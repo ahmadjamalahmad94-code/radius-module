@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Hobe Hub — Radius{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+<header class="topbar">
+  <div class="actions">
+    <span class="ic" title="إعدادات"><i class="fa-solid fa-gear"></i></span>
+    <span class="ic" title="تنبيهات"><i class="fa-solid fa-bell"></i>
+      <span class="dot">2</span>
+    </span>
+    <span class="ic" title="رسائل"><i class="fa-solid fa-envelope"></i>
+      <span class="dot">3</span>
+    </span>
+
+    {# Tenant switcher #}
+    {% set _admin_tenants = admin_tenants() %}
+    {% if _admin_tenants and _admin_tenants|length > 0 %}
+    <div class="tenant-switch" style="position:relative">
+      <span class="tenant-pill"
+            onclick="document.getElementById('tenant-menu').classList.toggle('open')"
+            style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);
+                   color:#cdd3da;padding:5px 12px;border-radius:6px;font-size:12px;
+                   font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.08)">
+        <i class="fa-solid fa-building" style="font-size:11px;color:var(--hr-cyan-500)"></i>
+        <span>{{ tenant.display_name if tenant else 'Default' }}</span>
+        <i class="fa-solid fa-caret-down" style="font-size:9px;opacity:.7"></i>
+      </span>
+      <div id="tenant-menu"
+           style="display:none;position:absolute;top:42px;inset-inline-end:0;background:#fff;
+                  border:1px solid var(--hr-border);border-radius:8px;
+                  box-shadow:var(--hr-shadow-pop);min-width:220px;z-index:60;overflow:hidden">
+        <div style="padding:7px 12px;font-size:10px;color:var(--hr-text-muted);
+                    text-transform:uppercase;letter-spacing:.8px;font-weight:800;
+                    border-bottom:1px solid var(--hr-border);background:var(--hr-soft)">
+          تبديل الجهة
+        </div>
+        {% for t in _admin_tenants %}
+        <form method="post" action="{{ url_for('radius.auth_switch_tenant') }}" style="margin:0">
+          <input type="hidden" name="tenant_id" value="{{ t.id }}">
+          <button type="submit"
+                  style="width:100%;text-align:right;padding:9px 12px;border:0;background:transparent;
+                         color:var(--hr-text);font-family:inherit;font-size:12.5px;cursor:pointer;
+                         display:flex;align-items:center;gap:8px;
+                         {% if t.id == tenant_id %}background:var(--hr-cyan-100);font-weight:800{% endif %}">
+            {% if t.id == tenant_id %}<i class="fa-solid fa-check" style="color:var(--hr-cyan-700);font-size:10px"></i>{% else %}<span style="width:10px"></span>{% endif %}
+            <span style="flex:1">{{ t.display_name or t.name }}</span>
+            <span class="pill pill-cyan" style="font-size:9px">{{ t.plan_tier }}</span>
+          </button>
+        </form>
+        {% endfor %}
+        {% if session.get('is_super_admin') %}
+        <a href="{{ url_for('radius.tenants_list') }}"
+           style="display:block;padding:8px 12px;border-top:1px solid var(--hr-border);
+                  text-decoration:none;color:var(--hr-cyan-700);font-size:11.5px;
+                  background:var(--hr-soft);font-weight:700">
+          <i class="fa-solid fa-cog"></i>&nbsp; إدارة الـ Tenants
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Admin pill — يفتح dropdown صغير للخروج #}
+    <div style="position:relative">
+      <span class="user-pill"
+            onclick="document.getElementById('user-menu').classList.toggle('open')"
+            style="cursor:pointer">
+        <span class="ava">{{ (session.get('admin_name') or 'A')[:1] }}</span>
+        <span>{{ session.get('admin_user') or 'admin' }}</span>
+        <i class="fa-solid fa-caret-down" style="font-size:10px;margin-inline-start:4px;opacity:.8"></i>
+      </span>
+      <div id="user-menu"
+           style="display:none;position:absolute;top:42px;inset-inline-end:0;background:#fff;
+                  border:1px solid var(--hr-border);border-radius:8px;
+                  box-shadow:var(--hr-shadow-pop);min-width:180px;z-index:60;overflow:hidden">
+        <a href="{{ url_for('radius.admins_list') }}"
+           style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-text);font-size:12.5px;border-bottom:1px solid var(--hr-divider, var(--hr-border))">
+          <i class="fa-solid fa-user-shield"></i>&nbsp; الملف الشخصي
+        </a>
+        <a href="{{ url_for('radius.auth_logout') }}"
+           style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-red);font-size:12.5px;background:#FCEEF1;font-weight:700">
+          <i class="fa-solid fa-right-from-bracket"></i>&nbsp; تسجيل الخروج
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="brand-area">
+    <span>{{ tenant.display_name if tenant else 'Hobe Hub' }}</span>
+    <span class="logo-mark"
+          style="{% if tenant and tenant.primary_color %}background:linear-gradient(135deg, {{ tenant.primary_color }}, {{ tenant.primary_color }}DD){% endif %}">
+      {{ (tenant.display_name or tenant.name)[:2] if tenant else 'HR' }}
+    </span>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <nav class="nav">
+
+    <a href="{{ url_for('radius.dashboard') }}"
+       class="{% if request.path == url_for('radius.dashboard') %}active{% endif %}">
+      <i class="fa-solid fa-gauge-high"></i> لوحة التحكم
+    </a>
+
+    <div class="nav-group">
+      <div class="nav-group-title">مشتركين</div>
+      <a href="{{ url_for('radius.users_list') }}"
+         class="{% if '/users' in request.path and '/users/new' not in request.path %}active{% endif %}">
+        <i class="fa-solid fa-list"></i> قائمة المشتركين
+      </a>
+      <a href="{{ url_for('radius.users_new') }}"
+         class="{% if request.path == url_for('radius.users_new') %}active{% endif %}">
+        <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+      </a>
+      <a href="{{ url_for('radius.online_list') }}"
+         class="{% if '/online' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-wifi"></i> المتصلون الآن
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">العروض</div>
+      <a href="{{ url_for('radius.plans_list') }}"
+         class="{% if request.path == url_for('radius.plans_list') %}active{% endif %}">
+        <i class="fa-solid fa-tags"></i> قائمة العروض
+      </a>
+      <a href="{{ url_for('radius.plans_new') }}"
+         class="{% if request.path == url_for('radius.plans_new') %}active{% endif %}">
+        <i class="fa-solid fa-circle-plus"></i> إضافة عرض
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">كروت</div>
+      <a href="{{ url_for('radius.cards_batches') }}"
+         class="{% if '/cards/batches' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-layer-group"></i> دفعات الكروت
+      </a>
+      <a href="{{ url_for('radius.cards_generate') }}"
+         class="{% if '/cards/generate' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء كروت
+      </a>
+      <a href="{{ url_for('radius.cards_list') }}"
+         class="{% if request.path == url_for('radius.cards_list') %}active{% endif %}">
+        <i class="fa-solid fa-id-card"></i> كل الكروت
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">البنية التحتية</div>
+      <a href="{{ url_for('radius.devices_list') }}"
+         class="{% if '/devices' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-server"></i> NAS
+      </a>
+      <a href="{{ url_for('radius.bw_list') }}"
+         class="{% if '/bandwidth' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-gauge"></i> Bandwidth
+      </a>
+      <a href="{{ url_for('radius.pool_list') }}"
+         class="{% if '/pools' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-network-wired"></i> IP Pools
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">المحاسبة</div>
+      <a href="{{ url_for('radius.inv_list') }}"
+         class="{% if '/invoices' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-file-invoice-dollar"></i> الفواتير
+      </a>
+      <a href="{{ url_for('radius.vch_list') }}"
+         class="{% if '/vouchers' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-ticket"></i> الكوبونات
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">الدعم</div>
+      <a href="{{ url_for('radius.tk_list') }}"
+         class="{% if '/tickets' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-headset"></i> التذاكر
+      </a>
+      <a href="{{ url_for('radius.svc_list') }}"
+         class="{% if '/services' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-toolbox"></i> الخدمات / المعدّات
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">الإدارة</div>
+      <a href="{{ url_for('radius.admins_list') }}"
+         class="{% if '/admins' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-user-shield"></i> المدراء
+      </a>
+      <a href="{{ url_for('radius.roles_list') }}"
+         class="{% if '/roles' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-key"></i> الأدوار والصلاحيات
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">التكامل</div>
+      <a href="{{ url_for('radius.mt_list') }}"
+         class="{% if '/mt' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-router"></i> اتصالات MikroTik
+      </a>
+      <a href="{{ url_for('radius.wh_settings') }}"
+         class="{% if '/webhooks' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-bolt"></i> Webhooks
+      </a>
+      <a href="{{ url_for('radius.tok_list') }}"
+         class="{% if '/tokens' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-key"></i> API Tokens
+      </a>
+      <a href="/api/docs" target="_blank">
+        <i class="fa-solid fa-book"></i> API Docs
+      </a>
+    </div>
+
+  </nav>
+
+  <div class="sidebar-foot">
+    <span>Version 0.1.0</span>
+    <span>HobeRadius</span>
+  </div>
+</aside>
+
+<main class="main">
+
+  <div class="page-head">
+    <div class="title">
+      {% block page_icon %}<i class="fa-solid fa-circle-dot"></i>{% endblock %}
+      <span>{% block page_title %}{% endblock %}</span>
+      {% block page_sub %}{% endblock %}
+    </div>
+    <div class="head-actions">
+      {% block head_buttons %}
+        <span class="ic" title="تحديث" onclick="location.reload()"><i class="fa-solid fa-rotate"></i></span>
+      {% endblock %}
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+  <div class="app-footer">
+    <span>Version 0.1.0</span>
+    <span>Copyright © 2017-2026 Hobe Hub</span>
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
+<script>
+  // dropdowns (tenant + user)
+  (function(){
+    function applyOpen(){
+      document.querySelectorAll('#tenant-menu.open, #user-menu.open').forEach(el => el.style.display='block');
+    }
+    document.addEventListener('click', function(e){
+      var tEl = document.getElementById('tenant-menu');
+      var uEl = document.getElementById('user-menu');
+      var tSwitch = e.target.closest('.tenant-switch');
+      var uPill = e.target.closest('.user-pill');
+      if (tEl && !tSwitch && !e.target.closest('#tenant-menu')) {
+        tEl.classList.remove('open'); tEl.style.display='none';
+      }
+      if (uEl && !uPill && !e.target.closest('#user-menu')) {
+        uEl.classList.remove('open'); uEl.style.display='none';
+      }
+      applyOpen();
+    });
+    document.querySelectorAll('.tenant-pill, .user-pill').forEach(function(el){
+      el.addEventListener('click', function(){ setTimeout(applyOpen, 0); });
+    });
+  })();
+</script>
+</body>
+</html>

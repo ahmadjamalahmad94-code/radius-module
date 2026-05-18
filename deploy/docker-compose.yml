@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: hoberadius:latest
+    restart: unless-stopped
+    env_file: ../.env
+    volumes:
+      - ../instance:/app/instance      # SQLite DB persists
+      - ../logs:/app/logs
+    networks: [hrnet]
+    expose: ["8000"]
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro       # شهادات Let's Encrypt
+      - /var/www/certbot:/var/www/certbot:ro       # ACME challenge
+    networks: [hrnet]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  backup:
+    image: alpine:3.20
+    restart: unless-stopped
+    volumes:
+      - ../instance:/data:ro
+      - ../backups:/backups
+      - ./backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["sh", "-c", "apk add --no-cache sqlite tzdata && crond -f -l 8 -L /dev/stdout"]
+    command: ["sh"]
+    environment:
+      - TZ=Asia/Amman
+    # crontab يُحقن عبر backup.sh — اقرأ تعليقاته
+    networks: [hrnet]
+
+networks:
+  hrnet:
+    driver: bridge

@@ -1,0 +1,2 @@
+/* مكوّن جدول مع ترقيم client-side — بسيط ومستقل */
+.d-table[data-paginated]{display:table}

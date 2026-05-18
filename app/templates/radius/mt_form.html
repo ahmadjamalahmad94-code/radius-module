@@ -1,0 +1,44 @@
+{% extends "admin/_admin_layout.html" %}
+{% set ttl = "إضافة اتصال MikroTik" if is_new else "تعديل اتصال" %}
+{% block title %}{{ ttl }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
+{% block page_title %}{{ ttl }}{% endblock %}
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.mt_update', cid=item.id) if not is_new else url_for('radius.mt_create') }}">
+  <div class="card"><div class="card-header"><span class="title">معطيات الاتصال</span></div><div class="card-body">
+    <div class="form-row"><label>الاسم *</label>
+      <div class="field"><input type="text" name="name" required value="{{ item.name or '' }}" placeholder="MT-HQ-Core"></div></div>
+    <div class="form-row"><label>المضيف *</label>
+      <div class="field"><input type="text" name="host" required value="{{ item.host or '' }}" placeholder="10.0.0.1"></div></div>
+    <div class="form-row"><label>المنفذ</label>
+      <div class="field"><input type="number" name="port" value="{{ item.port or 8728 }}"></div></div>
+    <div class="form-row"><label>اسم المستخدم *</label>
+      <div class="field"><input type="text" name="username" required value="{{ item.username or 'admin' }}"></div></div>
+    <div class="form-row"><label>كلمة المرور {% if is_new %}*{% endif %}</label>
+      <div class="field"><input type="password" name="password" {% if is_new %}required{% endif %}
+        placeholder="{{ '••••••••' if not is_new else '' }}"></div></div>
+    <div class="form-row"><label>المهلة (ثانية)</label>
+      <div class="field"><input type="number" name="timeout_sec" value="{{ item.timeout_sec or 10 }}"></div></div>
+    <div class="form-row"><label>TLS</label>
+      <div class="field"><label class="toggle">
+        <input type="checkbox" name="use_tls" value="1" {% if item.use_tls %}checked{% endif %}>
+        <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+      </label></div></div>
+    <div class="form-row"><label>تحقّق من الشهادة</label>
+      <div class="field"><label class="toggle">
+        <input type="checkbox" name="verify_tls" value="1" {% if item.verify_tls or is_new %}checked{% endif %}>
+        <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+      </label></div></div>
+    <div class="form-row"><label>مفعَّل</label>
+      <div class="field"><label class="toggle">
+        <input type="checkbox" name="enabled" value="1" {% if item.enabled or is_new %}checked{% endif %}>
+        <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+      </label></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.mt_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

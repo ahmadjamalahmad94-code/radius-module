@@ -1,0 +1,118 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}أجهزة RADIUS — NAS{% endblock %}
+{% block page_title %}أجهزة RADIUS (NAS){% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>RADIUS</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>أجهزة NAS</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  <style>
+    .radius-empty{padding:32px;text-align:center;color:var(--d-text-muted);font-size:13.5px}
+    .radius-empty .hint{margin-top:8px;font-size:12px;color:var(--d-text-soft)}
+    .nas-row td{vertical-align:middle;font-size:13px}
+    .nas-row td.col-id{font-family:monospace;color:var(--d-text-muted);font-size:11.5px}
+    .nas-row td.col-name{font-weight:700;color:var(--d-black)}
+    .vendor-badge{
+      display:inline-flex;align-items:center;gap:5px;padding:2px 8px;
+      border-radius:8px;font-size:11px;font-weight:600;
+      background:rgba(244,186,42,.13);color:#7c2d12;
+    }
+    .stage-banner{
+      background:#FDF1CF;color:#7c2d12;border:1px solid #f4d97a;
+      padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:16px;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div dir="rtl">
+
+  <div class="stage-banner">
+    <strong>قيد التطوير (M2.5):</strong>
+    وضع <code>manual</code> — البيانات في الذاكرة وتُمسح عند إعادة التشغيل.
+    سيُربط بالـ backend الفعلي في M3.
+  </div>
+
+  <div class="d-card">
+    <div class="d-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h3 class="d-card-title" style="margin:0">قائمة الأجهزة</h3>
+        <span class="d-card-meta">{{ items|length }} جهاز</span>
+      </div>
+      <a href="{{ url_for('radius.devices_new') }}"
+         style="background:var(--d-gold);color:var(--d-black);font-weight:700;
+                padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12.5px">
+        <i class="fa-solid fa-plus"></i> إضافة جهاز
+      </a>
+    </div>
+
+    <div class="d-card-body" style="padding:0">
+      {% if items %}
+      <table class="d-table"
+             data-paginated="1"
+             data-page-size="20"
+             data-page-sizes="10,20,50,100"
+             data-persist-key="radius-nas-devices">
+        <thead>
+          <tr>
+            <th style="width:64px">#</th>
+            <th>الاسم</th>
+            <th>العنوان</th>
+            <th>المُصنِّع</th>
+            <th>الوصف</th>
+            <th style="width:110px">الحالة</th>
+            <th style="width:140px">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in items %}
+          <tr class="nas-row">
+            <td class="col-id">{{ d.id }}</td>
+            <td class="col-name">{{ d.name }}</td>
+            <td>{{ d.address }}</td>
+            <td><span class="vendor-badge">{{ d.vendor }}</span></td>
+            <td>{{ d.description or "—" }}</td>
+            <td>
+              {% if d.enabled %}
+                <span class="vendor-badge" style="background:#e8f6ee;color:#1f8f51">مفعَّل</span>
+              {% else %}
+                <span class="vendor-badge" style="background:#fde2e2;color:#b91c1c">معطَّل</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <a href="{{ url_for('radius.devices_edit', nas_id=d.id) }}"
+                   class="vendor-badge" style="text-decoration:none;background:#e7f0fd;color:#1c52a8">
+                  <i class="fa-solid fa-pen"></i> تعديل
+                </a>
+                <form method="post"
+                      action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
+                      onsubmit="return confirm('حذف الجهاز «{{ d.name|e }}»؟');"
+                      style="display:inline">
+                  <button type="submit" class="vendor-badge"
+                          style="background:#fde2e2;color:#b91c1c;border:none;cursor:pointer">
+                    <i class="fa-solid fa-trash"></i> حذف
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="radius-empty">
+        لا يوجد أجهزة NAS بعد.
+        <div class="hint">في وضع <code>manual</code> البيانات في الذاكرة فقط وتُمسح عند إعادة التشغيل.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

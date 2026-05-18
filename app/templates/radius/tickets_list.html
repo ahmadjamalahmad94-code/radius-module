@@ -1,0 +1,54 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}التذاكر / الشكاوى{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
+{% block page_title %}التذاكر / الشكاوى{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.tk_new') }}">
+    <i class="fa-solid fa-plus"></i> تذكرة جديدة
+  </a>
+{% endblock %}
+{% block content %}
+<form method="get" class="filter-bar">
+  <select name="status">
+    <option value="">كل الحالات</option>
+    {% for s in ['open','pending','in_progress','resolved','closed'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>الموضوع</th><th>الفئة</th><th>الأولوية</th>
+      <th>الحالة</th><th>المسؤول</th><th>أُنشئت</th><th style="width:80px"></th>
+    </tr></thead>
+    <tbody>{% for t in items %}
+    <tr>
+      <td class="num">{{ t.id }}</td>
+      <td><strong>{{ t.subject }}</strong></td>
+      <td><span class="pill">{{ t.category }}</span></td>
+      <td>
+        {% if t.priority == 'urgent' %}<span class="pill pill-danger">عاجل</span>
+        {% elif t.priority == 'high' %}<span class="pill pill-warn">مرتفع</span>
+        {% elif t.priority == 'low' %}<span class="pill">منخفض</span>
+        {% else %}<span class="pill pill-info">عادي</span>{% endif %}
+      </td>
+      <td>
+        {% if t.status == 'open' %}<span class="pill pill-warn">مفتوحة</span>
+        {% elif t.status == 'in_progress' %}<span class="pill pill-info">قيد المعالجة</span>
+        {% elif t.status == 'resolved' %}<span class="pill pill-success">حُلَّت</span>
+        {% elif t.status == 'closed' %}<span class="pill">مغلقة</span>
+        {% else %}<span class="pill">{{ t.status }}</span>{% endif %}
+      </td>
+      <td class="mono">{{ t.assignee_admin_id or '—' }}</td>
+      <td class="mono">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '—' }}</td>
+      <td><a class="btn btn-primary btn-xs" href="{{ url_for('radius.tk_view', tid=t.id) }}">
+        <i class="fa-solid fa-eye"></i></a></td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-headset"></i>لا تذاكر</div>{% endif %}
+</div></div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "admin/_admin_layout.html" %}
+{% set ttl = "إضافة Pool" if is_new else "تعديل Pool" %}
+{% block title %}{{ ttl }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}{{ ttl }}{% endblock %}
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.pool_update', pid=item.id) if not is_new else url_for('radius.pool_create') }}">
+  <div class="card"><div class="card-header"><span class="title">المعطيات</span></div><div class="card-body">
+    <div class="form-row"><label>الاسم *</label>
+      <div class="field"><input type="text" name="pool_name" required value="{{ item.pool_name }}"></div></div>
+    <div class="form-row"><label>النطاق *</label>
+      <div class="field"><input type="text" name="range_ip" required value="{{ item.range_ip }}"
+        placeholder="10.0.0.10-10.0.0.250"></div></div>
+    <div class="form-row"><label>Local IP</label>
+      <div class="field"><input type="text" name="local_ip" value="{{ item.local_ip }}" placeholder="10.0.0.1"></div></div>
+    <div class="form-row"><label>الراوتر</label>
+      <div class="field"><select name="router_id">
+        <option value="">— بدون —</option>
+        {% for n in nas %}<option value="{{ n.id }}" {% if item.router_id == n.id %}selected{% endif %}>{{ n.name }}</option>{% endfor %}
+      </select></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.pool_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

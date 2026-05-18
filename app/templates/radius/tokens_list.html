@@ -1,0 +1,57 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}API Tokens{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
+{% block page_title %}API Tokens{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+
+{% block content %}
+{% if new_plain %}
+<div class="card" style="border-color:var(--hr-cyan-500);background:var(--hr-cyan-50)">
+  <div class="card-body">
+    <div style="font-weight:800;color:var(--hr-cyan-700);margin-bottom:6px">
+      <i class="fa-solid fa-circle-info"></i> تم إنشاء التوكن — انسخه الآن (لن يُعرض مجددًا)
+    </div>
+    <div class="mono" style="background:#fff;border:1px solid var(--hr-border);padding:10px 12px;border-radius:6px;
+                              font-size:13px;word-break:break-all">{{ new_plain }}</div>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" class="filter-bar">
+  <input type="text" name="name" placeholder="اسم التوكن" required style="flex:1">
+  <button class="btn btn-primary" type="submit">
+    <i class="fa-solid fa-plus"></i> إنشاء توكن
+  </button>
+</form>
+
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>الاسم</th><th>الـ Hash (آخر 12)</th>
+      <th>الحالة</th><th>آخر استخدام</th><th>أُنشئ</th><th style="width:90px"></th>
+    </tr></thead>
+    <tbody>{% for t in items %}
+    <tr>
+      <td class="num">{{ t.id }}</td>
+      <td><strong>{{ t.name }}</strong></td>
+      <td class="mono">…{{ t.token_hash[-12:] }}</td>
+      <td>
+        {% if t.revoked %}<span class="pill pill-danger">ملغى</span>
+        {% else %}<span class="pill pill-success"><span class="pill-dot"></span>نشط</span>{% endif %}
+      </td>
+      <td class="mono">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
+      <td class="mono">{{ t.created_at[:16] if t.created_at else '—' }}</td>
+      <td>
+        {% if not t.revoked %}
+        <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
+              onsubmit="return confirm('إلغاء التوكن؟')" style="display:inline">
+          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i> إلغاء</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-key"></i>لا توكنات بعد</div>{% endif %}
+</div></div>
+{% endblock %}

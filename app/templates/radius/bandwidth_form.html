@@ -1,0 +1,37 @@
+{% extends "admin/_admin_layout.html" %}
+{% set ttl = "إضافة باندويث" if is_new else "تعديل باندويث" %}
+{% block title %}{{ ttl }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
+{% block page_title %}{{ ttl }}{% endblock %}
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">
+  <div class="card"><div class="card-header"><span class="title">المعطيات</span></div><div class="card-body">
+    <div class="form-row"><label>الاسم *</label>
+      <div class="field"><input type="text" name="name" required value="{{ item.name }}"></div></div>
+    <div class="form-row"><label>تنزيل *</label>
+      <div class="field" style="display:flex;gap:6px">
+        <input type="number" name="rate_down" min="0" value="{{ item.rate_down }}" style="flex:1">
+        <select name="rate_down_unit" style="width:90px">
+          {% for u in ['Kbps','Mbps'] %}<option value="{{ u }}" {% if item.rate_down_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}
+        </select>
+      </div></div>
+    <div class="form-row"><label>رفع *</label>
+      <div class="field" style="display:flex;gap:6px">
+        <input type="number" name="rate_up" min="0" value="{{ item.rate_up }}" style="flex:1">
+        <select name="rate_up_unit" style="width:90px">
+          {% for u in ['Kbps','Mbps'] %}<option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}
+        </select>
+      </div></div>
+    <div class="form-row"><label>Burst (MT raw)</label>
+      <div class="field"><input type="text" name="burst" value="{{ item.burst }}" placeholder="10M/5M 8M/4M 4M/2M 30/30 8 4">
+        <div class="hint">سطر الـ MikroTik rate-limit الكامل (اختياري)</div></div></div>
+    <div class="form-row"><label>الأولوية</label>
+      <div class="field"><input type="number" name="priority" value="{{ item.priority }}"></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.bw_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

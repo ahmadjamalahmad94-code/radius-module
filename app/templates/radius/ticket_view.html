@@ -1,0 +1,70 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}تذكرة #{{ ticket.id }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
+{% block page_title %}{{ ticket.subject }}{% endblock %}
+{% block page_sub %}<span class="sub">(تذكرة #{{ ticket.id }})</span>{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+  <div>
+    <div class="card">
+      <div class="card-header"><span class="title">المحادثة</span></div>
+      <div class="card-body">
+        <div style="background:var(--hr-soft);padding:12px;border-radius:8px;margin-bottom:14px">
+          <div class="hint" style="margin-bottom:4px">المشترك · {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '' }}</div>
+          <div style="white-space:pre-wrap;font-size:13.5px">{{ ticket.body or '—' }}</div>
+        </div>
+        {% for r in replies %}
+        <div style="background:{% if r.author_type == 'admin' %}#E1F4FA{% else %}var(--hr-soft){% endif %};padding:10px 12px;border-radius:8px;margin-bottom:10px">
+          <div class="hint" style="margin-bottom:3px">
+            <strong>{{ 'مدير' if r.author_type == 'admin' else 'مشترك' }}</strong>
+            · {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}
+          </div>
+          <div style="white-space:pre-wrap;font-size:13px">{{ r.body }}</div>
+        </div>
+        {% endfor %}
+
+        <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" style="margin-top:12px">
+          <div class="form-row full"><label>إضافة رد</label>
+            <div class="field"><textarea name="body" rows="4" required placeholder="اكتب ردك..."></textarea></div></div>
+          <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header"><span class="title">معلومات</span></div>
+      <div class="card-body">
+        <div style="display:grid;gap:8px;font-size:12.5px">
+          <div><span class="hint">الفئة:</span> <strong>{{ ticket.category }}</strong></div>
+          <div><span class="hint">الأولوية:</span> <strong>{{ ticket.priority }}</strong></div>
+          <div><span class="hint">الحالة:</span> <strong>{{ ticket.status }}</strong></div>
+          <div><span class="hint">المشترك ID:</span> <strong class="mono">{{ ticket.subscriber_id }}</strong></div>
+          <div><span class="hint">المسؤول:</span> <strong class="mono">{{ ticket.assignee_admin_id or '—' }}</strong></div>
+          {% if ticket.closed_at %}<div><span class="hint">أُغلقت:</span> <strong class="mono">{{ ticket.closed_at.strftime('%Y-%m-%d') }}</strong></div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="title">تغيير الحالة</span></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('radius.tk_status', tid=ticket.id) }}" style="display:flex;gap:6px">
+          <select name="status" style="flex:1;padding:7px;border:1px solid var(--hr-border-strong);border-radius:6px">
+            {% for s in ['open','pending','in_progress','resolved','closed'] %}
+              <option value="{{ s }}" {% if ticket.status==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary btn-sm"><i class="fa-solid fa-check"></i></button>
+        </form>
+      </div>
+    </div>
+
+    <a class="btn btn-secondary" href="{{ url_for('radius.tk_list') }}">
+      <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
+    </a>
+  </div>
+</div>
+{% endblock %}

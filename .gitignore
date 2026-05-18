@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+instance/
+.env
+.venv/
+venv/
+*.db
+*.sqlite
+*.log
+New Text Document.txt
+????/
+/????/

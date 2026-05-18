@@ -1,0 +1,44 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الأدوار والصلاحيات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
+{% block page_title %}الأدوار والصلاحيات{% endblock %}
+
+{% block content %}
+{% set perm_by_cat = {} %}
+{% for p in perms %}
+  {% set cat = p.split('.')[0] %}
+  {% if perm_by_cat.update({cat: perm_by_cat.get(cat, []) + [p]}) %}{% endif %}
+{% endfor %}
+
+{% for r in roles %}
+<form method="post" action="{{ url_for('radius.roles_update', role_id=r.id) }}" class="card">
+  <div class="card-header">
+    <span class="title">
+      <i class="fa-solid fa-key"></i>&nbsp; {{ r.display_name or r.name }}
+      <span class="pill pill-cyan">{{ r.name }}</span>
+      <span class="hint" style="margin-inline-start:6px">{{ r.permissions|length }} صلاحية</span>
+    </span>
+    <button class="btn btn-primary btn-sm" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> حفظ
+    </button>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px">
+      {% for cat in perm_by_cat.keys() %}
+        <div style="grid-column:1/-1;font-size:11px;color:var(--hr-cyan-700);
+                    text-transform:uppercase;letter-spacing:.8px;font-weight:800;
+                    border-bottom:1px dashed var(--hr-border);padding:8px 0 4px">{{ cat }}</div>
+        {% for p in perm_by_cat[cat] %}
+        <label style="font-size:12px;display:flex;align-items:center;gap:6px;padding:3px 0">
+          <input type="checkbox" name="permissions" value="{{ p }}"
+                 {% if p in r.permissions %}checked{% endif %}
+                 style="accent-color:var(--hr-cyan-500)">
+          <span class="mono">{{ p }}</span>
+        </label>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</form>
+{% endfor %}
+{% endblock %}

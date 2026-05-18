@@ -1,0 +1,25 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}توليد كوبونات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
+{% block page_title %}توليد كوبونات{% endblock %}
+{% block content %}
+<form method="post">
+  <div class="card"><div class="card-header"><span class="title">معطيات الدفعة</span></div><div class="card-body">
+    <div class="form-row"><label>عدد الكوبونات *</label>
+      <div class="field"><input type="number" name="count" min="1" max="5000" required value="20"></div></div>
+    <div class="form-row"><label>القيمة (لكل كوبون) *</label>
+      <div class="field"><input type="number" step="0.01" name="amount" min="0.01" required value="5.00"></div></div>
+    <div class="form-row"><label>الباقة (اختياري)</label>
+      <div class="field"><select name="plan_id">
+        <option value="">— بدون ربط —</option>
+        {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>تنتهي في</label>
+      <div class="field"><input type="date" name="expire_at"></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.vch_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

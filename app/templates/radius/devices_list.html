@@ -1,0 +1,56 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}أجهزة NAS{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
+{% block page_title %}أجهزة NAS{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} جهاز)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.devices_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة جهاز
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
+      <thead><tr>
+        <th>#</th><th>الاسم</th><th>العنوان</th>
+        <th>المُصنِّع</th><th>النوع</th><th>الموقع</th>
+        <th>المنافذ</th><th>الحالة</th>
+        <th style="width:110px">إجراءات</th>
+      </tr></thead>
+      <tbody>
+        {% for d in items %}
+        <tr>
+          <td class="num">{{ d.id }}</td>
+          <td><strong>{{ d.name }}</strong></td>
+          <td class="mono">{{ d.address }}</td>
+          <td><span class="pill">{{ d.vendor }}</span></td>
+          <td><span class="pill pill-info">{{ d.nas_type }}</span></td>
+          <td>{{ d.location or '—' }}</td>
+          <td class="mono">{{ d.auth_port }}/{{ d.acct_port }}</td>
+          <td>
+            {% if d.enabled %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
+            {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
+          </td>
+          <td>
+            <div class="cell-actions">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
+                <i class="fa-solid fa-pen"></i></a>
+              <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
+                    onsubmit="return confirm('حذف «{{ d.name|e }}»؟');" style="display:inline">
+                <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-server"></i>لا أجهزة بعد</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

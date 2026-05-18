@@ -1,0 +1,93 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}قائمة المشتركين{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
+{% block page_title %}قائمة المشتركين{% endblock %}
+{% block page_sub %}<span class="sub">(عرض {{ items|length }} نتيجة)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.users_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+  <div class="search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
+  </div>
+  <select name="status">
+    <option value="">كل الحالات</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="plan_id">
+    <option value="">كل العروض</option>
+    {% for p in plans %}
+      <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-secondary btn-sm">CSV</button>
+  <button type="button" class="btn btn-secondary btn-sm">Excel</button>
+  <button type="button" class="btn btn-secondary btn-sm">طباعة</button>
+</form>
+
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
+      <thead><tr>
+        <th style="width:36px"><input type="checkbox"></th>
+        <th>#</th><th>اليوزر</th><th>الاسم</th><th>الجوال</th>
+        <th>الباقة</th><th>الحالة</th><th>تنتهي</th>
+        <th>الاستهلاك</th><th style="width:150px">إجراءات</th>
+      </tr></thead>
+      <tbody>
+        {% for u in items %}
+        <tr>
+          <td><input type="checkbox"></td>
+          <td class="num">{{ u.id or '—' }}</td>
+          <td><a href="{{ url_for('radius.users_edit', username=u.username) }}">{{ u.username }}</a></td>
+          <td>{{ u.full_name or '—' }}</td>
+          <td class="mono">{{ u.mobile or '—' }}</td>
+          <td>
+            {% set p = plans|selectattr('id','equalto',u.plan_id)|first %}
+            {{ p.name if p else '—' }}
+          </td>
+          <td>
+            {% if u.status == 'enabled' %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
+            {% elif u.status == 'expired' %}<span class="pill pill-warn">منتهٍ</span>
+            {% elif u.status == 'disabled' %}<span class="pill pill-danger">معطَّل</span>
+            {% else %}<span class="pill">{{ u.status }}</span>{% endif %}
+          </td>
+          <td class="mono">{{ u.expire_at.strftime('%Y-%m-%d') if u.expire_at else '—' }}</td>
+          <td class="mono">{{ "%.1f"|format((u.used_bytes_in or 0)/1048576) }} MB</td>
+          <td>
+            <div class="cell-actions">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.users_edit', username=u.username) }}" title="تعديل">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}" style="display:inline">
+                <button class="btn btn-xs {{ 'btn-warning' if u.status=='enabled' else 'btn-success' }}" title="{{ 'تعطيل' if u.status=='enabled' else 'تفعيل' }}">
+                  <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
+                    onsubmit="return confirm('حذف {{ u.username|e }}؟');" style="display:inline">
+                <button class="btn btn-danger btn-xs" title="حذف"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-users-slash"></i>لا مشتركين بهذه الفلترة</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

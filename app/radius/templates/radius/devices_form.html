@@ -1,0 +1,109 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة جهاز NAS" if is_new else "تعديل جهاز NAS" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>RADIUS</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <a href="{{ url_for('radius.devices_list') }}">أجهزة NAS</a>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>{{ title_ar }}</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  <style>
+    .nas-form{max-width:680px}
+    .nas-form .row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+    .nas-form .field{flex:1 1 280px;display:flex;flex-direction:column;gap:6px}
+    .nas-form label{font-size:12.5px;color:var(--d-text-soft);font-weight:600}
+    .nas-form input[type=text], .nas-form input[type=password], .nas-form select, .nas-form textarea{
+      padding:9px 11px;border:1px solid #e2dfd7;border-radius:8px;font-size:13px;background:#fff;
+    }
+    .nas-form textarea{min-height:80px;resize:vertical;font-family:inherit}
+    .nas-form .check{display:flex;align-items:center;gap:8px;font-size:13px}
+    .nas-form .actions{display:flex;gap:10px;margin-top:18px}
+    .btn-primary{background:var(--d-gold);color:var(--d-black);font-weight:700;border:none;
+      padding:10px 18px;border-radius:8px;cursor:pointer;font-size:13px}
+    .btn-secondary{background:#fff;border:1px solid #e2dfd7;color:var(--d-text-soft);
+      padding:10px 18px;border-radius:8px;cursor:pointer;font-size:13px;text-decoration:none}
+    .hint{font-size:11.5px;color:var(--d-text-muted)}
+  </style>
+{% endblock %}
+
+{% block content %}
+<div dir="rtl">
+  <div class="d-card">
+    <div class="d-card-header">
+      <h3 class="d-card-title">{{ title_ar }}</h3>
+    </div>
+    <div class="d-card-body">
+
+      <form class="nas-form"
+            method="post"
+            action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
+        {# _csrf_token يُحقَن تلقائيًا بواسطة after_request في HobeHub. #}
+
+        <div class="row">
+          <div class="field">
+            <label for="name">الاسم *</label>
+            <input type="text" id="name" name="name" required value="{{ device.name or '' }}">
+            <span class="hint">معرف فريد للجهاز (مثل: mt-hq-01)</span>
+          </div>
+          <div class="field">
+            <label for="address">العنوان *</label>
+            <input type="text" id="address" name="address" required value="{{ device.address or '' }}">
+            <span class="hint">IP أو hostname</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="vendor">المُصنِّع</label>
+            <select id="vendor" name="vendor">
+              {% for v in vendors %}
+                <option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="secret">Shared Secret *</label>
+            <input type="password" id="secret" name="secret"
+                   {% if is_new %}required{% endif %}
+                   placeholder="{{ '••••••••' if not is_new else '' }}"
+                   value="{{ device.secret or '' }}">
+            <span class="hint">يُخزَّن مشفَّرًا (لا يُعرض لاحقًا)</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field" style="flex-basis:100%">
+            <label for="description">الوصف</label>
+            <textarea id="description" name="description">{{ device.description or '' }}</textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" name="enabled" value="1" {% if device.enabled %}checked{% endif %}>
+              مفعَّل
+            </label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i>
+            {{ "حفظ" if is_new else "تحديث" }}
+          </button>
+          <a class="btn-secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

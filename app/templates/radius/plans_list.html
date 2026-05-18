@@ -1,0 +1,73 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}قائمة العروض{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}قائمة العروض{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} عرض)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.plans_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة عرض
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+  <div class="search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" name="q" placeholder="بحث في العروض...">
+  </div>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  <div class="spacer"></div>
+  <button type="button" class="btn btn-secondary btn-sm">CSV</button>
+  <button type="button" class="btn btn-secondary btn-sm">Excel</button>
+</form>
+
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
+      <thead><tr>
+        <th style="width:36px"><input type="checkbox"></th>
+        <th>#</th><th>الاسم</th><th>الكود</th><th>النوع</th>
+        <th>الوقت</th><th>الكوتا</th><th>السرعة (Down/Up)</th><th>السعر</th>
+        <th style="width:120px">إجراءات</th>
+      </tr></thead>
+      <tbody>
+        {% for p in items %}
+        <tr>
+          <td><input type="checkbox"></td>
+          <td class="num">{{ p.id }}</td>
+          <td>
+            <span style="display:inline-block;width:8px;height:18px;border-radius:3px;vertical-align:middle;background:{{ p.color }};margin-inline-end:6px"></span>
+            <strong>{{ p.name }}</strong>
+          </td>
+          <td class="mono">{{ p.code or '—' }}</td>
+          <td><span class="pill pill-cyan">{{ p.plan_type }}</span></td>
+          <td class="mono">
+            {% if p.duration_minutes %}{{ p.duration_minutes }}د{% endif %}
+            {% if p.validity_days %} · {{ p.validity_days }}ي{% endif %}
+            {% if not p.duration_minutes and not p.validity_days %}<span class="pill">غير محدود</span>{% endif %}
+          </td>
+          <td class="mono">{% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB{% else %}<span class="pill">غير محدود</span>{% endif %}</td>
+          <td class="mono">{{ p.speed_down_kbps or 0 }} / {{ p.speed_up_kbps or 0 }} Kbps</td>
+          <td><strong>{{ "%.2f"|format(p.price) }}</strong> <span class="hint">{{ p.currency }}</span></td>
+          <td>
+            <div class="cell-actions">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+                <i class="fa-solid fa-pen"></i></a>
+              <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
+                    onsubmit="return confirm('حذف «{{ p.name|e }}»؟');" style="display:inline">
+                <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-tags"></i>لا عروض</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

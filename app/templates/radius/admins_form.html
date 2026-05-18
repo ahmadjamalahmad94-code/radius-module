@@ -1,0 +1,49 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة مدير" if is_new else "تعديل مدير" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">
+
+  <div class="card">
+    <div class="card-header"><span class="title">معلومات المدير</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>اسم المستخدم *</label>
+        <div class="field"><input type="text" name="username" required {% if not is_new %}readonly{% endif %}
+            value="{{ admin.username if admin else '' }}"></div></div>
+      <div class="form-row"><label>كلمة المرور {% if is_new %}*{% endif %}</label>
+        <div class="field"><input type="password" name="password" {% if is_new %}required{% endif %}
+            placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else '' }}"></div></div>
+      <div class="form-row"><label>الاسم الكامل</label>
+        <div class="field"><input type="text" name="full_name" value="{{ admin.full_name if admin else '' }}"></div></div>
+      <div class="form-row"><label>الدور</label>
+        <div class="field"><select name="role_id">
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
+              {{ r.display_name }} ({{ r.name }})
+            </option>
+          {% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>البريد</label>
+        <div class="field"><input type="email" name="email" value="{{ admin.email if admin else '' }}"></div></div>
+      <div class="form-row"><label>الجوال</label>
+        <div class="field"><input type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="enabled" value="1" {% if (not admin) or admin.enabled %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إضافة" if is_new else "تحديث" }}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.admins_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

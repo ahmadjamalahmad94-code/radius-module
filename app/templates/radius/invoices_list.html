@@ -1,0 +1,84 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الفواتير{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
+{% block page_title %}الفواتير{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.inv_new') }}">
+    <i class="fa-solid fa-plus"></i> فاتورة جديدة
+  </a>
+{% endblock %}
+{% block content %}
+<div class="kpi-strip">
+  <div class="kpi-card kpi-green">
+    <div class="right"><div class="lbl">إجمالي</div><div class="val">{{ "%.2f"|format(stats.total) }}</div></div>
+    <div class="ico"><i class="fa-solid fa-sack-dollar"></i></div>
+  </div>
+  <div class="kpi-card">
+    <div class="right"><div class="lbl">مدفوعة</div><div class="val">{{ "%.2f"|format(stats.paid or 0) }}</div></div>
+    <div class="ico"><i class="fa-solid fa-circle-check"></i></div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="right"><div class="lbl">معلَّقة</div><div class="val">{{ "%.2f"|format(stats.pending or 0) }}</div></div>
+    <div class="ico"><i class="fa-solid fa-clock"></i></div>
+  </div>
+  <div class="kpi-card kpi-dark">
+    <div class="right"><div class="lbl">عدد الفواتير</div><div class="val">{{ stats.count }}</div></div>
+    <div class="ico"><i class="fa-solid fa-receipt"></i></div>
+  </div>
+</div>
+
+<form method="get" class="filter-bar" style="margin-top:8px">
+  <select name="status">
+    <option value="">كل الحالات</option>
+    {% for s in ['paid','pending','failed','refunded','canceled'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table" data-paginated="1" data-page-size="50">
+    <thead><tr>
+      <th>#</th><th>الرقم</th><th>اليوزر</th><th>الباقة</th>
+      <th>الاتجاه</th><th>المبلغ</th><th>الطريقة</th>
+      <th>التاريخ</th><th>الحالة</th><th style="width:130px"></th>
+    </tr></thead>
+    <tbody>{% for i in items %}
+    <tr>
+      <td class="num">{{ i.id }}</td>
+      <td class="mono"><strong>{{ i.invoice_number }}</strong></td>
+      <td class="mono">{{ i.username }}</td>
+      <td>{{ i.plan_name or '—' }}</td>
+      <td>
+        {% if i.direction == 'charge' %}<span class="pill pill-info">خصم</span>
+        {% elif i.direction == 'refund' %}<span class="pill pill-warn">إرجاع</span>
+        {% elif i.direction == 'deposit' %}<span class="pill pill-success">إيداع</span>
+        {% else %}<span class="pill">{{ i.direction }}</span>{% endif %}
+      </td>
+      <td><strong>{{ "%.2f"|format(i.amount) }}</strong></td>
+      <td>{{ i.payment_method }}</td>
+      <td class="mono">{{ i.created_at.strftime('%Y-%m-%d %H:%M') if i.created_at else '—' }}</td>
+      <td>
+        {% if i.status == 'paid' %}<span class="pill pill-success">مدفوعة</span>
+        {% elif i.status == 'pending' %}<span class="pill pill-warn">معلَّقة</span>
+        {% elif i.status == 'failed' %}<span class="pill pill-danger">فشلت</span>
+        {% else %}<span class="pill">{{ i.status }}</span>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" style="display:flex;gap:4px">
+          <select name="status" style="font-size:11px;padding:3px;border-radius:4px;border:1px solid var(--hr-border-strong)">
+            {% for s in ['paid','pending','failed','refunded','canceled'] %}
+              <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-secondary btn-xs"><i class="fa-solid fa-check"></i></button>
+        </form>
+      </td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i>لا فواتير</div>{% endif %}
+</div></div>
+{% endblock %}

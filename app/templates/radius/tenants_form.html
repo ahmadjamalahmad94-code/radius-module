@@ -1,0 +1,79 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة Tenant" if is_new else "تعديل Tenant" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.tenants_update', tenant_id=tenant.id) if not is_new else url_for('radius.tenants_create') }}">
+
+  <div class="card">
+    <div class="card-header"><span class="title">الهوية</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الـ slug *</label>
+        <div class="field"><input type="text" name="slug" required {% if not is_new %}readonly{% endif %}
+          value="{{ tenant.slug or '' }}" placeholder="acme">
+          <div class="hint">معرّف URL-friendly (لا يتغيّر لاحقًا)</div></div></div>
+      <div class="form-row"><label>الاسم *</label>
+        <div class="field"><input type="text" name="name" required value="{{ tenant.name or '' }}"></div></div>
+      <div class="form-row"><label>اسم العرض</label>
+        <div class="field"><input type="text" name="display_name" value="{{ tenant.display_name or '' }}"></div></div>
+      <div class="form-row"><label>البريد</label>
+        <div class="field"><input type="email" name="email" value="{{ tenant.email or '' }}"></div></div>
+      <div class="form-row"><label>الجوال</label>
+        <div class="field"><input type="tel" name="phone" value="{{ tenant.phone or '' }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">الـ Tier والحالة</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الـ Tier *</label>
+        <div class="field"><select name="plan_tier">
+          {% for t in tiers %}
+            <option value="{{ t }}" {% if tenant.plan_tier == t %}selected{% endif %}>
+              {{ t }} ({{ tier_limits[t].max_subscribers }} مشترك)
+            </option>
+          {% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {% if tenant.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>حد المشتركين</label>
+        <div class="field"><input type="number" name="max_subscribers" min="0" value="{{ tenant.max_subscribers or 0 }}">
+          <div class="hint">0 = استخدم قيمة الـ tier الافتراضية</div></div></div>
+      <div class="form-row"><label>حد NAS</label>
+        <div class="field"><input type="number" name="max_nas" min="0" value="{{ tenant.max_nas or 0 }}"></div></div>
+      <div class="form-row"><label>الـ API rate (req/min)</label>
+        <div class="field"><input type="number" name="api_rpm" min="0" value="{{ tenant.api_rpm or 0 }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">الإقليم والـ branding</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>العملة</label>
+        <div class="field"><input type="text" name="currency" value="{{ tenant.currency or 'JOD' }}"></div></div>
+      <div class="form-row"><label>اللغة</label>
+        <div class="field"><select name="locale">
+          {% for l in ['ar','en'] %}<option value="{{ l }}" {% if tenant.locale == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>المنطقة الزمنية</label>
+        <div class="field"><input type="text" name="timezone" value="{{ tenant.timezone or 'Asia/Amman' }}"></div></div>
+      <div class="form-row"><label>لون العلامة</label>
+        <div class="field"><input type="text" name="primary_color" value="{{ tenant.primary_color or '#2BAACC' }}"></div></div>
+      <div class="form-row"><label>رابط الشعار</label>
+        <div class="field"><input type="text" name="logo_url" value="{{ tenant.logo_url or '' }}"></div></div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء" if is_new else "تحديث" }}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.tenants_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

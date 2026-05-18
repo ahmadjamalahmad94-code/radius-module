@@ -1,0 +1,71 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة جهاز NAS" if is_new else "تعديل جهاز NAS" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
+
+  <div class="card">
+    <div class="card-header"><span class="title">الأساسيات</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الاسم *</label>
+        <div class="field"><input type="text" name="name" required value="{{ device.name or '' }}"></div></div>
+      <div class="form-row"><label>العنوان *</label>
+        <div class="field"><input type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1"></div></div>
+      <div class="form-row"><label>المُصنِّع</label>
+        <div class="field"><select name="vendor">
+          {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>النوع</label>
+        <div class="field"><select name="nas_type">
+          {% for t in ['hotspot','pppoe','dhcp','other'] %}
+            <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>Shared Secret *</label>
+        <div class="field"><input type="password" name="secret"
+          {% if is_new %}required{% endif %}
+          placeholder="{{ '••••••••' if not is_new else '' }}"
+          value="{{ device.secret or '' }}"></div></div>
+      <div class="form-row"><label>الموقع</label>
+        <div class="field"><input type="text" name="location" value="{{ device.location or '' }}"></div></div>
+      <div class="form-row"><label>الوصف</label>
+        <div class="field"><textarea name="description">{{ device.description or '' }}</textarea></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">المنافذ والمراقبة</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>Auth Port</label>
+        <div class="field"><input type="number" name="auth_port" value="{{ device.auth_port or 1812 }}"></div></div>
+      <div class="form-row"><label>Acct Port</label>
+        <div class="field"><input type="number" name="acct_port" value="{{ device.acct_port or 1813 }}"></div></div>
+      <div class="form-row"><label>CoA Port</label>
+        <div class="field"><input type="number" name="coa_port" value="{{ device.coa_port or 3799 }}"></div></div>
+      <div class="form-row"><label>الإحداثيات</label>
+        <div class="field"><input type="text" name="coordinates" placeholder="31.95,35.93" value="{{ device.coordinates or '' }}"></div></div>
+      <div class="form-row"><label>مراقبة دورية</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="monitoring_enabled" value="1" {% if device.monitoring_enabled %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="enabled" value="1" {% if device.enabled %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

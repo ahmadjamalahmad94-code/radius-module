@@ -1,0 +1,80 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}Sync Queue{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
+{% block page_title %}Sync Queue (DB → MikroTik){% endblock %}
+
+{% block content %}
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="right"><div class="lbl">queued</div><div class="val">{{ stats.queued }}</div></div>
+    <div class="ico"><i class="fa-solid fa-hourglass-half"></i></div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="right"><div class="lbl">retrying</div><div class="val">{{ stats.retrying }}</div></div>
+    <div class="ico"><i class="fa-solid fa-rotate-right"></i></div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="right"><div class="lbl">done</div><div class="val">{{ stats.done }}</div></div>
+    <div class="ico"><i class="fa-solid fa-check"></i></div>
+  </div>
+  <div class="kpi-card kpi-dark">
+    <div class="right"><div class="lbl">failed</div><div class="val">{{ stats.failed }}</div></div>
+    <div class="ico"><i class="fa-solid fa-xmark"></i></div>
+  </div>
+</div>
+
+<form method="get" class="filter-bar" style="margin-top:8px">
+  <select name="status">
+    <option value="">كل الحالات</option>
+    {% for s in ['queued','retrying','done','failed','syncing'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+
+<div class="card"><div class="card-body card-body--flush">
+  {% if jobs %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>Kind</th><th>Entity</th><th>Status</th>
+      <th>Attempts</th><th>Next</th><th>Error</th><th style="width:140px"></th>
+    </tr></thead>
+    <tbody>{% for j in jobs %}
+    <tr>
+      <td class="num">{{ j.id }}</td>
+      <td><span class="pill pill-cyan">{{ j.kind }}</span></td>
+      <td class="mono">{{ j.entity_key or j.entity_id or '—' }}</td>
+      <td>
+        {% if j.status == 'done' %}<span class="pill pill-success">done</span>
+        {% elif j.status == 'queued' %}<span class="pill pill-info">queued</span>
+        {% elif j.status == 'syncing' %}<span class="pill pill-info">syncing…</span>
+        {% elif j.status == 'retrying' %}<span class="pill pill-warn">retrying</span>
+        {% elif j.status == 'failed' %}<span class="pill pill-danger">failed</span>
+        {% else %}<span class="pill">{{ j.status }}</span>{% endif %}
+      </td>
+      <td class="num">{{ j.attempts }}</td>
+      <td class="mono">{{ j.next_attempt_at[:16] if j.next_attempt_at else '—' }}</td>
+      <td class="mono" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ j.last_error or '—' }}
+      </td>
+      <td>
+        {% if j.status in ['queued','retrying','failed'] %}
+        <div class="cell-actions">
+          <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}" style="display:inline">
+            <button class="btn btn-primary btn-xs" title="أعد فورًا"><i class="fa-solid fa-rotate"></i></button>
+          </form>
+          {% if j.status != 'failed' %}
+          <form method="post" action="{{ url_for('radius.sync_cancel', job_id=j.id) }}"
+                onsubmit="return confirm('إلغاء؟')" style="display:inline">
+            <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i></button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+      </td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-arrows-rotate"></i>لا jobs بهذا الفلتر</div>{% endif %}
+</div></div>
+{% endblock %}

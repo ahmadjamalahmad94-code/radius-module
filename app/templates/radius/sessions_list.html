@@ -1,0 +1,55 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}المتصلون الآن{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
+{% block page_title %}المتصلون الآن{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} جلسة · وضع {{ settings.mode }})</span>{% endblock %}
+
+{% block content %}
+{% if settings.mode == "manual" %}
+<div class="flash flash-warning" style="margin-bottom:10px">
+  وضع <strong>manual</strong> — لا توجد جلسات حية. شغّل <code>RADIUS_MODE=mikrotik</code> للرؤية الفعلية.
+</div>
+{% endif %}
+
+{% if error %}
+<div class="flash flash-error">تعذّر تحميل الجلسات: {{ error }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
+      <thead><tr>
+        <th>#</th><th>المستخدم</th><th>IP</th><th>MAC</th>
+        <th>NAS</th><th>بدأت</th><th>تحميل</th><th>رفع</th>
+        <th style="width:100px">إجراء</th>
+      </tr></thead>
+      <tbody>
+        {% for s in items %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td><strong>{{ s.username }}</strong></td>
+          <td class="mono">{{ s.framed_ip or '—' }}</td>
+          <td class="mono">{{ s.mac_address or '—' }}</td>
+          <td class="mono">{{ s.nas_address or '—' }}</td>
+          <td class="mono">{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else '—' }}</td>
+          <td class="mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
+          <td class="mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
+          <td>
+            <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+                  onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');" style="display:inline">
+              <input type="hidden" name="username" value="{{ s.username }}">
+              <input type="hidden" name="session_id" value="{{ s.session_id }}">
+              <button class="btn btn-danger btn-xs"><i class="fa-solid fa-plug-circle-xmark"></i> قطع</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-wifi"></i>لا جلسات مباشرة</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

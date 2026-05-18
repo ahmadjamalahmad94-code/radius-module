@@ -1,0 +1,123 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}System Status{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-heart-pulse"></i>{% endblock %}
+{% block page_title %}System Status{% endblock %}
+{% block page_sub %}<span class="sub">(تحديث تلقائي كل 10s)</span>{% endblock %}
+{% block head_extra %}
+<meta http-equiv="refresh" content="10">
+<style>
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+  .stat-card{background:#fff;border:1px solid var(--hr-border);border-radius:var(--hr-r-lg);padding:12px 14px;
+              box-shadow:var(--hr-shadow-sm)}
+  .stat-label{font-size:11px;color:var(--hr-text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:800}
+  .stat-value{font-size:22px;font-weight:800;color:var(--hr-text);margin-top:3px}
+  .stat-sub{font-size:11.5px;color:var(--hr-text-muted);margin-top:2px}
+  .ok{color:var(--hr-green)}
+  .warn{color:var(--hr-orange)}
+  .err{color:var(--hr-red)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="stat-grid">
+  {# workers #}
+  {% for w in s.workers %}
+  <div class="stat-card">
+    <div class="stat-label">Worker</div>
+    <div class="stat-value">
+      {% if w.is_alive %}<span class="ok">●</span>{% else %}<span class="err">●</span>{% endif %}
+      {{ w.name }}
+    </div>
+    <div class="stat-sub">آخر نبضة قبل {{ w.last_beat_age_sec }}s</div>
+    {% if w.info %}<div class="stat-sub mono">{{ w.info|tojson }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="stat-card">
+    <div class="stat-label">Workers</div>
+    <div class="stat-value warn">لا workers نشطة</div>
+    <div class="stat-sub">شغّل المشروع بدون <code>HOBERADIUS_NO_WORKER=1</code></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Sync queue</div>
+    <div class="stat-value">{{ s.sync_queue.total }}</div>
+    <div class="stat-sub">
+      queued: {{ s.sync_queue.queued }} ·
+      retrying: <span class="warn">{{ s.sync_queue.retrying }}</span> ·
+      failed: <span class="err">{{ s.sync_queue.failed }}</span> ·
+      done: <span class="ok">{{ s.sync_queue.done }}</span>
+    </div>
+    <a href="{{ url_for('radius.sync_list') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">
+      <i class="fa-solid fa-list"></i> فتح
+    </a>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Webhook deliveries</div>
+    <div class="stat-value">{{ s.webhook_deliveries.delivered + s.webhook_deliveries.queued + s.webhook_deliveries.retrying + s.webhook_deliveries.failed }}</div>
+    <div class="stat-sub">
+      queued: {{ s.webhook_deliveries.queued }} ·
+      retrying: <span class="warn">{{ s.webhook_deliveries.retrying }}</span> ·
+      failed: <span class="err">{{ s.webhook_deliveries.failed }}</span> ·
+      delivered: <span class="ok">{{ s.webhook_deliveries.delivered }}</span>
+    </div>
+    <a href="{{ url_for('radius.wh_deliveries') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">
+      <i class="fa-solid fa-list"></i> فتح
+    </a>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">MT Routers</div>
+    <div class="stat-value">
+      <span class="ok">{{ s.mt_routers.enabled }}</span>/{{ s.mt_routers.total }}
+    </div>
+    <div class="stat-sub">مفعَّل / إجمالي</div>
+    <a href="{{ url_for('radius.mt_list') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">إدارة</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="title">عدّادات الكيانات</span></div>
+  <div class="card-body card-body--flush">
+    <table class="hr-table">
+      <thead><tr><th>الكيان</th><th>العدد</th></tr></thead>
+      <tbody>
+        {% for k, v in s.counts.items() %}
+        <tr><td class="mono">{{ k }}</td><td class="num">{{ v }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="title">MT Routers</span></div>
+  <div class="card-body card-body--flush">
+    {% if s.mt_routers['items'] %}
+    <table class="hr-table">
+      <thead><tr><th>#</th><th>الاسم</th><th>المضيف</th><th>الحالة</th><th>آخر فحص</th><th>آخر نتيجة</th></tr></thead>
+      <tbody>
+        {% for r in s.mt_routers['items'] %}
+        <tr>
+          <td class="num">{{ r.id }}</td>
+          <td><strong>{{ r.name }}</strong></td>
+          <td class="mono">{{ r.host }}</td>
+          <td>{% if r.enabled %}<span class="pill pill-success">مفعَّل</span>
+              {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}</td>
+          <td class="mono">{{ r.last_seen_at[:16] if r.last_seen_at else '—' }}</td>
+          <td class="mono" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.last_status or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty"><i class="fa-solid fa-router"></i>لا اتصالات MT</div>{% endif %}
+  </div>
+</div>
+
+<div class="hint" style="margin-top:10px">
+  للحصول على JSON: <code>?format=json</code> أو <code>Accept: application/json</code>.
+  آخر تحديث: <span class="mono">{{ s.now }}</span>
+</div>
+{% endblock %}

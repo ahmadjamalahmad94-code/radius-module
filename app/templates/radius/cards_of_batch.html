@@ -1,0 +1,57 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}دفعة {{ batch.batch_code if batch else '' }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
+{% block page_title %}دفعة {{ batch.batch_code if batch else '—' }}{% endblock %}
+
+{% block content %}
+{% if batch %}
+<div class="profile-banner">
+  <div class="avatar"><i class="fa-solid fa-layer-group"></i></div>
+  <div class="info">
+    <div class="id-big">{{ batch.batch_code }}</div>
+    <div class="id-sub">{{ plan.name if plan else '—' }} · أنشأها {{ batch.created_by or '—' }} · {{ batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else '' }}</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">{{ batch.generated }}</div><div class="l">مُولَّد</div></div>
+    <div class="stat"><div class="v">{{ batch.used }}</div><div class="l">مستخدَم</div></div>
+    <div class="stat"><div class="v">{{ "%.0f"|format((batch.used/batch.generated*100) if batch.generated else 0) }}%</div><div class="l">نسبة</div></div>
+    <div class="stat"><div class="v">{{ "%.2f"|format(plan.price) if plan else '0.00' }}</div><div class="l">{{ plan.currency if plan else '' }}</div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="title">بطاقات الدفعة</span>
+    <span class="meta">{{ items|length }} بطاقة</span>
+  </div>
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="50" data-persist-key="batch-cards">
+      <thead><tr>
+        <th>#</th><th>اليوزر</th><th>الباسورد</th>
+        <th>الحالة</th><th>أول استخدام</th><th>MAC</th>
+      </tr></thead>
+      <tbody>
+        {% for c in items %}
+        <tr>
+          <td class="num">{{ c.id }}</td>
+          <td class="mono"><strong>{{ c.username }}</strong></td>
+          <td class="mono">{{ c.password }}</td>
+          <td>
+            {% if c.revoked %}<span class="pill pill-danger">ملغاة</span>
+            {% elif c.used %}<span class="pill pill-info">مستخدمة</span>
+            {% else %}<span class="pill pill-success">جاهزة</span>{% endif %}
+          </td>
+          <td class="mono">{{ c.first_used_at.strftime('%Y-%m-%d %H:%M') if c.first_used_at else '—' }}</td>
+          <td class="mono">{{ c.used_by_mac or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-id-card"></i>لا بطاقات</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

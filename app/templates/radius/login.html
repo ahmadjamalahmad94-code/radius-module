@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تسجيل الدخول — Hobe Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
+  <style>
+    body{
+      display:flex;align-items:center;justify-content:center;min-height:100vh;
+      background:linear-gradient(135deg, #1A2230 0%, #2C3849 100%);
+      margin:0;padding:20px;
+    }
+    .login-card{
+      background:#fff;border-radius:12px;width:380px;max-width:100%;
+      padding:32px 28px;box-shadow:0 16px 40px rgba(0,0,0,.3);
+    }
+    .login-logo{
+      display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px;
+    }
+    .login-logo .mark{
+      width:56px;height:56px;border-radius:14px;
+      background:linear-gradient(135deg, #2BAACC, #1F8FB0);
+      display:grid;place-items:center;color:#fff;font-weight:900;font-size:22px;
+      box-shadow:0 8px 22px rgba(43,170,204,.4);
+    }
+    .login-logo .name{font-size:22px;font-weight:800;color:var(--hr-text)}
+    .login-logo .sub{font-size:11px;color:var(--hr-text-muted);letter-spacing:1.2px;text-transform:uppercase}
+    .login-title{font-size:14px;color:var(--hr-text-soft);text-align:center;margin-bottom:18px}
+    .login-card .field{margin-bottom:14px;position:relative}
+    .login-card label{font-size:11.5px;color:var(--hr-text-soft);font-weight:700;display:block;margin-bottom:5px}
+    .login-card input{
+      width:100%;padding:10px 36px 10px 12px;border:1px solid var(--hr-border-strong);
+      border-radius:6px;font-size:13.5px;font-family:inherit;
+    }
+    .login-card input:focus{
+      outline:none;border-color:var(--hr-cyan-500);
+      box-shadow:0 0 0 3px rgba(43,170,204,.15);
+    }
+    .login-card .field i{
+      position:absolute;left:10px;top:32px;color:var(--hr-text-muted);font-size:13px;
+    }
+    .login-card .btn-login{
+      width:100%;padding:11px;background:linear-gradient(135deg, #2BAACC, #1F8FB0);
+      color:#fff;border:none;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;
+      margin-top:6px;
+    }
+    .login-card .btn-login:hover{filter:brightness(1.05)}
+    .login-foot{text-align:center;margin-top:16px;font-size:11px;color:var(--hr-text-muted)}
+    .login-foot strong{color:var(--hr-cyan-700)}
+    .flash{margin-bottom:12px}
+  </style>
+</head>
+<body>
+
+<form class="login-card" method="post" action="{{ url_for('radius.auth_login') }}">
+
+  <div class="login-logo">
+    <div class="mark">HR</div>
+    <div>
+      <div class="name">Hobe Hub</div>
+      <div class="sub">Radius Premium Control</div>
+    </div>
+  </div>
+
+  <div class="login-title">سجّل الدخول للوصول إلى لوحة التحكم</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="field">
+    <label>اسم المستخدم</label>
+    <input type="text" name="username" required value="{{ username or '' }}" autofocus>
+    <i class="fa-solid fa-user"></i>
+  </div>
+
+  <div class="field">
+    <label>كلمة المرور</label>
+    <input type="password" name="password" required>
+    <i class="fa-solid fa-lock"></i>
+  </div>
+
+  <button class="btn-login" type="submit">
+    <i class="fa-solid fa-right-to-bracket"></i>&nbsp; دخول
+  </button>
+
+  <div class="login-foot">
+    افتراضي للديمو: <strong>admin / admin</strong>
+  </div>
+</form>
+
+</body>
+</html>

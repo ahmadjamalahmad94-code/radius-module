@@ -1,0 +1,30 @@
+# systemd unit — للنشر المباشر (بدون Docker)
+# ضعه في: /etc/systemd/system/hoberadius.service
+# ثم: systemctl enable --now hoberadius
+
+[Unit]
+Description=HobeRadius (Flask + gunicorn)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hr
+Group=hr
+WorkingDirectory=/opt/hoberadius
+EnvironmentFile=/opt/hoberadius/.env
+ExecStart=/opt/hoberadius/.venv/bin/gunicorn -c deploy/gunicorn.conf.py wsgi:app
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=4096
+
+# security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/hoberadius/instance /opt/hoberadius/logs
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

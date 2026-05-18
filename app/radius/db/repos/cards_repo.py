@@ -1,0 +1,193 @@
+"""Card batches + Cards repo."""
+from __future__ import annotations
+
+import secrets
+import string
+from datetime import datetime
+from typing import Optional
+
+from ...core.types import Card, CardBatch
+from ..connection import db, transaction
+from ..helpers import dt_to_iso, now_iso, parse_dt
+
+
+def _batch_row(r) -> CardBatch:
+    return CardBatch(
+        id=r["id"], batch_code=r["batch_code"], package_name=r["package_name"] or "",
+        plan_id=r["plan_id"], tenant_id=r["tenant_id"],
+        count=r["count"], generated=r["generated"], used=r["used"],
+        price_per_card=r["price_per_card"] or 0.0, price_bulk=r["price_bulk"] or 0.0,
+        total_quota_mb=r["total_quota_mb"] or 0,
+        username_prefix=r["username_prefix"] or "", username_suffix=r["username_suffix"] or "",
+        username_length=r["username_length"] or 8,
+        include_batch_number=bool(r["include_batch_number"]),
+        password_length=r["password_length"] or 6,
+        password_charset=r["password_charset"] or "digits",
+        expire_at=parse_dt(r["expire_at"]),
+        validity_after_first_login_days=r["validity_after_first_login_days"] or 0,
+        count_by_seconds=bool(r["count_by_seconds"]),
+        count_from_first_connect=bool(r["count_from_first_connect"]),
+        on_quota_exhaust=r["on_quota_exhaust"] or "stop",
+        switch_to_mac_on_connect=bool(r["switch_to_mac_on_connect"]),
+        lock_to_mac_on_close=bool(r["lock_to_mac_on_close"]),
+        phone_only_login=bool(r["phone_only_login"]),
+        service_name=r["service_name"] or "", notes=r["notes"] or "",
+        manager_id=r["manager_id"] or 0,
+        created_by=r["created_by"] or "",
+        status=r["status"] or "active",
+        created_at=parse_dt(r["created_at"]),
+    )
+
+
+def _card_row(r) -> Card:
+    return Card(
+        id=r["id"], tenant_id=r["tenant_id"], batch_id=r["batch_id"],
+        username=r["username"], password=r["password"], plan_id=r["plan_id"],
+        used=bool(r["used"]), first_used_at=parse_dt(r["first_used_at"]),
+        used_by_mac=r["used_by_mac"] or "",
+        used_by_subscriber_id=r["used_by_subscriber_id"],
+        expire_at=parse_dt(r["expire_at"]),
+        revoked=bool(r["revoked"]),
+        created_at=parse_dt(r["created_at"]),
+    )
+
+
+# ─────────────── batches ───────────────
+
+def list_batches(tenant_id: int, *, limit: int = 100, offset: int = 0) -> list[CardBatch]:
+    cur = db().execute(
+        "SELECT * FROM card_batches WHERE tenant_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
+        (tenant_id, limit, offset)
+    )
+    return [_batch_row(r) for r in cur.fetchall()]
+
+
+def get_batch(tenant_id: int, batch_id: int) -> Optional[CardBatch]:
+    cur = db().execute(
+        "SELECT * FROM card_batches WHERE tenant_id = ? AND id = ?",
+        (tenant_id, batch_id)
+    )
+    row = cur.fetchone()
+    return _batch_row(row) if row else None
+
+
+def _build_batch_code(tenant_id: int) -> str:
+    cur = db().execute("SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ?", (tenant_id,))
+    n = cur.fetchone()["c"] + 1
+    return f"B-{datetime.utcnow().strftime('%Y%m%d')}-{n:04d}"
+
+
+def create_batch(b: CardBatch) -> CardBatch:
+    code = b.batch_code or _build_batch_code(b.tenant_id)
+    now = now_iso()
+    with transaction() as conn:
+        cur = conn.execute("""
+            INSERT INTO card_batches(tenant_id, batch_code, package_name, plan_id, count, generated, used,
+                price_per_card, price_bulk, total_quota_mb,
+                username_prefix, username_suffix, username_length, include_batch_number,
+                password_length, password_charset, expire_at, validity_after_first_login_days,
+                count_by_seconds, count_from_first_connect, on_quota_exhaust,
+                switch_to_mac_on_connect, lock_to_mac_on_close, phone_only_login,
+                service_name, notes, manager_id, created_by, status, created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
+              b.price_per_card, b.price_bulk, b.total_quota_mb,
+              b.username_prefix, b.username_suffix, b.username_length,
+              int(b.include_batch_number),
+              b.password_length, b.password_charset, dt_to_iso(b.expire_at),
+              b.validity_after_first_login_days,
+              int(b.count_by_seconds), int(b.count_from_first_connect), b.on_quota_exhaust,
+              int(b.switch_to_mac_on_connect), int(b.lock_to_mac_on_close), int(b.phone_only_login),
+              b.service_name, b.notes, b.manager_id, b.created_by, "active", now))
+        new_id = cur.lastrowid
+    return get_batch(b.tenant_id, new_id)
+
+
+def update_batch_counters(tenant_id: int, batch_id: int, *, generated_delta: int = 0, used_delta: int = 0) -> None:
+    with transaction() as conn:
+        conn.execute("""
+            UPDATE card_batches
+            SET generated = generated + ?, used = used + ?
+            WHERE tenant_id = ? AND id = ?
+        """, (generated_delta, used_delta, tenant_id, batch_id))
+
+
+# ─────────────── cards ───────────────
+
+def _random_str(n: int, *, charset: str = "digits") -> str:
+    alpha = string.digits if charset == "digits" else (
+        string.ascii_lowercase if charset == "alpha" else string.ascii_lowercase + string.digits
+    )
+    return "".join(secrets.choice(alpha) for _ in range(n))
+
+
+def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
+                used: Optional[bool] = None, revoked: Optional[bool] = None,
+                limit: int = 200, offset: int = 0) -> list[Card]:
+    sql = "SELECT * FROM cards WHERE tenant_id = ?"
+    vals: list = [tenant_id]
+    if batch_id is not None:
+        sql += " AND batch_id = ?"; vals.append(batch_id)
+    if used is not None:
+        sql += " AND used = ?"; vals.append(1 if used else 0)
+    if revoked is not None:
+        sql += " AND revoked = ?"; vals.append(1 if revoked else 0)
+    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    vals += [limit, offset]
+    cur = db().execute(sql, vals)
+    return [_card_row(r) for r in cur.fetchall()]
+
+
+def stats(tenant_id: int) -> dict:
+    total = db().execute("SELECT COUNT(*) AS c FROM cards WHERE tenant_id = ?", (tenant_id,)).fetchone()["c"]
+    used = db().execute("SELECT COUNT(*) AS c FROM cards WHERE tenant_id = ? AND used = 1", (tenant_id,)).fetchone()["c"]
+    batches = db().execute("SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ?", (tenant_id,)).fetchone()["c"]
+    return {"total_cards": total, "used_cards": used, "total_batches": batches}
+
+
+def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
+                   username_prefix: str = "", username_length: int = 8,
+                   password_length: int = 6, password_charset: str = "digits",
+                   expire_at: Optional[datetime] = None) -> list[Card]:
+    if count <= 0:
+        return []
+    now = now_iso()
+    rows = []
+    seen: set[str] = set()
+
+    # سحب الـ usernames الموجودة لمنع التضارب
+    cur = db().execute("SELECT username FROM cards WHERE tenant_id = ?", (tenant_id,))
+    for r in cur.fetchall():
+        seen.add(r["username"])
+
+    for _ in range(count):
+        for _try in range(40):
+            uname = (username_prefix + _random_str(max(4, username_length - len(username_prefix)),
+                                                    charset="digits")).lower()
+            if uname not in seen:
+                seen.add(uname)
+                break
+        else:
+            uname = (username_prefix + _random_str(12, charset="mixed")).lower()
+            seen.add(uname)
+        pwd = _random_str(password_length, charset=password_charset)
+        rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
+
+    with transaction() as conn:
+        conn.executemany("""
+            INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
+            VALUES(?,?,?,?,?,?,?,?,?)
+        """, rows)
+    update_batch_counters(tenant_id, batch_id, generated_delta=count)
+    # نُرجع الكروت الجديدة
+    cur = db().execute(
+        "SELECT * FROM cards WHERE tenant_id = ? AND batch_id = ? ORDER BY id DESC LIMIT ?",
+        (tenant_id, batch_id, count)
+    )
+    return [_card_row(r) for r in cur.fetchall()]
+
+
+def revoke_card(tenant_id: int, card_id: int) -> None:
+    with transaction() as conn:
+        conn.execute("UPDATE cards SET revoked = 1 WHERE tenant_id = ? AND id = ?",
+                     (tenant_id, card_id))

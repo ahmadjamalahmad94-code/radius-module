@@ -1,0 +1,60 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}كل الكروت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
+{% block page_title %}كل الكروت{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} بطاقة)</span>{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar">
+  <select name="used">
+    <option value="">كل الكروت</option>
+    <option value="0" {% if used == '0' %}selected{% endif %}>غير مستخدم فقط</option>
+    <option value="1" {% if used == '1' %}selected{% endif %}>مستخدم فقط</option>
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="50" data-persist-key="all-cards">
+      <thead><tr>
+        <th>#</th><th>اليوزر</th><th>الباسورد</th><th>الباقة</th><th>الدفعة</th>
+        <th>الحالة</th><th>تنتهي</th><th style="width:80px">إجراء</th>
+      </tr></thead>
+      <tbody>
+        {% for c in items %}
+        <tr>
+          <td class="num">{{ c.id }}</td>
+          <td class="mono"><strong>{{ c.username }}</strong></td>
+          <td class="mono">{{ c.password }}</td>
+          <td>{{ plans[c.plan_id].name if plans.get(c.plan_id) else '—' }}</td>
+          <td class="mono">
+            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}">
+              {{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}
+            </a>
+          </td>
+          <td>
+            {% if c.revoked %}<span class="pill pill-danger">ملغاة</span>
+            {% elif c.used %}<span class="pill pill-info">مستخدمة</span>
+            {% else %}<span class="pill pill-success">جاهزة</span>{% endif %}
+          </td>
+          <td class="mono">{{ c.expire_at.strftime('%Y-%m-%d') if c.expire_at else '—' }}</td>
+          <td>
+            {% if not c.revoked %}
+            <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
+                  onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
+              <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-id-card"></i>لا كروت</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

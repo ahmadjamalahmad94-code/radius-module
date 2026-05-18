@@ -1,0 +1,277 @@
+# HobeRadius — RUNBOOK (S5 Live Test)
+
+> دليل تشغيل وتجربة Phase-1 على VPS حقيقي مع MikroTik فعلي.
+> اتبع الخطوات بالترتيب. كل خطوة لها **معيار نجاح** صريح.
+
+---
+
+## A. المتطلّبات قبل البدء
+
+| البند | الحد الأدنى |
+|------|------------|
+| VPS | Ubuntu 22.04+ · 1 vCPU · 1GB RAM · 20GB SSD |
+| Network | IPv4 عام + port 80/443 مفتوح + (اختياري) 8728/8729 للوصول من Mikrotik للـ VPS |
+| Domain | DNS A record لـ VPS IP (اختياري للـ TLS) |
+| MikroTik | RouterOS ≥ 6.45 (موصى به 7.x) + API enabled |
+| على جهازك | ssh + scp |
+
+### تجهيز MikroTik (مرّة واحدة):
+```
+# على RouterOS:
+/ip service set api disabled=no port=8728
+# اختياري للأمان: TLS
+/ip service set api-ssl disabled=no port=8729 certificate=auto
+# مستخدم لـ HobeRadius (احذف group=full إن أردت تقييد أكثر):
+/user group add name=hr-api policy=read,write,api,test
+/user add name=hr password=STRONG-PASS group=hr-api
+```
+
+تحقّق:
+```
+/ip service print where name~"api"
+/user print where name=hr
+```
+
+---
+
+## B. النشر على VPS (5 دقائق)
+
+### 1. SSH وتجهيز
+```bash
+ssh root@YOUR_VPS_IP
+cd /opt
+git clone <repo-url> hoberadius
+cd hoberadius
+chmod +x deploy/deploy.sh deploy/backup.sh deploy/restore.sh
+```
+
+### 2. تثبيت + بناء + تشغيل (أمر واحد)
+```bash
+sudo bash deploy/deploy.sh init
+```
+
+سيقوم بـ:
+1. تثبيت Docker إن لزم.
+2. توليد `.env` بـ SECRET عشوائي.
+3. بناء الصورة.
+4. تشغيل containers (app + nginx + backup).
+5. انتظار healthcheck.
+
+**معيار النجاح**: تنتهي الرسالة بـ `✅ تم`.
+
+### 3. TLS (اختياري لكن موصى به)
+```bash
+sudo bash deploy/deploy.sh tls radius.example.com
+```
+
+**معيار النجاح**: `curl -fsS https://radius.example.com/admin/radius/_health` يردّ 200.
+
+---
+
+## C. الإعداد الأوّلي
+
+### 1. تسجيل الدخول
+- افتح: `https://YOUR_DOMAIN/` أو `http://VPS_IP/`
+- login: **`admin / admin`**
+- **فورًا**: اذهب لـ `/admin/radius/admins` → غيّر كلمة admin.
+
+### 2. إنشاء API Token
+- `/admin/radius/tokens` → "إنشاء توكن" → سمّه `prod-key`.
+- **انسخ القيمة الكاملة فورًا** (تظهر مرة واحدة).
+- احفظها في مكان آمن (سنستخدمها للـ smoke test).
+
+### 3. إضافة MikroTik connection
+- `/admin/radius/mt/new`
+- املأ: host, port (8728), username (hr), password (STRONG-PASS).
+- اختر **اختبار** — يجب أن يقرأ identity من الـ router.
+- **معيار النجاح**: رسالة "اتصال ناجح: <router-name>".
+
+### 4. إنشاء Plan
+- `/admin/radius/plans/new` → مثال: name=`hour-plan`, speed_down=4096, speed_up=2048, session_timeout=3600s.
+- بعد الحفظ: `/admin/radius/sync` → ترى job `plan_upsert` → خلال 3 ثوانٍ → status=`done`.
+- **معيار النجاح**: على الـ router:
+  ```
+  /ip hotspot user profile print where name=hour-plan
+  ```
+  يظهر الـ profile.
+
+### 5. إنشاء Subscriber
+- `/admin/radius/users/new` → username=`testuser`, password=`test123`, plan=hour-plan.
+- `/admin/radius/sync` → status=`done`.
+- على الـ router:
+  ```
+  /ip hotspot user print where name=testuser
+  ```
+  يجب أن يظهر.
+
+---
+
+## D. الاختبار الحي مع موبايل
+
+### 1. الاتصال بـ Hotspot
+- اتصل بـ Wi-Fi الـ MikroTik HotSpot.
+- في صفحة الدخول: `testuser / test123` → نجاح.
+
+### 2. تحقّق من الجلسة في HobeRadius
+- `/admin/radius/online` → خلال 5-30 ثانية تظهر الجلسة (IP, MAC, NAS).
+- على الـ router للمقارنة: `/ip hotspot active print where user=testuser`.
+
+### 3. تحقّق من accounting
+- انتظر 30+ ثانية.
+- `/admin/radius/users/testuser/edit` (مؤقتًا، حتى نضيف tab) — استخدم API:
+  ```bash
+  curl -fsS -H "Authorization: Bearer YOUR_TOKEN" \
+       https://YOUR_DOMAIN/api/v1/accounting?username=testuser | jq
+  ```
+- يجب أن تجد row مع bytes_in/out.
+
+### 4. قطع الجلسة
+- `/admin/radius/online` → "قطع" بجانب الجلسة.
+- خلال 3 ثوانٍ: الموبايل ينقطع فعلًا.
+- audit: `/admin/radius/audit` → سطر `disconnect`.
+
+### 5. accounting بعد الانقطاع
+- بعد 30s إضافية: row في `radacct` بـ `acctstoptime` مُعبّأ.
+- webhook (إن مُعدّ): `session.stopped` event.
+
+---
+
+## E. اختبار Webhooks
+
+### 1. إعداد target
+- `/admin/radius/webhooks` → target_url=`https://webhook.site/your-unique-id` + secret كيفما تشاء.
+- اضغط حفظ.
+
+### 2. تجربة
+- API: `curl -X POST -H "Authorization: Bearer YOUR_TOKEN" https://YOUR_DOMAIN/api/v1/webhooks/test`
+- على webhook.site → يجب أن يصل request مع `X-HobeRadius-Signature`.
+
+### 3. أحداث حقيقية
+- أنشئ subscriber آخر → webhook `account.created`.
+- اقطع جلسة → `session.disconnected`.
+- `/admin/radius/webhooks/deliveries` → سجل الإرسال.
+
+---
+
+## F. تحقّق Restart Persistence
+
+```bash
+docker compose -f deploy/docker-compose.yml restart app
+sleep 5
+curl -fsS https://YOUR_DOMAIN/admin/radius/_healthz
+```
+
+ثم في المتصفّح:
+- login يعمل (admin/passwd الجديد).
+- subscribers/plans/cards الموجودة.
+- `radacct` ما زال يحوي الجلسات السابقة.
+
+**معيار النجاح**: كل البيانات موجودة + healthy.
+
+---
+
+## G. Smoke Test تلقائي
+
+من جهازك (أو من VPS نفسه):
+```bash
+python tests/smoke_e2e.py \
+    --url https://radius.example.com \
+    --token YOUR_TOKEN \
+    --mt "host=10.0.0.1,user=hr,pass=STRONG-PASS,port=8728"
+```
+
+**معيار النجاح**: `✅ كل الاختبارات نجحت.` في الأسفل.
+
+---
+
+## H. مراقبة استمرارية التشغيل (15 دقيقة)
+
+### الواجهة المُلتقطة:
+- `/admin/radius/_status` — auto-refresh كل 10s.
+- يجب أن ترى:
+  - 3 workers `is_alive=true`
+  - sync_queue: queued ينخفض → done يرتفع
+  - MT Routers: enabled count > 0
+  - last_seen_at للـ MT يتحدّث
+
+### الـ logs:
+```bash
+sudo bash deploy/deploy.sh logs
+```
+
+ابحث عن:
+- ❌ `Traceback` → خطأ غير متوقّع، أبلغني
+- ✅ `sync_worker job=N done` → يعمل
+- ✅ `webhook sent event=...` → webhooks تخرج
+
+---
+
+## I. ما الذي تتفقّده يوميًا (Sanity Checks)
+
+| البند | الأمر | المتوقّع |
+|------|-------|---------|
+| Health | `curl https://X/admin/radius/_healthz` | `status: ok` |
+| Disk | `du -sh /opt/hoberadius/instance/` | `< 200MB في أول شهر` |
+| Backups | `ls -lh /opt/hoberadius/backups/` | يومي، آخر 14 |
+| Sync queue stuck | `/admin/radius/sync?status=failed` | فارغة أو معالَجة |
+| MT last_seen | `/admin/radius/_status` | < ساعة |
+
+---
+
+## J. Troubleshooting
+
+| العَرَض | الفحص | الحل |
+|---------|--------|------|
+| login يفشل | `docker compose ps app` healthy? | restart container |
+| sync فاشل لكل jobs | افحص `/admin/radius/mt/<id>/test` | جدّد credentials، تأكد port 8728 مفتوح من VPS لـ MT |
+| `connection refused` على MT | `nc -zv MT_IP 8728` من VPS | افتح firewall على MT أو غيّر network |
+| webhooks لا تصل | `/admin/radius/webhooks/deliveries` | افحص target_url، آخر error excerpt |
+| Disk full بسرعة | `du -sh /opt/hoberadius/*` | راجع logs/ → `docker system prune -af` |
+| Login redirect loop | امسح cookies للـ domain | جلسة قديمة من قبل تغيير SECRET |
+| 502 Bad Gateway | `docker compose logs nginx` | تأكد app يستجيب على 8000 |
+| DB locked | تتم محاكاتها تلقائيًا (busy_timeout=30s) | لو استمرّت: `docker compose restart app` |
+
+---
+
+## K. خطوات التراجع (Rollback)
+
+```bash
+# 1. أوقف
+sudo bash deploy/deploy.sh status     # تأكد من الإصدار
+docker compose -f deploy/docker-compose.yml down
+
+# 2. استعد آخر backup
+ls /opt/hoberadius/backups/
+sudo bash deploy/restore.sh /opt/hoberadius/backups/hoberadius-YYYYMMDD-HHMMSS.db.gz
+
+# 3. ارجع لـ commit سابق
+cd /opt/hoberadius && git log --oneline | head -10
+git checkout <previous-sha>
+
+# 4. شغّل
+sudo bash deploy/deploy.sh upgrade
+```
+
+---
+
+## L. معايير نجاح S5 الكاملة
+
+أنجزت S5 بنجاح **فقط** عند تحقّق هذه:
+
+- [ ] `deploy.sh init` يعمل من VPS فارغ
+- [ ] TLS مفعَّل (إذا domain)
+- [ ] login + change password
+- [ ] إنشاء MT config + اختبار = success
+- [ ] إنشاء plan → ظهور على MT خلال 5s
+- [ ] إنشاء subscriber → ظهور على MT خلال 5s
+- [ ] موبايل يتصل بـ Hotspot
+- [ ] `/online` يعرض الجلسة الحية
+- [ ] قطع جلسة من UI → الموبايل ينقطع
+- [ ] accounting puller يكتب radacct خلال 30s
+- [ ] webhook test ينجح + الـ signature صحيحة
+- [ ] restart container → كل البيانات موجودة
+- [ ] `smoke_e2e.py` ينجح
+- [ ] **15 دقيقة تشغيل بدون crash**
+- [ ] sync_queue.failed = 0 بعد كل العمليات
+
+عند تحقّق **كل ما سبق** = Phase-1 مُسلَّمة فعليًا.

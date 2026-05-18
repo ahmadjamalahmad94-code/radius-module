@@ -1,0 +1,58 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}المدراء{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
+{% block page_title %}المدراء{% endblock %}
+{% block page_sub %}<span class="sub">({{ admins|length }})</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.admins_new') }}">
+    <i class="fa-solid fa-user-plus"></i> إضافة مدير
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if admins %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="admins-list">
+      <thead><tr>
+        <th>#</th><th>اليوزر</th><th>الاسم</th><th>الدور</th>
+        <th>البريد</th><th>آخر دخول</th><th>الحالة</th>
+        <th style="width:110px">إجراءات</th>
+      </tr></thead>
+      <tbody>
+        {% for a in admins %}
+        <tr>
+          <td class="num">{{ a.id }}</td>
+          <td class="mono"><strong>{{ a.username }}</strong></td>
+          <td>{{ a.full_name or '—' }}</td>
+          <td>
+            <span class="pill pill-cyan">
+              {{ roles[a.role_id].display_name if a.role_id and roles.get(a.role_id) else '—' }}
+            </span>
+          </td>
+          <td class="mono">{{ a.email or '—' }}</td>
+          <td class="mono">{{ a.last_login_at.strftime('%Y-%m-%d %H:%M') if a.last_login_at else '—' }}</td>
+          <td>
+            {% if a.enabled %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
+            {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
+          </td>
+          <td>
+            <div class="cell-actions">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
+                <i class="fa-solid fa-pen"></i></a>
+              <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}"
+                    onsubmit="return confirm('حذف {{ a.username|e }}؟');" style="display:inline">
+                <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-user-shield"></i>لا مدراء</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة مشترك" if is_new else "تعديل مشترك" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-plus"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
+
+  <div class="card">
+    <div class="card-header"><span class="title">معلومات الدخول</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>اسم المستخدم *</label>
+        <div class="field"><input type="text" name="username" required {% if not is_new %}readonly{% endif %}
+            value="{{ sub.username or '' }}"></div></div>
+      <div class="form-row"><label>كلمة المرور {% if is_new %}*{% endif %}</label>
+        <div class="field"><input type="text" name="password" {% if is_new %}required{% endif %}
+            placeholder="{{ '••••••••' if not is_new else '' }}"
+            value="{{ sub.password if is_new else '' }}"></div></div>
+      <div class="form-row"><label>نوع الحساب</label>
+        <div class="field"><select name="user_type">
+          {% for t in user_types %}<option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>الباقة</label>
+        <div class="field"><select name="plan_id">
+          <option value="">— بدون —</option>
+          {% for p in plans %}<option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>مرجع HobeHub</label>
+        <div class="field"><input type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">المعلومات الشخصية</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الاسم الكامل</label>
+        <div class="field"><input type="text" name="full_name" value="{{ sub.full_name or '' }}"></div></div>
+      <div class="form-row"><label>الجوال</label>
+        <div class="field"><input type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div></div>
+      <div class="form-row"><label>البريد</label>
+        <div class="field"><input type="email" name="email" value="{{ sub.email or '' }}"></div></div>
+      <div class="form-row"><label>الرقم الوطني</label>
+        <div class="field"><input type="text" name="national_id" value="{{ sub.national_id or '' }}"></div></div>
+      <div class="form-row"><label>العنوان</label>
+        <div class="field"><input type="text" name="address" value="{{ sub.address or '' }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">قيود الشبكة</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>قفل MAC</label>
+        <div class="field"><input type="text" name="mac_lock" value="{{ sub.mac_lock or '' }}" placeholder="AA:BB:CC:DD:EE:FF"></div></div>
+      <div class="form-row"><label>IP ثابت</label>
+        <div class="field"><input type="text" name="static_ip" value="{{ sub.static_ip or '' }}"></div></div>
+      <div class="form-row"><label>VLAN</label>
+        <div class="field"><input type="number" name="vlan_id" value="{{ sub.vlan_id }}"></div></div>
+      <div class="form-row"><label>تجاوز الجلسات</label>
+        <div class="field"><input type="number" name="override_concurrent" value="{{ sub.override_concurrent }}">
+          <div class="hint">0 = استخدم قيمة الباقة</div></div></div>
+      <div class="form-row"><label>ملاحظات</label>
+        <div class="field"><textarea name="remark">{{ sub.remark or '' }}</textarea></div></div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

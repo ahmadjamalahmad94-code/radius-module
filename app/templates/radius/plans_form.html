@@ -1,0 +1,129 @@
+{% extends "admin/_admin_layout.html" %}
+{% set title_ar = "إضافة عرض" if is_new else "تعديل عرض" %}
+{% block title %}{{ title_ar }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.plans_update', plan_id=plan.id) if not is_new else url_for('radius.plans_create') }}">
+
+  <div class="card">
+    <div class="card-header"><span class="title">المعلومات الأساسية</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الاسم *</label>
+        <div class="field"><input type="text" name="name" required value="{{ plan.name or '' }}"></div></div>
+      <div class="form-row"><label>الكود (SKU)</label>
+        <div class="field"><input type="text" name="code" value="{{ plan.code or '' }}"></div></div>
+      <div class="form-row"><label>النوع</label>
+        <div class="field"><select name="plan_type">
+          {% for t in plan_types %}<option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select></div></div>
+      <div class="form-row"><label>اللون</label>
+        <div class="field"><input type="text" name="color" value="{{ plan.color or '#2BAACC' }}"></div></div>
+      <div class="form-row"><label>الوصف</label>
+        <div class="field"><textarea name="description">{{ plan.description or '' }}</textarea></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">⏱ الوقت</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>مدة الجلسة (دقيقة)</label>
+        <div class="field"><input type="number" name="duration_minutes" min="0" value="{{ plan.duration_minutes }}"></div></div>
+      <div class="form-row"><label>صلاحية (أيام)</label>
+        <div class="field"><input type="number" name="validity_days" min="0" value="{{ plan.validity_days }}"></div></div>
+      <div class="form-row"><label>حد يومي (دقيقة)</label>
+        <div class="field"><input type="number" name="max_daily_minutes" min="0" value="{{ plan.max_daily_minutes }}"></div></div>
+      <div class="form-row"><label>حد أسبوعي (دقيقة)</label>
+        <div class="field"><input type="number" name="max_weekly_minutes" min="0" value="{{ plan.max_weekly_minutes }}"></div></div>
+      <div class="form-row"><label>حد شهري (دقيقة)</label>
+        <div class="field"><input type="number" name="max_monthly_minutes" min="0" value="{{ plan.max_monthly_minutes }}"></div></div>
+      <div class="form-row"><label>Session timeout (ث)</label>
+        <div class="field"><input type="number" name="session_timeout_sec" min="0" value="{{ plan.session_timeout_sec }}"></div></div>
+      <div class="form-row"><label>Idle timeout (ث)</label>
+        <div class="field"><input type="number" name="idle_timeout_sec" min="0" value="{{ plan.idle_timeout_sec }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">📦 الكوتا</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>كوتا إجمالية (MB)</label>
+        <div class="field"><input type="number" name="quota_total_mb" min="0" value="{{ plan.quota_total_mb }}"></div></div>
+      <div class="form-row"><label>كوتا يومية (MB)</label>
+        <div class="field"><input type="number" name="quota_daily_mb" min="0" value="{{ plan.quota_daily_mb }}"></div></div>
+      <div class="form-row"><label>كوتا شهرية (MB)</label>
+        <div class="field"><input type="number" name="quota_monthly_mb" min="0" value="{{ plan.quota_monthly_mb }}"></div></div>
+      <div class="form-row"><label>سياسة الإعادة</label>
+        <div class="field"><select name="quota_reset_strategy">
+          {% for s in ['rolling','monthly','never'] %}<option value="{{ s }}" {% if plan.quota_reset_strategy == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">⚡ السرعة</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>تنزيل (Kbps)</label>
+        <div class="field"><input type="number" name="speed_down_kbps" min="0" value="{{ plan.speed_down_kbps }}"></div></div>
+      <div class="form-row"><label>رفع (Kbps)</label>
+        <div class="field"><input type="number" name="speed_up_kbps" min="0" value="{{ plan.speed_up_kbps }}"></div></div>
+      <div class="form-row"><label>Burst تنزيل</label>
+        <div class="field"><input type="number" name="burst_down_kbps" min="0" value="{{ plan.burst_down_kbps }}"></div></div>
+      <div class="form-row"><label>Burst رفع</label>
+        <div class="field"><input type="number" name="burst_up_kbps" min="0" value="{{ plan.burst_up_kbps }}"></div></div>
+      <div class="form-row"><label>Burst threshold</label>
+        <div class="field"><input type="number" name="burst_threshold_kbps" min="0" value="{{ plan.burst_threshold_kbps }}"></div></div>
+      <div class="form-row"><label>Burst time (ث)</label>
+        <div class="field"><input type="number" name="burst_time_sec" min="0" value="{{ plan.burst_time_sec }}"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">🌐 الشبكة والربط</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>جلسات متزامنة</label>
+        <div class="field"><input type="number" name="concurrent_sessions" min="1" value="{{ plan.concurrent_sessions or 1 }}"></div></div>
+      <div class="form-row"><label>Address pool</label>
+        <div class="field"><input type="text" name="address_pool" value="{{ plan.address_pool or '' }}"></div></div>
+      <div class="form-row"><label>VLAN ID</label>
+        <div class="field"><input type="number" name="vlan_id" min="0" value="{{ plan.vlan_id }}"></div></div>
+      <div class="form-row"><label>ربط MAC</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="bind_mac" value="1" {% if plan.bind_mac %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+      <div class="form-row"><label>ربط IP</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="bind_ip" value="1" {% if plan.bind_ip %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">💰 تجاري</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>السعر</label>
+        <div class="field"><input type="number" step="0.01" name="price" min="0" value="{{ plan.price }}"></div></div>
+      <div class="form-row"><label>العملة</label>
+        <div class="field"><input type="text" name="currency" value="{{ plan.currency or 'JOD' }}"></div></div>
+      <div class="form-row"><label>الأولوية</label>
+        <div class="field"><input type="number" name="priority" value="{{ plan.priority or 100 }}"></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="enabled" value="1" {% if plan.enabled %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+        </label></div></div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.plans_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

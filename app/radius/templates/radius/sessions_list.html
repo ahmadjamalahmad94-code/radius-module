@@ -1,0 +1,103 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الجلسات المباشرة — RADIUS{% endblock %}
+{% block page_title %}الجلسات المباشرة (Online){% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>RADIUS</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>الجلسات المباشرة</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  <style>
+    .mode-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;
+      border-radius:999px;font-size:11.5px;font-weight:700;background:#e7f0fd;color:#1c52a8}
+    .mode-pill.manual{background:#FDF1CF;color:#7c2d12}
+    .mode-pill.api{background:#e8f6ee;color:#1f8f51}
+    .sess-row td{vertical-align:middle;font-size:13px}
+    .sess-row td.col-user{font-weight:700;color:var(--d-black)}
+    .mono{font-family:monospace;font-size:12px;color:var(--d-text-soft)}
+    .error-banner{background:#fde2e2;color:#b91c1c;border:1px solid #f7b3b3;
+      padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:16px}
+    .stage-banner{background:#FDF1CF;color:#7c2d12;border:1px solid #f4d97a;
+      padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:16px}
+    .empty{padding:32px;text-align:center;color:var(--d-text-muted);font-size:13.5px}
+  </style>
+{% endblock %}
+
+{% block content %}
+<div dir="rtl">
+
+  {% if settings.mode == "manual" %}
+    <div class="stage-banner">
+      وضع <strong>manual</strong> — لا توجد جلسات حية.
+      شغّل <code>RADIUS_MODE=live</code> + <code>RADIUS_API_READY=1</code> للرؤية الفعلية.
+    </div>
+  {% endif %}
+
+  {% if error %}
+    <div class="error-banner">تعذّر تحميل الجلسات: {{ error }}</div>
+  {% endif %}
+
+  <div class="d-card">
+    <div class="d-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h3 class="d-card-title" style="margin:0">المتصلون الآن</h3>
+        <span class="d-card-meta">{{ items|length }} جلسة</span>
+      </div>
+      <span class="mode-pill {{ settings.mode }}">{{ settings.mode }}</span>
+    </div>
+    <div class="d-card-body" style="padding:0">
+      {% if items %}
+      <table class="d-table"
+             data-paginated="1"
+             data-page-size="20"
+             data-page-sizes="10,20,50,100"
+             data-persist-key="radius-online-sessions">
+        <thead>
+          <tr>
+            <th>المستخدم</th>
+            <th>IP</th>
+            <th>MAC</th>
+            <th>NAS</th>
+            <th>بدأت</th>
+            <th>تحميل/تنزيل</th>
+            <th style="width:110px">إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in items %}
+          <tr class="sess-row">
+            <td class="col-user">{{ s.username }}</td>
+            <td class="mono">{{ s.framed_ip or "—" }}</td>
+            <td class="mono">{{ s.mac_address or "—" }}</td>
+            <td class="mono">{{ s.nas_address or "—" }}</td>
+            <td class="mono">{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else "—" }}</td>
+            <td class="mono">↑ {{ s.bytes_out }} / ↓ {{ s.bytes_in }}</td>
+            <td>
+              <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+                    onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
+                    style="display:inline">
+                <input type="hidden" name="username" value="{{ s.username }}">
+                <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                <button type="submit"
+                        style="background:#fde2e2;color:#b91c1c;border:none;cursor:pointer;
+                               padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600">
+                  <i class="fa-solid fa-plug-circle-xmark"></i> قطع
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">لا جلسات مباشرة حاليًا.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الـ Tenants{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
+{% block page_title %}الـ Tenants{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} جهة)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.tenants_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة Tenant
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if items %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="tenants-list">
+      <thead><tr>
+        <th>#</th><th>الـ slug</th><th>الاسم</th><th>الـ Tier</th>
+        <th>الحالة</th><th>الحدود</th><th>العملة</th><th>أُنشئ</th>
+        <th style="width:90px">إجراءات</th>
+      </tr></thead>
+      <tbody>
+        {% for t in items %}
+        <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
+          <td class="num">{{ t.id }}</td>
+          <td class="mono"><strong>{{ t.slug }}</strong></td>
+          <td>
+            <strong>{{ t.display_name or t.name }}</strong>
+            {% if t.email %}<div class="hint">{{ t.email }}</div>{% endif %}
+          </td>
+          <td>
+            <span class="pill pill-cyan">{{ t.plan_tier }}</span>
+          </td>
+          <td>
+            {% if t.status == 'active' %}<span class="pill pill-success"><span class="pill-dot"></span>active</span>
+            {% elif t.status == 'trial' %}<span class="pill pill-warn">trial</span>
+            {% elif t.status == 'suspended' %}<span class="pill pill-danger">suspended</span>
+            {% else %}<span class="pill">{{ t.status }}</span>{% endif %}
+          </td>
+          <td class="mono">
+            <div>{{ t.max_subscribers }} مشترك</div>
+            <div class="hint">{{ t.max_nas }} NAS · {{ t.api_rpm }} req/min</div>
+          </td>
+          <td>{{ t.currency }} · {{ t.locale }}</td>
+          <td class="mono">{{ t.created_at.strftime('%Y-%m-%d') if t.created_at else '—' }}</td>
+          <td>
+            <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-building"></i>لا tenants</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

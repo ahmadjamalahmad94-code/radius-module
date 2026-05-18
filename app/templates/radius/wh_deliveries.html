@@ -1,0 +1,46 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}سجل تسليم Webhooks{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
+{% block page_title %}سجل تسليم Webhooks{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block content %}
+<form method="get" class="filter-bar">
+  <select name="status">
+    <option value="">كل الحالات</option>
+    {% for s in ['queued','retrying','delivered','failed'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>الحدث</th><th>event_id</th><th>المحاولات</th>
+      <th>الحالة</th><th>آخر كود</th><th>آخر استجابة</th><th>التالي</th><th>أُنشئ</th>
+    </tr></thead>
+    <tbody>{% for d in items %}
+    <tr>
+      <td class="num">{{ d.id }}</td>
+      <td><strong>{{ d.event }}</strong></td>
+      <td class="mono">{{ d.event_id }}</td>
+      <td class="num">{{ d.attempts }}</td>
+      <td>
+        {% if d.status == 'delivered' %}<span class="pill pill-success">delivered</span>
+        {% elif d.status == 'queued' %}<span class="pill pill-info">queued</span>
+        {% elif d.status == 'retrying' %}<span class="pill pill-warn">retrying</span>
+        {% elif d.status == 'failed' %}<span class="pill pill-danger">failed</span>
+        {% else %}<span class="pill">{{ d.status }}</span>{% endif %}
+      </td>
+      <td class="num">{{ d.last_status_code or '—' }}</td>
+      <td class="mono" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ d.last_response_excerpt or '—' }}
+      </td>
+      <td class="mono">{{ d.next_attempt_at.strftime('%H:%M') if d.next_attempt_at else '—' }}</td>
+      <td class="mono">{{ d.created_at.strftime('%Y-%m-%d %H:%M') if d.created_at else '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-bolt"></i>لا سجلات</div>{% endif %}
+</div></div>
+{% endblock %}

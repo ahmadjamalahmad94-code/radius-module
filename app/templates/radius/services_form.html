@@ -1,0 +1,43 @@
+{% extends "admin/_admin_layout.html" %}
+{% set ttl = "إضافة معدّة" if is_new else "تعديل معدّة" %}
+{% block title %}{{ ttl }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
+{% block page_title %}{{ ttl }}{% endblock %}
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.svc_update', sid=item.id) if not is_new else url_for('radius.svc_create') }}">
+  <div class="card"><div class="card-header"><span class="title">المعطيات</span></div><div class="card-body">
+    <div class="form-row"><label>المشترك *</label>
+      <div class="field"><select name="subscriber_id" required>
+        <option value="">— اختر —</option>
+        {% for s in subs %}<option value="{{ s.id }}" {% if item.subscriber_id == s.id %}selected{% endif %}>{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>الاسم *</label>
+      <div class="field"><input type="text" name="name" required value="{{ item.name }}" placeholder="مثلًا: راوتر منزلي MikroTik hAP"></div></div>
+    <div class="form-row"><label>النوع</label>
+      <div class="field"><select name="type">
+        {% for t in ['router','onu','modem','cable','antenna','other'] %}<option value="{{ t }}" {% if item.type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>الرقم التسلسلي</label>
+      <div class="field"><input type="text" name="serial" value="{{ item.serial }}"></div></div>
+    <div class="form-row"><label>MAC</label>
+      <div class="field"><input type="text" name="mac" value="{{ item.mac }}"></div></div>
+    <div class="form-row"><label>إيجار / شهر</label>
+      <div class="field"><input type="number" step="0.01" name="rent_per_month" min="0" value="{{ item.rent_per_month }}"></div></div>
+    <div class="form-row"><label>الحالة</label>
+      <div class="field"><select name="status">
+        {% for s in ['given','returned','lost','damaged'] %}<option value="{{ s }}" {% if item.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>تاريخ التسليم</label>
+      <div class="field"><input type="date" name="given_at" value="{{ item.given_at.strftime('%Y-%m-%d') if item.given_at else '' }}"></div></div>
+    <div class="form-row"><label>تاريخ الإرجاع</label>
+      <div class="field"><input type="date" name="returned_at" value="{{ item.returned_at.strftime('%Y-%m-%d') if item.returned_at else '' }}"></div></div>
+    <div class="form-row"><label>ملاحظات</label>
+      <div class="field"><textarea name="notes">{{ item.notes }}</textarea></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.svc_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

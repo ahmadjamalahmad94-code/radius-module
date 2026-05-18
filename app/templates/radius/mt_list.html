@@ -1,0 +1,50 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}اتصالات MikroTik{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
+{% block page_title %}اتصالات MikroTik{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.mt_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة اتصال
+  </a>
+{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>الاسم</th><th>المضيف</th><th>المنفذ</th>
+      <th>المستخدم</th><th>TLS</th><th>الحالة</th>
+      <th>آخر فحص</th><th>آخر نتيجة</th><th style="width:170px"></th>
+    </tr></thead>
+    <tbody>{% for it in items %}
+    <tr>
+      <td class="num">{{ it.id }}</td>
+      <td><strong>{{ it.name }}</strong></td>
+      <td class="mono">{{ it.host }}</td>
+      <td class="num">{{ it.port }}</td>
+      <td class="mono">{{ it.username }}</td>
+      <td>{% if it.use_tls %}<span class="pill pill-success">TLS</span>{% else %}<span class="pill">plain</span>{% endif %}</td>
+      <td>
+        {% if it.enabled %}<span class="pill pill-success">مفعَّل</span>
+        {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
+      </td>
+      <td class="mono">{{ it.last_seen_at[:16] if it.last_seen_at else '—' }}</td>
+      <td class="mono" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ it.last_status or '—' }}
+      </td>
+      <td><div class="cell-actions">
+        <form method="post" action="{{ url_for('radius.mt_test', cid=it.id) }}" style="display:inline">
+          <button class="btn btn-primary btn-xs" title="اختبار الاتصال"><i class="fa-solid fa-plug"></i></button>
+        </form>
+        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.mt_edit', cid=it.id) }}"><i class="fa-solid fa-pen"></i></a>
+        <form method="post" action="{{ url_for('radius.mt_delete', cid=it.id) }}"
+              onsubmit="return confirm('حذف؟')" style="display:inline">
+          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
+        </form>
+      </div></td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-router"></i>لا اتصالات MikroTik</div>{% endif %}
+</div></div>
+{% endblock %}

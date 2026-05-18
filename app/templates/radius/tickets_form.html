@@ -1,0 +1,31 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}تذكرة جديدة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
+{% block page_title %}تذكرة جديدة{% endblock %}
+{% block content %}
+<form method="post">
+  <div class="card"><div class="card-header"><span class="title">المعلومات</span></div><div class="card-body">
+    <div class="form-row"><label>المشترك *</label>
+      <div class="field"><select name="subscriber_id" required>
+        <option value="">— اختر —</option>
+        {% for s in subs %}<option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>الموضوع *</label>
+      <div class="field"><input type="text" name="subject" required></div></div>
+    <div class="form-row"><label>الفئة</label>
+      <div class="field"><select name="category">
+        {% for c in ['general','billing','connection','hardware','complaint'] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>الأولوية</label>
+      <div class="field"><select name="priority">
+        {% for p in ['low','normal','high','urgent'] %}<option value="{{ p }}" {% if p=='normal' %}selected{% endif %}>{{ p }}</option>{% endfor %}
+      </select></div></div>
+    <div class="form-row"><label>التفاصيل</label>
+      <div class="field"><textarea name="body" rows="6"></textarea></div></div>
+  </div></div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> إنشاء</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.tk_list') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

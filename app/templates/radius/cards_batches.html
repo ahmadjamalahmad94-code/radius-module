@@ -1,0 +1,52 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}دفعات الكروت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
+{% block page_title %}دفعات الكروت{% endblock %}
+{% block page_sub %}<span class="sub">({{ batches|length }} دفعة)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_generate') }}">
+    <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء كروت
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if batches %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="card-batches">
+      <thead><tr>
+        <th>#</th><th>كود الدفعة</th><th>الباقة</th><th>عدد</th><th>منشأ</th>
+        <th>مستخدم</th><th>التقدّم</th><th>أنشأها</th><th>التاريخ</th>
+        <th style="width:80px">عرض</th>
+      </tr></thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td class="num">{{ b.id }}</td>
+          <td class="mono"><strong>{{ b.batch_code }}</strong></td>
+          <td>{{ plans[b.plan_id].name if plans.get(b.plan_id) else '—' }}</td>
+          <td class="num">{{ b.count }}</td>
+          <td class="num">{{ b.generated }}</td>
+          <td class="num">{{ b.used }}</td>
+          <td style="min-width:140px">
+            {% set pct = (b.used/b.generated*100) if b.generated else 0 %}
+            <div class="progress-bar"><span style="width: {{ pct }}%"></span></div>
+            <div class="hint" style="margin-top:2px">{{ "%.0f"|format(pct) }}%</div>
+          </td>
+          <td>{{ b.created_by or '—' }}</td>
+          <td class="mono">{{ b.created_at.strftime('%Y-%m-%d %H:%M') if b.created_at else '—' }}</td>
+          <td>
+            <a class="btn btn-primary btn-xs" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-layer-group"></i>لا دفعات بعد</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
