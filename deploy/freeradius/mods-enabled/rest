@@ -10,13 +10,16 @@ rest {
     connect_uri = "http://hoberadius:8000"
     connect_timeout = 4.0
 
-    # ـ HOBERADIUS_INTERNAL_SECRET تُمرَّر إلى الـ container كـ env عبر compose ـ
-    # وتُحقن هنا في Header X-Internal-Secret. الـ /api/v1/internal/* يفحصها.
+    # ─ HTTP headers (X-Internal-Secret) ─
+    # تنبيه: المعامل `header = ...` هنا غير موجود في rlm_rest section parser
+    # على FreeRADIUS 3.2.x ـ كان يُتجاهَل بصمت ولذلك الطلبات كانت تصل لـ Flask
+    # بدون X-Internal-Secret فيردّ 401. الحقن يتمّ الآن في sites-enabled/default
+    # عبر `update request { REST-HTTP-Header := "X-Internal-Secret: ..." }`
+    # قبل كل استدعاء `rest`. لا تُضِف header = هنا.
     authorize {
         uri      = "${..connect_uri}/api/v1/internal/auth"
         method   = "post"
         body     = "json"
-        header   = "X-Internal-Secret: ${env:HOBERADIUS_INTERNAL_SECRET}"
         # ـ نُمرّر CHAP-Password + CHAP-Challenge أيضًا لأن MikroTik hotspot
         # يستخدم HTTP-CHAP افتراضيًا، فـ %{User-Password} يكون فارغًا.
         # سياسة التحقّق (PAP vs CHAP) تُنفَّذ داخل /api/v1/internal/auth.
@@ -39,11 +42,11 @@ rest {
 
     # ـ post-auth webhook: Flask يكتب radpostauth داخليًا + يُرسل أحداث ـ
     # ـ لاحظ: لا نستدعي sql في post-auth (انظر sites-enabled/default) ـ
+    # ـ X-Internal-Secret يُحقَن في sites-enabled/default (انظر التعليق أعلاه) ـ
     post-auth {
         uri      = "${..connect_uri}/api/v1/internal/postauth"
         method   = "post"
         body     = "json"
-        header   = "X-Internal-Secret: ${env:HOBERADIUS_INTERNAL_SECRET}"
         data     = '{ \
             "User-Name": "%{User-Name}", \
             "reply_code": "%{reply:Packet-Type}", \
