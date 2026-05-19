@@ -11,3 +11,12 @@ venv/
 New Text Document.txt
 ????/
 /????/
+
+# Keep customer-roadmap source files trackable. The broad legacy 4-character
+# folder ignore above catches docs/ and core/ unintentionally.
+!docs/
+docs/*
+!docs/roadmap/
+!docs/roadmap/*.md
+!app/radius/core/
+!app/radius/core/customer_roadmap.py
