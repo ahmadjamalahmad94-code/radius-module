@@ -105,6 +105,21 @@ def _register_all(bp: Blueprint) -> None:
     from .status import register_status_routes
     register_status_routes(bp)
 
+    from .reports import register_reports_routes
+    register_reports_routes(bp)
+
+    from .tools import register_tools_routes
+    register_tools_routes(bp)
+
+    from .settings import register_settings_routes
+    register_settings_routes(bp)
+
+    from .overviews import register_overview_routes
+    register_overview_routes(bp)
+
+    from .share_groups import register_share_groups_routes
+    register_share_groups_routes(bp)
+
 
 def _install_global_login_guard(bp: Blueprint) -> None:
     """يحرس كل الـ endpoints الإدارية بـ login، عدا public."""

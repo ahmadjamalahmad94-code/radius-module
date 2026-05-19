@@ -16,7 +16,8 @@ def get_api_blueprint() -> Blueprint:
         return ok({"versions": ["v1"], "docs": "/api/docs", "spec": "/api/openapi.json"})
 
     _register_v1(bp)
-    from . import openapi
+    from . import admin_auth, openapi
+    admin_auth.register(bp)
     openapi.register(bp)
     return bp
 
