@@ -66,48 +66,105 @@ sql {
         idle_timeout   = 60
     }
 
-    # ـ queries (مكتوبة inline بدل INCLUDE لتجنّب dialects) ـ
     group_attribute = "${.:instance}-SQL-Group"
 
-    accounting_start_query = "\
-        INSERT INTO ${acct_table1} \
-            (tenant_id, acctsessionid, acctuniqueid, username, realm, \
-             nasipaddress, nasportid, nasporttype, acctstarttime, \
-             acctauthentic, connectinfo_start, calledstationid, callingstationid, \
-             servicetype, framedprotocol, framedipaddress, framedipv6address, \
-             framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
-        VALUES \
-            (1, '%{Acct-Session-Id}', '%{Acct-Unique-Session-Id}', \
-             '%{SQL-User-Name}', '%{Realm}', \
-             '%{NAS-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
-             datetime('now'), \
-             '%{Acct-Authentic}', '%{Connect-Info}', \
-             '%{Called-Station-Id}', '%{Calling-Station-Id}', \
-             '%{Service-Type}', '%{Framed-Protocol}', \
-             '%{Framed-IP-Address}', '%{Framed-IPv6-Address}', \
-             '%{Framed-IPv6-Prefix}', '%{Framed-Interface-Id}', \
-             '%{Delegated-IPv6-Prefix}')"
+    # ─────────────────────────────────────────────────────────────────────
+    # accounting queries — هيكل nested قياسي لـ FR 3.x rlm_sql.
+    #
+    # السبب: rlm_sql في FR 3.2.x لا يقرأ accounting_start_query /
+    # accounting_update_query / accounting_stop_query كـ top-level keys
+    # في sql{}؛ هذه أسماء لا توجد في module_config parser فيُتجاهَلها
+    # بصمت. الهيكل المعتمد هو:
+    #     accounting {
+    #         reference = "%{tolower:type.%{Acct-Status-Type}.query}"
+    #         type { start { query = ... } interim-update { ... } stop { ... } }
+    #     }
+    # كل packet يدخل accounting{} في sites-enabled/default يُحلّ الـ
+    # reference إلى المسار المناسب (مثلاً Acct-Status-Type=Start →
+    # type.start.query) ويُنفّذ.
+    #
+    # WHERE keying:
+    #   نستخدم (acctsessionid, nasipaddress, acctstoptime IS NULL) بدل
+    #   acctuniqueid لأن rlm_acct_unique غير مُحمَّل في هذا image (الـ
+    #   .so ليس مشحوناً)، فـ %{Acct-Unique-Session-Id} يُحلّ فارغًا.
+    #   الـ tuple أعلاه فريد لكل جلسة حيّة (RFC 2866 §5.5).
+    # ─────────────────────────────────────────────────────────────────────
+    accounting {
+        reference = "%{tolower:type.%{Acct-Status-Type}.query}"
 
-    accounting_update_query = "\
-        UPDATE ${acct_table1} SET \
-            acctupdatetime  = datetime('now'), \
-            acctinterval    = '%{Acct-Interim-Interval}', \
-            acctsessiontime = '%{Acct-Session-Time}', \
-            acctinputoctets = '%{Acct-Input-Octets}', \
-            acctoutputoctets= '%{Acct-Output-Octets}', \
-            framedipaddress = '%{Framed-IP-Address}' \
-        WHERE acctuniqueid  = '%{Acct-Unique-Session-Id}'"
+        type {
+            accounting-on {
+                query = "\
+                    UPDATE ${....acct_table1} SET \
+                        acctstoptime = datetime('now'), \
+                        acctterminatecause = 'NAS-Reboot' \
+                    WHERE nasipaddress = '%{NAS-IP-Address}' \
+                      AND acctstoptime IS NULL"
+            }
 
-    accounting_stop_query = "\
-        UPDATE ${acct_table1} SET \
-            acctstoptime    = datetime('now'), \
-            acctsessiontime = '%{Acct-Session-Time}', \
-            acctinputoctets = '%{Acct-Input-Octets}', \
-            acctoutputoctets= '%{Acct-Output-Octets}', \
-            acctterminatecause = '%{Acct-Terminate-Cause}', \
-            connectinfo_stop = '%{Connect-Info}' \
-        WHERE acctuniqueid  = '%{Acct-Unique-Session-Id}'"
+            accounting-off {
+                query = "\
+                    UPDATE ${....acct_table1} SET \
+                        acctstoptime = datetime('now'), \
+                        acctterminatecause = 'NAS-Reboot' \
+                    WHERE nasipaddress = '%{NAS-IP-Address}' \
+                      AND acctstoptime IS NULL"
+            }
 
+            start {
+                query = "\
+                    INSERT INTO ${....acct_table1} \
+                        (tenant_id, acctsessionid, acctuniqueid, username, realm, \
+                         nasipaddress, nasportid, nasporttype, acctstarttime, \
+                         acctauthentic, connectinfo_start, calledstationid, callingstationid, \
+                         servicetype, framedprotocol, framedipaddress, framedipv6address, \
+                         framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
+                    VALUES \
+                        (1, '%{Acct-Session-Id}', '%{Acct-Unique-Session-Id}', \
+                         '%{SQL-User-Name}', '%{Realm}', \
+                         '%{NAS-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
+                         datetime('now'), \
+                         '%{Acct-Authentic}', '%{Connect-Info}', \
+                         '%{Called-Station-Id}', '%{Calling-Station-Id}', \
+                         '%{Service-Type}', '%{Framed-Protocol}', \
+                         '%{Framed-IP-Address}', '%{Framed-IPv6-Address}', \
+                         '%{Framed-IPv6-Prefix}', '%{Framed-Interface-Id}', \
+                         '%{Delegated-IPv6-Prefix}')"
+            }
+
+            interim-update {
+                query = "\
+                    UPDATE ${....acct_table1} SET \
+                        acctupdatetime  = datetime('now'), \
+                        acctinterval    = '%{Acct-Interim-Interval}', \
+                        acctsessiontime = '%{Acct-Session-Time}', \
+                        acctinputoctets = '%{Acct-Input-Octets}', \
+                        acctoutputoctets= '%{Acct-Output-Octets}', \
+                        framedipaddress = '%{Framed-IP-Address}' \
+                    WHERE acctsessionid = '%{Acct-Session-Id}' \
+                      AND nasipaddress  = '%{NAS-IP-Address}' \
+                      AND acctstoptime IS NULL"
+            }
+
+            stop {
+                query = "\
+                    UPDATE ${....acct_table1} SET \
+                        acctstoptime       = datetime('now'), \
+                        acctsessiontime    = '%{Acct-Session-Time}', \
+                        acctinputoctets    = '%{Acct-Input-Octets}', \
+                        acctoutputoctets   = '%{Acct-Output-Octets}', \
+                        acctterminatecause = '%{Acct-Terminate-Cause}', \
+                        connectinfo_stop   = '%{Connect-Info}' \
+                    WHERE acctsessionid = '%{Acct-Session-Id}' \
+                      AND nasipaddress  = '%{NAS-IP-Address}' \
+                      AND acctstoptime IS NULL"
+            }
+        }
+    }
+
+    # ـ post-auth query محفوظة لو احتجناها مستقبلاً — حاليًا الـ
+    # sites-enabled/default لا يستدعي sql في post-auth (Flask يكتب
+    # radpostauth داخليًا عبر policy_engine._log_attempt).
     post-auth {
         query = "\
             INSERT INTO radpostauth \

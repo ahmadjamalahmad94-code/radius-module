@@ -266,7 +266,110 @@ WHERE acctstoptime IS NULL
 يوقف النزيف؛ R4 يُنظّف عند الحاجة فقط، بعد تأكيد الشكل الفعلي للبيانات
 على الإنتاج.
 
-## Slices لاحقة (ما بعد R3/R4)
+## R5 — accounting query structure (مُنفَّذ)
+
+بعد R4 على VPS لاحظنا أن:
+- `Acct-Start` يصل (tcpdump مؤكَّد).
+- `Accounting-Response` يُرسَل.
+- الـ permissions على `/data` صحيحة (smoke test OK).
+- **لكن `radacct` فارغ — لا rows جديدة من FR**.
+
+### السبب الجذري المكتشف
+الـ queries كانت مكتوبة كـ top-level keys في `sql{}`:
+```
+accounting_start_query  = "..."
+accounting_update_query = "..."
+accounting_stop_query   = "..."
+```
+
+هذه ليست أسماء معروفة لـ `rlm_sql` parser في FR 3.x. الـ
+`module_config[]` في `src/modules/rlm_sql/rlm_sql.c` يحوي أسماء مثل
+`driver`, `dialect`, `acct_table1`, `postauth_table`, etc. — وليس
+`accounting_*_query`. النتيجة: FR يقرأ القيم وiتجاهلها بصمت
+عند instantiation.
+
+عندما تستدعي `accounting{}` في sites-enabled/default الـ `sql` module،
+الـ module يفحص الـ Acct-Status-Type ويبحث عن query في الـ nested
+`accounting { type { start { query } } }` structure — لكنّ هذه البنية
+غير موجودة في configنا. لا query → noop → R1's `{fail=1};ok` يُرسل
+Accounting-Response → MikroTik يُعتبر ACKed → `radacct` يبقى فارغًا.
+
+### secondary risk
+حتى لو كانت البنية صحيحة، الـ UPDATE WHERE كان يستخدم:
+```
+WHERE acctuniqueid = '%{Acct-Unique-Session-Id}'
+```
+لكن `rlm_acct_unique` غير محمَّل (الـ .so غير مشحون في image 3.2.5)،
+فـ `%{Acct-Unique-Session-Id}` يُحلّ فارغًا → UPDATE يَطابِق كل rows
+بـ acctuniqueid فارغ.
+
+### الإصلاح
+ملف واحد: `deploy/freeradius/mods-enabled/sql`
+
+البنية الجديدة:
+```
+sql {
+    ...
+    accounting {
+        reference = "%{tolower:type.%{Acct-Status-Type}.query}"
+        type {
+            accounting-on  { query = "..." }
+            accounting-off { query = "..." }
+            start          { query = "INSERT INTO radacct ..." }
+            interim-update { query = "UPDATE radacct SET ... WHERE acctsessionid=... AND nasipaddress=..." }
+            stop           { query = "UPDATE radacct SET ... WHERE acctsessionid=... AND nasipaddress=..." }
+        }
+    }
+}
+```
+
+الـ `${tolower:...}` يحوّل `Acct-Status-Type` (مثل `Start`) إلى
+lowercase ليُطابق مفاتيح `type.{start, interim-update, stop, ...}`.
+
+الـ WHERE تغيّر إلى:
+```
+acctsessionid = '%{Acct-Session-Id}'
+AND nasipaddress  = '%{NAS-IP-Address}'
+AND acctstoptime IS NULL
+```
+هذا tuple فريد لكل جلسة حيّة بحسب RFC 2866 §5.5 ولا يعتمد على
+`Acct-Unique-Session-Id`.
+
+### حالة الـ Accounting بعد R5
+
+| Acct-Status-Type | قبل R5 (بعد R1-R4) | بعد R5 |
+|-------------------|---------------------|--------|
+| Start             | Response مُرسل، **لا row** | Response مُرسل، **row مُدرَج** |
+| Interim-Update    | Response مُرسل، لا UPDATE | Response مُرسل، UPDATE ناجح |
+| Stop              | Response مُرسل، لا UPDATE | Response مُرسل، UPDATE ناجح + acctstoptime |
+| Accounting-On     | لا عمل | UPDATE يُغلق rows مفتوحة على الـ NAS (NAS reboot) |
+| Accounting-Off    | لا عمل | UPDATE يُغلق rows مفتوحة |
+
+### verification على VPS بعد deploy
+```bash
+docker compose -f deploy/docker-compose.yml restart freeradius
+
+# 1. تأكّد instantiation نجح (لا errors عن sql config):
+docker logs hoberadius-freeradius 2>&1 | grep -Ei 'sql.*error|sql.*failed' | head
+
+# 2. شغّل FR -X مؤقّتًا و راقب query execution:
+docker exec hoberadius-freeradius pkill freeradius
+docker exec -it hoberadius-freeradius freeradius -X 2>&1 | grep -E 'rlm_sql|Acct-Status-Type|INSERT|UPDATE'
+
+# 3. بعد login من MT و فترة قصيرة:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, username, acctstarttime, acctstoptime
+       FROM radacct ORDER BY radacctid DESC LIMIT 5;"
+
+# 4. بعد logout:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, username, acctstarttime, acctstoptime,
+            acctterminatecause, acctinputoctets, acctoutputoctets
+       FROM radacct WHERE acctstoptime IS NOT NULL
+       ORDER BY radacctid DESC LIMIT 5;"
+```
+
+## Slices لاحقة (ما بعد R5)
 
 - **enrichment via puller**: استخدام `_tick` لاستخراج metadata من MT
   (uptime، interface counters، router-set tags) وحقنها في radacct
@@ -274,6 +377,9 @@ WHERE acctstoptime IS NULL
 - **Acct-Status-Type-aware response shaping**: rate-limit/drop عند فيضان.
 - **مراقبة**: counter للـ Accounting-Request received vs Response sent
   vs sql success — مفيد للـ alerting.
+- **اختياري**: حلّ مشكلة `Acct-Unique-Session-Id` لو احتجناه مستقبلاً
+  — إمّا إصلاح build لـ rlm_acct_unique أو حساب الـ unique-id يدويًا
+  في unlang عبر hash من session attributes.
 
 ## Slices لاحقة (ما بعد R3)
 
