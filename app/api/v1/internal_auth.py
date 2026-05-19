@@ -39,32 +39,50 @@ def _redact_prefix(s: str, n: int = 4) -> str:
     return s[:n] + "…"
 
 
-def _check_internal_secret() -> bool:
-    """تحقّق من X-Internal-Secret.
+def _check_internal_secret(body: dict | None = None) -> bool:
+    """تحقّق من السرّ الداخلي. يقبل من مكانَين:
+
+      1. HTTP header `X-Internal-Secret` — الطريقة المثالية، لكن FR 3.2.x
+         لا يدعم custom headers في rlm_rest.
+      2. JSON body field `_internal_secret` — fallback تستعمله FR 3.2.x
+         (انظر mods-enabled/rest).
 
     مهم: لو HOBERADIUS_INTERNAL_SECRET غير مضبوط في env الخاص بـ Flask،
-    نعتبره dev mode ونقبل بدون header — هذا متعمَّد كي لا يُكسر اختبار محلي.
+    نعتبره dev mode ونقبل بدون secret — متعمَّد كي لا يكسر اختبار محلي.
 
-    عند الفشل نُسجّل WARNING يحوي:
-      - أطوال expected vs incoming
-      - prefix قصير للتمييز (4 أحرف ثم … — لا نُسرّب الـ secret)
-      - حضور الـ header
+    عند الفشل نُسجّل WARNING يحوي: أطوال expected vs incoming + presence،
+    + prefix قصير للتمييز (4 أحرف + …، لا نُسرّب السرّ).
     """
     expected = (os.environ.get("HOBERADIUS_INTERNAL_SECRET") or "").strip()
-    incoming = request.headers.get("X-Internal-Secret", "")
     if not expected:
         _LOG.warning("internal_auth: HOBERADIUS_INTERNAL_SECRET غير مضبوط — "
                       "تشغيل dev mode (يقبل بدون secret). اضبطها في .env للإنتاج.")
         return True
-    if incoming == expected:
+
+    header_secret = request.headers.get("X-Internal-Secret", "")
+    if header_secret and header_secret == expected:
+        _LOG.warning("internal_auth: secret OK via header")
         return True
+
+    if body is None:
+        body = request.get_json(silent=True) or {}
+    body_secret = str(body.get("_internal_secret") or "").strip()
+    if body_secret and body_secret == expected:
+        _LOG.warning("internal_auth: secret OK via body fallback "
+                      "(FR 3.2.x rlm_rest cannot send custom headers)")
+        return True
+
     _LOG.warning(
-        "internal_auth: SECRET MISMATCH — expected_len=%d incoming_len=%d "
-        "header_present=%s expected_prefix=%s incoming_prefix=%s remote=%s",
-        len(expected), len(incoming),
+        "internal_auth: SECRET MISMATCH — expected_len=%d "
+        "header_present=%s header_len=%d header_prefix=%s "
+        "body_secret_present=%s body_secret_len=%d body_secret_prefix=%s "
+        "expected_prefix=%s remote=%s",
+        len(expected),
         "yes" if "X-Internal-Secret" in request.headers else "no",
-        _redact_prefix(expected), _redact_prefix(incoming),
-        request.remote_addr or "?",
+        len(header_secret), _redact_prefix(header_secret),
+        "yes" if body_secret else "no",
+        len(body_secret), _redact_prefix(body_secret),
+        _redact_prefix(expected), request.remote_addr or "?",
     )
     return False
 
@@ -82,11 +100,15 @@ def _resolve_tenant_id(body: dict) -> int:
 
 
 def internal_auth():
-    if not _check_internal_secret():
+    body = request.get_json(silent=True) or {}
+    if not _check_internal_secret(body):
         return jsonify({"control:Auth-Type": "Reject",
                          "reply:Reply-Message": "Internal auth secret mismatch"}), 401
 
-    body = request.get_json(silent=True) or {}
+    # ـ نُسقط حقل السرّ من الـ body قبل التحليل كي لا يُسجَّل أو يُسرَّب في
+    # error traces لاحقاً ـ
+    body.pop("_internal_secret", None)
+
     # FreeRADIUS rlm_rest يستعمل أسماء الـ attributes الكاملة (case-sensitive).
     # نقبل أيضًا lowercased للتوافق.
     def g(k: str, default: str = "") -> str:
@@ -198,9 +220,10 @@ def internal_diag():
 
 def internal_postauth():
     """FreeRADIUS يستدعي هذا بعد قراره النهائي — للـ logging والـ webhooks."""
-    if not _check_internal_secret():
-        return jsonify({"ok": False, "reason": "secret_mismatch"}), 401
     body = request.get_json(silent=True) or {}
+    if not _check_internal_secret(body):
+        return jsonify({"ok": False, "reason": "secret_mismatch"}), 401
+    body.pop("_internal_secret", None)
     username = (body.get("User-Name") or body.get("user_name") or "").strip()
     reply_code = (body.get("reply_code") or "").strip()
     nas_ip = (body.get("NAS-IP-Address") or body.get("nas_ip_address") or "").strip()

@@ -10,12 +10,14 @@ rest {
     connect_uri = "http://hoberadius:8000"
     connect_timeout = 4.0
 
-    # ─ HTTP headers (X-Internal-Secret) ─
-    # تنبيه: المعامل `header = ...` هنا غير موجود في rlm_rest section parser
-    # على FreeRADIUS 3.2.x ـ كان يُتجاهَل بصمت ولذلك الطلبات كانت تصل لـ Flask
-    # بدون X-Internal-Secret فيردّ 401. الحقن يتمّ الآن في sites-enabled/default
-    # عبر `update request { REST-HTTP-Header := "X-Internal-Secret: ..." }`
-    # قبل كل استدعاء `rest`. لا تُضِف header = هنا.
+    # ─ ملاحظة عن X-Internal-Secret ─
+    # rlm_rest في FreeRADIUS 3.2.x لا يدعم إضافة custom HTTP headers
+    #   - المعامل `header = ...` هنا غير معروف لـ section parser → يُتجاهَل بصمت.
+    #   - الـ attribute `REST-HTTP-Header` ميزة FR 4.x، غير موجودة في 3.2.5.
+    # الحلّ المعتمد: نمرّر السرّ داخل JSON body كحقل _internal_secret،
+    # و Flask يقبل من الـ header أو من الـ body. الـ placeholder
+    # __HR_INTERNAL_SECRET__ يُستبدَل في entrypoint.sh بقيمة
+    # HOBERADIUS_INTERNAL_SECRET من env.
     authorize {
         uri      = "${..connect_uri}/api/v1/internal/auth"
         method   = "post"
@@ -24,6 +26,7 @@ rest {
         # يستخدم HTTP-CHAP افتراضيًا، فـ %{User-Password} يكون فارغًا.
         # سياسة التحقّق (PAP vs CHAP) تُنفَّذ داخل /api/v1/internal/auth.
         data     = '{ \
+            "_internal_secret": "__HR_INTERNAL_SECRET__", \
             "User-Name": "%{User-Name}", \
             "User-Password": "%{User-Password}", \
             "CHAP-Password": "%{CHAP-Password}", \
@@ -42,12 +45,12 @@ rest {
 
     # ـ post-auth webhook: Flask يكتب radpostauth داخليًا + يُرسل أحداث ـ
     # ـ لاحظ: لا نستدعي sql في post-auth (انظر sites-enabled/default) ـ
-    # ـ X-Internal-Secret يُحقَن في sites-enabled/default (انظر التعليق أعلاه) ـ
     post-auth {
         uri      = "${..connect_uri}/api/v1/internal/postauth"
         method   = "post"
         body     = "json"
         data     = '{ \
+            "_internal_secret": "__HR_INTERNAL_SECRET__", \
             "User-Name": "%{User-Name}", \
             "reply_code": "%{reply:Packet-Type}", \
             "NAS-IP-Address": "%{NAS-IP-Address}" \

@@ -37,21 +37,15 @@ listen {
     limit {}
 }
 
+# ـ ملاحظة هامة: rlm_rest في FR 3.2.5 لا يدعم إضافة custom HTTP headers ـ
+# (لا عبر `header = ...` في mods-enabled/rest، ولا عبر REST-HTTP-Header
+#  attribute — هذا الأخير ميزة FR 4.x فقط). الحلّ المعتمد: نمرّر السرّ
+# داخل JSON body كحقل _internal_secret (انظر mods-enabled/rest الـ data
+# block) و Flask يقبل السرّ من الـ header أو الـ body.
+
 # ─ AUTHORIZATION (قرار الوصول) ─
 authorize {
     preprocess
-
-    # ـ حقن header الـ secret الداخلي قبل استدعاء rest ـ
-    # FreeRADIUS 3.2.x: المعامل `header = ...` داخل mods-enabled/rest section
-    # غير مدعوم في الـ section parser — يُتجاهَل بصمت. الطريقة المعتمدة هي
-    # ضبط الـ attribute REST-HTTP-Header (مُعرَّف في dictionary الخاص بـ
-    # rlm_rest) عبر unlang، فيلتقطه الـ module ويُضيفه كـ HTTP header.
-    # الـ placeholder __HR_INTERNAL_SECRET__ يُستبدَل في entrypoint.sh من
-    # env HOBERADIUS_INTERNAL_SECRET (config-time لا runtime، لأن FR 3.2.x
-    # لا يوفّر env xlat موثوقًا داخل update blocks).
-    update request {
-        REST-HTTP-Header := "X-Internal-Secret: __HR_INTERNAL_SECRET__"
-    }
 
     # نطبّق rest module: يستدعي /api/v1/internal/auth ويُرجع:
     #   control:Auth-Type := Accept | Reject
@@ -98,10 +92,7 @@ accounting {
 # عبر policy_engine._log_attempt. لا sql هنا كي لا يفشل قبول auth بسبب
 # rlm_sql_sqlite reconnection issues.
 post-auth {
-    # ـ نفس header injection كما في authorize (نفس السبب) ـ
-    update request {
-        REST-HTTP-Header := "X-Internal-Secret: __HR_INTERNAL_SECRET__"
-    }
+    # ـ السرّ يُمرَّر في JSON body (انظر mods-enabled/rest) ـ
     rest
 
     Post-Auth-Type REJECT {
