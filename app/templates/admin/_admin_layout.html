@@ -112,10 +112,15 @@
       <i class="fa-solid fa-gauge-high"></i> لوحة التحكم
     </a>
 
+    {# ─────────────── المشتركين ─────────────── #}
     <div class="nav-group">
-      <div class="nav-group-title">مشتركين</div>
+      <div class="nav-group-title">المشتركين</div>
+      <a href="{{ url_for('radius.users_overview') }}"
+         class="{% if '/users/overview' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-chart-pie"></i> نظرة عامة
+      </a>
       <a href="{{ url_for('radius.users_list') }}"
-         class="{% if '/users' in request.path and '/users/new' not in request.path %}active{% endif %}">
+         class="{% if '/users' in request.path and '/users/new' not in request.path and '/overview' not in request.path %}active{% endif %}">
         <i class="fa-solid fa-list"></i> قائمة المشتركين
       </a>
       <a href="{{ url_for('radius.users_new') }}"
@@ -123,13 +128,39 @@
         <i class="fa-solid fa-user-plus"></i> إضافة مشترك
       </a>
       <a href="{{ url_for('radius.online_list') }}"
-         class="{% if '/online' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-wifi"></i> المتصلون الآن
+         class="{% if request.path == url_for('radius.online_list') and request.args.get('type') != 'card' %}active{% endif %}">
+        <i class="fa-solid fa-wifi"></i> المشتركين المتصلين
       </a>
     </div>
 
+    {# ─────────────── بطاقات هوتسبوت ─────────────── #}
+    <div class="nav-group">
+      <div class="nav-group-title">بطاقات هوتسبوت</div>
+      <a href="{{ url_for('radius.cards_overview') }}"
+         class="{% if '/cards/overview' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-chart-pie"></i> نظرة عامة
+      </a>
+      <a href="{{ url_for('radius.cards_batches') }}"
+         class="{% if '/cards/batches' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-layer-group"></i> حزم البطاقات
+      </a>
+      <a href="{{ url_for('radius.cards_generate') }}"
+         class="{% if '/cards/generate' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة حزمة
+      </a>
+      <a href="{{ url_for('radius.online_list', type='card') }}"
+         class="{% if request.path == url_for('radius.online_list') and request.args.get('type') == 'card' %}active{% endif %}">
+        <i class="fa-solid fa-id-card"></i> البطاقات المتصلة
+      </a>
+    </div>
+
+    {# ─────────────── العروض ─────────────── #}
     <div class="nav-group">
       <div class="nav-group-title">العروض</div>
+      <a href="{{ url_for('radius.plans_overview') }}"
+         class="{% if '/plans/overview' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-chart-pie"></i> نظرة عامة
+      </a>
       <a href="{{ url_for('radius.plans_list') }}"
          class="{% if request.path == url_for('radius.plans_list') %}active{% endif %}">
         <i class="fa-solid fa-tags"></i> قائمة العروض
@@ -138,24 +169,90 @@
          class="{% if request.path == url_for('radius.plans_new') %}active{% endif %}">
         <i class="fa-solid fa-circle-plus"></i> إضافة عرض
       </a>
+      <a href="{{ url_for('radius.pool_list') }}"
+         class="{% if '/pools' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-network-wired"></i> IP Pool
+      </a>
+      <a href="{{ url_for('radius.sgrp_list') }}"
+         class="{% if '/share_groups' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-people-arrows"></i> مجموعات المشاركة
+      </a>
     </div>
 
     <div class="nav-group">
-      <div class="nav-group-title">كروت</div>
-      <a href="{{ url_for('radius.cards_batches') }}"
-         class="{% if '/cards/batches' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-layer-group"></i> دفعات الكروت
+      <div class="nav-group-title">التقارير</div>
+      <a href="{{ url_for('radius.rep_sessions') }}"
+         class="{% if '/reports/sessions' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-chart-line"></i> الجلسات
       </a>
-      <a href="{{ url_for('radius.cards_generate') }}"
-         class="{% if '/cards/generate' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء كروت
+      <a href="{{ url_for('radius.rep_login_status') }}"
+         class="{% if '/reports/login_status' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-circle-check"></i> حالة الدخول
       </a>
-      <a href="{{ url_for('radius.cards_list') }}"
-         class="{% if request.path == url_for('radius.cards_list') %}active{% endif %}">
-        <i class="fa-solid fa-id-card"></i> كل الكروت
+      <a href="{{ url_for('radius.rep_failed_logins') }}"
+         class="{% if '/reports/failed_logins' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-triangle-exclamation"></i> دخول فاشل
+      </a>
+      <a href="{{ url_for('radius.rep_mac_history') }}"
+         class="{% if '/reports/mac_history' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-fingerprint"></i> سجل MAC
+      </a>
+      <a href="{{ url_for('radius.rep_user_events') }}"
+         class="{% if '/reports/user_events' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-users-rectangle"></i> أحداث المستخدمين
+      </a>
+      <a href="{{ url_for('radius.rep_manager_events') }}"
+         class="{% if '/reports/manager_events' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-user-shield"></i> أحداث المدراء
+      </a>
+      <a href="{{ url_for('radius.rep_manager_login_status') }}"
+         class="{% if '/reports/manager_login_status' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-user-clock"></i> دخول المدراء
+      </a>
+      <a href="{{ url_for('radius.rep_profile_changes') }}"
+         class="{% if '/reports/profile_changes' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-arrows-rotate"></i> تغييرات الباقات
+      </a>
+      <a href="{{ url_for('radius.rep_coa_failures') }}"
+         class="{% if '/reports/coa_failures' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-plug-circle-xmark"></i> إخفاقات CoA
+      </a>
+      <a href="{{ url_for('radius.rep_api_messages') }}"
+         class="{% if '/reports/api_messages' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-message"></i> رسائل API
       </a>
     </div>
 
+    <div class="nav-group">
+      <div class="nav-group-title">الأدوات</div>
+      <a href="{{ url_for('radius.tool_set_speeds') }}"
+         class="{% if '/tools/set_speeds' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-gauge-high"></i> تعديل السرعات
+      </a>
+      <a href="{{ url_for('radius.tool_general_adj') }}"
+         class="{% if '/tools/general_adjustments' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-layer-group"></i> عمليات جماعية
+      </a>
+      <a href="{{ url_for('radius.tool_maintenance') }}"
+         class="{% if '/tools/maintenance' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-screwdriver-wrench"></i> الصيانة
+      </a>
+      <a href="{{ url_for('radius.tool_test_auth') }}"
+         class="{% if '/tools/test_auth' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-vial"></i> اختبار المصادقة
+      </a>
+      <a href="{{ url_for('radius.tool_radius_log') }}"
+         class="{% if '/tools/radius_log' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-rss"></i> سجل RADIUS الحيّ
+      </a>
+      <a href="{{ url_for('radius.settings_page') }}"
+         class="{% if request.path == url_for('radius.settings_page') %}active{% endif %}">
+        <i class="fa-solid fa-gear"></i> الإعدادات
+      </a>
+    </div>
+
+    {# ملاحظة: "كروت" group القديم وُحِّد مع "بطاقات هوتسبوت" أعلاه.
+       IP Pools نُقِلَت من "البنية التحتية" إلى مجموعة "العروض". #}
     <div class="nav-group">
       <div class="nav-group-title">البنية التحتية</div>
       <a href="{{ url_for('radius.devices_list') }}"
@@ -165,10 +262,6 @@
       <a href="{{ url_for('radius.bw_list') }}"
          class="{% if '/bandwidth' in request.path %}active{% endif %}">
         <i class="fa-solid fa-gauge"></i> Bandwidth
-      </a>
-      <a href="{{ url_for('radius.pool_list') }}"
-         class="{% if '/pools' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-network-wired"></i> IP Pools
       </a>
     </div>
 

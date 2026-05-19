@@ -13,11 +13,24 @@ from ..services.plans import get_plans_service
 
 
 def register_cards_routes(bp: Blueprint) -> None:
+    bp.add_url_rule("/cards/overview", "cards_overview", cards_overview, methods=["GET"])
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke", cards_revoke, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
+
+
+def cards_overview():
+    """Stats overview للبطاقات — يستخدم helpers الموجودة من RM-H2."""
+    from ..services.dashboard_metrics import (
+        get_card_counts, get_recent_batches, get_plan_counts
+    )
+    cards = get_card_counts()
+    recent = get_recent_batches(limit=10)
+    plans = get_plan_counts()
+    return render_template("radius/cards_overview.html",
+                            cards=cards, recent=recent, plans=plans)
 
 
 def _actor() -> str:

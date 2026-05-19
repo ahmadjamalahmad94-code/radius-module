@@ -25,19 +25,32 @@ def _actor() -> str:
 
 
 def online_list():
+    """?type=card → يفلتر إلى usernames التي صُدِرت من حزم البطاقات."""
     svc = get_online_sessions_service()
     settings = get_radius_adapter().settings()
+    filter_type = (request.args.get("type") or "").strip().lower()
     try:
         items = svc.list(limit=500)
         error = None
     except RadiusError as e:
         items = []
         error = e.message
+
+    if filter_type == "card" and items:
+        try:
+            from ..services.cards import get_cards_service
+            card_usernames = {c.username for c in
+                              get_cards_service().list_cards(limit=10000)}
+            items = [it for it in items if it.username in card_usernames]
+        except Exception:
+            pass  # لو فشل الـ lookup، نُظهر الكل بدلًا من قائمة فارغة كاذبة
+
     return render_template(
         "radius/sessions_list.html",
         items=items,
         settings=settings,
         error=error,
+        filter_type=filter_type,
     )
 
 
