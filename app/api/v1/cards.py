@@ -28,6 +28,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_batches_list), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_get",
                     require_api_token(cards_batch_get), methods=["GET"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>/summary", "cards_batch_summary",
+                    require_api_token(cards_batch_summary), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch",
                     require_api_token(cards_of_batch), methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>", "cards_get",
@@ -50,6 +52,9 @@ def _serialize_batch(b) -> dict:
         "generated": b.generated,
         "used": b.used,
         "status": b.status,
+        "deleted_at": b.deleted_at.isoformat() + "Z" if b.deleted_at else None,
+        "deleted_by": b.deleted_by or None,
+        "delete_reason": b.delete_reason or None,
         "expire_at": b.expire_at.isoformat() + "Z" if b.expire_at else None,
         "created_at": b.created_at.isoformat() + "Z" if b.created_at else None,
         "created_by": b.created_by,
@@ -142,6 +147,14 @@ def cards_batch_get(batch_id: int):
     if not batch:
         return fail("not_found", f"batch {batch_id} غير موجود", status=404)
     return ok(_serialize_batch(batch))
+
+
+def cards_batch_summary(batch_id: int):
+    from ...radius.db.repos import cards_repo
+    summary = cards_repo.batch_operational_summary(_tid(), batch_id)
+    if not summary:
+        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+    return ok({"summary": summary})
 
 
 def cards_of_batch(batch_id: int):

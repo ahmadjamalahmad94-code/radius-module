@@ -59,6 +59,9 @@ def _batch_row(r) -> CardBatch:
         allow_entry_by_previous_card_palestine=bool(_g(r, "allow_entry_by_previous_card_palestine", 0)),
         total_price=_g(r, "total_price", 0.0) or 0.0,
         metadata=_g(r, "metadata", "{}") or "{}",
+        deleted_at=parse_dt(_g(r, "deleted_at", None)),
+        deleted_by=_g(r, "deleted_by", "") or "",
+        delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]),
     )
 
@@ -151,6 +154,81 @@ def update_batch_counters(tenant_id: int, batch_id: int, *, generated_delta: int
 
 
 # ─────────────── cards ───────────────
+def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = "") -> bool:
+    """Mark a card batch as deleted without removing cards."""
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE card_batches
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?, status = 'deleted'
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+        """, (now_iso(), actor or "system", (reason or "")[:300], tenant_id, batch_id))
+        return cur.rowcount > 0
+
+
+def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
+    """Return read-only operational counts for a card batch."""
+    batch = get_batch(tenant_id, batch_id)
+    if not batch:
+        return None
+
+    now = now_iso()
+    row = db().execute(
+        """
+        SELECT
+            COUNT(*) AS total_cards,
+            COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
+            COALESCE(SUM(CASE
+                WHEN revoked = 0 AND used = 1 AND (expire_at IS NULL OR expire_at >= ?)
+                THEN 1 ELSE 0 END), 0) AS active_count,
+            COALESCE(SUM(CASE
+                WHEN revoked = 0 AND used = 0 AND (expire_at IS NULL OR expire_at >= ?)
+                THEN 1 ELSE 0 END), 0) AS available_count,
+            COALESCE(SUM(CASE
+                WHEN revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                THEN 1 ELSE 0 END), 0) AS expired_count
+        FROM cards
+        WHERE tenant_id = ? AND batch_id = ?
+        """,
+        (now, now, now, tenant_id, batch_id),
+    ).fetchone()
+    total_cards = int(row["total_cards"] or 0)
+    available_count = int(row["available_count"] or 0)
+    active_count = int(row["active_count"] or 0)
+    expired_count = int(row["expired_count"] or 0)
+    revoked_count = int(row["revoked_count"] or 0)
+
+    normalized_status = (batch.status or "active").strip().lower()
+    if batch.deleted_at:
+        operational_status = "deleted"
+    elif normalized_status in {"deleted", "cancelled", "canceled", "revoked"}:
+        operational_status = normalized_status
+    elif total_cards and available_count == 0:
+        operational_status = "exhausted"
+    else:
+        operational_status = normalized_status or "active"
+
+    return {
+        "batch_id": batch.id,
+        "batch_code": batch.batch_code,
+        "plan_id": batch.plan_id,
+        "status": batch.status,
+        "operational_status": operational_status,
+        "configured_count": batch.count,
+        "generated_count": batch.generated,
+        "used_counter": batch.used,
+        "total_cards": total_cards,
+        "available_count": available_count,
+        "active_count": active_count,
+        "expired_count": expired_count,
+        "revoked_count": revoked_count,
+        "remaining_count": available_count,
+        "deleted_at": dt_to_iso(batch.deleted_at),
+        "deleted_by": batch.deleted_by or None,
+        "delete_reason": batch.delete_reason or None,
+        "created_at": dt_to_iso(batch.created_at),
+        "expires_at": dt_to_iso(batch.expire_at),
+    }
+
 
 def _random_str(n: int, *, charset: str = "digits") -> str:
     alpha = string.digits if charset == "digits" else (
@@ -207,6 +285,7 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             b.created_by AS batch_created_by,
             b.created_at AS batch_created_at,
             b.expire_at AS batch_expire_at,
+            b.deleted_at AS batch_deleted_at,
             p.name AS profile_name,
             p.code AS profile_code,
             p.service_type AS profile_service_type,

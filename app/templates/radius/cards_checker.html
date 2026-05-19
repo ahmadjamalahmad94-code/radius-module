@@ -1,0 +1,129 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}فحص بطاقة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-magnifying-glass"></i>{% endblock %}
+{% block page_title %}فحص بطاقة{% endblock %}
+{% block page_sub %}<span class="sub">ابحث باسم الدخول أو رقم البطاقة</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+  .card-checker-grid{display:grid;grid-template-columns:minmax(280px,420px) minmax(0,1fr);gap:16px;align-items:start}
+  .card-checker-form{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+  .card-checker-form .field{flex:1 1 240px}
+  .card-checker-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .cc-box{border:1px solid var(--hr-border);border-radius:8px;background:var(--hr-soft);padding:12px}
+  .cc-box .k{font-size:11px;color:var(--hr-text-muted);font-weight:800;margin-bottom:4px}
+  .cc-box .v{font-size:13px;color:var(--hr-text);font-weight:800;word-break:break-word}
+  .cc-wide{grid-column:1 / -1}
+  .cc-list{display:flex;gap:6px;flex-wrap:wrap}
+  @media(max-width:900px){.card-checker-grid,.card-checker-result{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card-checker-grid">
+  <div class="card">
+    <div class="card-body">
+      <form method="get" class="card-checker-form">
+        <div class="field">
+          <label>رقم البطاقة أو اسم الدخول</label>
+          <input type="text" name="query" value="{{ query or '' }}" maxlength="128"
+                 placeholder="مثال: 12345" autocomplete="off">
+          <div class="hint">اكتب اسم الدخول المطبوع على البطاقة أو رقمها الداخلي. لن يتم عرض كلمة المرور.</div>
+        </div>
+        <button class="btn btn-primary" type="submit">
+          <i class="fa-solid fa-magnifying-glass"></i> فحص
+        </button>
+      </form>
+      {% if error %}
+        <div class="flash flash-error" style="margin-top:12px">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      {% if not query %}
+        <div class="empty">
+          <i class="fa-solid fa-id-card"></i>
+          أدخل رقم بطاقة أو اسم دخول لعرض حالتها ومصدرها.
+        </div>
+      {% elif result and not result.exists %}
+        <div class="empty">
+          <i class="fa-solid fa-circle-question"></i>
+          لا توجد بطاقة مطابقة لهذا البحث.
+        </div>
+      {% elif result %}
+        {% set status = result.status %}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <div>
+            <div class="hint">اسم الدخول</div>
+            <h3 style="margin:0;font-size:20px" class="mono">{{ result.username }}</h3>
+          </div>
+          {% if status == 'available' %}<span class="pill pill-success"><span class="pill-dot"></span> جاهزة</span>
+          {% elif status == 'active' %}<span class="pill pill-info"><span class="pill-dot"></span> مستخدمة</span>
+          {% elif status == 'expired' %}<span class="pill pill-warn">منتهية</span>
+          {% elif status == 'revoked' %}<span class="pill pill-danger">ملغاة</span>
+          {% else %}<span class="pill">{{ status or 'غير معروف' }}</span>{% endif %}
+        </div>
+
+        <div class="card-checker-result">
+          <div class="cc-box"><div class="k">هل لها كلمة مرور؟</div><div class="v">{{ 'نعم' if result.has_password else 'لا' }}</div></div>
+          <div class="cc-box"><div class="k">تاريخ الإنشاء</div><div class="v mono">{{ result.created_at or '—' }}</div></div>
+          <div class="cc-box"><div class="k">بداية الاستخدام</div><div class="v mono">{{ result.started_at or '—' }}</div></div>
+          <div class="cc-box"><div class="k">تاريخ الانتهاء</div><div class="v mono">{{ result.expires_at or '—' }}</div></div>
+          <div class="cc-box"><div class="k">آخر ظهور</div><div class="v mono">{{ result.last_seen_at or '—' }}</div></div>
+          <div class="cc-box"><div class="k">MAC</div><div class="v mono">{{ result.mac_address or '—' }}</div></div>
+          <div class="cc-box"><div class="k">IP</div><div class="v mono">{{ result.ip_address or '—' }}</div></div>
+          <div class="cc-box"><div class="k">NAS</div><div class="v mono">{{ result.nas_address or '—' }}</div></div>
+
+          <div class="cc-box cc-wide">
+            <div class="k">الدفعة</div>
+            {% if result.batch %}
+              <div class="v">{{ result.batch.batch_code }}{% if result.batch.package_name %} — {{ result.batch.package_name }}{% endif %}</div>
+              <div class="hint">الحالة: {{ result.batch.status or 'غير معروف' }} · المنشئ: {{ result.batch.created_by or '—' }}</div>
+            {% else %}
+              <div class="v">غير مرتبطة بدفعة معروفة</div>
+            {% endif %}
+          </div>
+
+          <div class="cc-box cc-wide">
+            <div class="k">الباقة</div>
+            {% if result.profile %}
+              <div class="v">{{ result.profile.name }}</div>
+              <div class="hint">
+                تنزيل {{ result.profile.speed_down_kbps or 0 }} كيلوبت · رفع {{ result.profile.speed_up_kbps or 0 }} كيلوبت
+              </div>
+            {% else %}
+              <div class="v">لا توجد باقة مرتبطة</div>
+            {% endif %}
+          </div>
+
+          <div class="cc-box cc-wide">
+            <div class="k">حقول غير متوفرة حاليًا</div>
+            {% set labels = {
+              'assigned_to':'المستفيد المرتبط',
+              'batch':'الدفعة',
+              'cancelled_at':'وقت الإلغاء',
+              'created_at':'تاريخ الإنشاء',
+              'deleted_at':'وقت الأرشفة',
+              'expires_at':'تاريخ الانتهاء',
+              'last_seen_at':'آخر ظهور',
+              'mac_address':'MAC',
+              'ip_address':'IP',
+              'profile':'الباقة',
+              'sold_by':'البائع'
+            } %}
+            <div class="cc-list">
+              {% for item in result.missing_fields or [] %}
+                <span class="pill">{{ labels.get(item, item) }}</span>
+              {% else %}
+                <span class="pill pill-success">كل البيانات الأساسية متوفرة</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

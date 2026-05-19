@@ -193,6 +193,10 @@
          class="{% if '/cards/overview' in request.path %}active{% endif %}">
         <i class="fa-solid fa-chart-pie"></i> نظرة عامة
       </a>
+      <a href="{{ url_for('radius.cards_checker') }}"
+         class="{% if '/cards/checker' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-magnifying-glass"></i> فحص بطاقة
+      </a>
       <a href="{{ url_for('radius.cards_batches') }}"
          class="{% if '/cards/batches' in request.path %}active{% endif %}">
         <i class="fa-solid fa-layer-group"></i> حزم البطاقات

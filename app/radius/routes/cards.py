@@ -8,12 +8,14 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
 from ..services.plans import get_plans_service
 
 
 def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/overview", "cards_overview", cards_overview, methods=["GET"])
+    bp.add_url_rule("/cards/checker", "cards_checker", cards_checker, methods=["GET"])
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
@@ -35,6 +37,10 @@ def cards_overview():
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
+def _tid() -> int:
+    return int(session.get("tenant_id") or 1)
 
 
 def _form_int(name: str, d: int = 0) -> int:
@@ -102,7 +108,34 @@ def cards_batches():
     svc = get_cards_service()
     batches = svc.list_batches(limit=500)
     plans = {p.id: p for p in get_plans_service().list(limit=500)}
-    return render_template("radius/cards_batches.html", batches=batches, plans=plans)
+    summaries = {
+        b.id: svc.batch_operational_summary(b.id)
+        for b in batches
+        if b.id is not None
+    }
+    return render_template(
+        "radius/cards_batches.html",
+        batches=batches,
+        plans=plans,
+        summaries=summaries,
+    )
+
+
+def cards_checker():
+    query = (request.args.get("query") or "").strip()
+    result = None
+    error = ""
+    if query:
+        if len(query) > 128:
+            error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
+        else:
+            result = check_card(_tid(), query)
+    return render_template(
+        "radius/cards_checker.html",
+        query=query,
+        result=result,
+        error=error,
+    )
 
 
 def cards_generate():

@@ -16,7 +16,8 @@
     <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="card-batches">
       <thead><tr>
         <th>#</th><th>كود الدفعة</th><th>الباقة</th><th>عدد</th><th>منشأ</th>
-        <th>مستخدم</th><th>التقدّم</th><th>أنشأها</th><th>التاريخ</th>
+        <th>جاهزة</th><th>مستخدمة</th><th>منتهية</th><th>ملغاة</th><th>الحالة</th>
+        <th>التقدّم</th><th>أنشأها</th><th>التاريخ</th>
         <th style="width:80px">عرض</th>
       </tr></thead>
       <tbody>
@@ -27,7 +28,18 @@
           <td>{{ plans[b.plan_id].name if plans.get(b.plan_id) else '—' }}</td>
           <td class="num">{{ b.count }}</td>
           <td class="num">{{ b.generated }}</td>
-          <td class="num">{{ b.used }}</td>
+          {% set s = summaries.get(b.id) if summaries else none %}
+          <td class="num">{{ s.available_count if s else '—' }}</td>
+          <td class="num">{{ s.active_count if s else b.used }}</td>
+          <td class="num">{{ s.expired_count if s else '—' }}</td>
+          <td class="num">{{ s.revoked_count if s else '—' }}</td>
+          <td>
+            {% set st = s.operational_status if s else b.status %}
+            {% if st in ['active'] %}<span class="pill pill-success">نشطة</span>
+            {% elif st in ['exhausted'] %}<span class="pill pill-warn">مستهلكة</span>
+            {% elif st in ['deleted', 'cancelled', 'canceled', 'revoked'] %}<span class="pill pill-danger">مؤرشفة</span>
+            {% else %}<span class="pill">{{ st or 'غير معروف' }}</span>{% endif %}
+          </td>
           <td style="min-width:140px">
             {% set pct = (b.used/b.generated*100) if b.generated else 0 %}
             <div class="progress-bar"><span style="width: {{ pct }}%"></span></div>

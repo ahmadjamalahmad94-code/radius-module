@@ -34,7 +34,7 @@ def _int_or_none(value: Any) -> int | None:
 
 def _status(row: dict, now: datetime) -> str:
     batch_status = (row.get("batch_status") or "").strip().lower()
-    if bool(row.get("card_revoked")) or batch_status in {
+    if bool(row.get("card_revoked")) or row.get("batch_deleted_at") or batch_status in {
         "revoked",
         "cancelled",
         "canceled",
@@ -64,6 +64,7 @@ def _batch(row: dict) -> dict | None:
         "created_by": row.get("batch_created_by") or None,
         "created_at": _iso(row.get("batch_created_at")),
         "expires_at": _iso(row.get("batch_expire_at")),
+        "deleted_at": _iso(row.get("batch_deleted_at")),
     }
 
 

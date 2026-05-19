@@ -297,6 +297,10 @@ class CardBatch:
     total_price: float = 0.0
     # metadata JSON
     metadata: str = "{}"
+    # R1 lifecycle foundation. These are additive and not globally filtered yet.
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
 
 
 @dataclass(frozen=True)

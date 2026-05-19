@@ -4,12 +4,19 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional
 
-from ..core.constants import AUDIT_ACTION_BATCH_GENERATE, AUDIT_ACTION_REVOKE, USER_TYPE_CARD
+from ..core.constants import (
+    AUDIT_ACTION_BATCH_ARCHIVE,
+    AUDIT_ACTION_BATCH_GENERATE,
+    AUDIT_ACTION_REVOKE,
+    USER_TYPE_CARD,
+)
 from ..core.errors import RadiusValidationError
 from ..core.types import Card, CardBatch, Subscriber
+from ..db.repos import cards_repo
 from ..integration.adapter import RadiusAdapter
 from ..stores.cards_store import CardsStore
 from .audit import RadiusAuditService
+from .audit_events import roadmap_audit_payload
 
 
 class CardsService:
@@ -26,6 +33,17 @@ class CardsService:
 
     def stats(self) -> dict:
         return self._store.stats()
+
+    def batch_operational_summary(self, batch_id: int) -> dict | None:
+        return cards_repo.batch_operational_summary(self._store_tenant_id(), batch_id)
+
+    def _store_tenant_id(self) -> int:
+        from ..core.tenant import DEFAULT_TENANT_ID
+        try:
+            from flask import g
+            return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+        except (ImportError, RuntimeError):
+            return DEFAULT_TENANT_ID
 
     def generate_batch(
         self,
@@ -156,6 +174,24 @@ class CardsService:
         self._store.revoke(card_id)
         self._audit.record(actor=actor, action=AUDIT_ACTION_REVOKE,
                            target_type="card", target_id=str(card_id))
+
+    def archive_batch(self, *, actor: str, batch_id: int, reason: str = "") -> bool:
+        archived = cards_repo.archive_batch(
+            self._store_tenant_id(), batch_id, actor=actor, reason=reason,
+        )
+        if archived:
+            self._audit.record(
+                actor=actor,
+                action=AUDIT_ACTION_BATCH_ARCHIVE,
+                target_type="card_batch",
+                target_id=str(batch_id),
+                payload=roadmap_audit_payload(
+                    domain="card_batches",
+                    action=AUDIT_ACTION_BATCH_ARCHIVE,
+                    reason=reason,
+                ),
+            )
+        return archived
 
 
 def get_cards_service() -> CardsService:
