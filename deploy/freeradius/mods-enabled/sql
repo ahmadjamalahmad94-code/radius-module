@@ -33,10 +33,20 @@ sql {
     read_profiles   = yes
     delete_stale_sessions = yes
 
-    # ـ clients من جدول nas ـ
-    client_table    = "nas"
-    read_clients    = yes
-    client_query    = "SELECT nasname, shortname, type, secret FROM nas"
+    # ─ clients من جدول nas — معطّل مؤقتًا ─
+    # السبب: migration 010_freeradius_schema.sql لم يُطبَّق على هذه الـ DB
+    # فجدول `nas` غير موجود. إن أبقينا read_clients = yes فإنّ الـ sql
+    # module يفشل instantiation و freeradius لا يقلع.
+    #
+    # الحلّ المؤقّت: الاعتماد على clients.conf الثابت (يحوي localhost +
+    # docker network، وتضاف أجهزة MikroTik يدويًا إلى الـ file حتى يكتمل
+    # الـ NAS DB sync layer).
+    #
+    # للتفعيل لاحقًا بعد تطبيق migration 010 + nas_devices→nas sync:
+    #   client_table    = "nas"
+    #   read_clients    = yes
+    #   client_query    = "SELECT nasname, shortname, type, secret FROM nas"
+    read_clients    = no
 
     pool {
         start          = 4

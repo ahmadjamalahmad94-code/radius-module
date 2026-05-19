@@ -25,11 +25,12 @@ services:
     volumes:
       - ../instance:/data              # SQLite DB shared (read+write radacct)
       - ../logs/freeradius:/var/log/freeradius
+    # نُحمِّل نفس .env الذي يستهلكه hoberadius — هذا يضمن أن
+    # HOBERADIUS_INTERNAL_SECRET متطابق على الطرفَين دون الاعتماد على
+    # interpolation ${VAR:-} الذي يقرأ من dir الـ compose file، لا من cwd.
+    env_file: ../.env
     environment:
       - FREERADIUS_DEBUG_LEVEL=        # ضع "-X" للـ verbose debugging
-      # تمرير الـ secret إلى الـ container ليُحقن في Header X-Internal-Secret
-      # ـ rest module ـ. يجب أن يطابق HOBERADIUS_INTERNAL_SECRET في hoberadius.
-      - HOBERADIUS_INTERNAL_SECRET=${HOBERADIUS_INTERNAL_SECRET:-}
     ports:
       - "1812:1812/udp"                # auth
       - "1813:1813/udp"                # accounting
