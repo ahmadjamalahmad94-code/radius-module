@@ -36,6 +36,13 @@ class NasDevice:
     description: str = ""
     enabled: bool = True
     last_seen_at: Optional[datetime] = None
+    # ── RM-H5: AdvRadius extension (migration 014) ──
+    last_check_at: Optional[datetime] = None
+    last_check_status: str = ""              # reachable / timeout / unreachable / ""
+    require_message_authenticator: bool = False
+    ssh_port: int = 22
+    tags: str = ""                           # CSV
+    metadata: str = "{}"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

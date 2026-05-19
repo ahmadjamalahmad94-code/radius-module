@@ -1,11 +1,19 @@
-"""NAS Devices routes — CRUD مع الحقول الكاملة."""
+"""NAS Devices routes — CRUD + test-connection.
+
+RM-H5: extended form/list with full AdvRadius fields and a /test
+endpoint that does a TCP socket reachability check (timeout 2s).
+"""
 from __future__ import annotations
+
+import socket
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.constants import NAS_VENDORS, NAS_VENDOR_MIKROTIK
 from ..core.errors import RadiusError
+from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types import NasDevice
+from ..db.repos import nas_repo
 from ..services.devices import get_nas_devices_service
 
 
@@ -16,35 +24,57 @@ def register_devices_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/devices/<int:nas_id>/edit", "devices_edit", devices_edit, methods=["GET"])
     bp.add_url_rule("/devices/<int:nas_id>", "devices_update", devices_update, methods=["POST"])
     bp.add_url_rule("/devices/<int:nas_id>/delete", "devices_delete", devices_delete, methods=["POST"])
+    bp.add_url_rule("/devices/<int:nas_id>/test", "devices_test", devices_test, methods=["POST"])
 
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
-def _i(name, default):
+def _tid() -> int:
     try:
-        return int(request.form.get(name) or default)
-    except (TypeError, ValueError):
-        return default
+        from flask import g
+        return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+    except (ImportError, RuntimeError):
+        return DEFAULT_TENANT_ID
+
+
+def _i(name, default):
+    try: return int(request.form.get(name) or default)
+    except (TypeError, ValueError): return default
+
+
+def _b(name): return request.form.get(name, "") in ("1","on","true","yes")
+def _s(name): return (request.form.get(name) or "").strip()
 
 
 def _dto(*, nas_id=None) -> NasDevice:
     return NasDevice(
         id=nas_id,
-        name=(request.form.get("name") or "").strip(),
-        address=(request.form.get("address") or "").strip(),
-        secret=(request.form.get("secret") or "").strip(),
-        vendor=(request.form.get("vendor") or NAS_VENDOR_MIKROTIK).strip().lower(),
-        nas_type=(request.form.get("nas_type") or "hotspot").strip().lower(),
+        name=_s("name"),
+        address=_s("address"),
+        secret=_s("secret"),
+        vendor=_s("vendor").lower() or NAS_VENDOR_MIKROTIK,
+        nas_type=_s("nas_type").lower() or "hotspot",
+        shortname=_s("shortname"),
+        ports=_i("ports", 0),
+        snmp_community=_s("snmp_community"),
         auth_port=_i("auth_port", 1812),
         acct_port=_i("acct_port", 1813),
         coa_port=_i("coa_port", 3799),
-        location=(request.form.get("location") or "").strip(),
-        coordinates=(request.form.get("coordinates") or "").strip(),
-        monitoring_enabled=bool(request.form.get("monitoring_enabled")),
-        description=(request.form.get("description") or "").strip(),
-        enabled=bool(request.form.get("enabled")),
+        api_port=_i("api_port", 8728),
+        api_user=_s("api_user"),
+        api_password=_s("api_password"),
+        api_use_tls=_b("api_use_tls"),
+        location=_s("location"),
+        coordinates=_s("coordinates"),
+        monitoring_enabled=_b("monitoring_enabled"),
+        description=_s("description"),
+        enabled=_b("enabled"),
+        # RM-H5
+        require_message_authenticator=_b("require_message_authenticator"),
+        ssh_port=_i("ssh_port", 22),
+        tags=_s("tags"),
     )
 
 
@@ -99,4 +129,31 @@ def devices_delete(nas_id: int):
         flash("تم الحذف.", "success")
     except RadiusError as e:
         flash(e.message, "error")
+    return redirect(url_for("radius.devices_list"))
+
+
+def devices_test(nas_id: int):
+    """RM-H5: TCP reachability check على api_port. timeout 2s.
+    لا يستدعي MikroTik API الفعلي — فقط فحص socket. النتيجة تُكتب في
+    last_check_at + last_check_status للعرض في list."""
+    try:
+        dev = get_nas_devices_service().get(nas_id)
+    except RadiusError:
+        abort(404)
+    ip = dev.address; port = int(dev.api_port or 8728)
+    status = "unknown"
+    try:
+        with socket.create_connection((ip, port), timeout=2.0):
+            status = "reachable"
+            flash(f"✓ الاتصال نجح على {ip}:{port}", "success")
+    except socket.timeout:
+        status = "timeout"
+        flash(f"⏱ انتهت المهلة (2s) على {ip}:{port}", "warning")
+    except OSError as exc:
+        status = "unreachable"
+        flash(f"✗ تعذّر الاتصال: {exc}", "error")
+    try:
+        nas_repo.record_check(_tid(), nas_id, status=status)
+    except Exception:
+        pass
     return redirect(url_for("radius.devices_list"))

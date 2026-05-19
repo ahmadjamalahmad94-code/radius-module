@@ -4,62 +4,174 @@
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+/* RM-H5 — NAS form (نفس نمط RM-H1/H3/H4 بتوكينات --hr-*) */
+.nd-form{max-width:980px;margin:0 auto;padding:8px 4px 18px}
+.sec-card{
+  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
+  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
+  box-shadow:var(--hr-shadow-sm);
+}
+.sec-card > h3{
+  display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:14.5px;font-weight:800;
+  color:var(--hr-text);padding-bottom:10px;border-bottom:1px dashed var(--hr-border);
+}
+.sec-card > h3 i.h-ic{
+  width:30px;height:30px;border-radius:6px;
+  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;
+}
+.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
+.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
+.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
+.sec-card.collapsible.is-collapsed > .sb{display:none}
+.sec-card.id    {border-inline-start:3px solid var(--hr-cyan-500)}
+.sec-card.ports {border-inline-start:3px solid var(--hr-green)}
+.sec-card.ports > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
+.sec-card.api   {border-inline-start:3px solid var(--hr-purple)}
+.sec-card.api   > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
+.sec-card.mon   {border-inline-start:3px solid var(--hr-orange)}
+.sec-card.mon   > h3 i.h-ic{background:var(--hr-badge-warn-bg);color:#92500c}
+
+.f-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
+@media (max-width:720px){.f-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.f-grid{grid-template-columns:1fr}}
+.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f-field.full{grid-column:1 / -1}
+.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
+.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
+.f-field input, .f-field select, .f-field textarea{
+  padding:10px 12px;border-radius:var(--hr-r,6px);
+  border:1.5px solid var(--hr-border-strong);
+  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
+  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
+}
+.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
+  outline:0;border-color:var(--hr-cyan-500);background:#fff;
+  box-shadow:0 0 0 3px rgba(43,170,204,.20);
+}
+.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
+.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
+.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
+.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="nd-form">
 <form method="post"
       action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
 
-  <div class="card">
-    <div class="card-header"><span class="title">الأساسيات</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>الاسم *</label>
-        <div class="field"><input type="text" name="name" required value="{{ device.name or '' }}"></div></div>
-      <div class="form-row"><label>العنوان *</label>
-        <div class="field"><input type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1"></div></div>
-      <div class="form-row"><label>المُصنِّع</label>
-        <div class="field"><select name="vendor">
+  {# ─────────────── 1. الهوية والشبكة ─────────────── #}
+  <section class="sec-card id">
+    <h3><i class="fa-solid fa-network-wired h-ic"></i>الهوية والشبكة</h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>الاسم <span class="req">*</span></label>
+        <input type="text" name="name" required value="{{ device.name or '' }}" placeholder="Main Router">
+        <div class="field-help">يظهر في القائمة والسجلات.</div></div>
+      <div class="f-field"><label>الاسم المختصر</label>
+        <input type="text" name="shortname" value="{{ device.shortname or '' }}" placeholder="mt-main"></div>
+      <div class="f-field"><label>عنوان IP <span class="req">*</span></label>
+        <input type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1"></div>
+      <div class="f-field"><label>RADIUS Shared Secret <span class="req">*</span></label>
+        <input type="text" name="secret" {% if is_new %}required{% endif %}
+               value="{{ device.secret or '' }}">
+        <div class="field-help">يجب أن يطابق ما هو على الـ NAS نفسه.</div></div>
+      <div class="f-field"><label>المُصنِّع</label>
+        <select name="vendor">
           {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>النوع</label>
-        <div class="field"><select name="nas_type">
-          {% for t in ['hotspot','pppoe','dhcp','other'] %}
+        </select></div>
+      <div class="f-field"><label>النوع</label>
+        <select name="nas_type">
+          {% for t in ["hotspot","pppoe","dhcp","router","ap","switch","firewall","other"] %}
             <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
           {% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>Shared Secret *</label>
-        <div class="field"><input type="password" name="secret"
-          {% if is_new %}required{% endif %}
-          placeholder="{{ '••••••••' if not is_new else '' }}"
-          value="{{ device.secret or '' }}"></div></div>
-      <div class="form-row"><label>الموقع</label>
-        <div class="field"><input type="text" name="location" value="{{ device.location or '' }}"></div></div>
-      <div class="form-row"><label>الوصف</label>
-        <div class="field"><textarea name="description">{{ device.description or '' }}</textarea></div></div>
+        </select></div>
+      <div class="f-field"><label>الموقع</label>
+        <input type="text" name="location" value="{{ device.location or '' }}" placeholder="الطابق 1 - الإدارة"></div>
+      <div class="f-field"><label>إحداثيات GPS</label>
+        <input type="text" name="coordinates" value="{{ device.coordinates or '' }}" placeholder="31.95, 35.93"></div>
+      <div class="f-field"><label>وسوم (CSV)</label>
+        <input type="text" name="tags" value="{{ device.tags or '' }}" placeholder="prod, building-a"></div>
+      <div class="f-field"><label>الحالة</label>
+        <div class="chk-row"><input type="checkbox" name="enabled" id="nd-en" value="1"
+          {% if device.enabled or is_new %}checked{% endif %}>
+          <label for="nd-en">مفعَّل</label></div></div>
+      <div class="f-field"><label>المراقبة الدورية</label>
+        <div class="chk-row"><input type="checkbox" name="monitoring_enabled" id="nd-mon" value="1"
+          {% if device.monitoring_enabled or is_new %}checked{% endif %}>
+          <label for="nd-mon">مفعَّلة</label></div></div>
+      <div class="f-field"><label>RFC 3579 Message-Authenticator</label>
+        <div class="chk-row"><input type="checkbox" name="require_message_authenticator" id="nd-ma" value="1"
+          {% if device.require_message_authenticator %}checked{% endif %}>
+          <label for="nd-ma">إلزامي</label></div></div>
+      <div class="f-field full"><label>الوصف</label>
+        <textarea name="description" style="min-height:60px;resize:vertical">{{ device.description or '' }}</textarea></div>
     </div>
-  </div>
+    </div>
+  </section>
 
-  <div class="card">
-    <div class="card-header"><span class="title">المنافذ والمراقبة</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>Auth Port</label>
-        <div class="field"><input type="number" name="auth_port" value="{{ device.auth_port or 1812 }}"></div></div>
-      <div class="form-row"><label>Acct Port</label>
-        <div class="field"><input type="number" name="acct_port" value="{{ device.acct_port or 1813 }}"></div></div>
-      <div class="form-row"><label>CoA Port</label>
-        <div class="field"><input type="number" name="coa_port" value="{{ device.coa_port or 3799 }}"></div></div>
-      <div class="form-row"><label>الإحداثيات</label>
-        <div class="field"><input type="text" name="coordinates" placeholder="31.95,35.93" value="{{ device.coordinates or '' }}"></div></div>
-      <div class="form-row"><label>مراقبة دورية</label>
-        <div class="field"><label class="toggle">
-          <input type="checkbox" name="monitoring_enabled" value="1" {% if device.monitoring_enabled %}checked{% endif %}>
-          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
-        </label></div></div>
-      <div class="form-row"><label>الحالة</label>
-        <div class="field"><label class="toggle">
-          <input type="checkbox" name="enabled" value="1" {% if device.enabled %}checked{% endif %}>
-          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
-        </label></div></div>
+  {# ─────────────── 2. المنافذ ─────────────── #}
+  <section class="sec-card ports">
+    <h3><i class="fa-solid fa-plug h-ic"></i>المنافذ (Ports)</h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>RADIUS Auth Port</label>
+        <input type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
+        <div class="field-help">قياسي: 1812.</div></div>
+      <div class="f-field"><label>RADIUS Accounting Port</label>
+        <input type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
+        <div class="field-help">قياسي: 1813.</div></div>
+      <div class="f-field"><label>CoA / Disconnect Port</label>
+        <input type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
+        <div class="field-help">RFC 5176: 3799.</div></div>
+      <div class="f-field"><label>MikroTik API Port</label>
+        <input type="number" min="0" max="65535" name="api_port" value="{{ device.api_port or 8728 }}">
+        <div class="field-help">8728 عادي، 8729 لـ TLS.</div></div>
+      <div class="f-field"><label>SSH Port</label>
+        <input type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}"></div>
+      <div class="f-field"><label>عدد المنافذ الفيزيائية</label>
+        <input type="number" min="0" name="ports" value="{{ device.ports or 0 }}"></div>
     </div>
-  </div>
+    </div>
+  </section>
+
+  {# ─────────────── 3. وصول API / SNMP ─────────────── #}
+  <section class="sec-card api collapsible is-collapsed" data-sec="api">
+    <h3><i class="fa-solid fa-key h-ic"></i>وصول API / SNMP <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>API username</label>
+        <input type="text" name="api_user" value="{{ device.api_user or '' }}" placeholder="admin"></div>
+      <div class="f-field"><label>API password</label>
+        <input type="text" name="api_password" value="{{ device.api_password or '' }}"></div>
+      <div class="f-field"><label>API يستخدم TLS</label>
+        <div class="chk-row"><input type="checkbox" name="api_use_tls" id="api-tls" value="1"
+          {% if device.api_use_tls %}checked{% endif %}>
+          <label for="api-tls">8729 (TLS)</label></div></div>
+      <div class="f-field full"><label>SNMP Community</label>
+        <input type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public"></div>
+    </div>
+    </div>
+  </section>
+
+  {# ─────────────── 4. آخر فحص ─────────────── #}
+  {% if not is_new and device.last_check_at %}
+  <section class="sec-card mon">
+    <h3><i class="fa-solid fa-heart-pulse h-ic"></i>آخر فحص اتصال</h3>
+    <div class="sb">
+      <p style="margin:0">الحالة: <strong>{{ device.last_check_status or 'unknown' }}</strong>
+        &nbsp;·&nbsp;
+        الوقت: <span class="mono">{{ device.last_check_at }}</span></p>
+      <div class="field-help" style="margin-top:6px">
+        يُحدَّث عند الضغط على زر "فحص" في صفحة القائمة (TCP socket reachability على api_port، timeout 2s).
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <div class="actions-bar">
     <button class="btn btn-primary" type="submit">
@@ -68,4 +180,24 @@
     <a class="btn btn-secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>
   </div>
 </form>
+</div>
+
+<script>
+(function(){
+  var LS = 'hr:nd-form:sec:';
+  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+    var k = card.dataset.sec; if (!k) return;
+    var v = null;
+    try { v = localStorage.getItem(LS + k); } catch(_) {}
+    if (v === 'collapsed') card.classList.add('is-collapsed');
+    else if (v === 'open')  card.classList.remove('is-collapsed');
+    var h = card.querySelector(':scope > h3');
+    if (h) h.addEventListener('click', function(){
+      card.classList.toggle('is-collapsed');
+      try { localStorage.setItem(LS + k,
+        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
+    });
+  });
+})();
+</script>
 {% endblock %}

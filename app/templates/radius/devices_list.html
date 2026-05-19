@@ -17,25 +17,42 @@
       <thead><tr>
         <th>#</th><th>الاسم</th><th>العنوان</th>
         <th>المُصنِّع</th><th>النوع</th><th>الموقع</th>
-        <th>المنافذ</th><th>الحالة</th>
-        <th style="width:110px">إجراءات</th>
+        <th>المنافذ</th><th>آخر فحص</th><th>الحالة</th>
+        <th style="width:160px">إجراءات</th>
       </tr></thead>
       <tbody>
         {% for d in items %}
         <tr>
           <td class="num">{{ d.id }}</td>
-          <td><strong>{{ d.name }}</strong></td>
-          <td class="mono">{{ d.address }}</td>
+          <td><strong>{{ d.name }}</strong>
+            {% if d.shortname %}<div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.shortname }}</div>{% endif %}
+          </td>
+          <td class="mono">{{ d.address }}
+            {% if d.tags %}<div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.tags }}</div>{% endif %}
+          </td>
           <td><span class="pill">{{ d.vendor }}</span></td>
           <td><span class="pill pill-info">{{ d.nas_type }}</span></td>
           <td>{{ d.location or '—' }}</td>
-          <td class="mono">{{ d.auth_port }}/{{ d.acct_port }}</td>
+          <td class="mono">{{ d.auth_port }}/{{ d.acct_port }}
+            <div style="font-size:11px;color:var(--hr-text-muted)">CoA:{{ d.coa_port }} · API:{{ d.api_port }}</div>
+          </td>
+          <td>
+            {% set st = d.last_check_status or '' %}
+            {% if st == 'reachable' %}<span class="pill pill-success"><i class="fa-solid fa-check"></i> reachable</span>
+            {% elif st == 'timeout' %}<span class="pill pill-warning"><i class="fa-solid fa-hourglass"></i> timeout</span>
+            {% elif st == 'unreachable' %}<span class="pill pill-danger"><i class="fa-solid fa-xmark"></i> unreachable</span>
+            {% else %}<span class="pill" style="color:var(--hr-text-muted)">—</span>{% endif %}
+            {% if d.last_check_at %}<div class="mono" style="font-size:10.5px;color:var(--hr-text-muted)">{{ d.last_check_at.strftime('%H:%M') if d.last_check_at.strftime else d.last_check_at }}</div>{% endif %}
+          </td>
           <td>
             {% if d.enabled %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
             {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
           </td>
           <td>
             <div class="cell-actions">
+              <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline" title="فحص الاتصال">
+                <button class="btn btn-secondary btn-xs" title="فحص اتصال TCP على api_port"><i class="fa-solid fa-bolt"></i></button>
+              </form>
               <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
                 <i class="fa-solid fa-pen"></i></a>
               <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
