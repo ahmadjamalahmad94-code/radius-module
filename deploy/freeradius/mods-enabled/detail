@@ -1,0 +1,8 @@
+# كتابة الـ accounting لـ flat file كنسخة احتياطية (debug-able)
+detail {
+    filename = ${radacctdir}/%{%{Packet-Src-IP-Address}:-%{Packet-Src-IPv6-Address}}/detail-%Y%m%d
+    permissions = 0600
+    suppress {
+        User-Password
+    }
+}

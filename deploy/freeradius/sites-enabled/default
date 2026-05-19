@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# default — virtual server يعالج auth/acct.
+# منطق HobeRadius:
+#   authorize: استدعِ HobeRadius عبر rest → يقرّر Accept/Reject ويُرجع reply attrs.
+#   authenticate: pap (FreeRADIUS يقارن Cleartext-Password المُرجَعة من rest).
+#   accounting:  اكتب لـ radacct في SQLite.
+#   post-auth:   اكتب لـ radpostauth + استدعِ HobeRadius للـ logging.
+# ─────────────────────────────────────────────────────────────────────────────
+
+server default {
+
+listen {
+    type   = auth
+    ipaddr = *
+    port   = 0
+    limit {
+        max_connections = 16
+        lifetime        = 0
+        idle_timeout    = 30
+    }
+}
+
+listen {
+    ipaddr = *
+    port   = 0
+    type   = acct
+    limit {}
+}
+
+# ─ AUTHORIZATION (قرار الوصول) ─
+authorize {
+    preprocess
+
+    # نطبّق rest module: يستدعي /api/v1/internal/auth ويُرجع:
+    #   control:Auth-Type := Accept | Reject
+    #   reply:<attr> := <value>...
+    rest
+
+    # لو HobeRadius رفض → نُعيد Reject مع الـ Reply-Message
+    if (control:Auth-Type == "Reject") {
+        reject
+    }
+
+    # لو HobeRadius وافق ولم يحدّد طريقة auth → نستخدم pap لمقارنة كلمة المرور
+    # (rest يُرجع Cleartext-Password في reply attrs لو وافق)
+    if (!control:Auth-Type) {
+        update control { Auth-Type := PAP }
+    }
+
+    pap
+}
+
+# ─ AUTHENTICATION (مقارنة كلمة المرور بعد قرار الوصول) ─
+authenticate {
+    Auth-Type PAP {
+        pap
+    }
+    Auth-Type CHAP {
+        chap
+    }
+}
+
+# ─ PREACCT — تحضير acct request ─
+preacct {
+    preprocess
+    acct_unique
+    suffix
+}
+
+# ─ ACCOUNTING — كتابة لـ radacct ─
+accounting {
+    detail
+    sql
+}
+
+# ─ POST-AUTH (بعد قرار FreeRADIUS) ─
+post-auth {
+    sql                # تسجيل radpostauth
+    rest               # webhook لـ HobeRadius
+
+    Post-Auth-Type REJECT {
+        sql
+        attr_filter.access_reject
+    }
+}
+}

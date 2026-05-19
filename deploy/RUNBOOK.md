@@ -34,6 +34,83 @@
 
 ---
 
+## A.2 تفعيل FreeRADIUS
+
+> هذا القسم لازم لأي تجربة حقيقية مع MikroTik. بدون freeradius container لن
+> يردّ الـ VPS على UDP 1812/1813 وبالتالي MikroTik `/radius test` يعطي
+> "no response".
+
+### تشغيل freeradius مع باقي الـ stack
+
+```bash
+# على الـ VPS، داخل /opt/hoberadius:
+docker compose -f deploy/docker-compose.yml up -d freeradius
+docker compose -f deploy/docker-compose.yml ps
+```
+
+**معيار النجاح**: `docker compose ps` يُظهر **4 خدمات** (app + nginx + backup + **freeradius**) كلها بحالة `Up` أو `running`.
+
+### تحقّق سريع
+
+```bash
+# 1. منافذ UDP منشورة على الـ host
+ss -lunp | grep -E ':1812|:1813|:3799'
+# يجب أن يظهر كل من 1812 و 1813 (و 3799 إن فعّلت CoA)
+
+# 2. سكربت السموك الجاهز
+bash deploy/smoke_freeradius.sh
+# يُكمل بـ "smoke FreeRADIUS مكتمل."
+```
+
+### secret المطلوب في .env
+
+قبل أوّل `up`:
+```bash
+# على الـ VPS:
+cd /opt/hoberadius
+grep HOBERADIUS_INTERNAL_SECRET .env
+# لو فارغ:
+sed -i "s|^HOBERADIUS_INTERNAL_SECRET=.*|HOBERADIUS_INTERNAL_SECRET=$(openssl rand -hex 32)|" .env
+docker compose -f deploy/docker-compose.yml up -d --force-recreate hoberadius freeradius
+```
+
+> ⚠️ نفس القيمة لازم تظهر في الـ env لكلا الـ containers — `${HOBERADIUS_INTERNAL_SECRET:-}` في compose يقرأها من الـ .env تلقائيًا.
+
+### NAS shared secret (testing123 افتراضيًا)
+
+`deploy/freeradius/clients.conf` يحوي client `testing123` لـ `127.0.0.1` + شبكة docker الداخلية فقط — مفيد للتجربة من الـ VPS نفسه.
+
+للـ MikroTik الحقيقي، أضِف الجهاز من `/admin/radius/devices`. الـ secret اللي تضعه هناك هو الـ shared secret الذي يقرأه FreeRADIUS من جدول `nas` تلقائيًا (بدون restart) — انظر `mods-enabled/sql: read_clients = yes`.
+
+### اختبار من MikroTik
+
+```routeros
+# على RouterOS:
+/radius add service=hotspot address=<VPS_PUBLIC_IP> secret=<MY_NAS_SECRET>
+/radius test [find address=<VPS_PUBLIC_IP>] user=qa-smoke password=qa-smoke
+# المتوقّع: "rejected" (لأن المستخدم ليس مُسجَّلًا) — لكن وصول الـ rejected نفسه
+# يثبت أن FreeRADIUS يردّ. "no response" يعني المنافذ مغلقة.
+```
+
+افتح المنافذ على firewall الـ VPS:
+```bash
+sudo ufw allow 1812/udp
+sudo ufw allow 1813/udp
+sudo ufw allow 3799/udp     # اختياري للـ CoA
+```
+
+### troubleshooting سريع
+
+| العَرَض | السبب الأرجح | الحل |
+|--------|--------------|------|
+| `docker compose ps` لا يُظهر freeradius | الـ image لم تُبنَ | `docker compose -f deploy/docker-compose.yml build freeradius` ثم `up -d freeradius` |
+| freeradius يتكرّر restart | secret فارغ أو خطأ config | `docker logs hoberadius-freeradius -n 100` |
+| MikroTik test = "no response" | منفذ مغلق على firewall | `sudo ufw status` ثم افتح 1812/1813/udp |
+| MikroTik test = "rejected" بدون debug | طبيعي — FreeRADIUS وصلت، فقط المستخدم غير موجود |
+| logs تُظهر "X-Internal-Secret mismatch" | .env و freeradius env مختلفان | حدّث `.env` ثم `docker compose up -d --force-recreate` |
+
+---
+
 ## B. النشر على VPS (5 دقائق)
 
 ### 1. SSH وتجهيز

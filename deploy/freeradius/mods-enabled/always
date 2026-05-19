@@ -1,0 +1,10 @@
+# helpers: yes/no/fail/etc — يستخدمها بعض الـ unlang policies
+always reject     { rcode = reject     }
+always fail       { rcode = fail       }
+always ok         { rcode = ok         }
+always handled    { rcode = handled    }
+always invalid    { rcode = invalid    }
+always disallow   { rcode = disallow   }
+always notfound   { rcode = notfound   }
+always noop       { rcode = noop       }
+always updated    { rcode = updated    }

@@ -1,0 +1,10 @@
+policy filter_username {
+    if (&User-Name) {
+        if (&User-Name =~ /\\s/) {
+            update request {
+                &Module-Failure-Message += 'Rejected: Username contains whitespace'
+            }
+            reject
+        }
+    }
+}

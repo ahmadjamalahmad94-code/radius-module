@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# rest — يستدعي HobeRadius /api/v1/internal/auth ليقرّر Accept/Reject
+# ـ هذا هو الـ "policy engine" الفعلي: كل القرارات تذهب لـ Python.
+# FreeRADIUS هنا = RADIUS protocol terminator فقط.
+# ─────────────────────────────────────────────────────────────────────────────
+rest {
+    tls {
+    }
+
+    connect_uri = "http://hoberadius:8000"
+    connect_timeout = 4.0
+
+    # ـ HOBERADIUS_INTERNAL_SECRET تُمرَّر إلى الـ container كـ env عبر compose ـ
+    # وتُحقن هنا في Header X-Internal-Secret. الـ /api/v1/internal/* يفحصها.
+    authorize {
+        uri      = "${..connect_uri}/api/v1/internal/auth"
+        method   = "post"
+        body     = "json"
+        header   = "X-Internal-Secret: ${env:HOBERADIUS_INTERNAL_SECRET}"
+        data     = '{ \
+            "User-Name": "%{User-Name}", \
+            "User-Password": "%{User-Password}", \
+            "Calling-Station-Id": "%{Calling-Station-Id}", \
+            "Called-Station-Id": "%{Called-Station-Id}", \
+            "NAS-IP-Address": "%{NAS-IP-Address}", \
+            "NAS-Port-Type": "%{NAS-Port-Type}", \
+            "Framed-IP-Address": "%{Framed-IP-Address}" \
+        }'
+        tls = ${..tls}
+    }
+
+    # ـ نُعطل authenticate (نتركها لـ FreeRADIUS) ـ
+    authenticate {}
+
+    # ـ post-auth: يُسجَّل عبر sql module في radpostauth ـ
+    post-auth {
+        uri      = "${..connect_uri}/api/v1/internal/postauth"
+        method   = "post"
+        body     = "json"
+        header   = "X-Internal-Secret: ${env:HOBERADIUS_INTERNAL_SECRET}"
+        data     = '{ \
+            "User-Name": "%{User-Name}", \
+            "reply_code": "%{reply:Packet-Type}", \
+            "NAS-IP-Address": "%{NAS-IP-Address}" \
+        }'
+        tls = ${..tls}
+    }
+
+    pool {
+        start          = 4
+        min            = 4
+        max            = 32
+        spare          = 8
+        uses           = 0
+        retry_delay    = 5
+        lifetime       = 0
+        idle_timeout   = 60
+    }
+}

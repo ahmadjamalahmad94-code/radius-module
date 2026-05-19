@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# sql — backend SQLite يقرأ/يكتب نفس DB الـ HobeRadius.
+# الاستخدامات:
+#  - accounting: كتابة radacct
+#  - post-auth: كتابة radpostauth
+#  - clients: قراءة جدول nas (لإضافة NAS بدون restart)
+#
+# ملاحظة: لا نعتمد على هذا الـ module لتقرير Accept/Reject — هذا يحدث في rest.
+# ─────────────────────────────────────────────────────────────────────────────
+sql {
+    dialect  = "sqlite"
+    driver   = "rlm_sql_sqlite"
+
+    sqlite {
+        # نفس الـ SQLite الذي يستخدمه HobeRadius. الـ filename يطابق
+        # HOBERADIUS_DB_PATH من .env (افتراضي hoberadius.db).
+        # ـ compose يربط ../instance:/data ـ
+        filename    = "/data/hoberadius.db"
+        busy_timeout = 30000
+        bootstrap   = ""    # لا نُنشئ schema — HobeRadius migrations تتولّى
+    }
+
+    # ـ schema FreeRADIUS قياسي (موجود في 010_freeradius_schema.sql) ـ
+    acct_table1     = "radacct"
+    acct_table2     = "radacct"
+    postauth_table  = "radpostauth"
+    authcheck_table = "radcheck"
+    authreply_table = "radreply"
+    groupcheck_table = "radgroupcheck"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+    read_groups     = yes
+    read_profiles   = yes
+    delete_stale_sessions = yes
+
+    # ـ clients من جدول nas ـ
+    client_table    = "nas"
+    read_clients    = yes
+    client_query    = "SELECT nasname, shortname, type, secret FROM nas"
+
+    pool {
+        start          = 4
+        min            = 4
+        max            = 16
+        spare          = 4
+        uses           = 0
+        retry_delay    = 5
+        lifetime       = 0
+        idle_timeout   = 60
+    }
+
+    # ـ queries (مكتوبة inline بدل INCLUDE لتجنّب dialects) ـ
+    group_attribute = "${.:instance}-SQL-Group"
+
+    accounting_start_query = "\
+        INSERT INTO ${acct_table1} \
+            (tenant_id, acctsessionid, acctuniqueid, username, realm, \
+             nasipaddress, nasportid, nasporttype, acctstarttime, \
+             acctauthentic, connectinfo_start, calledstationid, callingstationid, \
+             servicetype, framedprotocol, framedipaddress, framedipv6address, \
+             framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
+        VALUES \
+            (1, '%{Acct-Session-Id}', '%{Acct-Unique-Session-Id}', \
+             '%{SQL-User-Name}', '%{Realm}', \
+             '%{NAS-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
+             datetime('now'), \
+             '%{Acct-Authentic}', '%{Connect-Info}', \
+             '%{Called-Station-Id}', '%{Calling-Station-Id}', \
+             '%{Service-Type}', '%{Framed-Protocol}', \
+             '%{Framed-IP-Address}', '%{Framed-IPv6-Address}', \
+             '%{Framed-IPv6-Prefix}', '%{Framed-Interface-Id}', \
+             '%{Delegated-IPv6-Prefix}')"
+
+    accounting_update_query = "\
+        UPDATE ${acct_table1} SET \
+            acctupdatetime  = datetime('now'), \
+            acctinterval    = '%{Acct-Interim-Interval}', \
+            acctsessiontime = '%{Acct-Session-Time}', \
+            acctinputoctets = '%{Acct-Input-Octets}', \
+            acctoutputoctets= '%{Acct-Output-Octets}', \
+            framedipaddress = '%{Framed-IP-Address}' \
+        WHERE acctuniqueid  = '%{Acct-Unique-Session-Id}'"
+
+    accounting_stop_query = "\
+        UPDATE ${acct_table1} SET \
+            acctstoptime    = datetime('now'), \
+            acctsessiontime = '%{Acct-Session-Time}', \
+            acctinputoctets = '%{Acct-Input-Octets}', \
+            acctoutputoctets= '%{Acct-Output-Octets}', \
+            acctterminatecause = '%{Acct-Terminate-Cause}', \
+            connectinfo_stop = '%{Connect-Info}' \
+        WHERE acctuniqueid  = '%{Acct-Unique-Session-Id}'"
+
+    post-auth {
+        query = "\
+            INSERT INTO radpostauth \
+                (tenant_id, username, pass, reply, authdate, class, nas) \
+            VALUES \
+                (1, '%{User-Name}', '%{User-Password}', '%{reply:Packet-Type}', \
+                 datetime('now'), '', '%{NAS-IP-Address}')"
+    }
+}
