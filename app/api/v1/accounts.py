@@ -1,12 +1,21 @@
 """
 Accounts endpoints — REAL implementation.
 
-كل endpoint يستدعي service حقيقي، يكتب في DB، ويُطلق sync لـ MT.
+Every write goes through UsersService (same path the Flask web form uses), so
+audit + RADIUS sync + MikroTik push happen identically regardless of caller.
+
+Field intake is whitelisted. The whitelist covers the full RM-H1 Subscriber
+DTO except read-only counters and ids; `metadata` is accepted as either a
+JSON object or a string and stored as a string.
+
+Serialization flattens `metadata` to a parsed dict on the way out, so Flutter
+can read both flat fields and meta groups in one round trip.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, replace
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import Blueprint, g, request
 
@@ -24,16 +33,167 @@ def _actor() -> str:
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
 
 
+# Whitelist of patchable / creatable subscriber fields (mirrors the DTO).
+# id, tenant_id, password, username, used_*, last_*, created_*, updated_*
+# are NOT in this list — they are handled explicitly.
+_EDITABLE = (
+    # identity & links
+    "user_type", "service_type", "plan_id",
+    # pppoe specifics
+    "pppoe_username", "pppoe_password", "pppoe_ip",
+    # personal
+    "full_name", "father_name", "mobile", "email", "address", "city",
+    "district", "state", "zip", "coordinates", "national_id", "account_type",
+    "photo_url",
+    # balance / status / management
+    "balance", "auto_renewal", "status", "manager_id", "group", "pool",
+    # network
+    "mac_lock", "static_ip", "vlan_id", "override_concurrent",
+    # RM-H1 bandwidth overrides
+    "bandwidth_control_enabled", "download_speed_kbps", "upload_speed_kbps",
+    "custom_speed", "temporary_speed",
+    # RM-H1 connection metadata
+    "caller_id", "primary_dns_ppp", "secondary_dns_ppp", "device_connection_file",
+    # RM-H1 personal extras
+    "nationality", "country", "payment_method", "payment_reference",
+    # RM-H1 time/quota overrides
+    "total_connection_time_min", "daily_connection_time_min",
+    "download_quota_mb", "upload_quota_mb", "combined_quota_mb",
+    "connection_time_limit_enabled", "quota_limit_enabled",
+    "equal_share_download", "equal_share_upload",
+    # RM-H1 device control + working days
+    "working_days", "device_count", "allowed_macs",
+    # misc
+    "beneficiary_ref", "remark",
+)
+
+_DATETIME_FIELDS = ("expire_at", "first_login_at", "last_login_at", "last_seen_at")
+
+
+def _parse_dt(v):
+    if v in (None, "", 0):
+        return None
+    if isinstance(v, datetime):
+        return v
+    try:
+        return datetime.fromisoformat(str(v).replace("Z", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_metadata(raw) -> str:
+    """Accept either a dict/list or a JSON string, always store a JSON string.
+
+    Invalid input raises RadiusValidationError so the caller can surface a
+    422 and the request fails atomically — important because the alternative
+    (silently normalising to "{}") would wipe existing metadata on PATCH,
+    which is destructive.
+
+    Whitespace/empty string is treated as "no change requested": returns "{}"
+    only for the create path; on patch the caller should omit the key.
+    """
+    if raw is None:
+        return "{}"
+    if isinstance(raw, str):
+        if not raw.strip():
+            return "{}"
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError) as e:
+            raise RadiusValidationError(f"metadata is not valid JSON: {e}")
+        if not isinstance(parsed, (dict, list)):
+            raise RadiusValidationError(
+                "metadata must decode to a JSON object or array")
+        return raw
+    if isinstance(raw, (dict, list)):
+        try:
+            return json.dumps(raw, ensure_ascii=False)
+        except (TypeError, ValueError) as e:
+            raise RadiusValidationError(f"metadata not JSON-serialisable: {e}")
+    raise RadiusValidationError(
+        f"metadata must be a dict, list, or JSON string (got {type(raw).__name__})")
+
+
+def _coerce(field_name: str, value):
+    """Light type coercion based on the destination field name. Errors raise
+    RadiusValidationError so the caller can return a 422 cleanly."""
+    if field_name in _DATETIME_FIELDS:
+        return _parse_dt(value)
+    if field_name == "metadata":
+        return _normalize_metadata(value)
+    if field_name == "plan_id" or field_name == "manager_id":
+        if value in (None, "", 0):
+            return None if field_name == "plan_id" else 0
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            raise RadiusValidationError(f"{field_name} must be integer")
+    # leave strings/booleans/numbers to the dataclass — replace() won't coerce
+    # but it does accept whatever is on the right type. We do a few common
+    # coercions for numerics that often arrive as strings.
+    if field_name == "balance":
+        if value in (None, ""):
+            return 0.0
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise RadiusValidationError(f"{field_name} must be numeric")
+    if field_name in {
+        "download_speed_kbps", "upload_speed_kbps",
+        "vlan_id", "override_concurrent",
+        "total_connection_time_min", "daily_connection_time_min",
+        "download_quota_mb", "upload_quota_mb", "combined_quota_mb",
+        "device_count",
+    }:
+        if value in (None, ""):
+            return 0
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            raise RadiusValidationError(f"{field_name} must be numeric")
+    if field_name in {
+        "bandwidth_control_enabled", "custom_speed", "temporary_speed",
+        "auto_renewal",
+        "connection_time_limit_enabled", "quota_limit_enabled",
+        "equal_share_download", "equal_share_upload",
+    }:
+        return bool(value)
+    return value
+
+
+def _apply_body(sub: Subscriber, body: dict) -> Subscriber:
+    """Apply whitelisted fields from body to sub via dataclasses.replace.
+    expire_at + other datetimes accepted as ISO strings."""
+    changes: dict = {}
+    for k in _EDITABLE:
+        if k in body:
+            changes[k] = _coerce(k, body[k])
+    if "expire_at" in body:
+        changes["expire_at"] = _parse_dt(body["expire_at"])
+    if "metadata" in body:
+        changes["metadata"] = _normalize_metadata(body["metadata"])
+    return replace(sub, **changes)
+
+
 def _serialize(sub: Subscriber) -> dict:
+    """Serialise + parse metadata to a dict for convenience. Never leaks the
+    raw password — clients must use /reset_password to change it."""
     d = asdict(sub)
-    # ISO datetimes
     for k in ("first_login_at", "expire_at", "last_login_at", "last_seen_at",
               "created_at", "updated_at"):
         v = d.get(k)
         if hasattr(v, "isoformat"):
             d[k] = v.isoformat() + "Z"
-    # لا نُسرّب password عبر API
     d.pop("password", None)
+    # Convert metadata string → parsed dict so Flutter can use it directly.
+    meta = d.get("metadata")
+    if isinstance(meta, str):
+        try:
+            d["metadata"] = json.loads(meta or "{}")
+        except (TypeError, ValueError):
+            d["metadata"] = {}
+    # Convert allowed_days tuple → list for JSON friendliness (Plan only — kept
+    # here so the helper covers both DTOs if reused).
     return d
 
 
@@ -74,7 +234,11 @@ def accounts_list():
     except ValueError:
         return fail("validation_error", "limit/offset must be int", status=422)
     status = request.args.get("status")
-    items = _svc().list(status=status, limit=limit, offset=offset)
+    search = request.args.get("search") or ""
+    plan_id = request.args.get("plan_id")
+    plan_id = int(plan_id) if (plan_id and plan_id.isdigit()) else None
+    items = _svc().list(status=status, plan_id=plan_id, search=search,
+                        limit=limit, offset=offset)
     return ok({"items": [_serialize(s) for s in items], "count": len(items)})
 
 
@@ -82,25 +246,18 @@ def accounts_create():
     body = request.get_json(silent=True) or {}
     if not body.get("username") or not body.get("password"):
         return fail("validation_error", "username + password مطلوبان", status=422)
-    plan_id = body.get("plan_id")
-    expire_at = None
-    if body.get("expire_at"):
-        try: expire_at = datetime.fromisoformat(body["expire_at"].replace("Z", ""))
-        except ValueError:
-            return fail("validation_error", "expire_at format invalid", status=422)
-    sub = Subscriber(
+
+    # Seed a default Subscriber, then apply whitelisted fields.
+    seed = Subscriber(
         id=None, tenant_id=_tid(),
         username=str(body["username"]).strip(),
         password=str(body["password"]),
-        plan_id=int(plan_id) if plan_id else None,
-        full_name=str(body.get("full_name", "")).strip(),
-        mobile=str(body.get("mobile", "")).strip(),
-        email=str(body.get("email", "")).strip(),
-        beneficiary_ref=str(body.get("beneficiary_ref", "")).strip(),
-        expire_at=expire_at,
-        user_type=body.get("user_type", "subscriber"),
-        status=body.get("status", "enabled"),
     )
+    try:
+        sub = _apply_body(seed, body)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+
     try:
         saved = _svc().create(actor=_actor(), sub=sub)
     except RadiusValidationError as e:
@@ -124,19 +281,14 @@ def accounts_patch(username: str):
         sub = _svc().get(username)
     except RadiusNotFound:
         return fail("not_found", "account not found", status=404)
-    # حقول مسموحة بالتعديل عبر API
-    patch: dict = {}
-    for k in ("full_name", "mobile", "email", "remark", "status",
-              "mac_lock", "static_ip", "plan_id", "beneficiary_ref"):
-        if k in body:
-            patch[k] = body[k]
-    if "expire_at" in body and body["expire_at"]:
-        try: patch["expire_at"] = datetime.fromisoformat(body["expire_at"].replace("Z", ""))
-        except ValueError:
-            return fail("validation_error", "expire_at format invalid", status=422)
-    new_sub = replace(sub, **patch)
+    try:
+        new_sub = _apply_body(sub, body)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         _svc().update(actor=_actor(), sub=new_sub)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok(_serialize(_svc().get(username)))
@@ -197,7 +349,6 @@ def accounts_enable(username: str):
 
 
 def accounts_usage(username: str):
-    """يُرجع snapshot استهلاك من DB."""
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
