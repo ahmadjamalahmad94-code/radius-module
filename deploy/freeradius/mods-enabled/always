@@ -1,10 +1,12 @@
-# helpers: yes/no/fail/etc — يستخدمها بعض الـ unlang policies
+# helpers: rcodes ثابتة — يستخدمها unlang policies
+# تنبيه: "disallow" ليس rcode صالح في FreeRADIUS 3.2.x. الـ rcodes المسموحة
+# في rlm_always هي: ok, fail, reject, noop, notfound, handled, updated,
+# invalid, userlock. وضع أي rcode آخر يفشل instantiation و يمنع الإقلاع.
 always reject     { rcode = reject     }
 always fail       { rcode = fail       }
 always ok         { rcode = ok         }
 always handled    { rcode = handled    }
 always invalid    { rcode = invalid    }
-always disallow   { rcode = disallow   }
 always notfound   { rcode = notfound   }
 always noop       { rcode = noop       }
 always updated    { rcode = updated    }
