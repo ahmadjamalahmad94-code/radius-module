@@ -31,6 +31,7 @@ def create_app() -> Flask:
     app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     _install_stubs(app)
+    _install_api_cors(app)
     _init_db(app)
     _install_tenant(app)
     _register_radius(app)
@@ -39,6 +40,88 @@ def create_app() -> Flask:
     _seed_demo(app)
     _start_workers(app)
     return app
+
+
+def _install_api_cors(app: Flask) -> None:
+    """CORS for /api/* — permissive in dev, allow-list in production.
+
+    Behaviour matrix (env = HOBERADIUS_ENV or FLASK_ENV):
+
+    | env       | HOBERADIUS_CORS_ORIGINS    | result                          |
+    |-----------|----------------------------|---------------------------------|
+    | dev/empty | unset or "*"               | echo any Origin (wildcard)      |
+    | dev/empty | "https://a,https://b"      | explicit allow-list             |
+    | prod      | unset, empty, or "*"       | no Access-Control-Allow-Origin  |
+    | prod      | "https://a,https://b"      | explicit allow-list             |
+
+    Native Flutter clients (Android/iOS/Windows) do not send an Origin
+    header, so they are unaffected by CORS regardless of mode. CORS only
+    gates browser-based callers — i.e. someone hitting the JSON API from a
+    web page in the admin's browser.
+
+    A misconfigured prod deploy (env=production with origins unset) fails
+    closed: browsers cannot read API responses. The mobile/desktop apps and
+    direct curl/script calls keep working.
+    """
+    from flask import request as _req
+
+    raw_origins = (os.environ.get("HOBERADIUS_CORS_ORIGINS") or "").strip()
+    env = (
+        os.environ.get("HOBERADIUS_ENV")
+        or os.environ.get("FLASK_ENV")
+        or ""
+    ).strip().lower()
+    is_prod = env in {"prod", "production"}
+
+    if is_prod:
+        # Never default to "*"; literal "*" is rejected too.
+        if not raw_origins or raw_origins == "*":
+            allowed_origins: tuple[str, ...] = ()
+            wildcard = False
+        else:
+            allowed_origins = tuple(
+                o.strip() for o in raw_origins.split(",") if o.strip()
+            )
+            wildcard = False
+    else:
+        if not raw_origins or raw_origins == "*":
+            allowed_origins = ()
+            wildcard = True
+        else:
+            allowed_origins = tuple(
+                o.strip() for o in raw_origins.split(",") if o.strip()
+            )
+            wildcard = False
+
+    def _origin_allowed(origin: str) -> str:
+        if wildcard:
+            return origin or "*"
+        if not origin:
+            return ""
+        return origin if origin in allowed_origins else ""
+
+    @app.after_request
+    def _cors_headers(resp):
+        if not _req.path.startswith("/api/"):
+            return resp
+        origin = _req.headers.get("Origin", "")
+        echoed = _origin_allowed(origin)
+        if echoed:
+            resp.headers["Access-Control-Allow-Origin"] = echoed
+            resp.headers["Vary"] = "Origin"
+            resp.headers["Access-Control-Allow-Headers"] = (
+                "Authorization, Content-Type, X-Request-Id"
+            )
+            resp.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, PATCH, DELETE, OPTIONS"
+            )
+            resp.headers["Access-Control-Max-Age"] = "3600"
+        return resp
+
+    @app.route("/api/<path:_any>", methods=["OPTIONS"])
+    def _cors_preflight(_any):  # noqa: ARG001
+        from flask import make_response
+        return make_response("", 204)
 
 
 def _start_workers(app: Flask) -> None:
