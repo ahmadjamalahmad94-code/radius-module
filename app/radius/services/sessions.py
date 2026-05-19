@@ -1,5 +1,11 @@
 """
 OnlineSessionsService — قراءة المتصلين الآن + قطع الجلسات.
+
+R8.2: مصدر الجلسات الحيّة تحوّل من MikroTik API (متزامن، قد يستغرق
+دقائق عند تعذّر الاتصال) إلى radacct (microseconds). FreeRADIUS هو
+الكاتب القياسي لـ radacct بعد R1→R7. الـ legacy method `list_online`
+يبقى على الـ adapter للاستخدام التشخيصي اليدوي فقط — لا يُستدعى من
+render path.
 """
 from __future__ import annotations
 
@@ -17,6 +23,13 @@ class OnlineSessionsService:
         self._audit = audit
 
     def list(self, *, limit: int = 200) -> Sequence[OnlineSession]:
+        """R8.2: يقرأ الجلسات الحيّة من radacct مباشرة عبر adapter
+        method جديدة لا تضرب الشبكة. لو الـ adapter النشط لا يدعمها
+        (مثلاً ManualAdapter في الاختبارات القديمة) نرجع لـ list_online
+        القديمة كـ fallback — لا blocking لأن ManualAdapter in-memory."""
+        rd = getattr(self._adapter, "list_online_from_radacct", None)
+        if callable(rd):
+            return rd(limit=limit)
         return self._adapter.list_online(limit=limit)
 
     def disconnect(self, *, actor: str, username: str, session_id: Optional[str] = None) -> None:

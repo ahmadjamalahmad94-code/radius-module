@@ -160,10 +160,45 @@ class SqliteAdapter(RadiusAdapter):
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue reset password sync failed")
 
-    # ─────────────── Sessions (live من MT) ───────────────
+    # ─────────────── Sessions ───────────────
+
+    def list_online_from_radacct(self, *, limit: int = 200) -> Sequence[OnlineSession]:
+        """R8.2: المصدر القياسي للجلسات الحيّة بعد أن أصبح FreeRADIUS
+        rlm_sql يكتب radacct على كل Acct-Start/Interim/Stop (R1→R7).
+
+        يقرأ مباشرة من SQLite — لا اتصال بـ MikroTik، microseconds بدل
+        عشرات الثواني. الجلسة "حيّة" = `acctstoptime IS NULL`.
+
+        لا يرفع أبدًا — fallback إلى [] عند أي خطأ كي لا نُكسر render
+        صفحة /admin/radius/online.
+        """
+        from ..db.connection import db
+        from ..db.helpers import parse_dt
+        try:
+            rows = db().execute(
+                "SELECT acctsessionid, acctuniqueid, username, nasipaddress, "
+                "       nasporttype, framedipaddress, callingstationid, "
+                "       acctstarttime, acctupdatetime, "
+                "       acctinputoctets, acctoutputoctets, tenant_id "
+                "  FROM radacct "
+                " WHERE tenant_id = ? AND acctstoptime IS NULL "
+                " ORDER BY acctstarttime DESC "
+                " LIMIT ?",
+                (_tid(), limit),
+            ).fetchall()
+        except Exception:  # noqa: BLE001
+            _LOG.exception("list_online_from_radacct: query failed — returning []")
+            return []
+        return [_radacct_row_to_session(r, parse_dt=parse_dt) for r in rows]
 
     def list_online(self, *, limit: int = 200) -> Sequence[OnlineSession]:
-        """يجمع الجلسات من كل routers الـ tenant المفعّلة (live، لا cache)."""
+        """LEGACY: يضرب MT API مباشرة لكل router (synchronous).
+
+        ⚠ لا تستدعِها من request handlers — قد تستغرق دقائق لو router
+        غير قابل للوصول. R8.1/R8.2 حوّلا render paths (dashboard + online
+        list) لـ radacct عبر list_online_from_radacct(). نُبقي هذه
+        الـ method لـ diagnostics / enrichment وقت طلب يدوي.
+        """
         from .mikrotik.errors import MikrotikError
         from .mikrotik.pool import acquire as acquire_mt
         out: list[OnlineSession] = []
@@ -257,6 +292,34 @@ def _mt_row_to_session(r: dict, *, nas_name: str, nas_addr: str) -> OnlineSessio
         bytes_out=_safe_int(r.get("bytes-out")),
         rate_down_kbps=_parse_rate_kbps(r.get("rate-limit-rx")),
         rate_up_kbps=_parse_rate_kbps(r.get("rate-limit-tx")),
+    )
+
+
+def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
+    """R8.2: يحوّل radacct row إلى OnlineSession.
+
+    البنية المُتاحة في radacct تغطي كل الحقول المطلوبة في DTO ما عدا:
+      - plan_name + user_type: ليس عمودًا في radacct؛ يبقى افتراضيًا.
+      - rate_down/up_kbps: RADIUS لا ينقل rate في acct؛ صفر.
+    نُعيد استخدام nasipaddress كـ nas_id و nas_address (لا join مع
+    nas_devices لتجنّب query إضافي على كل صفّ — تحسين قابل لاحقاً).
+    started_at fallback إلى utcnow() لو الـ DB row فاسد.
+    """
+    started = parse_dt(r["acctstarttime"]) or datetime.utcnow()
+    updated = parse_dt(r["acctupdatetime"]) or started
+    nas_ip = r["nasipaddress"] or ""
+    return OnlineSession(
+        username=r["username"] or "",
+        session_id=r["acctsessionid"] or "",
+        nas_id=nas_ip, nas_address=nas_ip,
+        framed_ip=r["framedipaddress"] or "",
+        mac_address=r["callingstationid"] or "",
+        started_at=started,
+        last_update_at=updated,
+        tenant_id=int(r["tenant_id"]) if r["tenant_id"] is not None else 1,
+        bytes_in=_safe_int(r["acctinputoctets"]),
+        bytes_out=_safe_int(r["acctoutputoctets"]),
+        nas_port_type=r["nasporttype"] or "",
     )
 
 
