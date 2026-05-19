@@ -1,0 +1,56 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}عمليات جماعية{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
+{% block page_title %}عمليات جماعية على المستخدمين{% endblock %}
+
+{% block content %}
+<form method="post">
+  <div class="card">
+    <div class="card-header"><span class="title">قائمة المستخدمين</span></div>
+    <div class="card-body">
+      <div class="form-row full"><label>أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)</label>
+        <div class="field"><textarea name="usernames" rows="8"
+          placeholder="user1&#10;user2&#10;user3"></textarea>
+          <div class="hint">قم بلصق القائمة هنا.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">العملية</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الإجراء</label>
+        <div class="field"><select name="action" id="action" onchange="
+          var v=this.value;
+          document.getElementById('row-minutes').style.display = (v==='extend')?'grid':'none';
+          document.getElementById('row-password').style.display = (v==='reset_password')?'grid':'none';
+        ">
+          <option value="disable">تعطيل</option>
+          <option value="enable">تفعيل</option>
+          <option value="extend">تمديد بالدقائق</option>
+          <option value="reset_password">إعادة تعيين كلمة المرور</option>
+        </select></div></div>
+
+      <div class="form-row" id="row-minutes" style="display:none">
+        <label>عدد الدقائق</label>
+        <div class="field"><input type="number" name="minutes" min="1" value="60"></div>
+      </div>
+      <div class="form-row" id="row-password" style="display:none">
+        <label>كلمة المرور الجديدة</label>
+        <div class="field"><input type="text" name="new_password" placeholder="كلمة مرور جديدة..."></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"
+            onclick="return confirm('تأكيد التطبيق على القائمة؟')">
+      <i class="fa-solid fa-bolt"></i> نفّذ
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
+  </div>
+</form>
+
+<div class="hint" style="margin-top:8px">
+  ⚠️ كل عملية تُسجَّل في audit وتُدفع لـ MT تلقائيًا.
+</div>
+{% endblock %}

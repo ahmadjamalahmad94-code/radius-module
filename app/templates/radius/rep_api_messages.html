@@ -1,0 +1,24 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}سجل رسائل واجهة الربط{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-message"></i>{% endblock %}
+{% block page_title %}سجل رسائل واجهة الربط{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr><th>#</th><th>التوكن</th><th>الفعل</th><th>الكيان</th><th>المعرّف</th><th>IP</th><th>الوقت</th></tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td class="num">{{ r.id }}</td>
+      <td><span class="pill pill-cyan">{{ r.actor }}</span></td>
+      <td>{{ r.action }}</td>
+      <td class="mono">{{ r.target_type }}</td>
+      <td class="mono">{{ r.target_id }}</td>
+      <td class="mono">{{ r.ip_address or '—' }}</td>
+      <td class="mono">{{ r.created_at[:16] if r.created_at else '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-message"></i>لا توجد رسائل واجهة ربط</div>{% endif %}
+</div></div>
+{% endblock %}

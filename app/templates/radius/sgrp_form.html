@@ -1,0 +1,45 @@
+{% extends "admin/_admin_layout.html" %}
+{% set ttl = "إضافة مجموعة" if is_new else "تعديل مجموعة" %}
+{% block title %}{{ ttl }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
+{% block page_title %}{{ ttl }}{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ url_for('radius.sgrp_update', gid=item.id) if not is_new else url_for('radius.sgrp_create') }}">
+  <div class="card">
+    <div class="card-header"><span class="title">المعطيات</span></div>
+    <div class="card-body">
+      <div class="form-row"><label>الاسم *</label>
+        <div class="field"><input type="text" name="name" required value="{{ item.name if item else '' }}"></div></div>
+      <div class="form-row"><label>الوصف</label>
+        <div class="field"><textarea name="description">{{ item.description if item else '' }}</textarea></div></div>
+      <div class="form-row"><label>الكوتا المشتركة (MB، 0=غير محدود)</label>
+        <div class="field"><input type="number" name="shared_quota_mb" min="0"
+          value="{{ item.shared_quota_mb if item else 0 }}"></div></div>
+      <div class="form-row"><label>سرعة تنزيل مشتركة (Kbps)</label>
+        <div class="field"><input type="number" name="shared_speed_down_kbps" min="0"
+          value="{{ item.shared_speed_down_kbps if item else 0 }}"></div></div>
+      <div class="form-row"><label>سرعة رفع مشتركة (Kbps)</label>
+        <div class="field"><input type="number" name="shared_speed_up_kbps" min="0"
+          value="{{ item.shared_speed_up_kbps if item else 0 }}"></div></div>
+      <div class="form-row"><label>حد الأعضاء (0=غير محدود)</label>
+        <div class="field"><input type="number" name="max_members" min="0"
+          value="{{ item.max_members if item else 0 }}"></div></div>
+      <div class="form-row"><label>الحالة</label>
+        <div class="field"><label class="toggle">
+          <input type="checkbox" name="enabled" value="1" {% if (not item) or item.enabled %}checked{% endif %}>
+          <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
+        </label></div></div>
+    </div>
+  </div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.sgrp_list') }}">إلغاء</a>
+  </div>
+</form>
+
+<div class="hint" style="margin-top:8px">
+  ملاحظة: مجموعات المشاركة محفوظة الآن في الواجهة، وسيتم تفعيلها بالكامل عند ربطها بمحرك RADIUS.
+</div>
+{% endblock %}

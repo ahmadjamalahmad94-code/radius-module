@@ -1,0 +1,28 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الإعدادات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gear"></i>{% endblock %}
+{% block page_title %}إعدادات النظام{% endblock %}
+{% block page_sub %}<span class="sub">(لكل جهة)</span>{% endblock %}
+
+{% block content %}
+<form method="post">
+  <div class="card">
+    <div class="card-header"><span class="title">القيم العامة</span></div>
+    <div class="card-body">
+      {% for it in items %}
+      <div class="form-row">
+        <label>{{ it.label }}</label>
+        <div class="field">
+          <input type="text" name="{{ it.key }}" value="{{ it.value }}">
+          <div class="hint mono">{{ it.key }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="actions-bar">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="btn btn-secondary" href="{{ url_for('radius.dashboard') }}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

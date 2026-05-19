@@ -1,0 +1,25 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}سجل عناوين الأجهزة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-fingerprint"></i>{% endblock %}
+{% block page_title %}سجل عناوين أجهزة المستفيدين{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>المستخدم</th><th>عنوان الجهاز</th><th>عنوان جهاز الشبكة</th><th>عدد الجلسات</th><th>آخر ظهور</th>
+    </tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td><strong>{{ r.username }}</strong></td>
+      <td class="mono">{{ r.mac }}</td>
+      <td class="mono">{{ r.nasipaddress }}</td>
+      <td class="num">{{ r.sessions }}</td>
+      <td class="mono">{{ r.last_seen[:16] if r.last_seen else '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-fingerprint"></i>لا سجلات</div>{% endif %}
+</div></div>
+{% endblock %}

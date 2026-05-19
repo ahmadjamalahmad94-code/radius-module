@@ -1,0 +1,36 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}حالة الدخول{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-circle-check"></i>{% endblock %}
+{% block page_title %}حالة دخول المستخدمين{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>المستخدم</th><th>الحالة</th><th>آخر تسجيل</th><th>آخر ظهور</th>
+      <th>متّصل الآن</th><th>تنتهي</th>
+    </tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td><strong>{{ r.username }}</strong></td>
+      <td>
+        {% if r.status == 'enabled' %}<span class="pill pill-success">مفعَّل</span>
+        {% elif r.status == 'expired' %}<span class="pill pill-warn">منتهٍ</span>
+        {% elif r.status == 'disabled' %}<span class="pill pill-danger">معطَّل</span>
+        {% else %}<span class="pill">{{ r.status }}</span>{% endif %}
+      </td>
+      <td class="mono">{{ r.last_login_at[:16] if r.last_login_at else '—' }}</td>
+      <td class="mono">{{ r.last_seen_at[:16] if r.last_seen_at else '—' }}</td>
+      <td class="num">
+        {% if r.online_count and r.online_count > 0 %}
+          <span class="pill pill-success">{{ r.online_count }}</span>
+        {% else %}—{% endif %}
+      </td>
+      <td class="mono">{{ r.expire_at[:10] if r.expire_at else '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-users"></i>لا مستخدمين</div>{% endif %}
+</div></div>
+{% endblock %}

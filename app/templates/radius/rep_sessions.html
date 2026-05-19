@@ -1,0 +1,45 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}تقرير الجلسات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
+{% block page_title %}تقرير الجلسات والمحاسبة{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} صف)</span>{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar">
+  <div class="search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" name="username" placeholder="ابحث باسم المستخدم..." value="{{ username }}">
+  </div>
+  <select name="limit">
+    {% for n in [100, 200, 500, 1000] %}<option value="{{ n }}" {% if limit==n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+</form>
+
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>المستخدم</th><th>رقم الجلسة</th><th>عنوان جهاز الشبكة</th>
+      <th>عنوان IP</th><th>عنوان الجهاز</th><th>المدة (ث)</th><th>تنزيل</th><th>رفع</th>
+      <th>بداية</th><th>نهاية</th><th>سبب الإنهاء</th>
+    </tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td class="num">{{ r.radacctid }}</td>
+      <td><strong>{{ r.username }}</strong></td>
+      <td class="mono">{{ r.acctsessionid[:18] }}{% if r.acctsessionid|length > 18 %}…{% endif %}</td>
+      <td class="mono">{{ r.nasipaddress or '—' }}</td>
+      <td class="mono">{{ r.framedipaddress or '—' }}</td>
+      <td class="mono">{{ r.callingstationid or '—' }}</td>
+      <td class="num">{{ r.acctsessiontime or 0 }}</td>
+      <td class="mono">{{ "%.1f"|format((r.acctinputoctets or 0)/1048576) }} MB</td>
+      <td class="mono">{{ "%.1f"|format((r.acctoutputoctets or 0)/1048576) }} MB</td>
+      <td class="mono">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
+      <td class="mono">{{ r.acctstoptime[:16] if r.acctstoptime else '—' }}</td>
+      <td class="mono">{{ r.acctterminatecause or '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-chart-line"></i>لا جلسات</div>{% endif %}
+</div></div>
+{% endblock %}

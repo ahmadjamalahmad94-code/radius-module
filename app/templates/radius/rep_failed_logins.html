@@ -1,0 +1,30 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}تقرير محاولات الدخول الفاشلة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
+{% block page_title %}محاولات الدخول الفاشلة{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} محاولة)</span>{% endblock %}
+
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr>
+      <th>#</th><th>المستخدم</th><th>الرد</th><th>جهاز الشبكة</th><th>التاريخ</th><th>الفئة</th>
+    </tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td class="num">{{ r.id }}</td>
+      <td><strong>{{ r.username }}</strong></td>
+      <td><span class="pill pill-danger">{{ r.reply }}</span></td>
+      <td class="mono">{{ r.nas or '—' }}</td>
+      <td class="mono">{{ r.authdate[:16] if r.authdate else '—' }}</td>
+      <td class="mono">{{ r.class or '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>لا محاولات فاشلة</div>{% endif %}
+</div></div>
+
+<div class="hint" style="margin-top:8px">
+  يُملأ هذا الجدول من حدث رفض الدخول في RADIUS بعد تفعيل التكامل الكامل.
+</div>
+{% endblock %}

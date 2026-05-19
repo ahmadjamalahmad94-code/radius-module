@@ -1,0 +1,98 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}سجل RADIUS الحيّ{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-rss"></i>{% endblock %}
+{% block page_title %}سجل قرارات RADIUS — حيّ{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <span class="title">آخر القرارات (radpostauth)</span>
+    <div style="margin-{% if false %}left{% else %}right{% endif %}:auto;display:flex;gap:8px;align-items:center">
+      <label style="font-size:13px">تحديث:
+        <select id="poll-int">
+          <option value="2000">2s</option>
+          <option value="5000" selected>5s</option>
+          <option value="10000">10s</option>
+          <option value="0">إيقاف</option>
+        </select>
+      </label>
+      <span id="last-update" class="hint"></span>
+    </div>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table style="width:100%">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th style="width:170px">الوقت</th>
+          <th>المستخدم</th>
+          <th style="width:120px">النتيجة</th>
+          <th style="width:130px">جهاز الشبكة</th>
+          <th>السبب</th>
+        </tr>
+      </thead>
+      <tbody id="log-body">
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:#888">
+          يتمّ التحميل…
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="hint" style="margin-top:8px">
+  هذا السجل يُكتب من FreeRADIUS بعد كل طلب دخول، سواء تم قبوله أو رفضه.
+</div>
+
+<script>
+(function(){
+  const body = document.getElementById('log-body');
+  const lastEl = document.getElementById('last-update');
+  const sel = document.getElementById('poll-int');
+  let timer = null;
+  let knownIds = new Set();
+
+  function esc(s){ return (s==null?'':String(s))
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function load(){
+    try{
+      const r = await fetch('{{ url_for("radius.tool_radius_log_json") }}?limit=80',
+                            { credentials: 'same-origin' });
+      const data = await r.json();
+      const rows = data.items || [];
+      if (!rows.length){
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">لا توجد سجلات بعد.</td></tr>';
+      } else {
+        body.innerHTML = rows.map(it => {
+          const isNew = !knownIds.has(it.id);
+          const badge = it.ok
+            ? '<span style="background:#e6f6fb;color:#2BAACC;padding:2px 8px;border-radius:10px;font-size:12px"><i class="fa-solid fa-check"></i> قبول</span>'
+            : '<span style="background:#fde9e9;color:#d04949;padding:2px 8px;border-radius:10px;font-size:12px"><i class="fa-solid fa-xmark"></i> رفض</span>';
+          return `<tr ${isNew?'style="background:#fffbe6"':''}>
+            <td>${it.id}</td>
+            <td><code>${esc(it.authdate)}</code></td>
+            <td><strong>${esc(it.username)}</strong></td>
+            <td>${badge}</td>
+            <td>${esc(it.nas)}</td>
+            <td>${esc(it.reason)}</td>
+          </tr>`;
+        }).join('');
+        rows.forEach(it => knownIds.add(it.id));
+      }
+      lastEl.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG');
+    } catch (e) {
+      lastEl.textContent = 'خطأ في الاتصال';
+    }
+  }
+
+  function schedule(){
+    if (timer) { clearTimeout(timer); timer = null; }
+    const ms = parseInt(sel.value || '0', 10);
+    if (ms > 0) { timer = setTimeout(() => { load().finally(schedule); }, ms); }
+  }
+  sel.addEventListener('change', schedule);
+  load().finally(schedule);
+})();
+</script>
+{% endblock %}

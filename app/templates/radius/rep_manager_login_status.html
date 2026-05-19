@@ -1,0 +1,27 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}حالة دخول المدراء{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-clock"></i>{% endblock %}
+{% block page_title %}حالة دخول المدراء{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr><th>#</th><th>اليوزر</th><th>الاسم</th><th>البريد</th><th>الحالة</th><th>آخر دخول</th><th>أُنشئ</th></tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td class="num">{{ r.id }}</td>
+      <td class="mono"><strong>{{ r.username }}</strong></td>
+      <td>{{ r.full_name or '—' }}</td>
+      <td class="mono">{{ r.email or '—' }}</td>
+      <td>
+        {% if r.enabled %}<span class="pill pill-success">مفعَّل</span>
+        {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
+      </td>
+      <td class="mono">{{ r.last_login_at[:16] if r.last_login_at else 'لم يدخل' }}</td>
+      <td class="mono">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-user-clock"></i>لا مدراء</div>{% endif %}
+</div></div>
+{% endblock %}

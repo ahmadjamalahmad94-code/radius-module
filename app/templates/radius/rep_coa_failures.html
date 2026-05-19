@@ -1,0 +1,31 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}أخطاء قطع الجلسة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
+{% block page_title %}أخطاء قطع الجلسة الفوري{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body card-body--flush">
+  {% if items %}
+  <table class="hr-table">
+    <thead><tr><th>#</th><th>النوع</th><th>المستخدم</th><th>الحالة</th><th>المحاولات</th><th>الخطأ</th><th>إجراء</th></tr></thead>
+    <tbody>{% for r in items %}
+    <tr>
+      <td class="num">{{ r.id }}</td>
+      <td><span class="pill pill-warn">{{ r.kind }}</span></td>
+      <td class="mono">{{ r.entity_key }}</td>
+      <td>
+        {% if r.status == 'failed' %}<span class="pill pill-danger">فشل</span>
+        {% else %}<span class="pill pill-warn">{{ r.status }}</span>{% endif %}
+      </td>
+      <td class="num">{{ r.attempts }}</td>
+      <td class="mono" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.last_error or '—' }}</td>
+      <td>
+        <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
+          <button class="btn btn-primary btn-xs"><i class="fa-solid fa-rotate"></i></button>
+        </form>
+      </td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty"><i class="fa-solid fa-plug-circle-xmark"></i>لا إخفاقات</div>{% endif %}
+</div></div>
+{% endblock %}

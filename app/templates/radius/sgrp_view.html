@@ -1,0 +1,84 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}مجموعة: {{ grp.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
+{% block page_title %}{{ grp.name }}{% endblock %}
+{% block page_sub %}<span class="sub">(مجموعة مشاركة #{{ grp.id }} · {{ members|length }} عضو)</span>{% endblock %}
+
+{% block content %}
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="right"><div class="lbl">الأعضاء</div><div class="val">{{ members|length }}</div></div>
+    <div class="ico"><i class="fa-solid fa-users"></i></div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="right"><div class="lbl">الكوتا المشتركة</div><div class="val" style="font-size:16px">
+      {% if grp.shared_quota_mb %}{{ "%.1f"|format(grp.shared_quota_mb/1024) }} GB{% else %}∞{% endif %}
+    </div></div>
+    <div class="ico"><i class="fa-solid fa-database"></i></div>
+  </div>
+  <div class="kpi-card">
+    <div class="right"><div class="lbl">السرعة (تنزيل/رفع)</div><div class="val" style="font-size:14px">{{ grp.shared_speed_down_kbps }}/{{ grp.shared_speed_up_kbps }} Kbps</div></div>
+    <div class="ico"><i class="fa-solid fa-gauge"></i></div>
+  </div>
+  <div class="kpi-card kpi-dark">
+    <div class="right"><div class="lbl">حد الأعضاء</div><div class="val">{{ grp.max_members or '∞' }}</div></div>
+    <div class="ico"><i class="fa-solid fa-user-plus"></i></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:8px">
+  <div class="card">
+    <div class="card-header"><span class="title">الأعضاء</span></div>
+    <div class="card-body card-body--flush">
+      {% if members %}
+      <table class="hr-table">
+        <thead><tr><th>#</th><th>اليوزر</th><th>الاسم</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>{% for m in members %}
+        <tr>
+          <td class="num">{{ m.id }}</td>
+          <td class="mono"><strong>{{ m.username }}</strong></td>
+          <td>{{ m.full_name or '—' }}</td>
+          <td><span class="pill">{{ m.status }}</span></td>
+          <td>
+            <form method="post" action="{{ url_for('radius.sgrp_remove_member', gid=grp.id, sid=m.id) }}"
+                  onsubmit="return confirm('إزالة من المجموعة؟')" style="display:inline">
+              <button class="btn btn-danger btn-xs"><i class="fa-solid fa-user-minus"></i></button>
+            </form>
+          </td>
+        </tr>{% endfor %}</tbody>
+      </table>
+      {% else %}<div class="empty"><i class="fa-solid fa-user-slash"></i>لا أعضاء</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="title">إضافة عضو</span></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
+        <div class="form-row full">
+          <div class="field">
+            <select name="subscriber_id" required>
+              <option value="">— اختر مشتركًا —</option>
+              {% for s in candidates %}
+                <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '' }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">
+          <i class="fa-solid fa-user-plus"></i> أضف
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="actions-bar">
+  <a class="btn btn-secondary" href="{{ url_for('radius.sgrp_edit', gid=grp.id) }}">
+    <i class="fa-solid fa-pen"></i> تعديل المجموعة
+  </a>
+  <a class="btn btn-ghost" href="{{ url_for('radius.sgrp_list') }}">
+    <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الصيانة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-screwdriver-wrench"></i>{% endblock %}
+{% block page_title %}الصيانة والتنظيف{% endblock %}
+
+{% block content %}
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="right"><div class="lbl">سجلات الجلسات</div><div class="val">{{ stats.radacct }}</div></div>
+    <div class="ico"><i class="fa-solid fa-database"></i></div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="right"><div class="lbl">سجل التدقيق</div><div class="val">{{ stats.audit_log }}</div></div>
+    <div class="ico"><i class="fa-solid fa-clock-rotate-left"></i></div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="right"><div class="lbl">مهام المزامنة</div><div class="val">{{ stats.sync_queue }}</div></div>
+    <div class="ico"><i class="fa-solid fa-arrows-rotate"></i></div>
+  </div>
+  <div class="kpi-card kpi-dark">
+    <div class="right"><div class="lbl">حجم قاعدة البيانات</div><div class="val">{{ "%.1f"|format(db_size_mb) }} MB</div></div>
+    <div class="ico"><i class="fa-solid fa-hard-drive"></i></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:8px">
+  <div class="card-header"><span class="title">أدوات التنظيف</span></div>
+  <div class="card-body">
+
+    <form method="post" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--hr-border)">
+      <input type="hidden" name="action" value="purge_radacct">
+      <div class="form-row"><label>حذف الجلسات المنتهية أقدم من</label>
+        <div class="field" style="display:flex;gap:6px;align-items:center">
+          <input type="number" name="days" value="90" min="7" style="width:100px"> يوم
+          <button class="btn btn-danger" type="submit" style="margin-inline-start:auto"
+                  onclick="return confirm('تأكيد الحذف؟ لا يمكن التراجع.')">
+            <i class="fa-solid fa-broom"></i> تنظيف
+          </button>
+        </div></div>
+    </form>
+
+    <form method="post" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--hr-border)">
+      <input type="hidden" name="action" value="purge_sync_done">
+      <div class="form-row"><label>حذف مهام المزامنة المكتملة الأقدم من</label>
+        <div class="field" style="display:flex;gap:6px;align-items:center">
+          <input type="number" name="days" value="30" min="1" style="width:100px"> يوم
+          <button class="btn btn-warning" type="submit" style="margin-inline-start:auto"
+                  onclick="return confirm('تأكيد؟')">
+            <i class="fa-solid fa-broom"></i> تنظيف
+          </button>
+        </div></div>
+    </form>
+
+    <form method="post" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--hr-border)">
+      <input type="hidden" name="action" value="purge_audit">
+      <div class="form-row"><label>حذف سجل تدقيق أقدم من</label>
+        <div class="field" style="display:flex;gap:6px;align-items:center">
+          <input type="number" name="days" value="180" min="30" style="width:100px"> يوم
+          <button class="btn btn-warning" type="submit" style="margin-inline-start:auto"
+                  onclick="return confirm('تأكيد؟')">
+            <i class="fa-solid fa-broom"></i> تنظيف
+          </button>
+        </div></div>
+    </form>
+
+    <form method="post" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--hr-border)">
+      <input type="hidden" name="action" value="purge_failed_webhooks">
+      <div class="form-row"><label>حذف محاولات إشعارات الربط الفاشلة</label>
+        <div class="field" style="display:flex;gap:6px;align-items:center">
+          <span class="hint">(فقط المحاولات التي توقفت نهائيًا)</span>
+          <button class="btn btn-warning" type="submit" style="margin-inline-start:auto"
+                  onclick="return confirm('تأكيد؟')">
+            <i class="fa-solid fa-broom"></i> تنظيف
+          </button>
+        </div></div>
+    </form>
+
+    <form method="post">
+      <input type="hidden" name="action" value="vacuum">
+      <div class="form-row"><label>تقليص ملف قاعدة البيانات</label>
+        <div class="field" style="display:flex;gap:6px;align-items:center">
+          <span class="hint">قد يستغرق بضع ثوانٍ حسب الحجم. شغّله بعد عمليات حذف كبيرة.</span>
+          <button class="btn btn-primary" type="submit" style="margin-inline-start:auto"
+                  onclick="return confirm('تنفيذ VACUUM؟')">
+            <i class="fa-solid fa-compress"></i> تشغيل
+          </button>
+        </div></div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
