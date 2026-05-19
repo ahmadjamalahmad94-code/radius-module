@@ -32,7 +32,9 @@
   <select name="status">
     <option value="">كل الحالات</option>
     {% for s in ['paid','pending','failed','refunded','canceled'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>
+        {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+      </option>
     {% endfor %}
   </select>
   <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
@@ -42,7 +44,7 @@
   {% if items %}
   <table class="hr-table" data-paginated="1" data-page-size="50">
     <thead><tr>
-      <th>#</th><th>الرقم</th><th>اليوزر</th><th>الباقة</th>
+      <th>#</th><th>الرقم</th><th>اسم الدخول</th><th>الباقة</th>
       <th>الاتجاه</th><th>المبلغ</th><th>الطريقة</th>
       <th>التاريخ</th><th>الحالة</th><th style="width:130px"></th>
     </tr></thead>
@@ -71,7 +73,9 @@
         <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" style="display:flex;gap:4px">
           <select name="status" style="font-size:11px;padding:3px;border-radius:4px;border:1px solid var(--hr-border-strong)">
             {% for s in ['paid','pending','failed','refunded','canceled'] %}
-              <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>{{ s }}</option>
+              <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>
+                {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+              </option>
             {% endfor %}
           </select>
           <button class="btn btn-secondary btn-xs"><i class="fa-solid fa-check"></i></button>

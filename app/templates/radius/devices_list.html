@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}أجهزة NAS{% endblock %}
+{% block title %}أجهزة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
-{% block page_title %}أجهزة NAS{% endblock %}
+{% block page_title %}أجهزة الشبكة{% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }} جهاز)</span>{% endblock %}
 {% block head_buttons %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('radius.devices_new') }}">
@@ -34,13 +34,13 @@
           <td><span class="pill pill-info">{{ d.nas_type }}</span></td>
           <td>{{ d.location or '—' }}</td>
           <td class="mono">{{ d.auth_port }}/{{ d.acct_port }}
-            <div style="font-size:11px;color:var(--hr-text-muted)">CoA:{{ d.coa_port }} · API:{{ d.api_port }}</div>
+            <div style="font-size:11px;color:var(--hr-text-muted)">قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}</div>
           </td>
           <td>
             {% set st = d.last_check_status or '' %}
-            {% if st == 'reachable' %}<span class="pill pill-success"><i class="fa-solid fa-check"></i> reachable</span>
-            {% elif st == 'timeout' %}<span class="pill pill-warning"><i class="fa-solid fa-hourglass"></i> timeout</span>
-            {% elif st == 'unreachable' %}<span class="pill pill-danger"><i class="fa-solid fa-xmark"></i> unreachable</span>
+            {% if st == 'reachable' %}<span class="pill pill-success"><i class="fa-solid fa-check"></i> متاح</span>
+            {% elif st == 'timeout' %}<span class="pill pill-warning"><i class="fa-solid fa-hourglass"></i> انتهت المهلة</span>
+            {% elif st == 'unreachable' %}<span class="pill pill-danger"><i class="fa-solid fa-xmark"></i> غير متاح</span>
             {% else %}<span class="pill" style="color:var(--hr-text-muted)">—</span>{% endif %}
             {% if d.last_check_at %}<div class="mono" style="font-size:10.5px;color:var(--hr-text-muted)">{{ d.last_check_at.strftime('%H:%M') if d.last_check_at.strftime else d.last_check_at }}</div>{% endif %}
           </td>
@@ -51,7 +51,7 @@
           <td>
             <div class="cell-actions">
               <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline" title="فحص الاتصال">
-                <button class="btn btn-secondary btn-xs" title="فحص اتصال TCP على api_port"><i class="fa-solid fa-bolt"></i></button>
+                <button class="btn btn-secondary btn-xs" title="فحص اتصال جهاز الشبكة"><i class="fa-solid fa-bolt"></i></button>
               </form>
               <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
                 <i class="fa-solid fa-pen"></i></a>

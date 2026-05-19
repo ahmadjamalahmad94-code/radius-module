@@ -80,7 +80,7 @@
   <section class="sec-card id">
     <h3><i class="fa-solid fa-key h-ic"></i>الهوية</h3>
     <div class="f-grid">
-      <div class="f-field"><label>اسم الدور (technical) <span class="req">*</span></label>
+      <div class="f-field"><label>اسم الدور الداخلي <span class="req">*</span></label>
         <input type="text" name="name" {% if not is_new %}readonly{% endif %} required
                value="{{ role.name if role else '' }}" placeholder="manager / viewer / auditor">
         <div class="field-help">اسم تقني فريد — يُستخدم في الكود.</div></div>

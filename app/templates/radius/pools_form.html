@@ -1,5 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
-{% set ttl = "إضافة Pool" if is_new else "تعديل Pool" %}
+{% set ttl = "إضافة نطاق عناوين" if is_new else "تعديل نطاق عناوين" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -12,7 +12,7 @@
     <div class="form-row"><label>النطاق *</label>
       <div class="field"><input type="text" name="range_ip" required value="{{ item.range_ip }}"
         placeholder="10.0.0.10-10.0.0.250"></div></div>
-    <div class="form-row"><label>Local IP</label>
+    <div class="form-row"><label>العنوان المحلي</label>
       <div class="field"><input type="text" name="local_ip" value="{{ item.local_ip }}" placeholder="10.0.0.1"></div></div>
     <div class="form-row"><label>الراوتر</label>
       <div class="field"><select name="router_id">

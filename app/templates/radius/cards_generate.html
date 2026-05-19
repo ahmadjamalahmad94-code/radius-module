@@ -116,19 +116,19 @@
           <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي (حروف+أرقام+رموز)</option>
           <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
         </select></div>
-      <div class="f-field"><label>إضافة (prefix أو suffix)</label>
+      <div class="f-field"><label>إضافة قبل أو بعد الاسم</label>
         {% set side = form.get('starts_with_or_ends_with') or '' %}
         <select name="starts_with_or_ends_with">
           <option value=""       {% if not side %}selected{% endif %}>— لا شيء —</option>
-          <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>prefix (قبل)</option>
-          <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>suffix (بعد)</option>
+          <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
+          <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
         </select></div>
-      <div class="f-field"><label>قيمة prefix/suffix</label>
+      <div class="f-field"><label>النص المضاف</label>
         <input type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}"
                placeholder="مثال: GZA-"></div>
-      <div class="f-field"><label>بادئة (compat قديم)</label>
+      <div class="f-field"><label>بادئة قديمة للتوافق</label>
         <input type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
-        <div class="field-help">للتوافق — يستخدم prefix أعلاه أحدث.</div></div>
+        <div class="field-help">للتوافق مع الإعداد القديم — خيار الإضافة أعلاه هو الأحدث.</div></div>
       <div class="f-field"><label>تضمين رقم الحزمة</label>
         <div class="chk-row"><input type="checkbox" name="include_batch_number" id="ibn" value="1"
           {% if form.get('include_batch_number') %}checked{% endif %}>
@@ -148,7 +148,7 @@
     <div class="f-grid">
       <div class="f-field"><label>قيمة الوقت</label>
         <input type="number" min="0" name="time_value" value="{{ form.get('time_value') or 0 }}">
-        <div class="field-help">0 = استخدم validity_days من الباقة.</div></div>
+        <div class="field-help">0 = استخدم صلاحية الأيام الموجودة في الباقة.</div></div>
       <div class="f-field"><label>وحدة الوقت</label>
         {% set tu = form.get('time_unit') or 'days' %}
         <select name="time_unit">

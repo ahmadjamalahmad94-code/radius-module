@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}باندويث Profiles{% endblock %}
+{% block title %}ملفات السرعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
-{% block page_title %}باندويث Profiles{% endblock %}
+{% block page_title %}ملفات السرعة{% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
 {% block head_buttons %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bw_new') }}">
@@ -12,7 +12,7 @@
 <div class="card"><div class="card-body card-body--flush">
   {% if items %}
   <table class="hr-table">
-    <thead><tr><th>#</th><th>الاسم</th><th>تنزيل</th><th>رفع</th><th>Burst</th><th>الأولوية</th><th style="width:110px"></th></tr></thead>
+    <thead><tr><th>#</th><th>الاسم</th><th>تنزيل</th><th>رفع</th><th>سرعة مؤقتة</th><th>الأولوية</th><th style="width:110px"></th></tr></thead>
     <tbody>{% for b in items %}
     <tr>
       <td class="num">{{ b.id }}</td>
@@ -30,6 +30,6 @@
       </div></td>
     </tr>{% endfor %}</tbody>
   </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-gauge"></i>لا profiles</div>{% endif %}
+  {% else %}<div class="empty"><i class="fa-solid fa-gauge"></i>لا توجد ملفات سرعة بعد.</div>{% endif %}
 </div></div>
 {% endblock %}

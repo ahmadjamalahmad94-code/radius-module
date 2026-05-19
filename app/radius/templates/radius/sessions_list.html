@@ -1,6 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
+{% set mode_label = "يدوي" if settings.mode == "manual" else ("مباشر" if settings.mode == "live" else settings.mode) %}
 {% block title %}الجلسات المباشرة — RADIUS{% endblock %}
-{% block page_title %}الجلسات المباشرة (Online){% endblock %}
+{% block page_title %}الجلسات المباشرة{% endblock %}
 {% block crumbs %}
   <span>الإدارة</span>
   <i class="fa-solid fa-chevron-left"></i>
@@ -32,7 +33,7 @@
 
   {% if settings.mode == "manual" %}
     <div class="stage-banner">
-      وضع <strong>manual</strong> — لا توجد جلسات حية.
+      الوضع اليدوي — لا توجد جلسات حية.
       شغّل <code>RADIUS_MODE=live</code> + <code>RADIUS_API_READY=1</code> للرؤية الفعلية.
     </div>
   {% endif %}
@@ -47,7 +48,7 @@
         <h3 class="d-card-title" style="margin:0">المتصلون الآن</h3>
         <span class="d-card-meta">{{ items|length }} جلسة</span>
       </div>
-      <span class="mode-pill {{ settings.mode }}">{{ settings.mode }}</span>
+      <span class="mode-pill {{ settings.mode }}">{{ mode_label }}</span>
     </div>
     <div class="d-card-body" style="padding:0">
       {% if items %}

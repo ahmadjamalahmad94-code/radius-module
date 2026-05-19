@@ -1,14 +1,16 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}سجل تسليم Webhooks{% endblock %}
+{% block title %}سجل إرسال إشعارات الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
-{% block page_title %}سجل تسليم Webhooks{% endblock %}
+{% block page_title %}سجل إرسال إشعارات الربط{% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
 {% block content %}
 <form method="get" class="filter-bar">
   <select name="status">
     <option value="">كل الحالات</option>
     {% for s in ['queued','retrying','delivered','failed'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>
+        {% if s == 'queued' %}في الانتظار{% elif s == 'retrying' %}يعاد المحاولة{% elif s == 'delivered' %}تم الإرسال{% elif s == 'failed' %}فشل{% else %}{{ s }}{% endif %}
+      </option>
     {% endfor %}
   </select>
   <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
@@ -17,7 +19,7 @@
   {% if items %}
   <table class="hr-table">
     <thead><tr>
-      <th>#</th><th>الحدث</th><th>event_id</th><th>المحاولات</th>
+      <th>#</th><th>الحدث</th><th>رقم الحدث</th><th>المحاولات</th>
       <th>الحالة</th><th>آخر كود</th><th>آخر استجابة</th><th>التالي</th><th>أُنشئ</th>
     </tr></thead>
     <tbody>{% for d in items %}
@@ -27,10 +29,10 @@
       <td class="mono">{{ d.event_id }}</td>
       <td class="num">{{ d.attempts }}</td>
       <td>
-        {% if d.status == 'delivered' %}<span class="pill pill-success">delivered</span>
-        {% elif d.status == 'queued' %}<span class="pill pill-info">queued</span>
-        {% elif d.status == 'retrying' %}<span class="pill pill-warn">retrying</span>
-        {% elif d.status == 'failed' %}<span class="pill pill-danger">failed</span>
+        {% if d.status == 'delivered' %}<span class="pill pill-success">تم الإرسال</span>
+        {% elif d.status == 'queued' %}<span class="pill pill-info">في الانتظار</span>
+        {% elif d.status == 'retrying' %}<span class="pill pill-warn">يعاد المحاولة</span>
+        {% elif d.status == 'failed' %}<span class="pill pill-danger">فشل</span>
         {% else %}<span class="pill">{{ d.status }}</span>{% endif %}
       </td>
       <td class="num">{{ d.last_status_code or '—' }}</td>

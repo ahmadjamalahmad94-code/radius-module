@@ -1,5 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة مشترك" if is_new else "تعديل مشترك" %}
+{% set title_ar = "إضافة مستفيد" if is_new else "تعديل مستفيد" %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-plus"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -8,11 +8,34 @@
 {{ super() }}
 <style>
 /* RM-H1 — Subscriber form (نفس روح HobeHub بتوكينات radius-module --hr-*) */
-.sub-form{max-width:1080px;margin:0 auto;padding:8px 4px 18px}
+.sub-form{max-width:1240px;margin:0 auto;padding:8px 4px 18px}
+.sub-layout{
+  direction:ltr;display:grid;grid-template-columns:218px minmax(0,1fr);
+  gap:14px;align-items:start;
+}
+.sub-layout > form,.sub-side{direction:rtl}
+.sub-side{
+  position:sticky;top:84px;background:#fff;border:1px solid var(--hr-border);
+  border-radius:8px;box-shadow:var(--hr-shadow-sm);padding:12px;
+}
+.sub-side-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--hr-text);margin-bottom:8px}
+.sub-side-title i{color:var(--hr-cyan-700);font-size:12px}
+.sub-side-list{display:flex;flex-direction:column;gap:4px}
+.sub-side-list a{
+  display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:6px;
+  text-decoration:none;color:var(--hr-text-soft);font-size:12px;font-weight:700;
+}
+.sub-side-list a:hover{background:var(--hr-soft);color:var(--hr-cyan-700)}
+.sub-side-list i{width:14px;text-align:center;font-size:11px;color:var(--hr-text-muted)}
+.sub-side-note{
+  margin-top:10px;padding:9px 10px;border-radius:6px;background:var(--hr-soft);
+  color:var(--hr-text-muted);font-size:11.5px;line-height:1.65;border:1px dashed var(--hr-border);
+}
 .sec-card{
   margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
   background:var(--hr-card,#fff);border:1px solid var(--hr-border);
   box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));
+  scroll-margin-top:96px;
 }
 .sec-card > h3{
   display:flex;align-items:center;gap:10px;
@@ -43,6 +66,12 @@
 .f-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
 @media (max-width:920px){.f-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.f-grid{grid-template-columns:1fr}}
+@media (max-width:980px){
+  .sub-layout{direction:rtl;display:block}
+  .sub-side{position:relative;top:auto;margin-bottom:12px}
+  .sub-side-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){.sub-side-list{grid-template-columns:1fr}}
 .f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .f-field.full{grid-column:1 / -1}
 .f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
@@ -58,8 +87,11 @@
   box-shadow:0 0 0 3px rgba(43,170,204,.20);
 }
 .f-field input[readonly]{background:var(--hr-stripe);color:var(--hr-text-soft);cursor:not-allowed}
+.f-field input:disabled{opacity:.65;cursor:not-allowed;background:var(--hr-stripe)}
 .f-field textarea{min-height:64px;resize:vertical}
 .field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
+.time-range{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.time-range{grid-template-columns:1fr}}
 
 .chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
 .chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
@@ -80,68 +112,102 @@
 
 {% block content %}
 <div class="sub-form">
+<div class="sub-layout">
+<aside class="sub-side" aria-label="أقسام نموذج المستفيد">
+  <div class="sub-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
+  <nav class="sub-side-list">
+    <a href="#sec-account"><i class="fa-solid fa-wifi"></i> حساب الإنترنت</a>
+    <a href="#sec-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
+    <a href="#sec-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
+    <a href="#sec-personal"><i class="fa-solid fa-id-card"></i> البيانات الشخصية</a>
+    <a href="#sec-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
+    <a href="#sec-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
+    <a href="#sec-advanced"><i class="fa-solid fa-microchip"></i> إعدادات متقدمة</a>
+    <a href="#sec-notes"><i class="fa-solid fa-comment"></i> الملاحظات</a>
+  </nav>
+  <div class="sub-side-note">
+    ابدأ من حساب الإنترنت وباقة الخدمة. باقي الأقسام اختيارية وتُستخدم عندما تحتاج تخصيصًا لهذا المستفيد.
+  </div>
+</aside>
 <form method="post" id="sub-form"
       action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
 
   {# ─────────────── 1. حساب الإنترنت (أساسي) ─────────────── #}
-  <section class="sec-card acct">
+  <section class="sec-card acct" id="sec-account">
     <h3><i class="fa-solid fa-wifi h-ic"></i>حساب الإنترنت</h3>
     <div class="sb">
     <div class="f-grid">
-      <div class="f-field"><label>اسم المستخدم <span class="req">*</span></label>
+      <div class="f-field"><label>اسم الدخول <span class="req">*</span></label>
         <input type="text" name="username" required {% if not is_new %}readonly{% endif %}
                value="{{ sub.username or '' }}" placeholder="user123">
-        <div class="field-help">المعرّف الذي يُدخله المشترك للاتصال.</div></div>
+        <div class="field-help">الاسم الذي يستخدمه المستفيد للدخول إلى الإنترنت.</div></div>
 
       <div class="f-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
         <input type="text" name="password" {% if is_new %}required{% endif %}
                placeholder="{{ '••••••••' if not is_new else '' }}"
                value="{{ sub.password if is_new else '' }}">
-        <div class="field-help">RADIUS PAP/CHAP يحتاج plaintext أو MD5.</div></div>
+        <div class="field-help">تستخدمه أجهزة الشبكة للتحقق من الحساب عند تسجيل الدخول.</div></div>
 
       <div class="f-field"><label>نوع الحساب</label>
         <select name="user_type">
-          {% for t in user_types %}<option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
-        </select></div>
+          {% for t in user_types %}
+            <option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>
+              {% if t == 'subscriber' %}مستفيد{% elif t == 'card' %}بطاقة دخول{% elif t == 'trial' %}تجريبي{% else %}{{ t }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="field-help">اختر نوع الحساب حسب طريقة استخدامه: مستفيد دائم، بطاقة دخول، أو حساب تجريبي.</div></div>
 
       <div class="f-field"><label>نوع الخدمة</label>
         <select name="service_type">
           {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
-            <option value="{{ t }}" {% if sub.service_type == t %}selected{% endif %}>{{ t }}</option>
+            <option value="{{ t }}" {% if sub.service_type == t %}selected{% endif %}>
+              {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
+            </option>
           {% endfor %}
-        </select></div>
+        </select>
+        <div class="field-help">اختر طريقة الدخول التي سيستخدمها المستفيد على الشبكة.</div></div>
 
-      <div class="f-field"><label>الباقة (Plan)</label>
+      <div class="f-field"><label>باقة الخدمة</label>
         <select name="plan_id">
           <option value="">— بدون —</option>
           {% for p in plans %}<option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
-        </select></div>
+        </select>
+        <div class="field-help">الباقة تحدد السرعة والحصة ومدة الاستخدام الأساسية.</div></div>
 
       <div class="f-field"><label>الحالة</label>
         <select name="status">
-          {% for s in statuses %}<option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-        </select></div>
+          {% for s in statuses %}
+            <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
+              {% if s == 'enabled' %}مفعّل{% elif s == 'disabled' %}معطّل{% elif s == 'expired' %}منتهي{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="field-help">عند التعطيل لن يستطيع المستفيد استخدام الحساب.</div></div>
 
-      <div class="f-field"><label>المدير المسؤول (ID)</label>
+      <div class="f-field"><label>رقم المدير المسؤول</label>
         <input type="number" name="manager_id" value="{{ sub.manager_id or '' }}" placeholder="—"></div>
 
       <div class="f-field"><label>المجموعة</label>
-        <input type="text" name="group" value="{{ sub.group or '' }}" placeholder="default"></div>
+        <input type="text" name="group" value="{{ sub.group or '' }}" placeholder="default">
+        <div class="field-help">اسم مجموعة اختيارية لتنظيم المستفيدين أو ربطهم بسياسة مشتركة.</div></div>
 
       <div class="f-field"><label>تجديد تلقائي</label>
         <div class="chk-row"><input type="checkbox" name="auto_renewal" id="auto-renew" value="1"
           {% if sub.auto_renewal %}checked{% endif %}>
-          <label for="auto-renew">مفعَّل</label></div></div>
+          <label for="auto-renew">مفعَّل</label></div>
+        <div class="field-help">فعّله إذا كان الحساب يُجدّد تلقائيًا عند انتهاء المدة أو الحصة.</div></div>
 
       <div class="f-field"><label>مرجع HobeHub</label>
-        <input type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}"></div>
+        <input type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
+        <div class="field-help">مرجع اختياري لربط الحساب بسجل المستفيد في نظام HobeHub.</div></div>
     </div>
     </div>
   </section>
 
-  {# ─────────────── 2. التحكم بالسرعة (override per-user) ─────────────── #}
-  <section class="sec-card acct collapsible is-collapsed" data-sec="speed">
-    <h3><i class="fa-solid fa-gauge-high h-ic"></i>التحكم بالسرعة (override per-user)
+  {# ─────────────── 2. التحكم بالسرعة ─────────────── #}
+  <section class="sec-card acct collapsible is-collapsed" data-sec="speed" id="sec-speed">
+    <h3><i class="fa-solid fa-gauge-high h-ic"></i>سرعة خاصة للمستفيد
       <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <div class="f-grid">
@@ -152,7 +218,7 @@
 
       <div class="f-field"><label>سرعة التنزيل (Kbps)</label>
         <input type="number" min="0" name="download_speed_kbps" value="{{ sub.download_speed_kbps or 0 }}">
-        <div class="field-help">0 = استخدم قيمة الباقة. 1024 = 1 Mbps.</div></div>
+        <div class="field-help">0 = استخدم قيمة الباقة. 1024 = 1 ميجابت.</div></div>
 
       <div class="f-field"><label>سرعة الرفع (Kbps)</label>
         <input type="number" min="0" name="upload_speed_kbps" value="{{ sub.upload_speed_kbps or 0 }}">
@@ -161,34 +227,55 @@
       <div class="f-field"><label>سرعة مخصصة</label>
         <div class="chk-row"><input type="checkbox" name="custom_speed" id="cs" value="1"
           {% if sub.custom_speed %}checked{% endif %}>
-          <label for="cs">مفعَّل</label></div></div>
+          <label for="cs">مفعَّل</label></div>
+        <div class="field-help">استخدمها عندما تريد سرعة مختلفة عن سرعة الباقة.</div></div>
 
       <div class="f-field"><label>سرعة مؤقتة</label>
         <div class="chk-row"><input type="checkbox" name="temporary_speed" id="ts" value="1"
           {% if sub.temporary_speed %}checked{% endif %}>
-          <label for="ts">مفعَّل</label></div></div>
+          <label for="ts">مفعَّل</label></div>
+        <div class="field-help">مناسبة لرفع السرعة مؤقتًا دون تغيير الباقة الأساسية.</div></div>
+      <div class="f-field full">
+        <label>وقت السرعة المؤقتة</label>
+        <div class="time-range">
+          <div>
+            <input type="time" name="temporary_speed_from" id="temporary-speed-from"
+                   value="{{ sub.temporary_speed_from or '' }}">
+            <div class="field-help">من الساعة</div>
+          </div>
+          <div>
+            <input type="time" name="temporary_speed_to" id="temporary-speed-to"
+                   value="{{ sub.temporary_speed_to or '' }}">
+            <div class="field-help">إلى الساعة</div>
+          </div>
+        </div>
+        <div class="field-help">حدد الفترة التي تعمل فيها السرعة المؤقتة لهذا المستفيد.</div>
+      </div>
     </div>
     </div>
   </section>
 
   {# ─────────────── 3. PPPoE (اختياري) ─────────────── #}
-  <section class="sec-card acct collapsible is-collapsed" data-sec="pppoe">
+  <section class="sec-card acct collapsible is-collapsed" data-sec="pppoe" id="sec-pppoe">
     <h3><i class="fa-solid fa-plug h-ic"></i>PPPoE (اختياري)
       <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <div class="f-grid">
-      <div class="f-field"><label>PPPoE username</label>
-        <input type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}"></div>
-      <div class="f-field"><label>PPPoE password</label>
-        <input type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}"></div>
-      <div class="f-field"><label>PPPoE IP</label>
-        <input type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5"></div>
+      <div class="f-field"><label>اسم دخول PPPoE</label>
+        <input type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
+        <div class="field-help">اتركه فارغًا إذا كان اسم الدخول الأساسي هو نفسه.</div></div>
+      <div class="f-field"><label>كلمة مرور PPPoE</label>
+        <input type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
+        <div class="field-help">كلمة مرور الاتصال عبر PPPoE إن كانت مختلفة عن كلمة المرور الأساسية.</div></div>
+      <div class="f-field"><label>عنوان PPPoE</label>
+        <input type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
+        <div class="field-help">عنوان ثابت اختياري لهذا الاتصال.</div></div>
     </div>
     </div>
   </section>
 
   {# ─────────────── 4. المعلومات الشخصية ─────────────── #}
-  <section class="sec-card pers">
+  <section class="sec-card pers" id="sec-personal">
     <h3><i class="fa-solid fa-id-card h-ic"></i>المعلومات الشخصية</h3>
     <div class="sb">
     <div class="f-grid">
@@ -215,7 +302,8 @@
       <div class="f-field"><label>الرمز البريدي</label>
         <input type="text" name="zip" value="{{ sub.zip or '' }}"></div>
       <div class="f-field full"><label>العنوان التفصيلي</label>
-        <input type="text" name="address" value="{{ sub.address or '' }}"></div>
+        <input type="text" name="address" value="{{ sub.address or '' }}">
+        <div class="field-help">اكتب وصفًا واضحًا يساعد فريق الدعم أو التحصيل عند الحاجة.</div></div>
       <div class="f-field"><label>طريقة الدفع (مرجعي)</label>
         <input type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="—">
         <div class="field-help">حقل مرجعي فقط — بدون منطق تجاري.</div></div>
@@ -226,23 +314,26 @@
   </section>
 
   {# ─────────────── 5. الشبكة والربط ─────────────── #}
-  <section class="sec-card netw collapsible is-collapsed" data-sec="net">
+  <section class="sec-card netw collapsible is-collapsed" data-sec="net" id="sec-network">
     <h3><i class="fa-solid fa-network-wired h-ic"></i>الشبكة وقيود الاتصال
       <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <div class="f-grid">
-      <div class="f-field"><label>قفل MAC الأساسي</label>
+      <div class="f-field"><label>قفل عنوان الجهاز الأساسي</label>
         <input type="text" name="mac_lock" value="{{ sub.mac_lock or '' }}" placeholder="AA:BB:CC:DD:EE:FF">
         <div class="field-help">لربط الحساب بجهاز واحد حصري.</div></div>
-      <div class="f-field"><label>IP ثابت</label>
-        <input type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"></div>
+      <div class="f-field"><label>عنوان IP ثابت</label>
+        <input type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5">
+        <div class="field-help">استخدمه فقط إذا كان المستفيد يحتاج عنوانًا ثابتًا.</div></div>
       <div class="f-field"><label>VLAN</label>
-        <input type="number" name="vlan_id" value="{{ sub.vlan_id or 0 }}"></div>
+        <input type="number" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
+        <div class="field-help">رقم شبكة افتراضية متقدمة، اتركه 0 إذا لم تكن تستخدم VLAN.</div></div>
       <div class="f-field"><label>تجاوز الجلسات</label>
         <input type="number" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
         <div class="field-help">0 = استخدم قيمة الباقة.</div></div>
-      <div class="f-field"><label>Caller ID</label>
-        <input type="text" name="caller_id" value="{{ sub.caller_id or '' }}" placeholder="device identifier"></div>
+      <div class="f-field"><label>معرّف الجهاز</label>
+        <input type="text" name="caller_id" value="{{ sub.caller_id or '' }}" placeholder="مثال: معرّف الجهاز">
+        <div class="field-help">يُستخدم لربط الدخول بجهاز أو نقطة اتصال معيّنة.</div></div>
       <div class="f-field"><label>عدد الأجهزة المسموحة</label>
         <input type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
         <div class="field-help">الحد الأقصى للجلسات المتزامنة.</div></div>
@@ -250,28 +341,31 @@
         <input type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
       <div class="f-field"><label>DNS ثانوي (PPP)</label>
         <input type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
-      <div class="f-field"><label>الـ pool (radius pool)</label>
-        <input type="text" name="pool" value="{{ sub.pool or '' }}"></div>
-      <div class="f-field full"><label>MACs إضافية مسموحة (CSV)</label>
+      <div class="f-field"><label>نطاق عناوين الشبكة</label>
+        <input type="text" name="pool" value="{{ sub.pool or '' }}">
+        <div class="field-help">اسم نطاق العناوين الذي يوزّع منه جهاز الشبكة عنوان الاتصال.</div></div>
+      <div class="f-field full"><label>عناوين أجهزة إضافية مسموحة</label>
         <input type="text" name="allowed_macs" value="{{ sub.allowed_macs or '' }}"
                placeholder="AA:BB:..., CC:DD:..."></div>
       <div class="f-field full"><label>ملف اتصال الجهاز</label>
         <input type="text" name="device_connection_file" value="{{ sub.device_connection_file or '' }}"
-               placeholder="connection file reference"></div>
+               placeholder="مرجع ملف الاتصال"></div>
     </div>
     </div>
   </section>
 
-  {# ─────────────── 6. الكوتا والوقت (override per-user) ─────────────── #}
-  <section class="sec-card quota collapsible is-collapsed" data-sec="quota">
-    <h3><i class="fa-solid fa-clock h-ic"></i>الكوتا والوقت (override per-user)
+  {# ─────────────── 6. الحصة والوقت ─────────────── #}
+  <section class="sec-card quota collapsible is-collapsed" data-sec="quota" id="sec-quota">
+    <h3><i class="fa-solid fa-clock h-ic"></i>الحصة والوقت
       <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <div class="f-grid">
       <div class="f-field"><label>إجمالي وقت الاتصال (دقيقة)</label>
-        <input type="number" min="0" name="total_connection_time_min" value="{{ sub.total_connection_time_min or 0 }}"></div>
+        <input type="number" min="0" name="total_connection_time_min" value="{{ sub.total_connection_time_min or 0 }}">
+        <div class="field-help">إجمالي الوقت المسموح لهذا الحساب، و0 يعني بلا حد خاص.</div></div>
       <div class="f-field"><label>وقت الاتصال اليومي (دقيقة)</label>
-        <input type="number" min="0" name="daily_connection_time_min" value="{{ sub.daily_connection_time_min or 0 }}"></div>
+        <input type="number" min="0" name="daily_connection_time_min" value="{{ sub.daily_connection_time_min or 0 }}">
+        <div class="field-help">الوقت المسموح به يوميًا لهذا الحساب.</div></div>
       <div class="f-field"><label>كوتا التنزيل (MB)</label>
         <input type="number" min="0" name="download_quota_mb" value="{{ sub.download_quota_mb or 0 }}">
         <div class="field-help">0 = غير محدودة. 1024 = 1 GB.</div></div>
@@ -284,11 +378,13 @@
       <div class="f-field"><label>حد وقت الاتصال</label>
         <div class="chk-row"><input type="checkbox" name="connection_time_limit_enabled" id="ctl" value="1"
           {% if sub.connection_time_limit_enabled %}checked{% endif %}>
-          <label for="ctl">مفعَّل</label></div></div>
+          <label for="ctl">مفعَّل</label></div>
+        <div class="field-help">فعّله إذا أردت تطبيق حدود الوقت المكتوبة هنا.</div></div>
       <div class="f-field"><label>حد الكوتا</label>
         <div class="chk-row"><input type="checkbox" name="quota_limit_enabled" id="ql" value="1"
           {% if sub.quota_limit_enabled %}checked{% endif %}>
-          <label for="ql">مفعَّل</label></div></div>
+          <label for="ql">مفعَّل</label></div>
+        <div class="field-help">فعّله إذا أردت تطبيق حدود الحصة المكتوبة هنا.</div></div>
       <div class="f-field"><label>توزيع متساوٍ للتنزيل</label>
         <div class="chk-row"><input type="checkbox" name="equal_share_download" id="esd" value="1"
           {% if sub.equal_share_download %}checked{% endif %}>
@@ -313,47 +409,47 @@
     </div>
   </section>
 
-  {# ─────────────── 7. MikroTik / RADIUS متقدمة (metadata JSON) ─────────────── #}
-  <section class="sec-card mt collapsible is-collapsed" data-sec="mt">
-    <h3><i class="fa-solid fa-microchip h-ic"></i>MikroTik / RADIUS attributes متقدمة
+  {# ─────────────── 7. خصائص الشبكة المتقدمة ─────────────── #}
+  <section class="sec-card mt collapsible is-collapsed" data-sec="mt" id="sec-advanced">
+    <h3><i class="fa-solid fa-microchip h-ic"></i>خصائص شبكة متقدمة
       <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <p class="field-help" style="margin-bottom:10px">
       <i class="fa-solid fa-circle-info"></i>
-      هذه الحقول تُحفظ داخل <code>metadata JSON</code> مُجمَّعة بنية {mikrotik, radius, advanced, notifications}.
-      TODO(radius-sync): تُرسَل لـ FreeRADIUS عبر <code>freeradius_translator</code> لاحقًا.
+      هذه الحقول اختيارية ومخصّصة لمن يحتاج إعدادات شبكة متقدمة.
     </p>
     <div class="f-grid">
-      <div class="f-field"><label>MikroTik Filter Chain</label>
+      <div class="f-field"><label>سلسلة فلترة MikroTik</label>
         <input type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}"
                placeholder="forward / input"></div>
-      <div class="f-field"><label>MikroTik Address List</label>
-        <input type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}"></div>
-      <div class="f-field"><label>MikroTik Framed Route</label>
+      <div class="f-field"><label>قائمة عناوين MikroTik</label>
+        <input type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}">
+        <div class="field-help">قائمة داخل جهاز الشبكة تُستخدم لتنظيم أو تقييد الوصول.</div></div>
+      <div class="f-field"><label>مسار MikroTik الموجّه</label>
         <input type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}"
                placeholder="10.10.0.0/24 10.10.0.1"></div>
-      <div class="f-field"><label>MikroTik User Group</label>
+      <div class="f-field"><label>مجموعة مستخدم MikroTik</label>
         <input type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}"></div>
-      <div class="f-field"><label>MikroTik Winbox Group</label>
+      <div class="f-field"><label>مجموعة Winbox في MikroTik</label>
         <input type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}"></div>
-      <div class="f-field"><label>أولوية الـ Queue</label>
+      <div class="f-field"><label>أولوية طابور السرعة</label>
         <input type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}"
                placeholder="1..8"></div>
-      <div class="f-field"><label>Framed Pool</label>
+      <div class="f-field"><label>نطاق عناوين الجلسات</label>
         <input type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}"></div>
-      <div class="f-field"><label>Acct-Interim-Interval (ث)</label>
+      <div class="f-field"><label>فترة تحديث الاستهلاك (ث)</label>
         <input type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}"
                placeholder="60"></div>
-      <div class="f-field full"><label>PPP Attributes إضافية (raw)</label>
+      <div class="f-field full"><label>خصائص PPP إضافية</label>
         <textarea name="ppp_attributes_extra"
-                  placeholder="attribute=value (سطر لكل واحد)">{{ sub.ppp_attributes_extra or '' }}</textarea>
-        <div class="field-help">سطر لكل attribute. لا تُرسَل إلى RADIUS فعليًا في هذه المرحلة.</div></div>
+                  placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
+        <div class="field-help">استخدم سطرًا لكل خاصية عند الحاجة لإعداد متقدم.</div></div>
     </div>
     </div>
   </section>
 
   {# ─────────────── 8. ملاحظات ─────────────── #}
-  <section class="sec-card">
+  <section class="sec-card" id="sec-notes">
     <h3><i class="fa-solid fa-comment h-ic"></i>ملاحظات</h3>
     <div class="f-grid">
       <div class="f-field full">
@@ -369,6 +465,7 @@
     <a class="btn btn-secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
   </div>
 </form>
+</div>
 </div>
 
 <script>
@@ -407,6 +504,36 @@
       sync();
     });
   });
+  document.querySelectorAll('.sub-side-list a[href^="#"]').forEach(function(link){
+    link.addEventListener('click', function(e){
+      e.preventDefault();
+      var target = document.querySelector(link.getAttribute('href'));
+      if (target && target.classList.contains('is-collapsed')) {
+        target.classList.remove('is-collapsed');
+        try { localStorage.setItem(LS + target.dataset.sec, 'open'); } catch(_) {}
+      }
+      if (target) {
+        var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+        var offset = (header ? header.getBoundingClientRect().height : 64) + 18;
+        var y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+        if (history.pushState) history.pushState(null, '', link.getAttribute('href'));
+      }
+    });
+  });
+  var tempSpeed = document.getElementById('ts');
+  var tempInputs = [
+    document.getElementById('temporary-speed-from'),
+    document.getElementById('temporary-speed-to')
+  ].filter(Boolean);
+  function syncTemporarySpeedTimes(){
+    var enabled = tempSpeed && tempSpeed.checked;
+    tempInputs.forEach(function(input){ input.disabled = !enabled; });
+  }
+  if (tempSpeed) {
+    tempSpeed.addEventListener('change', syncTemporarySpeedTimes);
+    syncTemporarySpeedTimes();
+  }
 })();
 </script>
 {% endblock %}

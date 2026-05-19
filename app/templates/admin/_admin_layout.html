@@ -9,6 +9,63 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
+  <style>
+    .hr-page-nav-host{max-width:1240px!important}
+    .hr-page-nav{
+      background:#fff;border:1px solid var(--hr-border);border-radius:8px;
+      box-shadow:var(--hr-shadow-sm);padding:12px;min-width:0;
+    }
+    .hr-page-nav-title{
+      display:flex;align-items:center;gap:8px;margin:2px 0 10px;
+      font-size:13px;font-weight:900;color:var(--hr-text);
+    }
+    .hr-page-nav-title i{color:var(--hr-cyan-700);font-size:12px}
+    .hr-page-nav-list{display:flex;flex-direction:column;gap:4px}
+    .hr-page-nav-list a{
+      display:flex;align-items:center;gap:8px;min-height:32px;padding:7px 8px;
+      border-radius:7px;color:var(--hr-text-soft);font-size:12px;font-weight:800;
+      text-decoration:none;transition:.16s ease;
+    }
+    .hr-page-nav-list a i{width:14px;text-align:center;color:var(--hr-text-muted);font-size:11px}
+    .hr-page-nav-list a:hover,.hr-page-nav-list a.is-active{
+      background:var(--hr-cyan-100);color:var(--hr-cyan-800,#0f7492);
+    }
+    .hr-page-nav-list a:hover i,.hr-page-nav-list a.is-active i{color:var(--hr-cyan-700)}
+    .hr-page-nav-note{
+      margin-top:12px;padding:10px;border:1px dashed var(--hr-border);
+      border-radius:7px;background:var(--hr-soft);font-size:11.5px;line-height:1.8;
+      color:var(--hr-text-muted);
+    }
+    .sec-card,.card{scroll-margin-top:96px}
+    .field-help.auto-help,.hint.auto-help{
+      display:block;flex-basis:100%;width:100%;margin-top:3px;
+      font-size:11px;line-height:1.7;color:var(--hr-text-muted);
+    }
+    @media (min-width:1180px){
+      .hr-page-nav-host{
+        display:grid!important;grid-template-columns:214px minmax(0,1fr);
+        gap:16px;align-items:start;direction:ltr;
+      }
+      .hr-page-nav-host > .hr-page-nav{
+        grid-column:1;position:sticky;top:84px;direction:rtl;z-index:5;
+      }
+      .hr-page-nav-host > form,
+      .hr-page-nav-host > .hr-page-main,
+      .hr-page-nav-host > .sec-card,
+      .hr-page-nav-host > .card,
+      .hr-page-nav-host > .actions-bar{
+        grid-column:2;direction:rtl;min-width:0;
+      }
+    }
+    @media (max-width:1179px){
+      .hr-page-nav{margin-bottom:12px}
+      .hr-page-nav-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:640px){
+      .hr-page-nav{padding:10px}
+      .hr-page-nav-list{grid-template-columns:1fr}
+    }
+  </style>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -64,7 +121,7 @@
            style="display:block;padding:8px 12px;border-top:1px solid var(--hr-border);
                   text-decoration:none;color:var(--hr-cyan-700);font-size:11.5px;
                   background:var(--hr-soft);font-weight:700">
-          <i class="fa-solid fa-cog"></i>&nbsp; إدارة الـ Tenants
+          <i class="fa-solid fa-cog"></i>&nbsp; إدارة الجهات
         </a>
         {% endif %}
       </div>
@@ -195,7 +252,7 @@
       </a>
       <a href="{{ url_for('radius.rep_mac_history') }}"
          class="{% if '/reports/mac_history' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-fingerprint"></i> سجل MAC
+        <i class="fa-solid fa-fingerprint"></i> سجل عناوين الأجهزة
       </a>
       <a href="{{ url_for('radius.rep_user_events') }}"
          class="{% if '/reports/user_events' in request.path %}active{% endif %}">
@@ -215,11 +272,11 @@
       </a>
       <a href="{{ url_for('radius.rep_coa_failures') }}"
          class="{% if '/reports/coa_failures' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-plug-circle-xmark"></i> إخفاقات CoA
+        <i class="fa-solid fa-plug-circle-xmark"></i> أخطاء قطع الجلسة
       </a>
       <a href="{{ url_for('radius.rep_api_messages') }}"
          class="{% if '/reports/api_messages' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-message"></i> رسائل API
+        <i class="fa-solid fa-message"></i> رسائل واجهة الربط
       </a>
     </div>
 
@@ -257,11 +314,11 @@
       <div class="nav-group-title">البنية التحتية</div>
       <a href="{{ url_for('radius.devices_list') }}"
          class="{% if '/devices' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-server"></i> NAS
+        <i class="fa-solid fa-server"></i> أجهزة الشبكة
       </a>
       <a href="{{ url_for('radius.bw_list') }}"
          class="{% if '/bandwidth' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-gauge"></i> Bandwidth
+        <i class="fa-solid fa-gauge"></i> السرعات
       </a>
     </div>
 
@@ -309,22 +366,22 @@
       </a>
       <a href="{{ url_for('radius.wh_settings') }}"
          class="{% if '/webhooks' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-bolt"></i> Webhooks
+        <i class="fa-solid fa-bolt"></i> إشعارات الربط
       </a>
       <a href="{{ url_for('radius.tok_list') }}"
          class="{% if '/tokens' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-key"></i> API Tokens
+        <i class="fa-solid fa-key"></i> مفاتيح واجهة الربط
       </a>
       <a href="/api/docs" target="_blank">
-        <i class="fa-solid fa-book"></i> API Docs
+        <i class="fa-solid fa-book"></i> توثيق واجهة الربط
       </a>
     </div>
 
   </nav>
 
   <div class="sidebar-foot">
-    <span>Version 0.1.0</span>
-    <span>HobeRadius</span>
+    <span>الإصدار 0.1.0</span>
+    <span>هوبي راديوس</span>
   </div>
 </aside>
 
@@ -356,8 +413,8 @@
   {% block content %}{% endblock %}
 
   <div class="app-footer">
-    <span>Version 0.1.0</span>
-    <span>Copyright © 2017-2026 Hobe Hub</span>
+    <span>الإصدار 0.1.0</span>
+    <span>حقوق النشر © 2017-2026 Hobe Hub</span>
   </div>
 </main>
 
@@ -384,6 +441,232 @@
     document.querySelectorAll('.tenant-pill, .user-pill').forEach(function(el){
       el.addEventListener('click', function(){ setTimeout(applyOpen, 0); });
     });
+  })();
+
+  // page section navigator + gentle Arabic field help
+  (function(){
+    function cleanHeadingText(card){
+      var h = card.querySelector(':scope > h3') ||
+              card.querySelector(':scope > .card-header .title') ||
+              card.querySelector(':scope > .card-header');
+      if (!h) return '';
+      var clone = h.cloneNode(true);
+      clone.querySelectorAll('i,svg,button').forEach(function(el){ el.remove(); });
+      return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function sectionStoragePrefix(card){
+      var host = card.closest('[data-form-ls]');
+      if (host && host.getAttribute('data-form-ls')) return host.getAttribute('data-form-ls');
+      if (card.closest('.usr-form')) return 'hr:user-form:sec:';
+      if (card.closest('.pln-form')) return 'hr:plan-form:sec:';
+      if (card.closest('.cb-form')) return 'hr:cb-form:sec:';
+      if (card.closest('.nd-form')) return 'hr:nd-form:sec:';
+      if (card.closest('.ad-form')) return 'hr:ad-form:sec:';
+      if (card.closest('.rl-form')) return 'hr:role-form:sec:';
+      return 'hr:auto:' + location.pathname + ':sec:';
+    }
+
+    function openAndScrollTo(target){
+      if (!target) return;
+      if (target.classList.contains('is-collapsed')) {
+        target.classList.remove('is-collapsed');
+        if (target.dataset.sec) {
+          try { localStorage.setItem(sectionStoragePrefix(target) + target.dataset.sec, 'open'); } catch(_) {}
+        }
+      }
+      var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+      var offset = (header ? header.getBoundingClientRect().height : 64) + 18;
+      var y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+
+    function buildPageNav(){
+      if (document.querySelector('.sub-side, .hr-page-nav')) return;
+      var cards = Array.prototype.slice.call(document.querySelectorAll('.main .sec-card, .main form > .card'))
+        .filter(function(card){
+          return card.querySelector(':scope > h3') ||
+                 card.querySelector(':scope > .card-header .title') ||
+                 card.querySelector(':scope > .card-header');
+        });
+      if (cards.length < 2) return;
+
+      var first = cards[0];
+      var form = first.closest('form');
+      var host = first.closest('.pln-form,.cb-form,.nd-form,.ad-form,.rl-form,.tn-form,.mt-form,.bw-form,.pool-form,.svc-form,.tk-form,.vch-form,.sg-form,.tool-form,.settings-form') ||
+                 form || first.parentElement;
+      if (!host) return;
+
+      host.classList.add('hr-page-nav-host');
+      var nav = document.createElement('aside');
+      nav.className = 'hr-page-nav';
+      nav.setAttribute('aria-label', 'أقسام الصفحة');
+      nav.innerHTML =
+        '<div class="hr-page-nav-title"><i class="fa-solid fa-compass"></i><span>أقسام الصفحة</span></div>' +
+        '<nav class="hr-page-nav-list"></nav>' +
+        '<div class="hr-page-nav-note">ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا.</div>';
+
+      var list = nav.querySelector('.hr-page-nav-list');
+      cards.forEach(function(card, index){
+        if (!card.id) card.id = 'hr-section-' + (index + 1);
+        var label = cleanHeadingText(card) || ('القسم ' + (index + 1));
+        var a = document.createElement('a');
+        a.href = '#' + card.id;
+        a.innerHTML = '<i class="fa-solid fa-angle-left"></i><span></span>';
+        a.querySelector('span').textContent = label;
+        list.appendChild(a);
+      });
+
+      if (form && form.parentElement === host) host.insertBefore(nav, form);
+      else host.insertBefore(nav, first);
+
+      var links = Array.prototype.slice.call(list.querySelectorAll('a'));
+      links.forEach(function(link){
+        link.addEventListener('click', function(e){
+          e.preventDefault();
+          var target = document.getElementById(link.getAttribute('href').slice(1));
+          openAndScrollTo(target);
+          if (history.pushState) history.pushState(null, '', link.getAttribute('href'));
+        });
+      });
+
+      function updateActive(){
+        var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+        var marker = (header ? header.getBoundingClientRect().height : 64) + 28;
+        var active = cards[0];
+        cards.forEach(function(card){
+          if (card.getBoundingClientRect().top <= marker) active = card;
+        });
+        links.forEach(function(link){
+          link.classList.toggle('is-active', link.getAttribute('href') === '#' + active.id);
+        });
+      }
+      updateActive();
+      document.addEventListener('scroll', updateActive, { passive:true });
+    }
+
+    function addFieldHelp(){
+      var hints = {
+        username: 'اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول.',
+        password: 'اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها.',
+        name: 'اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث.',
+        code: 'رمز داخلي قصير يساعدك في الترتيب والبحث.',
+        display_name: 'الاسم الظاهر للمستخدم داخل الواجهة.',
+        full_name: 'الاسم الحقيقي أو الوصفي لصاحب الحساب.',
+        email: 'بريد للتواصل أو استلام التنبيهات عند الحاجة.',
+        mobile: 'رقم جوال واضح للتواصل السريع.',
+        phone: 'رقم بديل إن وجد.',
+        notes: 'ملاحظات داخلية تساعدك لاحقًا ولا تظهر عادة للمستفيد.',
+        description: 'وصف قصير يوضّح الهدف من هذا العنصر.',
+        enabled: 'عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد.',
+        status: 'اختر الحالة الحالية لهذا العنصر.',
+        plan_id: 'اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام.',
+        service_type: 'اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة.',
+        account_type: 'اختر نوع الحساب حسب طريقة استخدامه.',
+        auth_mode: 'طريقة الدخول التي سيستخدمها المستفيد على الشبكة.',
+        group_name: 'اسم مجموعة اختياري لتنظيم الحسابات المتشابهة.',
+        manager_id: 'رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا.',
+        subscriber_ref: 'مرجع اختياري يربط الحساب بسجل داخلي آخر.',
+        package_name: 'اسم واضح لهذه الدفعة حتى تميّزها لاحقًا.',
+        count: 'عدد العناصر التي سيتم إنشاؤها في هذه العملية.',
+        username_length: 'عدد خانات اسم الدخول الذي سيتم توليده.',
+        password_length: 'عدد خانات كلمة المرور التي سيتم توليدها.',
+        password_generation_type: 'اختر نمط كلمة المرور حسب مستوى الأمان المطلوب.',
+        prefix_or_suffix_value: 'نص اختياري يُضاف قبل أو بعد الاسم المولّد.',
+        time_value: 'استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية.',
+        time_unit: 'الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها.',
+        device_count: 'أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت.',
+        quota_total_mb: 'إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص.',
+        daily_download_quota_mb: 'كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة.',
+        daily_upload_quota_mb: 'كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة.',
+        monthly_download_quota_mb: 'كمية التنزيل المتاحة خلال الشهر.',
+        monthly_upload_quota_mb: 'كمية الرفع المتاحة خلال الشهر.',
+        speed_down_kbps: 'سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.',
+        speed_up_kbps: 'سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.',
+        address: 'عنوان الجهاز أو الخادم داخل الشبكة.',
+        shortname: 'اسم مختصر يظهر في السجلات والقوائم.',
+        secret: 'المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة.',
+        auth_port: 'منفذ المصادقة القياسي غالبًا 1812.',
+        acct_port: 'منفذ المحاسبة القياسي غالبًا 1813.',
+        coa_port: 'منفذ قطع الجلسة أو تحديثها غالبًا 3799.',
+        api_port: 'منفذ واجهة MikroTik، غالبًا 8728 أو 8729 للاتصال الآمن.',
+        api_user: 'اسم مستخدم جهاز MikroTik المسموح له بإدارة الإعدادات.',
+        api_password: 'كلمة مرور جهاز MikroTik، احفظها بعناية.',
+        snmp_community: 'نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز.',
+        role_id: 'الدور يحدد الصلاحيات التي يحصل عليها هذا المدير.',
+        permissions: 'اختر الصلاحيات المناسبة فقط لهذا الدور.',
+        currency: 'رمز العملة المستخدم في العرض والتقارير.',
+        price: 'السعر المرجعي أو التجاري لهذا العنصر.',
+        tags: 'وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة.'
+        ,slug: 'معرّف قصير مناسب للرابط، ويفضّل ألا يتغير لاحقًا.'
+        ,plan_tier: 'فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة.'
+        ,max_subscribers: 'أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة.'
+        ,max_nas: 'أقصى عدد أجهزة شبكة مسموح لهذه الجهة.'
+        ,api_rpm: 'عدد طلبات واجهة الربط المسموح بها في الدقيقة.'
+        ,locale: 'لغة الواجهة الافتراضية لهذه الجهة.'
+        ,timezone: 'المنطقة الزمنية المستخدمة في التواريخ والتقارير.'
+        ,primary_color: 'لون العلامة المستخدم في أجزاء من الواجهة.'
+        ,logo_url: 'رابط الشعار إن كنت تريد إظهاره للجهة.'
+        ,pool_name: 'اسم نطاق العناوين كما سيظهر في القوائم.'
+        ,range_ip: 'مدى العناوين الذي سيوزّع منه جهاز الشبكة.'
+        ,local_ip: 'عنوان البوابة المحلية المرتبطة بهذا النطاق.'
+        ,router_id: 'اختر جهاز الشبكة المسؤول عن هذا النطاق.'
+        ,rate_down: 'سرعة التنزيل لهذا الملف.'
+        ,rate_up: 'سرعة الرفع لهذا الملف.'
+        ,burst: 'إعداد اختياري للسرعة المؤقتة في MikroTik.'
+        ,host: 'عنوان جهاز MikroTik أو اسم المضيف.'
+        ,port: 'منفذ الاتصال مع الجهاز.'
+        ,timeout_sec: 'مدة الانتظار قبل اعتبار الاتصال غير ناجح.'
+        ,target_url: 'الرابط الذي ستُرسل له إشعارات الربط.'
+        ,subscriber_id: 'رقم المستفيد المرتبط بهذا السجل.'
+        ,amount: 'المبلغ المالي المطلوب أو المسجل.'
+        ,payment_method: 'طريقة الدفع المستخدمة أو المرجعية.'
+        ,expiration_at: 'تاريخ انتهاء صلاحية هذا السجل.'
+        ,subject: 'عنوان مختصر يوضح سبب التذكرة.'
+        ,category: 'الفئة تساعد فريق الدعم على فرز الطلب.'
+        ,body: 'اكتب التفاصيل المطلوبة بوضوح.'
+        ,priority: 'الأولوية تحدد ترتيب المعالجة.'
+        ,serial: 'الرقم التسلسلي للجهاز أو المعدة إن وجد.'
+        ,mac: 'عنوان الجهاز الفيزيائي عند الحاجة للربط.'
+        ,rent_per_month: 'قيمة الإيجار الشهري إن كانت الخدمة مؤجرة.'
+        ,given_at: 'تاريخ تسليم المعدة أو بدء الخدمة.'
+        ,returned_at: 'تاريخ الإرجاع إن وجد.'
+        ,usernames: 'اكتب كل اسم دخول في سطر مستقل.'
+        ,action: 'اختر العملية التي تريد تنفيذها.'
+        ,minutes: 'عدد الدقائق التي ستضاف أو تعدل.'
+        ,new_password: 'كلمة المرور الجديدة للحسابات المحددة.'
+        ,mult_down: 'مضاعف سرعة التنزيل، مثل 0.5 للتنصيف.'
+        ,mult_up: 'مضاعف سرعة الرفع، مثل 2 للمضاعفة.'
+        ,set_down: 'قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها.'
+        ,set_up: 'قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها.'
+        ,calling_station_id: 'عنوان جهاز المستفيد المستخدم في الاختبار.'
+        ,called_station_id: 'معرّف نقطة الاتصال أو الجهاز المستقبل.'
+        ,nas_ip: 'عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة.'
+        ,nas_port_type: 'نوع منفذ الاتصال المستخدم في الاختبار.'
+      };
+      document.querySelectorAll('.main .sec-card .f-field, .main .sec-card .form-field, .main .sec-card .field-group, .main .card .field, .main .card .form-field, .main .card .field-group').forEach(function(box){
+        if (box.querySelector('.field-help, .hint')) return;
+        var control = box.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea');
+        if (!control) return;
+        var key = control.getAttribute('name') || control.id || control.getAttribute('type') || '';
+        var text = hints[key] || hints[(key || '').replace(/\[\]$/, '')];
+        if (!text) return;
+        var help = document.createElement('div');
+        help.className = 'field-help auto-help';
+        help.textContent = text;
+        try {
+          if (getComputedStyle(box).display === 'flex') box.style.flexWrap = box.style.flexWrap || 'wrap';
+        } catch(_) {}
+        box.appendChild(help);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ buildPageNav(); addFieldHelp(); });
+    } else {
+      buildPageNav();
+      addFieldHelp();
+    }
   })();
 </script>
 </body>

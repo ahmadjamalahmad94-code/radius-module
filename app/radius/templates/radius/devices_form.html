@@ -1,5 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة جهاز NAS" if is_new else "تعديل جهاز NAS" %}
+{% set title_ar = "إضافة جهاز شبكة" if is_new else "تعديل جهاز شبكة" %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 {% block crumbs %}
@@ -7,7 +7,7 @@
   <i class="fa-solid fa-chevron-left"></i>
   <span>RADIUS</span>
   <i class="fa-solid fa-chevron-left"></i>
-  <a href="{{ url_for('radius.devices_list') }}">أجهزة NAS</a>
+  <a href="{{ url_for('radius.devices_list') }}">أجهزة الشبكة</a>
   <i class="fa-solid fa-chevron-left"></i>
   <span>{{ title_ar }}</span>
 {% endblock %}
@@ -55,7 +55,7 @@
           <div class="field">
             <label for="address">العنوان *</label>
             <input type="text" id="address" name="address" required value="{{ device.address or '' }}">
-            <span class="hint">IP أو hostname</span>
+            <span class="hint">عنوان IP أو اسم المضيف</span>
           </div>
         </div>
 
@@ -69,7 +69,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="secret">Shared Secret *</label>
+            <label for="secret">المفتاح المشترك *</label>
             <input type="password" id="secret" name="secret"
                    {% if is_new %}required{% endif %}
                    placeholder="{{ '••••••••' if not is_new else '' }}"

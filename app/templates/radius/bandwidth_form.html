@@ -1,5 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
-{% set ttl = "إضافة باندويث" if is_new else "تعديل باندويث" %}
+{% set ttl = "إضافة ملف سرعة" if is_new else "تعديل ملف سرعة" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -23,9 +23,9 @@
           {% for u in ['Kbps','Mbps'] %}<option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}
         </select>
       </div></div>
-    <div class="form-row"><label>Burst (MT raw)</label>
+    <div class="form-row"><label>سطر السرعة المؤقتة في MikroTik</label>
       <div class="field"><input type="text" name="burst" value="{{ item.burst }}" placeholder="10M/5M 8M/4M 4M/2M 30/30 8 4">
-        <div class="hint">سطر الـ MikroTik rate-limit الكامل (اختياري)</div></div></div>
+        <div class="hint">سطر تحديد السرعة الكامل في MikroTik، وهو اختياري.</div></div></div>
     <div class="form-row"><label>الأولوية</label>
       <div class="field"><input type="number" name="priority" value="{{ item.priority }}"></div></div>
   </div></div>

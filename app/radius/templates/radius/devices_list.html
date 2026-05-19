@@ -1,12 +1,12 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}أجهزة RADIUS — NAS{% endblock %}
-{% block page_title %}أجهزة RADIUS (NAS){% endblock %}
+{% block title %}أجهزة الشبكة — RADIUS{% endblock %}
+{% block page_title %}أجهزة الشبكة{% endblock %}
 {% block crumbs %}
   <span>الإدارة</span>
   <i class="fa-solid fa-chevron-left"></i>
   <span>RADIUS</span>
   <i class="fa-solid fa-chevron-left"></i>
-  <span>أجهزة NAS</span>
+  <span>أجهزة الشبكة</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -34,8 +34,8 @@
 
   <div class="stage-banner">
     <strong>قيد التطوير (M2.5):</strong>
-    وضع <code>manual</code> — البيانات في الذاكرة وتُمسح عند إعادة التشغيل.
-    سيُربط بالـ backend الفعلي في M3.
+    الوضع اليدوي — البيانات في الذاكرة وتُمسح عند إعادة التشغيل.
+    سيُربط بالنظام الخلفي الفعلي في المرحلة التالية.
   </div>
 
   <div class="d-card">
@@ -107,8 +107,8 @@
       </table>
       {% else %}
       <div class="radius-empty">
-        لا يوجد أجهزة NAS بعد.
-        <div class="hint">في وضع <code>manual</code> البيانات في الذاكرة فقط وتُمسح عند إعادة التشغيل.</div>
+        لا توجد أجهزة شبكة بعد.
+        <div class="hint">في الوضع اليدوي، البيانات في الذاكرة فقط وتُمسح عند إعادة التشغيل.</div>
       </div>
       {% endif %}
     </div>

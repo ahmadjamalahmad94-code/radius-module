@@ -1,5 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة جهاز NAS" if is_new else "تعديل جهاز NAS" %}
+{% set title_ar = "إضافة جهاز شبكة" if is_new else "تعديل جهاز شبكة" %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -76,10 +76,10 @@
         <input type="text" name="shortname" value="{{ device.shortname or '' }}" placeholder="mt-main"></div>
       <div class="f-field"><label>عنوان IP <span class="req">*</span></label>
         <input type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1"></div>
-      <div class="f-field"><label>RADIUS Shared Secret <span class="req">*</span></label>
+      <div class="f-field"><label>المفتاح المشترك <span class="req">*</span></label>
         <input type="text" name="secret" {% if is_new %}required{% endif %}
                value="{{ device.secret or '' }}">
-        <div class="field-help">يجب أن يطابق ما هو على الـ NAS نفسه.</div></div>
+        <div class="field-help">يجب أن يطابق المفتاح الموجود على جهاز الشبكة نفسه.</div></div>
       <div class="f-field"><label>المُصنِّع</label>
         <select name="vendor">
           {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
@@ -95,7 +95,7 @@
       <div class="f-field"><label>إحداثيات GPS</label>
         <input type="text" name="coordinates" value="{{ device.coordinates or '' }}" placeholder="31.95, 35.93"></div>
       <div class="f-field"><label>وسوم (CSV)</label>
-        <input type="text" name="tags" value="{{ device.tags or '' }}" placeholder="prod, building-a"></div>
+        <input type="text" name="tags" value="{{ device.tags or '' }}" placeholder="إنتاج، مبنى أ"></div>
       <div class="f-field"><label>الحالة</label>
         <div class="chk-row"><input type="checkbox" name="enabled" id="nd-en" value="1"
           {% if device.enabled or is_new %}checked{% endif %}>
@@ -104,7 +104,7 @@
         <div class="chk-row"><input type="checkbox" name="monitoring_enabled" id="nd-mon" value="1"
           {% if device.monitoring_enabled or is_new %}checked{% endif %}>
           <label for="nd-mon">مفعَّلة</label></div></div>
-      <div class="f-field"><label>RFC 3579 Message-Authenticator</label>
+      <div class="f-field"><label>التحقق من رسالة RADIUS</label>
         <div class="chk-row"><input type="checkbox" name="require_message_authenticator" id="nd-ma" value="1"
           {% if device.require_message_authenticator %}checked{% endif %}>
           <label for="nd-ma">إلزامي</label></div></div>
@@ -116,22 +116,22 @@
 
   {# ─────────────── 2. المنافذ ─────────────── #}
   <section class="sec-card ports">
-    <h3><i class="fa-solid fa-plug h-ic"></i>المنافذ (Ports)</h3>
+    <h3><i class="fa-solid fa-plug h-ic"></i>المنافذ</h3>
     <div class="sb">
     <div class="f-grid">
-      <div class="f-field"><label>RADIUS Auth Port</label>
+      <div class="f-field"><label>منفذ المصادقة</label>
         <input type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
         <div class="field-help">قياسي: 1812.</div></div>
-      <div class="f-field"><label>RADIUS Accounting Port</label>
+      <div class="f-field"><label>منفذ المحاسبة</label>
         <input type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
         <div class="field-help">قياسي: 1813.</div></div>
-      <div class="f-field"><label>CoA / Disconnect Port</label>
+      <div class="f-field"><label>منفذ قطع الجلسة</label>
         <input type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
         <div class="field-help">RFC 5176: 3799.</div></div>
-      <div class="f-field"><label>MikroTik API Port</label>
+      <div class="f-field"><label>منفذ واجهة MikroTik</label>
         <input type="number" min="0" max="65535" name="api_port" value="{{ device.api_port or 8728 }}">
         <div class="field-help">8728 عادي، 8729 لـ TLS.</div></div>
-      <div class="f-field"><label>SSH Port</label>
+      <div class="f-field"><label>منفذ SSH</label>
         <input type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}"></div>
       <div class="f-field"><label>عدد المنافذ الفيزيائية</label>
         <input type="number" min="0" name="ports" value="{{ device.ports or 0 }}"></div>
@@ -139,20 +139,20 @@
     </div>
   </section>
 
-  {# ─────────────── 3. وصول API / SNMP ─────────────── #}
+  {# ─────────────── 3. وصول MikroTik / SNMP ─────────────── #}
   <section class="sec-card api collapsible is-collapsed" data-sec="api">
-    <h3><i class="fa-solid fa-key h-ic"></i>وصول API / SNMP <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
+    <h3><i class="fa-solid fa-key h-ic"></i>وصول MikroTik و SNMP <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
     <div class="sb">
     <div class="f-grid">
-      <div class="f-field"><label>API username</label>
+      <div class="f-field"><label>اسم مستخدم MikroTik</label>
         <input type="text" name="api_user" value="{{ device.api_user or '' }}" placeholder="admin"></div>
-      <div class="f-field"><label>API password</label>
+      <div class="f-field"><label>كلمة مرور MikroTik</label>
         <input type="text" name="api_password" value="{{ device.api_password or '' }}"></div>
-      <div class="f-field"><label>API يستخدم TLS</label>
+      <div class="f-field"><label>استخدام اتصال آمن TLS</label>
         <div class="chk-row"><input type="checkbox" name="api_use_tls" id="api-tls" value="1"
           {% if device.api_use_tls %}checked{% endif %}>
           <label for="api-tls">8729 (TLS)</label></div></div>
-      <div class="f-field full"><label>SNMP Community</label>
+      <div class="f-field full"><label>مجتمع SNMP</label>
         <input type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public"></div>
     </div>
     </div>
@@ -163,11 +163,11 @@
   <section class="sec-card mon">
     <h3><i class="fa-solid fa-heart-pulse h-ic"></i>آخر فحص اتصال</h3>
     <div class="sb">
-      <p style="margin:0">الحالة: <strong>{{ device.last_check_status or 'unknown' }}</strong>
+      <p style="margin:0">الحالة: <strong>{{ device.last_check_status or 'غير معروف' }}</strong>
         &nbsp;·&nbsp;
         الوقت: <span class="mono">{{ device.last_check_at }}</span></p>
       <div class="field-help" style="margin-top:6px">
-        يُحدَّث عند الضغط على زر "فحص" في صفحة القائمة (TCP socket reachability على api_port، timeout 2s).
+        يُحدَّث عند الضغط على زر "فحص" في صفحة القائمة للتحقق من إمكانية الوصول.
       </div>
     </div>
   </section>

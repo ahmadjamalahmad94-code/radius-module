@@ -1,24 +1,24 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}Sync Queue{% endblock %}
+{% block title %}طابور المزامنة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
-{% block page_title %}Sync Queue (DB → MikroTik){% endblock %}
+{% block page_title %}طابور المزامنة إلى MikroTik{% endblock %}
 
 {% block content %}
 <div class="kpi-strip">
   <div class="kpi-card">
-    <div class="right"><div class="lbl">queued</div><div class="val">{{ stats.queued }}</div></div>
+    <div class="right"><div class="lbl">في الانتظار</div><div class="val">{{ stats.queued }}</div></div>
     <div class="ico"><i class="fa-solid fa-hourglass-half"></i></div>
   </div>
   <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">retrying</div><div class="val">{{ stats.retrying }}</div></div>
+    <div class="right"><div class="lbl">يعاد المحاولة</div><div class="val">{{ stats.retrying }}</div></div>
     <div class="ico"><i class="fa-solid fa-rotate-right"></i></div>
   </div>
   <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">done</div><div class="val">{{ stats.done }}</div></div>
+    <div class="right"><div class="lbl">مكتمل</div><div class="val">{{ stats.done }}</div></div>
     <div class="ico"><i class="fa-solid fa-check"></i></div>
   </div>
   <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">failed</div><div class="val">{{ stats.failed }}</div></div>
+    <div class="right"><div class="lbl">فشل</div><div class="val">{{ stats.failed }}</div></div>
     <div class="ico"><i class="fa-solid fa-xmark"></i></div>
   </div>
 </div>
@@ -27,7 +27,9 @@
   <select name="status">
     <option value="">كل الحالات</option>
     {% for s in ['queued','retrying','done','failed','syncing'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>
+        {% if s == 'queued' %}في الانتظار{% elif s == 'retrying' %}يعاد المحاولة{% elif s == 'done' %}مكتمل{% elif s == 'failed' %}فشل{% elif s == 'syncing' %}جاري المزامنة{% else %}{{ s }}{% endif %}
+      </option>
     {% endfor %}
   </select>
   <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
@@ -37,8 +39,8 @@
   {% if jobs %}
   <table class="hr-table">
     <thead><tr>
-      <th>#</th><th>Kind</th><th>Entity</th><th>Status</th>
-      <th>Attempts</th><th>Next</th><th>Error</th><th style="width:140px"></th>
+      <th>#</th><th>النوع</th><th>العنصر</th><th>الحالة</th>
+      <th>المحاولات</th><th>الموعد التالي</th><th>الخطأ</th><th style="width:140px"></th>
     </tr></thead>
     <tbody>{% for j in jobs %}
     <tr>
@@ -46,11 +48,11 @@
       <td><span class="pill pill-cyan">{{ j.kind }}</span></td>
       <td class="mono">{{ j.entity_key or j.entity_id or '—' }}</td>
       <td>
-        {% if j.status == 'done' %}<span class="pill pill-success">done</span>
-        {% elif j.status == 'queued' %}<span class="pill pill-info">queued</span>
-        {% elif j.status == 'syncing' %}<span class="pill pill-info">syncing…</span>
-        {% elif j.status == 'retrying' %}<span class="pill pill-warn">retrying</span>
-        {% elif j.status == 'failed' %}<span class="pill pill-danger">failed</span>
+        {% if j.status == 'done' %}<span class="pill pill-success">مكتمل</span>
+        {% elif j.status == 'queued' %}<span class="pill pill-info">في الانتظار</span>
+        {% elif j.status == 'syncing' %}<span class="pill pill-info">جاري المزامنة…</span>
+        {% elif j.status == 'retrying' %}<span class="pill pill-warn">يعاد المحاولة</span>
+        {% elif j.status == 'failed' %}<span class="pill pill-danger">فشل</span>
         {% else %}<span class="pill">{{ j.status }}</span>{% endif %}
       </td>
       <td class="num">{{ j.attempts }}</td>
@@ -75,6 +77,6 @@
       </td>
     </tr>{% endfor %}</tbody>
   </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-arrows-rotate"></i>لا jobs بهذا الفلتر</div>{% endif %}
+  {% else %}<div class="empty"><i class="fa-solid fa-arrows-rotate"></i>لا توجد مهام بهذا الفلتر</div>{% endif %}
 </div></div>
 {% endblock %}

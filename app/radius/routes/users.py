@@ -37,7 +37,8 @@ _META_GROUPS = {
         "acct_interim_interval_sec",
     ],
     "advanced": [
-        # placeholders إضافية مستقبلية
+        "temporary_speed_from",
+        "temporary_speed_to",
     ],
     "notifications": [
         # placeholders للمرحلة القادمة

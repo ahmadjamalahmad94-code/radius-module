@@ -1,18 +1,18 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}IP Pools{% endblock %}
+{% block title %}نطاقات عناوين الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
-{% block page_title %}IP Pools{% endblock %}
+{% block page_title %}نطاقات عناوين الشبكة{% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
 {% block head_buttons %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('radius.pool_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة Pool
+    <i class="fa-solid fa-plus"></i> إضافة نطاق
   </a>
 {% endblock %}
 {% block content %}
 <div class="card"><div class="card-body card-body--flush">
   {% if items %}
   <table class="hr-table">
-    <thead><tr><th>#</th><th>الاسم</th><th>النطاق</th><th>Local IP</th><th>الراوتر</th><th style="width:110px"></th></tr></thead>
+    <thead><tr><th>#</th><th>الاسم</th><th>النطاق</th><th>العنوان المحلي</th><th>الراوتر</th><th style="width:110px"></th></tr></thead>
     <tbody>{% for p in items %}
     <tr>
       <td class="num">{{ p.id }}</td>
@@ -29,6 +29,6 @@
       </div></td>
     </tr>{% endfor %}</tbody>
   </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-network-wired"></i>لا pools</div>{% endif %}
+  {% else %}<div class="empty"><i class="fa-solid fa-network-wired"></i>لا توجد نطاقات عناوين بعد.</div>{% endif %}
 </div></div>
 {% endblock %}

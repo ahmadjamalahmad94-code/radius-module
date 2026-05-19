@@ -92,16 +92,22 @@
       <div class="f-field"><label>اسم العرض <span class="req">*</span></label>
         <input type="text" name="name" required value="{{ plan.name or '' }}" placeholder="Gold-1M">
         <div class="field-help">يظهر في القوائم وعند الاختيار.</div></div>
-      <div class="f-field"><label>الكود (SKU)</label>
+      <div class="f-field"><label>رمز الباقة</label>
         <input type="text" name="code" value="{{ plan.code or '' }}" placeholder="OF-GOLD-1"></div>
       <div class="f-field"><label>النوع</label>
         <select name="plan_type">
-          {% for t in plan_types %}<option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+          {% for t in plan_types %}
+            <option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>
+              {% if t == 'time' %}وقت{% elif t == 'quota' %}حصة{% elif t == 'hybrid' %}وقت وحصة{% elif t == 'unlimited' %}غير محدود{% elif t == 'recurring' %}متجدد{% else %}{{ t }}{% endif %}
+            </option>
+          {% endfor %}
         </select></div>
       <div class="f-field"><label>نوع الخدمة</label>
         <select name="service_type">
           {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
-            <option value="{{ t }}" {% if plan.service_type == t %}selected{% endif %}>{{ t }}</option>
+            <option value="{{ t }}" {% if plan.service_type == t %}selected{% endif %}>
+              {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
+            </option>
           {% endfor %}
         </select></div>
       <div class="f-field"><label>الحالة</label>
@@ -112,9 +118,9 @@
         <input type="color" name="color" value="{{ plan.color or '#2BAACC' }}"></div>
       <div class="f-field"><label>الأولوية</label>
         <input type="number" name="priority" value="{{ plan.priority or 100 }}"></div>
-      <div class="f-field"><label>الـ Cisco DL Policy</label>
+      <div class="f-field"><label>سياسة التنزيل في Cisco</label>
         <input type="text" name="download_policy_cisco" value="{{ plan.download_policy_cisco or '' }}"></div>
-      <div class="f-field"><label>الـ Cisco UL Policy</label>
+      <div class="f-field"><label>سياسة الرفع في Cisco</label>
         <input type="text" name="upload_policy_cisco" value="{{ plan.upload_policy_cisco or '' }}"></div>
       <div class="f-field"><label>ملف اتصال الجهاز</label>
         <input type="text" name="device_connection_file" value="{{ plan.device_connection_file or '' }}"></div>
@@ -148,12 +154,12 @@
         <div class="field-help">1024 = 1 Mbps.</div></div>
       <div class="f-field"><label>سرعة الرفع (Kbps)</label>
         <input type="number" min="0" name="speed_up_kbps" value="{{ plan.speed_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>CIR تنزيل (Kbps)</label>
+      <div class="f-field"><label>السرعة المضمونة للتنزيل (CIR)</label>
         <input type="number" min="0" name="cir_down_kbps" value="{{ plan.cir_down_kbps or 0 }}">
-        <div class="field-help">Committed Information Rate.</div></div>
-      <div class="f-field"><label>CIR رفع (Kbps)</label>
+        <div class="field-help">الحد الأدنى المضمون من السرعة عند الازدحام.</div></div>
+      <div class="f-field"><label>السرعة المضمونة للرفع (CIR)</label>
         <input type="number" min="0" name="cir_up_kbps" value="{{ plan.cir_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>Burst مفعَّل</label>
+      <div class="f-field"><label>السرعة المؤقتة مفعّلة</label>
         <div class="chk-row"><input type="checkbox" name="burst_enabled" id="b-en" value="1"
           {% if plan.burst_enabled %}checked{% endif %}>
           <label for="b-en">مفعَّل</label></div></div>
@@ -161,13 +167,13 @@
         <div class="chk-row"><input type="checkbox" name="nightly_unlimited_enabled" id="nu-en" value="1"
           {% if plan.nightly_unlimited_enabled %}checked{% endif %}>
           <label for="nu-en">مفعَّل</label></div></div>
-      <div class="f-field"><label>Burst تنزيل (Kbps)</label>
+      <div class="f-field"><label>السرعة المؤقتة للتنزيل (Kbps)</label>
         <input type="number" min="0" name="burst_down_kbps" value="{{ plan.burst_down_kbps or 0 }}"></div>
-      <div class="f-field"><label>Burst رفع (Kbps)</label>
+      <div class="f-field"><label>السرعة المؤقتة للرفع (Kbps)</label>
         <input type="number" min="0" name="burst_up_kbps" value="{{ plan.burst_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>Burst threshold</label>
+      <div class="f-field"><label>حد السرعة المؤقتة</label>
         <input type="number" min="0" name="burst_threshold_kbps" value="{{ plan.burst_threshold_kbps or 0 }}"></div>
-      <div class="f-field"><label>Burst time (ث)</label>
+      <div class="f-field"><label>مدة السرعة المؤقتة (ث)</label>
         <input type="number" min="0" name="burst_time_sec" value="{{ plan.burst_time_sec or 0 }}"></div>
       <div class="f-field"><label>توزيع متساوٍ للتنزيل</label>
         <div class="chk-row"><input type="checkbox" name="equal_download_speed" id="eds" value="1"
@@ -215,9 +221,9 @@
         <input type="number" min="0" name="max_weekly_minutes" value="{{ plan.max_weekly_minutes or 0 }}"></div>
       <div class="f-field"><label>حد شهري (دقيقة)</label>
         <input type="number" min="0" name="max_monthly_minutes" value="{{ plan.max_monthly_minutes or 0 }}"></div>
-      <div class="f-field"><label>Session timeout (ث)</label>
+      <div class="f-field"><label>مدة الجلسة (ث)</label>
         <input type="number" min="0" name="session_timeout_sec" value="{{ plan.session_timeout_sec or 0 }}"></div>
-      <div class="f-field"><label>Idle timeout (ث)</label>
+      <div class="f-field"><label>مهلة الخمول (ث)</label>
         <input type="number" min="0" name="idle_timeout_sec" value="{{ plan.idle_timeout_sec or 0 }}"></div>
       <div class="f-field"><label>استخدام مرة واحدة</label>
         <div class="chk-row"><input type="checkbox" name="single_use_once" id="suo" value="1"
@@ -249,14 +255,14 @@
     <div class="f-grid">
       <div class="f-field"><label>صلاحية التذاكر (أيام)</label>
         <input type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}"></div>
-      <div class="f-field"><label>مشاركة شبكة FUP</label>
+      <div class="f-field"><label>مشاركة عادلة للشبكة</label>
         <div class="chk-row"><input type="checkbox" name="shared_voucher_fup" value="1"
           {% if plan.shared_voucher_fup in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
       <div class="f-field"><label>إرسال تنبيهات</label>
         <div class="chk-row"><input type="checkbox" name="send_alerts" value="1"
           {% if plan.send_alerts in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
       <div class="f-field"><label>طريقة التجديد</label>
-        <input type="text" name="renewal_method" value="{{ plan.renewal_method or '' }}" placeholder="auto / manual"></div>
+        <input type="text" name="renewal_method" value="{{ plan.renewal_method or '' }}" placeholder="تلقائي / يدوي"></div>
       <div class="f-field"><label>طريقة الدفع (مرجعي)</label>
         <input type="text" name="billing_method" value="{{ plan.billing_method or '' }}" placeholder="مرجعي فقط">
         <div class="field-help">بدون منطق تجاري — مرجعي فقط.</div></div>
@@ -315,8 +321,8 @@
         <input type="text" name="notify_before_daily_quota_expiry" value="{{ plan.notify_before_daily_quota_expiry or '' }}"></div>
       <div class="f-field full"><label>قنوات التنبيه</label>
         <input type="text" name="notification_channels" value="{{ plan.notification_channels or '' }}"
-               placeholder="sms, whatsapp, email">
-        <div class="field-help">CSV — يُحفظ كـ metadata، تكامل فعلي لاحقًا.</div></div>
+               placeholder="رسالة نصية، واتساب، بريد إلكتروني">
+        <div class="field-help">اكتب القنوات مفصولة بفواصل، وتُحفظ كبيانات إضافية للتكامل لاحقًا.</div></div>
     </div>
     </div>
   </section>
@@ -335,10 +341,10 @@
           {% if plan.auto_renew_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
       <div class="f-field"><label>سياسة انتهاء الوقت</label>
         <input type="text" name="time_expiry_policy" value="{{ plan.time_expiry_policy or '' }}"
-               placeholder="block / queue / notify"></div>
+               placeholder="حظر / إضافة للطابور / تنبيه فقط"></div>
       <div class="f-field"><label>متاح لـ</label>
         <input type="text" name="only_available_for" value="{{ plan.only_available_for or '' }}"
-               placeholder="group/tag"></div>
+               placeholder="مجموعة أو وسم"></div>
       <div class="f-field"><label>متاح للكل</label>
         <div class="chk-row"><input type="checkbox" name="available_for_all" value="1"
           {% if plan.available_for_all in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
@@ -357,13 +363,13 @@
     <div class="f-grid">
       <div class="f-field"><label>جلسات متزامنة</label>
         <input type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}"></div>
-      <div class="f-field"><label>Address Pool</label>
+      <div class="f-field"><label>نطاق عناوين الشبكة</label>
         <input type="text" name="address_pool" value="{{ plan.address_pool or '' }}"></div>
-      <div class="f-field"><label>Framed Pool</label>
+      <div class="f-field"><label>نطاق عناوين الجلسات</label>
         <input type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}"></div>
-      <div class="f-field"><label>VLAN ID</label>
+      <div class="f-field"><label>رقم شبكة VLAN</label>
         <input type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}"></div>
-      <div class="f-field"><label>ربط MAC</label>
+      <div class="f-field"><label>ربط عنوان الجهاز</label>
         <div class="chk-row"><input type="checkbox" name="bind_mac" value="1"
           {% if plan.bind_mac %}checked{% endif %}><label>مفعَّل</label></div></div>
       <div class="f-field"><label>ربط IP</label>
@@ -375,7 +381,7 @@
       <div class="f-field"><label>PPP مفعَّل</label>
         <div class="chk-row"><input type="checkbox" name="ppp_enabled" value="1"
           {% if plan.ppp_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>تفعيل MTU</label>
+      <div class="f-field"><label>تفعيل حجم حزمة الشبكة (MTU)</label>
         <div class="chk-row"><input type="checkbox" name="enable_mtu" value="1"
           {% if plan.enable_mtu in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
       <div class="f-field"><label>حد بأيام انتهاء الصلاحية</label>
@@ -384,16 +390,16 @@
       <div class="f-field"><label>حد بساعات انتهاء الصلاحية</label>
         <div class="chk-row"><input type="checkbox" name="expiry_hour_limit_toggle" value="1"
           {% if plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>MikroTik Address List</label>
+      <div class="f-field"><label>قائمة عناوين MikroTik</label>
         <input type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}"></div>
-      <div class="f-field"><label>MikroTik Filter Chain</label>
+      <div class="f-field"><label>سلسلة فلترة MikroTik</label>
         <input type="text" name="mikrotik_filter_chain_name" value="{{ plan.mikrotik_filter_chain_name or '' }}"></div>
-      <div class="f-field"><label>MikroTik User Group</label>
+      <div class="f-field"><label>مجموعة مستخدم MikroTik</label>
         <input type="text" name="mikrotik_user_group" value="{{ plan.mikrotik_user_group or '' }}"></div>
-      <div class="f-field"><label>أولوية الـ Simple Queue</label>
+      <div class="f-field"><label>أولوية طابور السرعة</label>
         <input type="text" name="mikrotik_queue_priority_simple_queue"
                value="{{ plan.mikrotik_queue_priority_simple_queue or '' }}" placeholder="1..8"></div>
-      <div class="f-field"><label>IPv6 Pool</label>
+      <div class="f-field"><label>نطاق IPv6</label>
         <input type="text" name="ipv6_pool" value="{{ plan.ipv6_pool or '' }}"></div>
     </div>
     </div>

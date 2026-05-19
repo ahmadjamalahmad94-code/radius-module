@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}إعدادات Webhooks{% endblock %}
+{% block title %}إعدادات إشعارات الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
-{% block page_title %}إعدادات Webhooks{% endblock %}
+{% block page_title %}إعدادات إشعارات الربط{% endblock %}
 
 {% block content %}
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
@@ -9,19 +9,19 @@
     <div class="card">
       <div class="card-header"><span class="title">قنوات الإرسال</span></div>
       <div class="card-body">
-        <div class="form-row"><label>الـ URL المستهدف</label>
+        <div class="form-row"><label>رابط الاستقبال</label>
           <div class="field"><input type="text" name="target_url"
             value="{{ current.target_url if current else '' }}"
             placeholder="https://hobehub.example.com/webhooks/radius"></div></div>
         <div class="form-row"><label>المفتاح السري (HMAC)</label>
           <div class="field"><input type="text" name="secret"
             value="{{ current.secret if current else '' }}"
-            placeholder="shared-secret"></div></div>
+            placeholder="المفتاح المشترك"></div></div>
         <div class="form-row"><label>مُفعَّل</label>
           <div class="field"><label class="toggle">
             <input type="checkbox" name="enabled" value="1"
               {% if (current and current.enabled) or not current %}checked{% endif %}>
-            <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
+            <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
           </label></div></div>
       </div>
     </div>
@@ -34,9 +34,9 @@
   <div class="card">
     <div class="card-header"><span class="title">كيف يعمل</span></div>
     <div class="card-body" style="font-size:12.5px;line-height:1.7">
-      <p>كل حدث يُسجَّل في طابور DB ويُرسَل عبر worker خلفي بتوقيع <code>X-HobeRadius-Signature</code>.</p>
-      <p><strong>Retry policy:</strong> 30s → 2m → 8m → 30m → 2h ثم terminal.</p>
-      <p>أكواد 4xx (عدا 408/429) تُعتبر terminal فورًا. أكواد 5xx + شبكة تُعاد المحاولة.</p>
+      <p>كل حدث يُسجَّل في طابور داخلي ويُرسَل عبر عامل خلفي بتوقيع أمان.</p>
+      <p><strong>سياسة إعادة المحاولة:</strong> 30 ثانية → دقيقتان → 8 دقائق → 30 دقيقة → ساعتان ثم يتوقف.</p>
+      <p>أكواد 4xx (عدا 408/429) تُعد فشلًا نهائيًا فورًا. أخطاء 5xx وأخطاء الشبكة تُعاد محاولتها.</p>
     </div>
   </div>
 </div>

@@ -89,13 +89,13 @@
   </section>
 
   <section class="sec-card auth">
-    <h3><i class="fa-solid fa-key h-ic"></i>التحقّق (Auth)</h3>
+    <h3><i class="fa-solid fa-key h-ic"></i>التحقق من الدخول</h3>
     <div class="sb">
     <div class="f-grid">
       <div class="f-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
         <input type="password" name="password" {% if is_new %}required{% endif %}
                placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
-        <div class="field-help">يُخزَّن hash (scrypt) — لا plaintext.</div></div>
+        <div class="field-help">تُحفظ بصيغة مشفّرة، ولا تظهر كنص واضح.</div></div>
       {% if not is_new and admin and admin.last_login_at %}
       <div class="f-field"><label>آخر دخول</label>
         <input type="text" readonly value="{{ admin.last_login_at }}"></div>
@@ -117,12 +117,12 @@
         <input type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div>
       <div class="f-field"><label>هاتف آخر</label>
         <input type="tel" name="phone" value="{{ admin.phone if admin else '' }}"></div>
-      <div class="f-field"><label>رابط الصورة (avatar)</label>
+      <div class="f-field"><label>رابط الصورة الشخصية</label>
         <input type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}"
                placeholder="https://..."></div>
       <div class="f-field"><label>وسوم (CSV)</label>
         <input type="text" name="tags" value="{{ admin.tags if admin else '' }}"
-               placeholder="lead, support">
+               placeholder="دعم، تحصيل">
         <div class="field-help">للتنظيم — تصنيف داخلي للمدراء.</div></div>
       <div class="f-field full"><label>ملاحظات على الملف الشخصي</label>
         <textarea name="profile_notes" rows="2"

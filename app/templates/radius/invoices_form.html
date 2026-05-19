@@ -19,7 +19,9 @@
       <div class="field"><input type="number" step="0.01" name="amount" required min="0" value="0"></div></div>
     <div class="form-row"><label>الاتجاه</label>
       <div class="field"><select name="direction">
-        {% for d in ['charge','refund','deposit','withdraw','credit'] %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        {% for d in ['charge','refund','deposit','withdraw','credit'] %}
+          <option value="{{ d }}">{% if d == 'charge' %}تحصيل{% elif d == 'refund' %}إرجاع{% elif d == 'deposit' %}إيداع{% elif d == 'withdraw' %}سحب{% elif d == 'credit' %}رصيد{% else %}{{ d }}{% endif %}</option>
+        {% endfor %}
       </select></div></div>
     <div class="form-row"><label>نوع الخدمة</label>
       <div class="field"><select name="service_type">
@@ -27,11 +29,15 @@
       </select></div></div>
     <div class="form-row"><label>طريقة الدفع</label>
       <div class="field"><select name="payment_method">
-        {% for m in ['cash','transfer','card','online','manual'] %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        {% for m in ['cash','transfer','card','online','manual'] %}
+          <option value="{{ m }}">{% if m == 'cash' %}نقدًا{% elif m == 'transfer' %}حوالة{% elif m == 'card' %}بطاقة{% elif m == 'online' %}دفع إلكتروني{% elif m == 'manual' %}يدوي{% else %}{{ m }}{% endif %}</option>
+        {% endfor %}
       </select></div></div>
     <div class="form-row"><label>الحالة</label>
       <div class="field"><select name="status">
-        {% for s in ['paid','pending','failed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        {% for s in ['paid','pending','failed'] %}
+          <option value="{{ s }}">{% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلّقة{% elif s == 'failed' %}فشلت{% else %}{{ s }}{% endif %}</option>
+        {% endfor %}
       </select></div></div>
     <div class="form-row"><label>تنتهي في</label>
       <div class="field"><input type="date" name="expiration_at"></div></div>

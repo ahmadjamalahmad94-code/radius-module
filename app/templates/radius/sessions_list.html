@@ -1,13 +1,14 @@
 {% extends "admin/_admin_layout.html" %}
+{% set mode_label = "يدوي" if settings.mode == "manual" else ("مايكروتك" if settings.mode == "mikrotik" else settings.mode) %}
 {% block title %}المتصلون الآن{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}المتصلون الآن{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} جلسة · وضع {{ settings.mode }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">({{ items|length }} جلسة · الوضع {{ mode_label }})</span>{% endblock %}
 
 {% block content %}
 {% if settings.mode == "manual" %}
 <div class="flash flash-warning" style="margin-bottom:10px">
-  وضع <strong>manual</strong> — لا توجد جلسات حية. شغّل <code>RADIUS_MODE=mikrotik</code> للرؤية الفعلية.
+  الوضع اليدوي — لا توجد جلسات حية. شغّل <code>RADIUS_MODE=mikrotik</code> للرؤية الفعلية.
 </div>
 {% endif %}
 
