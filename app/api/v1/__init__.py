@@ -11,7 +11,9 @@ from flask import Blueprint
 def register_v1(parent: Blueprint) -> None:
     v1 = Blueprint("v1", __name__, url_prefix="/v1")
 
-    from . import health, accounts, cards, profiles, nas, sessions, accounting, webhooks, mikrotik
+    from . import (health, accounts, cards, profiles, nas, sessions,
+                    accounting, webhooks, mikrotik, internal_auth, dashboard,
+                    admins, audit)
     health.register(v1)
     accounts.register(v1)
     cards.register(v1)
@@ -21,6 +23,10 @@ def register_v1(parent: Blueprint) -> None:
     accounting.register(v1)
     webhooks.register(v1)
     mikrotik.register(v1)
+    internal_auth.register(v1)
+    dashboard.register(v1)
+    admins.register(v1)
+    audit.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token
