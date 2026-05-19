@@ -18,6 +18,8 @@ New Text Document.txt
 docs/*
 !docs/roadmap/
 !docs/roadmap/*.md
+!docs/api/
+!docs/api/*.md
 !docs/radius/
 !docs/radius/*.md
 !app/radius/core/
