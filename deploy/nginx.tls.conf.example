@@ -1,0 +1,82 @@
+# HobeRadius — nginx HTTPS variant (TLS enabled)
+#
+# للتفعيل:
+#   1. تأكّد من وجود شهادة Let's Encrypt على المضيف:
+#        sudo bash deploy/deploy.sh tls <your-domain>
+#   2. انسخ هذا الملف فوق nginx.conf الافتراضي:
+#        sed "s|<DOMAIN>|radius.example.com|g" \
+#            deploy/nginx.tls.conf.example > deploy/nginx.conf
+#   3. أعد تشغيل nginx:
+#        docker compose -f deploy/docker-compose.yml up -d --force-recreate nginx
+#
+# الـ placeholder <DOMAIN> لازم يُستبدَل قبل النشر — وإلا nginx لن يُحمّل
+# الشهادة (هذا بالضبط ما حدث على VPS قبل هذا الـ commit).
+
+upstream hoberadius_app {
+    server hoberadius:8000;
+    keepalive 32;
+}
+
+# HTTP → HTTPS + ACME challenge
+server {
+    listen 80;
+    server_name <DOMAIN>;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name <DOMAIN>;
+
+    ssl_certificate     /etc/letsencrypt/live/<DOMAIN>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<DOMAIN>/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+
+    # security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "same-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    client_max_body_size 16M;
+    gzip on;
+    gzip_types text/css application/javascript application/json;
+    gzip_min_length 1024;
+
+    location /static/ {
+        proxy_pass http://hoberadius_app;
+        proxy_cache_valid 200 1h;
+        expires 1h;
+    }
+
+    location = /admin/radius/_health {
+        proxy_pass http://hoberadius_app;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://hoberadius_app;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection        "";
+        proxy_read_timeout  60s;
+        proxy_send_timeout  60s;
+    }
+}
