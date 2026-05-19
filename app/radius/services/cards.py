@@ -95,6 +95,15 @@ class CardsService:
             }
             password_charset = pgt_map.get(password_generation_type, "mixed")
 
+        # ── RM-QA: H4 fix — apply starts_with_or_ends_with + prefix_or_suffix_value ──
+        # هذه الحقول الجديدة في H4 كانت تُحفظ في DB لكن لم تُطبَّق فعلًا على usernames.
+        # نطويها فوق username_prefix/username_suffix legacy قبل تمريرها للمولّد.
+        if prefix_or_suffix_value:
+            if starts_with_or_ends_with == "prefix":
+                username_prefix = (prefix_or_suffix_value or "") + (username_prefix or "")
+            elif starts_with_or_ends_with == "suffix":
+                username_suffix = (username_suffix or "") + (prefix_or_suffix_value or "")
+
         batch = self._store.create_batch(CardBatch(
             id=None, batch_code="", plan_id=plan_id, count=count,
             package_name=package_name,
@@ -125,7 +134,8 @@ class CardsService:
         ))
         cards = self._store.generate_cards_for_batch(
             batch_id=batch.id, plan_id=plan_id, count_to_make=count,
-            username_prefix=username_prefix, username_length=username_length,
+            username_prefix=username_prefix, username_suffix=username_suffix,
+            username_length=username_length,
             password_length=password_length, expire_at=expire,
         )
         # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card)

@@ -184,7 +184,8 @@ def stats(tenant_id: int) -> dict:
 
 
 def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
-                   username_prefix: str = "", username_length: int = 8,
+                   username_prefix: str = "", username_suffix: str = "",
+                   username_length: int = 8,
                    password_length: int = 6, password_charset: str = "digits",
                    expire_at: Optional[datetime] = None) -> list[Card]:
     if count <= 0:
@@ -198,15 +199,16 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
     for r in cur.fetchall():
         seen.add(r["username"])
 
+    fixed_len = len(username_prefix) + len(username_suffix)
+    rand_len = max(4, username_length - fixed_len)
     for _ in range(count):
         for _try in range(40):
-            uname = (username_prefix + _random_str(max(4, username_length - len(username_prefix)),
-                                                    charset="digits")).lower()
+            uname = (username_prefix + _random_str(rand_len, charset="digits") + username_suffix).lower()
             if uname not in seen:
                 seen.add(uname)
                 break
         else:
-            uname = (username_prefix + _random_str(12, charset="mixed")).lower()
+            uname = (username_prefix + _random_str(12, charset="mixed") + username_suffix).lower()
             seen.add(uname)
         pwd = _random_str(password_length, charset=password_charset)
         rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
