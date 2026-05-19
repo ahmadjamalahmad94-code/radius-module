@@ -4,7 +4,80 @@
 {% block page_title %}لوحة التحكم{% endblock %}
 {% block page_sub %}<span class="sub">(نظرة عامة)</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+/* RM-H2 — dashboard grouped sections (cream/navy/cyan tokens) */
+.dh-alerts{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}
+.dh-alert{padding:10px 14px;border-radius:var(--hr-r,6px);font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;border:1px solid transparent}
+.dh-alert .a-msg{flex:1}
+.dh-alert .a-link{font-size:12px;font-weight:800;text-decoration:underline;color:inherit;opacity:.85}
+.dh-alert .a-link:hover{opacity:1}
+.dh-al-danger{background:var(--hr-badge-danger-bg);color:#9B1C1C;border-color:rgba(155,28,28,.18)}
+.dh-al-warn  {background:var(--hr-badge-warn-bg);color:#7A4E0E;border-color:rgba(122,78,14,.18)}
+.dh-al-info  {background:var(--hr-badge-info-bg);color:#1F3D5A;border-color:rgba(31,61,90,.18)}
+
+.dh-group{margin:18px 0 6px}
+.dh-group-title{
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;
+  color:var(--hr-text-soft);margin:0 0 10px;padding:0 4px;
+}
+.dh-group-title .gt-bar{width:3px;height:16px;background:var(--hr-cyan-500);border-radius:2px}
+.dh-group-title .gt-meta{margin-inline-start:auto;font-size:11.5px;font-weight:700;color:var(--hr-text-muted)}
+
+.dh-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.dh-mini{
+  padding:13px 15px;background:var(--hr-card,#fff);border:1px solid var(--hr-border);
+  border-radius:var(--hr-r-lg,8px);display:flex;flex-direction:column;gap:3px;
+  transition:.15s ease;box-shadow:var(--hr-shadow-sm);
+}
+.dh-mini:hover{border-color:var(--hr-cyan-500)}
+.dh-mini .mi-lbl{font-size:11.5px;color:var(--hr-text-muted);font-weight:700;display:flex;align-items:center;gap:6px}
+.dh-mini .mi-lbl i{font-size:10.5px;opacity:.7}
+.dh-mini .mi-val{font-size:21px;font-weight:800;color:var(--hr-text);line-height:1.05;font-family:"Cairo",sans-serif}
+.dh-mini .mi-help{font-size:10.5px;color:var(--hr-text-muted);margin-top:1px}
+.dh-mini.is-danger .mi-val  {color:#B91C1C}
+.dh-mini.is-warn  .mi-val   {color:#92500c}
+.dh-mini.is-ok    .mi-val   {color:var(--hr-green)}
+.dh-mini.is-muted .mi-val   {color:var(--hr-text-muted)}
+.dh-mini .mi-bar{margin-top:5px;height:4px;border-radius:2px;background:var(--hr-stripe);overflow:hidden}
+.dh-mini .mi-bar > span{display:block;height:100%;background:var(--hr-cyan-500);transition:width .4s ease}
+.dh-mini.is-danger .mi-bar > span{background:#B91C1C}
+.dh-mini.is-warn   .mi-bar > span{background:#92500c}
+.dh-mini.is-ok     .mi-bar > span{background:var(--hr-green)}
+
+.dh-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800}
+.dh-pill-ok  {background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
+.dh-pill-bad {background:var(--hr-badge-danger-bg);color:#9B1C1C}
+.dh-pill-mute{background:var(--hr-badge-mute-bg);color:var(--hr-text-muted)}
+
+.dh-batches-list{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.dh-batch-row{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--hr-soft);
+  border:1px solid var(--hr-border);border-radius:var(--hr-r,6px);font-size:12.5px;
+}
+.dh-batch-row .b-code{font-family:monospace;font-weight:800;color:var(--hr-cyan-700)}
+.dh-batch-row .b-name{flex:1;color:var(--hr-text)}
+.dh-batch-row .b-count{font-family:monospace;color:var(--hr-text-muted)}
+</style>
+{% endblock %}
+
 {% block content %}
+
+{# ─────────────── RM-H2: التنبيهات العلوية ─────────────── #}
+{% if metrics and metrics.alerts %}
+<div class="dh-alerts">
+  {% for al in metrics.alerts[:6] %}
+  <div class="dh-alert dh-al-{{ al.level or 'info' }}">
+    <i class="fa-solid {{ 'fa-circle-exclamation' if al.level == 'danger' else ('fa-triangle-exclamation' if al.level == 'warn' else 'fa-circle-info') }}"></i>
+    <span class="a-msg">{{ al.message }}</span>
+    {% if al.link_endpoint %}
+      <a class="a-link" href="{{ url_for(al.link_endpoint) }}">عرض ←</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 <div class="kpi-strip">
   <div class="kpi-card kpi-dark">
@@ -63,6 +136,145 @@
     <div><div class="ttl">المدراء</div><div class="sub">والصلاحيات</div></div>
   </a>
 </div>
+
+{# ─────────────── RM-H2: الأقسام المُجمَّعة ─────────────── #}
+{% if metrics %}
+  {% set subs = metrics.subscribers or {} %}
+  {% set cd = metrics.cards or {} %}
+  {% set pl = metrics.plans or {} %}
+  {% set sy = metrics.system or {} %}
+  {% set ns = metrics.nas or {} %}
+
+  {# ── المشتركون والاتصال ── #}
+  <div class="dh-group">
+    <div class="dh-group-title">
+      <span class="gt-bar"></span>
+      <i class="fa-solid fa-users"></i> المشتركون والاتصال
+      <span class="gt-meta">إجمالي: {{ subs.total or 0 }}</span>
+    </div>
+    <div class="dh-mini-grid">
+      <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-circle-check"></i> نشطون</div>
+        <div class="mi-val">{{ subs.active or 0 }}</div></div>
+      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-wifi"></i> متصلون الآن</div>
+        <div class="mi-val">{{ subs.online or 0 }}</div>
+        <div class="mi-help">من radacct (جلسات مفتوحة)</div></div>
+      <div class="dh-mini is-warn"><div class="mi-lbl"><i class="fa-solid fa-hourglass-end"></i> ينتهون خلال 3 أيام</div>
+        <div class="mi-val">{{ subs.expiring_soon or 0 }}</div></div>
+      <div class="dh-mini is-danger"><div class="mi-lbl"><i class="fa-solid fa-ban"></i> منتهية اشتراكاتهم</div>
+        <div class="mi-val">{{ subs.expired or 0 }}</div></div>
+      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-pause"></i> معطَّلون</div>
+        <div class="mi-val">{{ subs.disabled or 0 }}</div></div>
+      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-user-slash"></i> موقوفون</div>
+        <div class="mi-val">{{ subs.suspended or 0 }}</div></div>
+    </div>
+  </div>
+
+  {# ── الكروت ── #}
+  <div class="dh-group">
+    <div class="dh-group-title">
+      <span class="gt-bar"></span>
+      <i class="fa-solid fa-id-card"></i> الكروت والحزم
+      <span class="gt-meta">{{ cd.batches or 0 }} حزمة</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="dh-mini-grid">
+        <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-layer-group"></i> الإجمالي</div>
+          <div class="mi-val">{{ cd.total or 0 }}</div></div>
+        <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-box-open"></i> متاحة</div>
+          <div class="mi-val">{{ cd.available or 0 }}</div></div>
+        <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-handshake"></i> مُستخدَمة</div>
+          <div class="mi-val">{{ cd.used or 0 }}</div></div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:var(--hr-text-muted);font-weight:700;margin-bottom:6px;padding-inline-start:4px">
+          آخر الحزم
+        </div>
+        {% if metrics.recent_batches %}
+        <div class="dh-batches-list">
+          {% for b in metrics.recent_batches %}
+          <div class="dh-batch-row">
+            <span class="b-code">{{ b.batch_code or '—' }}</span>
+            <span class="b-name">{{ b.package_name or '(بدون اسم)' }}</span>
+            <span class="b-count">{{ b.used or 0 }}/{{ b.count or 0 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="dh-batch-row" style="justify-content:center;color:var(--hr-text-muted)">
+          لا توجد حزم بعد
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── العروض / الخطط ── #}
+  <div class="dh-group">
+    <div class="dh-group-title">
+      <span class="gt-bar"></span>
+      <i class="fa-solid fa-tags"></i> العروض / الخطط
+      <span class="gt-meta">إجمالي: {{ pl.total or 0 }}</span>
+    </div>
+    <div class="dh-mini-grid">
+      <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-toggle-on"></i> مفعَّلة</div>
+        <div class="mi-val">{{ pl.enabled or 0 }}</div></div>
+      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-toggle-off"></i> معطَّلة</div>
+        <div class="mi-val">{{ pl.disabled or 0 }}</div></div>
+      <div class="dh-mini" style="grid-column:span 2"><div class="mi-lbl"><i class="fa-solid fa-trophy"></i> الأكثر استخدامًا</div>
+        {% if pl.top %}
+          <div class="mi-val" style="font-size:15px">{{ pl.top.name }}</div>
+          <div class="mi-help">{{ pl.top.subs }} مشترك</div>
+        {% else %}
+          <div class="mi-val" style="font-size:14px;color:var(--hr-text-muted)">— لا بيانات بعد —</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── صحة النظام ── #}
+  {% macro pct_class(v) %}{% if v is none %}{% elif v >= 90 %}is-danger{% elif v >= 75 %}is-warn{% else %}is-ok{% endif %}{% endmacro %}
+  <div class="dh-group">
+    <div class="dh-group-title">
+      <span class="gt-bar"></span>
+      <i class="fa-solid fa-heart-pulse"></i> صحة النظام
+      <span class="gt-meta">cache 30s</span>
+    </div>
+    <div class="dh-mini-grid">
+      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
+        <div class="mi-val" style="font-size:14px">
+          {% if sy.db_ok %}<span class="dh-pill dh-pill-ok"><i class="fa-solid fa-check"></i> OK</span>
+          {% else %}<span class="dh-pill dh-pill-bad"><i class="fa-solid fa-xmark"></i> فشل</span>{% endif %}
+        </div></div>
+      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-tower-broadcast"></i> RADIUS adapter</div>
+        <div class="mi-val" style="font-size:14px">
+          {% if sy.radius_ok %}<span class="dh-pill dh-pill-ok"><i class="fa-solid fa-check"></i> جاهز</span>
+          {% else %}<span class="dh-pill dh-pill-bad"><i class="fa-solid fa-xmark"></i> غير جاهز</span>{% endif %}
+        </div></div>
+      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-network-wired"></i> أجهزة NAS</div>
+        <div class="mi-val">{{ ns.enabled or 0 }} / {{ ns.total or 0 }}</div>
+        <div class="mi-help">مفعَّلة من الإجمالي</div></div>
+      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-power-off"></i> وقت تشغيل التطبيق</div>
+        <div class="mi-val" style="font-size:15px">{{ sy.process_uptime or '—' }}</div>
+        {% if sy.system_uptime %}<div class="mi-help">النظام: {{ sy.system_uptime }}</div>{% endif %}
+      </div>
+      <div class="dh-mini {{ pct_class(sy.cpu_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-microchip"></i> CPU</div>
+        <div class="mi-val">{{ '%.1f%%' % sy.cpu_pct if sy.cpu_pct is not none else '—' }}</div>
+        {% if sy.cpu_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.cpu_pct }}%"></span></div>{% endif %}
+      </div>
+      <div class="dh-mini {{ pct_class(sy.ram_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-memory"></i> RAM</div>
+        <div class="mi-val">{{ '%.1f%%' % sy.ram_pct if sy.ram_pct is not none else '—' }}</div>
+        {% if sy.ram_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.ram_pct }}%"></span></div>{% endif %}
+      </div>
+      <div class="dh-mini {{ pct_class(sy.disk_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-hard-drive"></i> Disk</div>
+        <div class="mi-val">{{ '%.1f%%' % sy.disk_pct if sy.disk_pct is not none else '—' }}</div>
+        {% if sy.disk_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.disk_pct }}%"></span></div>{% endif %}
+      </div>
+      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-server"></i> الـ host</div>
+        <div class="mi-val" style="font-size:13px;font-family:monospace">{{ sy.hostname or '—' }}</div>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px">
 
