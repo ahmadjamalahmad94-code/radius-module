@@ -5,6 +5,12 @@
 #   authenticate: pap (FreeRADIUS يقارن Cleartext-Password المُرجَعة من rest).
 #   accounting:  اكتب لـ radacct في SQLite.
 #   post-auth:   اكتب لـ radpostauth + استدعِ HobeRadius للـ logging.
+#
+# تنبيه:
+#   نتجنّب modules لا تُشحن مع image freeradius/freeradius-server:3.2.5 الرسمي:
+#     - rlm_acct_unique  → غير موجود؛ FreeRADIUS يولّد Acct-Unique-Session-Id داخليًا.
+#     - rlm_realm (suffix) → لسنا بحاجة لـ realm parsing.
+#     - rlm_attr_filter   → لسنا بحاجة لفلترة attrs الرفض.
 # ─────────────────────────────────────────────────────────────────────────────
 
 server default {
@@ -63,8 +69,6 @@ authenticate {
 # ─ PREACCT — تحضير acct request ─
 preacct {
     preprocess
-    acct_unique
-    suffix
 }
 
 # ─ ACCOUNTING — كتابة لـ radacct ─
@@ -80,7 +84,6 @@ post-auth {
 
     Post-Auth-Type REJECT {
         sql
-        attr_filter.access_reject
     }
 }
 }
