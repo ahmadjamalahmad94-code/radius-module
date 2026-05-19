@@ -34,18 +34,14 @@ def test_contract_endpoint_requires_auth(client):
 
 
 def test_contract_not_implemented_response_shape(client):
-    res = client.post("/api/v1/loans", json={
-        "subscriber_username": "user1",
-        "duration_value": 2,
-        "duration_unit": "days",
-    }, headers=AUTH)
+    res = client.post("/api/v1/recycle-bin/subscribers/1/restore", json={}, headers=AUTH)
     assert res.status_code == 501
     body = res.get_json()
     assert body["ok"] is False
     assert body["error"]["code"] == "not_implemented"
-    assert body["error"]["details"]["domain"] == "loans"
-    assert body["error"]["details"]["operation"] == "create"
-    assert body["meta"]["domain"] == "loans"
+    assert body["error"]["details"]["domain"] == "recycle_bin"
+    assert body["error"]["details"]["operation"] == "restore"
+    assert body["meta"]["domain"] == "recycle_bin"
     assert body["meta"]["status"] == "planned"
 
 
@@ -90,8 +86,13 @@ def test_contract_routes_are_registered(client):
 ])
 def test_contract_endpoints_do_not_500(client, method, path):
     res = client.open(path, method=method, json={}, headers=AUTH)
-    assert res.status_code == 501, (path, res.status_code, res.get_data(as_text=True))
-    assert res.get_json()["error"]["code"] == "not_implemented"
+    assert res.status_code in {200, 201, 422, 501}, (
+        path, res.status_code, res.get_data(as_text=True)
+    )
+    body = res.get_json()
+    assert body["ok"] is (res.status_code in {200, 201})
+    if res.status_code == 501:
+        assert body["error"]["code"] == "not_implemented"
 
 
 def test_contract_mutations_do_not_mutate_core_tables(client):
@@ -100,6 +101,9 @@ def test_contract_mutations_do_not_mutate_core_tables(client):
         "cards": _count("cards"),
         "card_batches": _count("card_batches"),
         "audit_log": _count("audit_log"),
+        "accounting_ledger_entries": _count("accounting_ledger_entries"),
+        "payment_transactions": _count("payment_transactions"),
+        "loan_entries": _count("loan_entries"),
     }
     for path in (
         "/api/v1/loans",
@@ -110,7 +114,7 @@ def test_contract_mutations_do_not_mutate_core_tables(client):
         "/api/v1/backups/run",
     ):
         res = client.post(path, json={"probe": True}, headers=AUTH)
-        assert res.status_code == 501
+        assert res.status_code in {422, 501}
     after = {table: _count(table) for table in before}
     assert after == before
 
