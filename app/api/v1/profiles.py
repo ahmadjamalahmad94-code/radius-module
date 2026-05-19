@@ -42,6 +42,7 @@ _STR_FIELDS = (
     "on_login", "on_logout",
     "currency", "plan_tier", "project", "description", "color",
     "offer_hours_from", "offer_hours_to",
+    "service_scope",
 )
 _INT_FIELDS = (
     "duration_value", "duration_minutes",
@@ -60,6 +61,7 @@ _INT_FIELDS = (
     "monthly_download_quota_mb", "monthly_upload_quota_mb", "monthly_combined_quota_mb",
     "daily_download_quota_mb", "daily_upload_quota_mb", "daily_combined_quota_mb",
     "max_consumption_times", "ticket_validity_days", "working_hours_limit",
+    "max_loan_minutes",
 )
 _FLOAT_FIELDS = ("price_card", "price_bulk", "price")
 _BOOL_FIELDS = (
@@ -68,6 +70,7 @@ _BOOL_FIELDS = (
     # RM-H3
     "speed_control_enabled", "burst_enabled", "nightly_unlimited_enabled",
     "single_use_once", "hotspot_enabled", "ppp_enabled",
+    "loan_enabled", "speed_override_allowed",
 )
 _TUPLE_FIELDS = ("allowed_days", "router_ids")
 

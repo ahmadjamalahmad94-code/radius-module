@@ -40,6 +40,7 @@ _COLS = (
     "daily_download_quota_mb","daily_upload_quota_mb","daily_combined_quota_mb",
     "single_use_once","max_consumption_times","ticket_validity_days","working_hours_limit",
     "hotspot_enabled","ppp_enabled",
+    "service_scope","loan_enabled","max_loan_minutes","speed_override_allowed",
     "offer_hours_from","offer_hours_to",
     "metadata",
 )
@@ -101,6 +102,10 @@ def _row(r) -> AccessPlan:
         working_hours_limit=_g(r,"working_hours_limit",0) or 0,
         hotspot_enabled=bool(_g(r,"hotspot_enabled",0)),
         ppp_enabled=bool(_g(r,"ppp_enabled",0)),
+        service_scope=_g(r,"service_scope","both") or "both",
+        loan_enabled=bool(_g(r,"loan_enabled",0)),
+        max_loan_minutes=_g(r,"max_loan_minutes",0) or 0,
+        speed_override_allowed=bool(_g(r,"speed_override_allowed",0)),
         offer_hours_from=_g(r,"offer_hours_from","") or "",
         offer_hours_to=_g(r,"offer_hours_to","") or "",
         metadata=_g(r,"metadata","{}") or "{}",
@@ -149,6 +154,7 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         p.daily_download_quota_mb, p.daily_upload_quota_mb, p.daily_combined_quota_mb,
         int(p.single_use_once), p.max_consumption_times, p.ticket_validity_days, p.working_hours_limit,
         int(p.hotspot_enabled), int(p.ppp_enabled),
+        p.service_scope, int(p.loan_enabled), p.max_loan_minutes, int(p.speed_override_allowed),
         p.offer_hours_from, p.offer_hours_to,
         p.metadata or "{}",
     )

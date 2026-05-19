@@ -369,7 +369,95 @@ docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
        ORDER BY radacctid DESC LIMIT 5;"
 ```
 
-## Slices لاحقة (ما بعد R5)
+## R6 — تفعيل rlm_expr لـ tolower xlat (مُنفَّذ)
+
+بعد R5 على VPS: الـ sql module يقلع نظيفًا، لا أخطاء، لكن `radacct`
+لا يزال فارغًا.
+
+### السبب الجذري المثبت
+الـ `reference` في R5 يستخدم:
+```
+reference = "%{tolower:type.%{Acct-Status-Type}.query}"
+```
+
+الـ `%{tolower:...}` xlat مُسجَّل في `rlm_expr` (تحديدًا في
+`src/modules/rlm_expr/rlm_expr.c::xlat_register("tolower", ...)`).
+ليس في core FR، ليس في rlm_sql.
+
+في configنا، `mods-enabled/` يحوي فقط:
+  always, chap, detail, pap, preprocess, rest, sql
+
+**`expr` غير مفعّل**. النتيجة عند runtime:
+1. FR يحاول توسيع `%{tolower:...}` لكل packet.
+2. الـ xlat name غير معروف → expansion صامت (FR 3.x default: empty
+   string، لا error في log level الافتراضي).
+3. الـ `reference` يُحلّ إلى `""` أو `"type..query"`.
+4. rlm_sql يبحث عن query بهذا الـ path في `accounting { type { ... } }`
+   → لا match.
+5. الـ module يُرجِع **noop** — ليس fail ولا reject — فـ R1's wrapper
+   `{ fail=1; ... }; ok` يمرّ بسلام والـ Accounting-Response يخرج.
+6. لا query SQL يُنفَّذ → `radacct` يبقى فارغًا.
+
+هذا يفسّر بالضبط:
+- "sql module loads cleanly" ✓ (الـ module نفسه سليم).
+- "No SQL errors appear in logs" ✓ (لا أخطاء — لأنه لا query أصلاً).
+- "Accounting-Response returns correctly" ✓ (R1 يضمن ذلك).
+- "radacct still receives no new rows" ← الـ symptom.
+
+### الإصلاح
+ملف واحد: `deploy/freeradius/mods-enabled/expr`
+```
+expr {
+}
+```
+الـ module مشحون أصلاً في image freeradius/freeradius-server:3.2.5،
+فقط نضيف الـ file كي يُحمَّل عند startup.
+
+### حالة الـ Accounting بعد R6
+
+| Acct-Status-Type | بعد R5 (rlm_expr مفقود) | بعد R6 (rlm_expr مفعّل) |
+|-------------------|--------------------------|--------------------------|
+| Start             | reference يُحلّ فارغًا → noop | reference → "type.start.query" → INSERT |
+| Interim-Update    | noop | reference → "type.interim-update.query" → UPDATE |
+| Stop              | noop | reference → "type.stop.query" → UPDATE + acctstoptime |
+| Accounting-On     | noop | reference → "type.accounting-on.query" → close orphans |
+| Accounting-Off    | noop | reference → "type.accounting-off.query" → close orphans |
+
+### verification على VPS بعد deploy
+```bash
+cd /opt/radius-module && git pull
+docker compose -f deploy/docker-compose.yml build freeradius
+docker compose -f deploy/docker-compose.yml up -d --force-recreate freeradius
+
+# 1. تأكّد أن expr مُحمَّل:
+docker exec hoberadius-freeradius ls /etc/freeradius/mods-enabled/expr
+# expected: file exists
+
+# 2. شغّل FR -X مؤقّتًا و راقب الـ expansion:
+docker exec hoberadius-freeradius pkill freeradius
+docker exec -it hoberadius-freeradius freeradius -X 2>&1 \\
+    | grep -E 'EXPAND|tolower|type\.'
+# expected عند Acct-Start:
+#   EXPAND %{tolower:type.%{Acct-Status-Type}.query}
+#      --> type.start.query
+#   (then SQL INSERT executed)
+
+# 3. بعد login من MT:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, username, acctstarttime, acctstoptime
+       FROM radacct ORDER BY radacctid DESC LIMIT 3;"
+# expected: صف جديد بـ acctstarttime مملوء، acctstoptime=NULL.
+
+# 4. بعد logout:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, username, acctstoptime, acctterminatecause,
+            acctinputoctets, acctoutputoctets
+       FROM radacct WHERE acctstoptime IS NOT NULL
+       ORDER BY radacctid DESC LIMIT 3;"
+# expected: نفس الـ row مع acctstoptime + bytes counters.
+```
+
+## Slices لاحقة (ما بعد R6)
 
 - **enrichment via puller**: استخدام `_tick` لاستخراج metadata من MT
   (uptime، interface counters، router-set tags) وحقنها في radacct

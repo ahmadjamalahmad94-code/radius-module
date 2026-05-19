@@ -62,6 +62,8 @@ def _batch_row(r) -> CardBatch:
         deleted_at=parse_dt(_g(r, "deleted_at", None)),
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
+        assigned_to=_g(r, "assigned_to", "") or "",
+        distributor_id=_g(r, "distributor_id", None),
         created_at=parse_dt(r["created_at"]),
     )
 

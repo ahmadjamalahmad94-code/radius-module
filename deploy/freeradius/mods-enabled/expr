@@ -1,0 +1,13 @@
+# rlm_expr — يوفّر xlats الـ string/math: tolower, toupper, length, md5,
+# sha1, base64, rand, hex, %{expr:...}, ... إلخ.
+#
+# يلزمنا تحديدًا لأن mods-enabled/sql يستخدم:
+#     reference = "%{tolower:type.%{Acct-Status-Type}.query}"
+# بدون rlm_expr، الـ tolower xlat غير مُعرَّف فيُحلّ فارغًا → rlm_sql لا
+# يجد query مناسب للـ Acct-Status-Type → noop → R1's wrapper يُرسل
+# Accounting-Response → radacct يبقى فارغًا. هذا هو السبب الجذري لـ R6.
+#
+# الـ module مشحون أصلاً في image freeradius/freeradius-server:3.2.5،
+# فقط لم يكن مفعّلًا في mods-enabled/.
+expr {
+}

@@ -7,6 +7,7 @@ from ..core.constants import AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, AUDIT_ACT
 from ..core.errors import RadiusValidationError
 from ..core.types import AccessPlan
 from ..integration.adapter import RadiusAdapter
+from .operations import validate_service_scope
 from .audit import RadiusAuditService
 
 
@@ -52,6 +53,9 @@ def _validate(plan: AccessPlan) -> None:
         raise RadiusValidationError("speed must be >= 0")
     if plan.concurrent_sessions < 1:
         raise RadiusValidationError("concurrent_sessions must be >= 1")
+    validate_service_scope(plan.service_scope)
+    if plan.max_loan_minutes < 0:
+        raise RadiusValidationError("max_loan_minutes must be >= 0")
 
 
 def get_plans_service() -> PlansService:

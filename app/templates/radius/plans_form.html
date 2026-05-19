@@ -381,6 +381,21 @@
       <div class="f-field"><label>PPP مفعَّل</label>
         <div class="chk-row"><input type="checkbox" name="ppp_enabled" value="1"
           {% if plan.ppp_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+      <div class="f-field"><label>نطاق الخدمة</label>
+        <select name="service_scope">
+          <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>هوتسبوت وبرودباند</option>
+          <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>هوتسبوت فقط</option>
+          <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>برودباند فقط</option>
+        </select>
+        <div class="field-help">يحدد أين يمكن استخدام هذه الباقة.</div></div>
+      <div class="f-field"><label>السلفة مسموحة</label>
+        <div class="chk-row"><input type="checkbox" name="loan_enabled" value="1"
+          {% if plan.loan_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+      <div class="f-field"><label>أقصى مدة سلفة (دقيقة)</label>
+        <input type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}"></div>
+      <div class="f-field"><label>تجاوز سرعة المستفيد</label>
+        <div class="chk-row"><input type="checkbox" name="speed_override_allowed" value="1"
+          {% if plan.speed_override_allowed %}checked{% endif %}><label>مسموح</label></div></div>
       <div class="f-field"><label>تفعيل حجم حزمة الشبكة (MTU)</label>
         <div class="chk-row"><input type="checkbox" name="enable_mtu" value="1"
           {% if plan.enable_mtu in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>

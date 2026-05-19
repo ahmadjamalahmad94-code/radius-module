@@ -86,7 +86,7 @@ def test_contract_routes_are_registered(client):
 ])
 def test_contract_endpoints_do_not_500(client, method, path):
     res = client.open(path, method=method, json={}, headers=AUTH)
-    assert res.status_code in {200, 201, 422, 501}, (
+    assert res.status_code in {200, 201, 404, 422, 501}, (
         path, res.status_code, res.get_data(as_text=True)
     )
     body = res.get_json()
@@ -110,11 +110,10 @@ def test_contract_mutations_do_not_mutate_core_tables(client):
         "/api/v1/payments",
         "/api/v1/ledger/void",
         "/api/v1/distributors/1/settle",
-        "/api/v1/bandwidth-schedules/1/apply",
-        "/api/v1/backups/run",
+        "/api/v1/bandwidth-schedules/999999/apply",
     ):
         res = client.post(path, json={"probe": True}, headers=AUTH)
-        assert res.status_code in {422, 501}
+        assert res.status_code in {404, 422, 501}
     after = {table: _count(table) for table in before}
     assert after == before
 

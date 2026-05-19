@@ -1,31 +1,72 @@
-"""Time-based / pressure-based bandwidth schedule API contracts."""
+"""Time-based bandwidth schedule API foundation."""
 from __future__ import annotations
 
-from flask import Blueprint
+from flask import Blueprint, g, request
 
-from .contracts import add_contract_route
+from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ..auth import require_api_token
+from ..responses import fail, ok
 
-_WORK = [
-    "schedule table",
-    "overlap validation",
-    "timezone policy",
-    "worker/apply logs",
-]
+
+def _tid() -> int:
+    return int(getattr(g, "tenant_id", 1))
+
+
+def _actor() -> str:
+    return f"api-token:{getattr(g, 'api_token_id', 'env')}"
+
+
+def _svc():
+    from ...radius.services.operations import get_operations_service
+    return get_operations_service()
 
 
 def register(bp: Blueprint) -> None:
-    add_contract_route(bp, "/bandwidth-schedules",
-                       "bandwidth_schedules_list", methods=["GET"],
-                       domain="bandwidth_schedules", operation="list",
-                       planned_slice="R3 bandwidth schedules",
-                       required_work=_WORK)
-    add_contract_route(bp, "/bandwidth-schedules",
-                       "bandwidth_schedules_create", methods=["POST"],
-                       domain="bandwidth_schedules", operation="create",
-                       planned_slice="R3 bandwidth schedules",
-                       required_work=_WORK)
-    add_contract_route(bp, "/bandwidth-schedules/<int:schedule_id>/apply",
-                       "bandwidth_schedules_apply", methods=["POST"],
-                       domain="bandwidth_schedules", operation="apply",
-                       planned_slice="R3 bandwidth schedules",
-                       required_work=_WORK)
+    bp.add_url_rule("/bandwidth-schedules",
+                    "bandwidth_schedules_list",
+                    require_api_token(bandwidth_schedules_list), methods=["GET"])
+    bp.add_url_rule("/bandwidth-schedules",
+                    "bandwidth_schedules_create",
+                    require_api_token(bandwidth_schedules_create), methods=["POST"])
+    bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>/apply",
+                    "bandwidth_schedules_apply",
+                    require_api_token(bandwidth_schedules_apply), methods=["POST"])
+
+
+def bandwidth_schedules_list():
+    try:
+        plan_id_raw = request.args.get("plan_id")
+        plan_id = int(plan_id_raw) if plan_id_raw else None
+        limit = min(int(request.args.get("limit") or 200), 1000)
+        offset = max(int(request.args.get("offset") or 0), 0)
+    except ValueError:
+        return fail("validation_error", "plan_id/limit/offset must be int", status=422)
+    items = _svc().list_bandwidth_schedules(
+        tenant_id=_tid(), plan_id=plan_id, limit=limit, offset=offset
+    )
+    return ok({"items": items, "count": len(items)})
+
+
+def bandwidth_schedules_create():
+    body = request.get_json(silent=True) or {}
+    try:
+        schedule = _svc().create_bandwidth_schedule(
+            tenant_id=_tid(), actor=_actor(), data=body
+        )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"schedule": schedule}, status=201)
+
+
+def bandwidth_schedules_apply(schedule_id: int):
+    try:
+        result = _svc().apply_bandwidth_schedule(
+            tenant_id=_tid(), schedule_id=schedule_id, actor=_actor()
+        )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    return ok(result)

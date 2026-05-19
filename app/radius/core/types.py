@@ -138,6 +138,10 @@ class AccessPlan:
     # خدمات NAS
     hotspot_enabled: bool = False
     ppp_enabled: bool = False
+    service_scope: str = "both"               # hotspot/broadband/both
+    loan_enabled: bool = False
+    max_loan_minutes: int = 0
+    speed_override_allowed: bool = False
     # ساعات العرض
     offer_hours_from: str = ""
     offer_hours_to: str = ""
@@ -301,6 +305,8 @@ class CardBatch:
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""
+    assigned_to: str = ""
+    distributor_id: Optional[int] = None
 
 
 @dataclass(frozen=True)
