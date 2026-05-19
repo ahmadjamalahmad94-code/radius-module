@@ -192,25 +192,88 @@ idempotency: `_migrations` table يتتبّع الـ migration باسم الـ f
 **هذا متعمَّد لـ R2** — تركنا puller يعمل لضمان عدم انقطاع reporting
 خلال الانتقال. الـ slice التالي R3 يحسم الـ ownership.
 
-## الـ slice التالي R3 (موصى به، لا يُنفَّذ هنا)
+## R3 — accounting_puller writes معطّلة (مُنفَّذ)
 
-**حسم تعارض accounting_puller**. الخيارات:
+**القرار**: FreeRADIUS هو الكاتب الوحيد لـ radacct. الـ puller يبقى
+يعمل (heartbeat + استعلام MT) لكن لا يُنفّذ INSERT/UPDATE.
 
-- (أ) **إيقاف الـ writes في puller** بعد تأكيد أن FR sql يكتب فعلاً
-  (انتظار يوم/يومين). الـ puller يبقى read-only للـ MT API ليُكمّل
-  metadata غير المتوفّرة عبر RADIUS (مثل MT-uptime، interface stats).
-  → single source of truth = FR sql.
+التغيير في `app/workers/accounting_puller.py`:
+- helper جديد `acct_puller_writes_enabled()` يقرأ
+  `HOBERADIUS_ACCT_PULLER_WRITES` (default: false).
+- داخل `_tick`: قبل استدعاء `_upsert_session` و `_close_stale_sessions`
+  يفحص الـ flag. لو disabled → يتجاوزها (لكن الـ MT poll يكتمل، نحسب
+  `total_sessions` للـ heartbeat).
+- على الإقلاع: `_run_loop` يطبع INFO أو WARNING واضح يوضّح الـ mode.
 
-- (ب) **إبقاء puller writer** وإيقاف FR sql في accounting{} (نُبقي
-  ok-only). يتطلّب موثوقية mt-pool عالية و polling interval قصير.
-  → single source of truth = MT API via puller.
+| القيمة | يُعتبر | الاستخدام |
+|--------|--------|-----------|
+| unset, "", "0", "false", "maybe" | **disabled** (default R3) | الإنتاج |
+| "1", "true", "yes", "on" (case-insensitive) | enabled | الطوارئ لو FR sql تعطّل |
 
-- (ج) **dedup view**: نُبقي الاثنين كاتبَيْن، نُضيف SQL VIEW يجمع
-  حسب `(tenant_id, username, nasipaddress, date_floor(acctstarttime))`.
-  → تعقيد إضافي، لكن يُعطي fallback لو أحدهما تعطّل.
+**Failure mode**: "stay off" — أي قيمة غير معروفة تبقى الـ writes
+disabled كي لا نعود لـ double-writes بالخطأ.
 
-التوصية: (أ). FR sql أدقّ زمنيًا (per-packet vs 30s poll) ويحوي
-Acct-Terminate-Cause المفيد لـ disconnect reporting.
+## مخاطر القراءة بعد R3 (overcounting من duplicates قديمة)
+
+الجدول `radacct` قد يحوي rows مكرَّرة من فترة R1→R2 (قبل R3): واحدة
+من puller (بـ `acctsessionid = acctuniqueid = MT .id`) وواحدة من FR
+(بـ `acctuniqueid` = UUID). بعد R3:
+- **لا rows جديدة مكرَّرة** — FR فقط يكتب.
+- **rows قديمة لا تُحذَف** (لم نُنفّذ dedup مدمّر — انظر R4 أدناه).
+
+القرّاء المحتمل تأثرهم بـ overcounting لجلسات تلك الفترة:
+
+| ملف | استعلام | الأثر |
+|-----|---------|--------|
+| `app/radius/services/dashboard_metrics.py:72` | `COUNT(*) FROM radacct WHERE acctstoptime IS NULL` | "online now" قد يكون مضاعفًا للجلسات القديمة المفتوحة |
+| `app/radius/services/policy_engine.py:199` | `COUNT(*) ... WHERE username=? AND acctstoptime IS NULL` | `concurrent_limit` قد يرفض مستخدمًا له session واحدة فقط بسبب row مكرَّر مفتوح من الفترة السابقة |
+| `app/radius/integration/sqlite_adapter.py:292` | `SELECT * FROM radacct` (online sessions list) | عرض مكرَّر |
+| `app/radius/routes/reports.py:44, 87` | reports queries | totals مضاعفة لتلك الفترة |
+| `app/radius/integration/radius_coa.py:306` | `SELECT acctsessionid, nasipaddress FROM radacct` (للـ disconnect lookup) | قد يُرسل disconnect لـ acctsessionid قديم من puller — غير خطر لأن MT يتجاهل غير الموجود |
+
+**التخفيف الفوري**: لو لاحظت overcounting يُؤثّر على تجربة المستخدم
+(مثل `concurrent_limit` خاطئ)، نفّذ يدويًا (آمن، لا يلمس الجلسات النشطة):
+```sql
+UPDATE radacct
+SET acctstoptime = COALESCE(acctstoptime, datetime('now')),
+    acctterminatecause = COALESCE(NULLIF(acctterminatecause,''), 'R3-Cleanup')
+WHERE acctstoptime IS NULL
+  AND acctstarttime < <timestamp of R3 deploy>
+  AND acctsessionid = acctuniqueid;  -- علامة rows الـ puller
+```
+هذا closes rows القديمة المفتوحة من الـ puller (signature: session_id == unique_id).
+الـ FR rows لها UUIDs مختلفة في الحقلين، لن تتأثّر.
+
+**لا تُنفَّذ تلقائيًا** — يعتمد القرار على إذا كان لديك جلسات
+"معلَّقة" (نادرة).
+
+## R4 (موصى به، لا يُنفَّذ هنا) — dedup migration حذِر
+
+اختياري لو تأثّر reporting:
+
+1. migration `017_radacct_dedup_legacy_puller_rows.sql`:
+   - يحذف الـ rows المُغلَقة (acctstoptime IS NOT NULL) التي
+     `acctsessionid = acctuniqueid` (سيغناتشر الـ puller).
+   - لا يحذف الـ rows المفتوحة (احتمال جلسة قيد التشغيل).
+   - يحذف الـ FR rows التي تحمل نفس (tenant_id, username, nasipaddress,
+     acctstarttime ± 30s) كـ puller-rows في الفترة الـ R1→R2.
+2. الـ migration يكون **مرّة واحدة** — يفحص شرطًا (مثل
+   COUNT puller-rows > 0) قبل التنفيذ.
+3. ينبغي backup قبل التنفيذ:
+   `cp /app/instance/hoberadius.db /backups/hoberadius.pre-R4.db`.
+
+**سبب التأجيل**: dedup مدمّر — أي خطأ في المنطق يفقد بيانات. R3
+يوقف النزيف؛ R4 يُنظّف عند الحاجة فقط، بعد تأكيد الشكل الفعلي للبيانات
+على الإنتاج.
+
+## Slices لاحقة (ما بعد R3/R4)
+
+- **enrichment via puller**: استخدام `_tick` لاستخراج metadata من MT
+  (uptime، interface counters، router-set tags) وحقنها في radacct
+  rows التي كتبها FR (UPDATE لا INSERT). single-source preserved.
+- **Acct-Status-Type-aware response shaping**: rate-limit/drop عند فيضان.
+- **مراقبة**: counter للـ Accounting-Request received vs Response sent
+  vs sql success — مفيد للـ alerting.
 
 ## Slices لاحقة (ما بعد R3)
 
