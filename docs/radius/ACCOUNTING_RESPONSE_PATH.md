@@ -146,25 +146,75 @@ docker exec hoberadius-freeradius ls /var/log/freeradius/radacct/
 # لازم تظهر directories بأسماء NAS IPs مع ملفات detail-YYYYMMDD.
 ```
 
-## الـ slice التالي (موصى به، لا يُنفَّذ هنا)
+## R2 — schema alignment (مُنفَّذ)
 
-1. **schema alignment**: migration `017_radacct_ipv6_columns.sql` تضيف:
-   ```sql
-   ALTER TABLE radacct ADD COLUMN framedipv6prefix TEXT DEFAULT '';
-   ALTER TABLE radacct ADD COLUMN framedinterfaceid TEXT DEFAULT '';
-   ALTER TABLE radacct ADD COLUMN delegatedipv6prefix TEXT DEFAULT '';
-   ```
-   ثم radacct rows ستُدخَل عبر FR sql فعليًا.
+migration: `app/radius/db/migrations/016_radacct_ipv6_columns.sql`
 
-2. **حسم تعارض accounting_puller**: قرار بين:
-   - (أ) إيقاف accounting_puller بعد تفعيل FR sql (single source).
-   - (ب) جعل accounting_puller يقرأ فقط ولا يكتب (read-only للـ MT API،
-        يُكمّل ما لا يصل عبر RADIUS مثل uptime).
-   - (ج) تنسيق المفاتيح: استخدام نفس acctuniqueid بدل acctsessionid.
+```sql
+ALTER TABLE radacct ADD COLUMN framedipv6prefix    TEXT DEFAULT '';
+ALTER TABLE radacct ADD COLUMN framedinterfaceid   TEXT DEFAULT '';
+ALTER TABLE radacct ADD COLUMN delegatedipv6prefix TEXT DEFAULT '';
+```
 
-3. **Acct-Status-Type-aware response shaping**: حاليًا نُرجع response
-   لكل request. يمكن تحسينه لـ rate-limit أو drop عند فيضان.
+بعد تطبيقها كل أعمدة الـ FR accounting queries موجودة:
 
-4. **مراقبة**: مقياس counter لـ Accounting-Request received vs
-   Response sent vs sql success. يُمكن إضافته في Flask عبر webhook من
-   FR post-auth (لكن sql post-auth معطّل — يلزم endpoint مستقل).
+| Query | الأعمدة المُستخدَمة | الحالة |
+|-------|-----------------------|--------|
+| `accounting_start_query` | 20 عمودًا (بما فيها الـ 3 الجديدة) | ✓ مكتمل |
+| `accounting_update_query` | 6 أعمدة (لا ipv6 الجديدة) | ✓ كانت موجودة |
+| `accounting_stop_query`   | 6 أعمدة | ✓ كانت موجودة |
+
+idempotency: `_migrations` table يتتبّع الـ migration باسم الـ file؛
+لن يُعاد تشغيلها على نفس DB.
+
+## حالة الـ Accounting الحالية (بعد R1 + R2)
+
+| Acct-Status-Type | بعد R1 فقط | بعد R1 + R2 |
+|-------------------|------------|--------------|
+| Start             | response مُرسل؛ row غير مُدرَج | response مُرسل؛ row مُدرَج |
+| Interim-Update    | response مُرسل؛ UPDATE فاشل (لا row) | response مُرسل؛ UPDATE ناجح |
+| Stop              | response مُرسل؛ UPDATE فاشل | response مُرسل؛ UPDATE ناجح |
+
+## ⚠ تحذير: تعارض مزدوج مع accounting_puller الآن ظاهر
+
+بعد R1 + R2:
+- **FreeRADIUS sql**: يكتب row في radacct على كل Acct-Start، بـ
+  `acctuniqueid` = FR-generated UUID (مختلف عن MT session-id).
+- **accounting_puller** (Flask، كل 30s): يكتب row في radacct بـ
+  `acctsessionid` = `acctuniqueid` = MT .id.
+
+النتيجة المتوقّعة: **صفّان لكل جلسة** — واحد من FR (كل event)
+وواحد من puller (poll-based). آثار:
+- عدّ الجلسات المتّصلة مضاعف.
+- إجمالي bytes مكرَّر إذا جمعت بدون deduplication.
+- race conditions على نفس username/nas/time-window.
+
+**هذا متعمَّد لـ R2** — تركنا puller يعمل لضمان عدم انقطاع reporting
+خلال الانتقال. الـ slice التالي R3 يحسم الـ ownership.
+
+## الـ slice التالي R3 (موصى به، لا يُنفَّذ هنا)
+
+**حسم تعارض accounting_puller**. الخيارات:
+
+- (أ) **إيقاف الـ writes في puller** بعد تأكيد أن FR sql يكتب فعلاً
+  (انتظار يوم/يومين). الـ puller يبقى read-only للـ MT API ليُكمّل
+  metadata غير المتوفّرة عبر RADIUS (مثل MT-uptime، interface stats).
+  → single source of truth = FR sql.
+
+- (ب) **إبقاء puller writer** وإيقاف FR sql في accounting{} (نُبقي
+  ok-only). يتطلّب موثوقية mt-pool عالية و polling interval قصير.
+  → single source of truth = MT API via puller.
+
+- (ج) **dedup view**: نُبقي الاثنين كاتبَيْن، نُضيف SQL VIEW يجمع
+  حسب `(tenant_id, username, nasipaddress, date_floor(acctstarttime))`.
+  → تعقيد إضافي، لكن يُعطي fallback لو أحدهما تعطّل.
+
+التوصية: (أ). FR sql أدقّ زمنيًا (per-packet vs 30s poll) ويحوي
+Acct-Terminate-Cause المفيد لـ disconnect reporting.
+
+## Slices لاحقة (ما بعد R3)
+
+- **Acct-Status-Type-aware response shaping**: حاليًا نُرجع response
+  لكل request. يمكن إضافة rate-limit/drop عند فيضان.
+- **مراقبة**: counter للـ Accounting-Request received vs Response sent
+  vs sql success — مفيد للـ alerting.
