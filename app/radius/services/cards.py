@@ -33,10 +33,41 @@ class CardsService:
         actor: str,
         plan_id: int,
         count: int,
+        # ── خيارات RM-H4 (كلها optional عشان توافق calls قديمة) ──
         username_prefix: str = "",
+        username_suffix: str = "",
         username_length: int = 8,
         password_length: int = 6,
+        password_charset: str = "digits",
+        password_generation_type: str = "medium",
+        include_batch_number: bool = False,
+        starts_with_or_ends_with: str = "",
+        prefix_or_suffix_value: str = "",
+        random_generation_enabled: bool = True,
+        time_value: int = 0,
+        time_unit: str = "days",
+        device_count: int = 1,
+        duration_mode: str = "time_unit",
+        validity_after_first_login_days: int = 0,
+        count_by_seconds: bool = False,
+        count_from_first_connect: bool = True,
+        on_quota_exhaust: str = "stop",
+        auto_renew_after_first_use: bool = False,
+        transfer_to_student_status_on_connect: bool = False,
+        close_user_session_on_disconnect: bool = False,
+        allow_entry_by_previous_card_palestine: bool = False,
+        switch_to_mac_on_connect: bool = False,
+        lock_to_mac_on_close: bool = False,
+        phone_only_login: bool = False,
+        price_per_card: float = 0.0,
+        price_bulk: float = 0.0,
+        total_price: float = 0.0,
+        total_quota_mb: int = 0,
+        package_name: str = "",
+        service_name: str = "",
+        manager_id: int = 0,
         notes: str = "",
+        metadata: str = "{}",
     ) -> tuple[CardBatch, list[Card]]:
         if count <= 0 or count > 2000:
             raise RadiusValidationError("count بين 1 و 2000")
@@ -45,13 +76,52 @@ class CardsService:
 
         plan = self._adapter.get_profile(plan_id)
         expire = None
-        if plan.validity_days:
+        # حساب الـ expire: time_value/time_unit يتقدم على plan.validity_days لو مُحدَّد
+        if time_value and time_unit and duration_mode == "time_unit":
+            if time_unit == "days":
+                expire = datetime.utcnow() + timedelta(days=time_value)
+            elif time_unit == "hours":
+                expire = datetime.utcnow() + timedelta(hours=time_value)
+            elif time_unit == "minutes":
+                expire = datetime.utcnow() + timedelta(minutes=time_value)
+        elif plan.validity_days:
             expire = datetime.utcnow() + timedelta(days=plan.validity_days)
+
+        # تحويل password_generation_type إلى password_charset لو الـ caller ما حدّد charset مخصص
+        if password_generation_type and password_charset == "digits":
+            pgt_map = {
+                "digits": "digits", "weak": "alpha",
+                "medium": "mixed", "strong": "mixed",
+            }
+            password_charset = pgt_map.get(password_generation_type, "mixed")
 
         batch = self._store.create_batch(CardBatch(
             id=None, batch_code="", plan_id=plan_id, count=count,
-            username_prefix=username_prefix, username_length=username_length,
-            password_length=password_length, notes=notes, created_by=actor,
+            package_name=package_name,
+            username_prefix=username_prefix, username_suffix=username_suffix,
+            username_length=username_length,
+            include_batch_number=include_batch_number,
+            password_length=password_length, password_charset=password_charset,
+            expire_at=expire,
+            validity_after_first_login_days=validity_after_first_login_days,
+            count_by_seconds=count_by_seconds, count_from_first_connect=count_from_first_connect,
+            on_quota_exhaust=on_quota_exhaust,
+            switch_to_mac_on_connect=switch_to_mac_on_connect,
+            lock_to_mac_on_close=lock_to_mac_on_close, phone_only_login=phone_only_login,
+            service_name=service_name, notes=notes, manager_id=manager_id, created_by=actor,
+            price_per_card=price_per_card, price_bulk=price_bulk, total_quota_mb=total_quota_mb,
+            # RM-H4
+            password_generation_type=password_generation_type,
+            random_generation_enabled=random_generation_enabled,
+            starts_with_or_ends_with=starts_with_or_ends_with,
+            prefix_or_suffix_value=prefix_or_suffix_value,
+            time_value=time_value, time_unit=time_unit,
+            device_count=device_count, duration_mode=duration_mode,
+            auto_renew_after_first_use=auto_renew_after_first_use,
+            transfer_to_student_status_on_connect=transfer_to_student_status_on_connect,
+            close_user_session_on_disconnect=close_user_session_on_disconnect,
+            allow_entry_by_previous_card_palestine=allow_entry_by_previous_card_palestine,
+            total_price=total_price, metadata=metadata,
         ))
         cards = self._store.generate_cards_for_batch(
             batch_id=batch.id, plan_id=plan_id, count_to_make=count,

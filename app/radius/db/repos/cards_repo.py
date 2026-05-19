@@ -4,11 +4,20 @@ from __future__ import annotations
 import secrets
 import string
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from ...core.types import Card, CardBatch
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
+
+
+def _g(row: Any, key: str, default):
+    """Safe getter for sqlite3.Row — fallback for snapshots before migration 013."""
+    try:
+        v = row[key]
+        return default if v is None else v
+    except (KeyError, IndexError):
+        return default
 
 
 def _batch_row(r) -> CardBatch:
@@ -35,6 +44,21 @@ def _batch_row(r) -> CardBatch:
         manager_id=r["manager_id"] or 0,
         created_by=r["created_by"] or "",
         status=r["status"] or "active",
+        # RM-H4 fields (migration 013)
+        password_generation_type=_g(r, "password_generation_type", "medium") or "medium",
+        random_generation_enabled=bool(_g(r, "random_generation_enabled", 1)),
+        starts_with_or_ends_with=_g(r, "starts_with_or_ends_with", "") or "",
+        prefix_or_suffix_value=_g(r, "prefix_or_suffix_value", "") or "",
+        time_value=_g(r, "time_value", 0) or 0,
+        time_unit=_g(r, "time_unit", "days") or "days",
+        device_count=_g(r, "device_count", 1) or 1,
+        duration_mode=_g(r, "duration_mode", "time_unit") or "time_unit",
+        auto_renew_after_first_use=bool(_g(r, "auto_renew_after_first_use", 0)),
+        transfer_to_student_status_on_connect=bool(_g(r, "transfer_to_student_status_on_connect", 0)),
+        close_user_session_on_disconnect=bool(_g(r, "close_user_session_on_disconnect", 0)),
+        allow_entry_by_previous_card_palestine=bool(_g(r, "allow_entry_by_previous_card_palestine", 0)),
+        total_price=_g(r, "total_price", 0.0) or 0.0,
+        metadata=_g(r, "metadata", "{}") or "{}",
         created_at=parse_dt(r["created_at"]),
     )
 
@@ -88,8 +112,15 @@ def create_batch(b: CardBatch) -> CardBatch:
                 password_length, password_charset, expire_at, validity_after_first_login_days,
                 count_by_seconds, count_from_first_connect, on_quota_exhaust,
                 switch_to_mac_on_connect, lock_to_mac_on_close, phone_only_login,
-                service_name, notes, manager_id, created_by, status, created_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                service_name, notes, manager_id, created_by, status, created_at,
+                password_generation_type, random_generation_enabled,
+                starts_with_or_ends_with, prefix_or_suffix_value,
+                time_value, time_unit, device_count, duration_mode,
+                auto_renew_after_first_use, transfer_to_student_status_on_connect,
+                close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
+                total_price, metadata)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
               b.price_per_card, b.price_bulk, b.total_quota_mb,
               b.username_prefix, b.username_suffix, b.username_length,
@@ -98,7 +129,14 @@ def create_batch(b: CardBatch) -> CardBatch:
               b.validity_after_first_login_days,
               int(b.count_by_seconds), int(b.count_from_first_connect), b.on_quota_exhaust,
               int(b.switch_to_mac_on_connect), int(b.lock_to_mac_on_close), int(b.phone_only_login),
-              b.service_name, b.notes, b.manager_id, b.created_by, "active", now))
+              b.service_name, b.notes, b.manager_id, b.created_by, "active", now,
+              # RM-H4 columns
+              b.password_generation_type, int(b.random_generation_enabled),
+              b.starts_with_or_ends_with, b.prefix_or_suffix_value,
+              b.time_value, b.time_unit, b.device_count, b.duration_mode,
+              int(b.auto_renew_after_first_use), int(b.transfer_to_student_status_on_connect),
+              int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
+              b.total_price, b.metadata or "{}"))
         new_id = cur.lastrowid
     return get_batch(b.tenant_id, new_id)
 

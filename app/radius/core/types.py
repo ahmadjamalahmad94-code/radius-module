@@ -270,6 +270,26 @@ class CardBatch:
     created_by: str = ""
     created_at: Optional[datetime] = None
     status: str = "active"                     # active / exhausted / revoked
+    # ── RM-H4: AdvRadius extension (migration 013) ──
+    # توليد
+    password_generation_type: str = "medium"   # weak/medium/strong/digits
+    random_generation_enabled: bool = True
+    starts_with_or_ends_with: str = ""         # prefix/suffix/""
+    prefix_or_suffix_value: str = ""
+    # وقت
+    time_value: int = 0
+    time_unit: str = "days"                    # days/hours/minutes
+    device_count: int = 1
+    duration_mode: str = "time_unit"           # seconds/time_unit
+    # سلوك
+    auto_renew_after_first_use: bool = False
+    transfer_to_student_status_on_connect: bool = False
+    close_user_session_on_disconnect: bool = False
+    allow_entry_by_previous_card_palestine: bool = False
+    # تجاري (مرجعي)
+    total_price: float = 0.0
+    # metadata JSON
+    metadata: str = "{}"
 
 
 @dataclass(frozen=True)

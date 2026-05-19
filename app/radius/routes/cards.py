@@ -1,4 +1,8 @@
-"""Cards routes — batches + generate + list."""
+"""Cards routes — batches + generate + list.
+
+RM-H4: extended generate form with full AdvRadius batch options +
+metadata JSON for future fields.
+"""
 from __future__ import annotations
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -20,6 +24,67 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _form_int(name: str, d: int = 0) -> int:
+    try: return int(request.form.get(name) or d)
+    except (TypeError, ValueError): return d
+
+
+def _form_float(name: str, d: float = 0.0) -> float:
+    try: return float(request.form.get(name) or d)
+    except (TypeError, ValueError): return d
+
+
+def _form_bool(name: str) -> bool:
+    return request.form.get(name, "") in ("1", "on", "true", "yes")
+
+
+def _form_str(name: str) -> str:
+    return (request.form.get(name) or "").strip()
+
+
+def _collect_batch_options() -> dict:
+    """جمع كل خيارات AdvRadius من POST. dict جاهز للتمرير لـ generate_batch."""
+    return {
+        # توليد
+        "username_prefix":           _form_str("username_prefix"),
+        "username_suffix":           _form_str("username_suffix"),
+        "username_length":           _form_int("username_length", 8),
+        "password_length":           _form_int("password_length", 6),
+        "password_charset":          _form_str("password_charset") or "digits",
+        "password_generation_type":  _form_str("password_generation_type") or "medium",
+        "include_batch_number":      _form_bool("include_batch_number"),
+        "starts_with_or_ends_with":  _form_str("starts_with_or_ends_with"),
+        "prefix_or_suffix_value":    _form_str("prefix_or_suffix_value"),
+        "random_generation_enabled": _form_bool("random_generation_enabled") or True,
+        # وقت
+        "time_value":                _form_int("time_value"),
+        "time_unit":                 _form_str("time_unit") or "days",
+        "device_count":              max(1, _form_int("device_count", 1)),
+        "duration_mode":             _form_str("duration_mode") or "time_unit",
+        "validity_after_first_login_days": _form_int("validity_after_first_login_days"),
+        "count_by_seconds":          _form_bool("count_by_seconds"),
+        "count_from_first_connect":  _form_bool("count_from_first_connect"),
+        # السلوك عند انتهاء الكوتا + خيارات
+        "on_quota_exhaust":          _form_str("on_quota_exhaust") or "stop",
+        "auto_renew_after_first_use":            _form_bool("auto_renew_after_first_use"),
+        "transfer_to_student_status_on_connect": _form_bool("transfer_to_student_status_on_connect"),
+        "close_user_session_on_disconnect":      _form_bool("close_user_session_on_disconnect"),
+        "allow_entry_by_previous_card_palestine":_form_bool("allow_entry_by_previous_card_palestine"),
+        "switch_to_mac_on_connect":  _form_bool("switch_to_mac_on_connect"),
+        "lock_to_mac_on_close":      _form_bool("lock_to_mac_on_close"),
+        "phone_only_login":          _form_bool("phone_only_login"),
+        # تجاري (مرجعي) + meta
+        "price_per_card":            _form_float("price_per_card"),
+        "price_bulk":                _form_float("price_bulk"),
+        "total_price":               _form_float("total_price"),
+        "total_quota_mb":            _form_int("total_quota_mb"),
+        "package_name":              _form_str("package_name"),
+        "service_name":              _form_str("service_name"),
+        "manager_id":                _form_int("manager_id"),
+        "notes":                     _form_str("notes"),
+    }
+
+
 def cards_batches():
     svc = get_cards_service()
     batches = svc.list_batches(limit=500)
@@ -30,16 +95,11 @@ def cards_batches():
 def cards_generate():
     if request.method == "POST":
         try:
-            plan_id = int(request.form.get("plan_id") or 0)
-            count = int(request.form.get("count") or 0)
+            plan_id = _form_int("plan_id")
+            count = _form_int("count")
+            opts = _collect_batch_options()
             batch, cards = get_cards_service().generate_batch(
-                actor=_actor(),
-                plan_id=plan_id,
-                count=count,
-                username_prefix=(request.form.get("username_prefix") or "").strip(),
-                username_length=int(request.form.get("username_length") or 8),
-                password_length=int(request.form.get("password_length") or 6),
-                notes=(request.form.get("notes") or "").strip(),
+                actor=_actor(), plan_id=plan_id, count=count, **opts,
             )
             flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=batch.id))
