@@ -17,9 +17,14 @@ rest {
         method   = "post"
         body     = "json"
         header   = "X-Internal-Secret: ${env:HOBERADIUS_INTERNAL_SECRET}"
+        # ـ نُمرّر CHAP-Password + CHAP-Challenge أيضًا لأن MikroTik hotspot
+        # يستخدم HTTP-CHAP افتراضيًا، فـ %{User-Password} يكون فارغًا.
+        # سياسة التحقّق (PAP vs CHAP) تُنفَّذ داخل /api/v1/internal/auth.
         data     = '{ \
             "User-Name": "%{User-Name}", \
             "User-Password": "%{User-Password}", \
+            "CHAP-Password": "%{CHAP-Password}", \
+            "CHAP-Challenge": "%{CHAP-Challenge}", \
             "Calling-Station-Id": "%{Calling-Station-Id}", \
             "Called-Station-Id": "%{Called-Station-Id}", \
             "NAS-IP-Address": "%{NAS-IP-Address}", \

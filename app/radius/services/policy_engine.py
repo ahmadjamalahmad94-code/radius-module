@@ -20,14 +20,16 @@ Policy Engine — قرارات Accept/Reject الديناميكية لـ RADIUS 
 """
 from __future__ import annotations
 
+import hashlib
+import hmac as _hmac
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
-from ..core.types import AccessPlan, Subscriber
+from ..core.types import AccessPlan, Card, Subscriber
 from ..db.connection import db
-from ..db.repos import plans_repo, subscribers_repo
+from ..db.repos import cards_repo, plans_repo, subscribers_repo
 
 _LOG = logging.getLogger(__name__)
 
@@ -35,10 +37,12 @@ _LOG = logging.getLogger(__name__)
 @dataclass
 class AuthRequest:
     username: str
-    password: str
+    password: str = ""                 # User-Password (cleartext PAP)
+    chap_password: str = ""            # CHAP-Password hex (17 bytes = chap_id + MD5)
+    chap_challenge: str = ""           # CHAP-Challenge hex (may be empty when NAS omits it)
     tenant_id: int = 1
-    calling_station_id: str = ""   # MAC العميل
-    called_station_id: str = ""    # MAC الـ NAS / SSID
+    calling_station_id: str = ""       # MAC العميل
+    called_station_id: str = ""        # MAC الـ NAS / SSID
     nas_ip: str = ""
     nas_port_type: str = ""
 
@@ -70,13 +74,61 @@ _MSG = {
 # ─────────────── الفحوصات ───────────────
 
 
+def _hex_to_bytes(s: str) -> bytes:
+    """Decode hex with optional 0x prefix. Returns b'' on malformed input."""
+    s = (s or "").strip()
+    if s[:2] in ("0x", "0X"):
+        s = s[2:]
+    if not s:
+        return b""
+    try:
+        return bytes.fromhex(s)
+    except ValueError:
+        return b""
+
+
+def _verify_chap(cleartext_password: str, chap_password_hex: str,
+                 chap_challenge_hex: str) -> bool:
+    """RFC 1994: CHAP-Password = MD5(CHAP-Id || cleartext-password || challenge)
+    where the first byte is CHAP-Id and the next 16 are the MD5 digest.
+    NAS clients (incl. MikroTik) may omit CHAP-Challenge — RFC says fall back
+    to the Request Authenticator; we can't see it here, so treat empty as
+    empty bytes. Most MikroTik hotspot configs do send CHAP-Challenge."""
+    chap_bytes = _hex_to_bytes(chap_password_hex)
+    if len(chap_bytes) != 17:
+        return False
+    chap_id = chap_bytes[:1]
+    digest_recv = chap_bytes[1:]
+    challenge = _hex_to_bytes(chap_challenge_hex)
+    digest_calc = hashlib.md5(
+        chap_id + cleartext_password.encode("utf-8") + challenge
+    ).digest()
+    return _hmac.compare_digest(digest_calc, digest_recv)
+
+
 def _check_password(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
-    """ملاحظة: نستخدم cleartext compare لأن FreeRADIUS يخزّن cleartext في DB.
-    لو في المستقبل خزّنا hashed → نُغيّر هنا فقط.
+    """يدعم PAP (User-Password cleartext) و CHAP (CHAP-Password + CHAP-Challenge).
+
+    PAP: مقارنة نصّية مباشرة.
+    CHAP: MD5(CHAP-Id || cleartext-password || CHAP-Challenge) ضد الـ digest المُستلم.
+
+    ملاحظة: نخزّن cleartext في `subscribers.password` لأن MikroTik hotspot
+    يطلب CHAP افتراضيًا — ولا يمكن التحقّق من CHAP إلا بالـ cleartext.
+    لو حدث تخزين hashed مستقبلاً → نُحدّث هنا (PAP ممكن، CHAP يصبح مستحيلاً).
     """
-    if sub.password != req.password:
-        return _reject("password_wrong")
-    return None
+    if req.password:
+        if sub.password != req.password:
+            return _reject("password_wrong")
+        return None
+    if req.chap_password:
+        if not sub.password or not _verify_chap(
+                sub.password, req.chap_password, req.chap_challenge):
+            return _reject("password_wrong")
+        return None
+    # لا PAP ولا CHAP — الطلب ناقص. نُسجّل ونرفض كـ password_wrong.
+    _LOG.warning("auth: no User-Password and no CHAP-Password for user=%r — "
+                  "هل MikroTik يستخدم MS-CHAP/EAP غير المدعوم؟", req.username)
+    return _reject("password_wrong")
 
 
 def _check_status(sub: Subscriber) -> Optional[AuthDecision]:
@@ -156,12 +208,49 @@ def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[A
 # ─────────────── المنفّذ الرئيسي ───────────────
 
 
+def _card_to_subscriber(card: Card) -> Subscriber:
+    """يُحوّل كارت إلى Subscriber DTO للمعالجة الموحَّدة في policy_engine.
+    حقول subscriber غير الموجودة على الكارت تأخذ defaults آمنة (لا quota، لا
+    bandwidth override، لا MAC lock — تأتي من الـ plan لو وُجدت)."""
+    return Subscriber(
+        id=card.id,
+        tenant_id=card.tenant_id,
+        username=card.username,
+        password=card.password,
+        user_type="card",
+        plan_id=card.plan_id,
+        status="disabled" if card.revoked else "enabled",
+        expire_at=card.expire_at,
+        # نُبقي mac_lock None للكروت حتى لو used_by_mac موجود — قرار التقييد
+        # على MAC يعتمد على إعدادات الـ batch (lock_to_mac/switch_to_mac) ولا
+        # نُلزمه هنا بسرعة كي لا نُغلق الكارت قبل المسح الأول.
+    )
+
+
 def authorize(req: AuthRequest) -> AuthDecision:
     """يقرّر السماح/الرفض ويعيد attrs الـ Access-Accept."""
+    _LOG.info(
+        "auth_attempt tenant=%d user=%r nas_ip=%s mac=%s pap=%s chap=%s",
+        req.tenant_id, req.username, req.nas_ip, req.calling_station_id,
+        "yes" if req.password else "no",
+        "yes" if req.chap_password else "no",
+    )
     if not req.username:
+        _LOG.info("auth_decision user='' reason=user_not_found")
         return _reject("user_not_found")
+
     sub = subscribers_repo.get_subscriber(req.tenant_id, req.username)
+    source = "subscriber"
     if not sub:
+        # ـ fallback: حاول إيجاد الـ username كـ كارت ـ
+        card = cards_repo.get_card_by_username(req.tenant_id, req.username)
+        if card:
+            sub = _card_to_subscriber(card)
+            source = "card"
+    if not sub:
+        _LOG.info("auth_decision user=%r reason=user_not_found "
+                  "(لا subscriber ولا card في tenant=%d)",
+                  req.username, req.tenant_id)
         return _reject("user_not_found")
 
     plan: Optional[AccessPlan] = None
@@ -183,6 +272,8 @@ def authorize(req: AuthRequest) -> AuthDecision:
     ):
         bad = fn()
         if bad is not None:
+            _LOG.info("auth_decision user=%r source=%s rejected reason=%s",
+                       req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)
             return bad
 
@@ -194,6 +285,8 @@ def authorize(req: AuthRequest) -> AuthDecision:
         if 0 <= days_left <= 3:
             msg = _MSG["ok_expires_soon"] + f" ({days_left} يوم)"
     reply["Reply-Message"] = msg
+    _LOG.info("auth_decision user=%r source=%s accepted attrs=%d",
+              req.username, source, len(reply))
     _log_attempt(req, accepted=True)
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
 

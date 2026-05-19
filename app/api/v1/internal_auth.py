@@ -65,11 +65,20 @@ def internal_auth():
         req = AuthRequest(
             username=g("User-Name"),
             password=g("User-Password"),
+            chap_password=g("CHAP-Password"),
+            chap_challenge=g("CHAP-Challenge"),
             tenant_id=_resolve_tenant_id(body),
             calling_station_id=g("Calling-Station-Id"),
             called_station_id=g("Called-Station-Id"),
             nas_ip=g("NAS-IP-Address"),
             nas_port_type=g("NAS-Port-Type"),
+        )
+        # ـ debug log آمن (لا نسجّل أي password) ـ
+        _LOG.info(
+            "internal_auth: tenant=%d user=%r nas=%s mac=%s pap=%s chap=%s",
+            req.tenant_id, req.username, req.nas_ip, req.calling_station_id,
+            "yes" if req.password else "no",
+            "yes" if req.chap_password else "no",
         )
         decision = authorize(req)
     except Exception:  # noqa: BLE001

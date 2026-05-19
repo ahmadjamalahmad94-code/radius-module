@@ -159,6 +159,18 @@ def _random_str(n: int, *, charset: str = "digits") -> str:
     return "".join(secrets.choice(alpha) for _ in range(n))
 
 
+def get_card_by_username(tenant_id: int, username: str) -> Optional[Card]:
+    """يبحث عن كارت برقم المستخدم — لاستخدام auth path كـ fallback لما لا
+    يُوجد subscriber بنفس الاسم. يُرجع الكارت حتى لو كان revoked/used كي
+    يستطيع policy_engine إصدار رفض دقيق (disabled vs user_not_found)."""
+    cur = db().execute(
+        "SELECT * FROM cards WHERE tenant_id = ? AND username = ? LIMIT 1",
+        (tenant_id, username)
+    )
+    row = cur.fetchone()
+    return _card_row(row) if row else None
+
+
 def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
                 used: Optional[bool] = None, revoked: Optional[bool] = None,
                 limit: int = 200, offset: int = 0) -> list[Card]:
