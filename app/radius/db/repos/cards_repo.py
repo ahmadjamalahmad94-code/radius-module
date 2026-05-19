@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from ...core.types import Card, CardBatch
 from ..connection import db, transaction
-from ..helpers import dt_to_iso, now_iso, parse_dt
+from ..helpers import dt_to_iso, now_iso, parse_dt, row_to_dict
 
 
 def _g(row: Any, key: str, default):
@@ -169,6 +169,103 @@ def get_card_by_username(tenant_id: int, username: str) -> Optional[Card]:
     )
     row = cur.fetchone()
     return _card_row(row) if row else None
+
+
+def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
+    """Return a card with the safe context needed by the Card Checker.
+
+    This is intentionally read-only and does not expose the card password.
+    The caller may search by exact username or numeric card id.
+    """
+    try:
+        card_id = int(query)
+    except (TypeError, ValueError):
+        card_id = -1
+    cur = db().execute(
+        """
+        SELECT
+            c.id AS card_id,
+            c.tenant_id AS tenant_id,
+            c.batch_id AS batch_id,
+            c.username AS username,
+            c.password AS password,
+            c.plan_id AS plan_id,
+            c.used AS card_used,
+            c.first_used_at AS first_used_at,
+            c.used_by_mac AS used_by_mac,
+            c.used_by_subscriber_id AS used_by_subscriber_id,
+            c.expire_at AS card_expire_at,
+            c.revoked AS card_revoked,
+            c.created_at AS card_created_at,
+            b.batch_code AS batch_code,
+            b.package_name AS batch_package_name,
+            b.status AS batch_status,
+            b.count AS batch_count,
+            b.generated AS batch_generated,
+            b.used AS batch_used,
+            b.manager_id AS batch_manager_id,
+            b.created_by AS batch_created_by,
+            b.created_at AS batch_created_at,
+            b.expire_at AS batch_expire_at,
+            p.name AS profile_name,
+            p.code AS profile_code,
+            p.service_type AS profile_service_type,
+            p.plan_type AS profile_plan_type,
+            p.speed_down_kbps AS profile_speed_down_kbps,
+            p.speed_up_kbps AS profile_speed_up_kbps,
+            p.quota_total_mb AS profile_quota_total_mb,
+            p.quota_daily_mb AS profile_quota_daily_mb,
+            p.quota_monthly_mb AS profile_quota_monthly_mb,
+            p.duration_minutes AS profile_duration_minutes,
+            p.validity_days AS profile_validity_days,
+            s.username AS subscriber_username,
+            s.full_name AS subscriber_full_name,
+            s.mobile AS subscriber_mobile,
+            s.status AS subscriber_status,
+            s.last_login_at AS subscriber_last_login_at,
+            s.last_seen_at AS subscriber_last_seen_at,
+            s.mac_lock AS subscriber_mac_lock,
+            s.static_ip AS subscriber_static_ip
+        FROM cards c
+        LEFT JOIN card_batches b
+            ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+        LEFT JOIN access_plans p
+            ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+        LEFT JOIN subscribers s
+            ON s.tenant_id = c.tenant_id AND s.id = c.used_by_subscriber_id
+        WHERE c.tenant_id = ? AND (c.username = ? OR c.id = ?)
+        LIMIT 1
+        """,
+        (tenant_id, query, card_id),
+    )
+    row = cur.fetchone()
+    return row_to_dict(row) if row else None
+
+
+def get_latest_card_accounting(tenant_id: int, username: str) -> Optional[dict]:
+    """Return the latest radacct row for a card username, if present."""
+    cur = db().execute(
+        """
+        SELECT
+            radacctid,
+            username,
+            acctstarttime,
+            acctupdatetime,
+            acctstoptime,
+            acctsessiontime,
+            nasipaddress,
+            callingstationid,
+            framedipaddress
+        FROM radacct
+        WHERE tenant_id = ? AND username = ?
+        ORDER BY COALESCE(acctupdatetime, acctstoptime, acctstarttime, '') DESC,
+                 radacctid DESC
+        LIMIT 1
+        """,
+        (tenant_id, username),
+    )
+    row = cur.fetchone()
+    return row_to_dict(row) if row else None
 
 
 def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,

@@ -11,12 +11,13 @@ from flask import Blueprint
 def register_v1(parent: Blueprint) -> None:
     v1 = Blueprint("v1", __name__, url_prefix="/v1")
 
-    from . import (health, accounts, cards, profiles, nas, sessions,
+    from . import (health, accounts, cards, card_checker, profiles, nas, sessions,
                     accounting, webhooks, mikrotik, internal_auth, dashboard,
                     admins, audit)
     health.register(v1)
     accounts.register(v1)
     cards.register(v1)
+    card_checker.register(v1)
     profiles.register(v1)
     nas.register(v1)
     sessions.register(v1)
