@@ -95,6 +95,13 @@ def internal_auth():
         out["control:Auth-Type"] = "Reject"
     for k, v in decision.reply_attrs.items():
         out[f"reply:{k}"] = v
+    # ـ debug log آمن: response shape كاملاً (لا توجد أسرار في reply_attrs) ـ
+    _LOG.info("internal_auth: response user=%r http=200 auth=%s reason=%s "
+              "reply_keys=%s",
+              req.username,
+              "Accept" if decision.ok else "Reject",
+              decision.reason or "-",
+              sorted(decision.reply_attrs.keys()))
     return jsonify(out), 200
 
 

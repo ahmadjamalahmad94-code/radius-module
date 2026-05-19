@@ -1,16 +1,20 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # default — virtual server يعالج auth/acct.
-# منطق HobeRadius:
-#   authorize: استدعِ HobeRadius عبر rest → يقرّر Accept/Reject ويُرجع reply attrs.
-#   authenticate: pap (FreeRADIUS يقارن Cleartext-Password المُرجَعة من rest).
-#   accounting:  اكتب لـ radacct في SQLite.
-#   post-auth:   اكتب لـ radpostauth + استدعِ HobeRadius للـ logging.
+# المعمارية المعتمدة (REST-only auth):
+#   authorize:   rest → /api/v1/internal/auth (Flask policy_engine يقرّر).
+#   authenticate: pap/chap (مُلحق فقط لو rest لم يُحدّد Auth-Type).
+#   accounting:  detail + sql (radacct فقط — مُعزَّل عن auth).
+#   post-auth:   rest فقط → /api/v1/internal/postauth (webhooks).
+#                ملحوظة: لا نستدعي sql هنا. Flask يكتب radpostauth داخليًا.
+#                السبب: rlm_sql_sqlite "Hit reconnection limit" كان يحوّل
+#                الـ Accept إلى Reject لأن post-auth section يفشل (rcode=fail).
+#                المعمارية الصحيحة: SQL مفيد للـ accounting reporting فقط،
+#                وكل قرارات الـ auth تذهب لـ Flask عبر REST.
 #
-# تنبيه:
-#   نتجنّب modules لا تُشحن مع image freeradius/freeradius-server:3.2.5 الرسمي:
-#     - rlm_acct_unique  → غير موجود؛ FreeRADIUS يولّد Acct-Unique-Session-Id داخليًا.
-#     - rlm_realm (suffix) → لسنا بحاجة لـ realm parsing.
-#     - rlm_attr_filter   → لسنا بحاجة لفلترة attrs الرفض.
+# تنبيه: نتجنّب modules لا تُشحن مع freeradius/freeradius-server:3.2.5 image:
+#   - rlm_acct_unique  → FreeRADIUS يولّد Acct-Unique-Session-Id داخليًا.
+#   - rlm_realm (suffix) → لا نحتاج realm parsing.
+#   - rlm_attr_filter   → لا نحتاج فلترة attrs الرفض.
 # ─────────────────────────────────────────────────────────────────────────────
 
 server default {
@@ -78,12 +82,16 @@ accounting {
 }
 
 # ─ POST-AUTH (بعد قرار FreeRADIUS) ─
+# ـ rest فقط: نستدعي Flask للـ logging/webhooks. Flask يكتب radpostauth داخليًا
+# عبر policy_engine._log_attempt. لا sql هنا كي لا يفشل قبول auth بسبب
+# rlm_sql_sqlite reconnection issues.
 post-auth {
-    sql                # تسجيل radpostauth
-    rest               # webhook لـ HobeRadius
+    rest
 
     Post-Auth-Type REJECT {
-        sql
+        # ـ noop: Flask سجّل الرفض بالفعل في policy_engine._log_attempt ـ
+        # نتجنّب sql هنا لنفس سبب post-auth أعلاه.
+        ok
     }
 }
 }

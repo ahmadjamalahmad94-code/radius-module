@@ -37,7 +37,8 @@ rest {
     # ـ نُعطل authenticate (نتركها لـ FreeRADIUS) ـ
     authenticate {}
 
-    # ـ post-auth: يُسجَّل عبر sql module في radpostauth ـ
+    # ـ post-auth webhook: Flask يكتب radpostauth داخليًا + يُرسل أحداث ـ
+    # ـ لاحظ: لا نستدعي sql في post-auth (انظر sites-enabled/default) ـ
     post-auth {
         uri      = "${..connect_uri}/api/v1/internal/postauth"
         method   = "post"

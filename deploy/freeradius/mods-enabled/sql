@@ -1,11 +1,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # sql — backend SQLite يقرأ/يكتب نفس DB الـ HobeRadius.
-# الاستخدامات:
-#  - accounting: كتابة radacct
-#  - post-auth: كتابة radpostauth
-#  - clients: قراءة جدول nas (لإضافة NAS بدون restart)
+# الاستخدام الوحيد المعتمد حاليًا:
+#  - accounting: كتابة radacct (sessions reporting). معزول عن auth.
 #
-# ملاحظة: لا نعتمد على هذا الـ module لتقرير Accept/Reject — هذا يحدث في rest.
+# ـ لا نستخدمه في authorize/authenticate (rest يقرّر) ـ
+# ـ لا نستخدمه في post-auth (Flask يكتب radpostauth داخليًا) ـ
+#
+# سبب الفصل: rlm_sql_sqlite قد يفشل (Hit reconnection limit، locked DB) عند
+# تزامن كتابة Flask + FreeRADIUS على نفس SQLite. لو كان sql في post-auth،
+# فشله يحوّل Access-Accept إلى Reject. الفصل يحافظ على auth حتى لو SQL تعطّل.
 # ─────────────────────────────────────────────────────────────────────────────
 sql {
     dialect  = "sqlite"
@@ -48,11 +51,15 @@ sql {
     #   client_query    = "SELECT nasname, shortname, type, secret FROM nas"
     read_clients    = no
 
+    # ـ lazy pool: لا تفتح أي connection عند startup ـ
+    # نفس النمط المُستخدم في mods-enabled/rest. لو SQLite غير متاح وقت
+    # الإقلاع، FreeRADIUS يبقى Ready ولا يفشل instantiation. أوّل acct
+    # request هو الذي يفتح أول connection.
     pool {
-        start          = 4
-        min            = 4
-        max            = 16
-        spare          = 4
+        start          = 0
+        min            = 0
+        max            = 8
+        spare          = 2
         uses           = 0
         retry_delay    = 5
         lifetime       = 0
