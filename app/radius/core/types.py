@@ -109,6 +109,33 @@ class AccessPlan:
     enabled: bool = True
     priority: int = 100
     color: str = "#2BAACC"
+    # ── RM-H3: AdvRadius extension fields (migration 012) ──
+    # سرعة متقدمة + CIR + bursts
+    speed_control_enabled: bool = False
+    cir_down_kbps: int = 0
+    cir_up_kbps: int = 0
+    burst_enabled: bool = False
+    nightly_unlimited_enabled: bool = False
+    # كوتا مفصَّلة شهري/يومي (download+upload+combined)
+    monthly_download_quota_mb: int = 0
+    monthly_upload_quota_mb: int = 0
+    monthly_combined_quota_mb: int = 0
+    daily_download_quota_mb: int = 0
+    daily_upload_quota_mb: int = 0
+    daily_combined_quota_mb: int = 0
+    # سلوك الاستخدام
+    single_use_once: bool = False
+    max_consumption_times: int = 0
+    ticket_validity_days: int = 0
+    working_hours_limit: int = 0
+    # خدمات NAS
+    hotspot_enabled: bool = False
+    ppp_enabled: bool = False
+    # ساعات العرض
+    offer_hours_from: str = ""
+    offer_hours_to: str = ""
+    # metadata JSON ـ مُجمَّعة {general, subscription, advanced, mikrotik, notifications}
+    metadata: str = "{}"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

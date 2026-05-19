@@ -1,11 +1,20 @@
 """Access Plans repo."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from ...core.types import AccessPlan
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso, parse_dt
+
+
+def _g(row: Any, key: str, default):
+    """Safe getter for sqlite3.Row — fallback for older DB snapshots."""
+    try:
+        v = row[key]
+        return default if v is None else v
+    except (KeyError, IndexError):
+        return default
 
 
 _COLS = (
@@ -24,6 +33,15 @@ _COLS = (
     "on_login","on_logout","auto_renew","router_ids",
     "price_card","price_bulk","price","currency","plan_tier","prepaid","project",
     "description","enabled","priority","color",
+    # RM-H3: AdvRadius extension cols (migration 012)
+    "speed_control_enabled","cir_down_kbps","cir_up_kbps",
+    "burst_enabled","nightly_unlimited_enabled",
+    "monthly_download_quota_mb","monthly_upload_quota_mb","monthly_combined_quota_mb",
+    "daily_download_quota_mb","daily_upload_quota_mb","daily_combined_quota_mb",
+    "single_use_once","max_consumption_times","ticket_validity_days","working_hours_limit",
+    "hotspot_enabled","ppp_enabled",
+    "offer_hours_from","offer_hours_to",
+    "metadata",
 )
 
 
@@ -65,6 +83,27 @@ def _row(r) -> AccessPlan:
         project=r["project"] or "", description=r["description"] or "",
         enabled=bool(r["enabled"]), priority=r["priority"] or 100,
         color=r["color"] or "#2BAACC",
+        # RM-H3 fields — safe defaults for rows from before migration 012
+        speed_control_enabled=bool(_g(r,"speed_control_enabled",0)),
+        cir_down_kbps=_g(r,"cir_down_kbps",0) or 0,
+        cir_up_kbps=_g(r,"cir_up_kbps",0) or 0,
+        burst_enabled=bool(_g(r,"burst_enabled",0)),
+        nightly_unlimited_enabled=bool(_g(r,"nightly_unlimited_enabled",0)),
+        monthly_download_quota_mb=_g(r,"monthly_download_quota_mb",0) or 0,
+        monthly_upload_quota_mb=_g(r,"monthly_upload_quota_mb",0) or 0,
+        monthly_combined_quota_mb=_g(r,"monthly_combined_quota_mb",0) or 0,
+        daily_download_quota_mb=_g(r,"daily_download_quota_mb",0) or 0,
+        daily_upload_quota_mb=_g(r,"daily_upload_quota_mb",0) or 0,
+        daily_combined_quota_mb=_g(r,"daily_combined_quota_mb",0) or 0,
+        single_use_once=bool(_g(r,"single_use_once",0)),
+        max_consumption_times=_g(r,"max_consumption_times",0) or 0,
+        ticket_validity_days=_g(r,"ticket_validity_days",0) or 0,
+        working_hours_limit=_g(r,"working_hours_limit",0) or 0,
+        hotspot_enabled=bool(_g(r,"hotspot_enabled",0)),
+        ppp_enabled=bool(_g(r,"ppp_enabled",0)),
+        offer_hours_from=_g(r,"offer_hours_from","") or "",
+        offer_hours_to=_g(r,"offer_hours_to","") or "",
+        metadata=_g(r,"metadata","{}") or "{}",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
     )
 
@@ -103,6 +142,15 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         p.on_login, p.on_logout, int(p.auto_renew), json_dump(list(p.router_ids)),
         p.price_card, p.price_bulk, p.price, p.currency, p.plan_tier, int(p.prepaid), p.project,
         p.description, int(p.enabled), p.priority, p.color,
+        # RM-H3 values (تطابق ترتيب _COLS الجديد)
+        int(p.speed_control_enabled), p.cir_down_kbps, p.cir_up_kbps,
+        int(p.burst_enabled), int(p.nightly_unlimited_enabled),
+        p.monthly_download_quota_mb, p.monthly_upload_quota_mb, p.monthly_combined_quota_mb,
+        p.daily_download_quota_mb, p.daily_upload_quota_mb, p.daily_combined_quota_mb,
+        int(p.single_use_once), p.max_consumption_times, p.ticket_validity_days, p.working_hours_limit,
+        int(p.hotspot_enabled), int(p.ppp_enabled),
+        p.offer_hours_from, p.offer_hours_to,
+        p.metadata or "{}",
     )
     now = now_iso()
     with transaction() as conn:
