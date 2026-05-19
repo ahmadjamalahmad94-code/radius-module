@@ -46,9 +46,16 @@ rest {
         tls = ${..tls}
     }
 
+    # ─ lazy pool: نتجنّب فتح أي connection عند startup ─
+    # السبب: DNS lookup لـ "hoberadius:8000" قد يفشل أثناء instantiation لو
+    # كان hoberadius container لم يصل بعدُ لحالة جاهزة (race مع docker DNS،
+    # خصوصًا لو hoberadius نفسه يدور في restart-loop). start=0 + min=0
+    # يجعل الـ pool يفتح connections عند أوّل طلب فعلي، لا أثناء الإقلاع.
+    # freeradius يبقى Ready to process requests حتى لو كان hoberadius
+    # مؤقّتًا غير قابل للوصول (طلب RADIUS سيُرجِع reject في تلك الحالة).
     pool {
-        start          = 4
-        min            = 4
+        start          = 0
+        min            = 0
         max            = 32
         spare          = 8
         uses           = 0
