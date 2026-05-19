@@ -75,22 +75,32 @@ _VALID_DAYS = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"}
 
 
 def _normalize_metadata(raw) -> str:
+    """Accept either a dict/list or a JSON string, always store a JSON string.
+
+    Invalid input raises RadiusValidationError so the caller can return 422
+    and the request fails atomically — silently normalising to "{}" would
+    wipe existing metadata on PATCH (destructive).
+    """
     if raw is None:
         return "{}"
     if isinstance(raw, str):
         if not raw.strip():
             return "{}"
         try:
-            json.loads(raw)
-            return raw
-        except (TypeError, ValueError):
-            return "{}"
+            parsed = json.loads(raw)
+        except (TypeError, ValueError) as e:
+            raise RadiusValidationError(f"metadata is not valid JSON: {e}")
+        if not isinstance(parsed, (dict, list)):
+            raise RadiusValidationError(
+                "metadata must decode to a JSON object or array")
+        return raw
     if isinstance(raw, (dict, list)):
         try:
             return json.dumps(raw, ensure_ascii=False)
-        except (TypeError, ValueError):
-            return "{}"
-    return "{}"
+        except (TypeError, ValueError) as e:
+            raise RadiusValidationError(f"metadata not JSON-serialisable: {e}")
+    raise RadiusValidationError(
+        f"metadata must be a dict, list, or JSON string (got {type(raw).__name__})")
 
 
 def _coerce_int(name: str, v: Any) -> int:
