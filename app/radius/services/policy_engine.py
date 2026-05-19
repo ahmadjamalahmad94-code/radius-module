@@ -229,14 +229,15 @@ def _card_to_subscriber(card: Card) -> Subscriber:
 
 def authorize(req: AuthRequest) -> AuthDecision:
     """يقرّر السماح/الرفض ويعيد attrs الـ Access-Accept."""
-    _LOG.info(
+    # ـ WARNING مؤقت للتشخيص: يُسجّل بدون أيّ password ـ
+    _LOG.warning(
         "auth_attempt tenant=%d user=%r nas_ip=%s mac=%s pap=%s chap=%s",
         req.tenant_id, req.username, req.nas_ip, req.calling_station_id,
         "yes" if req.password else "no",
         "yes" if req.chap_password else "no",
     )
     if not req.username:
-        _LOG.info("auth_decision user='' reason=user_not_found")
+        _LOG.warning("auth_decision user='' reason=user_not_found")
         return _reject("user_not_found")
 
     sub = subscribers_repo.get_subscriber(req.tenant_id, req.username)
@@ -248,9 +249,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
             sub = _card_to_subscriber(card)
             source = "card"
     if not sub:
-        _LOG.info("auth_decision user=%r reason=user_not_found "
-                  "(لا subscriber ولا card في tenant=%d)",
-                  req.username, req.tenant_id)
+        _LOG.warning("auth_decision user=%r reason=user_not_found "
+                      "(لا subscriber ولا card في tenant=%d)",
+                      req.username, req.tenant_id)
         return _reject("user_not_found")
 
     plan: Optional[AccessPlan] = None
@@ -272,8 +273,8 @@ def authorize(req: AuthRequest) -> AuthDecision:
     ):
         bad = fn()
         if bad is not None:
-            _LOG.info("auth_decision user=%r source=%s rejected reason=%s",
-                       req.username, source, bad.reason)
+            _LOG.warning("auth_decision user=%r source=%s rejected reason=%s",
+                          req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)
             return bad
 
@@ -285,8 +286,8 @@ def authorize(req: AuthRequest) -> AuthDecision:
         if 0 <= days_left <= 3:
             msg = _MSG["ok_expires_soon"] + f" ({days_left} يوم)"
     reply["Reply-Message"] = msg
-    _LOG.info("auth_decision user=%r source=%s accepted attrs=%d",
-              req.username, source, len(reply))
+    _LOG.warning("auth_decision user=%r source=%s accepted attrs=%d",
+                  req.username, source, len(reply))
     _log_attempt(req, accepted=True)
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
 

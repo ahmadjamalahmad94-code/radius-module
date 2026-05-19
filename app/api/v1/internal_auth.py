@@ -27,13 +27,46 @@ _LOG = logging.getLogger(__name__)
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/internal/auth", "internal_auth", internal_auth, methods=["POST"])
     bp.add_url_rule("/internal/postauth", "internal_postauth", internal_postauth, methods=["POST"])
+    bp.add_url_rule("/internal/_diag", "internal_diag", internal_diag, methods=["POST"])
+
+
+def _redact_prefix(s: str, n: int = 4) -> str:
+    """Return a short prefix for logging — never the full secret."""
+    if not s:
+        return "<empty>"
+    if len(s) <= n:
+        return "<short>"
+    return s[:n] + "…"
 
 
 def _check_internal_secret() -> bool:
+    """تحقّق من X-Internal-Secret.
+
+    مهم: لو HOBERADIUS_INTERNAL_SECRET غير مضبوط في env الخاص بـ Flask،
+    نعتبره dev mode ونقبل بدون header — هذا متعمَّد كي لا يُكسر اختبار محلي.
+
+    عند الفشل نُسجّل WARNING يحوي:
+      - أطوال expected vs incoming
+      - prefix قصير للتمييز (4 أحرف ثم … — لا نُسرّب الـ secret)
+      - حضور الـ header
+    """
     expected = (os.environ.get("HOBERADIUS_INTERNAL_SECRET") or "").strip()
+    incoming = request.headers.get("X-Internal-Secret", "")
     if not expected:
-        return True   # dev mode: لا secret مضبوط
-    return request.headers.get("X-Internal-Secret", "") == expected
+        _LOG.warning("internal_auth: HOBERADIUS_INTERNAL_SECRET غير مضبوط — "
+                      "تشغيل dev mode (يقبل بدون secret). اضبطها في .env للإنتاج.")
+        return True
+    if incoming == expected:
+        return True
+    _LOG.warning(
+        "internal_auth: SECRET MISMATCH — expected_len=%d incoming_len=%d "
+        "header_present=%s expected_prefix=%s incoming_prefix=%s remote=%s",
+        len(expected), len(incoming),
+        "yes" if "X-Internal-Secret" in request.headers else "no",
+        _redact_prefix(expected), _redact_prefix(incoming),
+        request.remote_addr or "?",
+    )
+    return False
 
 
 def _resolve_tenant_id(body: dict) -> int:
@@ -73,16 +106,16 @@ def internal_auth():
             nas_ip=g("NAS-IP-Address"),
             nas_port_type=g("NAS-Port-Type"),
         )
-        # ـ debug log آمن (لا نسجّل أي password) ـ
-        _LOG.info(
-            "internal_auth: tenant=%d user=%r nas=%s mac=%s pap=%s chap=%s",
+        # ـ WARNING level مؤقت للتشخيص ـ يحتوي username + النوع فقط، بلا secrets ـ
+        _LOG.warning(
+            "internal_auth: REQ tenant=%d user=%r nas=%s mac=%s pap=%s chap=%s",
             req.tenant_id, req.username, req.nas_ip, req.calling_station_id,
             "yes" if req.password else "no",
             "yes" if req.chap_password else "no",
         )
         decision = authorize(req)
     except Exception:  # noqa: BLE001
-        _LOG.exception("policy engine error — defaulting to Reject")
+        _LOG.exception("internal_auth: policy engine error — defaulting to Reject")
         return jsonify({
             "control:Auth-Type": "Reject",
             "reply:Reply-Message": "Internal error — try again",
@@ -95,14 +128,72 @@ def internal_auth():
         out["control:Auth-Type"] = "Reject"
     for k, v in decision.reply_attrs.items():
         out[f"reply:{k}"] = v
-    # ـ debug log آمن: response shape كاملاً (لا توجد أسرار في reply_attrs) ـ
-    _LOG.info("internal_auth: response user=%r http=200 auth=%s reason=%s "
-              "reply_keys=%s",
-              req.username,
-              "Accept" if decision.ok else "Reject",
-              decision.reason or "-",
-              sorted(decision.reply_attrs.keys()))
+    # ـ WARNING مؤقت: يطبع كل أركان القرار للوحدة الواحدة كي ينظر العامل
+    # ـ في log واحد ويعرف بالضبط لماذا تمّ القبول/الرفض ـ
+    _LOG.warning("internal_auth: RESP user=%r http=200 auth=%s reason=%s "
+                  "reply_keys=%s",
+                  req.username,
+                  "Accept" if decision.ok else "Reject",
+                  decision.reason or "-",
+                  sorted(decision.reply_attrs.keys()))
     return jsonify(out), 200
+
+
+def internal_diag():
+    """Endpoint تشخيصي يكشف عن مسار البحث + قرار policy_engine بلا
+    اعتماد على X-Internal-Secret. يُمكَّن فقط لو HOBERADIUS_DIAG_ENABLED=1.
+
+    الاستخدام من VPS:
+      docker exec hoberadius curl -s -X POST \\
+        http://localhost:8000/api/v1/internal/_diag \\
+        -H 'Content-Type: application/json' \\
+        -d '{"username":"user1000","password":"123456","tenant_id":1}'
+
+    يعيد JSON يحوي:
+      db_path, tenant_id, found_in (subscribers/cards/none),
+      decision (ok, reason, reply_keys).
+    """
+    if os.environ.get("HOBERADIUS_DIAG_ENABLED", "").strip() != "1":
+        return jsonify({"error": "diag disabled",
+                         "hint": "set HOBERADIUS_DIAG_ENABLED=1 in .env and "
+                                  "restart hoberadius"}), 403
+
+    body = request.get_json(silent=True) or {}
+    username = (body.get("username") or "").strip()
+    password = (body.get("password") or "")
+    tenant_id = int(body.get("tenant_id") or 1)
+
+    # ـ نلتقط مسار الـ DB الذي تستخدمه Flask فعليًا ـ
+    from app.radius.db.connection import _resolve_db_path  # type: ignore
+    from app.radius.db.repos import cards_repo, subscribers_repo
+
+    db_path = _resolve_db_path()
+    sub = subscribers_repo.get_subscriber(tenant_id, username)
+    card = cards_repo.get_card_by_username(tenant_id, username) if not sub else None
+    found_in = "subscribers" if sub else ("cards" if card else "none")
+
+    from app.radius.services.policy_engine import AuthRequest, authorize
+    req = AuthRequest(username=username, password=password, tenant_id=tenant_id)
+    _LOG.warning("internal_diag: REQ user=%r tenant=%d db_path=%s found_in=%s",
+                  username, tenant_id, db_path, found_in)
+    decision = authorize(req)
+    _LOG.warning("internal_diag: RESP user=%r auth=%s reason=%s",
+                  username, "Accept" if decision.ok else "Reject",
+                  decision.reason or "-")
+    return jsonify({
+        "db_path": db_path,
+        "tenant_id": tenant_id,
+        "username": username,
+        "found_in": found_in,
+        "subscriber_status": sub.status if sub else None,
+        "card_revoked": bool(card.revoked) if card else None,
+        "decision": {
+            "ok": decision.ok,
+            "reason": decision.reason,
+            "message": decision.message,
+            "reply_keys": sorted(decision.reply_attrs.keys()),
+        },
+    }), 200
 
 
 def internal_postauth():
