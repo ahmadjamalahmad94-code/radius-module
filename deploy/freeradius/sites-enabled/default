@@ -81,10 +81,28 @@ preacct {
     preprocess
 }
 
-# ─ ACCOUNTING — كتابة لـ radacct ─
+# ─ ACCOUNTING — كتابة لـ radacct + الردّ بـ Accounting-Response ─
+# ـ سياسة عدم منع الردّ ـ
+# المشكلة التي رأيناها: لمّا `sql` يفشل (لسبب أيًّا كان — locking على
+# SQLite، schema mismatch، disk full)، الـ accounting section يُرجع
+# rcode=fail، فـ FreeRADIUS لا يُرسل Accounting-Response. ينتج عن ذلك
+# على MikroTik: "RADIUS accounting request not sent: no response".
+#
+# الإصلاح: نُجبر sql على أن يكون "غير حاجز" — أي rcode فشل/رفض/invalid
+# يُعامَل بـ priority=1 (تابِع) بدل return. ثم نُلحق module `ok` في
+# نهاية الـ section ليضمن rcode=ok نهائي → FR يُرسل Accounting-Response.
+#
+# `detail` يكتب نسخة file-based في /var/log/freeradius/radacct/ → سجلّ
+# احتياطي مستقل عن SQLite (مفيد للـ debugging وللاستيراد لاحقاً).
 accounting {
     detail
-    sql
+    sql {
+        fail     = 1
+        reject   = 1
+        invalid  = 1
+        notfound = 1
+    }
+    ok
 }
 
 # ─ POST-AUTH (بعد قرار FreeRADIUS) ─
