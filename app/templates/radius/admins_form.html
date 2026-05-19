@@ -4,40 +4,132 @@
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+/* RM-H6 — Admin form (نفس نمط RM-H1/H3/H4/H5 بتوكينات --hr-*) */
+.ad-form{max-width:980px;margin:0 auto;padding:8px 4px 18px}
+.sec-card{
+  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
+  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
+  box-shadow:var(--hr-shadow-sm);
+}
+.sec-card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;
+  font-size:14.5px;font-weight:800;color:var(--hr-text);
+  padding-bottom:10px;border-bottom:1px dashed var(--hr-border)}
+.sec-card > h3 i.h-ic{width:30px;height:30px;border-radius:6px;
+  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
+.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
+.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
+.sec-card.collapsible.is-collapsed > .sb{display:none}
+.sec-card.id    {border-inline-start:3px solid var(--hr-cyan-500)}
+.sec-card.auth  {border-inline-start:3px solid var(--hr-green)}
+.sec-card.auth  > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
+.sec-card.prof  {border-inline-start:3px solid var(--hr-purple)}
+.sec-card.prof  > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
+
+.f-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
+@media (max-width:720px){.f-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.f-grid{grid-template-columns:1fr}}
+.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f-field.full{grid-column:1 / -1}
+.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
+.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
+.f-field input, .f-field select, .f-field textarea{
+  padding:10px 12px;border-radius:var(--hr-r,6px);
+  border:1.5px solid var(--hr-border-strong);
+  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
+  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
+}
+.f-field input[readonly]{background:var(--hr-stripe);color:var(--hr-text-soft);cursor:not-allowed}
+.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
+  outline:0;border-color:var(--hr-cyan-500);background:#fff;
+  box-shadow:0 0 0 3px rgba(43,170,204,.20);
+}
+.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
+.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
+.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
+.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="ad-form">
 <form method="post"
       action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">
 
-  <div class="card">
-    <div class="card-header"><span class="title">معلومات المدير</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>اسم المستخدم *</label>
-        <div class="field"><input type="text" name="username" required {% if not is_new %}readonly{% endif %}
-            value="{{ admin.username if admin else '' }}"></div></div>
-      <div class="form-row"><label>كلمة المرور {% if is_new %}*{% endif %}</label>
-        <div class="field"><input type="password" name="password" {% if is_new %}required{% endif %}
-            placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else '' }}"></div></div>
-      <div class="form-row"><label>الاسم الكامل</label>
-        <div class="field"><input type="text" name="full_name" value="{{ admin.full_name if admin else '' }}"></div></div>
-      <div class="form-row"><label>الدور</label>
-        <div class="field"><select name="role_id">
+  <section class="sec-card id">
+    <h3><i class="fa-solid fa-user-shield h-ic"></i>الهوية والدور</h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>اسم المستخدم <span class="req">*</span></label>
+        <input type="text" name="username" required {% if not is_new %}readonly{% endif %}
+               value="{{ admin.username if admin else '' }}" placeholder="admin">
+        <div class="field-help">لا يمكن تغييره بعد الإنشاء.</div></div>
+      <div class="f-field"><label>الاسم الكامل</label>
+        <input type="text" name="full_name" value="{{ admin.full_name if admin else '' }}"></div>
+      <div class="f-field"><label>الدور</label>
+        <select name="role_id">
+          <option value="">— بدون —</option>
           {% for r in roles %}
             <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
-              {{ r.display_name }} ({{ r.name }})
+              {{ r.display_name or r.name }} ({{ r.name }})
             </option>
           {% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>البريد</label>
-        <div class="field"><input type="email" name="email" value="{{ admin.email if admin else '' }}"></div></div>
-      <div class="form-row"><label>الجوال</label>
-        <div class="field"><input type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div></div>
-      <div class="form-row"><label>الحالة</label>
-        <div class="field"><label class="toggle">
-          <input type="checkbox" name="enabled" value="1" {% if (not admin) or admin.enabled %}checked{% endif %}>
-          <span class="track"><span class="lbl-on">ON</span><span class="lbl-off">OFF</span></span>
-        </label></div></div>
+        </select>
+        <div class="field-help">الدور يحدّد الصلاحيات الفعلية.</div></div>
+      <div class="f-field"><label>الحالة</label>
+        <div class="chk-row"><input type="checkbox" name="enabled" id="ad-en" value="1"
+          {% if (not admin) or admin.enabled %}checked{% endif %}>
+          <label for="ad-en">مفعَّل</label></div></div>
     </div>
-  </div>
+    </div>
+  </section>
+
+  <section class="sec-card auth">
+    <h3><i class="fa-solid fa-key h-ic"></i>التحقّق (Auth)</h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+        <input type="password" name="password" {% if is_new %}required{% endif %}
+               placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
+        <div class="field-help">يُخزَّن hash (scrypt) — لا plaintext.</div></div>
+      {% if not is_new and admin and admin.last_login_at %}
+      <div class="f-field"><label>آخر دخول</label>
+        <input type="text" readonly value="{{ admin.last_login_at }}"></div>
+      <div class="f-field"><label>من IP</label>
+        <input type="text" readonly value="{{ admin.last_login_ip or '—' }}"></div>
+      {% endif %}
+    </div>
+    </div>
+  </section>
+
+  <section class="sec-card prof collapsible" data-sec="prof">
+    <h3><i class="fa-solid fa-id-card h-ic"></i>معلومات الاتصال + الملف الشخصي
+      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
+    <div class="sb">
+    <div class="f-grid">
+      <div class="f-field"><label>البريد الإلكتروني</label>
+        <input type="email" name="email" value="{{ admin.email if admin else '' }}"></div>
+      <div class="f-field"><label>الجوال</label>
+        <input type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div>
+      <div class="f-field"><label>هاتف آخر</label>
+        <input type="tel" name="phone" value="{{ admin.phone if admin else '' }}"></div>
+      <div class="f-field"><label>رابط الصورة (avatar)</label>
+        <input type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}"
+               placeholder="https://..."></div>
+      <div class="f-field"><label>وسوم (CSV)</label>
+        <input type="text" name="tags" value="{{ admin.tags if admin else '' }}"
+               placeholder="lead, support">
+        <div class="field-help">للتنظيم — تصنيف داخلي للمدراء.</div></div>
+      <div class="f-field full"><label>ملاحظات على الملف الشخصي</label>
+        <textarea name="profile_notes" rows="2"
+                  style="min-height:60px;resize:vertical">{{ admin.profile_notes if admin else '' }}</textarea></div>
+    </div>
+    </div>
+  </section>
 
   <div class="actions-bar">
     <button class="btn btn-primary" type="submit">
@@ -46,4 +138,24 @@
     <a class="btn btn-secondary" href="{{ url_for('radius.admins_list') }}">إلغاء</a>
   </div>
 </form>
+</div>
+
+<script>
+(function(){
+  var LS = 'hr:ad-form:sec:';
+  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+    var k = card.dataset.sec; if (!k) return;
+    var v = null;
+    try { v = localStorage.getItem(LS + k); } catch(_) {}
+    if (v === 'collapsed') card.classList.add('is-collapsed');
+    else if (v === 'open')  card.classList.remove('is-collapsed');
+    var h = card.querySelector(':scope > h3');
+    if (h) h.addEventListener('click', function(){
+      card.classList.toggle('is-collapsed');
+      try { localStorage.setItem(LS + k,
+        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
+    });
+  });
+})();
+</script>
 {% endblock %}

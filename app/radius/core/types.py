@@ -380,6 +380,13 @@ class Admin:
     is_super_admin: bool = False              # عابر للـ tenants
     enabled: bool = True
     last_login_at: Optional[datetime] = None
+    # ── RM-H6: profile + RBAC fields (migration 015) ──
+    phone: str = ""
+    last_login_ip: str = ""
+    profile_notes: str = ""
+    avatar_url: str = ""
+    tags: str = ""                           # CSV
+    metadata: str = "{}"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -393,6 +400,9 @@ class Role:
     description: str = ""
     permissions: Tuple[str, ...] = field(default_factory=tuple)
     is_system: bool = False
+    # ── RM-H6: visual ──
+    color: str = "#2BAACC"
+    metadata: str = "{}"
     created_at: Optional[datetime] = None
 
 

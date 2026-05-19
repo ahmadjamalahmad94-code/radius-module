@@ -3,12 +3,21 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import Optional
+from typing import Any, Optional
 
 from ...core.constants import DEFAULT_ROLE_PERMISSIONS, ROLE_SUPER_ADMIN
 from ...core.types import Admin, Role
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
+
+
+def _g(row: Any, key: str, default):
+    """Safe getter — fallback for snapshots before migration 015."""
+    try:
+        v = row[key]
+        return default if v is None else v
+    except (KeyError, IndexError):
+        return default
 
 
 # ─────────────── password hashing ───────────────
@@ -41,6 +50,9 @@ def _row_to_role(row) -> Role:
         name=row["name"], display_name=row["display_name"], description=row["description"],
         permissions=tuple(json_load(row["permissions"], default=[])),
         is_system=bool(row["is_system"]),
+        # RM-H6 — safe defaults
+        color=_g(row, "color", "#2BAACC") or "#2BAACC",
+        metadata=_g(row, "metadata", "{}") or "{}",
         created_at=parse_dt(row["created_at"]),
     )
 
@@ -95,6 +107,13 @@ def _row_to_admin(row) -> Admin:
         role_id=row["role_id"], is_super_admin=bool(row["is_super_admin"]),
         enabled=bool(row["enabled"]),
         last_login_at=parse_dt(row["last_login_at"]),
+        # RM-H6 fields — safe defaults for pre-015 snapshots
+        phone=_g(row, "phone", "") or "",
+        last_login_ip=_g(row, "last_login_ip", "") or "",
+        profile_notes=_g(row, "profile_notes", "") or "",
+        avatar_url=_g(row, "avatar_url", "") or "",
+        tags=_g(row, "tags", "") or "",
+        metadata=_g(row, "metadata", "{}") or "{}",
         created_at=parse_dt(row["created_at"]), updated_at=parse_dt(row["updated_at"]),
     )
 
@@ -118,7 +137,9 @@ def get_by_username(username: str) -> Optional[Admin]:
 
 def create_admin(*, username: str, password: str, full_name: str = "",
                  email: str = "", mobile: str = "", role_id: Optional[int] = None,
-                 is_super_admin: bool = False, enabled: bool = True) -> Admin:
+                 is_super_admin: bool = False, enabled: bool = True,
+                 phone: str = "", profile_notes: str = "",
+                 avatar_url: str = "", tags: str = "") -> Admin:
     if get_by_username(username):
         raise ValueError(f"admin {username!r} already exists")
     if role_id is None:
@@ -128,10 +149,14 @@ def create_admin(*, username: str, password: str, full_name: str = "",
     with transaction() as conn:
         cur = conn.execute("""
             INSERT INTO admins(username, password_hash, full_name, email, mobile, role_id,
-                               is_super_admin, enabled, created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?)
+                               is_super_admin, enabled,
+                               phone, profile_notes, avatar_url, tags,
+                               created_at, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (username, hash_password(password), full_name, email, mobile, role_id,
-              1 if is_super_admin else 0, 1 if enabled else 0, now, now))
+              1 if is_super_admin else 0, 1 if enabled else 0,
+              phone, profile_notes, avatar_url, tags,
+              now, now))
         new_id = cur.lastrowid
     return get_admin(new_id)
 
@@ -139,8 +164,10 @@ def create_admin(*, username: str, password: str, full_name: str = "",
 def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     if "password" in changes:
         changes["password_hash"] = hash_password(changes.pop("password"))
+    # RM-H6: add profile fields to allowed set
     allowed = ("password_hash", "full_name", "email", "mobile", "role_id",
-               "is_super_admin", "enabled")
+               "is_super_admin", "enabled",
+               "phone", "profile_notes", "avatar_url", "tags")
     sets, vals = [], []
     for k, v in changes.items():
         if k in allowed:
@@ -161,16 +188,58 @@ def delete_admin(admin_id: int) -> None:
         conn.execute("DELETE FROM admins WHERE id = ?", (admin_id,))
 
 
-def authenticate(username: str, password: str) -> Optional[Admin]:
+def authenticate(username: str, password: str, *, ip: str = "") -> Optional[Admin]:
     a = get_by_username(username)
     if not a or not a.enabled:
         return None
     if not verify_password(password, a.password_hash):
         return None
+    # RM-H6: capture login IP (best-effort)
     with transaction() as conn:
-        conn.execute("UPDATE admins SET last_login_at = ? WHERE id = ?",
-                     (now_iso(), a.id))
+        conn.execute("UPDATE admins SET last_login_at = ?, last_login_ip = ? WHERE id = ?",
+                     (now_iso(), ip or "", a.id))
     return get_admin(a.id)
+
+
+# ─────────────── RM-H6: Roles CRUD ───────────────
+
+def create_role(*, name: str, display_name: str = "", description: str = "",
+                  permissions: tuple = (), color: str = "#2BAACC",
+                  tenant_id: Optional[int] = None) -> Role:
+    if get_role_by_name(name):
+        raise ValueError(f"role {name!r} already exists")
+    now = now_iso()
+    with transaction() as conn:
+        cur = conn.execute("""
+            INSERT INTO roles(tenant_id, name, display_name, description, permissions,
+                              is_system, color, metadata, created_at)
+            VALUES(?,?,?,?,?,0,?,'{}',?)
+        """, (tenant_id, name, display_name or name, description,
+              json_dump(list(permissions)), color, now))
+        return get_role(cur.lastrowid)
+
+
+def update_role(role_id: int, **changes) -> Optional[Role]:
+    allowed = {"display_name", "description", "permissions", "color"}
+    sets, vals = [], []
+    for k, v in changes.items():
+        if k not in allowed: continue
+        if k == "permissions":
+            sets.append("permissions = ?")
+            vals.append(json_dump(list(v)))
+        else:
+            sets.append(f"{k} = ?"); vals.append(v)
+    if not sets: return get_role(role_id)
+    vals.append(role_id)
+    with transaction() as conn:
+        conn.execute(f"UPDATE roles SET {', '.join(sets)} WHERE id = ?", vals)
+    return get_role(role_id)
+
+
+def delete_role(role_id: int) -> None:
+    # roles المُستخدمة من admins تُترك (ON DELETE SET NULL)
+    with transaction() as conn:
+        conn.execute("DELETE FROM roles WHERE id = ? AND is_system = 0", (role_id,))
 
 
 def admin_permissions(admin: Admin) -> tuple[str, ...]:

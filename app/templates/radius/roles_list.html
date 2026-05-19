@@ -2,43 +2,100 @@
 {% block title %}الأدوار والصلاحيات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}الأدوار والصلاحيات{% endblock %}
+{% block page_sub %}<span class="sub">({{ roles|length }} دور)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.roles_new') }}">
+    <i class="fa-solid fa-plus"></i> إضافة دور جديد
+  </a>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+/* RM-H6 — Roles list: grid of cards */
+.rl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.rl-card{
+  background:var(--hr-card);border:1px solid var(--hr-border);
+  border-radius:var(--hr-r-lg,8px);padding:18px 20px;
+  display:flex;flex-direction:column;gap:10px;
+  transition:.15s ease;position:relative;overflow:hidden;
+  box-shadow:var(--hr-shadow-sm);
+}
+.rl-card:hover{transform:translateY(-1px);box-shadow:var(--hr-shadow)}
+.rl-card::before{content:"";position:absolute;top:0;inset-inline-start:0;width:3px;height:100%;background:var(--c, var(--hr-cyan-500))}
+.rl-head{display:flex;align-items:center;gap:10px}
+.rl-name{font-size:15px;font-weight:800;color:var(--hr-text)}
+.rl-tech{font-family:monospace;font-size:11px;color:var(--hr-text-muted)}
+.rl-sys{margin-inline-start:auto;background:var(--hr-badge-warn-bg);color:#7A4E0E;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800}
+.rl-perms-count{margin-inline-start:auto;background:var(--hr-cyan-100);color:var(--hr-cyan-700);padding:2px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.rl-desc{font-size:12.5px;color:var(--hr-text-soft);min-height:32px;line-height:1.5}
+.rl-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto}
+.rl-chip{background:var(--hr-stripe);color:var(--hr-text-soft);padding:2px 8px;border-radius:999px;font-size:10.5px;font-family:monospace}
+.rl-chip-more{background:var(--hr-navy-800);color:#fff;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700}
+.rl-actions{display:flex;gap:6px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--hr-border)}
+.rl-actions a, .rl-actions button{
+  flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 10px;border-radius:var(--hr-r,6px);border:1px solid var(--hr-border-strong);
+  background:#fff;color:var(--hr-text);text-decoration:none;cursor:pointer;
+  font-size:12px;font-weight:700;font-family:inherit;transition:.15s ease;
+}
+.rl-actions a:hover{border-color:var(--hr-cyan-500);background:var(--hr-soft)}
+.rl-actions .btn-del{color:#9B1C1C;border-color:rgba(155,28,28,.3)}
+.rl-actions .btn-del:hover{background:var(--hr-badge-danger-bg)}
+.rl-actions .btn-del[disabled]{opacity:.5;cursor:not-allowed}
+.empty{text-align:center;padding:60px 20px;color:var(--hr-text-muted)}
+.empty i{font-size:40px;color:var(--hr-border-strong);margin-bottom:12px}
+</style>
+{% endblock %}
 
 {% block content %}
-{% set perm_by_cat = {} %}
-{% for p in perms %}
-  {% set cat = p.split('.')[0] %}
-  {% if perm_by_cat.update({cat: perm_by_cat.get(cat, []) + [p]}) %}{% endif %}
-{% endfor %}
-
-{% for r in roles %}
-<form method="post" action="{{ url_for('radius.roles_update', role_id=r.id) }}" class="card">
-  <div class="card-header">
-    <span class="title">
-      <i class="fa-solid fa-key"></i>&nbsp; {{ r.display_name or r.name }}
-      <span class="pill pill-cyan">{{ r.name }}</span>
-      <span class="hint" style="margin-inline-start:6px">{{ r.permissions|length }} صلاحية</span>
-    </span>
-    <button class="btn btn-primary btn-sm" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> حفظ
-    </button>
-  </div>
-  <div class="card-body">
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px">
-      {% for cat in perm_by_cat.keys() %}
-        <div style="grid-column:1/-1;font-size:11px;color:var(--hr-cyan-700);
-                    text-transform:uppercase;letter-spacing:.8px;font-weight:800;
-                    border-bottom:1px dashed var(--hr-border);padding:8px 0 4px">{{ cat }}</div>
-        {% for p in perm_by_cat[cat] %}
-        <label style="font-size:12px;display:flex;align-items:center;gap:6px;padding:3px 0">
-          <input type="checkbox" name="permissions" value="{{ p }}"
-                 {% if p in r.permissions %}checked{% endif %}
-                 style="accent-color:var(--hr-cyan-500)">
-          <span class="mono">{{ p }}</span>
-        </label>
-        {% endfor %}
-      {% endfor %}
+{% if not roles %}
+<div class="empty">
+  <i class="fa-solid fa-key"></i>
+  <div style="font-size:16px;font-weight:800;color:var(--hr-text);margin:8px 0">لا أدوار مُعرَّفة</div>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.roles_new') }}">
+    <i class="fa-solid fa-plus"></i> إنشاء أول دور
+  </a>
+</div>
+{% else %}
+<div class="rl-grid">
+  {% for r in roles %}
+  <div class="rl-card" style="--c: {{ r.color or '#2BAACC' }}">
+    <div class="rl-head">
+      <i class="fa-solid fa-key" style="color: {{ r.color or '#2BAACC' }};font-size:18px"></i>
+      <div>
+        <div class="rl-name">{{ r.display_name or r.name }}</div>
+        <div class="rl-tech">{{ r.name }}</div>
+      </div>
+      {% if r.is_system %}
+      <span class="rl-sys" title="دور نظام — لا يمكن حذفه">SYS</span>
+      {% endif %}
+      <span class="rl-perms-count">{{ r.permissions|length }} صلاحية</span>
+    </div>
+    <div class="rl-desc">{{ r.description or 'بدون وصف' }}</div>
+    <div class="rl-chips">
+      {% set shown = r.permissions[:6] %}
+      {% for p in shown %}<span class="rl-chip">{{ p }}</span>{% endfor %}
+      {% if r.permissions|length > 6 %}
+        <span class="rl-chip-more">+{{ r.permissions|length - 6 }}</span>
+      {% elif not r.permissions %}
+        <span class="rl-chip" style="color:var(--hr-text-muted)">بدون صلاحيات</span>
+      {% endif %}
+    </div>
+    <div class="rl-actions">
+      <a href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
+        <i class="fa-solid fa-pen"></i> تعديل
+      </a>
+      <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}"
+            {% if not r.is_system %}onsubmit="return confirm('تأكيد حذف الدور «{{ r.display_name or r.name }}»؟');"{% endif %}
+            style="flex:1;margin:0">
+        <button type="submit" class="btn-del" {% if r.is_system %}disabled title="دور نظام"{% endif %} style="width:100%">
+          <i class="fa-solid fa-trash"></i> {% if r.is_system %}محمي{% else %}حذف{% endif %}
+        </button>
+      </form>
     </div>
   </div>
-</form>
-{% endfor %}
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}
