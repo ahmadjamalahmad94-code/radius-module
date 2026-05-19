@@ -55,6 +55,8 @@ def _serialize_batch(b) -> dict:
         "deleted_at": b.deleted_at.isoformat() + "Z" if b.deleted_at else None,
         "deleted_by": b.deleted_by or None,
         "delete_reason": b.delete_reason or None,
+        "assigned_to": b.assigned_to or None,
+        "distributor_id": b.distributor_id,
         "expire_at": b.expire_at.isoformat() + "Z" if b.expire_at else None,
         "created_at": b.created_at.isoformat() + "Z" if b.created_at else None,
         "created_by": b.created_by,
