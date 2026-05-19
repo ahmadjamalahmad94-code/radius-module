@@ -157,6 +157,40 @@ class Subscriber:
     static_ip: Optional[str] = None
     vlan_id: int = 0
     override_concurrent: int = 0
+    # ── RM-H1: AdvRadius extension fields ──
+    # حساب الإنترنت — overrides per-user للسرعة
+    bandwidth_control_enabled: bool = False
+    download_speed_kbps: int = 0
+    upload_speed_kbps: int = 0
+    custom_speed: bool = False
+    temporary_speed: bool = False
+    # شبكة — DNS/Caller/Connection file
+    caller_id: str = ""
+    primary_dns_ppp: str = ""
+    secondary_dns_ppp: str = ""
+    device_connection_file: str = ""
+    # معلومات شخصية إضافية
+    nationality: str = ""
+    country: str = ""
+    payment_method: str = ""          # مرجعي فقط
+    payment_reference: str = ""       # مرجعي فقط
+    # الكوتا والوقت overrides
+    total_connection_time_min: int = 0
+    daily_connection_time_min: int = 0
+    download_quota_mb: int = 0
+    upload_quota_mb: int = 0
+    combined_quota_mb: int = 0
+    connection_time_limit_enabled: bool = False
+    quota_limit_enabled: bool = False
+    equal_share_download: bool = False
+    equal_share_upload: bool = False
+    # أيام + أجهزة إضافية
+    working_days: str = ""            # CSV: sat,sun,mon...
+    device_count: int = 1
+    allowed_macs: str = ""            # CSV
+    # metadata JSON ـ مُجمَّعة {mikrotik,radius,advanced,notifications}
+    # نُخزّنها هنا كنص خام؛ الـ helpers في types.py + repo يحوّلوها.
+    metadata: str = "{}"
     # استخدام
     used_seconds: int = 0
     used_bytes_in: int = 0
