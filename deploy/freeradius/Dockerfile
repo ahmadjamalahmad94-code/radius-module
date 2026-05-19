@@ -16,14 +16,17 @@ COPY radiusd.conf      /etc/freeradius/radiusd.conf
 COPY mods-enabled/     /etc/freeradius/mods-enabled/
 COPY sites-enabled/    /etc/freeradius/sites-enabled/
 COPY policy.d/         /etc/freeradius/policy.d/
+COPY entrypoint.sh     /usr/local/bin/entrypoint.sh
 
-# عدّل الـ permissions
-RUN chown -R freerad:freerad /etc/freeradius && \
+# permissions + entrypoint executable
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    chown -R freerad:freerad /etc/freeradius && \
     mkdir -p /var/log/freeradius/radacct && \
     chown -R freerad:freerad /var/log/freeradius
 
-EXPOSE 1812/udp 1813/udp
+EXPOSE 1812/udp 1813/udp 3799/udp
 
-# نشغّل في foreground مع debug logging قابل للتفعيل عبر env
+# entrypoint يستبدل ${env:HOBERADIUS_INTERNAL_SECRET} في mods-enabled/rest
+# قبل تشغيل freeradius (المعامل `header=` لا يدعم xlat الديناميكي).
 ENV FREERADIUS_DEBUG_LEVEL=""
-CMD ["sh", "-c", "exec freeradius -f -l stdout $FREERADIUS_DEBUG_LEVEL"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
