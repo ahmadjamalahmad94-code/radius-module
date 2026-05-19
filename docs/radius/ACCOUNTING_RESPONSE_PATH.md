@@ -457,7 +457,98 @@ docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
 # expected: نفس الـ row مع acctstoptime + bytes counters.
 ```
 
-## Slices لاحقة (ما بعد R6)
+## R7 — قيم xlat الصحيحة في accounting Start (مُنفَّذ)
+
+بعد R6 على VPS: query INSERT يُنفَّذ، صف جديد يظهر، لكن:
+```
+acctsessionid='8000004d'   ✓
+acctuniqueid=''            ✗ فارغ
+username=''                ✗ فارغ
+acctstarttime مملوء         ✓
+```
+
+### السبب الجذري المثبت
+
+#### `%{SQL-User-Name}` يُحلّ فارغًا في accounting
+الـ attribute `SQL-User-Name` ليس RFC standard. هو attribute داخلي
+يُحدِّده `rlm_sql` نفسه فقط داخل سياق `authorize` (لاستعلام radcheck/
+radreply) و `post-auth` (لكتابة radpostauth). في سياق `accounting{}`،
+الـ rlm_sql لا يُعدّ هذه الـ attribute فيُحلّ فارغًا.
+
+الـ standard FR queries.conf يستخدم `%{SQL-User-Name}` لأنه يحوي
+realm-stripping logic، لكن في configنا لا نُجري realm parsing
+(suffix module غير محمَّل، انظر مود-config notes)، فـ `%{User-Name}`
+المباشر يُعطي القيمة المُرسلة من MikroTik بالضبط.
+
+#### `%{Acct-Unique-Session-Id}` يُحلّ فارغًا
+سبق ذكره في R5/R6 audit: `rlm_acct_unique` غير محمَّل (الـ .so غير
+مشحون في image 3.2.5). الـ attribute لا يُولَّد تلقائيًا.
+
+### الإصلاح
+ملف واحد: `deploy/freeradius/mods-enabled/sql`. تعديل start query فقط:
+
+```diff
+-    (1, '%{Acct-Session-Id}', '%{Acct-Unique-Session-Id}',
+-     '%{SQL-User-Name}', '%{Realm}', ...
++    (1, '%{Acct-Session-Id}',
++     '%{NAS-IP-Address}-%{Acct-Session-Id}-%{User-Name}',
++     '%{User-Name}', '%{Realm}', ...
+```
+
+التغييرات:
+1. `%{SQL-User-Name}` → `%{User-Name}` — القيمة المُرسلة من MikroTik
+   بدون realm-stripping (لا نحتاجه).
+2. `%{Acct-Unique-Session-Id}` → tuple مبني يدويًا:
+   `%{NAS-IP-Address}-%{Acct-Session-Id}-%{User-Name}`
+   - فريد عبر NAS devices (`NAS-IP-Address`).
+   - فريد ضمن نفس NAS عبر الجلسات (`Acct-Session-Id`).
+   - يحوي معلومة المستخدم للتشخيص اليدوي السهل.
+   - مستقرّ خلال life-cycle الجلسة (Start/Interim/Stop يستخدمون نفس
+     الـ tuple).
+
+ما لم نُغيّره (متعمَّد):
+- Interim-Update + Stop WHERE clauses تستخدم `acctsessionid +
+  nasipaddress + acctstoptime IS NULL` (من R5)، وهي صحيحة ولا تعتمد
+  على `acctuniqueid`. لا تغيير هناك.
+- Accounting-On/Off queries — لا تغيير.
+- post-auth query — لا تغيير (غير مستدعَى).
+
+### حالة الـ row بعد R7
+
+| حقل | قبل R7 | بعد R7 |
+|-----|--------|--------|
+| `acctsessionid` | `'8000004d'` ✓ | `'8000004d'` ✓ |
+| `acctuniqueid` | `''` ✗ | `'213.6.169.138-8000004d-ahmad'` ✓ |
+| `username` | `''` ✗ | `'ahmad'` ✓ |
+| `acctstarttime` | مملوء ✓ | مملوء ✓ |
+| `nasipaddress` | مملوء ✓ | مملوء ✓ |
+
+### verification على VPS بعد deploy
+```bash
+cd /opt/radius-module && git pull
+docker compose -f deploy/docker-compose.yml restart freeradius
+
+# 1. login من MT — صف بحقول كاملة:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, acctuniqueid, username, nasipaddress,
+            acctstarttime, acctstoptime
+       FROM radacct ORDER BY radacctid DESC LIMIT 1;"
+
+# 2. logout — الـ row يُغلَق بـ acctstoptime + bytes:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, username, acctstoptime, acctterminatecause,
+            acctinputoctets, acctoutputoctets
+       FROM radacct WHERE acctstoptime IS NOT NULL
+       ORDER BY radacctid DESC LIMIT 1;"
+
+# 3. login ثاني لنفس user/NAS لكن session-id مختلف — صف منفصل:
+docker exec hoberadius sqlite3 /app/instance/hoberadius.db \\
+    "SELECT acctsessionid, acctuniqueid FROM radacct
+       WHERE username='ahmad' ORDER BY radacctid DESC LIMIT 3;"
+# expected: acctuniqueid مختلف لكل جلسة (يحوي session-id المختلف).
+```
+
+## Slices لاحقة (ما بعد R7)
 
 - **enrichment via puller**: استخدام `_tick` لاستخراج metadata من MT
   (uptime، interface counters، router-set tags) وحقنها في radacct

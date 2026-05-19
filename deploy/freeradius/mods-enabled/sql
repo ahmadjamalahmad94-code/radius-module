@@ -112,6 +112,14 @@ sql {
             }
 
             start {
+                # R7 — قيم xlat الصحيحة:
+                #   - %{User-Name} بدل %{SQL-User-Name}: الأخير لا يُحدَّد إلا
+                #     عندما يكون rlm_sql في authorize/post-auth context،
+                #     فيُحلّ فارغًا في accounting → username=''.
+                #   - acctuniqueid يُبنى يدويًا (NAS-IP + Session-Id + User)
+                #     لأن rlm_acct_unique غير محمَّل (الـ .so غير مشحون في
+                #     image 3.2.5)، فـ %{Acct-Unique-Session-Id} فارغ.
+                #     الـ tuple يضمن تفرّد عبر NAS devices وusers.
                 query = "\
                     INSERT INTO ${....acct_table1} \
                         (tenant_id, acctsessionid, acctuniqueid, username, realm, \
@@ -120,8 +128,9 @@ sql {
                          servicetype, framedprotocol, framedipaddress, framedipv6address, \
                          framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
                     VALUES \
-                        (1, '%{Acct-Session-Id}', '%{Acct-Unique-Session-Id}', \
-                         '%{SQL-User-Name}', '%{Realm}', \
+                        (1, '%{Acct-Session-Id}', \
+                         '%{NAS-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
+                         '%{User-Name}', '%{Realm}', \
                          '%{NAS-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
                          datetime('now'), \
                          '%{Acct-Authentic}', '%{Connect-Info}', \
