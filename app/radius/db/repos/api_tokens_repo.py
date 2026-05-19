@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from datetime import datetime
 from typing import Optional
 
 from ..connection import db, transaction
@@ -38,16 +39,21 @@ def list_tokens(tenant_id: int) -> list[dict]:
 
 
 def create_token(*, tenant_id: int, name: str, scopes: list[str] | None = None,
-                  created_by: int = 0) -> tuple[dict, str]:
-    """يُرجع (record, plaintext_token). الـ plaintext يُعرض مرّة واحدة."""
+                  created_by: int = 0,
+                  expires_at: Optional[datetime] = None) -> tuple[dict, str]:
+    """يُرجع (record, plaintext_token). الـ plaintext يُعرض مرّة واحدة.
+
+    `expires_at` (UTC datetime) is stored as ISO-8601 with a trailing "Z" so
+    `parse_dt` can read it back. None = never expires (legacy behaviour)."""
     plain = gen_plain_token()
     th = hash_token(plain)
+    exp_iso = (expires_at.isoformat() + "Z") if expires_at else None
     with transaction() as conn:
         cur = conn.execute("""
             INSERT INTO api_tokens(tenant_id, name, token_hash, scopes_json,
-                revoked, created_by, created_at)
-            VALUES(?,?,?,?,?,?,?)
-        """, (tenant_id, name, th, json_dump(scopes or []), 0, created_by, now_iso()))
+                revoked, created_by, created_at, expires_at)
+            VALUES(?,?,?,?,?,?,?,?)
+        """, (tenant_id, name, th, json_dump(scopes or []), 0, created_by, now_iso(), exp_iso))
         new_id = cur.lastrowid
     cur = db().execute("SELECT * FROM api_tokens WHERE id = ?", (new_id,))
     return _row(cur.fetchone()), plain

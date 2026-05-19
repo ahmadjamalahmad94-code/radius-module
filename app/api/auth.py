@@ -2,9 +2,17 @@
 Bearer Token Auth للـ API + rate limit per-token.
 
 مصادر التوكنات:
-1. `HOBERADIUS_API_TOKENS` env (CSV) — تستخدم tenant_id=1.
-2. DB `api_tokens` — لها tenant_id ومجال (scopes).
-3. dev fallback `dev-token-please-change` — tenant_id=1.
+1. `HOBERADIUS_API_TOKENS` env (CSV) — tenant_id=1.
+2. DB `api_tokens` — لها tenant_id ومجال (scopes) و expires_at.
+3. dev fallback `dev-token-please-change` — متاح **فقط** خارج بيئة الإنتاج.
+
+تحديد بيئة الإنتاج:
+- `HOBERADIUS_ENV=prod|production` أو `FLASK_ENV=prod|production`.
+- في الإنتاج: لا fallback dev token، وأي token مفقود/غير صالح يفشل.
+
+التحقّق من الانتهاء:
+- DB tokens بحقل `expires_at` (UTC ISO). لو تجاوز utcnow → 401 token_expired.
+- env tokens ليس لها expiry (مُدارة يدويًا).
 
 عند نجاح التحقّق نضع: g.api_token_id, g.tenant_id (override).
 """
@@ -15,6 +23,7 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
+from datetime import datetime
 from threading import Lock
 from typing import Optional
 
@@ -24,17 +33,44 @@ from .responses import fail
 
 _LOG = logging.getLogger(__name__)
 _DEV_DEFAULT_TOKEN = "dev-token-please-change"
+_DEV_FALLBACK_WARNED = False
 
 # rate limit state (in-memory)
 _rate_lock = Lock()
 _rate_log: dict[str, deque] = defaultdict(deque)
 
 
+def _is_production() -> bool:
+    """Production when HOBERADIUS_ENV or FLASK_ENV resolves to prod/production.
+    Empty/unset → development. Keep the check cheap — called per request."""
+    env = (os.environ.get("HOBERADIUS_ENV")
+           or os.environ.get("FLASK_ENV")
+           or "").strip().lower()
+    return env in {"prod", "production"}
+
+
 def _allowed_env_tokens() -> tuple[str, ...]:
+    """Explicit env tokens first, then the dev fallback when **not** in prod.
+
+    In production with no `HOBERADIUS_API_TOKENS` set, returns an empty tuple
+    — every request must authenticate against the DB `api_tokens` table or
+    fail. This closes the dev-token attack surface on a misconfigured deploy.
+    """
+    global _DEV_FALLBACK_WARNED
     raw = (os.environ.get("HOBERADIUS_API_TOKENS") or "").strip()
-    if not raw:
-        return (_DEV_DEFAULT_TOKEN,)
-    return tuple(t.strip() for t in raw.split(",") if t.strip())
+    if raw:
+        return tuple(t.strip() for t in raw.split(",") if t.strip())
+    if _is_production():
+        return ()
+    if not _DEV_FALLBACK_WARNED:
+        _LOG.warning(
+            "DEV-MODE auth fallback engaged (token=%r). "
+            "Set HOBERADIUS_ENV=prod and HOBERADIUS_API_TOKENS (or use DB "
+            "tokens) before deploying.",
+            _DEV_DEFAULT_TOKEN,
+        )
+        _DEV_FALLBACK_WARNED = True
+    return (_DEV_DEFAULT_TOKEN,)
 
 
 def _extract_bearer() -> Optional[str]:
@@ -59,6 +95,19 @@ def _rate_limit_check(token_key: str, *, per_minute: int = 60) -> bool:
         return True
 
 
+def _is_expired(expires_at_raw) -> Optional[bool]:
+    """Return True if expired, False if still valid, None if no expiry set.
+    Malformed `expires_at` is treated as expired — fail closed."""
+    if not expires_at_raw:
+        return None
+    try:
+        s = str(expires_at_raw).replace("Z", "")
+        exp = datetime.fromisoformat(s)
+    except (TypeError, ValueError):
+        return True
+    return datetime.utcnow() > exp
+
+
 def require_api_token(view):
     @functools.wraps(view)
     def wrapped(*a, **kw):
@@ -70,7 +119,7 @@ def require_api_token(view):
         token_id = None
         rpm = 60  # default
 
-        # 1. env token
+        # 1. env token (dev fallback included only when not in production)
         if token in _allowed_env_tokens():
             tenant_id = 1
         else:
@@ -83,6 +132,15 @@ def require_api_token(view):
             if not rec:
                 _LOG.warning("invalid api token attempt (len=%d)", len(token))
                 return fail("unauthorized", "توكن غير صالح", status=401)
+            # 2a. expiry — fail closed
+            expired = _is_expired(rec.get("expires_at"))
+            if expired is True:
+                _LOG.info("expired api token attempted (id=%s)", rec.get("id"))
+                return fail(
+                    "token_expired",
+                    "انتهت صلاحية الـ token — سجّل دخول مجددًا",
+                    status=401,
+                )
             tenant_id = rec["tenant_id"]
             token_id = rec["id"]
             # touch last_used (best-effort)
