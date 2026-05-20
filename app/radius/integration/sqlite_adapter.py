@@ -233,9 +233,29 @@ class SqliteAdapter(RadiusAdapter):
         return out
 
     def disconnect(self, username: str, *, session_id: Optional[str] = None) -> None:
-        """enqueue — sync_worker سيُنفّذ خلال ثوانٍ."""
-        from .router_sync import enqueue_disconnect
-        enqueue_disconnect(_tid(), username)
+        """R11.16: يستخدم CoA Disconnect-Request (RFC 5176, UDP/3799) بدل
+        sync_queue → MT API (TCP/8728).
+
+        السبب: في deployments بلا public IP أو خلف NAT (مثل R11 WireGuard
+        setup)، الـ MT API غير قابل للوصول من الـ VPS، فالـ enqueue كان
+        يُسجَّل ويُعاد المحاولة بلا نهاية ولا يُنفَّذ. الـ CoA path هو
+        نفس الذي اعتمد R9.3 لتغيير السرعة — يعمل على نفس الـ socket الذي
+        تستقبل عليه MT الـ accounting، فلا يحتاج port forward إضافي.
+
+        على فشل (لا جلسة، CoA-NAK، timeout) نرفع RadiusError ليصل لـ flash
+        الـ UI، بدل البلع الصامت الذي كان يحدث في enqueue path.
+        """
+        from ..core.errors import RadiusError
+        from .radius_coa import disconnect_user
+
+        res = disconnect_user(_tid(), username)
+        if not res.ok:
+            _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
+                          username, res.code_name, res.reply_message)
+            raise RadiusError(
+                res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
+            )
+        _LOG.info("Disconnect ok for %s: code=%s", username, res.code_name)
         try:
             from app.webhooks.dispatcher import dispatch_event
             dispatch_event("session.disconnected", {"username": username},
