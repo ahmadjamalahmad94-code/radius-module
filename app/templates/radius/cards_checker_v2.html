@@ -264,24 +264,32 @@
         <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
       </div>
       {% endif %}
-      {% if card.batch and (card.batch.unit_price or 0) > 0 %}
+      {# Sale price + bulk price — ALWAYS rendered (user request).
+         Show 'غير محدد' when the value isn't set instead of hiding
+         the row, so the admin always sees the pricing slot even
+         when empty. #}
       <div class="cc-card-info-row" data-cc-field="price">
         <div class="cc-card-info-label">سعر البيع</div>
         <div class="cc-card-info-value">
-          <span class="cc-card-price">{{ '%.2f' % card.batch.unit_price }}</span>
-          <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+          {% if card.batch and (card.batch.unit_price or 0) > 0 %}
+            <span class="cc-card-price">{{ '%.2f' % card.batch.unit_price }}</span>
+            <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+          {% else %}
+            <span class="cc-card-price-empty">غير محدد</span>
+          {% endif %}
         </div>
       </div>
-      {% endif %}
-      {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
       <div class="cc-card-info-row" data-cc-field="price_bulk">
         <div class="cc-card-info-label">سعر الجملة</div>
         <div class="cc-card-info-value">
-          <span class="cc-card-price">{{ '%.2f' % card.batch.price_bulk }}</span>
-          <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+          {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
+            <span class="cc-card-price">{{ '%.2f' % card.batch.price_bulk }}</span>
+            <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+          {% else %}
+            <span class="cc-card-price-empty">غير محدد</span>
+          {% endif %}
         </div>
       </div>
-      {% endif %}
       {% if card.batch and card.batch.created_by_name %}
       <div class="cc-card-info-row" data-cc-field="created_by_name">
         <div class="cc-card-info-label">المدير المُنشئ</div>

@@ -1922,3 +1922,12 @@ body:has(.cc-hero) .page-head{display:none !important}
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Hero — empty-price placeholder ('غير محدد'). Lighter weight + muted
+   white so it doesn't compete with real prices when present. */
+.cc-card-price-empty{
+  font-size:13px;
+  font-weight:600;
+  color:rgba(255,255,255,.65);
+  font-style:italic;
+}
