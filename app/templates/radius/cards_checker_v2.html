@@ -468,6 +468,23 @@
     {% set s    = card.accounting_summary or {} %}
     {% set ops  = card.operations or {} %}
 
+    {# Active-sessions payload shared by BOTH the advanced disconnect
+       picker and the simple disconnect picker (same data, same modal,
+       so both modes behave identically). Built once here at the
+       result-shell level instead of inside each mode's button. #}
+    {% set _active_sessions = [] %}
+    {% for ses in (s.latest_sessions or []) if ses.online %}
+      {% set _ = _active_sessions.append({
+        'id':       ses.session_id or (ses.id|string),
+        'mac':      ses.mac_address or '',
+        'ip':       ses.ip_address or '',
+        'duration': ses.duration_seconds or 0,
+        'started':  ses.started_at or '',
+        'device':   (ses.dhcp_device.label
+                      if ses.dhcp_device and ses.dhcp_device.label else ''),
+      }) %}
+    {% endfor %}
+
     {# ═══════════════════════════════════════════════════════════════════ #}
     {# ADVANCED MODE                                                        #}
     {# ═══════════════════════════════════════════════════════════════════ #}
@@ -898,22 +915,9 @@
                sessions. The admin picks which device(s) to kick (or
                'select all'); other active sessions keep running.
                session_ids is a CSV of acctsessionid strings.
-
-               Build a minimal payload (id/mac/ip/duration/started_at)
-               for the JS picker — the full session dict is too big
-               for an attribute and we only need these 5 fields. #}
-            {% set _active_sessions = [] %}
-            {% for ses in (s.latest_sessions or []) if ses.online %}
-              {% set _ = _active_sessions.append({
-                'id':       ses.session_id or (ses.id|string),
-                'mac':      ses.mac_address or '',
-                'ip':       ses.ip_address or '',
-                'duration': ses.duration_seconds or 0,
-                'started':  ses.started_at or '',
-                'device':   (ses.dhcp_device.label
-                              if ses.dhcp_device and ses.dhcp_device.label else ''),
-              }) %}
-            {% endfor %}
+               _active_sessions is built once at the result-shell
+               level so the simple-mode disconnect can use the
+               identical payload (and JS bootstrap). #}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect">
               <input type="hidden" name="op" value="disconnect">
               <input type="hidden" name="session_ids" data-cc-disc-field>
@@ -1281,22 +1285,29 @@
               </button>
             </form>
 
+            {# Simple-mode disconnect now mirrors advanced-mode: opens
+               the sessionsPicker so the operator can pick exactly
+               which device to kick. Previously this fired a bare
+               ccModal.confirm() then submitted without session_ids,
+               which broadcast-kicked every active device — different
+               behavior from advanced mode for the same button. The
+               data-* attributes + hidden session_ids field are
+               wired by the same JS bootstrap that handles the
+               advanced button (querySelectorAll). #}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect-simple">
               <input type="hidden" name="op" value="disconnect">
+              <input type="hidden" name="session_ids" data-cc-disc-field>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-soft-red" type="button"
                       {% if not ops.can_disconnect %}disabled{% endif %}
                       data-cc-op="disconnect"
-                      onclick="window.ccModal && window.ccModal.confirm({
-                        icon:'warn', title:'فصل الجلسة',
-                        body:'سيتم فصل الجهاز الحالي عن البطاقة <strong>{{ card.username }}</strong>.',
-                        confirmText:'فصل', dangerous:true,
-                        onConfirm: () => this.closest('form').submit()
-                      });">
+                      data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">فصل الجلسة</div>
-                  <div class="cc-action-sub">فصل الجهاز الحالي</div>
+                  <div class="cc-action-sub">
+                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                  </div>
                 </div>
               </button>
             </form>
@@ -1889,28 +1900,35 @@
   // device(s) to kick. The form's session_ids hidden field receives
   // the comma-joined IDs on confirm.
   //
+  // querySelectorAll: the page has TWO disconnect buttons — one in
+  // advanced mode (.cc-advanced-only) and one in simple mode
+  // (.cc-simple-only). CSS hides whichever doesn't match the current
+  // mode, but both exist in the DOM, and both should behave
+  // identically: open the picker, kick only what's selected.
+  //
   // Robust source priority:
   //   1. data-cc-active-sessions JSON (built by Jinja from
   //      s.latest_sessions filtered by online)
   //   2. DOM scrape of `<tr class="is-live" data-cc-session="...">`
   //      rows in the sessions table — the same rows the operator
   //      sees as "حية". This survives Jinja shape changes and stale
-  //      cached pages.
+  //      cached pages. Only meaningful when the table is visible
+  //      (advanced mode); in simple mode the data attribute is the
+  //      only source, which is fine because Jinja built it.
   (function(){
     'use strict';
-    var btn = document.querySelector('[data-cc-op="disconnect"][data-cc-active-sessions]');
-    if (!btn) return;
+    var btns = document.querySelectorAll(
+      '[data-cc-op="disconnect"][data-cc-active-sessions]'
+    );
+    if (!btns.length) return;
 
-    function fromAttribute(){
+    function fromAttribute(btn){
       try {
         var s = JSON.parse(btn.getAttribute('data-cc-active-sessions') || '[]');
         return Array.isArray(s) ? s : [];
       } catch(_){ return []; }
     }
     function fromDom(){
-      // Read every live session row from the visible sessions table.
-      // Each row is `<tr class="is-live" data-cc-session="<id>">` and
-      // its cells follow the table column order: state, ip, mac, ...
       var rows = document.querySelectorAll('.cc-sessions-table tr.is-live[data-cc-session]');
       var out = [];
       rows.forEach(function(tr){
@@ -1929,23 +1947,26 @@
       return out.filter(function(s){ return s.id; });
     }
 
-    btn.addEventListener('click', function(){
-      if (!window.ccModal || btn.disabled) return;
-      var sessions = fromAttribute();
-      if (!sessions.length) sessions = fromDom();
-      if (!sessions.length){
-        alert('لا أجهزة متّصلة الآن.');
-        return;
-      }
-      window.ccModal.sessionsPicker({
-        title: 'قطع الجلسة',
-        sessions: sessions,
-        onConfirm: function(idsCsv){
-          var f = btn.closest('form');
-          if (!f) return;
-          f.querySelector('[data-cc-disc-field]').value = idsCsv;
-          f.submit();
-        },
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if (!window.ccModal || btn.disabled) return;
+        var sessions = fromAttribute(btn);
+        if (!sessions.length) sessions = fromDom();
+        if (!sessions.length){
+          alert('لا أجهزة متّصلة الآن.');
+          return;
+        }
+        window.ccModal.sessionsPicker({
+          title: 'قطع الجلسة',
+          sessions: sessions,
+          onConfirm: function(idsCsv){
+            var f = btn.closest('form');
+            if (!f) return;
+            var fld = f.querySelector('[data-cc-disc-field]');
+            if (fld) fld.value = idsCsv;
+            f.submit();
+          },
+        });
       });
     });
   })();
