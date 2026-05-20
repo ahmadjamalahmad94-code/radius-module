@@ -21,7 +21,21 @@
 
     form.addEventListener('submit', onSearchSubmit);
     window.addEventListener('popstate', onPopState);
+    wireSectionToggles();
     maybeStartLivePoll();
+  }
+
+  // R13.A.5: collapsible sections. Click the chevron (or the header)
+  // to collapse/expand the body. Event delegation so the binding survives
+  // AJAX swaps of #cc-result.
+  function wireSectionToggles() {
+    document.addEventListener('click', (e) => {
+      const toggle = e.target.closest('.cc-section-head-toggle');
+      if (!toggle) return;
+      const section = toggle.closest('.cc-section');
+      if (!section) return;
+      section.classList.toggle('cc-collapsed');
+    });
   }
 
   async function onSearchSubmit(event) {

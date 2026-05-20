@@ -1,12 +1,17 @@
 {# ╔══════════════════════════════════════════════════════════════════╗
-   ║  Cards Checker v2 — "Operations Room" (R13.A.2)                      ║
+   ║  Cards Checker v2 — single-column section layout (R13.A.5)           ║
    ║                                                                       ║
-   ║  Server-rendered for now; A.3 will overlay AJAX search on top of    ║
-   ║  this same template so the markup stays identical.                  ║
+   ║  Replaces the 3-column grid from A.2 (which overflowed off-canvas   ║
+   ║  beside the admin sidebar). Now everything stacks vertically in a   ║
+   ║  centered column, each section is a card, operations are a wrap-    ║
+   ║  grid of action sub-cards. Mobile-friendly by construction.         ║
    ║                                                                       ║
-   ║  Layout: hero search + 3-column grid (identity / main / ops).        ║
-   ║  All operation POSTs go to the same legacy /cards/checker POST      ║
-   ║  handler — proven path — so this template adds zero risk.            ║
+   ║  The data-cc-* hook attributes (data-cc-section, data-cc-field,     ║
+   ║  data-cc-op, data-cc-col, ...) are preserved exactly so R13.B's    ║
+   ║  permission system can hide individual fields without touching the  ║
+   ║  template.                                                            ║
+   ║                                                                       ║
+   ║  Operation forms still POST to the legacy /cards/checker handler.   ║
    ╚══════════════════════════════════════════════════════════════════╝ #}
 {% extends "admin/_admin_layout.html" %}
 {% block title %}مركز عمليات البطاقة{% endblock %}
@@ -19,7 +24,7 @@
   <script src="{{ url_for('static', filename='js/cards_checker_v2.js') }}" defer></script>
 {% endblock %}
 
-{# ─────────── helper macros (shared with v1, simplified) ─────────── #}
+{# ─────────── helpers ─────────── #}
 {% macro dt(value) -%}
   {{ (value or '—')|replace('T', ' ')|replace('Z', '') }}
 {%- endmacro %}
@@ -65,12 +70,26 @@
   {%- endif -%}
 {%- endmacro %}
 
+{# ─────────── section header macro (icon + title + meta + collapse) ─────────── #}
+{% macro section_head(icon, title, meta='') -%}
+  <header class="cc-section-head">
+    <span class="cc-section-head-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
+    <span class="cc-section-head-title">{{ title }}</span>
+    {% if meta %}<span class="cc-section-head-meta">{{ meta }}</span>{% endif %}
+    <button type="button" class="cc-section-head-toggle" aria-label="طيّ القسم">
+      <i class="fa-solid fa-chevron-down"></i>
+    </button>
+  </header>
+{%- endmacro %}
+
 {% block content %}
+
+<div class="cc-page">
 
 {# ───────────────────── HERO + SEARCH ───────────────────── #}
 <div class="cc-hero" id="cc-hero">
   <h1>مركز عمليات البطاقة</h1>
-  <div class="cc-hero-sub">ابحث برقم البطاقة أو اسم الدخول للحصول على بطاقة الهوية، الجلسات الحيّة، تاريخ الاتصال، وكل عمليات الإدارة.</div>
+  <div class="cc-hero-sub">ابحث برقم البطاقة أو اسم الدخول للحصول على الهويّة، الجلسات، الأجهزة، وكل عمليات الإدارة.</div>
   <form class="cc-search-form" method="get" action="{{ url_for('radius.cards_checker') }}" id="cc-search-form">
     <input class="cc-search-input"
            type="search" name="query" autocomplete="off" spellcheck="false"
@@ -85,10 +104,6 @@
 </div>
 
 {# ───────────────── RESULT WRAPPER (swappable via AJAX) ───────────────── #}
-{# JS in cards_checker_v2.js intercepts the search form, fetches this
-   same page with ?query=X, parses the response, and swaps just the
-   contents of #cc-result. Initial server-render keeps the page
-   functional without JS — progressive enhancement. #}
 <div id="cc-result">
 
 {# ───────────────────── EMPTY STATE ───────────────────── #}
@@ -118,7 +133,7 @@
 {% elif result and result.exists %}
   {% set card = result %}
 
-  {# Live status banner #}
+  {# ─── live banner (full width, before all sections) ─── #}
   {% if card.active_session %}
     <div class="cc-live-banner" role="status">
       <span class="cc-live-dot"></span>
@@ -147,233 +162,207 @@
     </div>
   {% endif %}
 
-  <div class="cc-grid">
-
-    {# ═════════════════ IDENTITY COLUMN ═════════════════ #}
-    <div class="cc-col-identity">
-      <section class="cc-panel cc-identity" data-cc-section="identity">
-        <header class="cc-panel-head">
-          <span class="cc-panel-head-icon"><i class="fa-solid fa-id-card"></i></span>
-          هوية البطاقة
-        </header>
-        <div class="cc-panel-body">
-          <div class="cc-id-username" data-cc-field="username">{{ card.username }}</div>
-          <div class="cc-id-status-row" data-cc-field="status_pill">{{ status_pill(card) }}</div>
-
-          <dl class="cc-id-attrs">
-            <dt data-cc-field-label="batch">الدفعة</dt>
-            <dd data-cc-field="batch">
-              {% if card.batch %}
-                <a href="{{ url_for('radius.cards_of_batch', batch_id=card.batch.id) }}">{{ card.batch.batch_code or card.batch.id }}</a>
-              {% else %}—{% endif %}
-            </dd>
-
-            <dt data-cc-field-label="profile">الباقة</dt>
-            <dd data-cc-field="profile">{{ (card.profile or {}).name or '—' }}</dd>
-
-            <dt data-cc-field-label="created_at">أُنشئت</dt>
-            <dd class="mono" data-cc-field="created_at">{{ dt(card.created_at) }}</dd>
-
-            <dt data-cc-field-label="started_at">بدأت</dt>
-            <dd class="mono" data-cc-field="started_at">{{ dt(card.started_at) }}</dd>
-
-            <dt data-cc-field-label="expires_at">تنتهي</dt>
-            <dd class="mono" data-cc-field="expires_at">{{ dt(card.expires_at) }}</dd>
-
-            <dt data-cc-field-label="remaining_seconds">المتبقّي</dt>
-            <dd data-cc-field="remaining_seconds">
-              {%- if card.remaining_seconds is not none -%}
-                {{ duration(card.remaining_seconds) }}
-              {%- else -%}—{%- endif -%}
-            </dd>
-
-            <dt data-cc-field-label="mac_address">MAC الحالي</dt>
-            <dd class="mono" data-cc-field="mac_address">{{ card.mac_address or '—' }}</dd>
-
-            <dt data-cc-field-label="ip_address">IP</dt>
-            <dd class="mono" data-cc-field="ip_address">{{ card.ip_address or '—' }}</dd>
-
-            <dt data-cc-field-label="nas_address">NAS</dt>
-            <dd class="mono" data-cc-field="nas_address">{{ card.nas_address or '—' }}</dd>
-
-            <dt data-cc-field-label="locked_mac">MAC مقفول</dt>
-            <dd class="mono" data-cc-field="locked_mac">{{ card.locked_mac or '—' }}</dd>
-          </dl>
+  {# ─── 1. IDENTITY (always first) ─── #}
+  <section class="cc-section" data-cc-section="identity">
+    {{ section_head('id-card', 'هويّة البطاقة') }}
+    <div class="cc-section-body">
+      <div class="cc-identity">
+        <div class="cc-identity-hero">
+          <div class="cc-identity-username" data-cc-field="username">{{ card.username }}</div>
+          <div class="cc-identity-pills" data-cc-field="status_pill">{{ status_pill(card) }}</div>
         </div>
+        <dl class="cc-identity-attrs">
+          <dt data-cc-field-label="batch">الدفعة</dt>
+          <dd data-cc-field="batch">
+            {% if card.batch %}
+              <a href="{{ url_for('radius.cards_of_batch', batch_id=card.batch.id) }}">{{ card.batch.batch_code or card.batch.id }}</a>
+            {% else %}—{% endif %}
+          </dd>
 
-        {# data sources strip — small but useful for trust #}
-        <div class="cc-sources" data-cc-field="data_sources">
-          {% for src in card.data_sources %}
-            <span class="cc-source-chip">{{ src }}</span>
-          {% endfor %}
-        </div>
-      </section>
+          <dt data-cc-field-label="profile">الباقة</dt>
+          <dd data-cc-field="profile">{{ (card.profile or {}).name or '—' }}</dd>
+
+          <dt data-cc-field-label="created_at">أُنشئت</dt>
+          <dd class="mono" data-cc-field="created_at">{{ dt(card.created_at) }}</dd>
+
+          <dt data-cc-field-label="started_at">بدأت</dt>
+          <dd class="mono" data-cc-field="started_at">{{ dt(card.started_at) }}</dd>
+
+          <dt data-cc-field-label="expires_at">تنتهي</dt>
+          <dd class="mono" data-cc-field="expires_at">{{ dt(card.expires_at) }}</dd>
+
+          <dt data-cc-field-label="remaining_seconds">المتبقّي</dt>
+          <dd data-cc-field="remaining_seconds">
+            {%- if card.remaining_seconds is not none -%}{{ duration(card.remaining_seconds) }}{%- else -%}—{%- endif -%}
+          </dd>
+
+          <dt data-cc-field-label="mac_address">MAC الحالي</dt>
+          <dd class="mono" data-cc-field="mac_address">{{ card.mac_address or '—' }}</dd>
+
+          <dt data-cc-field-label="ip_address">IP</dt>
+          <dd class="mono" data-cc-field="ip_address">{{ card.ip_address or '—' }}</dd>
+
+          <dt data-cc-field-label="nas_address">NAS</dt>
+          <dd class="mono" data-cc-field="nas_address">{{ card.nas_address or '—' }}</dd>
+
+          <dt data-cc-field-label="locked_mac">MAC مقفول</dt>
+          <dd class="mono" data-cc-field="locked_mac">{{ card.locked_mac or '—' }}</dd>
+        </dl>
+      </div>
     </div>
+    <div class="cc-sources" data-cc-field="data_sources">
+      {% for src in card.data_sources %}
+        <span class="cc-source-chip">{{ src }}</span>
+      {% endfor %}
+    </div>
+  </section>
 
-    {# ═════════════════ MAIN COLUMN ═════════════════ #}
-    <div class="cc-col-main">
+  {# ─── 2. USAGE SUMMARY (stats grid) ─── #}
+  {% set s = card.accounting_summary or {} %}
+  <section class="cc-section" data-cc-section="stats">
+    {{ section_head('chart-line', 'خلاصة الاستخدام') }}
+    <div class="cc-section-body">
+      <div class="cc-stats">
+        <div class="cc-stat" data-cc-field="stats.sessions_count">
+          <div class="cc-stat-label">الجلسات</div>
+          <div class="cc-stat-value">{{ s.sessions_count or 0 }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.online_sessions">
+          <div class="cc-stat-label">حيّة الآن</div>
+          <div class="cc-stat-value">{{ s.online_sessions or 0 }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.unique_macs">
+          <div class="cc-stat-label">MACs مميَّزة</div>
+          <div class="cc-stat-value">{{ s.unique_macs or 0 }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.unique_nas">
+          <div class="cc-stat-label">NAS مميَّزة</div>
+          <div class="cc-stat-value">{{ s.unique_nas or 0 }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.total_session_seconds">
+          <div class="cc-stat-label">مجموع الاتصال</div>
+          <div class="cc-stat-value">{{ duration(s.total_session_seconds) }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.total_upload_bytes">
+          <div class="cc-stat-label">رفع</div>
+          <div class="cc-stat-value">{{ bytes_size(s.total_upload_bytes) }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.total_download_bytes">
+          <div class="cc-stat-label">تحميل</div>
+          <div class="cc-stat-value">{{ bytes_size(s.total_download_bytes) }}</div>
+        </div>
+        <div class="cc-stat" data-cc-field="stats.last_session_at">
+          <div class="cc-stat-label">آخر جلسة</div>
+          <div class="cc-stat-value" style="font-size:13px">{{ dt(s.last_session_at) }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-      {# stats panel #}
-      <section class="cc-panel" data-cc-section="stats">
-        <header class="cc-panel-head">
-          <span class="cc-panel-head-icon"><i class="fa-solid fa-chart-line"></i></span>
-          خلاصة الاستخدام
-        </header>
-        <div class="cc-panel-body">
-          {% set s = card.accounting_summary or {} %}
-          <div class="cc-stats">
-            <div class="cc-stat" data-cc-field="stats.sessions_count">
-              <div class="cc-stat-label">الجلسات</div>
-              <div class="cc-stat-value">{{ s.sessions_count or 0 }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.online_sessions">
-              <div class="cc-stat-label">حيّة الآن</div>
-              <div class="cc-stat-value">{{ s.online_sessions or 0 }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.unique_macs">
-              <div class="cc-stat-label">MACs مميَّزة</div>
-              <div class="cc-stat-value">{{ s.unique_macs or 0 }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.unique_nas">
-              <div class="cc-stat-label">NAS مميَّزة</div>
-              <div class="cc-stat-value">{{ s.unique_nas or 0 }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.total_session_seconds">
-              <div class="cc-stat-label">مجموع الاتصال</div>
-              <div class="cc-stat-value">{{ duration(s.total_session_seconds) }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.total_upload_bytes">
-              <div class="cc-stat-label">رفع</div>
-              <div class="cc-stat-value">{{ bytes_size(s.total_upload_bytes) }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.total_download_bytes">
-              <div class="cc-stat-label">تحميل</div>
-              <div class="cc-stat-value">{{ bytes_size(s.total_download_bytes) }}</div>
-            </div>
-            <div class="cc-stat" data-cc-field="stats.last_session_at">
-              <div class="cc-stat-label">آخر جلسة</div>
-              <div class="cc-stat-value" style="font-size:13px">{{ dt(s.last_session_at) }}</div>
+  {# ─── 3. DEVICE MACs (only if any) ─── #}
+  {% if s.macs %}
+  <section class="cc-section" data-cc-section="macs">
+    {{ section_head('microchip', 'أجهزة استخدمت البطاقة', s.macs|length) }}
+    <div class="cc-section-body">
+      <div class="cc-macs">
+        {% for m in s.macs %}
+          <div class="cc-mac" data-cc-mac="{{ m.mac }}">
+            <div class="cc-mac-addr">{{ m.mac }}</div>
+            <div class="cc-mac-meta">
+              <span data-cc-field="mac.sessions">{{ m.sessions or 0 }} جلسة</span>
+              <span data-cc-field="mac.online">{{ m.online or 0 }} حيّة</span>
+              <span class="mono" data-cc-field="mac.last_seen">{{ dt(m.last_seen) }}</span>
             </div>
           </div>
-        </div>
-      </section>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
-      {# MAC devices grid #}
-      {% if s.macs %}
-      <section class="cc-panel" data-cc-section="macs">
-        <header class="cc-panel-head">
-          <span class="cc-panel-head-icon"><i class="fa-solid fa-microchip"></i></span>
-          أجهزة استخدمت البطاقة ({{ s.macs|length }})
-        </header>
-        <div class="cc-panel-body">
-          <div class="cc-macs">
-            {% for m in s.macs %}
-              <div class="cc-mac" data-cc-mac="{{ m.mac }}">
-                <div class="cc-mac-addr">{{ m.mac }}</div>
-                <div class="cc-mac-meta">
-                  <span data-cc-field="mac.sessions">{{ m.sessions or 0 }} جلسة</span>
-                  · <span data-cc-field="mac.online">{{ m.online or 0 }} حيّة</span>
-                  · <span class="mono" data-cc-field="mac.last_seen">{{ dt(m.last_seen) }}</span>
-                </div>
-              </div>
+  {# ─── 4. SESSIONS TABLE (only if any) ─── #}
+  {% if s.latest_sessions %}
+  <section class="cc-section" data-cc-section="sessions">
+    {{ section_head('clock-rotate-left', 'آخر الجلسات', s.latest_sessions|length) }}
+    <div class="cc-section-body cc-section-body--flush">
+      <div class="cc-sessions-wrap">
+        <table class="cc-sessions">
+          <thead>
+            <tr>
+              <th data-cc-col="status">حالة</th>
+              <th data-cc-col="session_id">معرّف الجلسة</th>
+              <th data-cc-col="started_at">بدأت</th>
+              <th data-cc-col="stopped_at">انتهت</th>
+              <th data-cc-col="duration_seconds">المدة</th>
+              <th data-cc-col="mac">MAC</th>
+              <th data-cc-col="ip">IP</th>
+              <th data-cc-col="nas">NAS</th>
+              <th data-cc-col="upload">رفع</th>
+              <th data-cc-col="download">تحميل</th>
+              <th data-cc-col="device_hint">الجهاز</th>
+              <th data-cc-col="terminate">سبب الإغلاق</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ses in s.latest_sessions %}
+            <tr>
+              <td>
+                {% if ses.online %}
+                  <span class="cc-pill cc-pill-green">حيّة</span>
+                {% else %}
+                  <span class="cc-pill cc-pill-grey">منتهية</span>
+                {% endif %}
+              </td>
+              <td class="mono" data-cc-col-cell="session_id">{{ ses.session_id or ses.id or '—' }}</td>
+              <td class="mono">{{ dt(ses.started_at) }}</td>
+              <td class="mono">{{ dt(ses.stopped_at) }}</td>
+              <td>{{ duration(ses.duration_seconds) }}</td>
+              <td class="mono" data-cc-col-cell="mac">{{ ses.mac or '—' }}</td>
+              <td class="mono" data-cc-col-cell="ip">{{ ses.ip or '—' }}</td>
+              <td class="mono" data-cc-col-cell="nas">{{ ses.nas or '—' }}</td>
+              <td>{{ bytes_size(ses.upload_bytes) }}</td>
+              <td>{{ bytes_size(ses.download_bytes) }}</td>
+              <td data-cc-col-cell="device_hint">{{ ses.device_hint or ses.connect_info or '—' }}</td>
+              <td>{{ ses.terminate_cause or '—' }}</td>
+            </tr>
             {% endfor %}
-          </div>
-        </div>
-      </section>
-      {% endif %}
-
-      {# sessions table #}
-      {% if s.latest_sessions %}
-      <section class="cc-panel" data-cc-section="sessions">
-        <header class="cc-panel-head">
-          <span class="cc-panel-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-          آخر الجلسات ({{ s.latest_sessions|length }})
-        </header>
-        <div class="cc-panel-body cc-panel-body--flush">
-          <div class="cc-sessions-wrap">
-            <table class="cc-sessions">
-              <thead>
-                <tr>
-                  <th data-cc-col="status">حالة</th>
-                  <th data-cc-col="session_id">معرّف الجلسة</th>
-                  <th data-cc-col="started_at">بدأت</th>
-                  <th data-cc-col="stopped_at">انتهت</th>
-                  <th data-cc-col="duration_seconds">المدة</th>
-                  <th data-cc-col="mac">MAC</th>
-                  <th data-cc-col="ip">IP</th>
-                  <th data-cc-col="nas">NAS</th>
-                  <th data-cc-col="upload">رفع</th>
-                  <th data-cc-col="download">تحميل</th>
-                  <th data-cc-col="device_hint">الجهاز</th>
-                  <th data-cc-col="terminate">سبب الإغلاق</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for ses in s.latest_sessions %}
-                <tr>
-                  <td>
-                    {% if ses.online %}
-                      <span class="cc-pill cc-pill-green">حيّة</span>
-                    {% else %}
-                      <span class="cc-pill cc-pill-grey">منتهية</span>
-                    {% endif %}
-                  </td>
-                  <td class="mono" data-cc-col-cell="session_id">{{ ses.session_id or ses.id or '—' }}</td>
-                  <td class="mono">{{ dt(ses.started_at) }}</td>
-                  <td class="mono">{{ dt(ses.stopped_at) }}</td>
-                  <td>{{ duration(ses.duration_seconds) }}</td>
-                  <td class="mono" data-cc-col-cell="mac">{{ ses.mac or '—' }}</td>
-                  <td class="mono" data-cc-col-cell="ip">{{ ses.ip or '—' }}</td>
-                  <td class="mono" data-cc-col-cell="nas">{{ ses.nas or '—' }}</td>
-                  <td>{{ bytes_size(ses.upload_bytes) }}</td>
-                  <td>{{ bytes_size(ses.download_bytes) }}</td>
-                  <td data-cc-col-cell="device_hint">{{ ses.device_hint or ses.connect_info or '—' }}</td>
-                  <td>{{ ses.terminate_cause or '—' }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-      {% endif %}
+          </tbody>
+        </table>
+      </div>
     </div>
+  </section>
+  {% endif %}
 
-    {# ═════════════════ OPERATIONS COLUMN ═════════════════ #}
-    <div class="cc-col-ops">
-      <section class="cc-panel" data-cc-section="operations">
-        <header class="cc-panel-head">
-          <span class="cc-panel-head-icon"><i class="fa-solid fa-sliders"></i></span>
-          العمليات
-        </header>
-
-        {% set ops = card.operations or {} %}
+  {# ─── 5. OPERATIONS (wrap-grid of action sub-cards) ─── #}
+  {% set ops = card.operations or {} %}
+  <section class="cc-section" data-cc-section="operations">
+    {{ section_head('sliders', 'العمليات') }}
+    <div class="cc-section-body">
+      <div class="cc-ops">
 
         {# disconnect #}
-        <div class="cc-ops-group" data-cc-op="disconnect">
-          <div class="cc-ops-title">قطع الجلسة</div>
+        <div class="cc-op-card" data-cc-op="disconnect">
+          <div class="cc-op-title"><i class="fa-solid fa-plug-circle-xmark"></i> قطع الجلسة</div>
           <form method="post" action="{{ url_for('radius.cards_checker') }}"
                 onsubmit="return confirm('قطع الجلسة الحيّة لـ {{ card.username }}؟');">
             <input type="hidden" name="op" value="disconnect">
             {{ hidden_ops(card, query) }}
             <button class="cc-btn cc-btn-warning" type="submit"
                     {% if not ops.can_disconnect %}disabled{% endif %}>
-              <i class="fa-solid fa-plug-circle-xmark"></i> اطرد الآن
+              اطرد الآن
             </button>
           </form>
         </div>
 
         {# lock / unlock MAC #}
-        <div class="cc-ops-group" data-cc-op="lock-mac">
-          <div class="cc-ops-title">قفل MAC</div>
+        <div class="cc-op-card" data-cc-op="lock-mac">
+          <div class="cc-op-title"><i class="fa-solid fa-lock"></i> قفل MAC</div>
           {% if card.locked_mac %}
-            <div class="mono" style="font-size:12px;margin-bottom:8px">{{ card.locked_mac }}</div>
+            <div class="cc-op-current">{{ card.locked_mac }}</div>
             <form method="post" action="{{ url_for('radius.cards_checker') }}">
               <input type="hidden" name="op" value="unlock_mac">
               {{ hidden_ops(card, query) }}
-              <button class="cc-btn cc-btn-ghost" type="submit">
-                <i class="fa-solid fa-lock-open"></i> فك القفل
-              </button>
+              <button class="cc-btn cc-btn-ghost" type="submit">فك القفل</button>
             </form>
           {% else %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}">
@@ -385,36 +374,37 @@
                      dir="ltr">
               <button class="cc-btn cc-btn-primary" type="submit"
                       {% if not ops.can_lock_mac %}disabled{% endif %}>
-                <i class="fa-solid fa-lock"></i> اقفل على هذا الجهاز
+                اقفل
               </button>
             </form>
           {% endif %}
         </div>
 
         {# reset usage #}
-        <div class="cc-ops-group" data-cc-op="reset-usage">
-          <div class="cc-ops-title">إعادة الاستخدام</div>
+        <div class="cc-op-card" data-cc-op="reset-usage">
+          <div class="cc-op-title"><i class="fa-solid fa-rotate-right"></i> إعادة الاستخدام</div>
           <form method="post" action="{{ url_for('radius.cards_checker') }}"
                 onsubmit="return confirm('إعادة ضبط استخدام {{ card.username }}؟ سيُحسب وقتها من الصفر.');">
             <input type="hidden" name="op" value="reset_usage">
             {{ hidden_ops(card, query) }}
             <button class="cc-btn cc-btn-ghost" type="submit"
                     {% if not ops.can_reset_usage %}disabled{% endif %}>
-              <i class="fa-solid fa-rotate-right"></i> إعادة الضبط
+              إعادة الضبط
             </button>
           </form>
         </div>
 
         {# disable / enable #}
-        <div class="cc-ops-group" data-cc-op="disable-enable">
-          <div class="cc-ops-title">تعطيل / تفعيل</div>
+        <div class="cc-op-card" data-cc-op="disable-enable">
+          <div class="cc-op-title">
+            {% if ops.can_enable %}<i class="fa-solid fa-circle-check"></i> تفعيل
+            {% else %}<i class="fa-solid fa-ban"></i> تعطيل{% endif %}
+          </div>
           {% if ops.can_enable %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}">
               <input type="hidden" name="op" value="enable">
               {{ hidden_ops(card, query) }}
-              <button class="cc-btn cc-btn-success" type="submit">
-                <i class="fa-solid fa-circle-check"></i> أعِد التفعيل
-              </button>
+              <button class="cc-btn cc-btn-success" type="submit">أعِد التفعيل</button>
             </form>
           {% else %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}"
@@ -425,32 +415,34 @@
                      placeholder="سبب التعطيل (اختياري)" maxlength="120">
               <button class="cc-btn cc-btn-warning" type="submit"
                       {% if not ops.can_disable %}disabled{% endif %}>
-                <i class="fa-solid fa-ban"></i> تعطيل
+                تعطيل
               </button>
             </form>
           {% endif %}
         </div>
 
         {# delete permanently — destructive #}
-        <div class="cc-ops-group" data-cc-op="delete">
-          <div class="cc-ops-title">حذف نهائي</div>
+        <div class="cc-op-card" data-cc-op="delete">
+          <div class="cc-op-title"><i class="fa-solid fa-trash"></i> حذف نهائي</div>
           <form method="post" action="{{ url_for('radius.cards_checker') }}"
                 onsubmit="return prompt('للتأكيد، اكتب اسم البطاقة:') === '{{ card.username }}';">
             <input type="hidden" name="op" value="delete_permanent">
             {{ hidden_ops(card, query) }}
             <button class="cc-btn cc-btn-danger" type="submit"
                     {% if not ops.can_delete_permanently %}disabled{% endif %}>
-              <i class="fa-solid fa-trash"></i> احذف نهائيًا
+              احذف نهائيًا
             </button>
           </form>
         </div>
-      </section>
-    </div>
 
-  </div>
+      </div>
+    </div>
+  </section>
 
 {% endif %}
 
 </div>{# /#cc-result #}
+
+</div>{# /.cc-page #}
 
 {% endblock %}
