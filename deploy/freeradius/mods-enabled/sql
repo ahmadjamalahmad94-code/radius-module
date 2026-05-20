@@ -94,11 +94,13 @@ sql {
 
         type {
             accounting-on {
+                # R10.6: نُغلق فقط الـ rows التي كُتبت بنفس Packet-Src-IP
+                # (للاتساق مع start/interim/stop).
                 query = "\
                     UPDATE ${....acct_table1} SET \
                         acctstoptime = datetime('now'), \
                         acctterminatecause = 'NAS-Reboot' \
-                    WHERE nasipaddress = '%{NAS-IP-Address}' \
+                    WHERE nasipaddress = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
             }
 
@@ -107,7 +109,7 @@ sql {
                     UPDATE ${....acct_table1} SET \
                         acctstoptime = datetime('now'), \
                         acctterminatecause = 'NAS-Reboot' \
-                    WHERE nasipaddress = '%{NAS-IP-Address}' \
+                    WHERE nasipaddress = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
             }
 
@@ -116,10 +118,19 @@ sql {
                 #   - %{User-Name} بدل %{SQL-User-Name}: الأخير لا يُحدَّد إلا
                 #     عندما يكون rlm_sql في authorize/post-auth context،
                 #     فيُحلّ فارغًا في accounting → username=''.
-                #   - acctuniqueid يُبنى يدويًا (NAS-IP + Session-Id + User)
-                #     لأن rlm_acct_unique غير محمَّل (الـ .so غير مشحون في
-                #     image 3.2.5)، فـ %{Acct-Unique-Session-Id} فارغ.
-                #     الـ tuple يضمن تفرّد عبر NAS devices وusers.
+                #   - acctuniqueid يُبنى يدويًا (Packet-Src-IP + Session-Id +
+                #     User) لأن rlm_acct_unique غير محمَّل في image 3.2.5.
+                #
+                # R10.6 — `nasipaddress` يُخزَّن بـ %{Packet-Src-IP-Address}
+                # (الـ IP الذي وصل منه الـ UDP packet فعلاً، بعد NAT الـ ISP)
+                # بدل %{NAS-IP-Address} (الذي يكتبه MikroTik داخل الـ packet
+                # وغالبًا يكون private LAN IP غير قابل للوصول من VPS).
+                # الـ change يجعل radacct.nasipaddress يطابق ما نراه نحن
+                # من السلك، فـ find_nas_for_session في radius_coa يجد الـ
+                # nas_devices entry الصحيح، و CoA + Disconnect تذهبان لـ
+                # IP فعلاً قابل للوصول. لاحظي: لا أثر على الـ Auth ولا
+                # على الـ accounting itself — فقط على الـ "العنوان"
+                # المخزَّن في radacct.
                 query = "\
                     INSERT INTO ${....acct_table1} \
                         (tenant_id, acctsessionid, acctuniqueid, username, realm, \
@@ -129,9 +140,9 @@ sql {
                          framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
                     VALUES \
                         (1, '%{Acct-Session-Id}', \
-                         '%{NAS-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
+                         '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                          '%{User-Name}', '%{Realm}', \
-                         '%{NAS-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
+                         '%{Packet-Src-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
                          datetime('now'), \
                          '%{Acct-Authentic}', '%{Connect-Info}', \
                          '%{Called-Station-Id}', '%{Calling-Station-Id}', \
@@ -142,6 +153,8 @@ sql {
             }
 
             interim-update {
+                # R10.6: WHERE يطابِق Packet-Src-IP-Address نفسه الذي
+                # كُتب وقت INSERT (Start)، كي يصل لنفس الصفّ.
                 query = "\
                     UPDATE ${....acct_table1} SET \
                         acctupdatetime  = datetime('now'), \
@@ -151,7 +164,7 @@ sql {
                         acctoutputoctets= '%{Acct-Output-Octets}', \
                         framedipaddress = '%{Framed-IP-Address}' \
                     WHERE acctsessionid = '%{Acct-Session-Id}' \
-                      AND nasipaddress  = '%{NAS-IP-Address}' \
+                      AND nasipaddress  = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
             }
 
@@ -165,7 +178,7 @@ sql {
                         acctterminatecause = '%{Acct-Terminate-Cause}', \
                         connectinfo_stop   = '%{Connect-Info}' \
                     WHERE acctsessionid = '%{Acct-Session-Id}' \
-                      AND nasipaddress  = '%{NAS-IP-Address}' \
+                      AND nasipaddress  = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
             }
         }
