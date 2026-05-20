@@ -335,58 +335,123 @@ def _parse_response(resp: bytes, *, request_auth: bytes, secret: bytes) -> CoaRe
 
 
 def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
-    """يبحث في radacct عن الـ NAS التي تستضيف جلسة username النشطة.
+    """Single-session helper — returns the most recent active session
+    only. Kept for backward compat; the multi-session helpers below
+    are preferred for any code path that wants to affect ALL live
+    sessions of a username (which is almost always the right thing
+    to do for card actions)."""
+    sessions = find_all_nas_for_sessions(tenant_id, username)
+    return sessions[0] if sessions else None
 
-    R9.1: secret يُقرأ من `nas_devices` (الجدول الذي تملأه UI عبر
-    /admin/radius/devices)، بدل `nas` الذي كان يُستخدم سابقاً —
-    الأخير هو جدول FreeRADIUS-القياسي ويبقى فارغًا في configنا
-    (mods-enabled/sql: `read_clients = no`). إصلاح هذه الـ lookup
-    يجعل زرّ "قطع" في /admin/radius/online يعمل فعلاً.
 
-    R11.12: نُرجع أيضًا `framed_ip` و `calling_station_id` لأن MT يحتاجهما
-    كـ session keys للعثور على hotspot client. radacct.framedipaddress
-    يُخزَّن من Acct-Start (R10.6)، و callingstationid من نفس الـ packet.
+def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
+    """Return EVERY active radacct session for `username`, each with
+    the NAS info needed to send a CoA packet.
+
+    Same shape as `find_nas_for_session` but a list. Skips sessions
+    whose NAS row in `nas_devices` is missing or disabled (we can't
+    sign a CoA packet without the shared secret), and logs the skip
+    so the admin can investigate.
+
+    A card with multiple roaming devices ends up with multiple
+    concurrent radacct rows for the same username. Card Checker
+    actions (disconnect / change rate / change timeout) should affect
+    ALL of them — not just the newest one. Without this, the first
+    two operations seem to work on 'a' session and the third one
+    appears to do nothing because it's already targeting that same
+    session.
     """
     from ..db.connection import db
-    row = db().execute("""
+    rows = db().execute("""
         SELECT acctsessionid, nasipaddress, framedipaddress, callingstationid
           FROM radacct
         WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
-        ORDER BY radacctid DESC LIMIT 1
-    """, (tenant_id, username)).fetchone()
-    if not row: return None
-    # ـ R9.1: secret من nas_devices.address (المملوء من UI) ـ
-    nas_row = db().execute(
-        "SELECT secret FROM nas_devices "
-        "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
-        (tenant_id, row["nasipaddress"])).fetchone()
-    secret = nas_row["secret"] if nas_row else ""
-    return {
-        "nas_ip": row["nasipaddress"],
-        "nas_secret": secret,
-        "session_id": row["acctsessionid"],
-        # R11.12: session keys للـ MT (قد يكونان None لو لم يصل Acct-Start بعد)
-        "framed_ip": row["framedipaddress"] or "",
-        "calling_station_id": row["callingstationid"] or "",
-    }
+        ORDER BY radacctid DESC
+    """, (tenant_id, username)).fetchall()
+    if not rows:
+        return []
+    results: list[dict] = []
+    for row in rows:
+        nas_ip = row["nasipaddress"]
+        nas_row = db().execute(
+            "SELECT secret FROM nas_devices "
+            "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
+            (tenant_id, nas_ip)).fetchone()
+        if not nas_row or not nas_row["secret"]:
+            _LOG.warning(
+                "find_all_nas_for_sessions: skipping session %s on NAS %s "
+                "— no enabled nas_devices row with a secret",
+                row["acctsessionid"], nas_ip,
+            )
+            continue
+        results.append({
+            "nas_ip": nas_ip,
+            "nas_secret": nas_row["secret"],
+            "session_id": row["acctsessionid"],
+            "framed_ip": row["framedipaddress"] or "",
+            "calling_station_id": row["callingstationid"] or "",
+        })
+    return results
+
+
+def _broadcast(label: str, results: list[CoaResult],
+                sessions_total: int) -> CoaResult:
+    """Collapse a list of per-session CoaResults into one summary.
+
+    The shape mirrors a single CoaResult so callers don't need to
+    change. The `reply_message` and `code_name` reflect the aggregate
+    outcome:
+       all-ok      → 'all ok (N sessions)'
+       partial     → 'X ok / Y failed (Z sessions)'
+       all-failed  → 'all failed (N sessions)'
+       no-sessions → 'no_active_session'
+    """
+    if not results and sessions_total == 0:
+        return CoaResult(ok=False, code=0, code_name="no_active_session",
+                          reply_message="لا جلسات نشطة")
+    ok_count = sum(1 for r in results if r.ok)
+    fail_count = len(results) - ok_count
+    if fail_count == 0:
+        name = "all_ok"
+        msg  = f"{label}: {ok_count} جلسة"
+        ok   = True
+    elif ok_count == 0:
+        name = "all_failed"
+        msg  = f"{label} فشل على كل الجلسات ({fail_count})"
+        ok   = False
+    else:
+        name = "partial"
+        msg  = f"{label}: نجح {ok_count} وفشل {fail_count} من {len(results)}"
+        ok   = True   # treat partial as success (some sessions got it)
+    return CoaResult(ok=ok, code=0, code_name=name, reply_message=msg)
 
 
 def disconnect_user(tenant_id: int, username: str) -> CoaResult:
-    """واجهة مختصرة: ابحث عن الجلسة + أرسل Disconnect."""
-    info = find_nas_for_session(tenant_id, username)
-    if not info:
+    """Kick EVERY active session for `username` — not just the newest.
+
+    Cards with multiple concurrent devices (3 phones on one card,
+    family sharing, …) have multiple radacct rows. The old behaviour
+    here picked the most recent one with `LIMIT 1`, so the other
+    devices kept running. Now we iterate every active session and
+    send a Disconnect-Request to each.
+
+    Returns a summarised CoaResult (see `_broadcast`) so the caller's
+    existing `.ok` / `.code_name` checks keep working.
+    """
+    sessions = find_all_nas_for_sessions(tenant_id, username)
+    if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
                           reply_message=f"لا جلسة نشطة لـ {username}")
-    if not info["nas_secret"]:
-        return CoaResult(ok=False, code=0, code_name="missing_nas_secret",
-                          reply_message="لا secret مخزّن للـ NAS")
-    return send_disconnect(
-        nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
-        username=username, session_id=info["session_id"],
-        # R11.12: مرّر session keys لـ MT
-        framed_ip=info.get("framed_ip", ""),
-        calling_station_id=info.get("calling_station_id", ""),
-    )
+    results = [
+        send_disconnect(
+            nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
+            username=username, session_id=info["session_id"],
+            framed_ip=info.get("framed_ip", ""),
+            calling_station_id=info.get("calling_station_id", ""),
+        )
+        for info in sessions
+    ]
+    return _broadcast("قطع الجلسات", results, len(sessions))
 
 
 def change_user_rate(tenant_id: int, username: str, *,
@@ -408,22 +473,23 @@ def change_user_rate(tenant_id: int, username: str, *,
     if not new_rate_limit or not new_rate_limit.strip():
         return CoaResult(ok=False, code=0, code_name="empty_rate",
                           reply_message="rate فارغ — لا تغيير")
-    info = find_nas_for_session(tenant_id, username)
-    if not info:
+    sessions = find_all_nas_for_sessions(tenant_id, username)
+    if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
                           reply_message=f"لا جلسة نشطة لـ {username} — "
                                          "السرعة الجديدة ستُطبَّق على الجلسة التالية")
-    if not info["nas_secret"]:
-        return CoaResult(ok=False, code=0, code_name="missing_nas_secret",
-                          reply_message="لا secret مخزّن للـ NAS")
-    return send_coa(
-        nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
-        username=username, session_id=info["session_id"],
-        # R11.12: session keys للـ MT
-        framed_ip=info.get("framed_ip", ""),
-        calling_station_id=info.get("calling_station_id", ""),
-        new_rate_limit=new_rate_limit,
-    )
+    # Broadcast — push the rate change to every active session.
+    results = [
+        send_coa(
+            nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
+            username=username, session_id=info["session_id"],
+            framed_ip=info.get("framed_ip", ""),
+            calling_station_id=info.get("calling_station_id", ""),
+            new_rate_limit=new_rate_limit,
+        )
+        for info in sessions
+    ]
+    return _broadcast("تحديث السرعة", results, len(sessions))
 
 
 def change_user_session_timeout(tenant_id: int, username: str,
@@ -445,18 +511,19 @@ def change_user_session_timeout(tenant_id: int, username: str,
     if not session_timeout or int(session_timeout) <= 0:
         return CoaResult(ok=False, code=0, code_name="empty_timeout",
                           reply_message="timeout غير صالح — لا تغيير")
-    info = find_nas_for_session(tenant_id, username)
-    if not info:
+    sessions = find_all_nas_for_sessions(tenant_id, username)
+    if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
                           reply_message=f"لا جلسة نشطة لـ {username} — "
                                          "الوقت الجديد سيُطبَّق على الجلسة التالية")
-    if not info["nas_secret"]:
-        return CoaResult(ok=False, code=0, code_name="missing_nas_secret",
-                          reply_message="لا secret مخزّن للـ NAS")
-    return send_coa(
-        nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
-        username=username, session_id=info["session_id"],
-        framed_ip=info.get("framed_ip", ""),
-        calling_station_id=info.get("calling_station_id", ""),
-        session_timeout=int(session_timeout),
-    )
+    results = [
+        send_coa(
+            nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
+            username=username, session_id=info["session_id"],
+            framed_ip=info.get("framed_ip", ""),
+            calling_station_id=info.get("calling_station_id", ""),
+            session_timeout=int(session_timeout),
+        )
+        for info in sessions
+    ]
+    return _broadcast("تحديث الوقت", results, len(sessions))
