@@ -28,9 +28,11 @@
   --hb-text-muted:       #94A3B8;
   --hb-text-faint:       #B6BCC8;
 
-  --hb-bg:               #FFFFFF;
-  --hb-bg-page:          #FBFAFC;
-  --hb-bg-hover:         #F8F7FB;
+  --hb-bg:               #FFFFFF;       /* sidebar surface (kept pure white) */
+  --hb-bg-page:          #EFEDF5;       /* page canvas — slightly purpled grey
+                                            so cards/cards-checker hero pop
+                                            against it without being stark */
+  --hb-bg-hover:         #F4F2FA;       /* hover inside sidebar */
   --hb-bg-section-head:  #FFFFFF;
 
   --hb-border:           #EEEDF3;
