@@ -338,6 +338,62 @@ class CardsService:
         self._audit.record(actor=actor, action="card.reset_usage",
                            target_type="card", target_id=str(card_id))
 
+    def adjust_card_time(self, *, actor: str, card_id: int,
+                          delta_seconds: int, username: str = "") -> dict:
+        """Shift the card's expire_at by +/- delta_seconds and (best-effort)
+        push a CoA Session-Timeout update to any live MikroTik session so
+        the change takes effect without disconnecting the user.
+
+        Returns the repo result dict; raises RadiusValidationError for any
+        precondition failure (zero delta / card not found / not activated).
+
+        CoA push is best-effort — if it fails we still keep the DB write,
+        log a warning, and return so the caller can flash a helpful note.
+        """
+        if delta_seconds == 0:
+            raise RadiusValidationError("لا يوجد تعديل لتطبيقه")
+        tenant_id = self._store_tenant_id()
+        result = cards_repo.adjust_card_expire_at(tenant_id, card_id, delta_seconds)
+        if result is None:
+            raise RadiusValidationError(
+                "تعذر تعديل وقت البطاقة — تأكد أنها مفعّلة (لها وقت انتهاء)."
+            )
+
+        # ── Best-effort CoA push to update Session-Timeout on live sessions
+        # We delegate to the adapter so each adapter implementation can decide
+        # how to enumerate active NAS endpoints (MikroTik vs ManualAdapter).
+        coa_result = None
+        try:
+            push_coa = getattr(self._adapter, "push_session_timeout", None)
+            if callable(push_coa) and username:
+                coa_result = push_coa(
+                    username=username,
+                    session_timeout=result["remaining_seconds"],
+                )
+        except Exception as e:  # noqa: BLE001 — never let CoA failure mask the DB write
+            import logging
+            logging.getLogger(__name__).warning(
+                "CoA push_session_timeout failed for %s: %s", username, e
+            )
+            coa_result = None
+
+        # ── Audit
+        self._audit.record(
+            actor=actor, action="card.adjust_time",
+            target_type="card", target_id=str(card_id),
+            payload={
+                "delta_seconds":      delta_seconds,
+                "expire_at_old":      result["expire_at_old"],
+                "expire_at_new":      result["expire_at_new"],
+                "remaining_seconds":  result["remaining_seconds"],
+                "coa_pushed":         bool(coa_result and getattr(coa_result, "ok", False)),
+            },
+        )
+        return {
+            **result,
+            "coa_result": coa_result,
+        }
+
     def delete_card_permanently(self, *, actor: str, card_id: int) -> None:
         if not cards_repo.delete_card_permanently(self._store_tenant_id(), card_id):
             raise RadiusValidationError("تعذر حذف البطاقة")

@@ -384,6 +384,46 @@ def _handle_card_operation():
                 svc.delete_card_permanently(actor=_actor(), card_id=card_id)
                 flash("تم حذف البطاقة نهائيًا. لا يظهر هذا الخيار في التشغيل اليومي إلا بحذر.", "warning")
                 query = ""
+        elif action == "set_time":
+            # Per-card time adjustment (shift expire_at by ±N seconds).
+            # Form fields:
+            #   time_amount  → integer > 0
+            #   time_unit    → "minutes" | "hours" | "days"
+            #   time_op      → "add" | "subtract"
+            unit_map = {"minutes": 60, "hours": 3600, "days": 86400}
+            amount = _form_int("time_amount")
+            unit   = (_form_str("time_unit") or "").strip().lower()
+            op     = (_form_str("time_op")   or "").strip().lower()
+            if amount <= 0 or unit not in unit_map or op not in ("add", "subtract"):
+                flash("بيانات التعديل غير مكتملة. حدّد المدّة والوحدة والعملية.", "error")
+            else:
+                delta = amount * unit_map[unit] * (-1 if op == "subtract" else 1)
+                try:
+                    result = svc.adjust_card_time(
+                        actor=_actor(), card_id=card_id,
+                        delta_seconds=delta, username=username,
+                    )
+                except RadiusError as e:
+                    flash(e.message, "error")
+                else:
+                    # Build a friendly Arabic summary
+                    op_label   = "تمت إضافة" if op == "add" else "تم خصم"
+                    unit_label = {"minutes": "دقيقة", "hours": "ساعة", "days": "يوم"}[unit]
+                    rem_h, rem_m = divmod(int(result["remaining_seconds"]) // 60, 60)
+                    coa = result.get("coa_result")
+                    coa_note = ""
+                    if coa is not None:
+                        if getattr(coa, "ok", False):
+                            coa_note = " — وصل التحديث للـ MikroTik (CoA-ACK)."
+                        elif getattr(coa, "code_name", "") == "no_active_session":
+                            coa_note = " — لا جلسة نشطة الآن، سيُطبَّق في الجلسة التالية."
+                        else:
+                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({getattr(coa,'code_name','?')})."
+                    flash(
+                        f"{op_label} {amount} {unit_label} من وقت البطاقة. "
+                        f"المتبقي الآن: {rem_h} ساعة و {rem_m} دقيقة.{coa_note}",
+                        "success",
+                    )
         elif action == "set_speed":
             # Per-card speed override. The UI validates inputs client-side
             # and the user confirms; we re-validate server-side here.

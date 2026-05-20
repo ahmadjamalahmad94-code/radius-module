@@ -293,6 +293,29 @@ class SqliteAdapter(RadiusAdapter):
                            tenant_id=_tid())
         except Exception: pass
 
+    def push_session_timeout(self, *, username: str, session_timeout: int):
+        """Best-effort CoA push to update Session-Timeout on the live
+        session for `username`. Used by CardsService.adjust_card_time
+        after the new expire_at lands in DB, so the change takes effect
+        without disconnecting the user.
+
+        Returns the CoaResult (the service inspects .ok and logs); never
+        raises on no-active-session or NAK — those are normal cases
+        (e.g. the card isn't currently logged in). Network errors are
+        also swallowed: if the CoA push fails, the DB write still stands
+        and the new timeout takes effect on the next Access-Accept.
+        """
+        from .radius_coa import change_user_session_timeout
+        try:
+            return change_user_session_timeout(
+                _tid(), username, session_timeout=int(session_timeout),
+            )
+        except Exception as e:  # noqa: BLE001
+            _LOG.warning("push_session_timeout error for %s: %s", username, e)
+            from .radius_coa import CoaResult
+            return CoaResult(ok=False, code=0, code_name="exception",
+                              reply_message=str(e))
+
     # ─────────────── Accounting (من radacct المحلي) ───────────────
 
     def list_accounting(self, *, username: Optional[str] = None,

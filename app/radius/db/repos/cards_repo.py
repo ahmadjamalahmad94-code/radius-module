@@ -884,6 +884,65 @@ def reset_card_usage(tenant_id: int, card_id: int) -> bool:
         return bool(cur.rowcount)
 
 
+def adjust_card_expire_at(tenant_id: int, card_id: int, delta_seconds: int):
+    """Shift the card's `expire_at` by +/- delta_seconds.
+
+    Returns a dict {expire_at_old, expire_at_new, remaining_seconds} on
+    success, or None if the card doesn't exist OR isn't activated yet
+    (expire_at IS NULL — there's no anchor to shift from). Callers should
+    surface a clear error in that case.
+
+    Negative delta_seconds is allowed (subtraction). The new expire_at
+    is NOT clamped to >= now: subtracting past 'now' simply renders the
+    card expired, which is the correct semantic for an admin override.
+    """
+    if delta_seconds == 0:
+        return None
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT expire_at FROM cards WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return None
+        old_expire = row["expire_at"] if isinstance(row, dict) else row[0]
+        if old_expire is None:
+            return None
+        # SQLite datetime() accepts a signed 'N seconds' modifier.
+        modifier = f"{int(delta_seconds):+d} seconds"
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET expire_at = datetime(expire_at, ?)
+            WHERE tenant_id = ? AND id = ? AND expire_at IS NOT NULL
+            """,
+            (modifier, tenant_id, card_id),
+        )
+        if not cur.rowcount:
+            return None
+        new_row = conn.execute(
+            """
+            SELECT expire_at,
+                   CAST(strftime('%s', expire_at) AS INTEGER)
+                 - CAST(strftime('%s', 'now')   AS INTEGER) AS remaining
+              FROM cards
+             WHERE tenant_id = ? AND id = ?
+            """,
+            (tenant_id, card_id),
+        ).fetchone()
+        if isinstance(new_row, dict):
+            new_expire  = new_row.get("expire_at")
+            remaining_s = int(new_row.get("remaining") or 0)
+        else:
+            new_expire  = new_row[0]
+            remaining_s = int(new_row[1] or 0)
+        return {
+            "expire_at_old":     old_expire,
+            "expire_at_new":     new_expire,
+            "remaining_seconds": max(0, remaining_s),
+        }
+
+
 def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
     with transaction() as conn:
         cur = conn.execute(

@@ -647,6 +647,30 @@
             </form>
             {% endif %}
 
+            {# Change card TIME — per-card override (not batch-wide).
+               Opens the floating cc-time-modal below; the modal owns the
+               unit pills (min/hr/day), op pills (add/subtract) and number
+               input, then submits the hidden form on confirm.
+               Backend: routes/cards.py `set_time` action → CardsService
+               .adjust_card_time → cards_repo.adjust_card_expire_at +
+               best-effort CoA push (Session-Timeout) via SqliteAdapter
+               .push_session_timeout. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" id="cc-time-form">
+              <input type="hidden" name="op" value="set_time">
+              <input type="hidden" name="time_amount" id="cc-time-amount-field">
+              <input type="hidden" name="time_unit"   id="cc-time-unit-field">
+              <input type="hidden" name="time_op"     id="cc-time-op-field">
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button" data-cc-op="set-time"
+                      onclick="window.__ccOpenTimeModal && window.__ccOpenTimeModal();">
+                <span class="cc-action-icon amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">تغيير الوقت</div>
+                  <div class="cc-action-sub">للبطاقة فقط</div>
+                </div>
+              </button>
+            </form>
+
             {# Change card speed — per-card override (not batch-wide).
                Two prompts: download then upload, both in kbps. Validates
                numeric input client-side; backend enforces > 0. #}
@@ -860,6 +884,142 @@
   {% endif %}
 
   </div>{# /#cc-result #}
+
+{# ════════════════════════════════════════════════════════════════════
+   TIME-ADJUST MODAL (floating)
+   3 pills for unit · 2 pills for op · 1 number input · 2 footer buttons.
+   The "Apply" button copies the chosen values into the hidden #cc-time-form
+   above and submits it, which routes to `set_time` in cards.py.
+   ════════════════════════════════════════════════════════════════════ #}
+<div class="cc-modal-overlay" id="cc-time-modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="cc-modal" role="document">
+    <div class="cc-modal-head">
+      <span class="cc-modal-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+      <span class="cc-modal-head-title">تعديل وقت البطاقة</span>
+      <button type="button" class="cc-modal-close" data-cc-modal-close
+              aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="cc-modal-sub">
+      التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة).
+      إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الـ MikroTik فوراً عبر CoA.
+    </div>
+
+    <div class="cc-modal-section-label">العملية</div>
+    <div class="cc-pills" data-cc-pill-group="op">
+      <button type="button" class="cc-pill-btn is-active" data-cc-op-value="add">
+        <i class="fa-solid fa-plus"></i> إضافة
+      </button>
+      <button type="button" class="cc-pill-btn" data-cc-op-value="subtract">
+        <i class="fa-solid fa-minus"></i> خصم
+      </button>
+    </div>
+
+    <div class="cc-modal-section-label">الوحدة</div>
+    <div class="cc-pills" data-cc-pill-group="unit">
+      <button type="button" class="cc-pill-btn" data-cc-unit-value="minutes">دقائق</button>
+      <button type="button" class="cc-pill-btn is-active" data-cc-unit-value="hours">ساعات</button>
+      <button type="button" class="cc-pill-btn" data-cc-unit-value="days">أيام</button>
+    </div>
+
+    <div class="cc-modal-section-label">المقدار</div>
+    <input type="number" class="cc-modal-number" id="cc-time-amount-input"
+           min="1" step="1" placeholder="مثال: 30" value="1">
+
+    <div class="cc-modal-preview" id="cc-time-preview">
+      سيتم <strong>إضافة</strong> <span data-cc-prev-amount>1</span> <span data-cc-prev-unit>ساعة</span> إلى وقت البطاقة.
+    </div>
+
+    <div class="cc-modal-actions">
+      <button type="button" class="cc-modal-btn cc-modal-btn-cancel" data-cc-modal-close>إلغاء</button>
+      <button type="button" class="cc-modal-btn cc-modal-btn-confirm" id="cc-time-apply">
+        <i class="fa-solid fa-check"></i> تطبيق
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    'use strict';
+    var modal      = document.getElementById('cc-time-modal');
+    if (!modal) return;
+    var form       = document.getElementById('cc-time-form');
+    var amountInp  = document.getElementById('cc-time-amount-input');
+    var amountFld  = document.getElementById('cc-time-amount-field');
+    var unitFld    = document.getElementById('cc-time-unit-field');
+    var opFld      = document.getElementById('cc-time-op-field');
+    var preview    = document.getElementById('cc-time-preview');
+    var applyBtn   = document.getElementById('cc-time-apply');
+
+    function getActive(group){
+      var el = modal.querySelector('[data-cc-pill-group="'+group+'"] .is-active');
+      return el ? el : null;
+    }
+    function unitLabel(u){
+      return { minutes:'دقيقة', hours:'ساعة', days:'يوم' }[u] || u;
+    }
+    function refreshPreview(){
+      var opEl = getActive('op'); var uEl = getActive('unit');
+      if (!opEl || !uEl) return;
+      var op  = opEl.getAttribute('data-cc-op-value');
+      var u   = uEl.getAttribute('data-cc-unit-value');
+      var amt = parseInt(amountInp.value, 10);
+      var ok  = Number.isFinite(amt) && amt > 0;
+      applyBtn.disabled = !ok;
+      preview.innerHTML = 'سيتم <strong>'
+        + (op === 'add' ? 'إضافة' : 'خصم')
+        + '</strong> <span data-cc-prev-amount>'
+        + (ok ? amt : '—')
+        + '</span> <span data-cc-prev-unit>'
+        + unitLabel(u)
+        + '</span> ' + (op === 'add' ? 'إلى' : 'من') + ' وقت البطاقة.';
+    }
+
+    // Open / close
+    window.__ccOpenTimeModal = function(){
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(function(){ amountInp.focus(); amountInp.select(); }, 80);
+      refreshPreview();
+    };
+    function closeModal(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    modal.addEventListener('click', function(e){
+      if (e.target === modal) closeModal();           // backdrop click
+      if (e.target.closest('[data-cc-modal-close]')) closeModal();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+    });
+
+    // Pill toggles
+    modal.querySelectorAll('.cc-pill-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        var group = b.closest('[data-cc-pill-group]');
+        if (!group) return;
+        group.querySelectorAll('.cc-pill-btn').forEach(function(x){ x.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        refreshPreview();
+      });
+    });
+    amountInp.addEventListener('input', refreshPreview);
+
+    // Confirm → submit
+    applyBtn.addEventListener('click', function(){
+      var amt   = parseInt(amountInp.value, 10);
+      var opEl  = getActive('op');
+      var uEl   = getActive('unit');
+      if (!Number.isFinite(amt) || amt <= 0 || !opEl || !uEl) return;
+      amountFld.value = String(amt);
+      unitFld.value   = uEl.getAttribute('data-cc-unit-value');
+      opFld.value     = opEl.getAttribute('data-cc-op-value');
+      form.submit();
+    });
+  })();
+</script>
+
 </div>{# /.cc-page #}
 
 {% endblock %}

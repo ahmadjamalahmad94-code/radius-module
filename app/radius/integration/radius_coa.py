@@ -55,6 +55,8 @@ ATTR_NAS_PORT             = 5
 ATTR_FRAMED_IP_ADDRESS    = 8
 ATTR_REPLY_MESSAGE        = 18
 ATTR_VENDOR_SPECIFIC      = 26
+ATTR_SESSION_TIMEOUT      = 27   # RFC 2865 §5.27 — uint32 seconds
+ATTR_IDLE_TIMEOUT         = 28
 ATTR_CALLED_STATION_ID    = 30
 ATTR_CALLING_STATION_ID   = 31
 ATTR_NAS_IDENTIFIER       = 32
@@ -243,10 +245,14 @@ def send_coa(*, nas_ip: str, nas_secret: str,
               username: str, session_id: str = "",
               framed_ip: str = "", calling_station_id: str = "",
               new_rate_limit: str = "",
+              session_timeout: int = 0,
               port: int = 3799, timeout: float = 5.0) -> CoaResult:
     """
     CoA-Request (Code=43) — يغيّر attributes لجلسة جارية دون قطع.
-    أكثر استخدام: تغيير Mikrotik-Rate-Limit للسرعة الفورية.
+    استخدامات شائعة:
+      • تغيير Mikrotik-Rate-Limit (السرعة الفورية).
+      • تغيير Session-Timeout (الوقت المتبقي قبل قطع الجلسة) — يُستعمل
+        لتطبيق "تعديل وقت البطاقة" على الجلسات الحيّة دون قطعها.
 
     R11.12: نُضيف Framed-IP-Address + Calling-Station-Id (مثل send_disconnect)
     حتى يستطيع MT أن يعثر على hotspot client بـ IP/MAC وليس فقط بـ User-Name.
@@ -269,6 +275,12 @@ def send_coa(*, nas_ip: str, nas_secret: str,
         attrs += encode_string_attr(ATTR_CALLING_STATION_ID, calling_station_id)
     if new_rate_limit:
         attrs += encode_vendor_attr(VENDOR_MIKROTIK, MT_ATTR_RATE_LIMIT, new_rate_limit)
+    if session_timeout and session_timeout > 0:
+        # RFC 2865 §5.27 — uint32 seconds of remaining session time.
+        # Clamp to 32-bit and to 1..max so we never send 0 (which means
+        # "no session timeout" on most NAS implementations).
+        st = max(1, min(int(session_timeout), 0xFFFFFFFF))
+        attrs += encode_uint32_attr(ATTR_SESSION_TIMEOUT, st)
 
     packet = _build_packet(code=CODE_COA_REQUEST,
                             identifier=ident, attrs=attrs, secret=secret)
@@ -411,4 +423,40 @@ def change_user_rate(tenant_id: int, username: str, *,
         framed_ip=info.get("framed_ip", ""),
         calling_station_id=info.get("calling_station_id", ""),
         new_rate_limit=new_rate_limit,
+    )
+
+
+def change_user_session_timeout(tenant_id: int, username: str,
+                                  *, session_timeout: int) -> CoaResult:
+    """يُرسل CoA-Request (Code=43) لتحديث Session-Timeout على جلسة حيّة.
+
+    يُستعمَل من زرّ "تعديل وقت البطاقة" في Card Checker: بعد ما يتم تعديل
+    expire_at في DB، نُحاول دفع الوقت المتبقّي الجديد للـ NAS كـ
+    Session-Timeout (RFC 2865 §27، بالثواني) حتى لا يحتاج المستخدم
+    لتسجيل الدخول من جديد.
+
+    الـ behaviour يطابق change_user_rate:
+      - لا جلسة نشطة → no_active_session (نتجاهل بهدوء؛ السقف الجديد
+        سيُطبَّق تلقائيًا في الجلسة التالية عبر Access-Accept).
+      - لا secret → missing_nas_secret.
+      - session_timeout <= 0 → empty_timeout (skip).
+      - وإلا يُرسل CoA-Request و يُرجع CoA-ACK/NAK من الـ NAS.
+    """
+    if not session_timeout or int(session_timeout) <= 0:
+        return CoaResult(ok=False, code=0, code_name="empty_timeout",
+                          reply_message="timeout غير صالح — لا تغيير")
+    info = find_nas_for_session(tenant_id, username)
+    if not info:
+        return CoaResult(ok=False, code=0, code_name="no_active_session",
+                          reply_message=f"لا جلسة نشطة لـ {username} — "
+                                         "الوقت الجديد سيُطبَّق على الجلسة التالية")
+    if not info["nas_secret"]:
+        return CoaResult(ok=False, code=0, code_name="missing_nas_secret",
+                          reply_message="لا secret مخزّن للـ NAS")
+    return send_coa(
+        nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
+        username=username, session_id=info["session_id"],
+        framed_ip=info.get("framed_ip", ""),
+        calling_station_id=info.get("calling_station_id", ""),
+        session_timeout=int(session_timeout),
     )
