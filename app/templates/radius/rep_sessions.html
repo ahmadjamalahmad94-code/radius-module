@@ -1,45 +1,96 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Sessions report — REBUILT (Night N4, 2026-05-21)
+
+   Rebuilt on hub-v2. Same backend data: `items` (radacct rows),
+   `username` (filter value), `limit`. Zero backend change.
+
+   Columns mirror radacct fields used by route in reports.py.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}تقرير الجلسات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
 {% block page_title %}تقرير الجلسات والمحاسبة{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} صف)</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
 {% block content %}
-<form method="get" class="filter-bar">
-  <div class="search">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" name="username" placeholder="ابحث باسم المستخدم..." value="{{ username }}">
-  </div>
-  <select name="limit">
-    {% for n in [100, 200, 500, 1000] %}<option value="{{ n }}" {% if limit==n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+
+{{ hub.hero(
+  "تقرير الجلسات",
+  subtitle="سجل جلسات RADIUS من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء",
+  icon="chart-line"
+) }}
+
+{# ───── Filter Bar ───────────────────────────────────────── #}
+<form method="get" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="username"
+         placeholder="بحث باسم المستخدم..." value="{{ username or '' }}">
+  <select class="hub-select" name="limit">
+    {% for n in [100, 200, 500, 1000] %}
+      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} صف</option>
+    {% endfor %}
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if username %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_sessions') + "'" + '"') }}
+  {% endif %}
 </form>
 
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>المستخدم</th><th>رقم الجلسة</th><th>عنوان جهاز الشبكة</th>
-      <th>عنوان IP</th><th>عنوان الجهاز</th><th>المدة (ث)</th><th>تنزيل</th><th>رفع</th>
-      <th>بداية</th><th>نهاية</th><th>سبب الإنهاء</th>
-    </tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.radacctid }}</td>
-      <td><strong>{{ r.username }}</strong></td>
-      <td class="mono">{{ r.acctsessionid[:18] }}{% if r.acctsessionid|length > 18 %}…{% endif %}</td>
-      <td class="mono">{{ r.nasipaddress or '—' }}</td>
-      <td class="mono">{{ r.framedipaddress or '—' }}</td>
-      <td class="mono">{{ r.callingstationid or '—' }}</td>
-      <td class="num">{{ r.acctsessiontime or 0 }}</td>
-      <td class="mono">{{ "%.1f"|format((r.acctinputoctets or 0)/1048576) }} MB</td>
-      <td class="mono">{{ "%.1f"|format((r.acctoutputoctets or 0)/1048576) }} MB</td>
-      <td class="mono">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
-      <td class="mono">{{ r.acctstoptime[:16] if r.acctstoptime else '—' }}</td>
-      <td class="mono">{{ r.acctterminatecause or '—' }}</td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-chart-line"></i>لا جلسات</div>{% endif %}
-</div></div>
+{% if items %}
+{% call hub.section("سجل الجلسات", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px">#</th>
+          <th>المستخدم</th>
+          <th>رقم الجلسة</th>
+          <th>جهاز الشبكة</th>
+          <th>IP العميل</th>
+          <th>MAC</th>
+          <th class="num">المدة (ث)</th>
+          <th class="num">تنزيل</th>
+          <th class="num">رفع</th>
+          <th>بدأت</th>
+          <th>انتهت</th>
+          <th>سبب الإنهاء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono">{{ r.radacctid }}</td>
+          <td><strong>{{ r.username }}</strong></td>
+          <td class="mono small" title="{{ r.acctsessionid or '' }}">
+            {{ (r.acctsessionid or '')[:18] }}{% if (r.acctsessionid or '')|length > 18 %}…{% endif %}
+          </td>
+          <td class="mono small">{{ r.nasipaddress or '—' }}</td>
+          <td class="mono small">{{ r.framedipaddress or '—' }}</td>
+          <td class="mono small">{{ r.callingstationid or '—' }}</td>
+          <td class="num mono">{{ r.acctsessiontime or 0 }}</td>
+          <td class="num mono">{{ "%.1f"|format((r.acctinputoctets or 0)/1048576) }} MB</td>
+          <td class="num mono">{{ "%.1f"|format((r.acctoutputoctets or 0)/1048576) }} MB</td>
+          <td class="mono small">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
+          <td class="mono small">
+            {% if r.acctstoptime %}{{ r.acctstoptime[:16] }}
+            {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
+          </td>
+          <td class="mono small">{{ r.acctterminatecause or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا جلسات في النتائج",
+  sub="جرّب تخفيف فلترة المستخدم أو رفع حد النتائج." if username else "لم تُسجَّل أي جلسة بعد في جدول radacct.",
+  icon="chart-line"
+) }}
+{% endif %}
+
 {% endblock %}

@@ -1,30 +1,61 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Failed logins report — REBUILT (Night N4, 2026-05-21)
+
+   Rebuilt on hub-v2. Same backend data: `items` (radpostauth rows where
+   reply != 'Access-Accept'), `limit`. Zero backend change.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
-{% block title %}تقرير محاولات الدخول الفاشلة{% endblock %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}محاولات الدخول الفاشلة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}محاولات الدخول الفاشلة{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} محاولة)</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} محاولة</span>{% endblock %}
 
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>المستخدم</th><th>الرد</th><th>جهاز الشبكة</th><th>التاريخ</th><th>الفئة</th>
-    </tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.id }}</td>
-      <td><strong>{{ r.username }}</strong></td>
-      <td><span class="pill pill-danger">{{ r.reply }}</span></td>
-      <td class="mono">{{ r.nas or '—' }}</td>
-      <td class="mono">{{ r.authdate[:16] if r.authdate else '—' }}</td>
-      <td class="mono">{{ r.class or '—' }}</td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>لا محاولات فاشلة</div>{% endif %}
-</div></div>
 
-<div class="hint" style="margin-top:8px">
-  يُملأ هذا الجدول من حدث رفض الدخول في RADIUS بعد تفعيل التكامل الكامل.
-</div>
+{{ hub.hero(
+  "محاولات الدخول الفاشلة",
+  subtitle="سجل من radpostauth — كل ردّ بخلاف Access-Accept (رفض، خطأ، ضبط).",
+  icon="triangle-exclamation"
+) }}
+
+{% if items %}
+{% call hub.section("الردود السلبية", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px">#</th>
+          <th>المستخدم</th>
+          <th>الرد</th>
+          <th>جهاز الشبكة</th>
+          <th>الوقت</th>
+          <th>الفئة / السبب</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono">{{ r.id }}</td>
+          <td><strong>{{ r.username }}</strong></td>
+          <td>{{ hub.pill(r.reply, variant="red") }}</td>
+          <td class="mono small">{{ r.nas or '—' }}</td>
+          <td class="mono small">{{ r.authdate[:16] if r.authdate else '—' }}</td>
+          <td class="mono small">{{ r.class or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا محاولات فاشلة",
+  sub="يُملأ هذا الجدول من حدث رفض الدخول في RADIUS — لا شيء حتى الآن.",
+  icon="shield-halved"
+) }}
+{% endif %}
+
 {% endblock %}
