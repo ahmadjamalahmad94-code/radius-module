@@ -1,80 +1,94 @@
+{# Cards overview — REBUILT N7 (hub-v2). Backend data: cards{total,available,used,batches}, recent[...], plans{enabled,total}. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}نظرة عامة — البطاقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}نظرة عامة — بطاقات هوتسبوت{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_generate') }}">
-    <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة حزمة
-  </a>
-{% endblock %}
-
-{% block head_extra %}
-{{ super() }}
-<style>
-.co-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
-.co-stat{background:var(--hr-card);border:1px solid var(--hr-border);border-radius:var(--hr-r-lg,8px);padding:14px 16px;border-inline-start:3px solid var(--hr-cyan-500)}
-.co-stat .lbl{font-size:11.5px;color:var(--hr-text-muted);font-weight:700;display:flex;align-items:center;gap:6px}
-.co-stat .val{font-size:22px;font-weight:800;color:var(--hr-text)}
-.co-stat.ok    {border-inline-start-color:var(--hr-green)}
-.co-stat.warn  {border-inline-start-color:var(--hr-orange)}
-.co-stat.muted {border-inline-start-color:var(--hr-text-muted)}
-.co-card{background:var(--hr-card);border:1px solid var(--hr-border);border-radius:var(--hr-r-lg,8px);overflow:hidden}
-.co-card-head{padding:12px 16px;border-bottom:1px solid var(--hr-border);font-size:13px;font-weight:800;color:var(--hr-text);display:flex;align-items:center;gap:8px}
-.co-table{width:100%;border-collapse:separate;border-spacing:0}
-.co-table th{background:var(--hr-soft);font-size:12px;font-weight:800;color:var(--hr-text-soft);padding:10px 12px;text-align:start;border-bottom:1px solid var(--hr-border)}
-.co-table td{padding:10px 12px;font-size:13px;border-top:1px solid var(--hr-border);color:var(--hr-text)}
-.co-table tr:first-child td{border-top:0}
-.co-table tr:hover td{background:var(--hr-soft)}
-.empty{text-align:center;padding:30px 20px;color:var(--hr-text-muted)}
-</style>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ cards.total or 0 }} بطاقة في {{ cards.batches or 0 }} حزمة</span>{% endblock %}
 
 {% block content %}
 
-<div class="co-stats">
-  <div class="co-stat"><div class="lbl"><i class="fa-solid fa-layer-group"></i> إجمالي الكروت</div>
-    <div class="val">{{ cards.total or 0 }}</div></div>
-  <div class="co-stat ok"><div class="lbl"><i class="fa-solid fa-box-open"></i> متاحة</div>
-    <div class="val">{{ cards.available or 0 }}</div></div>
-  <div class="co-stat warn"><div class="lbl"><i class="fa-solid fa-handshake"></i> مُستخدَمة</div>
-    <div class="val">{{ cards.used or 0 }}</div></div>
-  <div class="co-stat muted"><div class="lbl"><i class="fa-solid fa-boxes-stacked"></i> الحزم</div>
-    <div class="val">{{ cards.batches or 0 }}</div></div>
-  <div class="co-stat muted"><div class="lbl"><i class="fa-solid fa-tags"></i> الباقات المتاحة</div>
-    <div class="val">{{ plans.enabled or 0 }} / {{ plans.total or 0 }}</div></div>
+{{ hub.hero(
+  "نظرة عامة — بطاقات هوتسبوت",
+  subtitle="إحصاءات سريعة عن البطاقات والحزم والباقات الفعّالة",
+  icon="id-card",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء حزمة
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-layer-group"></i> كل الحزم
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_list') + '">
+      <i class="fa-solid fa-list"></i> كل البطاقات
+    </a>
+  '
+) }}
+
+{# ───── KPI strip ──────────────────────────────────────────── #}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي البطاقات", cards.total or 0,     icon="layer-group", variant="brand") }}
+  {{ hub.kpi("متاحة",          cards.available or 0, icon="box-open",   variant="green") }}
+  {{ hub.kpi("مُستخدَمة",       cards.used or 0,      icon="handshake",  variant="amber") }}
+  {{ hub.kpi("الحزم",          cards.batches or 0,   icon="boxes-stacked", variant="blue") }}
+  {{ hub.kpi("الباقات النشطة", (plans.enabled or 0)|string + " / " + (plans.total or 0)|string,
+              icon="tags", variant="brand") }}
 </div>
 
-<div class="co-card">
-  <div class="co-card-head">
-    <i class="fa-solid fa-clock-rotate-left" style="color:var(--hr-cyan-500)"></i>
-    آخر الحزم المُنشأة
-    <a href="{{ url_for('radius.cards_batches') }}" style="margin-inline-start:auto;font-size:11.5px;font-weight:600">عرض الكل ←</a>
+{# ───── Recent batches ─────────────────────────────────────── #}
+{% if recent %}
+{% call hub.section(
+    "آخر الحزم المُنشأة",
+    icon="clock-rotate-left",
+    meta=recent|length|string + " حزمة",
+    flush=True
+) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>الكود</th>
+          <th>الاسم</th>
+          <th class="num">الكمية</th>
+          <th class="num">المُولَّدة</th>
+          <th class="num">المُستخدَمة</th>
+          <th>تاريخ الإنشاء</th>
+          <th style="width:90px">إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in recent %}
+        <tr>
+          <td class="mono">
+            <a href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
+               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:800">
+              {{ b.batch_code or '—' }}
+            </a>
+          </td>
+          <td>{{ b.package_name or '—' }}</td>
+          <td class="num mono">{{ b.count or 0 }}</td>
+          <td class="num mono">{{ b.generated or 0 }}</td>
+          <td class="num mono">{{ b.used or 0 }}</td>
+          <td class="mono small">{{ b.created_at or '—' }}</td>
+          <td>
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="عرض"
+               href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  {% if recent %}
-  <table class="co-table">
-    <thead>
-      <tr><th>الكود</th><th>الاسم</th><th>الكمية</th><th>المُنشأة</th><th>المُستخدَمة</th><th>تاريخ الإنشاء</th></tr>
-    </thead>
-    <tbody>
-      {% for b in recent %}
-      <tr>
-        <td class="mono" style="font-weight:800;color:var(--hr-cyan-700)">{{ b.batch_code }}</td>
-        <td>{{ b.package_name or '—' }}</td>
-        <td class="mono">{{ b.count or 0 }}</td>
-        <td class="mono">{{ b.generated or 0 }}</td>
-        <td class="mono">{{ b.used or 0 }}</td>
-        <td class="mono" style="color:var(--hr-text-muted);font-size:12px">{{ b.created_at or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <div class="empty">
-      <i class="fa-solid fa-boxes-stacked" style="font-size:32px;color:var(--hr-border-strong);margin-bottom:8px"></i>
-      <div>لا توجد حزم بعد —
-        <a href="{{ url_for('radius.cards_generate') }}">أنشئ أول حزمة</a>
-      </div>
-    </div>
-  {% endif %}
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد حزم بعد",
+  sub="أنشئ أوّل حزمة من زرّ «إنشاء حزمة» أعلى الصفحة لتبدأ ببيع البطاقات.",
+  icon="boxes-stacked"
+) }}
+{% endif %}
+
 {% endblock %}

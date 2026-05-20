@@ -1,67 +1,86 @@
+{# Cards of a single batch — REBUILT N7 (hub-v2). Backend data: items, batch, plan. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}دفعة {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}دفعة {{ batch.batch_code if batch else '—' }}{% endblock %}
-{% block head_buttons %}
-{% if batch %}
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
-    <i class="fa-solid fa-pen"></i> تعديل الباقة
-  </a>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bandwidth_schedules') }}">
-    <i class="fa-solid fa-gauge-high"></i> سرعات متعددة
-  </a>
-{% endif %}
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} بطاقة</span>{% endblock %}
 
 {% block content %}
+
 {% if batch %}
-<div class="profile-banner">
-  <div class="avatar"><i class="fa-solid fa-layer-group"></i></div>
-  <div class="info">
-    <div class="id-big">{{ batch.batch_code }}</div>
-    <div class="id-sub">{{ plan.name if plan else '—' }} · أنشأها {{ batch.created_by or '—' }} · {{ batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else '' }}</div>
-  </div>
-  <div class="stats">
-    <div class="stat"><div class="v">{{ batch.generated }}</div><div class="l">مُولَّد</div></div>
-    <div class="stat"><div class="v">{{ batch.used }}</div><div class="l">مستخدَم</div></div>
-    <div class="stat"><div class="v">{{ "%.0f"|format((batch.used/batch.generated*100) if batch.generated else 0) }}%</div><div class="l">نسبة</div></div>
-    <div class="stat"><div class="v">{{ "%.2f"|format(plan.price) if plan else '0.00' }}</div><div class="l">{{ plan.currency if plan else '' }}</div></div>
-  </div>
+{% set pct_used = ((batch.used / batch.generated * 100) if batch.generated else 0) %}
+{{ hub.hero(
+  "دفعة " + batch.batch_code,
+  subtitle=(plan.name if plan else "بدون باقة") + " · أنشأها " + (batch.created_by or '—')
+            + " · " + (batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else ''),
+  icon="layer-group",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_batch_edit', batch_id=batch.id) + '">
+      <i class="fa-solid fa-pen"></i> تعديل الحزمة
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i> كل الحزم
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.bandwidth_schedules') + '">
+      <i class="fa-solid fa-gauge-high"></i> سرعات متعددة
+    </a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("مُولَّد",   batch.generated or 0, icon="layer-group", variant="brand") }}
+  {{ hub.kpi("مستخدَم",  batch.used or 0,      icon="handshake",   variant="amber") }}
+  {{ hub.kpi("نسبة الاستخدام", "%.0f%%"|format(pct_used), icon="chart-pie", variant="blue") }}
+  {{ hub.kpi("سعر البطاقة",
+            ("%.2f"|format(plan.price) + ' ' + (plan.currency or '')) if plan else '—',
+            icon="coins", variant="green") }}
 </div>
+{% else %}
+{{ hub.hero("دفعة غير موجودة", subtitle="لم نتمكّن من العثور على الدفعة المطلوبة.", icon="circle-exclamation") }}
 {% endif %}
 
-<div class="card">
-  <div class="card-header">
-    <span class="title">بطاقات الدفعة</span>
-    <span class="meta">{{ items|length }} بطاقة</span>
-  </div>
-  <div class="card-body card-body--flush">
-    {% if items %}
-    <table class="hr-table" data-paginated="1" data-page-size="50" data-persist-key="batch-cards">
-      <thead><tr>
-        <th>#</th><th>اليوزر</th><th>الباسورد</th>
-        <th>الحالة</th><th>أول استخدام</th><th>MAC</th>
-      </tr></thead>
+{# ───── Cards table ────────────────────────────────────────── #}
+{% if items %}
+{% call hub.section("بطاقات الدفعة", icon="id-card", meta=items|length|string + " بطاقة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="50" data-persist-key="batch-cards">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>اليوزر</th>
+          <th>الباسورد</th>
+          <th>الحالة</th>
+          <th>أول استخدام</th>
+          <th>MAC</th>
+        </tr>
+      </thead>
       <tbody>
         {% for c in items %}
         <tr>
-          <td class="num">{{ c.id }}</td>
+          <td class="num mono">{{ c.id }}</td>
           <td class="mono"><strong>{{ c.username }}</strong></td>
           <td class="mono">{{ c.password }}</td>
           <td>
-            {% if c.revoked %}<span class="pill pill-danger">ملغاة</span>
-            {% elif c.used %}<span class="pill pill-info">مستخدمة</span>
-            {% else %}<span class="pill pill-success">جاهزة</span>{% endif %}
+            {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
+            {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
+            {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
           </td>
-          <td class="mono">{{ c.first_used_at.strftime('%Y-%m-%d %H:%M') if c.first_used_at else '—' }}</td>
-          <td class="mono">{{ c.used_by_mac or '—' }}</td>
+          <td class="mono small">{{ c.first_used_at.strftime('%Y-%m-%d %H:%M') if c.first_used_at else '—' }}</td>
+          <td class="mono small">{{ c.used_by_mac or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-id-card"></i>لا بطاقات</div>
-    {% endif %}
   </div>
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا بطاقات في هذه الدفعة",
+  sub="قد تكون الدفعة جديدة أو لم يبدأ توليد البطاقات بعد.",
+  icon="id-card"
+) }}
+{% endif %}
+
 {% endblock %}
