@@ -643,6 +643,15 @@ def get_card_by_username(tenant_id: int, username: str) -> Optional[Card]:
     return _card_row(row) if row else None
 
 
+def get_card(tenant_id: int, card_id: int) -> Optional[Card]:
+    cur = db().execute(
+        "SELECT * FROM cards WHERE tenant_id = ? AND id = ? LIMIT 1",
+        (tenant_id, card_id),
+    )
+    row = cur.fetchone()
+    return _card_row(row) if row else None
+
+
 def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
     """Return a card with the safe context needed by the Card Checker.
 

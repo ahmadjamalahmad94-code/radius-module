@@ -39,6 +39,20 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_get), methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke",
                     require_api_token(cards_revoke), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/enable", "cards_enable",
+                    require_api_token(cards_enable), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/disable", "cards_disable",
+                    require_api_token(cards_disable), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/lock-mac", "cards_lock_mac",
+                    require_api_token(cards_lock_mac), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/unlock-mac", "cards_unlock_mac",
+                    require_api_token(cards_unlock_mac), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/reset-usage", "cards_reset_usage",
+                    require_api_token(cards_reset_usage), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/disconnect", "cards_disconnect",
+                    require_api_token(cards_disconnect), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/delete-permanent", "cards_delete_permanent",
+                    require_api_token(cards_delete_permanent), methods=["POST"])
 
 
 # ─────────────── helpers ───────────────
@@ -111,6 +125,31 @@ def _serialize_card(c) -> dict:
         "first_used_at": c.first_used_at.isoformat() + "Z" if c.first_used_at else None,
         "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
     }
+
+
+def _card_or_response(card_id: int):
+    from ...radius.db.repos import cards_repo
+
+    card = cards_repo.get_card(_tid(), card_id)
+    if not card:
+        return None, fail("not_found", "card not found", status=404)
+    if not batch_in_scope(int(card.batch_id or 0)):
+        return None, deny_out_of_scope()
+    return card, None
+
+
+def _updated_card_payload(username: str, *, action: str) -> dict:
+    from ...radius.services.card_checker import check_card
+
+    return {
+        "action": action,
+        "card": check_card(_tid(), username),
+    }
+
+
+def _body() -> dict:
+    body = request.get_json(silent=True) or {}
+    return body if isinstance(body, dict) else {}
 
 
 # ─────────────── views ───────────────
@@ -268,9 +307,124 @@ def cards_get(card_id: int):
 
 
 def cards_revoke(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
     from ...radius.services.cards import get_cards_service
     try:
         get_cards_service().revoke_card(actor=_actor(), card_id=card_id)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
-    return ok({"id": card_id, "revoked": True})
+    payload = _updated_card_payload(card.username, action="revoke")
+    payload.update({"id": card_id, "revoked": True})
+    return ok(payload)
+
+
+def cards_enable(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().enable_card(actor=_actor(), card_id=card_id)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="enable"))
+
+
+def cards_disable(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    reason = str(_body().get("reason") or "")[:300]
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().disable_card(actor=_actor(), card_id=card_id, reason=reason)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="disable"))
+
+
+def cards_lock_mac(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    mac = str(_body().get("mac") or "").strip()[:64]
+    if not mac:
+        return fail("validation_error", "mac is required", status=422)
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().lock_card_mac(actor=_actor(), card_id=card_id, mac=mac)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="lock_mac"))
+
+
+def cards_unlock_mac(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().unlock_card_mac(actor=_actor(), card_id=card_id)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="unlock_mac"))
+
+
+def cards_reset_usage(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().reset_card_usage(actor=_actor(), card_id=card_id)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="reset_usage"))
+
+
+def cards_disconnect(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    body = _body()
+    session_id = str(body.get("session_id") or "")
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().disconnect_card(
+            actor=_actor(),
+            username=card.username,
+            session_id=session_id,
+        )
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok(_updated_card_payload(card.username, action="disconnect"))
+
+
+def cards_delete_permanent(card_id: int):
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    body = _body()
+    confirm = str(body.get("confirm") or "")
+    if confirm != f"DELETE:{card.username}":
+        return fail(
+            "validation_error",
+            "confirm must be DELETE:<username>",
+            status=422,
+        )
+    from ...radius.services.cards import get_cards_service
+    try:
+        get_cards_service().delete_card_permanently(actor=_actor(), card_id=card_id)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({
+        "action": "delete_permanent",
+        "card": {
+            "exists": False,
+            "status": "deleted",
+            "username": card.username,
+            "id": card_id,
+        },
+    })
