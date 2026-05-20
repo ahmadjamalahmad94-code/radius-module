@@ -726,3 +726,38 @@ body::after{
    .topbar (z:50), .hb-side (z:60), .main flow children >= z:1
    all paint over. Cards have their own opaque backgrounds so the
    anim only shows in the gaps between them — exactly what we want. */
+
+/* ────────────────────────────────────────────────────────────────
+   MikroTik unreachable banner
+   ──────────────────────────────────────────────────────────────── */
+.mt-warn-banner{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+  padding:10px 16px;
+  background:linear-gradient(180deg, #fff7ed, #ffedd5);
+  border:1px solid #fdba74;
+  border-inline-start:4px solid #ea580c;
+  border-radius:10px;
+  color:#9a3412;
+  font-size:13px;
+  font-weight:700;
+  box-shadow:0 1px 0 rgba(234,88,12,.05);
+}
+.mt-warn-banner i.fa-triangle-exclamation{
+  color:#ea580c; font-size:16px; flex-shrink:0;
+}
+.mt-warn-banner span{ flex:1; font-weight:600; }
+.mt-warn-cta{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px;
+  background:#ea580c; color:#fff;
+  border-radius:8px;
+  text-decoration:none;
+  font-size:12px; font-weight:800;
+  white-space:nowrap;
+  transition:.15s ease;
+}
+.mt-warn-cta:hover{ background:#c2410c; color:#fff; }
+.mt-warn-cta i{ font-size:10px; }

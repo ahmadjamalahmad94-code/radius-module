@@ -284,6 +284,22 @@
     </div>
   </div>
 
+  {# MT-unreachable banner — sourced from in-memory heartbeats published
+     by mt_reconciler each 30s tick. Shows when at least one router has
+     been timing out, with a one-click link to the diagnostics page. #}
+  {% if mt_health and mt_health.unreachable %}
+    <div class="mt-warn-banner" role="alert">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>
+        {{ mt_health.skipped }} راوتر مايكروتيك غير متاح حالياً —
+        لن تعمل عمليات DHCP / reconciliation / CoA حتى يعود.
+      </span>
+      <a class="mt-warn-cta" href="{{ url_for('radius.diagnostics') }}">
+        تشخيص الآن <i class="fa-solid fa-arrow-left"></i>
+      </a>
+    </div>
+  {% endif %}
+
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="flash-stack">

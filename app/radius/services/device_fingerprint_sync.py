@@ -229,7 +229,7 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
                 "password":    r.get("password") or "",
                 "use_tls":     bool(r.get("use_tls")),
                 "verify_tls":  bool(r.get("verify_tls")),
-                "timeout_sec": int(r.get("timeout_sec") or 10),
+                "timeout_sec": int(r.get("timeout_sec") or 20),
                 "_source":     "mikrotik_configs",
             }
     except Exception:  # noqa: BLE001
@@ -258,7 +258,7 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
                 "password":    api_pwd,
                 "use_tls":     bool(getattr(nas, "api_use_tls", False)),
                 "verify_tls":  True,  # nas_devices doesn't track verify flag
-                "timeout_sec": 10,
+                "timeout_sec": 20,
                 "_source":     "nas_devices",
             }
     except Exception:  # noqa: BLE001

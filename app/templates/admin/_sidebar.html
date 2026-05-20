@@ -69,6 +69,7 @@
 {%- set m_devices     = '/devices' in path -%}
 {%- set m_pools       = '/pools' in path -%}
 {%- set m_mt          = '/mt' in path -%}
+{%- set m_diag        = '/diagnostics' in path -%}
 
 {# Accounting #}
 {%- set m_invoices    = '/invoices' in path -%}
@@ -203,6 +204,7 @@
         {{ sub_item('radius.devices_list', 'أجهزة الشبكة',     m_devices) }}
         {{ sub_item('radius.pool_list',    'IP Pool',          m_pools) }}
         {{ sub_item('radius.mt_list',      'اتصالات MikroTik', m_mt) }}
+        {{ sub_item('radius.diagnostics',  'تشخيص الراوترات',  m_diag) }}
       </div></div>
     </div>
 

@@ -124,7 +124,7 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
                 "password":    r.get("password") or "",
                 "use_tls":     bool(r.get("use_tls")),
                 "verify_tls":  bool(r.get("verify_tls")),
-                "timeout_sec": int(r.get("timeout_sec") or 10),
+                "timeout_sec": int(r.get("timeout_sec") or 20),
             }
     except Exception:  # noqa: BLE001
         _LOG.exception("mt_reconciler: mikrotik_configs list failed tenant=%s",
@@ -146,7 +146,7 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
                 "password":    getattr(nas, "api_password", "") or "",
                 "use_tls":     bool(getattr(nas, "api_use_tls", False)),
                 "verify_tls":  True,
-                "timeout_sec": 10,
+                "timeout_sec": 20,
             }
     except Exception:  # noqa: BLE001
         _LOG.exception("mt_reconciler: nas_devices list failed tenant=%s",

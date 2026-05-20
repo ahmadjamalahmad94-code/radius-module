@@ -27,7 +27,12 @@ from .protocol import (
 
 _LOG = logging.getLogger(__name__)
 
-_DEFAULT_TIMEOUT = 10.0
+# 20s default — empirically, MT routers on public IPs (the common
+# deployment for ISP / hotel WiFi management) often take 8-15s for
+# a clean /ip/dhcp-server/lease/print with 500+ leases. The old 10s
+# default tripped on slow uplinks. Per-router `timeout_sec` config
+# still wins when set explicitly.
+_DEFAULT_TIMEOUT = 20.0
 
 
 class MikrotikClient:

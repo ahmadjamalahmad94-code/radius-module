@@ -37,9 +37,35 @@ def create_app() -> Flask:
     _register_radius(app)
     _register_api(app)
     _register_root(app)
+    _install_mt_health_context(app)
     _seed_demo(app)
     _start_workers(app)
     return app
+
+
+def _install_mt_health_context(app: Flask) -> None:
+    """Inject `mt_health` into every template, sourced from in-memory
+    heartbeats. Zero cost per request — no I/O, no DB, no probe."""
+    @app.context_processor
+    def _mt_health_inject():
+        try:
+            from .workers.heartbeat import get_info
+            # mt_reconciler publishes routers_ok / routers_skipped each tick.
+            info = get_info("mt_reconciler") or {}
+            skipped = int(info.get("last_routers_skipped") or 0)
+            ok      = int(info.get("last_routers_ok") or 0)
+            unreachable = skipped > 0
+            return {
+                "mt_health": {
+                    "unreachable":  unreachable,
+                    "skipped":      skipped,
+                    "ok":           ok,
+                    "any_routers":  (skipped + ok) > 0,
+                }
+            }
+        except Exception:  # noqa: BLE001
+            return {"mt_health": {"unreachable": False, "skipped": 0,
+                                   "ok": 0, "any_routers": False}}
 
 
 def _install_api_cors(app: Flask) -> None:

@@ -28,6 +28,28 @@ def register_status_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/audit", "audit_list", audit_list, methods=["GET"])
     bp.add_url_rule("/_reconcile_now", "reconcile_now",
                     reconcile_now, methods=["POST", "GET"])
+    bp.add_url_rule("/diagnostics", "diagnostics",
+                    diagnostics, methods=["GET"])
+
+
+def diagnostics():
+    """Per-router health-check page. Runs TCP probe + API login test
+    against every configured router and renders verdicts + fix hints +
+    copyable MT commands.
+    """
+    from ..services import mt_diagnostics
+    report = mt_diagnostics.diagnose_tenant(_tid())
+    # VPS public IP — useful in the copyable MT commands ("allow this
+    # IP through firewall"). Best-effort detection; falls back to a
+    # placeholder the operator can replace.
+    vps_ip = request.headers.get("X-Real-IP") or \
+             request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or \
+             request.remote_addr or "YOUR_VPS_IP"
+    return render_template(
+        "radius/mt_diagnostics.html",
+        report=report,
+        vps_ip=vps_ip,
+    )
 
 
 def reconcile_now():

@@ -44,3 +44,10 @@ def is_alive(name: str, *, max_age_sec: float = 60.0) -> bool:
         s = _state.get(name)
         if not s: return False
         return (time.time() - s["last_beat_ts"]) <= max_age_sec
+
+
+def get_info(name: str) -> dict:
+    """Returns the latest info dict published by a worker, or empty."""
+    with _lock:
+        s = _state.get(name)
+        return dict(s["info"]) if s else {}
