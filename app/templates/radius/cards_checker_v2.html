@@ -1565,10 +1565,21 @@
     async function fetchPassword(){
       var fd = new FormData();
       fd.append('card_id', cardId);
+      // App-wide CSRF middleware requires _csrf_token on every non-GET
+      // request (form field OR X-CSRFToken header). Send both for
+      // belt-and-braces — the auto-injector adds the field to <form>
+      // posts, but fetch() needs explicit handling.
+      var csrfTok = "{{ csrf_token() }}";
+      fd.append('_csrf_token', csrfTok);
       try {
         var r = await fetch(
           "{{ url_for('radius.cards_checker_api_reveal_password') }}",
-          { method: 'POST', body: fd, credentials: 'same-origin' }
+          {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': csrfTok },
+          }
         );
         var j = await r.json();
         if (!r.ok || !j.ok || !j.password){

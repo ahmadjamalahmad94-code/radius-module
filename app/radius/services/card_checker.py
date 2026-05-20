@@ -318,7 +318,16 @@ def check_card(tenant_id: int, query: str) -> dict:
         "disabled_at": _iso(record.get("disabled_at")),
         "disabled_by": record.get("disabled_by") or "",
         "created_at": _iso(record.get("card_created_at")),
-        "started_at": _iso(record.get("first_used_at")),
+        # 'started_at' = the first time this card actually connected.
+        # When FreeRADIUS native rlm_sql does the auth (not our HTTP
+        # policy engine), cards.first_used_at never gets stamped, but
+        # radacct still records the session start. Fall back to the
+        # earliest acctstarttime in radacct so the Card Checker hero
+        # always shows the real first connection.
+        "started_at": (
+            _iso(record.get("first_used_at"))
+            or accounting_summary.get("first_session_at")
+        ),
         "expires_at": _iso(record.get("card_expire_at")),
         "remaining_seconds": _remaining_seconds(record.get("card_expire_at"), now),
         "batch": _batch(record),

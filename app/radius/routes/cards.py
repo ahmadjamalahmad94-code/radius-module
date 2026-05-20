@@ -354,7 +354,9 @@ def _checker_redirect(query: str):
 
 def _handle_card_operation():
     svc = get_cards_service()
-    action = _form_str("_card_action")
+    # Accept both 'op' (new template forms) and '_card_action' (older
+    # forms / curl callers). 'op' wins when both are set.
+    action = _form_str("op") or _form_str("_card_action")
     card_id = _form_int("card_id")
     username = _form_str("username")
     query = _form_str("query") or username
