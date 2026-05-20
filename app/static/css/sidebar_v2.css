@@ -139,8 +139,8 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   padding:11px 12px;
   border-radius:10px;
   text-decoration:none;
-  color:var(--hb-text-soft);
-  font-size:14px;font-weight:700;        /* heavier — top-level items read first */
+  color:var(--hb-text);                  /* full dark — top-level reads first */
+  font-size:14px;font-weight:700;
   margin-bottom:4px;
   transition:.15s ease;
   position:relative;
@@ -205,7 +205,7 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   padding:11px 12px;
   border:0;background:transparent;
   border-radius:10px;
-  color:var(--hb-text-soft);
+  color:var(--hb-text);                  /* full dark like top-level items */
   font-size:14px;font-weight:700;
   cursor:pointer;
   font-family:inherit;
@@ -278,7 +278,7 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   padding:8px 12px 8px 42px;     /* indent for sub */
   border-radius:8px;
   text-decoration:none;
-  color:var(--hb-text-muted);
+  color:var(--hb-text-soft);     /* dark slate — reads clearly, still secondary */
   font-size:13px;font-weight:600;
   margin-top:2px;
   transition:.15s ease;
