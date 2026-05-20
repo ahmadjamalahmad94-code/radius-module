@@ -186,6 +186,114 @@ def test_policy_engine_speed_precedence_subscriber_then_card_batch_then_plan():
         assert plan_decision.reply_attrs["Mikrotik-Rate-Limit"] == "500k/5000k"
 
 
+def test_effective_speed_rule_api_explains_precedence():
+    app = _fresh_app()
+    client = app.test_client()
+    username = "effective_" + secrets.token_hex(4)
+    created_sub = client.post(
+        "/api/v1/accounts",
+        json={"username": username, "password": "pw", "plan_id": 1},
+        headers=_auth(),
+    )
+    assert created_sub.status_code == 201, created_sub.get_json()
+    created_batch = client.post(
+        "/api/v1/cards/generate",
+        json={"plan_id": 1, "count": 1, "username_prefix": "eff" + secrets.token_hex(2)},
+        headers=_auth(),
+    )
+    assert created_batch.status_code == 201, created_batch.get_json()
+    batch_id = created_batch.get_json()["data"]["batch"]["id"]
+    for payload in [
+        {"target_type": "plan", "plan_id": 1, "name": "Plan rule", "speed_down_kbps": 1000, "speed_up_kbps": 100},
+        {"target_type": "card_batch", "card_batch_id": batch_id, "name": "Batch rule", "speed_down_kbps": 3000, "speed_up_kbps": 300},
+        {"target_type": "subscriber", "subscriber_username": username, "name": "Subscriber rule", "speed_down_kbps": 7000, "speed_up_kbps": 700},
+    ]:
+        res = client.post(
+            "/api/v1/bandwidth-schedules",
+            json={
+                **payload,
+                "starts_at_time": "00:00",
+                "ends_at_time": "00:00",
+                "priority": 10,
+            },
+            headers=_auth(),
+        )
+        assert res.status_code == 201, res.get_json()
+
+    resolved = client.get(
+        f"/api/v1/bandwidth-schedules/effective?subscriber_username={username}&card_batch_id={batch_id}&plan_id=1",
+        headers=_auth(),
+    )
+    assert resolved.status_code == 200, resolved.get_json()
+    data = resolved.get_json()["data"]
+    assert data["source"] == "subscriber"
+    assert data["rate_limit"] == "700k/7000k"
+    assert data["precedence"] == ["subscriber", "card_batch", "plan"]
+
+
+def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatch):
+    app = _fresh_app()
+    client = app.test_client()
+    username = "live_speed_" + secrets.token_hex(4)
+    created_sub = client.post(
+        "/api/v1/accounts",
+        json={"username": username, "password": "pw", "plan_id": 1},
+        headers=_auth(),
+    )
+    assert created_sub.status_code == 201, created_sub.get_json()
+    schedule_res = client.post(
+        "/api/v1/bandwidth-schedules",
+        json={
+            "target_type": "subscriber",
+            "subscriber_username": username,
+            "name": "Live speed",
+            "starts_at_time": "00:00",
+            "ends_at_time": "00:00",
+            "speed_down_kbps": 9000,
+            "speed_up_kbps": 900,
+        },
+        headers=_auth(),
+    )
+    assert schedule_res.status_code == 201, schedule_res.get_json()
+    schedule_id = schedule_res.get_json()["data"]["schedule"]["id"]
+
+    captured = []
+
+    def _fake_change_user_rate(tenant_id, called_username, *, new_rate_limit):
+        captured.append((tenant_id, called_username, new_rate_limit))
+        from app.radius.integration.radius_coa import CoaResult
+        return CoaResult(ok=True, code=44, code_name="CoA-ACK", reply_message="ok")
+
+    monkeypatch.setattr(
+        "app.radius.integration.radius_coa.change_user_rate",
+        _fake_change_user_rate,
+    )
+    blocked = client.post(
+        f"/api/v1/bandwidth-schedules/{schedule_id}/apply",
+        json={"live": True},
+        headers=_auth(),
+    )
+    assert blocked.status_code == 200, blocked.get_json()
+    blocked_data = blocked.get_json()["data"]
+    assert blocked_data["dry_run"] is True
+    assert blocked_data["live_enabled"] is False
+    assert captured == []
+
+    monkeypatch.setenv("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY", "1")
+    live = client.post(
+        f"/api/v1/bandwidth-schedules/{schedule_id}/apply",
+        json={"live": True},
+        headers=_auth(),
+    )
+    assert live.status_code == 200, live.get_json()
+    data = live.get_json()["data"]
+    assert data["dry_run"] is False
+    assert data["applied_to_radius"] is True
+    assert data["target_count"] == 1
+    assert data["applied_count"] == 1
+    assert captured == [(1, username, "900k/9000k")]
+
+
 def test_card_batch_update_edits_package_settings_and_available_cards_plan():
     app = _fresh_app()
     client = app.test_client()

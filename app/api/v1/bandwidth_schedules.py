@@ -28,6 +28,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/bandwidth-schedules",
                     "bandwidth_schedules_create",
                     require_api_token(bandwidth_schedules_create), methods=["POST"])
+    bp.add_url_rule("/bandwidth-schedules/effective",
+                    "bandwidth_schedules_effective",
+                    require_api_token(bandwidth_schedules_effective), methods=["GET"])
     bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>/apply",
                     "bandwidth_schedules_apply",
                     require_api_token(bandwidth_schedules_apply), methods=["POST"])
@@ -72,10 +75,33 @@ def bandwidth_schedules_create():
     return ok({"schedule": schedule}, status=201)
 
 
+def bandwidth_schedules_effective():
+    try:
+        plan_id_raw = request.args.get("plan_id")
+        plan_id = int(plan_id_raw) if plan_id_raw else None
+        card_batch_raw = request.args.get("card_batch_id")
+        card_batch_id = int(card_batch_raw) if card_batch_raw else None
+    except ValueError:
+        return fail("validation_error", "plan_id/card_batch_id must be int", status=422)
+    result = _svc().resolve_effective_bandwidth_schedule(
+        tenant_id=_tid(),
+        subscriber_username=request.args.get("subscriber_username")
+        or request.args.get("username")
+        or "",
+        card_batch_id=card_batch_id,
+        plan_id=plan_id,
+    )
+    return ok(result)
+
+
 def bandwidth_schedules_apply(schedule_id: int):
+    body = request.get_json(silent=True) or {}
+    live = str(body.get("live") or request.args.get("live") or "").lower() in {
+        "1", "true", "yes", "on",
+    }
     try:
         result = _svc().apply_bandwidth_schedule(
-            tenant_id=_tid(), schedule_id=schedule_id, actor=_actor()
+            tenant_id=_tid(), schedule_id=schedule_id, actor=_actor(), live=live
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)

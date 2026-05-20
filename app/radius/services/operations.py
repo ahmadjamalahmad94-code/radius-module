@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -61,6 +62,13 @@ def _validate_time(value: str, field: str) -> str:
     if hour > 23 or minute > 59:
         raise RadiusValidationError(f"{field} must be a valid time")
     return raw
+
+
+def _rate_limit_from_schedule(schedule: dict | None) -> str:
+    schedule = schedule or {}
+    up = int(schedule.get("speed_up_kbps") or 0)
+    down = int(schedule.get("speed_down_kbps") or 0)
+    return f"{up}k/{down}k"
 
 
 def classify_online_state(*, account_status: str = "",
@@ -372,23 +380,122 @@ class OperationsService:
         return deleted
 
     def apply_bandwidth_schedule(self, *, tenant_id: int, schedule_id: int,
-                                 actor: str) -> dict:
+                                 actor: str, live: bool = False) -> dict:
         schedule = operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)
         if not schedule:
             raise RadiusNotFound("schedule not found")
-        # Foundation only: no realtime RADIUS mutation here.
+        rate = _rate_limit_from_schedule(schedule)
+        live_enabled = os.environ.get("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") == "1"
+        if not live or not live_enabled:
+            message = (
+                "Live RADIUS apply is disabled; dry-run only."
+                if live and not live_enabled
+                else "Validated schedule. Real-time RADIUS apply was not requested."
+            )
+            log = operations_repo.log_bandwidth_schedule(
+                tenant_id, schedule_id, action="dry_run_apply", status="planned",
+                message=message,
+            )
+            self._audit.record(
+                actor=actor,
+                action="bandwidth_schedule.apply_planned",
+                target_type="bandwidth_schedule",
+                target_id=str(schedule_id),
+                payload={"log_id": log.get("id"), "live_requested": bool(live)},
+            )
+            return {
+                "schedule": schedule,
+                "log": log,
+                "rate_limit": rate,
+                "applied_to_radius": False,
+                "dry_run": True,
+                "live_requested": bool(live),
+                "live_enabled": live_enabled,
+            }
+
+        usernames = operations_repo.usernames_for_bandwidth_schedule(
+            tenant_id,
+            schedule,
+            limit=1000,
+        )
+        results: list[dict] = []
+        applied = 0
+        from ..integration import radius_coa
+        for username in usernames:
+            coa = radius_coa.change_user_rate(
+                tenant_id,
+                username,
+                new_rate_limit=rate,
+            )
+            if coa.ok:
+                applied += 1
+            results.append({
+                "username": username,
+                "ok": bool(coa.ok),
+                "code": coa.code_name,
+                "message": coa.reply_message,
+            })
+        status = "applied" if applied else "no_active_sessions"
+        if not usernames:
+            status = "no_targets"
         log = operations_repo.log_bandwidth_schedule(
-            tenant_id, schedule_id, action="dry_run_apply", status="planned",
-            message="Validated schedule. Real-time RADIUS apply worker is not enabled in this slice.",
+            tenant_id,
+            schedule_id,
+            action="live_apply",
+            status=status,
+            message=f"Applied {applied}/{len(usernames)} active sessions.",
         )
         self._audit.record(
             actor=actor,
-            action="bandwidth_schedule.apply_planned",
+            action="bandwidth_schedule.apply_live",
             target_type="bandwidth_schedule",
             target_id=str(schedule_id),
-            payload={"log_id": log.get("id")},
+            payload={
+                "log_id": log.get("id"),
+                "rate_limit": rate,
+                "target_count": len(usernames),
+                "applied_count": applied,
+            },
         )
-        return {"schedule": schedule, "log": log, "applied_to_radius": False}
+        return {
+            "schedule": schedule,
+            "log": log,
+            "rate_limit": rate,
+            "applied_to_radius": applied > 0,
+            "dry_run": False,
+            "live_requested": True,
+            "live_enabled": True,
+            "target_count": len(usernames),
+            "applied_count": applied,
+            "results": results,
+        }
+
+    def resolve_effective_bandwidth_schedule(
+        self,
+        *,
+        tenant_id: int,
+        subscriber_username: str = "",
+        card_batch_id: int | None = None,
+        plan_id: int | None = None,
+    ) -> dict:
+        rule = operations_repo.resolve_effective_bandwidth_schedule(
+            tenant_id,
+            subscriber_username=subscriber_username,
+            card_batch_id=card_batch_id,
+            plan_id=plan_id,
+        )
+        return {
+            "effective_rule": rule,
+            "has_rule": bool(rule),
+            "rate_limit": _rate_limit_from_schedule(rule) if rule else "",
+            "source": (rule or {}).get("target_type") or "none",
+            "precedence": ["subscriber", "card_batch", "plan"],
+            "input": {
+                "subscriber_username": subscriber_username,
+                "card_batch_id": card_batch_id,
+                "plan_id": plan_id,
+            },
+        }
 
     def create_print_template(self, *, tenant_id: int, actor: str, data: dict) -> dict:
         name = (data.get("name") or "").strip()

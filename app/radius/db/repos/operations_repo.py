@@ -528,6 +528,66 @@ def resolve_effective_bandwidth_schedule(
     return None
 
 
+def usernames_for_bandwidth_schedule(
+    tenant_id: int,
+    schedule: dict,
+    *,
+    limit: int = 1000,
+) -> list[str]:
+    """Return usernames affected by a schedule for live CoA application.
+
+    This is deliberately bounded. The caller can inspect the returned count and
+    run the operation in slices later if a very large ISP deployment needs it.
+    """
+    target_type = (schedule.get("target_type") or "plan").strip().lower()
+    usernames: list[str] = []
+    if target_type == "subscriber":
+        username = (schedule.get("subscriber_username") or "").strip()
+        return [username] if username else []
+    if target_type == "card_batch":
+        batch_id = schedule.get("card_batch_id")
+        rows = db().execute(
+            """
+            SELECT username
+              FROM cards
+             WHERE tenant_id = ? AND batch_id = ?
+               AND COALESCE(revoked, 0) = 0
+             ORDER BY id
+             LIMIT ?
+            """,
+            (tenant_id, batch_id, limit),
+        ).fetchall()
+        return [str(row["username"]) for row in rows if row["username"]]
+    plan_id = schedule.get("plan_id")
+    rows = db().execute(
+        """
+        SELECT username
+          FROM subscribers
+         WHERE tenant_id = ? AND plan_id = ?
+           AND COALESCE(deleted_at, '') = ''
+         ORDER BY id
+         LIMIT ?
+        """,
+        (tenant_id, plan_id, limit),
+    ).fetchall()
+    usernames.extend(str(row["username"]) for row in rows if row["username"])
+    remaining = max(0, limit - len(usernames))
+    if remaining:
+        rows = db().execute(
+            """
+            SELECT username
+              FROM cards
+             WHERE tenant_id = ? AND plan_id = ?
+               AND COALESCE(revoked, 0) = 0
+             ORDER BY id
+             LIMIT ?
+            """,
+            (tenant_id, plan_id, remaining),
+        ).fetchall()
+        usernames.extend(str(row["username"]) for row in rows if row["username"])
+    return usernames
+
+
 def log_bandwidth_schedule(tenant_id: int, schedule_id: int, *,
                            action: str, status: str, message: str = "") -> dict:
     with transaction() as conn:
