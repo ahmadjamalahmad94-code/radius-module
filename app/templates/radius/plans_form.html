@@ -1,5 +1,9 @@
+{# Plans/Offers form — REBUILT (Night N6) on hub-v2. 9 sections.
+   Same backend route + field names — zero backend touched. #}
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة عرض" if is_new else "تعديل عرض" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -7,496 +11,595 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H3 — Plan form (نفس نمط RM-H1 بتوكينات radius-module --hr-*) */
-.pln-form{max-width:1080px;margin:0 auto;padding:8px 4px 18px}
-.sec-card{
-  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
-  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));
-}
-.sec-card > h3{
-  display:flex;align-items:center;gap:10px;
-  margin:0 0 14px;font-size:14.5px;font-weight:800;color:var(--hr-text);
-  padding-bottom:10px;border-bottom:1px dashed var(--hr-border);
-}
-.sec-card > h3 i.h-ic{
-  width:30px;height:30px;border-radius:6px;
-  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px;
-}
-.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
-.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
-.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
-.sec-card.collapsible.is-collapsed > .sb{display:none}
+  .pl-form{ max-width: 1180px; margin: 0 auto; }
 
-.sec-card.gen   {border-inline-start:3px solid var(--hr-cyan-500)}
-.sec-card.subs  {border-inline-start:3px solid var(--hr-blue-info)}
-.sec-card.subs  > h3 i.h-ic{background:var(--hr-badge-info-bg);color:var(--hr-blue-info)}
-.sec-card.quota {border-inline-start:3px solid var(--hr-orange)}
-.sec-card.quota > h3 i.h-ic{background:var(--hr-badge-warn-bg);color:#92500c}
-.sec-card.speed {border-inline-start:3px solid var(--hr-green)}
-.sec-card.speed > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
-.sec-card.notif {border-inline-start:3px solid var(--hr-purple)}
-.sec-card.notif > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
-.sec-card.mt    {border-inline-start:3px solid var(--hr-red)}
-.sec-card.mt    > h3 i.h-ic{background:var(--hr-badge-danger-bg);color:#9B1C1C}
-.sec-card.days  {border-inline-start:3px solid var(--hr-cyan-500)}
+  /* Two-column layout with sticky nav */
+  .pl-layout{
+    display:grid;
+    grid-template-columns: 224px minmax(0, 1fr);
+    gap: var(--hub-gap-section);
+    align-items: start;
+  }
+  @media (max-width: 980px){
+    .pl-layout{ display:block; }
+    .pl-side{ position: static !important; margin-bottom: var(--hub-gap-section); }
+  }
 
-.f-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
-@media (max-width:920px){.f-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:560px){.f-grid{grid-template-columns:1fr}}
-.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.f-field.full{grid-column:1 / -1}
-.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
-.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
-.f-field input, .f-field select, .f-field textarea{
-  padding:10px 12px;border-radius:var(--hr-r,6px);
-  border:1.5px solid var(--hr-border-strong);
-  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
-  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
-}
-.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
-  outline:0;border-color:var(--hr-cyan-500);background:#fff;
-  box-shadow:0 0 0 3px rgba(43,170,204,.20);
-}
-.f-field textarea{min-height:64px;resize:vertical}
-.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
+  /* Sticky nav */
+  .pl-side{
+    position: sticky; top: 84px;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    padding: 14px 12px;
+    box-shadow: var(--hub-sh-sm);
+  }
+  .pl-side-title{
+    display:flex; align-items:center; gap:8px;
+    font-size: 12.5px; font-weight: 800; color: var(--hub-text);
+    margin-bottom: 8px;
+  }
+  .pl-side-title i{ color: var(--hub-brand-ink); }
+  .pl-side-list{ display:flex; flex-direction:column; gap:3px; }
+  .pl-side-list a{
+    display:flex; align-items:center; gap:8px;
+    padding: 7px 10px;
+    border-radius: var(--hub-r-md);
+    text-decoration: none;
+    color: var(--hub-text-soft);
+    font-size: 12.5px; font-weight: 700;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .pl-side-list a:hover{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+  }
+  .pl-side-list i{ width:14px; text-align:center; font-size:11px; opacity:.7; }
 
-.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
+  /* Collapsible sections */
+  .pl-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+    scroll-margin-top: 96px;
+  }
+  .pl-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .pl-section.is-collapsible .pl-section-head{ cursor:pointer; user-select:none; }
+  .pl-section.is-collapsed .pl-section-head{ border-bottom: none; }
+  .pl-section-icon{
+    width: 30px; height: 30px;
+    border-radius: var(--hub-r-md);
+    display: inline-flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .pl-section-title{ flex:1; font-size: 14px; font-weight: 800; }
+  .pl-section-toggle{
+    color: var(--hub-text-mute); font-size: 13px;
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .pl-section.is-collapsed .pl-section-toggle{ transform: rotate(-90deg); }
+  .pl-section-body{ padding: 18px; }
+  .pl-section.is-collapsed .pl-section-body{ display:none; }
 
-.day-chips{display:flex;gap:6px;flex-wrap:wrap}
-.day-chip{
-  padding:6px 12px;border:1px solid var(--hr-border);border-radius:18px;
-  background:var(--hr-soft);font-size:12.5px;font-weight:700;cursor:pointer;color:var(--hr-text-soft);
-  user-select:none;transition:.15s ease;
-}
-.day-chip:hover{border-color:var(--hr-cyan-500)}
-.day-chip input{display:none}
-.day-chip.is-on{background:var(--hr-cyan-500);color:#fff;border-color:var(--hr-cyan-500)}
+  /* Section accent colors */
+  .pl-section--gen   { border-inline-start: 3px solid var(--hub-brand); }
+  .pl-section--gen   .pl-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .pl-section--speed { border-inline-start: 3px solid var(--hub-green); }
+  .pl-section--speed .pl-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .pl-section--quota { border-inline-start: 3px solid var(--hub-amber); }
+  .pl-section--quota .pl-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .pl-section--subs  { border-inline-start: 3px solid var(--hub-blue); }
+  .pl-section--subs  .pl-section-icon{ background: var(--hub-blue-soft); color: var(--hub-blue-ink); }
+  .pl-section--notif { border-inline-start: 3px solid #8B5CF6; }
+  .pl-section--notif .pl-section-icon{ background: #EDE9FE; color: #6D28D9; }
+  .pl-section--mt    { border-inline-start: 3px solid #EC4899; }
+  .pl-section--mt    .pl-section-icon{ background: #FCE7F3; color: #9D174D; }
+  .pl-section--days  { border-inline-start: 3px solid #06B6D4; }
+  .pl-section--days  .pl-section-icon{ background: #CFFAFE; color: #155E75; }
+  .pl-section--biz   { border-inline-start: 3px solid var(--hub-amber); }
+  .pl-section--biz   .pl-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .pl-section--adv   { border-inline-start: 3px solid var(--hub-text-mute); }
 
-.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+  /* Grid */
+  .pl-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .pl-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .pl-grid{ grid-template-columns: 1fr; } }
+  .pl-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .pl-field.full{ grid-column: 1 / -1; }
+  .pl-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .pl-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .pl-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+  .pl-field input[type=color]{ padding:3px; height:42px; cursor:pointer; }
+
+  /* Checkbox tile */
+  .pl-chk{
+    display:flex; align-items:center; gap:8px;
+    padding: 9px 12px;
+    background: var(--hub-bg-soft);
+    border: 1px solid var(--hub-border-soft);
+    border-radius: var(--hub-r-md);
+    font-size:12.5px; font-weight:700;
+  }
+  .pl-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+
+  /* Day chips */
+  .pl-day-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .pl-day-chip{
+    padding: 7px 14px;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-pill);
+    background: var(--hub-bg-card);
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    color: var(--hub-text-soft);
+    user-select: none;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .pl-day-chip:hover{ border-color: var(--hub-brand-line); }
+  .pl-day-chip input{ display:none; }
+  .pl-day-chip.is-on{
+    background: var(--hub-brand);
+    color: #fff;
+    border-color: var(--hub-brand);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="pln-form">
-<form method="post"
-      action="{{ url_for('radius.plans_update', plan_id=plan.id) if not is_new else url_for('radius.plans_create') }}">
 
-  {# ─────────────── 1. إعدادات عامة ─────────────── #}
-  <section class="sec-card gen">
-    <h3><i class="fa-solid fa-gear h-ic"></i>إعدادات عامة</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>اسم العرض <span class="req">*</span></label>
-        <input type="text" name="name" required value="{{ plan.name or '' }}" placeholder="Gold-1M">
-        <div class="field-help">يظهر في القوائم وعند الاختيار.</div></div>
-      <div class="f-field"><label>رمز الباقة</label>
-        <input type="text" name="code" value="{{ plan.code or '' }}" placeholder="OF-GOLD-1"></div>
-      <div class="f-field"><label>النوع</label>
-        <select name="plan_type">
-          {% for t in plan_types %}
-            <option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>
-              {% if t == 'time' %}وقت{% elif t == 'quota' %}حصة{% elif t == 'hybrid' %}وقت وحصة{% elif t == 'unlimited' %}غير محدود{% elif t == 'recurring' %}متجدد{% else %}{{ t }}{% endif %}
-            </option>
+{{ hub.hero(
+  title_ar,
+  subtitle="إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة",
+  icon="tags",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
+<div class="pl-form">
+<div class="pl-layout">
+
+  {# ───── Sticky nav ──────────────────────────── #}
+  <aside class="pl-side" aria-label="أقسام العرض">
+    <div class="pl-side-title"><i class="fa-solid fa-compass"></i> أقسام العرض</div>
+    <nav class="pl-side-list">
+      <a href="#pl-general"><i class="fa-solid fa-gear"></i> إعدادات عامة</a>
+      <a href="#pl-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
+      <a href="#pl-quota"><i class="fa-solid fa-clock"></i> الكوتا والوقت</a>
+      <a href="#pl-subs"><i class="fa-solid fa-handshake"></i> الاشتراك والسلوك</a>
+      <a href="#pl-notif"><i class="fa-solid fa-bell"></i> التنبيهات</a>
+      <a href="#pl-adv"><i class="fa-solid fa-sliders"></i> سياسات التجديد</a>
+      <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> الشبكة + MikroTik</a>
+      <a href="#pl-days"><i class="fa-solid fa-calendar-days"></i> أيام وساعات السماح</a>
+      <a href="#pl-biz"><i class="fa-solid fa-coins"></i> تجاري</a>
+    </nav>
+  </aside>
+
+  {# ───── Form ──────────────────────────────── #}
+  <form method="post"
+        action="{{ url_for('radius.plans_update', plan_id=plan.id) if not is_new else url_for('radius.plans_create') }}">
+
+    {# 1. General #}
+    <section class="pl-section pl-section--gen" id="pl-general">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-gear"></i></span>
+        <span class="pl-section-title">إعدادات عامة</span>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>اسم العرض <span class="req">*</span></label>
+            <input class="hub-input" type="text" name="name" required value="{{ plan.name or '' }}" placeholder="Gold-1M">
+            <div class="help">يظهر في القوائم.</div></div>
+          <div class="pl-field"><label>رمز الباقة</label>
+            <input class="hub-input" type="text" name="code" value="{{ plan.code or '' }}" placeholder="OF-GOLD-1"></div>
+          <div class="pl-field"><label>النوع</label>
+            <select class="hub-select" name="plan_type">
+              {% for t in plan_types %}
+                <option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>
+                  {% if t == 'time' %}وقت{% elif t == 'quota' %}حصة{% elif t == 'hybrid' %}وقت وحصة{% elif t == 'unlimited' %}غير محدود{% elif t == 'recurring' %}متجدد{% else %}{{ t }}{% endif %}
+                </option>
+              {% endfor %}
+            </select></div>
+          <div class="pl-field"><label>نوع الخدمة</label>
+            <select class="hub-select" name="service_type">
+              {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
+                <option value="{{ t }}" {% if plan.service_type == t %}selected{% endif %}>
+                  {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
+                </option>
+              {% endfor %}
+            </select></div>
+          <div class="pl-field"><label>الحالة</label>
+            <div class="pl-chk">
+              <input type="checkbox" name="enabled" id="pl-en" value="1" {% if plan.enabled or is_new %}checked{% endif %}>
+              <label for="pl-en">مفعَّل</label>
+            </div></div>
+          <div class="pl-field"><label>اللون</label>
+            <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}"></div>
+          <div class="pl-field"><label>الأولوية</label>
+            <input class="hub-input" type="number" name="priority" value="{{ plan.priority or 100 }}"></div>
+          <div class="pl-field"><label>سياسة Cisco (تنزيل)</label>
+            <input class="hub-input" type="text" name="download_policy_cisco" value="{{ plan.download_policy_cisco or '' }}"></div>
+          <div class="pl-field"><label>سياسة Cisco (رفع)</label>
+            <input class="hub-input" type="text" name="upload_policy_cisco" value="{{ plan.upload_policy_cisco or '' }}"></div>
+          <div class="pl-field"><label>ملف اتصال الجهاز</label>
+            <input class="hub-input" type="text" name="device_connection_file" value="{{ plan.device_connection_file or '' }}"></div>
+          <div class="pl-field"><label>DNS أولي (PPP)</label>
+            <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
+          <div class="pl-field"><label>DNS ثانوي (PPP)</label>
+            <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ plan.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
+          <div class="pl-field"><label>ساعات العرض — من</label>
+            <input class="hub-input" type="time" name="offer_hours_from" value="{{ plan.offer_hours_from or '' }}"></div>
+          <div class="pl-field"><label>ساعات العرض — إلى</label>
+            <input class="hub-input" type="time" name="offer_hours_to" value="{{ plan.offer_hours_to or '' }}"></div>
+          <div class="pl-field"><label>محدد الجلسة (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="working_hours_limit" value="{{ plan.working_hours_limit or 0 }}"></div>
+          <div class="pl-field full"><label>الوصف</label>
+            <textarea class="hub-textarea" name="description">{{ plan.description or '' }}</textarea></div>
+        </div>
+      </div>
+    </section>
+
+    {# 2. Speed #}
+    <section class="pl-section pl-section--speed" id="pl-speed">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
+        <span class="pl-section-title">السرعة والسياسات (CIR + Burst)</span>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>تفعيل التحكم بالسرعة</label>
+            <div class="pl-chk"><input type="checkbox" name="speed_control_enabled" id="sc-en" value="1" {% if plan.speed_control_enabled %}checked{% endif %}><label for="sc-en">مفعَّل</label></div></div>
+          <div class="pl-field"><label>سرعة التنزيل (Kbps)</label>
+            <input class="hub-input" type="number" min="0" name="speed_down_kbps" value="{{ plan.speed_down_kbps or 0 }}">
+            <div class="help">1024 = 1 Mbps.</div></div>
+          <div class="pl-field"><label>سرعة الرفع (Kbps)</label>
+            <input class="hub-input" type="number" min="0" name="speed_up_kbps" value="{{ plan.speed_up_kbps or 0 }}"></div>
+          <div class="pl-field"><label>سرعة مضمونة CIR للتنزيل</label>
+            <input class="hub-input" type="number" min="0" name="cir_down_kbps" value="{{ plan.cir_down_kbps or 0 }}">
+            <div class="help">الحد الأدنى عند الازدحام.</div></div>
+          <div class="pl-field"><label>سرعة مضمونة CIR للرفع</label>
+            <input class="hub-input" type="number" min="0" name="cir_up_kbps" value="{{ plan.cir_up_kbps or 0 }}"></div>
+          <div class="pl-field"><label>السرعة المؤقتة (Burst)</label>
+            <div class="pl-chk"><input type="checkbox" name="burst_enabled" id="b-en" value="1" {% if plan.burst_enabled %}checked{% endif %}><label for="b-en">مفعَّل</label></div></div>
+          <div class="pl-field"><label>غير محدود ليلًا</label>
+            <div class="pl-chk"><input type="checkbox" name="nightly_unlimited_enabled" id="nu-en" value="1" {% if plan.nightly_unlimited_enabled %}checked{% endif %}><label for="nu-en">مفعَّل</label></div></div>
+          <div class="pl-field"><label>سرعة Burst التنزيل</label>
+            <input class="hub-input" type="number" min="0" name="burst_down_kbps" value="{{ plan.burst_down_kbps or 0 }}"></div>
+          <div class="pl-field"><label>سرعة Burst الرفع</label>
+            <input class="hub-input" type="number" min="0" name="burst_up_kbps" value="{{ plan.burst_up_kbps or 0 }}"></div>
+          <div class="pl-field"><label>حد Burst</label>
+            <input class="hub-input" type="number" min="0" name="burst_threshold_kbps" value="{{ plan.burst_threshold_kbps or 0 }}"></div>
+          <div class="pl-field"><label>مدة Burst (ث)</label>
+            <input class="hub-input" type="number" min="0" name="burst_time_sec" value="{{ plan.burst_time_sec or 0 }}"></div>
+          <div class="pl-field"><label>توزيع متساوٍ للتنزيل</label>
+            <div class="pl-chk"><input type="checkbox" name="equal_download_speed" id="eds" value="1" {% if plan.equal_download_speed in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eds">مفعَّل</label></div></div>
+          <div class="pl-field"><label>توزيع متساوٍ للرفع</label>
+            <div class="pl-chk"><input type="checkbox" name="equal_upload_speed" id="eus" value="1" {% if plan.equal_upload_speed in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eus">مفعَّل</label></div></div>
+        </div>
+      </div>
+    </section>
+
+    {# 3. Quota & Time #}
+    <section class="pl-section pl-section--quota is-collapsible" data-sec="quota" id="pl-quota">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-clock"></i></span>
+        <span class="pl-section-title">الكوتا والوقت</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>كوتا إجمالية (MB)</label>
+            <input class="hub-input" type="number" min="0" name="quota_total_mb" value="{{ plan.quota_total_mb or 0 }}"></div>
+          <div class="pl-field"><label>سياسة الإعادة</label>
+            <select class="hub-select" name="quota_reset_strategy">
+              {% for s in ['rolling','monthly','never'] %}<option value="{{ s }}" {% if plan.quota_reset_strategy == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select></div>
+          <div class="pl-field"><label>مدة الجلسة (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="duration_minutes" value="{{ plan.duration_minutes or 0 }}"></div>
+          <div class="pl-field"><label>صلاحية (أيام)</label>
+            <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}"></div>
+          <div class="pl-field"><label>كوتا تنزيل شهرية</label>
+            <input class="hub-input" type="number" min="0" name="monthly_download_quota_mb" value="{{ plan.monthly_download_quota_mb or 0 }}"></div>
+          <div class="pl-field"><label>كوتا رفع شهرية</label>
+            <input class="hub-input" type="number" min="0" name="monthly_upload_quota_mb" value="{{ plan.monthly_upload_quota_mb or 0 }}"></div>
+          <div class="pl-field"><label>كوتا شهرية مدمجة</label>
+            <input class="hub-input" type="number" min="0" name="monthly_combined_quota_mb" value="{{ plan.monthly_combined_quota_mb or 0 }}">
+            <div class="help">تحلّ محل التنزيل+الرفع المنفصلين.</div></div>
+          <div class="pl-field"><label>كوتا تنزيل يومية</label>
+            <input class="hub-input" type="number" min="0" name="daily_download_quota_mb" value="{{ plan.daily_download_quota_mb or 0 }}"></div>
+          <div class="pl-field"><label>كوتا رفع يومية</label>
+            <input class="hub-input" type="number" min="0" name="daily_upload_quota_mb" value="{{ plan.daily_upload_quota_mb or 0 }}"></div>
+          <div class="pl-field"><label>كوتا يومية مدمجة</label>
+            <input class="hub-input" type="number" min="0" name="daily_combined_quota_mb" value="{{ plan.daily_combined_quota_mb or 0 }}"></div>
+          <div class="pl-field"><label>حد يومي (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="max_daily_minutes" value="{{ plan.max_daily_minutes or 0 }}"></div>
+          <div class="pl-field"><label>حد أسبوعي (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="max_weekly_minutes" value="{{ plan.max_weekly_minutes or 0 }}"></div>
+          <div class="pl-field"><label>حد شهري (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="max_monthly_minutes" value="{{ plan.max_monthly_minutes or 0 }}"></div>
+          <div class="pl-field"><label>مدة الجلسة (ث)</label>
+            <input class="hub-input" type="number" min="0" name="session_timeout_sec" value="{{ plan.session_timeout_sec or 0 }}"></div>
+          <div class="pl-field"><label>مهلة الخمول (ث)</label>
+            <input class="hub-input" type="number" min="0" name="idle_timeout_sec" value="{{ plan.idle_timeout_sec or 0 }}"></div>
+          <div class="pl-field"><label>استخدام مرة واحدة</label>
+            <div class="pl-chk"><input type="checkbox" name="single_use_once" id="suo" value="1" {% if plan.single_use_once %}checked{% endif %}><label for="suo">مفعَّل</label></div></div>
+          <div class="pl-field"><label>عدد مرات الاستهلاك</label>
+            <input class="hub-input" type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}"></div>
+          <div class="pl-field"><label>توزيع متساوٍ للكوتا</label>
+            <div class="pl-chk"><input type="checkbox" name="equal_quota_sharing" id="eqs" value="1" {% if plan.equal_quota_sharing in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eqs">مفعَّل</label></div></div>
+          <div class="pl-field"><label>إيقاف عند انتهاء الوقت</label>
+            <div class="pl-chk"><input type="checkbox" name="stop_user_when_time_expires" id="sut" value="1" {% if plan.stop_user_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="sut">مفعَّل</label></div></div>
+          <div class="pl-field"><label>تنبيه عند نفاد الكوتا</label>
+            <div class="pl-chk"><input type="checkbox" name="notify_when_quota_reaches_zero" id="nwq" value="1" {% if plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="nwq">مفعَّل</label></div></div>
+        </div>
+      </div>
+    </section>
+
+    {# 4. Subscription behaviour #}
+    <section class="pl-section pl-section--subs is-collapsible is-collapsed" data-sec="subs" id="pl-subs">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-handshake"></i></span>
+        <span class="pl-section-title">الاشتراك والسلوك العام</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>صلاحية التذاكر (أيام)</label>
+            <input class="hub-input" type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}"></div>
+          <div class="pl-field"><label>مشاركة عادلة (FUP)</label>
+            <div class="pl-chk"><input type="checkbox" name="shared_voucher_fup" value="1" {% if plan.shared_voucher_fup in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>إرسال تنبيهات</label>
+            <div class="pl-chk"><input type="checkbox" name="send_alerts" value="1" {% if plan.send_alerts in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>طريقة التجديد</label>
+            <input class="hub-input" type="text" name="renewal_method" value="{{ plan.renewal_method or '' }}" placeholder="تلقائي / يدوي"></div>
+          <div class="pl-field"><label>طريقة الدفع (مرجعي)</label>
+            <input class="hub-input" type="text" name="billing_method" value="{{ plan.billing_method or '' }}"></div>
+          <div class="pl-field"><label>تاريخ انتهاء الاشتراك</label>
+            <input class="hub-input" type="date" name="subscription_expiry_date" value="{{ plan.subscription_expiry_date or '' }}"></div>
+          <div class="pl-field"><label>المشترك يقدر يغيّر العرض</label>
+            <div class="pl-chk"><input type="checkbox" name="user_can_change_offer" value="1" {% if plan.user_can_change_offer in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
+          <div class="pl-field"><label>المشترك يطلب تغيير</label>
+            <div class="pl-chk"><input type="checkbox" name="user_can_request_offer_change" value="1" {% if plan.user_can_request_offer_change in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
+          <div class="pl-field"><label>إجبار شراء بطاقة</label>
+            <div class="pl-chk"><input type="checkbox" name="force_subscriber_to_purchase_card" value="1" {% if plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>إخفاء الفاتورة</label>
+            <div class="pl-chk"><input type="checkbox" name="hide_invoice" value="1" {% if plan.hide_invoice in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>لوحة تحكم المشترك</label>
+            <div class="pl-chk"><input type="checkbox" name="subscriber_control_panel_enabled" value="1" {% if plan.subscriber_control_panel_enabled in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>منع تغيير الاشتراك (مستخدم)</label>
+            <div class="pl-chk"><input type="checkbox" name="prevent_user_from_changing_subscription" value="1" {% if plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>منع المدير من تغيير الاشتراك</label>
+            <div class="pl-chk"><input type="checkbox" name="prevent_admin_from_changing_user_subscription" value="1" {% if plan.prevent_admin_from_changing_user_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>وقت اتصال يومي (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="daily_connection_time" value="{{ plan.daily_connection_time or '' }}"></div>
+          <div class="pl-field"><label>وقت اتصال إنترنت (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="internet_connection_time" value="{{ plan.internet_connection_time or '' }}"></div>
+          <div class="pl-field"><label>حفظ الكوتا عند التفعيل</label>
+            <div class="pl-chk"><input type="checkbox" name="save_remaining_quota_on_activation" value="1" {% if plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>استخدام الكوتا القديمة</label>
+            <div class="pl-chk"><input type="checkbox" name="use_old_quota_and_sessions_on_activation" value="1" {% if plan.use_old_quota_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>حذف الاستخدام القديم</label>
+            <div class="pl-chk"><input type="checkbox" name="delete_usage_data_and_sessions_on_activation" value="1" {% if plan.delete_usage_data_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>ترحيل الوقت المتبقي</label>
+            <div class="pl-chk"><input type="checkbox" name="carry_remaining_time_on_activation" value="1" {% if plan.carry_remaining_time_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+        </div>
+      </div>
+    </section>
+
+    {# 5. Notifications #}
+    <section class="pl-section pl-section--notif is-collapsible is-collapsed" data-sec="notif" id="pl-notif">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-bell"></i></span>
+        <span class="pl-section-title">التنبيهات</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>تنبيه قبل انتهاء الكوتا الشهرية</label>
+            <input class="hub-input" type="text" name="notify_before_quota_expiry" value="{{ plan.notify_before_quota_expiry or '' }}" placeholder="نسبة أو ميجا"></div>
+          <div class="pl-field"><label>تنبيه قبل انتهاء الكوتا اليومية</label>
+            <input class="hub-input" type="text" name="notify_before_daily_quota_expiry" value="{{ plan.notify_before_daily_quota_expiry or '' }}"></div>
+          <div class="pl-field full"><label>قنوات التنبيه</label>
+            <input class="hub-input" type="text" name="notification_channels" value="{{ plan.notification_channels or '' }}" placeholder="رسالة نصية، واتساب، بريد إلكتروني">
+            <div class="help">اكتب القنوات مفصولة بفواصل.</div></div>
+        </div>
+      </div>
+    </section>
+
+    {# 6. Advanced — renewal policies #}
+    <section class="pl-section pl-section--adv is-collapsible is-collapsed" data-sec="adv" id="pl-adv">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-sliders"></i></span>
+        <span class="pl-section-title">سياسات التجديد والتوفر</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>تجديد تلقائي عند انتهاء الكوتا</label>
+            <div class="pl-chk"><input type="checkbox" name="auto_renew_when_quota_expires" value="1" {% if plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>تجديد تلقائي عند انتهاء الوقت</label>
+            <div class="pl-chk"><input type="checkbox" name="auto_renew_when_time_expires" value="1" {% if plan.auto_renew_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>سياسة انتهاء الوقت</label>
+            <input class="hub-input" type="text" name="time_expiry_policy" value="{{ plan.time_expiry_policy or '' }}" placeholder="حظر / إضافة للطابور / تنبيه فقط"></div>
+          <div class="pl-field"><label>متاح لـ</label>
+            <input class="hub-input" type="text" name="only_available_for" value="{{ plan.only_available_for or '' }}" placeholder="مجموعة أو وسم"></div>
+          <div class="pl-field"><label>متاح للكل</label>
+            <div class="pl-chk"><input type="checkbox" name="available_for_all" value="1" {% if plan.available_for_all in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>كل الأيام</label>
+            <div class="pl-chk"><input type="checkbox" name="all_days" value="1" {% if plan.all_days in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+        </div>
+      </div>
+    </section>
+
+    {# 7. Network + MikroTik #}
+    <section class="pl-section pl-section--mt is-collapsible is-collapsed" data-sec="mt" id="pl-mt">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-network-wired"></i></span>
+        <span class="pl-section-title">الشبكة + MikroTik / PPP / Hotspot</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid">
+          <div class="pl-field"><label>جلسات متزامنة</label>
+            <input class="hub-input" type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}"></div>
+          <div class="pl-field"><label>نطاق عناوين الشبكة</label>
+            <input class="hub-input" type="text" name="address_pool" value="{{ plan.address_pool or '' }}"></div>
+          <div class="pl-field"><label>نطاق عناوين الجلسات</label>
+            <input class="hub-input" type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}"></div>
+          <div class="pl-field"><label>VLAN</label>
+            <input class="hub-input" type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}"></div>
+          <div class="pl-field"><label>ربط MAC</label>
+            <div class="pl-chk"><input type="checkbox" name="bind_mac" value="1" {% if plan.bind_mac %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>ربط IP</label>
+            <div class="pl-chk"><input type="checkbox" name="bind_ip" value="1" {% if plan.bind_ip %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>Hotspot مفعَّل</label>
+            <div class="pl-chk"><input type="checkbox" name="hotspot_enabled" value="1" {% if plan.hotspot_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>PPP مفعَّل</label>
+            <div class="pl-chk"><input type="checkbox" name="ppp_enabled" value="1" {% if plan.ppp_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>نطاق الخدمة</label>
+            <select class="hub-select" name="service_scope">
+              <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>هوتسبوت وبرودباند</option>
+              <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>هوتسبوت فقط</option>
+              <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>برودباند فقط</option>
+            </select></div>
+          <div class="pl-field"><label>السلفة مسموحة</label>
+            <div class="pl-chk"><input type="checkbox" name="loan_enabled" value="1" {% if plan.loan_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>أقصى مدة سلفة (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}"></div>
+          <div class="pl-field"><label>تجاوز سرعة المستفيد</label>
+            <div class="pl-chk"><input type="checkbox" name="speed_override_allowed" value="1" {% if plan.speed_override_allowed %}checked{% endif %}><label>مسموح</label></div></div>
+          <div class="pl-field"><label>تفعيل MTU</label>
+            <div class="pl-chk"><input type="checkbox" name="enable_mtu" value="1" {% if plan.enable_mtu in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>حد بأيام الانتهاء</label>
+            <div class="pl-chk"><input type="checkbox" name="expiry_day_limit_toggle" value="1" {% if plan.expiry_day_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>حد بساعات الانتهاء</label>
+            <div class="pl-chk"><input type="checkbox" name="expiry_hour_limit_toggle" value="1" {% if plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+          <div class="pl-field"><label>قائمة عناوين MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}"></div>
+          <div class="pl-field"><label>سلسلة فلترة MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_filter_chain_name" value="{{ plan.mikrotik_filter_chain_name or '' }}"></div>
+          <div class="pl-field"><label>مجموعة مستخدم MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ plan.mikrotik_user_group or '' }}"></div>
+          <div class="pl-field"><label>أولوية طابور السرعة</label>
+            <input class="hub-input" type="text" name="mikrotik_queue_priority_simple_queue" value="{{ plan.mikrotik_queue_priority_simple_queue or '' }}" placeholder="1..8"></div>
+          <div class="pl-field"><label>نطاق IPv6</label>
+            <input class="hub-input" type="text" name="ipv6_pool" value="{{ plan.ipv6_pool or '' }}"></div>
+        </div>
+      </div>
+    </section>
+
+    {# 8. Days + hours #}
+    <section class="pl-section pl-section--days is-collapsible is-collapsed" data-sec="days" id="pl-days">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-calendar-days"></i></span>
+        <span class="pl-section-title">أيام وساعات السماح</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
+        {% set sel_days = plan.allowed_days or ('mon','tue','wed','thu','fri','sat','sun') %}
+        <div class="pl-day-chips">
+          {% for d, lbl in day_labels %}
+            <label class="pl-day-chip {% if d in sel_days %}is-on{% endif %}" data-day="{{ d }}">
+              <input type="checkbox" name="allowed_days" value="{{ d }}" {% if d in sel_days %}checked{% endif %}>
+              {{ lbl }}
+            </label>
           {% endfor %}
-        </select></div>
-      <div class="f-field"><label>نوع الخدمة</label>
-        <select name="service_type">
-          {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
-            <option value="{{ t }}" {% if plan.service_type == t %}selected{% endif %}>
-              {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
-            </option>
-          {% endfor %}
-        </select></div>
-      <div class="f-field"><label>الحالة</label>
-        <div class="chk-row"><input type="checkbox" name="enabled" id="pl-en" value="1"
-          {% if plan.enabled or is_new %}checked{% endif %}>
-          <label for="pl-en">مفعَّل</label></div></div>
-      <div class="f-field"><label>اللون</label>
-        <input type="color" name="color" value="{{ plan.color or '#2BAACC' }}"></div>
-      <div class="f-field"><label>الأولوية</label>
-        <input type="number" name="priority" value="{{ plan.priority or 100 }}"></div>
-      <div class="f-field"><label>سياسة التنزيل في Cisco</label>
-        <input type="text" name="download_policy_cisco" value="{{ plan.download_policy_cisco or '' }}"></div>
-      <div class="f-field"><label>سياسة الرفع في Cisco</label>
-        <input type="text" name="upload_policy_cisco" value="{{ plan.upload_policy_cisco or '' }}"></div>
-      <div class="f-field"><label>ملف اتصال الجهاز</label>
-        <input type="text" name="device_connection_file" value="{{ plan.device_connection_file or '' }}"></div>
-      <div class="f-field"><label>DNS أولي (PPP)</label>
-        <input type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
-      <div class="f-field"><label>DNS ثانوي (PPP)</label>
-        <input type="text" name="secondary_dns_ppp" value="{{ plan.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
-      <div class="f-field"><label>ساعات العرض — من</label>
-        <input type="time" name="offer_hours_from" value="{{ plan.offer_hours_from or '' }}"></div>
-      <div class="f-field"><label>ساعات العرض — إلى</label>
-        <input type="time" name="offer_hours_to" value="{{ plan.offer_hours_to or '' }}"></div>
-      <div class="f-field"><label>محدد الجلسة (دقيقة)</label>
-        <input type="number" min="0" name="working_hours_limit" value="{{ plan.working_hours_limit or 0 }}"></div>
-      <div class="f-field full"><label>الوصف</label>
-        <textarea name="description">{{ plan.description or '' }}</textarea></div>
-    </div>
-    </div>
-  </section>
+        </div>
+        <div class="help" style="font-size:11px;color:var(--hub-text-mute);margin-top:8px">
+          اترك جميع الأيام محدَّدة للسماح طوال الأسبوع.
+        </div>
+        <div class="pl-grid" style="margin-top:14px;grid-template-columns:repeat(2,1fr);max-width:520px">
+          <div class="pl-field"><label>من ساعة</label>
+            <input class="hub-input" type="time" name="allowed_hours_from" value="{{ plan.allowed_hours_from or '' }}"></div>
+          <div class="pl-field"><label>إلى ساعة</label>
+            <input class="hub-input" type="time" name="allowed_hours_to" value="{{ plan.allowed_hours_to or '' }}">
+            <div class="help">مدى يعبر منتصف الليل مسموح (22:00 → 06:00).</div></div>
+        </div>
+      </div>
+    </section>
 
-  {# ─────────────── 2. السرعة (الأساسية + CIR + Burst) ─────────────── #}
-  <section class="sec-card speed">
-    <h3><i class="fa-solid fa-gauge-high h-ic"></i>السرعة والسياسات</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>تفعيل التحكم بالسرعة</label>
-        <div class="chk-row"><input type="checkbox" name="speed_control_enabled" id="sc-en" value="1"
-          {% if plan.speed_control_enabled %}checked{% endif %}>
-          <label for="sc-en">مفعَّل</label></div></div>
-      <div class="f-field"><label>سرعة التنزيل (Kbps)</label>
-        <input type="number" min="0" name="speed_down_kbps" value="{{ plan.speed_down_kbps or 0 }}">
-        <div class="field-help">1024 = 1 Mbps.</div></div>
-      <div class="f-field"><label>سرعة الرفع (Kbps)</label>
-        <input type="number" min="0" name="speed_up_kbps" value="{{ plan.speed_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>السرعة المضمونة للتنزيل (CIR)</label>
-        <input type="number" min="0" name="cir_down_kbps" value="{{ plan.cir_down_kbps or 0 }}">
-        <div class="field-help">الحد الأدنى المضمون من السرعة عند الازدحام.</div></div>
-      <div class="f-field"><label>السرعة المضمونة للرفع (CIR)</label>
-        <input type="number" min="0" name="cir_up_kbps" value="{{ plan.cir_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>السرعة المؤقتة مفعّلة</label>
-        <div class="chk-row"><input type="checkbox" name="burst_enabled" id="b-en" value="1"
-          {% if plan.burst_enabled %}checked{% endif %}>
-          <label for="b-en">مفعَّل</label></div></div>
-      <div class="f-field"><label>غير محدود ليلًا</label>
-        <div class="chk-row"><input type="checkbox" name="nightly_unlimited_enabled" id="nu-en" value="1"
-          {% if plan.nightly_unlimited_enabled %}checked{% endif %}>
-          <label for="nu-en">مفعَّل</label></div></div>
-      <div class="f-field"><label>السرعة المؤقتة للتنزيل (Kbps)</label>
-        <input type="number" min="0" name="burst_down_kbps" value="{{ plan.burst_down_kbps or 0 }}"></div>
-      <div class="f-field"><label>السرعة المؤقتة للرفع (Kbps)</label>
-        <input type="number" min="0" name="burst_up_kbps" value="{{ plan.burst_up_kbps or 0 }}"></div>
-      <div class="f-field"><label>حد السرعة المؤقتة</label>
-        <input type="number" min="0" name="burst_threshold_kbps" value="{{ plan.burst_threshold_kbps or 0 }}"></div>
-      <div class="f-field"><label>مدة السرعة المؤقتة (ث)</label>
-        <input type="number" min="0" name="burst_time_sec" value="{{ plan.burst_time_sec or 0 }}"></div>
-      <div class="f-field"><label>توزيع متساوٍ للتنزيل</label>
-        <div class="chk-row"><input type="checkbox" name="equal_download_speed" id="eds" value="1"
-          {% if plan.equal_download_speed in [True,1,'1','t','true','on'] %}checked{% endif %}>
-          <label for="eds">مفعَّل</label></div></div>
-      <div class="f-field"><label>توزيع متساوٍ للرفع</label>
-        <div class="chk-row"><input type="checkbox" name="equal_upload_speed" id="eus" value="1"
-          {% if plan.equal_upload_speed in [True,1,'1','t','true','on'] %}checked{% endif %}>
-          <label for="eus">مفعَّل</label></div></div>
-    </div>
-    </div>
-  </section>
+    {# 9. Commercial #}
+    <section class="pl-section pl-section--biz is-collapsible is-collapsed" data-sec="biz" id="pl-biz">
+      <header class="pl-section-head">
+        <span class="pl-section-icon"><i class="fa-solid fa-coins"></i></span>
+        <span class="pl-section-title">تجاري (مرجعي)</span>
+        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
+      </header>
+      <div class="pl-section-body">
+        <div class="pl-grid" style="grid-template-columns:repeat(2,1fr);max-width:520px">
+          <div class="pl-field"><label>السعر</label>
+            <input class="hub-input" type="number" step="0.01" min="0" name="price" value="{{ plan.price or 0 }}"></div>
+          <div class="pl-field"><label>العملة</label>
+            <input class="hub-input" type="text" name="currency" value="{{ plan.currency or 'JOD' }}"></div>
+        </div>
+      </div>
+    </section>
 
-  {# ─────────────── 3. الكوتا والوقت ─────────────── #}
-  <section class="sec-card quota collapsible" data-sec="quota">
-    <h3><i class="fa-solid fa-clock h-ic"></i>الكوتا والوقت <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>كوتا إجمالية (MB)</label>
-        <input type="number" min="0" name="quota_total_mb" value="{{ plan.quota_total_mb or 0 }}"></div>
-      <div class="f-field"><label>سياسة الإعادة</label>
-        <select name="quota_reset_strategy">
-          {% for s in ['rolling','monthly','never'] %}<option value="{{ s }}" {% if plan.quota_reset_strategy == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-        </select></div>
-      <div class="f-field"><label>مدة الجلسة (دقيقة)</label>
-        <input type="number" min="0" name="duration_minutes" value="{{ plan.duration_minutes or 0 }}"></div>
-      <div class="f-field"><label>صلاحية (أيام)</label>
-        <input type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}"></div>
-      <div class="f-field"><label>كوتا تنزيل شهرية (MB)</label>
-        <input type="number" min="0" name="monthly_download_quota_mb" value="{{ plan.monthly_download_quota_mb or 0 }}"></div>
-      <div class="f-field"><label>كوتا رفع شهرية (MB)</label>
-        <input type="number" min="0" name="monthly_upload_quota_mb" value="{{ plan.monthly_upload_quota_mb or 0 }}"></div>
-      <div class="f-field"><label>كوتا مدمجة شهرية (MB)</label>
-        <input type="number" min="0" name="monthly_combined_quota_mb" value="{{ plan.monthly_combined_quota_mb or 0 }}">
-        <div class="field-help">تحلّ محل التنزيل+الرفع المنفصلين.</div></div>
-      <div class="f-field"><label>كوتا تنزيل يومية (MB)</label>
-        <input type="number" min="0" name="daily_download_quota_mb" value="{{ plan.daily_download_quota_mb or 0 }}"></div>
-      <div class="f-field"><label>كوتا رفع يومية (MB)</label>
-        <input type="number" min="0" name="daily_upload_quota_mb" value="{{ plan.daily_upload_quota_mb or 0 }}"></div>
-      <div class="f-field"><label>كوتا مدمجة يومية (MB)</label>
-        <input type="number" min="0" name="daily_combined_quota_mb" value="{{ plan.daily_combined_quota_mb or 0 }}"></div>
-      <div class="f-field"><label>حد يومي (دقيقة)</label>
-        <input type="number" min="0" name="max_daily_minutes" value="{{ plan.max_daily_minutes or 0 }}"></div>
-      <div class="f-field"><label>حد أسبوعي (دقيقة)</label>
-        <input type="number" min="0" name="max_weekly_minutes" value="{{ plan.max_weekly_minutes or 0 }}"></div>
-      <div class="f-field"><label>حد شهري (دقيقة)</label>
-        <input type="number" min="0" name="max_monthly_minutes" value="{{ plan.max_monthly_minutes or 0 }}"></div>
-      <div class="f-field"><label>مدة الجلسة (ث)</label>
-        <input type="number" min="0" name="session_timeout_sec" value="{{ plan.session_timeout_sec or 0 }}"></div>
-      <div class="f-field"><label>مهلة الخمول (ث)</label>
-        <input type="number" min="0" name="idle_timeout_sec" value="{{ plan.idle_timeout_sec or 0 }}"></div>
-      <div class="f-field"><label>استخدام مرة واحدة</label>
-        <div class="chk-row"><input type="checkbox" name="single_use_once" id="suo" value="1"
-          {% if plan.single_use_once %}checked{% endif %}>
-          <label for="suo">مفعَّل</label></div></div>
-      <div class="f-field"><label>عدد مرات الاستهلاك</label>
-        <input type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}"></div>
-      <div class="f-field"><label>توزيع متساوٍ للكوتا</label>
-        <div class="chk-row"><input type="checkbox" name="equal_quota_sharing" id="eqs" value="1"
-          {% if plan.equal_quota_sharing in [True,1,'1','t','true','on'] %}checked{% endif %}>
-          <label for="eqs">مفعَّل</label></div></div>
-      <div class="f-field"><label>إيقاف عند انتهاء الوقت</label>
-        <div class="chk-row"><input type="checkbox" name="stop_user_when_time_expires" id="sut" value="1"
-          {% if plan.stop_user_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}>
-          <label for="sut">مفعَّل</label></div></div>
-      <div class="f-field"><label>تنبيه عند نفاد الكوتا</label>
-        <div class="chk-row"><input type="checkbox" name="notify_when_quota_reaches_zero" id="nwq" value="1"
-          {% if plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on'] %}checked{% endif %}>
-          <label for="nwq">مفعَّل</label></div></div>
-    </div>
-    </div>
-  </section>
+    {# Embedded speed-rules panel (edit mode only) #}
+    {% if not is_new %}
+      {% include "radius/_speed_rules_panel.html" %}
+    {% endif %}
 
-  {# ─────────────── 4. الاشتراك والسلوك ─────────────── #}
-  <section class="sec-card subs collapsible is-collapsed" data-sec="subs">
-    <h3><i class="fa-solid fa-handshake h-ic"></i>الاشتراك والسلوك العام
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>صلاحية التذاكر (أيام)</label>
-        <input type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}"></div>
-      <div class="f-field"><label>مشاركة عادلة للشبكة</label>
-        <div class="chk-row"><input type="checkbox" name="shared_voucher_fup" value="1"
-          {% if plan.shared_voucher_fup in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>إرسال تنبيهات</label>
-        <div class="chk-row"><input type="checkbox" name="send_alerts" value="1"
-          {% if plan.send_alerts in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>طريقة التجديد</label>
-        <input type="text" name="renewal_method" value="{{ plan.renewal_method or '' }}" placeholder="تلقائي / يدوي"></div>
-      <div class="f-field"><label>طريقة الدفع (مرجعي)</label>
-        <input type="text" name="billing_method" value="{{ plan.billing_method or '' }}" placeholder="مرجعي فقط">
-        <div class="field-help">بدون منطق تجاري — مرجعي فقط.</div></div>
-      <div class="f-field"><label>تاريخ انتهاء الاشتراك</label>
-        <input type="date" name="subscription_expiry_date" value="{{ plan.subscription_expiry_date or '' }}"></div>
-      <div class="f-field"><label>المشترك يقدر يغيّر العرض</label>
-        <div class="chk-row"><input type="checkbox" name="user_can_change_offer" value="1"
-          {% if plan.user_can_change_offer in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
-      <div class="f-field"><label>المشترك يطلب تغيير العرض</label>
-        <div class="chk-row"><input type="checkbox" name="user_can_request_offer_change" value="1"
-          {% if plan.user_can_request_offer_change in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
-      <div class="f-field"><label>إجبار شراء بطاقة</label>
-        <div class="chk-row"><input type="checkbox" name="force_subscriber_to_purchase_card" value="1"
-          {% if plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>إخفاء الفاتورة</label>
-        <div class="chk-row"><input type="checkbox" name="hide_invoice" value="1"
-          {% if plan.hide_invoice in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>لوحة تحكم المشترك</label>
-        <div class="chk-row"><input type="checkbox" name="subscriber_control_panel_enabled" value="1"
-          {% if plan.subscriber_control_panel_enabled in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>منع تغيير الاشتراك (مستخدم)</label>
-        <div class="chk-row"><input type="checkbox" name="prevent_user_from_changing_subscription" value="1"
-          {% if plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>منع المدير من تغيير الاشتراك</label>
-        <div class="chk-row"><input type="checkbox" name="prevent_admin_from_changing_user_subscription" value="1"
-          {% if plan.prevent_admin_from_changing_user_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>وقت اتصال يومي (دقيقة)</label>
-        <input type="number" min="0" name="daily_connection_time" value="{{ plan.daily_connection_time or '' }}"></div>
-      <div class="f-field"><label>وقت اتصال بالإنترنت (دقيقة)</label>
-        <input type="number" min="0" name="internet_connection_time" value="{{ plan.internet_connection_time or '' }}"></div>
-      <div class="f-field"><label>حفظ الكوتا المتبقية عند التفعيل</label>
-        <div class="chk-row"><input type="checkbox" name="save_remaining_quota_on_activation" value="1"
-          {% if plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>استخدام الكوتا القديمة</label>
-        <div class="chk-row"><input type="checkbox" name="use_old_quota_and_sessions_on_activation" value="1"
-          {% if plan.use_old_quota_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>حذف الاستخدام القديم</label>
-        <div class="chk-row"><input type="checkbox" name="delete_usage_data_and_sessions_on_activation" value="1"
-          {% if plan.delete_usage_data_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>ترحيل الوقت المتبقي</label>
-        <div class="chk-row"><input type="checkbox" name="carry_remaining_time_on_activation" value="1"
-          {% if plan.carry_remaining_time_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">إلغاء</a>
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ العرض" if is_new else "حفظ التعديلات" }}
+      </button>
     </div>
-    </div>
-  </section>
-
-  {# ─────────────── 5. التنبيهات ─────────────── #}
-  <section class="sec-card notif collapsible is-collapsed" data-sec="notif">
-    <h3><i class="fa-solid fa-bell h-ic"></i>التنبيهات <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>تنبيه قبل انتهاء الكوتا الشهرية</label>
-        <input type="text" name="notify_before_quota_expiry" value="{{ plan.notify_before_quota_expiry or '' }}"
-               placeholder="نسبة أو ميجا"></div>
-      <div class="f-field"><label>تنبيه قبل انتهاء الكوتا اليومية</label>
-        <input type="text" name="notify_before_daily_quota_expiry" value="{{ plan.notify_before_daily_quota_expiry or '' }}"></div>
-      <div class="f-field full"><label>قنوات التنبيه</label>
-        <input type="text" name="notification_channels" value="{{ plan.notification_channels or '' }}"
-               placeholder="رسالة نصية، واتساب، بريد إلكتروني">
-        <div class="field-help">اكتب القنوات مفصولة بفواصل، وتُحفظ كبيانات إضافية للتكامل لاحقًا.</div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 6. متقدم (سياسات التجديد) ─────────────── #}
-  <section class="sec-card gen collapsible is-collapsed" data-sec="adv">
-    <h3><i class="fa-solid fa-sliders h-ic"></i>متقدم — سياسات التجديد والتوفر
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>تجديد تلقائي عند انتهاء الكوتا</label>
-        <div class="chk-row"><input type="checkbox" name="auto_renew_when_quota_expires" value="1"
-          {% if plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>تجديد تلقائي عند انتهاء الوقت</label>
-        <div class="chk-row"><input type="checkbox" name="auto_renew_when_time_expires" value="1"
-          {% if plan.auto_renew_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>سياسة انتهاء الوقت</label>
-        <input type="text" name="time_expiry_policy" value="{{ plan.time_expiry_policy or '' }}"
-               placeholder="حظر / إضافة للطابور / تنبيه فقط"></div>
-      <div class="f-field"><label>متاح لـ</label>
-        <input type="text" name="only_available_for" value="{{ plan.only_available_for or '' }}"
-               placeholder="مجموعة أو وسم"></div>
-      <div class="f-field"><label>متاح للكل</label>
-        <div class="chk-row"><input type="checkbox" name="available_for_all" value="1"
-          {% if plan.available_for_all in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>كل الأيام</label>
-        <div class="chk-row"><input type="checkbox" name="all_days" value="1"
-          {% if plan.all_days in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 7. الشبكة + MikroTik/PPP/Hotspot ─────────────── #}
-  <section class="sec-card mt collapsible is-collapsed" data-sec="mt">
-    <h3><i class="fa-solid fa-network-wired h-ic"></i>الشبكة + MikroTik / PPP / Hotspot
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>جلسات متزامنة</label>
-        <input type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}"></div>
-      <div class="f-field"><label>نطاق عناوين الشبكة</label>
-        <input type="text" name="address_pool" value="{{ plan.address_pool or '' }}"></div>
-      <div class="f-field"><label>نطاق عناوين الجلسات</label>
-        <input type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}"></div>
-      <div class="f-field"><label>رقم شبكة VLAN</label>
-        <input type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}"></div>
-      <div class="f-field"><label>ربط عنوان الجهاز</label>
-        <div class="chk-row"><input type="checkbox" name="bind_mac" value="1"
-          {% if plan.bind_mac %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>ربط IP</label>
-        <div class="chk-row"><input type="checkbox" name="bind_ip" value="1"
-          {% if plan.bind_ip %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>Hotspot مفعَّل</label>
-        <div class="chk-row"><input type="checkbox" name="hotspot_enabled" value="1"
-          {% if plan.hotspot_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>PPP مفعَّل</label>
-        <div class="chk-row"><input type="checkbox" name="ppp_enabled" value="1"
-          {% if plan.ppp_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>نطاق الخدمة</label>
-        <select name="service_scope">
-          <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>هوتسبوت وبرودباند</option>
-          <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>هوتسبوت فقط</option>
-          <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>برودباند فقط</option>
-        </select>
-        <div class="field-help">يحدد أين يمكن استخدام هذه الباقة.</div></div>
-      <div class="f-field"><label>السلفة مسموحة</label>
-        <div class="chk-row"><input type="checkbox" name="loan_enabled" value="1"
-          {% if plan.loan_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>أقصى مدة سلفة (دقيقة)</label>
-        <input type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}"></div>
-      <div class="f-field"><label>تجاوز سرعة المستفيد</label>
-        <div class="chk-row"><input type="checkbox" name="speed_override_allowed" value="1"
-          {% if plan.speed_override_allowed %}checked{% endif %}><label>مسموح</label></div></div>
-      <div class="f-field"><label>تفعيل حجم حزمة الشبكة (MTU)</label>
-        <div class="chk-row"><input type="checkbox" name="enable_mtu" value="1"
-          {% if plan.enable_mtu in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>حد بأيام انتهاء الصلاحية</label>
-        <div class="chk-row"><input type="checkbox" name="expiry_day_limit_toggle" value="1"
-          {% if plan.expiry_day_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>حد بساعات انتهاء الصلاحية</label>
-        <div class="chk-row"><input type="checkbox" name="expiry_hour_limit_toggle" value="1"
-          {% if plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
-      <div class="f-field"><label>قائمة عناوين MikroTik</label>
-        <input type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}"></div>
-      <div class="f-field"><label>سلسلة فلترة MikroTik</label>
-        <input type="text" name="mikrotik_filter_chain_name" value="{{ plan.mikrotik_filter_chain_name or '' }}"></div>
-      <div class="f-field"><label>مجموعة مستخدم MikroTik</label>
-        <input type="text" name="mikrotik_user_group" value="{{ plan.mikrotik_user_group or '' }}"></div>
-      <div class="f-field"><label>أولوية طابور السرعة</label>
-        <input type="text" name="mikrotik_queue_priority_simple_queue"
-               value="{{ plan.mikrotik_queue_priority_simple_queue or '' }}" placeholder="1..8"></div>
-      <div class="f-field"><label>نطاق IPv6</label>
-        <input type="text" name="ipv6_pool" value="{{ plan.ipv6_pool or '' }}"></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 8. أيام وساعات السماح ─────────────── #}
-  <section class="sec-card days collapsible is-collapsed" data-sec="days">
-    <h3><i class="fa-solid fa-calendar-days h-ic"></i>أيام وساعات السماح
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
-    {% set sel_days = plan.allowed_days or ('mon','tue','wed','thu','fri','sat','sun') %}
-    <div class="day-chips">
-      {% for d, lbl in day_labels %}
-        <label class="day-chip {% if d in sel_days %}is-on{% endif %}" data-day="{{ d }}">
-          <input type="checkbox" name="allowed_days" value="{{ d }}" {% if d in sel_days %}checked{% endif %}>
-          {{ lbl }}
-        </label>
-      {% endfor %}
-    </div>
-    <div class="field-help" style="margin-top:8px">اترك جميع الأيام محدَّدة للسماح طوال الأسبوع.</div>
-
-    <div class="f-grid" style="margin-top:14px">
-      <div class="f-field"><label>من ساعة</label>
-        <input type="time" name="allowed_hours_from" value="{{ plan.allowed_hours_from or '' }}"></div>
-      <div class="f-field"><label>إلى ساعة</label>
-        <input type="time" name="allowed_hours_to" value="{{ plan.allowed_hours_to or '' }}">
-        <div class="field-help">مدى يعبر منتصف الليل مسموح (22:00 → 06:00).</div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 9. تجاري (مرجعي) ─────────────── #}
-  <section class="sec-card collapsible is-collapsed" data-sec="biz">
-    <h3><i class="fa-solid fa-coins h-ic"></i>تجاري (مرجعي)
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>السعر</label>
-        <input type="number" step="0.01" min="0" name="price" value="{{ plan.price or 0 }}"></div>
-      <div class="f-field"><label>العملة</label>
-        <input type="text" name="currency" value="{{ plan.currency or 'JOD' }}"></div>
-    </div>
-    </div>
-  </section>
-
-  {% if not is_new %}
-    {% include "radius/_speed_rules_panel.html" %}
-  {% endif %}
-
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}
-    </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.plans_list') }}">إلغاء</a>
-  </div>
-</form>
-</div>
+  </form>
+</div>{# /.pl-layout #}
+</div>{# /.pl-form #}
 
 <script>
 (function(){
-  // collapsible + localStorage
+  'use strict';
   var LS = 'hr:plan-form:sec:';
-  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+  document.querySelectorAll('.pl-section.is-collapsible').forEach(function(card){
     var k = card.dataset.sec; if (!k) return;
     var v = null;
     try { v = localStorage.getItem(LS + k); } catch(_) {}
     if (v === 'collapsed') card.classList.add('is-collapsed');
     else if (v === 'open')  card.classList.remove('is-collapsed');
-    var h = card.querySelector(':scope > h3');
-    if (h) h.addEventListener('click', function(){
+    var head = card.querySelector('.pl-section-head');
+    if (head) head.addEventListener('click', function(){
       card.classList.toggle('is-collapsed');
       try { localStorage.setItem(LS + k,
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
     });
   });
-  // day chips visual feedback
-  document.querySelectorAll('.day-chip').forEach(function(c){
+  document.querySelectorAll('.pl-day-chip').forEach(function(c){
     c.addEventListener('click', function(e){
       var cb = c.querySelector('input[type=checkbox]');
       if (e.target !== cb) cb.checked = !cb.checked;
       c.classList.toggle('is-on', cb.checked);
+    });
+  });
+  // Smooth-scroll nav + auto-open collapsed
+  document.querySelectorAll('.pl-side-list a[href^="#"]').forEach(function(link){
+    link.addEventListener('click', function(e){
+      e.preventDefault();
+      var target = document.querySelector(link.getAttribute('href'));
+      if (target && target.classList.contains('is-collapsed')) {
+        target.classList.remove('is-collapsed');
+        try { localStorage.setItem(LS + target.dataset.sec, 'open'); } catch(_) {}
+      }
+      if (target) {
+        var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+        var offset = (header ? header.getBoundingClientRect().height : 64) + 20;
+        var y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      }
     });
   });
 })();
