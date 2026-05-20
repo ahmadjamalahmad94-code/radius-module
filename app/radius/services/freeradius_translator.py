@@ -60,9 +60,23 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
     if sub.expire_at:
         checks.append(("Expiration", ":=", _fr_date(sub.expire_at)))
 
-    # ربط MAC إن وُجد
+    # ربط MAC — يدعم قفل متعدد عبر قائمة مفصولة بفواصل.
+    # • قيمة واحدة → 'Calling-Station-Id == "AA:BB:..."' (تحقّق صارم).
+    # • قيم متعدّدة → 'Calling-Station-Id =~ "^(MAC1|MAC2|...)$"' حتى
+    #   تقبل FreeRADIUS أيًّا منها (مع `==` المتكرّر يُقيِّمها AND مما
+    #   يُعطّل الجلسة كليًّا).
     if sub.mac_lock:
-        checks.append(("Calling-Station-Id", "==", sub.mac_lock.upper()))
+        raw = sub.mac_lock.replace(";", ",").replace("\n", ",")
+        macs = sorted({
+            m.strip().upper().replace("-", ":")
+            for m in raw.split(",")
+            if m.strip()
+        })
+        if len(macs) == 1:
+            checks.append(("Calling-Station-Id", "==", macs[0]))
+        elif len(macs) > 1:
+            pattern = "^(?:" + "|".join(macs) + ")$"
+            checks.append(("Calling-Station-Id", "=~", pattern))
 
     # ربط IP إن وُجد static_ip
     if sub.static_ip:

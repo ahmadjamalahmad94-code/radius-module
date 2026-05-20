@@ -185,10 +185,24 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
 
 
 def _check_mac(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
+    """Reject if the card has a MAC lock and the incoming MAC doesn't
+    match any of the locked entries.
+
+    `sub.mac_lock` may be a comma-separated list (multi-MAC support
+    added in the Card Checker rebuild). All entries are normalised to
+    UPPER + ':' separators before comparison.
+    """
     if not sub.mac_lock: return None
+    locked_raw = sub.mac_lock.replace(";", ",").replace("\n", ",")
+    locked = {
+        m.strip().upper().replace("-", ":")
+        for m in locked_raw.split(",")
+        if m.strip()
+    }
+    if not locked:
+        return None
     incoming = (req.calling_station_id or "").upper().replace("-", ":")
-    expected = sub.mac_lock.upper().replace("-", ":")
-    if not incoming or incoming != expected:
+    if not incoming or incoming not in locked:
         return _reject("mac_mismatch")
     return None
 

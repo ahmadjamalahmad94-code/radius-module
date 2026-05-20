@@ -356,14 +356,34 @@ class CardsService:
                            payload={"reason": reason})
 
     def lock_card_mac(self, *, actor: str, card_id: int, mac: str) -> None:
-        mac = (mac or "").strip()
-        if not mac:
+        """Lock the card to ONE OR MORE MAC addresses.
+
+        `mac` may be a single value or a comma/semicolon/newline-
+        separated list. All entries are normalised to UPPER + ':'
+        separators, de-duplicated, sorted, then re-joined with ','
+        for storage. Empty after parsing → ValidationError.
+        """
+        raw = (mac or "").replace(";", ",").replace("\n", ",")
+        macs = sorted({
+            m.strip().upper().replace("-", ":")
+            for m in raw.split(",")
+            if m.strip()
+        })
+        if not macs:
             raise RadiusValidationError("MAC مطلوب")
-        if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, mac, actor=actor):
+        # Loose validity check — 12 hex chars after stripping separators.
+        for m in macs:
+            hex_only = m.replace(":", "")
+            if len(hex_only) != 12 or any(c not in "0123456789ABCDEF" for c in hex_only):
+                raise RadiusValidationError(f"عنوان MAC غير صالح: {m}")
+        joined = ",".join(macs)
+        if not cards_repo.set_card_locked_mac(
+            self._store_tenant_id(), card_id, joined, actor=actor,
+        ):
             raise RadiusValidationError("تعذر تثبيت MAC")
         self._audit.record(actor=actor, action="card.lock_mac",
                            target_type="card", target_id=str(card_id),
-                           payload={"mac": mac})
+                           payload={"macs": macs, "count": len(macs)})
 
     def unlock_card_mac(self, *, actor: str, card_id: int) -> None:
         if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, "", actor=actor):

@@ -848,16 +848,26 @@ def summarize_card_accounting(tenant_id: int, username: str) -> dict:
 
 
 def list_card_macs(tenant_id: int, username: str, *, limit: int = 20) -> list[dict]:
+    """Distinct MACs seen for `username` in radacct, newest first.
+
+    Username comparison is case-insensitive — RADIUS clients sometimes
+    fold case ('user' vs 'User'), and we don't want the Card Checker's
+    MAC picker to silently miss a card's real session history just
+    because of a case mismatch. The MAC value itself is also
+    trimmed-and-non-empty filtered to skip stray whitespace rows.
+    """
     cur = db().execute(
         """
         SELECT
-            callingstationid AS mac,
+            UPPER(callingstationid) AS mac,
             COUNT(*) AS sessions_count,
             MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_seen_at,
             SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions
         FROM radacct
-        WHERE tenant_id = ? AND username = ? AND COALESCE(callingstationid, '') != ''
-        GROUP BY callingstationid
+        WHERE tenant_id = ?
+          AND LOWER(username) = LOWER(?)
+          AND COALESCE(TRIM(callingstationid), '') != ''
+        GROUP BY UPPER(callingstationid)
         ORDER BY last_seen_at DESC
         LIMIT ?
         """,

@@ -1283,61 +1283,113 @@
     }
 
     function macPicker(opts){
+      // MULTI-SELECT picker.
+      // The recent-MACs list is now a set of checkboxes (multi-select),
+      // and the custom-MAC field accepts comma/newline-separated values.
+      // onConfirm receives a comma-joined string ready for submission.
       opts = opts || {};
-      var macs = (opts.recentMacs || []).filter(Boolean);
-      // de-dup while preserving order
+      var raw = (opts.recentMacs || []).filter(Boolean);
       var seen = {}; var uniq = [];
-      for (var i=0;i<macs.length;i++){
-        var m = String(macs[i]).toUpperCase();
+      for (var i=0;i<raw.length;i++){
+        var m = String(raw[i]).toUpperCase();
         if (!seen[m]){ seen[m] = true; uniq.push(m); }
       }
       var listHtml = '';
       if (uniq.length){
         for (var j=0;j<uniq.length;j++){
-          listHtml += '<button type="button" class="cc-gmodal-mac-row" data-mac="' + esc(uniq[j]) + '">' +
+          listHtml += '<label class="cc-gmodal-mac-row" data-mac="' + esc(uniq[j]) + '">' +
+            '<input type="checkbox" class="cc-gmodal-mac-check" data-mac-check value="' + esc(uniq[j]) + '">' +
             '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid fa-wifi"></i></span>' +
             '<div class="cc-gmodal-mac-row-body">' +
               '<div class="cc-gmodal-mac-row-mac">' + esc(uniq[j]) + '</div>' +
               '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>' +
-            '</div></button>';
+            '</div></label>';
         }
       } else {
         listHtml = '<div class="cc-gmodal-mac-list-empty">' +
-                   'لا يوجد سجلّ سابق — اكتب العنوان أدناه يدوياً.</div>';
+                   'لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.</div>';
       }
       box.innerHTML =
         head(Object.assign({icon:'info'}, opts)) +
-        '<div class="cc-gmodal-body">اختر MAC من سجل الجلسات أو اكتب عنواناً مخصصاً.</div>' +
+        '<div class="cc-gmodal-body">يمكنك اختيار <strong>أكثر من MAC</strong> ' +
+          'من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).</div>' +
         '<div class="cc-gmodal-field-label">من سجل البطاقة</div>' +
         '<div class="cc-gmodal-mac-list" data-mac-list>' + listHtml + '</div>' +
         (uniq.length ? '<div class="cc-gmodal-mac-divider">— أو —</div>' : '') +
         '<div class="cc-gmodal-field">' +
-          '<div class="cc-gmodal-field-label">MAC مخصص</div>' +
-          '<input type="text" data-input maxlength="32" dir="ltr" ' +
-            'placeholder="AA:BB:CC:DD:EE:FF" value="' + esc(opts.currentMac || '') + '">' +
+          '<div class="cc-gmodal-field-label">عناوين مخصّصة (اختياري)</div>' +
+          '<textarea data-input rows="2" dir="ltr" ' +
+            'placeholder="AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66" ' +
+            'style="resize:vertical">' + esc(opts.currentMac || '') + '</textarea>' +
         '</div>' +
+        '<div class="cc-gmodal-mac-summary" data-mac-summary></div>' +
         actions('قفل', 'إلغاء', false);
 
-      var inp = box.querySelector('[data-input]');
-      box.querySelectorAll('.cc-gmodal-mac-row').forEach(function(r){
-        r.addEventListener('click', function(){
-          box.querySelectorAll('.cc-gmodal-mac-row').forEach(function(x){ x.classList.remove('is-active'); });
-          r.classList.add('is-active');
-          if (inp) inp.value = r.getAttribute('data-mac');
+      var inp     = box.querySelector('[data-input]');
+      var summary = box.querySelector('[data-mac-summary]');
+      var checks  = box.querySelectorAll('[data-mac-check]');
+
+      function collect(){
+        var set = {};
+        checks.forEach(function(c){
+          if (c.checked) set[c.value.toUpperCase()] = true;
+        });
+        var custom = (inp ? inp.value : '')
+          .replace(/[;\n]/g, ',').split(',');
+        custom.forEach(function(v){
+          v = v.trim().toUpperCase().replace(/-/g, ':');
+          if (v) set[v] = true;
+        });
+        return Object.keys(set);
+      }
+      function updateSummary(){
+        var picked = collect();
+        if (picked.length === 0){
+          summary.innerHTML = '';
+          summary.classList.remove('is-active');
+          return;
+        }
+        var pills = picked.map(function(m){
+          return '<span class="cc-gmodal-mac-chip">' + esc(m) + '</span>';
+        }).join(' ');
+        summary.innerHTML =
+          '<div class="cc-gmodal-mac-summary-label">' +
+            'سيتم قفل البطاقة على ' + picked.length + ' عنوان:</div>' +
+          '<div class="cc-gmodal-mac-summary-chips">' + pills + '</div>';
+        summary.classList.add('is-active');
+      }
+      checks.forEach(function(c){ c.addEventListener('change', updateSummary); });
+      if (inp) inp.addEventListener('input', updateSummary);
+      // Reflect parent .is-active on the row when its checkbox flips.
+      box.querySelectorAll('.cc-gmodal-mac-row').forEach(function(row){
+        var c = row.querySelector('[data-mac-check]');
+        if (!c) return;
+        c.addEventListener('change', function(){
+          row.classList.toggle('is-active', c.checked);
         });
       });
+      updateSummary();
+
       wire(opts.onConfirm, function(){
-        var v = (inp ? inp.value : '').trim().toUpperCase();
-        // very forgiving MAC validator — letters/digits/colons/dashes only,
-        // 12 hex chars at minimum once separators are removed.
-        var hex = v.replace(/[:\-\s]/g,'');
-        if (!/^[0-9A-F]{12}$/.test(hex)){
-          alert('عنوان MAC غير صالح. مثال: AA:BB:CC:DD:EE:FF');
+        var picked = collect();
+        if (!picked.length){
+          alert('اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.');
           return false;
         }
-        return v;
+        // Validate every entry — 12 hex chars after stripping separators.
+        for (var i=0;i<picked.length;i++){
+          var hex = picked[i].replace(/[:\-\s]/g,'');
+          if (!/^[0-9A-F]{12}$/.test(hex)){
+            alert('عنوان MAC غير صالح: ' + picked[i] + '\nالصيغة: AA:BB:CC:DD:EE:FF');
+            return false;
+          }
+        }
+        return picked.join(',');
       });
-      setTimeout(function(){ if (inp) inp.focus(); }, 60);
+      setTimeout(function(){
+        if (checks.length){ checks[0].focus(); }
+        else if (inp){ inp.focus(); }
+      }, 60);
       show();
     }
 
