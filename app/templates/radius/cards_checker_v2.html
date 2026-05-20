@@ -16,9 +16,14 @@
    ╚══════════════════════════════════════════════════════════════════╝ #}
 {% extends "admin/_admin_layout.html" %}
 {% block title %}مركز عمليات البطاقة{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-satellite-dish"></i>{% endblock %}
-{% block page_title %}مركز عمليات البطاقة{% endblock %}
-{% block page_sub %}<span class="sub">واجهة موحَّدة لفحص، تتبّع، وإدارة البطاقات بمستويَيْن.</span>{% endblock %}
+{# Title/sub blocks intentionally empty — the layout's `.page-head` is
+   hidden via cc-hero CSS (`body:has(.cc-hero) .page-head { display:none }`)
+   so we don't render two competing titles. The new compact hero owns
+   the title row. The HTML <title> still uses page_title block default
+   from the layout (Hobe Hub — Radius). #}
+{% block page_title %}{% endblock %}
+{% block page_sub %}{% endblock %}
+{% block page_icon %}{% endblock %}
 
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_checker_v2.css') }}">
@@ -267,66 +272,80 @@
 
 {% block content %}
 
-<div class="cc-page" data-cc-current-mode="advanced">
+<div class="cc-page cc-page-hero-host" data-cc-current-mode="advanced">
 
-  {# R13.A.9 round 2: top row with "back to cards" + a small action
-     toolbar (refresh / print / share) — mirrors Reference A's header
-     chrome. Actions are stable links/buttons that don't require new
-     backend wiring. #}
-  <div class="cc-header-row">
-    <a class="cc-header-back" href="{{ url_for('radius.cards_list') }}">
-      <i class="fa-solid fa-chevron-right"></i> رجوع إلى بطاقات
-    </a>
-    <div class="cc-header-actions">
-      <a class="cc-header-action" href="{{ url_for('radius.cards_checker', query=query) }}"
-         title="تحديث">
-        <i class="fa-solid fa-arrows-rotate"></i>
+  {# ════════════════════════════════════════════════════════════════════
+     UNIFIED COMPACT HERO — replaces the previous 4-stack (header-row,
+     header, mode-bar, search-form) AND hides the layout's `page-head`
+     (via CSS in cards_checker_v2.css). One short card, two rows, no
+     duplicated text.
+
+     Row 1: [← رجوع]  [🛰  مركز عمليات البطاقة]  [↻ ⎙ 🔗]
+     Row 2: [📊 متقدّم | ⚡ بسيط]                [🔍 …                  بحث]
+
+     JS hooks preserved: #cc-search-form, #cc-search-input,
+     .cc-mode-toggle button[data-mode]  →  drives cards_checker_v2.js
+     without any JS changes.
+     ════════════════════════════════════════════════════════════════════ #}
+  <div class="cc-hero">
+
+    <div class="cc-hero-row">
+      <a class="cc-hero-back" href="{{ url_for('radius.cards_list') }}">
+        <i class="fa-solid fa-chevron-right"></i>
+        <span>رجوع</span>
       </a>
-      <button type="button" class="cc-header-action" onclick="window.print()" title="طباعة">
-        <i class="fa-solid fa-print"></i>
-      </button>
-      <button type="button" class="cc-header-action"
-              onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)"
-              title="نسخ الرابط">
-        <i class="fa-solid fa-link"></i>
-      </button>
+
+      <div class="cc-hero-title">
+        <span class="cc-hero-title-icon"><i class="fa-solid fa-satellite-dish"></i></span>
+        <span>مركز عمليات البطاقة</span>
+      </div>
+
+      <div class="cc-hero-actions">
+        <a class="cc-hero-action" href="{{ url_for('radius.cards_checker', query=query) }}"
+           title="تحديث">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </a>
+        <button type="button" class="cc-hero-action" onclick="window.print()" title="طباعة">
+          <i class="fa-solid fa-print"></i>
+        </button>
+        <button type="button" class="cc-hero-action"
+                onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)"
+                title="نسخ الرابط">
+          <i class="fa-solid fa-link"></i>
+        </button>
+      </div>
     </div>
-  </div>
 
-  {# ───────────────────── HEADER ───────────────────── #}
-  <div class="cc-header">
-    <h1>مركز عمليات البطاقة</h1>
-    <div class="cc-sub">مرآتك الذكيّة لمتابعة بطاقة العميل في الوقت الحقيقي.</div>
-    <span class="cc-level-pill" data-cc-mode-label>
-      <span class="dot"></span>
-      <span data-cc-mode-text>المستوى المتقدّم</span>
-    </span>
-  </div>
+    <div class="cc-hero-row">
+      {# Class .cc-mode-toggle + button[data-mode] kept verbatim
+         for cards_checker_v2.js compatibility. #}
+      <div class="cc-mode-toggle cc-hero-modes" role="tablist" aria-label="مستوى الفحص">
+        <button type="button" data-mode="advanced" class="active" role="tab" aria-selected="true">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>متقدّم</span>
+        </button>
+        <button type="button" data-mode="simple" role="tab" aria-selected="false">
+          <i class="fa-solid fa-bolt"></i>
+          <span>بسيط</span>
+        </button>
+      </div>
 
-  {# ───────────────────── MODE TOGGLE ───────────────────── #}
-  <div class="cc-mode-bar">
-    <div class="cc-mode-toggle" role="tablist" aria-label="مستوى الفحص">
-      <button type="button" data-mode="advanced" class="active" role="tab" aria-selected="true">
-        <i class="fa-solid fa-layer-group"></i> المستوى المتقدّم
-      </button>
-      <button type="button" data-mode="simple" role="tab" aria-selected="false">
-        <i class="fa-solid fa-bolt"></i> المستوى البسيط
-      </button>
+      {# Form #id and input #id preserved for cards_checker_v2.js. #}
+      <form class="cc-hero-search" method="get"
+            action="{{ url_for('radius.cards_checker') }}"
+            id="cc-search-form">
+        <i class="fa-solid fa-magnifying-glass cc-hero-search-icon"></i>
+        <input type="search" name="query"
+               autocomplete="off" spellcheck="false"
+               placeholder="ابحث برقم البطاقة أو MAC أو اسم العميل…"
+               value="{{ query or '' }}"
+               id="cc-search-input"
+               dir="ltr">
+        <button class="cc-hero-search-btn" type="submit">بحث</button>
+      </form>
     </div>
-  </div>
 
-  {# ───────────────────── SEARCH ───────────────────── #}
-  <form class="cc-search-form" method="get" action="{{ url_for('radius.cards_checker') }}" id="cc-search-form">
-    <input class="cc-search-input"
-           type="search" name="query" autocomplete="off" spellcheck="false"
-           placeholder="ابحث برقم البطاقة أو MAC أو اسم العميل…"
-           value="{{ query or '' }}"
-           id="cc-search-input"
-           dir="ltr">
-    <button class="cc-search-btn" type="submit">
-      <i class="fa-solid fa-magnifying-glass"></i> بحث
-    </button>
-  </form>
+  </div>
 
   {# ───────────────── RESULT WRAPPER (swappable via AJAX) ───────────────── #}
   <div id="cc-result">
