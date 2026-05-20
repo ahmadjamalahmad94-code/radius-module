@@ -226,19 +226,10 @@
         <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
         {{ card.username }}
       </div>
-      {% if card.password %}
-      {# Password sits just under the username — the admin needs it to
-         hand to the customer. Tap-to-copy via the small copy button. #}
+      {% if card.has_password %}
       <div class="cc-card-password" data-cc-field="password">
         <i class="fa-solid fa-key"></i>
-        <span class="cc-card-password-value mono">{{ card.password }}</span>
-        <button type="button" class="cc-card-password-copy"
-                title="نسخ كلمة المرور"
-                onclick="navigator.clipboard && navigator.clipboard.writeText('{{ card.password }}');
-                         this.classList.add('ok');
-                         setTimeout(()=>this.classList.remove('ok'),900);">
-          <i class="fa-solid fa-copy"></i>
-        </button>
+        <span class="cc-card-password-value">كلمة المرور محفوظة ولا تظهر في الفحص</span>
       </div>
       {% endif %}
       {# Removed: cc-card-remaining + MAC bottom row — both moved to

@@ -311,11 +311,6 @@ def check_card(tenant_id: int, query: str) -> dict:
         "id": record.get("card_id"),
         "username": record.get("username"),
         "has_password": bool(record.get("password")),
-        # Raw password — exposed for the Card Checker hero so an admin
-        # can hand it to the customer without bouncing through the cards
-        # CRUD. Cards are short-lived shared secrets, plaintext is part
-        # of their data model (see migration 003_cards.sql).
-        "password": record.get("password") or "",
         "used": bool(record.get("card_used")),
         "revoked": bool(record.get("card_revoked")),
         "locked_mac": record.get("locked_mac") or None,
