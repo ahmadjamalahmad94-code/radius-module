@@ -409,13 +409,17 @@ body[data-hb-side="collapsed"] .hb-side-brand{
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn{
   position:absolute;
-  /* Pin to the bottom-INSIDE edge of the brand block and poke half
-     outside the sidebar — produces a clean "FAB-style" handle that
-     the user can click to expand. Sidebar is docked at
-     inset-inline-start (right in RTL), so its INSIDE edge is
-     inset-inline-end → push the button past it. */
-  bottom:-15px;
-  inset-inline-end:-15px;
+  /* Centered FAB beneath the logo square, straddling the brand/nav
+     divider. `left:50% + translateX(-50%)` works the same in RTL/LTR
+     because it operates on the visual axis, not the inline axis.
+     Clear any inline-axis positioning that may carry over from the
+     opened-state flex layout. */
+  bottom:-16px;
+  left:50%;
+  right:auto;
+  inset-inline-start:auto;
+  inset-inline-end:auto;
+  transform:translateX(-50%);
   width:32px;height:32px;
   background:var(--hb-purple) !important;
   color:#fff !important;
@@ -425,7 +429,8 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn{
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn:hover{
   background:var(--hb-purple-deep) !important;
-  transform:scale(1.08);
+  /* keep the centering — only ADD the scale */
+  transform:translateX(-50%) scale(1.08);
 }
 
 body[data-hb-side="collapsed"] .hb-side-nav{padding:10px 8px 16px}
