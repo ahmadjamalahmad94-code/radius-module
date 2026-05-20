@@ -1,0 +1,49 @@
+{#
+    hub_empty — empty state block
+    ────────────────────────────────────────────────────────────────────────
+    Honest empty state: writes "لا توجد ..." in muted style. Per
+    DESIGN_SYSTEM §1.2 we never silently hide data — we render this.
+
+    Parameters
+      message  str  : main message (e.g. "لا توجد سجلات بعد")
+      title    str  : optional H2 above the message
+      icon     str  : Font Awesome fragment without "fa-" (default "inbox")
+      icon_pack str : "solid" (default) | "regular" | "brands"
+      actions  list[dict] : optional CTA buttons (same shape as
+                            hub_page_header.actions)
+
+    Usage
+      {%- from "_components/empty.html" import hub_empty -%}
+      {{ hub_empty("لا يوجد عملاء بعد", title="ابدأ بإضافة عميل",
+                   icon="users",
+                   actions=[{"label":"إضافة","variant":"primary",
+                             "icon":"plus","href":url_for('admin.users_new')}]) }}
+#}
+{% macro hub_empty(message, title="", icon="inbox", icon_pack="solid",
+                   actions=[]) -%}
+<div class="hub-empty" role="status">
+  <div class="hub-empty-icon">
+    <i class="fa-{{ icon_pack }} fa-{{ icon }}" aria-hidden="true"></i>
+  </div>
+  {%- if title -%}
+    <h2 class="hub-empty-title">{{ title }}</h2>
+  {%- endif -%}
+  <p class="hub-empty-message">{{ message }}</p>
+  {%- if actions -%}
+    <div class="hub-empty-actions">
+      {%- for a in actions -%}
+        {%- set variant = a.variant or "primary" -%}
+        {%- set icon_html %}
+          {%- if a.icon %}<i class="fa-{{ a.icon_pack or 'solid' }} fa-{{ a.icon }}" aria-hidden="true"></i>{% endif -%}
+        {%- endset -%}
+        {%- if a.href -%}
+          <a class="hub-btn hub-btn--{{ variant }}" href="{{ a.href }}">{{ icon_html|safe }}{{ a.label }}</a>
+        {%- else -%}
+          <button type="button" class="hub-btn hub-btn--{{ variant }}"
+                  {% if a.onclick %}onclick="{{ a.onclick }}"{% endif %}>{{ icon_html|safe }}{{ a.label }}</button>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+</div>
+{%- endmacro %}

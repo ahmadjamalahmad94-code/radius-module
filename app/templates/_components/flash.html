@@ -1,0 +1,81 @@
+{#
+    hub_flash + hub_flash_messages — toast / flash messages
+    ────────────────────────────────────────────────────────────────────────
+    Two macros:
+
+      hub_flash(message, category="info", title="", icon="")
+          — render a SINGLE flash card. Use anywhere on a page.
+
+      hub_flash_messages()
+          — render Flask's `get_flashed_messages(with_categories=true)`
+            as a fixed `.hub-flash-region` in the corner. Place near the
+            end of <body> in the base layout.
+
+    Category → variant mapping (matches the Flask convention):
+      success → success | error/danger → danger | warning → warning
+      info (default) → info
+      anything else → "info"
+
+    Each category implies an icon:
+      success → check-circle | danger → triangle-exclamation
+      warning → triangle-exclamation | info → circle-info
+
+    Usage
+      {%- from "_components/flash.html" import hub_flash_messages, hub_flash -%}
+      {{ hub_flash_messages() }}
+
+      (or render inline:)
+      {{ hub_flash("تم الحفظ بنجاح", category="success") }}
+#}
+{%- macro _flash_icon_for(category) -%}
+{%- if category == "success" -%}check-circle
+{%- elif category in ("danger","error") -%}triangle-exclamation
+{%- elif category == "warning" -%}triangle-exclamation
+{%- else -%}circle-info
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro _flash_variant_for(category) -%}
+{%- if category == "success" -%}success
+{%- elif category in ("danger","error") -%}danger
+{%- elif category == "warning" -%}warning
+{%- elif category == "info" -%}info
+{%- else -%}info
+{%- endif -%}
+{%- endmacro -%}
+
+{% macro hub_flash(message, category="info", title="", icon="",
+                   closable=true) -%}
+{%- set variant = _flash_variant_for(category) -%}
+{%- set ico = icon or _flash_icon_for(category) -%}
+<div class="hub-flash hub-flash--{{ variant }}" role="status">
+  <span class="hub-flash-icon">
+    <i class="fa-solid fa-{{ ico }}" aria-hidden="true"></i>
+  </span>
+  <div class="hub-flash-body">
+    {%- if title -%}
+      <div class="hub-flash-title">{{ title }}</div>
+    {%- endif -%}
+    <div>{{ message }}</div>
+  </div>
+  {%- if closable -%}
+    <button type="button" class="hub-flash-close"
+            aria-label="إغلاق"
+            onclick="this.closest('.hub-flash').remove();">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+  {%- endif -%}
+</div>
+{%- endmacro %}
+
+{% macro hub_flash_messages() -%}
+{%- with messages = get_flashed_messages(with_categories=true) -%}
+  {%- if messages -%}
+    <div class="hub-flash-region" aria-live="polite" aria-atomic="false">
+      {%- for category, message in messages -%}
+        {{ hub_flash(message, category=category) }}
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+{%- endwith -%}
+{%- endmacro %}

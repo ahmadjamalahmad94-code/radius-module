@@ -1,0 +1,88 @@
+{#
+    hub_pagination — paginator strip + optional page-size selector
+    ────────────────────────────────────────────────────────────────────────
+    Renders a .hub-foot with prev/next nav, page indicator, optional
+    page-size <select>, and an optional info line.
+
+    Parameters
+      page         int      : current page (1-indexed)
+      total_pages  int      : total number of pages
+      base_url     str      : URL with no `page=` parameter; the component
+                              appends `?page=` (or `&page=`) for prev/next.
+                              Use `?` or `` for "no other params".
+      page_param   str      : query parameter name (default "page")
+      per_page     int      : current page-size (used to display selector)
+      per_page_options list[int] : if non-empty, render a <select> that
+                              submits the parent form (caller should wrap
+                              this macro in a <form method="get">).
+      info_text    str      : optional right-aligned info (e.g. "1-20 of 314")
+
+    Usage
+      {%- from "_components/pagination.html" import hub_pagination -%}
+      <form method="get" action="">
+        {{ hub_pagination(page=2, total_pages=12,
+                          base_url=url_for('admin.users'),
+                          per_page=20,
+                          per_page_options=[10,20,50,100],
+                          info_text="20 من 314") }}
+      </form>
+#}
+{% macro _href(base_url, page_param, page) -%}
+{%- if base_url and "?" in base_url -%}
+{{ base_url }}&{{ page_param }}={{ page }}
+{%- else -%}
+{{ base_url or "" }}?{{ page_param }}={{ page }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro hub_pagination(page=1, total_pages=1, base_url="",
+                        page_param="page", per_page=20,
+                        per_page_options=[], info_text="") -%}
+{%- set page = page|int -%}
+{%- set total_pages = (total_pages|int) or 1 -%}
+{%- set prev_disabled = (page <= 1) -%}
+{%- set next_disabled = (page >= total_pages) -%}
+<nav class="hub-foot" role="navigation" aria-label="ترقيم الصفحات">
+  <div class="hub-foot-left">
+    {%- if per_page_options -%}
+      <label class="hub-foot-info" for="hub-foot-pp" style="margin-inline-end:6px;">عرض</label>
+      <select id="hub-foot-pp" name="{{ page_param }}_size"
+              class="hub-foot-select"
+              onchange="this.form && this.form.submit();">
+        {%- for opt in per_page_options -%}
+          <option value="{{ opt }}"{% if opt == per_page %} selected{% endif %}>{{ opt }}</option>
+        {%- endfor -%}
+      </select>
+      <span class="hub-foot-info">في الصفحة</span>
+    {%- endif -%}
+  </div>
+
+  <div class="hub-foot-mid">
+    {%- if prev_disabled -%}
+      <button type="button" class="hub-foot-nav" disabled aria-label="السابق">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    {%- else -%}
+      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page - 1) }}" aria-label="السابق">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </a>
+    {%- endif -%}
+    <span class="hub-foot-page">{{ page }} / {{ total_pages }}</span>
+    {%- if next_disabled -%}
+      <button type="button" class="hub-foot-nav" disabled aria-label="التالي">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </button>
+    {%- else -%}
+      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page + 1) }}" aria-label="التالي">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </a>
+    {%- endif -%}
+  </div>
+
+  <div class="hub-foot-right">
+    {%- if info_text -%}
+      <span class="hub-foot-info">{{ info_text }}</span>
+    {%- endif -%}
+  </div>
+</nav>
+{%- endmacro %}

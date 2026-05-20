@@ -1,0 +1,31 @@
+{#
+    hub_pill — status badge
+    ────────────────────────────────────────────────────────────────────────
+    Renders a status pill from .hub-pill + variant class.
+
+    Parameters
+      label    str  : visible text
+      variant  str  : "grey" (default) | "green" | "red" | "yellow"
+                      | "amber" | "blue" | "purple" | "cyan" | "teal"
+      dot      bool : show the leading colored dot (default: true)
+      icon     str  : optional Font Awesome icon fragment (rendered
+                      instead of the dot when supplied)
+      icon_pack str : "solid" (default) | "regular" | "brands"
+
+    Usage
+      {%- from "_components/pill.html" import hub_pill -%}
+      {{ hub_pill("نشطة", variant="green") }}
+      {{ hub_pill("معلّقة", variant="amber", icon="hourglass-half") }}
+      {{ hub_pill("ENDED", variant="grey", dot=false) }}
+#}
+{% macro hub_pill(label, variant="grey", dot=true,
+                  icon="", icon_pack="solid") -%}
+<span class="hub-pill hub-pill--{{ variant }}">
+  {%- if icon -%}
+    <i class="fa-{{ icon_pack }} fa-{{ icon }}" aria-hidden="true"></i>
+  {%- elif dot -%}
+    <span class="dot" aria-hidden="true"></span>
+  {%- endif -%}
+  {{ label }}
+</span>
+{%- endmacro %}

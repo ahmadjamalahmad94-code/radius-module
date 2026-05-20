@@ -1,0 +1,21 @@
+{#
+    _components/index.html — discovery doc for the component library
+    ────────────────────────────────────────────────────────────────────────
+    Jinja can't transparently re-export `{% call %}`-style macros (the
+    `caller` context doesn't survive a proxy macro). So instead of one
+    "import everything" shortcut, this file is a quick lookup of where
+    each component lives. Always import from the source file:
+
+        {%- from "_components/card.html"        import hub_card        -%}
+        {%- from "_components/table.html"       import hub_table       -%}
+        {%- from "_components/pill.html"        import hub_pill        -%}
+        {%- from "_components/page_header.html" import hub_page_header -%}
+        {%- from "_components/empty.html"       import hub_empty       -%}
+        {%- from "_components/kpi.html"         import hub_kpi         -%}
+        {%- from "_components/pagination.html"  import hub_pagination  -%}
+        {%- from "_components/flash.html"       import hub_flash,
+                                                       hub_flash_messages -%}
+
+    See COMPONENT_LIBRARY.md (repo root) for the full usage guide.
+#}
+{# This file intentionally has no template output. #}

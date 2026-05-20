@@ -1,0 +1,66 @@
+{#
+    hub_page_header — H1 + subtitle + optional action row
+    ────────────────────────────────────────────────────────────────────────
+    Two layouts:
+      - actions empty → centered header (mirrors Card Checker hero header).
+      - actions present → row layout (title on start, actions on end).
+
+    Parameters
+      title     str        : page title (H1)
+      subtitle  str        : optional sub-line
+      actions   list[dict] : optional action buttons. Each dict has:
+            label    str           : button label
+            href     str           : link target (renders <a>)
+            onclick  str           : JS handler (renders <button>)
+            variant  str           : "primary"|"secondary"|"danger"|"ghost"
+                                     (default: "secondary")
+            icon     str           : optional FA fragment (no "fa-" prefix)
+            icon_pack str          : default "solid"
+      back_href str         : if set, renders a back-arrow icon button on
+                              the END side of the actions row.
+
+    Usage
+      {%- from "_components/page_header.html" import hub_page_header -%}
+      {{ hub_page_header(
+            title="إدارة العملاء",
+            subtitle="إضافة، تحرير، أو حذف الحسابات",
+            actions=[
+              {"label":"عميل جديد","variant":"primary","icon":"plus",
+               "href":url_for('admin.users_new')},
+              {"label":"تصدير CSV","variant":"secondary","icon":"download",
+               "href":url_for('admin.users_export')},
+            ]) }}
+#}
+{% macro hub_page_header(title, subtitle="", actions=[], back_href="") -%}
+{%- set has_extras = (actions and actions|length > 0) or back_href -%}
+<header class="hub-page-header{% if has_extras %} has-actions{% endif %}">
+  {%- if has_extras -%}
+    <div class="hub-page-header-text">
+      <h1>{{ title }}</h1>
+      {%- if subtitle %}<p class="hub-sub">{{ subtitle }}</p>{% endif -%}
+    </div>
+    <div class="hub-page-header-actions">
+      {%- for a in actions -%}
+        {%- set variant = a.variant or "secondary" -%}
+        {%- set icon_html %}
+          {%- if a.icon %}<i class="fa-{{ a.icon_pack or 'solid' }} fa-{{ a.icon }}" aria-hidden="true"></i>{% endif -%}
+        {%- endset -%}
+        {%- if a.href -%}
+          <a class="hub-btn hub-btn--{{ variant }}" href="{{ a.href }}">{{ icon_html|safe }}{{ a.label }}</a>
+        {%- else -%}
+          <button type="button" class="hub-btn hub-btn--{{ variant }}"
+                  {% if a.onclick %}onclick="{{ a.onclick }}"{% endif %}>{{ icon_html|safe }}{{ a.label }}</button>
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if back_href -%}
+        <a class="hub-header-icon-btn" href="{{ back_href }}" aria-label="رجوع">
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      {%- endif -%}
+    </div>
+  {%- else -%}
+    <h1>{{ title }}</h1>
+    {%- if subtitle %}<p class="hub-sub">{{ subtitle }}</p>{% endif -%}
+  {%- endif -%}
+</header>
+{%- endmacro %}

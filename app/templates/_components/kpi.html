@@ -1,0 +1,41 @@
+{#
+    hub_kpi — single stat tile
+    ────────────────────────────────────────────────────────────────────────
+    Renders one .hub-stat-card. Wrap several of these in
+    <div class="hub-stat-grid">…</div> for the standard KPI row.
+
+    Parameters
+      label   str  : top label (small, muted)
+      value   str  : the big number (kept tabular)
+      sub     str  : optional sub-line (10.5px muted)
+      accent  str  : icon-tile color — "purple" (default) | "green" |
+                     "amber" | "cyan" | "blue" | "red" | "grey" | "teal"
+      icon    str  : Font Awesome fragment without "fa-" (default "chart-line")
+      icon_pack str: "solid" (default) | "regular" | "brands"
+      href    str  : optional — if supplied, the tile becomes a link.
+
+    Usage
+      {%- from "_components/kpi.html" import hub_kpi -%}
+      <div class="hub-stat-grid">
+        {{ hub_kpi("جلسات حيّة","42",sub="آخر تحديث الآن",
+                   accent="green",icon="signal") }}
+        {{ hub_kpi("اشتراكات نشطة","1,204",accent="purple",icon="id-card") }}
+        {{ hub_kpi("إيراد اليوم","$315",accent="amber",icon="money-bill") }}
+      </div>
+#}
+{% macro hub_kpi(label, value, sub="", accent="purple",
+                 icon="chart-line", icon_pack="solid", href="") -%}
+{%- set tag = "a" if href else "div" -%}
+<{{ tag }} class="hub-stat-card"{% if href %} href="{{ href }}" style="text-decoration:none;color:inherit;"{% endif %}>
+  <div class="hub-stat-body">
+    <div class="hub-stat-label">{{ label }}</div>
+    <div class="hub-stat-value">{{ value }}</div>
+    {%- if sub -%}
+      <div class="hub-stat-sub">{{ sub }}</div>
+    {%- endif -%}
+  </div>
+  <span class="hub-stat-icon {{ accent }}">
+    <i class="fa-{{ icon_pack }} fa-{{ icon }}" aria-hidden="true"></i>
+  </span>
+</{{ tag }}>
+{%- endmacro %}

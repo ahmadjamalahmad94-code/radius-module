@@ -1,0 +1,53 @@
+{#
+    hub_card — section card with optional header (icon + title + side link)
+    ────────────────────────────────────────────────────────────────────────
+    Renders the surface from .hub-card + .hub-section-head + .hub-card-body.
+    Body content goes between the call tags (Jinja `{% call %}` block).
+
+    Parameters
+      title      str  : header title; if falsy, the header is omitted
+      icon       str  : Font Awesome class fragment (e.g. "user", "credit-card").
+                        Passed without the "fa-" prefix; we add it.
+      icon_pack  str  : "solid" (default) | "regular" | "brands"
+      link_text  str  : optional right-side link label
+      link_href  str  : optional href for the right-side link
+      link_muted bool : render the link as a muted, non-interactive label
+      soft       bool : use the tinted (.is-soft) gradient variant
+      flush      bool : drop body padding (for tables/lists that own their padding)
+      extra_class str : extra CSS classes appended to .hub-card
+
+    Usage
+      {%- from "_components/card.html" import hub_card -%}
+      {% call hub_card("معلومات الجلسة", icon="circle-info", link_text="إجراء جانبي ←") %}
+        <p>Body content here.</p>
+      {% endcall %}
+#}
+{% macro hub_card(title="", icon="", icon_pack="solid",
+                  link_text="", link_href="",
+                  link_muted=false, soft=false, flush=false,
+                  extra_class="") -%}
+<section class="hub-card{% if soft %} is-soft{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}">
+  {%- if title or icon -%}
+  <header class="hub-section-head">
+    {%- if icon -%}
+      <span class="hub-section-head-icon">
+        <i class="fa-{{ icon_pack }} fa-{{ icon }}" aria-hidden="true"></i>
+      </span>
+    {%- endif -%}
+    {%- if title -%}
+      <span class="hub-section-head-title">{{ title }}</span>
+    {%- endif -%}
+    {%- if link_text -%}
+      {%- if link_muted or not link_href -%}
+        <span class="hub-section-head-link is-muted">{{ link_text }}</span>
+      {%- else -%}
+        <a class="hub-section-head-link" href="{{ link_href }}">{{ link_text }}</a>
+      {%- endif -%}
+    {%- endif -%}
+  </header>
+  {%- endif -%}
+  <div class="hub-card-body{% if flush %} is-flush{% endif %}">
+    {{ caller() }}
+  </div>
+</section>
+{%- endmacro %}

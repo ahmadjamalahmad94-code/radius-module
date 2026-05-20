@@ -1,0 +1,203 @@
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  hub_tokens.css — Hobe Hub canonical design tokens                  ║
+   ║                                                                       ║
+   ║  Single source of truth for colors, spacing, radii, shadows,        ║
+   ║  motion, and typography. Extracted from cards_checker_v2.css so     ║
+   ║  every rebuilt admin page inherits the exact same visual language.  ║
+   ║                                                                       ║
+   ║  RULES                                                                ║
+   ║   1. Every new component file must `@import "hub_tokens.css"` (or   ║
+   ║      load it before its own stylesheet via <link>) — never inline   ║
+   ║      a hex that lives here.                                          ║
+   ║   2. The `--cc-*` prefix is the canonical token surface. Aliases   ║
+   ║      with `--hb-*` are provided for the admin shell + sidebar that  ║
+   ║      already use that namespace; they map onto the same values.     ║
+   ║   3. Don't add a new value without naming it here first.            ║
+   ║                                                                       ║
+   ║  Source of truth: DESIGN_SYSTEM.md (§2-§4) — keep both in sync.    ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+:root{
+  /* ────────────────────────────── BRAND PURPLE ────────────────────────────── */
+  --cc-brand:        #6B5AED;   /* primary action, focus ring, active item     */
+  --cc-brand-2:      #8B7BF8;   /* mid-gradient stop                            */
+  --cc-brand-3:      #A99BF9;   /* light-gradient stop, hero illustrations      */
+  --cc-brand-deep:   #4A36C9;   /* hover, pressed                                */
+  --cc-brand-ink:    #2E1F8C;   /* heavy text on purple-soft surfaces            */
+  --cc-brand-soft:   #F2EEFE;   /* soft pill bg, active row bg                  */
+  --cc-brand-soft2:  #E8E1FB;   /* hover bg, deeper soft                         */
+  --cc-brand-softer: #F4F1FE;   /* hover wash, lightest soft                    */
+
+  /* Aliases used by admin shell + sidebar (kept in lock-step). */
+  --hb-purple:        var(--cc-brand);
+  --hb-purple-deep:   #5B4BD8;
+  --hb-purple-soft:   #EDE9FE;
+  --hb-purple-softer: var(--cc-brand-softer);
+
+  /* Brand-tinted gradients — used by hero, primary btn, mode toggle. */
+  --cc-hero-grad:  linear-gradient(135deg,#6B5AED 0%,#7B6BF2 45%,#A99BF9 100%);
+  --cc-chip-grad:  linear-gradient(135deg,#FFD86B 0%,#E3A41A 100%);
+  --cc-soft-grad:  linear-gradient(135deg,#F4F1FE 0%,#EDE7FB 100%);
+
+  /* ────────────────────────────── SURFACES ────────────────────────────── */
+  --cc-page-bg:    #F5F4F0;     /* legacy card-checker page tone               */
+  --hb-bg-page:    #EFEDF5;     /* canonical page canvas (lives on html)       */
+  --hb-bg:         #F5F3FB;     /* sidebar surface                              */
+  --hb-bg-hover:   #E6E2F2;     /* sidebar item hover                           */
+  --hb-bg-icon-idle:#EBE7F4;    /* idle icon tile in sidebar                    */
+  --cc-card-bg:    #FFFFFF;     /* card / panel surface                         */
+  --cc-tint-bg:    #FAFAFA;     /* inner panel band                             */
+
+  /* ────────────────────────────── TEXT ────────────────────────────── */
+  --cc-text:       #1F2A37;     /* primary body text                           */
+  --cc-text-soft:  #475569;     /* secondary text, sub-items                   */
+  --cc-text-mute:  #94A0AE;     /* muted hint, placeholder, faded values       */
+  --cc-text-faint: #B6BCC8;     /* bullets, separators                          */
+
+  --hb-text:        var(--cc-text);
+  --hb-text-soft:   var(--cc-text-soft);
+  --hb-text-muted:  var(--cc-text-mute);
+  --hb-text-faint:  var(--cc-text-faint);
+
+  /* ────────────────────────────── BORDERS ────────────────────────────── */
+  --cc-border:     #ECE9E0;     /* default card border (cream)                 */
+  --cc-border-2:   #E2DBC7;     /* stronger divider, hover border               */
+  --hb-border:        #EEEDF3;  /* default border on cool surfaces             */
+  --hb-border-strong: #E3E1EC;  /* stronger cool divider                        */
+  /* Cool-grey border used by tables (sits well on white). */
+  --cc-border-cool: #E5E0F5;
+
+  /* ────────────────────────────── SEMANTIC ────────────────────────────── */
+  --hb-green:  #22C55E;
+  --hr-green:  #26B673;
+  --hb-amber:  #F59E0B;
+  --hr-orange: #F39C12;
+  --hb-red:    #EF4444;
+  --hr-red:    #E84A4A;
+  --hr-blue-info: #3D8DD6;
+
+  /* Pill / icon-tile palette — keep in sync with §2.6 of DESIGN_SYSTEM.md.
+     Each role exposes a bg + fg pair as tokens so components don't repeat
+     the literal hex. */
+  --cc-pill-purple-bg: #EEE9FE; --cc-pill-purple-fg: #2E1F8C;
+  --cc-pill-green-bg:  #DEF3E5; --cc-pill-green-fg:  #157F4E;
+  --cc-pill-amber-bg:  #FCEFC9; --cc-pill-amber-fg:  #7A4F02;
+  --cc-pill-cyan-bg:   #DEF3F8; --cc-pill-cyan-fg:   #0F627A;
+  --cc-pill-blue-bg:   #E3EDF9; --cc-pill-blue-fg:   #1E5C9F;
+  --cc-pill-red-bg:    #FDE5E5; --cc-pill-red-fg:    #9B1C1C;
+  --cc-pill-grey-bg:   #EDEAE1; --cc-pill-grey-fg:   #5B6470;
+  --cc-pill-teal-bg:   #D2F1EC; --cc-pill-teal-fg:   #0B6E5B;
+
+  /* The dot colors for the pill family (slightly stronger than fg). */
+  --cc-pill-purple-dot:#6B5AED;
+  --cc-pill-green-dot: #26B673;
+  --cc-pill-amber-dot: #F39C12;
+  --cc-pill-cyan-dot:  #1F8FB0;
+  --cc-pill-blue-dot:  #3D8DD6;
+  --cc-pill-red-dot:   #E84A4A;
+  --cc-pill-grey-dot:  #94A0AE;
+  --cc-pill-teal-dot:  #0B9078;
+
+  /* ────────────────────────────── RADII ────────────────────────────── */
+  --cc-r-sm:    6px;     /* tiny chips, dense pills                  */
+  --cc-r:       8px;     /* inputs, small buttons                     */
+  --cc-r-lg:    10px;    /* section headers, soft buttons             */
+  --cc-r-tile:  14px;    /* metric tiles, action cards                 */
+  --cc-r-card:  18px;    /* content cards, modals                      */
+  --cc-r-hero:  22px;    /* hero card                                  */
+  --cc-r-pill:  999px;   /* status badges, mode toggle                 */
+
+  --hr-r-sm: var(--cc-r-sm);
+  --hr-r:    var(--cc-r);
+  --hr-r-lg: var(--cc-r-lg);
+
+  /* ────────────────────────────── SHADOWS ────────────────────────────── */
+  --cc-sh-card:    0 1px 0 rgba(15,23,42,.03), 0 6px 18px rgba(15,23,42,.05);
+  --cc-sh-card2:   0 1px 0 rgba(15,23,42,.03), 0 10px 26px rgba(15,23,42,.08);
+  --cc-sh-hero:    0 14px 30px rgba(74,54,201,.22), 0 4px 10px rgba(74,54,201,.10);
+  --cc-sh-pop:     0 8px 22px rgba(0,0,0,.12);
+  --cc-sh-glow:    0 4px 12px rgba(107,90,237,.30);
+  --cc-sh-glow-sm: 0 4px 10px rgba(107,90,237,.10);
+  --cc-sh-focus:   0 0 0 3px rgba(107,90,237,.15);
+
+  --hr-shadow-sm:  var(--cc-sh-card);
+  --hr-shadow:     var(--cc-sh-card2);
+  --hr-shadow-pop: var(--cc-sh-pop);
+
+  /* ────────────────────────────── SPACING SCALE ────────────────────────────── */
+  /* Use these values ONLY — see DESIGN_SYSTEM §4.1. No 5/7/9/13. */
+  --cc-sp-1:  2px;
+  --cc-sp-2:  4px;
+  --cc-sp-3:  6px;
+  --cc-sp-4:  8px;
+  --cc-sp-5:  10px;
+  --cc-sp-6:  12px;
+  --cc-sp-7:  14px;
+  --cc-sp-8:  16px;
+  --cc-sp-9:  18px;
+  --cc-sp-10: 20px;
+  --cc-sp-11: 24px;
+  --cc-sp-12: 28px;
+  --cc-sp-13: 32px;
+
+  /* Section rhythm (LOCKED — see DESIGN_SYSTEM §4.5) ─────────────────────
+     Every vertical gap between page-level blocks equals exactly this
+     value. Reference both tokens — never a literal margin/gap. */
+  --cc-gap-section: 16px;   /* major vertical step between blocks         */
+  --cc-gap-inline:  12px;   /* in-row tile gap (metric / action tiles)   */
+
+  /* ────────────────────────────── MOTION ────────────────────────────── */
+  --cc-anim-fast: 140ms;   /* hover, button press, pill toggle           */
+  --cc-anim-med:  240ms;   /* modal open, sidebar collapse               */
+  --cc-anim-slow: 3s;      /* node pulse, packet drift                   */
+  --cc-anim-ambient: 60s;  /* background orb drift                       */
+
+  --cc-ease:        ease;
+  --cc-ease-out:    cubic-bezier(.16,.84,.44,1);
+  --cc-ease-in-out: ease-in-out;
+
+  /* ────────────────────────────── TYPOGRAPHY ────────────────────────────── */
+  --cc-font:      "Cairo", "Tajawal", "Segoe UI", -apple-system, sans-serif;
+  --cc-font-mono: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  --hr-mono:      var(--cc-font-mono);
+
+  /* Type scale — every size that appears in the system. Add a new token
+     here BEFORE using a new size in a component. */
+  --cc-fs-display: 30px;   /* hero numbers                                */
+  --cc-fs-h1:      22px;   /* page title                                  */
+  --cc-fs-h2:      16px;   /* section heading, modal title                */
+  --cc-fs-h3:      14px;   /* card heading, sidebar item                  */
+  --cc-fs-body-l:  14px;   /* strong inline value                          */
+  --cc-fs-body:    13px;   /* default text, action title                  */
+  --cc-fs-body-s:  12.5px; /* metric label, table cell                    */
+  --cc-fs-small:   11.5px; /* table header, metric sub                    */
+  --cc-fs-tiny:    11px;   /* field label, side-pill label                */
+
+  --cc-fw-regular:  500;
+  --cc-fw-medium:   600;
+  --cc-fw-bold:     700;
+  --cc-fw-heavy:    800;
+  --cc-fw-display:  900;
+
+  --cc-lh-tight:    1.15;
+  --cc-lh-default:  1.55;
+  --cc-lh-loose:    1.65;
+
+  /* ────────────────────────────── LAYOUT METRICS ────────────────────────────── */
+  --cc-page-max:     1180px;
+  --cc-sidebar-w:    260px;
+  --cc-sidebar-w-collapsed: 72px;
+  --cc-topbar-h:     50px;
+  --cc-control-h:    42px;     /* default input/button height               */
+  --cc-control-h-sm: 32px;     /* dense controls (inline action input)      */
+  --cc-control-h-md: 38px;     /* mid controls                              */
+}
+
+/* ────────────────────────────── BASE PAGE TONE ──────────────────────────────
+   Optional helper: when a page extends the admin layout, html should carry
+   the page canvas color so the bg-net layer + cards float over it. */
+html.hub-themed{
+  background: var(--hb-bg-page);
+  font-family: var(--cc-font);
+  color: var(--cc-text);
+}

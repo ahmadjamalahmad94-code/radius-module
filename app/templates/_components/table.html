@@ -1,0 +1,95 @@
+{#
+    hub_table — admin data table with header pill + zebra rows + hover
+    ────────────────────────────────────────────────────────────────────────
+    Renders <table class="hub-table"> wrapped in .hub-table-wrap so it can
+    scroll horizontally when there are many columns.
+
+    Parameters
+      columns  list[dict|str]
+                 each item is either a string (label, all defaults) or
+                 a dict with these keys:
+                   label    str   visible header text
+                   key      str   row dict key to read (default: the
+                                  index in `columns`)
+                   align    str   "start" | "center" (default) | "end"
+                   mono     bool  render cells with monospace LTR
+                   numeric  bool  apply tabular-nums + center
+                   class    str   extra class appended to <td>
+      rows     list[dict|list]
+                 list of rows. Each row is either a dict (looked up by
+                 column key) or a list/tuple (positional).
+      wide     bool   apply .is-wide for min-width:1180px tables
+      empty_message str message rendered when rows is empty
+      row_class fn    optional callable: takes row, returns extra class
+                      (e.g. "is-live"). If not provided, no extra class.
+      caption  str    optional caption above the table
+
+    Usage
+      {%- from "_components/table.html" import hub_table -%}
+      {{ hub_table(
+            columns=[
+              {"label":"الاسم", "key":"name", "align":"start"},
+              {"label":"MAC",   "key":"mac",  "mono":true},
+              {"label":"الحالة","key":"status"},
+            ],
+            rows=sessions,
+            empty_message="لا توجد جلسات بعد") }}
+#}
+{% macro _td_classes(col) -%}
+{%- set parts = [] -%}
+{%- if col.numeric -%}{% set _ = parts.append("num") %}{%- endif -%}
+{%- if col.mono -%}{% set _ = parts.append("mono") %}{%- endif -%}
+{%- if col.align == "start" -%}{% set _ = parts.append("text-start") %}{%- endif -%}
+{%- if col.align == "end" -%}{% set _ = parts.append("text-end") %}{%- endif -%}
+{%- if col.class -%}{% set _ = parts.append(col.class) %}{%- endif -%}
+{{- parts|join(" ") -}}
+{%- endmacro %}
+
+{% macro hub_table(columns=[], rows=[], wide=false,
+                   empty_message="لا توجد بيانات",
+                   row_class=none, caption="") -%}
+{%- set _cols = [] -%}
+{%- for c in columns -%}
+  {%- if c is mapping -%}
+    {%- set _ = _cols.append(c) -%}
+  {%- else -%}
+    {%- set _ = _cols.append({"label": c, "key": loop.index0}) -%}
+  {%- endif -%}
+{%- endfor -%}
+<div class="hub-table-wrap">
+  <table class="hub-table{% if wide %} is-wide{% endif %}">
+    {%- if caption %}<caption class="visually-hidden">{{ caption }}</caption>{% endif -%}
+    <thead>
+      <tr>
+        {%- for col in _cols -%}
+          <th>{{ col.label }}</th>
+        {%- endfor -%}
+      </tr>
+    </thead>
+    <tbody>
+      {%- if rows -%}
+        {%- for row in rows -%}
+          {%- set extra = row_class(row) if row_class else "" -%}
+          <tr{% if extra %} class="{{ extra }}"{% endif %}>
+            {%- for col in _cols -%}
+              {%- set key = col.key if col.key is defined else loop.index0 -%}
+              {%- if row is mapping -%}
+                {%- set value = row.get(key, "") -%}
+              {%- else -%}
+                {%- set value = row[key] if (key is integer and key < row|length) else "" -%}
+              {%- endif -%}
+              <td class="{{ _td_classes(col) }}">{{ value if value is not none else "" }}</td>
+            {%- endfor -%}
+          </tr>
+        {%- endfor -%}
+      {%- else -%}
+        <tr>
+          <td colspan="{{ _cols|length }}" class="muted" style="padding:24px;">
+            {{ empty_message }}
+          </td>
+        </tr>
+      {%- endif -%}
+    </tbody>
+  </table>
+</div>
+{%- endmacro %}
