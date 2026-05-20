@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ..db.helpers import parse_dt
-from ..db.repos import cards_repo
+from ..db.repos import cards_repo, device_fingerprints_repo
 from .device_fingerprint import infer_device
 
 
@@ -185,6 +185,60 @@ def _session(row: dict, now: datetime) -> dict:
     }
 
 
+def _dhcp_device(fp: dict | None) -> dict | None:
+    """Compact display payload for a device_fingerprints row.
+
+    Returns None when the fingerprint is empty / missing — callers
+    decide whether to fall back to OUI-based inference.
+    """
+    if not fp:
+        return None
+    hostname = fp.get("hostname") or ""
+    os_family = fp.get("os_family") or ""
+    os_version = fp.get("os_version") or ""
+    brand = fp.get("device_brand") or ""
+    # Human label, prefers the hostname which is the most recognizable
+    # to operators (e.g. "Redmi-Note-12-Pro · Android 11").
+    parts = []
+    if hostname:
+        parts.append(hostname)
+    if os_family:
+        os_label = os_family.capitalize()
+        if os_version:
+            os_label += f" {os_version}"
+        parts.append(os_label)
+    label = " · ".join(parts) if parts else ""
+    return {
+        "hostname":   hostname,
+        "class_id":   fp.get("dhcp_class_id") or "",
+        "os_family":  os_family,
+        "os_version": os_version,
+        "brand":      brand,
+        "model":      fp.get("device_model") or "",
+        "label":      label,           # human one-liner
+        "ip":         fp.get("ip_address") or "",
+        "last_seen":  fp.get("last_seen_at") or "",
+    }
+
+
+def _trigger_oncheck_refresh(tenant_id: int, macs: list[str]) -> None:
+    """Fire-and-forget MT refresh for the card's MACs. Never blocks the
+    page render — failures are logged but invisible to the user."""
+    import logging
+    import threading
+    log = logging.getLogger(__name__)
+
+    def _run():
+        try:
+            from .device_fingerprint_sync import sync_macs_for_tenant
+            sync_macs_for_tenant(tenant_id, macs)
+        except Exception:  # noqa: BLE001
+            log.exception("oncheck dhcp refresh failed tenant=%s", tenant_id)
+
+    t = threading.Thread(target=_run, daemon=True, name="cc-dhcp-refresh")
+    t.start()
+
+
 def _summary(raw: dict, sessions: list[dict], macs: list[dict]) -> dict:
     return {
         "sessions_count": _seconds(raw.get("sessions_count")),
@@ -287,6 +341,34 @@ def check_card(tenant_id: int, query: str) -> dict:
     sessions = [_session(row, now) for row in session_rows]
     accounting_summary = cards_repo.summarize_card_accounting(tenant_id, record["username"])
     macs = cards_repo.list_card_macs(tenant_id, record["username"], limit=30)
+
+    # ── DHCP-lease device fingerprints (migration 026) ─────────────
+    # Collect every MAC this card has ever touched, look them all up in
+    # one query, and inject the `dhcp_device` payload into each session
+    # and each MAC-history entry. Also fire a background refresh that
+    # tops up the cache from the live router — the response itself
+    # never blocks on MT.
+    _all_macs: list[str] = []
+    for s in sessions:
+        if s.get("mac_address"):
+            _all_macs.append(s["mac_address"])
+    for m in macs:
+        if m.get("mac"):
+            _all_macs.append(m["mac"])
+    if record.get("used_by_mac"):
+        _all_macs.append(record["used_by_mac"])
+    _fp_by_mac = (
+        device_fingerprints_repo.get_many_by_macs(tenant_id, _all_macs)
+        if _all_macs else {}
+    )
+    for s in sessions:
+        mac_key = (s.get("mac_address") or "").lower()
+        s["dhcp_device"] = _dhcp_device(_fp_by_mac.get(mac_key))
+    for m in macs:
+        mac_key = (m.get("mac") or "").lower()
+        m["dhcp_device"] = _dhcp_device(_fp_by_mac.get(mac_key))
+    if _all_macs:
+        _trigger_oncheck_refresh(tenant_id, _all_macs)
     data_sources = ["cards"]
     if record.get("batch_code") is not None:
         data_sources.append("card_batches")

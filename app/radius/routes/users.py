@@ -209,9 +209,31 @@ def users_list():
     plan_id = int(plan_id) if plan_id else None
     items = get_users_service().list(status=status, plan_id=plan_id, search=q, limit=1000)
     plans = list(get_plans_service().list(limit=500))
+
+    # DHCP fingerprints (migration 026) — bulk look-up by mac_lock for
+    # the subscribers on this page. Renders the device name/OS in a new
+    # column next to the username. Subscribers without a mac_lock get
+    # a dash. We use mac_lock (not the latest observed MAC) so the data
+    # is deterministic and doesn't churn between renders.
+    dhcp_by_username = {}
+    try:
+        from ..db.repos import device_fingerprints_repo
+        tid = _tid()
+        macs = [u.mac_lock for u in items if getattr(u, "mac_lock", None)]
+        if macs:
+            fp_by_mac = device_fingerprints_repo.get_many_by_macs(tid, macs)
+            for u in items:
+                m = (getattr(u, "mac_lock", "") or "").lower()
+                if m and m in fp_by_mac:
+                    dhcp_by_username[u.username] = fp_by_mac[m]
+    except Exception:  # noqa: BLE001
+        # Never break the subscribers list because of fingerprint lookup.
+        dhcp_by_username = {}
+
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
-        statuses=ACCOUNT_STATUSES)
+        statuses=ACCOUNT_STATUSES,
+        dhcp_by_username=dhcp_by_username)
 
 
 def users_new():

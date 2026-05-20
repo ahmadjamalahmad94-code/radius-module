@@ -13,7 +13,7 @@ def register_v1(parent: Blueprint) -> None:
 
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_schedules,
-        card_checker, cards, dashboard, distributors, health, internal_auth,
+        card_checker, cards, dashboard, devices, distributors, health, internal_auth,
         ledger, loans, mikrotik, nas, payments, print_templates, profiles,
         recycle_bin, reports, sessions, webhooks,
     )
@@ -40,6 +40,7 @@ def register_v1(parent: Blueprint) -> None:
     dashboard.register(v1)
     admins.register(v1)
     audit.register(v1)
+    devices.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token

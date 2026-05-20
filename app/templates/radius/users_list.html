@@ -42,7 +42,8 @@
       <thead><tr>
         <th style="width:36px"><input type="checkbox"></th>
         <th>#</th><th>اليوزر</th><th>الاسم</th><th>الجوال</th>
-        <th>الباقة</th><th>الحالة</th><th>تنتهي</th>
+        <th>الباقة</th><th>الجهاز / النظام</th>
+        <th>الحالة</th><th>تنتهي</th>
         <th>الاستهلاك</th><th style="width:150px">إجراءات</th>
       </tr></thead>
       <tbody>
@@ -56,6 +57,24 @@
           <td>
             {% set p = plans|selectattr('id','equalto',u.plan_id)|first %}
             {{ p.name if p else '—' }}
+          </td>
+          {# Device fingerprint column — sourced from DHCP leases via
+             the background worker (migration 026). Looks up the
+             subscriber's mac_lock; users without a lock or without a
+             cached fingerprint render a dash. #}
+          <td>
+            {% set _fp = (dhcp_by_username or {}).get(u.username) %}
+            {% if _fp %}
+              <span class="pill pill-info" title="{{ _fp.dhcp_class_id or '' }}">
+                <i class="fa-solid fa-mobile-screen" style="margin-inline-end:4px"></i>
+                {{ _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else '') or '—' }}
+                {% if _fp.os_family %}
+                  <small style="opacity:.75;margin-inline-start:4px">
+                    {{ _fp.os_family|capitalize }} {{ _fp.os_version or '' }}
+                  </small>
+                {% endif %}
+              </span>
+            {% else %}—{% endif %}
           </td>
           <td>
             {% if u.status == 'enabled' %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>

@@ -728,6 +728,7 @@
                   <th>الحالة</th>
                   <th>IP</th>
                   <th>MAC</th>
+                  <th>الجهاز / النظام</th>
                   <th class="num">تحميل</th>
                   <th class="num">رفع</th>
                   <th class="num">تحميل مجاني</th>
@@ -753,6 +754,24 @@
                   </td>
                   <td class="mono">{{ ses.ip_address or '—' }}</td>
                   <td class="mono">{{ ses.mac_address or '—' }}</td>
+                  {# Device fingerprint pulled from MikroTik DHCP leases
+                     (migration 026). Falls back to '—' when the lease
+                     hasn't been observed yet — the background worker
+                     ingests every 2 minutes. #}
+                  <td class="cc-device-cell">
+                    {% if ses.dhcp_device and ses.dhcp_device.label %}
+                      <span class="cc-device-label" title="{{ ses.dhcp_device.class_id or '' }}">
+                        {% if ses.dhcp_device.os_family %}
+                          <i class="fa-brands fa-{{ ses.dhcp_device.os_family if ses.dhcp_device.os_family in ['android','windows','apple','linux'] else 'android' }}"></i>
+                        {% else %}
+                          <i class="fa-solid fa-network-wired"></i>
+                        {% endif %}
+                        <span>{{ ses.dhcp_device.label }}</span>
+                      </span>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
                   <td class="num">{{ bytes_size(ses.download_bytes or 0) }}</td>
                   <td class="num">{{ bytes_size(ses.upload_bytes or 0) }}</td>
                   {# Free upload/download — radacct doesn't track free vs paid
@@ -811,6 +830,8 @@
                 'ip':       ses.ip_address or '',
                 'duration': ses.duration_seconds or 0,
                 'started':  ses.started_at or '',
+                'device':   (ses.dhcp_device.label
+                              if ses.dhcp_device and ses.dhcp_device.label else ''),
               }) %}
             {% endfor %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect">
@@ -883,6 +904,16 @@
                visible text. data-attributes get safe HTML escaping
                from Jinja by default. A wire-up script at the bottom
                of this template binds the click handler. #}
+            {# Build a meta map { MAC_UPPER: 'device label' } so the
+               picker can show "Redmi-Note-12-Pro · Android 11" next
+               to each MAC instead of just the raw address.
+               Backward-compatible — recentMacs stays a flat list. #}
+            {% set _mac_meta = {} %}
+            {% for _m in (s.macs or []) %}
+              {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
+                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+              {% endif %}
+            {% endfor %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="lock-mac">
               <input type="hidden" name="op" value="lock_mac">
               <input type="hidden" name="mac" data-cc-prompt-field>
@@ -890,7 +921,8 @@
               <button class="cc-action" type="button"
                       data-cc-op="lock-mac"
                       data-cc-current-mac="{{ card.mac_address or '' }}"
-                      data-cc-recent-macs="{{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }}">
+                      data-cc-recent-macs="{{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }}"
+                      data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">قفل MAC</div>
@@ -1310,15 +1342,27 @@
         var m = String(raw[i]).toUpperCase();
         if (!seen[m]){ seen[m] = true; uniq.push(m); }
       }
+      // Optional meta map { MAC_UPPER: 'Redmi-Note-12-Pro · Android 11' }
+      // sourced from device_fingerprints. When present, replaces the
+      // generic "من سجل جلسات البطاقة" line with the device label so
+      // the operator can pick the right MAC visually.
+      var metaMap = (opts.recentMacsMeta && typeof opts.recentMacsMeta === 'object')
+                    ? opts.recentMacsMeta : {};
       var listHtml = '';
       if (uniq.length){
         for (var j=0;j<uniq.length;j++){
-          listHtml += '<label class="cc-gmodal-mac-row" data-mac="' + esc(uniq[j]) + '">' +
-            '<input type="checkbox" class="cc-gmodal-mac-check" data-mac-check value="' + esc(uniq[j]) + '">' +
-            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid fa-wifi"></i></span>' +
+          var macUp = uniq[j];
+          var devLabel = metaMap[macUp] || '';
+          var metaLine = devLabel
+            ? '<div class="cc-gmodal-mac-row-meta">' + esc(devLabel) + '</div>'
+            : '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>';
+          listHtml += '<label class="cc-gmodal-mac-row" data-mac="' + esc(macUp) + '">' +
+            '<input type="checkbox" class="cc-gmodal-mac-check" data-mac-check value="' + esc(macUp) + '">' +
+            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid ' +
+              (devLabel ? 'fa-mobile-screen' : 'fa-wifi') + '"></i></span>' +
             '<div class="cc-gmodal-mac-row-body">' +
-              '<div class="cc-gmodal-mac-row-mac">' + esc(uniq[j]) + '</div>' +
-              '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>' +
+              '<div class="cc-gmodal-mac-row-mac">' + esc(macUp) + '</div>' +
+              metaLine +
             '</div></label>';
         }
       } else {
@@ -1470,11 +1514,21 @@
       if (sessions.length){
         for (var i=0;i<sessions.length;i++){
           var s = sessions[i];
+          // Device label (from DHCP fingerprint) goes above the
+          // IP/duration meta line so the operator can immediately tell
+          // apart "Redmi-Note-12-Pro" from "iPhone 14" before kicking.
+          var devLine = s.device
+            ? '<div class="cc-gmodal-mac-row-device">' +
+                '<i class="fa-solid fa-mobile-screen"></i> ' + esc(s.device) +
+              '</div>'
+            : '';
           rowsHtml += '<label class="cc-gmodal-mac-row" data-sess="' + esc(s.id) + '">' +
             '<input type="checkbox" class="cc-gmodal-mac-check" data-sess-check value="' + esc(s.id) + '">' +
-            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid fa-wifi"></i></span>' +
+            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid ' +
+              (s.device ? 'fa-mobile-screen' : 'fa-wifi') + '"></i></span>' +
             '<div class="cc-gmodal-mac-row-body">' +
               '<div class="cc-gmodal-mac-row-mac">' + esc(s.mac || '—') + '</div>' +
+              devLine +
               '<div class="cc-gmodal-mac-row-meta">' +
                 'IP ' + esc(s.ip || '—') + ' · ' + fmtDur(s.duration) +
               '</div>' +
@@ -1739,14 +1793,20 @@
       if (!window.ccModal) return;
       var current = btn.getAttribute('data-cc-current-mac') || '';
       var recent  = [];
+      var meta    = {};
       try {
         recent = JSON.parse(btn.getAttribute('data-cc-recent-macs') || '[]');
         if (!Array.isArray(recent)) recent = [];
       } catch(_){ recent = []; }
+      try {
+        meta = JSON.parse(btn.getAttribute('data-cc-recent-macs-meta') || '{}');
+        if (!meta || typeof meta !== 'object') meta = {};
+      } catch(_){ meta = {}; }
       window.ccModal.macPicker({
         title: 'قفل MAC',
         currentMac: current,
         recentMacs: recent,
+        recentMacsMeta: meta,
         onConfirm: function(mac){
           var f = btn.closest('form');
           if (!f) return;
