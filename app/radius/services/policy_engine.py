@@ -289,7 +289,53 @@ def authorize(req: AuthRequest) -> AuthDecision:
     _LOG.warning("auth_decision user=%r source=%s accepted attrs=%d",
                   req.username, source, len(reply))
     _log_attempt(req, accepted=True)
+    # R9.2: حدّث first_login_at + last_login_at + last_seen_at على الـ
+    # subscriber الحقيقي، و first_used_at + used_by_mac على الـ card.
+    # لا نرفع لو فشلت الكتابة — auth قد نجح فعلاً، لا نحوّله إلى Reject.
+    _update_login_timestamps(req, source=source, now=now)
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
+
+
+def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) -> None:
+    """يحدّث حقول وقت الدخول بعد قبول الـ auth.
+
+    - `subscribers.first_login_at`: يُعَيَّن مرّة واحدة فقط (COALESCE).
+    - `subscribers.last_login_at` و `last_seen_at`: يُحدَّثان دائمًا.
+    - `cards.first_used_at`: يُعَيَّن مرّة واحدة (COALESCE) + `used=1`.
+    - `cards.used_by_mac`: نضع الـ Calling-Station-Id لو موجود وفارغ سابقاً.
+
+    fail-safe: try/except حول كل UPDATE كي لا تتسرّب أخطاء الـ DB إلى
+    مسار الـ auth (الذي نجح بالفعل).
+    """
+    try:
+        from ..db.connection import transaction
+        from ..db.helpers import now_iso
+        ts = now_iso()
+        mac = (req.calling_station_id or "").strip()
+        with transaction() as conn:
+            # المشترك الحقيقي: حدّث جدول subscribers (الـ row قد يكون
+            # mirror لكارت بـ user_type='card' — لا بأس، نفس الجدول).
+            conn.execute("""
+                UPDATE subscribers
+                   SET first_login_at = COALESCE(first_login_at, ?),
+                       last_login_at  = ?,
+                       last_seen_at   = ?
+                 WHERE tenant_id = ? AND username = ?
+            """, (ts, ts, ts, req.tenant_id, req.username))
+            # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
+            if source == "card":
+                conn.execute("""
+                    UPDATE cards
+                       SET first_used_at = COALESCE(first_used_at, ?),
+                           used          = 1,
+                           used_by_mac   = CASE
+                               WHEN COALESCE(used_by_mac, '') = '' AND ? != ''
+                               THEN ? ELSE used_by_mac END
+                     WHERE tenant_id = ? AND username = ?
+                """, (ts, mac, mac, req.tenant_id, req.username))
+    except Exception:  # noqa: BLE001
+        _LOG.warning("policy_engine: failed to update login timestamps for %r",
+                      req.username, exc_info=True)
 
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
