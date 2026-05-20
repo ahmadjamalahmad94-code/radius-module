@@ -85,7 +85,7 @@ def print_templates_create():
             actor=_actor(),
             data=_payload(),
         )
-        flash("تم حفظ قالب الطباعة. المعاينة الحالية JSON فقط ولا تنشئ PDF.", "success")
+        flash("تم حفظ قالب الطباعة. المعاينة بصرية الآن، ولا تنشئ PDF نهائي.", "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(url_for("radius.print_templates"))

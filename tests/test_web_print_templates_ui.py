@@ -53,11 +53,11 @@ def test_print_templates_web_route_is_login_guarded(client):
     assert "/admin/radius/login" in res.headers.get("Location", "")
 
 
-def test_print_templates_create_and_json_preview(client):
+def test_print_templates_create_and_visual_preview(client):
     _web_login(client)
     page = client.get("/admin/radius/print-templates")
     assert page.status_code == 200
-    assert "PDF renderer" in page.get_data(as_text=True)
+    assert "معاينة بصرية" in page.get_data(as_text=True)
 
     token = _csrf(client, "/admin/radius/print-templates")
     name = f"Print UI {uuid4().hex[:8]}"
@@ -99,6 +99,6 @@ def test_print_templates_create_and_json_preview(client):
     )
     assert preview.status_code == 200
     html = preview.get_data(as_text=True)
-    assert "json_layout_preview" in html
-    assert "cards_per_page" in html
+    assert "visual_card_preview" in html
+    assert "pt-visual-card" in html
     assert "QA123" in html

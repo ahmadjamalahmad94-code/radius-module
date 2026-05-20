@@ -545,18 +545,46 @@ class OperationsService:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
             raise RadiusNotFound("print template not found")
+        layout = template.get("layout_json")
+        if not isinstance(layout, dict):
+            layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
+        width_mm = max(float(layout.get("card_width_mm") or 85), 1.0)
+        height_mm = max(float(layout.get("card_height_mm") or 54), 1.0)
+
+        def _placement(prefix: str) -> dict:
+            x_mm = float(template.get(f"{prefix}_x") or 0)
+            y_mm = float(template.get(f"{prefix}_y") or 0)
+            return {
+                "x_mm": x_mm,
+                "y_mm": y_mm,
+                "x_percent": max(0, min(100, round((x_mm / width_mm) * 100, 2))),
+                "y_percent": max(0, min(100, round((y_mm / height_mm) * 100, 2))),
+            }
+
+        sample_payload = sample or {
+            "username": "CARD1234",
+            "has_password": True,
+            "qr_payload": "CARD1234",
+        }
         return {
             "template": template,
             "preview": {
-                "renderer": "json_layout_preview",
+                "renderer": "visual_card_preview",
                 "cards_per_page": int(template.get("cards_per_row") or 0)
                                   * int(template.get("cards_per_column") or 0),
                 "qr_supported": bool(template.get("show_qr")),
-                "sample": sample or {
-                    "username": "CARD1234",
-                    "has_password": True,
-                    "qr_payload": "CARD1234",
+                "card": {
+                    "width_mm": width_mm,
+                    "height_mm": height_mm,
+                    "font_size": int(template.get("font_size") or 12),
+                    "color": template.get("color") or "#1f2937",
                 },
+                "placements": {
+                    "username": _placement("username"),
+                    "password": _placement("password"),
+                    "qr": _placement("qr"),
+                },
+                "sample": sample_payload,
             },
             "export_generated": False,
         }

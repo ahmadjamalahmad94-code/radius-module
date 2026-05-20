@@ -207,7 +207,10 @@ def test_print_template_persistence_and_json_preview(client):
     )
     assert preview.status_code == 200, preview.get_json()
     data = preview.get_json()["data"]
+    assert data["preview"]["renderer"] == "visual_card_preview"
     assert data["preview"]["cards_per_page"] == 12
+    assert data["preview"]["card"]["width_mm"] == 85
+    assert "username" in data["preview"]["placements"]
     assert data["export_generated"] is False
 
 
