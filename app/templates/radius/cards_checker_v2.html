@@ -913,24 +913,59 @@
             </form>
 
             {% if card.locked_mac %}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="unlock-mac">
+            {# Locked-state action — when card is already locked, we offer
+               TWO options through a chooser modal:
+                 • "تعديل القائمة" → re-opens the MAC picker with the
+                   currently locked MACs pre-checked, so the admin can
+                   add/remove individual MACs without first unlocking.
+                 • "فك القفل تماماً" → submits the unlock_mac form to
+                   strip the lock entirely.
+
+               Build a meta map { MAC_UPPER: 'device label' } for the
+               picker — same enrichment as the lock branch below. Also
+               compute the union of (locked_macs ∪ recent_session_macs)
+               so the edit picker always shows the currently-locked
+               MACs even when they don't appear in recent history. #}
+            {% set _mac_meta = {} %}
+            {% for _m in (s.macs or []) %}
+              {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
+                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+              {% endif %}
+            {% endfor %}
+            {% set _locked_macs = (card.locked_mac or '')|trim
+                                    |replace(';', ',')|replace(' ', '')|split(',') %}
+            {% set _locked_macs_clean = [] %}
+            {% for _lm in _locked_macs %}
+              {% if _lm %}{% set _ = _locked_macs_clean.append(_lm.upper()) %}{% endif %}
+            {% endfor %}
+            {% set _recent_session_macs = (s.macs or []) | map(attribute='mac') | select | list %}
+            {% set _picker_macs = (_locked_macs_clean + _recent_session_macs) | unique | list %}
+
+            {# Forms: full unlock + re-lock (with new selection). Only
+               one of them gets submitted by the chooser modal. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}"
+                  data-cc-form="unlock-mac" id="cc-unlock-mac-form">
               <input type="hidden" name="op" value="unlock_mac">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" data-cc-op="lock-mac"
-                      onclick="window.ccModal && window.ccModal.confirm({
-                        icon:'info', title:'فك قفل MAC',
-                        body:'سيُسمح للبطاقة <strong>{{ card.username }}</strong> بالاتصال من أي MAC ' +
-                             'بعد فك قفل العنوان الحالي <code>{{ card.locked_mac }}</code>.',
-                        confirmText:'فك القفل',
-                        onConfirm: () => this.closest('form').submit()
-                      });">
-                <span class="cc-action-icon purple"><i class="fa-solid fa-lock-open"></i></span>
-                <div class="cc-action-body">
-                  <div class="cc-action-title">فك قفل MAC</div>
-                  <div class="cc-action-sub">{{ card.locked_mac }}</div>
-                </div>
-              </button>
             </form>
+            <form method="post" action="{{ url_for('radius.cards_checker') }}"
+                  data-cc-form="edit-lock-mac" id="cc-edit-lock-mac-form">
+              <input type="hidden" name="op" value="lock_mac">
+              <input type="hidden" name="mac" data-cc-edit-mac-field>
+              {{ hidden_ops(card, query) }}
+            </form>
+
+            <button class="cc-action" type="button"
+                    data-cc-op="manage-lock-mac"
+                    data-cc-locked-macs="{{ _locked_macs_clean | tojson }}"
+                    data-cc-recent-macs="{{ _picker_macs | tojson }}"
+                    data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
+              <span class="cc-action-icon purple"><i class="fa-solid fa-lock-open"></i></span>
+              <div class="cc-action-body">
+                <div class="cc-action-title">إدارة قفل MAC</div>
+                <div class="cc-action-sub">{{ card.locked_mac }}</div>
+              </div>
+            </button>
             {% else %}
             {# MAC picker — modal lists previously-seen MACs from the
                card's accounting history; admin can pick one or paste
@@ -1388,18 +1423,34 @@
       // the operator can pick the right MAC visually.
       var metaMap = (opts.recentMacsMeta && typeof opts.recentMacsMeta === 'object')
                     ? opts.recentMacsMeta : {};
+      // Pre-checked set — passed when opening the picker for EDIT
+      // (existing locked MACs should start checked so the operator
+      // can uncheck individual ones without re-typing).
+      var checkedSet = {};
+      (opts.checkedMacs || []).forEach(function(m){
+        if (m) checkedSet[String(m).toUpperCase()] = true;
+      });
       var listHtml = '';
       if (uniq.length){
         for (var j=0;j<uniq.length;j++){
           var macUp = uniq[j];
           var devLabel = metaMap[macUp] || '';
-          var metaLine = devLabel
-            ? '<div class="cc-gmodal-mac-row-meta">' + esc(devLabel) + '</div>'
-            : '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>';
-          listHtml += '<label class="cc-gmodal-mac-row" data-mac="' + esc(macUp) + '">' +
-            '<input type="checkbox" class="cc-gmodal-mac-check" data-mac-check value="' + esc(macUp) + '">' +
+          var isChecked = !!checkedSet[macUp];
+          // For locked MACs not in session history, use a "locked"
+          // sublabel so the operator immediately recognizes them.
+          var metaLine = isChecked && !devLabel && opts.lockedMacLabel
+            ? '<div class="cc-gmodal-mac-row-meta" style="color:#5B4BD6">' +
+                esc(opts.lockedMacLabel) + '</div>'
+            : (devLabel
+                ? '<div class="cc-gmodal-mac-row-meta">' + esc(devLabel) + '</div>'
+                : '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>');
+          listHtml += '<label class="cc-gmodal-mac-row' +
+              (isChecked ? ' is-active' : '') +
+              '" data-mac="' + esc(macUp) + '">' +
+            '<input type="checkbox" class="cc-gmodal-mac-check" data-mac-check value="' + esc(macUp) + '"' +
+              (isChecked ? ' checked' : '') + '>' +
             '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid ' +
-              (devLabel ? 'fa-mobile-screen' : 'fa-wifi') + '"></i></span>' +
+              (devLabel ? 'fa-mobile-screen' : (isChecked ? 'fa-lock' : 'fa-wifi')) + '"></i></span>' +
             '<div class="cc-gmodal-mac-row-body">' +
               '<div class="cc-gmodal-mac-row-mac">' + esc(macUp) + '</div>' +
               metaLine +
@@ -1907,6 +1958,83 @@
           f.submit();
         },
       });
+    });
+  })();
+
+  // ── Manage lock-MAC button → chooser → picker OR full-unlock ──────
+  // Replaces the old single-action "فك القفل" modal. The card is
+  // already locked, so the admin sees two distinct paths:
+  //   1) تعديل القائمة — opens the macPicker with the currently
+  //      locked MACs pre-checked and the recent-session MACs added
+  //      as unchecked options. Submitting re-LOCKs with the new
+  //      selection via op=lock_mac.
+  //   2) فك القفل تماماً — submits the unlock_mac form, removing
+  //      the lock entirely (old behavior).
+  (function(){
+    'use strict';
+    var btn = document.querySelector('[data-cc-op="manage-lock-mac"]');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+      if (!window.ccModal) return;
+      var locked  = [];
+      var recent  = [];
+      var meta    = {};
+      try { locked = JSON.parse(btn.getAttribute('data-cc-locked-macs') || '[]'); }
+      catch(_){ locked = []; }
+      try { recent = JSON.parse(btn.getAttribute('data-cc-recent-macs') || '[]'); }
+      catch(_){ recent = []; }
+      try { meta = JSON.parse(btn.getAttribute('data-cc-recent-macs-meta') || '{}'); }
+      catch(_){ meta = {}; }
+      if (!Array.isArray(locked)) locked = [];
+      if (!Array.isArray(recent)) recent = [];
+
+      // Open the chooser modal with three actions.
+      window.ccModal.confirm({
+        icon:    'info',
+        title:   'إدارة قفل MAC',
+        body:    'البطاقة مقفولة حالياً على <strong>' + locked.length +
+                 ' عنوان</strong>. ماذا تريد أن تفعل؟',
+        confirmText: 'تعديل القائمة',
+        cancelText:  'إغلاق',
+        // Show a third button via the extra-action hook. ccModal.confirm
+        // doesn't expose one natively, so we'll inject it after open.
+        onConfirm: function(){
+          // Open the macPicker pre-populated with locked + recent.
+          window.ccModal.macPicker({
+            title:          'تعديل قفل MAC',
+            recentMacs:     recent,
+            recentMacsMeta: meta,
+            checkedMacs:    locked,
+            lockedMacLabel: 'مقفول حاليًا',
+            onConfirm: function(macCsv){
+              var f = document.getElementById('cc-edit-lock-mac-form');
+              if (!f) return;
+              f.querySelector('[data-cc-edit-mac-field]').value = macCsv;
+              f.submit();
+            },
+          });
+        },
+      });
+
+      // Inject the third button "فك القفل تماماً" once the modal is
+      // rendered. Looks for the actions row.
+      setTimeout(function(){
+        var actions = document.querySelector('.cc-gmodal-actions');
+        if (!actions || actions.querySelector('[data-cc-full-unlock]')) return;
+        var btn3 = document.createElement('button');
+        btn3.type = 'button';
+        btn3.className = 'cc-gmodal-btn cc-gmodal-btn-confirm danger';
+        btn3.setAttribute('data-cc-full-unlock', '1');
+        btn3.innerHTML = '<i class="fa-solid fa-lock-open"></i> فك القفل تماماً';
+        btn3.addEventListener('click', function(){
+          var f = document.getElementById('cc-unlock-mac-form');
+          if (f) f.submit();
+        });
+        // Insert as the LAST item so the visual order in RTL is:
+        // [cancel] [unlock] [edit primary]. Cancel stays leftmost,
+        // primary edit stays rightmost, unlock goes between.
+        actions.appendChild(btn3);
+      }, 30);
     });
   })();
 
