@@ -300,7 +300,14 @@ def _parse_response(resp: bytes, *, request_auth: bytes, secret: bytes) -> CoaRe
 
 
 def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
-    """يبحث في radacct عن الـ NAS التي تستضيف جلسة username النشطة."""
+    """يبحث في radacct عن الـ NAS التي تستضيف جلسة username النشطة.
+
+    R9.1: secret يُقرأ من `nas_devices` (الجدول الذي تملأه UI عبر
+    /admin/radius/devices)، بدل `nas` الذي كان يُستخدم سابقاً —
+    الأخير هو جدول FreeRADIUS-القياسي ويبقى فارغًا في configنا
+    (mods-enabled/sql: `read_clients = no`). إصلاح هذه الـ lookup
+    يجعل زرّ "قطع" في /admin/radius/online يعمل فعلاً.
+    """
     from ..db.connection import db
     row = db().execute("""
         SELECT acctsessionid, nasipaddress FROM radacct
@@ -308,9 +315,10 @@ def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
         ORDER BY radacctid DESC LIMIT 1
     """, (tenant_id, username)).fetchone()
     if not row: return None
-    # ابحث عن secret الـ NAS
+    # ـ R9.1: secret من nas_devices.address (المملوء من UI) ـ
     nas_row = db().execute(
-        "SELECT secret FROM nas WHERE tenant_id = ? AND nasname = ? LIMIT 1",
+        "SELECT secret FROM nas_devices "
+        "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
         (tenant_id, row["nasipaddress"])).fetchone()
     secret = nas_row["secret"] if nas_row else ""
     return {
