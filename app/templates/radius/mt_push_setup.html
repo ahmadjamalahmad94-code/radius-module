@@ -294,9 +294,12 @@
     //  - Double quotes must be escaped \"
     //  - Variables expand in double-quoted strings
     //  - We use only ASCII-safe content for the body to avoid encoding issues
+    // Header comment is intentionally omitted — copy/paste from the
+    // page into MT terminal sometimes strips the first character or
+    // mangles non-ASCII (em-dashes etc.), producing 'expected command
+    // name' errors on what's supposed to be just a comment. Keeping
+    // the script all-instructions makes paste idempotent.
     var script =
-      '# HobeRadius — DHCP push to ' + url + '\n' +
-      '# Removes any previous installation so the script is idempotent.\n' +
       '/system scheduler remove [find name=hoberadius-push-dhcp]\n' +
       '\n' +
       '/system scheduler add name="hoberadius-push-dhcp" interval=2m \\\n' +
