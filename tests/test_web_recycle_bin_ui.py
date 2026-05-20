@@ -7,9 +7,6 @@ from uuid import uuid4
 import pytest
 
 
-AUTH = {"Authorization": "Bearer dev-token-please-change"}
-
-
 @pytest.fixture
 def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
@@ -68,12 +65,21 @@ def _csrf(client, url: str) -> str:
         return sess["_csrf_token"]
 
 
+def _auth_headers(client) -> dict:
+    res = client.post(
+        "/api/admin/login",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert res.status_code == 200, res.get_json()
+    return {"Authorization": f"Bearer {res.get_json()['data']['token']}"}
+
+
 def _subscriber(client) -> dict:
     username = "recycleui_" + secrets.token_hex(5)
     res = client.post(
         "/api/v1/accounts",
         json={"username": username, "password": "pw1234", "plan_id": 1},
-        headers=AUTH,
+        headers=_auth_headers(client),
     )
     assert res.status_code == 201, res.get_json()
     return res.get_json()["data"]

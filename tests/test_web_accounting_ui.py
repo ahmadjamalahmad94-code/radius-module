@@ -7,9 +7,6 @@ from uuid import uuid4
 import pytest
 
 
-AUTH = {"Authorization": "Bearer dev-token-please-change"}
-
-
 @pytest.fixture
 def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
@@ -75,12 +72,21 @@ def _csrf(client, url: str) -> str:
         return sess["_csrf_token"]
 
 
+def _auth_headers(client) -> dict:
+    res = client.post(
+        "/api/admin/login",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert res.status_code == 200, res.get_json()
+    return {"Authorization": f"Bearer {res.get_json()['data']['token']}"}
+
+
 def _subscriber(client) -> dict:
     username = "acctui_" + secrets.token_hex(5)
     res = client.post(
         "/api/v1/accounts",
         json={"username": username, "password": "pw1234", "plan_id": 1},
-        headers=AUTH,
+        headers=_auth_headers(client),
     )
     assert res.status_code == 201, res.get_json()
     return res.get_json()["data"]
@@ -132,7 +138,7 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
 
     open_loans = client.get(
         f"/api/v1/loans?subscriber_id={sub['id']}&status=open",
-        headers=AUTH,
+        headers=_auth_headers(client),
     ).get_json()["data"]["items"]
     assert open_loans
     settled = client.post(
@@ -151,7 +157,7 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
 
     entries = client.get(
         f"/api/v1/ledger?subscriber_id={sub['id']}&entry_type=payment",
-        headers=AUTH,
+        headers=_auth_headers(client),
     ).get_json()["data"]["items"]
     assert entries
     voided = client.post(

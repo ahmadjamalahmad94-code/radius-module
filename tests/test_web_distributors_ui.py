@@ -6,9 +6,6 @@ import secrets
 import pytest
 
 
-AUTH = {"Authorization": "Bearer dev-token-please-change"}
-
-
 @pytest.fixture
 def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
@@ -67,12 +64,21 @@ def _csrf(client) -> str:
         return sess["_csrf_token"]
 
 
+def _auth_headers(client) -> dict:
+    res = client.post(
+        "/api/admin/login",
+        json={"username": "admin", "password": "admin"},
+    )
+    assert res.status_code == 200, res.get_json()
+    return {"Authorization": f"Bearer {res.get_json()['data']['token']}"}
+
+
 def _batch(client) -> dict:
     prefix = "distui" + secrets.token_hex(4)
     res = client.post(
         "/api/v1/cards/generate",
         json={"plan_id": 1, "count": 1, "username_prefix": prefix},
-        headers=AUTH,
+        headers=_auth_headers(client),
     )
     assert res.status_code == 201, res.get_json()
     return res.get_json()["data"]["batch"]
