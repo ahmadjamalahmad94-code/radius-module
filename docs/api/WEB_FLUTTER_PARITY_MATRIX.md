@@ -25,7 +25,7 @@ Status values:
 | Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions exist; Flutter layout and operational counters need more polish. |
 | Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | partial | Real API-backed operations exist; no password exposure. Needs final mobile visual polish. |
 | Online sessions | `/admin/radius/sessions` | `/api/v1/sessions/online`, `/api/v1/sessions/disconnect` | `/sessions` | partial | Disconnect is API-backed; must verify against real CoA/NAS on VPS. |
-| NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas` | partial | NAS CRUD exists. Device fingerprints browser/sync needs Flutter screen parity. |
+| NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas`, `/device-fingerprints` | partial | NAS CRUD and device fingerprints browser/sync now exist in Flutter. Live DHCP/MikroTik sync still needs VPS acceptance tests per customer server. |
 | Admins / roles | `/admin/radius/admins`, `/admin/radius/roles` | `/api/v1/admins`, `/api/v1/roles` | `/admins`, `/roles` | done | Role editor is API-backed; permission enforcement still needs continuous testing. |
 | Distributors | `/admin/radius/distributors` | `/api/v1/distributors` | `/distributors` | partial | API/UI exist; scoped visibility must stay covered by tests before new data views. |
 | Audit log | `/admin/radius/audit` | `/api/v1/audit` | `/audit` | done | Flutter viewer exists; payload rendering should stay Arabic-friendly. |
