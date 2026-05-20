@@ -487,154 +487,126 @@
                   'stats.total_quota') }}
       </div>
 
-      {# Row 3: Activity timeline #}
-      <section class="cc-section" data-cc-section="timeline">
+      {# Row 3: Current device — full width (the old half-width sibling
+         "آخر الجلسات" small list has moved into the wide table below,
+         and the timeline got merged into that same table since the
+         data overlap was high). #}
+      <section class="cc-section" data-cc-section="current_device">
         <header class="cc-section-head">
-          <span class="cc-section-head-icon"><i class="fa-solid fa-timeline"></i></span>
-          <span class="cc-section-head-title">النشاط الأخير للبطاقة</span>
-          {% if s.latest_sessions and s.latest_sessions|length > 3 %}
-          <a class="cc-section-head-link" href="#cc-sessions-section">عرض الكل <i class="fa-solid fa-angle-left"></i></a>
-          {% endif %}
+          <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
+          <span class="cc-section-head-title">الجهاز المستخدم حاليًا</span>
         </header>
         <div class="cc-section-body">
-          <div class="cc-timeline">
-            {% if card.active_session %}
-            <div class="cc-tl-item">
-              <div>
-                <span class="cc-tl-dot green"></span>
-                <div class="cc-tl-body">
-                  <div class="cc-tl-title">
-                    <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط</span>
-                    جلسة نشطة الآن
-                  </div>
-                  <div class="cc-tl-desc">الاتصال عبر {{ (card.current_device or {}).connection or '—' }} من {{ card.mac_address or '—' }}</div>
-                </div>
+          {% set d = card.current_device or {} %}
+          <div class="cc-device-card">
+            <div class="cc-device-card-body">
+              <div class="cc-device-card-title" data-cc-field="device.label">
+                {{ d.label or '—' }}
               </div>
-              <div class="cc-tl-time">{{ dt_split(card.last_seen_at) }}</div>
-            </div>
-            {% endif %}
-            {% if card.started_at %}
-            <div class="cc-tl-item">
-              <div>
-                <span class="cc-tl-dot blue"></span>
-                <div class="cc-tl-body">
-                  <div class="cc-tl-title">
-                    <span class="cc-pill cc-pill-blue"><span class="dot"></span>اتصال</span>
-                    بداية الجلسة الأولى
-                  </div>
-                  <div class="cc-tl-desc">تم الاتصال لأول مرّة باستخدام هذه البطاقة</div>
-                </div>
+              <div class="cc-device-card-tags">
+                {% if card.active_session %}
+                  <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
+                {% else %}
+                  <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
+                {% endif %}
+                {% if d.vendor and d.vendor != 'غير معروف' %}
+                  <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
+                    <i class="fa-solid fa-industry" style="font-size:9px"></i> {{ d.vendor }}
+                  </span>
+                {% endif %}
+                {% if d.connection %}
+                  <span class="cc-pill cc-pill-blue" data-cc-field="device.connection">
+                    <i class="fa-solid fa-signal" style="font-size:9px"></i> {{ d.connection }}
+                  </span>
+                {% endif %}
               </div>
-              <div class="cc-tl-time">{{ dt_split(card.started_at) }}</div>
+              <dl class="cc-device-card-attrs">
+                <dt><i class="fa-solid fa-fingerprint"></i> MAC</dt>
+                <dd data-cc-field="device.mac">{{ card.mac_address or '—' }}</dd>
+                <dt><i class="fa-solid fa-globe"></i> IP</dt>
+                <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
+                {% if card.nas_address %}
+                <dt><i class="fa-solid fa-server"></i> NAS</dt>
+                <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
+                {% endif %}
+              </dl>
             </div>
-            {% endif %}
-            <div class="cc-tl-item">
-              <div>
-                <span class="cc-tl-dot"></span>
-                <div class="cc-tl-body">
-                  <div class="cc-tl-title">
-                    <span class="cc-pill cc-pill-purple"><span class="dot"></span>إنشاء</span>
-                    تم إنشاء البطاقة
-                  </div>
-                  <div class="cc-tl-desc">تم إصدار البطاقة ضمن الحزمة {{ (card.batch or {}).batch_code or '—' }}</div>
-                </div>
-              </div>
-              <div class="cc-tl-time">{{ dt_split(card.created_at) }}</div>
-            </div>
+            {{ device_illustration(d) }}
           </div>
         </div>
       </section>
 
-      {# Row 4: Current device + Latest sessions side by side #}
-      <div class="cc-grid-2">
-        {# Current device — R13.A.9 Section B: bigger icon, vendor + connection
-           shown as tags, attrs in a clean labeled grid. #}
-        <section class="cc-section" data-cc-section="current_device">
-          <header class="cc-section-head">
-            <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
-            <span class="cc-section-head-title">الجهاز المستخدم حاليًا</span>
-          </header>
-          <div class="cc-section-body">
-            {% set d = card.current_device or {} %}
-            <div class="cc-device-card">
-              <div class="cc-device-card-body">
-                <div class="cc-device-card-title" data-cc-field="device.label">
-                  {{ d.label or '—' }}
-                </div>
-                <div class="cc-device-card-tags">
-                  {% if card.active_session %}
-                    <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
-                  {% else %}
-                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
-                  {% endif %}
-                  {% if d.vendor and d.vendor != 'غير معروف' %}
-                    <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
-                      <i class="fa-solid fa-industry" style="font-size:9px"></i> {{ d.vendor }}
-                    </span>
-                  {% endif %}
-                  {% if d.connection %}
-                    <span class="cc-pill cc-pill-blue" data-cc-field="device.connection">
-                      <i class="fa-solid fa-signal" style="font-size:9px"></i> {{ d.connection }}
-                    </span>
-                  {% endif %}
-                </div>
-                <dl class="cc-device-card-attrs">
-                  <dt><i class="fa-solid fa-fingerprint"></i> MAC</dt>
-                  <dd data-cc-field="device.mac">{{ card.mac_address or '—' }}</dd>
-                  <dt><i class="fa-solid fa-globe"></i> IP</dt>
-                  <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
-                  {% if card.nas_address %}
-                  <dt><i class="fa-solid fa-server"></i> NAS</dt>
-                  <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
-                  {% endif %}
-                </dl>
-              </div>
-              {{ device_illustration(d) }}
-            </div>
+      {# Row 4: Wide sessions table — replaces both the timeline section
+         AND the half-width sessions list. 12 columns per user spec,
+         horizontally scrollable on narrow viewports, sticky header. #}
+      <section class="cc-section" data-cc-section="sessions" id="cc-sessions-section">
+        <header class="cc-section-head">
+          <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+          <span class="cc-section-head-title">آخر الجلسات</span>
+          <span class="cc-section-head-link" style="cursor:default">
+            {{ s.latest_sessions|length if s.latest_sessions else 0 }} جلسة
+          </span>
+        </header>
+        <div class="cc-section-body">
+          {% if s.latest_sessions %}
+          <div class="cc-sessions-table-wrap">
+            <table class="cc-sessions-table">
+              <thead>
+                <tr>
+                  <th>الحالة</th>
+                  <th>IP</th>
+                  <th>MAC</th>
+                  <th class="num">تحميل</th>
+                  <th class="num">رفع</th>
+                  <th class="num">تحميل مجاني</th>
+                  <th class="num">رفع مجاني</th>
+                  <th class="num">المحصّلة</th>
+                  <th>تاريخ البدء</th>
+                  <th>تاريخ الإنتهاء</th>
+                  <th class="num">الوقت</th>
+                  <th>معرّف الخدمة</th>
+                  <th>منفذ الاتصال</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ses in s.latest_sessions %}
+                {% set total = (ses.upload_bytes or 0) + (ses.download_bytes or 0) %}
+                <tr data-cc-session="{{ ses.id }}" class="{% if ses.online %}is-live{% endif %}">
+                  <td>
+                    {% if ses.online %}
+                      <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
+                    {% else %}
+                      <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
+                    {% endif %}
+                  </td>
+                  <td class="mono">{{ ses.ip_address or '—' }}</td>
+                  <td class="mono">{{ ses.mac_address or '—' }}</td>
+                  <td class="num">{{ bytes_size(ses.download_bytes or 0) }}</td>
+                  <td class="num">{{ bytes_size(ses.upload_bytes or 0) }}</td>
+                  {# Free upload/download — radacct doesn't track free vs paid
+                     traffic separately, so we render a dash. When the system
+                     adds zero-rated accounting in the future these will pick
+                     up automatically. #}
+                  <td class="num muted">—</td>
+                  <td class="num muted">—</td>
+                  <td class="num"><strong>{{ bytes_size(total) }}</strong></td>
+                  <td class="mono small">{{ dt(ses.started_at) }}</td>
+                  <td class="mono small">{{ dt(ses.stopped_at) if ses.stopped_at else '—' }}</td>
+                  <td class="num">{{ duration(ses.duration_seconds or 0) }}</td>
+                  <td class="mono small" title="{{ ses.session_id }}">
+                    {{ ses.session_id[:14] + '…' if ses.session_id and ses.session_id|length > 14 else (ses.session_id or '—') }}
+                  </td>
+                  <td class="mono small">{{ ses.nas_port or ses.nas_port_type or '—' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-        </section>
-
-        {# Latest sessions list #}
-        <section class="cc-section" data-cc-section="sessions" id="cc-sessions-section">
-          <header class="cc-section-head">
-            <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-            <span class="cc-section-head-title">آخر الجلسات</span>
-            <span class="cc-section-head-link" style="cursor:default">{{ s.latest_sessions|length if s.latest_sessions else 0 }}</span>
-          </header>
-          <div class="cc-section-body">
-            {# R13.A.9 round 2: cleaner list matching Reference A — one
-               row per session, no dense stats strip. Wifi-icon + MAC +
-               IP/duration + status + timestamp. #}
-            {% if s.latest_sessions %}
-            <div class="cc-sessions-list">
-              {% for ses in s.latest_sessions[:6] %}
-              <div class="cc-session-row {% if ses.online %}cc-session-live-row{% endif %}"
-                   data-cc-session="{{ ses.id }}">
-                <span class="cc-session-icon {% if ses.online %}green{% else %}grey{% endif %}">
-                  <i class="fa-solid fa-{% if ses.online %}wifi{% else %}circle-stop{% endif %}"></i>
-                </span>
-                <div class="cc-session-row-body">
-                  <div class="cc-session-name">{{ ses.mac or ses.session_id or '—' }}</div>
-                  <div class="cc-session-meta">
-                    {%- if ses.ip -%}IP {{ ses.ip }} · {% endif -%}
-                    {{ duration(ses.duration_seconds) }}
-                  </div>
-                </div>
-                {% if ses.online %}
-                  <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
-                {% else %}
-                  <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
-                {% endif %}
-                <div class="cc-session-time">{{ dt(ses.started_at)[11:16] if ses.started_at else '—' }}</div>
-              </div>
-              {% endfor %}
-            </div>
-            {% else %}
-            <div class="cc-state-hint" style="text-align:center;padding:20px 0">لا جلسات بعد.</div>
-            {% endif %}
-          </div>
-        </section>
-      </div>
+          {% else %}
+          <div class="cc-state-hint" style="text-align:center;padding:24px 0">لا جلسات بعد.</div>
+          {% endif %}
+        </div>
+      </section>
 
       {# Row 5: Smart actions #}
       <section class="cc-section" data-cc-section="operations">
