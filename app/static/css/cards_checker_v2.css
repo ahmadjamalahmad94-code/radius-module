@@ -1685,9 +1685,11 @@ body:has(.cc-hero) .page-head{display:none !important}
    ╚════════════════════════════════════════════════════════════════════╝ */
 
 /* Info panel (right column next to the hero in advanced mode) — used
-   to be 12px label / 12.5px value, now reads at a clear 13/14px. */
+   to be 12px label / 12.5px value, now reads at a clear 13/14px.
+   Keep the 18px horizontal padding from the base rule so values don't
+   stick to the panel edge; only bump the vertical breathing room. */
 .cc-info-panel-lg .cc-info-row{
-  padding:11px 0 !important;
+  padding:13px 18px !important;
   font-size:14px !important;
   line-height:1.6;
 }
