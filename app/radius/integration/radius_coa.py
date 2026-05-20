@@ -341,3 +341,37 @@ def disconnect_user(tenant_id: int, username: str) -> CoaResult:
         nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
         username=username, session_id=info["session_id"],
     )
+
+
+def change_user_rate(tenant_id: int, username: str, *,
+                       new_rate_limit: str) -> CoaResult:
+    """R9.3: يُرسل CoA-Request (Code=43) بتغيير Mikrotik-Rate-Limit لجلسة
+    حيّة دون قطع. يستخدمها SqliteAdapter.upsert_account لتطبيق تغيير
+    السرعة فوريًا بدلاً من الانتظار حتى الجلسة التالية.
+
+    الـ behaviour:
+      - لا جلسة نشطة → no_active_session (نتجاهل بهدوء؛ التغيير
+        سيُطبَّق على الجلسة التالية تلقائيًا عبر Access-Accept).
+      - لا secret → missing_nas_secret.
+      - new_rate_limit فارغ → empty_rate (skip).
+      - وإلا يُرسل CoA-Request و يُرجع CoA-ACK/NAK من الـ NAS.
+
+    آمن: حتى لو الـ NAS لا يدعم CoA Change-of-Authorization، فقط نسجّل
+    الفشل ولا نمنع حفظ السرعة الجديدة في DB.
+    """
+    if not new_rate_limit or not new_rate_limit.strip():
+        return CoaResult(ok=False, code=0, code_name="empty_rate",
+                          reply_message="rate فارغ — لا تغيير")
+    info = find_nas_for_session(tenant_id, username)
+    if not info:
+        return CoaResult(ok=False, code=0, code_name="no_active_session",
+                          reply_message=f"لا جلسة نشطة لـ {username} — "
+                                         "السرعة الجديدة ستُطبَّق على الجلسة التالية")
+    if not info["nas_secret"]:
+        return CoaResult(ok=False, code=0, code_name="missing_nas_secret",
+                          reply_message="لا secret مخزّن للـ NAS")
+    return send_coa(
+        nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
+        username=username, session_id=info["session_id"],
+        new_rate_limit=new_rate_limit,
+    )

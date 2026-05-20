@@ -134,6 +134,13 @@ class SqliteAdapter(RadiusAdapter):
         try: enqueue_subscriber_upsert(saved)
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue subscriber sync failed (saved in DB, MT pending)")
+        # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
+        # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
+        # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
+        try:
+            _push_coa_rate_if_active(saved)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
         # webhook event
         try:
             from app.webhooks.dispatcher import dispatch_event
@@ -300,6 +307,41 @@ def _mt_row_to_session(r: dict, *, nas_name: str, nas_addr: str) -> OnlineSessio
         rate_down_kbps=_parse_rate_kbps(r.get("rate-limit-rx")),
         rate_up_kbps=_parse_rate_kbps(r.get("rate-limit-tx")),
     )
+
+
+def _push_coa_rate_if_active(sub: Subscriber) -> None:
+    """R9.3: لو الـ subscriber له plan له rate وفي جلسة نشطة حالياً،
+    نُرسل CoA Change-of-Authorization لتطبيق السرعة فوراً.
+
+    البنية:
+      - بدون plan_id → return (لا قاعدة سرعة معروفة).
+      - plan.speed_down/up_kbps = 0 + لا burst_raw → return (الـ plan
+        لا يحدّد rate).
+      - find_nas_for_session = None → no-op (لا جلسة، CoA لا معنى له،
+        التغيير سيُطبَّق على الجلسة التالية تلقائيًا).
+      - عدا ذلك: send CoA. NAS الذي لا يدعم CoA يرجّع NAK → نسجّل فقط.
+
+    fail-safe: لا exception يُرفَع للـ caller.
+    """
+    if not sub.plan_id:
+        return
+    try:
+        plan = plans_repo.get_plan(sub.tenant_id, sub.plan_id)
+    except Exception:  # noqa: BLE001
+        return
+    if not plan:
+        return
+    if not (plan.speed_down_kbps or plan.speed_up_kbps or plan.burst_raw):
+        return
+    rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
+    from .radius_coa import change_user_rate
+    result = change_user_rate(sub.tenant_id, sub.username, new_rate_limit=rate)
+    if result.ok:
+        _LOG.info("CoA rate push ok for %s: rate=%s code=%s",
+                  sub.username, rate, result.code_name)
+    else:
+        _LOG.info("CoA rate push skipped/failed for %s: rate=%s reason=%s",
+                  sub.username, rate, result.code_name)
 
 
 def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
