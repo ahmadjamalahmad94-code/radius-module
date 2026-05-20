@@ -77,6 +77,10 @@ def _card_row(r) -> Card:
         used_by_subscriber_id=r["used_by_subscriber_id"],
         expire_at=parse_dt(r["expire_at"]),
         revoked=bool(r["revoked"]),
+        locked_mac=_g(r, "locked_mac", "") or "",
+        disabled_reason=_g(r, "disabled_reason", "") or "",
+        disabled_at=parse_dt(_g(r, "disabled_at", None)),
+        disabled_by=_g(r, "disabled_by", "") or "",
         created_at=parse_dt(r["created_at"]),
     )
 
@@ -383,6 +387,10 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             c.used AS card_used,
             c.first_used_at AS first_used_at,
             c.used_by_mac AS used_by_mac,
+            c.locked_mac AS locked_mac,
+            c.disabled_reason AS disabled_reason,
+            c.disabled_at AS disabled_at,
+            c.disabled_by AS disabled_by,
             c.used_by_subscriber_id AS used_by_subscriber_id,
             c.expire_at AS card_expire_at,
             c.revoked AS card_revoked,
@@ -459,21 +467,189 @@ def get_latest_card_accounting(tenant_id: int, username: str) -> Optional[dict]:
     return row_to_dict(row) if row else None
 
 
+def list_card_accounting(tenant_id: int, username: str, *, limit: int = 50) -> list[dict]:
+    cur = db().execute(
+        """
+        SELECT
+            radacctid,
+            acctsessionid,
+            acctuniqueid,
+            username,
+            groupname,
+            nasipaddress,
+            nasportid,
+            nasporttype,
+            acctstarttime,
+            acctupdatetime,
+            acctstoptime,
+            acctsessiontime,
+            connectinfo_start,
+            connectinfo_stop,
+            acctinputoctets,
+            acctoutputoctets,
+            calledstationid,
+            callingstationid,
+            acctterminatecause,
+            servicetype,
+            framedprotocol,
+            framedipaddress,
+            framedipv6address,
+            framedipv6prefix,
+            framedinterfaceid,
+            delegatedipv6prefix
+        FROM radacct
+        WHERE tenant_id = ? AND username = ?
+        ORDER BY COALESCE(acctstarttime, acctupdatetime, acctstoptime, '') DESC,
+                 radacctid DESC
+        LIMIT ?
+        """,
+        (tenant_id, username, limit),
+    )
+    return [row_to_dict(row) for row in cur.fetchall()]
+
+
+def summarize_card_accounting(tenant_id: int, username: str) -> dict:
+    row = db().execute(
+        """
+        SELECT
+            COUNT(*) AS sessions_count,
+            COUNT(DISTINCT NULLIF(callingstationid, '')) AS unique_macs,
+            COUNT(DISTINCT NULLIF(framedipaddress, '')) AS unique_ips,
+            COUNT(DISTINCT NULLIF(nasipaddress, '')) AS unique_nas,
+            SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions,
+            COALESCE(SUM(acctsessiontime), 0) AS total_session_seconds,
+            COALESCE(SUM(acctinputoctets), 0) AS total_upload_bytes,
+            COALESCE(SUM(acctoutputoctets), 0) AS total_download_bytes,
+            MIN(acctstarttime) AS first_session_at,
+            MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_session_at
+        FROM radacct
+        WHERE tenant_id = ? AND username = ?
+        """,
+        (tenant_id, username),
+    ).fetchone()
+    return row_to_dict(row) if row else {}
+
+
+def list_card_macs(tenant_id: int, username: str, *, limit: int = 20) -> list[dict]:
+    cur = db().execute(
+        """
+        SELECT
+            callingstationid AS mac,
+            COUNT(*) AS sessions_count,
+            MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_seen_at,
+            SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions
+        FROM radacct
+        WHERE tenant_id = ? AND username = ? AND COALESCE(callingstationid, '') != ''
+        GROUP BY callingstationid
+        ORDER BY last_seen_at DESC
+        LIMIT ?
+        """,
+        (tenant_id, username, limit),
+    )
+    return [row_to_dict(row) for row in cur.fetchall()]
+
+
+def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET locked_mac = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (mac.strip(), tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def set_card_revoked(tenant_id: int, card_id: int, revoked: bool, *,
+                     actor: str = "", reason: str = "") -> bool:
+    now = now_iso() if revoked else None
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET revoked = ?,
+                disabled_reason = ?,
+                disabled_at = ?,
+                disabled_by = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (1 if revoked else 0, reason if revoked else "", now, actor if revoked else "", tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def reset_card_usage(tenant_id: int, card_id: int) -> bool:
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET used = 0,
+                first_used_at = NULL,
+                used_by_mac = '',
+                used_by_subscriber_id = NULL,
+                expire_at = NULL
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
+    with transaction() as conn:
+        cur = conn.execute(
+            "DELETE FROM cards WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
+                         revoked: Optional[bool],
+                         search: Optional[str]) -> tuple[str, list]:
+    """يبني WHERE + values المشتركة بين list_cards و count_cards.
+    R10.4: استُخرج إلى دالة مستقلة لمنع الفرع بين عداد و قائمة."""
+    where = ["tenant_id = ?"]
+    vals: list = []
+    if batch_id is not None:
+        where.append("batch_id = ?"); vals.append(batch_id)
+    if used is not None:
+        where.append("used = ?"); vals.append(1 if used else 0)
+    if revoked is not None:
+        where.append("revoked = ?"); vals.append(1 if revoked else 0)
+    if search:
+        s = search.strip()
+        if s:
+            # LIKE على username — مفهرس بـ tenant_id ضمنيًا، و LIKE
+            # على text قصير سريع حتى بدون فهرس مخصّص.
+            where.append("username LIKE ?"); vals.append(f"%{s}%")
+    return " AND ".join(where), vals
+
+
 def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
                 used: Optional[bool] = None, revoked: Optional[bool] = None,
+                search: Optional[str] = None,
                 limit: int = 200, offset: int = 0) -> list[Card]:
-    sql = "SELECT * FROM cards WHERE tenant_id = ?"
-    vals: list = [tenant_id]
-    if batch_id is not None:
-        sql += " AND batch_id = ?"; vals.append(batch_id)
-    if used is not None:
-        sql += " AND used = ?"; vals.append(1 if used else 0)
-    if revoked is not None:
-        sql += " AND revoked = ?"; vals.append(1 if revoked else 0)
-    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
-    vals += [limit, offset]
-    cur = db().execute(sql, vals)
+    """R10.4: أضفنا search (LIKE على username) + limit/offset للـ pagination."""
+    where, vals = _build_cards_filter(
+        batch_id=batch_id, used=used, revoked=revoked, search=search)
+    sql = f"SELECT * FROM cards WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?"
+    cur = db().execute(sql, [tenant_id, *vals, limit, offset])
     return [_card_row(r) for r in cur.fetchall()]
+
+
+def count_cards(tenant_id: int, *, batch_id: Optional[int] = None,
+                 used: Optional[bool] = None, revoked: Optional[bool] = None,
+                 search: Optional[str] = None) -> int:
+    """R10.4: عدّ الكروت بنفس فلاتر list_cards (للـ pagination في الـ UI)."""
+    where, vals = _build_cards_filter(
+        batch_id=batch_id, used=used, revoked=revoked, search=search)
+    row = db().execute(
+        f"SELECT COUNT(*) AS c FROM cards WHERE {where}",
+        [tenant_id, *vals]).fetchone()
+    return int(row["c"] or 0) if row else 0
 
 
 def stats(tenant_id: int) -> dict:

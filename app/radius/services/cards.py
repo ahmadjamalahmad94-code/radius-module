@@ -32,6 +32,10 @@ class CardsService:
     def list_cards(self, **kw):
         return self._store.list_cards(**kw)
 
+    def count_cards(self, **kw) -> int:
+        """R10.4: عدّ الكروت — للـ pagination في cards_list."""
+        return self._store.count_cards(**kw)
+
     def stats(self) -> dict:
         return self._store.stats()
 

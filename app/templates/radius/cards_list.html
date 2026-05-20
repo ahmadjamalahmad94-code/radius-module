@@ -2,22 +2,58 @@
 {% block title %}كل الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}كل الكروت{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} بطاقة)</span>{% endblock %}
+{% block page_sub %}<span class="sub">({{ total }} بطاقة · صفحة {{ page }}/{{ pages_count }})</span>{% endblock %}
 
 {% block content %}
-<form method="get" class="filter-bar">
-  <select name="used">
-    <option value="">كل الكروت</option>
-    <option value="0" {% if used == '0' %}selected{% endif %}>غير مستخدم فقط</option>
-    <option value="1" {% if used == '1' %}selected{% endif %}>مستخدم فقط</option>
+{# R10.4: filter-bar صف واحد — بحث + dropdowns + per_page + زرّ + إعادة ضبط #}
+<form method="get" class="filter-bar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+  <input type="search" name="q" value="{{ q or '' }}" placeholder="بحث في اليوزر…"
+         style="min-width:180px"
+         autocomplete="off">
+
+  <select name="batch_id">
+    <option value="">كل الدفعات</option>
+    {% for bid, b in batches.items() %}
+      <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>
+        {{ b.batch_code or bid }}
+      </option>
+    {% endfor %}
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+
+  <select name="used">
+    <option value="">كل الحالات (مستخدم/لا)</option>
+    <option value="0" {% if used == '0' %}selected{% endif %}>غير مستخدم</option>
+    <option value="1" {% if used == '1' %}selected{% endif %}>مستخدم</option>
+  </select>
+
+  <select name="revoked">
+    <option value="">كل الحالات (ملغاة/لا)</option>
+    <option value="0" {% if revoked == '0' %}selected{% endif %}>غير ملغاة</option>
+    <option value="1" {% if revoked == '1' %}selected{% endif %}>ملغاة</option>
+  </select>
+
+  <select name="per_page">
+    {% for n in [25, 50, 100] %}
+      <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
+    {% endfor %}
+  </select>
+
+  <button class="btn btn-secondary" type="submit">
+    <i class="fa-solid fa-filter"></i> تطبيق
+  </button>
+
+  {% if q or batch_id or used or revoked %}
+    <a class="btn btn-link" href="{{ url_for('radius.cards_list') }}">
+      <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+    </a>
+  {% endif %}
 </form>
 
 <div class="card">
   <div class="card-body card-body--flush">
     {% if items %}
-    <table class="hr-table" data-paginated="1" data-page-size="50" data-persist-key="all-cards">
+    {# R10.4: paginated بـ server-side — لا حاجة لـ data-paginated client-side. #}
+    <table class="hr-table">
       <thead><tr>
         <th>#</th><th>اليوزر</th><th>الباسورد</th><th>الباقة</th><th>الدفعة</th>
         <th>الحالة</th><th>تنتهي</th><th style="width:80px">إجراء</th>
@@ -52,8 +88,52 @@
         {% endfor %}
       </tbody>
     </table>
+
+    {# R10.4: pagination controls — يحتفظ بكل filters عبر preserve_params. #}
+    {% if pages_count > 1 %}
+    <nav class="pagination" style="display:flex;gap:.25rem;align-items:center;justify-content:center;padding:1rem 0">
+      {# روابط: «أوّل  «السابق  …  أرقام  …  التالي»  الأخير»  #}
+      {% set prev = page - 1 %}
+      {% set next = page + 1 %}
+      {% macro page_link(p, label, disabled=false) -%}
+        {% if disabled %}
+          <span class="btn btn-secondary btn-xs" style="opacity:.5;cursor:default">{{ label }}</span>
+        {% else %}
+          {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
+          <a class="btn btn-secondary btn-xs"
+             href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
+        {% endif %}
+      {%- endmacro %}
+
+      {{ page_link(1,           '«', disabled=(page == 1)) }}
+      {{ page_link(prev,        '‹', disabled=(page == 1)) }}
+
+      {# نافذة الأرقام: 5 صفحات حول الحالية #}
+      {% set window_lo = [page - 2, 1] | max %}
+      {% set window_hi = [page + 2, pages_count] | min %}
+      {% if window_lo > 1 %}<span>…</span>{% endif %}
+      {% for p in range(window_lo, window_hi + 1) %}
+        {% if p == page %}
+          <span class="btn btn-primary btn-xs">{{ p }}</span>
+        {% else %}
+          {{ page_link(p, p) }}
+        {% endif %}
+      {% endfor %}
+      {% if window_hi < pages_count %}<span>…</span>{% endif %}
+
+      {{ page_link(next,        '›', disabled=(page == pages_count)) }}
+      {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
+    </nav>
+    {% endif %}
+
     {% else %}
-    <div class="empty"><i class="fa-solid fa-id-card"></i>لا كروت</div>
+    <div class="empty"><i class="fa-solid fa-id-card"></i>
+      {% if q or batch_id or used or revoked %}
+        لا كروت تطابق الفلتر.
+      {% else %}
+        لا كروت بعد.
+      {% endif %}
+    </div>
     {% endif %}
   </div>
 </div>

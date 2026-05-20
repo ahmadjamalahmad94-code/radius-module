@@ -11,6 +11,7 @@ from ..core.errors import RadiusError
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
 from ..services.plans import get_plans_service
+from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
 
 def register_cards_routes(bp: Blueprint) -> None:
@@ -38,6 +39,10 @@ def cards_overview():
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
+def _tid() -> int:
+    return int(session.get("tenant_id") or 1)
 
 
 def _tid() -> int:
@@ -206,6 +211,20 @@ def cards_batch_edit(batch_id: int):
         flash("دفعة الكروت غير موجودة.", "error")
         return redirect(url_for("radius.cards_batches"))
     if request.method == "POST":
+        if request.form.get("_speed_rule_action"):
+            try:
+                handle_embedded_speed_rule(
+                    tenant_id=_tid(),
+                    actor=_actor(),
+                    form=request.form,
+                    target_type="card_batch",
+                    plan_id=batch.plan_id,
+                    card_batch_id=batch_id,
+                )
+                flash("تم تنفيذ إجراء قواعد السرعة لهذه الحزمة.", "success")
+            except RadiusError as e:
+                flash(e.message, "error")
+            return redirect(url_for("radius.cards_batch_edit", batch_id=batch_id))
         try:
             data = _collect_batch_options()
             data.update({
@@ -227,16 +246,89 @@ def cards_batch_edit(batch_id: int):
         batch=batch,
         plans=plans,
         form=form,
+        speed_rules_panel=speed_rules_panel(
+            tenant_id=_tid(),
+            target_type="card_batch",
+            plan_id=batch.plan_id,
+            card_batch_id=batch_id,
+            return_to=request.path,
+            title="قواعد سرعة هذه الحزمة",
+            help_text="أضف قواعد سرعة لكل بطاقات هذه الحزمة. عند وجود سرعة للعرض وسرعة لهذه الحزمة، تُطبّق سرعة الحزمة أولًا.",
+        ),
     )
 
 
 def cards_list():
+    """R10.4: pagination + search + batch + revoked filters.
+
+    Pre-R10.4 رفعنا 1000 كرت دفعة واحدة. مع 2020+ كرت، الصفحة كانت
+    بطيئة وصعبة التصفّح. الآن:
+      - `?q=...`    LIKE على username (يدعم البحث الجزئي بالأرقام).
+      - `?batch_id=X` فلترة على دفعة محدّدة.
+      - `?used=0|1` ، `?revoked=0|1` — booleans منفصلة.
+      - `?page=N`   صفحة (1-based). `?per_page` يقبل 25/50/100 (سقف 100).
+
+    نُمرّر `total / page / per_page / pages_count / q / batch_id / revoked
+    / used / preserve_params` للقالب حتى يبني روابط pagination بدون
+    إعادة بناء query string.
+    """
     used = request.args.get("used")
     used_b = True if used == "1" else (False if used == "0" else None)
-    items = get_cards_service().list_cards(used=used_b, limit=1000)
+
+    revoked = request.args.get("revoked")
+    revoked_b = True if revoked == "1" else (False if revoked == "0" else None)
+
+    raw_batch = (request.args.get("batch_id") or "").strip()
+    try:
+        batch_id = int(raw_batch) if raw_batch else None
+    except ValueError:
+        batch_id = None
+
+    q = (request.args.get("q") or "").strip()
+
+    # per_page: clamp إلى whitelist {25, 50, 100} لمنع abuse + استقرار CSS.
+    try:
+        per_page = int(request.args.get("per_page") or "50")
+    except ValueError:
+        per_page = 50
+    if per_page not in (25, 50, 100):
+        per_page = 50
+
+    try:
+        page = max(1, int(request.args.get("page") or "1"))
+    except ValueError:
+        page = 1
+
+    svc = get_cards_service()
+    total = svc.count_cards(used=used_b, revoked=revoked_b,
+                             batch_id=batch_id, search=q or None)
+    pages_count = max(1, (total + per_page - 1) // per_page)
+    if page > pages_count:
+        page = pages_count
+    offset = (page - 1) * per_page
+
+    items = svc.list_cards(used=used_b, revoked=revoked_b,
+                           batch_id=batch_id, search=q or None,
+                           limit=per_page, offset=offset)
     plans = {p.id: p for p in get_plans_service().list(limit=500)}
-    batches = {b.id: b for b in get_cards_service().list_batches(limit=500)}
-    return render_template("radius/cards_list.html", items=items, plans=plans, batches=batches, used=used)
+    batches = {b.id: b for b in svc.list_batches(limit=500)}
+
+    # preserve_params: نمرّرها للقالب فيستخدمها في hidden inputs + روابط
+    # pagination — يحافظ على البحث/الفلاتر عبر تغيير الصفحة.
+    preserve = {}
+    if used is not None: preserve["used"] = used
+    if revoked is not None: preserve["revoked"] = revoked
+    if batch_id is not None: preserve["batch_id"] = batch_id
+    if q: preserve["q"] = q
+    preserve["per_page"] = per_page
+
+    return render_template(
+        "radius/cards_list.html",
+        items=items, plans=plans, batches=batches,
+        used=used, revoked=revoked, batch_id=batch_id, q=q,
+        page=page, per_page=per_page, total=total,
+        pages_count=pages_count, preserve=preserve,
+    )
 
 
 def cards_of_batch(batch_id: int):

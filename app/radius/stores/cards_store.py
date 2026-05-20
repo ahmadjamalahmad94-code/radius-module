@@ -55,6 +55,10 @@ class CardsStore:
     def list_cards(self, **kw) -> list[Card]:
         return cards_repo.list_cards(_tid(), **kw)
 
+    def count_cards(self, **kw) -> int:
+        """R10.4: عدّ الكروت لاستخدام الـ UI في pagination."""
+        return cards_repo.count_cards(_tid(), **kw)
+
     def mark_used(self, *, username: str, mac: str = "") -> None:
         # سيُستدعى من webhook لاحقًا — نمرّر الآن بدون فعل
         pass
