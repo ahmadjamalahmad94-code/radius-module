@@ -1978,3 +1978,42 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-size:30px !important;
   letter-spacing:.5px;
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  Hero — compact pass: match the info-panel's height next to it.    ║
+   ║  User: 'لسا الارتفاع كبير — ظبط شي يصيرو نفس ارتفاع البلوك الي جمبه'║
+   ║                                                                      ║
+   ║  Strategy: trim every vertical breathing room on the hero (padding, ║
+   ║  gaps, row heights, bottom strip) so the natural content height     ║
+   ║  drops close to the 6-row info-panel sibling.                       ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+.cc-card-hero{
+  padding:14px 18px !important;       /* was ~24px */
+}
+.cc-card-top{ margin-bottom:8px !important }
+.cc-card-main{ gap:16px !important }
+.cc-card-number-wrap{ gap:8px !important }
+.cc-card-info-row{
+  padding:6px 0 !important;           /* was ~10px */
+  font-size:12px !important;
+}
+.cc-card-info-label{ font-size:11px !important }
+.cc-card-info-value{ font-size:12.5px !important }
+.cc-card-side-info{ margin-top:8px !important; gap:5px !important }
+.cc-card-side-row{
+  padding:4px 10px !important;
+  font-size:12px !important;
+}
+.cc-card-side-label{ font-size:10.5px !important }
+.cc-card-side-value{ font-size:12px !important }
+.cc-card-bottom{
+  margin-top:10px !important;
+  padding-top:8px !important;
+  font-size:11px !important;
+}
+.cc-card-password{
+  margin-top:4px !important;
+  padding:4px 10px !important;
+  font-size:13px !important;
+}
+.cc-card-password-value{ font-size:13.5px !important }
