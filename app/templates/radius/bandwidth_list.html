@@ -1,35 +1,88 @@
+{# Bandwidth profiles list — REBUILT N9 (hub-v2). Backend data: items list. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}ملفات السرعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
 {% block page_title %}ملفات السرعة{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bw_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة
-  </a>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} ملف</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr><th>#</th><th>الاسم</th><th>تنزيل</th><th>رفع</th><th>سرعة مؤقتة</th><th>الأولوية</th><th style="width:110px"></th></tr></thead>
-    <tbody>{% for b in items %}
-    <tr>
-      <td class="num">{{ b.id }}</td>
-      <td><strong>{{ b.name }}</strong></td>
-      <td class="mono">{{ b.rate_down }} {{ b.rate_down_unit }}</td>
-      <td class="mono">{{ b.rate_up }} {{ b.rate_up_unit }}</td>
-      <td class="mono">{{ b.burst or '—' }}</td>
-      <td class="num">{{ b.priority }}</td>
-      <td><div class="cell-actions">
-        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.bw_edit', bw_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>
-        <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}"
-              onsubmit="return confirm('حذف؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
-        </form>
-      </div></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-gauge"></i>لا توجد ملفات سرعة بعد.</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "ملفات السرعة",
+  subtitle="إدارة ملفّات Bandwidth — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية",
+  icon="gauge",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.bw_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة ملف
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _with_burst = items|selectattr('burst')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",        items|length, icon="gauge",         variant="brand") }}
+  {{ hub.kpi("بسرعة مؤقتة",     _with_burst,  icon="rocket",        variant="green") }}
+  {{ hub.kpi("بدون سرعة مؤقتة", items|length - _with_burst, icon="minus", variant="grey") }}
+</div>
+
+{% call hub.section("الملفات", icon="table-list", meta=items|length|string + " ملف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>تنزيل</th>
+          <th>رفع</th>
+          <th>سرعة مؤقتة</th>
+          <th class="num">الأولوية</th>
+          <th style="width:120px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in items %}
+        <tr>
+          <td class="num mono">{{ b.id }}</td>
+          <td><strong>{{ b.name }}</strong></td>
+          <td class="mono small">
+            <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
+            {{ b.rate_down }} {{ b.rate_down_unit }}
+          </td>
+          <td class="mono small">
+            <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
+            {{ b.rate_up }} {{ b.rate_up_unit }}
+          </td>
+          <td class="mono small">{{ b.burst or '—' }}</td>
+          <td class="num mono">{{ hub.pill(b.priority|string, variant="brand", dot=False) }}</td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.bw_edit', bw_id=b.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}"
+                    onsubmit="return confirm('حذف؟')" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد ملفات سرعة بعد",
+  sub="أضف أوّل ملف Bandwidth من زرّ «إضافة ملف» أعلى الصفحة لربطه بالباقات.",
+  icon="gauge"
+) }}
+{% endif %}
+
 {% endblock %}

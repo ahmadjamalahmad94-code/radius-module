@@ -1,50 +1,104 @@
+{# MikroTik (MT) connections list — REBUILT N9 (hub-v2). Backend data: items list. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}اتصالات MikroTik{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
 {% block page_title %}اتصالات MikroTik{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.mt_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة اتصال
-  </a>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} اتصال</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الاسم</th><th>المضيف</th><th>المنفذ</th>
-      <th>المستخدم</th><th>TLS</th><th>الحالة</th>
-      <th>آخر فحص</th><th>آخر نتيجة</th><th style="width:170px"></th>
-    </tr></thead>
-    <tbody>{% for it in items %}
-    <tr>
-      <td class="num">{{ it.id }}</td>
-      <td><strong>{{ it.name }}</strong></td>
-      <td class="mono">{{ it.host }}</td>
-      <td class="num">{{ it.port }}</td>
-      <td class="mono">{{ it.username }}</td>
-      <td>{% if it.use_tls %}<span class="pill pill-success">TLS</span>{% else %}<span class="pill">عادي</span>{% endif %}</td>
-      <td>
-        {% if it.enabled %}<span class="pill pill-success">مفعَّل</span>
-        {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
-      </td>
-      <td class="mono">{{ it.last_seen_at[:16] if it.last_seen_at else '—' }}</td>
-      <td class="mono" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        {{ it.last_status or '—' }}
-      </td>
-      <td><div class="cell-actions">
-        <form method="post" action="{{ url_for('radius.mt_test', cid=it.id) }}" style="display:inline">
-          <button class="btn btn-primary btn-xs" title="اختبار الاتصال"><i class="fa-solid fa-plug"></i></button>
-        </form>
-        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.mt_edit', cid=it.id) }}"><i class="fa-solid fa-pen"></i></a>
-        <form method="post" action="{{ url_for('radius.mt_delete', cid=it.id) }}"
-              onsubmit="return confirm('حذف؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
-        </form>
-      </div></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-router"></i>لا اتصالات MikroTik</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "اتصالات MikroTik",
+  subtitle="إدارة اتصالات RouterOS API — العنوان، المنفذ، TLS، وحالة آخر فحص",
+  icon="router",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة اتصال
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _enabled = items|selectattr('enabled')|list|length %}
+{% set _tls     = items|selectattr('use_tls')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",   items|length, icon="router",      variant="brand") }}
+  {{ hub.kpi("مفعَّل",      _enabled,     icon="toggle-on",   variant="green") }}
+  {{ hub.kpi("معطَّل",      items|length - _enabled, icon="toggle-off", variant="amber") }}
+  {{ hub.kpi("يستخدم TLS", _tls,         icon="lock",        variant="blue") }}
+</div>
+
+{% call hub.section("الاتصالات", icon="table-list", meta=items|length|string + " اتصال", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>المضيف</th>
+          <th class="num">المنفذ</th>
+          <th>المستخدم</th>
+          <th>الأمان</th>
+          <th>الحالة</th>
+          <th>آخر فحص</th>
+          <th>آخر نتيجة</th>
+          <th style="width:170px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td class="num mono">{{ it.id }}</td>
+          <td><strong>{{ it.name }}</strong></td>
+          <td class="mono small">{{ it.host }}</td>
+          <td class="num mono">{{ it.port }}</td>
+          <td class="mono small">{{ it.username }}</td>
+          <td>
+            {% if it.use_tls %}{{ hub.pill("TLS", variant="green") }}
+            {% else %}{{ hub.pill("عادي", variant="grey") }}{% endif %}
+          </td>
+          <td>
+            {% if it.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+          </td>
+          <td class="mono small">{{ it.last_seen_at[:16] if it.last_seen_at else '—' }}</td>
+          <td class="mono small" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              title="{{ it.last_status or '' }}">
+            {{ it.last_status or '—' }}
+          </td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <form method="post" action="{{ url_for('radius.mt_test', cid=it.id) }}" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="اختبار الاتصال">
+                  <i class="fa-solid fa-plug"></i>
+                </button>
+              </form>
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.mt_edit', cid=it.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.mt_delete', cid=it.id) }}"
+                    onsubmit="return confirm('حذف؟')" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا اتصالات MikroTik بعد",
+  sub="أضف أوّل اتصال RouterOS API من زرّ «إضافة اتصال» لإدارة أجهزة MikroTik مباشرة.",
+  icon="router"
+) }}
+{% endif %}
+
 {% endblock %}
