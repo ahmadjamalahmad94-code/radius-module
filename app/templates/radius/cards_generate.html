@@ -1,4 +1,9 @@
+{# Cards generate — REBUILT on hub-v2 (Night final pass, 2026-05-21)
+   4-section wizard for generating a batch of cards. Same backend
+   route (radius.cards_generate) + same form field names. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}إنشاء كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}إنشاء حزمة بطاقات{% endblock %}
@@ -6,247 +11,290 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H4 — Card batch form (نفس نمط RM-H1/H3 بتوكينات --hr-*) */
-.cb-form{max-width:1080px;margin:0 auto;padding:8px 4px 18px}
-.sec-card{
-  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
-  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));
-}
-.sec-card > h3{
-  display:flex;align-items:center;gap:10px;
-  margin:0 0 14px;font-size:14.5px;font-weight:800;color:var(--hr-text);
-  padding-bottom:10px;border-bottom:1px dashed var(--hr-border);
-}
-.sec-card > h3 i.h-ic{
-  width:30px;height:30px;border-radius:6px;
-  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px;
-}
-.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
-.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
-.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
-.sec-card.collapsible.is-collapsed > .sb{display:none}
-.sec-card.batch  {border-inline-start:3px solid var(--hr-cyan-500)}
-.sec-card.gen    {border-inline-start:3px solid var(--hr-green)}
-.sec-card.gen    > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
-.sec-card.time   {border-inline-start:3px solid var(--hr-orange)}
-.sec-card.time   > h3 i.h-ic{background:var(--hr-badge-warn-bg);color:#92500c}
-.sec-card.behave {border-inline-start:3px solid var(--hr-purple)}
-.sec-card.behave > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
+  .cg-form{ max-width: 1180px; margin: 0 auto; }
+  .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
+  .cg-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .cg-field.full{ grid-column: 1 / -1; }
+  .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+  .cg-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px;
+    background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700;
+  }
+  .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
 
-.f-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
-@media (max-width:920px){.f-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:560px){.f-grid{grid-template-columns:1fr}}
-.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.f-field.full{grid-column:1 / -1}
-.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
-.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
-.f-field input, .f-field select, .f-field textarea{
-  padding:10px 12px;border-radius:var(--hr-r,6px);
-  border:1.5px solid var(--hr-border-strong);
-  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
-  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
-}
-.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
-  outline:0;border-color:var(--hr-cyan-500);background:#fff;
-  box-shadow:0 0 0 3px rgba(43,170,204,.20);
-}
-.f-field textarea{min-height:60px;resize:vertical}
-.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
-.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
-.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+  .cg-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+  }
+  .cg-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .cg-section.is-collapsible .cg-section-head{ cursor:pointer; user-select:none; }
+  .cg-section.is-collapsed .cg-section-head{ border-bottom: none; }
+  .cg-section-icon{
+    width:30px; height:30px;
+    border-radius: var(--hub-r-md);
+    display: inline-flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .cg-section-title{ flex:1; font-size: 14px; font-weight: 800; }
+  .cg-section-toggle{
+    color: var(--hub-text-mute);
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-section.is-collapsed .cg-section-toggle{ transform: rotate(-90deg); }
+  .cg-section-body{ padding: 18px; }
+  .cg-section.is-collapsed .cg-section-body{ display:none; }
+
+  .cg-section--batch  { border-inline-start: 3px solid var(--hub-brand); }
+  .cg-section--batch  .cg-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .cg-section--gen    { border-inline-start: 3px solid var(--hub-green); }
+  .cg-section--gen    .cg-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .cg-section--time   { border-inline-start: 3px solid var(--hub-amber); }
+  .cg-section--time   .cg-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .cg-section--behave { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--behave .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="cb-form">
+
+{{ hub.hero(
+  "إنشاء حزمة بطاقات",
+  subtitle="حدّد الباقة، العدد، خيارات التوليد، ومدة الصلاحية — ثم ولّد الدفعة",
+  icon="wand-magic-sparkles",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للحزم
+    </a>
+  '
+) }}
+
+<div class="cg-form">
 <form method="post" action="{{ url_for('radius.cards_generate') }}">
 
-  {# ─────────────── 1. بيانات الحزمة ─────────────── #}
-  <section class="sec-card batch">
-    <h3><i class="fa-solid fa-box h-ic"></i>بيانات الحزمة</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>اسم الحزمة</label>
-        <input type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25"></div>
-      <div class="f-field"><label>الباقة المرتبطة <span class="req">*</span></label>
-        <select name="plan_id" required>
-          <option value="">— اختر —</option>
-          {% for p in plans %}
-            <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>
-              {{ p.name }} · {{ "%.2f"|format(p.price) }} {{ p.currency }}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="field-help">الباقة تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.</div></div>
-      <div class="f-field"><label>عدد البطاقات <span class="req">*</span></label>
-        <input type="number" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
-        <div class="field-help">حد أقصى 2000 لكل دفعة.</div></div>
-      <div class="f-field"><label>المدير المسؤول</label>
-        <input type="number" name="manager_id" value="{{ form.get('manager_id') or '' }}" placeholder="—"></div>
-      <div class="f-field"><label>سعر البطاقة (مرجعي)</label>
-        <input type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}"></div>
-      <div class="f-field"><label>السعر الإجمالي (مرجعي)</label>
-        <input type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
-        <div class="field-help">حقول مرجعية فقط.</div></div>
-      <div class="f-field"><label>الكوتا الكلية (MB)</label>
-        <input type="number" min="0" name="total_quota_mb" value="{{ form.get('total_quota_mb') or 0 }}"></div>
-      <div class="f-field"><label>اسم الخدمة</label>
-        <input type="text" name="service_name" value="{{ form.get('service_name') or '' }}"></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 2. توليد البطاقات ─────────────── #}
-  <section class="sec-card gen">
-    <h3><i class="fa-solid fa-dice h-ic"></i>توليد البطاقات</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>طول اسم المستخدم</label>
-        <input type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}"></div>
-      <div class="f-field"><label>طول كلمة المرور</label>
-        <input type="number" name="password_length" min="4" max="20" value="{{ form.get('password_length') or 6 }}"></div>
-      <div class="f-field"><label>نمط توليد كلمة المرور</label>
-        {% set pgt = form.get('password_generation_type') or 'medium' %}
-        <select name="password_generation_type">
-          <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>سيئ (حروف)</option>
-          <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
-          <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي (حروف+أرقام+رموز)</option>
-          <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
-        </select></div>
-      <div class="f-field"><label>إضافة قبل أو بعد الاسم</label>
-        {% set side = form.get('starts_with_or_ends_with') or '' %}
-        <select name="starts_with_or_ends_with">
-          <option value=""       {% if not side %}selected{% endif %}>— لا شيء —</option>
-          <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
-          <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
-        </select></div>
-      <div class="f-field"><label>النص المضاف</label>
-        <input type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}"
-               placeholder="مثال: GZA-"></div>
-      <div class="f-field"><label>بادئة قديمة للتوافق</label>
-        <input type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
-        <div class="field-help">للتوافق مع الإعداد القديم — خيار الإضافة أعلاه هو الأحدث.</div></div>
-      <div class="f-field"><label>تضمين رقم الحزمة</label>
-        <div class="chk-row"><input type="checkbox" name="include_batch_number" id="ibn" value="1"
-          {% if form.get('include_batch_number') %}checked{% endif %}>
-          <label for="ibn">B{id}-... قبل الاسم</label></div></div>
-      <div class="f-field"><label>توليد عشوائي</label>
-        <div class="chk-row"><input type="checkbox" name="random_generation_enabled" id="rge" value="1"
-          {% if form.get('random_generation_enabled') or not form %}checked{% endif %}>
-          <label for="rge">مفعَّل</label></div></div>
-    </div>
+  {# ── 1. Batch info ─────────────────────────── #}
+  <section class="cg-section cg-section--batch">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-box"></i></span>
+      <span class="cg-section-title">بيانات الحزمة</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>اسم الحزمة</label>
+          <input class="hub-input" type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25"></div>
+        <div class="cg-field"><label>الباقة المرتبطة <span class="req">*</span></label>
+          <select class="hub-select" name="plan_id" required>
+            <option value="">— اختر —</option>
+            {% for p in plans %}
+              <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>
+                {{ p.name }} · {{ "%.2f"|format(p.price) }} {{ p.currency }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="help">تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.</div></div>
+        <div class="cg-field"><label>عدد البطاقات <span class="req">*</span></label>
+          <input class="hub-input" type="number" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
+          <div class="help">حد أقصى 2000 لكل دفعة.</div></div>
+        <div class="cg-field"><label>المدير المسؤول</label>
+          <input class="hub-input" type="number" name="manager_id" value="{{ form.get('manager_id') or '' }}" placeholder="—"></div>
+        <div class="cg-field"><label>سعر البطاقة (مرجعي)</label>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}"></div>
+        <div class="cg-field"><label>السعر الإجمالي (مرجعي)</label>
+          <input class="hub-input" type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
+          <div class="help">حقول مرجعية فقط.</div></div>
+        <div class="cg-field"><label>الكوتا الكلية (MB)</label>
+          <input class="hub-input" type="number" min="0" name="total_quota_mb" value="{{ form.get('total_quota_mb') or 0 }}"></div>
+        <div class="cg-field"><label>اسم الخدمة</label>
+          <input class="hub-input" type="text" name="service_name" value="{{ form.get('service_name') or '' }}"></div>
+      </div>
     </div>
   </section>
 
-  {# ─────────────── 3. الصلاحية والوقت ─────────────── #}
-  <section class="sec-card time collapsible" data-sec="time">
-    <h3><i class="fa-solid fa-clock h-ic"></i>الصلاحية والوقت <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>قيمة الوقت</label>
-        <input type="number" min="0" name="time_value" value="{{ form.get('time_value') or 0 }}">
-        <div class="field-help">0 = استخدم صلاحية الأيام الموجودة في الباقة.</div></div>
-      <div class="f-field"><label>وحدة الوقت</label>
-        {% set tu = form.get('time_unit') or 'days' %}
-        <select name="time_unit">
-          <option value="days"    {% if tu == 'days' %}selected{% endif %}>أيام</option>
-          <option value="hours"   {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
-          <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
-        </select></div>
-      <div class="f-field"><label>عدد الأجهزة</label>
-        <input type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
-        <div class="field-help">عدد الجلسات المتزامنة المسموحة.</div></div>
-      <div class="f-field"><label>وضع المدة</label>
-        {% set dm = form.get('duration_mode') or 'time_unit' %}
-        <select name="duration_mode">
-          <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>بالوحدة المحدَّدة</option>
-          <option value="seconds"   {% if dm == 'seconds' %}selected{% endif %}>بالثانية</option>
-        </select></div>
-      <div class="f-field"><label>صلاحية بعد أول دخول (أيام)</label>
-        <input type="number" min="0" name="validity_after_first_login_days"
-               value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
-      <div class="f-field"><label>العدّ من أول اتصال</label>
-        <div class="chk-row"><input type="checkbox" name="count_from_first_connect" id="cfc" value="1"
-          {% if form.get('count_from_first_connect') or not form %}checked{% endif %}>
-          <label for="cfc">مفعَّل (وإلا من تاريخ الإنشاء)</label></div></div>
-      <div class="f-field"><label>العدّ بالثواني</label>
-        <div class="chk-row"><input type="checkbox" name="count_by_seconds" id="cbs" value="1"
-          {% if form.get('count_by_seconds') %}checked{% endif %}>
-          <label for="cbs">مفعَّل</label></div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 4. السلوك عند الانتهاء + خيارات إضافية ─────────────── #}
-  <section class="sec-card behave collapsible" data-sec="behave">
-    <h3><i class="fa-solid fa-sliders h-ic"></i>سلوك انتهاء الكوتا + خيارات إضافية
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>عند انتهاء الكوتا</label>
-        {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
-        <select name="on_quota_exhaust">
-          <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف الكرت</option>
-          <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
-          <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>إبقاء مع تنبيه</option>
-        </select></div>
-      <div class="f-field"><label>تجديد تلقائي بعد أول استخدام</label>
-        <div class="chk-row"><input type="checkbox" name="auto_renew_after_first_use" id="arfu" value="1"
-          {% if form.get('auto_renew_after_first_use') %}checked{% endif %}>
-          <label for="arfu">مفعَّل</label></div></div>
-      <div class="f-field"><label>تحويل إلى حالة طالب</label>
-        <div class="chk-row"><input type="checkbox" name="transfer_to_student_status_on_connect" id="ts" value="1"
-          {% if form.get('transfer_to_student_status_on_connect') %}checked{% endif %}>
-          <label for="ts">عند الاتصال</label></div></div>
-      <div class="f-field"><label>إغلاق جلسة المستخدم</label>
-        <div class="chk-row"><input type="checkbox" name="close_user_session_on_disconnect" id="cus" value="1"
-          {% if form.get('close_user_session_on_disconnect') %}checked{% endif %}>
-          <label for="cus">عند الفصل</label></div></div>
-      <div class="f-field"><label>ربط MAC عند الاتصال</label>
-        <div class="chk-row"><input type="checkbox" name="switch_to_mac_on_connect" id="smc" value="1"
-          {% if form.get('switch_to_mac_on_connect') %}checked{% endif %}>
-          <label for="smc">مفعَّل</label></div></div>
-      <div class="f-field"><label>قفل MAC عند الإغلاق</label>
-        <div class="chk-row"><input type="checkbox" name="lock_to_mac_on_close" id="lmc" value="1"
-          {% if form.get('lock_to_mac_on_close') %}checked{% endif %}>
-          <label for="lmc">مفعَّل</label></div></div>
-      <div class="f-field"><label>دخول برقم الجوال فقط</label>
-        <div class="chk-row"><input type="checkbox" name="phone_only_login" id="pol" value="1"
-          {% if form.get('phone_only_login') %}checked{% endif %}>
-          <label for="pol">مفعَّل</label></div></div>
-      <div class="f-field full"><label>السماح بالدخول ببطاقة سابقة (فلسطين فقط)</label>
-        <div class="chk-row"><input type="checkbox" name="allow_entry_by_previous_card_palestine" id="aep" value="1"
-          {% if form.get('allow_entry_by_previous_card_palestine') %}checked{% endif %}>
-          <label for="aep">مفعَّل</label></div></div>
-      <div class="f-field full"><label>ملاحظات</label>
-        <textarea name="notes">{{ form.get('notes') or '' }}</textarea></div>
-    </div>
+  {# ── 2. Generation pattern ──────────────────── #}
+  <section class="cg-section cg-section--gen">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-dice"></i></span>
+      <span class="cg-section-title">توليد البطاقات</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>طول اسم المستخدم</label>
+          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}"></div>
+        <div class="cg-field"><label>طول كلمة المرور</label>
+          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="{{ form.get('password_length') or 6 }}"></div>
+        <div class="cg-field"><label>نمط توليد كلمة المرور</label>
+          {% set pgt = form.get('password_generation_type') or 'medium' %}
+          <select class="hub-select" name="password_generation_type">
+            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>سيئ (حروف)</option>
+            <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي (حروف+أرقام+رموز)</option>
+            <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
+          </select></div>
+        <div class="cg-field"><label>إضافة قبل أو بعد الاسم</label>
+          {% set side = form.get('starts_with_or_ends_with') or '' %}
+          <select class="hub-select" name="starts_with_or_ends_with">
+            <option value=""       {% if not side %}selected{% endif %}>— لا شيء —</option>
+            <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
+            <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
+          </select></div>
+        <div class="cg-field"><label>النص المضاف</label>
+          <input class="hub-input" type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="مثال: GZA-"></div>
+        <div class="cg-field"><label>بادئة قديمة للتوافق</label>
+          <input class="hub-input" type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
+          <div class="help">للتوافق مع الإعداد القديم.</div></div>
+        <div class="cg-field"><label>تضمين رقم الحزمة</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="include_batch_number" id="ibn" value="1" {% if form.get('include_batch_number') %}checked{% endif %}>
+            <label for="ibn">B{id}-... قبل الاسم</label>
+          </div></div>
+        <div class="cg-field"><label>توليد عشوائي</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="random_generation_enabled" id="rge" value="1" {% if form.get('random_generation_enabled') or not form %}checked{% endif %}>
+            <label for="rge">مفعَّل</label>
+          </div></div>
+      </div>
     </div>
   </section>
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
+  {# ── 3. Validity & time ─────────────────────── #}
+  <section class="cg-section cg-section--time is-collapsible" data-sec="time">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-clock"></i></span>
+      <span class="cg-section-title">الصلاحية والوقت</span>
+      <i class="fa-solid fa-chevron-down cg-section-toggle"></i>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>قيمة الوقت</label>
+          <input class="hub-input" type="number" min="0" name="time_value" value="{{ form.get('time_value') or 0 }}">
+          <div class="help">0 = استخدم صلاحية الباقة.</div></div>
+        <div class="cg-field"><label>وحدة الوقت</label>
+          {% set tu = form.get('time_unit') or 'days' %}
+          <select class="hub-select" name="time_unit">
+            <option value="days"    {% if tu == 'days' %}selected{% endif %}>أيام</option>
+            <option value="hours"   {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
+            <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
+          </select></div>
+        <div class="cg-field"><label>عدد الأجهزة</label>
+          <input class="hub-input" type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
+          <div class="help">عدد الجلسات المتزامنة المسموحة.</div></div>
+        <div class="cg-field"><label>وضع المدة</label>
+          {% set dm = form.get('duration_mode') or 'time_unit' %}
+          <select class="hub-select" name="duration_mode">
+            <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>بالوحدة المحدَّدة</option>
+            <option value="seconds"   {% if dm == 'seconds' %}selected{% endif %}>بالثانية</option>
+          </select></div>
+        <div class="cg-field"><label>صلاحية بعد أول دخول (أيام)</label>
+          <input class="hub-input" type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
+        <div class="cg-field"><label>العدّ من أول اتصال</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="count_from_first_connect" id="cfc" value="1" {% if form.get('count_from_first_connect') or not form %}checked{% endif %}>
+            <label for="cfc">مفعَّل (وإلا من تاريخ الإنشاء)</label>
+          </div></div>
+        <div class="cg-field"><label>العدّ بالثواني</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="count_by_seconds" id="cbs" value="1" {% if form.get('count_by_seconds') %}checked{% endif %}>
+            <label for="cbs">مفعَّل</label>
+          </div></div>
+      </div>
+    </div>
+  </section>
+
+  {# ── 4. Behaviour ──────────────────────────── #}
+  <section class="cg-section cg-section--behave is-collapsible" data-sec="behave">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-sliders"></i></span>
+      <span class="cg-section-title">سلوك انتهاء الكوتا وخيارات إضافية</span>
+      <i class="fa-solid fa-chevron-down cg-section-toggle"></i>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>عند انتهاء الكوتا</label>
+          {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
+          <select class="hub-select" name="on_quota_exhaust">
+            <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف الكرت</option>
+            <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
+            <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>إبقاء مع تنبيه</option>
+          </select></div>
+        <div class="cg-field"><label>تجديد تلقائي بعد أول استخدام</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="auto_renew_after_first_use" id="arfu" value="1" {% if form.get('auto_renew_after_first_use') %}checked{% endif %}>
+            <label for="arfu">مفعَّل</label>
+          </div></div>
+        <div class="cg-field"><label>تحويل إلى حالة طالب</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="transfer_to_student_status_on_connect" id="ts" value="1" {% if form.get('transfer_to_student_status_on_connect') %}checked{% endif %}>
+            <label for="ts">عند الاتصال</label>
+          </div></div>
+        <div class="cg-field"><label>إغلاق جلسة المستخدم</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="close_user_session_on_disconnect" id="cus" value="1" {% if form.get('close_user_session_on_disconnect') %}checked{% endif %}>
+            <label for="cus">عند الفصل</label>
+          </div></div>
+        <div class="cg-field"><label>ربط MAC عند الاتصال</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="switch_to_mac_on_connect" id="smc" value="1" {% if form.get('switch_to_mac_on_connect') %}checked{% endif %}>
+            <label for="smc">مفعَّل</label>
+          </div></div>
+        <div class="cg-field"><label>قفل MAC عند الإغلاق</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="lock_to_mac_on_close" id="lmc" value="1" {% if form.get('lock_to_mac_on_close') %}checked{% endif %}>
+            <label for="lmc">مفعَّل</label>
+          </div></div>
+        <div class="cg-field"><label>دخول برقم الجوال فقط</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="phone_only_login" id="pol" value="1" {% if form.get('phone_only_login') %}checked{% endif %}>
+            <label for="pol">مفعَّل</label>
+          </div></div>
+        <div class="cg-field full"><label>السماح بالدخول ببطاقة سابقة (فلسطين فقط)</label>
+          <div class="cg-chk">
+            <input type="checkbox" name="allow_entry_by_previous_card_palestine" id="aep" value="1" {% if form.get('allow_entry_by_previous_card_palestine') %}checked{% endif %}>
+            <label for="aep">مفعَّل</label>
+          </div></div>
+        <div class="cg-field full"><label>ملاحظات</label>
+          <textarea class="hub-textarea" name="notes">{{ form.get('notes') or '' }}</textarea></div>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-wand-magic-sparkles"></i> توليد الآن
     </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.cards_batches') }}">إلغاء</a>
   </div>
 </form>
 </div>
 
 <script>
 (function(){
-  var LS = 'hr:cb-form:sec:';
-  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+  'use strict';
+  var LS = 'hr:cg-form:sec:';
+  document.querySelectorAll('.cg-section.is-collapsible').forEach(function(card){
     var k = card.dataset.sec; if (!k) return;
     var v = null;
     try { v = localStorage.getItem(LS + k); } catch(_) {}
     if (v === 'collapsed') card.classList.add('is-collapsed');
     else if (v === 'open')  card.classList.remove('is-collapsed');
-    var h = card.querySelector(':scope > h3');
-    if (h) h.addEventListener('click', function(){
+    var head = card.querySelector('.cg-section-head');
+    if (head) head.addEventListener('click', function(){
       card.classList.toggle('is-collapsed');
       try { localStorage.setItem(LS + k,
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}

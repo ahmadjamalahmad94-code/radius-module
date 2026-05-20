@@ -1,58 +1,84 @@
+{# Plans overview — REBUILT on hub-v2. Same backend data
+   (total_plans, enabled_plans, revenue_estimate, by_type, top). #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}نظرة عامة — الباقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
 {% block page_title %}نظرة عامة — الباقات{% endblock %}
 
 {% block content %}
-<div class="kpi-strip">
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">إجمالي الباقات</div><div class="val">{{ total_plans }}</div></div>
-    <div class="ico"><i class="fa-solid fa-tags"></i></div>
-  </div>
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">مفعَّلة</div><div class="val">{{ enabled_plans }}</div></div>
-    <div class="ico"><i class="fa-solid fa-circle-check"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">تقدير الإيراد</div><div class="val">{{ "%.2f"|format(revenue_estimate) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-coins"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">أنواع</div><div class="val">{{ by_type|length }}</div></div>
-    <div class="ico"><i class="fa-solid fa-layer-group"></i></div>
-  </div>
+
+{{ hub.hero(
+  "نظرة عامة — الباقات",
+  subtitle="إحصاءات الباقات، الإيراد التقديري، والأكثر اشتراكًا",
+  icon="chart-pie",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
+      <i class="fa-solid fa-circle-plus"></i> إضافة عرض
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
+      <i class="fa-solid fa-list"></i> القائمة
+    </a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الباقات", total_plans,                          icon="tags",        variant="brand") }}
+  {{ hub.kpi("مفعَّلة",          enabled_plans,                        icon="circle-check", variant="green") }}
+  {{ hub.kpi("تقدير الإيراد",    "%.2f"|format(revenue_estimate),     icon="coins",       variant="amber") }}
+  {{ hub.kpi("أنواع",            by_type|length,                       icon="layer-group", variant="blue")  }}
 </div>
 
-<div class="card" style="margin-top:8px">
-  <div class="card-header"><span class="title">أكثر الباقات اشتراكًا</span></div>
-  <div class="card-body card-body--flush">
+<div class="hub-grid-2">
+  {# Top plans table #}
+  {% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta="أعلى 5", flush=True) %}
     {% if top %}
-    <table class="hr-table">
-      <thead><tr><th>#</th><th>الباقة</th><th>النوع</th><th>السعر</th><th>المشتركون</th></tr></thead>
-      <tbody>{% for r in top %}
-      <tr>
-        <td class="num">{{ r.id }}</td>
-        <td><strong>{{ r.name }}</strong></td>
-        <td><span class="pill pill-cyan">{{ r.plan_type }}</span></td>
-        <td><strong>{{ "%.2f"|format(r.price) }}</strong> <span class="hint">{{ r.currency }}</span></td>
-        <td class="num">{{ r.subscribers_count }}</td>
-      </tr>{% endfor %}</tbody>
-    </table>
-    {% else %}<div class="empty"><i class="fa-solid fa-tags"></i>لا باقات</div>{% endif %}
-  </div>
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th class="num" style="width:60px">#</th>
+              <th>الباقة</th>
+              <th>النوع</th>
+              <th class="num">السعر</th>
+              <th class="num">المشتركون</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in top %}
+            <tr>
+              <td class="num mono">{{ r.id }}</td>
+              <td><strong>{{ r.name }}</strong></td>
+              <td>{{ hub.pill(r.plan_type, variant="brand", dot=False) }}</td>
+              <td class="num"><strong>{{ "%.2f"|format(r.price) }}</strong> <small class="hub-text-mute">{{ r.currency }}</small></td>
+              <td class="num">{{ r.subscribers_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding:18px">{{ hub.empty("لا باقات بعد", icon="tags") }}</div>
+    {% endif %}
+  {% endcall %}
+
+  {# Distribution by type #}
+  {% call hub.section("توزيع حسب النوع", icon="layer-group") %}
+    {% if by_type %}
+      <div class="hub-list">
+        {% for t, c in by_type.items() %}
+        <div class="hub-list-row">
+          {{ hub.pill(t, variant="brand", dot=False) }}
+          <span class="grow"></span>
+          <strong>{{ c }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      {{ hub.empty("لا بيانات بعد", icon="layer-group") }}
+    {% endif %}
+  {% endcall %}
 </div>
 
-<div class="card">
-  <div class="card-header"><span class="title">توزيع حسب النوع</span></div>
-  <div class="card-body">
-    {% if by_type %}
-    {% for t, c in by_type.items() %}
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--hr-border)">
-      <span><span class="pill pill-cyan">{{ t }}</span></span>
-      <strong>{{ c }}</strong>
-    </div>
-    {% endfor %}
-    {% else %}<div class="empty">—</div>{% endif %}
-  </div>
-</div>
 {% endblock %}

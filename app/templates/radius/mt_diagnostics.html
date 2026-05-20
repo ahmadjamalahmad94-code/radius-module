@@ -15,11 +15,11 @@
     gap:10px;margin-bottom:16px;
   }
   .mtd-summary-card{
-    background:#fff;border:1px solid var(--hr-border);
-    border-radius:var(--hr-r-lg);padding:14px 16px;
-    box-shadow:var(--hr-shadow-sm);
+    background:#fff;border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-lg);padding:14px 16px;
+    box-shadow:var(--hub-sh-sm);
   }
-  .mtd-summary-card .lbl{font-size:11.5px;color:var(--hr-text-muted);
+  .mtd-summary-card .lbl{font-size:11.5px;color:var(--hub-text-mute);
     text-transform:uppercase;letter-spacing:.7px;font-weight:800}
   .mtd-summary-card .val{font-size:24px;font-weight:800;margin-top:3px}
   .mtd-summary-card.ok .val{color:#16a34a}
@@ -27,18 +27,18 @@
   .mtd-summary-card.warn .val{color:#d97706}
 
   .mtd-router-card{
-    background:#fff;border:1px solid var(--hr-border);
-    border-radius:var(--hr-r-lg);box-shadow:var(--hr-shadow-sm);
+    background:#fff;border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-lg);box-shadow:var(--hub-sh-sm);
     margin-bottom:14px;overflow:hidden;
   }
   .mtd-router-head{
     display:flex;align-items:center;gap:10px;
-    padding:12px 16px;border-bottom:1px solid var(--hr-border-soft);
+    padding:12px 16px;border-bottom:1px solid var(--hub-border-soft);
     background:linear-gradient(180deg,#fafbff,#fff);
   }
-  .mtd-router-head .title{font-weight:800;font-size:15px;color:var(--hr-text)}
-  .mtd-router-head .host{font-family:var(--hr-mono);font-size:12px;
-    color:var(--hr-text-muted);direction:ltr}
+  .mtd-router-head .title{font-weight:800;font-size:15px;color:var(--hub-text)}
+  .mtd-router-head .host{font-family:var(--hub-mono);font-size:12px;
+    color:var(--hub-text-mute);direction:ltr}
   .mtd-router-head .source-tag{
     margin-inline-start:auto;
     padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;
@@ -59,16 +59,16 @@
     gap:10px;
   }
   .mtd-test{
-    border:1px solid var(--hr-border-soft);
+    border:1px solid var(--hub-border-soft);
     border-radius:8px;padding:10px 12px;background:#fafbff;
   }
-  .mtd-test .lbl{font-size:11px;color:var(--hr-text-muted);
+  .mtd-test .lbl{font-size:11px;color:var(--hub-text-mute);
     font-weight:700;text-transform:uppercase;letter-spacing:.5px}
   .mtd-test .val{font-size:13px;font-weight:700;margin-top:3px}
   .mtd-test .val.ok{color:#15803d}
   .mtd-test .val.bad{color:#b91c1c}
-  .mtd-test .latency{font-family:var(--hr-mono);font-size:11px;
-    color:var(--hr-text-muted);margin-top:2px}
+  .mtd-test .latency{font-family:var(--hub-mono);font-size:11px;
+    color:var(--hub-text-mute);margin-top:2px}
 
   .mtd-verdict{
     margin:0 16px 12px;padding:10px 14px;
@@ -92,7 +92,7 @@
     text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;
   }
   .mtd-fix pre{
-    margin:0;font-family:var(--hr-mono);font-size:12px;
+    margin:0;font-family:var(--hub-mono);font-size:12px;
     line-height:1.6;color:#bfdbfe;direction:ltr;
     white-space:pre-wrap;word-break:break-all;
   }
@@ -106,7 +106,7 @@
 
   .mtd-no-routers{
     background:#fffbeb;border:1px solid #fcd34d;color:#92400e;
-    padding:18px 22px;border-radius:var(--hr-r-lg);
+    padding:18px 22px;border-radius:var(--hub-r-lg);
     font-size:14px;text-align:center;
   }
 </style>
@@ -143,7 +143,7 @@
           onclick="location.reload()">
     <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
   </button>
-  <span style="color:var(--hr-text-muted);font-size:12px;margin-inline-start:10px">
+  <span style="color:var(--hub-text-mute);font-size:12px;margin-inline-start:10px">
     IP الـ VPS كما رآه الخادم: <code style="direction:ltr">{{ vps_ip }}</code>
   </span>
 </div>

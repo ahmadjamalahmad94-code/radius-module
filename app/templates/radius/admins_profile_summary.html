@@ -1,4 +1,8 @@
+{# Admins profile summary — REBUILT on hub-v2. Same backend data
+   (stats, perms_count, admins, roles). #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}ملخّص المدراء{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}ملخّص ملفات المدراء{% endblock %}
@@ -6,85 +10,124 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-.ps-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
-.ps-stat{background:var(--hr-card);border:1px solid var(--hr-border);border-radius:var(--hr-r-lg,8px);padding:14px 16px}
-.ps-stat .lbl{font-size:11.5px;color:var(--hr-text-muted);font-weight:700}
-.ps-stat .val{font-size:22px;font-weight:800;color:var(--hr-text)}
-.ps-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--hr-card);border:1px solid var(--hr-border);border-radius:var(--hr-r-lg,8px);overflow:hidden}
-.ps-table th{background:var(--hr-soft);font-size:12px;font-weight:800;color:var(--hr-text-soft);padding:11px 14px;text-align:start;border-bottom:1px solid var(--hr-border)}
-.ps-table td{padding:11px 14px;font-size:13px;border-top:1px solid var(--hr-border);color:var(--hr-text)}
-.ps-table tr:first-child td{border-top:0}
-.ps-table tr:hover td{background:var(--hr-soft)}
-.ps-user{display:flex;align-items:center;gap:10px}
-.ps-avatar{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--hr-cyan-500),var(--hr-cyan-700))}
-.ps-user .meta{display:flex;flex-direction:column;gap:1px;min-width:0}
-.ps-user .uname{font-weight:800;color:var(--hr-text)}
-.ps-user .fname{font-size:11.5px;color:var(--hr-text-muted)}
-.ps-mono{font-family:monospace;font-size:12px;color:var(--hr-text-soft)}
-.ps-role-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;color:#fff}
-.ps-no-role{color:var(--hr-text-muted);font-size:11px}
+  /* Avatar circle for each admin row */
+  .ps-avatar{
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 800; font-size: 14px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    box-shadow: 0 2px 6px rgba(107,90,237,.25);
+  }
+  .ps-user{ display: flex; align-items: center; gap: 10px; }
+  .ps-user .meta{ display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .ps-user .uname{
+    font-weight: 800; color: var(--hub-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ps-user .fname{
+    font-size: 11.5px; color: var(--hub-text-mute);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Custom role pill (colored per-role) */
+  .ps-role-pill{
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+    color: #fff;
+    border: 1px solid transparent;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ps-stats">
-  <div class="ps-stat"><div class="lbl">إجمالي المدراء</div><div class="val">{{ stats.total }}</div></div>
-  <div class="ps-stat"><div class="lbl">مفعَّلون</div><div class="val">{{ stats.active }}</div></div>
-  <div class="ps-stat"><div class="lbl">لديهم دور</div><div class="val">{{ stats.with_role }}</div></div>
-  <div class="ps-stat"><div class="lbl">سجَّلوا دخولًا</div><div class="val">{{ stats.with_login }}</div></div>
-  <div class="ps-stat"><div class="lbl">صلاحيات النظام</div><div class="val">{{ perms_count }}</div></div>
+
+{{ hub.hero(
+  "ملخّص المدراء",
+  subtitle="جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول",
+  icon="id-card-clip",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.admins_new') + '">
+      <i class="fa-solid fa-user-plus"></i> إضافة مدير
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
+      <i class="fa-solid fa-list"></i> القائمة الكاملة
+    </a>
+  '
+) }}
+
+{# ───── KPIs ─────────────────────────────────────────────── #}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي المدراء", stats.total,     icon="users-gear",       variant="brand") }}
+  {{ hub.kpi("مفعَّلون",        stats.active,    icon="circle-check",     variant="green") }}
+  {{ hub.kpi("لديهم دور",       stats.with_role, icon="key",              variant="blue")  }}
+  {{ hub.kpi("سجّلوا دخولًا",   stats.with_login, icon="right-to-bracket", variant="amber") }}
+  {{ hub.kpi("صلاحيات النظام",  perms_count,     icon="shield-halved",    variant="red")   }}
 </div>
 
+{# ───── Table ───────────────────────────────────────────── #}
 {% if not admins %}
-<div class="empty"><i class="fa-solid fa-user-shield"></i>لا مدراء بعد.</div>
+  {{ hub.empty(
+    "لا مدراء بعد",
+    sub="أضف أول مدير من زرّ «إضافة مدير» أعلى الصفحة.",
+    icon="user-shield"
+  ) }}
 {% else %}
-<table class="ps-table">
-  <thead>
-    <tr>
-      <th>المدير</th>
-      <th>الدور</th>
-      <th>البريد</th>
-      <th>الجوال</th>
-      <th>وسوم</th>
-      <th>الحالة</th>
-      <th>آخر دخول</th>
-      <th>من IP</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for a in admins %}
-    <tr>
-      <td>
-        <div class="ps-user">
-          <span class="ps-avatar">{{ (a.full_name or a.username or '?')[:1]|upper }}</span>
-          <div class="meta">
-            <span class="uname">{{ a.username }}</span>
-            <span class="fname">{{ a.full_name or '—' }}</span>
-          </div>
-        </div>
-      </td>
-      <td>
-        {% set r = roles.get(a.role_id) if a.role_id else None %}
-        {% if r %}
-          <span class="ps-role-pill" style="background:{{ r.color or '#2BAACC' }}">
-            <i class="fa-solid fa-key"></i> {{ r.display_name or r.name }}
-          </span>
-        {% else %}
-          <span class="ps-no-role">— بدون —</span>
-        {% endif %}
-      </td>
-      <td><span class="ps-mono">{{ a.email or '—' }}</span></td>
-      <td><span class="ps-mono">{{ a.mobile or a.phone or '—' }}</span></td>
-      <td><span class="ps-mono">{{ a.tags or '—' }}</span></td>
-      <td>
-        {% if a.enabled %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
-        {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
-      </td>
-      <td><span class="ps-mono">{{ a.last_login_at or '—' }}</span></td>
-      <td><span class="ps-mono">{{ a.last_login_ip or '—' }}</span></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% call hub.section("المدراء", icon="table-list", meta=(admins|length)|string + " مدير", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>المدير</th>
+          <th>الدور</th>
+          <th>البريد</th>
+          <th>الجوال</th>
+          <th>وسوم</th>
+          <th>الحالة</th>
+          <th>آخر دخول</th>
+          <th>من IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in admins %}
+        <tr>
+          <td>
+            <div class="ps-user">
+              <span class="ps-avatar">{{ (a.full_name or a.username or '?')[:1]|upper }}</span>
+              <div class="meta">
+                <span class="uname">{{ a.username }}</span>
+                <span class="fname">{{ a.full_name or '—' }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% set r = roles.get(a.role_id) if a.role_id else None %}
+            {% if r %}
+              <span class="ps-role-pill" style="background:{{ r.color or '#6B5AED' }}">
+                <i class="fa-solid fa-key"></i> {{ r.display_name or r.name }}
+              </span>
+            {% else %}
+              <span class="hub-text-mute">— بدون —</span>
+            {% endif %}
+          </td>
+          <td class="mono small">{{ a.email or '—' }}</td>
+          <td class="mono small">{{ a.mobile or a.phone or '—' }}</td>
+          <td class="mono small">{{ a.tags or '—' }}</td>
+          <td>
+            {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+          </td>
+          <td class="mono small">{{ a.last_login_at or '—' }}</td>
+          <td class="mono small">{{ a.last_login_ip or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
 {% endif %}
+
 {% endblock %}
