@@ -459,24 +459,30 @@
       {% set used_mb = (((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)) / 1048576)|int %}
       {% set remaining_mb = (quota_total_mb - used_mb) if quota_total_mb > 0 else 0 %}
       {% if remaining_mb < 0 %}{% set remaining_mb = 0 %}{% endif %}
-      {# Accounting method — derived from plan fields. If the plan has
-         BOTH a duration AND a data quota, it's combined; otherwise
-         whichever one is set wins; if neither is set we call it
-         unlimited. #}
+      {# Accounting method — two modes per the system's actual model:
+            • 'بالثانية'        — card is activated; timer counts down
+                                   second-by-second against expire_at.
+            • 'من أول اتصال'   — card hasn't been used yet; timer is
+                                   armed and will start the moment the
+                                   first session opens.
+         The subtitle shows the relevant quota anchor (duration or
+         data) so the admin still sees the plan limits at a glance. #}
       {% set has_time = (p.duration_minutes or 0) > 0 %}
       {% set has_data = quota_total_mb > 0 %}
-      {% if has_time and has_data %}
-        {% set accounting_label = 'وقت + كمية' %}
-        {% set accounting_sub   = 'مزدوج' %}
-      {% elif has_time %}
-        {% set accounting_label = 'بالوقت' %}
-        {% set accounting_sub   = (p.duration_minutes|string + ' دقيقة') %}
-      {% elif has_data %}
-        {% set accounting_label = 'بالكمية' %}
-        {% set accounting_sub   = (quota_total_mb|string + ' MB') %}
+      {% if card.started_at %}
+        {% set accounting_label = 'بالثانية' %}
+        {% set accounting_sub   = 'الوقت يجري الآن' %}
       {% else %}
-        {% set accounting_label = 'بدون قيد' %}
-        {% set accounting_sub   = 'مفتوحة' %}
+        {% set accounting_label = 'من أول اتصال' %}
+        {% if has_time and has_data %}
+          {% set accounting_sub = (p.duration_minutes|string + ' دقيقة + ' + quota_total_mb|string + ' MB') %}
+        {% elif has_time %}
+          {% set accounting_sub = (p.duration_minutes|string + ' دقيقة') %}
+        {% elif has_data %}
+          {% set accounting_sub = (quota_total_mb|string + ' MB') %}
+        {% else %}
+          {% set accounting_sub = 'بانتظار التفعيل' %}
+        {% endif %}
       {% endif %}
       <div class="cc-metrics cc-metrics-2rows" data-cc-section="stats">
         {{ metric('الجلسات',           s.sessions_count or 0,
