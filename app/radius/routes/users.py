@@ -17,6 +17,7 @@ from ..core.errors import RadiusError
 from ..core.types import Subscriber
 from ..services.plans import get_plans_service
 from ..services.users import get_users_service
+from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
 
 # ════════════════════════════════════════════════════════════════
@@ -92,6 +93,10 @@ def register_users_routes(bp: Blueprint) -> None:
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
+def _tid() -> int:
+    return int(session.get("tenant_id") or 1)
 
 
 def _form_dto(*, sub_id: int | None = None) -> Subscriber:
@@ -214,7 +219,8 @@ def users_new():
     empty = Subscriber(id=None, username="", password="", status="enabled")
     return render_template("radius/users_form.html",
         sub=_sub_with_meta_for_template(empty),
-        plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES, is_new=True)
+        plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES,
+        is_new=True, speed_rules_panel=None)
 
 
 def users_create():
@@ -226,7 +232,7 @@ def users_create():
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
-            user_types=USER_TYPES, is_new=True), 400
+            user_types=USER_TYPES, is_new=True, speed_rules_panel=None), 400
     flash(f"تم إنشاء المستخدم «{saved.username}».", "success")
     return redirect(url_for("radius.users_list"))
 
@@ -240,10 +246,36 @@ def users_edit(username: str):
     return render_template("radius/users_form.html",
         sub=_sub_with_meta_for_template(sub),
         plans=plans, statuses=ACCOUNT_STATUSES,
-        user_types=USER_TYPES, is_new=False)
+        user_types=USER_TYPES,
+        is_new=False,
+        speed_rules_panel=speed_rules_panel(
+            tenant_id=_tid(),
+            target_type="subscriber",
+            plan_id=sub.plan_id,
+            subscriber_username=username,
+            return_to=request.path,
+            title="قواعد سرعة هذا المشترك",
+            help_text="هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.",
+        ))
 
 
 def users_update(username: str):
+    if request.form.get("_speed_rule_action"):
+        try:
+            sub = get_users_service().get(username)
+            handle_embedded_speed_rule(
+                tenant_id=_tid(),
+                actor=_actor(),
+                form=request.form,
+                target_type="subscriber",
+                plan_id=sub.plan_id,
+                subscriber_username=username,
+            )
+            flash("تم تنفيذ إجراء قواعد السرعة لهذا المشترك.", "success")
+        except RadiusError as e:
+            flash(e.message, "error")
+        return redirect(url_for("radius.users_edit", username=username))
+
     dto = _form_dto()
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
@@ -255,7 +287,7 @@ def users_update(username: str):
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
-            user_types=USER_TYPES, is_new=False), 400
+            user_types=USER_TYPES, is_new=False, speed_rules_panel=None), 400
     flash("تم التحديث.", "success")
     return redirect(url_for("radius.users_list"))
 

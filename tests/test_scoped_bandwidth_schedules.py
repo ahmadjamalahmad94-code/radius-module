@@ -257,5 +257,6 @@ def test_card_batch_edit_web_route_shows_speed_rules_entry():
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert "تعديل باقة كروت" in html
-    assert "السرعات المتغيرة" in html
-    assert "إضافة قواعد سرعة" in html
+    assert "قواعد سرعة هذه الحزمة" in html
+    assert "sr_starts_at_time" in html
+    assert "sr_source_schedule_id" in html

@@ -16,6 +16,7 @@ from ..core.constants import PLAN_TYPES
 from ..core.errors import RadiusError
 from ..core.types import AccessPlan
 from ..services.plans import get_plans_service
+from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
 
 # ════════════════════════════════════════════════════════════════
@@ -114,6 +115,10 @@ def register_plans_routes(bp: Blueprint) -> None:
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
+def _tid() -> int:
+    return int(session.get("tenant_id") or 1)
 
 
 def _i(name: str, default: int = 0) -> int:
@@ -227,7 +232,7 @@ def plans_new():
     empty = AccessPlan(id=None, name="", enabled=True)
     return render_template("radius/plans_form.html",
         plan=_plan_with_meta_for_template(empty),
-        plan_types=PLAN_TYPES, is_new=True)
+        plan_types=PLAN_TYPES, is_new=True, speed_rules_panel=None)
 
 
 def plans_create():
@@ -237,7 +242,8 @@ def plans_create():
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/plans_form.html",
-            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES, is_new=True), 400
+            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
+            is_new=True, speed_rules_panel=None), 400
     flash(f"تم إنشاء العرض «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
 
@@ -249,17 +255,41 @@ def plans_edit(plan_id: int):
         abort(404)
     return render_template("radius/plans_form.html",
         plan=_plan_with_meta_for_template(plan),
-        plan_types=PLAN_TYPES, is_new=False)
+        plan_types=PLAN_TYPES,
+        is_new=False,
+        speed_rules_panel=speed_rules_panel(
+            tenant_id=_tid(),
+            target_type="plan",
+            plan_id=plan_id,
+            return_to=request.path,
+            title="قواعد سرعة هذا العرض",
+            help_text="أضف قواعد سرعة متغيرة لهذا العرض حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة العرض.",
+        ))
 
 
 def plans_update(plan_id: int):
+    if request.form.get("_speed_rule_action"):
+        try:
+            handle_embedded_speed_rule(
+                tenant_id=_tid(),
+                actor=_actor(),
+                form=request.form,
+                target_type="plan",
+                plan_id=plan_id,
+            )
+            flash("تم تنفيذ إجراء قواعد السرعة لهذا العرض.", "success")
+        except RadiusError as e:
+            flash(e.message, "error")
+        return redirect(url_for("radius.plans_edit", plan_id=plan_id))
+
     dto = _form_to_dto(plan_id=plan_id)
     try:
         saved = get_plans_service().update(actor=_actor(), plan=dto)
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/plans_form.html",
-            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES, is_new=False), 400
+            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
+            is_new=False, speed_rules_panel=None), 400
     flash(f"تم تحديث «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
 

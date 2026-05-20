@@ -281,6 +281,96 @@ class OperationsService:
             offset=offset,
         )
 
+    def get_bandwidth_schedule(self, *, tenant_id: int, schedule_id: int) -> dict | None:
+        return operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)
+
+    def update_bandwidth_schedule(self, *, tenant_id: int, actor: str,
+                                  schedule_id: int, data: dict) -> dict:
+        current = operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)
+        if not current:
+            raise RadiusNotFound("schedule not found")
+        normalized = {
+            "name": (data.get("name") or current.get("name") or "قاعدة سرعة").strip(),
+            "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
+            "ends_at_time": _validate_time(data.get("ends_at_time"), "ends_at_time"),
+            "speed_down_kbps": _int_field(data, "speed_down_kbps"),
+            "speed_up_kbps": _int_field(data, "speed_up_kbps"),
+            "cir_down_kbps": _int_field(data, "cir_down_kbps"),
+            "cir_up_kbps": _int_field(data, "cir_up_kbps"),
+            "restore_mode": (data.get("restore_mode") or "profile_default").strip(),
+            "priority": _int_field(data, "priority", minimum=1, default=100),
+            "enabled": bool(data.get("enabled", True)),
+            "notes": (data.get("notes") or "")[:500],
+        }
+        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]):
+            raise RadiusValidationError("speed_down_kbps or speed_up_kbps is required")
+        saved = operations_repo.update_bandwidth_schedule(tenant_id, schedule_id, normalized)
+        self._audit.record(
+            actor=actor,
+            action="bandwidth_schedule.update",
+            target_type="bandwidth_schedule",
+            target_id=str(schedule_id),
+            payload={"name": saved.get("name"), "enabled": saved.get("enabled")},
+        )
+        return saved
+
+    def set_bandwidth_schedule_enabled(self, *, tenant_id: int, actor: str,
+                                       schedule_id: int, enabled: bool) -> dict:
+        saved = operations_repo.set_bandwidth_schedule_enabled(tenant_id, schedule_id, enabled)
+        if not saved:
+            raise RadiusNotFound("schedule not found")
+        self._audit.record(
+            actor=actor,
+            action="bandwidth_schedule.enable" if enabled else "bandwidth_schedule.disable",
+            target_type="bandwidth_schedule",
+            target_id=str(schedule_id),
+            payload={"enabled": enabled},
+        )
+        return saved
+
+    def set_bandwidth_schedules_enabled_for_target(
+        self,
+        *,
+        tenant_id: int,
+        actor: str,
+        target_type: str,
+        enabled: bool,
+        plan_id: int | None = None,
+        subscriber_username: str = "",
+        card_batch_id: int | None = None,
+    ) -> int:
+        count = operations_repo.set_bandwidth_schedules_enabled_for_target(
+            tenant_id,
+            target_type=target_type,
+            enabled=enabled,
+            plan_id=plan_id,
+            subscriber_username=subscriber_username,
+            card_batch_id=card_batch_id,
+        )
+        self._audit.record(
+            actor=actor,
+            action="bandwidth_schedule.bulk_enable" if enabled else "bandwidth_schedule.bulk_disable",
+            target_type=target_type,
+            target_id=str(plan_id or subscriber_username or card_batch_id or ""),
+            payload={"enabled": enabled, "count": count},
+        )
+        return count
+
+    def delete_bandwidth_schedule(self, *, tenant_id: int, actor: str,
+                                  schedule_id: int) -> bool:
+        current = operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)
+        if not current:
+            raise RadiusNotFound("schedule not found")
+        deleted = operations_repo.delete_bandwidth_schedule(tenant_id, schedule_id)
+        self._audit.record(
+            actor=actor,
+            action="bandwidth_schedule.delete",
+            target_type="bandwidth_schedule",
+            target_id=str(schedule_id),
+            payload={"name": current.get("name"), "deleted": deleted},
+        )
+        return deleted
+
     def apply_bandwidth_schedule(self, *, tenant_id: int, schedule_id: int,
                                  actor: str) -> dict:
         schedule = operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)

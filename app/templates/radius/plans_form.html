@@ -461,6 +461,10 @@
     </div>
   </section>
 
+  {% if not is_new %}
+    {% include "radius/_speed_rules_panel.html" %}
+  {% endif %}
+
   <div class="actions-bar">
     <button class="btn btn-primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}

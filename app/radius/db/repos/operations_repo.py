@@ -366,6 +366,83 @@ def get_bandwidth_schedule(tenant_id: int, schedule_id: int) -> Optional[dict]:
     return _hydrate_json_fields(_row(row), "metadata_json")
 
 
+def update_bandwidth_schedule(tenant_id: int, schedule_id: int, data: dict) -> dict:
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE bandwidth_schedules
+            SET name = ?, starts_at_time = ?, ends_at_time = ?,
+                speed_down_kbps = ?, speed_up_kbps = ?,
+                cir_down_kbps = ?, cir_up_kbps = ?,
+                restore_mode = ?, priority = ?, enabled = ?,
+                notes = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                data["name"], data["starts_at_time"], data["ends_at_time"],
+                data.get("speed_down_kbps") or 0, data.get("speed_up_kbps") or 0,
+                data.get("cir_down_kbps") or 0, data.get("cir_up_kbps") or 0,
+                data.get("restore_mode") or "profile_default",
+                int(data.get("priority") or 100),
+                1 if data.get("enabled", True) else 0,
+                data.get("notes") or "", now, tenant_id, schedule_id,
+            ),
+        )
+    return get_bandwidth_schedule(tenant_id, schedule_id) or {}
+
+
+def set_bandwidth_schedule_enabled(tenant_id: int, schedule_id: int, enabled: bool) -> dict:
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE bandwidth_schedules
+            SET enabled = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (1 if enabled else 0, now_iso(), tenant_id, schedule_id),
+        )
+    return get_bandwidth_schedule(tenant_id, schedule_id) or {}
+
+
+def set_bandwidth_schedules_enabled_for_target(
+    tenant_id: int,
+    *,
+    target_type: str,
+    enabled: bool,
+    plan_id: int | None = None,
+    subscriber_username: str = "",
+    card_batch_id: int | None = None,
+) -> int:
+    sql = "UPDATE bandwidth_schedules SET enabled = ?, updated_at = ? WHERE tenant_id = ? AND target_type = ?"
+    vals: list[Any] = [1 if enabled else 0, now_iso(), tenant_id, target_type]
+    if target_type == "subscriber":
+        sql += " AND subscriber_username = ?"
+        vals.append(subscriber_username or "")
+    elif target_type == "card_batch":
+        sql += " AND card_batch_id = ?"
+        vals.append(card_batch_id)
+    else:
+        sql += " AND plan_id = ?"
+        vals.append(plan_id)
+    with transaction() as conn:
+        cur = conn.execute(sql, vals)
+        return int(cur.rowcount or 0)
+
+
+def delete_bandwidth_schedule(tenant_id: int, schedule_id: int) -> bool:
+    with transaction() as conn:
+        conn.execute(
+            "DELETE FROM bandwidth_schedule_logs WHERE tenant_id = ? AND schedule_id = ?",
+            (tenant_id, schedule_id),
+        )
+        cur = conn.execute(
+            "DELETE FROM bandwidth_schedules WHERE tenant_id = ? AND id = ?",
+            (tenant_id, schedule_id),
+        )
+        return bool(cur.rowcount)
+
+
 def _time_minutes(value: str) -> int:
     hour, minute = (value or "00:00").split(":", 1)
     return int(hour) * 60 + int(minute)

@@ -60,6 +60,53 @@ def _payload() -> dict:
     }
 
 
+def _safe_return_url() -> str:
+    value = (request.form.get("return_to") or "").strip()
+    if value.startswith("/") and not value.startswith("//"):
+        return value
+    return url_for("radius.bandwidth_schedules")
+
+
+def _payload_from_saved_schedule(base: dict) -> dict:
+    source_id = request.form.get("source_schedule_id")
+    if not source_id:
+        return base
+    try:
+        source_id_i = int(source_id)
+    except (TypeError, ValueError):
+        return base
+
+    source = get_operations_service().get_bandwidth_schedule(
+        tenant_id=_tid(),
+        schedule_id=source_id_i,
+    )
+    if not source:
+        return base
+
+    copied = {
+        "name": request.form.get("name") or f"نسخة من {source.get('name') or 'جدول محفوظ'}",
+        "target_type": base.get("target_type"),
+        "plan_id": base.get("plan_id"),
+        "subscriber_username": base.get("subscriber_username"),
+        "card_batch_id": base.get("card_batch_id"),
+        "priority": request.form.get("priority") or source.get("priority") or 100,
+        "starts_at_time": source.get("starts_at_time"),
+        "ends_at_time": source.get("ends_at_time"),
+        "speed_down_kbps": source.get("speed_down_kbps") or 0,
+        "speed_up_kbps": source.get("speed_up_kbps") or 0,
+        "cir_down_kbps": source.get("cir_down_kbps") or 0,
+        "cir_up_kbps": source.get("cir_up_kbps") or 0,
+        "restore_mode": source.get("restore_mode") or "profile_default",
+        "enabled": base.get("enabled", True),
+        "notes": request.form.get("notes") or source.get("notes") or "",
+        "metadata": {
+            "copied_from_schedule_id": source_id_i,
+            "copied_from_target_type": source.get("target_type"),
+        },
+    }
+    return copied
+
+
 def _plans() -> list:
     return list(get_plans_service().list(limit=500))
 
@@ -93,15 +140,16 @@ def bandwidth_schedules():
 
 def bandwidth_schedules_create():
     try:
+        payload = _payload_from_saved_schedule(_payload())
         get_operations_service().create_bandwidth_schedule(
             tenant_id=_tid(),
             actor=_actor(),
-            data=_payload(),
+            data=payload,
         )
         flash("تم حفظ جدول السرعة. التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة.", "success")
     except RadiusError as exc:
         flash(exc.message, "error")
-    return redirect(url_for("radius.bandwidth_schedules"))
+    return redirect(_safe_return_url())
 
 
 def bandwidth_schedules_apply(schedule_id: int):

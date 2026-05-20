@@ -91,15 +91,7 @@
       </div>
     </section>
 
-    <section class="cb-edit-card">
-      <h3><i class="fa-solid fa-gauge-high"></i> السرعات المتغيرة</h3>
-      <div class="cb-help" style="margin-bottom:10px">
-        أضف أكثر من قاعدة سرعة لهذه الباقة من صفحة جدولة السرعات. عند وجود سرعة للعرض وسرعة لهذه الباقة، تُطبّق سرعة الباقة أولًا.
-      </div>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bandwidth_schedules') }}">
-        <i class="fa-solid fa-plus"></i> إضافة قواعد سرعة لهذه الباقة
-      </a>
-    </section>
+    {% include "radius/_speed_rules_panel.html" %}
 
     <section class="cb-edit-card">
       <h3><i class="fa-solid fa-dice"></i> إعدادات التوليد</h3>

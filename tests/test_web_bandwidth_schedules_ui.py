@@ -116,3 +116,103 @@ def test_bandwidth_schedules_create_and_apply_dry_run(client):
     applied_html = applied.get_data(as_text=True)
     assert "Night speed window" in applied_html
     assert "applied_to_radius = false" in applied_html
+
+
+def test_card_batch_edit_embeds_speed_rule_creator(client):
+    _web_login(client)
+
+    from app.radius.core.types import CardBatch
+    from app.radius.db.repos import cards_repo, operations_repo
+
+    batch = cards_repo.create_batch(
+        CardBatch(
+            id=None,
+            tenant_id=1,
+            batch_code="",
+            plan_id=1,
+            count=10,
+            package_name="Embedded Speed Batch",
+            created_by="test",
+        )
+    )
+
+    edit_url = f"/admin/radius/cards/batches/{batch.id}/edit"
+    page = client.get(edit_url)
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert "sr_starts_at_time" in html
+    assert "sr_source_schedule_id" in html
+
+    token = _csrf(client, edit_url)
+    created = client.post(
+        edit_url,
+        data={
+            "_csrf_token": token,
+            "_speed_rule_action": "manual",
+            "sr_name": "Batch evening speed",
+            "sr_starts_at_time": "14:00",
+            "sr_ends_at_time": "18:00",
+            "sr_speed_down_kbps": "3000",
+            "sr_speed_up_kbps": "1000",
+            "sr_restore_mode": "profile_default",
+            "sr_priority": "20",
+        },
+        follow_redirects=True,
+    )
+    assert created.status_code == 200
+
+    rules = operations_repo.list_bandwidth_schedules(
+        1,
+        target_type="card_batch",
+        card_batch_id=batch.id,
+        limit=100,
+    )
+    rule = next(r for r in rules if r["name"] == "Batch evening speed")
+
+    updated = client.post(
+        edit_url,
+        data={
+            "_csrf_token": token,
+            "_speed_rule_action": f"update:{rule['id']}",
+            f"sr_edit_name_{rule['id']}": "Batch edited speed",
+            f"sr_edit_starts_at_time_{rule['id']}": "18:00",
+            f"sr_edit_ends_at_time_{rule['id']}": "23:00",
+            f"sr_edit_speed_down_kbps_{rule['id']}": "5000",
+            f"sr_edit_speed_up_kbps_{rule['id']}": "1500",
+            f"sr_edit_restore_mode_{rule['id']}": "keep_current",
+            f"sr_edit_priority_{rule['id']}": "10",
+            f"sr_edit_enabled_{rule['id']}": "1",
+        },
+        follow_redirects=True,
+    )
+    assert updated.status_code == 200
+    edited = operations_repo.get_bandwidth_schedule(1, rule["id"])
+    assert edited["name"] == "Batch edited speed"
+    assert edited["speed_down_kbps"] == 5000
+    assert edited["restore_mode"] == "keep_current"
+
+    toggled = client.post(
+        edit_url,
+        data={"_csrf_token": token, "_speed_rule_action": f"toggle:{rule['id']}"},
+        follow_redirects=True,
+    )
+    assert toggled.status_code == 200
+    disabled = operations_repo.get_bandwidth_schedule(1, rule["id"])
+    assert disabled["enabled"] == 0
+
+    bulk_enabled = client.post(
+        edit_url,
+        data={"_csrf_token": token, "_speed_rule_action": "enable_all"},
+        follow_redirects=True,
+    )
+    assert bulk_enabled.status_code == 200
+    enabled = operations_repo.get_bandwidth_schedule(1, rule["id"])
+    assert enabled["enabled"] == 1
+
+    deleted = client.post(
+        edit_url,
+        data={"_csrf_token": token, "_speed_rule_action": f"delete:{rule['id']}"},
+        follow_redirects=True,
+    )
+    assert deleted.status_code == 200
+    assert operations_repo.get_bandwidth_schedule(1, rule["id"]) is None
