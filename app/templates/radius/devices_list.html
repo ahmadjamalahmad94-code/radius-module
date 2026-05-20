@@ -1,63 +1,110 @@
+{# NAS devices list — REBUILT N8 (hub-v2). Backend data: items (NasDevice list). #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}أجهزة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}أجهزة الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} جهاز)</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.devices_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة جهاز
-  </a>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} جهاز</span>{% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if items %}
-    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
-      <thead><tr>
-        <th>#</th><th>الاسم</th><th>العنوان</th>
-        <th>المُصنِّع</th><th>النوع</th><th>الموقع</th>
-        <th>المنافذ</th><th>آخر فحص</th><th>الحالة</th>
-        <th style="width:160px">إجراءات</th>
-      </tr></thead>
+
+{{ hub.hero(
+  "أجهزة الشبكة (NAS)",
+  subtitle="إدارة موجِّهات الراديوس — العنوان، المنافذ، الحالة، والصلاحيات",
+  icon="server",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.devices_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة جهاز
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _enabled   = items|selectattr('enabled')|list|length %}
+{% set _reachable = items|selectattr('last_check_status','equalto','reachable')|list|length %}
+{% set _down      = items|selectattr('last_check_status','equalto','unreachable')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",    items|length, icon="server",        variant="brand") }}
+  {{ hub.kpi("مفعَّل",       _enabled,     icon="toggle-on",     variant="green") }}
+  {{ hub.kpi("متاح حاليًا",  _reachable,   icon="circle-check",  variant="blue") }}
+  {{ hub.kpi("غير متاح",    _down,        icon="circle-xmark",  variant="red") }}
+</div>
+
+{% call hub.section("قائمة الأجهزة", icon="table-list", meta=items|length|string + " جهاز", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>العنوان</th>
+          <th>المُصنِّع</th>
+          <th>النوع</th>
+          <th>الموقع</th>
+          <th>المنافذ</th>
+          <th>آخر فحص</th>
+          <th>الحالة</th>
+          <th style="width:170px">إجراءات</th>
+        </tr>
+      </thead>
       <tbody>
         {% for d in items %}
         <tr>
-          <td class="num">{{ d.id }}</td>
-          <td><strong>{{ d.name }}</strong>
-            {% if d.shortname %}<div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.shortname }}</div>{% endif %}
+          <td class="num mono">{{ d.id }}</td>
+          <td>
+            <strong>{{ d.name }}</strong>
+            {% if d.shortname %}
+              <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.shortname }}</div>
+            {% endif %}
           </td>
-          <td class="mono">{{ d.address }}
-            {% if d.tags %}<div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.tags }}</div>{% endif %}
+          <td class="mono small">
+            {{ d.address }}
+            {% if d.tags %}
+              <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.tags }}</div>
+            {% endif %}
           </td>
-          <td><span class="pill">{{ d.vendor }}</span></td>
-          <td><span class="pill pill-info">{{ d.nas_type }}</span></td>
+          <td>{{ hub.pill(d.vendor, variant="grey", dot=False) }}</td>
+          <td>{{ hub.pill(d.nas_type, variant="blue", dot=False) }}</td>
           <td>{{ d.location or '—' }}</td>
-          <td class="mono">{{ d.auth_port }}/{{ d.acct_port }}
-            <div style="font-size:11px;color:var(--hr-text-muted)">قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}</div>
+          <td class="mono small">
+            {{ d.auth_port }}/{{ d.acct_port }}
+            <div class="hub-text-mute" style="font-size:11px">
+              قطع الجلسة: {{ d.coa_port }} · API: {{ d.api_port }}
+            </div>
           </td>
           <td>
             {% set st = d.last_check_status or '' %}
-            {% if st == 'reachable' %}<span class="pill pill-success"><i class="fa-solid fa-check"></i> متاح</span>
-            {% elif st == 'timeout' %}<span class="pill pill-warning"><i class="fa-solid fa-hourglass"></i> انتهت المهلة</span>
-            {% elif st == 'unreachable' %}<span class="pill pill-danger"><i class="fa-solid fa-xmark"></i> غير متاح</span>
-            {% else %}<span class="pill" style="color:var(--hr-text-muted)">—</span>{% endif %}
-            {% if d.last_check_at %}<div class="mono" style="font-size:10.5px;color:var(--hr-text-muted)">{{ d.last_check_at.strftime('%H:%M') if d.last_check_at.strftime else d.last_check_at }}</div>{% endif %}
+            {% if st == 'reachable' %}{{ hub.pill("متاح", variant="green") }}
+            {% elif st == 'timeout' %}{{ hub.pill("انتهت المهلة", variant="amber") }}
+            {% elif st == 'unreachable' %}{{ hub.pill("غير متاح", variant="red") }}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            {% if d.last_check_at %}
+              <div class="hub-text-mono hub-text-mute" style="font-size:10.5px;margin-top:3px">
+                {{ d.last_check_at.strftime('%H:%M') if d.last_check_at.strftime else d.last_check_at }}
+              </div>
+            {% endif %}
           </td>
           <td>
-            {% if d.enabled %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
-            {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
+            {% if d.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
           </td>
           <td>
-            <div class="cell-actions">
-              <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline" title="فحص الاتصال">
-                <button class="btn btn-secondary btn-xs" title="فحص اتصال جهاز الشبكة"><i class="fa-solid fa-bolt"></i></button>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="فحص اتصال جهاز الشبكة">
+                  <i class="fa-solid fa-bolt"></i>
+                </button>
               </form>
-              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
-                <i class="fa-solid fa-pen"></i></a>
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
               <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
                     onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                <button class="btn btn-danger btn-xs" title="أرشفة"><i class="fa-solid fa-box-archive"></i></button>
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                  <i class="fa-solid fa-box-archive"></i>
+                </button>
               </form>
             </div>
           </td>
@@ -65,9 +112,14 @@
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-server"></i>لا أجهزة بعد</div>
-    {% endif %}
   </div>
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا أجهزة شبكة بعد",
+  sub="أضف أوّل موجِّه راديوس من زرّ «إضافة جهاز» أعلى الصفحة لتبدأ تشغيل الخدمة.",
+  icon="server"
+) }}
+{% endif %}
+
 {% endblock %}

@@ -1,34 +1,89 @@
+{# IP Pools list — REBUILT N8 (hub-v2). Backend data: items (IpPool list), nas (dict id -> NasDevice). #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}نطاقات عناوين الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}نطاقات عناوين الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.pool_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة نطاق
-  </a>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} نطاق</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr><th>#</th><th>الاسم</th><th>النطاق</th><th>العنوان المحلي</th><th>الراوتر</th><th style="width:110px"></th></tr></thead>
-    <tbody>{% for p in items %}
-    <tr>
-      <td class="num">{{ p.id }}</td>
-      <td><strong>{{ p.pool_name }}</strong></td>
-      <td class="mono">{{ p.range_ip }}</td>
-      <td class="mono">{{ p.local_ip or '—' }}</td>
-      <td>{{ nas[p.router_id].name if p.router_id and nas.get(p.router_id) else '—' }}</td>
-      <td><div class="cell-actions">
-        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.pool_edit', pid=p.id) }}"><i class="fa-solid fa-pen"></i></a>
-        <form method="post" action="{{ url_for('radius.pool_delete', pid=p.id) }}"
-              onsubmit="return confirm('حذف؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
-        </form>
-      </div></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-network-wired"></i>لا توجد نطاقات عناوين بعد.</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "نطاقات عناوين الشبكة",
+  subtitle="إدارة نطاقات IP الموزَّعة من راوترات الراديوس للمشتركين",
+  icon="network-wired",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.pool_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة نطاق
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.devices_list') + '">
+      <i class="fa-solid fa-server"></i> الأجهزة
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _with_router = items|selectattr('router_id')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",     items|length, icon="network-wired", variant="brand") }}
+  {{ hub.kpi("مرتبط بجهاز", _with_router, icon="link",          variant="green") }}
+  {{ hub.kpi("بدون جهاز",   items|length - _with_router, icon="link-slash", variant="amber") }}
+</div>
+
+{% call hub.section("النطاقات", icon="table-list", meta=items|length|string + " نطاق", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>النطاق</th>
+          <th>العنوان المحلي</th>
+          <th>الراوتر</th>
+          <th style="width:120px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in items %}
+        <tr>
+          <td class="num mono">{{ p.id }}</td>
+          <td><strong>{{ p.pool_name }}</strong></td>
+          <td class="mono small">{{ p.range_ip }}</td>
+          <td class="mono small">{{ p.local_ip or '—' }}</td>
+          <td>
+            {% if p.router_id and nas.get(p.router_id) %}
+              {{ hub.pill(nas[p.router_id].name, variant="blue", dot=False) }}
+            {% else %}
+              <span class="hub-text-mute">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.pool_edit', pid=p.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.pool_delete', pid=p.id) }}"
+                    onsubmit="return confirm('حذف؟')" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد نطاقات عناوين بعد",
+  sub="أضف أوّل نطاق IP من زرّ «إضافة نطاق» أعلى الصفحة لتبدأ تخصيص العناوين للمشتركين.",
+  icon="network-wired"
+) }}
+{% endif %}
+
 {% endblock %}
