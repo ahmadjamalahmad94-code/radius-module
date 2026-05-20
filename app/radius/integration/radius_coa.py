@@ -178,6 +178,7 @@ def _parse_attrs(payload: bytes) -> dict[int, bytes]:
 
 def send_disconnect(*, nas_ip: str, nas_secret: str,
                      username: str = "", session_id: str = "",
+                     framed_ip: str = "", calling_station_id: str = "",
                      port: int = 3799, timeout: float = 5.0,
                      identifier: Optional[int] = None) -> CoaResult:
     """
@@ -186,6 +187,11 @@ def send_disconnect(*, nas_ip: str, nas_secret: str,
 
     NAS-IP-Address يُضاف تلقائيًا (عنوان الـ NAS ذاته من منظوره — في معظم
     الأحيان نمرّر له nas_ip كمصدر الجلسة).
+
+    R11.12: نُضيف Framed-IP-Address (8) و Calling-Station-Id (31) عندما تكون
+    متاحة. MikroTik يستخدم هذه الـ attributes كـ session keys للتعرّف على
+    الجلسة (في hotspot specifically، MT يبحث عن client بـ IP/MAC في
+    /ip hotspot active). بدونها يُرجع NAK: "Radius with no ip provided".
     """
     if not username and not session_id:
         raise ValueError("username أو session_id مطلوب")
@@ -202,6 +208,12 @@ def send_disconnect(*, nas_ip: str, nas_secret: str,
     # NAS-IP-Address (يساعد بعض الـ NAS في التعرّف)
     try: attrs += encode_ipv4_attr(ATTR_NAS_IP_ADDRESS, nas_ip)
     except ValueError: pass
+    # R11.12: Framed-IP-Address + Calling-Station-Id (MT session keys)
+    if framed_ip:
+        try: attrs += encode_ipv4_attr(ATTR_FRAMED_IP_ADDRESS, framed_ip)
+        except ValueError: pass
+    if calling_station_id:
+        attrs += encode_string_attr(ATTR_CALLING_STATION_ID, calling_station_id)
 
     packet = _build_packet(code=CODE_DISCONNECT_REQUEST,
                             identifier=ident, attrs=attrs, secret=secret)
@@ -229,11 +241,16 @@ def send_disconnect(*, nas_ip: str, nas_secret: str,
 
 def send_coa(*, nas_ip: str, nas_secret: str,
               username: str, session_id: str = "",
+              framed_ip: str = "", calling_station_id: str = "",
               new_rate_limit: str = "",
               port: int = 3799, timeout: float = 5.0) -> CoaResult:
     """
     CoA-Request (Code=43) — يغيّر attributes لجلسة جارية دون قطع.
     أكثر استخدام: تغيير Mikrotik-Rate-Limit للسرعة الفورية.
+
+    R11.12: نُضيف Framed-IP-Address + Calling-Station-Id (مثل send_disconnect)
+    حتى يستطيع MT أن يعثر على hotspot client بـ IP/MAC وليس فقط بـ User-Name.
+    بدون Framed-IP-Address، MT 7.x يُرجع CoA-NAK: "Radius with no ip provided".
     """
     secret = nas_secret.encode("utf-8")
     ident = _sec.randbits(8)
@@ -244,6 +261,12 @@ def send_coa(*, nas_ip: str, nas_secret: str,
         attrs += encode_string_attr(ATTR_ACCT_SESSION_ID, session_id)
     try: attrs += encode_ipv4_attr(ATTR_NAS_IP_ADDRESS, nas_ip)
     except ValueError: pass
+    # R11.12: session keys التي يتوقّعها MT
+    if framed_ip:
+        try: attrs += encode_ipv4_attr(ATTR_FRAMED_IP_ADDRESS, framed_ip)
+        except ValueError: pass
+    if calling_station_id:
+        attrs += encode_string_attr(ATTR_CALLING_STATION_ID, calling_station_id)
     if new_rate_limit:
         attrs += encode_vendor_attr(VENDOR_MIKROTIK, MT_ATTR_RATE_LIMIT, new_rate_limit)
 
@@ -307,10 +330,15 @@ def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
     الأخير هو جدول FreeRADIUS-القياسي ويبقى فارغًا في configنا
     (mods-enabled/sql: `read_clients = no`). إصلاح هذه الـ lookup
     يجعل زرّ "قطع" في /admin/radius/online يعمل فعلاً.
+
+    R11.12: نُرجع أيضًا `framed_ip` و `calling_station_id` لأن MT يحتاجهما
+    كـ session keys للعثور على hotspot client. radacct.framedipaddress
+    يُخزَّن من Acct-Start (R10.6)، و callingstationid من نفس الـ packet.
     """
     from ..db.connection import db
     row = db().execute("""
-        SELECT acctsessionid, nasipaddress FROM radacct
+        SELECT acctsessionid, nasipaddress, framedipaddress, callingstationid
+          FROM radacct
         WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
         ORDER BY radacctid DESC LIMIT 1
     """, (tenant_id, username)).fetchone()
@@ -325,6 +353,9 @@ def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
         "nas_ip": row["nasipaddress"],
         "nas_secret": secret,
         "session_id": row["acctsessionid"],
+        # R11.12: session keys للـ MT (قد يكونان None لو لم يصل Acct-Start بعد)
+        "framed_ip": row["framedipaddress"] or "",
+        "calling_station_id": row["callingstationid"] or "",
     }
 
 
@@ -340,6 +371,9 @@ def disconnect_user(tenant_id: int, username: str) -> CoaResult:
     return send_disconnect(
         nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
         username=username, session_id=info["session_id"],
+        # R11.12: مرّر session keys لـ MT
+        framed_ip=info.get("framed_ip", ""),
+        calling_station_id=info.get("calling_station_id", ""),
     )
 
 
@@ -373,5 +407,8 @@ def change_user_rate(tenant_id: int, username: str, *,
     return send_coa(
         nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
         username=username, session_id=info["session_id"],
+        # R11.12: session keys للـ MT
+        framed_ip=info.get("framed_ip", ""),
+        calling_station_id=info.get("calling_station_id", ""),
         new_rate_limit=new_rate_limit,
     )

@@ -44,14 +44,16 @@ def app(monkeypatch):
             del sys.modules[k]
 
 
-def _seed_active(conn, *, tenant_id=1, username, nas_ip):
+def _seed_active(conn, *, tenant_id=1, username, nas_ip,
+                  framed_ip="10.20.30.254", calling="9E:49:36:50:27:A4"):
     now = datetime.utcnow().isoformat() + "Z"
     conn.execute("""
         INSERT INTO radacct
             (tenant_id, acctsessionid, acctuniqueid, username,
-             nasipaddress, acctstarttime)
-        VALUES (?,?,?,?,?,?)
-    """, (tenant_id, "s-rate-1", "uniq", username, nas_ip, now))
+             nasipaddress, framedipaddress, callingstationid, acctstarttime)
+        VALUES (?,?,?,?,?,?,?,?)
+    """, (tenant_id, "s-rate-1", "uniq", username, nas_ip,
+           framed_ip, calling, now))
 
 
 def _seed_nas(conn, *, tenant_id=1, name, address, secret):
@@ -84,19 +86,27 @@ def test_change_user_rate_when_no_active_session_returns_clear_message(app):
 
 
 def test_change_user_rate_reaches_send_coa(app, monkeypatch):
+    """R11.12: change_user_rate forwards Framed-IP + Calling-Station-Id
+    (read from radacct) into send_coa, so MT can identify the hotspot
+    session and not reply with 'Radius with no ip provided'."""
     with app.app_context():
         from app.radius.db.connection import transaction
         from app.radius.integration import radius_coa
 
         with transaction() as c:
             _seed_nas(c, name="mt", address="10.0.0.1", secret="topsecret")
-            _seed_active(c, username="ahmad", nas_ip="10.0.0.1")
+            _seed_active(c, username="ahmad", nas_ip="10.0.0.1",
+                         framed_ip="10.20.30.254",
+                         calling="9E:49:36:50:27:A4")
 
         captured = {}
         def _fake_send_coa(*, nas_ip, nas_secret, username, session_id,
+                            framed_ip="", calling_station_id="",
                             new_rate_limit, port=3799, timeout=5.0):
             captured.update(dict(nas_ip=nas_ip, nas_secret=nas_secret,
                                   username=username, session_id=session_id,
+                                  framed_ip=framed_ip,
+                                  calling_station_id=calling_station_id,
                                   new_rate_limit=new_rate_limit))
             return radius_coa.CoaResult(ok=True, code=44, code_name="CoA-ACK",
                                          reply_message="ok")
@@ -109,8 +119,72 @@ def test_change_user_rate_reaches_send_coa(app, monkeypatch):
             "nas_secret": "topsecret",
             "username": "ahmad",
             "session_id": "s-rate-1",
+            "framed_ip": "10.20.30.254",
+            "calling_station_id": "9E:49:36:50:27:A4",
             "new_rate_limit": "5M/5M",
         }
+
+
+def test_find_nas_returns_framed_ip_and_calling_station(app):
+    """R11.12: find_nas_for_session must return framed_ip + calling_station_id
+    from radacct (so disconnect_user and change_user_rate can pass them along
+    to send_disconnect/send_coa)."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.integration.radius_coa import find_nas_for_session
+
+        with transaction() as c:
+            _seed_nas(c, name="mt", address="10.0.0.1", secret="topsecret")
+            _seed_active(c, username="ahmad", nas_ip="10.0.0.1",
+                         framed_ip="10.20.30.254",
+                         calling="9E:49:36:50:27:A4")
+
+        info = find_nas_for_session(1, "ahmad")
+        assert info is not None
+        assert info["framed_ip"] == "10.20.30.254"
+        assert info["calling_station_id"] == "9E:49:36:50:27:A4"
+
+
+def test_send_coa_packet_includes_framed_ip_and_calling_station(monkeypatch):
+    """R11.12 unit: when framed_ip + calling_station_id are passed, the UDP
+    packet bytes must contain Framed-IP-Address (type=8, len=6) and
+    Calling-Station-Id (type=31). Without these MT 7.x rejects with
+    'Radius with no ip provided'."""
+    import socket as _socket
+
+    from app.radius.integration import radius_coa
+
+    sent = {}
+
+    class _FakeSock:
+        def settimeout(self, t): pass
+        def sendto(self, data, addr):
+            sent["data"] = data
+            sent["addr"] = addr
+            # force the recvfrom path to time out so send_coa returns
+            raise _socket.timeout()
+        def recvfrom(self, n): raise _socket.timeout()
+        def close(self): pass
+
+    monkeypatch.setattr(_socket, "socket", lambda *a, **k: _FakeSock())
+
+    radius_coa.send_coa(
+        nas_ip="10.10.0.2", nas_secret="123123",
+        username="ahmad", session_id="80000063",
+        framed_ip="10.20.30.254",
+        calling_station_id="9E:49:36:50:27:A4",
+        new_rate_limit="5M/5M",
+    )
+
+    pkt = sent["data"]
+    # walk attrs after the 20-byte header
+    attrs = radius_coa._parse_attrs(pkt[20:])
+    # Framed-IP-Address (8) → 4 bytes = 10.20.30.254
+    assert 8 in attrs
+    assert attrs[8] == bytes([10, 20, 30, 254])
+    # Calling-Station-Id (31)
+    assert 31 in attrs
+    assert attrs[31] == b"9E:49:36:50:27:A4"
 
 
 # ─────────── _push_coa_rate_if_active ───────────
