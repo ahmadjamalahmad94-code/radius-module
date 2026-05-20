@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
 from ..core.constants import (
-    AUDIT_ACTION_CREATE, AUDIT_ACTION_DELETE, AUDIT_ACTION_DISABLE,
+    AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE, AUDIT_ACTION_DISABLE,
     AUDIT_ACTION_ENABLE, AUDIT_ACTION_RESET_PASSWORD, AUDIT_ACTION_UPDATE,
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
@@ -85,8 +85,9 @@ class UsersService:
 
     def delete(self, *, actor: str, username: str) -> None:
         self._adapter.delete_account(username)
-        self._audit.record(actor=actor, action=AUDIT_ACTION_DELETE,
-                           target_type="user", target_id=username)
+        self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
+                           target_type="user", target_id=username,
+                           payload={"mode": "soft_delete"})
 
 
 def _validate(sub: Subscriber) -> None:

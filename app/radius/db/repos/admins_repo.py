@@ -53,6 +53,9 @@ def _row_to_role(row) -> Role:
         # RM-H6 — safe defaults
         color=_g(row, "color", "#2BAACC") or "#2BAACC",
         metadata=_g(row, "metadata", "{}") or "{}",
+        deleted_at=parse_dt(_g(row, "deleted_at", None)),
+        deleted_by=_g(row, "deleted_by", "") or "",
+        delete_reason=_g(row, "delete_reason", "") or "",
         created_at=parse_dt(row["created_at"]),
     )
 
@@ -74,19 +77,30 @@ def ensure_default_roles() -> None:
             """, (name, _ROLE_DISPLAYS.get(name, name), json_dump(list(perms)), now))
 
 
-def list_roles() -> list[Role]:
-    cur = db().execute("SELECT * FROM roles ORDER BY id")
+def list_roles(*, include_deleted: bool = False) -> list[Role]:
+    sql = "SELECT * FROM roles"
+    if not include_deleted:
+        sql += " WHERE deleted_at IS NULL"
+    sql += " ORDER BY id"
+    cur = db().execute(sql)
     return [_row_to_role(r) for r in cur.fetchall()]
 
 
-def get_role(role_id: int) -> Optional[Role]:
-    cur = db().execute("SELECT * FROM roles WHERE id = ?", (role_id,))
+def get_role(role_id: int, *, include_deleted: bool = False) -> Optional[Role]:
+    sql = "SELECT * FROM roles WHERE id = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    cur = db().execute(sql, (role_id,))
     row = cur.fetchone()
     return _row_to_role(row) if row else None
 
 
-def get_role_by_name(name: str) -> Optional[Role]:
-    cur = db().execute("SELECT * FROM roles WHERE name = ? ORDER BY id LIMIT 1", (name,))
+def get_role_by_name(name: str, *, include_deleted: bool = False) -> Optional[Role]:
+    sql = "SELECT * FROM roles WHERE name = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    sql += " ORDER BY id LIMIT 1"
+    cur = db().execute(sql, (name,))
     row = cur.fetchone()
     return _row_to_role(row) if row else None
 
@@ -114,23 +128,36 @@ def _row_to_admin(row) -> Admin:
         avatar_url=_g(row, "avatar_url", "") or "",
         tags=_g(row, "tags", "") or "",
         metadata=_g(row, "metadata", "{}") or "{}",
+        deleted_at=parse_dt(_g(row, "deleted_at", None)),
+        deleted_by=_g(row, "deleted_by", "") or "",
+        delete_reason=_g(row, "delete_reason", "") or "",
         created_at=parse_dt(row["created_at"]), updated_at=parse_dt(row["updated_at"]),
     )
 
 
-def list_admins() -> list[Admin]:
-    cur = db().execute("SELECT * FROM admins ORDER BY id")
+def list_admins(*, include_deleted: bool = False) -> list[Admin]:
+    sql = "SELECT * FROM admins"
+    if not include_deleted:
+        sql += " WHERE deleted_at IS NULL"
+    sql += " ORDER BY id"
+    cur = db().execute(sql)
     return [_row_to_admin(r) for r in cur.fetchall()]
 
 
-def get_admin(admin_id: int) -> Optional[Admin]:
-    cur = db().execute("SELECT * FROM admins WHERE id = ?", (admin_id,))
+def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin]:
+    sql = "SELECT * FROM admins WHERE id = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    cur = db().execute(sql, (admin_id,))
     row = cur.fetchone()
     return _row_to_admin(row) if row else None
 
 
-def get_by_username(username: str) -> Optional[Admin]:
-    cur = db().execute("SELECT * FROM admins WHERE username = ?", (username,))
+def get_by_username(username: str, *, include_deleted: bool = False) -> Optional[Admin]:
+    sql = "SELECT * FROM admins WHERE username = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    cur = db().execute(sql, (username,))
     row = cur.fetchone()
     return _row_to_admin(row) if row else None
 
@@ -184,8 +211,31 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
 
 
 def delete_admin(admin_id: int) -> None:
+    archive_admin(admin_id)
+
+
+def archive_admin(admin_id: int, *, actor: str = "",
+                  reason: str = "") -> bool:
     with transaction() as conn:
-        conn.execute("DELETE FROM admins WHERE id = ?", (admin_id,))
+        cur = conn.execute("""
+            UPDATE admins
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+                enabled = 0, updated_at = ?
+            WHERE id = ? AND deleted_at IS NULL
+        """, (now_iso(), actor or "system", (reason or "")[:300],
+              now_iso(), admin_id))
+        return cur.rowcount > 0
+
+
+def restore_admin(admin_id: int, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE admins
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '',
+                enabled = 0, updated_at = ?
+            WHERE id = ? AND deleted_at IS NOT NULL
+        """, (now_iso(), admin_id))
+        return cur.rowcount > 0
 
 
 def authenticate(username: str, password: str, *, ip: str = "") -> Optional[Admin]:
@@ -239,7 +289,11 @@ def update_role(role_id: int, **changes) -> Optional[Role]:
 def delete_role(role_id: int) -> None:
     # roles المُستخدمة من admins تُترك (ON DELETE SET NULL)
     with transaction() as conn:
-        conn.execute("DELETE FROM roles WHERE id = ? AND is_system = 0", (role_id,))
+        conn.execute(
+            "UPDATE roles SET deleted_at = ?, deleted_by = ?, delete_reason = ? "
+            "WHERE id = ? AND is_system = 0 AND deleted_at IS NULL",
+            (now_iso(), "system", "", role_id),
+        )
 
 
 def admin_permissions(admin: Admin) -> tuple[str, ...]:
@@ -247,3 +301,28 @@ def admin_permissions(admin: Admin) -> tuple[str, ...]:
         return ()
     r = get_role(admin.role_id)
     return r.permissions if r else ()
+
+
+def archive_role(role_id: int, *, actor: str = "",
+                 reason: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE roles
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?
+            WHERE id = ? AND is_system = 0 AND deleted_at IS NULL
+        """, (now_iso(), actor or "system", (reason or "")[:300], role_id))
+        return cur.rowcount > 0
+
+
+def restore_role(role_id: int, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE roles
+            SET deleted_at = NULL, deleted_by = '', delete_reason = ''
+            WHERE id = ? AND is_system = 0 AND deleted_at IS NOT NULL
+        """, (role_id,))
+        return cur.rowcount > 0
+
+
+def delete_role(role_id: int) -> None:
+    archive_role(role_id)

@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from ...core.types import AccessPlan
 from ..connection import db, transaction
-from ..helpers import json_dump, json_load, now_iso, parse_dt
+from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
 
 
 def _g(row: Any, key: str, default):
@@ -43,6 +43,7 @@ _COLS = (
     "service_scope","loan_enabled","max_loan_minutes","speed_override_allowed",
     "offer_hours_from","offer_hours_to",
     "metadata",
+    "deleted_at","deleted_by","delete_reason",
 )
 
 
@@ -109,22 +110,37 @@ def _row(r) -> AccessPlan:
         offer_hours_from=_g(r,"offer_hours_from","") or "",
         offer_hours_to=_g(r,"offer_hours_to","") or "",
         metadata=_g(r,"metadata","{}") or "{}",
+        deleted_at=parse_dt(_g(r, "deleted_at", None)),
+        deleted_by=_g(r, "deleted_by", "") or "",
+        delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
     )
 
 
-def list_plans(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[AccessPlan]:
+def list_plans(tenant_id: int, *, limit: int = 200, offset: int = 0,
+               include_deleted: bool = False) -> list[AccessPlan]:
+    sql = "SELECT * FROM access_plans WHERE tenant_id = ?"
+    vals: list = [tenant_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    sql += " ORDER BY priority, id LIMIT ? OFFSET ?"
+    vals.extend([limit, offset])
     cur = db().execute(
-        "SELECT * FROM access_plans WHERE tenant_id = ? ORDER BY priority, id LIMIT ? OFFSET ?",
-        (tenant_id, limit, offset)
+        sql,
+        vals
     )
     return [_row(r) for r in cur.fetchall()]
 
 
-def get_plan(tenant_id: int, plan_id: int) -> Optional[AccessPlan]:
+def get_plan(tenant_id: int, plan_id: int,
+             include_deleted: bool = False) -> Optional[AccessPlan]:
+    sql = "SELECT * FROM access_plans WHERE tenant_id = ? AND id = ?"
+    vals: list = [tenant_id, plan_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
     cur = db().execute(
-        "SELECT * FROM access_plans WHERE tenant_id = ? AND id = ?",
-        (tenant_id, plan_id)
+        sql,
+        vals
     )
     row = cur.fetchone()
     return _row(row) if row else None
@@ -157,6 +173,7 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         p.service_scope, int(p.loan_enabled), p.max_loan_minutes, int(p.speed_override_allowed),
         p.offer_hours_from, p.offer_hours_to,
         p.metadata or "{}",
+        dt_to_iso(p.deleted_at), p.deleted_by, p.delete_reason,
     )
     now = now_iso()
     with transaction() as conn:
@@ -179,5 +196,28 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
 
 
 def delete_plan(tenant_id: int, plan_id: int) -> None:
+    archive_plan(tenant_id, plan_id)
+
+
+def archive_plan(tenant_id: int, plan_id: int, *, actor: str = "",
+                 reason: str = "") -> bool:
     with transaction() as conn:
-        conn.execute("DELETE FROM access_plans WHERE tenant_id = ? AND id = ?", (tenant_id, plan_id))
+        cur = conn.execute("""
+            UPDATE access_plans
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+                enabled = 0, updated_at = ?
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+        """, (now_iso(), actor or "system", (reason or "")[:300],
+              now_iso(), tenant_id, plan_id))
+        return cur.rowcount > 0
+
+
+def restore_plan(tenant_id: int, plan_id: int, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE access_plans
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '',
+                enabled = 0, updated_at = ?
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
+        """, (now_iso(), tenant_id, plan_id))
+        return cur.rowcount > 0

@@ -201,8 +201,8 @@ def admins_delete(admin_id: int):
         return fail("forbidden",
                     "لا يمكن حذف super_admin عبر الـ API", status=403)
     admins_repo.delete_admin(admin_id)
-    _audit("delete", "admin", str(admin_id), {"username": existing.username})
-    return ok({"deleted": admin_id})
+    _audit("archive", "admin", str(admin_id), {"username": existing.username})
+    return ok({"deleted": admin_id, "archived": True})
 
 
 # ─────────────── roles ───────────────
@@ -295,8 +295,8 @@ def roles_delete(role_id: int):
         return fail("forbidden",
                     "لا يمكن حذف دور نظامي", status=403)
     admins_repo.delete_role(role_id)
-    _audit("delete", "role", str(role_id), {"name": existing.name})
-    return ok({"deleted": role_id})
+    _audit("archive", "role", str(role_id), {"name": existing.name})
+    return ok({"deleted": role_id, "archived": True})
 
 
 # ─────────────── permissions catalog ───────────────

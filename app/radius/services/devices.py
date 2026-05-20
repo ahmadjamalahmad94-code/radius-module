@@ -10,8 +10,8 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 from ..core.constants import (
+    AUDIT_ACTION_ARCHIVE,
     AUDIT_ACTION_CREATE,
-    AUDIT_ACTION_DELETE,
     AUDIT_ACTION_UPDATE,
     NAS_VENDORS,
 )
@@ -62,9 +62,10 @@ class NasDevicesService:
         self._adapter.delete_nas(nas_id)
         self._audit.record(
             actor=actor,
-            action=AUDIT_ACTION_DELETE,
+            action=AUDIT_ACTION_ARCHIVE,
             target_type="nas",
             target_id=str(nas_id),
+            payload={"mode": "soft_delete"},
         )
 
 

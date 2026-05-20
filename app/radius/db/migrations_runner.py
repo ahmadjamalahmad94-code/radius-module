@@ -12,6 +12,14 @@ from .connection import db
 
 _LOG = logging.getLogger(__name__)
 _MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+_MIGRATION_ALIASES = {
+    # The uncommitted S2/S5 migration was split before commit. Some local dev
+    # DBs may have already recorded the mixed filename during verification.
+    "020_core_soft_delete_and_reporting.sql": (
+        "020_core_soft_delete.sql",
+        "021_financial_report_snapshots.sql",
+    ),
+}
 
 
 def _ensure_table() -> None:
@@ -27,7 +35,11 @@ def _ensure_table() -> None:
 def _applied() -> set[str]:
     _ensure_table()
     cur = db().execute("SELECT name FROM _migrations")
-    return {r["name"] for r in cur.fetchall()}
+    applied = {r["name"] for r in cur.fetchall()}
+    for legacy_name, replacement_names in _MIGRATION_ALIASES.items():
+        if legacy_name in applied:
+            applied.update(replacement_names)
+    return applied
 
 
 def list_migrations() -> list[Path]:

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from ..core.constants import AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, AUDIT_ACTION_DELETE, PLAN_TYPES
+from ..core.constants import AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, PLAN_TYPES
 from ..core.errors import RadiusValidationError
 from ..core.types import AccessPlan
 from ..integration.adapter import RadiusAdapter
@@ -42,8 +42,9 @@ class PlansService:
 
     def delete(self, *, actor: str, plan_id: int) -> None:
         self._adapter.delete_profile(plan_id)
-        self._audit.record(actor=actor, action=AUDIT_ACTION_DELETE,
-                           target_type="plan", target_id=str(plan_id))
+        self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
+                           target_type="plan", target_id=str(plan_id),
+                           payload={"mode": "soft_delete"})
 
 
 def _validate(plan: AccessPlan) -> None:

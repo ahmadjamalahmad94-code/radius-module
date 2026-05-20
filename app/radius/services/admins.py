@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 
 from ..core.constants import (
-    ALL_PERMISSIONS, AUDIT_ACTION_CREATE, AUDIT_ACTION_DELETE,
+    ALL_PERMISSIONS, AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE,
     AUDIT_ACTION_UPDATE,
 )
 from ..core.errors import RadiusValidationError
@@ -47,8 +47,9 @@ class AdminsService:
 
     def delete_admin(self, *, actor: str, admin_id: int) -> None:
         self._store.delete_admin(admin_id)
-        self._audit.record(actor=actor, action=AUDIT_ACTION_DELETE,
-                           target_type="admin", target_id=str(admin_id))
+        self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
+                           target_type="admin", target_id=str(admin_id),
+                           payload={"mode": "soft_delete"})
 
     # ─── roles + permissions ───
     def list_roles(self) -> list[Role]:

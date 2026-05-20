@@ -305,4 +305,4 @@ def profiles_delete(profile_id: int):
         _svc().delete(actor=_actor(), plan_id=profile_id)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
-    return ok({"deleted": profile_id})
+    return ok({"deleted": profile_id, "archived": True})

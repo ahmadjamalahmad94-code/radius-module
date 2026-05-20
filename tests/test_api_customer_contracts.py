@@ -33,16 +33,12 @@ def test_contract_endpoint_requires_auth(client):
     assert res.get_json()["error"]["code"] == "unauthorized"
 
 
-def test_contract_not_implemented_response_shape(client):
+def test_recycle_bin_restore_returns_real_not_found_shape(client):
     res = client.post("/api/v1/recycle-bin/subscribers/1/restore", json={}, headers=AUTH)
-    assert res.status_code == 501
+    assert res.status_code == 404
     body = res.get_json()
     assert body["ok"] is False
-    assert body["error"]["code"] == "not_implemented"
-    assert body["error"]["details"]["domain"] == "recycle_bin"
-    assert body["error"]["details"]["operation"] == "restore"
-    assert body["meta"]["domain"] == "recycle_bin"
-    assert body["meta"]["status"] == "planned"
+    assert body["error"]["code"] == "not_found"
 
 
 def test_contract_routes_are_registered(client):

@@ -83,18 +83,30 @@ def _card_row(r) -> Card:
 
 # ─────────────── batches ───────────────
 
-def list_batches(tenant_id: int, *, limit: int = 100, offset: int = 0) -> list[CardBatch]:
+def list_batches(tenant_id: int, *, limit: int = 100, offset: int = 0,
+                 include_deleted: bool = False) -> list[CardBatch]:
+    sql = "SELECT * FROM card_batches WHERE tenant_id = ?"
+    vals: list = [tenant_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    vals.extend([limit, offset])
     cur = db().execute(
-        "SELECT * FROM card_batches WHERE tenant_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-        (tenant_id, limit, offset)
+        sql,
+        vals
     )
     return [_batch_row(r) for r in cur.fetchall()]
 
 
-def get_batch(tenant_id: int, batch_id: int) -> Optional[CardBatch]:
+def get_batch(tenant_id: int, batch_id: int,
+              include_deleted: bool = True) -> Optional[CardBatch]:
+    sql = "SELECT * FROM card_batches WHERE tenant_id = ? AND id = ?"
+    vals: list = [tenant_id, batch_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
     cur = db().execute(
-        "SELECT * FROM card_batches WHERE tenant_id = ? AND id = ?",
-        (tenant_id, batch_id)
+        sql,
+        vals
     )
     row = cur.fetchone()
     return _batch_row(row) if row else None
@@ -167,9 +179,19 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
         return cur.rowcount > 0
 
 
+def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE card_batches
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '', status = 'active'
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
+        """, (tenant_id, batch_id))
+        return cur.rowcount > 0
+
+
 def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
     """Return read-only operational counts for a card batch."""
-    batch = get_batch(tenant_id, batch_id)
+    batch = get_batch(tenant_id, batch_id, include_deleted=True)
     if not batch:
         return None
 
@@ -369,7 +391,10 @@ def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
 def stats(tenant_id: int) -> dict:
     total = db().execute("SELECT COUNT(*) AS c FROM cards WHERE tenant_id = ?", (tenant_id,)).fetchone()["c"]
     used = db().execute("SELECT COUNT(*) AS c FROM cards WHERE tenant_id = ? AND used = 1", (tenant_id,)).fetchone()["c"]
-    batches = db().execute("SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ?", (tenant_id,)).fetchone()["c"]
+    batches = db().execute(
+        "SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ? AND deleted_at IS NULL",
+        (tenant_id,),
+    ).fetchone()["c"]
     return {"total_cards": total, "used_cards": used, "total_batches": batches}
 
 

@@ -39,6 +39,7 @@ _COLS = (
     # ── usage ──
     "used_seconds","used_bytes_in","used_bytes_out","online_count",
     "beneficiary_ref","card_batch_id","remark","created_by","updated_by",
+    "deleted_at","deleted_by","delete_reason",
 )
 
 
@@ -100,15 +101,21 @@ def _row(r) -> Subscriber:
         card_batch_id=r["card_batch_id"],
         remark=r["remark"] or "",
         created_by=r["created_by"] or 0, updated_by=r["updated_by"] or 0,
+        deleted_at=parse_dt(_g(r, "deleted_at", None)),
+        deleted_by=_g(r, "deleted_by", "") or "",
+        delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
     )
 
 
 def list_subscribers(tenant_id: int, *,
                       status: Optional[str] = None,
-                      limit: int = 500, offset: int = 0) -> list[Subscriber]:
+                      limit: int = 500, offset: int = 0,
+                      include_deleted: bool = False) -> list[Subscriber]:
     sql = "SELECT * FROM subscribers WHERE tenant_id = ?"
     vals: list = [tenant_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
     if status:
         sql += " AND status = ?"
         vals.append(status)
@@ -118,9 +125,13 @@ def list_subscribers(tenant_id: int, *,
     return [_row(r) for r in cur.fetchall()]
 
 
-def get_subscriber(tenant_id: int, username: str) -> Optional[Subscriber]:
+def get_subscriber(tenant_id: int, username: str, *,
+                   include_deleted: bool = False) -> Optional[Subscriber]:
+    sql = "SELECT * FROM subscribers WHERE tenant_id = ? AND username = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
     cur = db().execute(
-        "SELECT * FROM subscribers WHERE tenant_id = ? AND username = ?",
+        sql,
         (tenant_id, username)
     )
     row = cur.fetchone()
@@ -149,6 +160,7 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         s.working_days, s.device_count, s.allowed_macs, s.metadata or "{}",
         s.used_seconds, s.used_bytes_in, s.used_bytes_out, s.online_count,
         s.beneficiary_ref, s.card_batch_id, s.remark, s.created_by, s.updated_by,
+        dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
     )
     now = now_iso()
     with transaction() as conn:
@@ -174,10 +186,38 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
     return get_subscriber(s.tenant_id, s.username)
 
 
-def delete_subscriber(tenant_id: int, username: str) -> None:
+def archive_subscriber(tenant_id: int, username: str, *, actor: str = "",
+                       reason: str = "") -> bool:
     with transaction() as conn:
-        conn.execute("DELETE FROM subscribers WHERE tenant_id = ? AND username = ?",
-                     (tenant_id, username))
+        cur = conn.execute(
+            """
+            UPDATE subscribers
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+                status = 'disabled', updated_at = ?
+            WHERE tenant_id = ? AND username = ? AND deleted_at IS NULL
+            """,
+            (now_iso(), actor or "system", (reason or "")[:300],
+             now_iso(), tenant_id, username),
+        )
+        return cur.rowcount > 0
+
+
+def restore_subscriber(tenant_id: int, username: str, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE subscribers
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '',
+                status = 'disabled', updated_at = ?
+            WHERE tenant_id = ? AND username = ? AND deleted_at IS NOT NULL
+            """,
+            (now_iso(), tenant_id, username),
+        )
+        return cur.rowcount > 0
+
+
+def delete_subscriber(tenant_id: int, username: str) -> None:
+    archive_subscriber(tenant_id, username)
 
 
 def reset_password(tenant_id: int, username: str, new_password: str) -> None:
@@ -189,7 +229,7 @@ def reset_password(tenant_id: int, username: str, new_password: str) -> None:
 
 
 def count_subscribers(tenant_id: int, *, status: Optional[str] = None) -> int:
-    sql = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ?"
+    sql = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
     vals: list = [tenant_id]
     if status:
         sql += " AND status = ?"

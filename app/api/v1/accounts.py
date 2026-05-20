@@ -299,7 +299,7 @@ def accounts_delete(username: str):
         _svc().delete(actor=_actor(), username=username)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
-    return ok({"deleted": username})
+    return ok({"deleted": username, "archived": True})
 
 
 def accounts_reset_pw(username: str):

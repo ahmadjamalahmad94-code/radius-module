@@ -199,7 +199,7 @@ def nas_delete(nas_id: int):
         _svc().delete(actor=_actor(), nas_id=nas_id)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
-    return ok({"deleted": nas_id})
+    return ok({"deleted": nas_id, "archived": True})
 
 
 def nas_test(nas_id: int):

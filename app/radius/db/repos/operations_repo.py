@@ -146,6 +146,7 @@ def list_assigned_batches(tenant_id: int, distributor_id: int, *,
         JOIN card_batches b
           ON b.tenant_id = a.tenant_id AND b.id = a.batch_id
         WHERE a.tenant_id = ? AND a.distributor_id = ? AND a.status = 'assigned'
+          AND b.deleted_at IS NULL
         ORDER BY a.assigned_at DESC, b.id DESC
         LIMIT ? OFFSET ?
         """,

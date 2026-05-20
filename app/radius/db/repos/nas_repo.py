@@ -5,7 +5,7 @@ from typing import Any, Optional, Sequence
 
 from ...core.types import NasDevice
 from ..connection import db, transaction
-from ..helpers import now_iso, parse_dt
+from ..helpers import dt_to_iso, now_iso, parse_dt
 
 
 def _g(row: Any, key: str, default):
@@ -36,22 +36,37 @@ def _row(r) -> NasDevice:
         ssh_port=_g(r, "ssh_port", 22) or 22,
         tags=_g(r, "tags", "") or "",
         metadata=_g(r, "metadata", "{}") or "{}",
+        deleted_at=parse_dt(_g(r, "deleted_at", None)),
+        deleted_by=_g(r, "deleted_by", "") or "",
+        delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
     )
 
 
-def list_nas(tenant_id: int, *, limit: int = 100, offset: int = 0) -> list[NasDevice]:
+def list_nas(tenant_id: int, *, limit: int = 100, offset: int = 0,
+             include_deleted: bool = False) -> list[NasDevice]:
+    sql = "SELECT * FROM nas_devices WHERE tenant_id = ?"
+    vals: list = [tenant_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    sql += " ORDER BY id LIMIT ? OFFSET ?"
+    vals.extend([limit, offset])
     cur = db().execute(
-        "SELECT * FROM nas_devices WHERE tenant_id = ? ORDER BY id LIMIT ? OFFSET ?",
-        (tenant_id, limit, offset)
+        sql,
+        vals
     )
     return [_row(r) for r in cur.fetchall()]
 
 
-def get_nas(tenant_id: int, nas_id: int) -> Optional[NasDevice]:
+def get_nas(tenant_id: int, nas_id: int,
+            include_deleted: bool = False) -> Optional[NasDevice]:
+    sql = "SELECT * FROM nas_devices WHERE tenant_id = ? AND id = ?"
+    vals: list = [tenant_id, nas_id]
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
     cur = db().execute(
-        "SELECT * FROM nas_devices WHERE tenant_id = ? AND id = ?",
-        (tenant_id, nas_id)
+        sql,
+        vals
     )
     row = cur.fetchone()
     return _row(row) if row else None
@@ -67,14 +82,16 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                     api_port, api_user, api_password, api_use_tls,
                     location, coordinates, monitoring_enabled, description, enabled,
                     require_message_authenticator, ssh_port, tags, metadata,
+                    deleted_at, deleted_by, delete_reason,
                     created_at, updated_at)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (d.tenant_id, d.name, d.shortname, d.address, d.secret, d.vendor, d.nas_type,
                   d.ports, d.snmp_community, d.auth_port, d.acct_port, d.coa_port,
                   d.api_port, d.api_user, d.api_password, int(d.api_use_tls),
                   d.location, d.coordinates, int(d.monitoring_enabled),
                   d.description, int(d.enabled),
                   int(d.require_message_authenticator), d.ssh_port, d.tags, d.metadata or "{}",
+                  dt_to_iso(d.deleted_at), d.deleted_by, d.delete_reason,
                   now, now))
             new_id = cur.lastrowid
         else:
@@ -85,6 +102,7 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                     api_port=?, api_user=?, api_password=?, api_use_tls=?,
                     location=?, coordinates=?, monitoring_enabled=?, description=?, enabled=?,
                     require_message_authenticator=?, ssh_port=?, tags=?, metadata=?,
+                    deleted_at=?, deleted_by=?, delete_reason=?,
                     updated_at=?
                 WHERE tenant_id = ? AND id = ?
             """, (d.name, d.shortname, d.address, d.secret, d.vendor, d.nas_type,
@@ -93,6 +111,7 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                   d.location, d.coordinates, int(d.monitoring_enabled),
                   d.description, int(d.enabled),
                   int(d.require_message_authenticator), d.ssh_port, d.tags, d.metadata or "{}",
+                  dt_to_iso(d.deleted_at), d.deleted_by, d.delete_reason,
                   now, d.tenant_id, d.id))
             new_id = d.id
     return get_nas(d.tenant_id, new_id)
@@ -108,5 +127,28 @@ def record_check(tenant_id: int, nas_id: int, *, status: str) -> None:
 
 
 def delete_nas(tenant_id: int, nas_id: int) -> None:
+    archive_nas(tenant_id, nas_id)
+
+
+def archive_nas(tenant_id: int, nas_id: int, *, actor: str = "",
+                reason: str = "") -> bool:
     with transaction() as conn:
-        conn.execute("DELETE FROM nas_devices WHERE tenant_id = ? AND id = ?", (tenant_id, nas_id))
+        cur = conn.execute("""
+            UPDATE nas_devices
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+                enabled = 0, monitoring_enabled = 0, updated_at = ?
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+        """, (now_iso(), actor or "system", (reason or "")[:300],
+              now_iso(), tenant_id, nas_id))
+        return cur.rowcount > 0
+
+
+def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE nas_devices
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '',
+                enabled = 0, monitoring_enabled = 0, updated_at = ?
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
+        """, (now_iso(), tenant_id, nas_id))
+        return cur.rowcount > 0

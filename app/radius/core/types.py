@@ -43,6 +43,9 @@ class NasDevice:
     ssh_port: int = 22
     tags: str = ""                           # CSV
     metadata: str = "{}"
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -147,6 +150,9 @@ class AccessPlan:
     offer_hours_to: str = ""
     # metadata JSON ـ مُجمَّعة {general, subscription, advanced, mikrotik, notifications}
     metadata: str = "{}"
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -241,6 +247,9 @@ class Subscriber:
     remark: str = ""
     created_by: int = 0
     updated_by: int = 0
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -397,6 +406,9 @@ class Admin:
     avatar_url: str = ""
     tags: str = ""                           # CSV
     metadata: str = "{}"
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -413,6 +425,9 @@ class Role:
     # ── RM-H6: visual ──
     color: str = "#2BAACC"
     metadata: str = "{}"
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
     created_at: Optional[datetime] = None
 
 

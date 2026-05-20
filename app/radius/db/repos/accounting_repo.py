@@ -15,12 +15,12 @@ def resolve_subscriber(tenant_id: int, *, subscriber_id: int | None = None,
                        username: str = "") -> Optional[dict]:
     if subscriber_id:
         row = db().execute(
-            "SELECT * FROM subscribers WHERE tenant_id = ? AND id = ?",
+            "SELECT * FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
             (tenant_id, subscriber_id),
         ).fetchone()
     else:
         row = db().execute(
-            "SELECT * FROM subscribers WHERE tenant_id = ? AND username = ?",
+            "SELECT * FROM subscribers WHERE tenant_id = ? AND username = ? AND deleted_at IS NULL",
             (tenant_id, username),
         ).fetchone()
     return row_to_dict(row) if row else None
@@ -30,7 +30,7 @@ def resolve_plan(tenant_id: int, plan_id: int | None) -> Optional[dict]:
     if not plan_id:
         return None
     row = db().execute(
-        "SELECT * FROM access_plans WHERE tenant_id = ? AND id = ?",
+        "SELECT * FROM access_plans WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
         (tenant_id, plan_id),
     ).fetchone()
     return row_to_dict(row) if row else None
