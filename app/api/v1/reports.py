@@ -17,6 +17,10 @@ def register(bp: Blueprint) -> None:
         ("sales/yearly", "yearly"),
         ("payments", "subscriber_payments"),
         ("loans", "loans"),
+        ("activations", "activations"),
+        ("card-sales", "card_sales"),
+        ("profit-loss", "profit_loss"),
+        ("distributor-debts", "distributor_debts"),
     ):
         bp.add_url_rule(
             f"/reports/{slug}",
@@ -24,32 +28,6 @@ def register(bp: Blueprint) -> None:
             require_api_token(_report_view(report_type)),
             methods=["GET"],
         )
-
-    bp.add_url_rule(
-        "/reports/activations",
-        "reports_activations",
-        require_api_token(_not_ready("activations")),
-        methods=["GET"],
-    )
-    bp.add_url_rule(
-        "/reports/card-sales",
-        "reports_card_sales",
-        require_api_token(_not_ready("card_sales")),
-        methods=["GET"],
-    )
-    bp.add_url_rule(
-        "/reports/profit-loss",
-        "reports_profit_loss",
-        require_api_token(_not_ready("profit_loss")),
-        methods=["GET"],
-    )
-    bp.add_url_rule(
-        "/reports/distributor-debts",
-        "reports_distributor_debts",
-        require_api_token(_not_ready("distributor_debts")),
-        methods=["GET"],
-    )
-
 
 def _report_view(report_type: str):
     def _view():
@@ -60,17 +38,4 @@ def _report_view(report_type: str):
         return ok({"items": items, "count": len(items), "report_type": report_type})
 
     _view.__name__ = f"reports_{report_type}_view"
-    return _view
-
-
-def _not_ready(report_type: str):
-    def _view():
-        return fail(
-            "not_implemented",
-            f"{report_type} requires distributor/accounting expansion.",
-            status=501,
-            details={"report_type": report_type},
-        )
-
-    _view.__name__ = f"reports_{report_type}_not_ready"
     return _view

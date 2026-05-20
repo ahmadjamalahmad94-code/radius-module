@@ -215,11 +215,8 @@ def test_foundational_reports_aggregate_real_records(client):
         "/api/v1/reports/sales/yearly",
         "/api/v1/reports/payments",
         "/api/v1/reports/loans",
+        "/api/v1/reports/profit-loss",
     ):
         res = client.get(path, headers=AUTH)
         assert res.status_code == 200, (path, res.get_json())
         assert res.get_json()["data"]["count"] >= 1
-
-    profit_loss = client.get("/api/v1/reports/profit-loss", headers=AUTH)
-    assert profit_loss.status_code == 501
-    assert profit_loss.get_json()["error"]["code"] == "not_implemented"

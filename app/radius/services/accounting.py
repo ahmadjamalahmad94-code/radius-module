@@ -321,6 +321,14 @@ class AccountingService:
             return accounting_repo.subscriber_payment_report(self.tenant_id)
         if report_type == "loans":
             return accounting_repo.loan_report(self.tenant_id)
+        if report_type == "activations":
+            return accounting_repo.activation_report(self.tenant_id)
+        if report_type == "card_sales":
+            return accounting_repo.card_sales_report(self.tenant_id)
+        if report_type == "profit_loss":
+            return accounting_repo.profit_loss_summary(self.tenant_id)
+        if report_type == "distributor_debts":
+            return accounting_repo.distributor_debts_report(self.tenant_id)
         raise RadiusValidationError("unsupported report type")
 
 

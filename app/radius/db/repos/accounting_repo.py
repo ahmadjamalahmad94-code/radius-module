@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..connection import db, transaction
-from ..helpers import json_dump, now_iso, row_to_dict
+from ..helpers import json_dump, json_load, now_iso, row_to_dict
 
 
 def resolve_subscriber(tenant_id: int, *, subscriber_id: int | None = None,
@@ -337,16 +337,22 @@ def void_ledger_entry(*, tenant_id: int, entry_id: int, actor: str,
 
 def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
     if grain == "monthly":
-        expr = "substr(created_at, 1, 7)"
+        expr = "substr(l.created_at, 1, 7)"
     elif grain == "yearly":
-        expr = "substr(created_at, 1, 4)"
+        expr = "substr(l.created_at, 1, 4)"
     else:
-        expr = "substr(created_at, 1, 10)"
+        expr = "substr(l.created_at, 1, 10)"
     rows = db().execute(
         f"""
-        SELECT {expr} AS period, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total
-        FROM payment_transactions
-        WHERE tenant_id = ? AND status = 'posted'
+        SELECT {expr} AS period, COUNT(*) AS count, COALESCE(SUM(l.amount), 0) AS total
+        FROM accounting_ledger_entries l
+        LEFT JOIN accounting_ledger_entries orig
+          ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+        WHERE l.tenant_id = ?
+          AND (
+            (l.entry_type = 'payment' AND l.status = 'posted')
+            OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+          )
         GROUP BY {expr}
         ORDER BY period DESC
         LIMIT 60
@@ -358,15 +364,21 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
 
 def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = None) -> list[dict]:
     sql = """
-        SELECT subscriber_id, username, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total
-        FROM payment_transactions
-        WHERE tenant_id = ? AND status = 'posted'
+        SELECT l.subscriber_id, l.username, COUNT(*) AS count, COALESCE(SUM(l.amount), 0) AS total
+        FROM accounting_ledger_entries l
+        LEFT JOIN accounting_ledger_entries orig
+          ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+        WHERE l.tenant_id = ?
+          AND (
+            (l.entry_type = 'payment' AND l.status = 'posted')
+            OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+          )
     """
     vals: list[Any] = [tenant_id]
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
-    sql += " GROUP BY subscriber_id, username ORDER BY total DESC, username LIMIT 200"
+    sql += " GROUP BY l.subscriber_id, l.username ORDER BY total DESC, l.username LIMIT 200"
     return [dict(r) for r in db().execute(sql, vals).fetchall()]
 
 
@@ -383,3 +395,119 @@ def loan_report(tenant_id: int) -> list[dict]:
         (tenant_id,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def activation_report(tenant_id: int) -> list[dict]:
+    rows = db().execute(
+        """
+        SELECT
+            l.entry_type, l.status, l.amount, l.username, l.subscriber_id,
+            l.metadata_json, orig.metadata_json AS orig_metadata_json
+        FROM accounting_ledger_entries l
+        LEFT JOIN accounting_ledger_entries orig
+          ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+        WHERE l.tenant_id = ?
+          AND (
+            (l.entry_type = 'payment' AND l.status = 'posted')
+            OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+          )
+        """,
+        (tenant_id,),
+    ).fetchall()
+    totals: dict[str, dict] = {}
+    for row in rows:
+        item = dict(row)
+        meta = json_load(item.get("metadata_json"), default={}) or {}
+        orig_meta = json_load(item.get("orig_metadata_json"), default={}) or {}
+        minutes = int((orig_meta if item["entry_type"] != "payment" else meta).get("earned_minutes") or 0)
+        if item["entry_type"] != "payment":
+            minutes = -minutes
+        key = item.get("username") or ""
+        current = totals.setdefault(key, {
+            "username": key,
+            "subscriber_id": item.get("subscriber_id"),
+            "activation_count": 0,
+            "earned_minutes": 0,
+        })
+        current["activation_count"] += 1
+        current["earned_minutes"] += minutes
+    return sorted(totals.values(), key=lambda x: x["earned_minutes"], reverse=True)
+
+
+def profit_loss_summary(tenant_id: int) -> list[dict]:
+    row = db().execute(
+        """
+        SELECT
+            COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END), 0) AS credits,
+            COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END), 0) AS debits,
+            COUNT(*) AS entries
+        FROM accounting_ledger_entries
+        WHERE tenant_id = ?
+        """,
+        (tenant_id,),
+    ).fetchone()
+    credits = float(row["credits"] or 0)
+    debits = float(row["debits"] or 0)
+    return [{
+        "credits": credits,
+        "debits": debits,
+        "net": credits - debits,
+        "entries": int(row["entries"] or 0),
+        "source": "accounting_ledger_entries",
+    }]
+
+
+def card_sales_report(tenant_id: int) -> list[dict]:
+    rows = db().execute(
+        """
+        SELECT source_id AS batch_id, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total
+        FROM accounting_ledger_entries
+        WHERE tenant_id = ? AND entry_type = 'payment'
+          AND source_type = 'card_sale' AND status = 'posted'
+        GROUP BY source_id
+        ORDER BY total DESC
+        LIMIT 200
+        """,
+        (tenant_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def distributor_debts_report(tenant_id: int) -> list[dict]:
+    rows = db().execute(
+        """
+        SELECT id AS distributor_id, name, display_name, debt_balance, balance, credit_limit
+        FROM distributors
+        WHERE tenant_id = ? AND status = 'active'
+        ORDER BY debt_balance DESC, name
+        LIMIT 200
+        """,
+        (tenant_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def create_report_snapshot(tenant_id: int, *, report_type: str,
+                           result: dict | list, created_by: str = "",
+                           date_from: str = "", date_to: str = "",
+                           parameters: dict | None = None) -> dict:
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO financial_report_snapshots(
+                tenant_id, report_type, date_from, date_to, parameters_json,
+                result_json, source, created_by, created_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                tenant_id, report_type, date_from, date_to,
+                json_dump(parameters or {}), json_dump(result),
+                "ledger", created_by, now_iso(),
+            ),
+        )
+    row = db().execute(
+        "SELECT * FROM financial_report_snapshots WHERE id = ?",
+        (cur.lastrowid,),
+    ).fetchone()
+    return row_to_dict(row)
