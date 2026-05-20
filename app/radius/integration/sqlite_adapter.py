@@ -244,8 +244,17 @@ class SqliteAdapter(RadiusAdapter):
 
         على فشل (لا جلسة، CoA-NAK، timeout) نرفع RadiusError ليصل لـ flash
         الـ UI، بدل البلع الصامت الذي كان يحدث في enqueue path.
+
+        R11.18: بعد Disconnect-ACK ناجح، نُغلق كل rows المفتوحة لـ username
+        في radacct (acctstoptime IS NULL → datetime('now')). السبب أنّ MT لا
+        يُرسل دائمًا Acct-Stop بعد disconnect عبر CoA، فالـ row يبقى زومبي
+        ويظهر المستخدم في /admin/radius/online رغم أنه فعلاً مطرود. نُغلق
+        كل الـ rows المفتوحة لـ username (لا الأخير فقط) لأنّ نفس username
+        لا يجب أن يكون له أكثر من جلسة حيّة في نفس اللحظة — أي rows
+        مفتوحة قديمة هي زومبي بطبيعتها.
         """
         from ..core.errors import RadiusError
+        from ..db.connection import transaction
         from .radius_coa import disconnect_user
 
         res = disconnect_user(_tid(), username)
@@ -256,6 +265,28 @@ class SqliteAdapter(RadiusAdapter):
                 res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
             )
         _LOG.info("Disconnect ok for %s: code=%s", username, res.code_name)
+
+        # R11.18: غلِّق كل الـ rows المفتوحة لـ username
+        try:
+            with transaction() as c:
+                cur = c.execute(
+                    "UPDATE radacct SET "
+                    "  acctstoptime = datetime('now'), "
+                    "  acctterminatecause = 'Admin-Reset' "
+                    "WHERE tenant_id = ? AND username = ? "
+                    "  AND acctstoptime IS NULL",
+                    (_tid(), username),
+                )
+                if cur.rowcount:
+                    _LOG.info("Closed %d radacct row(s) for %s after Disconnect-ACK",
+                              cur.rowcount, username)
+        except Exception as e:
+            # نسجّل لكن لا نرفع — الـ disconnect نفسه نجح، الـ DB close
+            # مجرد cleanup. الـ stale row سيُغلق بـ accounting-on/off لاحقًا
+            # أو بـ cron مستقبلي.
+            _LOG.warning("Could not close radacct row for %s after disconnect: %s",
+                          username, e)
+
         try:
             from app.webhooks.dispatcher import dispatch_event
             dispatch_event("session.disconnected", {"username": username},
