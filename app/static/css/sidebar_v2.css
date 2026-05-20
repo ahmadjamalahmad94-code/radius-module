@@ -28,11 +28,15 @@
   --hb-text-muted:       #94A3B8;
   --hb-text-faint:       #B6BCC8;
 
-  --hb-bg:               #FFFFFF;       /* sidebar surface (kept pure white) */
-  --hb-bg-page:          #EFEDF5;       /* page canvas — slightly purpled grey
-                                            so cards/cards-checker hero pop
-                                            against it without being stark */
-  --hb-bg-hover:         #F4F2FA;       /* hover inside sidebar */
+  --hb-bg:               #F5F3FB;       /* sidebar surface — subtle off-white,
+                                            slightly raised against page canvas */
+  --hb-bg-page:          #EFEDF5;       /* page canvas — page sits a step below
+                                            the sidebar (still light, no harshness) */
+  --hb-bg-hover:         #E6E2F2;       /* item/section hover inside the sidebar
+                                            (must be clearly darker than --hb-bg) */
+  --hb-bg-icon-idle:     #EBE7F4;       /* icon-tile background when idle —
+                                            independent from hover so the icon
+                                            stays visible against --hb-bg */
   --hb-bg-section-head:  #FFFFFF;
 
   --hb-border:           #EEEDF3;
@@ -165,13 +169,13 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   width:28px;height:28px;flex:0 0 28px;
   display:grid;place-items:center;
   color:var(--hb-text-muted);font-size:13px;
-  background:var(--hb-bg-hover);
+  background:var(--hb-bg-icon-idle);     /* its own var, decoupled from hover */
   border-radius:8px;
   transition:.15s ease;
 }
 .hb-side-item:hover .hb-side-icon,
 .hb-side-section-head:hover .hb-side-icon{
-  background:#EFEDF7;
+  background:#DDD7EE;
   color:var(--hb-text-soft);
 }
 .hb-side-item.is-active .hb-side-icon,
