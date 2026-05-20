@@ -1,105 +1,156 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Subscribers list — REBUILT (Night N4, 2026-05-21)
+
+   Full from-scratch rebuild on the hub-v2 design system. Same route
+   data (`items`, `plans`, `statuses`, `q`, `status`, `plan_id`,
+   `dhcp_by_username`) — zero backend change.
+
+   Layout:
+     1. Hero with primary "add subscriber" CTA
+     2. Filter bar (search + status + plan filters)
+     3. KPI strip (total / active / online / expiring)
+     4. Subscribers table with device column + row actions
+   ═══════════════════════════════════════════════════════════════════════ #}
+
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}قائمة المشتركين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
-{% block page_title %}قائمة المشتركين{% endblock %}
-{% block page_sub %}<span class="sub">(عرض {{ items|length }} نتيجة)</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.users_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة
-  </a>
-{% endblock %}
+{% block page_title %}المشتركون{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} مشترك في النتائج</span>{% endblock %}
 
 {% block content %}
 
-<form method="get" class="filter-bar">
-  <div class="search">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
-  </div>
-  <select name="status">
+{# ───── Hero ───────────────────────────────────────────────── #}
+{{ hub.hero(
+  "المشتركون",
+  subtitle="إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة",
+  icon="users",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.users_new') + '">
+      <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.online_list') + '">
+      <i class="fa-solid fa-wifi"></i> المتصلون الآن
+    </a>
+  '
+) }}
+
+{# ───── Filter Bar ─────────────────────────────────────────── #}
+<form method="get" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
+  <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in statuses %}
       <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
-  <select name="plan_id">
-    <option value="">كل العروض</option>
+  <select class="hub-select" name="plan_id">
+    <option value="">كل الباقات</option>
     {% for p in plans %}
       <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
     {% endfor %}
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
-  <div class="spacer"></div>
-  <button type="button" class="btn btn-secondary btn-sm">CSV</button>
-  <button type="button" class="btn btn-secondary btn-sm">تصدير جدول</button>
-  <button type="button" class="btn btn-secondary btn-sm">طباعة</button>
+  {{ hub.btn("تطبيق",   icon="filter", variant="primary",   type="submit", size="sm") }}
+  <span class="hub-spacer"></span>
+  {{ hub.btn("CSV",    icon="file-csv",   variant="secondary", size="sm") }}
+  {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm") }}
 </form>
 
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if items %}
-    <table class="hr-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
-      <thead><tr>
-        <th style="width:36px"><input type="checkbox"></th>
-        <th>#</th><th>اليوزر</th><th>الاسم</th><th>الجوال</th>
-        <th>الباقة</th><th>الجهاز / النظام</th>
-        <th>الحالة</th><th>تنتهي</th>
-        <th>الاستهلاك</th><th style="width:150px">إجراءات</th>
-      </tr></thead>
+{# ───── Quick Stats ────────────────────────────────────────── #}
+{% set _total   = items|length %}
+{% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
+{% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
+{% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("في النتائج", _total,  icon="list",        variant="brand") }}
+  {{ hub.kpi("نشطون",      _active, icon="circle-check", variant="green") }}
+  {{ hub.kpi("منتهون",     _expird, icon="hourglass-end", variant="amber") }}
+  {{ hub.kpi("معطَّلون",    _disab,  icon="pause",       variant="red")   }}
+</div>
+
+{# ───── Subscribers Table ──────────────────────────────────── #}
+{% if items %}
+{% call hub.section("قائمة المشتركين", icon="table-list", meta=_total|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox" aria-label="تحديد الكل"></th>
+          <th style="width:60px" class="num">#</th>
+          <th>اليوزر</th>
+          <th>الاسم</th>
+          <th>الجوال</th>
+          <th>الباقة</th>
+          <th>الجهاز / النظام</th>
+          <th>الحالة</th>
+          <th>تنتهي</th>
+          <th class="num">الاستهلاك</th>
+          <th style="width:160px">إجراءات</th>
+        </tr>
+      </thead>
       <tbody>
         {% for u in items %}
         <tr>
-          <td><input type="checkbox"></td>
-          <td class="num">{{ u.id or '—' }}</td>
-          <td><a href="{{ url_for('radius.users_edit', username=u.username) }}">{{ u.username }}</a></td>
+          <td><input type="checkbox" aria-label="تحديد"></td>
+          <td class="num mono">{{ u.id or '—' }}</td>
+          <td>
+            <a href="{{ url_for('radius.users_edit', username=u.username) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+              {{ u.username }}
+            </a>
+          </td>
           <td>{{ u.full_name or '—' }}</td>
           <td class="mono">{{ u.mobile or '—' }}</td>
           <td>
             {% set p = plans|selectattr('id','equalto',u.plan_id)|first %}
-            {{ p.name if p else '—' }}
+            {% if p %}{{ hub.pill(p.name, variant="brand", dot=False) }}{% else %}—{% endif %}
           </td>
-          {# Device fingerprint column — sourced from DHCP leases via
-             the background worker (migration 026). Looks up the
-             subscriber's mac_lock; users without a lock or without a
-             cached fingerprint render a dash. #}
+          {# DHCP device — pretty pill if fingerprint exists, dash otherwise #}
           <td>
             {% set _fp = (dhcp_by_username or {}).get(u.username) %}
             {% if _fp %}
-              <span class="pill pill-info" title="{{ _fp.dhcp_class_id or '' }}">
-                <i class="fa-solid fa-mobile-screen" style="margin-inline-end:4px"></i>
-                {{ _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else '') or '—' }}
-                {% if _fp.os_family %}
-                  <small style="opacity:.75;margin-inline-start:4px">
-                    {{ _fp.os_family|capitalize }} {{ _fp.os_version or '' }}
-                  </small>
-                {% endif %}
+              <span class="hub-pill hub-pill--blue" title="{{ _fp.dhcp_class_id or '' }}" style="border-color:#bfdbfe">
+                <i class="fa-solid fa-mobile-screen"></i>
+                <span>{{ _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else '—') }}</span>
+                {% if _fp.os_family %}<small style="opacity:.7">{{ _fp.os_family|capitalize }} {{ _fp.os_version or '' }}</small>{% endif %}
               </span>
-            {% else %}—{% endif %}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td>
-            {% if u.status == 'enabled' %}<span class="pill pill-success"><span class="pill-dot"></span>مفعَّل</span>
-            {% elif u.status == 'expired' %}<span class="pill pill-warn">منتهٍ</span>
-            {% elif u.status == 'disabled' %}<span class="pill pill-danger">معطَّل</span>
-            {% else %}<span class="pill">{{ u.status }}</span>{% endif %}
+            {% if u.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% elif u.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
+            {% elif u.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
+            {% else %}{{ hub.pill(u.status, variant="grey") }}{% endif %}
           </td>
-          <td class="mono">{{ u.expire_at.strftime('%Y-%m-%d') if u.expire_at else '—' }}</td>
-          <td class="mono">{{ "%.1f"|format((u.used_bytes_in or 0)/1048576) }} MB</td>
+          <td class="mono small">{{ u.expire_at.strftime('%Y-%m-%d') if u.expire_at else '—' }}</td>
+          <td class="num mono">{{ "%.1f"|format((u.used_bytes_in or 0)/1048576) }} MB</td>
           <td>
-            <div class="cell-actions">
-              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.users_edit', username=u.username) }}" title="تعديل">
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.users_edit', username=u.username) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
-              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.users_finance', username=u.username) }}" title="الدفعات والسلف">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="الدفعات والسلف"
+                 href="{{ url_for('radius.users_finance', username=u.username) }}">
                 <i class="fa-solid fa-wallet"></i>
               </a>
               <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}" style="display:inline">
-                <button class="btn btn-xs {{ 'btn-warning' if u.status=='enabled' else 'btn-success' }}" title="{{ 'تعطيل' if u.status=='enabled' else 'تفعيل' }}">
+                <button type="submit"
+                  class="hub-btn hub-btn--{{ 'amber' if u.status=='enabled' else 'green' }} hub-btn--icon"
+                  style="background:{{ 'var(--hub-amber-soft)' if u.status=='enabled' else 'var(--hub-green-soft)' }};
+                         color:{{ 'var(--hub-amber-ink)' if u.status=='enabled' else 'var(--hub-green-ink)' }};
+                         border-color:transparent"
+                  title="{{ 'تعطيل' if u.status=='enabled' else 'تفعيل' }}">
                   <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
                 </button>
               </form>
               <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
                     onsubmit="return confirm('أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                <button class="btn btn-danger btn-xs" title="أرشفة"><i class="fa-solid fa-box-archive"></i></button>
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                  <i class="fa-solid fa-box-archive"></i>
+                </button>
               </form>
             </div>
           </td>
@@ -107,9 +158,14 @@
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-users-slash"></i>لا مشتركين بهذه الفلترة</div>
-    {% endif %}
   </div>
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا مشتركين بهذه الفلترة",
+  sub="جرّب تخفيف معايير البحث أو أضف مشترك جديد من الزر أعلى الصفحة.",
+  icon="users-slash"
+) }}
+{% endif %}
+
 {% endblock %}

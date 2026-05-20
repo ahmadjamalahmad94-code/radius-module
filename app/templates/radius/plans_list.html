@@ -1,63 +1,98 @@
+{# Plans list — REBUILT N6 (hub-v2). Same backend data: items list. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}قائمة العروض{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
-{% block page_title %}قائمة العروض{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }} عرض)</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.plans_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة عرض
-  </a>
-{% endblock %}
+{% block page_title %}العروض والخطط{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} عرض في النتائج</span>{% endblock %}
 
 {% block content %}
 
-<form method="get" class="filter-bar">
-  <div class="search">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" name="q" placeholder="بحث في العروض...">
-  </div>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
-  <div class="spacer"></div>
-  <button type="button" class="btn btn-secondary btn-sm">CSV</button>
-  <button type="button" class="btn btn-secondary btn-sm">تصدير جدول</button>
+{{ hub.hero(
+  "العروض والخطط",
+  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية",
+  icon="tags",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
+      <i class="fa-solid fa-circle-plus"></i> إضافة عرض
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
+      <i class="fa-solid fa-chart-pie"></i> النظرة العامة
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="q" placeholder="بحث باسم/كود العرض...">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  <span class="hub-spacer"></span>
+  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
 </form>
 
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if items %}
-    <table class="hr-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
-      <thead><tr>
-        <th style="width:36px"><input type="checkbox"></th>
-        <th>#</th><th>الاسم</th><th>الكود</th><th>النوع</th>
-        <th>الوقت</th><th>الكوتا</th><th>السرعة (تنزيل/رفع)</th><th>السعر</th>
-        <th style="width:120px">إجراءات</th>
-      </tr></thead>
+{% if items %}
+{% set _enabled = items|selectattr('enabled')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي", items|length, icon="layer-group", variant="brand") }}
+  {{ hub.kpi("مفعَّلة",  _enabled,      icon="toggle-on",  variant="green") }}
+  {{ hub.kpi("معطَّلة",  items|length - _enabled, icon="toggle-off", variant="amber") }}
+</div>
+
+{% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox"></th>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>الكود</th>
+          <th>النوع</th>
+          <th>المدة</th>
+          <th>الكوتا</th>
+          <th>السرعة</th>
+          <th class="num">السعر</th>
+          <th style="width:120px">إجراءات</th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in items %}
         <tr>
           <td><input type="checkbox"></td>
-          <td class="num">{{ p.id }}</td>
+          <td class="num mono">{{ p.id }}</td>
           <td>
-            <span style="display:inline-block;width:8px;height:18px;border-radius:3px;vertical-align:middle;background:{{ p.color }};margin-inline-end:6px"></span>
-            <strong>{{ p.name }}</strong>
+            <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
+              <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
+              <strong style="color:var(--hub-text)">{{ p.name }}</strong>
+            </div>
           </td>
-          <td class="mono">{{ p.code or '—' }}</td>
-          <td><span class="pill pill-cyan">{{ p.plan_type }}</span></td>
-          <td class="mono">
-            {% if p.duration_minutes %}{{ p.duration_minutes }}د{% endif %}
-            {% if p.validity_days %} · {{ p.validity_days }}ي{% endif %}
-            {% if not p.duration_minutes and not p.validity_days %}<span class="pill">غير محدود</span>{% endif %}
+          <td class="mono small">{{ p.code or '—' }}</td>
+          <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
+          <td class="mono small">
+            {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
+            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
+            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
           </td>
-          <td class="mono">{% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB{% else %}<span class="pill">غير محدود</span>{% endif %}</td>
-          <td class="mono">{{ p.speed_down_kbps or 0 }} / {{ p.speed_up_kbps or 0 }} Kbps</td>
-          <td><strong>{{ "%.2f"|format(p.price) }}</strong> <span class="hint">{{ p.currency }}</span></td>
+          <td class="mono small">
+            {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
+            {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+          </td>
+          <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
+          <td class="num">
+            <strong>{{ "%.2f"|format(p.price) }}</strong>
+            <small class="hub-text-mute">{{ p.currency or '' }}</small>
+          </td>
           <td>
-            <div class="cell-actions">
-              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-                <i class="fa-solid fa-pen"></i></a>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
               <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                     onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');" style="display:inline">
-                <button class="btn btn-danger btn-xs" title="أرشفة"><i class="fa-solid fa-box-archive"></i></button>
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                  <i class="fa-solid fa-box-archive"></i>
+                </button>
               </form>
             </div>
           </td>
@@ -65,9 +100,14 @@
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-tags"></i>لا عروض</div>
-    {% endif %}
   </div>
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا عروض بعد",
+  sub="أنشئ أول عرض من زرّ «إضافة عرض» في الأعلى لتبدأ ببيع الباقات.",
+  icon="tags"
+) }}
+{% endif %}
+
 {% endblock %}

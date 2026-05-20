@@ -1,86 +1,103 @@
+{# Cards list — REBUILT N5 (hub-v2). Backend data: items, total, page, pages_count, batches, plans, preserve, per_page, q, used, revoked, batch_id. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}كل الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}كل الكروت{% endblock %}
-{% block page_sub %}<span class="sub">({{ total }} بطاقة · صفحة {{ page }}/{{ pages_count }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} بطاقة — صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
 
 {% block content %}
-{# R10.4: filter-bar صف واحد — بحث + dropdowns + per_page + زرّ + إعادة ضبط #}
-<form method="get" class="filter-bar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-  <input type="search" name="q" value="{{ q or '' }}" placeholder="بحث في اليوزر…"
-         style="min-width:180px"
-         autocomplete="off">
 
-  <select name="batch_id">
+{{ hub.hero(
+  "كل الكروت",
+  subtitle="عرض كل الكروت المولّدة عبر الدفعات — مع تصفية حسب الدفعة والحالة",
+  icon="id-card",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> توليد كروت
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-layer-group"></i> الدفعات
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker_v2') + '">
+      <i class="fa-solid fa-magnifying-glass"></i> فحص بطاقة
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}" placeholder="بحث في اليوزر..." autocomplete="off">
+  <select class="hub-select" name="batch_id">
     <option value="">كل الدفعات</option>
     {% for bid, b in batches.items() %}
-      <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>
-        {{ b.batch_code or bid }}
-      </option>
+      <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>{{ b.batch_code or bid }}</option>
     {% endfor %}
   </select>
-
-  <select name="used">
-    <option value="">كل الحالات (مستخدم/لا)</option>
+  <select class="hub-select" name="used">
+    <option value="">كل الحالات (مستخدم)</option>
     <option value="0" {% if used == '0' %}selected{% endif %}>غير مستخدم</option>
     <option value="1" {% if used == '1' %}selected{% endif %}>مستخدم</option>
   </select>
-
-  <select name="revoked">
-    <option value="">كل الحالات (ملغاة/لا)</option>
+  <select class="hub-select" name="revoked">
+    <option value="">كل الحالات (إلغاء)</option>
     <option value="0" {% if revoked == '0' %}selected{% endif %}>غير ملغاة</option>
     <option value="1" {% if revoked == '1' %}selected{% endif %}>ملغاة</option>
   </select>
-
-  <select name="per_page">
+  <select class="hub-select" name="per_page">
     {% for n in [25, 50, 100] %}
       <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
     {% endfor %}
   </select>
-
-  <button class="btn btn-secondary" type="submit">
-    <i class="fa-solid fa-filter"></i> تطبيق
-  </button>
-
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if q or batch_id or used or revoked %}
-    <a class="btn btn-link" href="{{ url_for('radius.cards_list') }}">
-      <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
-    </a>
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+                attrs='onclick="window.location=' + "'" + url_for('radius.cards_list') + "'" + '"') }}
   {% endif %}
 </form>
 
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if items %}
-    {# R10.4: paginated بـ server-side — لا حاجة لـ data-paginated client-side. #}
-    <table class="hr-table">
-      <thead><tr>
-        <th>#</th><th>اليوزر</th><th>الباسورد</th><th>الباقة</th><th>الدفعة</th>
-        <th>الحالة</th><th>تنتهي</th><th style="width:80px">إجراء</th>
-      </tr></thead>
+{% if items %}
+{% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>اليوزر</th>
+          <th>الباسورد</th>
+          <th>الباقة</th>
+          <th>الدفعة</th>
+          <th>الحالة</th>
+          <th>تنتهي</th>
+          <th style="width:80px">إجراء</th>
+        </tr>
+      </thead>
       <tbody>
         {% for c in items %}
         <tr>
-          <td class="num">{{ c.id }}</td>
+          <td class="num mono">{{ c.id }}</td>
           <td class="mono"><strong>{{ c.username }}</strong></td>
-          <td class="mono">{{ c.password }}</td>
+          <td class="mono small">{{ c.password }}</td>
           <td>{{ plans[c.plan_id].name if plans.get(c.plan_id) else '—' }}</td>
-          <td class="mono">
-            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}">
+          <td class="mono small">
+            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
+               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
               {{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}
             </a>
           </td>
           <td>
-            {% if c.revoked %}<span class="pill pill-danger">ملغاة</span>
-            {% elif c.used %}<span class="pill pill-info">مستخدمة</span>
-            {% else %}<span class="pill pill-success">جاهزة</span>{% endif %}
+            {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
+            {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
+            {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
           </td>
-          <td class="mono">{{ c.expire_at.strftime('%Y-%m-%d') if c.expire_at else '—' }}</td>
+          <td class="mono small">{{ c.expire_at.strftime('%Y-%m-%d') if c.expire_at else '—' }}</td>
           <td>
             {% if not c.revoked %}
             <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
                   onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
-              <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i></button>
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
+                <i class="fa-solid fa-ban"></i>
+              </button>
             </form>
             {% endif %}
           </td>
@@ -88,53 +105,45 @@
         {% endfor %}
       </tbody>
     </table>
-
-    {# R10.4: pagination controls — يحتفظ بكل filters عبر preserve_params. #}
-    {% if pages_count > 1 %}
-    <nav class="pagination" style="display:flex;gap:.25rem;align-items:center;justify-content:center;padding:1rem 0">
-      {# روابط: «أوّل  «السابق  …  أرقام  …  التالي»  الأخير»  #}
-      {% set prev = page - 1 %}
-      {% set next = page + 1 %}
-      {% macro page_link(p, label, disabled=false) -%}
-        {% if disabled %}
-          <span class="btn btn-secondary btn-xs" style="opacity:.5;cursor:default">{{ label }}</span>
-        {% else %}
-          {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
-          <a class="btn btn-secondary btn-xs"
-             href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
-        {% endif %}
-      {%- endmacro %}
-
-      {{ page_link(1,           '«', disabled=(page == 1)) }}
-      {{ page_link(prev,        '‹', disabled=(page == 1)) }}
-
-      {# نافذة الأرقام: 5 صفحات حول الحالية #}
-      {% set window_lo = [page - 2, 1] | max %}
-      {% set window_hi = [page + 2, pages_count] | min %}
-      {% if window_lo > 1 %}<span>…</span>{% endif %}
-      {% for p in range(window_lo, window_hi + 1) %}
-        {% if p == page %}
-          <span class="btn btn-primary btn-xs">{{ p }}</span>
-        {% else %}
-          {{ page_link(p, p) }}
-        {% endif %}
-      {% endfor %}
-      {% if window_hi < pages_count %}<span>…</span>{% endif %}
-
-      {{ page_link(next,        '›', disabled=(page == pages_count)) }}
-      {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
-    </nav>
-    {% endif %}
-
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-id-card"></i>
-      {% if q or batch_id or used or revoked %}
-        لا كروت تطابق الفلتر.
-      {% else %}
-        لا كروت بعد.
-      {% endif %}
-    </div>
-    {% endif %}
   </div>
-</div>
+
+  {# Pagination — server-side, preserves filters #}
+  {% if pages_count > 1 %}
+  <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0">
+    {% set prev = page - 1 %}
+    {% set next = page + 1 %}
+    {% macro page_link(p, label, disabled=false) -%}
+      {% if disabled %}
+        <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
+      {% else %}
+        {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
+        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
+      {% endif %}
+    {%- endmacro %}
+    {{ page_link(1,           '«', disabled=(page == 1)) }}
+    {{ page_link(prev,        '‹', disabled=(page == 1)) }}
+    {% set window_lo = [page - 2, 1] | max %}
+    {% set window_hi = [page + 2, pages_count] | min %}
+    {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
+    {% for p in range(window_lo, window_hi + 1) %}
+      {% if p == page %}
+        <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
+      {% else %}
+        {{ page_link(p, p) }}
+      {% endif %}
+    {% endfor %}
+    {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
+    {{ page_link(next,        '›', disabled=(page == pages_count)) }}
+    {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
+  </nav>
+  {% endif %}
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا كروت تطابق الفلتر" if (q or batch_id or used or revoked) else "لا كروت بعد",
+  sub="ولّد دفعة جديدة من زرّ «توليد كروت» أعلى الصفحة" if not (q or batch_id or used or revoked) else "جرّب تخفيف معايير البحث.",
+  icon="id-card"
+) }}
+{% endif %}
+
 {% endblock %}
