@@ -266,10 +266,37 @@
       {% endif %}
       {% if card.batch and (card.batch.unit_price or 0) > 0 %}
       <div class="cc-card-info-row" data-cc-field="price">
-        <div class="cc-card-info-label">السعر</div>
+        <div class="cc-card-info-label">سعر البيع</div>
         <div class="cc-card-info-value">
           <span class="cc-card-price">{{ '%.2f' % card.batch.unit_price }}</span>
           <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+        </div>
+      </div>
+      {% endif %}
+      {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
+      <div class="cc-card-info-row" data-cc-field="price_bulk">
+        <div class="cc-card-info-label">سعر الجملة</div>
+        <div class="cc-card-info-value">
+          <span class="cc-card-price">{{ '%.2f' % card.batch.price_bulk }}</span>
+          <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+        </div>
+      </div>
+      {% endif %}
+      {% if card.batch and card.batch.created_by_name %}
+      <div class="cc-card-info-row" data-cc-field="created_by_name">
+        <div class="cc-card-info-label">المدير المُنشئ</div>
+        <div class="cc-card-info-value">
+          <i class="fa-solid fa-user-pen" style="font-size:11px;opacity:.85"></i>
+          {{ card.batch.created_by_name }}
+        </div>
+      </div>
+      {% endif %}
+      {% if card.batch and card.batch.manager_name %}
+      <div class="cc-card-info-row" data-cc-field="manager_name">
+        <div class="cc-card-info-label">المدير المالك</div>
+        <div class="cc-card-info-value">
+          <i class="fa-solid fa-user-shield" style="font-size:11px;opacity:.85"></i>
+          {{ card.batch.manager_name }}
         </div>
       </div>
       {% endif %}

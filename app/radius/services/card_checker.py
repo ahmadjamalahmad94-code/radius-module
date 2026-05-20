@@ -100,10 +100,21 @@ def _batch(row: dict) -> dict | None:
         "deleted_at": _iso(row.get("batch_deleted_at")),
         # Price hooks for the Card Checker hero:
         # `price_per_card` is the explicit unit price; `unit_price` is
-        # the same value with the total_price-fallback applied.
+        # the same value with the total_price-fallback applied;
+        # `price_bulk` is the wholesale tier price (when set).
         "price_per_card": ppc,
         "total_price":    total_pr,
         "unit_price":     unit_price,
+        "price_bulk":     float(row.get("batch_price_bulk") or 0),
+        # Manager names — prefer the joined full_name; fall back to the
+        # username string, and only then to the raw id / created_by
+        # string. Either may be empty if the JOIN didn't match.
+        "manager_name": (row.get("batch_manager_full_name")
+                          or row.get("batch_manager_username")
+                          or (str(row.get("batch_manager_id"))
+                              if row.get("batch_manager_id") else "")),
+        "created_by_name": (row.get("batch_created_by_full_name")
+                             or row.get("batch_created_by") or ""),
     }
 
 

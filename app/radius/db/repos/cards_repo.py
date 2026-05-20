@@ -702,7 +702,16 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             b.expire_at AS batch_expire_at,
             b.deleted_at AS batch_deleted_at,
             b.price_per_card AS batch_price_per_card,
-            b.total_price AS batch_total_price,
+            b.price_bulk     AS batch_price_bulk,
+            b.total_price    AS batch_total_price,
+            -- Owner manager (FK admins.id) — show full_name then fall
+            -- back to username then to the raw id.
+            mo.full_name     AS batch_manager_full_name,
+            mo.username      AS batch_manager_username,
+            -- Creator manager — b.created_by is stored as a username
+            -- string, so we LEFT JOIN admins ON that to pick up a
+            -- friendlier full_name.
+            mc.full_name     AS batch_created_by_full_name,
             p.name AS profile_name,
             p.currency AS profile_currency,
             p.code AS profile_code,
@@ -730,6 +739,10 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
         LEFT JOIN subscribers s
             ON s.tenant_id = c.tenant_id AND s.id = c.used_by_subscriber_id
+        LEFT JOIN admins mo
+            ON mo.id = b.manager_id
+        LEFT JOIN admins mc
+            ON mc.username = b.created_by
         WHERE c.tenant_id = ? AND (c.username = ? OR c.id = ?)
         LIMIT 1
         """,
