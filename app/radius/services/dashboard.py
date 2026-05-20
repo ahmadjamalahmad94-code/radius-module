@@ -6,6 +6,15 @@ R8.1: استبدلنا الاستدعاء المتزامن لـ `adapter.list_on
 الاتصال بـ MT، فيُغلِق nginx الطلب بـ 504. الآن radacct هو المصدر
 الأساسي بعد أن أصبح FreeRADIUS rlm_sql يكتب فيه (R1→R7).
 
+R10.2: إصلاحان مهمّان في عَدّ الأرقام:
+  1. `total_subscribers / enabled / expired` كانت تشمل صفوف الكروت
+     (user_type='card') أيضًا — فيظهر العدد 2057 بدل 37. الآن نُمرّر
+     user_type='subscriber' عند الاستدعاء، فيُحسب المشتركون فقط.
+  2. `revenue_today / revenue_month` كانت تجمع أسعار الباقات لآخر 20
+     مشترك / لجميع المشتركين (بغض النظر عن الدفع الفعلي) — أرقام
+     خيالية. الآن نقرأ من `payment_transactions` (status='posted')
+     بفلترة `created_at` لليوم / للشهر، فالأرقام تطابق الـ ledger.
+
 نحافظ على نفس DTO و نفس الـ UI semantics. الفروق الوحيدة:
 - `online_now` يأتي من COUNT(*) في radacct بدل len(MT-list).
 - `bytes_today_in`/`out` يأتيان من SUM(...) على الجلسات المفتوحة
@@ -19,6 +28,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 
+from ..core.constants import USER_TYPE_SUBSCRIBER
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types import DashboardSnapshot
 from ..db.connection import db
@@ -60,17 +70,50 @@ def _live_session_totals(tenant_id: int) -> tuple[int, int, int]:
         return 0, 0, 0
 
 
+def _revenue_totals(tenant_id: int) -> tuple[float, float]:
+    """R10.2: يُرجع (revenue_today, revenue_month) — جمع المدفوعات الفعلية
+    من payment_transactions بفلترة status='posted' (لا نحسب الـ voided
+    / refunded). الـ created_at مُخزَّن كـ ISO TEXT، فنُقارنه بـ
+    boundaries نصّيّة — sqlite يقارنها lexicographically بشكل صحيح
+    طالما الـ format موحَّد (YYYY-MM-DDTHH:MM:SS...).
+
+    fallback (0.0, 0.0) عند أي خطأ — مفضّل على إيقاف الـ dashboard."""
+    try:
+        row = db().execute(
+            "SELECT "
+            "  COALESCE(SUM(CASE WHEN created_at >= date('now','start of day') "
+            "                    THEN effective_price ELSE 0 END), 0) AS today, "
+            "  COALESCE(SUM(CASE WHEN created_at >= date('now','start of month') "
+            "                    THEN effective_price ELSE 0 END), 0) AS month "
+            "  FROM payment_transactions "
+            " WHERE tenant_id = ? AND status = 'posted'",
+            (tenant_id,),
+        ).fetchone()
+        if not row:
+            return 0.0, 0.0
+        return float(row["today"] or 0.0), float(row["month"] or 0.0)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("dashboard: revenue totals query failed — using zeros")
+        return 0.0, 0.0
+
+
 class DashboardService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
         self._audit = audit
 
     def snapshot(self) -> DashboardSnapshot:
-        subs = list(self._adapter.list_accounts(limit=10_000))
+        # R10.2: user_type='subscriber' يستثني صفوف الكروت — العدد يطابق
+        # شاشة /users الحالية (بعد R9.0).
+        subs = list(self._adapter.list_accounts(
+            user_type=USER_TYPE_SUBSCRIBER, limit=10_000))
         plans = list(self._adapter.list_profiles(limit=1000))
         nas = list(self._adapter.list_nas(limit=1000))
         # R8.1: radacct بدل MT API — مكروسيكوندز بدل عشرات الثواني.
         online_now, bytes_in, bytes_out = _live_session_totals(_tid())
+        # R10.2: أرقام إيرادات من payment_transactions بدل تجميع
+        # أسعار الباقات الوهمي.
+        revenue_today, revenue_month = _revenue_totals(_tid())
         cards_stats = CardsStore.instance().stats()
         admins_count = len(AdminsStore.instance().list_admins())
 
@@ -97,8 +140,8 @@ class DashboardService:
             admins_total=admins_count,
             bytes_today_in=bytes_in,
             bytes_today_out=bytes_out,
-            revenue_today=sum((next((p.price for p in plans if p.id == u.plan_id), 0.0)) for u in subs[-20:]),
-            revenue_month=sum((next((p.price for p in plans if p.id == u.plan_id), 0.0)) for u in subs),
+            revenue_today=revenue_today,
+            revenue_month=revenue_month,
             recent_actions=tuple(recent),
             top_plans=tuple(top),
         )
