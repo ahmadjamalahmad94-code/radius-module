@@ -14,8 +14,9 @@ def register_v1(parent: Blueprint) -> None:
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_schedules,
         card_checker, cards, dashboard, devices, distributors, health, internal_auth,
-        ledger, loans, mikrotik, nas, payments, print_templates, profiles,
-        recycle_bin, reports, sessions, settings, system, tenants, tokens, webhooks,
+        ledger, loans, mikrotik, nas, operational_reports, payments,
+        print_templates, profiles, recycle_bin, reports, sessions, settings,
+        system, tenants, tokens, webhooks,
     )
     health.register(v1)
     accounts.register(v1)
@@ -27,6 +28,7 @@ def register_v1(parent: Blueprint) -> None:
     payments.register(v1)
     distributors.register(v1)
     reports.register(v1)
+    operational_reports.register(v1)
     bandwidth_schedules.register(v1)
     print_templates.register(v1)
     backups.register(v1)

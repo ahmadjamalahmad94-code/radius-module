@@ -43,7 +43,7 @@ Status values:
 | Settings | `/admin/radius/settings` | `/api/v1/settings` | missing | partial | API exists; Flutter screen is still missing. |
 | API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
 | Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
-| Operational reports | `/admin/radius/reports/*` | missing | missing | web_only_until_api | Sessions, failed logins, MAC history, CoA failures, manager events need JSON API. |
+| Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | missing | partial | JSON API exists for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Flutter screens are next. |
 | Tools: set speeds | `/admin/radius/tools/set-speeds` | missing | missing | web_only_until_api | Needs safe API. No direct Flutter RADIUS action. |
 | Tools: maintenance | `/admin/radius/tools/maintenance` | missing | missing | web_only_until_api | API must require preview first and strong confirmation before run. |
 | Tools: test auth | `/admin/radius/tools/test-auth` | missing | missing | web_only_until_api | Needs API-backed test screen. |
