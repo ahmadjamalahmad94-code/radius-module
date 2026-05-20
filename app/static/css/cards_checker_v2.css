@@ -56,6 +56,12 @@
   margin: 0 auto;
   padding: 0 2px;
   font-family: "Cairo", system-ui, -apple-system, sans-serif;
+
+  /* R13.A.9-mobile: container query host. Lets every responsive rule
+     below react to the SHELL width, not just the viewport. This way we
+     also handle docked sidebars / split-screen / iframes correctly. */
+  container-type: inline-size;
+  container-name: cc-page;
 }
 
 /* the existing admin layout uses a cream page bg already; we don't
@@ -750,43 +756,111 @@
 @keyframes cc-spin{ to{ transform: rotate(360deg); } }
 
 /* ═════════════════════════ MOBILE TUNING ═════════════════════════ */
-@media (max-width: 700px){
-  .cc-page{ padding: 0; }
-  .cc-header h1{ font-size: 19px; }
+/* R13.A.9-mobile: container queries based on `.cc-page` inline size.
+   Fires whenever the shell is narrow — matches real phones AND any
+   embed where the sidebar takes most of the screen. */
+@container cc-page (max-width: 760px){
+  .cc-header h1{ font-size: 18px; }
   .cc-header .cc-sub{ font-size: 12px; }
 
-  /* mode toggle should still feel native, but slightly smaller */
-  .cc-mode-toggle button{ padding: 7px 12px; font-size: 12px; }
+  .cc-mode-toggle{ padding: 3px; }
+  .cc-mode-toggle button{ padding: 7px 14px; font-size: 12px; }
 
-  /* search */
-  .cc-search-input{ height: 40px; font-size: 13px; }
-  .cc-search-btn  { height: 40px; padding: 0 16px; font-size: 13px; }
+  .cc-search-input{ height: 42px; font-size: 14px; }
+  .cc-search-btn  { height: 42px; padding: 0 16px; font-size: 13px; }
 
-  /* hero: tighter, smaller number */
-  .cc-card-hero{ padding: 18px 20px; min-height: 180px; border-radius: 18px; }
-  .cc-card-number{ font-size: 30px; letter-spacing: 1.5px; }
+  /* HERO: stack number on top, info below; tighter padding; smaller chip */
+  .cc-card-hero{
+    padding: 18px 18px;
+    min-height: 0;
+    border-radius: 18px;
+  }
+  .cc-card-top{ margin-bottom: 14px; }
   .cc-card-chip{ width: 34px; height: 26px; }
-  .cc-card-main{ flex-direction: column-reverse; gap: 14px; align-items: stretch; }
-  .cc-card-number-wrap{ align-items: flex-end; }
+  .cc-card-status{ padding: 4px 10px; font-size: 11px; }
+  .cc-card-main{
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+  .cc-card-number-wrap{ align-items: flex-start; text-align: start; }
+  .cc-card-number{
+    font-size: 26px; letter-spacing: 1px;
+    /* prevent the huge username from overflowing */
+    word-break: break-all; max-width: 100%;
+  }
+  .cc-card-info{ align-items: flex-end; text-align: end; }
+  .cc-card-info-row{ margin-bottom: 6px; }
+  .cc-card-bottom{
+    flex-direction: column; align-items: stretch; gap: 6px;
+    font-size: 10.5px;
+  }
+  .cc-card-bottom span{ display: block; }
 
-  /* metrics: 2 columns on phones, not 1 */
-  .cc-metrics{ grid-template-columns: 1fr 1fr; gap: 8px; }
-  .cc-metric{ padding: 12px 12px; }
+  /* GRID-2: stack everywhere (hero+info, device+sessions, etc.) */
+  .cc-grid-2{ grid-template-columns: 1fr; gap: 12px; }
+
+  /* INFO PANEL: tighter rows */
+  .cc-info-row{ padding: 10px 14px; font-size: 12.5px; }
+  .cc-info-value{ font-size: 11.5px; }
+
+  /* METRICS: 2 columns on phones */
+  .cc-metrics{ grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cc-metric{ padding: 12px 14px; min-height: 0; }
+  .cc-metric-label{ font-size: 11px; }
   .cc-metric-value{ font-size: 17px; }
-  .cc-metric-icon{ width: 36px; height: 36px; font-size: 15px; border-radius: 10px; }
+  .cc-metric-sub{ font-size: 10px; }
+  .cc-metric-icon{ width: 36px; height: 36px; font-size: 14px; border-radius: 10px; }
 
-  /* sections — slightly tighter */
+  /* SECTIONS: tighter chrome */
   .cc-section-head{ padding: 12px 14px; }
-  .cc-section-body{ padding: 12px 14px; }
+  .cc-section-head-title{ font-size: 13px; }
+  .cc-section-body{ padding: 14px; }
 
-  /* timeline keeps its vertical line but tightens spacing */
+  /* TIMELINE: keep vertical line but pull dots closer */
   .cc-timeline{ padding-inline-start: 22px; }
-  .cc-tl-dot{ inset-inline-start: -20px; top: 14px; }
+  .cc-timeline::before{ inset-inline-start: 7px; }
+  .cc-tl-dot{ inset-inline-start: -22px; top: 14px; width: 14px; height: 14px; border-width: 2px; }
+  .cc-tl-item{ grid-template-columns: 1fr; gap: 4px; padding: 10px 0; }
+  .cc-tl-time{ text-align: start; flex-direction: row; gap: 6px; font-size: 11px; }
+  .cc-tl-time .hour{ font-size: 11px; }
+  .cc-tl-time .day{ font-size: 10.5px; opacity: .75; }
+  .cc-tl-title{ font-size: 12.5px; }
+  .cc-tl-desc{ font-size: 11.5px; }
 
-  /* actions: 1 per row on phones, big tap targets */
+  /* DEVICE CARD: stack icon above body */
+  .cc-device-card{
+    flex-direction: column; align-items: stretch; gap: 12px;
+    padding: 14px;
+  }
+  .cc-device-card-icon{
+    width: 56px; height: 56px;
+    align-self: flex-start;
+  }
+  .cc-device-card-title{ font-size: 14px; }
+  .cc-device-card-attrs{ font-size: 11.5px; }
+
+  /* SESSIONS LIST: kept as rows but tighter, hide IP column hint */
+  .cc-session-row{
+    grid-template-columns: 32px 1fr max-content;
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .cc-session-row .cc-session-time{ display: none; }
+  .cc-session-name{ font-size: 11.5px; }
+  .cc-session-meta{ font-size: 10.5px; }
+
+  /* ACTIONS: 1 per row, big touch targets (44px minimum recommended) */
   .cc-actions{ grid-template-columns: 1fr; gap: 8px; }
   .cc-action{ min-height: 60px; padding: 12px 14px; }
+  .cc-action-icon{ width: 36px; height: 36px; font-size: 13px; }
+  .cc-action-title{ font-size: 13px; }
+  .cc-action-sub{ font-size: 11px; }
+}
 
-  /* the side info panel becomes its own card under the hero */
-  .cc-grid-2{ gap: 10px; }
+/* Even narrower: 1 column for metrics on very small phones */
+@container cc-page (max-width: 380px){
+  .cc-metrics{ grid-template-columns: 1fr; }
+  .cc-card-number{ font-size: 22px; }
+  .cc-card-hero{ padding: 14px 16px; }
 }
