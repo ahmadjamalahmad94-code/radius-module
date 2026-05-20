@@ -1,80 +1,121 @@
+{# Accounting ledger — REBUILT N7 (hub-v2). Backend: items, entry_type, subscriber_id. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}السجل المالي{% endblock %}
-{% block page_title %}السجل المالي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
+{% block page_title %}السجل المالي{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} قيد في النتائج</span>{% endblock %}
 
 {% block content %}
-<style>
-  .ledger-panel{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
-  .ledger-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
-  .ledger-filter label{display:flex;flex-direction:column;gap:5px;font-weight:700;color:#263244;font-size:13px}
-  .ledger-filter input,.ledger-filter select{border:1px solid #d8c8a9;border-radius:8px;padding:9px;background:#fffaf1}
-  .ledger-note{margin-bottom:14px;padding:10px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px}
-  .ledger-table{width:100%;border-collapse:collapse}
-  .ledger-table th,.ledger-table td{border-bottom:1px solid #eee3d0;padding:9px;text-align:right;vertical-align:top}
-  .ledger-table th{font-size:12px;color:#657386}
-  .ledger-void{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .ledger-void input{max-width:160px}
-</style>
 
-<div class="ledger-note">
+{{ hub.hero(
+  "السجل المالي",
+  subtitle="سجل تراكمي للقيود المالية — لا يتم حذف القيود؛ التصحيح بقيد عكسي",
+  icon="scale-balanced",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_reports') + '">
+      <i class="fa-solid fa-chart-line"></i> التقارير المالية
+    </a>
+  '
+) }}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
+            border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
+            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
+  <i class="fa-solid fa-circle-info"></i>
   السجل المالي تراكمي. لا يتم حذف القيود المالية؛ التصحيح يتم بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.
 </div>
 
-<section class="ledger-panel">
-  <form class="ledger-filter" method="get" action="{{ url_for('radius.finance_ledger') }}">
-    <label>نوع القيد
-      <select name="entry_type">
-        <option value="">الكل</option>
-        {% for t in ['payment','loan','settlement','void','reversal','correction'] %}
-        <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>{{ t }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>رقم المستفيد
-      <input name="subscriber_id" value="{{ subscriber_id }}" inputmode="numeric">
-    </label>
-    <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> فلترة</button>
-    <a class="btn btn-ghost" href="{{ url_for('radius.finance_ledger') }}">مسح</a>
-  </form>
+<form method="get" action="{{ url_for('radius.finance_ledger') }}" class="hub-filterbar">
+  <select class="hub-select" name="entry_type">
+    <option value="">كل أنواع القيود</option>
+    {% for t in ['payment','loan','settlement','void','reversal','correction'] %}
+      <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
+        {% if t == 'payment' %}دفعة
+        {% elif t == 'loan' %}سلفة
+        {% elif t == 'settlement' %}تسوية
+        {% elif t == 'void' %}إلغاء
+        {% elif t == 'reversal' %}عكسي
+        {% elif t == 'correction' %}تصحيح
+        {% else %}{{ t }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+  <input class="hub-input" type="text" name="subscriber_id" value="{{ subscriber_id }}"
+         placeholder="رقم المستفيد..." inputmode="numeric" style="max-width:180px">
+  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn("مسح",  icon="rotate-left", variant="ghost", size="sm",
+              attrs='onclick="window.location=' + "'" + url_for('radius.finance_ledger') + "'" + '"') }}
+</form>
 
-  {% if items %}
-  <table class="ledger-table">
-    <thead>
-      <tr>
-        <th>#</th><th>النوع</th><th>المستفيد</th><th>الاتجاه</th><th>المبلغ</th>
-        <th>الحالة</th><th>المصدر</th><th>ملاحظات</th><th>عكس القيد</th><th>التاريخ</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for entry in items %}
-      <tr>
-        <td class="mono">{{ entry.id }}</td>
-        <td>{{ entry.entry_type }}</td>
-        <td>{{ entry.username or '—' }}{% if entry.subscriber_id %}<div class="hint">#{{ entry.subscriber_id }}</div>{% endif %}</td>
-        <td>{{ entry.direction }}</td>
-        <td class="mono">{{ entry.amount }} {{ entry.currency }}</td>
-        <td><span class="pill {% if entry.status in ['posted','void'] %}pill-success{% else %}pill-warn{% endif %}">{{ entry.status }}</span></td>
-        <td>{{ entry.source_type or '—' }}{% if entry.source_id %} #{{ entry.source_id }}{% endif %}</td>
-        <td>{{ entry.notes or '—' }}</td>
-        <td>
-          {% if entry.entry_type not in ['void','reversal','correction'] %}
-          <form class="ledger-void" method="post" action="{{ url_for('radius.finance_ledger_void') }}">
-            <input type="hidden" name="entry_id" value="{{ entry.id }}">
-            <input name="reason" placeholder="سبب التصحيح" required>
-            <button class="btn btn-warning btn-xs" type="submit">عكس</button>
-          </form>
-          {% else %}
-            <span class="hint">قيد تصحيحي</span>
-          {% endif %}
-        </td>
-        <td class="mono">{{ entry.created_at }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <div class="empty"><i class="fa-solid fa-scale-balanced"></i> لا توجد قيود بهذه الفلترة.</div>
-  {% endif %}
-</section>
+{% if items %}
+{% call hub.section("القيود", icon="table-list", meta=items|length|string + " قيد", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="50" data-page-sizes="25,50,100" data-persist-key="ledger-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>النوع</th>
+          <th>المستفيد</th>
+          <th>الاتجاه</th>
+          <th class="num">المبلغ</th>
+          <th>الحالة</th>
+          <th>المصدر</th>
+          <th>ملاحظات</th>
+          <th>التاريخ</th>
+          <th style="width:240px">عكس القيد</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in items %}
+        <tr>
+          <td class="num mono">{{ entry.id }}</td>
+          <td>{{ hub.pill(entry.entry_type, variant="brand", dot=False) }}</td>
+          <td>
+            <div>{{ entry.username or '—' }}</div>
+            {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
+          </td>
+          <td>
+            {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
+            {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
+            {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
+          </td>
+          <td class="num mono"><strong>{{ entry.amount }}</strong> <small class="hub-text-mute">{{ entry.currency }}</small></td>
+          <td>
+            {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
+            {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
+            {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
+          </td>
+          <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
+          <td class="small">{{ entry.notes or '—' }}</td>
+          <td class="mono small">{{ entry.created_at }}</td>
+          <td>
+            {% if entry.entry_type not in ['void','reversal','correction'] %}
+            <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <input type="hidden" name="entry_id" value="{{ entry.id }}">
+              <input class="hub-input" name="reason" placeholder="سبب التصحيح" required style="font-size:12px;padding:5px 8px;min-width:120px">
+              <button type="submit" class="hub-btn hub-btn--icon" title="عكس القيد"
+                style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+            </form>
+            {% else %}
+              <span class="hub-text-mute small">قيد تصحيحي</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا قيود بهذه الفلترة",
+  sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر لعرض الكل.",
+  icon="scale-balanced"
+) }}
+{% endif %}
+
 {% endblock %}

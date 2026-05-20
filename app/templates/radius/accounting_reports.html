@@ -1,63 +1,72 @@
+{# Accounting reports — REBUILT N7 (hub-v2). Backend: report_type, report_label, reports, items. #}
 {% extends "admin/_admin_layout.html" %}
-{% block title %}التقارير المالية{% endblock %}
-{% block page_title %}التقارير المالية{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
+{% import "_partials/hub.html" as hub %}
 
-{% block page_actions %}
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.finance_ledger') }}">
-    <i class="fa-solid fa-scale-balanced"></i> السجل المالي
-  </a>
-{% endblock %}
+{% block title %}التقارير المالية{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
+{% block page_title %}التقارير المالية{% endblock %}
+{% block page_sub %}<span class="sub">{{ report_label }}</span>{% endblock %}
 
 {% block content %}
-<style>
-  .reports-panel{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
-  .reports-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
-  .reports-filter label{display:flex;flex-direction:column;gap:5px;font-weight:700;color:#263244;font-size:13px}
-  .reports-filter select{border:1px solid #d8c8a9;border-radius:8px;padding:9px;background:#fffaf1;min-width:220px}
-  .reports-note{margin-bottom:14px;padding:10px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px}
-  .reports-table{width:100%;border-collapse:collapse}
-  .reports-table th,.reports-table td{border-bottom:1px solid #eee3d0;padding:9px;text-align:right;vertical-align:top}
-  .reports-table th{font-size:12px;color:#657386}
-</style>
 
-<div class="reports-note">
-  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والvoid.
+{{ hub.hero(
+  "التقارير المالية",
+  subtitle="تقارير مبنية من السجل المالي — يومية، شهرية، سنوية، دفعات، سلف، تفعيلات، ربح/خسارة",
+  icon="chart-line",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
+      <i class="fa-solid fa-scale-balanced"></i> السجل المالي
+    </a>
+  '
+) }}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
+            border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
+            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.
 </div>
 
-<section class="reports-panel">
-  <form class="reports-filter" method="get" action="{{ url_for('radius.finance_reports') }}">
-    <label>نوع التقرير
-      <select name="type">
-        {% for key, label in reports.items() %}
-        <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-chart-line"></i> عرض</button>
-  </form>
+<form method="get" action="{{ url_for('radius.finance_reports') }}" class="hub-filterbar">
+  <select class="hub-select grow" name="type" style="min-width:220px">
+    {% for key, label in reports.items() %}
+      <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
+  <span class="hub-spacer"></span>
+  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
+  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
+</form>
 
-  <h3 style="margin:0 0 12px">{{ report_label }}</h3>
-  {% if items %}
-    {% set columns = items[0].keys()|list %}
-    <table class="reports-table">
-      <thead>
-        <tr>
-          {% for column in columns %}<th>{{ column }}</th>{% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in items %}
-        <tr>
-          {% for column in columns %}
-          <td class="mono">{{ row.get(column, '—') }}</td>
+{% if items %}
+  {% set columns = items[0].keys()|list %}
+  {% call hub.section(report_label, icon="chart-pie", meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="reports-list">
+        <thead>
+          <tr>
+            {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+          <tr>
+            {% for column in columns %}
+              <td class="mono small">{{ row.get(column, '—') }}</td>
+            {% endfor %}
+          </tr>
           {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="empty"><i class="fa-solid fa-chart-simple"></i> لا توجد بيانات لهذا التقرير بعد.</div>
-  {% endif %}
-</section>
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد بيانات لهذا التقرير بعد",
+  sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.",
+  icon="chart-simple"
+) }}
+{% endif %}
+
 {% endblock %}

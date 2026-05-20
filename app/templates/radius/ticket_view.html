@@ -1,70 +1,159 @@
+{# Ticket view — REBUILT N7 (hub-v2). Backend: ticket, replies. #}
 {% extends "admin/_admin_layout.html" %}
-{% block title %}تذكرة #{{ ticket.id }}{% endblock %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تذكرة #{{ ticket.id }} — {{ ticket.subject }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
-{% block page_title %}{{ ticket.subject }}{% endblock %}
-{% block page_sub %}<span class="sub">(تذكرة #{{ ticket.id }})</span>{% endblock %}
+{% block page_title %}تذكرة #{{ ticket.id }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ ticket.subject }}</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+.tk-msg{
+  padding:12px 14px;
+  border-radius:var(--hub-r-lg);
+  margin-bottom:10px;
+  border:1px solid var(--hub-border-soft);
+}
+.tk-msg--sub{ background:var(--hub-bg-soft); }
+.tk-msg--admin{ background:var(--hub-blue-soft); border-color:#bfdbfe; }
+.tk-msg-head{
+  display:flex; align-items:center; gap:8px;
+  font-size:11.5px; color:var(--hub-text-mute);
+  margin-bottom:6px;
+}
+.tk-msg-head strong{ color:var(--hub-text); font-weight:800; font-size:12px; }
+.tk-msg-body{
+  white-space:pre-wrap;
+  font-size:13.5px; line-height:1.6;
+  color:var(--hub-text);
+}
+.tk-info-row{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 0;
+  font-size:12.5px;
+  border-bottom:1px dashed var(--hub-border-soft);
+}
+.tk-info-row:last-child{ border-bottom:none; }
+.tk-info-row .lbl{
+  color:var(--hub-text-mute); min-width:80px;
+  font-weight:600;
+}
+.tk-info-row .val{ color:var(--hub-text); font-weight:700; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-  <div>
-    <div class="card">
-      <div class="card-header"><span class="title">المحادثة</span></div>
-      <div class="card-body">
-        <div style="background:var(--hr-soft);padding:12px;border-radius:8px;margin-bottom:14px">
-          <div class="hint" style="margin-bottom:4px">المشترك · {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '' }}</div>
-          <div style="white-space:pre-wrap;font-size:13.5px">{{ ticket.body or '—' }}</div>
-        </div>
-        {% for r in replies %}
-        <div style="background:{% if r.author_type == 'admin' %}#E1F4FA{% else %}var(--hr-soft){% endif %};padding:10px 12px;border-radius:8px;margin-bottom:10px">
-          <div class="hint" style="margin-bottom:3px">
-            <strong>{{ 'مدير' if r.author_type == 'admin' else 'مشترك' }}</strong>
-            · {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}
-          </div>
-          <div style="white-space:pre-wrap;font-size:13px">{{ r.body }}</div>
-        </div>
-        {% endfor %}
 
-        <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" style="margin-top:12px">
-          <div class="form-row full"><label>إضافة رد</label>
-            <div class="field"><textarea name="body" rows="4" required placeholder="اكتب ردك..."></textarea></div></div>
-          <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div>
-    <div class="card">
-      <div class="card-header"><span class="title">معلومات</span></div>
-      <div class="card-body">
-        <div style="display:grid;gap:8px;font-size:12.5px">
-          <div><span class="hint">الفئة:</span> <strong>{{ ticket.category }}</strong></div>
-          <div><span class="hint">الأولوية:</span> <strong>{{ ticket.priority }}</strong></div>
-          <div><span class="hint">الحالة:</span> <strong>{{ ticket.status }}</strong></div>
-          <div><span class="hint">المشترك ID:</span> <strong class="mono">{{ ticket.subscriber_id }}</strong></div>
-          <div><span class="hint">المسؤول:</span> <strong class="mono">{{ ticket.assignee_admin_id or '—' }}</strong></div>
-          {% if ticket.closed_at %}<div><span class="hint">أُغلقت:</span> <strong class="mono">{{ ticket.closed_at.strftime('%Y-%m-%d') }}</strong></div>{% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><span class="title">تغيير الحالة</span></div>
-      <div class="card-body">
-        <form method="post" action="{{ url_for('radius.tk_status', tid=ticket.id) }}" style="display:flex;gap:6px">
-          <select name="status" style="flex:1;padding:7px;border:1px solid var(--hr-border-strong);border-radius:6px">
-            {% for s in ['open','pending','in_progress','resolved','closed'] %}
-              <option value="{{ s }}" {% if ticket.status==s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
-          <button class="btn btn-primary btn-sm"><i class="fa-solid fa-check"></i></button>
-        </form>
-      </div>
-    </div>
-
-    <a class="btn btn-secondary" href="{{ url_for('radius.tk_list') }}">
+{{ hub.hero(
+  ticket.subject,
+  subtitle="تذكرة #" + ticket.id|string + " — متابعة المحادثة وتحديث الحالة",
+  icon="headset",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tk_list') + '">
       <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
     </a>
+  '
+) }}
+
+<div class="hub-grid-2">
+  {# ─── Right column (conversation) ─── #}
+  <div>
+    {% call hub.section("المحادثة", icon="comments") %}
+      {# Original ticket body #}
+      <div class="tk-msg tk-msg--sub">
+        <div class="tk-msg-head">
+          <i class="fa-solid fa-user"></i>
+          <strong>المشترك</strong>
+          <span>·</span>
+          <span class="mono">{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '' }}</span>
+        </div>
+        <div class="tk-msg-body">{{ ticket.body or '—' }}</div>
+      </div>
+
+      {# Replies #}
+      {% for r in replies %}
+      <div class="tk-msg {% if r.author_type == 'admin' %}tk-msg--admin{% else %}tk-msg--sub{% endif %}">
+        <div class="tk-msg-head">
+          <i class="fa-solid fa-{{ 'user-shield' if r.author_type == 'admin' else 'user' }}"></i>
+          <strong>{{ 'مدير' if r.author_type == 'admin' else 'مشترك' }}</strong>
+          <span>·</span>
+          <span class="mono">{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}</span>
+        </div>
+        <div class="tk-msg-body">{{ r.body }}</div>
+      </div>
+      {% endfor %}
+
+      {# Reply form #}
+      <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" style="margin-top:14px">
+        <div class="hub-field">
+          <label class="hub-field-label" for="hub-f-body">إضافة رد</label>
+          <textarea class="hub-textarea" id="hub-f-body" name="body" rows="4" required placeholder="اكتب ردك..."></textarea>
+        </div>
+        <div style="margin-top:10px">
+          {{ hub.btn("إرسال الرد", icon="paper-plane", variant="primary", type="submit") }}
+        </div>
+      </form>
+    {% endcall %}
+  </div>
+
+  {# ─── Left column (sidebar info) ─── #}
+  <div>
+    {% call hub.section("معلومات التذكرة", icon="circle-info") %}
+      <div class="tk-info-row">
+        <span class="lbl">الفئة:</span>
+        <span class="val">{{ hub.pill(ticket.category or '—', variant="grey", dot=False) }}</span>
+      </div>
+      <div class="tk-info-row">
+        <span class="lbl">الأولوية:</span>
+        <span class="val">
+          {% if ticket.priority == 'urgent' %}{{ hub.pill("عاجل", variant="red") }}
+          {% elif ticket.priority == 'high' %}{{ hub.pill("مرتفع", variant="amber") }}
+          {% elif ticket.priority == 'low' %}{{ hub.pill("منخفض", variant="grey") }}
+          {% else %}{{ hub.pill("عادي", variant="blue") }}{% endif %}
+        </span>
+      </div>
+      <div class="tk-info-row">
+        <span class="lbl">الحالة:</span>
+        <span class="val">
+          {% if ticket.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
+          {% elif ticket.status == 'in_progress' %}{{ hub.pill("قيد المعالجة", variant="blue") }}
+          {% elif ticket.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}
+          {% elif ticket.status == 'resolved' %}{{ hub.pill("محلولة", variant="green") }}
+          {% elif ticket.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
+          {% else %}{{ hub.pill(ticket.status, variant="grey") }}{% endif %}
+        </span>
+      </div>
+      <div class="tk-info-row">
+        <span class="lbl">المشترك:</span>
+        <span class="val mono">#{{ ticket.subscriber_id }}</span>
+      </div>
+      <div class="tk-info-row">
+        <span class="lbl">المسؤول:</span>
+        <span class="val mono">{{ ticket.assignee_admin_id or '—' }}</span>
+      </div>
+      {% if ticket.closed_at %}
+      <div class="tk-info-row">
+        <span class="lbl">أُغلقت:</span>
+        <span class="val mono">{{ ticket.closed_at.strftime('%Y-%m-%d') }}</span>
+      </div>
+      {% endif %}
+    {% endcall %}
+
+    {% call hub.section("تغيير الحالة", icon="arrow-right-arrow-left") %}
+      <form method="post" action="{{ url_for('radius.tk_status', tid=ticket.id) }}" class="hub-flex-row" style="gap:6px">
+        <select class="hub-select grow" name="status" style="flex:1">
+          <option value="open"        {% if ticket.status=='open' %}selected{% endif %}>مفتوحة</option>
+          <option value="pending"     {% if ticket.status=='pending' %}selected{% endif %}>معلَّقة</option>
+          <option value="in_progress" {% if ticket.status=='in_progress' %}selected{% endif %}>قيد المعالجة</option>
+          <option value="resolved"    {% if ticket.status=='resolved' %}selected{% endif %}>محلولة</option>
+          <option value="closed"      {% if ticket.status=='closed' %}selected{% endif %}>مغلقة</option>
+        </select>
+        {{ hub.btn("تحديث", icon="check", variant="primary", type="submit", size="sm") }}
+      </form>
+    {% endcall %}
   </div>
 </div>
+
 {% endblock %}

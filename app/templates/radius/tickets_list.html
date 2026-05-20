@@ -1,54 +1,109 @@
+{# Tickets list — REBUILT N7 (hub-v2). Backend: items, status. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}التذاكر / الشكاوى{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
-{% block page_title %}التذاكر / الشكاوى{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.tk_new') }}">
-    <i class="fa-solid fa-plus"></i> تذكرة جديدة
-  </a>
-{% endblock %}
+{% block page_title %}التذاكر{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} تذكرة في النتائج</span>{% endblock %}
+
 {% block content %}
-<form method="get" class="filter-bar">
-  <select name="status">
+
+{{ hub.hero(
+  "التذاكر والشكاوى",
+  subtitle="إدارة طلبات الدعم — فلترة بالحالة، عرض المحادثات، تحديث الأولويات",
+  icon="headset",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.tk_new') + '">
+      <i class="fa-solid fa-plus"></i> تذكرة جديدة
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
-    {% for s in ['open','pending','in_progress','resolved','closed'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
-    {% endfor %}
+    <option value="open"         {% if status=='open' %}selected{% endif %}>مفتوحة</option>
+    <option value="pending"      {% if status=='pending' %}selected{% endif %}>معلَّقة</option>
+    <option value="in_progress"  {% if status=='in_progress' %}selected{% endif %}>قيد المعالجة</option>
+    <option value="resolved"     {% if status=='resolved' %}selected{% endif %}>محلولة</option>
+    <option value="closed"       {% if status=='closed' %}selected{% endif %}>مغلقة</option>
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
 </form>
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الموضوع</th><th>الفئة</th><th>الأولوية</th>
-      <th>الحالة</th><th>المسؤول</th><th>أُنشئت</th><th style="width:80px"></th>
-    </tr></thead>
-    <tbody>{% for t in items %}
-    <tr>
-      <td class="num">{{ t.id }}</td>
-      <td><strong>{{ t.subject }}</strong></td>
-      <td><span class="pill">{{ t.category }}</span></td>
-      <td>
-        {% if t.priority == 'urgent' %}<span class="pill pill-danger">عاجل</span>
-        {% elif t.priority == 'high' %}<span class="pill pill-warn">مرتفع</span>
-        {% elif t.priority == 'low' %}<span class="pill">منخفض</span>
-        {% else %}<span class="pill pill-info">عادي</span>{% endif %}
-      </td>
-      <td>
-        {% if t.status == 'open' %}<span class="pill pill-warn">مفتوحة</span>
-        {% elif t.status == 'in_progress' %}<span class="pill pill-info">قيد المعالجة</span>
-        {% elif t.status == 'resolved' %}<span class="pill pill-success">حُلَّت</span>
-        {% elif t.status == 'closed' %}<span class="pill">مغلقة</span>
-        {% else %}<span class="pill">{{ t.status }}</span>{% endif %}
-      </td>
-      <td class="mono">{{ t.assignee_admin_id or '—' }}</td>
-      <td class="mono">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '—' }}</td>
-      <td><a class="btn btn-primary btn-xs" href="{{ url_for('radius.tk_view', tid=t.id) }}">
-        <i class="fa-solid fa-eye"></i></a></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-headset"></i>لا تذاكر</div>{% endif %}
-</div></div>
+
+{% if items %}
+{% set _open  = items|selectattr('status','equalto','open')|list|length %}
+{% set _prog  = items|selectattr('status','equalto','in_progress')|list|length %}
+{% set _resol = items|selectattr('status','equalto','resolved')|list|length %}
+{% set _close = items|selectattr('status','equalto','closed')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("في النتائج",   items|length, icon="list",          variant="brand") }}
+  {{ hub.kpi("مفتوحة",        _open,        icon="folder-open",    variant="amber") }}
+  {{ hub.kpi("قيد المعالجة",  _prog,        icon="spinner",        variant="blue") }}
+  {{ hub.kpi("محلولة",        _resol,       icon="circle-check",   variant="green") }}
+</div>
+
+{% call hub.section("قائمة التذاكر", icon="table-list", meta=items|length|string + " تذكرة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="tickets-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الموضوع</th>
+          <th>الفئة</th>
+          <th>الأولوية</th>
+          <th>الحالة</th>
+          <th>المسؤول</th>
+          <th>أُنشئت</th>
+          <th style="width:80px">عرض</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in items %}
+        <tr>
+          <td class="num mono">{{ t.id }}</td>
+          <td>
+            <a href="{{ url_for('radius.tk_view', tid=t.id) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+              {{ t.subject }}
+            </a>
+          </td>
+          <td>{{ hub.pill(t.category or '—', variant="grey", dot=False) }}</td>
+          <td>
+            {% if t.priority == 'urgent' %}{{ hub.pill("عاجل", variant="red") }}
+            {% elif t.priority == 'high' %}{{ hub.pill("مرتفع", variant="amber") }}
+            {% elif t.priority == 'low' %}{{ hub.pill("منخفض", variant="grey") }}
+            {% else %}{{ hub.pill("عادي", variant="blue") }}{% endif %}
+          </td>
+          <td>
+            {% if t.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
+            {% elif t.status == 'in_progress' %}{{ hub.pill("قيد المعالجة", variant="blue") }}
+            {% elif t.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}
+            {% elif t.status == 'resolved' %}{{ hub.pill("محلولة", variant="green") }}
+            {% elif t.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
+            {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
+          </td>
+          <td class="mono small">{{ t.assignee_admin_id or '—' }}</td>
+          <td class="mono small">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '—' }}</td>
+          <td>
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
+               href="{{ url_for('radius.tk_view', tid=t.id) }}">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا تذاكر بهذه الفلترة",
+  sub="أنشئ تذكرة جديدة من زرّ «تذكرة جديدة» في الأعلى أو غيّر الفلتر.",
+  icon="headset"
+) }}
+{% endif %}
+
 {% endblock %}
