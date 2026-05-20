@@ -711,21 +711,21 @@
   font-size: 11px;
 }
 
-/* ═════════════════════════ SMART ACTIONS ═════════════════════════ */
+/* ═════════════════════════ SMART ACTIONS (R13.A.9 Section C) ═════════════════════════ */
 .cc-actions{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 .cc-action{
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 14px;
   padding: 14px 16px;
   background: var(--cc-card-bg);
   border: 1px solid var(--cc-border);
   border-radius: var(--cc-r-tile);
   cursor: pointer;
   transition: transform var(--cc-anim-fast), box-shadow var(--cc-anim-fast),
-              border-color var(--cc-anim-fast);
+              border-color var(--cc-anim-fast), background-color var(--cc-anim-fast);
   text-align: start;
   font-family: inherit;
   font-size: 13px;
@@ -733,49 +733,91 @@
   color: var(--cc-text);
   width: 100%;
   text-decoration: none;
-  min-height: 70px;
+  min-height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+/* Subtle gradient shine on hover — slides in from start. */
+.cc-action::before{
+  content: ""; position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(107,90,237,.04) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity var(--cc-anim-fast);
+  pointer-events: none;
 }
 .cc-action:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(107,90,237,.10);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(107,90,237,.12);
   border-color: var(--cc-brand-soft2);
 }
+.cc-action:hover::before{ opacity: 1; }
+.cc-action:active{ transform: translateY(0); }
 .cc-action:disabled{
-  opacity:.55; cursor:not-allowed; transform:none; box-shadow:none;
+  opacity:.5; cursor:not-allowed; transform:none; box-shadow:none;
   border-color:var(--cc-border);
 }
+.cc-action:disabled::before{ display:none; }
+
+/* Icon block: bigger, with a subtle inner highlight for depth. */
 .cc-action-icon{
-  width: 38px; height: 38px;
+  width: 42px; height: 42px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 16px;
   flex: 0 0 auto;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6),
+              0 1px 2px rgba(0,0,0,.04);
+  transition: transform var(--cc-anim-fast);
 }
+.cc-action:hover .cc-action-icon{ transform: scale(1.06); }
 .cc-action-icon.purple { background:#EEE9FE; color:var(--cc-brand-ink); }
 .cc-action-icon.green  { background:#DEF3E5; color:#157F4E; }
 .cc-action-icon.amber  { background:#FCEFC9; color:#7A4F02; }
 .cc-action-icon.cyan   { background:#DEF3F8; color:#0F627A; }
 .cc-action-icon.blue   { background:#E3EDF9; color:#1E5C9F; }
 .cc-action-icon.red    { background:#FDE5E5; color:#9B1C1C; }
-.cc-action-body{ flex: 1; min-width: 0; }
-.cc-action-title{ font-size: 13px; font-weight: 700; color: var(--cc-text); }
-.cc-action-sub  { font-size: 11px; color: var(--cc-text-mute); font-weight: 500; margin-top: 1px; }
+.cc-action-icon.grey   { background:#EDEAE1; color:#5B6470; }
 
+.cc-action-body{ flex: 1; min-width: 0; position: relative; }
+.cc-action-title{
+  font-size: 13.5px; font-weight: 800;
+  color: var(--cc-text);
+  line-height: 1.3;
+}
+.cc-action-sub{
+  font-size: 11px;
+  color: var(--cc-text-mute);
+  font-weight: 500;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* Destructive — red gradient + clear separation from peers. */
 .cc-action.cc-action-danger{
   background: linear-gradient(135deg,#FFF1F1 0%,#FBE2E2 100%);
   border-color: #F4C5C5;
 }
 .cc-action.cc-action-danger .cc-action-title{ color:#9B1C1C; }
-.cc-action.cc-action-danger:hover{ border-color:#E8A5A5; }
+.cc-action.cc-action-danger:hover{
+  border-color:#E48A8A;
+  box-shadow: 0 8px 20px rgba(232,74,74,.18);
+}
+.cc-action.cc-action-danger:hover .cc-action-icon{
+  background:#FBC9C9; color:#7A0E0E;
+}
 
-/* lighter red tint — used in simple mode for "فصل الجلسة" which is
-   strong but not destructive like delete-permanent. */
+/* Soft-red — used in simple mode for "فصل الجلسة" (strong but
+   recoverable; distinct from the unrecoverable delete). */
 .cc-action.cc-action-soft-red{
   background: linear-gradient(135deg,#FFF6F6 0%,#FCEAEA 100%);
   border-color: #F2CFCF;
 }
 .cc-action.cc-action-soft-red .cc-action-title{ color: #B12525; }
-.cc-action.cc-action-soft-red:hover{ border-color: #E8A5A5; }
+.cc-action.cc-action-soft-red:hover{
+  border-color: #E48A8A;
+  box-shadow: 0 8px 20px rgba(232,74,74,.12);
+}
 
 /* inline form inside action */
 .cc-action form{ width:100%; display:flex; flex-direction:column; gap:6px; margin:0; }
