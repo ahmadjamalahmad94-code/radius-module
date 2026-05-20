@@ -16,6 +16,10 @@
       background:#FFFFFF !important;
       border-bottom:1px solid #EEEDF3 !important;
       box-shadow:0 1px 0 rgba(15,23,42,.02);
+      /* Flip visual order — brand goes to the visual RIGHT, account
+         actions go to the visual LEFT (user request). flex-direction:
+         row-reverse on top of the existing space-between layout. */
+      flex-direction:row-reverse !important;
     }
     .topbar .brand-area{
       color:#1F2937;
