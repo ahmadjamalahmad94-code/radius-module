@@ -301,18 +301,57 @@ class CardsService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_REVOKE,
                            target_type="card", target_id=str(card_id))
 
-    def enable_card(self, *, actor: str, card_id: int) -> None:
-        if not cards_repo.set_card_revoked(self._store_tenant_id(), card_id, False, actor=actor):
+    def enable_card(self, *, actor: str, card_id: int) -> dict:
+        """Re-enable a previously-disabled card AND restore the time
+        snapshot taken at disable. Returns dict with the new expire_at
+        and how many seconds were restored (0 if the card was never
+        frozen, e.g. disabled before migration 025)."""
+        tenant_id = self._store_tenant_id()
+        result = cards_repo.thaw_card_time(tenant_id, card_id)
+        if result is None:
             raise RadiusValidationError("تعذر تفعيل البطاقة")
         self._audit.record(actor=actor, action="card.enable",
-                           target_type="card", target_id=str(card_id))
+                           target_type="card", target_id=str(card_id),
+                           payload={
+                               "restored_seconds": result["restored_seconds"],
+                               "expire_at_new":    result["expire_at_new"],
+                           })
+        return result
 
-    def disable_card(self, *, actor: str, card_id: int, reason: str = "") -> None:
-        if not cards_repo.set_card_revoked(
-            self._store_tenant_id(), card_id, True, actor=actor, reason=reason,
-        ):
+    def disable_card(self, *, actor: str, card_id: int, reason: str = "") -> dict:
+        """Disable a card and FREEZE its remaining time. Real-world clock
+        won't burn the user's quota while disabled; re-enabling restores
+        the same number of seconds from 'now'.
+
+        Returns dict with frozen_remaining_seconds + old expire_at.
+        """
+        tenant_id = self._store_tenant_id()
+        result = cards_repo.freeze_card_time(
+            tenant_id, card_id, actor=actor, reason=reason,
+        )
+        if result is None:
             raise RadiusValidationError("تعذر تعطيل البطاقة")
         self._audit.record(actor=actor, action="card.disable",
+                           target_type="card", target_id=str(card_id),
+                           payload={
+                               "reason":                   reason,
+                               "frozen_remaining_seconds": result["frozen_remaining_seconds"],
+                               "expire_at_old":            result["expire_at_old"],
+                           })
+        return result
+
+    def soft_delete_card(self, *, actor: str, card_id: int, reason: str = "") -> None:
+        """Move a card to the recycle bin (deleted_at set). The row stays
+        in the DB so /admin/radius/recycle-bin can restore or purge it.
+        Replaces the previous hard-delete path as the default 'حذف'
+        action — delete_card_permanently still exists for explicit
+        purging from the recycle bin."""
+        tenant_id = self._store_tenant_id()
+        if not cards_repo.soft_delete_card(
+            tenant_id, card_id, actor=actor, reason=reason,
+        ):
+            raise RadiusValidationError("تعذر نقل البطاقة إلى سلة المحذوفات")
+        self._audit.record(actor=actor, action="card.soft_delete",
                            target_type="card", target_id=str(card_id),
                            payload={"reason": reason})
 

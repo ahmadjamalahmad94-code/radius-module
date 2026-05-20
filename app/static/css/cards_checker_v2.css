@@ -1462,3 +1462,219 @@ body:has(.cc-hero) .page-head{display:none !important}
 .cc-modal-btn-confirm:disabled{
   background:#C4BCE9;cursor:not-allowed;transform:none;box-shadow:none;
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  GENERIC MODAL SYSTEM (window.ccModal.*)                             ║
+   ║                                                                      ║
+   ║  Replaces native confirm()/prompt()/alert(). Five flavors render     ║
+   ║  inside the same .cc-gmodal shell, just with different bodies:       ║
+   ║                                                                      ║
+   ║    confirm()      → title + message + cancel/confirm (red if danger) ║
+   ║    form()         → title + N labelled inputs + cancel/apply         ║
+   ║    macPicker()    → title + clickable MAC list + custom-MAC input    ║
+   ║    speed()        → 2 number inputs (down + up) preset to current    ║
+   ║    softDelete()   → reason input + recycle-bin reassurance copy      ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+
+.cc-gmodal-overlay{
+  position:fixed; inset:0;
+  background:rgba(15,23,42,.45);
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:300;
+  padding:16px;
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.cc-gmodal-overlay.is-open{
+  display:flex;
+  opacity:1;
+}
+
+.cc-gmodal{
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 20px 50px rgba(15,23,42,.25);
+  padding:22px 22px 18px;
+  width:100%; max-width:460px;
+  transform:translateY(8px) scale(.985);
+  transition:transform .2s ease;
+  border:1px solid #E5E0F5;
+  max-height:90vh;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.cc-gmodal-overlay.is-open .cc-gmodal{
+  transform:translateY(0) scale(1);
+}
+
+.cc-gmodal-head{
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:6px;
+}
+.cc-gmodal-head-icon{
+  width:38px; height:38px; border-radius:11px;
+  background:linear-gradient(135deg,#6B5AED,#5B4BD8);
+  color:#fff; display:grid; place-items:center;
+  font-size:14px;
+  box-shadow:0 4px 10px rgba(107,90,237,.30);
+}
+.cc-gmodal-head-icon.danger{
+  background:linear-gradient(135deg,#EF4444,#DC2626);
+  box-shadow:0 4px 10px rgba(239,68,68,.30);
+}
+.cc-gmodal-head-icon.warn{
+  background:linear-gradient(135deg,#F59E0B,#D97706);
+  box-shadow:0 4px 10px rgba(245,158,11,.30);
+}
+.cc-gmodal-head-icon.success{
+  background:linear-gradient(135deg,#22C55E,#16A34A);
+  box-shadow:0 4px 10px rgba(34,197,94,.30);
+}
+.cc-gmodal-head-title{
+  font-size:16px; font-weight:800; color:#1F2937; flex:1;
+}
+.cc-gmodal-close{
+  width:30px; height:30px; border:0; background:#F4F1FE;
+  border-radius:50%; color:#475569; cursor:pointer;
+  display:grid; place-items:center; font-size:12px;
+  transition:.15s ease;
+}
+.cc-gmodal-close:hover{background:#EF4444;color:#fff}
+
+.cc-gmodal-body{
+  font-size:13px; color:#475569;
+  line-height:1.65;
+  margin:8px 0 18px;
+}
+.cc-gmodal-body strong{color:#1F2937; font-weight:800}
+
+/* Form field — labelled input row */
+.cc-gmodal-field{
+  margin-bottom:12px;
+}
+.cc-gmodal-field-label{
+  font-size:11.5px; font-weight:800; color:#475569;
+  margin-bottom:6px; letter-spacing:.3px;
+}
+.cc-gmodal-field input,
+.cc-gmodal-field textarea{
+  width:100%;
+  padding:11px 12px;
+  background:#F8F6FE;
+  border:1px solid #E5E0F5;
+  border-radius:10px;
+  font-family:inherit;
+  font-size:13.5px; color:#1F2937;
+  outline:none;
+  transition:.15s ease;
+}
+.cc-gmodal-field input:focus,
+.cc-gmodal-field textarea:focus{
+  background:#fff;
+  border-color:#6B5AED;
+  box-shadow:0 0 0 3px rgba(107,90,237,.12);
+}
+.cc-gmodal-field textarea{ min-height:72px; resize:vertical }
+
+/* Pair of fields side-by-side (e.g. speed: down/up) */
+.cc-gmodal-grid-2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+/* MAC picker list */
+.cc-gmodal-mac-list{
+  display:flex; flex-direction:column; gap:6px;
+  max-height:200px; overflow-y:auto;
+  margin-bottom:10px;
+  padding:4px;
+  background:#F8F6FE;
+  border:1px solid #E5E0F5;
+  border-radius:10px;
+}
+.cc-gmodal-mac-list:empty{display:none}
+.cc-gmodal-mac-row{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px;
+  background:#fff;
+  border:1px solid #E5E0F5;
+  border-radius:8px;
+  cursor:pointer;
+  transition:.15s ease;
+  text-align:start;
+  font-family:inherit;
+  font-size:12.5px;
+}
+.cc-gmodal-mac-row:hover{
+  border-color:#6B5AED;
+  background:#F4F1FE;
+}
+.cc-gmodal-mac-row.is-active{
+  border-color:#6B5AED;
+  background:#EDE9FE;
+  box-shadow:0 0 0 3px rgba(107,90,237,.10);
+}
+.cc-gmodal-mac-row-ic{
+  width:28px; height:28px; flex:0 0 28px;
+  border-radius:8px;
+  background:#EDE9FE; color:#6B5AED;
+  display:grid; place-items:center; font-size:12px;
+}
+.cc-gmodal-mac-row-body{ flex:1; min-width:0 }
+.cc-gmodal-mac-row-mac{
+  font-family:ui-monospace, Consolas, monospace;
+  font-size:12px; font-weight:700; color:#1F2937;
+  direction:ltr; text-align:start;
+}
+.cc-gmodal-mac-row-meta{ font-size:11px; color:#94A3B8 }
+.cc-gmodal-mac-list-empty{
+  padding:14px; text-align:center;
+  font-size:12px; color:#94A3B8;
+}
+.cc-gmodal-mac-divider{
+  text-align:center; font-size:11px; color:#94A3B8;
+  font-weight:700; letter-spacing:.5px;
+  margin:6px 0;
+}
+
+/* Footer buttons */
+.cc-gmodal-actions{
+  display:flex; gap:8px;
+}
+.cc-gmodal-btn{
+  flex:1;
+  padding:11px 14px;
+  border-radius:10px; border:0;
+  font-family:inherit;
+  font-size:13px; font-weight:700;
+  cursor:pointer;
+  transition:.15s ease;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+}
+.cc-gmodal-btn-cancel{
+  background:#F4F1FE; color:#475569;
+  border:1px solid #E5E0F5;
+}
+.cc-gmodal-btn-cancel:hover{background:#EAE5F8;color:#1F2937}
+.cc-gmodal-btn-confirm{
+  background:#6B5AED; color:#fff;
+  box-shadow:0 4px 12px rgba(107,90,237,.30);
+}
+.cc-gmodal-btn-confirm:hover{
+  background:#5B4BD8;
+  transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(107,90,237,.40);
+}
+.cc-gmodal-btn-confirm.danger{
+  background:#EF4444;
+  box-shadow:0 4px 12px rgba(239,68,68,.30);
+}
+.cc-gmodal-btn-confirm.danger:hover{
+  background:#DC2626;
+  box-shadow:0 6px 16px rgba(239,68,68,.40);
+}
+.cc-gmodal-btn-confirm:disabled{
+  background:#C4BCE9; cursor:not-allowed; transform:none; box-shadow:none;
+}

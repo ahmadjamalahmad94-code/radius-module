@@ -372,12 +372,41 @@ def _handle_card_operation():
             svc.reset_card_usage(actor=_actor(), card_id=card_id)
             flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")
         elif action == "disable":
-            svc.disable_card(actor=_actor(), card_id=card_id, reason=_form_str("reason"))
-            flash("تم تعطيل البطاقة بدون حذفها.", "warning")
+            res = svc.disable_card(
+                actor=_actor(), card_id=card_id, reason=_form_str("reason"),
+            )
+            frozen = int((res or {}).get("frozen_remaining_seconds") or 0)
+            if frozen > 0:
+                h, m = divmod(frozen // 60, 60)
+                flash(
+                    f"تم تعطيل البطاقة وتجميد الوقت المتبقي ({h} ساعة و {m} دقيقة). "
+                    "سيعود نفس الوقت عند إعادة التفعيل.",
+                    "warning",
+                )
+            else:
+                flash("تم تعطيل البطاقة.", "warning")
         elif action == "enable":
-            svc.enable_card(actor=_actor(), card_id=card_id)
-            flash("تم إعادة تفعيل البطاقة.", "success")
+            res = svc.enable_card(actor=_actor(), card_id=card_id)
+            restored = int((res or {}).get("restored_seconds") or 0)
+            if restored > 0:
+                h, m = divmod(restored // 60, 60)
+                flash(
+                    f"تم تفعيل البطاقة. تمت استعادة الوقت المجمَّد ({h} ساعة و {m} دقيقة).",
+                    "success",
+                )
+            else:
+                flash("تم تفعيل البطاقة.", "success")
+        elif action == "soft_delete":
+            # Default 'حذف' from the Card Checker — moves to recycle bin,
+            # NOT permanent. The /admin/radius/recycle-bin screen can
+            # restore or finally purge it.
+            svc.soft_delete_card(
+                actor=_actor(), card_id=card_id, reason=_form_str("reason"),
+            )
+            flash("تم نقل البطاقة إلى سلة المحذوفات. يمكنك استعادتها من سلة المحذوفات.", "success")
+            query = ""
         elif action == "delete_permanent":
+            # Hard-delete path retained for the recycle bin screen.
             if _form_str("confirm_delete") != "DELETE":
                 flash("للحذف النهائي اكتب DELETE في خانة التأكيد.", "error")
             else:

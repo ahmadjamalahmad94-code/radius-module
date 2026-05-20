@@ -85,6 +85,11 @@ def _card_row(r) -> Card:
         # migration 024 — safe getter so any pre-migration snapshot still loads
         card_speed_down_kbps=int(_g(r, "card_speed_down_kbps", 0) or 0),
         card_speed_up_kbps=int(_g(r, "card_speed_up_kbps", 0) or 0),
+        # migration 025 — freeze + soft delete
+        frozen_remaining_seconds=int(_g(r, "frozen_remaining_seconds", 0) or 0),
+        deleted_at=parse_dt(_g(r, "deleted_at", None)),
+        deleted_by=_g(r, "deleted_by", "") or "",
+        delete_reason=_g(r, "delete_reason", "") or "",
     )
 
 
@@ -944,6 +949,167 @@ def adjust_card_expire_at(tenant_id: int, card_id: int, delta_seconds: int):
             "expire_at_new":     new_expire,
             "remaining_seconds": max(0, remaining_s),
         }
+
+
+def freeze_card_time(tenant_id: int, card_id: int, *, actor: str = "",
+                       reason: str = "") -> dict | None:
+    """Disable a card AND snapshot its remaining time.
+
+    Step 1 reads current expire_at, computes remaining_seconds against
+    'now'. Step 2 sets revoked=1, stores frozen_remaining_seconds,
+    NULL-s expire_at (so the translator can't accidentally hand out
+    seconds while the card is parked), records disabled_at/by/reason.
+
+    Returns {frozen_remaining_seconds, expire_at_old} on success or
+    None if the card doesn't exist. If the card was already disabled
+    we return frozen_remaining_seconds unchanged (idempotent).
+    """
+    now = now_iso()
+    with transaction() as conn:
+        row = conn.execute(
+            """
+            SELECT expire_at, revoked, frozen_remaining_seconds,
+                   CAST(strftime('%s', expire_at) AS INTEGER)
+                 - CAST(strftime('%s', 'now')   AS INTEGER) AS remaining
+              FROM cards
+             WHERE tenant_id = ? AND id = ?
+            """,
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return None
+        get = (lambda k, i: row[k] if isinstance(row, dict) else row[i])
+        expire_at      = get("expire_at", 0)
+        already_disabled = bool(get("revoked", 1))
+        already_frozen  = int(get("frozen_remaining_seconds", 2) or 0)
+        live_remaining  = int(get("remaining", 3) or 0)
+
+        # If already disabled, keep the previously-frozen value (idempotent).
+        if already_disabled and already_frozen > 0:
+            frozen = already_frozen
+        else:
+            frozen = max(0, live_remaining)
+
+        conn.execute(
+            """
+            UPDATE cards
+            SET revoked = 1,
+                disabled_at = COALESCE(disabled_at, ?),
+                disabled_by = CASE WHEN disabled_by = '' THEN ? ELSE disabled_by END,
+                disabled_reason = CASE WHEN disabled_reason = '' THEN ? ELSE disabled_reason END,
+                frozen_remaining_seconds = ?,
+                expire_at = NULL
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (now, actor, reason, frozen, tenant_id, card_id),
+        )
+        return {
+            "frozen_remaining_seconds": frozen,
+            "expire_at_old":            expire_at,
+        }
+
+
+def thaw_card_time(tenant_id: int, card_id: int) -> dict | None:
+    """Re-enable a card AND restore its remaining time as expire_at = now + frozen.
+
+    Reads frozen_remaining_seconds, sets new expire_at, clears
+    revoked/disabled fields and the frozen snapshot. If
+    frozen_remaining_seconds is 0 (card was never frozen, OR was
+    enabled before the freeze-time feature shipped), we just clear
+    the revoked flag and leave expire_at untouched.
+
+    Returns {expire_at_new, restored_seconds} on success or None.
+    """
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT frozen_remaining_seconds FROM cards "
+            "WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return None
+        frozen = int((row["frozen_remaining_seconds"]
+                      if isinstance(row, dict) else row[0]) or 0)
+
+        if frozen > 0:
+            modifier = f"+{int(frozen)} seconds"
+            conn.execute(
+                """
+                UPDATE cards
+                SET revoked = 0,
+                    disabled_at = NULL,
+                    disabled_by = '',
+                    disabled_reason = '',
+                    frozen_remaining_seconds = 0,
+                    expire_at = datetime('now', ?)
+                WHERE tenant_id = ? AND id = ?
+                """,
+                (modifier, tenant_id, card_id),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE cards
+                SET revoked = 0,
+                    disabled_at = NULL,
+                    disabled_by = '',
+                    disabled_reason = ''
+                WHERE tenant_id = ? AND id = ?
+                """,
+                (tenant_id, card_id),
+            )
+
+        new_row = conn.execute(
+            "SELECT expire_at FROM cards WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        ).fetchone()
+        new_expire = (new_row["expire_at"] if isinstance(new_row, dict)
+                       else (new_row[0] if new_row else None))
+        return {
+            "expire_at_new":      new_expire,
+            "restored_seconds":   frozen,
+        }
+
+
+def soft_delete_card(tenant_id: int, card_id: int, *,
+                      actor: str = "", reason: str = "") -> bool:
+    """Move a card to the recycle bin instead of dropping the row.
+
+    Sets deleted_at + deleted_by + delete_reason, and also revokes the
+    card so any future Access-Request is rejected immediately. The row
+    stays so the existing recycle-bin screen can restore it.
+    """
+    now = now_iso()
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET deleted_at = ?,
+                deleted_by = ?,
+                delete_reason = ?,
+                revoked = 1
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+            """,
+            (now, actor, reason, tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def restore_card_from_bin(tenant_id: int, card_id: int) -> bool:
+    """Pull a soft-deleted card back out of the bin. Does NOT auto-enable
+    it — the admin must explicitly re-enable from the checker."""
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET deleted_at = NULL,
+                deleted_by = '',
+                delete_reason = ''
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
+            """,
+            (tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
 
 
 def set_card_speed_override(tenant_id: int, card_id: int,

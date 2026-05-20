@@ -582,14 +582,25 @@
           <span class="cc-section-head-link" style="cursor:default;color:var(--hr-text-muted)">تحكّم كامل في بطاقة العميل</span>
         </header>
         <div class="cc-section-body">
+          {# All inline `confirm()` / `prompt()` calls have been replaced
+             with floating modals driven by window.ccModal.* (see the
+             cc-gmodal CSS block + script at the bottom of the template).
+             Each button is now a `type="button"` that opens a modal;
+             the modal's confirm handler submits the hidden form. #}
           <div class="cc-actions">
 
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('قطع الجلسة الحيّة لـ {{ card.username }}؟');">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect">
               <input type="hidden" name="op" value="disconnect">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" {% if not ops.can_disconnect %}disabled{% endif %}
-                      data-cc-op="disconnect">
+              <button class="cc-action" type="button" {% if not ops.can_disconnect %}disabled{% endif %}
+                      data-cc-op="disconnect"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'warn', title:'قطع الجلسة',
+                        body:'سيتم طرد الجلسة الحيّة لـ <strong>{{ card.username }}</strong> من MikroTik. ' +
+                             'يمكنه الاتصال من جديد بعد ذلك.',
+                        confirmText:'قطع',
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">قطع الجلسة</div>
@@ -598,12 +609,18 @@
               </button>
             </form>
 
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('إعادة ضبط استخدام {{ card.username }}؟');">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" {% if not ops.can_reset_usage %}disabled{% endif %}
-                      data-cc-op="reset-usage">
+              <button class="cc-action" type="button" {% if not ops.can_reset_usage %}disabled{% endif %}
+                      data-cc-op="reset-usage"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'warn', title:'إعادة ضبط الاستخدام',
+                        body:'سيتم تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong> ' +
+                             'وعدّاد البطاقة يبدأ من جديد عند أول اتصال.',
+                        confirmText:'إعادة الضبط',
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon cyan"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">إعادة الاستخدام</div>
@@ -613,10 +630,17 @@
             </form>
 
             {% if card.locked_mac %}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="unlock-mac">
               <input type="hidden" name="op" value="unlock_mac">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" data-cc-op="lock-mac">
+              <button class="cc-action" type="button" data-cc-op="lock-mac"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'info', title:'فك قفل MAC',
+                        body:'سيُسمح للبطاقة <strong>{{ card.username }}</strong> بالاتصال من أي MAC ' +
+                             'بعد فك قفل العنوان الحالي <code>{{ card.locked_mac }}</code>.',
+                        confirmText:'فك القفل',
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock-open"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">فك قفل MAC</div>
@@ -625,19 +649,24 @@
               </button>
             </form>
             {% else %}
-            {# Inline MAC input replaced with a button that opens a prompt —
-               keeps the action card the same height as its siblings. #}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-prompt-form="lock-mac">
+            {# MAC picker — modal lists previously-seen MACs from the
+               card's accounting history; admin can pick one or paste
+               a custom address. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="lock-mac">
               <input type="hidden" name="op" value="lock_mac">
               <input type="hidden" name="mac" data-cc-prompt-field>
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="lock-mac"
-                      onclick="var m = prompt('عنوان MAC للقفل (مثال: AA:BB:CC:DD:EE:FF):', '{{ card.mac_address or '' }}');
-                               if (m && m.trim()) {
-                                 var f = this.closest('form');
-                                 f.querySelector('[data-cc-prompt-field]').value = m.trim();
-                                 f.submit();
-                               }">
+                      onclick="window.ccModal && window.ccModal.macPicker({
+                        title:'قفل MAC',
+                        currentMac: '{{ card.mac_address or "" }}',
+                        recentMacs: {{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }},
+                        onConfirm: (mac) => {
+                          var f = this.closest('form');
+                          f.querySelector('[data-cc-prompt-field]').value = mac;
+                          f.submit();
+                        }
+                      });">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">قفل MAC</div>
@@ -671,28 +700,24 @@
               </button>
             </form>
 
-            {# Change card speed — per-card override (not batch-wide).
-               Two prompts: download then upload, both in kbps. Validates
-               numeric input client-side; backend enforces > 0. #}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-prompt-form="set-speed">
+            {# Speed override — modal with 2 numeric inputs (down + up). #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="set-speed">
               <input type="hidden" name="op" value="set_speed">
               <input type="hidden" name="speed_down_kbps" data-cc-prompt-down>
               <input type="hidden" name="speed_up_kbps"   data-cc-prompt-up>
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="set-speed"
-                      onclick="var d = prompt('سرعة التنزيل بـ kbps (للبطاقة فقط):', '');
-                               if (!d) return;
-                               if (!/^[0-9]+$/.test(d.trim()) || parseInt(d,10) <= 0) {
-                                 alert('قيمة غير صالحة. أدخل رقماً صحيحاً موجباً.'); return; }
-                               var u = prompt('سرعة الرفع بـ kbps (للبطاقة فقط):', '');
-                               if (!u) return;
-                               if (!/^[0-9]+$/.test(u.trim()) || parseInt(u,10) <= 0) {
-                                 alert('قيمة غير صالحة. أدخل رقماً صحيحاً موجباً.'); return; }
-                               if (!confirm('تطبيق السرعة الجديدة (تنزيل: '+d+' / رفع: '+u+' kbps) على هذه البطاقة فقط؟')) return;
-                               var f = this.closest('form');
-                               f.querySelector('[data-cc-prompt-down]').value = d.trim();
-                               f.querySelector('[data-cc-prompt-up]').value   = u.trim();
-                               f.submit();">
+                      onclick="window.ccModal && window.ccModal.speedForm({
+                        title:'تغيير السرعة',
+                        currentDown: {{ card.card_speed_down_kbps or 0 }},
+                        currentUp:   {{ card.card_speed_up_kbps   or 0 }},
+                        onConfirm: (down, up) => {
+                          var f = this.closest('form');
+                          f.querySelector('[data-cc-prompt-down]').value = String(down);
+                          f.querySelector('[data-cc-prompt-up]').value   = String(up);
+                          f.submit();
+                        }
+                      });">
                 <span class="cc-action-icon teal"><i class="fa-solid fa-gauge-high"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">تغيير السرعة</div>
@@ -702,44 +727,80 @@
             </form>
 
             {% if ops.can_enable %}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="enable">
               <input type="hidden" name="op" value="enable">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" data-cc-op="disable-enable">
+              <button class="cc-action" type="button" data-cc-op="disable-enable"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'success', title:'إعادة تفعيل البطاقة',
+                        body:'سيتم إعادة تفعيل البطاقة <strong>{{ card.username }}</strong> ' +
+                             'واستعادة الوقت المتبقي الذي تم تجميده عند التعطيل.',
+                        confirmText:'تفعيل',
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon green"><i class="fa-solid fa-circle-check"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">إعادة التفعيل</div>
-                  <div class="cc-action-sub">رفع التعطيل</div>
+                  <div class="cc-action-sub">يستعيد الوقت المتبقي</div>
                 </div>
               </button>
             </form>
             {% else %}
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('تعطيل {{ card.username }}؟');">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disable">
               <input type="hidden" name="op" value="disable">
+              <input type="hidden" name="reason" data-cc-disable-reason>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" {% if not ops.can_disable %}disabled{% endif %}
-                      data-cc-op="disable-enable">
+              <button class="cc-action" type="button" {% if not ops.can_disable %}disabled{% endif %}
+                      data-cc-op="disable-enable"
+                      onclick="window.ccModal && window.ccModal.reasonForm({
+                        icon:'warn', title:'تعطيل البطاقة',
+                        body:'سيتم إيقاف البطاقة <strong>{{ card.username }}</strong> مؤقتاً. ' +
+                             '<strong>سيتم تجميد الوقت المتبقي</strong> ' +
+                             'بحيث لا ينقص أثناء التعطيل ويعود نفسه عند إعادة التفعيل.',
+                        label:'سبب التعطيل (اختياري)',
+                        confirmText:'تعطيل',
+                        onConfirm: (reason) => {
+                          var f = this.closest('form');
+                          f.querySelector('[data-cc-disable-reason]').value = reason || '';
+                          f.submit();
+                        }
+                      });">
                 <span class="cc-action-icon blue"><i class="fa-solid fa-pause"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">تعطيل البطاقة</div>
-                  <div class="cc-action-sub">إيقاف مؤقت</div>
+                  <div class="cc-action-sub">يجمّد الوقت المتبقي</div>
                 </div>
               </button>
             </form>
             {% endif %}
 
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return prompt('للتأكيد، اكتب اسم البطاقة:') === '{{ card.username }}';">
-              <input type="hidden" name="op" value="delete_permanent">
+            {# Default delete is now SOFT — moves to recycle bin. The
+               admin can still purge from the recycle-bin screen if
+               truly needed (uses the separate `delete_permanent`
+               handler that's not exposed here). #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="soft-delete">
+              <input type="hidden" name="op" value="soft_delete">
+              <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action cc-action-danger" type="submit"
+              <button class="cc-action cc-action-danger" type="button"
                       {% if not ops.can_delete_permanently %}disabled{% endif %}
-                      data-cc-op="delete">
+                      data-cc-op="delete"
+                      onclick="window.ccModal && window.ccModal.softDelete({
+                        title:'نقل البطاقة إلى المحذوفات',
+                        body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
+                             '<strong>سلة المحذوفات</strong> ولن تستطيع الاتصال. ' +
+                             'يمكنك استعادتها لاحقاً من شاشة سلة المحذوفات.',
+                        label:'سبب الحذف (اختياري)',
+                        onConfirm: (reason) => {
+                          var f = this.closest('form');
+                          f.querySelector('[data-cc-delete-reason]').value = reason || '';
+                          f.submit();
+                        }
+                      });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">حذف نهائيًا</div>
-                  <div class="cc-action-sub">لا يمكن التراجع</div>
+                  <div class="cc-action-title">نقل للمحذوفات</div>
+                  <div class="cc-action-sub">يمكن الاستعادة</div>
                 </div>
               </button>
             </form>
@@ -830,12 +891,17 @@
               </div>
             </a>
 
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('إعادة ضبط استخدام {{ card.username }}؟');">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage-simple">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" {% if not ops.can_reset_usage %}disabled{% endif %}
-                      data-cc-op="reset-usage">
+              <button class="cc-action" type="button" {% if not ops.can_reset_usage %}disabled{% endif %}
+                      data-cc-op="reset-usage"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'warn', title:'إعادة ضبط الاستخدام',
+                        body:'تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong>.',
+                        confirmText:'إعادة الضبط',
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">إعادة ضبط</div>
@@ -844,13 +910,18 @@
               </button>
             </form>
 
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('قطع الجلسة الحيّة لـ {{ card.username }}؟');">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect-simple">
               <input type="hidden" name="op" value="disconnect">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action cc-action-soft-red" type="submit"
+              <button class="cc-action cc-action-soft-red" type="button"
                       {% if not ops.can_disconnect %}disabled{% endif %}
-                      data-cc-op="disconnect">
+                      data-cc-op="disconnect"
+                      onclick="window.ccModal && window.ccModal.confirm({
+                        icon:'warn', title:'فصل الجلسة',
+                        body:'سيتم فصل الجهاز الحالي عن البطاقة <strong>{{ card.username }}</strong>.',
+                        confirmText:'فصل', dangerous:true,
+                        onConfirm: () => this.closest('form').submit()
+                      });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">فصل الجلسة</div>
@@ -861,18 +932,29 @@
           </div>
 
           <div style="margin-top:14px">
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return prompt('للتأكيد، اكتب اسم البطاقة:') === '{{ card.username }}';">
-              <input type="hidden" name="op" value="delete_permanent">
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="soft-delete-simple">
+              <input type="hidden" name="op" value="soft_delete">
+              <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action cc-action-danger" type="submit"
+              <button class="cc-action cc-action-danger" type="button"
                       style="width:100%"
                       {% if not ops.can_delete_permanently %}disabled{% endif %}
-                      data-cc-op="delete">
+                      data-cc-op="delete"
+                      onclick="window.ccModal && window.ccModal.softDelete({
+                        title:'نقل البطاقة إلى المحذوفات',
+                        body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
+                             '<strong>سلة المحذوفات</strong> ويمكنك استعادتها لاحقاً.',
+                        label:'سبب الحذف (اختياري)',
+                        onConfirm: (reason) => {
+                          var f = this.closest('form');
+                          f.querySelector('[data-cc-delete-reason]').value = reason || '';
+                          f.submit();
+                        }
+                      });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">حذف نهائيًا</div>
-                  <div class="cc-action-sub">لا يمكن التراجع عن هذه العمليّة</div>
+                  <div class="cc-action-title">نقل للمحذوفات</div>
+                  <div class="cc-action-sub">يمكنك استعادتها من السلة</div>
                 </div>
               </button>
             </form>
@@ -884,6 +966,227 @@
   {% endif %}
 
   </div>{# /#cc-result #}
+
+{# ════════════════════════════════════════════════════════════════════
+   GENERIC MODAL HOST  (window.ccModal.*)
+   Single shell rendered once, content swapped by the JS API.
+   Flavors: .confirm() · .reasonForm() · .macPicker() · .speedForm() ·
+            .softDelete()
+   ════════════════════════════════════════════════════════════════════ #}
+<div class="cc-gmodal-overlay" id="cc-gmodal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="cc-gmodal" role="document" id="cc-gmodal-box">
+    {# innerHTML rewritten per call — see script below #}
+  </div>
+</div>
+
+<script>
+  (function(){
+    'use strict';
+    var overlay = document.getElementById('cc-gmodal');
+    var box     = document.getElementById('cc-gmodal-box');
+    if (!overlay || !box) return;
+
+    // ── helpers ─────────────────────────────────────────────────────
+    function esc(s){ return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function show(){ overlay.classList.add('is-open');
+                      overlay.setAttribute('aria-hidden','false'); }
+    function hide(){ overlay.classList.remove('is-open');
+                      overlay.setAttribute('aria-hidden','true'); }
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) hide(); });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && overlay.classList.contains('is-open')) hide();
+    });
+    function head(opts){
+      var iconClass = opts.icon === 'danger'  ? 'danger'
+                    : opts.icon === 'warn'    ? 'warn'
+                    : opts.icon === 'success' ? 'success' : '';
+      var glyph = opts.icon === 'danger'  ? 'fa-trash'
+                : opts.icon === 'warn'    ? 'fa-triangle-exclamation'
+                : opts.icon === 'success' ? 'fa-circle-check'
+                : 'fa-circle-info';
+      return '<div class="cc-gmodal-head">' +
+        '<span class="cc-gmodal-head-icon ' + iconClass + '">' +
+          '<i class="fa-solid ' + glyph + '"></i></span>' +
+        '<span class="cc-gmodal-head-title">' + esc(opts.title || '') + '</span>' +
+        '<button type="button" class="cc-gmodal-close" data-close>' +
+          '<i class="fa-solid fa-xmark"></i></button>' +
+      '</div>';
+    }
+    function actions(confirmText, cancelText, danger){
+      return '<div class="cc-gmodal-actions">' +
+        '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-cancel" data-close>' +
+          esc(cancelText || 'إلغاء') + '</button>' +
+        '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-confirm' +
+          (danger ? ' danger' : '') + '" data-confirm>' +
+          '<i class="fa-solid fa-check"></i> ' + esc(confirmText || 'حسناً') +
+        '</button></div>';
+    }
+    function wire(onConfirm, validate){
+      box.querySelectorAll('[data-close]').forEach(function(b){
+        b.addEventListener('click', hide);
+      });
+      var cb = box.querySelector('[data-confirm]');
+      if (!cb) return;
+      cb.addEventListener('click', function(){
+        var v = validate ? validate() : true;
+        if (v === false) return;
+        hide();
+        try { if (typeof onConfirm === 'function') onConfirm(v); } catch(_){}
+      });
+    }
+
+    // ── flavors ─────────────────────────────────────────────────────
+    function confirm_(opts){
+      opts = opts || {};
+      box.innerHTML =
+        head(opts) +
+        '<div class="cc-gmodal-body">' + (opts.body || '') + '</div>' +
+        actions(opts.confirmText, opts.cancelText, opts.icon === 'danger' || opts.dangerous);
+      wire(opts.onConfirm);
+      show();
+    }
+
+    function reasonForm(opts){
+      opts = opts || {};
+      box.innerHTML =
+        head(opts) +
+        '<div class="cc-gmodal-body">' + (opts.body || '') + '</div>' +
+        '<div class="cc-gmodal-field">' +
+          '<div class="cc-gmodal-field-label">' + esc(opts.label || 'سبب (اختياري)') + '</div>' +
+          '<input type="text" data-input maxlength="200" placeholder="' +
+            esc(opts.placeholder || '...') + '">' +
+        '</div>' +
+        actions(opts.confirmText, opts.cancelText, opts.icon === 'danger' || opts.dangerous);
+      var inp = box.querySelector('[data-input]');
+      wire(opts.onConfirm, function(){ return inp ? inp.value.trim() : ''; });
+      setTimeout(function(){ if (inp) inp.focus(); }, 60);
+      show();
+    }
+
+    function softDelete(opts){
+      // Same as reasonForm but the confirm button is red.
+      reasonForm(Object.assign({
+        icon:'danger', dangerous:true,
+        confirmText:'نقل للمحذوفات', cancelText:'إلغاء',
+        placeholder:'مثال: انتهت صلاحية البطاقة',
+      }, opts || {}));
+    }
+
+    function macPicker(opts){
+      opts = opts || {};
+      var macs = (opts.recentMacs || []).filter(Boolean);
+      // de-dup while preserving order
+      var seen = {}; var uniq = [];
+      for (var i=0;i<macs.length;i++){
+        var m = String(macs[i]).toUpperCase();
+        if (!seen[m]){ seen[m] = true; uniq.push(m); }
+      }
+      var listHtml = '';
+      if (uniq.length){
+        for (var j=0;j<uniq.length;j++){
+          listHtml += '<button type="button" class="cc-gmodal-mac-row" data-mac="' + esc(uniq[j]) + '">' +
+            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid fa-wifi"></i></span>' +
+            '<div class="cc-gmodal-mac-row-body">' +
+              '<div class="cc-gmodal-mac-row-mac">' + esc(uniq[j]) + '</div>' +
+              '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>' +
+            '</div></button>';
+        }
+      } else {
+        listHtml = '<div class="cc-gmodal-mac-list-empty">' +
+                   'لا يوجد سجلّ سابق — اكتب العنوان أدناه يدوياً.</div>';
+      }
+      box.innerHTML =
+        head(Object.assign({icon:'info'}, opts)) +
+        '<div class="cc-gmodal-body">اختر MAC من سجل الجلسات أو اكتب عنواناً مخصصاً.</div>' +
+        '<div class="cc-gmodal-field-label">من سجل البطاقة</div>' +
+        '<div class="cc-gmodal-mac-list" data-mac-list>' + listHtml + '</div>' +
+        (uniq.length ? '<div class="cc-gmodal-mac-divider">— أو —</div>' : '') +
+        '<div class="cc-gmodal-field">' +
+          '<div class="cc-gmodal-field-label">MAC مخصص</div>' +
+          '<input type="text" data-input maxlength="32" dir="ltr" ' +
+            'placeholder="AA:BB:CC:DD:EE:FF" value="' + esc(opts.currentMac || '') + '">' +
+        '</div>' +
+        actions('قفل', 'إلغاء', false);
+
+      var inp = box.querySelector('[data-input]');
+      box.querySelectorAll('.cc-gmodal-mac-row').forEach(function(r){
+        r.addEventListener('click', function(){
+          box.querySelectorAll('.cc-gmodal-mac-row').forEach(function(x){ x.classList.remove('is-active'); });
+          r.classList.add('is-active');
+          if (inp) inp.value = r.getAttribute('data-mac');
+        });
+      });
+      wire(opts.onConfirm, function(){
+        var v = (inp ? inp.value : '').trim().toUpperCase();
+        // very forgiving MAC validator — letters/digits/colons/dashes only,
+        // 12 hex chars at minimum once separators are removed.
+        var hex = v.replace(/[:\-\s]/g,'');
+        if (!/^[0-9A-F]{12}$/.test(hex)){
+          alert('عنوان MAC غير صالح. مثال: AA:BB:CC:DD:EE:FF');
+          return false;
+        }
+        return v;
+      });
+      setTimeout(function(){ if (inp) inp.focus(); }, 60);
+      show();
+    }
+
+    function speedForm(opts){
+      opts = opts || {};
+      var cd = opts.currentDown || '';
+      var cu = opts.currentUp   || '';
+      box.innerHTML =
+        head(Object.assign({icon:'info'}, opts)) +
+        '<div class="cc-gmodal-body">سرعة <strong>للبطاقة فقط</strong>. اتركها <code>0</code> ' +
+          'في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.</div>' +
+        '<div class="cc-gmodal-grid-2">' +
+          '<div class="cc-gmodal-field">' +
+            '<div class="cc-gmodal-field-label">التنزيل (kbps)</div>' +
+            '<input type="number" min="0" step="1" data-down value="' + esc(cd) + '" placeholder="مثال: 4096">' +
+          '</div>' +
+          '<div class="cc-gmodal-field">' +
+            '<div class="cc-gmodal-field-label">الرفع (kbps)</div>' +
+            '<input type="number" min="0" step="1" data-up value="' + esc(cu) + '" placeholder="مثال: 2048">' +
+          '</div>' +
+        '</div>' +
+        actions('تطبيق', 'إلغاء', false);
+
+      var down = box.querySelector('[data-down]');
+      var up   = box.querySelector('[data-up]');
+      wire(function(){
+        var d = parseInt(down.value, 10) || 0;
+        var u = parseInt(up.value,   10) || 0;
+        if (typeof opts.onConfirm === 'function') opts.onConfirm(d, u);
+      }, function(){
+        var d = down.value.trim(); var u = up.value.trim();
+        // Allow 0+0 (clear). Otherwise both must be positive integers.
+        var dn = parseInt(d, 10), un = parseInt(u, 10);
+        if ((d === '0' && u === '0') || (d === '' && u === '')) return true;
+        if (!Number.isInteger(dn) || !Number.isInteger(un) || dn < 0 || un < 0){
+          alert('قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.'); return false;
+        }
+        if ((dn > 0 && un === 0) || (un > 0 && dn === 0)){
+          alert('يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).');
+          return false;
+        }
+        return true;
+      });
+      setTimeout(function(){ if (down) down.focus(); }, 60);
+      show();
+    }
+
+    window.ccModal = {
+      confirm:    confirm_,
+      reasonForm: reasonForm,
+      softDelete: softDelete,
+      macPicker:  macPicker,
+      speedForm:  speedForm,
+      close:      hide,
+    };
+  })();
+</script>
 
 {# ════════════════════════════════════════════════════════════════════
    TIME-ADJUST MODAL (floating)

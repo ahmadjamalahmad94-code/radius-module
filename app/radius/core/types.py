@@ -342,6 +342,13 @@ class Card:
     # the plan-level group reply. Either == 0 → fall back to plan defaults.
     card_speed_down_kbps: int = 0
     card_speed_up_kbps: int = 0
+    # ── Freeze remaining seconds when disabled (migration 025) ──
+    # Snapshot taken on disable; consumed on enable to recompute expire_at.
+    frozen_remaining_seconds: int = 0
+    # ── Soft delete (migration 025) ──
+    deleted_at: Optional[datetime] = None
+    deleted_by: str = ""
+    delete_reason: str = ""
 
 
 @dataclass(frozen=True)
