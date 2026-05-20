@@ -1,227 +1,284 @@
+{# Print templates — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}قوالب طباعة الكروت{% endblock %}
-{% block page_title %}قوالب طباعة الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
-{% block page_sub %}<span class="sub">حفظ تخطيط الطباعة ومعاينة بصرية حقيقية بدون تصدير PDF نهائي</span>{% endblock %}
+{% block page_title %}قوالب طباعة الكروت{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .pt-grid{ display:grid; grid-template-columns: minmax(300px,440px) minmax(0,1fr); gap:14px; align-items:start; }
+  @media (max-width: 1000px){ .pt-grid{ grid-template-columns: 1fr; } }
+  .pt-form{ display:grid; gap:11px; }
+  .pt-row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  @media (max-width: 540px){ .pt-row{ grid-template-columns: 1fr; } }
+  .pt-form label.fld{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .pt-help{ font-size:11px; color:var(--hub-text-mute); line-height:1.7; margin-top:2px; }
+  .pt-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700;
+  }
+  .pt-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+
+  .pt-preview-json{
+    margin-top:10px;background:#0f172a;color:#e2e8f0;
+    border-radius:var(--hub-r-md);padding:14px;overflow:auto;
+    direction:ltr;text-align:left;font-size:11px;
+  }
+  .pt-visual-wrap{
+    padding:18px;border:1px dashed var(--hub-border-soft);
+    border-radius:var(--hub-r-lg);background:var(--hub-bg-soft);overflow:auto;
+  }
+  .pt-visual-card{
+    position:relative;width:min(100%,360px);
+    aspect-ratio:var(--card-ratio,1.57);
+    border-radius:var(--hub-r-md);
+    border:1px solid var(--hub-brand-soft);
+    background:linear-gradient(135deg,#ffffff,#eef7ff);
+    box-shadow:0 10px 24px rgba(15,23,42,.12);
+    color:var(--card-color,#1f2937);
+    font-size:var(--card-font,12px);
+    direction:ltr;text-align:left;
+  }
+  .pt-visual-item{
+    position:absolute;
+    transform:translate(-2px,-50%);
+    font-weight:800;white-space:nowrap;
+  }
+  .pt-visual-qr{
+    display:grid;place-items:center;
+    width:44px;height:44px;
+    border:2px solid currentColor;border-radius:8px;
+    font-size:11px;letter-spacing:.08em;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-  .pt-grid{display:grid;grid-template-columns:minmax(280px,430px) 1fr;gap:14px;align-items:start}
-  .pt-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
-  .pt-card h3{margin:0 0 12px;color:#263244;font-size:17px}
-  .pt-form{display:grid;gap:10px}
-  .pt-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .pt-form label{display:grid;gap:5px;color:#263244;font-weight:800;font-size:13px}
-  .pt-form input,.pt-form select{border:1px solid #d7c8ae;border-radius:10px;padding:10px;background:#fffaf4;color:#263244}
-  .pt-help{font-size:12px;color:#7b8796;line-height:1.8}
-  .pt-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px;line-height:1.9}
-  .pt-table{width:100%;border-collapse:collapse}
-  .pt-table th,.pt-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
-  .pt-table th{font-size:12px;color:#657386;background:#fffaf1}
-  .pt-preview{margin-top:14px;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:14px;overflow:auto;direction:ltr;text-align:left}
-  .pt-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
-  .pt-visual-wrap{padding:18px;border:1px dashed #d8c8a9;border-radius:14px;background:#fffaf1;overflow:auto}
-  .pt-visual-card{position:relative;width:min(100%,360px);aspect-ratio:var(--card-ratio,1.57);border-radius:12px;border:1px solid #c7d2fe;background:linear-gradient(135deg,#ffffff,#eef7ff);box-shadow:0 10px 24px rgba(15,23,42,.12);color:var(--card-color,#1f2937);font-size:var(--card-font,12px);direction:ltr;text-align:left}
-  .pt-visual-item{position:absolute;transform:translate(-2px,-50%);font-weight:800;white-space:nowrap}
-  .pt-visual-qr{display:grid;place-items:center;width:44px;height:44px;border:2px solid currentColor;border-radius:8px;font-size:11px;letter-spacing:.08em}
-  @media (max-width: 980px){.pt-grid{grid-template-columns:1fr}.pt-row{grid-template-columns:1fr}}
-</style>
 
-<div class="pt-note">
-  هذه المرحلة تحفظ قوالب الطباعة وتعرض معاينة بصرية للمواضع والألوان. لا يتم إنشاء PDF أو ملف طباعة نهائي الآن، حتى لا تظهر الميزة كأنها مكتملة أكثر من وضعها الحقيقي.
+{{ hub.hero(
+  "قوالب طباعة الكروت",
+  subtitle="حفظ تخطيط الطباعة ومعاينة بصرية حقيقية — بدون تصدير PDF نهائي بعد",
+  icon="print"
+) }}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:12.5px;
+            border-radius:var(--hub-r-lg);border:1px solid var(--hub-amber);
+            background:var(--hub-amber-soft);color:var(--hub-amber-ink);line-height:1.8">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه المرحلة تحفظ قوالب الطباعة وتعرض معاينة بصرية للمواضع والألوان.
+  <strong>لا يتم إنشاء PDF أو ملف طباعة نهائي الآن</strong>، حتى لا تظهر الميزة كأنها مكتملة أكثر من وضعها الحقيقي.
 </div>
 
 {% if preview %}
-  <section class="pt-card" style="margin-bottom:14px">
-    <h3>معاينة القالب</h3>
-    {% set pv = preview.get('preview', {}) %}
-    {% set card = pv.get('card', {}) %}
-    {% set placements = pv.get('placements', {}) %}
-    {% set sample = pv.get('sample', {}) %}
-    <p class="pt-help">
-      نوع المعاينة: {{ pv.get('renderer') }}،
-      عدد الكروت في الصفحة: {{ pv.get('cards_per_page') }}،
-      إنشاء ملف تصدير: {{ preview.get('export_generated') }}
+  {% set pv = preview.get('preview', {}) %}
+  {% set card = pv.get('card', {}) %}
+  {% set placements = pv.get('placements', {}) %}
+  {% set sample = pv.get('sample', {}) %}
+  {% call hub.section("معاينة القالب", icon="eye") %}
+    <p class="hub-text-mute" style="font-size:12px;margin:0 0 10px">
+      نوع المعاينة: <strong>{{ pv.get('renderer') }}</strong> ·
+      عدد الكروت في الصفحة: <strong>{{ pv.get('cards_per_page') }}</strong> ·
+      إنشاء ملف تصدير: <strong>{{ preview.get('export_generated') }}</strong>
     </p>
     <div class="pt-visual-wrap">
       <div class="pt-visual-card"
-           style="--card-ratio: {{ card.get('width_mm', 85) / card.get('height_mm', 54) }}; --card-color: {{ card.get('color', '#1f2937') }}; --card-font: {{ card.get('font_size', 12) }}px">
+           style="--card-ratio: {{ card.get('width_mm', 85) / card.get('height_mm', 54) }};
+                  --card-color: {{ card.get('color', '#1f2937') }};
+                  --card-font: {{ card.get('font_size', 12) }}px">
         <div class="pt-visual-item"
-             style="left:{{ placements.get('username', {}).get('x_percent', 12) }}%;top:{{ placements.get('username', {}).get('y_percent', 28) }}%">
+             style="left:{{ placements.get('username', {}).get('x_percent', 12) }}%;
+                    top:{{ placements.get('username', {}).get('y_percent', 28) }}%">
           {{ sample.get('username', 'CARD1234') }}
         </div>
         <div class="pt-visual-item"
-             style="left:{{ placements.get('password', {}).get('x_percent', 12) }}%;top:{{ placements.get('password', {}).get('y_percent', 48) }}%">
+             style="left:{{ placements.get('password', {}).get('x_percent', 12) }}%;
+                    top:{{ placements.get('password', {}).get('y_percent', 48) }}%">
           ••••••••
         </div>
         {% if pv.get('qr_supported') %}
         <div class="pt-visual-item pt-visual-qr"
-             style="left:{{ placements.get('qr', {}).get('x_percent', 70) }}%;top:{{ placements.get('qr', {}).get('y_percent', 32) }}%">
+             style="left:{{ placements.get('qr', {}).get('x_percent', 70) }}%;
+                    top:{{ placements.get('qr', {}).get('y_percent', 32) }}%">
           QR
         </div>
         {% endif %}
       </div>
     </div>
     <details style="margin-top:10px">
-      <summary class="pt-help">تفاصيل JSON للمطور</summary>
-      <pre class="pt-preview">{{ pv | tojson(indent=2) }}</pre>
+      <summary style="cursor:pointer;font-size:12px;color:var(--hub-text-mute);font-weight:700">
+        تفاصيل JSON للمطور
+      </summary>
+      <pre class="pt-preview-json mono">{{ pv | tojson(indent=2) }}</pre>
     </details>
-  </section>
+  {% endcall %}
 {% endif %}
 
 <div class="pt-grid">
-  <section class="pt-card">
-    <h3>إضافة قالب طباعة</h3>
+  {% call hub.section("إضافة قالب طباعة", icon="plus") %}
     <form class="pt-form" method="post" action="{{ url_for('radius.print_templates_create') }}">
-      <label>
+      <label class="fld">
         اسم القالب
-        <input name="name" required placeholder="مثال: كرت صغير عمودي">
+        <input class="hub-input" name="name" required placeholder="مثال: كرت صغير عمودي">
         <span class="pt-help">استخدم اسمًا يساعدك في إعادة استخدام القالب لاحقًا.</span>
       </label>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           اتجاه الصفحة
-          <select name="orientation">
+          <select class="hub-select" name="orientation">
             <option value="portrait">عمودي</option>
             <option value="landscape">أفقي</option>
           </select>
         </label>
-        <label>
+        <label class="fld">
           حجم الصفحة
-          <input name="page_size" value="A4">
+          <input class="hub-input" name="page_size" value="A4">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           كروت في الصف
-          <input type="number" name="cards_per_row" min="1" value="2">
+          <input class="hub-input" type="number" name="cards_per_row" min="1" value="2">
         </label>
-        <label>
+        <label class="fld">
           كروت في العمود
-          <input type="number" name="cards_per_column" min="1" value="5">
+          <input class="hub-input" type="number" name="cards_per_column" min="1" value="5">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
-          عرض الكرت mm
-          <input type="number" name="card_width_mm" min="1" step="0.1" value="85">
+        <label class="fld">
+          عرض الكرت (mm)
+          <input class="hub-input" type="number" name="card_width_mm" min="1" step="0.1" value="85">
         </label>
-        <label>
-          ارتفاع الكرت mm
-          <input type="number" name="card_height_mm" min="1" step="0.1" value="54">
+        <label class="fld">
+          ارتفاع الكرت (mm)
+          <input class="hub-input" type="number" name="card_height_mm" min="1" step="0.1" value="54">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           موضع اسم الدخول X
-          <input type="number" name="username_x" step="0.1" value="10">
+          <input class="hub-input" type="number" name="username_x" step="0.1" value="10">
         </label>
-        <label>
+        <label class="fld">
           موضع اسم الدخول Y
-          <input type="number" name="username_y" step="0.1" value="15">
+          <input class="hub-input" type="number" name="username_y" step="0.1" value="15">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           موضع كلمة المرور X
-          <input type="number" name="password_x" step="0.1" value="10">
+          <input class="hub-input" type="number" name="password_x" step="0.1" value="10">
         </label>
-        <label>
+        <label class="fld">
           موضع كلمة المرور Y
-          <input type="number" name="password_y" step="0.1" value="25">
+          <input class="hub-input" type="number" name="password_y" step="0.1" value="25">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           موضع QR X
-          <input type="number" name="qr_x" step="0.1" value="60">
+          <input class="hub-input" type="number" name="qr_x" step="0.1" value="60">
         </label>
-        <label>
+        <label class="fld">
           موضع QR Y
-          <input type="number" name="qr_y" step="0.1" value="12">
+          <input class="hub-input" type="number" name="qr_y" step="0.1" value="12">
         </label>
       </div>
 
       <div class="pt-row">
-        <label>
+        <label class="fld">
           حجم الخط
-          <input type="number" name="font_size" min="6" value="12">
+          <input class="hub-input" type="number" name="font_size" min="6" value="12">
         </label>
-        <label>
+        <label class="fld">
           اللون
-          <input type="color" name="color" value="#1f2937">
+          <input class="hub-input" type="color" name="color" value="#1f2937"
+                 style="padding:4px;height:42px">
         </label>
       </div>
 
-      <label style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" name="show_qr" value="1" checked style="width:auto">
-        إظهار QR
-      </label>
+      <div class="pt-chk">
+        <input type="checkbox" name="show_qr" id="pt-qr" value="1" checked>
+        <label for="pt-qr" style="margin:0">إظهار QR على الكرت</label>
+      </div>
 
-      <button class="btn btn-primary" type="submit">
+      <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> حفظ القالب
       </button>
     </form>
-  </section>
+  {% endcall %}
 
-  <section class="pt-card">
-    <h3>القوالب المحفوظة</h3>
+  <div>
     {% if templates %}
-      <table class="pt-table">
-        <thead>
-          <tr>
-            <th>الاسم</th>
-            <th>التخطيط</th>
-            <th>المواضع</th>
-            <th>الحالة</th>
-            <th>معاينة</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in templates %}
-          <tr>
-            <td>
-              <strong>{{ item.get('name') }}</strong>
-              <div class="pt-help">{{ item.get('page_size') }} / {{ item.get('orientation') }}</div>
-            </td>
-            <td>{{ item.get('cards_per_row') }} × {{ item.get('cards_per_column') }}</td>
-            <td class="mono">
-              U({{ item.get('username_x') }},{{ item.get('username_y') }})
-              P({{ item.get('password_x') }},{{ item.get('password_y') }})
-              QR({{ item.get('qr_x') }},{{ item.get('qr_y') }})
-            </td>
-            <td>
-              {% if item.get('show_qr') %}
-                <span class="pt-badge">QR ظاهر</span>
-              {% else %}
-                <span class="pt-badge">بدون QR</span>
-              {% endif %}
-              <div class="pt-help">PDF renderer غير مضاف بعد</div>
-            </td>
-            <td>
-              <form method="post" action="{{ url_for('radius.print_templates_preview', template_id=item.get('id')) }}">
-                <input type="hidden" name="sample_username" value="CARD1234">
-                <button class="btn btn-secondary" type="submit">
-                <i class="fa-solid fa-eye"></i> معاينة بصرية
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% call hub.section("القوالب المحفوظة", icon="table-list",
+                          meta=templates|length|string + " قالب", flush=True) %}
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>التخطيط</th>
+                <th>المواضع</th>
+                <th>الحالة</th>
+                <th style="width:160px">معاينة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in templates %}
+              <tr>
+                <td>
+                  <strong>{{ item.get('name') }}</strong>
+                  <div class="small hub-text-mute">{{ item.get('page_size') }} / {{ item.get('orientation') }}</div>
+                </td>
+                <td>{{ item.get('cards_per_row') }} × {{ item.get('cards_per_column') }}</td>
+                <td class="mono small">
+                  U({{ item.get('username_x') }},{{ item.get('username_y') }})
+                  P({{ item.get('password_x') }},{{ item.get('password_y') }})
+                  QR({{ item.get('qr_x') }},{{ item.get('qr_y') }})
+                </td>
+                <td>
+                  {% if item.get('show_qr') %}
+                    {{ hub.pill("QR ظاهر", variant="blue", dot=False) }}
+                  {% else %}
+                    {{ hub.pill("بدون QR", variant="grey", dot=False) }}
+                  {% endif %}
+                  <div class="small hub-text-mute" style="margin-top:3px">
+                    <i class="fa-solid fa-circle-info"></i> PDF renderer غير مضاف بعد
+                  </div>
+                </td>
+                <td>
+                  <form method="post" action="{{ url_for('radius.print_templates_preview', template_id=item.get('id')) }}">
+                    <input type="hidden" name="sample_username" value="CARD1234">
+                    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                      <i class="fa-solid fa-eye"></i> معاينة بصرية
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endcall %}
     {% else %}
-      <div class="empty">
-        <i class="fa-solid fa-print"></i>
-        لا توجد قوالب طباعة بعد. احفظ أول قالب من النموذج بجانبك.
-      </div>
+      {{ hub.empty(
+        "لا توجد قوالب طباعة بعد",
+        sub="احفظ أول قالب من النموذج بجانبك لبدء طباعة الكروت.",
+        icon="print"
+      ) }}
     {% endif %}
-  </section>
+  </div>
 </div>
+
 {% endblock %}

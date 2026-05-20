@@ -1,82 +1,113 @@
+{# Users overview — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}نظرة عامة — المشتركين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
 {% block page_title %}نظرة عامة — المشتركين{% endblock %}
 
 {% block content %}
-<div class="kpi-strip">
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">إجمالي</div><div class="val">{{ total }}</div></div>
-    <div class="ico"><i class="fa-solid fa-users"></i></div>
+
+{{ hub.hero(
+  "نظرة عامة — المشتركين",
+  subtitle="إحصاءات سريعة عن قاعدة المشتركين — الحالات، الأنواع، والاستهلاك الإجمالي",
+  icon="chart-pie",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
+      <i class="fa-solid fa-users"></i> قائمة المشتركين
+    </a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي المشتركين", total,                              icon="users",         variant="brand") }}
+  {{ hub.kpi("مفعَّل",            by_status.get('enabled', 0),         icon="circle-check",  variant="green") }}
+  {{ hub.kpi("منتهي الصلاحية",   by_status.get('expired', 0),         icon="clock",         variant="amber") }}
+  {{ hub.kpi("معطَّل",            by_status.get('disabled', 0),        icon="ban",           variant="red") }}
+</div>
+
+<div class="hub-kpi-grid" style="margin-top:var(--hub-gap-section)">
+  {{ hub.kpi("تنزيل إجمالي", "%.1f GB"|format(bytes_in/1073741824),  icon="download",      variant="blue") }}
+  {{ hub.kpi("رفع إجمالي",   "%.1f GB"|format(bytes_out/1073741824), icon="upload",        variant="blue") }}
+  {{ hub.kpi("مستفيد",       by_type.get('subscriber', 0),           icon="user",          variant="green") }}
+  {{ hub.kpi("بطاقة دخول",   by_type.get('card', 0),                 icon="id-card",       variant="brand") }}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:var(--hub-gap-section)">
+  <div>
+    {% if last_created %}
+      {% call hub.section("آخر المستخدمين المُضافين", icon="user-plus",
+                          meta=last_created|length|string, flush=True) %}
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th class="num" style="width:55px">#</th>
+                <th>اليوزر</th>
+                <th>الاسم</th>
+                <th>الحالة</th>
+                <th>أُنشئ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in last_created %}
+              <tr>
+                <td class="num mono">{{ r.id }}</td>
+                <td class="mono"><strong>{{ r.username }}</strong></td>
+                <td>{{ r.full_name or '—' }}</td>
+                <td>
+                  {% if r.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
+                  {% elif r.status == 'expired' %}{{ hub.pill("منتهي", variant="amber") }}
+                  {% elif r.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
+                  {% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}
+                </td>
+                <td class="mono small">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endcall %}
+    {% else %}
+      {% call hub.section("آخر المستخدمين المُضافين", icon="user-plus") %}
+        {{ hub.empty("لا مستخدمين بعد", icon="user") }}
+      {% endcall %}
+    {% endif %}
   </div>
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">مفعَّل</div><div class="val">{{ by_status.get('enabled', 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-circle-check"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">منتهي الصلاحية</div><div class="val">{{ by_status.get('expired', 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-clock"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">معطَّل</div><div class="val">{{ by_status.get('disabled', 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-ban"></i></div>
+
+  <div>
+    {% if expiring_soon %}
+      {% call hub.section("تنتهي خلال 7 أيام", icon="hourglass-half",
+                          meta=expiring_soon|length|string, flush=True) %}
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>اليوزر</th>
+                <th>الاسم</th>
+                <th>تنتهي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in expiring_soon %}
+              <tr>
+                <td class="mono"><strong>{{ r.username }}</strong></td>
+                <td>{{ r.full_name or '—' }}</td>
+                <td class="mono small">
+                  {{ hub.pill(r.expire_at[:10], variant="amber", dot=False) }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endcall %}
+    {% else %}
+      {% call hub.section("تنتهي خلال 7 أيام", icon="hourglass-half") %}
+        {{ hub.empty("لا انتهاءات قريبة", sub="جميع المشتركين خارج نافذة الأيام السبعة.", icon="circle-check") }}
+      {% endcall %}
+    {% endif %}
   </div>
 </div>
 
-<div class="kpi-strip" style="margin-top:8px">
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">تنزيل إجمالي</div><div class="val">{{ "%.1f"|format(bytes_in/1073741824) }} GB</div></div>
-    <div class="ico"><i class="fa-solid fa-download"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">رفع إجمالي</div><div class="val">{{ "%.1f"|format(bytes_out/1073741824) }} GB</div></div>
-    <div class="ico"><i class="fa-solid fa-upload"></i></div>
-  </div>
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">مستفيد</div><div class="val">{{ by_type.get('subscriber', 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-user"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">بطاقة دخول</div><div class="val">{{ by_type.get('card', 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-id-card"></i></div>
-  </div>
-</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
-  <div class="card">
-    <div class="card-header"><span class="title">آخر المستخدمين المُضافين</span></div>
-    <div class="card-body card-body--flush">
-      {% if last_created %}
-      <table class="hr-table">
-        <thead><tr><th>#</th><th>اليوزر</th><th>الاسم</th><th>الحالة</th><th>أُنشئ</th></tr></thead>
-        <tbody>{% for r in last_created %}
-        <tr>
-          <td class="num">{{ r.id }}</td>
-          <td class="mono"><strong>{{ r.username }}</strong></td>
-          <td>{{ r.full_name or '—' }}</td>
-          <td><span class="pill">{{ r.status }}</span></td>
-          <td class="mono">{{ r.created_at[:10] if r.created_at else '—' }}</td>
-        </tr>{% endfor %}</tbody>
-      </table>
-      {% else %}<div class="empty"><i class="fa-solid fa-user"></i>—</div>{% endif %}
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header"><span class="title">تنتهي خلال 7 أيام</span></div>
-    <div class="card-body card-body--flush">
-      {% if expiring_soon %}
-      <table class="hr-table">
-        <thead><tr><th>اليوزر</th><th>الاسم</th><th>تنتهي</th></tr></thead>
-        <tbody>{% for r in expiring_soon %}
-        <tr>
-          <td class="mono"><strong>{{ r.username }}</strong></td>
-          <td>{{ r.full_name or '—' }}</td>
-          <td class="mono">{{ r.expire_at[:10] }}</td>
-        </tr>{% endfor %}</tbody>
-      </table>
-      {% else %}<div class="empty"><i class="fa-solid fa-circle-check"></i>لا انتهاءات قريبة</div>{% endif %}
-    </div>
-  </div>
-</div>
 {% endblock %}

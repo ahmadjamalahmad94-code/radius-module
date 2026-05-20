@@ -1,48 +1,100 @@
+{# Webhook deliveries log — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}سجل إرسال إشعارات الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
 {% block page_title %}سجل إرسال إشعارات الربط{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} سجل</span>{% endblock %}
+
 {% block content %}
-<form method="get" class="filter-bar">
-  <select name="status">
+
+{{ hub.hero(
+  "سجل إرسال إشعارات الربط",
+  subtitle="آخر محاولات إرسال Webhook — الحالة، عدد المحاولات، آخر استجابة",
+  icon="bolt",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_settings') + '">
+      <i class="fa-solid fa-gear"></i> الإعدادات
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in ['queued','retrying','delivered','failed'] %}
       <option value="{{ s }}" {% if status==s %}selected{% endif %}>
-        {% if s == 'queued' %}في الانتظار{% elif s == 'retrying' %}يعاد المحاولة{% elif s == 'delivered' %}تم الإرسال{% elif s == 'failed' %}فشل{% else %}{{ s }}{% endif %}
+        {% if s == 'queued' %}في الانتظار
+        {% elif s == 'retrying' %}يعاد المحاولة
+        {% elif s == 'delivered' %}تم الإرسال
+        {% elif s == 'failed' %}فشل
+        {% else %}{{ s }}{% endif %}
       </option>
     {% endfor %}
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
 </form>
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الحدث</th><th>رقم الحدث</th><th>المحاولات</th>
-      <th>الحالة</th><th>آخر كود</th><th>آخر استجابة</th><th>التالي</th><th>أُنشئ</th>
-    </tr></thead>
-    <tbody>{% for d in items %}
-    <tr>
-      <td class="num">{{ d.id }}</td>
-      <td><strong>{{ d.event }}</strong></td>
-      <td class="mono">{{ d.event_id }}</td>
-      <td class="num">{{ d.attempts }}</td>
-      <td>
-        {% if d.status == 'delivered' %}<span class="pill pill-success">تم الإرسال</span>
-        {% elif d.status == 'queued' %}<span class="pill pill-info">في الانتظار</span>
-        {% elif d.status == 'retrying' %}<span class="pill pill-warn">يعاد المحاولة</span>
-        {% elif d.status == 'failed' %}<span class="pill pill-danger">فشل</span>
-        {% else %}<span class="pill">{{ d.status }}</span>{% endif %}
-      </td>
-      <td class="num">{{ d.last_status_code or '—' }}</td>
-      <td class="mono" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        {{ d.last_response_excerpt or '—' }}
-      </td>
-      <td class="mono">{{ d.next_attempt_at.strftime('%H:%M') if d.next_attempt_at else '—' }}</td>
-      <td class="mono">{{ d.created_at.strftime('%Y-%m-%d %H:%M') if d.created_at else '—' }}</td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-bolt"></i>لا سجلات</div>{% endif %}
-</div></div>
+
+{% if items %}
+{% set _delivered = items|selectattr('status','equalto','delivered')|list|length %}
+{% set _retrying  = items|selectattr('status','equalto','retrying')|list|length %}
+{% set _failed    = items|selectattr('status','equalto','failed')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",      items|length, icon="bolt",         variant="brand") }}
+  {{ hub.kpi("تم الإرسال",    _delivered,    icon="circle-check", variant="green") }}
+  {{ hub.kpi("يعاد المحاولة", _retrying,     icon="rotate",       variant="amber") }}
+  {{ hub.kpi("فشل",           _failed,       icon="circle-xmark", variant="red") }}
+</div>
+
+{% call hub.section("السجلات", icon="table-list", meta=items|length|string + " سجل", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="wh-deliveries">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الحدث</th>
+          <th>رقم الحدث</th>
+          <th class="num">المحاولات</th>
+          <th>الحالة</th>
+          <th class="num">آخر كود</th>
+          <th>آخر استجابة</th>
+          <th>التالي</th>
+          <th>أُنشئ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in items %}
+        <tr>
+          <td class="num mono">{{ d.id }}</td>
+          <td><strong>{{ d.event }}</strong></td>
+          <td class="mono small">{{ d.event_id }}</td>
+          <td class="num">{{ d.attempts }}</td>
+          <td>
+            {% if d.status == 'delivered' %}{{ hub.pill("تم الإرسال", variant="green") }}
+            {% elif d.status == 'queued'    %}{{ hub.pill("في الانتظار", variant="blue") }}
+            {% elif d.status == 'retrying'  %}{{ hub.pill("يعاد المحاولة", variant="amber") }}
+            {% elif d.status == 'failed'    %}{{ hub.pill("فشل", variant="red") }}
+            {% else %}{{ hub.pill(d.status, variant="grey") }}{% endif %}
+          </td>
+          <td class="num mono">{{ d.last_status_code or '—' }}</td>
+          <td class="mono small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ d.last_response_excerpt or '—' }}
+          </td>
+          <td class="mono small">{{ d.next_attempt_at.strftime('%H:%M') if d.next_attempt_at else '—' }}</td>
+          <td class="mono small">{{ d.created_at.strftime('%Y-%m-%d %H:%M') if d.created_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا سجلات بعد",
+  sub="عند إرسال أول إشعار Webhook ستظهر السجلات هنا.",
+  icon="bolt"
+) }}
+{% endif %}
+
 {% endblock %}
