@@ -63,9 +63,19 @@ def payments_create():
 
 
 def payments_void(payment_id: int):
-    return fail(
-        "not_implemented",
-        "Payment voids require a dedicated reversal slice; use /ledger/void for now.",
-        status=501,
-        details={"payment_id": payment_id},
-    )
+    body = request.get_json(silent=True) or {}
+    try:
+        payment = service_from_context().get_payment(payment_id)
+        if current_distributor() and not subscriber_in_scope(
+            username=payment.get("username") or "",
+            subscriber_id=payment.get("subscriber_id"),
+        ):
+            return deny_out_of_scope()
+        result = service_from_context().void_payment(
+            payment_id=payment_id,
+            actor=_actor(),
+            reason=str(body.get("reason") or "")[:500],
+        )
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422, details=e.details)
+    return ok(result, status=201)

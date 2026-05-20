@@ -160,6 +160,49 @@ def get_payment(tenant_id: int, payment_id: int) -> Optional[dict]:
     return row_to_dict(row) if row else None
 
 
+def void_payment(*, tenant_id: int, payment: dict, actor: str,
+                 reason: str = "") -> Optional[dict]:
+    ledger_id = payment.get("ledger_entry_id")
+    if not ledger_id:
+        return None
+    original = get_ledger_entry(tenant_id, int(ledger_id))
+    if not original:
+        return None
+    amount = -float(original["amount"] or 0)
+    with transaction() as conn:
+        void_id = create_ledger_entry(
+            conn,
+            tenant_id=tenant_id,
+            entry_type="void",
+            amount=amount,
+            direction="debit" if original["direction"] == "credit" else "credit",
+            currency=original["currency"],
+            subscriber_id=original["subscriber_id"],
+            username=original["username"],
+            operator=actor,
+            source_type="payment_void",
+            source_id=payment["id"],
+            related_type="payment",
+            related_id=payment["id"],
+            reversal_of_entry_id=int(ledger_id),
+            status="void",
+            notes=reason,
+            metadata={"voided_payment_id": payment["id"], "reason": reason},
+        )
+        conn.execute(
+            """
+            UPDATE payment_transactions
+            SET status = 'voided'
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (tenant_id, payment["id"]),
+        )
+    return {
+        "payment": get_payment(tenant_id, payment["id"]) or {},
+        "entry": get_ledger_entry(tenant_id, void_id) or {},
+    }
+
+
 def list_payments(tenant_id: int, *, subscriber_id: int | None = None,
                   distributor_id: int | None = None,
                   limit: int = 100, offset: int = 0) -> list[dict]:

@@ -196,6 +196,32 @@ def test_ledger_void_is_append_only_and_no_financial_delete_routes_exist(client,
     assert "/api/v1/ledger/<int:entry_id>" not in delete_paths
 
 
+def test_payment_void_is_real_append_only_reversal(client):
+    subscriber = _create_subscriber(client)
+    payment = client.post(
+        "/api/v1/payments",
+        json={"username": subscriber["username"], "amount": 30},
+        headers=AUTH,
+    ).get_json()["data"]["payment"]
+
+    voided = client.post(
+        f"/api/v1/payments/{payment['id']}/void",
+        json={"reason": "operator correction"},
+        headers=AUTH,
+    )
+    assert voided.status_code == 201, voided.get_json()
+    data = voided.get_json()["data"]
+    assert data["payment"]["status"] == "voided"
+    assert data["entry"]["entry_type"] == "void"
+    assert data["entry"]["source_type"] == "payment_void"
+    assert data["entry"]["source_id"] == payment["id"]
+    assert data["entry"]["reversal_of_entry_id"] == payment["ledger_entry_id"]
+    assert data["entry"]["amount"] == -30
+
+    listed = client.get("/api/v1/payments", headers=AUTH).get_json()["data"]["items"]
+    assert any(item["id"] == payment["id"] and item["status"] == "voided" for item in listed)
+
+
 def test_foundational_reports_aggregate_real_records(client):
     subscriber = _create_subscriber(client)
     client.post(

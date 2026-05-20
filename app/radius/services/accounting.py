@@ -118,6 +118,26 @@ class AccountingService:
             raise RadiusValidationError("ledger entry not found")
         return entry
 
+    def get_payment(self, payment_id: int) -> dict:
+        payment = accounting_repo.get_payment(self.tenant_id, payment_id)
+        if not payment:
+            raise RadiusValidationError("payment not found")
+        return payment
+
+    def void_payment(self, *, payment_id: int, actor: str, reason: str = "") -> dict:
+        payment = self.get_payment(payment_id)
+        if payment.get("status") == "voided":
+            raise RadiusValidationError("payment is already voided")
+        result = accounting_repo.void_payment(
+            tenant_id=self.tenant_id,
+            payment=payment,
+            actor=actor,
+            reason=reason,
+        )
+        if not result:
+            raise RadiusValidationError("payment ledger entry not found")
+        return result
+
     def create_payment(self, body: dict, *, actor: str,
                        distributor_id: int | None = None) -> dict:
         subscriber = self.resolve_subscriber(body)
