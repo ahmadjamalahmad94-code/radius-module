@@ -35,14 +35,14 @@ Status values:
 | Bandwidth schedules | `/admin/radius/bandwidth-schedules` | `/api/v1/bandwidth-schedules` | `/bandwidth-schedules` | dry_run | Saved schedules and resolver exist. Live apply depends on backend flag and RADIUS adapter verification. |
 | Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates` | `/print-templates` | partial | Saved layout and preview exist. Real PDF/export renderer is not complete. |
 | MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | missing | missing | API exists. Flutter config/test UI is required. |
-| Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks` | missing | partial | Config/test API exists; deliveries API and Flutter UI are missing. |
+| Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | partial | partial | Config/test/deliveries API exists; Flutter UI is still missing. |
 | System status | `/admin/radius/status` | `/api/v1/system/status` | missing | partial | API exists; Flutter screen is next. |
 | Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | missing | partial | API exists; Flutter screen is next. |
 | Sync queue | `/admin/radius/sync` | `/api/v1/system/sync`, retry/cancel | missing | partial | API exists; Flutter queue screen is next. |
 | Reconcile | `/admin/radius/reconcile` | `/api/v1/system/reconcile` | missing | partial | API exists and runs backend reconciler; Flutter must show result clearly. |
-| Settings | `/admin/radius/settings` | missing | missing | web_only_until_api | Needs settings API and Flutter screen. |
-| API tokens | `/admin/radius/tokens` | missing | missing | web_only_until_api | Needs create/revoke API. Token secret should only be shown once. |
-| Tenants | `/admin/radius/tenants` | missing | missing | web_only_until_api | Needs tenant list/manage/switch API. |
+| Settings | `/admin/radius/settings` | `/api/v1/settings` | missing | partial | API exists; Flutter screen is still missing. |
+| API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
+| Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
 | Operational reports | `/admin/radius/reports/*` | missing | missing | web_only_until_api | Sessions, failed logins, MAC history, CoA failures, manager events need JSON API. |
 | Tools: set speeds | `/admin/radius/tools/set-speeds` | missing | missing | web_only_until_api | Needs safe API. No direct Flutter RADIUS action. |
 | Tools: maintenance | `/admin/radius/tools/maintenance` | missing | missing | web_only_until_api | API must require preview first and strong confirmation before run. |

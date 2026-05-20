@@ -18,6 +18,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(webhooks_set), methods=["PUT"])
     bp.add_url_rule("/webhooks/test", "webhooks_test",
                     require_api_token(webhooks_test), methods=["POST"])
+    bp.add_url_rule("/webhooks/deliveries", "webhooks_deliveries",
+                    require_api_token(webhooks_deliveries), methods=["GET"])
 
 
 def _config_store():
@@ -58,3 +60,46 @@ def webhooks_test():
         {"message": "this is a test event from HobeRadius"},
     )
     return ok({"dispatched": True, "event_id": event_id})
+
+
+def _delivery_item(item) -> dict:
+    return {
+        "id": item.id,
+        "tenant_id": item.tenant_id,
+        "subscription_id": item.subscription_id,
+        "event": item.event,
+        "event_id": item.event_id,
+        "status": item.status,
+        "attempts": item.attempts,
+        "last_status_code": item.last_status_code,
+        "last_response_excerpt": item.last_response_excerpt,
+        "next_attempt_at": item.next_attempt_at.isoformat() + "Z"
+        if item.next_attempt_at
+        else None,
+        "created_at": item.created_at.isoformat() + "Z" if item.created_at else None,
+    }
+
+
+def webhooks_deliveries():
+    from flask import g
+    from app.radius.db.repos import webhooks_repo
+
+    status = (request.args.get("status") or "").strip()
+    if status and status not in {"queued", "retrying", "delivered", "failed"}:
+        return fail("validation_error", "unknown status", status=422)
+    try:
+        limit = min(500, max(1, int(request.args.get("limit") or 200)))
+    except ValueError:
+        return fail("validation_error", "limit must be integer", status=422)
+    items = webhooks_repo.list_deliveries(
+        int(getattr(g, "tenant_id", 1)),
+        status=status or None,
+        limit=limit,
+    )
+    return ok(
+        {
+            "items": [_delivery_item(item) for item in items],
+            "count": len(items),
+            "status": status or "all",
+        }
+    )
