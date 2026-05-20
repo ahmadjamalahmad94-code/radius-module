@@ -109,6 +109,15 @@
    row 3: bottom-divider with creation date           #}
 {% macro card_hero(card) -%}
 <div class="cc-card-hero" data-cc-section="hero">
+  {# Decorative wave lines — inline SVG (CSS data-URI was unreliable). #}
+  <svg class="cc-card-waves" viewBox="0 0 600 240" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M-40,165 Q150,110 320,165 T660,140" stroke="white" stroke-width="2"
+          stroke-opacity="0.22" fill="none" stroke-linecap="round"/>
+    <path d="M-40,195 Q170,135 340,195 T660,170" stroke="white" stroke-width="2"
+          stroke-opacity="0.16" fill="none" stroke-linecap="round"/>
+    <path d="M-40,225 Q190,165 360,225 T660,205" stroke="white" stroke-width="2"
+          stroke-opacity="0.10" fill="none" stroke-linecap="round"/>
+  </svg>
   <div class="cc-card-top">
     <div class="cc-card-chip" aria-hidden="true"></div>
     {{ hero_status(card) }}
@@ -584,17 +593,17 @@
           <span class="cc-section-head-title">إجراءات سريعة</span>
         </header>
         <div class="cc-section-body">
+          {# Order matches Reference B (RTL: first child = rightmost):
+             تحديث → إعادة ضبط → فصل الجلسة (red). #}
           <div class="cc-actions" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-            <form method="post" action="{{ url_for('radius.cards_checker') }}"
-                  onsubmit="return confirm('قطع الجلسة الحيّة لـ {{ card.username }}؟');">
-              <input type="hidden" name="op" value="disconnect">
-              {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="submit" {% if not ops.can_disconnect %}disabled{% endif %}
-                      data-cc-op="disconnect">
-                <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
-                <div class="cc-action-body"><div class="cc-action-title">فصل الجلسة</div></div>
-              </button>
-            </form>
+            <a class="cc-action" href="{{ url_for('radius.cards_checker', query=query) }}"
+               data-cc-op="refresh">
+              <span class="cc-action-icon blue"><i class="fa-solid fa-arrows-rotate"></i></span>
+              <div class="cc-action-body">
+                <div class="cc-action-title">تحديث</div>
+                <div class="cc-action-sub">تحديث بيانات البطاقة</div>
+              </div>
+            </a>
 
             <form method="post" action="{{ url_for('radius.cards_checker') }}"
                   onsubmit="return confirm('إعادة ضبط استخدام {{ card.username }}؟');">
@@ -602,16 +611,28 @@
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="submit" {% if not ops.can_reset_usage %}disabled{% endif %}
                       data-cc-op="reset-usage">
-                <span class="cc-action-icon purple"><i class="fa-solid fa-rotate-right"></i></span>
-                <div class="cc-action-body"><div class="cc-action-title">إعادة ضبط</div></div>
+                <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">إعادة ضبط</div>
+                  <div class="cc-action-sub">إعادة تشغيل البطاقة</div>
+                </div>
               </button>
             </form>
 
-            <a class="cc-action" href="{{ url_for('radius.cards_checker', query=query) }}"
-               data-cc-op="refresh">
-              <span class="cc-action-icon cyan"><i class="fa-solid fa-arrows-rotate"></i></span>
-              <div class="cc-action-body"><div class="cc-action-title">تحديث</div></div>
-            </a>
+            <form method="post" action="{{ url_for('radius.cards_checker') }}"
+                  onsubmit="return confirm('قطع الجلسة الحيّة لـ {{ card.username }}؟');">
+              <input type="hidden" name="op" value="disconnect">
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action cc-action-soft-red" type="submit"
+                      {% if not ops.can_disconnect %}disabled{% endif %}
+                      data-cc-op="disconnect">
+                <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">فصل الجلسة</div>
+                  <div class="cc-action-sub">فصل الجهاز الحالي</div>
+                </div>
+              </button>
+            </form>
           </div>
 
           <div style="margin-top:14px">

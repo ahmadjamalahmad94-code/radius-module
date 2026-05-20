@@ -190,19 +190,13 @@
 .cc-state .cc-state-hint{ color: var(--cc-text-mute); font-size: 12.5px; }
 
 /* ═════════════════════════ HERO CREDIT-CARD ═════════════════════════ */
+/* Softer purple to feel premium (matches the reference more closely
+   than the previous denser gradient). */
 .cc-card-hero{
-  /* decorative wave path baked into a data: URI so we get those soft
-     curving white lines from the reference without an extra HTTP. */
   background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 240' preserveAspectRatio='none'>\
-<path d='M-20 180 Q150 120 320 170 T 650 130' stroke='white' stroke-width='1.5' stroke-opacity='0.18' fill='none'/>\
-<path d='M-20 200 Q170 140 340 200 T 650 160' stroke='white' stroke-width='1.5' stroke-opacity='0.13' fill='none'/>\
-<path d='M-20 230 Q190 170 360 230 T 650 200' stroke='white' stroke-width='1.5' stroke-opacity='0.08' fill='none'/>\
-</svg>") no-repeat right bottom / 110% auto,
-    radial-gradient(ellipse 80% 60% at 90% -10%, rgba(255,255,255,.20) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 0% 110%, rgba(255,255,255,.10) 0%, transparent 60%),
-    var(--cc-hero-grad);
-
+    radial-gradient(ellipse 80% 60% at 100% -10%, rgba(255,255,255,.20) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at -10% 110%, rgba(255,255,255,.12) 0%, transparent 55%),
+    linear-gradient(135deg, #7563F0 0%, #8A7BF5 50%, #B7ACFB 110%);
   border-radius: var(--cc-r-hero);
   padding: 24px 28px;
   color: white;
@@ -212,6 +206,18 @@
   box-shadow: var(--cc-sh-hero);
   display: flex; flex-direction: column;
 }
+
+/* Decorative wave SVG rendered as an actual <svg> inside the hero —
+   CSS data-URI was unreliable across browsers when the markup contained
+   apostrophes and tagged attributes. Inline element is bulletproof. */
+.cc-card-waves{
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.cc-card-hero > *:not(.cc-card-waves){ position: relative; z-index: 1; }
 
 .cc-card-top{
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -647,6 +653,15 @@
 }
 .cc-action.cc-action-danger .cc-action-title{ color:#9B1C1C; }
 .cc-action.cc-action-danger:hover{ border-color:#E8A5A5; }
+
+/* lighter red tint — used in simple mode for "فصل الجلسة" which is
+   strong but not destructive like delete-permanent. */
+.cc-action.cc-action-soft-red{
+  background: linear-gradient(135deg,#FFF6F6 0%,#FCEAEA 100%);
+  border-color: #F2CFCF;
+}
+.cc-action.cc-action-soft-red .cc-action-title{ color: #B12525; }
+.cc-action.cc-action-soft-red:hover{ border-color: #E8A5A5; }
 
 /* inline form inside action */
 .cc-action form{ width:100%; display:flex; flex-direction:column; gap:6px; margin:0; }
