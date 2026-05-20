@@ -100,39 +100,53 @@
   {% endif %}
 {%- endmacro %}
 
-{# ═════════════════════════ HERO CARD (shared advanced + simple) ═════════════════════════ #}
+{# ═════════════════════════ HERO CREDIT-CARD (R13.A.8) ═════════════════════════ #}
+{# Structure matches Reference A exactly:
+   row 1: chip (left)                                status pill (right)
+   row 2: card info block (left)                     large number + star (right)
+              ├ batch code                              ├ plan name + crown
+              ├ plan                                    └ remaining time
+   row 3: bottom-divider with creation date           #}
 {% macro card_hero(card) -%}
 <div class="cc-card-hero" data-cc-section="hero">
   <div class="cc-card-top">
     <div class="cc-card-chip" aria-hidden="true"></div>
     {{ hero_status(card) }}
   </div>
-  <div class="cc-card-number" data-cc-field="username">
-    {{ card.username }}
-    <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
+
+  <div class="cc-card-main">
+    <div class="cc-card-info">
+      {% if card.batch %}
+      <div class="cc-card-info-row" data-cc-field="batch">
+        <div class="cc-card-info-label">حزمة البطاقة</div>
+        <div class="cc-card-info-value">{{ card.batch.batch_code or card.batch.id }}</div>
+      </div>
+      {% endif %}
+      {% if card.profile and card.profile.name %}
+      <div class="cc-card-info-row" data-cc-field="profile">
+        <div class="cc-card-info-label">الباقة / الخطّة</div>
+        <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="cc-card-number-wrap">
+      <div class="cc-card-number" data-cc-field="username">
+        {{ card.username }}
+        <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
+      </div>
+      {% if card.remaining_seconds is not none %}
+      <div class="cc-card-remaining" data-cc-field="remaining_seconds">
+        <i class="fa-regular fa-clock"></i>
+        <span><span class="num">{{ duration(card.remaining_seconds) }}</span> متبقية</span>
+      </div>
+      {% endif %}
+    </div>
   </div>
-  <div class="cc-card-meta">
-    {% if card.batch %}
-    <div class="cc-card-meta-row" data-cc-field="batch">
-      <span class="cc-card-meta-label">حزمة البطاقة</span>
-      <span class="cc-card-meta-value">{{ card.batch.batch_code or card.batch.id }}</span>
-    </div>
-    {% endif %}
-    {% if card.profile and card.profile.name %}
-    <div class="cc-card-meta-row" data-cc-field="profile">
-      <span class="cc-card-meta-label">نوع الاشتراك</span>
-      <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
-    </div>
-    {% endif %}
-    {% if card.remaining_seconds is not none %}
-    <div class="cc-card-meta-row" data-cc-field="remaining_seconds">
-      <span class="cc-card-meta-label">الحد الزمني</span>
-      <span class="cc-card-meta-value">{{ duration(card.remaining_seconds) }} متبقية</span>
-    </div>
-    {% endif %}
-  </div>
+
   <div class="cc-card-bottom">
-    <span><i class="fa-regular fa-calendar"></i> تم إصدارها: {{ dt(card.created_at) }}</span>
+    <span><i class="fa-regular fa-calendar"></i>تم إصدارها: {{ dt(card.created_at) }}</span>
+    <span>MAC: <span class="mono" style="font-family:ui-monospace,Consolas,monospace">{{ card.mac_address or '—' }}</span></span>
   </div>
 </div>
 {%- endmacro %}
