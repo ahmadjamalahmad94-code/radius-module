@@ -44,17 +44,17 @@ Status values:
 | API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
 | Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
 | Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | `/operational-reports` | partial | JSON API and Flutter viewer exist for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Needs export/pinned filters later. |
-| Tools: set speeds | `/admin/radius/tools/set-speeds` | `/api/v1/tools/set-speeds` | missing | partial | API supports dry-run and real plan speed updates. Flutter screen is next. |
-| Tools: maintenance | `/admin/radius/tools/maintenance` | `/api/v1/tools/maintenance/preview`, `/api/v1/tools/maintenance/run` | missing | partial | API requires preview token and explicit confirmation phrase before run. Flutter screen is next. |
-| Tools: test auth | `/admin/radius/tools/test-auth` | `/api/v1/tools/test-auth` | missing | partial | API-backed policy-engine test exists. Flutter screen is next. |
-| Tools: RADIUS log | `/admin/radius/tools/radius-log` | `/api/v1/tools/radius-log` | missing | partial | Authenticated API exposes radpostauth rows without passwords. Flutter viewer is next. |
-| Bandwidth profiles | `/admin/radius/bandwidth-profiles` | `/api/v1/bandwidth-profiles` | missing | partial | API CRUD exists; Flutter screen is next. |
-| Pools | `/admin/radius/pools` | `/api/v1/pools` | missing | partial | API CRUD exists; Flutter screen is next. |
-| Vouchers | `/admin/radius/vouchers` | `/api/v1/vouchers` | missing | partial | API generate/list/revoke exists; Flutter screen is next. |
-| Invoices | `/admin/radius/invoices` | `/api/v1/invoices` | missing | partial | API list/create/status exists; Flutter screen is next. No hard delete. |
-| Tickets | `/admin/radius/tickets` | `/api/v1/tickets` | missing | partial | API list/create/update/reply exists; Flutter screen is next. |
-| Services | `/admin/radius/services` | `/api/v1/services` | missing | partial | API CRUD exists; Flutter screen is next. |
-| Share groups | `/admin/radius/share-groups` | `/api/v1/share-groups` | missing | partial | API CRUD/member management exists; Flutter screen is next. |
+| Tools: set speeds | `/admin/radius/tools/set-speeds` | `/api/v1/tools/set-speeds` | `/tools` | done | API supports dry-run and real plan speed updates; Flutter exposes both preview and apply. |
+| Tools: maintenance | `/admin/radius/tools/maintenance` | `/api/v1/tools/maintenance/preview`, `/api/v1/tools/maintenance/run` | `/tools` | done | API requires preview token and explicit confirmation phrase before run; Flutter uses that flow. |
+| Tools: test auth | `/admin/radius/tools/test-auth` | `/api/v1/tools/test-auth` | `/tools` | done | API-backed policy-engine test exists and Flutter shows the decision. |
+| Tools: RADIUS log | `/admin/radius/tools/radius-log` | `/api/v1/tools/radius-log` | `/tools` | done | Authenticated API exposes radpostauth rows without passwords; Flutter viewer exists. |
+| Bandwidth profiles | `/admin/radius/bandwidth-profiles` | `/api/v1/bandwidth-profiles` | `/saas-modules` | done | API CRUD exists; Flutter generic SaaS module screen covers create/list/delete where supported. |
+| Pools | `/admin/radius/pools` | `/api/v1/pools` | `/saas-modules` | done | API CRUD exists; Flutter generic SaaS module screen covers create/list/delete. |
+| Vouchers | `/admin/radius/vouchers` | `/api/v1/vouchers` | `/saas-modules` | done | API generate/list/revoke exists; Flutter exposes generation and revoke. |
+| Invoices | `/admin/radius/invoices` | `/api/v1/invoices` | `/saas-modules` | done | API list/create/status exists; Flutter can mark paid. No hard delete. |
+| Tickets | `/admin/radius/tickets` | `/api/v1/tickets` | `/saas-modules` | done | API list/create/update/reply exists; Flutter exposes create and reply. |
+| Services | `/admin/radius/services` | `/api/v1/services` | `/saas-modules` | done | API CRUD exists; Flutter generic SaaS module screen covers create/list/delete. |
+| Share groups | `/admin/radius/share-groups` | `/api/v1/share-groups` | `/saas-modules` | done | API CRUD/member management exists; Flutter exposes core create/list/delete. |
 
 ## Implementation Order
 
