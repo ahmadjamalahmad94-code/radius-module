@@ -757,7 +757,14 @@
               <tbody>
                 {% for ses in s.latest_sessions %}
                 {% set total = (ses.upload_bytes or 0) + (ses.download_bytes or 0) %}
-                <tr data-cc-session="{{ ses.id }}" class="{% if ses.online %}is-live{% endif %}">
+                {# data-cc-session carries acctsessionid (the RADIUS
+                   session identifier MT uses for CoA-Disconnect), with
+                   a fallback to the radacct row id when acctsessionid
+                   is empty. Using radacctid alone here would break the
+                   per-session disconnect picker because the CoA filter
+                   in radius_coa.disconnect_user matches by
+                   acctsessionid, not by radacct row id. #}
+                <tr data-cc-session="{{ ses.session_id or ses.id }}" class="{% if ses.online %}is-live{% endif %}">
                   <td>
                     {% if ses.online %}
                       <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
@@ -1411,9 +1418,14 @@
         (uniq.length ? '<div class="cc-gmodal-mac-divider">— أو —</div>' : '') +
         '<div class="cc-gmodal-field">' +
           '<div class="cc-gmodal-field-label">عناوين مخصّصة (اختياري)</div>' +
+          // Textarea starts EMPTY — the operator opens this picker to
+          // pick from the session history above, not to re-type what
+          // they already saw. Pre-filling with currentMac was confusing
+          // because users thought it was already-locked and ended up
+          // submitting the same MAC again by accident.
           '<textarea data-input rows="2" dir="ltr" ' +
             'placeholder="AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66" ' +
-            'style="resize:vertical">' + esc(opts.currentMac || '') + '</textarea>' +
+            'style="resize:vertical"></textarea>' +
         '</div>' +
         '<div class="cc-gmodal-mac-summary" data-mac-summary></div>' +
         actions('قفل', 'إلغاء', false);
