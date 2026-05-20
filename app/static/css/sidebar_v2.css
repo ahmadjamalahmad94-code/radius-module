@@ -391,7 +391,10 @@ body{
   margin-inline-start: var(--hb-side-current-w) !important;
   margin-inline-end: 0 !important;
   transition: margin-inline-start .2s ease;
-  background: var(--hb-bg-page);
+  /* IMPORTANT: keep .main transparent so the animated network
+     background (.hb-bg-net + body orbs at z-index:-1/-2) actually
+     shows through. The page colour now comes from body + html only. */
+  background: transparent;
   min-height: calc(100vh - var(--hr-topbar-h, 50px));
 }
 

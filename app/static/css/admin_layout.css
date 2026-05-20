@@ -655,3 +655,67 @@ body::after{
 @media print{
   body::before, body::after, .hb-bg-net{ display:none !important; }
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  Background animation — VISIBLE pass.                                ║
+   ║                                                                      ║
+   ║  Previous attempt used body::before / body::after for the big        ║
+   ║  drifting orbs, but the body background-color paint covered them    ║
+   ║  on most browsers (negative z-index on a body pseudo-element gets   ║
+   ║  swallowed by the canvas). Moved the orbs to real elements inside   ║
+   ║  .hb-bg-net so z-index works reliably. Also bumped opacity since    ║
+   ║  the original 0.04-0.10 values were near-invisible against the      ║
+   ║  light page bg.                                                      ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+
+/* Make the host fill the viewport but render BEHIND content. */
+.hb-bg-net{ z-index:0 !important; }
+.hb-bg-net > *{ position:absolute }
+
+/* Big drifting orbs (replaced body::before / body::after) */
+.hb-bg-net .hb-orb{
+  border-radius:50%;
+  pointer-events:none;
+  filter:blur(28px);
+  opacity:1;
+}
+.hb-bg-net .hb-orb-a{
+  top:-15%; inset-inline-end:-10%;
+  width:60vw; height:60vw;
+  max-width:900px; max-height:900px;
+  background:radial-gradient(circle at center,
+                              rgba(107,90,237,.28) 0%,
+                              rgba(107,90,237,.10) 35%,
+                              transparent 70%);
+  animation:hb-orb-a 60s ease-in-out infinite;
+}
+.hb-bg-net .hb-orb-b{
+  bottom:-20%; inset-inline-start:-12%;
+  width:55vw; height:55vw;
+  max-width:850px; max-height:850px;
+  background:radial-gradient(circle at center,
+                              rgba(59,130,246,.22) 0%,
+                              rgba(139,92,246,.10) 40%,
+                              transparent 75%);
+  animation:hb-orb-b 75s ease-in-out infinite;
+}
+
+/* Visibility bumps on the rest of the layers (was too faint). */
+.hb-bg-net .hb-wifi{
+  border-width:2px !important;
+  border-color:rgba(107,90,237,.32) !important;
+}
+.hb-bg-net .hb-wifi-b1,
+.hb-bg-net .hb-wifi-b2,
+.hb-bg-net .hb-wifi-b3{
+  border-color:rgba(59,130,246,.32) !important;
+}
+.hb-bg-net .hb-node{ opacity:.85 !important; width:7px; height:7px }
+.hb-bg-net .hb-pkt{ opacity:.55 !important; height:2.5px }
+
+/* Sit above the body background canvas but below content (which lives
+   in .main with bg:transparent now). The body painting layer is at
+   the canvas; .hb-bg-net at z:0 paints on top of body bg;
+   .topbar (z:50), .hb-side (z:60), .main flow children >= z:1
+   all paint over. Cards have their own opaque backgrounds so the
+   anim only shows in the gaps between them — exactly what we want. */
