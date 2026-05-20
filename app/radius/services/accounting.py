@@ -9,6 +9,7 @@ from typing import Any
 from ..core.errors import RadiusValidationError
 from ..db.helpers import dt_to_iso, json_load
 from ..db.repos import accounting_repo
+from .radius_apply import apply_activation_minutes
 
 
 def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
@@ -76,6 +77,10 @@ def calculate_proportional_minutes(
     if rounding_mode == "nearest":
         return int(round(raw))
     return int(math.floor(raw))
+
+
+def _truthy(value: Any) -> bool:
+    return value is True or str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 class AccountingService:
@@ -163,12 +168,37 @@ class AccountingService:
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )
+        apply_requested = _truthy(body.get("apply_to_radius"))
+        dry_run = _truthy(body.get("dry_run"))
+        activation_result = {
+            "applied_to_radius": False,
+            "dry_run": dry_run,
+            "source": "payment",
+            "status": "skipped",
+            "reason": "apply_to_radius was not requested",
+        }
+        if apply_requested and earned_minutes > 0:
+            activation_result = apply_activation_minutes(
+                username=subscriber["username"],
+                minutes=earned_minutes,
+                actor=actor,
+                source=f"payment:{payment['id']}",
+                dry_run=dry_run,
+            )
+        elif apply_requested:
+            activation_result.update({
+                "status": "skipped",
+                "reason": "earned_minutes is 0",
+            })
         payment["proportional_activation"] = {
             "base_minutes": base_minutes,
             "earned_minutes": earned_minutes,
             "rounding_mode": rounding,
-            "applied_to_radius": False,
+            "applied_to_radius": bool(activation_result.get("applied_to_radius")),
         }
+        payment["activation_result"] = activation_result
+        payment["radius_action_id"] = activation_result.get("radius_action_id")
+        payment["dry_run"] = dry_run
         return payment
 
     def list_payments(self, *, subscriber_id: int | None = None,
@@ -218,12 +248,32 @@ class AccountingService:
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )
+        apply_requested = _truthy(body.get("apply_to_radius"))
+        dry_run = _truthy(body.get("dry_run"))
+        activation_result = {
+            "applied_to_radius": False,
+            "dry_run": dry_run,
+            "source": "loan",
+            "status": "skipped",
+            "reason": "apply_to_radius was not requested",
+        }
+        if apply_requested:
+            activation_result = apply_activation_minutes(
+                username=subscriber["username"],
+                minutes=duration_minutes,
+                actor=actor,
+                source=f"loan:{loan['id']}",
+                dry_run=dry_run,
+            )
         loan["activation_window"] = {
             "starts_at": loan["starts_at"],
             "ends_at": loan["ends_at"],
             "duration_minutes": duration_minutes,
-            "applied_to_radius": False,
+            "applied_to_radius": bool(activation_result.get("applied_to_radius")),
         }
+        loan["activation_result"] = activation_result
+        loan["radius_action_id"] = activation_result.get("radius_action_id")
+        loan["dry_run"] = dry_run
         return loan
 
     def list_loans(self, *, status: str = "", subscriber_id: int | None = None,
