@@ -12,11 +12,11 @@ def register_v1(parent: Blueprint) -> None:
     v1 = Blueprint("v1", __name__, url_prefix="/v1")
 
     from . import (
-        accounting, accounts, admins, audit, backups, bandwidth_schedules,
+        accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules,
         card_checker, cards, dashboard, devices, distributors, health, internal_auth,
-        ledger, loans, mikrotik, nas, operational_reports, payments,
-        print_templates, profiles, recycle_bin, reports, sessions, settings,
-        system, tenants, tokens, webhooks,
+        invoices, ledger, loans, mikrotik, nas, operational_reports, payments,
+        pools, print_templates, profiles, recycle_bin, reports, services, sessions,
+        settings, share_groups, system, tenants, tickets, tokens, vouchers, webhooks,
     )
     health.register(v1)
     accounts.register(v1)
@@ -29,6 +29,7 @@ def register_v1(parent: Blueprint) -> None:
     distributors.register(v1)
     reports.register(v1)
     operational_reports.register(v1)
+    bandwidth_profiles.register(v1)
     bandwidth_schedules.register(v1)
     print_templates.register(v1)
     backups.register(v1)
@@ -43,6 +44,12 @@ def register_v1(parent: Blueprint) -> None:
     admins.register(v1)
     audit.register(v1)
     devices.register(v1)
+    pools.register(v1)
+    vouchers.register(v1)
+    invoices.register(v1)
+    tickets.register(v1)
+    services.register(v1)
+    share_groups.register(v1)
     system.register(v1)
     settings.register(v1)
     tokens.register(v1)

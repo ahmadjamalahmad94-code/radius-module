@@ -43,18 +43,18 @@ Status values:
 | Settings | `/admin/radius/settings` | `/api/v1/settings` | missing | partial | API exists; Flutter screen is still missing. |
 | API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
 | Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
-| Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | missing | partial | JSON API exists for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Flutter screens are next. |
+| Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | `/operational-reports` | partial | JSON API and Flutter viewer exist for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Needs export/pinned filters later. |
 | Tools: set speeds | `/admin/radius/tools/set-speeds` | missing | missing | web_only_until_api | Needs safe API. No direct Flutter RADIUS action. |
 | Tools: maintenance | `/admin/radius/tools/maintenance` | missing | missing | web_only_until_api | API must require preview first and strong confirmation before run. |
 | Tools: test auth | `/admin/radius/tools/test-auth` | missing | missing | web_only_until_api | Needs API-backed test screen. |
 | Tools: RADIUS log | `/admin/radius/tools/radius-log` | missing | missing | web_only_until_api | Web has JSON helper; expose authenticated API before Flutter. |
-| Bandwidth profiles | `/admin/radius/bandwidth-profiles` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Pools | `/admin/radius/pools` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Vouchers | `/admin/radius/vouchers` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Invoices | `/admin/radius/invoices` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Tickets | `/admin/radius/tickets` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Services | `/admin/radius/services` | missing | missing | web_only_until_api | Web CRUD exists; API/Flutter missing. |
-| Share groups | `/admin/radius/share-groups` | missing | missing | web_only_until_api | Web CRUD/member management exists; API/Flutter missing. |
+| Bandwidth profiles | `/admin/radius/bandwidth-profiles` | `/api/v1/bandwidth-profiles` | missing | partial | API CRUD exists; Flutter screen is next. |
+| Pools | `/admin/radius/pools` | `/api/v1/pools` | missing | partial | API CRUD exists; Flutter screen is next. |
+| Vouchers | `/admin/radius/vouchers` | `/api/v1/vouchers` | missing | partial | API generate/list/revoke exists; Flutter screen is next. |
+| Invoices | `/admin/radius/invoices` | `/api/v1/invoices` | missing | partial | API list/create/status exists; Flutter screen is next. No hard delete. |
+| Tickets | `/admin/radius/tickets` | `/api/v1/tickets` | missing | partial | API list/create/update/reply exists; Flutter screen is next. |
+| Services | `/admin/radius/services` | `/api/v1/services` | missing | partial | API CRUD exists; Flutter screen is next. |
+| Share groups | `/admin/radius/share-groups` | `/api/v1/share-groups` | missing | partial | API CRUD/member management exists; Flutter screen is next. |
 
 ## Implementation Order
 
