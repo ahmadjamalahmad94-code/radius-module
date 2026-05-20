@@ -541,55 +541,96 @@
 .cc-tl-time .hour{ font-weight: 700; color: var(--cc-text); font-size: 12px; }
 .cc-tl-time .day{ font-size: 10.5px; }
 
-/* ═════════════════════════ DEVICE CARD ═════════════════════════ */
+/* ═════════════════════════ DEVICE CARD (R13.A.9 Section B) ═════════════════════════ */
 .cc-device-card{
   background: linear-gradient(135deg,#FBFAF7 0%,#F4F2EC 100%);
   border: 1px solid var(--cc-border);
   border-radius: var(--cc-r-tile);
-  padding: 16px;
-  display: flex; align-items: flex-start; gap: 14px;
+  padding: 18px;
+  display: flex; align-items: flex-start; gap: 16px;
 }
 .cc-device-card-icon{
-  width: 52px; height: 52px;
+  width: 64px; height: 64px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--cc-brand-soft);
+  background: var(--cc-card-bg);
   color: var(--cc-brand);
-  border-radius: 14px;
-  font-size: 22px;
+  border: 1px solid var(--cc-border);
+  border-radius: 16px;
+  font-size: 26px;
   flex: 0 0 auto;
+  box-shadow: 0 4px 12px rgba(107,90,237,.08);
 }
 .cc-device-card-body{ flex: 1; min-width: 0; }
 .cc-device-card-title{
-  font-size: 14.5px; font-weight: 700;
+  font-size: 15px; font-weight: 800;
   color: var(--cc-text);
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin-bottom: 2px;
+  margin-bottom: 6px;
+}
+.cc-device-card-tags{
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 12px;
 }
 .cc-device-card-sub{
-  font-size: 12px; color: var(--cc-text-mute);
-  margin-bottom: 10px;
+  font-size: 11.5px; color: var(--cc-text-mute);
+  margin-bottom: 10px; font-weight: 500;
 }
+/* clean two-column attrs with bottom-dotted dividers — feels precise */
 .cc-device-card-attrs{
-  display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px;
-  font-size: 12px;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  font-size: 12.5px;
+  border-top: 1px solid var(--cc-border);
+  padding-top: 10px;
 }
-.cc-device-card-attrs dt{ color: var(--cc-text-mute); }
+.cc-device-card-attrs dt{
+  color: var(--cc-text-mute);
+  font-weight: 500;
+  font-size: 11.5px;
+  display: flex; align-items: center; gap: 6px;
+}
+.cc-device-card-attrs dt i{ font-size: 10px; color: var(--cc-text-mute); }
 .cc-device-card-attrs dd{
-  margin: 0; color: var(--cc-text-soft);
-  font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+  margin: 0; color: var(--cc-text);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
   word-break: break-all;
 }
 
-/* ═════════════════════════ SESSIONS LIST ═════════════════════════ */
-.cc-sessions-list{ display: flex; flex-direction: column; }
-.cc-session-row{
+/* ═════════════════════════ SESSION CARDS (R13.A.9 Section B) ═════════════════════════ */
+/* Real cards, not list rows. Each session has its own surface, icon
+   block, status pill, MAC, and a labeled stats strip. */
+.cc-sessions-cards{
   display: grid;
-  grid-template-columns: 36px 1fr max-content max-content;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.cc-session-card{
+  background: var(--cc-card-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color var(--cc-anim-fast), box-shadow var(--cc-anim-fast),
+              transform var(--cc-anim-fast);
+}
+.cc-session-card:hover{
+  border-color: var(--cc-brand-soft2);
+  box-shadow: 0 4px 12px rgba(107,90,237,.06);
+  transform: translateY(-1px);
+}
+.cc-session-card.cc-session-live{
+  border-color: #C9E7D7;
+  background: linear-gradient(135deg,#FBFEFC 0%,#F1FAF5 100%);
+}
+.cc-session-head{
+  display: grid;
+  grid-template-columns: 36px 1fr max-content;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  margin-bottom: 8px;
 }
-.cc-session-row + .cc-session-row{ border-top: 1px dashed var(--cc-border); }
 .cc-session-icon{
   width: 36px; height: 36px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -598,16 +639,43 @@
   border-radius: 10px;
   font-size: 13px;
 }
-.cc-session-icon.grey{ background:#EDEAE1; color:#5B6470; }
-.cc-session-name{
-  font-weight: 700; font-size: 12.5px; color: var(--cc-text);
+.cc-session-icon.green{ background:#DEF3E5; color:#157F4E; }
+.cc-session-icon.grey { background:#EDEAE1; color:#5B6470; }
+.cc-session-id{
+  font-weight: 800; font-size: 13px; color: var(--cc-text);
   font-family: ui-monospace, Consolas, monospace;
 }
-.cc-session-meta{ font-size: 11px; color: var(--cc-text-mute); margin-top: 2px; }
-.cc-session-time{
+.cc-session-id-sub{
+  font-size: 10.5px; color: var(--cc-text-mute);
   font-family: ui-monospace, Consolas, monospace;
-  font-size: 11px; color: var(--cc-text-mute);
-  text-align: end;
+  margin-top: 2px;
+}
+/* stats strip — 3-4 micro-tiles inside the card */
+.cc-session-stats{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cc-border);
+}
+.cc-session-stat{
+  display: flex; flex-direction: column;
+  font-size: 11px;
+}
+.cc-session-stat-label{
+  color: var(--cc-text-mute);
+  font-size: 10px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.cc-session-stat-value{
+  color: var(--cc-text);
+  font-weight: 700;
+  font-size: 12px;
+}
+.cc-session-stat-value.mono{
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
 }
 
 /* ═════════════════════════ SMART ACTIONS ═════════════════════════ */
@@ -828,27 +896,20 @@
   .cc-tl-title{ font-size: 12.5px; }
   .cc-tl-desc{ font-size: 11.5px; }
 
-  /* DEVICE CARD: stack icon above body */
-  .cc-device-card{
-    flex-direction: column; align-items: stretch; gap: 12px;
-    padding: 14px;
-  }
-  .cc-device-card-icon{
-    width: 56px; height: 56px;
-    align-self: flex-start;
-  }
+  /* DEVICE CARD: keep icon + body in a row, tighter */
+  .cc-device-card{ padding: 14px; gap: 12px; }
+  .cc-device-card-icon{ width: 52px; height: 52px; font-size: 22px; border-radius: 14px; }
   .cc-device-card-title{ font-size: 14px; }
-  .cc-device-card-attrs{ font-size: 11.5px; }
+  .cc-device-card-attrs{ font-size: 11.5px; gap: 6px 10px; }
 
-  /* SESSIONS LIST: kept as rows but tighter, hide IP column hint */
-  .cc-session-row{
-    grid-template-columns: 32px 1fr max-content;
-    gap: 10px;
-    padding: 10px 0;
-  }
-  .cc-session-row .cc-session-time{ display: none; }
-  .cc-session-name{ font-size: 11.5px; }
-  .cc-session-meta{ font-size: 10.5px; }
+  /* SESSION CARDS: stats reduce to 2 columns under each header */
+  .cc-session-card{ padding: 12px; }
+  .cc-session-head{ grid-template-columns: 32px 1fr max-content; gap: 10px; }
+  .cc-session-icon{ width: 32px; height: 32px; }
+  .cc-session-id{ font-size: 12.5px; }
+  .cc-session-stats{ grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cc-session-stat-label{ font-size: 9.5px; }
+  .cc-session-stat-value{ font-size: 11.5px; }
 
   /* ACTIONS: 1 per row, big touch targets (44px minimum recommended) */
   .cc-actions{ grid-template-columns: 1fr; gap: 8px; }

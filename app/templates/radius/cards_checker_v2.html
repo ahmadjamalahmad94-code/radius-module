@@ -365,7 +365,8 @@
 
       {# Row 4: Current device + Latest sessions side by side #}
       <div class="cc-grid-2">
-        {# Current device #}
+        {# Current device — R13.A.9 Section B: bigger icon, vendor + connection
+           shown as tags, attrs in a clean labeled grid. #}
         <section class="cc-section" data-cc-section="current_device">
           <header class="cc-section-head">
             <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
@@ -376,17 +377,35 @@
             <div class="cc-device-card">
               <div class="cc-device-card-icon"><i class="fa-solid fa-{{ d.icon or 'circle-question' }}"></i></div>
               <div class="cc-device-card-body">
-                <div class="cc-device-card-title">
+                <div class="cc-device-card-title" data-cc-field="device.label">
                   {{ d.label or '—' }}
+                </div>
+                <div class="cc-device-card-tags">
                   {% if card.active_session %}
                     <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
+                  {% else %}
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
+                  {% endif %}
+                  {% if d.vendor and d.vendor != 'غير معروف' %}
+                    <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
+                      <i class="fa-solid fa-industry" style="font-size:9px"></i> {{ d.vendor }}
+                    </span>
+                  {% endif %}
+                  {% if d.connection %}
+                    <span class="cc-pill cc-pill-blue" data-cc-field="device.connection">
+                      <i class="fa-solid fa-signal" style="font-size:9px"></i> {{ d.connection }}
+                    </span>
                   {% endif %}
                 </div>
-                <div class="cc-device-card-sub">{{ d.vendor or '' }}{% if d.connection %} · {{ d.connection }}{% endif %}</div>
                 <dl class="cc-device-card-attrs">
-                  <dt>MAC</dt><dd>{{ card.mac_address or '—' }}</dd>
-                  <dt>IP</dt><dd>{{ card.ip_address or '—' }}</dd>
-                  {% if card.nas_address %}<dt>NAS</dt><dd>{{ card.nas_address }}</dd>{% endif %}
+                  <dt><i class="fa-solid fa-fingerprint"></i> MAC</dt>
+                  <dd data-cc-field="device.mac">{{ card.mac_address or '—' }}</dd>
+                  <dt><i class="fa-solid fa-globe"></i> IP</dt>
+                  <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
+                  {% if card.nas_address %}
+                  <dt><i class="fa-solid fa-server"></i> NAS</dt>
+                  <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
+                  {% endif %}
                 </dl>
               </div>
             </div>
@@ -401,23 +420,50 @@
             <span class="cc-section-head-link" style="cursor:default">{{ s.latest_sessions|length if s.latest_sessions else 0 }}</span>
           </header>
           <div class="cc-section-body">
+            {# R13.A.9 Section B: real session cards (not list rows).
+               Each card has a head (icon + MAC + status) and a stats
+               strip (start / duration / traffic / terminate cause). #}
             {% if s.latest_sessions %}
-            <div class="cc-sessions-list">
-              {% for ses in s.latest_sessions[:8] %}
-              <div class="cc-session-row">
-                <span class="cc-session-icon {% if not ses.online %}grey{% endif %}">
-                  <i class="fa-solid fa-{% if ses.online %}wifi{% else %}circle-stop{% endif %}"></i>
-                </span>
-                <div>
-                  <div class="cc-session-name">{{ ses.mac or '—' }}</div>
-                  <div class="cc-session-meta">IP {{ ses.ip or '—' }} · {{ duration(ses.duration_seconds) }}</div>
+            <div class="cc-sessions-cards">
+              {% for ses in s.latest_sessions[:6] %}
+              <div class="cc-session-card {% if ses.online %}cc-session-live{% endif %}"
+                   data-cc-session="{{ ses.id }}">
+                <div class="cc-session-head">
+                  <span class="cc-session-icon {% if ses.online %}green{% else %}grey{% endif %}">
+                    <i class="fa-solid fa-{% if ses.online %}wifi{% else %}circle-stop{% endif %}"></i>
+                  </span>
+                  <div>
+                    <div class="cc-session-id">{{ ses.mac or ses.session_id or '—' }}</div>
+                    <div class="cc-session-id-sub">{{ ses.ip or '—' }}</div>
+                  </div>
+                  {% if ses.online %}
+                    <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
+                  {% else %}
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
+                  {% endif %}
                 </div>
-                {% if ses.online %}
-                  <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
-                {% else %}
-                  <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
-                {% endif %}
-                <div class="cc-session-time">{{ dt_split(ses.started_at) }}</div>
+                <div class="cc-session-stats">
+                  <div class="cc-session-stat">
+                    <span class="cc-session-stat-label">بدأت</span>
+                    <span class="cc-session-stat-value mono">{{ dt(ses.started_at)[11:16] if ses.started_at else '—' }}</span>
+                  </div>
+                  <div class="cc-session-stat">
+                    <span class="cc-session-stat-label">المدة</span>
+                    <span class="cc-session-stat-value">{{ duration(ses.duration_seconds) }}</span>
+                  </div>
+                  <div class="cc-session-stat">
+                    <span class="cc-session-stat-label">رفع/تحميل</span>
+                    <span class="cc-session-stat-value">{{ bytes_size((ses.upload_bytes or 0) + (ses.download_bytes or 0)) }}</span>
+                  </div>
+                  <div class="cc-session-stat">
+                    <span class="cc-session-stat-label">{% if ses.online %}NAS{% else %}سبب الإغلاق{% endif %}</span>
+                    <span class="cc-session-stat-value mono">
+                      {%- if ses.online -%}{{ ses.nas or '—' }}
+                      {%- else -%}{{ ses.terminate_cause or '—' }}
+                      {%- endif -%}
+                    </span>
+                  </div>
+                </div>
               </div>
               {% endfor %}
             </div>
