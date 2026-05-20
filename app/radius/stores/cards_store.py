@@ -38,6 +38,9 @@ class CardsStore:
         from dataclasses import replace
         return cards_repo.create_batch(replace(b, tenant_id=b.tenant_id or _tid()))
 
+    def update_batch(self, batch_id: int, changes: dict) -> Optional[CardBatch]:
+        return cards_repo.update_batch(_tid(), batch_id, changes)
+
     def generate_cards_for_batch(self, *, batch_id: int, plan_id: int, count_to_make: int,
                                    username_prefix: str = "", username_suffix: str = "",
                                    username_length: int = 8,

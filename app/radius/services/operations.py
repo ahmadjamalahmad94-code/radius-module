@@ -197,11 +197,42 @@ class OperationsService:
         name = (data.get("name") or "").strip()
         if not name:
             raise RadiusValidationError("name is required")
-        plan_id = _int_field(data, "plan_id", minimum=1)
-        if not plans_repo.get_plan(tenant_id, plan_id):
-            raise RadiusNotFound("plan not found")
+        target_type = (data.get("target_type") or "plan").strip().lower()
+        if target_type not in {"plan", "subscriber", "card_batch"}:
+            raise RadiusValidationError("target_type must be plan, subscriber, or card_batch")
+
+        plan_id = _int_field(data, "plan_id", minimum=0, default=0) or None
+        subscriber_username = ""
+        card_batch_id = None
+        if target_type == "plan":
+            if not plan_id:
+                raise RadiusValidationError("plan_id is required")
+            if not plans_repo.get_plan(tenant_id, plan_id):
+                raise RadiusNotFound("plan not found")
+        elif target_type == "subscriber":
+            from ..db.repos import subscribers_repo
+            subscriber_username = (data.get("subscriber_username") or data.get("username") or "").strip()
+            if not subscriber_username:
+                raise RadiusValidationError("subscriber_username is required")
+            sub = subscribers_repo.get_subscriber(tenant_id, subscriber_username)
+            if not sub:
+                raise RadiusNotFound("subscriber not found")
+            plan_id = sub.plan_id or plan_id
+            if not plan_id:
+                raise RadiusValidationError("subscriber has no plan_id; set plan_id first")
+        else:
+            from ..db.repos import cards_repo
+            card_batch_id = _int_field(data, "card_batch_id", minimum=1)
+            batch = cards_repo.get_batch(tenant_id, card_batch_id, include_deleted=True)
+            if not batch:
+                raise RadiusNotFound("card batch not found")
+            plan_id = batch.plan_id or plan_id
         normalized = {
             "plan_id": plan_id,
+            "target_type": target_type,
+            "subscriber_username": subscriber_username,
+            "card_batch_id": card_batch_id,
+            "priority": _int_field(data, "priority", minimum=1, default=100),
             "name": name,
             "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
             "ends_at_time": _validate_time(data.get("ends_at_time"), "ends_at_time"),
@@ -214,6 +245,8 @@ class OperationsService:
             "notes": (data.get("notes") or "")[:500],
             "metadata": data.get("metadata") or {},
         }
+        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]):
+            raise RadiusValidationError("speed_down_kbps or speed_up_kbps is required")
         saved = operations_repo.create_bandwidth_schedule(
             tenant_id, normalized, actor=actor
         )
@@ -222,15 +255,30 @@ class OperationsService:
             action="bandwidth_schedule.create",
             target_type="bandwidth_schedule",
             target_id=str(saved.get("id")),
-            payload={"plan_id": plan_id, "name": name},
+            payload={
+                "plan_id": plan_id,
+                "target_type": target_type,
+                "subscriber_username": subscriber_username,
+                "card_batch_id": card_batch_id,
+                "name": name,
+            },
         )
         return saved
 
     def list_bandwidth_schedules(self, *, tenant_id: int,
                                  plan_id: int | None = None,
+                                 target_type: str | None = None,
+                                 subscriber_username: str | None = None,
+                                 card_batch_id: int | None = None,
                                  limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_bandwidth_schedules(
-            tenant_id, plan_id=plan_id, limit=limit, offset=offset
+            tenant_id,
+            plan_id=plan_id,
+            target_type=target_type,
+            subscriber_username=subscriber_username,
+            card_batch_id=card_batch_id,
+            limit=limit,
+            offset=offset,
         )
 
     def apply_bandwidth_schedule(self, *, tenant_id: int, schedule_id: int,

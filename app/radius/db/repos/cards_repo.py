@@ -167,6 +167,94 @@ def update_batch_counters(tenant_id: int, batch_id: int, *, generated_delta: int
         """, (generated_delta, used_delta, tenant_id, batch_id))
 
 
+_MUTABLE_BATCH_FIELDS = {
+    "package_name",
+    "plan_id",
+    "count",
+    "price_per_card",
+    "price_bulk",
+    "total_quota_mb",
+    "username_prefix",
+    "username_suffix",
+    "username_length",
+    "include_batch_number",
+    "password_length",
+    "password_charset",
+    "expire_at",
+    "validity_after_first_login_days",
+    "count_by_seconds",
+    "count_from_first_connect",
+    "on_quota_exhaust",
+    "switch_to_mac_on_connect",
+    "lock_to_mac_on_close",
+    "phone_only_login",
+    "service_name",
+    "notes",
+    "manager_id",
+    "status",
+    "password_generation_type",
+    "random_generation_enabled",
+    "starts_with_or_ends_with",
+    "prefix_or_suffix_value",
+    "time_value",
+    "time_unit",
+    "device_count",
+    "duration_mode",
+    "auto_renew_after_first_use",
+    "transfer_to_student_status_on_connect",
+    "close_user_session_on_disconnect",
+    "allow_entry_by_previous_card_palestine",
+    "total_price",
+    "metadata",
+    "assigned_to",
+    "distributor_id",
+}
+
+
+def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Optional[CardBatch]:
+    """Update mutable card-batch settings without regenerating existing cards."""
+    filtered = {k: v for k, v in changes.items() if k in _MUTABLE_BATCH_FIELDS}
+    if not filtered:
+        return get_batch(tenant_id, batch_id)
+    plan_changed = "plan_id" in filtered
+    assignments = ", ".join(f"{key} = ?" for key in filtered)
+    values = list(filtered.values())
+    with transaction() as conn:
+        cur = conn.execute(
+            f"""
+            UPDATE card_batches
+            SET {assignments}
+            WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+            """,
+            (*values, tenant_id, batch_id),
+        )
+        if cur.rowcount == 0:
+            return None
+        if plan_changed:
+            new_plan_id = int(filtered["plan_id"] or 0)
+            conn.execute(
+                """
+                UPDATE cards
+                SET plan_id = ?
+                WHERE tenant_id = ? AND batch_id = ? AND used = 0 AND revoked = 0
+                """,
+                (new_plan_id, tenant_id, batch_id),
+            )
+            conn.execute(
+                """
+                UPDATE subscribers
+                SET plan_id = ?
+                WHERE tenant_id = ?
+                  AND card_batch_id = ?
+                  AND user_type = 'card'
+                  AND first_login_at IS NULL
+                  AND deleted_at IS NULL
+                """,
+                (new_plan_id, tenant_id, batch_id),
+            )
+    return get_batch(tenant_id, batch_id)
+
+
 # ─────────────── cards ───────────────
 def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = "") -> bool:
     """Mark a card batch as deleted without removing cards."""

@@ -29,6 +29,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_batches_list), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_get",
                     require_api_token(cards_batch_get), methods=["GET"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_update",
+                    require_api_token(cards_batch_update), methods=["PATCH", "PUT"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/summary", "cards_batch_summary",
                     require_api_token(cards_batch_summary), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch",
@@ -68,7 +70,9 @@ def _serialize_batch(b) -> dict:
         "username_length": b.username_length,
         "password_length": b.password_length,
         "password_charset": b.password_charset,
+        "include_batch_number": b.include_batch_number,
         "password_generation_type": b.password_generation_type,
+        "random_generation_enabled": b.random_generation_enabled,
         "starts_with_or_ends_with": b.starts_with_or_ends_with,
         "prefix_or_suffix_value": b.prefix_or_suffix_value,
         "time_value": b.time_value,
@@ -79,6 +83,18 @@ def _serialize_batch(b) -> dict:
         "price_bulk": b.price_bulk,
         "total_price": b.total_price,
         "total_quota_mb": b.total_quota_mb,
+        "duration_mode": b.duration_mode,
+        "count_by_seconds": b.count_by_seconds,
+        "count_from_first_connect": b.count_from_first_connect,
+        "on_quota_exhaust": b.on_quota_exhaust,
+        "auto_renew_after_first_use": b.auto_renew_after_first_use,
+        "transfer_to_student_status_on_connect": b.transfer_to_student_status_on_connect,
+        "close_user_session_on_disconnect": b.close_user_session_on_disconnect,
+        "allow_entry_by_previous_card_palestine": b.allow_entry_by_previous_card_palestine,
+        "switch_to_mac_on_connect": b.switch_to_mac_on_connect,
+        "lock_to_mac_on_close": b.lock_to_mac_on_close,
+        "phone_only_login": b.phone_only_login,
+        "metadata": b.metadata,
     }
 
 
@@ -117,10 +133,32 @@ def cards_generate():
             prefix_or_suffix_value=str(body.get("prefix_or_suffix_value") or "").strip(),
             username_length=int(body.get("username_length") or 8),
             password_length=int(body.get("password_length") or 6),
+            password_charset=str(body.get("password_charset") or "digits"),
             password_generation_type=str(body.get("password_generation_type") or "medium"),
+            include_batch_number=bool(body.get("include_batch_number")),
+            random_generation_enabled=body.get("random_generation_enabled") is not False,
             time_value=int(body.get("time_value") or 0),
             time_unit=str(body.get("time_unit") or "days"),
             device_count=int(body.get("device_count") or 1),
+            duration_mode=str(body.get("duration_mode") or "time_unit"),
+            validity_after_first_login_days=int(body.get("validity_after_first_login_days") or 0),
+            count_by_seconds=bool(body.get("count_by_seconds")),
+            count_from_first_connect=body.get("count_from_first_connect") is not False,
+            on_quota_exhaust=str(body.get("on_quota_exhaust") or "stop"),
+            auto_renew_after_first_use=bool(body.get("auto_renew_after_first_use")),
+            transfer_to_student_status_on_connect=bool(body.get("transfer_to_student_status_on_connect")),
+            close_user_session_on_disconnect=bool(body.get("close_user_session_on_disconnect")),
+            allow_entry_by_previous_card_palestine=bool(body.get("allow_entry_by_previous_card_palestine")),
+            switch_to_mac_on_connect=bool(body.get("switch_to_mac_on_connect")),
+            lock_to_mac_on_close=bool(body.get("lock_to_mac_on_close")),
+            phone_only_login=bool(body.get("phone_only_login")),
+            price_per_card=float(body.get("price_per_card") or 0),
+            price_bulk=float(body.get("price_bulk") or 0),
+            total_price=float(body.get("total_price") or 0),
+            total_quota_mb=int(body.get("total_quota_mb") or 0),
+            package_name=str(body.get("package_name") or "").strip(),
+            service_name=str(body.get("service_name") or "").strip(),
+            manager_id=int(body.get("manager_id") or 0),
             notes=str(body.get("notes") or "")[:300],
         )
     except RadiusValidationError as e:
@@ -155,6 +193,26 @@ def cards_batch_get(batch_id: int):
     if not batch:
         return fail("not_found", f"batch {batch_id} غير موجود", status=404)
     return ok(_serialize_batch(batch))
+
+
+def cards_batch_update(batch_id: int):
+    if not batch_in_scope(batch_id):
+        return deny_out_of_scope()
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("validation_error", "JSON body must be an object", status=422)
+    from ...radius.services.cards import get_cards_service
+    try:
+        batch = get_cards_service().update_batch(
+            actor=_actor(),
+            batch_id=batch_id,
+            data=body,
+        )
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"batch": _serialize_batch(batch)})
 
 
 def cards_batch_summary(batch_id: int):

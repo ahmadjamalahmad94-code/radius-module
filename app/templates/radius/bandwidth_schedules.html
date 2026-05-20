@@ -43,14 +43,52 @@
       </label>
 
       <label>
+        نطاق القاعدة
+        <select name="target_type" id="bs-target-type">
+          <option value="plan">عرض / باقة خدمة</option>
+          <option value="subscriber">مشترك محدد</option>
+          <option value="card_batch">باقة كروت / دفعة</option>
+        </select>
+        <span class="bs-help">إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض.</span>
+      </label>
+
+      <label class="bs-target-field" data-target="plan">
         الباقة
-        <select name="plan_id" required>
+        <select name="plan_id" id="bs-plan-id">
           <option value="">اختر باقة</option>
           {% for plan in plans %}
             <option value="{{ plan.id }}">{{ plan.name }}</option>
           {% endfor %}
         </select>
-        <span class="bs-help">الجدول يرتبط بباقة واحدة في هذه المرحلة.</span>
+        <span class="bs-help">تُستخدم هذه القاعدة إذا لم توجد قاعدة خاصة بالمشترك أو باقة الكروت.</span>
+      </label>
+
+      <label class="bs-target-field" data-target="subscriber" hidden>
+        المشترك
+        <select name="subscriber_username" id="bs-subscriber-username">
+          <option value="">اختر مشتركًا</option>
+          {% for sub in subscribers %}
+            <option value="{{ sub.username }}">{{ sub.username }}{% if sub.full_name %} — {{ sub.full_name }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <span class="bs-help">قاعدة المشترك لها أعلى أولوية عند تسجيل الدخول.</span>
+      </label>
+
+      <label class="bs-target-field" data-target="card_batch" hidden>
+        باقة الكروت / الدفعة
+        <select name="card_batch_id" id="bs-card-batch-id">
+          <option value="">اختر دفعة كروت</option>
+          {% for batch in batches %}
+            <option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or 'بدون اسم' }}</option>
+          {% endfor %}
+        </select>
+        <span class="bs-help">تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض.</span>
+      </label>
+
+      <label>
+        الأولوية داخل نفس النطاق
+        <input type="number" name="priority" min="1" step="1" value="100">
+        <span class="bs-help">الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق.</span>
       </label>
 
       <div class="bs-row">
@@ -118,6 +156,7 @@
         <thead>
           <tr>
             <th>الاسم</th>
+            <th>النطاق</th>
             <th>الباقة</th>
             <th>الوقت</th>
             <th>السرعة</th>
@@ -131,6 +170,16 @@
             <td>
               <strong>{{ item.get('name') }}</strong>
               {% if item.get('notes') %}<div class="bs-help">{{ item.get('notes') }}</div>{% endif %}
+            </td>
+            <td>
+              {% if item.get('target_type') == 'subscriber' %}
+                مشترك: {{ item.get('subscriber_username') }}
+              {% elif item.get('target_type') == 'card_batch' %}
+                كروت: {{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}
+              {% else %}
+                عرض
+              {% endif %}
+              <div class="bs-help">أولوية {{ item.get('priority') or 100 }}</div>
             </td>
             <td>{{ plan_names.get(item.get('plan_id'), '—') }}</td>
             <td class="mono">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
@@ -167,4 +216,29 @@
     {% endif %}
   </section>
 </div>
+<script>
+  (function(){
+    const type = document.getElementById('bs-target-type');
+    const fields = Array.from(document.querySelectorAll('.bs-target-field'));
+    const requiredByTarget = {
+      plan: 'bs-plan-id',
+      subscriber: 'bs-subscriber-username',
+      card_batch: 'bs-card-batch-id',
+    };
+    function syncTargetFields(){
+      const value = type ? type.value : 'plan';
+      fields.forEach((field) => {
+        const active = field.dataset.target === value;
+        field.hidden = !active;
+        field.querySelectorAll('select,input').forEach((el) => {
+          el.required = el.id === requiredByTarget[value];
+        });
+      });
+    }
+    if (type) {
+      type.addEventListener('change', syncTargetFields);
+      syncTargetFields();
+    }
+  })();
+</script>
 {% endblock %}

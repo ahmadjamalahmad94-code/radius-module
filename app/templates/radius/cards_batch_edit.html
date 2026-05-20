@@ -1,0 +1,216 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}تعديل باقة كروت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-pen-to-square"></i>{% endblock %}
+{% block page_title %}تعديل باقة كروت {{ batch.batch_code }}{% endblock %}
+{% block page_sub %}<span class="sub">لا يتم إعادة توليد أسماء الدخول أو كلمات المرور عند الحفظ.</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+.cb-edit{max-width:1120px;margin:0 auto;padding:8px 4px 18px}
+.cb-edit-card{margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);background:var(--hr-card,#fff);border:1px solid var(--hr-border);box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));border-inline-start:3px solid var(--hr-cyan-500)}
+.cb-edit-card h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:14.5px;font-weight:800;color:var(--hr-text);padding-bottom:10px;border-bottom:1px dashed var(--hr-border)}
+.cb-edit-card h3 i{width:30px;height:30px;border-radius:6px;background:var(--hr-cyan-100);color:var(--hr-cyan-700);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.cb-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
+@media (max-width:920px){.cb-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.cb-grid{grid-template-columns:1fr}}
+.cb-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.cb-field.full{grid-column:1 / -1}
+.cb-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
+.cb-field input,.cb-field select,.cb-field textarea{padding:10px 12px;border-radius:var(--hr-r,6px);border:1.5px solid var(--hr-border-strong);font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text)}
+.cb-field input:focus,.cb-field select:focus,.cb-field textarea:focus{outline:0;border-color:var(--hr-cyan-500);background:#fff;box-shadow:0 0 0 3px rgba(43,170,204,.20)}
+.cb-field textarea{min-height:72px;resize:vertical}
+.cb-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
+.cb-check{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
+.cb-check input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
+.cb-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+</style>
+{% endblock %}
+
+{% macro checked(name) -%}
+  {%- if form.get(name) in [true, 1, '1', 'true', 'on', 'yes'] -%}checked{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="cb-edit">
+  <form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+    <section class="cb-edit-card">
+      <h3><i class="fa-solid fa-box"></i> بيانات الباقة</h3>
+      <div class="cb-grid">
+        <div class="cb-field">
+          <label>اسم الباقة</label>
+          <input name="package_name" value="{{ form.get('package_name') or '' }}">
+        </div>
+        <div class="cb-field">
+          <label>العرض المرتبط</label>
+          <select name="plan_id" required>
+            {% for p in plans %}
+              <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="cb-help">تغيير العرض يطبّق على الكروت المتاحة فقط. الكروت المستخدمة تبقى كسجل سابق.</div>
+        </div>
+        <div class="cb-field">
+          <label>عدد الباقة</label>
+          <input type="number" name="count" min="{{ batch.generated or 1 }}" max="2000" value="{{ form.get('count') or batch.count }}">
+          <div class="cb-help">لا يمكن تقليل العدد تحت عدد الكروت المولدة.</div>
+        </div>
+        <div class="cb-field">
+          <label>الحالة</label>
+          {% set st = form.get('status') or batch.status %}
+          <select name="status">
+            <option value="active" {% if st == 'active' %}selected{% endif %}>نشطة</option>
+            <option value="exhausted" {% if st == 'exhausted' %}selected{% endif %}>مستهلكة</option>
+            <option value="revoked" {% if st == 'revoked' %}selected{% endif %}>ملغاة</option>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label>سعر البطاقة</label>
+          <input type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>سعر الجملة</label>
+          <input type="number" step="0.01" min="0" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>السعر الإجمالي</label>
+          <input type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>الحصة الكلية MB</label>
+          <input type="number" min="0" name="total_quota_mb" value="{{ form.get('total_quota_mb') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>اسم الخدمة</label>
+          <input name="service_name" value="{{ form.get('service_name') or '' }}">
+        </div>
+        <div class="cb-field">
+          <label>المدير المسؤول</label>
+          <input type="number" name="manager_id" value="{{ form.get('manager_id') or 0 }}">
+        </div>
+      </div>
+    </section>
+
+    <section class="cb-edit-card">
+      <h3><i class="fa-solid fa-gauge-high"></i> السرعات المتغيرة</h3>
+      <div class="cb-help" style="margin-bottom:10px">
+        أضف أكثر من قاعدة سرعة لهذه الباقة من صفحة جدولة السرعات. عند وجود سرعة للعرض وسرعة لهذه الباقة، تُطبّق سرعة الباقة أولًا.
+      </div>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bandwidth_schedules') }}">
+        <i class="fa-solid fa-plus"></i> إضافة قواعد سرعة لهذه الباقة
+      </a>
+    </section>
+
+    <section class="cb-edit-card">
+      <h3><i class="fa-solid fa-dice"></i> إعدادات التوليد</h3>
+      <div class="cb-grid">
+        <div class="cb-field">
+          <label>طول اسم الدخول</label>
+          <input type="number" min="4" max="32" name="username_length" value="{{ form.get('username_length') or 8 }}">
+        </div>
+        <div class="cb-field">
+          <label>طول كلمة المرور</label>
+          <input type="number" min="4" max="64" name="password_length" value="{{ form.get('password_length') or 6 }}">
+        </div>
+        <div class="cb-field">
+          <label>نمط كلمة المرور</label>
+          {% set pgt = form.get('password_generation_type') or 'medium' %}
+          <select name="password_generation_type">
+            <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
+            <option value="weak" {% if pgt == 'weak' %}selected{% endif %}>حروف</option>
+            <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي</option>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label>موضع الإضافة</label>
+          {% set side = form.get('starts_with_or_ends_with') or '' %}
+          <select name="starts_with_or_ends_with">
+            <option value="" {% if not side %}selected{% endif %}>بدون</option>
+            <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
+            <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label>النص المضاف</label>
+          <input name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}">
+        </div>
+        <div class="cb-field">
+          <label>بادئة قديمة</label>
+          <input name="username_prefix" value="{{ form.get('username_prefix') or '' }}">
+        </div>
+        <div class="cb-field">
+          <label>لاحقة قديمة</label>
+          <input name="username_suffix" value="{{ form.get('username_suffix') or '' }}">
+        </div>
+        <div class="cb-field">
+          <label>تضمين رقم الباقة</label>
+          <div class="cb-check"><input type="checkbox" name="include_batch_number" value="1" {{ checked('include_batch_number') }}> مفعّل</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cb-edit-card">
+      <h3><i class="fa-solid fa-clock"></i> الصلاحية والسلوك</h3>
+      <div class="cb-grid">
+        <div class="cb-field">
+          <label>قيمة الوقت</label>
+          <input type="number" min="0" name="time_value" value="{{ form.get('time_value') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>وحدة الوقت</label>
+          {% set tu = form.get('time_unit') or 'days' %}
+          <select name="time_unit">
+            <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
+            <option value="hours" {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
+            <option value="days" {% if tu == 'days' %}selected{% endif %}>أيام</option>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label>عدد الأجهزة</label>
+          <input type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
+        </div>
+        <div class="cb-field">
+          <label>وضع المدة</label>
+          {% set dm = form.get('duration_mode') or 'time_unit' %}
+          <select name="duration_mode">
+            <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>حسب الوحدة</option>
+            <option value="seconds" {% if dm == 'seconds' %}selected{% endif %}>بالثواني</option>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label>صلاحية بعد أول دخول</label>
+          <input type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}">
+        </div>
+        <div class="cb-field">
+          <label>عند انتهاء الحصة</label>
+          {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
+          <select name="on_quota_exhaust">
+            <option value="stop" {% if oqe == 'stop' %}selected{% endif %}>إيقاف</option>
+            <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
+            <option value="notify" {% if oqe == 'notify' %}selected{% endif %}>تنبيه فقط</option>
+          </select>
+        </div>
+        <div class="cb-field full">
+          <label>خيارات تشغيل</label>
+          <div class="cb-check"><input type="checkbox" name="count_from_first_connect" value="1" {{ checked('count_from_first_connect') }}> العد من أول اتصال</div>
+          <div class="cb-check"><input type="checkbox" name="count_by_seconds" value="1" {{ checked('count_by_seconds') }}> العد بالثواني</div>
+          <div class="cb-check"><input type="checkbox" name="auto_renew_after_first_use" value="1" {{ checked('auto_renew_after_first_use') }}> تجديد تلقائي بعد أول استخدام</div>
+          <div class="cb-check"><input type="checkbox" name="switch_to_mac_on_connect" value="1" {{ checked('switch_to_mac_on_connect') }}> ربط MAC عند الاتصال</div>
+          <div class="cb-check"><input type="checkbox" name="lock_to_mac_on_close" value="1" {{ checked('lock_to_mac_on_close') }}> قفل MAC عند الإغلاق</div>
+          <div class="cb-check"><input type="checkbox" name="phone_only_login" value="1" {{ checked('phone_only_login') }}> دخول برقم الجوال فقط</div>
+        </div>
+        <div class="cb-field full">
+          <label>ملاحظات</label>
+          <textarea name="notes">{{ form.get('notes') or '' }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <div class="cb-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات</button>
+      <a class="btn btn-secondary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

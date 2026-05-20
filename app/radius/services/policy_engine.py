@@ -29,7 +29,7 @@ from typing import Optional
 
 from ..core.types import AccessPlan, Card, Subscriber
 from ..db.connection import db
-from ..db.repos import cards_repo, plans_repo, subscribers_repo
+from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
 
 _LOG = logging.getLogger(__name__)
 
@@ -340,8 +340,21 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     out: dict = {}
+    active_rule = operations_repo.resolve_effective_bandwidth_schedule(
+        sub.tenant_id,
+        subscriber_username=sub.username,
+        card_batch_id=sub.card_batch_id,
+        plan_id=plan.id if plan else sub.plan_id,
+    )
+    if active_rule:
+        out["Mikrotik-Rate-Limit"] = (
+            f"{int(active_rule.get('speed_up_kbps') or 0)}k/"
+            f"{int(active_rule.get('speed_down_kbps') or 0)}k"
+        )
+    elif sub.bandwidth_control_enabled and (sub.download_speed_kbps or sub.upload_speed_kbps):
+        out["Mikrotik-Rate-Limit"] = f"{sub.upload_speed_kbps}k/{sub.download_speed_kbps}k"
     if plan:
-        if plan.speed_down_kbps or plan.speed_up_kbps:
+        if "Mikrotik-Rate-Limit" not in out and (plan.speed_down_kbps or plan.speed_up_kbps):
             rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
             out["Mikrotik-Rate-Limit"] = rate
         # Session-Timeout: استخدم الأقل بين plan + ما تبقى من expire

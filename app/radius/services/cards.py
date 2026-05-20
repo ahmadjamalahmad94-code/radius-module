@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from ..core.constants import (
+    AUDIT_ACTION_UPDATE,
     AUDIT_ACTION_BATCH_ARCHIVE,
     AUDIT_ACTION_BATCH_GENERATE,
     AUDIT_ACTION_REVOKE,
@@ -44,6 +45,24 @@ class CardsService:
             return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
         except (ImportError, RuntimeError):
             return DEFAULT_TENANT_ID
+
+    @staticmethod
+    def _int(value, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _float(value, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _bool(value) -> bool:
+        return value in (True, 1, "1", "true", "yes", "on")
 
     def generate_batch(
         self,
@@ -169,6 +188,100 @@ class CardsService:
             payload={"plan_id": plan_id, "count": count, "batch_code": batch.batch_code},
         )
         return self._store.get_batch(batch.id), cards
+
+    def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
+        batch = self._store.get_batch(batch_id)
+        if not batch:
+            raise RadiusValidationError("دفعة الكروت غير موجودة")
+
+        changes: dict = {}
+        text_fields = (
+            "package_name",
+            "username_prefix",
+            "username_suffix",
+            "password_charset",
+            "starts_with_or_ends_with",
+            "prefix_or_suffix_value",
+            "time_unit",
+            "duration_mode",
+            "on_quota_exhaust",
+            "service_name",
+            "notes",
+            "status",
+            "password_generation_type",
+            "metadata",
+            "assigned_to",
+        )
+        int_fields = (
+            "plan_id",
+            "count",
+            "total_quota_mb",
+            "username_length",
+            "password_length",
+            "validity_after_first_login_days",
+            "manager_id",
+            "time_value",
+            "device_count",
+            "distributor_id",
+        )
+        float_fields = ("price_per_card", "price_bulk", "total_price")
+        bool_fields = (
+            "include_batch_number",
+            "count_by_seconds",
+            "count_from_first_connect",
+            "switch_to_mac_on_connect",
+            "lock_to_mac_on_close",
+            "phone_only_login",
+            "random_generation_enabled",
+            "auto_renew_after_first_use",
+            "transfer_to_student_status_on_connect",
+            "close_user_session_on_disconnect",
+            "allow_entry_by_previous_card_palestine",
+        )
+
+        for field in text_fields:
+            if field in data:
+                changes[field] = str(data.get(field) or "").strip()[:500]
+        for field in int_fields:
+            if field in data:
+                changes[field] = self._int(data.get(field))
+        for field in float_fields:
+            if field in data:
+                changes[field] = self._float(data.get(field))
+        for field in bool_fields:
+            if field in data:
+                changes[field] = int(self._bool(data.get(field)))
+        if "expire_at" in data:
+            value = str(data.get("expire_at") or "").strip()
+            changes["expire_at"] = value or None
+
+        if "plan_id" in changes:
+            if changes["plan_id"] <= 0:
+                raise RadiusValidationError("الباقة المرتبطة مطلوبة")
+            self._adapter.get_profile(changes["plan_id"])
+        if "count" in changes:
+            if changes["count"] < max(1, batch.generated):
+                raise RadiusValidationError("عدد الدفعة لا يمكن أن يكون أقل من عدد الكروت المولدة")
+            if changes["count"] > 2000:
+                raise RadiusValidationError("عدد الدفعة يجب ألا يتجاوز 2000")
+        if "username_length" in changes:
+            changes["username_length"] = max(4, min(changes["username_length"], 32))
+        if "password_length" in changes:
+            changes["password_length"] = max(4, min(changes["password_length"], 64))
+        if "device_count" in changes:
+            changes["device_count"] = max(1, min(changes["device_count"], 50))
+
+        updated = self._store.update_batch(batch_id, changes)
+        if not updated:
+            raise RadiusValidationError("تعذر تعديل دفعة الكروت")
+        self._audit.record(
+            actor=actor,
+            action=AUDIT_ACTION_UPDATE,
+            target_type="card_batch",
+            target_id=str(batch_id),
+            payload={"changed_fields": sorted(changes.keys())},
+        )
+        return updated
 
     def revoke_card(self, *, actor: str, card_id: int) -> None:
         self._store.revoke(card_id)

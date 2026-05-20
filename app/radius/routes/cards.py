@@ -20,6 +20,7 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke", cards_revoke, methods=["POST"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>/edit", "cards_batch_edit", cards_batch_edit, methods=["GET", "POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
 
 
@@ -104,6 +105,47 @@ def _collect_batch_options() -> dict:
     }
 
 
+def _batch_form_data(batch) -> dict:
+    return {
+        "package_name": batch.package_name,
+        "plan_id": batch.plan_id,
+        "count": batch.count,
+        "manager_id": batch.manager_id,
+        "price_per_card": batch.price_per_card,
+        "price_bulk": batch.price_bulk,
+        "total_price": batch.total_price,
+        "total_quota_mb": batch.total_quota_mb,
+        "service_name": batch.service_name,
+        "username_prefix": batch.username_prefix,
+        "username_suffix": batch.username_suffix,
+        "username_length": batch.username_length,
+        "password_length": batch.password_length,
+        "password_charset": batch.password_charset,
+        "password_generation_type": batch.password_generation_type,
+        "include_batch_number": batch.include_batch_number,
+        "random_generation_enabled": batch.random_generation_enabled,
+        "starts_with_or_ends_with": batch.starts_with_or_ends_with,
+        "prefix_or_suffix_value": batch.prefix_or_suffix_value,
+        "time_value": batch.time_value,
+        "time_unit": batch.time_unit,
+        "device_count": batch.device_count,
+        "duration_mode": batch.duration_mode,
+        "validity_after_first_login_days": batch.validity_after_first_login_days,
+        "count_by_seconds": batch.count_by_seconds,
+        "count_from_first_connect": batch.count_from_first_connect,
+        "on_quota_exhaust": batch.on_quota_exhaust,
+        "auto_renew_after_first_use": batch.auto_renew_after_first_use,
+        "transfer_to_student_status_on_connect": batch.transfer_to_student_status_on_connect,
+        "close_user_session_on_disconnect": batch.close_user_session_on_disconnect,
+        "allow_entry_by_previous_card_palestine": batch.allow_entry_by_previous_card_palestine,
+        "switch_to_mac_on_connect": batch.switch_to_mac_on_connect,
+        "lock_to_mac_on_close": batch.lock_to_mac_on_close,
+        "phone_only_login": batch.phone_only_login,
+        "status": batch.status,
+        "notes": batch.notes,
+    }
+
+
 def cards_batches():
     svc = get_cards_service()
     batches = svc.list_batches(limit=500)
@@ -155,6 +197,37 @@ def cards_generate():
             flash(e.message, "error")
     plans = list(get_plans_service().list(limit=500))
     return render_template("radius/cards_generate.html", plans=plans, form=request.form)
+
+
+def cards_batch_edit(batch_id: int):
+    svc = get_cards_service()
+    batch = next((b for b in svc.list_batches(limit=1000) if b.id == batch_id), None)
+    if not batch:
+        flash("دفعة الكروت غير موجودة.", "error")
+        return redirect(url_for("radius.cards_batches"))
+    if request.method == "POST":
+        try:
+            data = _collect_batch_options()
+            data.update({
+                "plan_id": _form_int("plan_id"),
+                "count": _form_int("count", batch.count),
+                "status": _form_str("status") or batch.status,
+            })
+            updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
+            flash("تم حفظ تعديلات دفعة الكروت.", "success")
+            return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
+        except (TypeError, ValueError) as e:
+            flash(f"قيم غير صحيحة: {e}", "error")
+        except RadiusError as e:
+            flash(e.message, "error")
+    plans = list(get_plans_service().list(limit=500))
+    form = request.form if request.method == "POST" else _batch_form_data(batch)
+    return render_template(
+        "radius/cards_batch_edit.html",
+        batch=batch,
+        plans=plans,
+        form=form,
+    )
 
 
 def cards_list():

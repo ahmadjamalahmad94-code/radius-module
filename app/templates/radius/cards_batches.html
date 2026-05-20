@@ -18,7 +18,7 @@
         <th>#</th><th>كود الدفعة</th><th>الباقة</th><th>عدد</th><th>منشأ</th>
         <th>جاهزة</th><th>مستخدمة</th><th>منتهية</th><th>ملغاة</th><th>الحالة</th>
         <th>التقدّم</th><th>أنشأها</th><th>التاريخ</th>
-        <th style="width:80px">عرض</th>
+        <th style="width:120px">إجراءات</th>
       </tr></thead>
       <tbody>
         {% for b in batches %}
@@ -50,6 +50,9 @@
           <td>
             <a class="btn btn-primary btn-xs" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
               <i class="fa-solid fa-eye"></i>
+            </a>
+            <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
+              <i class="fa-solid fa-pen"></i>
             </a>
           </td>
         </tr>

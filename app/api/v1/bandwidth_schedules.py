@@ -37,12 +37,22 @@ def bandwidth_schedules_list():
     try:
         plan_id_raw = request.args.get("plan_id")
         plan_id = int(plan_id_raw) if plan_id_raw else None
+        target_type = request.args.get("target_type") or None
+        subscriber_username = request.args.get("subscriber_username") or None
+        card_batch_raw = request.args.get("card_batch_id")
+        card_batch_id = int(card_batch_raw) if card_batch_raw else None
         limit = min(int(request.args.get("limit") or 200), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "plan_id/limit/offset must be int", status=422)
+        return fail("validation_error", "plan_id/card_batch_id/limit/offset must be int", status=422)
     items = _svc().list_bandwidth_schedules(
-        tenant_id=_tid(), plan_id=plan_id, limit=limit, offset=offset
+        tenant_id=_tid(),
+        plan_id=plan_id,
+        target_type=target_type,
+        subscriber_username=subscriber_username,
+        card_batch_id=card_batch_id,
+        limit=limit,
+        offset=offset,
     )
     return ok({"items": items, "count": len(items)})
 

@@ -4,8 +4,10 @@ from __future__ import annotations
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
+from ..services.users import get_users_service
 
 
 def register_bandwidth_schedule_routes(bp: Blueprint) -> None:
@@ -40,7 +42,11 @@ def _actor() -> str:
 def _payload() -> dict:
     enabled = request.form.get("enabled") in {"1", "true", "on", "yes"}
     return {
+        "target_type": request.form.get("target_type") or "plan",
         "plan_id": request.form.get("plan_id"),
+        "subscriber_username": request.form.get("subscriber_username") or "",
+        "card_batch_id": request.form.get("card_batch_id") or "",
+        "priority": request.form.get("priority") or 100,
         "name": request.form.get("name"),
         "starts_at_time": request.form.get("starts_at_time"),
         "ends_at_time": request.form.get("ends_at_time"),
@@ -58,15 +64,29 @@ def _plans() -> list:
     return list(get_plans_service().list(limit=500))
 
 
+def _subscribers() -> list:
+    return list(get_users_service().list(user_type="subscriber", limit=500))
+
+
+def _batches() -> list:
+    return list(get_cards_service().list_batches(limit=500))
+
+
 def bandwidth_schedules():
     svc = get_operations_service()
     schedules = svc.list_bandwidth_schedules(tenant_id=_tid(), limit=500)
     plans = _plans()
+    subscribers = _subscribers()
+    batches = _batches()
     return render_template(
         "radius/bandwidth_schedules.html",
         schedules=schedules,
         plans=plans,
+        subscribers=subscribers,
+        batches=batches,
         plan_names={plan.id: plan.name for plan in plans},
+        subscriber_names={sub.username: (sub.full_name or sub.username) for sub in subscribers},
+        batch_names={batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or 'بدون اسم'}" for batch in batches},
         apply_result=None,
     )
 

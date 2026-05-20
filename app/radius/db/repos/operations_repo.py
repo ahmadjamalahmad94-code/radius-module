@@ -1,6 +1,7 @@
 """Operational foundation repositories for distributors and ISP workflows."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Optional
 
 from ..connection import db, transaction
@@ -305,14 +306,17 @@ def create_bandwidth_schedule(tenant_id: int, data: dict, *, actor: str) -> dict
         cur = conn.execute(
             """
             INSERT INTO bandwidth_schedules(
-                tenant_id, plan_id, name, starts_at_time, ends_at_time,
+                tenant_id, plan_id, target_type, subscriber_username, card_batch_id,
+                priority, name, starts_at_time, ends_at_time,
                 speed_down_kbps, speed_up_kbps, cir_down_kbps, cir_up_kbps,
                 restore_mode, enabled, created_by, notes, metadata_json, created_at
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
-                tenant_id, data["plan_id"], data["name"], data["starts_at_time"],
+                tenant_id, data["plan_id"], data.get("target_type") or "plan",
+                data.get("subscriber_username") or "", data.get("card_batch_id"),
+                int(data.get("priority") or 100), data["name"], data["starts_at_time"],
                 data["ends_at_time"], data.get("speed_down_kbps") or 0,
                 data.get("speed_up_kbps") or 0, data.get("cir_down_kbps") or 0,
                 data.get("cir_up_kbps") or 0,
@@ -326,13 +330,25 @@ def create_bandwidth_schedule(tenant_id: int, data: dict, *, actor: str) -> dict
 
 
 def list_bandwidth_schedules(tenant_id: int, *, plan_id: int | None = None,
+                             target_type: str | None = None,
+                             subscriber_username: str | None = None,
+                             card_batch_id: int | None = None,
                              limit: int = 200, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM bandwidth_schedules WHERE tenant_id = ?"
     vals: list[Any] = [tenant_id]
+    if target_type:
+        sql += " AND target_type = ?"
+        vals.append(target_type)
     if plan_id is not None:
         sql += " AND plan_id = ?"
         vals.append(plan_id)
-    sql += " ORDER BY plan_id, starts_at_time LIMIT ? OFFSET ?"
+    if subscriber_username:
+        sql += " AND subscriber_username = ?"
+        vals.append(subscriber_username)
+    if card_batch_id is not None:
+        sql += " AND card_batch_id = ?"
+        vals.append(card_batch_id)
+    sql += " ORDER BY target_type, plan_id, subscriber_username, card_batch_id, priority, starts_at_time LIMIT ? OFFSET ?"
     vals += [limit, offset]
     return [
         _hydrate_json_fields(_row(r), "metadata_json")
@@ -348,6 +364,91 @@ def get_bandwidth_schedule(tenant_id: int, schedule_id: int) -> Optional[dict]:
     if not row:
         return None
     return _hydrate_json_fields(_row(row), "metadata_json")
+
+
+def _time_minutes(value: str) -> int:
+    hour, minute = (value or "00:00").split(":", 1)
+    return int(hour) * 60 + int(minute)
+
+
+def _in_time_window(now_hm: str, start_hm: str, end_hm: str) -> bool:
+    current = _time_minutes(now_hm)
+    start = _time_minutes(start_hm)
+    end = _time_minutes(end_hm)
+    if start == end:
+        return True
+    if start < end:
+        return start <= current < end
+    return current >= start or current < end
+
+
+def _active_rule_for_target(
+    tenant_id: int,
+    *,
+    target_type: str,
+    now_hm: str,
+    plan_id: int | None = None,
+    subscriber_username: str | None = None,
+    card_batch_id: int | None = None,
+) -> Optional[dict]:
+    sql = """
+        SELECT * FROM bandwidth_schedules
+        WHERE tenant_id = ? AND target_type = ? AND enabled = 1
+    """
+    vals: list[Any] = [tenant_id, target_type]
+    if target_type == "subscriber":
+        sql += " AND subscriber_username = ?"
+        vals.append(subscriber_username or "")
+    elif target_type == "card_batch":
+        sql += " AND card_batch_id = ?"
+        vals.append(card_batch_id)
+    else:
+        sql += " AND plan_id = ?"
+        vals.append(plan_id)
+    sql += " ORDER BY priority ASC, id DESC"
+    for row in db().execute(sql, vals).fetchall():
+        item = _hydrate_json_fields(_row(row), "metadata_json")
+        if _in_time_window(now_hm, item["starts_at_time"], item["ends_at_time"]):
+            return item
+    return None
+
+
+def resolve_effective_bandwidth_schedule(
+    tenant_id: int,
+    *,
+    subscriber_username: str = "",
+    card_batch_id: int | None = None,
+    plan_id: int | None = None,
+    at: datetime | None = None,
+) -> Optional[dict]:
+    """Return the active speed rule using subscriber/card-batch/plan priority."""
+    now_hm = (at or datetime.utcnow()).strftime("%H:%M")
+    if subscriber_username:
+        rule = _active_rule_for_target(
+            tenant_id,
+            target_type="subscriber",
+            subscriber_username=subscriber_username,
+            now_hm=now_hm,
+        )
+        if rule:
+            return rule
+    if card_batch_id is not None:
+        rule = _active_rule_for_target(
+            tenant_id,
+            target_type="card_batch",
+            card_batch_id=card_batch_id,
+            now_hm=now_hm,
+        )
+        if rule:
+            return rule
+    if plan_id is not None:
+        return _active_rule_for_target(
+            tenant_id,
+            target_type="plan",
+            plan_id=plan_id,
+            now_hm=now_hm,
+        )
+    return None
 
 
 def log_bandwidth_schedule(tenant_id: int, schedule_id: int, *,

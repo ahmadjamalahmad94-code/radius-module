@@ -2,6 +2,16 @@
 {% block title %}دفعة {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}دفعة {{ batch.batch_code if batch else '—' }}{% endblock %}
+{% block head_buttons %}
+{% if batch %}
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+    <i class="fa-solid fa-pen"></i> تعديل الباقة
+  </a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.bandwidth_schedules') }}">
+    <i class="fa-solid fa-gauge-high"></i> سرعات متعددة
+  </a>
+{% endif %}
+{% endblock %}
 
 {% block content %}
 {% if batch %}
