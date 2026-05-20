@@ -285,24 +285,29 @@ html[dir="rtl"] .hb-side-subitem{padding:7px 32px 7px 10px}
   margin-inline-start:auto;color:var(--hb-text-muted);font-size:11px;
 }
 
-/* ═════════════════════════ MAIN AREA — adapts to sidebar width ═════════════════════════
-   The sidebar is anchored at `inset-inline-start: 0` which means visually:
-     • RTL → sidebar on the RIGHT → main needs margin-RIGHT
-     • LTR → sidebar on the LEFT  → main needs margin-LEFT
-   So we use the logical `margin-inline-start` which mirrors automatically. */
-.main{
-  margin-top:var(--hr-topbar-h, 50px);
-  margin-inline-start:var(--hb-side-current-w);
-  margin-inline-end:0;
-  transition:margin-inline-start .2s ease;
-  padding:14px 16px 40px;
-  min-height:calc(100vh - var(--hr-topbar-h, 50px));
-  background:var(--hb-bg-page);
+/* ═════════════════════════ MAIN AREA — reserves space for the sidebar ═════════════════════════
+   Strategy: re-point the OLD `--hr-sidebar-w` variable (which the legacy
+   admin_layout.css uses for `.main { margin-right: var(--hr-sidebar-w) }`)
+   at our new dynamic value. This way the existing legacy rule keeps
+   working, automatically adapts to opened/collapsed widths, and we
+   don't fight the cascade with !important.
+
+   Also drive the topbar's brand-area width from the same variable so
+   the topbar's right portion lines up with the sidebar below it. */
+body{
+  --hr-sidebar-w: var(--hb-side-current-w);
 }
-/* Reset the OLD admin_layout.css physical margins that would otherwise
-   stack on top of the logical ones above. */
-html[dir="rtl"] .main{margin-right:0 !important; margin-left:0 !important}
-html[dir="ltr"] .main{margin-right:0 !important; margin-left:0 !important}
+
+/* Belt-and-braces: also set the logical margin in case any consumer
+   page overrides the legacy rule. !important here is safe because
+   nothing else in the project should override the sidebar gutter. */
+.main{
+  margin-inline-start: var(--hb-side-current-w) !important;
+  margin-inline-end: 0 !important;
+  transition: margin-inline-start .2s ease;
+  background: var(--hb-bg-page);
+  min-height: calc(100vh - var(--hr-topbar-h, 50px));
+}
 
 /* Body background to match the new identity (off-white, not cream). */
 html, body{ background:var(--hb-bg-page) !important; }
