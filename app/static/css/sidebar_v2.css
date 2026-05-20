@@ -52,16 +52,19 @@ body[data-hb-side="collapsed"]{ --hb-side-current-w: var(--hb-side-w-collapsed);
 body[data-hb-side="mobile-open"]{ --hb-side-current-w: 0; }
 body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
 
-/* ═════════════════════════ SIDEBAR SHELL ═════════════════════════ */
+/* ═════════════════════════ SIDEBAR SHELL ═════════════════════════
+   In Arabic RTL the conventional sidebar lives on the RIGHT edge.
+   `inset-inline-start: 0` resolves to the visual RIGHT in RTL
+   (and LEFT in LTR), so the partial works correctly in both modes. */
 .hb-side{
   position:fixed;
   top:var(--hr-topbar-h, 50px);
-  inset-inline-end:0;
+  inset-inline-start:0;
   bottom:0;
   width:var(--hb-side-current-w);
   background:var(--hb-bg);
   color:var(--hb-text);
-  border-inline-start:1px solid var(--hb-border);
+  border-inline-end:1px solid var(--hb-border);
   box-shadow:var(--hb-shadow-card);
   z-index:40;
   display:flex;
@@ -282,17 +285,27 @@ html[dir="rtl"] .hb-side-subitem{padding:7px 32px 7px 10px}
   margin-inline-start:auto;color:var(--hb-text-muted);font-size:11px;
 }
 
-/* ═════════════════════════ MAIN AREA — adapts to sidebar width ═════════════════════════ */
+/* ═════════════════════════ MAIN AREA — adapts to sidebar width ═════════════════════════
+   The sidebar is anchored at `inset-inline-start: 0` which means visually:
+     • RTL → sidebar on the RIGHT → main needs margin-RIGHT
+     • LTR → sidebar on the LEFT  → main needs margin-LEFT
+   So we use the logical `margin-inline-start` which mirrors automatically. */
 .main{
   margin-top:var(--hr-topbar-h, 50px);
-  margin-right:var(--hb-side-current-w);
-  transition:margin-right .2s ease, margin-left .2s ease;
+  margin-inline-start:var(--hb-side-current-w);
+  margin-inline-end:0;
+  transition:margin-inline-start .2s ease;
   padding:14px 16px 40px;
   min-height:calc(100vh - var(--hr-topbar-h, 50px));
   background:var(--hb-bg-page);
 }
-html[dir="rtl"] .main{margin-right:var(--hb-side-current-w); margin-left:0}
-html[dir="ltr"] .main{margin-left:var(--hb-side-current-w); margin-right:0}
+/* Reset the OLD admin_layout.css physical margins that would otherwise
+   stack on top of the logical ones above. */
+html[dir="rtl"] .main{margin-right:0 !important; margin-left:0 !important}
+html[dir="ltr"] .main{margin-right:0 !important; margin-left:0 !important}
+
+/* Body background to match the new identity (off-white, not cream). */
+html, body{ background:var(--hb-bg-page) !important; }
 
 /* Hide old sidebar foot rows (legacy admin_layout.css) when new sidebar active */
 .hb-side .sidebar-foot{display:none !important}
@@ -311,6 +324,9 @@ body[data-hb-side="collapsed"] .hb-side-brand{
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn{
   position:absolute;bottom:-14px;
+  /* Poke out toward the content side (away from screen edge).
+     Sidebar is docked at inset-inline-start, so its inside edge
+     is inset-inline-end. */
   inset-inline-end:-14px;
   background:#fff;border:1px solid var(--hb-border);
   box-shadow:var(--hb-shadow-card);
@@ -378,16 +394,18 @@ body[data-hb-side="collapsed"] .hb-side-section-head[data-hb-label]:hover::after
 
 @media (max-width: 900px){
   body{ --hb-side-current-w: 0; }
-  .main{margin-right:0 !important;margin-left:0 !important}
+  .main{margin-inline-start:0 !important}
 
   .hb-side{
     width:var(--hb-side-w);
     top:0;bottom:0;
-    transform:translateX(-100%);  /* off-screen on the right in RTL */
+    /* RTL: sidebar is docked on the right, so off-screen = translate right.
+       LTR: docked on the left, so off-screen = translate left. */
+    transform:translateX(-100%);                /* LTR default */
     box-shadow:var(--hb-shadow-pop);
-    border-inline-start:0;
+    border-inline-end:0;
   }
-  html[dir="rtl"] .hb-side{transform:translateX(100%)}
+  html[dir="rtl"] .hb-side{transform:translateX(100%)} /* RTL off-screen */
 
   body[data-hb-side="mobile-open"] .hb-side{
     transform:translateX(0);
