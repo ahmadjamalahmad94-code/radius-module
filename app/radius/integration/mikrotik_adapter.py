@@ -176,6 +176,8 @@ class MikrotikAdapter(RadiusAdapter):
         *,
         beneficiary_id: Optional[int] = None,
         status: Optional[str] = None,
+        user_type: Optional[str] = None,
+        search: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -184,6 +186,15 @@ class MikrotikAdapter(RadiusAdapter):
         out = [_row_to_subscriber(r) for r in rows]
         if status:
             out = [s for s in out if s.status == status]
+        # R9.0: in-memory filters للتوافق مع SqliteAdapter signature.
+        if user_type:
+            out = [s for s in out if getattr(s, "user_type", None) == user_type]
+        if search:
+            t = search.lower()
+            out = [s for s in out
+                   if t in s.username.lower()
+                   or t in (getattr(s, "full_name", "") or "").lower()
+                   or t in (getattr(s, "mobile", "") or "")]
         return out[offset : offset + limit]
 
     def get_account(self, username: str) -> RadiusAccount:

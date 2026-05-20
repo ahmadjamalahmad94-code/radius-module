@@ -96,22 +96,26 @@ class SqliteAdapter(RadiusAdapter):
 
     def delete_profile(self, profile_id: int) -> None:
         # احتجز الاسم قبل الحذف لتمريره
-        try:
-            p = plans_repo.get_plan(_tid(), profile_id)
-        except Exception: p = None
-        plans_repo.delete_plan(_tid(), profile_id)
-        if p:
-            from .router_sync import enqueue_plan_delete
-            try: enqueue_plan_delete(_tid(), p.name)
+        plans_repo.archive_plan(_tid(), profile_id, actor="adapter")
+        archived = plans_repo.get_plan(_tid(), profile_id, include_deleted=True)
+        if archived:
+            from .router_sync import enqueue_plan_upsert
+            try: enqueue_plan_upsert(archived)
             except Exception:  # noqa: BLE001
-                _LOG.exception("enqueue plan delete sync failed")
+                _LOG.exception("enqueue archived plan sync failed")
 
     # ─────────────── Accounts ───────────────
 
     def list_accounts(self, *, beneficiary_id: Optional[int] = None,
                        status: Optional[str] = None,
+                       user_type: Optional[str] = None,
+                       search: Optional[str] = None,
                        limit: int = 100, offset: int = 0) -> Sequence[Subscriber]:
-        items = subscribers_repo.list_subscribers(_tid(), status=status, limit=limit, offset=offset)
+        # R9.0: user_type + search يُمرَّران إلى SQL في الـ repo.
+        items = subscribers_repo.list_subscribers(
+            _tid(), status=status, user_type=user_type, search=search,
+            limit=limit, offset=offset,
+        )
         if beneficiary_id is not None:
             items = [s for s in items if s.beneficiary_ref == str(beneficiary_id)]
         return items
@@ -143,11 +147,14 @@ class SqliteAdapter(RadiusAdapter):
 
     def delete_account(self, username: str) -> None:
         tenant_id = _tid()
-        subscribers_repo.delete_subscriber(tenant_id, username)
-        from .router_sync import enqueue_subscriber_delete
-        try: enqueue_subscriber_delete(tenant_id, username)
+        subscribers_repo.archive_subscriber(tenant_id, username, actor="adapter")
+        archived = subscribers_repo.get_subscriber(tenant_id, username, include_deleted=True)
+        if not archived:
+            return
+        from .router_sync import enqueue_subscriber_upsert
+        try: enqueue_subscriber_upsert(archived)
         except Exception:  # noqa: BLE001
-            _LOG.exception("enqueue subscriber delete sync failed")
+            _LOG.exception("enqueue archived subscriber sync failed")
 
     def reset_password(self, username: str, new_password: str) -> None:
         if not new_password:

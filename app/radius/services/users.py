@@ -21,15 +21,25 @@ class UsersService:
         self._audit = audit
 
     def list(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
+             user_type: Optional[str] = "subscriber",
              search: str = "", limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
-        items = list(self._adapter.list_accounts(status=status, limit=limit, offset=offset))
+        """قائمة المشتركين.
+
+        R9.0:
+          - `user_type='subscriber'` افتراضياً يستبعد سجلّات mirror التي
+            يُنشئها card generation (user_type='card'). صفحة "المشتركين"
+            تعرض المشتركين الحقيقيين فقط؛ البطاقات لها صفحة منفصلة.
+            تمرير `user_type=None` صراحةً يُعيد السلوك القديم (الكل).
+            تمرير `user_type='card'` يعرض البطاقات.
+          - `search` يُمرَّر إلى SQL pushdown في الـ adapter/repo بدل
+            الفلترة بعد LIMIT. مهم مع >1000 سجلّ.
+        """
+        items = list(self._adapter.list_accounts(
+            status=status, user_type=user_type, search=(search or None),
+            limit=limit, offset=offset,
+        ))
         if plan_id is not None:
             items = [u for u in items if u.plan_id == plan_id]
-        if search:
-            s = search.lower()
-            items = [u for u in items if s in u.username.lower()
-                     or s in (u.full_name or "").lower()
-                     or s in (u.mobile or "")]
         return items
 
     def get(self, username: str) -> Subscriber:

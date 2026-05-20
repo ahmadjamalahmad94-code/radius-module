@@ -82,6 +82,8 @@ class RadiusAdapter(ABC):
         *,
         beneficiary_id: Optional[int] = None,
         status: Optional[str] = None,
+        user_type: Optional[str] = None,
+        search: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]: ...

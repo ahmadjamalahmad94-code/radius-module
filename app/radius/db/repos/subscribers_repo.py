@@ -110,8 +110,20 @@ def _row(r) -> Subscriber:
 
 def list_subscribers(tenant_id: int, *,
                       status: Optional[str] = None,
+                      user_type: Optional[str] = None,
+                      search: Optional[str] = None,
                       limit: int = 500, offset: int = 0,
                       include_deleted: bool = False) -> list[Subscriber]:
+    """قائمة المشتركين مع فلاتر SQL.
+
+    R9.0:
+      - `user_type`: استبعاد سجلات mirror التي يُنشئها card generation
+        (user_type='card'). Default None = جميع الأنواع للتوافق العكسي.
+        صفحة "المشتركين" تمرّر 'subscriber' لتُظهر المشتركين الحقيقيين فقط.
+      - `search`: pushdown إلى SQL عبر LIKE على username/full_name/mobile.
+        كان سابقاً يفلتر بعد LIMIT في الـ service → مع 2000+ سجلّ يفوت
+        المستخدم البحث عنه. الآن يصل لكل DB قبل LIMIT.
+    """
     sql = "SELECT * FROM subscribers WHERE tenant_id = ?"
     vals: list = [tenant_id]
     if not include_deleted:
@@ -119,6 +131,13 @@ def list_subscribers(tenant_id: int, *,
     if status:
         sql += " AND status = ?"
         vals.append(status)
+    if user_type:
+        sql += " AND user_type = ?"
+        vals.append(user_type)
+    if search:
+        pat = f"%{search}%"
+        sql += (" AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)")
+        vals += [pat, pat, pat]
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals += [limit, offset]
     cur = db().execute(sql, vals)
@@ -228,10 +247,14 @@ def reset_password(tenant_id: int, username: str, new_password: str) -> None:
         )
 
 
-def count_subscribers(tenant_id: int, *, status: Optional[str] = None) -> int:
+def count_subscribers(tenant_id: int, *, status: Optional[str] = None,
+                       user_type: Optional[str] = None) -> int:
     sql = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
     vals: list = [tenant_id]
     if status:
         sql += " AND status = ?"
         vals.append(status)
+    if user_type:
+        sql += " AND user_type = ?"
+        vals.append(user_type)
     return db().execute(sql, vals).fetchone()["c"]

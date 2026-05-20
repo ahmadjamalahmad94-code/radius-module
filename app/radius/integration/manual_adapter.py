@@ -139,6 +139,8 @@ class ManualAdapter(RadiusAdapter):
         *,
         beneficiary_id: Optional[int] = None,
         status: Optional[str] = None,
+        user_type: Optional[str] = None,
+        search: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -147,6 +149,15 @@ class ManualAdapter(RadiusAdapter):
             items = [a for a in items if a.beneficiary_id == beneficiary_id]
         if status:
             items = [a for a in items if a.status == status]
+        # R9.0: in-memory filters للتوافق مع SqliteAdapter signature.
+        if user_type:
+            items = [a for a in items if getattr(a, "user_type", None) == user_type]
+        if search:
+            s = search.lower()
+            items = [a for a in items
+                     if s in a.username.lower()
+                     or s in (getattr(a, "full_name", "") or "").lower()
+                     or s in (getattr(a, "mobile", "") or "")]
         items.sort(key=lambda a: a.username)
         return items[offset : offset + limit]
 
