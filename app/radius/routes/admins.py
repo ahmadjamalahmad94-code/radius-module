@@ -122,7 +122,7 @@ def admins_update(admin_id: int):
 def admins_delete(admin_id: int):
     try:
         get_admins_service().delete_admin(actor=_actor(), admin_id=admin_id)
-        flash("تم حذف المدير.", "success")
+        flash("تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات.", "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.admins_list"))
@@ -236,11 +236,11 @@ def roles_delete(role_id: int):
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
     if r.is_system:
-        flash("لا يمكن حذف دور النظام.", "error")
+        flash("لا يمكن أرشفة دور النظام.", "error")
         return redirect(url_for("radius.roles_list"))
     try:
         admins_repo.delete_role(role_id)
-        flash(f"تم حذف الدور «{r.name}» ✓", "success")
+        flash(f"تمت أرشفة الدور «{r.name}» ✓", "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.roles_list"))

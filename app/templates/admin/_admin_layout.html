@@ -288,6 +288,10 @@
          class="{% if '/roles' in request.path %}active{% endif %}">
         <i class="fa-solid fa-key"></i> الأدوار والصلاحيات
       </a>
+      <a href="{{ url_for('radius.recycle_bin') }}"
+         class="{% if '/recycle-bin' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-box-archive"></i> سلة المحذوفات
+      </a>
     </div>
 
     <div class="nav-group">

@@ -267,7 +267,7 @@ def plans_update(plan_id: int):
 def plans_delete(plan_id: int):
     try:
         get_plans_service().delete(actor=_actor(), plan_id=plan_id)
-        flash("تم حذف العرض.", "success")
+        flash("تمت أرشفة العرض. يمكنك استعادته من سلة المحذوفات.", "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.plans_list"))

@@ -79,8 +79,8 @@
                 </button>
               </form>
               <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
-                    onsubmit="return confirm('حذف {{ u.username|e }}؟');" style="display:inline">
-                <button class="btn btn-danger btn-xs" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    onsubmit="return confirm('أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
+                <button class="btn btn-danger btn-xs" title="أرشفة"><i class="fa-solid fa-box-archive"></i></button>
               </form>
             </div>
           </td>

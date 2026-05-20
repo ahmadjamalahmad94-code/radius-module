@@ -263,7 +263,7 @@ def users_update(username: str):
 def users_delete(username: str):
     try:
         get_users_service().delete(actor=_actor(), username=username)
-        flash("تم الحذف.", "success")
+        flash("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.", "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_list"))

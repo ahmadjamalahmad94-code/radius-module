@@ -87,10 +87,10 @@
         <i class="fa-solid fa-pen"></i> تعديل
       </a>
       <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}"
-            {% if not r.is_system %}onsubmit="return confirm('تأكيد حذف الدور «{{ r.display_name or r.name }}»؟');"{% endif %}
+            {% if not r.is_system %}onsubmit="return confirm('أرشفة الدور «{{ r.display_name or r.name }}»؟ يمكن استعادته من سلة المحذوفات.');"{% endif %}
             style="flex:1;margin:0">
         <button type="submit" class="btn-del" {% if r.is_system %}disabled title="دور نظام"{% endif %} style="width:100%">
-          <i class="fa-solid fa-trash"></i> {% if r.is_system %}محمي{% else %}حذف{% endif %}
+          <i class="fa-solid fa-box-archive"></i> {% if r.is_system %}محمي{% else %}أرشفة{% endif %}
         </button>
       </form>
     </div>

@@ -126,7 +126,7 @@ def devices_update(nas_id: int):
 def devices_delete(nas_id: int):
     try:
         get_nas_devices_service().delete(actor=_actor(), nas_id=nas_id)
-        flash("تم الحذف.", "success")
+        flash("تمت أرشفة جهاز الشبكة. يمكنك استعادته من سلة المحذوفات.", "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.devices_list"))

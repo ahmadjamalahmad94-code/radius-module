@@ -1,0 +1,98 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}سلة المحذوفات{% endblock %}
+{% block page_title %}سلة المحذوفات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
+{% block page_sub %}<span class="sub">الأرشفة بديل آمن عن الحذف النهائي</span>{% endblock %}
+
+{% block head_buttons %}
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.users_list') }}">
+    <i class="fa-solid fa-users"></i> المستفيدون
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .rb-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px;line-height:1.8}
+  .rb-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .rb-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;border:1px solid #e8deca;background:#fff;color:#263244;text-decoration:none;font-size:12.5px;font-weight:800}
+  .rb-chip.active{background:#e9f7fb;border-color:#2baacc;color:#11708e}
+  .rb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+  .rb-stat{background:#fff;border:1px solid #e8deca;border-radius:10px;padding:12px}
+  .rb-stat b{display:block;color:#263244;font-size:22px}
+  .rb-stat span{color:#657386;font-size:12px}
+  .rb-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8deca;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(32,44,64,.06)}
+  .rb-table th,.rb-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
+  .rb-table th{font-size:12px;color:#657386;background:#fffaf1}
+  .rb-reason{max-width:320px;color:#5d6b7d;font-size:12.5px;line-height:1.7}
+  .rb-type{display:inline-flex;padding:4px 9px;border-radius:999px;background:#eef5f8;color:#11708e;font-size:11px;font-weight:900}
+</style>
+
+<div class="rb-note">
+  الحذف في هذه المجالات يعني أرشفة قابلة للاستعادة، وليس حذفًا نهائيًا. السجلات المالية لا تظهر هنا لأنها يجب أن تبقى محفوظة وتُصحّح بقيود عكسية أو تسويات.
+</div>
+
+<div class="rb-filter">
+  <a class="rb-chip {% if not selected %}active{% endif %}" href="{{ url_for('radius.recycle_bin') }}">
+    الكل <span>{{ counts.values()|sum }}</span>
+  </a>
+  {% for entity, label in entity_labels.items() %}
+  <a class="rb-chip {% if selected == entity %}active{% endif %}"
+     href="{{ url_for('radius.recycle_bin', entity_type=entity) }}">
+    {{ label }} <span>{{ counts.get(entity, 0) }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="rb-grid">
+  {% for entity, label in entity_labels.items() %}
+  <div class="rb-stat">
+    <b>{{ counts.get(entity, 0) }}</b>
+    <span>{{ label }} مؤرشفة</span>
+  </div>
+  {% endfor %}
+</div>
+
+{% if items %}
+<table class="rb-table">
+  <thead>
+    <tr>
+      <th>النوع</th>
+      <th>العنصر</th>
+      <th>الحالة</th>
+      <th>وقت الأرشفة</th>
+      <th>بواسطة</th>
+      <th>السبب</th>
+      <th>إجراء</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td><span class="rb-type">{{ entity_labels.get(item.entity_type, item.entity_type) }}</span></td>
+      <td>
+        <strong>{{ item.label }}</strong>
+        <div class="mono">#{{ item.id }}</div>
+      </td>
+      <td>{{ item.status or 'غير محدد' }}</td>
+      <td class="mono">{{ item.deleted_at or '—' }}</td>
+      <td>{{ item.deleted_by or 'غير معروف' }}</td>
+      <td><div class="rb-reason">{{ item.delete_reason or 'لم يتم تسجيل سبب.' }}</div></td>
+      <td>
+        <form method="post" action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
+              onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');">
+          <button class="btn btn-success btn-sm" type="submit">
+            <i class="fa-solid fa-rotate-left"></i> استعادة
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <div class="empty">
+    <i class="fa-solid fa-box-open"></i>
+    لا توجد عناصر مؤرشفة حاليًا. عند أرشفة مستفيد أو باقة أو جهاز شبكة سيظهر هنا للاستعادة.
+  </div>
+{% endif %}
+{% endblock %}
