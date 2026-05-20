@@ -159,6 +159,34 @@ No 5, 7, 9, 13 — those are accidents.
 | `--cc-r-hero` | 22px | hero card |
 | `--cc-r-pill` | 999px | full pill (status badges, mode toggle) |
 
+### 4.5 Section rhythm (LOCKED)
+
+**Every vertical gap between page-level blocks must equal exactly one
+value**, sourced from a single token. No drift, no per-component
+tweaks. The page reads as one breath.
+
+```css
+:root{
+  --cc-gap-section: 16px;   /* major vertical step between blocks +
+                                row-gap inside multi-row grids       */
+  --cc-gap-inline:  12px;   /* in-row tile gap (metric / action      */
+                            /*  tiles), and column-gap inside grids  */
+}
+```
+
+**Apply to**:
+- `margin-bottom` on **every** top-level page block: `.cc-section`,
+  `.cc-grid-2`, `.cc-metrics`, `.cc-hero`, custom sections.
+- `row-gap` on multi-row grids (`.cc-metrics`, action grids that wrap).
+- `gap` on `.cc-grid-2` (uses `--cc-gap-section` for both axes — the
+  hero/info column gap matches the vertical block step, which is what
+  the eye expects).
+- `column-gap` on `.cc-metrics` and similar tile grids: `--cc-gap-inline`.
+
+**Hard rule**: never write a literal `margin-bottom: 14px` (or 12, 18,
+24) on a top-level block. Always reference the variable. If a new
+context truly needs a custom step, add a new named token here first.
+
 ### 4.4 Shadow scale
 | Token | Value | Use |
 |---|---|---|
@@ -350,6 +378,10 @@ elsewhere.
 11. **Every page** extends `admin/_admin_layout.html` and gets the
     background-net + sidebar + topbar for free — don't duplicate them.
 12. **Soft-delete is the default** — `delete_permanent` is recycle-bin-only.
+13. **Section rhythm is sacred** (§4.5). No literal `margin-bottom`
+    on a top-level block — always `var(--cc-gap-section)`. Vertical
+    gaps between page blocks must read as one consistent step from
+    top to bottom of the page.
 
 ---
 
