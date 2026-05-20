@@ -26,6 +26,24 @@ def register_status_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/sync/<int:job_id>/retry", "sync_retry", sync_retry, methods=["POST"])
     bp.add_url_rule("/sync/<int:job_id>/cancel", "sync_cancel", sync_cancel, methods=["POST"])
     bp.add_url_rule("/audit", "audit_list", audit_list, methods=["GET"])
+    bp.add_url_rule("/_reconcile_now", "reconcile_now",
+                    reconcile_now, methods=["POST", "GET"])
+
+
+def reconcile_now():
+    """On-demand: run the MT-reconciler once across this tenant.
+
+    Useful after a router reboot when the operator wants to flush
+    ghost sessions immediately instead of waiting for the next 30s
+    background tick. Returns JSON so it can be hit from the UI or
+    curl/cron. Safe to spam — the reconciler is idempotent.
+    """
+    from app.workers import mt_reconciler
+    try:
+        stats = mt_reconciler.reconcile_once()
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(e)}), 500
+    return jsonify({"ok": True, "stats": stats})
 
 
 # ─────────────── status ───────────────
