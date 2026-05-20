@@ -31,6 +31,15 @@ class CardsStore:
     def list_batches(self, *, limit: int = 100, offset: int = 0) -> list[CardBatch]:
         return cards_repo.list_batches(_tid(), limit=limit, offset=offset)
 
+    def list_batch_operations(self, **kw) -> list[dict]:
+        return cards_repo.list_batch_operations(_tid(), **kw)
+
+    def count_batch_operations(self, **kw) -> int:
+        return cards_repo.count_batch_operations(_tid(), **kw)
+
+    def batch_operations_totals(self, **kw) -> dict:
+        return cards_repo.batch_operations_totals(_tid(), **kw)
+
     def get_batch(self, batch_id: int) -> Optional[CardBatch]:
         return cards_repo.get_batch(_tid(), batch_id)
 

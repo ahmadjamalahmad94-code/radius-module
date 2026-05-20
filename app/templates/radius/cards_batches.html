@@ -1,67 +1,319 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}دفعات الكروت{% endblock %}
+{% block title %}مركز عمليات حزم البطاقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
-{% block page_title %}دفعات الكروت{% endblock %}
-{% block page_sub %}<span class="sub">({{ batches|length }} دفعة)</span>{% endblock %}
+{% block page_title %}مركز عمليات حزم البطاقات{% endblock %}
+{% block page_sub %}<span class="sub">({{ total }} حزمة مطابقة)</span>{% endblock %}
 {% block head_buttons %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_generate') }}">
-    <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء كروت
+    <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء حزمة
   </a>
 {% endblock %}
 
+{% macro money(value) -%}
+  {{ "%.2f"|format(value or 0) }}
+{%- endmacro %}
+
+{% macro num(value) -%}
+  {{ "{:,}".format(value or 0) }}
+{%- endmacro %}
+
 {% block content %}
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if batches %}
-    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="card-batches">
-      <thead><tr>
-        <th>#</th><th>كود الدفعة</th><th>الباقة</th><th>عدد</th><th>منشأ</th>
-        <th>جاهزة</th><th>مستخدمة</th><th>منتهية</th><th>ملغاة</th><th>الحالة</th>
-        <th>التقدّم</th><th>أنشأها</th><th>التاريخ</th>
-        <th style="width:120px">إجراءات</th>
-      </tr></thead>
-      <tbody>
-        {% for b in batches %}
-        <tr>
-          <td class="num">{{ b.id }}</td>
-          <td class="mono"><strong>{{ b.batch_code }}</strong></td>
-          <td>{{ plans[b.plan_id].name if plans.get(b.plan_id) else '—' }}</td>
-          <td class="num">{{ b.count }}</td>
-          <td class="num">{{ b.generated }}</td>
-          {% set s = summaries.get(b.id) if summaries else none %}
-          <td class="num">{{ s.available_count if s else '—' }}</td>
-          <td class="num">{{ s.active_count if s else b.used }}</td>
-          <td class="num">{{ s.expired_count if s else '—' }}</td>
-          <td class="num">{{ s.revoked_count if s else '—' }}</td>
-          <td>
-            {% set st = s.operational_status if s else b.status %}
-            {% if st in ['active'] %}<span class="pill pill-success">نشطة</span>
-            {% elif st in ['exhausted'] %}<span class="pill pill-warn">مستهلكة</span>
-            {% elif st in ['deleted', 'cancelled', 'canceled', 'revoked'] %}<span class="pill pill-danger">مؤرشفة</span>
-            {% else %}<span class="pill">{{ st or 'غير معروف' }}</span>{% endif %}
-          </td>
-          <td style="min-width:140px">
-            {% set pct = (b.used/b.generated*100) if b.generated else 0 %}
-            <div class="progress-bar"><span style="width: {{ pct }}%"></span></div>
-            <div class="hint" style="margin-top:2px">{{ "%.0f"|format(pct) }}%</div>
-          </td>
-          <td>{{ b.created_by or '—' }}</td>
-          <td class="mono">{{ b.created_at.strftime('%Y-%m-%d %H:%M') if b.created_at else '—' }}</td>
-          <td>
-            <a class="btn btn-primary btn-xs" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
-              <i class="fa-solid fa-eye"></i>
-            </a>
-            <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
-              <i class="fa-solid fa-pen"></i>
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-layer-group"></i>لا دفعات بعد</div>
-    {% endif %}
+<style>
+.bops-shell{display:flex;flex-direction:column;gap:14px}
+.bops-hero{display:grid;grid-template-columns:1.35fr 2fr;gap:14px;align-items:stretch}
+.bops-panel{background:#fff;border:1px solid var(--hr-border);border-radius:8px;box-shadow:var(--hr-shadow-sm);padding:16px}
+.bops-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.bops-title h3{margin:0;font-size:18px;font-weight:900;color:var(--hr-text)}
+.bops-title p{margin:5px 0 0;color:var(--hr-text-muted);font-size:12.5px;line-height:1.8}
+.bops-icon{width:42px;height:42px;border-radius:8px;background:var(--hr-cyan-100);color:var(--hr-cyan-700);display:inline-flex;align-items:center;justify-content:center;font-size:18px}
+.bops-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.bops-kpi{border:1px solid var(--hr-border);border-radius:8px;padding:12px;background:var(--hr-soft)}
+.bops-kpi .label{font-size:11.5px;color:var(--hr-text-muted);font-weight:800}
+.bops-kpi .value{margin-top:5px;font-size:22px;line-height:1.1;font-weight:950;color:var(--hr-text)}
+.bops-kpi .sub{margin-top:4px;font-size:11.5px;color:var(--hr-text-muted)}
+.bops-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.bops-toolbar .left,.bops-toolbar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bops-filters{display:grid;grid-template-columns:1.4fr .9fr .9fr .9fr .8fr auto;gap:9px;align-items:end}
+.bops-filters label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:850;color:var(--hr-text)}
+.bops-input,.bops-select{width:100%;box-sizing:border-box;border:1.5px solid var(--hr-border-strong);border-radius:6px;background:var(--hr-soft);padding:9px 10px;font-family:inherit;font-size:12.5px;color:var(--hr-text)}
+.bops-input:focus,.bops-select:focus{outline:0;border-color:var(--hr-cyan-500);background:#fff;box-shadow:0 0 0 3px rgba(43,170,204,.15)}
+.bops-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 12px;border:1px solid var(--hr-border);border-radius:8px;background:#fff}
+.bops-actions .bops-input,.bops-actions .bops-select{width:auto;min-width:170px}
+.bops-table-wrap{overflow:auto;border:1px solid var(--hr-border);border-radius:8px;background:#fff}
+.bops-table{min-width:1320px;margin:0}
+.bops-table thead th{position:sticky;top:0;z-index:1}
+.bops-table td,.bops-table th{white-space:nowrap}
+.bops-batch{display:flex;flex-direction:column;gap:4px}
+.bops-batch strong{font-size:12.5px}
+.bops-batch span{font-size:11px;color:var(--hr-text-muted)}
+.bops-meter{min-width:118px}
+.bops-meter-track{height:7px;border-radius:999px;background:#e9edf2;overflow:hidden}
+.bops-meter-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--hr-cyan-500),#1c7ed6)}
+.bops-mini{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.bops-mini .tag{border-radius:999px;padding:3px 7px;font-size:10.5px;font-weight:850;background:var(--hr-cyan-100);color:var(--hr-cyan-700)}
+.bops-mini .tag.gray{background:#edf0f3;color:#667085}
+.bops-mini .tag.warn{background:#fff3cd;color:#946200}
+.bops-mini .tag.danger{background:#ffe3e3;color:#b42318}
+.bops-row-actions{display:flex;gap:5px;align-items:center;justify-content:flex-end}
+.bops-row-actions .btn{padding:6px 8px}
+.bops-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 2px;color:var(--hr-text-muted);font-size:12px}
+.bops-empty{padding:34px;text-align:center;color:var(--hr-text-muted)}
+.bops-empty i{display:block;font-size:26px;color:var(--hr-cyan-600);margin-bottom:8px}
+@media print{
+  .sidebar,.topbar,.bops-filters,.bops-toolbar,.bops-actions,.bops-pager,.bops-row-actions,.head-buttons{display:none!important}
+  .main{margin:0!important;padding:0!important}.bops-panel{box-shadow:none}.bops-table{min-width:0;font-size:10px}
+}
+@media (max-width:1100px){.bops-hero{grid-template-columns:1fr}.bops-filters{grid-template-columns:1fr 1fr}.bops-filters button{width:100%}}
+@media (max-width:680px){.bops-kpis{grid-template-columns:1fr}.bops-filters{grid-template-columns:1fr}.bops-actions .bops-input,.bops-actions .bops-select{width:100%}}
+</style>
+
+{% set current_export = url_for('radius.cards_batches_export_csv', q=filters.q, status=filters.status, plan_id=filters.plan_id or '', manager=filters.manager, distributor_id=filters.distributor_id or '') %}
+
+<div class="bops-shell">
+  <section class="bops-hero">
+    <div class="bops-panel">
+      <div class="bops-title">
+        <div>
+          <h3>لوحة تشغيل الحزم</h3>
+          <p>تحكم بالحزم، راقب المتبقي والمستخدم، صدّر النتائج، وطبّق إجراءات آمنة بدون حذف نهائي.</p>
+        </div>
+        <span class="bops-icon"><i class="fa-solid fa-layer-group"></i></span>
+      </div>
+      <div class="bops-toolbar">
+        <div class="right">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_generate') }}">
+            <i class="fa-solid fa-plus"></i> إنشاء
+          </a>
+          <a class="btn btn-secondary btn-sm" href="{{ current_export }}">
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </a>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> طباعة
+          </button>
+        </div>
+        <div class="left">
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batches_export_csv', status='all') }}">كل الحزم CSV</a>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batches_export_csv', status='available') }}">الجاهزة CSV</a>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batches_export_csv', status='deleted') }}">المؤرشفة CSV</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="bops-kpis">
+      <div class="bops-kpi">
+        <div class="label">بطاقات مباعة اليوم</div>
+        <div class="value">{{ num(totals.used_today) }}</div>
+        <div class="sub">قيمة تقديرية: {{ money(totals.value_today) }}</div>
+      </div>
+      <div class="bops-kpi">
+        <div class="label">بطاقات مباعة هذا الشهر</div>
+        <div class="value">{{ num(totals.used_month) }}</div>
+        <div class="sub">قيمة تقديرية: {{ money(totals.value_month) }}</div>
+      </div>
+      <div class="bops-kpi">
+        <div class="label">بطاقات مباعة هذا العام</div>
+        <div class="value">{{ num(totals.used_year) }}</div>
+        <div class="sub">قيمة تقديرية: {{ money(totals.value_year) }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bops-panel">
+    <form class="bops-filters" method="get" action="{{ url_for('radius.cards_batches') }}">
+      <label>بحث
+        <input class="bops-input" name="q" value="{{ filters.q }}" placeholder="كود الحزمة، اسمها، الباقة، أو المنشئ">
+      </label>
+      <label>الحالة
+        <select class="bops-select" name="status">
+          {% for value,label in status_options %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>الباقة
+        <select class="bops-select" name="plan_id">
+          <option value="">كل الباقات</option>
+          {% for p in plans %}
+          <option value="{{ p.id }}" {% if filters.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>الموزع
+        <select class="bops-select" name="distributor_id">
+          <option value="">كل الموزعين</option>
+          {% for d in distributors %}
+          <option value="{{ d.id }}" {% if filters.distributor_id == d.id %}selected{% endif %}>{{ d.display_name or d.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>كل صفحة
+        <select class="bops-select" name="per_page">
+          {% for n in [10,20,50,100] %}
+          <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass"></i> تطبيق</button>
+    </form>
+  </section>
+
+  <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
+    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+    <section class="bops-panel">
+      <div class="bops-actions">
+        <select class="bops-select" name="bulk_action" required>
+          <option value="">إجراء على المحدد</option>
+          <option value="refresh">تحديث الإحصاءات</option>
+          <option value="archive">أرشفة آمنة</option>
+          <option value="restore">استعادة المؤرشف</option>
+        </select>
+        <input class="bops-input" name="reason" placeholder="سبب الأرشفة أو ملاحظة الإجراء">
+        <button class="btn btn-secondary btn-sm" type="submit">
+          <i class="fa-solid fa-check"></i> اعتماد
+        </button>
+        <span class="hint">الحذف هنا يعني أرشفة آمنة. البطاقات لا تُحذف من قاعدة البيانات.</span>
+      </div>
+    </section>
+
+    <section class="bops-table-wrap">
+      {% if batches %}
+      <table class="hr-table bops-table">
+        <thead>
+          <tr>
+            <th style="width:34px"><input id="select-all-batches" type="checkbox" aria-label="تحديد الكل"></th>
+            <th>#</th>
+            <th>الحزمة</th>
+            <th>الباقة</th>
+            <th>العدد</th>
+            <th>جاهزة</th>
+            <th>نشطة</th>
+            <th>منتهية</th>
+            <th>ملغاة</th>
+            <th>جلسات</th>
+            <th>MAC</th>
+            <th>المدة/الأجهزة</th>
+            <th>السعر</th>
+            <th>قواعد السرعة</th>
+            <th>المدير/الموزع</th>
+            <th>الحالة</th>
+            <th>التقدم</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in batches %}
+          {% set st = b.operational_status %}
+          {% set total_cards = b.total_cards or b.generated or 0 %}
+          {% set pct = (b.active_count / total_cards * 100) if total_cards else 0 %}
+          {% set unit_price = b.estimated_unit_price or 0 %}
+          {% set configured_value = b.total_price if b.total_price and b.total_price > 0 else unit_price * (b.generated or 0) %}
+          <tr>
+            <td><input class="batch-check" type="checkbox" name="batch_ids" value="{{ b.id }}"></td>
+            <td class="num">{{ b.id }}</td>
+            <td>
+              <div class="bops-batch">
+                <strong class="mono">{{ b.batch_code }}</strong>
+                <span>{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</span>
+              </div>
+            </td>
+            <td>{{ b.plan_name or '—' }}</td>
+            <td class="num">{{ num(b.count) }}<br><span class="hint">مولّد {{ num(b.generated) }}</span></td>
+            <td class="num">{{ num(b.available_count) }}</td>
+            <td class="num">{{ num(b.active_count) }}</td>
+            <td class="num">{{ num(b.expired_count) }}</td>
+            <td class="num">{{ num(b.revoked_count) }}</td>
+            <td class="num">{{ num(b.sessions_count) }}<br><span class="hint">متصل {{ num(b.online_sessions) }}</span></td>
+            <td class="num">{{ num(b.unique_macs) }}</td>
+            <td>
+              <div class="bops-mini">
+                <span class="tag gray">{{ b.time_value or b.plan_duration_minutes or '—' }} {{ b.time_unit or 'دقيقة' }}</span>
+                <span class="tag gray">{{ b.device_count or 1 }} جهاز</span>
+                {% if b.total_quota_mb or b.plan_quota_total_mb %}
+                <span class="tag">{{ num(b.total_quota_mb or b.plan_quota_total_mb) }} MB</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="bops-batch">
+                <strong>{{ money(unit_price) }}</strong>
+                <span>إجمالي تقديري {{ money(configured_value) }}</span>
+              </div>
+            </td>
+            <td>
+              {% if b.active_speed_rules %}
+                <span class="pill pill-info">{{ b.active_speed_rules }} مفعّلة</span>
+              {% elif b.speed_rules_count %}
+                <span class="pill">{{ b.speed_rules_count }} معطّلة</span>
+              {% else %}
+                <span class="pill">لا توجد</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="bops-batch">
+                <strong>{{ b.created_by or b.manager_id or '—' }}</strong>
+                <span>{{ b.distributor_display_name or b.distributor_name or b.assigned_to or 'بدون موزع' }}</span>
+              </div>
+            </td>
+            <td>
+              {% if st == 'active' %}<span class="pill pill-success">نشطة</span>
+              {% elif st == 'exhausted' %}<span class="pill pill-warn">مستهلكة</span>
+              {% elif st in ['deleted','cancelled','canceled','revoked'] %}<span class="pill pill-danger">مؤرشفة</span>
+              {% elif st == 'expired' %}<span class="pill pill-warn">منتهية</span>
+              {% else %}<span class="pill">{{ st or 'غير معروف' }}</span>{% endif %}
+              <div class="hint">{{ (b.created_at or '')[:16].replace('T',' ') }}</div>
+            </td>
+            <td class="bops-meter">
+              <div class="bops-meter-track"><span class="bops-meter-fill" style="width: {{ "%.0f"|format(pct) }}%"></span></div>
+              <div class="hint">{{ "%.0f"|format(pct) }}% مستخدم</div>
+            </td>
+            <td>
+              <div class="bops-row-actions">
+                <a class="btn btn-primary btn-xs" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}" title="عرض البطاقات">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+                <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}" title="تعديل الحزمة">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}" title="قواعد السرعة">
+                  <i class="fa-solid fa-gauge-high"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="bops-empty">
+        <i class="fa-solid fa-layer-group"></i>
+        لا توجد حزم مطابقة للفلاتر الحالية.
+      </div>
+      {% endif %}
+    </section>
+  </form>
+
+  <div class="bops-pager">
+    <div>صفحة {{ page }} من {{ pages_count }} — إجمالي {{ total }} حزمة</div>
+    <div class="bops-toolbar">
+      {% if page > 1 %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batches', q=filters.q, status=filters.status, plan_id=filters.plan_id or '', manager=filters.manager, distributor_id=filters.distributor_id or '', per_page=per_page, page=page-1) }}">السابق</a>
+      {% endif %}
+      {% if page < pages_count %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.cards_batches', q=filters.q, status=filters.status, plan_id=filters.plan_id or '', manager=filters.manager, distributor_id=filters.distributor_id or '', per_page=per_page, page=page+1) }}">التالي</a>
+      {% endif %}
+    </div>
   </div>
 </div>
+
+<script>
+(function(){
+  var all = document.getElementById('select-all-batches');
+  if (!all) return;
+  all.addEventListener('change', function(){
+    document.querySelectorAll('.batch-check').forEach(function(box){
+      box.checked = all.checked;
+    });
+  });
+})();
+</script>
 {% endblock %}

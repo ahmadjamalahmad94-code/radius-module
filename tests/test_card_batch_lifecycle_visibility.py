@@ -53,6 +53,12 @@ def _web_login(client) -> None:
     assert res.status_code in {302, 303}
 
 
+def _csrf(client, url: str) -> str:
+    client.get(url)
+    with client.session_transaction() as sess:
+        return sess["_csrf_token"]
+
+
 def test_card_batch_lifecycle_columns_are_additive(app):
     from app.radius.db.connection import db
 
@@ -110,6 +116,69 @@ def test_batch_summary_counts_available_active_expired_and_revoked(client, auth_
     assert summary["available_count"] == 1
     assert summary["remaining_count"] == 1
     assert "password" not in summary
+
+
+def test_card_batches_operations_page_filters_and_exports_csv(client, auth_headers):
+    data = _generate(
+        client,
+        auth_headers,
+        count=2,
+        package_name="Ops Batch QA",
+        price_per_card=3.5,
+    )
+    batch = data["batch"]
+    _web_login(client)
+
+    page = client.get(
+        "/admin/radius/cards/batches",
+        query_string={"q": batch["batch_code"], "per_page": "10"},
+    )
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert batch["batch_code"] in html
+    assert "bops-table" in html
+    assert "CSV" in html
+    assert "أرشفة آمنة" in html
+
+    export = client.get(
+        "/admin/radius/cards/batches/export.csv",
+        query_string={"q": batch["batch_code"]},
+    )
+    assert export.status_code == 200
+    assert export.headers["Content-Type"].startswith("text/csv")
+    csv_text = export.get_data(as_text=True)
+    assert batch["batch_code"] in csv_text
+    assert "رقم الحزمة" in csv_text
+    for card in data["cards"]:
+        assert card["password"] not in csv_text
+
+
+def test_card_batches_bulk_archive_is_soft_and_preserves_cards(client, auth_headers):
+    from app.radius.db.repos import cards_repo
+
+    data = _generate(client, auth_headers, count=2, package_name="Bulk Archive QA")
+    batch_id = data["batch"]["id"]
+    _web_login(client)
+    token = _csrf(client, "/admin/radius/cards/batches")
+
+    res = client.post(
+        "/admin/radius/cards/batches/bulk",
+        data={
+            "_csrf_token": token,
+            "batch_ids": str(batch_id),
+            "bulk_action": "archive",
+            "reason": "qa bulk archive",
+            "return_to": "/admin/radius/cards/batches",
+        },
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    archived = cards_repo.get_batch(1, batch_id)
+    cards = cards_repo.list_cards(1, batch_id=batch_id)
+    assert archived is not None
+    assert archived.deleted_at is not None
+    assert archived.delete_reason == "qa bulk archive"
+    assert len(cards) == 2
 
 
 def test_card_checker_ui_route_and_result_never_expose_password(client, auth_headers):

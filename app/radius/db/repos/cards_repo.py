@@ -116,6 +116,284 @@ def get_batch(tenant_id: int, batch_id: int,
     return _batch_row(row) if row else None
 
 
+def _batch_operations_base_sql() -> str:
+    return """
+        WITH card_stats AS (
+            SELECT
+                batch_id,
+                COUNT(*) AS total_cards,
+                COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
+                COALESCE(SUM(CASE
+                    WHEN revoked = 0 AND used = 1
+                     AND (expire_at IS NULL OR expire_at >= ?)
+                    THEN 1 ELSE 0 END), 0) AS active_count,
+                COALESCE(SUM(CASE
+                    WHEN revoked = 0 AND used = 0
+                     AND (expire_at IS NULL OR expire_at >= ?)
+                    THEN 1 ELSE 0 END), 0) AS available_count,
+                COALESCE(SUM(CASE
+                    WHEN revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                    THEN 1 ELSE 0 END), 0) AS expired_count
+            FROM cards
+            WHERE tenant_id = ?
+            GROUP BY batch_id
+        ),
+        acct_stats AS (
+            SELECT
+                c.batch_id,
+                COUNT(r.radacctid) AS sessions_count,
+                COUNT(DISTINCT NULLIF(r.callingstationid, '')) AS unique_macs,
+                SUM(CASE WHEN r.acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions
+            FROM cards c
+            LEFT JOIN radacct r
+              ON r.tenant_id = c.tenant_id AND r.username = c.username
+            WHERE c.tenant_id = ?
+            GROUP BY c.batch_id
+        ),
+        speed_stats AS (
+            SELECT
+                card_batch_id,
+                COUNT(*) AS speed_rules_count,
+                COALESCE(SUM(CASE WHEN enabled = 1 THEN 1 ELSE 0 END), 0) AS active_speed_rules
+            FROM bandwidth_schedules
+            WHERE tenant_id = ? AND target_type = 'card_batch'
+            GROUP BY card_batch_id
+        )
+    """
+
+
+def _batch_operations_conditions(*, status: str = "", q: str = "",
+                                 plan_id: Optional[int] = None,
+                                 manager: str = "",
+                                 distributor_id: Optional[int] = None) -> tuple[list[str], list[Any]]:
+    where = ["b.tenant_id = ?"]
+    vals: list[Any] = []
+
+    status = (status or "").strip().lower()
+    if status in {"deleted", "archived"}:
+        where.append("(b.deleted_at IS NOT NULL OR b.status IN ('deleted', 'cancelled', 'canceled', 'revoked'))")
+    elif status == "all":
+        pass
+    else:
+        where.append("b.deleted_at IS NULL")
+        if status == "active":
+            where.append("COALESCE(b.status, 'active') = 'active'")
+        elif status == "exhausted":
+            where.append("COALESCE(cs.total_cards, 0) > 0")
+            where.append("COALESCE(cs.available_count, 0) = 0")
+        elif status == "available":
+            where.append("COALESCE(cs.available_count, 0) > 0")
+        elif status in {"used", "in_use"}:
+            where.append("COALESCE(cs.active_count, 0) > 0")
+        elif status == "expired":
+            where.append("COALESCE(cs.expired_count, 0) > 0")
+        elif status in {"revoked", "cancelled", "canceled"}:
+            where.append("COALESCE(cs.revoked_count, 0) > 0")
+
+    if q:
+        like = f"%{q.strip()}%"
+        where.append(
+            "(b.batch_code LIKE ? OR b.package_name LIKE ? OR b.service_name LIKE ? "
+            "OR b.created_by LIKE ? OR p.name LIKE ?)"
+        )
+        vals.extend([like, like, like, like, like])
+    if plan_id:
+        where.append("b.plan_id = ?")
+        vals.append(plan_id)
+    if manager:
+        like = f"%{manager.strip()}%"
+        where.append("(CAST(b.manager_id AS TEXT) = ? OR b.created_by LIKE ?)")
+        vals.extend([manager.strip(), like])
+    if distributor_id:
+        where.append("b.distributor_id = ?")
+        vals.append(distributor_id)
+    return where, vals
+
+
+def _operation_status_from_row(item: dict) -> str:
+    status = (item.get("status") or "active").strip().lower()
+    if item.get("deleted_at"):
+        return "deleted"
+    if status in {"deleted", "cancelled", "canceled", "revoked"}:
+        return status
+    if int(item.get("total_cards") or 0) and int(item.get("available_count") or 0) == 0:
+        return "exhausted"
+    return status or "active"
+
+
+def list_batch_operations(
+    tenant_id: int,
+    *,
+    q: str = "",
+    status: str = "",
+    plan_id: Optional[int] = None,
+    manager: str = "",
+    distributor_id: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    now = now_iso()
+    where, vals = _batch_operations_conditions(
+        status=status,
+        q=q,
+        plan_id=plan_id,
+        manager=manager,
+        distributor_id=distributor_id,
+    )
+    sql = _batch_operations_base_sql() + f"""
+        SELECT
+            b.*,
+            p.name AS plan_name,
+            p.currency AS plan_currency,
+            p.speed_down_kbps AS plan_speed_down_kbps,
+            p.speed_up_kbps AS plan_speed_up_kbps,
+            p.quota_total_mb AS plan_quota_total_mb,
+            p.duration_minutes AS plan_duration_minutes,
+            d.display_name AS distributor_display_name,
+            d.name AS distributor_name,
+            COALESCE(cs.total_cards, 0) AS total_cards,
+            COALESCE(cs.available_count, 0) AS available_count,
+            COALESCE(cs.active_count, 0) AS active_count,
+            COALESCE(cs.expired_count, 0) AS expired_count,
+            COALESCE(cs.revoked_count, 0) AS revoked_count,
+            COALESCE(cs.available_count, 0) AS remaining_count,
+            COALESCE(a.sessions_count, 0) AS sessions_count,
+            COALESCE(a.unique_macs, 0) AS unique_macs,
+            COALESCE(a.online_sessions, 0) AS online_sessions,
+            COALESCE(ss.speed_rules_count, 0) AS speed_rules_count,
+            COALESCE(ss.active_speed_rules, 0) AS active_speed_rules,
+            CASE
+                WHEN COALESCE(b.price_per_card, 0) > 0 THEN b.price_per_card
+                WHEN COALESCE(b.total_price, 0) > 0 AND COALESCE(b.generated, 0) > 0
+                    THEN b.total_price * 1.0 / b.generated
+                ELSE 0
+            END AS estimated_unit_price
+        FROM card_batches b
+        LEFT JOIN access_plans p
+          ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
+        LEFT JOIN distributors d
+          ON d.tenant_id = b.tenant_id AND d.id = b.distributor_id
+        LEFT JOIN card_stats cs ON cs.batch_id = b.id
+        LEFT JOIN acct_stats a ON a.batch_id = b.id
+        LEFT JOIN speed_stats ss ON ss.card_batch_id = b.id
+        WHERE {" AND ".join(where)}
+        ORDER BY b.id DESC
+        LIMIT ? OFFSET ?
+    """
+    params = [now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals, limit, offset]
+    rows = [row_to_dict(row) for row in db().execute(sql, params).fetchall()]
+    for item in rows:
+        item["operational_status"] = _operation_status_from_row(item)
+    return rows
+
+
+def count_batch_operations(
+    tenant_id: int,
+    *,
+    q: str = "",
+    status: str = "",
+    plan_id: Optional[int] = None,
+    manager: str = "",
+    distributor_id: Optional[int] = None,
+) -> int:
+    now = now_iso()
+    where, vals = _batch_operations_conditions(
+        status=status,
+        q=q,
+        plan_id=plan_id,
+        manager=manager,
+        distributor_id=distributor_id,
+    )
+    sql = _batch_operations_base_sql() + f"""
+        SELECT COUNT(*) AS c
+        FROM card_batches b
+        LEFT JOIN access_plans p
+          ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
+        LEFT JOIN card_stats cs ON cs.batch_id = b.id
+        WHERE {" AND ".join(where)}
+    """
+    row = db().execute(
+        sql,
+        [now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals],
+    ).fetchone()
+    return int(row["c"] or 0) if row else 0
+
+
+def batch_operations_totals(
+    tenant_id: int,
+    *,
+    q: str = "",
+    status: str = "",
+    plan_id: Optional[int] = None,
+    manager: str = "",
+    distributor_id: Optional[int] = None,
+) -> dict:
+    now = now_iso()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    month = datetime.utcnow().strftime("%Y-%m")
+    year = datetime.utcnow().strftime("%Y")
+    where, vals = _batch_operations_conditions(
+        status=status,
+        q=q,
+        plan_id=plan_id,
+        manager=manager,
+        distributor_id=distributor_id,
+    )
+    sql = _batch_operations_base_sql() + f"""
+        SELECT
+            COUNT(DISTINCT b.id) AS batch_count,
+            COALESCE(SUM(CASE WHEN b.total_price > 0 THEN b.total_price ELSE b.price_per_card * b.generated END), 0) AS configured_value,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ? THEN 1 ELSE 0 END), 0) AS used_today,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ? THEN 1 ELSE 0 END), 0) AS used_month,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 4) = ? THEN 1 ELSE 0 END), 0) AS used_year,
+            COALESCE(SUM(CASE
+                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ?
+                THEN CASE
+                    WHEN b.price_per_card > 0 THEN b.price_per_card
+                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                    ELSE 0
+                END ELSE 0 END), 0) AS value_today,
+            COALESCE(SUM(CASE
+                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ?
+                THEN CASE
+                    WHEN b.price_per_card > 0 THEN b.price_per_card
+                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                    ELSE 0
+                END ELSE 0 END), 0) AS value_month,
+            COALESCE(SUM(CASE
+                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 4) = ?
+                THEN CASE
+                    WHEN b.price_per_card > 0 THEN b.price_per_card
+                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                    ELSE 0
+                END ELSE 0 END), 0) AS value_year
+        FROM card_batches b
+        LEFT JOIN access_plans p
+          ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
+        LEFT JOIN card_stats cs ON cs.batch_id = b.id
+        LEFT JOIN cards c
+          ON c.tenant_id = b.tenant_id AND c.batch_id = b.id
+        WHERE {" AND ".join(where)}
+    """
+    params = [
+        now, now, now, tenant_id, tenant_id, tenant_id,
+        today, month, year, today, month, year,
+        tenant_id, *vals,
+    ]
+    row = db().execute(sql, params).fetchone()
+    data = row_to_dict(row) if row else {}
+    return {
+        "batch_count": int(data.get("batch_count") or 0),
+        "configured_value": float(data.get("configured_value") or 0),
+        "used_today": int(data.get("used_today") or 0),
+        "used_month": int(data.get("used_month") or 0),
+        "used_year": int(data.get("used_year") or 0),
+        "value_today": float(data.get("value_today") or 0),
+        "value_month": float(data.get("value_month") or 0),
+        "value_year": float(data.get("value_year") or 0),
+    }
+
+
 def _build_batch_code(tenant_id: int) -> str:
     cur = db().execute("SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ?", (tenant_id,))
     n = cur.fetchone()["c"] + 1

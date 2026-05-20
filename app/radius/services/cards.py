@@ -29,6 +29,15 @@ class CardsService:
     def list_batches(self, *, limit: int = 100, offset: int = 0):
         return self._store.list_batches(limit=limit, offset=offset)
 
+    def list_batch_operations(self, **kw) -> list[dict]:
+        return self._store.list_batch_operations(**kw)
+
+    def count_batch_operations(self, **kw) -> int:
+        return self._store.count_batch_operations(**kw)
+
+    def batch_operations_totals(self, **kw) -> dict:
+        return self._store.batch_operations_totals(**kw)
+
     def list_cards(self, **kw):
         return self._store.list_cards(**kw)
 
@@ -309,6 +318,21 @@ class CardsService:
                 ),
             )
         return archived
+
+    def restore_batch(self, *, actor: str, batch_id: int) -> bool:
+        restored = cards_repo.restore_batch(self._store_tenant_id(), batch_id, actor=actor)
+        if restored:
+            self._audit.record(
+                actor=actor,
+                action="card_batch.restore",
+                target_type="card_batch",
+                target_id=str(batch_id),
+                payload=roadmap_audit_payload(
+                    domain="card_batches",
+                    action="card_batch.restore",
+                ),
+            )
+        return restored
 
 
 def get_cards_service() -> CardsService:
