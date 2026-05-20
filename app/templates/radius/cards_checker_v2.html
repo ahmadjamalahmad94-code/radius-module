@@ -857,22 +857,24 @@
             {% else %}
             {# MAC picker — modal lists previously-seen MACs from the
                card's accounting history; admin can pick one or paste
-               a custom address. #}
+               a custom address.
+
+               IMPORTANT: data is passed via data-* attributes (NOT
+               inline onclick). The earlier inline approach mixed
+               Jinja's `tojson` output (which contains double-quotes)
+               inside an onclick="..." attribute (also double-quoted),
+               which broke the attribute parsing and leaked the JS as
+               visible text. data-attributes get safe HTML escaping
+               from Jinja by default. A wire-up script at the bottom
+               of this template binds the click handler. #}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="lock-mac">
               <input type="hidden" name="op" value="lock_mac">
               <input type="hidden" name="mac" data-cc-prompt-field>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" data-cc-op="lock-mac"
-                      onclick="window.ccModal && window.ccModal.macPicker({
-                        title:'قفل MAC',
-                        currentMac: '{{ card.mac_address or "" }}',
-                        recentMacs: {{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }},
-                        onConfirm: (mac) => {
-                          var f = this.closest('form');
-                          f.querySelector('[data-cc-prompt-field]').value = mac;
-                          f.submit();
-                        }
-                      });">
+              <button class="cc-action" type="button"
+                      data-cc-op="lock-mac"
+                      data-cc-current-mac="{{ card.mac_address or '' }}"
+                      data-cc-recent-macs="{{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }}">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">قفل MAC</div>
@@ -1525,6 +1527,37 @@
       unitFld.value   = uEl.getAttribute('data-cc-unit-value');
       opFld.value     = opEl.getAttribute('data-cc-op-value');
       form.submit();
+    });
+  })();
+
+  // ── MAC lock button → MAC picker modal ────────────────────────────
+  // Wired via data-* attributes instead of inline onclick because the
+  // Jinja `tojson` output for the recent-MACs array contains double
+  // quotes that would break an onclick="..." attribute. Data attrs
+  // get safe HTML-escaping from Jinja and are decoded here on demand.
+  (function(){
+    'use strict';
+    var btn = document.querySelector('[data-cc-op="lock-mac"][data-cc-recent-macs]');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+      if (!window.ccModal) return;
+      var current = btn.getAttribute('data-cc-current-mac') || '';
+      var recent  = [];
+      try {
+        recent = JSON.parse(btn.getAttribute('data-cc-recent-macs') || '[]');
+        if (!Array.isArray(recent)) recent = [];
+      } catch(_){ recent = []; }
+      window.ccModal.macPicker({
+        title: 'قفل MAC',
+        currentMac: current,
+        recentMacs: recent,
+        onConfirm: function(mac){
+          var f = btn.closest('form');
+          if (!f) return;
+          f.querySelector('[data-cc-prompt-field]').value = mac;
+          f.submit();
+        },
+      });
     });
   })();
 
