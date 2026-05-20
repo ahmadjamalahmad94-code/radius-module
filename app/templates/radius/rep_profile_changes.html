@@ -1,23 +1,63 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Profile / plan changes — REBUILT (Night N4, 2026-05-21)
+
+   Same backend data: `items` (audit_log rows where target_type='user'
+   and action IN ('update','extend_time')).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}تغييرات الباقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
 {% block page_title %}تغييرات الباقات للمشتركين{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} تغيير</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr><th>#</th><th>المنفّذ</th><th>الفعل</th><th>المستخدم</th><th>التفاصيل</th><th>التاريخ</th></tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.id }}</td>
-      <td><strong>{{ r.actor }}</strong></td>
-      <td><span class="pill pill-cyan">{{ r.action }}</span></td>
-      <td class="mono">{{ r.target_id }}</td>
-      <td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.payload_json }}</td>
-      <td class="mono">{{ r.created_at[:16] if r.created_at else '—' }}</td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-arrows-rotate"></i>لا تغييرات</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "تغييرات الباقات والملفات",
+  subtitle="كل تعديل أو تمديد على مشترك — من audit_log (target_type=user).",
+  icon="arrows-rotate"
+) }}
+
+{% if items %}
+{% call hub.section("سجل التغييرات", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px">#</th>
+          <th>المنفّذ</th>
+          <th>الفعل</th>
+          <th>المستخدم</th>
+          <th>التفاصيل</th>
+          <th>التاريخ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono">{{ r.id }}</td>
+          <td><strong>{{ r.actor }}</strong></td>
+          <td>
+            {% if r.action == 'extend_time' %}{{ hub.pill("تمديد", variant="blue", dot=False) }}
+            {% else %}{{ hub.pill(r.action, variant="brand", dot=False) }}{% endif %}
+          </td>
+          <td class="mono">{{ r.target_id or '—' }}</td>
+          <td class="mono small" title="{{ r.payload_json or '' }}"
+              style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ r.payload_json or '—' }}
+          </td>
+          <td class="mono small">{{ r.created_at[:16] if r.created_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا تغييرات في الباقات", icon="arrows-rotate") }}
+{% endif %}
+
 {% endblock %}

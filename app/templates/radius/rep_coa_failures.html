@@ -1,31 +1,89 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   CoA failures (disconnect / reset_password) — REBUILT (Night N4, 2026-05-21)
+
+   Same backend data: `items` (sync_queue rows where kind in
+   (disconnect, reset_password) AND status in (failed, retrying)).
+   Retry POST → radius.sync_retry(job_id=…).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}أخطاء قطع الجلسة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
 {% block page_title %}أخطاء قطع الجلسة الفوري{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} مهمّة</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr><th>#</th><th>النوع</th><th>المستخدم</th><th>الحالة</th><th>المحاولات</th><th>الخطأ</th><th>إجراء</th></tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.id }}</td>
-      <td><span class="pill pill-warn">{{ r.kind }}</span></td>
-      <td class="mono">{{ r.entity_key }}</td>
-      <td>
-        {% if r.status == 'failed' %}<span class="pill pill-danger">فشل</span>
-        {% else %}<span class="pill pill-warn">{{ r.status }}</span>{% endif %}
-      </td>
-      <td class="num">{{ r.attempts }}</td>
-      <td class="mono" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.last_error or '—' }}</td>
-      <td>
-        <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
-          <button class="btn btn-primary btn-xs"><i class="fa-solid fa-rotate"></i></button>
-        </form>
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-plug-circle-xmark"></i>لا إخفاقات</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "أخطاء أوامر CoA",
+  subtitle="فشل/إعادة محاولة لأوامر disconnect و reset_password — من sync_queue.",
+  icon="plug-circle-xmark"
+) }}
+
+{% if items %}
+{% set _failed   = items|selectattr('status','equalto','failed')|list|length %}
+{% set _retrying = items|selectattr('status','equalto','retrying')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",      items|length, icon="layer-group", variant="brand") }}
+  {{ hub.kpi("فشل نهائي",    _failed,       icon="circle-xmark", variant="red") }}
+  {{ hub.kpi("إعادة محاولة", _retrying,    icon="rotate",       variant="amber") }}
+</div>
+
+{% call hub.section("المهام الفاشلة", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px">#</th>
+          <th>النوع</th>
+          <th>المستخدم</th>
+          <th>الحالة</th>
+          <th class="num">المحاولات</th>
+          <th>الخطأ</th>
+          <th style="width:80px">إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono">{{ r.id }}</td>
+          <td>
+            {% if r.kind == 'disconnect' %}{{ hub.pill("قطع", variant="amber", dot=False) }}
+            {% elif r.kind == 'reset_password' %}{{ hub.pill("تغيير كلمة", variant="blue", dot=False) }}
+            {% else %}{{ hub.pill(r.kind, variant="grey", dot=False) }}{% endif %}
+          </td>
+          <td class="mono">{{ r.entity_key or '—' }}</td>
+          <td>
+            {% if r.status == 'failed' %}{{ hub.pill("فشل", variant="red") }}
+            {% elif r.status == 'retrying' %}{{ hub.pill("إعادة", variant="amber") }}
+            {% else %}{{ hub.pill(r.status, variant="grey") }}{% endif %}
+          </td>
+          <td class="num mono">{{ r.attempts or 0 }}</td>
+          <td class="mono small" title="{{ r.last_error or '' }}"
+              style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ r.last_error or '—' }}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
+              <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="إعادة محاولة">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا إخفاقات حاليًا",
+  sub="كل أوامر CoA نجحت أو ما زالت قيد التنفيذ.",
+  icon="circle-check"
+) }}
+{% endif %}
+
 {% endblock %}

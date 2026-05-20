@@ -1,27 +1,69 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Manager login status — REBUILT (Night N4, 2026-05-21)
+
+   Same backend data: `items` (admins rows with username, full_name, email,
+   role_id, enabled, last_login_at, created_at).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}حالة دخول المدراء{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-clock"></i>{% endblock %}
 {% block page_title %}حالة دخول المدراء{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} مدير</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr><th>#</th><th>اليوزر</th><th>الاسم</th><th>البريد</th><th>الحالة</th><th>آخر دخول</th><th>أُنشئ</th></tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.id }}</td>
-      <td class="mono"><strong>{{ r.username }}</strong></td>
-      <td>{{ r.full_name or '—' }}</td>
-      <td class="mono">{{ r.email or '—' }}</td>
-      <td>
-        {% if r.enabled %}<span class="pill pill-success">مفعَّل</span>
-        {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}
-      </td>
-      <td class="mono">{{ r.last_login_at[:16] if r.last_login_at else 'لم يدخل' }}</td>
-      <td class="mono">{{ r.created_at[:10] if r.created_at else '—' }}</td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-user-clock"></i>لا مدراء</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "حالة دخول المدراء",
+  subtitle="آخر دخول لكل مدير في النظام — مرتّبة تنازليًا.",
+  icon="user-clock"
+) }}
+
+{% if items %}
+{% set _active = items|selectattr('enabled')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي", items|length, icon="users-gear",   variant="brand") }}
+  {{ hub.kpi("مفعَّلون", _active,       icon="circle-check", variant="green") }}
+  {{ hub.kpi("معطَّلون", items|length - _active, icon="circle-pause", variant="red") }}
+</div>
+
+{% call hub.section("المدراء", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>اليوزر</th>
+          <th>الاسم</th>
+          <th>البريد</th>
+          <th>الحالة</th>
+          <th>آخر دخول</th>
+          <th>أُنشئ في</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono">{{ r.id }}</td>
+          <td class="mono"><strong>{{ r.username }}</strong></td>
+          <td>{{ r.full_name or '—' }}</td>
+          <td class="mono small">{{ r.email or '—' }}</td>
+          <td>
+            {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+          </td>
+          <td class="mono small">{{ r.last_login_at[:16] if r.last_login_at else 'لم يدخل' }}</td>
+          <td class="mono small">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا مدراء بعد", icon="user-clock") }}
+{% endif %}
+
 {% endblock %}
