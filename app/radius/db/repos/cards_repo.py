@@ -712,6 +712,10 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             -- string, so we LEFT JOIN admins ON that to pick up a
             -- friendlier full_name.
             mc.full_name     AS batch_created_by_full_name,
+            -- Distributor (seller) — show display_name then fall back
+            -- to the canonical name.
+            d.display_name   AS batch_distributor_display_name,
+            d.name           AS batch_distributor_name,
             p.name AS profile_name,
             p.currency AS profile_currency,
             p.code AS profile_code,
@@ -743,6 +747,8 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             ON mo.id = b.manager_id
         LEFT JOIN admins mc
             ON mc.username = b.created_by
+        LEFT JOIN distributors d
+            ON d.id = b.distributor_id AND d.tenant_id = c.tenant_id
         WHERE c.tenant_id = ? AND (c.username = ? OR c.id = ?)
         LIMIT 1
         """,

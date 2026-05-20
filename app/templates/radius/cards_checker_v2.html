@@ -267,6 +267,20 @@
           </span>
         </div>
         {% endif %}
+        {# Distributor / seller — ALWAYS rendered like the price rows
+           (user request). Shows 'غير محدد' if the batch wasn't
+           assigned to a distributor. #}
+        <div class="cc-card-side-row" data-cc-field="distributor">
+          <span class="cc-card-side-label">الموزّع</span>
+          <span class="cc-card-side-value">
+            <i class="fa-solid fa-people-arrows" style="font-size:11px;opacity:.85"></i>
+            {% if card.batch and card.batch.distributor_name %}
+              {{ card.batch.distributor_name }}
+            {% else %}
+              <span class="cc-card-side-empty">غير محدد</span>
+            {% endif %}
+          </span>
+        </div>
       </div>
     </div>
 

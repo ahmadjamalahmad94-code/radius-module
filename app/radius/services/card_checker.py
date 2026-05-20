@@ -115,6 +115,10 @@ def _batch(row: dict) -> dict | None:
                               if row.get("batch_manager_id") else "")),
         "created_by_name": (row.get("batch_created_by_full_name")
                              or row.get("batch_created_by") or ""),
+        # Distributor / seller — display_name then name; empty if the
+        # batch wasn't assigned to a distributor (the JOIN missed).
+        "distributor_name": (row.get("batch_distributor_display_name")
+                              or row.get("batch_distributor_name") or ""),
     }
 
 

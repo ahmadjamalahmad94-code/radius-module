@@ -1961,3 +1961,12 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-weight:700;
   color:#fff;
 }
+
+/* Empty-value placeholder inside the hero side-info frosted pills.
+   Same idea as .cc-card-price-empty but tuned for the smaller pill
+   text so it doesn't dominate. */
+.cc-card-side-empty{
+  font-style:italic;
+  font-weight:600;
+  color:rgba(255,255,255,.65);
+}
