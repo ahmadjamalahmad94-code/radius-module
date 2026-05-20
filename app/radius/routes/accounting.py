@@ -11,6 +11,7 @@ from ..services.users import get_users_service
 def register_accounting_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/finance/ledger", "finance_ledger", finance_ledger, methods=["GET"])
     bp.add_url_rule("/finance/ledger/void", "finance_ledger_void", finance_ledger_void, methods=["POST"])
+    bp.add_url_rule("/finance/reports", "finance_reports", finance_reports, methods=["GET"])
     bp.add_url_rule("/users/<username>/finance", "users_finance", users_finance, methods=["GET"])
     bp.add_url_rule("/users/<username>/payments", "users_payment_create", users_payment_create, methods=["POST"])
     bp.add_url_rule("/users/<username>/loans", "users_loan_create", users_loan_create, methods=["POST"])
@@ -165,3 +166,34 @@ def finance_ledger_void():
     except (ValueError, RadiusValidationError) as e:
         flash(getattr(e, "message", str(e)), "error")
     return redirect(url_for("radius.finance_ledger"))
+
+
+_REPORTS = {
+    "daily": "مبيعات يومية",
+    "monthly": "مبيعات شهرية",
+    "yearly": "مبيعات سنوية",
+    "subscriber_payments": "دفعات المستفيدين",
+    "loans": "السلف",
+    "activations": "التفعيلات",
+    "card_sales": "مبيعات الكروت",
+    "profit_loss": "ربح / خسارة",
+    "distributor_debts": "ديون الموزعين",
+}
+
+
+def finance_reports():
+    report_type = (request.args.get("type") or "daily").strip()
+    if report_type not in _REPORTS:
+        report_type = "daily"
+    try:
+        items = _svc().reports(report_type=report_type)
+    except RadiusValidationError as e:
+        flash(e.message, "error")
+        items = []
+    return render_template(
+        "radius/accounting_reports.html",
+        report_type=report_type,
+        report_label=_REPORTS[report_type],
+        reports=_REPORTS,
+        items=items,
+    )

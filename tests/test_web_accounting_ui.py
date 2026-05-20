@@ -163,3 +163,28 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
     assert "web correction" in client.get(
         f"/admin/radius/finance/ledger?subscriber_id={sub['id']}",
     ).get_data(as_text=True)
+
+
+def test_financial_reports_page_reads_ledger_reports(client):
+    _web_login(client)
+    sub = _subscriber(client)
+    token = _csrf(client, f"/admin/radius/users/{sub['username']}/finance")
+    created = client.post(
+        f"/admin/radius/users/{sub['username']}/payments",
+        data={
+            "_csrf_token": token,
+            "amount": "25",
+            "currency": "JOD",
+            "method": "cash",
+            "notes": "report smoke",
+        },
+        follow_redirects=True,
+    )
+    assert created.status_code == 200
+
+    reports = client.get("/admin/radius/finance/reports?type=subscriber_payments")
+    assert reports.status_code == 200
+    html = reports.get_data(as_text=True)
+    assert "دفعات المستفيدين" in html
+    assert sub["username"] in html
+    assert "25" in html
