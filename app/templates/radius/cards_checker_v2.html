@@ -241,16 +241,10 @@
         </button>
       </div>
       {% endif %}
-      {% if card.remaining_seconds is not none %}
-      <div class="cc-card-remaining" data-cc-field="remaining_seconds">
-        <i class="fa-regular fa-clock"></i>
-        <span><span class="num">{{ duration(card.remaining_seconds) }}</span> متبقية</span>
-      </div>
-      {% endif %}
-
-      {# Moved here from the left info block — balances the hero's
-         visual weight. Plan + package live alongside the number;
-         pricing/manager rows stay on the left side. #}
+      {# Removed: cc-card-remaining + MAC bottom row — both moved to
+         the metric tiles / info panel so the hero's vertical height
+         stays controlled (user request). Package + plan stay on the
+         right as frosted side pills. #}
       <div class="cc-card-side-info">
         {% if card.batch and (card.batch.package_name or card.batch.batch_code) %}
         <div class="cc-card-side-row" data-cc-field="package_name">
@@ -267,20 +261,6 @@
           </span>
         </div>
         {% endif %}
-        {# Distributor / seller — ALWAYS rendered like the price rows
-           (user request). Shows 'غير محدد' if the batch wasn't
-           assigned to a distributor. #}
-        <div class="cc-card-side-row" data-cc-field="distributor">
-          <span class="cc-card-side-label">الموزّع</span>
-          <span class="cc-card-side-value">
-            <i class="fa-solid fa-people-arrows" style="font-size:11px;opacity:.85"></i>
-            {% if card.batch and card.batch.distributor_name %}
-              {{ card.batch.distributor_name }}
-            {% else %}
-              <span class="cc-card-side-empty">غير محدد</span>
-            {% endif %}
-          </span>
-        </div>
       </div>
     </div>
 
@@ -329,12 +309,28 @@
         </div>
       </div>
       {% endif %}
+
+      {# Distributor / seller — ALWAYS rendered (per user request) in
+         the same left-column style as the manager rows. Shows 'غير
+         محدد' if the batch wasn't assigned to a distributor. #}
+      <div class="cc-card-info-row" data-cc-field="distributor">
+        <div class="cc-card-info-label">الموزّع</div>
+        <div class="cc-card-info-value">
+          <i class="fa-solid fa-people-arrows" style="font-size:11px;opacity:.85"></i>
+          {% if card.batch and card.batch.distributor_name %}
+            {{ card.batch.distributor_name }}
+          {% else %}
+            <span class="cc-card-price-empty">غير محدد</span>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="cc-card-bottom">
     <span><i class="fa-regular fa-calendar"></i>تم إصدارها: {{ dt(card.created_at) }}</span>
-    <span>MAC: <span class="mono" style="font-family:ui-monospace,Consolas,monospace">{{ card.mac_address or '—' }}</span></span>
+    {# MAC removed from the bottom strip — visible in the info panel
+       beside the hero and in the wide sessions table below. #}
   </div>
 </div>
 {%- endmacro %}

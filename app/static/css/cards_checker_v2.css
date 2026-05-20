@@ -1970,3 +1970,11 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-weight:600;
   color:rgba(255,255,255,.65);
 }
+
+/* Hero — number size trimmed (user: 'رقم البطاقة صغرو نضبضب شوي').
+   Was 40px; 30px keeps the card identity prominent without bullying
+   the side info pills next to it. */
+.cc-card-number{
+  font-size:30px !important;
+  letter-spacing:.5px;
+}
