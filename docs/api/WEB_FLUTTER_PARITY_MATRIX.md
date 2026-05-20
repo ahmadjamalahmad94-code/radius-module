@@ -34,7 +34,7 @@ Status values:
 | Backups | `/admin/radius/backups` | `/api/v1/backups/status`, `/api/v1/backups/run` | `/backups` | partial | Local backup is real. Google Drive is intentionally disabled. |
 | Bandwidth schedules | `/admin/radius/bandwidth-schedules` | `/api/v1/bandwidth-schedules` | `/bandwidth-schedules` | dry_run | Saved schedules and resolver exist. Live apply depends on backend flag and RADIUS adapter verification. |
 | Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates` | `/print-templates` | partial | Saved layout and preview exist. Real PDF/export renderer is not complete. |
-| MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | missing | missing | API exists. Flutter config/test UI is required. |
+| MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | `/mikrotik` | done | Flutter now supports list/create/edit/delete plus saved and unsaved connectivity tests. Saved passwords are not returned. |
 | Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | partial | partial | Config/test/deliveries API exists; Flutter UI is still missing. |
 | System status | `/admin/radius/status` | `/api/v1/system/status` | missing | partial | API exists; Flutter screen is next. |
 | Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | missing | partial | API exists; Flutter screen is next. |
