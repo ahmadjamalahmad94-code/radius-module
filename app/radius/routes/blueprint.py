@@ -88,6 +88,7 @@ def _register_all(bp: Blueprint) -> None:
     from .accounting import register_accounting_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
+    from .bandwidth_schedules import register_bandwidth_schedule_routes
 
     register_dashboard_routes(bp)
     register_devices_routes(bp)
@@ -100,6 +101,7 @@ def _register_all(bp: Blueprint) -> None:
     register_accounting_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
+    register_bandwidth_schedule_routes(bp)
 
     from .saas_modules import register_saas_routes
     register_saas_routes(bp)

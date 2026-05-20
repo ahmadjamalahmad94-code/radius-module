@@ -237,8 +237,12 @@
         <i class="fa-solid fa-server"></i> أجهزة الشبكة
       </a>
       <a href="{{ url_for('radius.bw_list') }}"
-         class="{% if '/bandwidth' in request.path %}active{% endif %}">
+         class="{% if request.endpoint == 'radius.bw_list' %}active{% endif %}">
         <i class="fa-solid fa-gauge"></i> السرعات
+      </a>
+      <a href="{{ url_for('radius.bandwidth_schedules') }}"
+         class="{% if '/bandwidth-schedules' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-clock"></i> جدولة السرعات
       </a>
     </div>
 
