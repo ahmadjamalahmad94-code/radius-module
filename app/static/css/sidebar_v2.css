@@ -407,6 +407,17 @@ body[data-hb-side="collapsed"] .hb-side-user-caret{
 body[data-hb-side="collapsed"] .hb-side-brand{
   justify-content:center;padding:14px 8px 12px;
 }
+/* In collapsed mode the inner logo wrapper had `flex:1` (so the
+   logo + label text could span the row in opened mode). With the
+   text hidden in collapsed mode, that `flex:1` left the Ho mark
+   pinned to the row's start (visually RIGHT in RTL), and the
+   centered collapse FAB then looked offset from it. Shrink the
+   wrapper to fit so the brand's `justify-content: center` actually
+   centers the Ho mark — which makes the FAB beneath it line up. */
+body[data-hb-side="collapsed"] .hb-side-logo{
+  flex:0 0 auto;
+  gap:0;
+}
 body[data-hb-side="collapsed"] .hb-side-collapse-btn{
   position:absolute;
   /* Centered FAB beneath the logo square, straddling the brand/nav
