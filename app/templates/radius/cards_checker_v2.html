@@ -107,65 +107,71 @@
   <div class="cc-device-card-illustration">
     {% set cat = (device or {}).category or 'unknown' %}
     {% if cat in ['phone-ios','phone-android','phone-random','tablet'] %}
-      {# Phone illustration — frame + screen + speaker dot. #}
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {# Phone illustration — fills the viewBox so it reads at 130x100 #}
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         <defs>
           <linearGradient id="phoneScreen" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#A99BF9"/>
             <stop offset="100%" stop-color="#6B5AED"/>
           </linearGradient>
         </defs>
-        <rect x="42" y="14" width="40" height="92" rx="8" fill="#3A2A9E" />
-        <rect x="44" y="22" width="36" height="76" rx="3" fill="url(#phoneScreen)" />
-        <circle cx="62" cy="18" r="1.4" fill="#FFFFFF" opacity=".8"/>
-        <rect x="56" y="100" width="12" height="2" rx="1" fill="#FFFFFF" opacity=".6"/>
-        <circle cx="62" cy="60" r="6" fill="#FFFFFF" opacity=".35"/>
+        <rect x="30" y="6"  width="60" height="108" rx="10" fill="#3A2A9E" />
+        <rect x="34" y="18" width="52" height="84"  rx="4"  fill="url(#phoneScreen)" />
+        <circle cx="60" cy="12" r="2" fill="#FFFFFF" opacity=".85"/>
+        <rect x="50" y="106" width="20" height="3" rx="1.5" fill="#FFFFFF" opacity=".55"/>
+        <circle cx="60" cy="60" r="11" fill="#FFFFFF" opacity=".30"/>
+        <rect x="46" y="78"  width="28" height="3" rx="1.5" fill="#FFFFFF" opacity=".40"/>
+        <rect x="50" y="86"  width="20" height="2" rx="1"   fill="#FFFFFF" opacity=".30"/>
       </svg>
     {% elif cat in ['laptop'] %}
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="20" y="28" width="80" height="52" rx="4" fill="#3A2A9E"/>
-        <rect x="24" y="32" width="72" height="44" rx="2" fill="#A99BF9"/>
-        <rect x="12" y="80" width="96" height="6" rx="3" fill="#6B5AED"/>
-        <rect x="48" y="82" width="24" height="2" rx="1" fill="#3A2A9E"/>
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <rect x="12" y="20" width="96" height="60" rx="5" fill="#3A2A9E"/>
+        <rect x="16" y="24" width="88" height="52" rx="3" fill="#A99BF9"/>
+        <rect x="32" y="38" width="56" height="4"  rx="2" fill="#FFFFFF" opacity=".55"/>
+        <rect x="32" y="48" width="40" height="3"  rx="1.5" fill="#FFFFFF" opacity=".35"/>
+        <rect x="4"  y="82" width="112" height="8" rx="4" fill="#6B5AED"/>
+        <rect x="42" y="86" width="36"  height="3" rx="1.5" fill="#3A2A9E"/>
       </svg>
     {% elif cat in ['desktop'] %}
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="22" y="22" width="76" height="54" rx="4" fill="#3A2A9E"/>
-        <rect x="26" y="26" width="68" height="46" rx="2" fill="#A99BF9"/>
-        <rect x="52" y="76" width="16" height="14" fill="#6B5AED"/>
-        <rect x="36" y="90" width="48" height="6" rx="2" fill="#3A2A9E"/>
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <rect x="10" y="10" width="100" height="74" rx="5" fill="#3A2A9E"/>
+        <rect x="14" y="14" width="92"  height="66" rx="3" fill="#A99BF9"/>
+        <rect x="48" y="84" width="24"  height="16" fill="#6B5AED"/>
+        <rect x="28" y="100" width="64" height="8"  rx="3" fill="#3A2A9E"/>
+        <circle cx="60" cy="46" r="10" fill="#FFFFFF" opacity=".35"/>
       </svg>
     {% elif cat in ['console'] %}
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M 24 50 Q 24 36 38 36 H 82 Q 96 36 96 50 L 96 78 Q 96 86 88 86 L 76 86 L 60 64 L 44 86 L 32 86 Q 24 86 24 78 Z" fill="#3A2A9E"/>
-        <circle cx="42" cy="60" r="5" fill="#A99BF9"/>
-        <circle cx="78" cy="60" r="5" fill="#A99BF9"/>
-        <rect x="40" y="59" width="4" height="2" fill="#3A2A9E"/>
-        <rect x="76" y="59" width="4" height="2" fill="#3A2A9E"/>
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path d="M 8 50 Q 8 30 28 30 H 92 Q 112 30 112 50 L 112 86 Q 112 100 96 100 L 80 100 L 60 70 L 40 100 L 24 100 Q 8 100 8 86 Z" fill="#3A2A9E"/>
+        <circle cx="32" cy="62" r="9" fill="#A99BF9"/>
+        <circle cx="88" cy="62" r="9" fill="#A99BF9"/>
+        <rect x="28" y="60" width="8" height="4" rx="1" fill="#3A2A9E"/>
+        <rect x="84" y="60" width="8" height="4" rx="1" fill="#3A2A9E"/>
+        <circle cx="60" cy="56" r="5" fill="#6B5AED"/>
       </svg>
     {% else %}
-      {# Router illustration — body + 2 antennas + LED + WiFi waves. #}
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {# Router — antennas + body + LEDs + WiFi waves. Now fills 120x120. #}
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         {# antennas #}
-        <rect x="32" y="20" width="3" height="34" rx="1.5" fill="#3A2A9E"/>
-        <circle cx="33.5" cy="20" r="3" fill="#6B5AED"/>
-        <rect x="85" y="20" width="3" height="34" rx="1.5" fill="#3A2A9E"/>
-        <circle cx="86.5" cy="20" r="3" fill="#6B5AED"/>
+        <rect x="22" y="6"  width="4" height="44" rx="2" fill="#3A2A9E"/>
+        <circle cx="24" cy="6"  r="4" fill="#6B5AED"/>
+        <rect x="94" y="6"  width="4" height="44" rx="2" fill="#3A2A9E"/>
+        <circle cx="96" cy="6"  r="4" fill="#6B5AED"/>
         {# body #}
-        <rect x="18" y="54" width="84" height="34" rx="6" fill="#3A2A9E"/>
-        <rect x="22" y="58" width="76" height="26" rx="3" fill="#6B5AED"/>
+        <rect x="6"  y="50" width="108" height="46" rx="8" fill="#3A2A9E"/>
+        <rect x="12" y="56" width="96"  height="34" rx="5" fill="#6B5AED"/>
         {# LEDs #}
-        <circle cx="34" cy="71" r="2.6" fill="#5DE7A3"/>
-        <circle cx="44" cy="71" r="2.6" fill="#FFD86B"/>
-        <circle cx="54" cy="71" r="2.6" fill="#FFFFFF" opacity=".7"/>
-        {# WiFi waves rising above center #}
-        <path d="M 60 50 Q 50 42 40 50" stroke="#6B5AED" stroke-width="2" fill="none" opacity=".55"/>
-        <path d="M 60 44 Q 46 32 32 44" stroke="#6B5AED" stroke-width="2" fill="none" opacity=".35"/>
-        {# right-side waves to balance #}
-        <path d="M 60 50 Q 70 42 80 50" stroke="#6B5AED" stroke-width="2" fill="none" opacity=".55"/>
-        <path d="M 60 44 Q 74 32 88 44" stroke="#6B5AED" stroke-width="2" fill="none" opacity=".35"/>
-        {# base shadow line #}
-        <rect x="28" y="92" width="64" height="3" rx="1.5" fill="#3A2A9E" opacity=".3"/>
+        <circle cx="28" cy="73" r="3.5" fill="#5DE7A3"/>
+        <circle cx="42" cy="73" r="3.5" fill="#FFD86B"/>
+        <circle cx="56" cy="73" r="3.5" fill="#FFFFFF" opacity=".7"/>
+        <circle cx="70" cy="73" r="3.5" fill="#FFFFFF" opacity=".5"/>
+        {# WiFi waves above the center, both sides #}
+        <path d="M 60 44 Q 46 30 30 44" stroke="#6B5AED" stroke-width="3" fill="none" opacity=".55" stroke-linecap="round"/>
+        <path d="M 60 36 Q 40 18 20 36" stroke="#6B5AED" stroke-width="3" fill="none" opacity=".30" stroke-linecap="round"/>
+        <path d="M 60 44 Q 74 30 90 44" stroke="#6B5AED" stroke-width="3" fill="none" opacity=".55" stroke-linecap="round"/>
+        <path d="M 60 36 Q 80 18 100 36" stroke="#6B5AED" stroke-width="3" fill="none" opacity=".30" stroke-linecap="round"/>
+        {# base shadow #}
+        <rect x="18" y="100" width="84" height="4" rx="2" fill="#3A2A9E" opacity=".3"/>
       </svg>
     {% endif %}
   </div>
@@ -706,7 +712,6 @@
           <div class="cc-section-body">
             {% set d = card.current_device or {} %}
             <div class="cc-device-card">
-              <div class="cc-device-card-icon"><i class="fa-solid fa-{{ d.icon or 'wifi' }}"></i></div>
               <div class="cc-device-card-body">
                 <div class="cc-device-card-title">
                   {{ d.label or (d.connection or 'غير معروف') }}
@@ -717,6 +722,9 @@
                   <dt>IP</dt><dd>{{ card.ip_address or '—' }}</dd>
                 </dl>
               </div>
+              {# Same illustration used in advanced mode — fixes R13.A.9
+                 round 2 gap where simple mode still showed the old icon. #}
+              {{ device_illustration(d) }}
             </div>
           </div>
         </section>
