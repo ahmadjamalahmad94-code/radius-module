@@ -16,7 +16,7 @@ def register_v1(parent: Blueprint) -> None:
         card_checker, cards, dashboard, devices, distributors, health, internal_auth,
         invoices, ledger, loans, mikrotik, nas, operational_reports, payments,
         pools, print_templates, profiles, recycle_bin, reports, services, sessions,
-        settings, share_groups, system, tenants, tickets, tokens, vouchers, webhooks,
+        settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
     )
     health.register(v1)
     accounts.register(v1)
@@ -54,6 +54,7 @@ def register_v1(parent: Blueprint) -> None:
     settings.register(v1)
     tokens.register(v1)
     tenants.register(v1)
+    tools.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token

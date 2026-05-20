@@ -44,10 +44,10 @@ Status values:
 | API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
 | Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
 | Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | `/operational-reports` | partial | JSON API and Flutter viewer exist for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Needs export/pinned filters later. |
-| Tools: set speeds | `/admin/radius/tools/set-speeds` | missing | missing | web_only_until_api | Needs safe API. No direct Flutter RADIUS action. |
-| Tools: maintenance | `/admin/radius/tools/maintenance` | missing | missing | web_only_until_api | API must require preview first and strong confirmation before run. |
-| Tools: test auth | `/admin/radius/tools/test-auth` | missing | missing | web_only_until_api | Needs API-backed test screen. |
-| Tools: RADIUS log | `/admin/radius/tools/radius-log` | missing | missing | web_only_until_api | Web has JSON helper; expose authenticated API before Flutter. |
+| Tools: set speeds | `/admin/radius/tools/set-speeds` | `/api/v1/tools/set-speeds` | missing | partial | API supports dry-run and real plan speed updates. Flutter screen is next. |
+| Tools: maintenance | `/admin/radius/tools/maintenance` | `/api/v1/tools/maintenance/preview`, `/api/v1/tools/maintenance/run` | missing | partial | API requires preview token and explicit confirmation phrase before run. Flutter screen is next. |
+| Tools: test auth | `/admin/radius/tools/test-auth` | `/api/v1/tools/test-auth` | missing | partial | API-backed policy-engine test exists. Flutter screen is next. |
+| Tools: RADIUS log | `/admin/radius/tools/radius-log` | `/api/v1/tools/radius-log` | missing | partial | Authenticated API exposes radpostauth rows without passwords. Flutter viewer is next. |
 | Bandwidth profiles | `/admin/radius/bandwidth-profiles` | `/api/v1/bandwidth-profiles` | missing | partial | API CRUD exists; Flutter screen is next. |
 | Pools | `/admin/radius/pools` | `/api/v1/pools` | missing | partial | API CRUD exists; Flutter screen is next. |
 | Vouchers | `/admin/radius/vouchers` | `/api/v1/vouchers` | missing | partial | API generate/list/revoke exists; Flutter screen is next. |
