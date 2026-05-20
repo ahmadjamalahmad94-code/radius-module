@@ -1,5 +1,8 @@
+{# Admin form — REBUILT (Night N10) on hub-v2. Same backend. #}
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة مدير" if is_new else "تعديل مدير" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "إضافة مدير" if is_new else "تعديل: " + (admin.username or 'مدير') %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -7,135 +10,163 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H6 — Admin form (نفس نمط RM-H1/H3/H4/H5 بتوكينات --hr-*) */
-.ad-form{max-width:980px;margin:0 auto;padding:8px 4px 18px}
-.sec-card{
-  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
-  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  box-shadow:var(--hr-shadow-sm);
-}
-.sec-card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;
-  font-size:14.5px;font-weight:800;color:var(--hr-text);
-  padding-bottom:10px;border-bottom:1px dashed var(--hr-border)}
-.sec-card > h3 i.h-ic{width:30px;height:30px;border-radius:6px;
-  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px}
-.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
-.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
-.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
-.sec-card.collapsible.is-collapsed > .sb{display:none}
-.sec-card.id    {border-inline-start:3px solid var(--hr-cyan-500)}
-.sec-card.auth  {border-inline-start:3px solid var(--hr-green)}
-.sec-card.auth  > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
-.sec-card.prof  {border-inline-start:3px solid var(--hr-purple)}
-.sec-card.prof  > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
+  .ad-form{ max-width: 1080px; margin: 0 auto; }
+  .ad-grid{ display:grid; gap:12px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width:720px){ .ad-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:480px){ .ad-grid{ grid-template-columns: 1fr; } }
+  .ad-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .ad-field.full{ grid-column: 1 / -1; }
+  .ad-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .ad-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .ad-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+  .ad-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700;
+  }
+  .ad-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+  .ad-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+  }
+  .ad-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .ad-section.is-collapsible .ad-section-head{ cursor:pointer; user-select:none; }
+  .ad-section.is-collapsed .ad-section-head{ border-bottom: none; }
+  .ad-section-icon{
+    width:30px; height:30px; border-radius:var(--hub-r-md);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:13px; flex-shrink:0;
+  }
+  .ad-section-title{ flex:1; font-size:14px; font-weight:800; }
+  .ad-section-toggle{ color:var(--hub-text-mute); transition: transform var(--hub-anim-fast) var(--hub-ease); }
+  .ad-section.is-collapsed .ad-section-toggle{ transform: rotate(-90deg); }
+  .ad-section-body{ padding: 18px; }
+  .ad-section.is-collapsed .ad-section-body{ display:none; }
 
-.f-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
-@media (max-width:720px){.f-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:480px){.f-grid{grid-template-columns:1fr}}
-.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.f-field.full{grid-column:1 / -1}
-.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
-.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
-.f-field input, .f-field select, .f-field textarea{
-  padding:10px 12px;border-radius:var(--hr-r,6px);
-  border:1.5px solid var(--hr-border-strong);
-  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
-  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
-}
-.f-field input[readonly]{background:var(--hr-stripe);color:var(--hr-text-soft);cursor:not-allowed}
-.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
-  outline:0;border-color:var(--hr-cyan-500);background:#fff;
-  box-shadow:0 0 0 3px rgba(43,170,204,.20);
-}
-.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
-.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
-.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+  .ad-section--id   { border-inline-start: 3px solid var(--hub-brand); }
+  .ad-section--id   .ad-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .ad-section--auth { border-inline-start: 3px solid var(--hub-green); }
+  .ad-section--auth .ad-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .ad-section--prof { border-inline-start: 3px solid #8B5CF6; }
+  .ad-section--prof .ad-section-icon{ background: #EDE9FE; color: #6D28D9; }
 </style>
 {% endblock %}
 
 {% block content %}
+
+{{ hub.hero(
+  title_ar,
+  subtitle="حساب مدير في نظام الراديوس — الهوية، كلمة المرور، الدور، الملف الشخصي",
+  icon="user-shield",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
 <div class="ad-form">
 <form method="post"
       action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">
 
-  <section class="sec-card id">
-    <h3><i class="fa-solid fa-user-shield h-ic"></i>الهوية والدور</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>اسم المستخدم <span class="req">*</span></label>
-        <input type="text" name="username" required {% if not is_new %}readonly{% endif %}
-               value="{{ admin.username if admin else '' }}" placeholder="admin">
-        <div class="field-help">لا يمكن تغييره بعد الإنشاء.</div></div>
-      <div class="f-field"><label>الاسم الكامل</label>
-        <input type="text" name="full_name" value="{{ admin.full_name if admin else '' }}"></div>
-      <div class="f-field"><label>الدور</label>
-        <select name="role_id">
-          <option value="">— بدون —</option>
-          {% for r in roles %}
-            <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
-              {{ r.display_name or r.name }} ({{ r.name }})
-            </option>
-          {% endfor %}
-        </select>
-        <div class="field-help">الدور يحدّد الصلاحيات الفعلية.</div></div>
-      <div class="f-field"><label>الحالة</label>
-        <div class="chk-row"><input type="checkbox" name="enabled" id="ad-en" value="1"
-          {% if (not admin) or admin.enabled %}checked{% endif %}>
-          <label for="ad-en">مفعَّل</label></div></div>
-    </div>
-    </div>
-  </section>
-
-  <section class="sec-card auth">
-    <h3><i class="fa-solid fa-key h-ic"></i>التحقق من الدخول</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
-        <input type="password" name="password" {% if is_new %}required{% endif %}
-               placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
-        <div class="field-help">تُحفظ بصيغة مشفّرة، ولا تظهر كنص واضح.</div></div>
-      {% if not is_new and admin and admin.last_login_at %}
-      <div class="f-field"><label>آخر دخول</label>
-        <input type="text" readonly value="{{ admin.last_login_at }}"></div>
-      <div class="f-field"><label>من IP</label>
-        <input type="text" readonly value="{{ admin.last_login_ip or '—' }}"></div>
-      {% endif %}
-    </div>
+  {# ── 1. Identity + Role ─────────────────────── #}
+  <section class="ad-section ad-section--id">
+    <header class="ad-section-head">
+      <span class="ad-section-icon"><i class="fa-solid fa-user-shield"></i></span>
+      <span class="ad-section-title">الهوية والدور</span>
+    </header>
+    <div class="ad-section-body">
+      <div class="ad-grid">
+        <div class="ad-field"><label>اسم المستخدم <span class="req">*</span></label>
+          <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
+                 value="{{ admin.username if admin else '' }}" placeholder="admin">
+          <div class="help">{% if is_new %}لن يمكن تغييره بعد الإنشاء.{% else %}لا يمكن تعديله.{% endif %}</div></div>
+        <div class="ad-field"><label>الاسم الكامل</label>
+          <input class="hub-input" type="text" name="full_name" value="{{ admin.full_name if admin else '' }}"></div>
+        <div class="ad-field"><label>الدور</label>
+          <select class="hub-select" name="role_id">
+            <option value="">— بدون —</option>
+            {% for r in roles %}
+              <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
+                {{ r.display_name or r.name }} ({{ r.name }})
+              </option>
+            {% endfor %}
+          </select>
+          <div class="help">الدور يحدّد الصلاحيات الفعلية.</div></div>
+        <div class="ad-field"><label>الحالة</label>
+          <div class="ad-chk">
+            <input type="checkbox" name="enabled" id="ad-en" value="1" {% if (not admin) or admin.enabled %}checked{% endif %}>
+            <label for="ad-en">مفعَّل</label>
+          </div></div>
+      </div>
     </div>
   </section>
 
-  <section class="sec-card prof collapsible" data-sec="prof">
-    <h3><i class="fa-solid fa-id-card h-ic"></i>معلومات الاتصال + الملف الشخصي
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>البريد الإلكتروني</label>
-        <input type="email" name="email" value="{{ admin.email if admin else '' }}"></div>
-      <div class="f-field"><label>الجوال</label>
-        <input type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div>
-      <div class="f-field"><label>هاتف آخر</label>
-        <input type="tel" name="phone" value="{{ admin.phone if admin else '' }}"></div>
-      <div class="f-field"><label>رابط الصورة الشخصية</label>
-        <input type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}"
-               placeholder="https://..."></div>
-      <div class="f-field"><label>وسوم (CSV)</label>
-        <input type="text" name="tags" value="{{ admin.tags if admin else '' }}"
-               placeholder="دعم، تحصيل">
-        <div class="field-help">للتنظيم — تصنيف داخلي للمدراء.</div></div>
-      <div class="f-field full"><label>ملاحظات على الملف الشخصي</label>
-        <textarea name="profile_notes" rows="2"
-                  style="min-height:60px;resize:vertical">{{ admin.profile_notes if admin else '' }}</textarea></div>
-    </div>
+  {# ── 2. Authentication ───────────────────────── #}
+  <section class="ad-section ad-section--auth">
+    <header class="ad-section-head">
+      <span class="ad-section-icon"><i class="fa-solid fa-key"></i></span>
+      <span class="ad-section-title">التحقق من الدخول</span>
+    </header>
+    <div class="ad-section-body">
+      <div class="ad-grid">
+        <div class="ad-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+          <input class="hub-input" type="password" name="password" {% if is_new %}required{% endif %}
+                 placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
+          <div class="help">تُحفظ مشفّرة. لا تظهر كنص واضح بعد الحفظ.</div></div>
+        {% if not is_new and admin and admin.last_login_at %}
+        <div class="ad-field"><label>آخر دخول</label>
+          <input class="hub-input" type="text" readonly value="{{ admin.last_login_at }}"
+                 style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"></div>
+        <div class="ad-field"><label>من IP</label>
+          <input class="hub-input" type="text" readonly value="{{ admin.last_login_ip or '—' }}"
+                 style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"></div>
+        {% endif %}
+      </div>
     </div>
   </section>
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "إضافة" if is_new else "تحديث" }}
+  {# ── 3. Profile (collapsible) ────────────────── #}
+  <section class="ad-section ad-section--prof is-collapsible" data-sec="prof">
+    <header class="ad-section-head">
+      <span class="ad-section-icon"><i class="fa-solid fa-id-card"></i></span>
+      <span class="ad-section-title">معلومات الاتصال والملف الشخصي</span>
+      <i class="fa-solid fa-chevron-down ad-section-toggle"></i>
+    </header>
+    <div class="ad-section-body">
+      <div class="ad-grid">
+        <div class="ad-field"><label>البريد الإلكتروني</label>
+          <input class="hub-input" type="email" name="email" value="{{ admin.email if admin else '' }}"></div>
+        <div class="ad-field"><label>الجوال</label>
+          <input class="hub-input" type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}"></div>
+        <div class="ad-field"><label>هاتف آخر</label>
+          <input class="hub-input" type="tel" name="phone" value="{{ admin.phone if admin else '' }}"></div>
+        <div class="ad-field"><label>رابط الصورة الشخصية</label>
+          <input class="hub-input" type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}" placeholder="https://..."></div>
+        <div class="ad-field"><label>وسوم (CSV)</label>
+          <input class="hub-input" type="text" name="tags" value="{{ admin.tags if admin else '' }}" placeholder="دعم، تحصيل">
+          <div class="help">تصنيف داخلي للمدراء.</div></div>
+        <div class="ad-field full"><label>ملاحظات على الملف الشخصي</label>
+          <textarea class="hub-textarea" name="profile_notes">{{ admin.profile_notes if admin else '' }}</textarea></div>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.admins_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء المدير" if is_new else "حفظ التعديلات" }}
     </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.admins_list') }}">إلغاء</a>
   </div>
 </form>
 </div>
@@ -143,14 +174,14 @@
 <script>
 (function(){
   var LS = 'hr:ad-form:sec:';
-  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+  document.querySelectorAll('.ad-section.is-collapsible').forEach(function(card){
     var k = card.dataset.sec; if (!k) return;
     var v = null;
     try { v = localStorage.getItem(LS + k); } catch(_) {}
     if (v === 'collapsed') card.classList.add('is-collapsed');
     else if (v === 'open')  card.classList.remove('is-collapsed');
-    var h = card.querySelector(':scope > h3');
-    if (h) h.addEventListener('click', function(){
+    var head = card.querySelector('.ad-section-head');
+    if (head) head.addEventListener('click', function(){
       card.classList.toggle('is-collapsed');
       try { localStorage.setItem(LS + k,
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}

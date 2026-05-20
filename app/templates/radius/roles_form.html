@@ -1,5 +1,8 @@
+{# Role form — REBUILT (Night N10) on hub-v2. Same backend. #}
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة دور" if is_new else "تعديل دور" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "إضافة دور" if is_new else "تعديل دور: " + (role.name or '') %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -7,110 +10,131 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H6 — Role form (نفس نمط RM-H1.. بتوكينات --hr-*) */
-.rl-form{max-width:1000px;margin:0 auto;padding:8px 4px 18px}
-.sec-card{
-  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
-  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  box-shadow:var(--hr-shadow-sm);
-}
-.sec-card > h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;
-  font-size:14.5px;font-weight:800;color:var(--hr-text);
-  padding-bottom:10px;border-bottom:1px dashed var(--hr-border)}
-.sec-card > h3 i.h-ic{width:30px;height:30px;border-radius:6px;
-  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px}
-.sec-card.id  {border-inline-start:3px solid var(--hr-cyan-500)}
-.sec-card.perm{border-inline-start:3px solid var(--hr-green)}
-.sec-card.perm > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
+  .rl-form{ max-width: 1100px; margin: 0 auto; }
+  .rl-grid{ display:grid; gap:12px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width:720px){ .rl-grid{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:480px){ .rl-grid{ grid-template-columns: 1fr; } }
+  .rl-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .rl-field.full{ grid-column: 1 / -1; }
+  .rl-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .rl-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .rl-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+  .rl-field input[type=color]{ padding: 3px; height: 42px; cursor: pointer; }
 
-.f-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
-@media (max-width:720px){.f-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:480px){.f-grid{grid-template-columns:1fr}}
-.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.f-field.full{grid-column:1 / -1}
-.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
-.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
-.f-field input, .f-field select, .f-field textarea{
-  padding:10px 12px;border-radius:var(--hr-r,6px);
-  border:1.5px solid var(--hr-border-strong);
-  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
-  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
-}
-.f-field input[readonly]{background:var(--hr-stripe);color:var(--hr-text-soft);cursor:not-allowed}
-.f-field input[type=color]{padding:4px;height:42px;cursor:pointer}
-.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
-  outline:0;border-color:var(--hr-cyan-500);background:#fff;
-  box-shadow:0 0 0 3px rgba(43,170,204,.20);
-}
-.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
-
-.perm-group{margin-bottom:14px}
-.perm-group-title{
-  font-size:13px;font-weight:800;color:var(--hr-text);margin-bottom:8px;
-  padding-bottom:6px;border-bottom:1px dashed var(--hr-border);
-  display:flex;align-items:center;gap:8px;
-}
-.perm-group-title .pg-toggle{
-  margin-inline-start:auto;background:transparent;border:1px solid var(--hr-border-strong);
-  border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--hr-text-soft);
-}
-.perm-group-title .pg-toggle:hover{background:var(--hr-soft)}
-.perm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px}
-.perm-item{
-  display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;
-  background:var(--hr-soft);cursor:pointer;font-size:12.5px;color:var(--hr-text);
-  border:1px solid transparent;transition:.12s ease;user-select:none;
-}
-.perm-item:hover{background:#fff;border-color:var(--hr-border)}
-.perm-item input{width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:var(--hr-cyan-500)}
-.perm-item.is-checked{background:var(--hr-badge-success-bg);border-color:rgba(31,122,79,.3);color:var(--hr-badge-success-fg);font-weight:700}
-.perm-item code{font-family:monospace;font-size:11px;color:var(--hr-text-muted)}
-
-.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+  /* Permissions */
+  .perm-group{ margin-bottom: var(--hub-gap-lg); }
+  .perm-group-title{
+    display:flex; align-items:center; gap:8px;
+    font-size: 13px; font-weight: 800; color: var(--hub-text);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--hub-border);
+  }
+  .perm-group-title i.folder{ color: var(--hub-brand-ink); font-size: 12px; }
+  .perm-group-title .pg-toggle{
+    margin-inline-start: auto;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border-strong);
+    border-radius: var(--hub-r-md);
+    padding: 4px 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--hub-brand-ink);
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .perm-group-title .pg-toggle:hover{ background: var(--hub-brand-soft); border-color: var(--hub-brand-line); }
+  .perm-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 6px;
+  }
+  .perm-item{
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--hub-r-md);
+    background: var(--hub-bg-soft);
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--hub-text);
+    user-select: none;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .perm-item:hover{
+    background: var(--hub-bg-card);
+    border-color: var(--hub-border);
+  }
+  .perm-item input{
+    width: 15px; height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--hub-brand);
+  }
+  .perm-item.is-checked{
+    background: var(--hub-brand-soft);
+    border-color: var(--hub-brand-line);
+    color: var(--hub-brand-ink);
+    font-weight: 700;
+  }
+  .perm-item code{
+    font-family: var(--hub-mono);
+    font-size: 11px;
+    color: var(--hub-text-mute);
+  }
+  .perm-item.is-checked code{ color: var(--hub-brand-ink); }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set selected = (role.permissions if role else ())|list %}
+
+{{ hub.hero(
+  title_ar,
+  subtitle="دور وصلاحيات لاستخدامه في تعيينات المدراء — الاسم التقني، الاسم الظاهر، الصلاحيات",
+  icon="key",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.roles_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
 <div class="rl-form">
 <form method="post"
       action="{{ url_for('radius.roles_save', role_id=role.id) if not is_new else url_for('radius.roles_create') }}">
 
-  <section class="sec-card id">
-    <h3><i class="fa-solid fa-key h-ic"></i>الهوية</h3>
-    <div class="f-grid">
-      <div class="f-field"><label>اسم الدور الداخلي <span class="req">*</span></label>
-        <input type="text" name="name" {% if not is_new %}readonly{% endif %} required
+  {# ── Identity ───────────────────────────── #}
+  {% call hub.section("الهوية", icon="key") %}
+    <div class="rl-grid">
+      <div class="rl-field"><label>اسم الدور الداخلي <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %} required
                value="{{ role.name if role else '' }}" placeholder="manager / viewer / auditor">
-        <div class="field-help">اسم تقني فريد — يُستخدم في الكود.</div></div>
-      <div class="f-field"><label>الاسم الظاهر</label>
-        <input type="text" name="display_name" value="{{ role.display_name if role else '' }}"></div>
-      <div class="f-field"><label>اللون</label>
-        <input type="color" name="color" value="{{ role.color if role else '#2BAACC' }}"></div>
-      <div class="f-field full"><label>الوصف</label>
-        <textarea name="description" rows="2" style="min-height:60px;resize:vertical">{{ role.description if role else '' }}</textarea></div>
+        <div class="help">اسم تقني فريد — يُستخدم في الكود.</div></div>
+      <div class="rl-field"><label>الاسم الظاهر</label>
+        <input class="hub-input" type="text" name="display_name" value="{{ role.display_name if role else '' }}"></div>
+      <div class="rl-field"><label>اللون</label>
+        <input class="hub-input" type="color" name="color" value="{{ role.color if role else '#6B5AED' }}"></div>
+      <div class="rl-field full"><label>الوصف</label>
+        <textarea class="hub-textarea" name="description">{{ role.description if role else '' }}</textarea></div>
     </div>
-  </section>
+  {% endcall %}
 
-  <section class="sec-card perm">
-    <h3><i class="fa-solid fa-shield-halved h-ic"></i>الصلاحيات
-      <span style="margin-inline-start:auto;font-weight:600;color:var(--hr-text-muted);font-size:11.5px">
-        <span id="perm-count">0</span> / {{ perms|length }} مختارة
-      </span></h3>
+  {# ── Permissions ────────────────────────── #}
+  {% call hub.section("الصلاحيات", icon="shield-halved",
+       meta='<span id="perm-count">0</span> / ' + (perms|length)|string + ' مختارة') %}
     {% if groups %}
       {% for grp, plist in groups.items() %}
       <div class="perm-group">
         <div class="perm-group-title">
-          <i class="fa-solid fa-folder-open" style="color:var(--hr-cyan-500)"></i>
+          <i class="fa-solid fa-folder-open folder"></i>
           <span>{{ grp }}</span>
           <button type="button" class="pg-toggle" data-group="{{ loop.index }}">حدّد الكل</button>
         </div>
         <div class="perm-grid" data-group-grid="{{ loop.index }}">
           {% for p in plist %}
           <label class="perm-item {% if p in selected %}is-checked{% endif %}">
-            <input type="checkbox" name="permissions" value="{{ p }}"
-              {% if p in selected %}checked{% endif %}>
+            <input type="checkbox" name="permissions" value="{{ p }}" {% if p in selected %}checked{% endif %}>
             <code>{{ p }}</code>
           </label>
           {% endfor %}
@@ -121,26 +145,26 @@
       <div class="perm-grid">
         {% for p in perms %}
         <label class="perm-item {% if p in selected %}is-checked{% endif %}">
-          <input type="checkbox" name="permissions" value="{{ p }}"
-            {% if p in selected %}checked{% endif %}>
+          <input type="checkbox" name="permissions" value="{{ p }}" {% if p in selected %}checked{% endif %}>
           <code>{{ p }}</code>
         </label>
         {% endfor %}
       </div>
     {% endif %}
-  </section>
+  {% endcall %}
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.roles_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الدور" if is_new else "حفظ التعديلات" }}
     </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.roles_list') }}">إلغاء</a>
   </div>
 </form>
 </div>
 
 <script>
 (function(){
+  'use strict';
   var items = document.querySelectorAll('.perm-item');
   var counter = document.getElementById('perm-count');
   function recount(){
@@ -161,7 +185,8 @@
     });
   });
   document.querySelectorAll('.pg-toggle').forEach(function(btn){
-    btn.addEventListener('click', function(){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
       var gid = btn.dataset.group;
       var grid = document.querySelector('[data-group-grid="' + gid + '"]');
       if (!grid) return;
