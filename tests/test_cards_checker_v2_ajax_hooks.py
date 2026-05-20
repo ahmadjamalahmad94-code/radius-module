@@ -125,11 +125,13 @@ def test_v2_found_card_still_inside_wrapper(app):
     assert section_pos > start
 
 
-def test_v1_does_not_include_v2_script(app):
-    """Loading v2 JS on v1 would silently bind to non-existent ids —
-    not catastrophic but a smell. The legacy page stays JS-free here."""
+def test_legacy_url_loads_v2_script_after_swap(app):
+    """R13.A.4: /cards/checker now renders the v2 template, which
+    includes the v2 script. Before A.4 this test was inverted (asserted
+    'NOT in body'); after A.4 it must be present."""
     client = app.test_client()
     _login(client)
     resp = client.get("/admin/radius/cards/checker?query=anything")
     body = resp.get_data(as_text=True)
-    assert "cards_checker_v2.js" not in body
+    assert "cards_checker_v2.js" in body, \
+        "after A.4, legacy /cards/checker URL serves the v2 template"

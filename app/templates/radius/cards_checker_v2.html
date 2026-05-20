@@ -295,6 +295,7 @@
               <thead>
                 <tr>
                   <th data-cc-col="status">حالة</th>
+                  <th data-cc-col="session_id">معرّف الجلسة</th>
                   <th data-cc-col="started_at">بدأت</th>
                   <th data-cc-col="stopped_at">انتهت</th>
                   <th data-cc-col="duration_seconds">المدة</th>
@@ -303,6 +304,7 @@
                   <th data-cc-col="nas">NAS</th>
                   <th data-cc-col="upload">رفع</th>
                   <th data-cc-col="download">تحميل</th>
+                  <th data-cc-col="device_hint">الجهاز</th>
                   <th data-cc-col="terminate">سبب الإغلاق</th>
                 </tr>
               </thead>
@@ -316,6 +318,7 @@
                       <span class="cc-pill cc-pill-grey">منتهية</span>
                     {% endif %}
                   </td>
+                  <td class="mono" data-cc-col-cell="session_id">{{ ses.session_id or ses.id or '—' }}</td>
                   <td class="mono">{{ dt(ses.started_at) }}</td>
                   <td class="mono">{{ dt(ses.stopped_at) }}</td>
                   <td>{{ duration(ses.duration_seconds) }}</td>
@@ -324,6 +327,7 @@
                   <td class="mono" data-cc-col-cell="nas">{{ ses.nas or '—' }}</td>
                   <td>{{ bytes_size(ses.upload_bytes) }}</td>
                   <td>{{ bytes_size(ses.download_bytes) }}</td>
+                  <td data-cc-col-cell="device_hint">{{ ses.device_hint or ses.connect_info or '—' }}</td>
                   <td>{{ ses.terminate_cause or '—' }}</td>
                 </tr>
                 {% endfor %}

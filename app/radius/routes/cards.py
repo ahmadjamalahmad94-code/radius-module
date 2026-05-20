@@ -392,10 +392,17 @@ def _handle_card_operation():
 
 
 def cards_checker():
+    """R13.A.4: GET now renders the v2 operations-room template by default.
+
+    The /v2 preview URL stays as an alias (same template), so any
+    bookmarked /v2 link keeps working. POST still routes through the
+    existing _handle_card_operation() handler — all card operations are
+    unchanged.
+    """
     if request.method == "POST":
         return _handle_card_operation()
 
-    query = (request.args.get("query") or "").strip()
+    query = (request.args.get("query") or request.args.get("q") or "").strip()
     result = None
     error = ""
     if query:
@@ -404,7 +411,7 @@ def cards_checker():
         else:
             result = check_card(_tid(), query)
     return render_template(
-        "radius/cards_checker.html",
+        "radius/cards_checker_v2.html",
         query=query,
         result=result,
         error=error,

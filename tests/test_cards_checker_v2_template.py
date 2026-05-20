@@ -183,15 +183,42 @@ def test_v2_does_not_accept_post(app):
     assert resp.status_code != 200
 
 
-# ─────────── legacy unaffected ───────────
+# ─────────── A.4 swap ───────────
 
-def test_v1_still_works(app):
-    """A.2 is a side-by-side preview, not a swap. v1 must keep rendering
-    until A.4 explicitly retires it."""
+def test_legacy_url_now_renders_v2(app):
+    """R13.A.4: the original /cards/checker URL now renders the v2
+    operations-room template. Bookmarks, sidebar links, and form
+    submissions all keep landing on a working page — they just get the
+    new design from now on. (Before A.4 this assertion was inverted.)"""
     client = app.test_client()
     _login(client)
     resp = client.get("/admin/radius/cards/checker?query=anything")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    # v1 page does NOT link the v2 stylesheet
-    assert "cards_checker_v2.css" not in body
+    assert "cards_checker_v2.css" in body, \
+        "after A.4, /cards/checker must render the v2 template"
+
+
+def test_legacy_url_keeps_handling_operations_post(app):
+    """The POST handler for card operations (disconnect, lock_mac, ...)
+    is unchanged in A.4 — only GET swaps templates."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_card(c, username="ops-still-work")
+
+    client = app.test_client()
+    _login(client)
+    # POST to /cards/checker (the legacy URL) must NOT 404/405 — it's
+    # still the canonical operations endpoint. We don't care here what
+    # the operation actually does; only that the route accepts the POST.
+    resp = client.post("/admin/radius/cards/checker",
+                       data={
+                           "op": "disconnect",
+                           "query": "ops-still-work",
+                           "username": "ops-still-work",
+                           "card_id": "1",
+                       })
+    # 302 (redirect after handling) or 200 (re-render) are both OK.
+    # 404/405 would mean the route was lost — that's the regression we guard.
+    assert resp.status_code in (200, 302)

@@ -255,8 +255,13 @@ def test_card_checker_operations_show_accounting_and_lock_mac(client, auth_heade
     )
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    assert "عدد MAC مختلف" in html
-    assert "جدول الجلسات التفصيلي" in html
+    # R13.A.4: assertions updated for the new operations-room layout.
+    # Same data is shown — labels and section names changed:
+    #   "عدد MAC مختلف"        → stat tile labelled "MACs مميَّزة"
+    #   "جدول الجلسات التفصيلي" → section labelled "آخر الجلسات"
+    assert "MACs مميَّزة" in html
+    assert "آخر الجلسات" in html
+    # data integrity — must still be visible regardless of layout
     assert "sess-online" in html
     assert "AA:BB:CC:DD:EE:01" in html
     assert "android wifi" in html
