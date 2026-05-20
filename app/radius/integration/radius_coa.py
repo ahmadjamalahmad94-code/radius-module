@@ -341,7 +341,29 @@ def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
     sessions of a username (which is almost always the right thing
     to do for card actions)."""
     sessions = find_all_nas_for_sessions(tenant_id, username)
-    return sessions[0] if sessions else None
+    if sessions:
+        return sessions[0]
+
+    # Backward-compatible diagnostic shape: if a session exists but its
+    # NAS is disabled or has no secret, callers can still show the active
+    # NAS/session context without leaking or using the shared secret.
+    from ..db.connection import db
+    row = db().execute("""
+        SELECT acctsessionid, nasipaddress, framedipaddress, callingstationid
+          FROM radacct
+        WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
+        ORDER BY radacctid DESC
+        LIMIT 1
+    """, (tenant_id, username)).fetchone()
+    if not row:
+        return None
+    return {
+        "nas_ip": row["nasipaddress"],
+        "nas_secret": "",
+        "session_id": row["acctsessionid"],
+        "framed_ip": row["framedipaddress"] or "",
+        "calling_station_id": row["callingstationid"] or "",
+    }
 
 
 def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:

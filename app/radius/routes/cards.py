@@ -370,14 +370,14 @@ def _handle_card_operation():
             kept = res.get("kept") or 0
             if kicked > 0:
                 flash(
-                    f"تم تثبيت {len(macs_locked)} عنوان MAC، وقطع {kicked} جلسة "
+                    f"تم تثبيت عنوان MAC للبطاقة ({len(macs_locked)} عنوان)، وقطع {kicked} جلسة "
                     f"لأجهزة غير مطابقة. "
                     + (f"{kept} جلسة مطابقة بقيت متّصلة." if kept else ""),
                     "success",
                 )
             else:
                 flash(
-                    f"تم تثبيت {len(macs_locked)} عنوان MAC على البطاقة." +
+                    f"تم تثبيت عنوان MAC على البطاقة ({len(macs_locked)} عنوان)." +
                     (f" ({kept} جلسة نشطة كانت مطابقة بالفعل.)" if kept else ""),
                     "success",
                 )

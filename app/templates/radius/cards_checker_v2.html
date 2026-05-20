@@ -976,8 +976,9 @@
                 {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
               {% endif %}
             {% endfor %}
-            {% set _locked_macs = (card.locked_mac or '')|trim
-                                    |replace(';', ',')|replace(' ', '')|split(',') %}
+            {% set _locked_macs_raw = (card.locked_mac or '')|trim
+                                      |replace(';', ',')|replace(' ', '') %}
+            {% set _locked_macs = _locked_macs_raw.split(',') %}
             {% set _locked_macs_clean = [] %}
             {% for _lm in _locked_macs %}
               {% if _lm %}{% set _ = _locked_macs_clean.append(_lm.upper()) %}{% endif %}

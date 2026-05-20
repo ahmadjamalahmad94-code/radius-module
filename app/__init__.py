@@ -152,7 +152,7 @@ def _install_api_cors(app: Flask) -> None:
 
 def _start_workers(app: Flask) -> None:
     """يُشغّل خيوط الخلفية لمرّة واحدة: webhook + sync + accounting puller."""
-    if os.environ.get("HOBERADIUS_NO_WORKER"):
+    if os.environ.get("HOBERADIUS_NO_WORKER") or os.environ.get("PYTEST_CURRENT_TEST"):
         return
     try:
         from app.webhooks.queue_worker import start_worker_once

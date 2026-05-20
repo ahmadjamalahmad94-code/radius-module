@@ -271,7 +271,12 @@ class SqliteAdapter(RadiusAdapter):
         ids = list(session_ids) if session_ids else (
             [session_id] if session_id else None
         )
-        res = disconnect_user(_tid(), username, session_ids=ids)
+        try:
+            res = disconnect_user(_tid(), username, session_ids=ids)
+        except TypeError as exc:
+            if "session_ids" not in str(exc):
+                raise
+            res = disconnect_user(_tid(), username)
         if not res.ok:
             _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
                           username, res.code_name, res.reply_message)
