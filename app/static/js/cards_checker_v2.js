@@ -1,74 +1,45 @@
-/* ╔══════════════════════════════════════════════════════════════════╗
-   ║  Card Checker v2 — AJAX + live refresh (R13.A.3)                     ║
-   ║                                                                       ║
-   ║  Progressive enhancement on top of the server-rendered v2 page:     ║
-   ║                                                                       ║
-   ║   1. Intercept the search form → fetch the same /v2 URL with the    ║
-   ║      new query → extract #cc-result → swap into the page with a    ║
-   ║      fade transition. URL bar updates via history.pushState so the ║
-   ║      back button still works and the URL is shareable.             ║
-   ║                                                                       ║
-   ║   2. When the current result has an active session, poll the JSON  ║
-   ║      API every 10 s and refresh the live banner + the "online"     ║
-   ║      stat without re-rendering the whole panel. If the session     ║
-   ║      ends, swap to the off-banner and stop polling.                ║
-   ║                                                                       ║
-   ║   3. Skeleton overlay while a fetch is in flight — keeps the       ║
-   ║      previous content visible underneath, dimmed, so the admin     ║
-   ║      doesn't lose context.                                          ║
-   ║                                                                       ║
-   ║  No framework, no build step. Plain ES2017+; Edge 18+ / FF 60+.    ║
-   ╚══════════════════════════════════════════════════════════════════╝ */
-
+/* Card Checker v2 progressive enhancement.
+   The page remains fully server-rendered when JavaScript is unavailable. */
 (function () {
   'use strict';
 
   const PAGE_URL = '/admin/radius/cards/checker/v2';
-  const API_URL  = '/admin/radius/cards/checker/api/lookup';
-  const LIVE_POLL_MS = 10000;          // 10 s — same as MT acct interim
-  const FADE_IN_MS   = 220;             // matches --cc-anim-med in CSS
+  const API_URL = '/admin/radius/cards/checker/api/lookup';
+  const LIVE_POLL_MS = 10000;
+  const FADE_IN_MS = 220;
 
-  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $ = (selector, root) => (root || document).querySelector(selector);
 
-  // ─────────── state ───────────
-  let livePollTimer = null;            // setTimeout handle for live refresh
-  let inflightFetch = null;            // AbortController of pending request
+  let livePollTimer = null;
+  let inflightFetch = null;
 
-  // ─────────── boot ───────────
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
     const form = $('#cc-search-form');
-    if (!form) return;          // not on the checker page
+    if (!form) return;
 
-    // Intercept the search form
     form.addEventListener('submit', onSearchSubmit);
-
-    // Wire browser back/forward
     window.addEventListener('popstate', onPopState);
-
-    // If we landed already showing a result, start live polling
     maybeStartLivePoll();
   }
 
-  // ─────────── search submit ───────────
-  async function onSearchSubmit(e) {
-    e.preventDefault();
+  async function onSearchSubmit(event) {
+    event.preventDefault();
     const input = $('#cc-search-input');
-    const q = (input?.value || '').trim();
-    if (!q) return;
-    await loadResultFor(q, { pushHistory: true });
+    const query = (input?.value || '').trim();
+    if (!query) return;
+    await loadResultFor(query, { pushHistory: true });
   }
 
   function onPopState() {
     const params = new URLSearchParams(window.location.search);
-    const q = params.get('query') || params.get('q') || '';
+    const query = params.get('query') || params.get('q') || '';
     const input = $('#cc-search-input');
-    if (input) input.value = q;
-    loadResultFor(q, { pushHistory: false });
+    if (input) input.value = query;
+    loadResultFor(query, { pushHistory: false });
   }
 
-  // ─────────── core: fetch v2 page, swap #cc-result ───────────
   async function loadResultFor(query, { pushHistory }) {
     cancelLivePoll();
     if (inflightFetch) inflightFetch.abort();
@@ -79,70 +50,61 @@
 
     const url = PAGE_URL + '?query=' + encodeURIComponent(query);
     if (pushHistory) {
-      const adminUrl = '/admin/radius/cards/checker?query=' + encodeURIComponent(query);
-      window.history.pushState({ q: query }, '', adminUrl.replace(
-        '/admin/radius/cards/checker',
-        PAGE_URL,
-      ));
+      window.history.pushState({ query }, '', url);
     }
 
     try {
-      const ctrl = new AbortController();
-      inflightFetch = ctrl;
-      const resp = await fetch(url, {
-        signal: ctrl.signal,
+      const controller = new AbortController();
+      inflightFetch = controller;
+      const response = await fetch(url, {
+        signal: controller.signal,
         headers: { 'X-Requested-With': 'cards-checker-v2' },
         credentials: 'same-origin',
       });
-      if (!resp.ok) throw new Error('http ' + resp.status);
-      const html = await resp.text();
+      if (!response.ok) throw new Error('HTTP ' + response.status);
 
-      // parse the response and lift its #cc-result
+      const html = await response.text();
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const fresh = doc.getElementById('cc-result');
-      if (!fresh) throw new Error('no #cc-result in response');
+      if (!fresh) throw new Error('Missing #cc-result in response');
 
-      // swap with fade
       resultEl.innerHTML = fresh.innerHTML;
       resultEl.classList.remove('cc-loading');
       animateFadeIn(resultEl);
-
-      // restart live polling if applicable
       maybeStartLivePoll();
-    } catch (err) {
-      if (err.name === 'AbortError') return;   // cancelled — silent
+    } catch (error) {
+      if (error.name === 'AbortError') return;
       resultEl.classList.remove('cc-loading');
       resultEl.innerHTML = `
         <div class="cc-state cc-state-error">
           <div class="cc-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-          <h2>تعذّر جلب البيانات</h2>
-          <div class="cc-state-hint">${escapeHtml(err.message || 'خطأ غير معروف')}</div>
+          <h2>تعذر جلب بيانات البطاقة</h2>
+          <div class="cc-state-hint">${escapeHtml(error.message || 'خطأ غير معروف')}</div>
         </div>`;
     } finally {
       inflightFetch = null;
     }
   }
 
-  // ─────────── fade-in animation ───────────
-  function animateFadeIn(el) {
-    el.style.transition = 'none';
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(4px)';
+  function animateFadeIn(element) {
+    element.style.transition = 'none';
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(4px)';
     requestAnimationFrame(() => {
-      el.style.transition =
+      element.style.transition =
         `opacity ${FADE_IN_MS}ms ease, transform ${FADE_IN_MS}ms ease`;
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
+      element.style.opacity = '1';
+      element.style.transform = 'translateY(0)';
     });
   }
 
-  // ─────────── live refresh (active session only) ───────────
   function maybeStartLivePoll() {
     cancelLivePoll();
     const banner = document.querySelector(
       '.cc-live-banner:not(.cc-live-off):not(.cc-live-error)'
     );
-    if (!banner) return;  // not an active-session view
+    if (!banner) return;
+
     const username = readCurrentUsername();
     if (!username) return;
     livePollTimer = setTimeout(() => liveTick(username), LIVE_POLL_MS);
@@ -157,60 +119,65 @@
 
   async function liveTick(username) {
     try {
-      const resp = await fetch(
+      const response = await fetch(
         API_URL + '?q=' + encodeURIComponent(username),
-        { credentials: 'same-origin' },
+        { credentials: 'same-origin' }
       );
-      if (!resp.ok) throw new Error('http ' + resp.status);
-      const json = await resp.json();
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+
+      const json = await response.json();
       if (!json.ok || !json.result || !json.result.exists) return;
       applyLiveUpdate(json.result);
-    } catch (_e) {
-      // fall through — try again next tick
+    } catch (_error) {
+      // Keep the current panel visible and retry on the next interval.
     } finally {
       livePollTimer = setTimeout(() => liveTick(username), LIVE_POLL_MS);
     }
   }
 
-  // ─────────── partial DOM updates from live tick ───────────
   function applyLiveUpdate(card) {
-    // active session → keep banner live; session ended → swap to off
     const banner = document.querySelector('.cc-live-banner');
     if (!banner) return;
 
     if (card.active_session) {
       banner.classList.remove('cc-live-off', 'cc-live-error');
-      // update IP/MAC/last seen if shown — careful, may be hidden by ACL in C
-      setIfPresent('[data-cc-field="mac_address"]', card.mac_address || '—', 'mono');
-      setIfPresent('[data-cc-field="ip_address"]', card.ip_address || '—', 'mono');
+      setIfPresent('[data-cc-field="mac_address"]', card.mac_address || '-', 'mono');
+      setIfPresent('[data-cc-field="ip_address"]', card.ip_address || '-', 'mono');
     } else {
-      // ended since last tick — swap visuals, stop polling
       banner.classList.add('cc-live-off');
-      banner.querySelector('div').textContent =
-        'انتهت الجلسة — آخر ظهور: ' + (card.last_seen_at || '—');
+      const content = banner.querySelector('div');
+      if (content) {
+        content.textContent =
+          'انتهت الجلسة. آخر ظهور: ' + (card.last_seen_at || '-');
+      }
       cancelLivePoll();
     }
 
-    // update online count stat without re-rendering the whole grid
-    setIfPresent('[data-cc-field="stats.online_sessions"] .cc-stat-value',
-      String((card.accounting_summary || {}).online_sessions || 0));
+    setIfPresent(
+      '[data-cc-field="stats.online_sessions"] .cc-stat-value',
+      String((card.accounting_summary || {}).online_sessions || 0)
+    );
   }
 
-  // ─────────── helpers ───────────
   function readCurrentUsername() {
     const el = document.querySelector('[data-cc-field="username"]');
     return el ? el.textContent.trim() : '';
   }
+
   function setIfPresent(selector, text, monoClass) {
     const el = document.querySelector(selector);
-    if (!el) return;       // hidden by ACL or not in current section — fine
+    if (!el) return;
     el.textContent = text;
     if (monoClass) el.classList.add(monoClass);
   }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;',
-      '"': '&quot;', "'": '&#39;'
-    }[c]));
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char]));
   }
 })();
