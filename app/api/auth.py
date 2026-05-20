@@ -97,6 +97,27 @@ def _rate_limit_check(token_key: str, *, per_minute: int = 60) -> bool:
         return True
 
 
+def _configured_api_rpm(tenant_rpm: int = 60) -> int:
+    """Return the effective API rate limit.
+
+    The Android/Windows admin clients make many small authenticated requests
+    while refreshing dashboards and operational screens. The default is
+    therefore unlimited. Operators can explicitly re-enable a cap with
+    HOBERADIUS_API_RATE_LIMIT_PER_MINUTE=<positive integer>.
+    """
+    raw = os.environ.get("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE")
+    if raw is None or raw == "":
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        _LOG.warning(
+            "Ignoring invalid HOBERADIUS_API_RATE_LIMIT_PER_MINUTE=%r",
+            raw,
+        )
+        return 0
+
+
 def _is_expired(expires_at_raw) -> Optional[bool]:
     """Return True if expired, False if still valid, None if no expiry set.
     Malformed `expires_at` is treated as expired — fail closed."""
@@ -161,9 +182,10 @@ def require_api_token(view):
             except Exception: pass
 
         # rate limit
+        rpm = _configured_api_rpm(rpm)
         key_prefix = f"test:{id(current_app)}:" if current_app.testing else ""
         key = f"{key_prefix}tok:{token_id or token[:12]}"
-        if not _rate_limit_check(key, per_minute=rpm):
+        if rpm > 0 and not _rate_limit_check(key, per_minute=rpm):
             return fail("rate_limited",
                         f"تجاوزت الحد ({rpm} req/min)", status=429,
                         details={"retry_after_seconds": 60})

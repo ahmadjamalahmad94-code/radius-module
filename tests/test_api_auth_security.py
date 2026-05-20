@@ -77,6 +77,19 @@ def test_env_tokens_still_work_in_production(client, monkeypatch):
     assert res.status_code == 200
 
 
+def test_api_rate_limit_is_unlimited_unless_explicitly_enabled(monkeypatch):
+    from app.api.auth import _configured_api_rpm
+
+    monkeypatch.delenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", raising=False)
+    assert _configured_api_rpm(tenant_rpm=10) == 0
+
+    monkeypatch.setenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", "250")
+    assert _configured_api_rpm(tenant_rpm=10) == 250
+
+    monkeypatch.setenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", "0")
+    assert _configured_api_rpm(tenant_rpm=10) == 0
+
+
 # ─────────────── B. token expiry / validity ───────────────
 
 def test_valid_login_token_authenticates(client):
