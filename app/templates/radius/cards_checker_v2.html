@@ -734,7 +734,9 @@
         </header>
         <div class="cc-section-body">
           {% if s.latest_sessions %}
-          <div class="cc-sessions-table-wrap">
+          <div class="cc-sessions-table-wrap"
+               data-cc-sessions-region
+               data-cc-query="{{ query or card.username }}">
             <table class="cc-sessions-table">
               <thead>
                 <tr>
@@ -832,6 +834,44 @@
                 {% endfor %}
               </tbody>
             </table>
+
+            {# Pagination strip + auto-refresh controls. Both are
+               progressive enhancements — the table renders fine
+               server-side; this block only wires up additional
+               behavior in JS at the bottom of the file. #}
+            <div class="cc-sessions-foot" data-cc-sessions-foot>
+              <div class="cc-sessions-foot-left">
+                <label class="cc-sessions-foot-label">
+                  صفوف:
+                  <select data-cc-page-size class="cc-sessions-foot-select">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="0">الكل</option>
+                  </select>
+                </label>
+                <span class="cc-sessions-foot-info" data-cc-page-info>—</span>
+              </div>
+              <div class="cc-sessions-foot-mid">
+                <button type="button" class="cc-sessions-foot-nav"
+                        data-cc-page-prev title="السابقة">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <span class="cc-sessions-foot-page" data-cc-page-current>1 / 1</span>
+                <button type="button" class="cc-sessions-foot-nav"
+                        data-cc-page-next title="التالية">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+              </div>
+              <div class="cc-sessions-foot-right">
+                <span class="cc-sessions-foot-stale" data-cc-refresh-stale>الآن</span>
+                <label class="cc-sessions-foot-label cc-sessions-foot-toggle">
+                  <input type="checkbox" data-cc-autorefresh checked>
+                  <span>تحديث تلقائي</span>
+                </label>
+              </div>
+            </div>
           </div>
           {% else %}
           <div class="cc-state-hint" style="text-align:center;padding:24px 0">لا جلسات بعد.</div>
@@ -2035,6 +2075,198 @@
         // primary edit stays rightmost, unlock goes between.
         actions.appendChild(btn3);
       }, 30);
+    });
+  })();
+
+  // ── Sessions: pagination + auto-refresh ───────────────────────────
+  // Two-part progressive enhancement on the sessions table:
+  //
+  //   1. Pagination — pure DOM. Hides rows beyond the current page
+  //      via .is-paged-hidden. No backend involvement.
+  //
+  //   2. Auto-refresh — fetches /admin/radius/cards/checker/api/lookup
+  //      every N seconds, rebuilds the tbody from
+  //      result.accounting_summary.latest_sessions, then re-applies
+  //      pagination. Pauses while a floating modal is open or the tab
+  //      is hidden, so we don't ruin the operator's in-flight UI.
+  //
+  // Both behaviors are self-contained — if this IIFE fails for any
+  // reason (e.g. table missing), the page still renders normally.
+  (function(){
+    'use strict';
+    var region = document.querySelector('[data-cc-sessions-region]');
+    if (!region) return;
+    var table  = region.querySelector('.cc-sessions-table');
+    var tbody  = table && table.querySelector('tbody');
+    var foot   = region.querySelector('[data-cc-sessions-foot]');
+    if (!table || !tbody || !foot) return;
+
+    var query        = region.getAttribute('data-cc-query') || '';
+    var sizeSel      = foot.querySelector('[data-cc-page-size]');
+    var prevBtn      = foot.querySelector('[data-cc-page-prev]');
+    var nextBtn      = foot.querySelector('[data-cc-page-next]');
+    var pageInfo     = foot.querySelector('[data-cc-page-info]');
+    var pageLabel    = foot.querySelector('[data-cc-page-current]');
+    var stale        = foot.querySelector('[data-cc-refresh-stale]');
+    var autoToggle   = foot.querySelector('[data-cc-autorefresh]');
+
+    var REFRESH_MS   = 5000;     // 5 seconds
+    var STALE_AFTER  = 15000;    // 15s without update → mark stale
+    var page         = 1;
+    var pageSize     = parseInt(sizeSel.value, 10) || 10;
+    var lastUpdatedAt = Date.now();
+
+    function applyPagination(){
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      var total = rows.length;
+      var size  = pageSize === 0 ? total : pageSize;
+      var pages = size ? Math.max(1, Math.ceil(total / size)) : 1;
+      if (page > pages) page = pages;
+      if (page < 1)     page = 1;
+      var startIdx = (page - 1) * size;
+      var endIdx   = startIdx + size;
+      rows.forEach(function(tr, i){
+        var hide = pageSize !== 0 && (i < startIdx || i >= endIdx);
+        tr.classList.toggle('is-paged-hidden', hide);
+      });
+      pageLabel.textContent = page + ' / ' + pages;
+      // Visible range "1–10 من 22"
+      var firstShown = total ? (startIdx + 1) : 0;
+      var lastShown  = Math.min(endIdx, total);
+      pageInfo.textContent = total ? (firstShown + '–' + lastShown + ' من ' + total) : '0';
+      prevBtn.disabled = page <= 1;
+      nextBtn.disabled = page >= pages;
+    }
+
+    sizeSel.addEventListener('change', function(){
+      pageSize = parseInt(sizeSel.value, 10) || 0;
+      page = 1;
+      applyPagination();
+    });
+    prevBtn.addEventListener('click', function(){
+      if (page > 1){ page--; applyPagination(); }
+    });
+    nextBtn.addEventListener('click', function(){
+      page++; applyPagination();
+    });
+
+    applyPagination();
+
+    // ─── Auto-refresh ─────────────────────────────────────────────
+    // Reuse the existing /api/lookup endpoint so we don't need a new
+    // route. Re-renders the tbody from the JSON payload then re-applies
+    // pagination, preserving the user's current page when possible.
+    function fmtKBMB(n){
+      n = parseInt(n, 10) || 0;
+      if (n < 1024)         return n + ' B';
+      if (n < 1024 * 1024)  return (n / 1024).toFixed(1) + ' KB';
+      if (n < 1024 * 1024 * 1024) return (n / 1048576).toFixed(2) + ' MB';
+      return (n / 1073741824).toFixed(2) + ' GB';
+    }
+    function fmtDur(secs){
+      secs = parseInt(secs, 10) || 0;
+      var h = Math.floor(secs / 3600);
+      var m = Math.floor((secs % 3600) / 60);
+      var s = secs % 60;
+      return (h ? h + 'س ' : '') + (m ? m + 'د ' : '') + s + 'ث';
+    }
+    function fmtDt(iso){
+      if (!iso) return '—';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var pad = function(x){ return x < 10 ? '0' + x : '' + x; };
+      return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+             ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+    function escHtml(s){
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    }
+    function buildRow(ses){
+      var total = (parseInt(ses.upload_bytes, 10) || 0) +
+                  (parseInt(ses.download_bytes, 10) || 0);
+      var pillCls  = ses.online ? 'cc-pill-green' : 'cc-pill-grey';
+      var pillText = ses.online ? 'حيّة' : 'منتهية';
+      var dev = ses.dhcp_device || {};
+      var devCell = (dev && dev.label)
+        ? '<span class="cc-device-label" title="' + escHtml(dev.class_id || '') + '">' +
+            '<i class="fa-solid fa-network-wired"></i>' +
+            '<span>' + escHtml(dev.label) + '</span>' +
+          '</span>'
+        : '<span class="muted">—</span>';
+      var svc = ses.service_type || ses.framed_protocol || ses.session_id || '';
+      if (svc && svc.length > 14) svc = svc.substring(0, 14) + '…';
+      var port = ses.nas_port_type || ses.nas_port || '';
+      if (port && port.length > 14) port = port.substring(0, 14) + '…';
+      var rowId = ses.session_id || ses.id || '';
+      return '<tr data-cc-session="' + escHtml(rowId) +
+             '" class="' + (ses.online ? 'is-live' : '') + '">' +
+        '<td><span class="cc-pill ' + pillCls + '"><span class="dot"></span>' + pillText + '</span></td>' +
+        '<td class="mono">' + escHtml(ses.ip_address || '—') + '</td>' +
+        '<td class="mono">' + escHtml(ses.mac_address || '—') + '</td>' +
+        '<td class="cc-device-cell">' + devCell + '</td>' +
+        '<td class="num">' + fmtKBMB(ses.download_bytes) + '</td>' +
+        '<td class="num">' + fmtKBMB(ses.upload_bytes) + '</td>' +
+        '<td class="num muted">—</td>' +
+        '<td class="num muted">—</td>' +
+        '<td class="num"><strong>' + fmtKBMB(total) + '</strong></td>' +
+        '<td class="mono small">' + fmtDt(ses.started_at) + '</td>' +
+        '<td class="mono small">' + (ses.stopped_at ? fmtDt(ses.stopped_at) : '—') + '</td>' +
+        '<td class="num">' + fmtDur(ses.duration_seconds) + '</td>' +
+        '<td class="mono small">' + escHtml(svc || '—') + '</td>' +
+        '<td class="mono small">' + escHtml(port || '—') + '</td>' +
+      '</tr>';
+    }
+    function rerender(sessions){
+      if (!Array.isArray(sessions)) return;
+      tbody.innerHTML = sessions.map(buildRow).join('');
+      // Update the section header count "X جلسة"
+      var head = document.querySelector('[data-cc-section="sessions"] .cc-section-head-link');
+      if (head) head.textContent = sessions.length + ' جلسة';
+      applyPagination();
+    }
+    function shouldPause(){
+      // Pause while a floating modal is open (don't disrupt in-flight
+      // picker state), or while the tab is hidden (saves bandwidth).
+      if (document.hidden) return true;
+      var modal = document.getElementById('cc-gmodal');
+      if (modal && modal.classList.contains('is-open')) return true;
+      var time = document.getElementById('cc-time-modal');
+      if (time && time.classList.contains('is-open')) return true;
+      var speed = document.getElementById('cc-speed-modal');
+      if (speed && speed.classList.contains('is-open')) return true;
+      return false;
+    }
+    function markStale(){
+      var age = (Date.now() - lastUpdatedAt) / 1000;
+      stale.classList.remove('is-fresh', 'is-stale');
+      if (age < 3)           { stale.classList.add('is-fresh'); stale.textContent = 'محدّث الآن'; }
+      else if (age < 15)     { stale.textContent = 'تحديث منذ ' + Math.round(age) + ' ث'; }
+      else                   { stale.classList.add('is-stale'); stale.textContent = 'قديم — ' + Math.round(age) + ' ث'; }
+    }
+    function fetchOnce(){
+      if (!query || !autoToggle.checked) return;
+      if (shouldPause()) return;
+      fetch('{{ url_for("radius.cards_checker_api_lookup") }}?q=' +
+            encodeURIComponent(query), { credentials: 'same-origin' })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){
+          if (!j || !j.ok || !j.result) return;
+          var sessions = (j.result.accounting_summary || {}).latest_sessions || [];
+          rerender(sessions);
+          lastUpdatedAt = Date.now();
+          markStale();
+        })
+        .catch(function(){ /* swallow — keep retrying */ });
+    }
+
+    setInterval(fetchOnce, REFRESH_MS);
+    setInterval(markStale, 1000);
+    markStale();
+
+    autoToggle.addEventListener('change', function(){
+      if (autoToggle.checked) fetchOnce();
     });
   })();
 

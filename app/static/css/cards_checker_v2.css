@@ -2228,3 +2228,90 @@ body:has(.cc-hero) .page-head{display:none !important}
   border-color:#D5CCF5;
 }
 .cc-mini-action i{ font-size:11px; }
+
+/* ───────────────────────────────────────────────────────────────
+   Sessions footer — pagination + auto-refresh controls
+   ─────────────────────────────────────────────────────────────── */
+.cc-sessions-foot{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px;
+  margin-top:8px;
+  background:linear-gradient(180deg,#fafbff,#f4f1fe);
+  border:1px solid #E5E0F5;
+  border-radius:10px;
+  font-size:12px;
+  color:#475569;
+  flex-wrap:wrap;
+}
+.cc-sessions-foot-left,
+.cc-sessions-foot-mid,
+.cc-sessions-foot-right{
+  display:inline-flex; align-items:center; gap:8px;
+}
+.cc-sessions-foot-mid{ flex:1; justify-content:center; }
+.cc-sessions-foot-label{
+  display:inline-flex; align-items:center; gap:6px;
+  font-weight:700;
+  color:#475569;
+  cursor:pointer;
+}
+.cc-sessions-foot-select{
+  font-family:inherit;
+  background:#fff;
+  border:1px solid #D5CCF5;
+  border-radius:6px;
+  padding:4px 10px;
+  font-size:12px;
+  font-weight:700;
+  color:#1F2937;
+  cursor:pointer;
+}
+.cc-sessions-foot-info{
+  font-size:11.5px;
+  color:#64748B;
+  font-weight:600;
+}
+.cc-sessions-foot-nav{
+  background:#fff;
+  border:1px solid #D5CCF5;
+  color:#5B4BD6;
+  width:30px; height:30px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:12px;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:.15s ease;
+}
+.cc-sessions-foot-nav:hover:not(:disabled){
+  background:#F4F1FE;
+  border-color:#A593F2;
+}
+.cc-sessions-foot-nav:disabled{
+  opacity:.4; cursor:not-allowed;
+}
+.cc-sessions-foot-page{
+  font-family:var(--hr-mono);
+  font-size:12px;
+  font-weight:700;
+  color:#1F2937;
+  min-width:48px;
+  text-align:center;
+}
+.cc-sessions-foot-toggle{
+  cursor:pointer;
+  user-select:none;
+}
+.cc-sessions-foot-toggle input{
+  accent-color:#5B4BD6;
+}
+.cc-sessions-foot-stale{
+  font-size:11px;
+  color:#94A3B8;
+  font-style:italic;
+  margin-inline-end:4px;
+}
+.cc-sessions-foot-stale.is-fresh{ color:#16a34a; font-style:normal; font-weight:700; }
+.cc-sessions-foot-stale.is-stale{ color:#d97706; }
+
+/* Pagination hides rows by adding this class */
+.cc-sessions-table tr.is-paged-hidden{ display:none !important; }
