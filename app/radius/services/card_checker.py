@@ -468,7 +468,16 @@ def check_card(tenant_id: int, query: str) -> dict:
             connect_info=(acct or {}).get("connectinfo_start"),
         ),
         "operations": {
-            "can_disconnect": bool((acct or {}).get("acctstoptime") is None and acct),
+            # can_disconnect must reflect "any device currently online",
+            # not "the single latest radacct row is open". After a
+            # per-session kick (multi-device card), the kicked row's
+            # acctstoptime = now() makes it the newest row by timestamp
+            # → get_latest_card_accounting returns the CLOSED row even
+            # though sibling sessions are still active. We instead
+            # count rows with acctstoptime IS NULL across all sessions
+            # (already aggregated by summarize_card_accounting). The
+            # button stays enabled as long as >0 devices are live.
+            "can_disconnect": int(accounting_summary.get("online_sessions") or 0) > 0,
             "can_lock_mac": bool(mac_address),
             "can_reset_usage": True,
             "can_disable": not bool(record.get("card_revoked")),
