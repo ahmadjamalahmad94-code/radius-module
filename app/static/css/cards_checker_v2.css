@@ -1678,3 +1678,92 @@ body:has(.cc-hero) .page-head{display:none !important}
 .cc-gmodal-btn-confirm:disabled{
   background:#C4BCE9; cursor:not-allowed; transform:none; box-shadow:none;
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  Hero + Info-Panel + Metrics — larger readable type                  ║
+   ║  User feedback: "نكبر الخط شوي يكون مبين ومقروء"                     ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+
+/* Info panel (right column next to the hero in advanced mode) — used
+   to be 12px label / 12.5px value, now reads at a clear 13/14px. */
+.cc-info-panel-lg .cc-info-row{
+  padding:11px 0 !important;
+  font-size:14px !important;
+  line-height:1.6;
+}
+.cc-info-panel-lg .cc-info-label{
+  font-size:13px !important;
+  font-weight:700 !important;
+  color:#475569 !important;
+}
+.cc-info-panel-lg .cc-info-value{
+  font-size:14px !important;
+  font-weight:700 !important;
+  color:#1F2937 !important;
+}
+.cc-info-panel-lg .cc-info-value.mono,
+.cc-info-panel-lg .cc-info-value .mono{
+  font-size:13.5px !important;
+}
+
+/* Hero — password row under the username */
+.cc-card-password{
+  display:inline-flex; align-items:center; gap:8px;
+  margin-top:8px;
+  padding:6px 12px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.30);
+  border-radius:999px;
+  color:#fff;
+  font-size:15px; font-weight:700;
+  backdrop-filter: blur(4px);
+}
+.cc-card-password i.fa-key{
+  font-size:12px; opacity:.85;
+}
+.cc-card-password-value{
+  letter-spacing:.5px;
+  font-family:ui-monospace,Consolas,monospace;
+  font-size:15.5px;
+  color:#fff;
+}
+.cc-card-password-copy{
+  width:26px; height:26px; flex:0 0 26px;
+  border:0; background:rgba(255,255,255,.18);
+  border-radius:7px; color:#fff;
+  font-size:11px; cursor:pointer;
+  display:grid; place-items:center;
+  transition:.15s ease;
+}
+.cc-card-password-copy:hover{ background:rgba(255,255,255,.30); }
+.cc-card-password-copy.ok{ background:#22C55E !important; }
+.cc-card-password-copy.ok::after{
+  content:""; /* swap to check on success */
+}
+
+/* Hero info block — price + currency */
+.cc-card-price{
+  font-size:18px; font-weight:900; color:#fff;
+}
+.cc-card-currency{
+  font-size:12px; font-weight:700; color:rgba(255,255,255,.85);
+  margin-inline-start:4px;
+}
+
+/* Metric tiles — bigger value text + wider min so 7 tiles flow cleanly */
+.cc-metrics{
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+  gap:12px !important;
+}
+.cc-metric-value{
+  font-size:22px !important;
+  font-weight:900 !important;
+  line-height:1.15 !important;
+}
+.cc-metric-label{
+  font-size:12.5px !important;
+  font-weight:700 !important;
+}
+.cc-metric-sub{
+  font-size:11.5px !important;
+}

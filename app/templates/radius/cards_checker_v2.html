@@ -226,6 +226,21 @@
         <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
         {{ card.username }}
       </div>
+      {% if card.password %}
+      {# Password sits just under the username — the admin needs it to
+         hand to the customer. Tap-to-copy via the small copy button. #}
+      <div class="cc-card-password" data-cc-field="password">
+        <i class="fa-solid fa-key"></i>
+        <span class="cc-card-password-value mono">{{ card.password }}</span>
+        <button type="button" class="cc-card-password-copy"
+                title="نسخ كلمة المرور"
+                onclick="navigator.clipboard && navigator.clipboard.writeText('{{ card.password }}');
+                         this.classList.add('ok');
+                         setTimeout(()=>this.classList.remove('ok'),900);">
+          <i class="fa-solid fa-copy"></i>
+        </button>
+      </div>
+      {% endif %}
       {% if card.remaining_seconds is not none %}
       <div class="cc-card-remaining" data-cc-field="remaining_seconds">
         <i class="fa-regular fa-clock"></i>
@@ -235,16 +250,27 @@
     </div>
 
     <div class="cc-card-info">
-      {% if card.batch %}
-      <div class="cc-card-info-row" data-cc-field="batch">
-        <div class="cc-card-info-label">حزمة البطاقة</div>
-        <div class="cc-card-info-value">{{ card.batch.batch_code or card.batch.id }}</div>
+      {% if card.batch and (card.batch.package_name or card.batch.batch_code) %}
+      <div class="cc-card-info-row" data-cc-field="package_name">
+        <div class="cc-card-info-label">اسم الحزمة</div>
+        <div class="cc-card-info-value">
+          {{ card.batch.package_name or card.batch.batch_code }}
+        </div>
       </div>
       {% endif %}
       {% if card.profile and card.profile.name %}
       <div class="cc-card-info-row" data-cc-field="profile">
         <div class="cc-card-info-label">نوع الاشتراك</div>
         <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
+      </div>
+      {% endif %}
+      {% if card.batch and (card.batch.unit_price or 0) > 0 %}
+      <div class="cc-card-info-row" data-cc-field="price">
+        <div class="cc-card-info-label">السعر</div>
+        <div class="cc-card-info-value">
+          <span class="cc-card-price">{{ '%.2f' % card.batch.unit_price }}</span>
+          <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+        </div>
       </div>
       {% endif %}
     </div>
@@ -388,14 +414,21 @@
       <div class="cc-grid-2">
         {{ card_hero(card) }}
 
-        <div class="cc-info-panel" data-cc-section="identity">
+        {# Card info panel — order per user spec:
+           status → first conn → last conn → IP → NAS → MAC.
+           Bigger, more readable text (see .cc-info-row size bump below). #}
+        <div class="cc-info-panel cc-info-panel-lg" data-cc-section="identity">
           <div class="cc-info-row">
             <span class="cc-info-label">حالة البطاقة</span>
             <span class="cc-info-value txt" data-cc-field="status_pill">{{ status_inline(card) }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">MAC الحالي</span>
-            <span class="cc-info-value" data-cc-field="mac_address">{{ card.mac_address or '—' }}</span>
+            <span class="cc-info-label">أوّل اتصال</span>
+            <span class="cc-info-value txt" data-cc-field="first_used_at">{{ dt(card.started_at) }}</span>
+          </div>
+          <div class="cc-info-row">
+            <span class="cc-info-label">آخر اتصال</span>
+            <span class="cc-info-value txt" data-cc-field="last_seen_at">{{ dt(card.last_seen_at) }}</span>
           </div>
           <div class="cc-info-row">
             <span class="cc-info-label">IP</span>
@@ -406,23 +439,52 @@
             <span class="cc-info-value" data-cc-field="nas_address">{{ card.nas_address or '—' }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">آخر اتّصال</span>
-            <span class="cc-info-value txt" data-cc-field="last_seen_at">{{ dt(card.last_seen_at) }}</span>
-          </div>
-          <div class="cc-info-row">
-            <span class="cc-info-label">تاريخ الإنشاء</span>
-            <span class="cc-info-value" data-cc-field="created_at">{{ dt(card.created_at) }}</span>
+            <span class="cc-info-label">MAC الحالي</span>
+            <span class="cc-info-value" data-cc-field="mac_address">{{ card.mac_address or '—' }}</span>
           </div>
         </div>
       </div>
 
-      {# Row 2: 5 metric tiles #}
+      {# Row 2: metric tiles — order per user spec:
+           sessions / unique MACs / connected devices / remaining time /
+           total usage / remaining quota / total quota.
+           Auto-fit grid wraps as needed. #}
+      {% set p = card.profile or {} %}
+      {% set quota_total_mb = (p.quota_total_mb or 0)|int %}
+      {% set used_mb = (((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)) / 1048576)|int %}
+      {% set remaining_mb = (quota_total_mb - used_mb) if quota_total_mb > 0 else 0 %}
+      {% if remaining_mb < 0 %}{% set remaining_mb = 0 %}{% endif %}
       <div class="cc-metrics" data-cc-section="stats">
-        {{ metric('الجلسات',         s.sessions_count or 0,      'wave-square',  'purple', 'نشطة الآن: ' + (s.online_sessions or 0)|string, 'stats.sessions_count') }}
-        {{ metric('الأجهزة المتّصلة', s.unique_macs or 0,         'laptop',       'cyan',   'جهاز واحد' if (s.unique_macs or 0) == 1 else (s.unique_macs or 0)|string + ' أجهزة', 'stats.unique_macs') }}
-        {{ metric('الوقت المتبقّي',  duration(card.remaining_seconds or 0), 'clock', 'amber', '', 'remaining_seconds') }}
-        {{ metric('إجمالي الاستهلاك', bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)), 'arrow-up-from-bracket', 'green', 'رفع + تحميل', 'stats.total_traffic') }}
-        {{ metric('الحزمة',          (card.batch.batch_code if card.batch else '—'), 'cube', 'blue', 'حالية' if card.batch else '', 'batch') }}
+        {{ metric('الجلسات',           s.sessions_count or 0,
+                  'wave-square',  'purple',
+                  'نشطة الآن: ' + (s.online_sessions or 0)|string,
+                  'stats.sessions_count') }}
+        {{ metric('ماكات فريدة',       s.unique_macs or 0,
+                  'fingerprint',  'cyan',
+                  'استخدمت البطاقة',
+                  'stats.unique_macs') }}
+        {{ metric('الأجهزة المتّصلة',  s.online_sessions or 0,
+                  'laptop',       'blue',
+                  'الآن',
+                  'stats.active_devices') }}
+        {{ metric('الوقت المتبقّي',    duration(card.remaining_seconds or 0),
+                  'clock',        'amber',
+                  '',
+                  'remaining_seconds') }}
+        {{ metric('إجمالي الاستهلاك',  bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)),
+                  'arrow-up-from-bracket', 'green',
+                  'رفع + تحميل',
+                  'stats.total_traffic') }}
+        {{ metric('الكوتة المتبقّية',
+                  (remaining_mb|string + ' MB') if quota_total_mb > 0 else 'بلا حد',
+                  'database',     'teal',
+                  ('من ' + quota_total_mb|string + ' MB') if quota_total_mb > 0 else 'بدون قيد',
+                  'stats.remaining_quota') }}
+        {{ metric('الكوتة الكلّية',
+                  (quota_total_mb|string + ' MB') if quota_total_mb > 0 else 'بلا حد',
+                  'gauge',        'grey',
+                  'حسب الباقة',
+                  'stats.total_quota') }}
       </div>
 
       {# Row 3: Activity timeline #}

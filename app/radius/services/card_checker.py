@@ -74,6 +74,17 @@ def _status(row: dict, now: datetime) -> str:
 def _batch(row: dict) -> dict | None:
     if row.get("batch_id") is None:
         return None
+    # Estimated unit price — direct price_per_card if set, otherwise
+    # the total_price spread across generated count.
+    ppc       = float(row.get("batch_price_per_card") or 0)
+    total_pr  = float(row.get("batch_total_price")    or 0)
+    gen       = int(row.get("batch_generated") or 0)
+    if ppc > 0:
+        unit_price = ppc
+    elif total_pr > 0 and gen > 0:
+        unit_price = total_pr / gen
+    else:
+        unit_price = 0.0
     return {
         "id": row.get("batch_id"),
         "batch_code": row.get("batch_code"),
@@ -87,6 +98,12 @@ def _batch(row: dict) -> dict | None:
         "created_at": _iso(row.get("batch_created_at")),
         "expires_at": _iso(row.get("batch_expire_at")),
         "deleted_at": _iso(row.get("batch_deleted_at")),
+        # Price hooks for the Card Checker hero:
+        # `price_per_card` is the explicit unit price; `unit_price` is
+        # the same value with the total_price-fallback applied.
+        "price_per_card": ppc,
+        "total_price":    total_pr,
+        "unit_price":     unit_price,
     }
 
 
@@ -97,6 +114,7 @@ def _profile(row: dict) -> dict | None:
         "id": row.get("plan_id"),
         "name": row.get("profile_name"),
         "code": row.get("profile_code") or "",
+        "currency": row.get("profile_currency") or "",
         "service_type": row.get("profile_service_type"),
         "plan_type": row.get("profile_plan_type"),
         "speed_down_kbps": row.get("profile_speed_down_kbps"),
@@ -278,6 +296,11 @@ def check_card(tenant_id: int, query: str) -> dict:
         "id": record.get("card_id"),
         "username": record.get("username"),
         "has_password": bool(record.get("password")),
+        # The raw card password — exposed for the Card Checker hero so
+        # an admin can hand it to the customer without bouncing through
+        # the cards list. Cards are short-lived shared secrets, plaintext
+        # is part of their data model (see migration 003_cards.sql).
+        "password": record.get("password") or "",
         "used": bool(record.get("card_used")),
         "revoked": bool(record.get("card_revoked")),
         "locked_mac": record.get("locked_mac") or None,
