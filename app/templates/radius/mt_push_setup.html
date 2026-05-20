@@ -299,6 +299,14 @@
     // mangles non-ASCII (em-dashes etc.), producing 'expected command
     // name' errors on what's supposed to be just a comment. Keeping
     // the script all-instructions makes paste idempotent.
+    // Two pieces of defensive scripting on top of the basic build:
+    //   1. Filter the lease list to status=bound. Non-bound leases
+    //      (waiting / expired / offered) have no active-* fields,
+    //      and trying to GET them raises 'input does not match any
+    //      value of value-name' — which kills the whole scheduler.
+    //   2. Wrap each property read in :do {} on-error={} so a single
+    //      malformed lease never aborts the loop. We also default
+    //      every JSON field to "" so the upsert sees a clean shape.
     var script =
       '/system scheduler remove [find name=hoberadius-push-dhcp]\n' +
       '\n' +
@@ -307,13 +315,19 @@
       '    on-event="\n' +
       ':local body \\"[\\";\n' +
       ':local first true;\n' +
-      ':foreach lease in=[/ip/dhcp-server/lease/find] do={\n' +
-      '  :local mac [/ip/dhcp-server/lease/get \\$lease active-mac-address];\n' +
-      '  :if ([:len \\$mac] = 0) do={ :set mac [/ip/dhcp-server/lease/get \\$lease mac-address] };\n' +
+      ':foreach lease in=[/ip/dhcp-server/lease/find status=bound] do={\n' +
+      '  :local mac \\"\\";\n' +
+      '  :local host \\"\\";\n' +
+      '  :local cid \\"\\";\n' +
+      '  :local ip \\"\\";\n' +
+      '  :do { :set mac [/ip/dhcp-server/lease/get \\$lease active-mac-address] } on-error={};\n' +
+      '  :if ([:len \\$mac] = 0) do={\n' +
+      '    :do { :set mac [/ip/dhcp-server/lease/get \\$lease mac-address] } on-error={};\n' +
+      '  };\n' +
+      '  :do { :set host [/ip/dhcp-server/lease/get \\$lease active-host-name] } on-error={};\n' +
+      '  :do { :set cid  [/ip/dhcp-server/lease/get \\$lease active-client-id] } on-error={};\n' +
+      '  :do { :set ip   [/ip/dhcp-server/lease/get \\$lease active-address] } on-error={};\n' +
       '  :if ([:len \\$mac] > 0) do={\n' +
-      '    :local host [/ip/dhcp-server/lease/get \\$lease active-host-name];\n' +
-      '    :local cid  [/ip/dhcp-server/lease/get \\$lease active-client-id];\n' +
-      '    :local ip   [/ip/dhcp-server/lease/get \\$lease active-address];\n' +
       '    :if (!\\$first) do={ :set body (\\$body . \\",\\") };\n' +
       '    :set body (\\$body . \\"{\\\\\\"mac\\\\\\":\\\\\\"\\" . \\$mac . \\"\\\\\\",\\\\\\"hostname\\\\\\":\\\\\\"\\" . \\$host . \\"\\\\\\",\\\\\\"class_id\\\\\\":\\\\\\"\\" . \\$cid . \\"\\\\\\",\\\\\\"ip\\\\\\":\\\\\\"\\" . \\$ip . \\"\\\\\\"}\\");\n' +
       '    :set first false;\n' +
