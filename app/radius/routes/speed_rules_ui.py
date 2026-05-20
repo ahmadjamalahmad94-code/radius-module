@@ -1,0 +1,182 @@
+"""Shared helpers for embedding speed-rule controls in admin edit pages."""
+from __future__ import annotations
+
+from ..core.errors import RadiusValidationError
+from ..services.operations import get_operations_service
+
+
+def speed_rules_panel(
+    *,
+    tenant_id: int,
+    target_type: str,
+    return_to: str,
+    title: str,
+    help_text: str,
+    plan_id: int | None = None,
+    subscriber_username: str = "",
+    card_batch_id: int | None = None,
+) -> dict:
+    svc = get_operations_service()
+    rules = svc.list_bandwidth_schedules(
+        tenant_id=tenant_id,
+        target_type=target_type,
+        plan_id=plan_id if target_type == "plan" else None,
+        subscriber_username=subscriber_username if target_type == "subscriber" else None,
+        card_batch_id=card_batch_id if target_type == "card_batch" else None,
+        limit=200,
+    )
+    presets = svc.list_bandwidth_schedules(tenant_id=tenant_id, limit=500)
+    return {
+        "target_type": target_type,
+        "plan_id": plan_id,
+        "subscriber_username": subscriber_username,
+        "card_batch_id": card_batch_id,
+        "return_to": return_to,
+        "title": title,
+        "help_text": help_text,
+        "rules": rules,
+        "presets": presets,
+    }
+
+
+def handle_embedded_speed_rule(
+    *,
+    tenant_id: int,
+    actor: str,
+    form,
+    target_type: str,
+    plan_id: int | None = None,
+    subscriber_username: str = "",
+    card_batch_id: int | None = None,
+) -> bool:
+    """Handle speed-rule actions from an edit page."""
+    action = (form.get("_speed_rule_action") or "").strip()
+    known_prefixes = ("update:", "toggle:", "delete:")
+    if action not in {"manual", "copy", "enable_all", "disable_all"} and not action.startswith(known_prefixes):
+        return False
+
+    base = {
+        "target_type": target_type,
+        "plan_id": plan_id,
+        "subscriber_username": subscriber_username,
+        "card_batch_id": card_batch_id,
+        "priority": form.get("sr_priority") or 100,
+        "enabled": True,
+        "notes": form.get("sr_notes") or "",
+    }
+    svc = get_operations_service()
+
+    def _schedule_id() -> int:
+        try:
+            return int(action.split(":", 1)[1])
+        except (IndexError, TypeError, ValueError):
+            raise RadiusValidationError("قاعدة السرعة غير واضحة")
+
+    def _assert_target(rule: dict) -> None:
+        if not rule or rule.get("target_type") != target_type:
+            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا القسم")
+        if target_type == "plan" and int(rule.get("plan_id") or 0) != int(plan_id or 0):
+            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا العرض")
+        if target_type == "subscriber" and (rule.get("subscriber_username") or "") != subscriber_username:
+            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا المشترك")
+        if target_type == "card_batch" and int(rule.get("card_batch_id") or 0) != int(card_batch_id or 0):
+            raise RadiusValidationError("قاعدة السرعة لا تتبع هذه الحزمة")
+
+    if action in {"enable_all", "disable_all"}:
+        svc.set_bandwidth_schedules_enabled_for_target(
+            tenant_id=tenant_id,
+            actor=actor,
+            target_type=target_type,
+            enabled=action == "enable_all",
+            plan_id=plan_id,
+            subscriber_username=subscriber_username,
+            card_batch_id=card_batch_id,
+        )
+        return True
+
+    if action.startswith("toggle:"):
+        schedule_id = _schedule_id()
+        rule = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=schedule_id)
+        _assert_target(rule or {})
+        svc.set_bandwidth_schedule_enabled(
+            tenant_id=tenant_id,
+            actor=actor,
+            schedule_id=schedule_id,
+            enabled=not bool(rule.get("enabled")),
+        )
+        return True
+
+    if action.startswith("delete:"):
+        schedule_id = _schedule_id()
+        rule = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=schedule_id)
+        _assert_target(rule or {})
+        svc.delete_bandwidth_schedule(tenant_id=tenant_id, actor=actor, schedule_id=schedule_id)
+        return True
+
+    if action.startswith("update:"):
+        schedule_id = _schedule_id()
+        rule = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=schedule_id)
+        _assert_target(rule or {})
+        suffix = str(schedule_id)
+        svc.update_bandwidth_schedule(
+            tenant_id=tenant_id,
+            actor=actor,
+            schedule_id=schedule_id,
+            data={
+                "name": form.get(f"sr_edit_name_{suffix}"),
+                "starts_at_time": form.get(f"sr_edit_starts_at_time_{suffix}"),
+                "ends_at_time": form.get(f"sr_edit_ends_at_time_{suffix}"),
+                "speed_down_kbps": form.get(f"sr_edit_speed_down_kbps_{suffix}") or 0,
+                "speed_up_kbps": form.get(f"sr_edit_speed_up_kbps_{suffix}") or 0,
+                "cir_down_kbps": form.get(f"sr_edit_cir_down_kbps_{suffix}") or 0,
+                "cir_up_kbps": form.get(f"sr_edit_cir_up_kbps_{suffix}") or 0,
+                "restore_mode": form.get(f"sr_edit_restore_mode_{suffix}") or "profile_default",
+                "priority": form.get(f"sr_edit_priority_{suffix}") or 100,
+                "enabled": form.get(f"sr_edit_enabled_{suffix}") in {"1", "true", "on", "yes"},
+                "notes": form.get(f"sr_edit_notes_{suffix}") or "",
+            },
+        )
+        return True
+
+    if action == "copy":
+        source_raw = form.get("sr_source_schedule_id")
+        try:
+            source_id = int(source_raw or 0)
+        except (TypeError, ValueError):
+            raise RadiusValidationError("اختر جدول سرعة محفوظًا أولًا")
+        source = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=source_id)
+        if not source:
+            raise RadiusValidationError("جدول السرعة المحفوظ غير موجود")
+        payload = {
+            **base,
+            "name": form.get("sr_copy_name") or f"نسخة من {source.get('name') or 'جدول محفوظ'}",
+            "priority": form.get("sr_priority") or source.get("priority") or 100,
+            "starts_at_time": source.get("starts_at_time"),
+            "ends_at_time": source.get("ends_at_time"),
+            "speed_down_kbps": source.get("speed_down_kbps") or 0,
+            "speed_up_kbps": source.get("speed_up_kbps") or 0,
+            "cir_down_kbps": source.get("cir_down_kbps") or 0,
+            "cir_up_kbps": source.get("cir_up_kbps") or 0,
+            "restore_mode": source.get("restore_mode") or "profile_default",
+            "metadata": {
+                "copied_from_schedule_id": source_id,
+                "copied_from_target_type": source.get("target_type"),
+                "embedded_target": target_type,
+            },
+        }
+    else:
+        payload = {
+            **base,
+            "name": form.get("sr_name") or "قاعدة سرعة",
+            "starts_at_time": form.get("sr_starts_at_time"),
+            "ends_at_time": form.get("sr_ends_at_time"),
+            "speed_down_kbps": form.get("sr_speed_down_kbps") or 0,
+            "speed_up_kbps": form.get("sr_speed_up_kbps") or 0,
+            "cir_down_kbps": form.get("sr_cir_down_kbps") or 0,
+            "cir_up_kbps": form.get("sr_cir_up_kbps") or 0,
+            "restore_mode": form.get("sr_restore_mode") or "profile_default",
+            "metadata": {"embedded_target": target_type},
+        }
+
+    svc.create_bandwidth_schedule(tenant_id=tenant_id, actor=actor, data=payload)
+    return True

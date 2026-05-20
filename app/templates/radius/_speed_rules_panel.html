@@ -1,0 +1,184 @@
+{% if speed_rules_panel %}
+<style>
+.speed-rules-panel{margin:14px 0;padding:18px 22px;border-radius:var(--hr-r-lg,8px);background:var(--hr-card,#fff);border:1px solid var(--hr-border);box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));border-inline-start:3px solid var(--hr-cyan-500)}
+.sr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px dashed var(--hr-border)}
+.sr-head h3{display:flex;align-items:center;gap:9px;margin:0 0 6px;font-size:15px;font-weight:900;color:var(--hr-text)}
+.sr-head h3 i{width:30px;height:30px;border-radius:6px;background:var(--hr-cyan-100);color:var(--hr-cyan-700);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.sr-head p,.sr-help{margin:0;color:var(--hr-text-muted);font-size:12px;line-height:1.8}
+.sr-badge{white-space:nowrap;border:1px solid var(--hr-border);border-radius:999px;background:var(--hr-soft,#f8f5ec);padding:7px 10px;font-size:11px;font-weight:800;color:var(--hr-text)}
+.sr-current{margin-bottom:14px}
+.sr-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.sr-table th,.sr-table td{padding:9px 8px;border-bottom:1px solid var(--hr-border);text-align:right;vertical-align:middle}
+.sr-table th{font-size:11.5px;color:var(--hr-text-muted);font-weight:900;background:var(--hr-soft,#f8f5ec)}
+.sr-table input,.sr-table select{width:100%;box-sizing:border-box;border:1px solid var(--hr-border-strong);border-radius:6px;background:var(--hr-soft,#f8f5ec);padding:7px 8px;font-family:inherit;font-size:12px;color:var(--hr-text)}
+.sr-table input:focus,.sr-table select:focus{outline:0;border-color:var(--hr-cyan-500);background:#fff;box-shadow:0 0 0 2px rgba(43,170,204,.14)}
+.sr-name{min-width:135px}
+.sr-time{width:92px}
+.sr-num{width:86px}
+.sr-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sr-actions .btn{padding:7px 9px;font-size:11.5px;line-height:1}
+.sr-bulk{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.sr-danger{background:#fff5f5!important;border-color:#ffd0d0!important;color:#b42318!important}
+.sr-ok,.sr-off{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900}
+.sr-ok{background:var(--hr-badge-success-bg,#e8f7ee);color:var(--hr-badge-success-fg,#176b3b)}
+.sr-off{background:#f1f3f5;color:#667085}
+.sr-empty{padding:12px;border:1px dashed var(--hr-border);border-radius:8px;background:var(--hr-soft,#f8f5ec);color:var(--hr-text-muted);font-size:12.5px}
+.sr-grid{display:grid;grid-template-columns:1.4fr .9fr;gap:12px}
+.sr-box{border:1px solid var(--hr-border);border-radius:8px;padding:13px;background:#fff}
+.sr-box h4{margin:0 0 10px;font-size:13px;font-weight:900;color:var(--hr-text)}
+.sr-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.sr-fields.one{grid-template-columns:1fr}
+.sr-fields label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800;color:var(--hr-text)}
+.sr-fields input,.sr-fields select{width:100%;box-sizing:border-box;border:1.5px solid var(--hr-border-strong);border-radius:6px;background:var(--hr-soft,#f8f5ec);padding:9px 10px;font-family:inherit;font-size:12.5px;color:var(--hr-text)}
+.sr-fields input:focus,.sr-fields select:focus{outline:0;border-color:var(--hr-cyan-500);background:#fff;box-shadow:0 0 0 3px rgba(43,170,204,.16)}
+@media (max-width:980px){.sr-grid{grid-template-columns:1fr}.sr-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.sr-head{flex-direction:column}.sr-badge{white-space:normal}}
+@media (max-width:560px){.sr-fields{grid-template-columns:1fr}.sr-table{font-size:11px}}
+</style>
+<section class="speed-rules-panel">
+  <div class="sr-head">
+    <div>
+      <h3><i class="fa-solid fa-gauge-high"></i> {{ speed_rules_panel.title }}</h3>
+      <p>{{ speed_rules_panel.help_text }}</p>
+    </div>
+    <span class="sr-badge">الأولوية: مشترك ثم حزمة بطاقات ثم عرض</span>
+  </div>
+
+  <div class="sr-current">
+    {% if speed_rules_panel.rules %}
+      <div class="sr-bulk">
+        <button class="btn btn-secondary btn-sm" type="submit" name="_speed_rule_action" value="enable_all" formnovalidate>
+          <i class="fa-solid fa-toggle-on"></i> تفعيل كل قواعد هذا القسم
+        </button>
+        <button class="btn btn-secondary btn-sm" type="submit" name="_speed_rule_action" value="disable_all" formnovalidate>
+          <i class="fa-solid fa-toggle-off"></i> تعطيل كل قواعد هذا القسم
+        </button>
+      </div>
+      <table class="sr-table">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>من</th>
+            <th>إلى</th>
+            <th>تنزيل</th>
+            <th>رفع</th>
+            <th>بعد الانتهاء</th>
+            <th>الأولوية</th>
+            <th>الحالة</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in speed_rules_panel.rules %}
+          <tr>
+            <td>
+              <input class="sr-name" name="sr_edit_name_{{ rule.id }}" value="{{ rule.name or 'قاعدة سرعة' }}">
+            </td>
+            <td><input class="sr-time mono" type="time" name="sr_edit_starts_at_time_{{ rule.id }}" value="{{ rule.starts_at_time }}"></td>
+            <td><input class="sr-time mono" type="time" name="sr_edit_ends_at_time_{{ rule.id }}" value="{{ rule.ends_at_time }}"></td>
+            <td><input class="sr-num mono" type="number" min="0" step="1" name="sr_edit_speed_down_kbps_{{ rule.id }}" value="{{ rule.speed_down_kbps or 0 }}"></td>
+            <td><input class="sr-num mono" type="number" min="0" step="1" name="sr_edit_speed_up_kbps_{{ rule.id }}" value="{{ rule.speed_up_kbps or 0 }}"></td>
+            <td>
+              <select name="sr_edit_restore_mode_{{ rule.id }}">
+                <option value="profile_default" {% if rule.restore_mode == 'profile_default' %}selected{% endif %}>رجوع للسرعة الأساسية</option>
+                <option value="keep_current" {% if rule.restore_mode == 'keep_current' %}selected{% endif %}>إبقاء آخر سرعة</option>
+                <option value="disconnect" {% if rule.restore_mode == 'disconnect' %}selected{% endif %}>فصل الجلسة</option>
+              </select>
+            </td>
+            <td>
+              <input class="sr-num mono" type="number" min="1" step="1" name="sr_edit_priority_{{ rule.id }}" value="{{ rule.priority or 100 }}">
+            </td>
+            <td>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:800">
+                <input type="checkbox" name="sr_edit_enabled_{{ rule.id }}" value="1" {% if rule.enabled %}checked{% endif %}>
+                {% if rule.enabled %}<span class="sr-ok">مفعّلة</span>{% else %}<span class="sr-off">معطّلة</span>{% endif %}
+              </label>
+            </td>
+            <td>
+              <input type="hidden" name="sr_edit_cir_down_kbps_{{ rule.id }}" value="{{ rule.cir_down_kbps or 0 }}">
+              <input type="hidden" name="sr_edit_cir_up_kbps_{{ rule.id }}" value="{{ rule.cir_up_kbps or 0 }}">
+              <input type="hidden" name="sr_edit_notes_{{ rule.id }}" value="{{ rule.notes or '' }}">
+              <div class="sr-actions">
+                <button class="btn btn-primary btn-sm" type="submit" name="_speed_rule_action" value="update:{{ rule.id }}" formnovalidate>
+                  <i class="fa-solid fa-floppy-disk"></i> تحديث
+                </button>
+                <button class="btn btn-secondary btn-sm" type="submit" name="_speed_rule_action" value="toggle:{{ rule.id }}" formnovalidate>
+                  {% if rule.enabled %}<i class="fa-solid fa-toggle-off"></i> تعطيل{% else %}<i class="fa-solid fa-toggle-on"></i> تفعيل{% endif %}
+                </button>
+                <button class="btn btn-secondary btn-sm sr-danger" type="submit" name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate onclick="return confirm('حذف قاعدة السرعة هذه؟');">
+                  <i class="fa-solid fa-trash"></i> حذف
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="sr-empty">لا توجد قواعد سرعة خاصة هنا بعد. أضف قاعدة يدوية أو انسخ من جدول محفوظ.</div>
+    {% endif %}
+  </div>
+
+  <div class="sr-grid">
+    <div class="sr-box">
+      <h4>إضافة قاعدة يدوية</h4>
+      <div class="sr-fields">
+        <label>اسم القاعدة
+          <input name="sr_name" placeholder="مثال: سرعة المساء">
+        </label>
+        <label>من الساعة
+          <input type="time" name="sr_starts_at_time">
+        </label>
+        <label>إلى الساعة
+          <input type="time" name="sr_ends_at_time">
+        </label>
+        <label>سرعة التنزيل Kbps
+          <input type="number" name="sr_speed_down_kbps" min="0" step="1" value="0">
+        </label>
+        <label>سرعة الرفع Kbps
+          <input type="number" name="sr_speed_up_kbps" min="0" step="1" value="0">
+        </label>
+        <label>بعد انتهاء المدة
+          <select name="sr_restore_mode">
+            <option value="profile_default">الرجوع للسرعة الأساسية</option>
+            <option value="keep_current">إبقاء آخر سرعة</option>
+            <option value="disconnect">فصل الجلسة</option>
+          </select>
+        </label>
+        <label>الأولوية
+          <input type="number" name="sr_priority" min="1" step="1" value="100">
+        </label>
+        <label>ملاحظات
+          <input name="sr_notes" placeholder="اختياري">
+        </label>
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit" name="_speed_rule_action" value="manual" formnovalidate>
+        <i class="fa-solid fa-check"></i> اعتماد وإضافة القاعدة
+      </button>
+      <p class="sr-help">يمكنك إضافة أي عدد من قواعد الوقت. إذا كانت الفترة تعبر منتصف الليل مثل 22:00 إلى 06:00 سيتم فهمها تلقائيًا.</p>
+    </div>
+
+    <div class="sr-box">
+      <h4>إضافة من الجداول المحفوظة</h4>
+      <div class="sr-fields one">
+        <label>اختر جدولًا محفوظًا
+          <select name="sr_source_schedule_id">
+            <option value="">اختر جدول سرعة</option>
+            {% for preset in speed_rules_panel.presets %}
+              <option value="{{ preset.id }}">
+                {{ preset.name or 'جدول سرعة' }} - {{ preset.starts_at_time }} إلى {{ preset.ends_at_time }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>اسم جديد اختياري
+          <input name="sr_copy_name" placeholder="اتركه فارغًا لاستخدام اسم الجدول">
+        </label>
+      </div>
+      <button class="btn btn-secondary btn-sm" type="submit" name="_speed_rule_action" value="copy" formnovalidate>
+        <i class="fa-solid fa-copy"></i> اعتماد من المحفوظ
+      </button>
+      <p class="sr-help">سيتم نسخ الوقت والسرعات وطريقة الرجوع، وتطبيقها على هذا العنصر فقط.</p>
+    </div>
+  </div>
+</section>
+{% endif %}
