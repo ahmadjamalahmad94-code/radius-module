@@ -1,0 +1,94 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}الموزعون والصلاحيات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
+{% block page_title %}الموزعون والصلاحيات{% endblock %}
+{% block page_sub %}<span class="sub">({{ distributors|length }} موزع)</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.distributors_new') }}">
+    <i class="fa-solid fa-user-plus"></i> إضافة موزع
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .dist-note{margin-bottom:12px;padding:10px 12px;border:1px solid var(--hr-border);border-radius:8px;background:var(--hr-soft);color:var(--hr-text-muted);font-size:12.5px}
+  .dist-summary{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+<div class="dist-note">
+  هذه الشاشة تستخدم طبقة الموزعين الحالية في الباكند. الصلاحيات والنطاق محفوظة كأساس قابل للتوسعة، وتطبيق العزل الفعلي يتم في واجهات API الحساسة.
+</div>
+
+<div class="card">
+  <div class="card-body card-body--flush">
+    {% if distributors %}
+    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="distributors-list">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>اسم الدخول</th>
+          <th>الاسم الظاهر</th>
+          <th>التواصل</th>
+          <th>الصلاحيات</th>
+          <th>النطاق</th>
+          <th>الرصيد والدين</th>
+          <th>الحالة</th>
+          <th style="width:100px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in distributors %}
+        <tr>
+          <td class="num">{{ d.id }}</td>
+          <td class="mono"><strong>{{ d.name }}</strong></td>
+          <td>{{ d.display_name or d.name }}</td>
+          <td>
+            <div>{{ d.phone or '—' }}</div>
+            <div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.email or '—' }}</div>
+          </td>
+          <td>
+            <div class="dist-summary">
+              {% for p in d.permissions_json[:3] %}
+                <span class="pill pill-cyan">{{ p }}</span>
+              {% else %}
+                <span class="pill">لم تحدد بعد</span>
+              {% endfor %}
+              {% if d.permissions_json|length > 3 %}
+                <span class="pill">+{{ d.permissions_json|length - 3 }}</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if d.scope_json.card_batches == 'assigned' %}
+              <span class="pill pill-info">الحزم المربوطة فقط</span>
+            {% else %}
+              <span class="pill">{{ d.scope_json.card_batches or 'مخصص' }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="mono">رصيد: {{ "%.2f"|format(d.balance or 0) }}</div>
+            <div class="mono" style="font-size:11px;color:var(--hr-text-muted)">دين: {{ "%.2f"|format(d.debt_balance or 0) }} · حد: {{ "%.2f"|format(d.credit_limit or 0) }}</div>
+          </td>
+          <td>
+            {% if d.status == 'active' %}
+              <span class="pill pill-success"><span class="pill-dot"></span>مفعّل</span>
+            {% elif d.status == 'blocked' %}
+              <span class="pill pill-danger">محظور</span>
+            {% else %}
+              <span class="pill pill-warn">{{ d.status or 'غير معروف' }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <a class="btn btn-primary btn-xs" href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fa-solid fa-people-arrows"></i>لا يوجد موزعون بعد</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

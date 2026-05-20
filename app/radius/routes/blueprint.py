@@ -84,6 +84,7 @@ def _register_all(bp: Blueprint) -> None:
     from .users import register_users_routes
     from .cards import register_cards_routes
     from .admins import register_admins_routes
+    from .distributors import register_distributors_routes
 
     register_dashboard_routes(bp)
     register_devices_routes(bp)
@@ -92,6 +93,7 @@ def _register_all(bp: Blueprint) -> None:
     register_users_routes(bp)
     register_cards_routes(bp)
     register_admins_routes(bp)
+    register_distributors_routes(bp)
 
     from .saas_modules import register_saas_routes
     register_saas_routes(bp)

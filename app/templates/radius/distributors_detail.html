@@ -1,0 +1,164 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}{{ distributor.display_name or distributor.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
+{% block page_title %}{{ distributor.display_name or distributor.name }}{% endblock %}
+{% block page_sub %}<span class="sub">ملف موزع وتشغيل الحزم</span>{% endblock %}
+{% block head_buttons %}
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.distributors_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> كل الموزعين
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .dist-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+  .dist-stat{background:#fff;border:1px solid var(--hr-border);border-radius:8px;padding:12px}
+  .dist-stat .v{font-size:20px;font-weight:900;color:var(--hr-navy-800)}
+  .dist-stat .l{font-size:12px;color:var(--hr-text-muted);margin-top:4px}
+  .dist-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:14px;align-items:start}
+  .dist-kv{display:grid;grid-template-columns:110px 1fr;gap:8px 10px;font-size:12.5px}
+  .dist-kv dt{color:var(--hr-text-muted)}
+  .dist-kv dd{margin:0;font-weight:700}
+  .dist-form-stack{display:grid;gap:9px}
+  @media(max-width:1000px){.dist-stats,.dist-grid{grid-template-columns:1fr}.dist-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:620px){.dist-stats{grid-template-columns:1fr}}
+</style>
+
+<div class="dist-stats">
+  <div class="dist-stat"><div class="v">{{ summary.assigned_batches }}</div><div class="l">حزم مربوطة</div></div>
+  <div class="dist-stat"><div class="v">{{ "%.2f"|format(summary.balance or 0) }}</div><div class="l">الرصيد</div></div>
+  <div class="dist-stat"><div class="v">{{ "%.2f"|format(summary.debt_balance or 0) }}</div><div class="l">الدين</div></div>
+  <div class="dist-stat"><div class="v">{{ "%.2f"|format(summary.credit_limit or 0) }}</div><div class="l">حد الائتمان</div></div>
+</div>
+
+<div class="dist-grid">
+  <div>
+    <div class="card sec-card">
+      <div class="card-header">
+        <div class="title">بيانات ونطاق الموزع</div>
+        <div class="meta">معلومات تشغيلية محفوظة في الباكند.</div>
+      </div>
+      <div class="card-body">
+        <dl class="dist-kv">
+          <dt>اسم الدخول</dt><dd class="mono">{{ distributor.name }}</dd>
+          <dt>الحالة</dt><dd>{{ distributor.status }}</dd>
+          <dt>الهاتف</dt><dd>{{ distributor.phone or '—' }}</dd>
+          <dt>البريد</dt><dd class="mono">{{ distributor.email or '—' }}</dd>
+          <dt>الصلاحيات</dt>
+          <dd>
+            {% for p in distributor.permissions_json %}
+              <span class="pill pill-cyan">{{ p }}</span>
+            {% else %}
+              <span class="pill">لم تحدد</span>
+            {% endfor %}
+          </dd>
+          <dt>النطاق</dt>
+          <dd>
+            {% if distributor.scope_json.card_batches == 'assigned' %}
+              <span class="pill pill-info">الحزم المربوطة فقط</span>
+            {% else %}
+              <span class="pill">{{ distributor.scope_json.card_batches or 'مخصص' }}</span>
+            {% endif %}
+          </dd>
+        </dl>
+        {% if distributor.notes %}
+          <p class="hint" style="margin-top:12px">{{ distributor.notes }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card sec-card" style="margin-top:12px">
+      <div class="card-header">
+        <div class="title">ربط حزمة كروت</div>
+        <div class="meta">بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع.</div>
+      </div>
+      <div class="card-body">
+        <form class="dist-form-stack" method="post" action="{{ url_for('radius.distributors_assign_batch', distributor_id=distributor.id) }}">
+          <div class="form-row">
+            <label>الحزمة</label>
+            <select name="batch_id" required>
+              <option value="">اختر حزمة</option>
+              {% for b in available_batches %}
+                <option value="{{ b.id }}">{{ b.batch_code }} — {{ b.package_name or 'بدون اسم' }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-row">
+            <label>ملاحظة الربط</label>
+            <input name="notes" maxlength="300" placeholder="مثال: تسليم يدوي للموزع">
+          </div>
+          <button class="btn btn-primary"><i class="fa-solid fa-link"></i> ربط الحزمة</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card sec-card" style="margin-top:12px">
+      <div class="card-header">
+        <div class="title">تسوية مالية يدوية</div>
+        <div class="meta">تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.</div>
+      </div>
+      <div class="card-body">
+        <form class="dist-form-stack" method="post" action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">
+          <div class="form-row">
+            <label>المبلغ</label>
+            <input type="number" step="0.01" min="0.01" name="amount" required>
+          </div>
+          <div class="form-row">
+            <label>الاتجاه</label>
+            <select name="direction">
+              <option value="credit">تسديد / إنقاص الدين</option>
+              <option value="debit">إضافة دين</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>ملاحظات</label>
+            <input name="notes" maxlength="500">
+          </div>
+          <button class="btn btn-secondary"><i class="fa-solid fa-receipt"></i> تسجيل الحركة</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="title">الحزم المربوطة</div>
+      <div class="meta">{{ assigned_batches|length }} حزمة ضمن نطاق الموزع.</div>
+    </div>
+    <div class="card-body card-body--flush">
+      {% if assigned_batches %}
+      <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="distributor-batches-{{ distributor.id }}">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>كود الحزمة</th>
+            <th>الباقة</th>
+            <th>العدد</th>
+            <th>المستخدم</th>
+            <th>الحالة</th>
+            <th>تاريخ الربط</th>
+            <th>ملاحظة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in assigned_batches %}
+          <tr>
+            <td class="num">{{ b.id }}</td>
+            <td class="mono"><strong>{{ b.batch_code }}</strong></td>
+            <td>{{ b.package_name or '—' }}</td>
+            <td class="num">{{ b.count }}</td>
+            <td class="num">{{ b.used }}</td>
+            <td><span class="pill">{{ b.status or 'غير معروف' }}</span></td>
+            <td class="mono">{{ b.assigned_at or '—' }}</td>
+            <td>{{ b.assignment_notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty"><i class="fa-solid fa-layer-group"></i>لا توجد حزم مربوطة بعد</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

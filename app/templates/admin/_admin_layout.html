@@ -272,6 +272,10 @@
          class="{% if '/admins' in request.path %}active{% endif %}">
         <i class="fa-solid fa-user-shield"></i> المدراء
       </a>
+      <a href="{{ url_for('radius.distributors_list') }}"
+         class="{% if '/distributors' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-people-arrows"></i> الموزعون
+      </a>
       <a href="{{ url_for('radius.roles_list') }}"
          class="{% if '/roles' in request.path %}active{% endif %}">
         <i class="fa-solid fa-key"></i> الأدوار والصلاحيات
