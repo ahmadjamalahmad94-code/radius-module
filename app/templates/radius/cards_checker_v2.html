@@ -263,6 +263,30 @@
 
 <div class="cc-page" data-cc-current-mode="advanced">
 
+  {# R13.A.9 round 2: top row with "back to cards" + a small action
+     toolbar (refresh / print / share) — mirrors Reference A's header
+     chrome. Actions are stable links/buttons that don't require new
+     backend wiring. #}
+  <div class="cc-header-row">
+    <a class="cc-header-back" href="{{ url_for('radius.cards_list') }}">
+      <i class="fa-solid fa-chevron-right"></i> رجوع إلى بطاقات
+    </a>
+    <div class="cc-header-actions">
+      <a class="cc-header-action" href="{{ url_for('radius.cards_checker', query=query) }}"
+         title="تحديث">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </a>
+      <button type="button" class="cc-header-action" onclick="window.print()" title="طباعة">
+        <i class="fa-solid fa-print"></i>
+      </button>
+      <button type="button" class="cc-header-action"
+              onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)"
+              title="نسخ الرابط">
+        <i class="fa-solid fa-link"></i>
+      </button>
+    </div>
+  </div>
+
   {# ───────────────────── HEADER ───────────────────── #}
   <div class="cc-header">
     <h1>مركز عمليات البطاقة</h1>
