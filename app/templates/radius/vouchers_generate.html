@@ -1,25 +1,61 @@
+{# Vouchers generate — REBUILT N7 (hub-v2). Backend: plans. POST to vch_generate. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}توليد كوبونات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}توليد كوبونات{% endblock %}
+
 {% block content %}
+
+{{ hub.hero(
+  "توليد دفعة كوبونات",
+  subtitle="إنشاء دفعة كوبونات بقيمة محددة وربطها اختياريًا بباقة وتاريخ انتهاء",
+  icon="wand-magic-sparkles",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.vch_list') + '">
+      <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
 <form method="post">
-  <div class="card"><div class="card-header"><span class="title">معطيات الدفعة</span></div><div class="card-body">
-    <div class="form-row"><label>عدد الكوبونات *</label>
-      <div class="field"><input type="number" name="count" min="1" max="5000" required value="20"></div></div>
-    <div class="form-row"><label>القيمة (لكل كوبون) *</label>
-      <div class="field"><input type="number" step="0.01" name="amount" min="0.01" required value="5.00"></div></div>
-    <div class="form-row"><label>الباقة (اختياري)</label>
-      <div class="field"><select name="plan_id">
-        <option value="">— بدون ربط —</option>
-        {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-      </select></div></div>
-    <div class="form-row"><label>تنتهي في</label>
-      <div class="field"><input type="date" name="expire_at"></div></div>
-  </div></div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.vch_list') }}">إلغاء</a>
+  {% call hub.section("معطيات الدفعة", icon="sliders") %}
+    <div class="hub-form">
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-count">عدد الكوبونات <span class="req">*</span></label>
+        <input class="hub-input" type="number" id="hub-f-count" name="count" min="1" max="5000" required value="20">
+        <div class="hub-field-hint">حدّ أقصى 5000 كوبون في الدفعة.</div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-amount">القيمة لكل كوبون <span class="req">*</span></label>
+        <input class="hub-input" type="number" id="hub-f-amount" name="amount" step="0.01" min="0.01" required value="5.00">
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-plan_id">الباقة (اختياري)</label>
+        <select class="hub-select" id="hub-f-plan_id" name="plan_id">
+          <option value="">— بدون ربط —</option>
+          {% for p in plans %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="hub-field-hint">ربط الكوبون بباقة معينة سيمكِّن المشترك من تفعيلها تلقائيًا.</div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-expire_at">تنتهي في</label>
+        <input class="hub-input" type="date" id="hub-f-expire_at" name="expire_at">
+        <div class="hub-field-hint">اتركه فارغًا للكوبونات دون تاريخ انتهاء.</div>
+      </div>
+    </div>
+  {% endcall %}
+
+  <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
+    {{ hub.btn("توليد الكوبونات", icon="wand-magic-sparkles", variant="primary", type="submit") }}
+    {{ hub.btn("إلغاء", href=url_for('radius.vch_list'), variant="secondary") }}
   </div>
 </form>
+
 {% endblock %}

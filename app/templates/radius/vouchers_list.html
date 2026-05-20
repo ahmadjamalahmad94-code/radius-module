@@ -1,74 +1,103 @@
+{# Vouchers list — REBUILT N7 (hub-v2). Backend: items, plans, stats, status. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}الكوبونات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
 {% block page_title %}الكوبونات{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.vch_generate') }}">
-    <i class="fa-solid fa-wand-magic-sparkles"></i> توليد كوبونات
-  </a>
-{% endblock %}
-{% block content %}
-<div class="kpi-strip">
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">نشطة</div><div class="val">{{ stats.active }}</div></div>
-    <div class="ico"><i class="fa-solid fa-check"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">مستخدمة</div><div class="val">{{ stats.used }}</div></div>
-    <div class="ico"><i class="fa-solid fa-circle-check"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">ملغاة</div><div class="val">{{ stats.revoked }}</div></div>
-    <div class="ico"><i class="fa-solid fa-ban"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">القيمة الإجمالية</div><div class="val">{{ "%.2f"|format(stats.total_amount) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-coins"></i></div>
-  </div>
-</div>
+{% block page_sub %}<span class="sub">{{ items|length }} كوبون في النتائج</span>{% endblock %}
 
-<form method="get" class="filter-bar" style="margin-top:8px">
-  <select name="status">
+{% block content %}
+
+{{ hub.hero(
+  "الكوبونات",
+  subtitle="إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة",
+  icon="ticket",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.vch_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> توليد كوبونات
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
-    {% for s in ['active','used','revoked','expired'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
-    {% endfor %}
+    <option value="active"  {% if status=='active'  %}selected{% endif %}>نشطة</option>
+    <option value="used"    {% if status=='used'    %}selected{% endif %}>مستخدمة</option>
+    <option value="revoked" {% if status=='revoked' %}selected{% endif %}>ملغاة</option>
+    <option value="expired" {% if status=='expired' %}selected{% endif %}>منتهية</option>
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  <span class="hub-spacer"></span>
+  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
 </form>
 
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table" data-paginated="1" data-page-size="50">
-    <thead><tr>
-      <th>#</th><th>الكود</th><th>القيمة</th><th>الباقة</th>
-      <th>الحالة</th><th>تنتهي</th><th>مولِّد</th><th style="width:80px"></th>
-    </tr></thead>
-    <tbody>{% for v in items %}
-    <tr>
-      <td class="num">{{ v.id }}</td>
-      <td class="mono"><strong>{{ v.code }}</strong></td>
-      <td><strong>{{ "%.2f"|format(v.amount) }}</strong></td>
-      <td>{{ plans[v.plan_id].name if v.plan_id and plans.get(v.plan_id) else '—' }}</td>
-      <td>
-        {% if v.status == 'active' %}<span class="pill pill-success">نشط</span>
-        {% elif v.status == 'used' %}<span class="pill pill-info">مستخدم</span>
-        {% elif v.status == 'revoked' %}<span class="pill pill-danger">ملغى</span>
-        {% else %}<span class="pill pill-warn">{{ v.status }}</span>{% endif %}
-      </td>
-      <td class="mono">{{ v.expire_at.strftime('%Y-%m-%d') if v.expire_at else '—' }}</td>
-      <td class="mono">{{ v.generated_by or '—' }}</td>
-      <td>
-        {% if v.status == 'active' %}
-        <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
-              onsubmit="return confirm('إلغاء؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i></button>
-        </form>
-        {% endif %}
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-ticket"></i>لا كوبونات</div>{% endif %}
-</div></div>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("نشطة",          stats.active or 0,  icon="circle-check", variant="green") }}
+  {{ hub.kpi("مستخدمة",       stats.used or 0,    icon="handshake",     variant="blue") }}
+  {{ hub.kpi("ملغاة",         stats.revoked or 0, icon="ban",           variant="red") }}
+  {{ hub.kpi("القيمة الإجمالية", "%.2f"|format(stats.total_amount or 0), icon="coins", variant="amber") }}
+</div>
+
+{% if items %}
+{% call hub.section("قائمة الكوبونات", icon="table-list", meta=items|length|string + " كوبون", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="vouchers-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الكود</th>
+          <th class="num">القيمة</th>
+          <th>الباقة</th>
+          <th>الحالة</th>
+          <th>تنتهي</th>
+          <th>مولِّد</th>
+          <th style="width:80px">إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in items %}
+        <tr>
+          <td class="num mono">{{ v.id }}</td>
+          <td class="mono"><strong style="color:var(--hub-brand-ink)">{{ v.code }}</strong></td>
+          <td class="num"><strong>{{ "%.2f"|format(v.amount) }}</strong></td>
+          <td>
+            {% if v.plan_id and plans.get(v.plan_id) %}
+              {{ hub.pill(plans[v.plan_id].name, variant="brand", dot=False) }}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td>
+            {% if v.status == 'active' %}{{ hub.pill("نشط", variant="green") }}
+            {% elif v.status == 'used' %}{{ hub.pill("مستخدم", variant="blue") }}
+            {% elif v.status == 'revoked' %}{{ hub.pill("ملغى", variant="red") }}
+            {% elif v.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
+            {% else %}{{ hub.pill(v.status, variant="grey") }}{% endif %}
+          </td>
+          <td class="mono small">{{ v.expire_at.strftime('%Y-%m-%d') if v.expire_at else '—' }}</td>
+          <td class="mono small">{{ v.generated_by or '—' }}</td>
+          <td>
+            {% if v.status == 'active' %}
+            <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
+                  onsubmit="return confirm('إلغاء الكوبون {{ v.code|e }}؟');" style="display:inline">
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
+                <i class="fa-solid fa-ban"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا كوبونات بهذه الفلترة",
+  sub="ولّد دفعة كوبونات جديدة من زرّ «توليد كوبونات» في الأعلى.",
+  icon="ticket"
+) }}
+{% endif %}
+
 {% endblock %}

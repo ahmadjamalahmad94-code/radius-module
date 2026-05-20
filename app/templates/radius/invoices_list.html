@@ -1,88 +1,127 @@
+{# Invoices list — REBUILT N7 (hub-v2). Backend: items, stats, status. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}الفواتير{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}الفواتير{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.inv_new') }}">
-    <i class="fa-solid fa-plus"></i> فاتورة جديدة
-  </a>
-{% endblock %}
-{% block content %}
-<div class="kpi-strip">
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">إجمالي</div><div class="val">{{ "%.2f"|format(stats.total) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-sack-dollar"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">مدفوعة</div><div class="val">{{ "%.2f"|format(stats.paid or 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-circle-check"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">معلَّقة</div><div class="val">{{ "%.2f"|format(stats.pending or 0) }}</div></div>
-    <div class="ico"><i class="fa-solid fa-clock"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">عدد الفواتير</div><div class="val">{{ stats.count }}</div></div>
-    <div class="ico"><i class="fa-solid fa-receipt"></i></div>
-  </div>
-</div>
+{% block page_sub %}<span class="sub">{{ items|length }} فاتورة في النتائج</span>{% endblock %}
 
-<form method="get" class="filter-bar" style="margin-top:8px">
-  <select name="status">
+{% block content %}
+
+{{ hub.hero(
+  "الفواتير",
+  subtitle="إدارة كاملة لفواتير المشتركين — تحصيل، إيداع، استرجاع، تتبع الحالة",
+  icon="file-invoice-dollar",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.inv_new') + '">
+      <i class="fa-solid fa-plus"></i> فاتورة جديدة
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
+      <i class="fa-solid fa-scale-balanced"></i> السجل المالي
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in ['paid','pending','failed','refunded','canceled'] %}
       <option value="{{ s }}" {% if status==s %}selected{% endif %}>
-        {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+        {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلَّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
       </option>
     {% endfor %}
   </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  <span class="hub-spacer"></span>
+  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
+  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
 </form>
 
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table" data-paginated="1" data-page-size="50">
-    <thead><tr>
-      <th>#</th><th>الرقم</th><th>اسم الدخول</th><th>الباقة</th>
-      <th>الاتجاه</th><th>المبلغ</th><th>الطريقة</th>
-      <th>التاريخ</th><th>الحالة</th><th style="width:130px"></th>
-    </tr></thead>
-    <tbody>{% for i in items %}
-    <tr>
-      <td class="num">{{ i.id }}</td>
-      <td class="mono"><strong>{{ i.invoice_number }}</strong></td>
-      <td class="mono">{{ i.username }}</td>
-      <td>{{ i.plan_name or '—' }}</td>
-      <td>
-        {% if i.direction == 'charge' %}<span class="pill pill-info">خصم</span>
-        {% elif i.direction == 'refund' %}<span class="pill pill-warn">إرجاع</span>
-        {% elif i.direction == 'deposit' %}<span class="pill pill-success">إيداع</span>
-        {% else %}<span class="pill">{{ i.direction }}</span>{% endif %}
-      </td>
-      <td><strong>{{ "%.2f"|format(i.amount) }}</strong></td>
-      <td>{{ i.payment_method }}</td>
-      <td class="mono">{{ i.created_at.strftime('%Y-%m-%d %H:%M') if i.created_at else '—' }}</td>
-      <td>
-        {% if i.status == 'paid' %}<span class="pill pill-success">مدفوعة</span>
-        {% elif i.status == 'pending' %}<span class="pill pill-warn">معلَّقة</span>
-        {% elif i.status == 'failed' %}<span class="pill pill-danger">فشلت</span>
-        {% else %}<span class="pill">{{ i.status }}</span>{% endif %}
-      </td>
-      <td>
-        <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" style="display:flex;gap:4px">
-          <select name="status" style="font-size:11px;padding:3px;border-radius:4px;border:1px solid var(--hr-border-strong)">
-            {% for s in ['paid','pending','failed','refunded','canceled'] %}
-              <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>
-                {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
-              </option>
-            {% endfor %}
-          </select>
-          <button class="btn btn-secondary btn-xs"><i class="fa-solid fa-check"></i></button>
-        </form>
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i>لا فواتير</div>{% endif %}
-</div></div>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي القيمة", "%.2f"|format(stats.total or 0), icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("مدفوعة",       "%.2f"|format(stats.paid or 0),  icon="circle-check", variant="brand") }}
+  {{ hub.kpi("معلَّقة",       "%.2f"|format(stats.pending or 0), icon="clock", variant="amber") }}
+  {{ hub.kpi("عدد الفواتير", stats.count or 0, icon="receipt", variant="blue") }}
+</div>
+
+{% if items %}
+{% call hub.section("قائمة الفواتير", icon="table-list", meta=items|length|string + " فاتورة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="invoices-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الرقم</th>
+          <th>اسم الدخول</th>
+          <th>الباقة</th>
+          <th>الاتجاه</th>
+          <th class="num">المبلغ</th>
+          <th>الطريقة</th>
+          <th>التاريخ</th>
+          <th>الحالة</th>
+          <th style="width:150px">تحديث الحالة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in items %}
+        <tr>
+          <td class="num mono">{{ i.id }}</td>
+          <td class="mono"><strong>{{ i.invoice_number }}</strong></td>
+          <td class="mono">{{ i.username }}</td>
+          <td>{{ i.plan_name or '—' }}</td>
+          <td>
+            {% if i.direction == 'charge' %}{{ hub.pill("خصم", variant="blue") }}
+            {% elif i.direction == 'refund' %}{{ hub.pill("إرجاع", variant="amber") }}
+            {% elif i.direction == 'deposit' %}{{ hub.pill("إيداع", variant="green") }}
+            {% elif i.direction == 'withdraw' %}{{ hub.pill("سحب", variant="red") }}
+            {% elif i.direction == 'credit' %}{{ hub.pill("رصيد", variant="brand") }}
+            {% else %}{{ hub.pill(i.direction, variant="grey") }}{% endif %}
+          </td>
+          <td class="num"><strong>{{ "%.2f"|format(i.amount) }}</strong></td>
+          <td class="small">
+            {% if i.payment_method == 'cash' %}نقدًا
+            {% elif i.payment_method == 'transfer' %}حوالة
+            {% elif i.payment_method == 'card' %}بطاقة
+            {% elif i.payment_method == 'online' %}إلكتروني
+            {% elif i.payment_method == 'manual' %}يدوي
+            {% else %}{{ i.payment_method }}{% endif %}
+          </td>
+          <td class="mono small">{{ i.created_at.strftime('%Y-%m-%d %H:%M') if i.created_at else '—' }}</td>
+          <td>
+            {% if i.status == 'paid' %}{{ hub.pill("مدفوعة", variant="green") }}
+            {% elif i.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}
+            {% elif i.status == 'failed' %}{{ hub.pill("فشلت", variant="red") }}
+            {% elif i.status == 'refunded' %}{{ hub.pill("مسترجعة", variant="blue") }}
+            {% elif i.status == 'canceled' %}{{ hub.pill("ملغاة", variant="grey") }}
+            {% else %}{{ hub.pill(i.status, variant="grey") }}{% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <select class="hub-select" name="status" style="font-size:11.5px;padding:4px 6px;min-width:auto">
+                {% for s in ['paid','pending','failed','refunded','canceled'] %}
+                  <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>
+                    {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلَّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="تحديث">
+                <i class="fa-solid fa-check"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا فواتير بهذه الفلترة",
+  sub="أنشئ فاتورة جديدة من زرّ «فاتورة جديدة» في الأعلى.",
+  icon="file-invoice-dollar"
+) }}
+{% endif %}
+
 {% endblock %}
