@@ -1,123 +1,185 @@
+{# System status page — REBUILT N11 (hub-v2). Backend untouched.
+   (Note: filename starts with underscore but this is a full route page,
+   not an include partial.) #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}حالة النظام{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-heart-pulse"></i>{% endblock %}
 {% block page_title %}حالة النظام{% endblock %}
-{% block page_sub %}<span class="sub">(تحديث تلقائي كل 10 ثوانٍ)</span>{% endblock %}
+
 {% block head_extra %}
+{{ super() }}
 <meta http-equiv="refresh" content="10">
 <style>
-  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px}
-  .stat-card{background:#fff;border:1px solid var(--hr-border);border-radius:var(--hr-r-lg);padding:12px 14px;
-              box-shadow:var(--hr-shadow-sm)}
-  .stat-label{font-size:11px;color:var(--hr-text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:800}
-  .stat-value{font-size:22px;font-weight:800;color:var(--hr-text);margin-top:3px}
-  .stat-sub{font-size:11.5px;color:var(--hr-text-muted);margin-top:2px}
-  .ok{color:var(--hr-green)}
-  .warn{color:var(--hr-orange)}
-  .err{color:var(--hr-red)}
+  .st-worker-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: var(--hub-gap-section);
+  }
+  .st-worker{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    padding: 12px 14px;
+    box-shadow: var(--hub-sh-sm);
+  }
+  .st-worker .lbl{
+    font-size: 11px; color: var(--hub-text-mute);
+    text-transform: uppercase; letter-spacing: .8px;
+    font-weight: 800;
+  }
+  .st-worker .val{
+    font-size: 17px; font-weight: 800;
+    color: var(--hub-text);
+    margin-top: 4px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .st-worker .sub{
+    font-size: 11.5px; color: var(--hub-text-mute);
+    margin-top: 3px;
+  }
+  .st-dot-ok  { color: var(--hub-green); }
+  .st-dot-err { color: var(--hub-red); }
+  .st-dot-warn{ color: var(--hub-amber); }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="stat-grid">
-  {# workers #}
+{{ hub.hero(
+  "حالة النظام",
+  subtitle="تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة MikroTik، وعدّادات الكيانات",
+  icon="heart-pulse"
+) }}
+
+{# Workers #}
+<div class="st-worker-grid">
   {% for w in s.workers %}
-  <div class="stat-card">
-    <div class="stat-label">العامل</div>
-    <div class="stat-value">
-      {% if w.is_alive %}<span class="ok">●</span>{% else %}<span class="err">●</span>{% endif %}
+  <div class="st-worker">
+    <div class="lbl">العامل</div>
+    <div class="val">
+      {% if w.is_alive %}<span class="st-dot-ok">●</span>{% else %}<span class="st-dot-err">●</span>{% endif %}
       {{ w.name }}
     </div>
-    <div class="stat-sub">آخر نبضة قبل {{ w.last_beat_age_sec }} ثانية</div>
-    {% if w.info %}<div class="stat-sub mono">{{ w.info|tojson }}</div>{% endif %}
+    <div class="sub">آخر نبضة قبل {{ w.last_beat_age_sec }} ثانية</div>
+    {% if w.info %}<div class="sub mono">{{ w.info|tojson }}</div>{% endif %}
   </div>
   {% else %}
-  <div class="stat-card">
-    <div class="stat-label">العاملون</div>
-    <div class="stat-value warn">لا يوجد عاملون نشطون</div>
-    <div class="stat-sub">شغّل المشروع بدون <code>HOBERADIUS_NO_WORKER=1</code></div>
+  <div class="st-worker">
+    <div class="lbl">العاملون</div>
+    <div class="val st-dot-warn">لا يوجد عاملون نشطون</div>
+    <div class="sub">شغّل المشروع بدون <code>HOBERADIUS_NO_WORKER=1</code></div>
   </div>
   {% endfor %}
 </div>
 
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-label">طابور المزامنة</div>
-    <div class="stat-value">{{ s.sync_queue.total }}</div>
-    <div class="stat-sub">
-      في الانتظار: {{ s.sync_queue.queued }} ·
-      يعاد المحاولة: <span class="warn">{{ s.sync_queue.retrying }}</span> ·
-      فشل: <span class="err">{{ s.sync_queue.failed }}</span> ·
-      مكتمل: <span class="ok">{{ s.sync_queue.done }}</span>
-    </div>
-    <a href="{{ url_for('radius.sync_list') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">
-      <i class="fa-solid fa-list"></i> فتح
-    </a>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">إرسال إشعارات الربط</div>
-    <div class="stat-value">{{ s.webhook_deliveries.delivered + s.webhook_deliveries.queued + s.webhook_deliveries.retrying + s.webhook_deliveries.failed }}</div>
-    <div class="stat-sub">
-      في الانتظار: {{ s.webhook_deliveries.queued }} ·
-      يعاد المحاولة: <span class="warn">{{ s.webhook_deliveries.retrying }}</span> ·
-      فشل: <span class="err">{{ s.webhook_deliveries.failed }}</span> ·
-      تم الإرسال: <span class="ok">{{ s.webhook_deliveries.delivered }}</span>
-    </div>
-    <a href="{{ url_for('radius.wh_deliveries') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">
-      <i class="fa-solid fa-list"></i> فتح
-    </a>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">أجهزة MikroTik</div>
-    <div class="stat-value">
-      <span class="ok">{{ s.mt_routers.enabled }}</span>/{{ s.mt_routers.total }}
-    </div>
-    <div class="stat-sub">مفعَّل / إجمالي</div>
-    <a href="{{ url_for('radius.mt_list') }}" class="btn btn-secondary btn-xs" style="margin-top:6px">إدارة</a>
-  </div>
+{# KPI summary #}
+{% set _wh_total = s.webhook_deliveries.delivered + s.webhook_deliveries.queued + s.webhook_deliveries.retrying + s.webhook_deliveries.failed %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi(
+      "طابور المزامنة",
+      s.sync_queue.total,
+      icon="rotate",
+      variant="brand",
+      sub=("في الانتظار " ~ s.sync_queue.queued ~ " · فشل " ~ s.sync_queue.failed ~ " · مكتمل " ~ s.sync_queue.done)
+  ) }}
+  {{ hub.kpi(
+      "إشعارات الربط",
+      _wh_total,
+      icon="bolt",
+      variant="blue",
+      sub=("تم الإرسال " ~ s.webhook_deliveries.delivered ~ " · يعاد المحاولة " ~ s.webhook_deliveries.retrying ~ " · فشل " ~ s.webhook_deliveries.failed)
+  ) }}
+  {{ hub.kpi(
+      "أجهزة MikroTik",
+      s.mt_routers.enabled|string ~ " / " ~ s.mt_routers.total|string,
+      icon="router",
+      variant="green",
+      sub="مفعَّل / إجمالي"
+  ) }}
 </div>
 
-<div class="card">
-  <div class="card-header"><span class="title">عدّادات الكيانات</span></div>
-  <div class="card-body card-body--flush">
-    <table class="hr-table">
-      <thead><tr><th>الكيان</th><th>العدد</th></tr></thead>
+<div style="display:flex;gap:8px;margin:6px 0 var(--hub-gap-section);flex-wrap:wrap">
+  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.sync_list') }}">
+    <i class="fa-solid fa-list"></i> فتح طابور المزامنة
+  </a>
+  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.wh_deliveries') }}">
+    <i class="fa-solid fa-bolt"></i> فتح سجل الإشعارات
+  </a>
+  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
+    <i class="fa-solid fa-router"></i> إدارة MikroTik
+  </a>
+</div>
+
+{# Entity counts #}
+{% call hub.section("عدّادات الكيانات", icon="database", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>الكيان</th>
+          <th class="num" style="width:120px">العدد</th>
+        </tr>
+      </thead>
       <tbody>
         {% for k, v in s.counts.items() %}
-        <tr><td class="mono">{{ k }}</td><td class="num">{{ v }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header"><span class="title">أجهزة MikroTik</span></div>
-  <div class="card-body card-body--flush">
-    {% if s.mt_routers['items'] %}
-    <table class="hr-table">
-      <thead><tr><th>#</th><th>الاسم</th><th>المضيف</th><th>الحالة</th><th>آخر فحص</th><th>آخر نتيجة</th></tr></thead>
-      <tbody>
-        {% for r in s.mt_routers['items'] %}
         <tr>
-          <td class="num">{{ r.id }}</td>
-          <td><strong>{{ r.name }}</strong></td>
-          <td class="mono">{{ r.host }}</td>
-          <td>{% if r.enabled %}<span class="pill pill-success">مفعَّل</span>
-              {% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}</td>
-          <td class="mono">{{ r.last_seen_at[:16] if r.last_seen_at else '—' }}</td>
-          <td class="mono" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.last_status or '—' }}</td>
+          <td class="mono">{{ k }}</td>
+          <td class="num mono"><strong>{{ v }}</strong></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}<div class="empty"><i class="fa-solid fa-router"></i>لا توجد اتصالات MikroTik</div>{% endif %}
   </div>
-</div>
+{% endcall %}
 
-<div class="hint" style="margin-top:10px">
+{# MikroTik routers detail #}
+{% if s.mt_routers['items'] %}
+  {% call hub.section("أجهزة MikroTik", icon="router",
+                      meta=s.mt_routers['items']|length|string + " اتصال", flush=True) %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>الاسم</th>
+            <th>المضيف</th>
+            <th>الحالة</th>
+            <th>آخر فحص</th>
+            <th>آخر نتيجة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in s.mt_routers['items'] %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td><strong>{{ r.name }}</strong></td>
+            <td class="mono">{{ r.host }}</td>
+            <td>
+              {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            </td>
+            <td class="mono small">{{ r.last_seen_at[:16] if r.last_seen_at else '—' }}</td>
+            <td class="mono small" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ r.last_status or '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% else %}
+  {% call hub.section("أجهزة MikroTik", icon="router") %}
+    {{ hub.empty("لا توجد اتصالات MikroTik", icon="router") }}
+  {% endcall %}
+{% endif %}
+
+<div class="hub-text-mute" style="margin-top:10px;font-size:12px;line-height:1.7">
   للحصول على JSON: <code>?format=json</code> أو <code>Accept: application/json</code>.
   آخر تحديث: <span class="mono">{{ s.now }}</span>
 </div>
+
 {% endblock %}
