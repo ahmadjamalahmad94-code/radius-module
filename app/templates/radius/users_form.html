@@ -1,497 +1,645 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Subscriber form — REBUILT (Night N4, 2026-05-21)
+
+   Full from-scratch rebuild on hub-v2 design system. Eight collapsible
+   sections + sticky sidebar nav + day chips + speed-time toggle.
+   Same backend route (radius.users_create / radius.users_update) and
+   same form field names — zero backend touched.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة مستفيد" if is_new else "تعديل مستفيد" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "إضافة مشترك" if is_new else ("تعديل " + (sub.username or "مشترك")) %}
 {% block title %}{{ title_ar }}{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-user-plus"></i>{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-{{ 'plus' if is_new else 'pen' }}"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H1 — Subscriber form (نفس روح HobeHub بتوكينات radius-module --hr-*) */
-.sub-form{max-width:1240px;margin:0 auto;padding:8px 4px 18px}
-.sub-layout{
-  direction:ltr;display:grid;grid-template-columns:218px minmax(0,1fr);
-  gap:14px;align-items:start;
-}
-.sub-layout > form,.sub-side{direction:rtl}
-.sub-side{
-  position:sticky;top:84px;background:#fff;border:1px solid var(--hr-border);
-  border-radius:8px;box-shadow:var(--hr-shadow-sm);padding:12px;
-}
-.sub-side-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--hr-text);margin-bottom:8px}
-.sub-side-title i{color:var(--hr-cyan-700);font-size:12px}
-.sub-side-list{display:flex;flex-direction:column;gap:4px}
-.sub-side-list a{
-  display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:6px;
-  text-decoration:none;color:var(--hr-text-soft);font-size:12px;font-weight:700;
-}
-.sub-side-list a:hover{background:var(--hr-soft);color:var(--hr-cyan-700)}
-.sub-side-list i{width:14px;text-align:center;font-size:11px;color:var(--hr-text-muted)}
-.sub-side-note{
-  margin-top:10px;padding:9px 10px;border-radius:6px;background:var(--hr-soft);
-  color:var(--hr-text-muted);font-size:11.5px;line-height:1.65;border:1px dashed var(--hr-border);
-}
-.sec-card{
-  margin-bottom:14px;padding:18px 22px;border-radius:var(--hr-r-lg,8px);
-  background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  box-shadow:var(--hr-shadow-sm,0 1px 3px rgba(30,30,30,.04));
-  scroll-margin-top:96px;
-}
-.sec-card > h3{
-  display:flex;align-items:center;gap:10px;
-  margin:0 0 14px;font-size:14.5px;font-weight:800;color:var(--hr-text);
-  padding-bottom:10px;border-bottom:1px dashed var(--hr-border);
-}
-.sec-card > h3 i.h-ic{
-  width:30px;height:30px;border-radius:6px;
-  background:var(--hr-cyan-100);color:var(--hr-cyan-700);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px;
-}
-.sec-card.collapsible > h3{cursor:pointer;user-select:none;justify-content:space-between}
-.sec-card.collapsible > h3 .tg-ic{font-size:13px;color:var(--hr-text-muted);transition:transform .2s ease}
-.sec-card.collapsible.is-collapsed > h3 .tg-ic{transform:rotate(-90deg)}
-.sec-card.collapsible.is-collapsed > .sb{display:none}
+  /* Subscriber form local layout — sticky side nav + collapsible cards. */
+  .uf-layout{
+    display:grid;
+    grid-template-columns: 224px minmax(0, 1fr);
+    gap: var(--hub-gap-section);
+    align-items: start;
+  }
+  @media (max-width: 980px){
+    .uf-layout{ display:block; }
+    .uf-side{ position:static !important; margin-bottom: var(--hub-gap-section); }
+  }
 
-/* تلوين accent strip لكل قسم بحسب فئته */
-.sec-card.acct  {border-inline-start:3px solid var(--hr-cyan-500)}
-.sec-card.pers  {border-inline-start:3px solid var(--hr-green)}
-.sec-card.pers > h3 i.h-ic{background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
-.sec-card.netw  {border-inline-start:3px solid var(--hr-blue-info)}
-.sec-card.netw > h3 i.h-ic{background:var(--hr-badge-info-bg);color:var(--hr-blue-info)}
-.sec-card.quota {border-inline-start:3px solid var(--hr-orange)}
-.sec-card.quota > h3 i.h-ic{background:var(--hr-badge-warn-bg);color:#92500c}
-.sec-card.mt    {border-inline-start:3px solid var(--hr-purple)}
-.sec-card.mt    > h3 i.h-ic{background:rgba(107,90,237,.10);color:var(--hr-purple)}
+  /* Sticky section nav */
+  .uf-side{
+    position: sticky; top: 84px;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    padding: 14px 12px;
+    box-shadow: var(--hub-sh-sm);
+  }
+  .uf-side-title{
+    display:flex; align-items:center; gap:8px;
+    font-size: 12.5px; font-weight: 800; color: var(--hub-text);
+    margin-bottom: 8px; padding-inline-start: 2px;
+  }
+  .uf-side-title i{ color: var(--hub-brand-ink); font-size:12px; }
+  .uf-side-list{ display:flex; flex-direction:column; gap:3px; }
+  .uf-side-list a{
+    display:flex; align-items:center; gap:8px;
+    padding: 7px 10px;
+    border-radius: var(--hub-r-md);
+    text-decoration: none;
+    color: var(--hub-text-soft);
+    font-size: 12.5px; font-weight: 700;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-side-list a:hover{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+  }
+  .uf-side-list i{ width:14px; text-align:center; font-size:11px; opacity:.7; }
+  .uf-side-note{
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--hub-r-md);
+    background: var(--hub-brand-soft);
+    border: 1px dashed var(--hub-border-strong);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--hub-brand-ink);
+  }
 
-.f-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
-@media (max-width:920px){.f-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:560px){.f-grid{grid-template-columns:1fr}}
-@media (max-width:980px){
-  .sub-layout{direction:rtl;display:block}
-  .sub-side{position:relative;top:auto;margin-bottom:12px}
-  .sub-side-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media (max-width:560px){.sub-side-list{grid-template-columns:1fr}}
-.f-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.f-field.full{grid-column:1 / -1}
-.f-field label{font-size:12.5px;font-weight:700;color:var(--hr-text)}
-.f-field label .req{color:var(--hr-red);margin-inline-start:3px}
-.f-field input, .f-field select, .f-field textarea{
-  padding:10px 12px;border-radius:var(--hr-r,6px);
-  border:1.5px solid var(--hr-border-strong);
-  font-size:13px;font-family:inherit;background:var(--hr-soft,#f8f5ec);
-  transition:.18s ease;width:100%;box-sizing:border-box;color:var(--hr-text);
-}
-.f-field input:focus, .f-field select:focus, .f-field textarea:focus{
-  outline:0;border-color:var(--hr-cyan-500);background:#fff;
-  box-shadow:0 0 0 3px rgba(43,170,204,.20);
-}
-.f-field input[readonly]{background:var(--hr-stripe);color:var(--hr-text-soft);cursor:not-allowed}
-.f-field input:disabled{opacity:.65;cursor:not-allowed;background:var(--hr-stripe)}
-.f-field textarea{min-height:64px;resize:vertical}
-.field-help{font-size:11px;color:var(--hr-text-muted);margin-top:2px}
-.time-range{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:560px){.time-range{grid-template-columns:1fr}}
+  /* Collapsible fieldset */
+  .uf-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+    scroll-margin-top: 96px;
+  }
+  .uf-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .uf-section.is-collapsed .uf-section-head{ border-bottom: none; }
+  .uf-section.is-collapsible .uf-section-head{ cursor: pointer; user-select: none; }
+  .uf-section-icon{
+    width: 30px; height: 30px;
+    border-radius: var(--hub-r-md);
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    display: inline-flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .uf-section-title{ flex:1; font-size: 14px; font-weight: 800; color: var(--hub-text); }
+  .uf-section-toggle{
+    color: var(--hub-text-mute);
+    font-size: 13px;
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-section.is-collapsed .uf-section-toggle{ transform: rotate(-90deg); }
+  .uf-section-body{ padding: 18px; }
+  .uf-section.is-collapsed .uf-section-body{ display: none; }
 
-.chk-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700;color:var(--hr-text)}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--hr-cyan-500)}
+  /* Section accent borders */
+  .uf-section--acct  { border-inline-start: 3px solid var(--hub-brand); }
+  .uf-section--speed { border-inline-start: 3px solid #8B5CF6; }
+  .uf-section--pppoe { border-inline-start: 3px solid #06B6D4; }
+  .uf-section--pers  { border-inline-start: 3px solid var(--hub-green); }
+  .uf-section--pers  .uf-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .uf-section--netw  { border-inline-start: 3px solid var(--hub-blue); }
+  .uf-section--netw  .uf-section-icon{ background: var(--hub-blue-soft); color: var(--hub-blue-ink); }
+  .uf-section--quota { border-inline-start: 3px solid var(--hub-amber); }
+  .uf-section--quota .uf-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .uf-section--mt    { border-inline-start: 3px solid #EC4899; }
+  .uf-section--mt    .uf-section-icon{ background: #FCE7F3; color: #9D174D; }
+  .uf-section--notes { border-inline-start: 3px solid var(--hub-text-mute); }
 
-.day-chips{display:flex;gap:6px;flex-wrap:wrap}
-.day-chip{
-  padding:6px 12px;border:1px solid var(--hr-border);border-radius:18px;
-  background:var(--hr-soft);font-size:12.5px;font-weight:700;cursor:pointer;color:var(--hr-text-soft);
-  user-select:none;transition:.15s ease;
-}
-.day-chip:hover{border-color:var(--hr-cyan-500)}
-.day-chip input{display:none}
-.day-chip.is-on{background:var(--hr-cyan-500);color:#fff;border-color:var(--hr-cyan-500)}
+  /* Fields grid */
+  .uf-grid{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 920px){ .uf-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px){ .uf-grid{ grid-template-columns: 1fr; } }
+  .uf-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .uf-field.full{ grid-column: 1 / -1; }
+  .uf-field label{ font-size: 12.5px; font-weight: 700; color: var(--hub-text-soft); }
+  .uf-field label .req{ color: var(--hub-red); margin-inline-start: 2px; }
+  .uf-field .help{ font-size: 11px; color: var(--hub-text-mute); margin-top: 2px; }
 
-.actions-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;padding:0 4px}
+  /* Inline checkbox row */
+  .uf-chk{
+    display:flex; align-items:center; gap:8px;
+    padding: 9px 12px;
+    background: var(--hub-bg-soft);
+    border: 1px solid var(--hub-border-soft);
+    border-radius: var(--hub-r-md);
+    font-size: 12.5px; font-weight: 700; color: var(--hub-text);
+  }
+  .uf-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+
+  /* Day chips */
+  .uf-day-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .uf-day-chip{
+    padding: 7px 14px;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-pill);
+    background: var(--hub-bg-card);
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    color: var(--hub-text-soft);
+    user-select: none;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-day-chip:hover{ border-color: var(--hub-brand-line); }
+  .uf-day-chip input{ display:none; }
+  .uf-day-chip.is-on{
+    background: var(--hub-brand);
+    color: #fff;
+    border-color: var(--hub-brand);
+  }
+
+  /* Time range pair */
+  .uf-time-range{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 560px){ .uf-time-range{ grid-template-columns: 1fr; } }
+
+  /* Action bar */
+  .uf-actions{
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding: 12px 4px 0;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="sub-form">
-<div class="sub-layout">
-<aside class="sub-side" aria-label="أقسام نموذج المستفيد">
-  <div class="sub-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
-  <nav class="sub-side-list">
-    <a href="#sec-account"><i class="fa-solid fa-wifi"></i> حساب الإنترنت</a>
-    <a href="#sec-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
-    <a href="#sec-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
-    <a href="#sec-personal"><i class="fa-solid fa-id-card"></i> البيانات الشخصية</a>
-    <a href="#sec-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
-    <a href="#sec-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
-    <a href="#sec-advanced"><i class="fa-solid fa-microchip"></i> إعدادات متقدمة</a>
-    <a href="#sec-notes"><i class="fa-solid fa-comment"></i> الملاحظات</a>
-  </nav>
-  <div class="sub-side-note">
-    ابدأ من حساب الإنترنت وباقة الخدمة. باقي الأقسام اختيارية وتُستخدم عندما تحتاج تخصيصًا لهذا المستفيد.
-  </div>
-</aside>
-<form method="post" id="sub-form"
-      action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
 
-  {# ─────────────── 1. حساب الإنترنت (أساسي) ─────────────── #}
-  <section class="sec-card acct" id="sec-account">
-    <h3><i class="fa-solid fa-wifi h-ic"></i>حساب الإنترنت</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>اسم الدخول <span class="req">*</span></label>
-        <input type="text" name="username" required {% if not is_new %}readonly{% endif %}
-               value="{{ sub.username or '' }}" placeholder="user123">
-        <div class="field-help">الاسم الذي يستخدمه المستفيد للدخول إلى الإنترنت.</div></div>
+{{ hub.hero(
+  title_ar,
+  subtitle="بيانات شاملة للمشترك: حساب، سرعة، شبكة، حصة، مزايا متقدمة",
+  icon=("user-plus" if is_new else "user-pen"),
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
 
-      <div class="f-field"><label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
-        <input type="text" name="password" {% if is_new %}required{% endif %}
-               placeholder="{{ '••••••••' if not is_new else '' }}"
-               value="{{ sub.password if is_new else '' }}">
-        <div class="field-help">تستخدمه أجهزة الشبكة للتحقق من الحساب عند تسجيل الدخول.</div></div>
+<div class="uf-layout">
 
-      <div class="f-field"><label>نوع الحساب</label>
-        <select name="user_type">
-          {% for t in user_types %}
-            <option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>
-              {% if t == 'subscriber' %}مستفيد{% elif t == 'card' %}بطاقة دخول{% elif t == 'trial' %}تجريبي{% else %}{{ t }}{% endif %}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="field-help">اختر نوع الحساب حسب طريقة استخدامه: مستفيد دائم، بطاقة دخول، أو حساب تجريبي.</div></div>
-
-      <div class="f-field"><label>نوع الخدمة</label>
-        <select name="service_type">
-          {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
-            <option value="{{ t }}" {% if sub.service_type == t %}selected{% endif %}>
-              {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="field-help">اختر طريقة الدخول التي سيستخدمها المستفيد على الشبكة.</div></div>
-
-      <div class="f-field"><label>باقة الخدمة</label>
-        <select name="plan_id">
-          <option value="">— بدون —</option>
-          {% for p in plans %}<option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
-        </select>
-        <div class="field-help">الباقة تحدد السرعة والحصة ومدة الاستخدام الأساسية.</div></div>
-
-      <div class="f-field"><label>الحالة</label>
-        <select name="status">
-          {% for s in statuses %}
-            <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
-              {% if s == 'enabled' %}مفعّل{% elif s == 'disabled' %}معطّل{% elif s == 'expired' %}منتهي{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="field-help">عند التعطيل لن يستطيع المستفيد استخدام الحساب.</div></div>
-
-      <div class="f-field"><label>رقم المدير المسؤول</label>
-        <input type="number" name="manager_id" value="{{ sub.manager_id or '' }}" placeholder="—"></div>
-
-      <div class="f-field"><label>المجموعة</label>
-        <input type="text" name="group" value="{{ sub.group or '' }}" placeholder="default">
-        <div class="field-help">اسم مجموعة اختيارية لتنظيم المستفيدين أو ربطهم بسياسة مشتركة.</div></div>
-
-      <div class="f-field"><label>تجديد تلقائي</label>
-        <div class="chk-row"><input type="checkbox" name="auto_renewal" id="auto-renew" value="1"
-          {% if sub.auto_renewal %}checked{% endif %}>
-          <label for="auto-renew">مفعَّل</label></div>
-        <div class="field-help">فعّله إذا كان الحساب يُجدّد تلقائيًا عند انتهاء المدة أو الحصة.</div></div>
-
-      <div class="f-field"><label>مرجع HobeHub</label>
-        <input type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
-        <div class="field-help">مرجع اختياري لربط الحساب بسجل المستفيد في نظام HobeHub.</div></div>
+  {# ───── Sticky side nav ────────────────────────────────── #}
+  <aside class="uf-side" aria-label="أقسام النموذج">
+    <div class="uf-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
+    <nav class="uf-side-list">
+      <a href="#uf-account"><i class="fa-solid fa-wifi"></i> حساب الإنترنت</a>
+      <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
+      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
+      <a href="#uf-personal"><i class="fa-solid fa-id-card"></i> البيانات الشخصية</a>
+      <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
+      <a href="#uf-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
+      <a href="#uf-advanced"><i class="fa-solid fa-microchip"></i> إعدادات متقدمة</a>
+      <a href="#uf-notes"><i class="fa-solid fa-comment"></i> الملاحظات</a>
+    </nav>
+    <div class="uf-side-note">
+      ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.
     </div>
-    </div>
-  </section>
+  </aside>
 
-  {# ─────────────── 2. التحكم بالسرعة ─────────────── #}
-  <section class="sec-card acct collapsible is-collapsed" data-sec="speed" id="sec-speed">
-    <h3><i class="fa-solid fa-gauge-high h-ic"></i>سرعة خاصة للمستفيد
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>تفعيل التحكم بالسرعة</label>
-        <div class="chk-row"><input type="checkbox" name="bandwidth_control_enabled" id="bw-en" value="1"
-          {% if sub.bandwidth_control_enabled %}checked{% endif %}>
-          <label for="bw-en">مفعَّل (يتجاوز سرعة الباقة)</label></div></div>
+  {# ───── The form itself ──────────────────────────────── #}
+  <form method="post" id="uf-form"
+        action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
 
-      <div class="f-field"><label>سرعة التنزيل (Kbps)</label>
-        <input type="number" min="0" name="download_speed_kbps" value="{{ sub.download_speed_kbps or 0 }}">
-        <div class="field-help">0 = استخدم قيمة الباقة. 1024 = 1 ميجابت.</div></div>
-
-      <div class="f-field"><label>سرعة الرفع (Kbps)</label>
-        <input type="number" min="0" name="upload_speed_kbps" value="{{ sub.upload_speed_kbps or 0 }}">
-        <div class="field-help">0 = استخدم قيمة الباقة.</div></div>
-
-      <div class="f-field"><label>سرعة مخصصة</label>
-        <div class="chk-row"><input type="checkbox" name="custom_speed" id="cs" value="1"
-          {% if sub.custom_speed %}checked{% endif %}>
-          <label for="cs">مفعَّل</label></div>
-        <div class="field-help">استخدمها عندما تريد سرعة مختلفة عن سرعة الباقة.</div></div>
-
-      <div class="f-field"><label>سرعة مؤقتة</label>
-        <div class="chk-row"><input type="checkbox" name="temporary_speed" id="ts" value="1"
-          {% if sub.temporary_speed %}checked{% endif %}>
-          <label for="ts">مفعَّل</label></div>
-        <div class="field-help">مناسبة لرفع السرعة مؤقتًا دون تغيير الباقة الأساسية.</div></div>
-      <div class="f-field full">
-        <label>وقت السرعة المؤقتة</label>
-        <div class="time-range">
-          <div>
-            <input type="time" name="temporary_speed_from" id="temporary-speed-from"
-                   value="{{ sub.temporary_speed_from or '' }}">
-            <div class="field-help">من الساعة</div>
+    {# ── 1. Account ─────────────────────────────────────── #}
+    <section class="uf-section uf-section--acct" id="uf-account">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-wifi"></i></span>
+        <span class="uf-section-title">حساب الإنترنت</span>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field">
+            <label>اسم الدخول <span class="req">*</span></label>
+            <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
+                   value="{{ sub.username or '' }}" placeholder="user123">
+            <div class="help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
           </div>
-          <div>
-            <input type="time" name="temporary_speed_to" id="temporary-speed-to"
-                   value="{{ sub.temporary_speed_to or '' }}">
-            <div class="field-help">إلى الساعة</div>
+
+          <div class="uf-field">
+            <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+            <input class="hub-input" type="text" name="password" {% if is_new %}required{% endif %}
+                   placeholder="{{ '••••••••' if not is_new else '' }}"
+                   value="{{ sub.password if is_new else '' }}">
+            <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>نوع الحساب</label>
+            <select class="hub-select" name="user_type">
+              {% for t in user_types %}
+                <option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>
+                  {% if t == 'subscriber' %}مشترك{% elif t == 'card' %}بطاقة دخول{% elif t == 'trial' %}تجريبي{% else %}{{ t }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">اختر نوع الحساب حسب طريقة استخدامه.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>نوع الخدمة</label>
+            <select class="hub-select" name="service_type">
+              {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
+                <option value="{{ t }}" {% if sub.service_type == t %}selected{% endif %}>
+                  {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">طريقة الدخول إلى الشبكة.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>باقة الخدمة</label>
+            <select class="hub-select" name="plan_id">
+              <option value="">— بدون —</option>
+              {% for p in plans %}<option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+            <div class="help">تحدد السرعة والحصة ومدة الاستخدام.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>الحالة</label>
+            <select class="hub-select" name="status">
+              {% for s in statuses %}
+                <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
+                  {% if s == 'enabled' %}مفعَّل{% elif s == 'disabled' %}معطَّل{% elif s == 'expired' %}منتهٍ{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>رقم المدير المسؤول</label>
+            <input class="hub-input" type="number" name="manager_id" value="{{ sub.manager_id or '' }}" placeholder="—">
+          </div>
+
+          <div class="uf-field">
+            <label>المجموعة</label>
+            <input class="hub-input" type="text" name="group" value="{{ sub.group or '' }}" placeholder="default">
+            <div class="help">اسم مجموعة اختيارية لتنظيم المشتركين.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>تجديد تلقائي</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="auto_renewal" id="auto-renew" value="1" {% if sub.auto_renewal %}checked{% endif %}>
+              <label for="auto-renew">مفعَّل</label>
+            </div>
+            <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>مرجع HobeHub</label>
+            <input class="hub-input" type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
+            <div class="help">لربط الحساب بسجل HobeHub خارجي.</div>
           </div>
         </div>
-        <div class="field-help">حدد الفترة التي تعمل فيها السرعة المؤقتة لهذا المستفيد.</div>
       </div>
-    </div>
-    </div>
-  </section>
+    </section>
 
-  {# ─────────────── 3. PPPoE (اختياري) ─────────────── #}
-  <section class="sec-card acct collapsible is-collapsed" data-sec="pppoe" id="sec-pppoe">
-    <h3><i class="fa-solid fa-plug h-ic"></i>PPPoE (اختياري)
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>اسم دخول PPPoE</label>
-        <input type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
-        <div class="field-help">اتركه فارغًا إذا كان اسم الدخول الأساسي هو نفسه.</div></div>
-      <div class="f-field"><label>كلمة مرور PPPoE</label>
-        <input type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
-        <div class="field-help">كلمة مرور الاتصال عبر PPPoE إن كانت مختلفة عن كلمة المرور الأساسية.</div></div>
-      <div class="f-field"><label>عنوان PPPoE</label>
-        <input type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
-        <div class="field-help">عنوان ثابت اختياري لهذا الاتصال.</div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 4. المعلومات الشخصية ─────────────── #}
-  <section class="sec-card pers" id="sec-personal">
-    <h3><i class="fa-solid fa-id-card h-ic"></i>المعلومات الشخصية</h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>الاسم الكامل</label>
-        <input type="text" name="full_name" value="{{ sub.full_name or '' }}"></div>
-      <div class="f-field"><label>اسم الأب</label>
-        <input type="text" name="father_name" value="{{ sub.father_name or '' }}"></div>
-      <div class="f-field"><label>الجوال</label>
-        <input type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div>
-      <div class="f-field"><label>البريد الإلكتروني</label>
-        <input type="email" name="email" value="{{ sub.email or '' }}"></div>
-      <div class="f-field"><label>الرقم الوطني</label>
-        <input type="text" name="national_id" value="{{ sub.national_id or '' }}"></div>
-      <div class="f-field"><label>الجنسية</label>
-        <input type="text" name="nationality" value="{{ sub.nationality or '' }}"></div>
-      <div class="f-field"><label>الدولة</label>
-        <input type="text" name="country" value="{{ sub.country or '' }}"></div>
-      <div class="f-field"><label>المدينة</label>
-        <input type="text" name="city" value="{{ sub.city or '' }}"></div>
-      <div class="f-field"><label>المنطقة / الحي</label>
-        <input type="text" name="district" value="{{ sub.district or '' }}"></div>
-      <div class="f-field"><label>المحافظة</label>
-        <input type="text" name="state" value="{{ sub.state or '' }}"></div>
-      <div class="f-field"><label>الرمز البريدي</label>
-        <input type="text" name="zip" value="{{ sub.zip or '' }}"></div>
-      <div class="f-field full"><label>العنوان التفصيلي</label>
-        <input type="text" name="address" value="{{ sub.address or '' }}">
-        <div class="field-help">اكتب وصفًا واضحًا يساعد فريق الدعم أو التحصيل عند الحاجة.</div></div>
-      <div class="f-field"><label>طريقة الدفع (مرجعي)</label>
-        <input type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="—">
-        <div class="field-help">حقل مرجعي فقط — بدون منطق تجاري.</div></div>
-      <div class="f-field"><label>مرجع الدفع</label>
-        <input type="text" name="payment_reference" value="{{ sub.payment_reference or '' }}" placeholder="InstaPay/Other"></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 5. الشبكة والربط ─────────────── #}
-  <section class="sec-card netw collapsible is-collapsed" data-sec="net" id="sec-network">
-    <h3><i class="fa-solid fa-network-wired h-ic"></i>الشبكة وقيود الاتصال
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>قفل عنوان الجهاز الأساسي</label>
-        <input type="text" name="mac_lock" value="{{ sub.mac_lock or '' }}" placeholder="AA:BB:CC:DD:EE:FF">
-        <div class="field-help">لربط الحساب بجهاز واحد حصري.</div></div>
-      <div class="f-field"><label>عنوان IP ثابت</label>
-        <input type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5">
-        <div class="field-help">استخدمه فقط إذا كان المستفيد يحتاج عنوانًا ثابتًا.</div></div>
-      <div class="f-field"><label>VLAN</label>
-        <input type="number" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
-        <div class="field-help">رقم شبكة افتراضية متقدمة، اتركه 0 إذا لم تكن تستخدم VLAN.</div></div>
-      <div class="f-field"><label>تجاوز الجلسات</label>
-        <input type="number" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
-        <div class="field-help">0 = استخدم قيمة الباقة.</div></div>
-      <div class="f-field"><label>معرّف الجهاز</label>
-        <input type="text" name="caller_id" value="{{ sub.caller_id or '' }}" placeholder="مثال: معرّف الجهاز">
-        <div class="field-help">يُستخدم لربط الدخول بجهاز أو نقطة اتصال معيّنة.</div></div>
-      <div class="f-field"><label>عدد الأجهزة المسموحة</label>
-        <input type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
-        <div class="field-help">الحد الأقصى للجلسات المتزامنة.</div></div>
-      <div class="f-field"><label>DNS أولي (PPP)</label>
-        <input type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
-      <div class="f-field"><label>DNS ثانوي (PPP)</label>
-        <input type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
-      <div class="f-field"><label>نطاق عناوين الشبكة</label>
-        <input type="text" name="pool" value="{{ sub.pool or '' }}">
-        <div class="field-help">اسم نطاق العناوين الذي يوزّع منه جهاز الشبكة عنوان الاتصال.</div></div>
-      <div class="f-field full"><label>عناوين أجهزة إضافية مسموحة</label>
-        <input type="text" name="allowed_macs" value="{{ sub.allowed_macs or '' }}"
-               placeholder="AA:BB:..., CC:DD:..."></div>
-      <div class="f-field full"><label>ملف اتصال الجهاز</label>
-        <input type="text" name="device_connection_file" value="{{ sub.device_connection_file or '' }}"
-               placeholder="مرجع ملف الاتصال"></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 6. الحصة والوقت ─────────────── #}
-  <section class="sec-card quota collapsible is-collapsed" data-sec="quota" id="sec-quota">
-    <h3><i class="fa-solid fa-clock h-ic"></i>الحصة والوقت
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <div class="f-grid">
-      <div class="f-field"><label>إجمالي وقت الاتصال (دقيقة)</label>
-        <input type="number" min="0" name="total_connection_time_min" value="{{ sub.total_connection_time_min or 0 }}">
-        <div class="field-help">إجمالي الوقت المسموح لهذا الحساب، و0 يعني بلا حد خاص.</div></div>
-      <div class="f-field"><label>وقت الاتصال اليومي (دقيقة)</label>
-        <input type="number" min="0" name="daily_connection_time_min" value="{{ sub.daily_connection_time_min or 0 }}">
-        <div class="field-help">الوقت المسموح به يوميًا لهذا الحساب.</div></div>
-      <div class="f-field"><label>كوتا التنزيل (MB)</label>
-        <input type="number" min="0" name="download_quota_mb" value="{{ sub.download_quota_mb or 0 }}">
-        <div class="field-help">0 = غير محدودة. 1024 = 1 GB.</div></div>
-      <div class="f-field"><label>كوتا الرفع (MB)</label>
-        <input type="number" min="0" name="upload_quota_mb" value="{{ sub.upload_quota_mb or 0 }}">
-        <div class="field-help">0 = غير محدودة.</div></div>
-      <div class="f-field full"><label>كوتا مدمجة (MB)</label>
-        <input type="number" min="0" name="combined_quota_mb" value="{{ sub.combined_quota_mb or 0 }}">
-        <div class="field-help">إن حُدِّدت، تحلّ محل كوتا التنزيل والرفع المنفصلتين.</div></div>
-      <div class="f-field"><label>حد وقت الاتصال</label>
-        <div class="chk-row"><input type="checkbox" name="connection_time_limit_enabled" id="ctl" value="1"
-          {% if sub.connection_time_limit_enabled %}checked{% endif %}>
-          <label for="ctl">مفعَّل</label></div>
-        <div class="field-help">فعّله إذا أردت تطبيق حدود الوقت المكتوبة هنا.</div></div>
-      <div class="f-field"><label>حد الكوتا</label>
-        <div class="chk-row"><input type="checkbox" name="quota_limit_enabled" id="ql" value="1"
-          {% if sub.quota_limit_enabled %}checked{% endif %}>
-          <label for="ql">مفعَّل</label></div>
-        <div class="field-help">فعّله إذا أردت تطبيق حدود الحصة المكتوبة هنا.</div></div>
-      <div class="f-field"><label>توزيع متساوٍ للتنزيل</label>
-        <div class="chk-row"><input type="checkbox" name="equal_share_download" id="esd" value="1"
-          {% if sub.equal_share_download %}checked{% endif %}>
-          <label for="esd">مفعَّل</label></div></div>
-      <div class="f-field"><label>توزيع متساوٍ للرفع</label>
-        <div class="chk-row"><input type="checkbox" name="equal_share_upload" id="esu" value="1"
-          {% if sub.equal_share_upload %}checked{% endif %}>
-          <label for="esu">مفعَّل</label></div></div>
-      <div class="f-field full"><label>أيام العمل المسموحة</label>
-        {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
-        {% set chosen = (sub.working_days or '').split(',') %}
-        <div class="day-chips" id="day-chips">
-          {% for d, lbl in day_labels %}
-          <label class="day-chip {% if d in chosen %}is-on{% endif %}" data-day="{{ d }}">
-            <input type="checkbox" value="{{ d }}" {% if d in chosen %}checked{% endif %}> {{ lbl }}
-          </label>
-          {% endfor %}
+    {# ── 2. Speed ───────────────────────────────────────── #}
+    <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
+        <span class="uf-section-title">سرعة خاصة للمشترك</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field">
+            <label>تفعيل التحكم بالسرعة</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="bandwidth_control_enabled" id="bw-en" value="1" {% if sub.bandwidth_control_enabled %}checked{% endif %}>
+              <label for="bw-en">مفعَّل (يتجاوز سرعة الباقة)</label>
+            </div>
+          </div>
+          <div class="uf-field">
+            <label>سرعة التنزيل (Kbps)</label>
+            <input class="hub-input" type="number" min="0" name="download_speed_kbps" value="{{ sub.download_speed_kbps or 0 }}">
+            <div class="help">0 = استخدم قيمة الباقة. 1024 = 1 ميجابت.</div>
+          </div>
+          <div class="uf-field">
+            <label>سرعة الرفع (Kbps)</label>
+            <input class="hub-input" type="number" min="0" name="upload_speed_kbps" value="{{ sub.upload_speed_kbps or 0 }}">
+            <div class="help">0 = استخدم قيمة الباقة.</div>
+          </div>
+          <div class="uf-field">
+            <label>سرعة مخصصة</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="custom_speed" id="cs" value="1" {% if sub.custom_speed %}checked{% endif %}>
+              <label for="cs">مفعَّل</label>
+            </div>
+          </div>
+          <div class="uf-field">
+            <label>سرعة مؤقتة</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="temporary_speed" id="ts" value="1" {% if sub.temporary_speed %}checked{% endif %}>
+              <label for="ts">مفعَّل</label>
+            </div>
+            <div class="help">رفع مؤقت بدون تغيير الباقة.</div>
+          </div>
+          <div class="uf-field full">
+            <label>وقت السرعة المؤقتة</label>
+            <div class="uf-time-range">
+              <div>
+                <input class="hub-input" type="time" name="temporary_speed_from" id="temporary-speed-from"
+                       value="{{ sub.temporary_speed_from or '' }}">
+                <div class="help">من الساعة</div>
+              </div>
+              <div>
+                <input class="hub-input" type="time" name="temporary_speed_to" id="temporary-speed-to"
+                       value="{{ sub.temporary_speed_to or '' }}">
+                <div class="help">إلى الساعة</div>
+              </div>
+            </div>
+            <div class="help">الفترة التي تعمل فيها السرعة المؤقتة.</div>
+          </div>
         </div>
-        <input type="hidden" name="working_days" id="working_days_hidden" value="{{ sub.working_days or '' }}">
-        <div class="field-help">اترك الكل غير محدَّد للسماح طوال الأسبوع.</div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 7. خصائص الشبكة المتقدمة ─────────────── #}
-  <section class="sec-card mt collapsible is-collapsed" data-sec="mt" id="sec-advanced">
-    <h3><i class="fa-solid fa-microchip h-ic"></i>خصائص شبكة متقدمة
-      <i class="fa-solid fa-chevron-down tg-ic"></i></h3>
-    <div class="sb">
-    <p class="field-help" style="margin-bottom:10px">
-      <i class="fa-solid fa-circle-info"></i>
-      هذه الحقول اختيارية ومخصّصة لمن يحتاج إعدادات شبكة متقدمة.
-    </p>
-    <div class="f-grid">
-      <div class="f-field"><label>سلسلة فلترة MikroTik</label>
-        <input type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}"
-               placeholder="forward / input"></div>
-      <div class="f-field"><label>قائمة عناوين MikroTik</label>
-        <input type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}">
-        <div class="field-help">قائمة داخل جهاز الشبكة تُستخدم لتنظيم أو تقييد الوصول.</div></div>
-      <div class="f-field"><label>مسار MikroTik الموجّه</label>
-        <input type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}"
-               placeholder="10.10.0.0/24 10.10.0.1"></div>
-      <div class="f-field"><label>مجموعة مستخدم MikroTik</label>
-        <input type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}"></div>
-      <div class="f-field"><label>مجموعة Winbox في MikroTik</label>
-        <input type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}"></div>
-      <div class="f-field"><label>أولوية طابور السرعة</label>
-        <input type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}"
-               placeholder="1..8"></div>
-      <div class="f-field"><label>نطاق عناوين الجلسات</label>
-        <input type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}"></div>
-      <div class="f-field"><label>فترة تحديث الاستهلاك (ث)</label>
-        <input type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}"
-               placeholder="60"></div>
-      <div class="f-field full"><label>خصائص PPP إضافية</label>
-        <textarea name="ppp_attributes_extra"
-                  placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
-        <div class="field-help">استخدم سطرًا لكل خاصية عند الحاجة لإعداد متقدم.</div></div>
-    </div>
-    </div>
-  </section>
-
-  {# ─────────────── 8. ملاحظات ─────────────── #}
-  <section class="sec-card" id="sec-notes">
-    <h3><i class="fa-solid fa-comment h-ic"></i>ملاحظات</h3>
-    <div class="f-grid">
-      <div class="f-field full">
-        <textarea name="remark" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea>
       </div>
+    </section>
+
+    {# ── 3. PPPoE ───────────────────────────────────────── #}
+    <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
+        <span class="uf-section-title">PPPoE (اختياري)</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field">
+            <label>اسم دخول PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
+            <div class="help">اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.</div>
+          </div>
+          <div class="uf-field">
+            <label>كلمة مرور PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
+          </div>
+          <div class="uf-field">
+            <label>عنوان PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
+            <div class="help">عنوان ثابت اختياري.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 4. Personal ────────────────────────────────────── #}
+    <section class="uf-section uf-section--pers" id="uf-personal">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-id-card"></i></span>
+        <span class="uf-section-title">المعلومات الشخصية</span>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field"><label>الاسم الكامل</label>
+            <input class="hub-input" type="text" name="full_name" value="{{ sub.full_name or '' }}"></div>
+          <div class="uf-field"><label>اسم الأب</label>
+            <input class="hub-input" type="text" name="father_name" value="{{ sub.father_name or '' }}"></div>
+          <div class="uf-field"><label>الجوال</label>
+            <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div>
+          <div class="uf-field"><label>البريد الإلكتروني</label>
+            <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}"></div>
+          <div class="uf-field"><label>الرقم الوطني</label>
+            <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}"></div>
+          <div class="uf-field"><label>الجنسية</label>
+            <input class="hub-input" type="text" name="nationality" value="{{ sub.nationality or '' }}"></div>
+          <div class="uf-field"><label>الدولة</label>
+            <input class="hub-input" type="text" name="country" value="{{ sub.country or '' }}"></div>
+          <div class="uf-field"><label>المدينة</label>
+            <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}"></div>
+          <div class="uf-field"><label>المنطقة / الحي</label>
+            <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}"></div>
+          <div class="uf-field"><label>المحافظة</label>
+            <input class="hub-input" type="text" name="state" value="{{ sub.state or '' }}"></div>
+          <div class="uf-field"><label>الرمز البريدي</label>
+            <input class="hub-input" type="text" name="zip" value="{{ sub.zip or '' }}"></div>
+          <div class="uf-field full"><label>العنوان التفصيلي</label>
+            <input class="hub-input" type="text" name="address" value="{{ sub.address or '' }}">
+            <div class="help">يساعد فريق الدعم أو التحصيل عند الحاجة.</div></div>
+          <div class="uf-field"><label>طريقة الدفع (مرجعي)</label>
+            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="—"></div>
+          <div class="uf-field"><label>مرجع الدفع</label>
+            <input class="hub-input" type="text" name="payment_reference" value="{{ sub.payment_reference or '' }}" placeholder="InstaPay/Other"></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 5. Network ─────────────────────────────────────── #}
+    <section class="uf-section uf-section--netw is-collapsible is-collapsed" data-sec="net" id="uf-network">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-network-wired"></i></span>
+        <span class="uf-section-title">الشبكة وقيود الاتصال</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field"><label>قفل عنوان الجهاز الأساسي</label>
+            <input class="hub-input" type="text" name="mac_lock" value="{{ sub.mac_lock or '' }}" placeholder="AA:BB:CC:DD:EE:FF">
+            <div class="help">لربط الحساب بجهاز واحد حصرًا.</div></div>
+          <div class="uf-field"><label>عنوان IP ثابت</label>
+            <input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5">
+            <div class="help">استخدمه فقط لمن يحتاج عنوانًا ثابتًا.</div></div>
+          <div class="uf-field"><label>VLAN</label>
+            <input class="hub-input" type="number" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
+            <div class="help">0 إذا لم تستخدم VLAN.</div></div>
+          <div class="uf-field"><label>تجاوز الجلسات</label>
+            <input class="hub-input" type="number" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
+            <div class="help">0 = قيمة الباقة.</div></div>
+          <div class="uf-field"><label>معرّف الجهاز</label>
+            <input class="hub-input" type="text" name="caller_id" value="{{ sub.caller_id or '' }}"></div>
+          <div class="uf-field"><label>عدد الأجهزة المسموحة</label>
+            <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
+            <div class="help">الحد الأقصى للجلسات المتزامنة.</div></div>
+          <div class="uf-field"><label>DNS أولي (PPP)</label>
+            <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
+          <div class="uf-field"><label>DNS ثانوي (PPP)</label>
+            <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
+          <div class="uf-field"><label>نطاق عناوين الشبكة</label>
+            <input class="hub-input" type="text" name="pool" value="{{ sub.pool or '' }}">
+            <div class="help">اسم نطاق العناوين على جهاز الشبكة.</div></div>
+          <div class="uf-field full"><label>عناوين أجهزة إضافية مسموحة</label>
+            <input class="hub-input" type="text" name="allowed_macs" value="{{ sub.allowed_macs or '' }}"
+                   placeholder="AA:BB:..., CC:DD:..."></div>
+          <div class="uf-field full"><label>ملف اتصال الجهاز</label>
+            <input class="hub-input" type="text" name="device_connection_file" value="{{ sub.device_connection_file or '' }}"
+                   placeholder="مرجع ملف الاتصال"></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 6. Quota & Time ───────────────────────────────── #}
+    <section class="uf-section uf-section--quota is-collapsible is-collapsed" data-sec="quota" id="uf-quota">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-clock"></i></span>
+        <span class="uf-section-title">الحصة والوقت</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field"><label>إجمالي وقت الاتصال (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="total_connection_time_min" value="{{ sub.total_connection_time_min or 0 }}">
+            <div class="help">0 = بلا حد خاص.</div></div>
+          <div class="uf-field"><label>وقت الاتصال اليومي (دقيقة)</label>
+            <input class="hub-input" type="number" min="0" name="daily_connection_time_min" value="{{ sub.daily_connection_time_min or 0 }}"></div>
+          <div class="uf-field"><label>كوتا التنزيل (MB)</label>
+            <input class="hub-input" type="number" min="0" name="download_quota_mb" value="{{ sub.download_quota_mb or 0 }}">
+            <div class="help">0 = غير محدودة. 1024 = 1 GB.</div></div>
+          <div class="uf-field"><label>كوتا الرفع (MB)</label>
+            <input class="hub-input" type="number" min="0" name="upload_quota_mb" value="{{ sub.upload_quota_mb or 0 }}"></div>
+          <div class="uf-field full"><label>كوتا مدمجة (MB)</label>
+            <input class="hub-input" type="number" min="0" name="combined_quota_mb" value="{{ sub.combined_quota_mb or 0 }}">
+            <div class="help">إن حُدِّدت، تحلّ محل الكوتا المنفصلة.</div></div>
+          <div class="uf-field"><label>حد وقت الاتصال</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="connection_time_limit_enabled" id="ctl" value="1" {% if sub.connection_time_limit_enabled %}checked{% endif %}>
+              <label for="ctl">مفعَّل</label>
+            </div></div>
+          <div class="uf-field"><label>حد الكوتا</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="quota_limit_enabled" id="ql" value="1" {% if sub.quota_limit_enabled %}checked{% endif %}>
+              <label for="ql">مفعَّل</label>
+            </div></div>
+          <div class="uf-field"><label>توزيع متساوٍ للتنزيل</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="equal_share_download" id="esd" value="1" {% if sub.equal_share_download %}checked{% endif %}>
+              <label for="esd">مفعَّل</label>
+            </div></div>
+          <div class="uf-field"><label>توزيع متساوٍ للرفع</label>
+            <div class="uf-chk">
+              <input type="checkbox" name="equal_share_upload" id="esu" value="1" {% if sub.equal_share_upload %}checked{% endif %}>
+              <label for="esu">مفعَّل</label>
+            </div></div>
+          <div class="uf-field full">
+            <label>أيام العمل المسموحة</label>
+            {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
+            {% set chosen = (sub.working_days or '').split(',') %}
+            <div class="uf-day-chips" id="uf-day-chips">
+              {% for d, lbl in day_labels %}
+              <label class="uf-day-chip {% if d in chosen %}is-on{% endif %}" data-day="{{ d }}">
+                <input type="checkbox" value="{{ d }}" {% if d in chosen %}checked{% endif %}> {{ lbl }}
+              </label>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="working_days" id="working_days_hidden" value="{{ sub.working_days or '' }}">
+            <div class="help">اترك الكل غير محدَّد للسماح طوال الأسبوع.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 7. Advanced MikroTik ─────────────────────────── #}
+    <section class="uf-section uf-section--mt is-collapsible is-collapsed" data-sec="mt" id="uf-advanced">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-microchip"></i></span>
+        <span class="uf-section-title">خصائص شبكة متقدمة</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div style="font-size:12px;color:var(--hub-text-mute);margin-bottom:12px">
+          <i class="fa-solid fa-circle-info"></i>
+          حقول اختيارية لإعدادات شبكة متقدمة.
+        </div>
+        <div class="uf-grid">
+          <div class="uf-field"><label>سلسلة فلترة MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}" placeholder="forward / input"></div>
+          <div class="uf-field"><label>قائمة عناوين MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}"></div>
+          <div class="uf-field"><label>مسار MikroTik الموجَّه</label>
+            <input class="hub-input" type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}" placeholder="10.10.0.0/24 10.10.0.1"></div>
+          <div class="uf-field"><label>مجموعة مستخدم MikroTik</label>
+            <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}"></div>
+          <div class="uf-field"><label>مجموعة Winbox</label>
+            <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}"></div>
+          <div class="uf-field"><label>أولوية طابور السرعة</label>
+            <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8"></div>
+          <div class="uf-field"><label>نطاق عناوين الجلسات</label>
+            <input class="hub-input" type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}"></div>
+          <div class="uf-field"><label>فترة تحديث الاستهلاك (ث)</label>
+            <input class="hub-input" type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}" placeholder="60"></div>
+          <div class="uf-field full"><label>خصائص PPP إضافية</label>
+            <textarea class="hub-textarea" name="ppp_attributes_extra" placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
+            <div class="help">سطر لكل خاصية.</div></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 8. Notes ──────────────────────────────────────── #}
+    <section class="uf-section uf-section--notes" id="uf-notes">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-comment"></i></span>
+        <span class="uf-section-title">ملاحظات</span>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field full">
+            <textarea class="hub-textarea" name="remark" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 9. Embedded speed-rules panel (edit mode only) #}
+    {% if not is_new %}
+      {% include "radius/_speed_rules_panel.html" %}
+    {% endif %}
+
+    {# ── Action bar ───────────────────────────────────── #}
+    <div class="uf-actions">
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ المشترك" if is_new else "حفظ التعديلات" }}
+      </button>
     </div>
-  </section>
-
-  {% if not is_new %}
-    {% include "radius/_speed_rules_panel.html" %}
-  {% endif %}
-
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "تحديث" }}
-    </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
-  </div>
-</form>
-</div>
+  </form>
 </div>
 
 <script>
 (function(){
-  // collapsible + localStorage
+  'use strict';
+  // Collapsible sections — same localStorage key prefix as before
   var LS = 'hr:users-form:sec:';
-  document.querySelectorAll('.sec-card.collapsible').forEach(function(card){
+  document.querySelectorAll('.uf-section.is-collapsible').forEach(function(card){
     var k = card.dataset.sec; if (!k) return;
     var v = null;
     try { v = localStorage.getItem(LS + k); } catch(_) {}
     if (v === 'collapsed') card.classList.add('is-collapsed');
     else if (v === 'open')  card.classList.remove('is-collapsed');
-    var h = card.querySelector(':scope > h3');
-    if (h) h.addEventListener('click', function(){
+    var head = card.querySelector('.uf-section-head');
+    if (head) head.addEventListener('click', function(){
       card.classList.toggle('is-collapsed');
       try { localStorage.setItem(LS + k,
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
     });
   });
-  // day chips → hidden CSV
+  // Day chips → hidden CSV
   var hidden = document.getElementById('working_days_hidden');
-  var chips = document.querySelectorAll('#day-chips .day-chip');
+  var chips = document.querySelectorAll('#uf-day-chips .uf-day-chip');
   function sync(){
     var chosen = [];
     chips.forEach(function(c){
@@ -508,7 +656,8 @@
       sync();
     });
   });
-  document.querySelectorAll('.sub-side-list a[href^="#"]').forEach(function(link){
+  // Smooth-scroll nav with auto-open of collapsed targets
+  document.querySelectorAll('.uf-side-list a[href^="#"]').forEach(function(link){
     link.addEventListener('click', function(e){
       e.preventDefault();
       var target = document.querySelector(link.getAttribute('href'));
@@ -518,13 +667,14 @@
       }
       if (target) {
         var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
-        var offset = (header ? header.getBoundingClientRect().height : 64) + 18;
+        var offset = (header ? header.getBoundingClientRect().height : 64) + 20;
         var y = target.getBoundingClientRect().top + window.pageYOffset - offset;
         window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
         if (history.pushState) history.pushState(null, '', link.getAttribute('href'));
       }
     });
   });
+  // Disable temporary-speed times when checkbox is off
   var tempSpeed = document.getElementById('ts');
   var tempInputs = [
     document.getElementById('temporary-speed-from'),
