@@ -102,9 +102,18 @@ def _configured_api_rpm(tenant_rpm: int = 60) -> int:
 
     The Android/Windows admin clients make many small authenticated requests
     while refreshing dashboards and operational screens. The default is
-    therefore unlimited. Operators can explicitly re-enable a cap with
-    HOBERADIUS_API_RATE_LIMIT_PER_MINUTE=<positive integer>.
+    therefore unlimited. Tenant-tier limits are ignored for the management API.
+
+    To intentionally re-enable throttling, operators must set both:
+      HOBERADIUS_API_RATE_LIMIT_ENABLED=1
+      HOBERADIUS_API_RATE_LIMIT_PER_MINUTE=<positive integer>
+
+    This double opt-in prevents old tenant defaults such as 10 req/min from
+    breaking the mobile/desktop management clients.
     """
+    enabled = (os.environ.get("HOBERADIUS_API_RATE_LIMIT_ENABLED") or "").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return 0
     raw = os.environ.get("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE")
     if raw is None or raw == "":
         return 0

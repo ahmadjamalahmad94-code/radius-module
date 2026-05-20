@@ -15,6 +15,7 @@ Covers:
 from __future__ import annotations
 
 import os
+import tempfile
 import time
 from datetime import datetime, timedelta
 
@@ -23,8 +24,33 @@ import pytest
 
 @pytest.fixture(scope="module")
 def app():
+    tmp = tempfile.mkdtemp(prefix="hr_api_auth_")
+    db_path = os.path.join(tmp, "test.db")
+    old_db = os.environ.get("HOBERADIUS_DB_PATH")
+    old_worker = os.environ.get("HOBERADIUS_NO_WORKER")
+    old_seed = os.environ.get("HOBERADIUS_NO_SEED")
+    os.environ["HOBERADIUS_DB_PATH"] = db_path
+    os.environ["HOBERADIUS_NO_WORKER"] = "1"
+    os.environ.pop("HOBERADIUS_NO_SEED", None)
+    from app.radius.db.connection import reset_for_tests
+    reset_for_tests(db_path)
     from app import create_app
-    return create_app()
+    created = create_app()
+    yield created
+    if old_db is None:
+        os.environ.pop("HOBERADIUS_DB_PATH", None)
+        reset_for_tests(None)
+    else:
+        os.environ["HOBERADIUS_DB_PATH"] = old_db
+        reset_for_tests(old_db)
+    if old_worker is None:
+        os.environ.pop("HOBERADIUS_NO_WORKER", None)
+    else:
+        os.environ["HOBERADIUS_NO_WORKER"] = old_worker
+    if old_seed is None:
+        os.environ.pop("HOBERADIUS_NO_SEED", None)
+    else:
+        os.environ["HOBERADIUS_NO_SEED"] = old_seed
 
 
 @pytest.fixture
@@ -80,9 +106,14 @@ def test_env_tokens_still_work_in_production(client, monkeypatch):
 def test_api_rate_limit_is_unlimited_unless_explicitly_enabled(monkeypatch):
     from app.api.auth import _configured_api_rpm
 
+    monkeypatch.delenv("HOBERADIUS_API_RATE_LIMIT_ENABLED", raising=False)
     monkeypatch.delenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", raising=False)
     assert _configured_api_rpm(tenant_rpm=10) == 0
 
+    monkeypatch.setenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", "250")
+    assert _configured_api_rpm(tenant_rpm=10) == 0
+
+    monkeypatch.setenv("HOBERADIUS_API_RATE_LIMIT_ENABLED", "1")
     monkeypatch.setenv("HOBERADIUS_API_RATE_LIMIT_PER_MINUTE", "250")
     assert _configured_api_rpm(tenant_rpm=10) == 250
 
