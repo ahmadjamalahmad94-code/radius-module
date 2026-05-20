@@ -1,30 +1,61 @@
+{# Distributors list — REBUILT N7 (hub-v2). Backend: distributors, status. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}الموزعون والصلاحيات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
-{% block page_title %}الموزعون والصلاحيات{% endblock %}
-{% block page_sub %}<span class="sub">({{ distributors|length }} موزع)</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.distributors_new') }}">
-    <i class="fa-solid fa-user-plus"></i> إضافة موزع
-  </a>
-{% endblock %}
+{% block page_title %}الموزعون{% endblock %}
+{% block page_sub %}<span class="sub">{{ distributors|length }} موزع في النتائج</span>{% endblock %}
 
 {% block content %}
-<style>
-  .dist-note{margin-bottom:12px;padding:10px 12px;border:1px solid var(--hr-border);border-radius:8px;background:var(--hr-soft);color:var(--hr-text-muted);font-size:12.5px}
-  .dist-summary{display:flex;gap:6px;flex-wrap:wrap}
-</style>
-<div class="dist-note">
-  هذه الشاشة تستخدم طبقة الموزعين الحالية في الباكند. الصلاحيات والنطاق محفوظة كأساس قابل للتوسعة، وتطبيق العزل الفعلي يتم في واجهات API الحساسة.
+
+{{ hub.hero(
+  "الموزعون والصلاحيات",
+  subtitle="إدارة شبكة الموزعين — الرصيد، الديون، الحدود الائتمانية، الصلاحيات والنطاق",
+  icon="people-arrows",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.distributors_new') + '">
+      <i class="fa-solid fa-user-plus"></i> إضافة موزع
+    </a>
+  '
+) }}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:12.5px;
+            border-radius:var(--hub-r-lg);border:1px solid var(--hub-border-soft);
+            background:var(--hub-bg-soft);color:var(--hub-text-mute)">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه الشاشة تستخدم طبقة الموزعين الحالية في الباكند. الصلاحيات والنطاق محفوظة كأساس قابل للتوسعة،
+  وتطبيق العزل الفعلي يتم في واجهات API الحساسة.
 </div>
 
-<div class="card">
-  <div class="card-body card-body--flush">
-    {% if distributors %}
-    <table class="hr-table" data-paginated="1" data-page-size="20" data-persist-key="distributors-list">
+<form method="get" class="hub-filterbar">
+  <select class="hub-select" name="status">
+    <option value="">كل الحالات</option>
+    <option value="active"   {% if status=='active' %}selected{% endif %}>مفعَّل</option>
+    <option value="blocked"  {% if status=='blocked' %}selected{% endif %}>محظور</option>
+    <option value="inactive" {% if status=='inactive' %}selected{% endif %}>متوقّف</option>
+  </select>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+</form>
+
+{% if distributors %}
+{% set _active   = distributors|selectattr('status','equalto','active')|list|length %}
+{% set _blocked  = distributors|selectattr('status','equalto','blocked')|list|length %}
+{% set _total_debt = distributors|sum(attribute='debt_balance') %}
+{% set _total_bal  = distributors|sum(attribute='balance') %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",      distributors|length, icon="users", variant="brand") }}
+  {{ hub.kpi("مفعَّلون",       _active,              icon="circle-check", variant="green") }}
+  {{ hub.kpi("إجمالي الرصيد", "%.2f"|format(_total_bal or 0), icon="wallet", variant="blue") }}
+  {{ hub.kpi("إجمالي الديون", "%.2f"|format(_total_debt or 0), icon="hand-holding-dollar", variant="amber") }}
+</div>
+
+{% call hub.section("قائمة الموزعين", icon="table-list", meta=distributors|length|string + " موزع", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="distributors-list">
       <thead>
         <tr>
-          <th>#</th>
+          <th class="num" style="width:60px">#</th>
           <th>اسم الدخول</th>
           <th>الاسم الظاهر</th>
           <th>التواصل</th>
@@ -32,53 +63,58 @@
           <th>النطاق</th>
           <th>الرصيد والدين</th>
           <th>الحالة</th>
-          <th style="width:100px">إجراءات</th>
+          <th style="width:80px">عرض</th>
         </tr>
       </thead>
       <tbody>
         {% for d in distributors %}
         <tr>
-          <td class="num">{{ d.id }}</td>
-          <td class="mono"><strong>{{ d.name }}</strong></td>
+          <td class="num mono">{{ d.id }}</td>
+          <td class="mono">
+            <a href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+              {{ d.name }}
+            </a>
+          </td>
           <td>{{ d.display_name or d.name }}</td>
           <td>
             <div>{{ d.phone or '—' }}</div>
-            <div class="mono" style="font-size:11px;color:var(--hr-text-muted)">{{ d.email or '—' }}</div>
+            <div class="mono small hub-text-mute">{{ d.email or '—' }}</div>
           </td>
           <td>
-            <div class="dist-summary">
+            <div class="hub-flex-row" style="gap:4px">
               {% for p in d.permissions_json[:3] %}
-                <span class="pill pill-cyan">{{ p }}</span>
+                {{ hub.pill(p, variant="brand", dot=False) }}
               {% else %}
-                <span class="pill">لم تحدد بعد</span>
+                <span class="hub-text-mute small">لم تحدد بعد</span>
               {% endfor %}
               {% if d.permissions_json|length > 3 %}
-                <span class="pill">+{{ d.permissions_json|length - 3 }}</span>
+                {{ hub.pill("+" + (d.permissions_json|length - 3)|string, variant="grey", dot=False) }}
               {% endif %}
             </div>
           </td>
           <td>
             {% if d.scope_json.card_batches == 'assigned' %}
-              <span class="pill pill-info">الحزم المربوطة فقط</span>
+              {{ hub.pill("الحزم المربوطة فقط", variant="blue", dot=False) }}
             {% else %}
-              <span class="pill">{{ d.scope_json.card_batches or 'مخصص' }}</span>
+              {{ hub.pill(d.scope_json.card_batches or 'مخصص', variant="grey", dot=False) }}
             {% endif %}
           </td>
           <td>
-            <div class="mono">رصيد: {{ "%.2f"|format(d.balance or 0) }}</div>
-            <div class="mono" style="font-size:11px;color:var(--hr-text-muted)">دين: {{ "%.2f"|format(d.debt_balance or 0) }} · حد: {{ "%.2f"|format(d.credit_limit or 0) }}</div>
+            <div class="mono small"><strong>رصيد:</strong> {{ "%.2f"|format(d.balance or 0) }}</div>
+            <div class="mono small hub-text-mute">
+              دين: {{ "%.2f"|format(d.debt_balance or 0) }} · حد: {{ "%.2f"|format(d.credit_limit or 0) }}
+            </div>
           </td>
           <td>
-            {% if d.status == 'active' %}
-              <span class="pill pill-success"><span class="pill-dot"></span>مفعّل</span>
-            {% elif d.status == 'blocked' %}
-              <span class="pill pill-danger">محظور</span>
-            {% else %}
-              <span class="pill pill-warn">{{ d.status or 'غير معروف' }}</span>
-            {% endif %}
+            {% if d.status == 'active' %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% elif d.status == 'blocked' %}{{ hub.pill("محظور", variant="red") }}
+            {% elif d.status == 'inactive' %}{{ hub.pill("متوقّف", variant="grey") }}
+            {% else %}{{ hub.pill(d.status or 'غير معروف', variant="amber") }}{% endif %}
           </td>
           <td>
-            <a class="btn btn-primary btn-xs" href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
+               href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
               <i class="fa-solid fa-eye"></i>
             </a>
           </td>
@@ -86,9 +122,14 @@
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty"><i class="fa-solid fa-people-arrows"></i>لا يوجد موزعون بعد</div>
-    {% endif %}
   </div>
-</div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا موزعين بعد",
+  sub="أضف أول موزع من زرّ «إضافة موزع» في الأعلى لتبدأ بشبكة التوزيع.",
+  icon="people-arrows"
+) }}
+{% endif %}
+
 {% endblock %}

@@ -1,48 +1,98 @@
+{# Services list — REBUILT N7 (hub-v2). Backend: items (services / equipment). #}
 {% extends "admin/_admin_layout.html" %}
-{% block title %}الخدمات / المعدّات{% endblock %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الخدمات والمعدّات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
-{% block page_title %}الخدمات / المعدّات{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.svc_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة معدّة
-  </a>
-{% endblock %}
+{% block page_title %}الخدمات والمعدّات{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} عنصر في النتائج</span>{% endblock %}
+
 {% block content %}
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الاسم</th><th>النوع</th><th>السيريال</th>
-      <th>MAC</th><th>المشترك</th><th>إيجار/شهر</th>
-      <th>الحالة</th><th>تاريخ التسليم</th><th style="width:110px"></th>
-    </tr></thead>
-    <tbody>{% for s in items %}
-    <tr>
-      <td class="num">{{ s.id }}</td>
-      <td><strong>{{ s.name }}</strong></td>
-      <td><span class="pill pill-info">{{ s.type }}</span></td>
-      <td class="mono">{{ s.serial or '—' }}</td>
-      <td class="mono">{{ s.mac or '—' }}</td>
-      <td class="mono">{{ s.subscriber_id }}</td>
-      <td><strong>{{ "%.2f"|format(s.rent_per_month) }}</strong></td>
-      <td>
-        {% if s.status == 'given' %}<span class="pill pill-success">مسلَّمة</span>
-        {% elif s.status == 'returned' %}<span class="pill pill-info">مرتجعة</span>
-        {% elif s.status == 'lost' %}<span class="pill pill-danger">مفقودة</span>
-        {% elif s.status == 'damaged' %}<span class="pill pill-warn">متضرّرة</span>
-        {% else %}<span class="pill">{{ s.status }}</span>{% endif %}
-      </td>
-      <td class="mono">{{ s.given_at.strftime('%Y-%m-%d') if s.given_at else '—' }}</td>
-      <td><div class="cell-actions">
-        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.svc_edit', sid=s.id) }}"><i class="fa-solid fa-pen"></i></a>
-        <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
-              onsubmit="return confirm('حذف؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
-        </form>
-      </div></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-toolbox"></i>لا معدّات</div>{% endif %}
-</div></div>
+
+{{ hub.hero(
+  "الخدمات والمعدّات",
+  subtitle="إدارة المعدّات المُسلَّمة للمشتركين — راوترات، بطاقات، ملحقات — وإيجاراتها الشهرية",
+  icon="toolbox",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.svc_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة معدّة
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _given     = items|selectattr('status','equalto','given')|list|length %}
+{% set _returned  = items|selectattr('status','equalto','returned')|list|length %}
+{% set _lost      = items|selectattr('status','equalto','lost')|list|length %}
+{% set _damaged   = items|selectattr('status','equalto','damaged')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي", items|length, icon="layer-group", variant="brand") }}
+  {{ hub.kpi("مسلَّمة",   _given,        icon="handshake",  variant="green") }}
+  {{ hub.kpi("مرتجعة",   _returned,     icon="rotate-left", variant="blue") }}
+  {{ hub.kpi("مفقودة/تالفة", _lost + _damaged, icon="triangle-exclamation", variant="red") }}
+</div>
+
+{% call hub.section("قائمة المعدّات", icon="table-list", meta=items|length|string + " معدّة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="services-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th>السيريال</th>
+          <th>MAC</th>
+          <th>المشترك</th>
+          <th class="num">إيجار/شهر</th>
+          <th>الحالة</th>
+          <th>تاريخ التسليم</th>
+          <th style="width:110px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in items %}
+        <tr>
+          <td class="num mono">{{ s.id }}</td>
+          <td><strong>{{ s.name }}</strong></td>
+          <td>{{ hub.pill(s.type, variant="blue", dot=False) }}</td>
+          <td class="mono small">{{ s.serial or '—' }}</td>
+          <td class="mono small">{{ s.mac or '—' }}</td>
+          <td class="mono small">#{{ s.subscriber_id }}</td>
+          <td class="num"><strong>{{ "%.2f"|format(s.rent_per_month) }}</strong></td>
+          <td>
+            {% if s.status == 'given' %}{{ hub.pill("مسلَّمة", variant="green") }}
+            {% elif s.status == 'returned' %}{{ hub.pill("مرتجعة", variant="blue") }}
+            {% elif s.status == 'lost' %}{{ hub.pill("مفقودة", variant="red") }}
+            {% elif s.status == 'damaged' %}{{ hub.pill("متضرّرة", variant="amber") }}
+            {% else %}{{ hub.pill(s.status, variant="grey") }}{% endif %}
+          </td>
+          <td class="mono small">{{ s.given_at.strftime('%Y-%m-%d') if s.given_at else '—' }}</td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.svc_edit', sid=s.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
+                    onsubmit="return confirm('حذف «{{ s.name|e }}»؟');" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا معدّات مسجَّلة بعد",
+  sub="سجِّل أول معدّة من زرّ «إضافة معدّة» في الأعلى.",
+  icon="toolbox"
+) }}
+{% endif %}
+
 {% endblock %}
