@@ -1,57 +1,99 @@
+{# API tokens list — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}API Tokens{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}API Tokens{% endblock %}
-{% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} توكن</span>{% endblock %}
 
 {% block content %}
+
+{{ hub.hero(
+  "API Tokens",
+  subtitle="إدارة توكنات الوصول للواجهة البرمجية — إنشاء، إلغاء، ومراجعة آخر استخدام",
+  icon="key"
+) }}
+
 {% if new_plain %}
-<div class="card" style="border-color:var(--hr-cyan-500);background:var(--hr-cyan-50)">
-  <div class="card-body">
-    <div style="font-weight:800;color:var(--hr-cyan-700);margin-bottom:6px">
-      <i class="fa-solid fa-circle-info"></i> تم إنشاء التوكن — انسخه الآن (لن يُعرض مجددًا)
-    </div>
-    <div class="mono" style="background:#fff;border:1px solid var(--hr-border);padding:10px 12px;border-radius:6px;
-                              font-size:13px;word-break:break-all">{{ new_plain }}</div>
+<div style="margin-bottom:var(--hub-gap-section);padding:14px 16px;font-size:13px;
+            border-radius:var(--hub-r-lg);border:1px solid var(--hub-green);
+            background:var(--hub-green-soft);color:var(--hub-green-ink);line-height:1.7">
+  <div style="font-weight:800;margin-bottom:8px">
+    <i class="fa-solid fa-circle-check"></i> تم إنشاء التوكن — انسخه الآن، لن يُعرض مجددًا
+  </div>
+  <div class="mono" style="background:#fff;border:1px solid var(--hub-border);
+                            padding:11px 14px;border-radius:var(--hub-r-md);
+                            font-size:13px;word-break:break-all;color:var(--hub-text)">
+    {{ new_plain }}
   </div>
 </div>
 {% endif %}
 
-<form method="post" class="filter-bar">
-  <input type="text" name="name" placeholder="اسم التوكن" required style="flex:1">
-  <button class="btn btn-primary" type="submit">
-    <i class="fa-solid fa-plus"></i> إنشاء توكن
-  </button>
+{% if items %}
+{% set _active  = items|rejectattr('revoked')|list|length %}
+{% set _revoked = items|selectattr('revoked')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي", items|length, icon="key",          variant="brand") }}
+  {{ hub.kpi("نشطة",     _active,      icon="circle-check", variant="green") }}
+  {{ hub.kpi("ملغاة",    _revoked,     icon="ban",          variant="red") }}
+</div>
+{% endif %}
+
+<form method="post" class="hub-filterbar">
+  <input class="hub-input" type="text" name="name" placeholder="اسم التوكن الجديد" required style="flex:1">
+  {{ hub.btn("إنشاء توكن", icon="plus", variant="primary", type="submit", size="sm") }}
 </form>
 
-<div class="card"><div class="card-body card-body--flush">
-  {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الاسم</th><th>الـ Hash (آخر 12)</th>
-      <th>الحالة</th><th>آخر استخدام</th><th>أُنشئ</th><th style="width:90px"></th>
-    </tr></thead>
-    <tbody>{% for t in items %}
-    <tr>
-      <td class="num">{{ t.id }}</td>
-      <td><strong>{{ t.name }}</strong></td>
-      <td class="mono">…{{ t.token_hash[-12:] }}</td>
-      <td>
-        {% if t.revoked %}<span class="pill pill-danger">ملغى</span>
-        {% else %}<span class="pill pill-success"><span class="pill-dot"></span>نشط</span>{% endif %}
-      </td>
-      <td class="mono">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
-      <td class="mono">{{ t.created_at[:16] if t.created_at else '—' }}</td>
-      <td>
-        {% if not t.revoked %}
-        <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
-              onsubmit="return confirm('إلغاء التوكن؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i> إلغاء</button>
-        </form>
-        {% endif %}
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-key"></i>لا توكنات بعد</div>{% endif %}
-</div></div>
+{% if items %}
+{% call hub.section("التوكنات", icon="table-list", meta=items|length|string + " توكن", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="tokens-list">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>Hash (آخر 12)</th>
+          <th>الحالة</th>
+          <th>آخر استخدام</th>
+          <th>أُنشئ</th>
+          <th style="width:110px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in items %}
+        <tr>
+          <td class="num mono">{{ t.id }}</td>
+          <td><strong>{{ t.name }}</strong></td>
+          <td class="mono small">…{{ t.token_hash[-12:] }}</td>
+          <td>
+            {% if t.revoked %}{{ hub.pill("ملغى", variant="red") }}
+            {% else %}{{ hub.pill("نشط", variant="green") }}{% endif %}
+          </td>
+          <td class="mono small">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
+          <td class="mono small">{{ t.created_at[:16] if t.created_at else '—' }}</td>
+          <td>
+            {% if not t.revoked %}
+            <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
+                  onsubmit="return confirm('إلغاء التوكن؟')" style="display:inline">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
+                <i class="fa-solid fa-ban"></i> إلغاء
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توكنات بعد",
+  sub="أنشئ أول توكن من النموذج بالأعلى. التوكنات تستخدم لمصادقة طلبات الواجهة البرمجية.",
+  icon="key"
+) }}
+{% endif %}
+
 {% endblock %}

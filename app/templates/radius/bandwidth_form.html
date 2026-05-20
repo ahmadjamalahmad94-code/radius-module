@@ -1,37 +1,100 @@
+{# Bandwidth profile form — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
-{% set ttl = "إضافة ملف سرعة" if is_new else "تعديل ملف سرعة" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set ttl = "إضافة ملف سرعة" if is_new else "تعديل: " + (item.name or 'ملف سرعة') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .bf-form{ max-width: 900px; margin: 0 auto; }
+  .bf-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width:720px){ .bf-grid{ grid-template-columns: 1fr; } }
+  .bf-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .bf-field.full{ grid-column: 1 / -1; }
+  .bf-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .bf-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .bf-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
+  .bf-rate-row{ display:flex; gap:6px; }
+  .bf-rate-row > input{ flex:1; min-width:0; }
+  .bf-rate-row > select{ width:100px; flex-shrink:0; }
+</style>
+{% endblock %}
+
 {% block content %}
+
+{{ hub.hero(
+  ttl,
+  subtitle="ملف سرعة Bandwidth — قيم التنزيل والرفع والسرعة المؤقتة والأولوية",
+  icon="gauge",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.bw_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
+<div class="bf-form">
 <form method="post"
       action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">
-  <div class="card"><div class="card-header"><span class="title">المعطيات</span></div><div class="card-body">
-    <div class="form-row"><label>الاسم *</label>
-      <div class="field"><input type="text" name="name" required value="{{ item.name }}"></div></div>
-    <div class="form-row"><label>تنزيل *</label>
-      <div class="field" style="display:flex;gap:6px">
-        <input type="number" name="rate_down" min="0" value="{{ item.rate_down }}" style="flex:1">
-        <select name="rate_down_unit" style="width:90px">
-          {% for u in ['Kbps','Mbps'] %}<option value="{{ u }}" {% if item.rate_down_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}
-        </select>
-      </div></div>
-    <div class="form-row"><label>رفع *</label>
-      <div class="field" style="display:flex;gap:6px">
-        <input type="number" name="rate_up" min="0" value="{{ item.rate_up }}" style="flex:1">
-        <select name="rate_up_unit" style="width:90px">
-          {% for u in ['Kbps','Mbps'] %}<option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}
-        </select>
-      </div></div>
-    <div class="form-row"><label>سطر السرعة المؤقتة في MikroTik</label>
-      <div class="field"><input type="text" name="burst" value="{{ item.burst }}" placeholder="10M/5M 8M/4M 4M/2M 30/30 8 4">
-        <div class="hint">سطر تحديد السرعة الكامل في MikroTik، وهو اختياري.</div></div></div>
-    <div class="form-row"><label>الأولوية</label>
-      <div class="field"><input type="number" name="priority" value="{{ item.priority }}"></div></div>
-  </div></div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.bw_list') }}">إلغاء</a>
+
+  {% call hub.section("معطيات الملف", icon="sliders") %}
+    <div class="bf-grid">
+      <div class="bf-field full">
+        <label>الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required value="{{ item.name }}"
+               placeholder="مثال: 10M/5M عادي">
+      </div>
+
+      <div class="bf-field">
+        <label>سرعة التنزيل <span class="req">*</span></label>
+        <div class="bf-rate-row">
+          <input class="hub-input" type="number" name="rate_down" min="0" value="{{ item.rate_down }}">
+          <select class="hub-select" name="rate_down_unit">
+            {% for u in ['Kbps','Mbps'] %}
+              <option value="{{ u }}" {% if item.rate_down_unit==u %}selected{% endif %}>{{ u }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="bf-field">
+        <label>سرعة الرفع <span class="req">*</span></label>
+        <div class="bf-rate-row">
+          <input class="hub-input" type="number" name="rate_up" min="0" value="{{ item.rate_up }}">
+          <select class="hub-select" name="rate_up_unit">
+            {% for u in ['Kbps','Mbps'] %}
+              <option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="bf-field full">
+        <label>سطر السرعة المؤقتة في MikroTik</label>
+        <input class="hub-input mono" type="text" name="burst" value="{{ item.burst }}"
+               placeholder="10M/5M 8M/4M 4M/2M 30/30 8 4">
+        <div class="help">سطر تحديد السرعة الكامل في MikroTik. اختياري.</div>
+      </div>
+
+      <div class="bf-field">
+        <label>الأولوية</label>
+        <input class="hub-input" type="number" name="priority" value="{{ item.priority }}">
+        <div class="help">يستخدم عند تداخل قواعد السرعة.</div>
+      </div>
+    </div>
+  {% endcall %}
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الملف" if is_new else "حفظ التعديلات" }}
+    </button>
   </div>
 </form>
+</div>
+
 {% endblock %}

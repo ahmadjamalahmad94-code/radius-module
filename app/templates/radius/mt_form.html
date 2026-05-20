@@ -1,44 +1,125 @@
+{# MikroTik connection form — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
-{% set ttl = "إضافة اتصال MikroTik" if is_new else "تعديل اتصال" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set ttl = "إضافة اتصال MikroTik" if is_new else "تعديل: " + (item.name or 'اتصال MikroTik') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .mt-form{ max-width: 960px; margin: 0 auto; }
+  .mt-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width:720px){ .mt-grid{ grid-template-columns: 1fr; } }
+  .mt-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .mt-field.full{ grid-column: 1 / -1; }
+  .mt-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .mt-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .mt-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
+  .mt-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700;
+  }
+  .mt-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+</style>
+{% endblock %}
+
 {% block content %}
+
+{{ hub.hero(
+  ttl,
+  subtitle="إعداد اتصال API بجهاز MikroTik — المضيف والمنفذ وبيانات الدخول وخيارات TLS",
+  icon="router",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
+<div class="mt-form">
 <form method="post"
       action="{{ url_for('radius.mt_update', cid=item.id) if not is_new else url_for('radius.mt_create') }}">
-  <div class="card"><div class="card-header"><span class="title">معطيات الاتصال</span></div><div class="card-body">
-    <div class="form-row"><label>الاسم *</label>
-      <div class="field"><input type="text" name="name" required value="{{ item.name or '' }}" placeholder="MT-HQ-Core"></div></div>
-    <div class="form-row"><label>المضيف *</label>
-      <div class="field"><input type="text" name="host" required value="{{ item.host or '' }}" placeholder="10.0.0.1"></div></div>
-    <div class="form-row"><label>المنفذ</label>
-      <div class="field"><input type="number" name="port" value="{{ item.port or 8728 }}"></div></div>
-    <div class="form-row"><label>اسم المستخدم *</label>
-      <div class="field"><input type="text" name="username" required value="{{ item.username or 'admin' }}"></div></div>
-    <div class="form-row"><label>كلمة المرور {% if is_new %}*{% endif %}</label>
-      <div class="field"><input type="password" name="password" {% if is_new %}required{% endif %}
-        placeholder="{{ '••••••••' if not is_new else '' }}"></div></div>
-    <div class="form-row"><label>المهلة (ثانية)</label>
-      <div class="field"><input type="number" name="timeout_sec" value="{{ item.timeout_sec or 10 }}"></div></div>
-    <div class="form-row"><label>TLS</label>
-      <div class="field"><label class="toggle">
-        <input type="checkbox" name="use_tls" value="1" {% if item.use_tls %}checked{% endif %}>
-        <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
-      </label></div></div>
-    <div class="form-row"><label>تحقّق من الشهادة</label>
-      <div class="field"><label class="toggle">
-        <input type="checkbox" name="verify_tls" value="1" {% if item.verify_tls or is_new %}checked{% endif %}>
-        <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
-      </label></div></div>
-    <div class="form-row"><label>مفعَّل</label>
-      <div class="field"><label class="toggle">
-        <input type="checkbox" name="enabled" value="1" {% if item.enabled or is_new %}checked{% endif %}>
-        <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
-      </label></div></div>
-  </div></div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.mt_list') }}">إلغاء</a>
+
+  {% call hub.section("اتصال الجهاز", icon="network-wired") %}
+    <div class="mt-grid">
+      <div class="mt-field">
+        <label>الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required
+               value="{{ item.name or '' }}" placeholder="MT-HQ-Core">
+      </div>
+      <div class="mt-field">
+        <label>المضيف <span class="req">*</span></label>
+        <input class="hub-input mono" type="text" name="host" required
+               value="{{ item.host or '' }}" placeholder="10.0.0.1">
+      </div>
+      <div class="mt-field">
+        <label>المنفذ</label>
+        <input class="hub-input" type="number" name="port" value="{{ item.port or 8728 }}">
+        <div class="help">الافتراضي 8728 (بدون TLS) أو 8729 (TLS).</div>
+      </div>
+      <div class="mt-field">
+        <label>المهلة (ثانية)</label>
+        <input class="hub-input" type="number" name="timeout_sec" value="{{ item.timeout_sec or 10 }}">
+      </div>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("بيانات الدخول", icon="key") %}
+    <div class="mt-grid">
+      <div class="mt-field">
+        <label>اسم المستخدم <span class="req">*</span></label>
+        <input class="hub-input mono" type="text" name="username" required
+               value="{{ item.username or 'admin' }}">
+      </div>
+      <div class="mt-field">
+        <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+        <input class="hub-input" type="password" name="password" {% if is_new %}required{% endif %}
+               placeholder="{{ '••••••••' if not is_new else 'كلمة مرور قوية' }}">
+        <div class="help">{% if is_new %}تُحفظ مشفّرة.{% else %}اتركها فارغة لإبقاء القيمة الحالية.{% endif %}</div>
+      </div>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("التشغيل و TLS", icon="shield-halved") %}
+    <div class="mt-grid">
+      <div class="mt-field">
+        <label>تفعيل TLS</label>
+        <div class="mt-chk">
+          <input type="checkbox" name="use_tls" id="mt-tls" value="1" {% if item.use_tls %}checked{% endif %}>
+          <label for="mt-tls" style="margin:0">تشفير الاتصال (TLS)</label>
+        </div>
+      </div>
+      <div class="mt-field">
+        <label>تحقّق من الشهادة</label>
+        <div class="mt-chk">
+          <input type="checkbox" name="verify_tls" id="mt-vtls" value="1"
+                 {% if item.verify_tls or is_new %}checked{% endif %}>
+          <label for="mt-vtls" style="margin:0">رفض الشهادات غير الموثّقة</label>
+        </div>
+      </div>
+      <div class="mt-field full">
+        <label>الحالة</label>
+        <div class="mt-chk">
+          <input type="checkbox" name="enabled" id="mt-en" value="1"
+                 {% if item.enabled or is_new %}checked{% endif %}>
+          <label for="mt-en" style="margin:0">الاتصال مفعَّل ضمن العاملين</label>
+        </div>
+      </div>
+    </div>
+  {% endcall %}
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الاتصال" if is_new else "حفظ التعديلات" }}
+    </button>
   </div>
 </form>
+</div>
+
 {% endblock %}
