@@ -252,6 +252,10 @@
          class="{% if '/vouchers' in request.path %}active{% endif %}">
         <i class="fa-solid fa-ticket"></i> الكوبونات
       </a>
+      <a href="{{ url_for('radius.finance_ledger') }}"
+         class="{% if '/finance' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-scale-balanced"></i> السجل المالي
+      </a>
     </div>
 
     <div class="nav-group">

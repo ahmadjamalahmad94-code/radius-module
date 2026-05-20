@@ -1,0 +1,193 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
+{% block page_title %}دفعات وسلف المستفيد{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.users_edit', username=sub.username) }}">
+    <i class="fa-solid fa-user-pen"></i> رجوع للمستفيد
+  </a>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.finance_ledger', subscriber_id=sub.id) }}">
+    <i class="fa-solid fa-scale-balanced"></i> قيود هذا المستفيد
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .finance-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+  .finance-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
+  .finance-card h3{margin:0 0 10px;font-size:17px;color:#1f2937}
+  .finance-muted{color:#708095;font-size:13px}
+  .finance-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .finance-form .wide{grid-column:1/-1}
+  .finance-form label{display:flex;flex-direction:column;gap:5px;font-weight:700;color:#263244;font-size:13px}
+  .finance-form input,.finance-form select,.finance-form textarea{border:1px solid #d8c8a9;border-radius:8px;padding:9px;background:#fffaf1}
+  .finance-checks{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .finance-checks label{display:flex;flex-direction:row;align-items:center;font-weight:600}
+  .finance-table{width:100%;border-collapse:collapse}
+  .finance-table th,.finance-table td{border-bottom:1px solid #eee3d0;padding:9px;text-align:right;vertical-align:top}
+  .finance-table th{font-size:12px;color:#657386}
+  .finance-note{margin:8px 0 14px;padding:10px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px}
+  @media (max-width: 980px){.finance-grid,.finance-form{grid-template-columns:1fr}}
+</style>
+
+<div class="finance-note">
+  هذه الصفحة تسجل الدفعات والسلف في السجل المالي. عند اختيار “تطبيق على RADIUS” يتم تنفيذ مدة الاستحقاق عبر طبقة التطبيق الحالية، و“تجربة فقط” لا تغيّر حساب الشبكة.
+</div>
+
+<div class="finance-grid">
+  <section class="finance-card">
+    <h3><i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة</h3>
+    <form class="finance-form" method="post" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+      <label>المبلغ
+        <input name="amount" type="number" step="0.01" min="0.01" required>
+      </label>
+      <label>العملة
+        <input name="currency" value="JOD" maxlength="8">
+      </label>
+      <label>طريقة الدفع
+        <select name="method">
+          <option value="cash">نقدًا</option>
+          <option value="bank">تحويل بنكي</option>
+          <option value="manual">يدوي</option>
+          <option value="other">أخرى</option>
+        </select>
+      </label>
+      <label>التقريب
+        <select name="rounding_mode">
+          <option value="floor">للأسفل</option>
+          <option value="nearest">الأقرب</option>
+          <option value="ceil">للأعلى</option>
+        </select>
+      </label>
+      <label>سعر خاص
+        <input name="custom_price" type="number" step="0.01" min="0">
+      </label>
+      <label>خصم
+        <input name="discount_amount" type="number" step="0.01" min="0" value="0">
+      </label>
+      <label class="wide">سبب الخصم
+        <input name="discount_reason" maxlength="300">
+      </label>
+      <label class="wide">ملاحظات
+        <textarea name="notes" rows="2"></textarea>
+      </label>
+      <div class="finance-checks wide">
+        <label><input type="checkbox" name="apply_to_radius" value="1"> تطبيق على RADIUS</label>
+        <label><input type="checkbox" name="dry_run" value="1" checked> تجربة فقط</label>
+      </div>
+      <div class="wide">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل الدفعة</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="finance-card">
+    <h3><i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة</h3>
+    <form class="finance-form" method="post" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+      <label>عدد الساعات
+        <input name="hours" type="number" min="0" placeholder="مثال: 6">
+      </label>
+      <label>عدد الأيام
+        <input name="days" type="number" min="0" placeholder="مثال: 1">
+      </label>
+      <label>قيمة السلفة
+        <input name="amount" type="number" step="0.01" min="0" value="0">
+      </label>
+      <label>العملة
+        <input name="currency" value="JOD" maxlength="8">
+      </label>
+      <label class="wide">سبب السلفة
+        <textarea name="reason" rows="2" placeholder="اكتب سببًا واضحًا ليسهل الرجوع له لاحقًا."></textarea>
+      </label>
+      <div class="finance-checks wide">
+        <label><input type="checkbox" name="apply_to_radius" value="1"> تطبيق مؤقت على RADIUS</label>
+        <label><input type="checkbox" name="dry_run" value="1" checked> تجربة فقط</label>
+      </div>
+      <div class="wide">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-clock"></i> منح السلفة</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<section class="finance-card" style="margin-top:16px">
+  <h3><i class="fa-solid fa-receipt"></i> آخر الدفعات</h3>
+  {% if payments %}
+  <table class="finance-table">
+    <thead><tr><th>#</th><th>المبلغ</th><th>المدة المستحقة</th><th>الخصم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td class="mono">{{ p.id }}</td>
+        <td class="mono">{{ p.amount }} {{ p.currency }}</td>
+        <td>{{ p.earned_minutes or 0 }} دقيقة</td>
+        <td>{{ p.discount_amount or 0 }}</td>
+        <td><span class="pill pill-success">{{ p.status }}</span></td>
+        <td class="mono">{{ p.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty"><i class="fa-solid fa-receipt"></i> لا توجد دفعات بعد.</div>
+  {% endif %}
+</section>
+
+<section class="finance-card" style="margin-top:16px">
+  <h3><i class="fa-solid fa-handshake"></i> السلف والتسويات</h3>
+  {% if loans %}
+  <table class="finance-table">
+    <thead><tr><th>#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th><th>تسوية</th></tr></thead>
+    <tbody>
+      {% for loan in loans %}
+      <tr>
+        <td class="mono">{{ loan.id }}</td>
+        <td>{{ loan.duration_minutes }} دقيقة</td>
+        <td class="mono">{{ loan.amount }} {{ loan.currency }}</td>
+        <td><span class="pill {% if loan.status == 'open' %}pill-warn{% else %}pill-success{% endif %}">{{ loan.status }}</span></td>
+        <td>{{ loan.reason or '—' }}</td>
+        <td>
+          {% if loan.status == 'open' %}
+          <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:90px">
+            <input name="notes" placeholder="ملاحظة التسوية" style="width:150px">
+            <button class="btn btn-secondary btn-xs" type="submit">تسوية</button>
+          </form>
+          {% else %}
+            <span class="finance-muted">تمت التسوية</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty"><i class="fa-solid fa-hand-holding-dollar"></i> لا توجد سلف بعد.</div>
+  {% endif %}
+</section>
+
+<section class="finance-card" style="margin-top:16px">
+  <h3><i class="fa-solid fa-scale-balanced"></i> سجل القيود</h3>
+  {% if ledger %}
+  <table class="finance-table">
+    <thead><tr><th>#</th><th>النوع</th><th>الاتجاه</th><th>المبلغ</th><th>المصدر</th><th>ملاحظات</th><th>التاريخ</th></tr></thead>
+    <tbody>
+      {% for entry in ledger %}
+      <tr>
+        <td class="mono">{{ entry.id }}</td>
+        <td>{{ entry.entry_type }}</td>
+        <td>{{ entry.direction }}</td>
+        <td class="mono">{{ entry.amount }} {{ entry.currency }}</td>
+        <td>{{ entry.source_type or '—' }}{% if entry.source_id %} #{{ entry.source_id }}{% endif %}</td>
+        <td>{{ entry.notes or '—' }}</td>
+        <td class="mono">{{ entry.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty"><i class="fa-solid fa-scale-balanced"></i> لا توجد قيود مالية بعد.</div>
+  {% endif %}
+</section>
+{% endblock %}

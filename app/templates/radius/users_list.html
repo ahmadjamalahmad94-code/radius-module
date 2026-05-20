@@ -70,6 +70,9 @@
               <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.users_edit', username=u.username) }}" title="تعديل">
                 <i class="fa-solid fa-pen"></i>
               </a>
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.users_finance', username=u.username) }}" title="الدفعات والسلف">
+                <i class="fa-solid fa-wallet"></i>
+              </a>
               <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}" style="display:inline">
                 <button class="btn btn-xs {{ 'btn-warning' if u.status=='enabled' else 'btn-success' }}" title="{{ 'تعطيل' if u.status=='enabled' else 'تفعيل' }}">
                   <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
