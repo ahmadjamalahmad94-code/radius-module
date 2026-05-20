@@ -668,8 +668,15 @@ body::after{
    ║  light page bg.                                                      ║
    ╚════════════════════════════════════════════════════════════════════╝ */
 
-/* Make the host fill the viewport but render BEHIND content. */
-.hb-bg-net{ z-index:0 !important; }
+/* Host fills viewport, renders BELOW every other element.
+   z-index:-1 + transparent body bg + page colour moved up to html
+   gives a stack like:
+       html paint  ← page color (#EFEDF5)
+       .hb-bg-net  ← animation layer (z:-1, fixed)
+       body        ← transparent
+       cards/content ← default z:auto (above z:-1)
+   so the animation peeks ONLY through the gaps between cards. */
+.hb-bg-net{ z-index:-1 !important; }
 .hb-bg-net > *{ position:absolute }
 
 /* Big drifting orbs (replaced body::before / body::after) */

@@ -398,8 +398,12 @@ body{
   min-height: calc(100vh - var(--hr-topbar-h, 50px));
 }
 
-/* Body background to match the new identity (off-white, not cream). */
-html, body{ background:var(--hb-bg-page) !important; }
+/* Body background — page color goes on HTML so the .hb-bg-net layer
+   (z-index:-1, fixed) sits between html paint and body content and
+   becomes visible. Body itself stays transparent so it doesn't cover
+   the animation. */
+html{ background:var(--hb-bg-page) !important; }
+body{ background:transparent !important; }
 
 /* Hide old sidebar foot rows (legacy admin_layout.css) when new sidebar active */
 .hb-side .sidebar-foot{display:none !important}
