@@ -262,6 +262,11 @@ def _summary(raw: dict, sessions: list[dict], macs: list[dict]) -> dict:
                 # leans on the OUI alone — still high-confidence for
                 # well-known vendors like Apple / Samsung.
                 "device": infer_device(mac=item.get("mac")),
+                # DHCP fingerprint (migration 026) — set by check_card
+                # after this _summary builds the macs list. Passing
+                # through here so the lock-MAC picker can show the
+                # device hostname/OS next to each MAC.
+                "dhcp_device": item.get("dhcp_device"),
             }
             for item in macs
         ],
@@ -341,6 +346,37 @@ def check_card(tenant_id: int, query: str) -> dict:
     sessions = [_session(row, now) for row in session_rows]
     accounting_summary = cards_repo.summarize_card_accounting(tenant_id, record["username"])
     macs = cards_repo.list_card_macs(tenant_id, record["username"], limit=30)
+
+    # Safety net: list_card_macs occasionally returns empty even when
+    # sessions clearly contain MAC addresses (case-folded usernames,
+    # NULL-as-empty bookkeeping rows, etc.). The user-visible symptom
+    # was the lock-MAC picker showing "لا يوجد سجل سابق" while the
+    # sessions table right above it listed MACs. Re-derive from the
+    # session list whenever the dedicated query came back empty.
+    if not macs and sessions:
+        _agg: dict[str, dict] = {}
+        for s in sessions:
+            raw = (s.get("mac_address") or "").strip()
+            if not raw:
+                continue
+            key = raw.upper()
+            entry = _agg.setdefault(key, {
+                "mac":             key,
+                "sessions_count":  0,
+                "online_sessions": 0,
+                "last_seen_at":    None,
+            })
+            entry["sessions_count"] += 1
+            if s.get("online"):
+                entry["online_sessions"] += 1
+            ls = s.get("stopped_at") or s.get("started_at")
+            if ls and (entry["last_seen_at"] is None or ls > entry["last_seen_at"]):
+                entry["last_seen_at"] = ls
+        macs = sorted(
+            _agg.values(),
+            key=lambda x: (x["last_seen_at"] or ""),
+            reverse=True,
+        )
 
     # ── DHCP-lease device fingerprints (migration 026) ─────────────
     # Collect every MAC this card has ever touched, look them all up in

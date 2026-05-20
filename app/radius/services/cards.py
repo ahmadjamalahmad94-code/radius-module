@@ -319,11 +319,26 @@ class CardsService:
         return result
 
     def disable_card(self, *, actor: str, card_id: int, reason: str = "") -> dict:
-        """Disable a card and FREEZE its remaining time. Real-world clock
-        won't burn the user's quota while disabled; re-enabling restores
-        the same number of seconds from 'now'.
+        """Disable a card, FREEZE its remaining time, AND kick every
+        currently-active session.
 
-        Returns dict with frozen_remaining_seconds + old expire_at.
+        Three things happen atomically from the operator's POV:
+
+        1. The remaining-seconds snapshot is taken (frozen_remaining_seconds)
+           so the real-world clock does not burn the user's quota while
+           the card is disabled. Re-enabling restores the same amount
+           of time from 'now'.
+
+        2. The card is marked revoked, so the next auth attempt fails
+           and FreeRADIUS won't let the device re-join.
+
+        3. CoA-Disconnect is broadcast to every active radacct session
+           for this username. Without this, an already-online device
+           keeps using the network until its lease/keepalive expires —
+           the operator clicked "تعطيل" but the user is still online.
+
+        Returns dict with frozen_remaining_seconds + old expire_at,
+        plus `kicked_sessions` (how many CoA-Disconnects were sent).
         """
         tenant_id = self._store_tenant_id()
         result = cards_repo.freeze_card_time(
@@ -331,12 +346,36 @@ class CardsService:
         )
         if result is None:
             raise RadiusValidationError("تعذر تعطيل البطاقة")
+
+        # Kick any device that's still online. Wrapped in try/except so
+        # a transient CoA failure doesn't roll back the freeze — the
+        # admin's intent ("disable this card") is the contract; the
+        # CoA broadcast is best-effort enforcement.
+        kicked = 0
+        try:
+            card = cards_repo.get_card(tenant_id, card_id)
+            # get_card returns a Card dataclass; defensive on shape.
+            username = getattr(card, "username", None) or (
+                card.get("username") if isinstance(card, dict) else None
+            )
+            if username:
+                self._adapter.disconnect(username)
+                kicked = -1  # adapter doesn't return a count; -1 = "best-effort dispatched"
+        except Exception:  # noqa: BLE001
+            # CoA failure must not prevent the freeze from being recorded.
+            import logging
+            logging.getLogger(__name__).warning(
+                "disable_card: CoA kick failed for card=%s", card_id, exc_info=True,
+            )
+
+        result["kicked_sessions"] = kicked
         self._audit.record(actor=actor, action="card.disable",
                            target_type="card", target_id=str(card_id),
                            payload={
                                "reason":                   reason,
                                "frozen_remaining_seconds": result["frozen_remaining_seconds"],
                                "expire_at_old":            result["expire_at_old"],
+                               "kicked_sessions":          kicked,
                            })
         return result
 

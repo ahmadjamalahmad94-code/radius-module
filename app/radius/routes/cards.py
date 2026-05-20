@@ -394,15 +394,19 @@ def _handle_card_operation():
                 actor=_actor(), card_id=card_id, reason=_form_str("reason"),
             )
             frozen = int((res or {}).get("frozen_remaining_seconds") or 0)
+            # disable_card now also broadcasts CoA-Disconnect so devices
+            # currently online can't keep using the network after the
+            # admin froze the card. Reflect both actions in the flash.
+            suffix = " وتم قطع كل الجلسات النشطة."
             if frozen > 0:
                 h, m = divmod(frozen // 60, 60)
                 flash(
                     f"تم تعطيل البطاقة وتجميد الوقت المتبقي ({h} ساعة و {m} دقيقة). "
-                    "سيعود نفس الوقت عند إعادة التفعيل.",
+                    "سيعود نفس الوقت عند إعادة التفعيل." + suffix,
                     "warning",
                 )
             else:
-                flash("تم تعطيل البطاقة.", "warning")
+                flash("تم تعطيل البطاقة." + suffix, "warning")
         elif action == "enable":
             res = svc.enable_card(actor=_actor(), card_id=card_id)
             restored = int((res or {}).get("restored_seconds") or 0)

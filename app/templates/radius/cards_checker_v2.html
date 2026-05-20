@@ -1752,17 +1752,51 @@
   // opens window.ccModal.sessionsPicker so the operator picks WHICH
   // device(s) to kick. The form's session_ids hidden field receives
   // the comma-joined IDs on confirm.
+  //
+  // Robust source priority:
+  //   1. data-cc-active-sessions JSON (built by Jinja from
+  //      s.latest_sessions filtered by online)
+  //   2. DOM scrape of `<tr class="is-live" data-cc-session="...">`
+  //      rows in the sessions table — the same rows the operator
+  //      sees as "حية". This survives Jinja shape changes and stale
+  //      cached pages.
   (function(){
     'use strict';
     var btn = document.querySelector('[data-cc-op="disconnect"][data-cc-active-sessions]');
     if (!btn) return;
+
+    function fromAttribute(){
+      try {
+        var s = JSON.parse(btn.getAttribute('data-cc-active-sessions') || '[]');
+        return Array.isArray(s) ? s : [];
+      } catch(_){ return []; }
+    }
+    function fromDom(){
+      // Read every live session row from the visible sessions table.
+      // Each row is `<tr class="is-live" data-cc-session="<id>">` and
+      // its cells follow the table column order: state, ip, mac, ...
+      var rows = document.querySelectorAll('.cc-sessions-table tr.is-live[data-cc-session]');
+      var out = [];
+      rows.forEach(function(tr){
+        var cells = tr.querySelectorAll('td');
+        var ip  = cells[1] ? cells[1].textContent.trim() : '';
+        var mac = cells[2] ? cells[2].textContent.trim() : '';
+        out.push({
+          id:       tr.getAttribute('data-cc-session') || '',
+          mac:      (mac && mac !== '—') ? mac : '',
+          ip:       (ip  && ip  !== '—') ? ip  : '',
+          duration: 0,
+          started:  '',
+          device:   '',
+        });
+      });
+      return out.filter(function(s){ return s.id; });
+    }
+
     btn.addEventListener('click', function(){
       if (!window.ccModal || btn.disabled) return;
-      var sessions = [];
-      try {
-        sessions = JSON.parse(btn.getAttribute('data-cc-active-sessions') || '[]');
-        if (!Array.isArray(sessions)) sessions = [];
-      } catch(_){ sessions = []; }
+      var sessions = fromAttribute();
+      if (!sessions.length) sessions = fromDom();
       if (!sessions.length){
         alert('لا أجهزة متّصلة الآن.');
         return;
@@ -1802,6 +1836,20 @@
         meta = JSON.parse(btn.getAttribute('data-cc-recent-macs-meta') || '{}');
         if (!meta || typeof meta !== 'object') meta = {};
       } catch(_){ meta = {}; }
+
+      // DOM fallback — when the dedicated MAC summary query returned
+      // empty but the sessions table clearly shows MACs to the user,
+      // scrape unique MAC values from the visible rows. This makes the
+      // picker reflect what the operator can actually see on the page.
+      if (!recent.length){
+        var seen = {};
+        var rows = document.querySelectorAll('.cc-sessions-table tbody tr td:nth-child(3)');
+        rows.forEach(function(td){
+          var v = (td.textContent || '').trim().toUpperCase();
+          if (v && v !== '—' && !seen[v]){ seen[v] = true; recent.push(v); }
+        });
+      }
+
       window.ccModal.macPicker({
         title: 'قفل MAC',
         currentMac: current,
