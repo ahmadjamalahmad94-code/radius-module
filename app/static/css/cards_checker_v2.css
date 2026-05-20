@@ -2059,3 +2059,17 @@ body:has(.cc-hero) .page-head{display:none !important}
   margin-top:6px !important;
   padding-top:6px !important;
 }
+
+/* Hero password — eye toggle (sibling of the copy button). Same
+   frosted glass-on-purple treatment so the two reads as a pair. */
+.cc-card-password-eye{
+  width:26px; height:26px; flex:0 0 26px;
+  border:0; background:rgba(255,255,255,.18);
+  border-radius:7px; color:#fff;
+  font-size:11px; cursor:pointer;
+  display:grid; place-items:center;
+  transition:.15s ease;
+  margin-inline-end:2px;
+}
+.cc-card-password-eye:hover{ background:rgba(255,255,255,.32); }
+.cc-card-password-eye:active{ transform:scale(.94); }

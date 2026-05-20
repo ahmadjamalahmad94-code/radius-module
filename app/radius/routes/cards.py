@@ -24,6 +24,10 @@ def register_cards_routes(bp: Blueprint) -> None:
     # ـ R13.A.1: JSON API لـ Card Checker AJAX (foundation للـ UI rebuild) ـ
     bp.add_url_rule("/cards/checker/api/lookup", "cards_checker_api_lookup",
                      cards_checker_api_lookup, methods=["GET"])
+    # On-demand password reveal — separate endpoint so the password
+    # never lives in the default Checker payload. Role-gated + audited.
+    bp.add_url_rule("/cards/checker/api/reveal-password", "cards_checker_api_reveal_password",
+                     cards_checker_api_reveal_password, methods=["POST"])
     # ـ R13.A.2: v2 template preview — side-by-side with v1 حتى A.4 ـ
     bp.add_url_rule("/cards/checker/v2", "cards_checker_v2",
                      cards_checker_v2, methods=["GET"])
@@ -598,6 +602,62 @@ def cards_checker_api_lookup():
         "ok": True,
         "query": query,
         "result": result,
+    })
+
+
+def cards_checker_api_reveal_password():
+    """POST /admin/radius/cards/checker/api/reveal-password
+
+    On-demand password reveal for the Card Checker hero.
+
+    Why a SEPARATE endpoint instead of including the password in the
+    default Checker payload:
+      • The default payload is rendered into the page HTML on every
+        Checker request and may be cached, logged in browser dev tools,
+        sniffed via the SSE / network tab, or copied accidentally.
+      • By keeping the password OUT of the default response and
+        requiring an explicit POST to retrieve it, we get:
+          – Per-reveal audit row (action: 'card.password_reveal')
+            with actor + card_id + tenant_id + timestamp.
+          – Role gate: only admins reaching this route can call it
+            (the blueprint already enforces login_required on the
+            whole radius module).
+          – Less leakage: a casual screenshot of the Checker won't
+            include the value.
+
+    Body: form field `card_id` (int)
+    Returns: 200 {ok:true, password:'...'} or 4xx {ok:false, error:...}
+    """
+    from ..db.connection import db as _db_conn
+    from ..services.audit import get_audit_service
+    card_id = _form_int("card_id")
+    if not card_id:
+        return jsonify({"ok": False, "error": "card_id مطلوب"}), 400
+    tenant_id = _tid()
+    row = _db_conn().execute(
+        "SELECT username, password FROM cards "
+        "WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
+        (tenant_id, card_id),
+    ).fetchone()
+    if row is None:
+        return jsonify({"ok": False, "error": "البطاقة غير موجودة"}), 404
+    username = row["username"] if isinstance(row, dict) else row[0]
+    password = row["password"]  if isinstance(row, dict) else row[1]
+    if not password:
+        return jsonify({"ok": False, "error": "هذه البطاقة بدون كلمة مرور"}), 404
+    # Audit the reveal — operator + card + when.
+    try:
+        get_audit_service().record(
+            actor=_actor(), action="card.password_reveal",
+            target_type="card", target_id=str(card_id),
+            payload={"username": username},
+        )
+    except Exception:  # noqa: BLE001 — never block the reveal on audit issues
+        pass
+    return jsonify({
+        "ok": True,
+        "card_id": card_id,
+        "password": password,
     })
 
 

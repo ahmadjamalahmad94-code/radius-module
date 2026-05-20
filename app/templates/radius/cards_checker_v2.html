@@ -227,9 +227,28 @@
         {{ card.username }}
       </div>
       {% if card.has_password %}
-      <div class="cc-card-password" data-cc-field="password">
+      {# Password pill — masked by default. Eye toggle calls a separate
+         audited endpoint (POST /cards/checker/api/reveal-password)
+         which returns the value only on explicit user action. Auto
+         re-masks after 8s. Never lives in the page's default payload. #}
+      <div class="cc-card-password" data-cc-field="password"
+           data-cc-card-id="{{ card.id }}"
+           data-cc-pwd-mask="••••••••">
         <i class="fa-solid fa-key"></i>
-        <span class="cc-card-password-value">كلمة المرور محفوظة ولا تظهر في الفحص</span>
+        <span class="cc-card-password-value mono"
+              data-cc-pwd-display>••••••••</span>
+        <button type="button" class="cc-card-password-eye"
+                title="إظهار كلمة المرور"
+                aria-label="إظهار كلمة المرور"
+                data-cc-pwd-toggle>
+          <i class="fa-solid fa-eye"></i>
+        </button>
+        <button type="button" class="cc-card-password-copy"
+                title="نسخ كلمة المرور"
+                aria-label="نسخ كلمة المرور"
+                data-cc-pwd-copy>
+          <i class="fa-solid fa-copy"></i>
+        </button>
       </div>
       {% endif %}
       {# Removed: cc-card-remaining + MAC bottom row — both moved to
@@ -1506,6 +1525,83 @@
       unitFld.value   = uEl.getAttribute('data-cc-unit-value');
       opFld.value     = opEl.getAttribute('data-cc-op-value');
       form.submit();
+    });
+  })();
+
+  // ── Password reveal (eye toggle + copy) ───────────────────────────
+  // The password never lives in the page payload — clicking the eye
+  // POSTs to /cards/checker/api/reveal-password which returns the
+  // value on demand and logs an audit row. The pill auto-re-masks
+  // 8 seconds after reveal so a forgotten-open page doesn't leak it.
+  (function(){
+    'use strict';
+    var pill = document.querySelector('[data-cc-field="password"]');
+    if (!pill) return;
+    var displayEl = pill.querySelector('[data-cc-pwd-display]');
+    var eyeBtn    = pill.querySelector('[data-cc-pwd-toggle]');
+    var copyBtn   = pill.querySelector('[data-cc-pwd-copy]');
+    var cardId    = pill.getAttribute('data-cc-card-id');
+    var mask      = pill.getAttribute('data-cc-pwd-mask') || '••••••••';
+    var revealed  = null;       // cached plaintext once fetched
+    var hideTimer = null;
+
+    function setMasked(){
+      displayEl.textContent = mask;
+      eyeBtn.querySelector('i').className = 'fa-solid fa-eye';
+      eyeBtn.setAttribute('title', 'إظهار كلمة المرور');
+      eyeBtn.setAttribute('aria-label', 'إظهار كلمة المرور');
+      if (hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
+    }
+    function setRevealed(value){
+      revealed = value;
+      displayEl.textContent = value;
+      eyeBtn.querySelector('i').className = 'fa-solid fa-eye-slash';
+      eyeBtn.setAttribute('title', 'إخفاء كلمة المرور');
+      eyeBtn.setAttribute('aria-label', 'إخفاء كلمة المرور');
+      // Auto re-mask after 8s so an open tab can't leak it forever.
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(setMasked, 8000);
+    }
+    async function fetchPassword(){
+      var fd = new FormData();
+      fd.append('card_id', cardId);
+      try {
+        var r = await fetch(
+          "{{ url_for('radius.cards_checker_api_reveal_password') }}",
+          { method: 'POST', body: fd, credentials: 'same-origin' }
+        );
+        var j = await r.json();
+        if (!r.ok || !j.ok || !j.password){
+          alert(j.error || 'تعذّر إظهار كلمة المرور');
+          return null;
+        }
+        return j.password;
+      } catch(e){
+        alert('خطأ في الشبكة');
+        return null;
+      }
+    }
+
+    eyeBtn && eyeBtn.addEventListener('click', async function(){
+      // Toggle: if currently masked → reveal; if revealed → re-mask.
+      if (displayEl.textContent === mask){
+        var pwd = revealed || await fetchPassword();
+        if (pwd) setRevealed(pwd);
+      } else {
+        setMasked();
+      }
+    });
+
+    copyBtn && copyBtn.addEventListener('click', async function(){
+      // Need the actual value — fetch if we haven't already, but DON'T
+      // unmask the display (silent copy is the friendly default).
+      var pwd = revealed || await fetchPassword();
+      if (!pwd || !navigator.clipboard) return;
+      try {
+        await navigator.clipboard.writeText(pwd);
+        copyBtn.classList.add('ok');
+        setTimeout(function(){ copyBtn.classList.remove('ok'); }, 900);
+      } catch(_){}
     });
   })();
 </script>
