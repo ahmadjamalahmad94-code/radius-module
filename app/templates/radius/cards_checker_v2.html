@@ -487,54 +487,120 @@
                   'stats.total_quota') }}
       </div>
 
-      {# Row 3: Current device — full width (the old half-width sibling
-         "آخر الجلسات" small list has moved into the wide table below,
-         and the timeline got merged into that same table since the
-         data overlap was high). #}
-      <section class="cc-section" data-cc-section="current_device">
-        <header class="cc-section-head">
-          <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
-          <span class="cc-section-head-title">الجهاز المستخدم حاليًا</span>
-        </header>
-        <div class="cc-section-body">
-          {% set d = card.current_device or {} %}
-          <div class="cc-device-card">
-            <div class="cc-device-card-body">
-              <div class="cc-device-card-title" data-cc-field="device.label">
-                {{ d.label or '—' }}
+      {# Row 3: Current device + Activity timeline — side by side in cc-grid-2.
+         The wide sessions table below has the full per-session data; this
+         timeline is the at-a-glance summary of the THREE key lifecycle
+         events (created → first connected → currently active). #}
+      <div class="cc-grid-2">
+        <section class="cc-section" data-cc-section="current_device">
+          <header class="cc-section-head">
+            <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
+            <span class="cc-section-head-title">الجهاز المستخدم حاليًا</span>
+          </header>
+          <div class="cc-section-body">
+            {% set d = card.current_device or {} %}
+            <div class="cc-device-card">
+              <div class="cc-device-card-body">
+                <div class="cc-device-card-title" data-cc-field="device.label">
+                  {{ d.label or '—' }}
+                </div>
+                <div class="cc-device-card-tags">
+                  {% if card.active_session %}
+                    <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
+                  {% else %}
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
+                  {% endif %}
+                  {% if d.vendor and d.vendor != 'غير معروف' %}
+                    <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
+                      <i class="fa-solid fa-industry" style="font-size:9px"></i> {{ d.vendor }}
+                    </span>
+                  {% endif %}
+                  {% if d.connection %}
+                    <span class="cc-pill cc-pill-blue" data-cc-field="device.connection">
+                      <i class="fa-solid fa-signal" style="font-size:9px"></i> {{ d.connection }}
+                    </span>
+                  {% endif %}
+                </div>
+                <dl class="cc-device-card-attrs">
+                  <dt><i class="fa-solid fa-fingerprint"></i> MAC</dt>
+                  <dd data-cc-field="device.mac">{{ card.mac_address or '—' }}</dd>
+                  <dt><i class="fa-solid fa-globe"></i> IP</dt>
+                  <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
+                  {% if card.nas_address %}
+                  <dt><i class="fa-solid fa-server"></i> NAS</dt>
+                  <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
+                  {% endif %}
+                </dl>
               </div>
-              <div class="cc-device-card-tags">
-                {% if card.active_session %}
-                  <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
-                {% else %}
-                  <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
-                {% endif %}
-                {% if d.vendor and d.vendor != 'غير معروف' %}
-                  <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
-                    <i class="fa-solid fa-industry" style="font-size:9px"></i> {{ d.vendor }}
-                  </span>
-                {% endif %}
-                {% if d.connection %}
-                  <span class="cc-pill cc-pill-blue" data-cc-field="device.connection">
-                    <i class="fa-solid fa-signal" style="font-size:9px"></i> {{ d.connection }}
-                  </span>
-                {% endif %}
-              </div>
-              <dl class="cc-device-card-attrs">
-                <dt><i class="fa-solid fa-fingerprint"></i> MAC</dt>
-                <dd data-cc-field="device.mac">{{ card.mac_address or '—' }}</dd>
-                <dt><i class="fa-solid fa-globe"></i> IP</dt>
-                <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
-                {% if card.nas_address %}
-                <dt><i class="fa-solid fa-server"></i> NAS</dt>
-                <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
-                {% endif %}
-              </dl>
+              {{ device_illustration(d) }}
             </div>
-            {{ device_illustration(d) }}
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section class="cc-section" data-cc-section="timeline">
+          <header class="cc-section-head">
+            <span class="cc-section-head-icon"><i class="fa-solid fa-timeline"></i></span>
+            <span class="cc-section-head-title">النشاط الأخير للبطاقة</span>
+            {% if s.latest_sessions and s.latest_sessions|length > 3 %}
+            <a class="cc-section-head-link" href="#cc-sessions-section">
+              عرض الكل <i class="fa-solid fa-angle-left"></i>
+            </a>
+            {% endif %}
+          </header>
+          <div class="cc-section-body">
+            <div class="cc-timeline">
+              {% if card.active_session %}
+              <div class="cc-tl-item">
+                <div>
+                  <span class="cc-tl-dot green"></span>
+                  <div class="cc-tl-body">
+                    <div class="cc-tl-title">
+                      <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط</span>
+                      جلسة نشطة الآن
+                    </div>
+                    <div class="cc-tl-desc">
+                      الاتصال عبر {{ (card.current_device or {}).connection or '—' }}
+                      من {{ card.mac_address or '—' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="cc-tl-time">{{ dt_split(card.last_seen_at) }}</div>
+              </div>
+              {% endif %}
+              {% if card.started_at %}
+              <div class="cc-tl-item">
+                <div>
+                  <span class="cc-tl-dot blue"></span>
+                  <div class="cc-tl-body">
+                    <div class="cc-tl-title">
+                      <span class="cc-pill cc-pill-blue"><span class="dot"></span>اتصال</span>
+                      بداية الجلسة الأولى
+                    </div>
+                    <div class="cc-tl-desc">تم الاتصال لأول مرّة باستخدام هذه البطاقة</div>
+                  </div>
+                </div>
+                <div class="cc-tl-time">{{ dt_split(card.started_at) }}</div>
+              </div>
+              {% endif %}
+              <div class="cc-tl-item">
+                <div>
+                  <span class="cc-tl-dot"></span>
+                  <div class="cc-tl-body">
+                    <div class="cc-tl-title">
+                      <span class="cc-pill cc-pill-purple"><span class="dot"></span>إنشاء</span>
+                      تم إنشاء البطاقة
+                    </div>
+                    <div class="cc-tl-desc">
+                      تم إصدار البطاقة ضمن الحزمة {{ (card.batch or {}).batch_code or '—' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="cc-tl-time">{{ dt_split(card.created_at) }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
       {# Row 4: Wide sessions table — replaces both the timeline section
          AND the half-width sessions list. 12 columns per user spec,
