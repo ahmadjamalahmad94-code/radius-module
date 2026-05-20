@@ -18,12 +18,12 @@ Status values:
 
 | Domain | Web Route | API Endpoint | Flutter Route / Screen | Status | Notes / Tests Needed |
 | --- | --- | --- | --- | --- | --- |
-| Dashboard counters | `/admin/radius/` | `/api/v1/dashboard` | `/` dashboard | partial | Flutter exists, but counters must be verified against real API data on each VPS. |
+| Dashboard counters | `/admin/radius/` | `/api/v1/dashboard` | `/` dashboard | done | API exposes stable flat counter aliases and Flutter reads nested/flat shapes; live values still depend on each VPS database. |
 | Subscribers | `/admin/radius/users` | `/api/v1/accounts` | `/subscribers` | done | Create/edit/archive/enable/disable/extend flows are API-backed. |
 | Subscriber finance | `/admin/radius/users/<username>/finance` | `/api/v1/payments`, `/api/v1/loans`, `/api/v1/ledger` | `/subscribers/<username>/finance`, `/ledger` | partial | Apply-to-RADIUS has dry-run/live result fields; needs more manual VPS verification. |
 | Plans / offers | `/admin/radius/plans` | `/api/v1/profiles` | `/plans` | partial | Advanced plan fields exist; inline speed-rule editing must be rechecked on mobile. |
-| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions exist; Flutter layout and operational counters need more polish. |
-| Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | partial | Real API-backed operations exist; no password exposure. Needs final mobile visual polish. |
+| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions exist; mobile layout is stabilized. Remaining work is live VPS acceptance for operational counters/export behavior. |
+| Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | partial | Real API-backed operations exist; no password exposure. Mobile visual layout is stabilized; live disconnect must be verified against NAS/CoA. |
 | Online sessions | `/admin/radius/sessions` | `/api/v1/sessions/online`, `/api/v1/sessions/disconnect` | `/sessions` | partial | Disconnect is API-backed; must verify against real CoA/NAS on VPS. |
 | NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas`, `/device-fingerprints` | partial | NAS CRUD and device fingerprints browser/sync now exist in Flutter. Live DHCP/MikroTik sync still needs VPS acceptance tests per customer server. |
 | Admins / roles | `/admin/radius/admins`, `/admin/radius/roles` | `/api/v1/admins`, `/api/v1/roles` | `/admins`, `/roles` | done | Role editor is API-backed; permission enforcement still needs continuous testing. |
