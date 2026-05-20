@@ -25,7 +25,15 @@ def _actor() -> str:
 
 
 def online_list():
-    """?type=card → يفلتر إلى usernames التي صُدِرت من حزم البطاقات."""
+    """R12.2: فصل صارم بين شاشتين:
+      - افتراضي (`/online`)          → المشتركون فقط (يستثني كل usernames
+                                       المسجّلة كـ user_type=card).
+      - `/online?type=card`         → الكروت فقط.
+
+    قبل R12.2 الافتراضي كان يعرض الاثنين مختلطين، فيظهر كرت (مثل 2044)
+    في شاشة "المشتركين المتصلين" بشكل يربك الإدمن. الفصل يطابق صفحات
+    /users vs /cards: كل شاشة لجمهورها فقط.
+    """
     svc = get_online_sessions_service()
     settings = get_radius_adapter().settings()
     filter_type = (request.args.get("type") or "").strip().lower()
@@ -36,14 +44,18 @@ def online_list():
         items = []
         error = e.message
 
-    if filter_type == "card" and items:
+    if items:
         try:
             from ..services.cards import get_cards_service
             card_usernames = {c.username for c in
                               get_cards_service().list_cards(limit=10000)}
-            items = [it for it in items if it.username in card_usernames]
         except Exception:
-            pass  # لو فشل الـ lookup، نُظهر الكل بدلًا من قائمة فارغة كاذبة
+            card_usernames = None  # فشل lookup → fallback لعرض الكل
+        if card_usernames is not None:
+            if filter_type == "card":
+                items = [it for it in items if it.username in card_usernames]
+            else:
+                items = [it for it in items if it.username not in card_usernames]
 
     return render_template(
         "radius/sessions_list.html",
