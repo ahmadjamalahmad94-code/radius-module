@@ -407,3 +407,25 @@
 
 /* ─── permission gating (used in C/D) ─── */
 .cc-hidden-by-acl{ display: none !important; }
+
+/* ─── R13.A.3: loading overlay while AJAX swaps the result ─── */
+#cc-result.cc-loading{
+  position: relative;
+  opacity: .55;
+  filter: saturate(.7);
+  pointer-events: none;
+  transition: opacity var(--cc-anim-fast), filter var(--cc-anim-fast);
+}
+#cc-result.cc-loading::before{
+  content: "";
+  position: absolute;
+  top: 80px; left: 50%;
+  width: 36px; height: 36px;
+  margin-inline-start: -18px;
+  border: 3px solid rgba(43,170,204,.25);
+  border-top-color: var(--hr-cyan-500);
+  border-radius: 50%;
+  animation: cc-spin .9s linear infinite;
+  z-index: 5;
+}
+@keyframes cc-spin{ to{ transform: rotate(360deg); } }

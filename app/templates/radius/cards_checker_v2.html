@@ -16,6 +16,7 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_checker_v2.css') }}">
+  <script src="{{ url_for('static', filename='js/cards_checker_v2.js') }}" defer></script>
 {% endblock %}
 
 {# ─────────── helper macros (shared with v1, simplified) ─────────── #}
@@ -82,6 +83,13 @@
     </button>
   </form>
 </div>
+
+{# ───────────────── RESULT WRAPPER (swappable via AJAX) ───────────────── #}
+{# JS in cards_checker_v2.js intercepts the search form, fetches this
+   same page with ?query=X, parses the response, and swaps just the
+   contents of #cc-result. Initial server-render keeps the page
+   functional without JS — progressive enhancement. #}
+<div id="cc-result">
 
 {# ───────────────────── EMPTY STATE ───────────────────── #}
 {% if not query and not error %}
@@ -438,5 +446,7 @@
   </div>
 
 {% endif %}
+
+</div>{# /#cc-result #}
 
 {% endblock %}
