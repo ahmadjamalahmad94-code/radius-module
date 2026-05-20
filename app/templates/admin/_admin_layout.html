@@ -9,6 +9,63 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar_v2.css') }}">
+  <style>
+    /* ───── Light topbar overrides (Sidebar Rebuild) ───── */
+    .topbar{
+      background:#FFFFFF !important;
+      border-bottom:1px solid #EEEDF3 !important;
+      box-shadow:0 1px 0 rgba(15,23,42,.02);
+    }
+    .topbar .brand-area{
+      color:#1F2937;
+      border-inline-start:1px solid #EEEDF3;
+    }
+    .topbar .brand-area .logo-mark{
+      background:linear-gradient(135deg,#6B5AED,#5B4BD8) !important;
+      box-shadow:0 3px 8px rgba(107,90,237,.25);
+    }
+    .topbar .actions .ic{
+      color:#475569;
+    }
+    .topbar .actions .ic:hover{
+      background:#F4F1FE;
+      color:#6B5AED;
+    }
+    .topbar .actions .ic .dot{
+      background:#EF4444;
+    }
+    .topbar .user-pill{
+      background:#F4F1FE !important;
+      color:#1F2937 !important;
+      border:1px solid #E3E1EC;
+    }
+    .topbar .user-pill .ava{
+      background:linear-gradient(135deg,#6B5AED,#5B4BD8) !important;
+      color:#fff !important;
+    }
+    .topbar .tenant-pill{
+      background:#F4F1FE !important;
+      color:#1F2937 !important;
+      border:1px solid #E3E1EC !important;
+    }
+    .topbar .tenant-pill .fa-building{
+      color:#6B5AED !important;
+    }
+    /* Hamburger button — only visible on mobile */
+    .topbar .hb-burger{
+      display:none;
+      width:36px;height:36px;
+      border:0;background:transparent;border-radius:8px;
+      color:#475569;font-size:16px;cursor:pointer;
+      margin-inline-end:8px;
+    }
+    .topbar .hb-burger:hover{background:#F4F1FE;color:#6B5AED}
+    @media (max-width: 900px){
+      .topbar .hb-burger{display:inline-grid;place-items:center}
+      .topbar .brand-area{width:auto;border-inline-start:0;padding-inline-start:0}
+    }
+  </style>
   <style>
     .hr-page-nav-host{max-width:1240px!important}
     .hr-page-nav{
@@ -71,6 +128,9 @@
 <body>
 
 <header class="topbar">
+  <button type="button" class="hb-burger" data-hb-mobile-open aria-label="فتح القائمة">
+    <i class="fa-solid fa-bars"></i>
+  </button>
   <div class="actions">
     <span class="ic" title="إعدادات"><i class="fa-solid fa-gear"></i></span>
     <span class="ic" title="تنبيهات"><i class="fa-solid fa-bell"></i>
@@ -161,177 +221,11 @@
   </div>
 </header>
 
-<aside class="sidebar">
-  <nav class="nav">
-
-    <a href="{{ url_for('radius.dashboard') }}"
-       class="{% if request.path == url_for('radius.dashboard') %}active{% endif %}">
-      <i class="fa-solid fa-gauge-high"></i> لوحة التحكم
-    </a>
-
-    {# ─────────────── المشتركين ─────────────── #}
-    <div class="nav-group">
-      <div class="nav-group-title">المشتركين</div>
-      <a href="{{ url_for('radius.users_list') }}"
-         class="{% if '/users' in request.path and '/users/new' not in request.path and '/overview' not in request.path %}active{% endif %}">
-        <i class="fa-solid fa-list"></i> قائمة المشتركين
-      </a>
-      <a href="{{ url_for('radius.users_new') }}"
-         class="{% if request.path == url_for('radius.users_new') %}active{% endif %}">
-        <i class="fa-solid fa-user-plus"></i> إضافة مشترك
-      </a>
-      <a href="{{ url_for('radius.online_list') }}"
-         class="{% if request.path == url_for('radius.online_list') and request.args.get('type') != 'card' %}active{% endif %}">
-        <i class="fa-solid fa-wifi"></i> المشتركين المتصلين
-      </a>
-    </div>
-
-    {# ─────────────── بطاقات هوتسبوت ─────────────── #}
-    <div class="nav-group">
-      <div class="nav-group-title">بطاقات هوتسبوت</div>
-      <a href="{{ url_for('radius.cards_overview') }}"
-         class="{% if '/cards/overview' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-chart-pie"></i> نظرة عامة
-      </a>
-      <a href="{{ url_for('radius.cards_checker') }}"
-         class="{% if '/cards/checker' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-magnifying-glass"></i> فحص بطاقة
-      </a>
-      <a href="{{ url_for('radius.cards_batches') }}"
-         class="{% if '/cards/batches' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-layer-group"></i> حزم البطاقات
-      </a>
-      <a href="{{ url_for('radius.cards_generate') }}"
-         class="{% if '/cards/generate' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة حزمة
-      </a>
-      <a href="{{ url_for('radius.online_list', type='card') }}"
-         class="{% if request.path == url_for('radius.online_list') and request.args.get('type') == 'card' %}active{% endif %}">
-        <i class="fa-solid fa-id-card"></i> البطاقات المتصلة
-      </a>
-      <a href="{{ url_for('radius.print_templates') }}"
-         class="{% if '/print-templates' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-print"></i> قوالب الطباعة
-      </a>
-    </div>
-
-    {# ─────────────── العروض ─────────────── #}
-    <div class="nav-group">
-      <div class="nav-group-title">العروض</div>
-      <a href="{{ url_for('radius.plans_list') }}"
-         class="{% if request.path == url_for('radius.plans_list') %}active{% endif %}">
-        <i class="fa-solid fa-tags"></i> قائمة العروض
-      </a>
-      <a href="{{ url_for('radius.plans_new') }}"
-         class="{% if request.path == url_for('radius.plans_new') %}active{% endif %}">
-        <i class="fa-solid fa-circle-plus"></i> إضافة عرض
-      </a>
-      <a href="{{ url_for('radius.pool_list') }}"
-         class="{% if '/pools' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-network-wired"></i> IP Pool
-      </a>
-    </div>
-
-    {# ملاحظة: "كروت" group القديم وُحِّد مع "بطاقات هوتسبوت" أعلاه.
-       IP Pools نُقِلَت من "البنية التحتية" إلى مجموعة "العروض". #}
-    <div class="nav-group">
-      <div class="nav-group-title">البنية التحتية</div>
-      <a href="{{ url_for('radius.devices_list') }}"
-         class="{% if '/devices' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-server"></i> أجهزة الشبكة
-      </a>
-      <a href="{{ url_for('radius.bw_list') }}"
-         class="{% if request.endpoint == 'radius.bw_list' %}active{% endif %}">
-        <i class="fa-solid fa-gauge"></i> السرعات
-      </a>
-      <a href="{{ url_for('radius.bandwidth_schedules') }}"
-         class="{% if '/bandwidth-schedules' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-clock"></i> جدولة السرعات
-      </a>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-group-title">المحاسبة</div>
-      <a href="{{ url_for('radius.inv_list') }}"
-         class="{% if '/invoices' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-file-invoice-dollar"></i> الفواتير
-      </a>
-      <a href="{{ url_for('radius.vch_list') }}"
-         class="{% if '/vouchers' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-ticket"></i> الكوبونات
-      </a>
-      <a href="{{ url_for('radius.finance_ledger') }}"
-         class="{% if '/finance/ledger' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-scale-balanced"></i> السجل المالي
-      </a>
-      <a href="{{ url_for('radius.finance_reports') }}"
-         class="{% if '/finance/reports' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-chart-line"></i> التقارير المالية
-      </a>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-group-title">الدعم</div>
-      <a href="{{ url_for('radius.tk_list') }}"
-         class="{% if '/tickets' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-headset"></i> التذاكر
-      </a>
-      <a href="{{ url_for('radius.svc_list') }}"
-         class="{% if '/services' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-toolbox"></i> الخدمات / المعدّات
-      </a>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-group-title">الإدارة</div>
-      <a href="{{ url_for('radius.admins_list') }}"
-         class="{% if '/admins' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-user-shield"></i> المدراء
-      </a>
-      <a href="{{ url_for('radius.distributors_list') }}"
-         class="{% if '/distributors' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-people-arrows"></i> الموزعون
-      </a>
-      <a href="{{ url_for('radius.roles_list') }}"
-         class="{% if '/roles' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-key"></i> الأدوار والصلاحيات
-      </a>
-      <a href="{{ url_for('radius.recycle_bin') }}"
-         class="{% if '/recycle-bin' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-box-archive"></i> سلة المحذوفات
-      </a>
-      <a href="{{ url_for('radius.backups') }}"
-         class="{% if '/backups' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-database"></i> النسخ الاحتياطي
-      </a>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-group-title">التكامل</div>
-      <a href="{{ url_for('radius.mt_list') }}"
-         class="{% if '/mt' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-router"></i> اتصالات MikroTik
-      </a>
-      <a href="{{ url_for('radius.wh_settings') }}"
-         class="{% if '/webhooks' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-bolt"></i> إشعارات الربط
-      </a>
-      <a href="{{ url_for('radius.tok_list') }}"
-         class="{% if '/tokens' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-key"></i> مفاتيح واجهة الربط
-      </a>
-      <a href="/api/docs" target="_blank">
-        <i class="fa-solid fa-book"></i> توثيق واجهة الربط
-      </a>
-    </div>
-
-  </nav>
-
-  <div class="sidebar-foot">
-    <span>الإصدار 0.1.0</span>
-    <span>هوبي راديوس</span>
-  </div>
-</aside>
+{# Sidebar Visual Rebuild — new light premium collapsible sidebar.
+   The old `<aside class="sidebar">` block (above) was replaced by this
+   include. All 31 routes preserved, regrouped into 8 sections per the
+   approved mapping. See app/templates/admin/_sidebar.html for content. #}
+{% include 'admin/_sidebar.html' %}
 
 <main class="main">
 
@@ -367,6 +261,7 @@
 </main>
 
 <script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
 <script>
   // dropdowns (tenant + user)
   (function(){
