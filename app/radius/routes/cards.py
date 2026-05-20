@@ -439,7 +439,8 @@ def cards_checker_v2():
     Preview of the new operations-room layout. Side-by-side with v1
     until A.4 swaps the default. Renders the same `result` payload as
     v1 — no POST handling here; the v2 template's operation forms
-    submit back to the v1 route (proven path)."""
+    submit back to the v1 route (proven path).
+    """
     query = (request.args.get("query") or request.args.get("q") or "").strip()
     result = None
     error = ""
