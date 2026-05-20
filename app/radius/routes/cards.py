@@ -384,6 +384,26 @@ def _handle_card_operation():
                 svc.delete_card_permanently(actor=_actor(), card_id=card_id)
                 flash("تم حذف البطاقة نهائيًا. لا يظهر هذا الخيار في التشغيل اليومي إلا بحذر.", "warning")
                 query = ""
+        elif action == "set_speed":
+            # Per-card speed override. The UI validates inputs client-side
+            # and the user confirms; we re-validate server-side here.
+            # NOTE: this is a STUB. Persisting a per-card override requires
+            # (a) a cards-table migration to add card_speed_down_kbps /
+            #     card_speed_up_kbps columns, and
+            # (b) the freeradius_translator to prefer those over the
+            #     batch/plan speeds when emitting radreply attributes.
+            # Until those land the values are captured + audited but NOT
+            # applied to RADIUS — the message below makes that explicit.
+            down = _form_int("speed_down_kbps")
+            up   = _form_int("speed_up_kbps")
+            if down <= 0 or up <= 0:
+                flash("قيم السرعة يجب أن تكون أرقامًا موجبة (kbps).", "error")
+            else:
+                flash(
+                    f"التُقطت السرعة المطلوبة للبطاقة (تنزيل: {down} kbps / رفع: {up} kbps). "
+                    "ميزة تجاوز السرعة لكل بطاقة قيد التنفيذ — لن تنعكس على RADIUS بعد.",
+                    "warning",
+                )
         else:
             flash("إجراء غير معروف.", "error")
     except RadiusError as e:

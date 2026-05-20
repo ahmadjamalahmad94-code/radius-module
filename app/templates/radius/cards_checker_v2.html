@@ -625,19 +625,57 @@
               </button>
             </form>
             {% else %}
-            <div class="cc-action" data-cc-op="lock-mac">
-              <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
-              <div class="cc-action-body" style="display:flex;flex-direction:column;gap:6px;flex:1">
-                <div class="cc-action-title">قفل MAC</div>
-                <form method="post" action="{{ url_for('radius.cards_checker') }}">
-                  <input type="hidden" name="op" value="lock_mac">
-                  {{ hidden_ops(card, query) }}
-                  <input class="cc-input" name="mac" placeholder="MAC للقفل"
-                         value="{{ card.mac_address or '' }}" dir="ltr" maxlength="32">
-                </form>
-              </div>
-            </div>
+            {# Inline MAC input replaced with a button that opens a prompt —
+               keeps the action card the same height as its siblings. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-prompt-form="lock-mac">
+              <input type="hidden" name="op" value="lock_mac">
+              <input type="hidden" name="mac" data-cc-prompt-field>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button" data-cc-op="lock-mac"
+                      onclick="var m = prompt('عنوان MAC للقفل (مثال: AA:BB:CC:DD:EE:FF):', '{{ card.mac_address or '' }}');
+                               if (m && m.trim()) {
+                                 var f = this.closest('form');
+                                 f.querySelector('[data-cc-prompt-field]').value = m.trim();
+                                 f.submit();
+                               }">
+                <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">قفل MAC</div>
+                  <div class="cc-action-sub">تثبيت على عنوان واحد</div>
+                </div>
+              </button>
+            </form>
             {% endif %}
+
+            {# Change card speed — per-card override (not batch-wide).
+               Two prompts: download then upload, both in kbps. Validates
+               numeric input client-side; backend enforces > 0. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-prompt-form="set-speed">
+              <input type="hidden" name="op" value="set_speed">
+              <input type="hidden" name="speed_down_kbps" data-cc-prompt-down>
+              <input type="hidden" name="speed_up_kbps"   data-cc-prompt-up>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button" data-cc-op="set-speed"
+                      onclick="var d = prompt('سرعة التنزيل بـ kbps (للبطاقة فقط):', '');
+                               if (!d) return;
+                               if (!/^[0-9]+$/.test(d.trim()) || parseInt(d,10) <= 0) {
+                                 alert('قيمة غير صالحة. أدخل رقماً صحيحاً موجباً.'); return; }
+                               var u = prompt('سرعة الرفع بـ kbps (للبطاقة فقط):', '');
+                               if (!u) return;
+                               if (!/^[0-9]+$/.test(u.trim()) || parseInt(u,10) <= 0) {
+                                 alert('قيمة غير صالحة. أدخل رقماً صحيحاً موجباً.'); return; }
+                               if (!confirm('تطبيق السرعة الجديدة (تنزيل: '+d+' / رفع: '+u+' kbps) على هذه البطاقة فقط؟')) return;
+                               var f = this.closest('form');
+                               f.querySelector('[data-cc-prompt-down]').value = d.trim();
+                               f.querySelector('[data-cc-prompt-up]').value   = u.trim();
+                               f.submit();">
+                <span class="cc-action-icon teal"><i class="fa-solid fa-gauge-high"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">تغيير السرعة</div>
+                  <div class="cc-action-sub">للبطاقة فقط</div>
+                </div>
+              </button>
+            </form>
 
             {% if ops.can_enable %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}">

@@ -841,7 +841,10 @@
   color: var(--cc-text);
   width: 100%;
   text-decoration: none;
-  min-height: 72px;
+  /* Locked uniform height — was min-height which let cards with inline
+     inputs (e.g. MAC lock) push the whole row taller. All cards now
+     read as buttons of the same shape. */
+  height: 78px;
   position: relative;
   overflow: hidden;
 }
@@ -886,6 +889,7 @@
 .cc-action-icon.blue   { background:#E3EDF9; color:#1E5C9F; }
 .cc-action-icon.red    { background:#FDE5E5; color:#9B1C1C; }
 .cc-action-icon.grey   { background:#EDEAE1; color:#5B6470; }
+.cc-action-icon.teal   { background:#D2F1EC; color:#0B6E5B; }
 
 .cc-action-body{ flex: 1; min-width: 0; position: relative; }
 .cc-action-title{
