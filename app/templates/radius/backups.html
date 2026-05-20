@@ -1,0 +1,85 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}النسخ الاحتياطي{% endblock %}
+{% block page_title %}النسخ الاحتياطي{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
+{% block page_sub %}<span class="sub">نسخة محلية آمنة الآن، وGoogle Drive لاحقًا</span>{% endblock %}
+
+{% block content %}
+<style>
+  .bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+  .bk-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
+  .bk-card h3{margin:0 0 8px;color:#263244;font-size:16px}
+  .bk-value{font-size:22px;font-weight:900;color:#263244}
+  .bk-muted{color:#657386;font-size:12.5px;line-height:1.8}
+  .bk-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px;line-height:1.8}
+  .bk-table{width:100%;border-collapse:collapse}
+  .bk-table th,.bk-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
+  .bk-table th{font-size:12px;color:#657386;background:#fffaf1}
+</style>
+
+{% set job = status.get('job') or {} %}
+{% set runs = status.get('recent_runs') or [] %}
+
+<div class="bk-note">
+  النسخ الحالي محلي داخل مجلد قاعدة البيانات. زر Google Drive غير مفعّل عمدًا في هذه المرحلة حتى لا نعطي إحساسًا وهميًا بأن الربط السحابي جاهز.
+</div>
+
+<div class="bk-grid">
+  <section class="bk-card">
+    <h3>الحالة الأخيرة</h3>
+    <div class="bk-value">{{ job.get('last_status') or 'never_run' }}</div>
+    <div class="bk-muted">{{ job.get('last_message') or 'لم يتم تشغيل نسخة بعد.' }}</div>
+  </section>
+  <section class="bk-card">
+    <h3>آخر تشغيل</h3>
+    <div class="bk-value mono">{{ job.get('last_run_at') or '—' }}</div>
+    <div class="bk-muted">ينصح بالتحقق من النسخة خارج التطبيق قبل الاعتماد عليها إنتاجيًا.</div>
+  </section>
+  <section class="bk-card">
+    <h3>Google Drive</h3>
+    <div class="bk-value">غير مفعل</div>
+    <div class="bk-muted">جاهز كعقد API لاحقًا، لكنه لا ينفذ OAuth أو رفعًا سحابيًا الآن.</div>
+  </section>
+</div>
+
+<section class="bk-card">
+  <h3>تشغيل نسخة محلية الآن</h3>
+  <p class="bk-muted">هذا الإجراء ينسخ ملف SQLite الحالي إلى مجلد backups ويتحقق أن الملف الناتج موجود وحجمه أكبر من صفر. لا يغير قاعدة البيانات ولا ينفذ restore.</p>
+  <form method="post" action="{{ url_for('radius.backups_run') }}">
+    <button class="btn btn-primary" type="submit">
+      <i class="fa-solid fa-download"></i> تشغيل نسخة محلية
+    </button>
+    <button class="btn btn-secondary" type="button" disabled title="غير مفعل في هذه المرحلة">
+      <i class="fa-brands fa-google-drive"></i> ربط Google Drive لاحقًا
+    </button>
+  </form>
+</section>
+
+<section class="bk-card" style="margin-top:14px">
+  <h3>آخر محاولات النسخ</h3>
+  {% if runs %}
+  <table class="bk-table">
+    <thead>
+      <tr>
+        <th>الحالة</th>
+        <th>المسار</th>
+        <th>الرسالة</th>
+        <th>الوقت</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td>{{ run.get('status') }}</td>
+        <td class="mono">{{ run.get('path') or '—' }}</td>
+        <td>{{ run.get('message') or '—' }}</td>
+        <td class="mono">{{ run.get('created_at') or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty"><i class="fa-solid fa-database"></i> لا توجد محاولات نسخ بعد.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -292,6 +292,10 @@
          class="{% if '/recycle-bin' in request.path %}active{% endif %}">
         <i class="fa-solid fa-box-archive"></i> سلة المحذوفات
       </a>
+      <a href="{{ url_for('radius.backups') }}"
+         class="{% if '/backups' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-database"></i> النسخ الاحتياطي
+      </a>
     </div>
 
     <div class="nav-group">
