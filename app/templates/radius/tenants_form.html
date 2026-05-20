@@ -1,83 +1,223 @@
+{# Tenants form — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
-{% set title_ar = "إضافة جهة" if is_new else "تعديل جهة" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "إضافة جهة" if is_new else ("تعديل: " + (tenant.display_name or tenant.name)) %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  .tn-form{ max-width: 1080px; margin: 0 auto; }
+  .tn-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width:720px){ .tn-grid{ grid-template-columns: 1fr; } }
+  .tn-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .tn-field.full{ grid-column: 1 / -1; }
+  .tn-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .tn-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .tn-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
+  .tn-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+  }
+  .tn-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .tn-section.is-collapsible .tn-section-head{ cursor:pointer; user-select:none; }
+  .tn-section.is-collapsed .tn-section-head{ border-bottom: none; }
+  .tn-section-icon{ width:30px; height:30px; border-radius:var(--hub-r-md);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:13px; flex-shrink:0; }
+  .tn-section-title{ flex:1; font-size:14px; font-weight:800; }
+  .tn-section-toggle{ color:var(--hub-text-mute); transition: transform var(--hub-anim-fast) var(--hub-ease); }
+  .tn-section.is-collapsed .tn-section-toggle{ transform: rotate(-90deg); }
+  .tn-section-body{ padding: 18px; }
+  .tn-section.is-collapsed .tn-section-body{ display:none; }
+
+  .tn-section--id    { border-inline-start: 3px solid var(--hub-brand); }
+  .tn-section--id    .tn-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .tn-section--plan  { border-inline-start: 3px solid var(--hub-green); }
+  .tn-section--plan  .tn-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .tn-section--brand { border-inline-start: 3px solid #8B5CF6; }
+  .tn-section--brand .tn-section-icon{ background: #EDE9FE; color: #6D28D9; }
+</style>
+{% endblock %}
+
 {% block content %}
+
+{{ hub.hero(
+  title_ar,
+  subtitle="إعداد جهة جديدة في النظام — المعرّف والاسم والفئة والإعدادات الإقليمية",
+  icon="building",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tenants_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
+) }}
+
+<div class="tn-form">
 <form method="post"
       action="{{ url_for('radius.tenants_update', tenant_id=tenant.id) if not is_new else url_for('radius.tenants_create') }}">
 
-  <div class="card">
-    <div class="card-header"><span class="title">الهوية</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>المعرّف المختصر *</label>
-        <div class="field"><input type="text" name="slug" required {% if not is_new %}readonly{% endif %}
-          value="{{ tenant.slug or '' }}" placeholder="acme">
-          <div class="hint">معرّف مناسب للرابط، ولا يتغيّر لاحقًا.</div></div></div>
-      <div class="form-row"><label>الاسم *</label>
-        <div class="field"><input type="text" name="name" required value="{{ tenant.name or '' }}"></div></div>
-      <div class="form-row"><label>اسم العرض</label>
-        <div class="field"><input type="text" name="display_name" value="{{ tenant.display_name or '' }}"></div></div>
-      <div class="form-row"><label>البريد</label>
-        <div class="field"><input type="email" name="email" value="{{ tenant.email or '' }}"></div></div>
-      <div class="form-row"><label>الجوال</label>
-        <div class="field"><input type="tel" name="phone" value="{{ tenant.phone or '' }}"></div></div>
+  {# ── 1. Identity ─────────────────────── #}
+  <section class="tn-section tn-section--id">
+    <header class="tn-section-head">
+      <span class="tn-section-icon"><i class="fa-solid fa-id-card"></i></span>
+      <span class="tn-section-title">الهوية والمعرّف</span>
+    </header>
+    <div class="tn-section-body">
+      <div class="tn-grid">
+        <div class="tn-field">
+          <label>المعرّف المختصر <span class="req">*</span></label>
+          <input class="hub-input mono" type="text" name="slug" required
+                 {% if not is_new %}readonly{% endif %}
+                 value="{{ tenant.slug or '' }}" placeholder="acme"
+                 {% if not is_new %}style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}>
+          <div class="help">معرّف مناسب للرابط، ولا يتغيّر لاحقًا.</div>
+        </div>
+        <div class="tn-field">
+          <label>الاسم <span class="req">*</span></label>
+          <input class="hub-input" type="text" name="name" required value="{{ tenant.name or '' }}">
+        </div>
+        <div class="tn-field">
+          <label>اسم العرض</label>
+          <input class="hub-input" type="text" name="display_name" value="{{ tenant.display_name or '' }}">
+        </div>
+        <div class="tn-field">
+          <label>البريد</label>
+          <input class="hub-input" type="email" name="email" value="{{ tenant.email or '' }}">
+        </div>
+        <div class="tn-field">
+          <label>الجوال</label>
+          <input class="hub-input" type="tel" name="phone" value="{{ tenant.phone or '' }}">
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="card-header"><span class="title">فئة الاشتراك والحالة</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>فئة الاشتراك *</label>
-        <div class="field"><select name="plan_tier">
-          {% for t in tiers %}
-            <option value="{{ t }}" {% if tenant.plan_tier == t %}selected{% endif %}>
-              {{ t }} ({{ tier_limits[t].max_subscribers }} مشترك)
-            </option>
-          {% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>الحالة</label>
-        <div class="field"><select name="status">
-          {% for s in statuses %}
-            <option value="{{ s }}" {% if tenant.status == s %}selected{% endif %}>
-              {% if s == 'active' %}مفعّلة{% elif s == 'trial' %}تجريبية{% elif s == 'suspended' %}موقوفة{% else %}{{ s }}{% endif %}
-            </option>
-          {% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>حد المشتركين</label>
-        <div class="field"><input type="number" name="max_subscribers" min="0" value="{{ tenant.max_subscribers or 0 }}">
-          <div class="hint">0 = استخدم قيمة الفئة الافتراضية.</div></div></div>
-      <div class="form-row"><label>حد أجهزة الشبكة</label>
-        <div class="field"><input type="number" name="max_nas" min="0" value="{{ tenant.max_nas or 0 }}"></div></div>
-      <div class="form-row"><label>حد طلبات واجهة الربط في الدقيقة</label>
-        <div class="field"><input type="number" name="api_rpm" min="0" value="{{ tenant.api_rpm or 0 }}"></div></div>
+  {# ── 2. Plan + Status + Limits ─────────────────────── #}
+  <section class="tn-section tn-section--plan">
+    <header class="tn-section-head">
+      <span class="tn-section-icon"><i class="fa-solid fa-layer-group"></i></span>
+      <span class="tn-section-title">فئة الاشتراك والحدود</span>
+    </header>
+    <div class="tn-section-body">
+      <div class="tn-grid">
+        <div class="tn-field">
+          <label>فئة الاشتراك <span class="req">*</span></label>
+          <select class="hub-select" name="plan_tier">
+            {% for t in tiers %}
+              <option value="{{ t }}" {% if tenant.plan_tier == t %}selected{% endif %}>
+                {{ t }} ({{ tier_limits[t].max_subscribers }} مشترك)
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="tn-field">
+          <label>الحالة</label>
+          <select class="hub-select" name="status">
+            {% for s in statuses %}
+              <option value="{{ s }}" {% if tenant.status == s %}selected{% endif %}>
+                {% if s == 'active' %}مفعَّلة
+                {% elif s == 'trial' %}تجريبية
+                {% elif s == 'suspended' %}موقوفة
+                {% elif s == 'closed' %}مغلقة
+                {% else %}{{ s }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="tn-field">
+          <label>حد المشتركين</label>
+          <input class="hub-input" type="number" name="max_subscribers" min="0" value="{{ tenant.max_subscribers or 0 }}">
+          <div class="help">0 = استخدم قيمة الفئة الافتراضية.</div>
+        </div>
+        <div class="tn-field">
+          <label>حد أجهزة الشبكة</label>
+          <input class="hub-input" type="number" name="max_nas" min="0" value="{{ tenant.max_nas or 0 }}">
+        </div>
+        <div class="tn-field">
+          <label>حد طلبات واجهة الربط (RPM)</label>
+          <input class="hub-input" type="number" name="api_rpm" min="0" value="{{ tenant.api_rpm or 0 }}">
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="card-header"><span class="title">الإقليم والهوية</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>العملة</label>
-        <div class="field"><input type="text" name="currency" value="{{ tenant.currency or 'JOD' }}"></div></div>
-      <div class="form-row"><label>اللغة</label>
-        <div class="field"><select name="locale">
-          {% for l in ['ar','en'] %}<option value="{{ l }}" {% if tenant.locale == l %}selected{% endif %}>{% if l == 'ar' %}العربية{% elif l == 'en' %}الإنجليزية{% else %}{{ l }}{% endif %}</option>{% endfor %}
-        </select></div></div>
-      <div class="form-row"><label>المنطقة الزمنية</label>
-        <div class="field"><input type="text" name="timezone" value="{{ tenant.timezone or 'Asia/Amman' }}"></div></div>
-      <div class="form-row"><label>لون العلامة</label>
-        <div class="field"><input type="text" name="primary_color" value="{{ tenant.primary_color or '#2BAACC' }}"></div></div>
-      <div class="form-row"><label>رابط الشعار</label>
-        <div class="field"><input type="text" name="logo_url" value="{{ tenant.logo_url or '' }}"></div></div>
+  {# ── 3. Locale + Brand (collapsible) ─────────────────────── #}
+  <section class="tn-section tn-section--brand is-collapsible" data-sec="brand">
+    <header class="tn-section-head">
+      <span class="tn-section-icon"><i class="fa-solid fa-palette"></i></span>
+      <span class="tn-section-title">الإقليم والعلامة</span>
+      <i class="fa-solid fa-chevron-down tn-section-toggle"></i>
+    </header>
+    <div class="tn-section-body">
+      <div class="tn-grid">
+        <div class="tn-field">
+          <label>العملة</label>
+          <input class="hub-input" type="text" name="currency" value="{{ tenant.currency or 'JOD' }}">
+        </div>
+        <div class="tn-field">
+          <label>اللغة</label>
+          <select class="hub-select" name="locale">
+            {% for l in ['ar','en'] %}
+              <option value="{{ l }}" {% if tenant.locale == l %}selected{% endif %}>
+                {% if l == 'ar' %}العربية{% elif l == 'en' %}الإنجليزية{% else %}{{ l }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="tn-field">
+          <label>المنطقة الزمنية</label>
+          <input class="hub-input" type="text" name="timezone" value="{{ tenant.timezone or 'Asia/Amman' }}">
+        </div>
+        <div class="tn-field">
+          <label>لون العلامة</label>
+          <input class="hub-input" type="text" name="primary_color" value="{{ tenant.primary_color or '#2BAACC' }}">
+        </div>
+        <div class="tn-field full">
+          <label>رابط الشعار</label>
+          <input class="hub-input" type="text" name="logo_url" value="{{ tenant.logo_url or '' }}">
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء" if is_new else "تحديث" }}
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الجهة" if is_new else "حفظ التعديلات" }}
     </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.tenants_list') }}">إلغاء</a>
   </div>
 </form>
+</div>
+
+<script>
+(function(){
+  var LS = 'hr:tn-form:sec:';
+  document.querySelectorAll('.tn-section.is-collapsible').forEach(function(card){
+    var k = card.dataset.sec; if (!k) return;
+    var v = null;
+    try { v = localStorage.getItem(LS + k); } catch(_) {}
+    if (v === 'collapsed') card.classList.add('is-collapsed');
+    else if (v === 'open')  card.classList.remove('is-collapsed');
+    var head = card.querySelector('.tn-section-head');
+    if (head) head.addEventListener('click', function(){
+      card.classList.toggle('is-collapsed');
+      try { localStorage.setItem(LS + k,
+        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
+    });
+  });
+})();
+</script>
 {% endblock %}
