@@ -1,0 +1,197 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}قوالب طباعة الكروت{% endblock %}
+{% block page_title %}قوالب طباعة الكروت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
+{% block page_sub %}<span class="sub">حفظ تخطيط الطباعة ومعاينة JSON بسيطة بدون PDF renderer</span>{% endblock %}
+
+{% block content %}
+<style>
+  .pt-grid{display:grid;grid-template-columns:minmax(280px,430px) 1fr;gap:14px;align-items:start}
+  .pt-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
+  .pt-card h3{margin:0 0 12px;color:#263244;font-size:17px}
+  .pt-form{display:grid;gap:10px}
+  .pt-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pt-form label{display:grid;gap:5px;color:#263244;font-weight:800;font-size:13px}
+  .pt-form input,.pt-form select{border:1px solid #d7c8ae;border-radius:10px;padding:10px;background:#fffaf4;color:#263244}
+  .pt-help{font-size:12px;color:#7b8796;line-height:1.8}
+  .pt-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px;line-height:1.9}
+  .pt-table{width:100%;border-collapse:collapse}
+  .pt-table th,.pt-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
+  .pt-table th{font-size:12px;color:#657386;background:#fffaf1}
+  .pt-preview{margin-top:14px;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:14px;overflow:auto;direction:ltr;text-align:left}
+  .pt-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+  @media (max-width: 980px){.pt-grid{grid-template-columns:1fr}.pt-row{grid-template-columns:1fr}}
+</style>
+
+<div class="pt-note">
+  هذه المرحلة تحفظ قوالب الطباعة وتعرض معاينة JSON فقط. لا يتم إنشاء PDF أو ملف طباعة نهائي الآن، حتى لا تظهر الميزة كأنها مكتملة أكثر من وضعها الحقيقي.
+</div>
+
+{% if preview %}
+  <section class="pt-card" style="margin-bottom:14px">
+    <h3>معاينة القالب</h3>
+    <p class="pt-help">
+      نوع المعاينة: {{ preview.get('preview', {}).get('renderer') }}،
+      عدد الكروت في الصفحة: {{ preview.get('preview', {}).get('cards_per_page') }}،
+      إنشاء ملف تصدير: {{ preview.get('export_generated') }}
+    </p>
+    <pre class="pt-preview">{{ preview.get('preview') | tojson(indent=2) }}</pre>
+  </section>
+{% endif %}
+
+<div class="pt-grid">
+  <section class="pt-card">
+    <h3>إضافة قالب طباعة</h3>
+    <form class="pt-form" method="post" action="{{ url_for('radius.print_templates_create') }}">
+      <label>
+        اسم القالب
+        <input name="name" required placeholder="مثال: كرت صغير عمودي">
+        <span class="pt-help">استخدم اسمًا يساعدك في إعادة استخدام القالب لاحقًا.</span>
+      </label>
+
+      <div class="pt-row">
+        <label>
+          اتجاه الصفحة
+          <select name="orientation">
+            <option value="portrait">عمودي</option>
+            <option value="landscape">أفقي</option>
+          </select>
+        </label>
+        <label>
+          حجم الصفحة
+          <input name="page_size" value="A4">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          كروت في الصف
+          <input type="number" name="cards_per_row" min="1" value="2">
+        </label>
+        <label>
+          كروت في العمود
+          <input type="number" name="cards_per_column" min="1" value="5">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          عرض الكرت mm
+          <input type="number" name="card_width_mm" min="1" step="0.1" value="85">
+        </label>
+        <label>
+          ارتفاع الكرت mm
+          <input type="number" name="card_height_mm" min="1" step="0.1" value="54">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          موضع اسم الدخول X
+          <input type="number" name="username_x" step="0.1" value="10">
+        </label>
+        <label>
+          موضع اسم الدخول Y
+          <input type="number" name="username_y" step="0.1" value="15">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          موضع كلمة المرور X
+          <input type="number" name="password_x" step="0.1" value="10">
+        </label>
+        <label>
+          موضع كلمة المرور Y
+          <input type="number" name="password_y" step="0.1" value="25">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          موضع QR X
+          <input type="number" name="qr_x" step="0.1" value="60">
+        </label>
+        <label>
+          موضع QR Y
+          <input type="number" name="qr_y" step="0.1" value="12">
+        </label>
+      </div>
+
+      <div class="pt-row">
+        <label>
+          حجم الخط
+          <input type="number" name="font_size" min="6" value="12">
+        </label>
+        <label>
+          اللون
+          <input type="color" name="color" value="#1f2937">
+        </label>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" name="show_qr" value="1" checked style="width:auto">
+        إظهار QR
+      </label>
+
+      <button class="btn btn-primary" type="submit">
+        <i class="fa-solid fa-floppy-disk"></i> حفظ القالب
+      </button>
+    </form>
+  </section>
+
+  <section class="pt-card">
+    <h3>القوالب المحفوظة</h3>
+    {% if templates %}
+      <table class="pt-table">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>التخطيط</th>
+            <th>المواضع</th>
+            <th>الحالة</th>
+            <th>معاينة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in templates %}
+          <tr>
+            <td>
+              <strong>{{ item.get('name') }}</strong>
+              <div class="pt-help">{{ item.get('page_size') }} / {{ item.get('orientation') }}</div>
+            </td>
+            <td>{{ item.get('cards_per_row') }} × {{ item.get('cards_per_column') }}</td>
+            <td class="mono">
+              U({{ item.get('username_x') }},{{ item.get('username_y') }})
+              P({{ item.get('password_x') }},{{ item.get('password_y') }})
+              QR({{ item.get('qr_x') }},{{ item.get('qr_y') }})
+            </td>
+            <td>
+              {% if item.get('show_qr') %}
+                <span class="pt-badge">QR ظاهر</span>
+              {% else %}
+                <span class="pt-badge">بدون QR</span>
+              {% endif %}
+              <div class="pt-help">PDF renderer غير مضاف بعد</div>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('radius.print_templates_preview', template_id=item.get('id')) }}">
+                <input type="hidden" name="sample_username" value="CARD1234">
+                <button class="btn btn-secondary" type="submit">
+                  <i class="fa-solid fa-eye"></i> معاينة JSON
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty">
+        <i class="fa-solid fa-print"></i>
+        لا توجد قوالب طباعة بعد. احفظ أول قالب من النموذج بجانبك.
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

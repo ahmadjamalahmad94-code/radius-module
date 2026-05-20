@@ -209,6 +209,10 @@
          class="{% if request.path == url_for('radius.online_list') and request.args.get('type') == 'card' %}active{% endif %}">
         <i class="fa-solid fa-id-card"></i> البطاقات المتصلة
       </a>
+      <a href="{{ url_for('radius.print_templates') }}"
+         class="{% if '/print-templates' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-print"></i> قوالب الطباعة
+      </a>
     </div>
 
     {# ─────────────── العروض ─────────────── #}
