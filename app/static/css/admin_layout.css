@@ -449,7 +449,12 @@ a:hover{color:var(--hr-cyan-700)}
 .quick-action .sub{font-size:11px;color:var(--hr-text-muted);margin-top:1px}
 
 .app-footer{
-  margin-top:24px;padding:12px 18px;
+  /* Match .cc-page width — same max-width + auto-centered margins, so
+     the footer lines up with the page content instead of running edge
+     to edge of the .main element. */
+  max-width:1180px;
+  margin:24px auto 0;
+  padding:12px 18px;
   background:linear-gradient(135deg, #FFFFFF 0%, #F8F6FE 100%);
   border:1px solid #E5E0F5;
   border-radius:14px;
