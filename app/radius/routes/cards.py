@@ -572,7 +572,24 @@ def cards_checker():
         if len(query) > 128:
             error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
         else:
-            result = check_card(_tid(), query)
+            try:
+                result = check_card(_tid(), query)
+            except Exception as exc:  # noqa: BLE001
+                # Never let an internal exception bubble as a bare HTTP 500
+                # — log the full traceback so we can find the cause, and
+                # show the operator a friendly message so they don't think
+                # the whole system is dead.
+                import logging
+                logging.getLogger(__name__).exception(
+                    "cards_checker: check_card raised for query=%r tenant=%s",
+                    query, _tid(),
+                )
+                error = (
+                    "حدث خطأ داخلي أثناء فحص البطاقة. تم تسجيل تفاصيل "
+                    "الخطأ في سجل الخادم — راجع `docker compose logs "
+                    f"hoberadius` للتفاصيل. ({type(exc).__name__})"
+                )
+                result = None
     return render_template(
         "radius/cards_checker_v2.html",
         query=query,
@@ -618,7 +635,24 @@ def cards_checker_v2():
         if len(query) > 128:
             error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
         else:
-            result = check_card(_tid(), query)
+            try:
+                result = check_card(_tid(), query)
+            except Exception as exc:  # noqa: BLE001
+                # Never let an internal exception bubble as a bare HTTP 500
+                # — log the full traceback so we can find the cause, and
+                # show the operator a friendly message so they don't think
+                # the whole system is dead.
+                import logging
+                logging.getLogger(__name__).exception(
+                    "cards_checker: check_card raised for query=%r tenant=%s",
+                    query, _tid(),
+                )
+                error = (
+                    "حدث خطأ داخلي أثناء فحص البطاقة. تم تسجيل تفاصيل "
+                    "الخطأ في سجل الخادم — راجع `docker compose logs "
+                    f"hoberadius` للتفاصيل. ({type(exc).__name__})"
+                )
+                result = None
     return render_template(
         "radius/cards_checker_v2.html",
         query=query,
@@ -645,7 +679,20 @@ def cards_checker_api_lookup():
             "error": "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا.",
             "code": "query_too_long",
         }), 400
-    result = check_card(_tid(), query)
+    try:
+        result = check_card(_tid(), query)
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception(
+            "cards_checker_api_lookup: check_card raised for query=%r tenant=%s",
+            query, _tid(),
+        )
+        return jsonify({
+            "ok": False,
+            "error": f"خطأ داخلي أثناء فحص البطاقة ({type(exc).__name__}). "
+                     "راجع docker logs hoberadius.",
+            "code": "internal_error",
+        }), 500
     return jsonify({
         "ok": True,
         "query": query,

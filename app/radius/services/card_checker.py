@@ -384,6 +384,12 @@ def check_card(tenant_id: int, query: str) -> dict:
     # and each MAC-history entry. Also fire a background refresh that
     # tops up the cache from the live router — the response itself
     # never blocks on MT.
+    #
+    # Wrapped in a defensive try/except: if migration 026 didn't run,
+    # if the table is corrupt, or if the repo throws for any reason,
+    # we MUST NOT 500 the Card Checker — the operator's flow has to
+    # survive a degraded fingerprint layer. We log and continue with
+    # empty dhcp_device on every row.
     _all_macs: list[str] = []
     for s in sessions:
         if s.get("mac_address"):
@@ -393,10 +399,18 @@ def check_card(tenant_id: int, query: str) -> dict:
             _all_macs.append(m["mac"])
     if record.get("used_by_mac"):
         _all_macs.append(record["used_by_mac"])
-    _fp_by_mac = (
-        device_fingerprints_repo.get_many_by_macs(tenant_id, _all_macs)
-        if _all_macs else {}
-    )
+    _fp_by_mac: dict[str, dict] = {}
+    try:
+        if _all_macs:
+            _fp_by_mac = device_fingerprints_repo.get_many_by_macs(
+                tenant_id, _all_macs,
+            )
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception(
+            "check_card: DHCP fingerprint lookup failed (continuing without)"
+        )
+        _fp_by_mac = {}
     for s in sessions:
         mac_key = (s.get("mac_address") or "").lower()
         s["dhcp_device"] = _dhcp_device(_fp_by_mac.get(mac_key))
@@ -404,7 +418,13 @@ def check_card(tenant_id: int, query: str) -> dict:
         mac_key = (m.get("mac") or "").lower()
         m["dhcp_device"] = _dhcp_device(_fp_by_mac.get(mac_key))
     if _all_macs:
-        _trigger_oncheck_refresh(tenant_id, _all_macs)
+        try:
+            _trigger_oncheck_refresh(tenant_id, _all_macs)
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).exception(
+                "check_card: oncheck refresh dispatch failed (non-fatal)"
+            )
     data_sources = ["cards"]
     if record.get("batch_code") is not None:
         data_sources.append("card_batches")
