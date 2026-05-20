@@ -107,9 +107,21 @@
               ├ batch code                              ├ plan name + crown
               ├ plan                                    └ remaining time
    row 3: bottom-divider with creation date           #}
+{# R13.A.9 — Reference-faithful hero card layout.
+
+   Reference A places elements at these VISUAL positions:
+     • top-LEFT  : gold chip
+     • top-RIGHT : green status pill
+     • mid-RIGHT : large card number + star (the focal point)
+     • mid-LEFT  : info block (batch / plan / remaining)
+
+   In an RTL flex row, the FIRST child renders on the visual RIGHT.
+   So to put status on the right and chip on the left, status must
+   come first in HTML; chip last. Same logic for main row.
+#}
 {% macro card_hero(card) -%}
 <div class="cc-card-hero" data-cc-section="hero">
-  {# Decorative wave lines — inline SVG (CSS data-URI was unreliable). #}
+  {# Decorative wave lines — inline SVG #}
   <svg class="cc-card-waves" viewBox="0 0 600 240" preserveAspectRatio="none" aria-hidden="true">
     <path d="M-40,165 Q150,110 320,165 T660,140" stroke="white" stroke-width="2"
           stroke-opacity="0.22" fill="none" stroke-linecap="round"/>
@@ -118,12 +130,28 @@
     <path d="M-40,225 Q190,165 360,225 T660,205" stroke="white" stroke-width="2"
           stroke-opacity="0.10" fill="none" stroke-linecap="round"/>
   </svg>
+
+  {# Top row: status pill (right visual) ↔ chip (left visual) #}
   <div class="cc-card-top">
-    <div class="cc-card-chip" aria-hidden="true"></div>
     {{ hero_status(card) }}
+    <div class="cc-card-chip" aria-hidden="true"></div>
   </div>
 
+  {# Main row: big number (right visual) ↔ info block (left visual) #}
   <div class="cc-card-main">
+    <div class="cc-card-number-wrap">
+      <div class="cc-card-number" data-cc-field="username">
+        <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
+        {{ card.username }}
+      </div>
+      {% if card.remaining_seconds is not none %}
+      <div class="cc-card-remaining" data-cc-field="remaining_seconds">
+        <i class="fa-regular fa-clock"></i>
+        <span><span class="num">{{ duration(card.remaining_seconds) }}</span> متبقية</span>
+      </div>
+      {% endif %}
+    </div>
+
     <div class="cc-card-info">
       {% if card.batch %}
       <div class="cc-card-info-row" data-cc-field="batch">
@@ -135,19 +163,6 @@
       <div class="cc-card-info-row" data-cc-field="profile">
         <div class="cc-card-info-label">الباقة / الخطّة</div>
         <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="cc-card-number-wrap">
-      <div class="cc-card-number" data-cc-field="username">
-        {{ card.username }}
-        <span class="cc-card-number-icon"><i class="fa-solid fa-star"></i></span>
-      </div>
-      {% if card.remaining_seconds is not none %}
-      <div class="cc-card-remaining" data-cc-field="remaining_seconds">
-        <i class="fa-regular fa-clock"></i>
-        <span><span class="num">{{ duration(card.remaining_seconds) }}</span> متبقية</span>
       </div>
       {% endif %}
     </div>

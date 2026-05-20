@@ -291,10 +291,17 @@
 }
 .cc-card-plan i{ color: #FFE07A; }
 
+/* R13.A.9: number lives on the START (right in RTL), info on the END.
+   align-items:flex-start keeps the number anchored to its column edge. */
 .cc-card-number-wrap{
+  text-align: start;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 6px;
+}
+.cc-card-info{
   text-align: end;
   display: flex; flex-direction: column; align-items: flex-end;
-  gap: 6px;
+  gap: 10px;
 }
 .cc-card-number{
   font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
