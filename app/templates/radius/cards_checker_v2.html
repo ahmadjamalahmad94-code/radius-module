@@ -1125,15 +1125,15 @@
                 </div>
               </button>
             </form>
-          </div>
 
-          <div style="margin-top:14px">
+            {# Moved INTO the same grid so all 4 simple-mode actions
+               sit on one row (user request: 'بدي الزراير كلهم ع نفس
+               السطر'). Was inside its own full-width wrapper below. #}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="soft-delete-simple">
               <input type="hidden" name="op" value="soft_delete">
               <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-danger" type="button"
-                      style="width:100%"
                       {% if not ops.can_delete_permanently %}disabled{% endif %}
                       data-cc-op="delete"
                       onclick="window.ccModal && window.ccModal.softDelete({
