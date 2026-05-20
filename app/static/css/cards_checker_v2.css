@@ -2042,11 +2042,12 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-size:12px !important;
 }
 
-/* Tighter gap on both info columns now they use the same pill style */
+/* Pills need a touch of room between them so the column doesn't read
+   as one solid wall — 10px breathes well without growing the hero. */
 .cc-card-info.cc-card-side-info,
 .cc-card-side-info{
   margin-top:0 !important;
-  gap:6px !important;
+  gap:10px !important;
 }
 
 /* And one more height squeeze: nudge the hero overall paddings */
