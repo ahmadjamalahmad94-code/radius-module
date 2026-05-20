@@ -362,8 +362,25 @@ def _handle_card_operation():
     query = _form_str("query") or username
     try:
         if action == "lock_mac":
-            svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
-            flash("تم تثبيت عنوان MAC على البطاقة.", "success")
+            res = svc.lock_card_mac(
+                actor=_actor(), card_id=card_id, mac=_form_str("mac"),
+            ) or {}
+            macs_locked = res.get("macs") or []
+            kicked = len(res.get("kicked") or [])
+            kept = res.get("kept") or 0
+            if kicked > 0:
+                flash(
+                    f"تم تثبيت {len(macs_locked)} عنوان MAC، وقطع {kicked} جلسة "
+                    f"لأجهزة غير مطابقة. "
+                    + (f"{kept} جلسة مطابقة بقيت متّصلة." if kept else ""),
+                    "success",
+                )
+            else:
+                flash(
+                    f"تم تثبيت {len(macs_locked)} عنوان MAC على البطاقة." +
+                    (f" ({kept} جلسة نشطة كانت مطابقة بالفعل.)" if kept else ""),
+                    "success",
+                )
         elif action == "unlock_mac":
             svc.unlock_card_mac(actor=_actor(), card_id=card_id)
             flash("تم إلغاء تثبيت MAC عن البطاقة.", "success")
@@ -517,6 +534,19 @@ def _handle_card_operation():
                             f"تم تعيين سرعة البطاقة: تنزيل {down} kbps / رفع {up} kbps.{coa_note}",
                             "success",
                         )
+        elif action == "sync_dhcp":
+            # On-demand DHCP-lease pull from the tenant's MikroTik
+            # routers. Useful when the operator opens the Checker for
+            # a brand-new card and doesn't want to wait the 2-minute
+            # worker tick. Best-effort — failures are logged, never
+            # raised.
+            try:
+                from ..services import device_fingerprint_sync
+                seen = device_fingerprint_sync.sync_tenant(_tid())
+                flash(f"تم تحديث بيانات DHCP من المايكروتيك — {seen} عنوان MAC.",
+                      "success")
+            except Exception as e:  # noqa: BLE001
+                flash(f"تعذّر التحديث الفوري للـ DHCP: {e}", "error")
         else:
             flash("إجراء غير معروف.", "error")
     except RadiusError as e:

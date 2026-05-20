@@ -718,6 +718,19 @@
           <span class="cc-section-head-link" style="cursor:default">
             {{ s.latest_sessions|length if s.latest_sessions else 0 }} جلسة
           </span>
+          {# DHCP refresh — pulls /ip/dhcp-server/lease/print on demand
+             so the "الجهاز / النظام" column populates without waiting
+             for the 2-minute background worker. Tiny inline form, no
+             confirmation modal needed (read-only side effect). #}
+          <form method="post" action="{{ url_for('radius.cards_checker') }}"
+                style="display:inline-flex;margin-inline-start:auto">
+            <input type="hidden" name="op" value="sync_dhcp">
+            {{ hidden_ops(card, query) }}
+            <button type="submit" class="cc-mini-action" title="تحديث بيانات DHCP الآن من المايكروتيك">
+              <i class="fa-solid fa-arrows-rotate"></i>
+              <span>تحديث DHCP</span>
+            </button>
+          </form>
         </header>
         <div class="cc-section-body">
           {% if s.latest_sessions %}
@@ -784,10 +797,30 @@
                   <td class="mono small">{{ dt(ses.started_at) }}</td>
                   <td class="mono small">{{ dt(ses.stopped_at) if ses.stopped_at else '—' }}</td>
                   <td class="num">{{ duration(ses.duration_seconds or 0) }}</td>
-                  <td class="mono small" title="{{ ses.session_id }}">
-                    {{ ses.session_id[:14] + '…' if ses.session_id and ses.session_id|length > 14 else (ses.session_id or '—') }}
+                  {# معرّف الخدمة — combines the human-readable service
+                     (servicetype) with the technical session_id in a
+                     tooltip so the operator sees something meaningful at
+                     a glance. Falls back to whichever is non-empty. #}
+                  <td class="mono small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
+                    {% set _svc = ses.service_type or ses.framed_protocol %}
+                    {% if _svc %}
+                      {{ _svc }}
+                    {% elif ses.session_id %}
+                      {{ ses.session_id[:14] + '…' if ses.session_id|length > 14 else ses.session_id }}
+                    {% else %}—{% endif %}
                   </td>
-                  <td class="mono small">{{ ses.nas_port or ses.nas_port_type or '—' }}</td>
+                  {# منفذ الاتصال — prefer the human-readable port type
+                     (Ethernet / Wireless / etc.), then the technical
+                     NAS port descriptor. nas_port_type is the friendly
+                     label; nas_port is the raw value (often an integer
+                     from MT hotspot). Tooltip shows both. #}
+                  <td class="mono small" title="{% if ses.nas_port_type %}{{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · {{ ses.nas_port }}{% endif %}">
+                    {% if ses.nas_port_type %}
+                      {{ ses.nas_port_type }}
+                    {% elif ses.nas_port %}
+                      {{ ses.nas_port[:14] + '…' if ses.nas_port and ses.nas_port|length > 14 else ses.nas_port }}
+                    {% else %}—{% endif %}
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>

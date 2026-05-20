@@ -20,7 +20,7 @@ import logging
 import re
 from typing import Any, Iterable
 
-from ..db.repos import device_fingerprints_repo, mikrotik_repo
+from ..db.repos import device_fingerprints_repo, mikrotik_repo, nas_repo
 
 _LOG = logging.getLogger(__name__)
 
@@ -131,12 +131,19 @@ def fetch_leases_for_router(router_cfg: dict) -> list[dict]:
     from ..integration.mikrotik.pool import acquire as acquire_mt
 
     out: list[dict] = []
+    seen_keys = set()  # diagnostic — record what MT actually returned
     try:
         with acquire_mt(router_cfg) as client:
-            # NOTE: RouterOS returns the camelCase-ish fields:
-            #   mac-address, host-name, active-host-name,
-            #   client-id, active-client-id, address
+            # RouterOS field names (RouterOS 6.x → 7.x):
+            #   mac-address, active-mac-address
+            #   host-name, active-host-name
+            #   client-id, active-client-id  (this is DHCP option 60 class)
+            #   address, active-address
+            # The `active-*` variants are only set when the lease is
+            # currently bound to a client — exactly what we want.
             for raw in client.print_("/ip/dhcp-server/lease/print"):
+                if not seen_keys:
+                    seen_keys.update(raw.keys())  # record one sample
                 mac = _normalize_mac(
                     raw.get("active-mac-address") or raw.get("mac-address") or ""
                 )
@@ -145,6 +152,7 @@ def fetch_leases_for_router(router_cfg: dict) -> list[dict]:
                 hostname = (
                     raw.get("active-host-name")
                     or raw.get("host-name")
+                    or raw.get("comment")  # some setups put hostname here
                     or ""
                 ).strip()
                 class_id = (
@@ -175,12 +183,90 @@ def fetch_leases_for_router(router_cfg: dict) -> list[dict]:
         _LOG.exception("dhcp-lease sync: unexpected error router=%s",
                        router_cfg.get("host"))
         return []
+    # First-fetch diagnostic — log the field names MT actually returns
+    # so we can audit field-name drift across RouterOS versions.
+    if seen_keys:
+        _LOG.debug("dhcp-lease sync: router=%s sample lease keys: %s",
+                   router_cfg.get("host"), sorted(seen_keys))
     return out
 
 
 # ────────────────────────────────────────────────────────────────────
 # Top-level sync entry points
 # ────────────────────────────────────────────────────────────────────
+
+def _collect_router_configs(tenant_id: int) -> list[dict]:
+    """Build a unified router-config list from BOTH tables.
+
+    Some deployments populate only `nas_devices` (the RADIUS NAS table,
+    which also carries api_port/api_user/api_password since RM-H5), while
+    others use the dedicated `mikrotik_configs` table managed via the
+    /admin/radius/mt screen. We pull from both, de-dup by host, and
+    return a list of dicts matching the shape the MT connection pool
+    expects (id, host, port, username, password, use_tls, verify_tls,
+    timeout_sec).
+
+    Without this, a tenant who configured only NAS rows would have an
+    empty DHCP-lease cache — the worker would silently see "no routers"
+    every cycle.
+    """
+    out: dict[str, dict] = {}
+
+    # Source A — mikrotik_configs (preferred when present, since the
+    # router list there is API-purpose).
+    try:
+        for r in mikrotik_repo.list_configs(int(tenant_id)):
+            if not r.get("enabled"):
+                continue
+            host = (r.get("host") or "").strip()
+            if not host:
+                continue
+            out[host] = {
+                "id":          r["id"],
+                "host":        host,
+                "port":        int(r.get("port") or 8728),
+                "username":    r.get("username") or "admin",
+                "password":    r.get("password") or "",
+                "use_tls":     bool(r.get("use_tls")),
+                "verify_tls":  bool(r.get("verify_tls")),
+                "timeout_sec": int(r.get("timeout_sec") or 10),
+                "_source":     "mikrotik_configs",
+            }
+    except Exception:  # noqa: BLE001
+        _LOG.exception("dhcp-lease sync: listing mikrotik_configs failed tenant=%s",
+                       tenant_id)
+
+    # Source B — nas_devices (fallback / additional). Only include
+    # devices that look like MikroTik (have an api_user set, vendor
+    # might also be 'mikrotik').
+    try:
+        for nas in nas_repo.list_nas(int(tenant_id), limit=1000):
+            if not getattr(nas, "enabled", False):
+                continue
+            host = (getattr(nas, "address", "") or "").strip()
+            api_user = getattr(nas, "api_user", "") or ""
+            api_pwd  = getattr(nas, "api_password", "") or ""
+            if not host or not api_user:
+                continue  # no MT API on this NAS row
+            if host in out:
+                continue  # already covered by mikrotik_configs
+            out[host] = {
+                "id":          nas.id,
+                "host":        host,
+                "port":        int(getattr(nas, "api_port", 8728) or 8728),
+                "username":    api_user,
+                "password":    api_pwd,
+                "use_tls":     bool(getattr(nas, "api_use_tls", False)),
+                "verify_tls":  True,  # nas_devices doesn't track verify flag
+                "timeout_sec": 10,
+                "_source":     "nas_devices",
+            }
+    except Exception:  # noqa: BLE001
+        _LOG.exception("dhcp-lease sync: listing nas_devices failed tenant=%s",
+                       tenant_id)
+
+    return list(out.values())
+
 
 def sync_tenant(tenant_id: Any) -> int:
     """Pulls leases from every enabled router for a tenant and upserts.
@@ -189,14 +275,19 @@ def sync_tenant(tenant_id: Any) -> int:
     Last write wins per (tenant, mac) — fine, because the upsert merges
     instead of overwriting empty values.
     """
-    routers = [r for r in mikrotik_repo.list_configs(int(tenant_id)) if r["enabled"]]
+    routers = _collect_router_configs(int(tenant_id))
     if not routers:
+        _LOG.info("dhcp-lease sync: no MT routers configured for tenant=%s "
+                  "(neither mikrotik_configs nor nas_devices with api_user)",
+                  tenant_id)
         return 0
 
     seen: set[str] = set()
+    leases_total = 0
     for cfg in routers:
-        nas_id_for_source = None  # mikrotik_configs.id != nas_devices.id; leave NULL for now
-        for row in fetch_leases_for_router(cfg):
+        rows = fetch_leases_for_router(cfg)
+        leases_total += len(rows)
+        for row in rows:
             device_fingerprints_repo.upsert(
                 tenant_id=tenant_id,
                 mac=row["mac"],
@@ -207,9 +298,11 @@ def sync_tenant(tenant_id: Any) -> int:
                 device_brand=row["device_brand"],
                 device_model=row["device_model"],
                 ip_address=row["ip_address"],
-                nas_id=nas_id_for_source,
+                nas_id=None,
             )
             seen.add(row["mac"])
+    _LOG.info("dhcp-lease sync: tenant=%s routers=%d leases=%d unique_macs=%d",
+              tenant_id, len(routers), leases_total, len(seen))
     return len(seen)
 
 

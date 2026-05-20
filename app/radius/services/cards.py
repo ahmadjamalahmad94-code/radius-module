@@ -394,13 +394,26 @@ class CardsService:
                            target_type="card", target_id=str(card_id),
                            payload={"reason": reason})
 
-    def lock_card_mac(self, *, actor: str, card_id: int, mac: str) -> None:
-        """Lock the card to ONE OR MORE MAC addresses.
+    def lock_card_mac(self, *, actor: str, card_id: int, mac: str) -> dict:
+        """Lock the card to ONE OR MORE MAC addresses, and immediately
+        ENFORCE the lock by disconnecting any active session whose MAC
+        is not in the allowed list.
 
         `mac` may be a single value or a comma/semicolon/newline-
         separated list. All entries are normalised to UPPER + ':'
         separators, de-duplicated, sorted, then re-joined with ','
         for storage. Empty after parsing → ValidationError.
+
+        Returns:
+          {
+            "macs":   ["AA:BB:..", ...],   # the locked-down list
+            "kicked": [session_id, ...],   # sessions we sent CoA-Disconnect to
+            "kept":   N,                   # sessions whose MAC matched (untouched)
+          }
+
+        Without the kick step, a previously-connected non-matching
+        device would happily keep streaming until its lease/keepalive
+        timeout — defeating the point of locking.
         """
         raw = (mac or "").replace(";", ",").replace("\n", ",")
         macs = sorted({
@@ -416,13 +429,62 @@ class CardsService:
             if len(hex_only) != 12 or any(c not in "0123456789ABCDEF" for c in hex_only):
                 raise RadiusValidationError(f"عنوان MAC غير صالح: {m}")
         joined = ",".join(macs)
+        tenant_id = self._store_tenant_id()
         if not cards_repo.set_card_locked_mac(
-            self._store_tenant_id(), card_id, joined, actor=actor,
+            tenant_id, card_id, joined, actor=actor,
         ):
             raise RadiusValidationError("تعذر تثبيت MAC")
+
+        # ── Enforce ────────────────────────────────────────────────
+        # Walk active sessions for this card's username; any session
+        # whose callingstationid is NOT in `macs` gets CoA-Disconnected.
+        kicked: list[str] = []
+        kept = 0
+        try:
+            card = cards_repo.get_card(tenant_id, card_id)
+            username = getattr(card, "username", None) or (
+                card.get("username") if isinstance(card, dict) else None
+            )
+            if username:
+                allowed = {m.upper() for m in macs}
+                rows = cards_repo.list_card_accounting(tenant_id, username, limit=100)
+                offenders: list[str] = []  # acctsessionid values to kick
+                for row in rows:
+                    if row.get("acctstoptime"):
+                        continue  # already ended
+                    sess_mac = (row.get("callingstationid") or "").strip().upper()
+                    sid = row.get("acctsessionid") or ""
+                    if not sid:
+                        continue
+                    if sess_mac and sess_mac in allowed:
+                        kept += 1
+                    else:
+                        offenders.append(sid)
+                if offenders:
+                    try:
+                        # adapter supports session_ids list (per-session disconnect)
+                        self._adapter.disconnect(username, session_ids=offenders)
+                        kicked.extend(offenders)
+                    except TypeError:
+                        # Legacy adapter without session_ids kwarg — broadcast.
+                        self._adapter.disconnect(username)
+                        kicked.extend(offenders)
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "lock_card_mac: enforcement kick failed for card=%s",
+                card_id, exc_info=True,
+            )
+
         self._audit.record(actor=actor, action="card.lock_mac",
                            target_type="card", target_id=str(card_id),
-                           payload={"macs": macs, "count": len(macs)})
+                           payload={
+                               "macs":          macs,
+                               "count":         len(macs),
+                               "kicked_count":  len(kicked),
+                               "kept_count":    kept,
+                           })
+        return {"macs": macs, "kicked": kicked, "kept": kept}
 
     def unlock_card_mac(self, *, actor: str, card_id: int) -> None:
         if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, "", actor=actor):
