@@ -76,7 +76,10 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   display:flex;
   flex-direction:column;
   transition:width .2s ease, transform .2s ease;
-  overflow:hidden;
+  /* IMPORTANT: do NOT clip overflow here. The collapse handle (in
+     collapsed mode) and the hover tooltips intentionally poke out
+     past the sidebar's edge into the page area. The nav body still
+     handles its own horizontal clipping below. */
 }
 
 /* ═════════════════════════ BRAND BLOCK ═════════════════════════ */
@@ -111,7 +114,7 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   font-size:11px;color:var(--hb-text-muted);font-weight:600;
 }
 .hb-side-collapse-btn{
-  width:28px;height:28px;flex:0 0 28px;
+  width:30px;height:30px;flex:0 0 30px;
   border-radius:50%;
   background:var(--hb-purple-soft);
   color:var(--hb-purple);
@@ -119,8 +122,21 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   display:grid;place-items:center;
   font-size:11px;
   transition:.15s ease;
+  z-index:2;
 }
-.hb-side-collapse-btn:hover{background:var(--hb-purple);color:#fff}
+.hb-side-collapse-btn:hover{
+  background:var(--hb-purple);
+  color:#fff;
+  transform:scale(1.06);
+}
+/* The chevron is `fa-chevron-right` in markup. In RTL the sidebar
+   is docked at the right edge, so visually that arrow points TOWARD
+   the screen edge — i.e. it reads as "close me". On flip the icon
+   180deg when the sidebar is collapsed so it now reads "open me". */
+.hb-side-collapse-btn i{transition:transform .2s ease}
+body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
+  transform:rotate(180deg);
+}
 
 /* ═════════════════════════ NAV (scrollable list) ═════════════════════════ */
 .hb-side-nav{
@@ -392,13 +408,24 @@ body[data-hb-side="collapsed"] .hb-side-brand{
   justify-content:center;padding:14px 8px 12px;
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn{
-  position:absolute;bottom:-14px;
-  /* Poke out toward the content side (away from screen edge).
-     Sidebar is docked at inset-inline-start, so its inside edge
-     is inset-inline-end. */
-  inset-inline-end:-14px;
-  background:#fff;border:1px solid var(--hb-border);
-  box-shadow:var(--hb-shadow-card);
+  position:absolute;
+  /* Pin to the bottom-INSIDE edge of the brand block and poke half
+     outside the sidebar — produces a clean "FAB-style" handle that
+     the user can click to expand. Sidebar is docked at
+     inset-inline-start (right in RTL), so its INSIDE edge is
+     inset-inline-end → push the button past it. */
+  bottom:-15px;
+  inset-inline-end:-15px;
+  width:32px;height:32px;
+  background:var(--hb-purple) !important;
+  color:#fff !important;
+  border:2px solid #fff;
+  box-shadow:0 4px 12px rgba(107,90,237,.35);
+  z-index:3;
+}
+body[data-hb-side="collapsed"] .hb-side-collapse-btn:hover{
+  background:var(--hb-purple-deep) !important;
+  transform:scale(1.08);
 }
 
 body[data-hb-side="collapsed"] .hb-side-nav{padding:10px 8px 16px}
