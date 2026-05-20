@@ -1,47 +1,66 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Live RADIUS log — REBUILT (Night N4, 2026-05-21)
+
+   Backend untouched (route tool_radius_log + JSON endpoint
+   tool_radius_log_json). Same polling loop and DOM contracts:
+     • #log-body  — tbody injected by JS
+     • #poll-int  — interval select (2s/5s/10s/off)
+     • #last-update — status label updated after each fetch
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}سجل RADIUS الحيّ{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-rss"></i>{% endblock %}
 {% block page_title %}سجل قرارات RADIUS — حيّ{% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <span class="title">آخر القرارات (radpostauth)</span>
-    <div style="margin-{% if false %}left{% else %}right{% endif %}:auto;display:flex;gap:8px;align-items:center">
-      <label style="font-size:13px">تحديث:
-        <select id="poll-int">
-          <option value="2000">2s</option>
-          <option value="5000" selected>5s</option>
-          <option value="10000">10s</option>
-          <option value="0">إيقاف</option>
-        </select>
-      </label>
-      <span id="last-update" class="hint"></span>
-    </div>
-  </div>
-  <div class="card-body" style="padding:0">
-    <table style="width:100%">
+
+{{ hub.hero(
+  "سجل قرارات RADIUS الحيّ",
+  subtitle="آخر قرارات FreeRADIUS من جدول radpostauth — يتحدّث ذاتيًا.",
+  icon="rss"
+) }}
+
+{# Toolbar (interval + last-update) #}
+<form class="hub-filterbar" onsubmit="return false">
+  <label class="hub-field" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:0">
+    <span class="hub-field-label" style="margin:0">تحديث:</span>
+    <select id="poll-int" class="hub-select" style="width:auto">
+      <option value="2000">كل 2 ثانية</option>
+      <option value="5000" selected>كل 5 ثوانٍ</option>
+      <option value="10000">كل 10 ثوانٍ</option>
+      <option value="0">إيقاف</option>
+    </select>
+  </label>
+  <span class="hub-spacer"></span>
+  <span id="last-update" class="hub-text-mute" style="font-size:12.5px"></span>
+</form>
+
+{% call hub.section("آخر القرارات (radpostauth)", icon="bolt-lightning", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
-          <th style="width:60px">#</th>
+          <th class="num" style="width:70px">#</th>
           <th style="width:170px">الوقت</th>
           <th>المستخدم</th>
           <th style="width:120px">النتيجة</th>
-          <th style="width:130px">جهاز الشبكة</th>
+          <th style="width:140px">جهاز الشبكة</th>
           <th>السبب</th>
         </tr>
       </thead>
       <tbody id="log-body">
-        <tr><td colspan="6" style="text-align:center;padding:24px;color:#888">
-          يتمّ التحميل…
+        <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">
+          <i class="fa-solid fa-spinner fa-spin"></i> يتمّ التحميل…
         </td></tr>
       </tbody>
     </table>
   </div>
-</div>
+{% endcall %}
 
-<div class="hint" style="margin-top:8px">
-  هذا السجل يُكتب من FreeRADIUS بعد كل طلب دخول، سواء تم قبوله أو رفضه.
+<div class="hub-text-mute" style="margin-top:10px;font-size:12.5px;text-align:start">
+  يُكتب هذا السجل من FreeRADIUS بعد كل طلب دخول، سواء تم قبوله أو رفضه.
 </div>
 
 <script>
@@ -50,10 +69,16 @@
   const lastEl = document.getElementById('last-update');
   const sel = document.getElementById('poll-int');
   let timer = null;
-  let knownIds = new Set();
+  const knownIds = new Set();
 
   function esc(s){ return (s==null?'':String(s))
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function pill(ok){
+    return ok
+      ? '<span class="hub-pill hub-pill--green"><span class="dot"></span>قبول</span>'
+      : '<span class="hub-pill hub-pill--red"><span class="dot"></span>رفض</span>';
+  }
 
   async function load(){
     try{
@@ -62,20 +87,17 @@
       const data = await r.json();
       const rows = data.items || [];
       if (!rows.length){
-        body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#888">لا توجد سجلات بعد.</td></tr>';
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">لا توجد سجلات بعد.</td></tr>';
       } else {
         body.innerHTML = rows.map(it => {
           const isNew = !knownIds.has(it.id);
-          const badge = it.ok
-            ? '<span style="background:#e6f6fb;color:#2BAACC;padding:2px 8px;border-radius:10px;font-size:12px"><i class="fa-solid fa-check"></i> قبول</span>'
-            : '<span style="background:#fde9e9;color:#d04949;padding:2px 8px;border-radius:10px;font-size:12px"><i class="fa-solid fa-xmark"></i> رفض</span>';
-          return `<tr ${isNew?'style="background:#fffbe6"':''}>
-            <td>${it.id}</td>
-            <td><code>${esc(it.authdate)}</code></td>
+          return `<tr ${isNew ? 'class="is-live"' : ''}>
+            <td class="num mono">${it.id}</td>
+            <td class="mono small">${esc(it.authdate)}</td>
             <td><strong>${esc(it.username)}</strong></td>
-            <td>${badge}</td>
-            <td>${esc(it.nas)}</td>
-            <td>${esc(it.reason)}</td>
+            <td>${pill(it.ok)}</td>
+            <td class="mono small">${esc(it.nas)}</td>
+            <td class="mono small">${esc(it.reason)}</td>
           </tr>`;
         }).join('');
         rows.forEach(it => knownIds.add(it.id));

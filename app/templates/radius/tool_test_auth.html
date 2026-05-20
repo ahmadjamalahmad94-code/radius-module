@@ -1,89 +1,112 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Test auth (simulate Access-Request) — REBUILT (Night N4, 2026-05-21)
+
+   Backend unchanged (app/radius/routes/tools.py tool_test_auth).
+     • form:    dict with username/password/calling_station_id/...
+     • result:  None on GET; on POST: {ok, reason, message, reply_attrs}
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}اختبار المصادقة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-vial"></i>{% endblock %}
 {% block page_title %}محاكاة طلب دخول{% endblock %}
 
 {% block content %}
-<form method="post">
-  <div class="card">
-    <div class="card-header"><span class="title">بيانات طلب الدخول</span></div>
-    <div class="card-body">
-      <div class="form-row">
-        <label>اسم المستخدم *</label>
-        <div class="field"><input type="text" name="username" value="{{ form.username }}" required></div>
-      </div>
-      <div class="form-row">
-        <label>كلمة المرور *</label>
-        <div class="field"><input type="text" name="password" value="{{ form.password }}" required></div>
-      </div>
-      <div class="form-row">
-        <label>معرّف جهاز العميل</label>
-        <div class="field"><input type="text" name="calling_station_id"
-                                   placeholder="AA:BB:CC:DD:EE:FF"
-                                   value="{{ form.calling_station_id }}"></div>
-      </div>
-      <div class="form-row">
-        <label>معرّف نقطة الوصول</label>
-        <div class="field"><input type="text" name="called_station_id" value="{{ form.called_station_id }}"></div>
-      </div>
-      <div class="form-row">
-        <label>عنوان جهاز الشبكة</label>
-        <div class="field"><input type="text" name="nas_ip" value="{{ form.nas_ip }}"
-                                   placeholder="10.0.0.1"></div>
-      </div>
-      <div class="form-row">
-        <label>نوع منفذ جهاز الشبكة</label>
-        <div class="field">
-          <select name="nas_port_type">
-            {% for t in ["Ethernet","Wireless-802.11","ADSL-CAP","ADSL-DMT","Virtual","PPP"] %}
-              <option value="{{ t }}" {% if form.nas_port_type==t %}selected{% endif %}>{{ t }}</option>
-            {% endfor %}
-          </select>
-        </div>
+
+{{ hub.hero(
+  "محاكاة طلب دخول RADIUS",
+  subtitle="يستدعي محرّك السماح مباشرة بنفس مسار خدمة RADIUS الداخلية — بدون شبكة.",
+  icon="vial",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tool_radius_log') + '">
+      <i class="fa-solid fa-rss"></i> سجل القرارات
+    </a>
+  '
+) }}
+
+<form method="post" class="hub-form">
+
+  {% call hub.fieldset("بيانات طلب الدخول", icon="user-shield") %}
+    <div class="hub-form-row">
+      {{ hub.field("اسم المستخدم", "username", value=form.username, required=True,
+                    placeholder="مثلًا: 7772") }}
+      {{ hub.field("كلمة المرور", "password", value=form.password, required=True,
+                    placeholder="كلمة المرور النصّية") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.fieldset("معلومات المنفذ والجهاز", icon="network-wired") %}
+    <div class="hub-form-row">
+      {{ hub.field("معرّف جهاز العميل (Calling-Station-Id)", "calling_station_id",
+                    value=form.calling_station_id,
+                    placeholder="AA:BB:CC:DD:EE:FF") }}
+      {{ hub.field("معرّف نقطة الوصول (Called-Station-Id)", "called_station_id",
+                    value=form.called_station_id) }}
+      {{ hub.field("عنوان جهاز الشبكة (NAS-IP)", "nas_ip", value=form.nas_ip,
+                    placeholder="10.0.0.1") }}
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-nas_port_type">نوع منفذ جهاز الشبكة</label>
+        <select class="hub-select" id="hub-f-nas_port_type" name="nas_port_type">
+          {% for t in ["Ethernet","Wireless-802.11","ADSL-CAP","ADSL-DMT","Virtual","PPP"] %}
+            <option value="{{ t }}" {% if form.nas_port_type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
-  </div>
+  {% endcall %}
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-paper-plane"></i> أرسِل الطلب
-    </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.tool_radius_log') }}">سجل القرارات</a>
+  <div class="hub-flex-row">
+    {{ hub.btn("أرسِل الطلب", icon="paper-plane", variant="primary", type="submit") }}
+    {{ hub.btn("سجل القرارات", icon="rss", variant="secondary",
+                href=url_for('radius.tool_radius_log')) }}
   </div>
 </form>
 
 {% if result %}
-<div class="card" style="margin-top:16px;border-{% if result.ok %}right:4px solid #2BAACC{% else %}right:4px solid #d04949{% endif %}">
-  <div class="card-header">
-    <span class="title">
-      {% if result.ok %}
-        <i class="fa-solid fa-check-circle" style="color:#2BAACC"></i> قبول الدخول
-      {% else %}
-        <i class="fa-solid fa-times-circle" style="color:#d04949"></i> رفض الدخول
-      {% endif %}
-      &nbsp;—&nbsp; <code>{{ result.reason }}</code>
-    </span>
-  </div>
-  <div class="card-body">
+<div style="margin-top:18px">
+  {% set _icon  = "circle-check"  if result.ok else "circle-xmark" %}
+  {% set _vrt   = "green"        if result.ok else "red" %}
+  {% set _ttl   = "قبول الدخول"  if result.ok else "رفض الدخول" %}
+  {% call hub.section(_ttl, icon=_icon, meta=result.reason or "") %}
     {% if result.message %}
-      <div style="padding:8px 0"><strong>الرسالة:</strong> {{ result.message }}</div>
+      <div style="padding:4px 0 12px;font-size:13.5px">
+        <strong>الرسالة:</strong> {{ result.message }}
+      </div>
     {% endif %}
+
     {% if result.reply_attrs %}
-      <div><strong>خصائص الرد:</strong></div>
-      <table style="width:100%;margin-top:8px">
-        <thead><tr><th>الخاصية</th><th>القيمة</th></tr></thead>
-        <tbody>
-          {% for k, v in result.reply_attrs.items() %}
-            <tr><td><code>{{ k }}</code></td><td>{{ v }}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div style="font-weight:700;margin-bottom:8px;color:var(--hub-text-soft)">
+        <i class="fa-solid fa-list"></i> خصائص الرد:
+      </div>
+      <div class="hub-table-wrap">
+        <table class="hub-table">
+          <thead>
+            <tr><th style="width:40%">الخاصية</th><th>القيمة</th></tr>
+          </thead>
+          <tbody>
+            {% for k, v in result.reply_attrs.items() %}
+              <tr>
+                <td class="mono">{{ k }}</td>
+                <td class="mono small">{{ v }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="hub-text-mute" style="font-size:12.5px">لا خصائص رد.</div>
     {% endif %}
-  </div>
+
+    {# colored side accent #}
+    <div style="height:4px;border-radius:2px;margin-top:14px;
+                background:var(--hub-{{ _vrt }}-soft)"></div>
+  {% endcall %}
 </div>
 {% endif %}
 
-<div class="hint" style="margin-top:12px">
+<div class="hub-text-mute" style="margin-top:12px;font-size:12.5px">
   هذا الاختبار يستدعي محرك السماح مباشرة بنفس المسار الذي تستخدمه خدمة RADIUS الداخلية.
 </div>
+
 {% endblock %}

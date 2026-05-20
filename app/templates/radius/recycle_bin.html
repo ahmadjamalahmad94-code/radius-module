@@ -1,98 +1,129 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Recycle bin — REBUILT (Night N4, 2026-05-21)
+
+   Backend unchanged (app/radius/routes/recycle_bin.py):
+     • items: serialized soft-deleted rows
+              ({entity_type, table, id, label, status,
+                deleted_at, deleted_by, delete_reason})
+     • selected: currently active entity_type filter
+     • entity_labels: dict[entity_type → arabic label]
+     • counts: dict[entity_type → archived count]
+
+   POST → radius.recycle_bin_restore(entity_type, entity_id) restores row.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}سلة المحذوفات{% endblock %}
-{% block page_title %}سلة المحذوفات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
+{% block page_title %}سلة المحذوفات{% endblock %}
 {% block page_sub %}<span class="sub">الأرشفة بديل آمن عن الحذف النهائي</span>{% endblock %}
 
-{% block head_buttons %}
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('radius.users_list') }}">
-    <i class="fa-solid fa-users"></i> المستفيدون
-  </a>
-{% endblock %}
-
 {% block content %}
-<style>
-  .rb-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;font-size:13px;line-height:1.8}
-  .rb-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  .rb-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;border:1px solid #e8deca;background:#fff;color:#263244;text-decoration:none;font-size:12.5px;font-weight:800}
-  .rb-chip.active{background:#e9f7fb;border-color:#2baacc;color:#11708e}
-  .rb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
-  .rb-stat{background:#fff;border:1px solid #e8deca;border-radius:10px;padding:12px}
-  .rb-stat b{display:block;color:#263244;font-size:22px}
-  .rb-stat span{color:#657386;font-size:12px}
-  .rb-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8deca;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(32,44,64,.06)}
-  .rb-table th,.rb-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
-  .rb-table th{font-size:12px;color:#657386;background:#fffaf1}
-  .rb-reason{max-width:320px;color:#5d6b7d;font-size:12.5px;line-height:1.7}
-  .rb-type{display:inline-flex;padding:4px 9px;border-radius:999px;background:#eef5f8;color:#11708e;font-size:11px;font-weight:900}
-</style>
 
-<div class="rb-note">
-  الحذف في هذه المجالات يعني أرشفة قابلة للاستعادة، وليس حذفًا نهائيًا. السجلات المالية لا تظهر هنا لأنها يجب أن تبقى محفوظة وتُصحّح بقيود عكسية أو تسويات.
-</div>
+{{ hub.hero(
+  "سلة المحذوفات",
+  subtitle="الحذف في هذه المجالات أرشفة قابلة للاستعادة، وليس حذفًا نهائيًا — السجلات المالية لا تظهر هنا لأنها تُصحَّح بقيود عكسية.",
+  icon="box-archive",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
+      <i class="fa-solid fa-users"></i> المستفيدون
+    </a>
+  '
+) }}
 
-<div class="rb-filter">
-  <a class="rb-chip {% if not selected %}active{% endif %}" href="{{ url_for('radius.recycle_bin') }}">
-    الكل <span>{{ counts.values()|sum }}</span>
+{# ───── Filter chips (entity_type) ────────────────────── #}
+<form method="get" class="hub-filterbar" onsubmit="return false">
+  <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'ghost' }} hub-btn--sm"
+     href="{{ url_for('radius.recycle_bin') }}">
+    <i class="fa-solid fa-layer-group"></i>
+    الكل
+    <span style="margin-inline-start:6px;padding:1px 7px;border-radius:999px;
+                 background:rgba(255,255,255,.18);font-size:11px">
+      {{ counts.values()|sum }}
+    </span>
   </a>
   {% for entity, label in entity_labels.items() %}
-  <a class="rb-chip {% if selected == entity %}active{% endif %}"
-     href="{{ url_for('radius.recycle_bin', entity_type=entity) }}">
-    {{ label }} <span>{{ counts.get(entity, 0) }}</span>
-  </a>
+    <a class="hub-btn hub-btn--{{ 'primary' if selected == entity else 'secondary' }} hub-btn--sm"
+       href="{{ url_for('radius.recycle_bin', entity_type=entity) }}">
+      {{ label }}
+      <span style="margin-inline-start:6px;padding:1px 7px;border-radius:999px;
+                   background:{{ 'rgba(255,255,255,.18)' if selected == entity else 'var(--hub-bg-soft)' }};
+                   font-size:11px">
+        {{ counts.get(entity, 0) }}
+      </span>
+    </a>
+  {% endfor %}
+</form>
+
+{# ───── Per-entity tiles ──────────────────────────────── #}
+<div class="hub-tile-grid">
+  {% for entity, label in entity_labels.items() %}
+    {{ hub.tile(label + " مؤرشفة", counts.get(entity, 0),
+                icon="box-archive",
+                variant=("brand" if counts.get(entity, 0) else "")) }}
   {% endfor %}
 </div>
 
-<div class="rb-grid">
-  {% for entity, label in entity_labels.items() %}
-  <div class="rb-stat">
-    <b>{{ counts.get(entity, 0) }}</b>
-    <span>{{ label }} مؤرشفة</span>
-  </div>
-  {% endfor %}
-</div>
-
+{# ───── Archived items table ──────────────────────────── #}
 {% if items %}
-<table class="rb-table">
-  <thead>
-    <tr>
-      <th>النوع</th>
-      <th>العنصر</th>
-      <th>الحالة</th>
-      <th>وقت الأرشفة</th>
-      <th>بواسطة</th>
-      <th>السبب</th>
-      <th>إجراء</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in items %}
-    <tr>
-      <td><span class="rb-type">{{ entity_labels.get(item.entity_type, item.entity_type) }}</span></td>
-      <td>
-        <strong>{{ item.label }}</strong>
-        <div class="mono">#{{ item.id }}</div>
-      </td>
-      <td>{{ item.status or 'غير محدد' }}</td>
-      <td class="mono">{{ item.deleted_at or '—' }}</td>
-      <td>{{ item.deleted_by or 'غير معروف' }}</td>
-      <td><div class="rb-reason">{{ item.delete_reason or 'لم يتم تسجيل سبب.' }}</div></td>
-      <td>
-        <form method="post" action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
-              onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');">
-          <button class="btn btn-success btn-sm" type="submit">
-            <i class="fa-solid fa-rotate-left"></i> استعادة
-          </button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-  <div class="empty">
-    <i class="fa-solid fa-box-open"></i>
-    لا توجد عناصر مؤرشفة حاليًا. عند أرشفة مستفيد أو باقة أو جهاز شبكة سيظهر هنا للاستعادة.
+{% call hub.section("العناصر المؤرشفة", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>النوع</th>
+          <th>العنصر</th>
+          <th>الحالة</th>
+          <th>وقت الأرشفة</th>
+          <th>بواسطة</th>
+          <th>السبب</th>
+          <th style="width:120px">إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ hub.pill(entity_labels.get(item.entity_type, item.entity_type),
+                          variant="brand", dot=False) }}</td>
+          <td>
+            <strong>{{ item.label }}</strong>
+            <div class="mono small hub-text-mute">#{{ item.id }}</div>
+          </td>
+          <td>
+            {% if item.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% elif item.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
+            {% elif item.status %}{{ hub.pill(item.status, variant="grey") }}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td class="mono small">{{ item.deleted_at or '—' }}</td>
+          <td>{{ item.deleted_by or '—' }}</td>
+          <td class="hub-text-mute" style="max-width:320px;font-size:12.5px;line-height:1.7">
+            {{ item.delete_reason or 'لم يتم تسجيل سبب.' }}
+          </td>
+          <td>
+            <form method="post"
+                  action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
+                  onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');"
+                  style="display:inline">
+              <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm">
+                <i class="fa-solid fa-rotate-left"></i> استعادة
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا عناصر مؤرشفة",
+  sub="عند أرشفة مستفيد أو باقة أو جهاز شبكة يظهر هنا للاستعادة.",
+  icon="box-open"
+) }}
 {% endif %}
+
 {% endblock %}
