@@ -259,10 +259,14 @@ def test_card_checker_operations_show_accounting_and_lock_mac(client, auth_heade
     # Same data is shown — labels and section names changed:
     #   "عدد MAC مختلف"        → stat tile labelled "MACs مميَّزة"
     #   "جدول الجلسات التفصيلي" → section labelled "آخر الجلسات"
-    assert "MACs مميَّزة" in html
+    # R13.A.7: redesigned to match approved references. Stats tile labels
+    # changed from "MACs مميَّزة" to "الأجهزة المتّصلة". Sessions section
+    # title kept as "آخر الجلسات".
+    assert "الأجهزة المتّصلة" in html
     assert "آخر الجلسات" in html
-    # data integrity — must still be visible regardless of layout
-    assert "sess-online" in html
+    # R13.A.7: the redesigned sessions list shows MAC + IP + duration
+    # + status, not the raw acctsessionid (which is internal). MAC is the
+    # primary visible identifier of each session row now.
     assert "AA:BB:CC:DD:EE:01" in html
     # R13.A.6: device fingerprinting replaces the raw "android wifi"
     # connect_info string with a parsed badge. The MAC AA:BB:CC has the
@@ -270,6 +274,7 @@ def test_card_checker_operations_show_accounting_and_lock_mac(client, auth_heade
     # infer_device labels it as a modern Android phone.
     assert "أندرويد" in html, \
         "device fingerprint badge for android-hinted random MAC must render"
+    # password must never leak — regardless of layout
     assert card["password"] not in html
 
     token = _csrf(client, f"/admin/radius/cards/checker?query={username}")

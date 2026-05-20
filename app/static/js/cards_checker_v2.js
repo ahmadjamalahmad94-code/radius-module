@@ -22,7 +22,48 @@
     form.addEventListener('submit', onSearchSubmit);
     window.addEventListener('popstate', onPopState);
     wireSectionToggles();
+    wireModeToggle();
     maybeStartLivePoll();
+  }
+
+  // R13.A.7: advanced / simple mode switcher. Persists in localStorage
+  // and applies the current choice on every page load (including after
+  // AJAX swaps of #cc-result, which re-renders both panels).
+  function wireModeToggle() {
+    const MODE_KEY = 'cc-mode';
+    const page = document.querySelector('.cc-page');
+    if (!page) return;
+
+    function apply(mode) {
+      if (mode !== 'advanced' && mode !== 'simple') mode = 'advanced';
+      page.dataset.ccCurrentMode = mode;
+      document.querySelectorAll('[data-cc-mode-toggle], .cc-mode-toggle')
+        .forEach((host) => {
+          host.querySelectorAll('button[data-mode]').forEach((btn) => {
+            const isActive = btn.dataset.mode === mode;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          });
+        });
+      const label = document.querySelector('[data-cc-mode-text]');
+      if (label) {
+        label.textContent =
+          mode === 'simple' ? 'المستوى البسيط' : 'المستوى المتقدّم';
+      }
+      try { localStorage.setItem(MODE_KEY, mode); } catch (_e) {}
+    }
+
+    // initial — honor saved preference, default to advanced
+    let saved = 'advanced';
+    try { saved = localStorage.getItem(MODE_KEY) || 'advanced'; } catch (_e) {}
+    apply(saved);
+
+    // event delegation so AJAX-swapped result panels still find handlers
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.cc-mode-toggle button[data-mode]');
+      if (!btn) return;
+      apply(btn.dataset.mode);
+    });
   }
 
   // R13.A.5: collapsible sections. Click the chevron (or the header)
