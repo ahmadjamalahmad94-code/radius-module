@@ -1931,3 +1931,33 @@ body:has(.cc-hero) .page-head{display:none !important}
   color:rgba(255,255,255,.65);
   font-style:italic;
 }
+
+/* Hero — side info pills (package + plan) under the remaining time on
+   the right side of the hero. Fills the empty space below the time so
+   the left info column doesn't carry all the weight. */
+.cc-card-side-info{
+  margin-top:14px;
+  display:flex; flex-direction:column;
+  gap:8px;
+}
+.cc-card-side-row{
+  display:flex; align-items:center; gap:10px;
+  padding:6px 12px;
+  background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;
+  font-size:12.5px;
+  color:#fff;
+  backdrop-filter:blur(3px);
+}
+.cc-card-side-label{
+  font-size:11px;
+  font-weight:700;
+  color:rgba(255,255,255,.75);
+  min-width:60px;
+}
+.cc-card-side-value{
+  display:inline-flex; align-items:center; gap:5px;
+  font-weight:700;
+  color:#fff;
+}

@@ -247,23 +247,30 @@
         <span><span class="num">{{ duration(card.remaining_seconds) }}</span> متبقية</span>
       </div>
       {% endif %}
+
+      {# Moved here from the left info block — balances the hero's
+         visual weight. Plan + package live alongside the number;
+         pricing/manager rows stay on the left side. #}
+      <div class="cc-card-side-info">
+        {% if card.batch and (card.batch.package_name or card.batch.batch_code) %}
+        <div class="cc-card-side-row" data-cc-field="package_name">
+          <span class="cc-card-side-label">الحزمة</span>
+          <span class="cc-card-side-value">{{ card.batch.package_name or card.batch.batch_code }}</span>
+        </div>
+        {% endif %}
+        {% if card.profile and card.profile.name %}
+        <div class="cc-card-side-row" data-cc-field="profile">
+          <span class="cc-card-side-label">الاشتراك</span>
+          <span class="cc-card-side-value">
+            <i class="fa-solid fa-crown" style="font-size:11px;color:#FBBF24"></i>
+            {{ card.profile.name }}
+          </span>
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="cc-card-info">
-      {% if card.batch and (card.batch.package_name or card.batch.batch_code) %}
-      <div class="cc-card-info-row" data-cc-field="package_name">
-        <div class="cc-card-info-label">اسم الحزمة</div>
-        <div class="cc-card-info-value">
-          {{ card.batch.package_name or card.batch.batch_code }}
-        </div>
-      </div>
-      {% endif %}
-      {% if card.profile and card.profile.name %}
-      <div class="cc-card-info-row" data-cc-field="profile">
-        <div class="cc-card-info-label">نوع الاشتراك</div>
-        <span class="cc-card-plan"><i class="fa-solid fa-crown"></i>{{ card.profile.name }}</span>
-      </div>
-      {% endif %}
+    <div class="cc-card-info">{# pricing + manager rows only — package & plan moved to the side-info above #}
       {# Sale price + bulk price — ALWAYS rendered (user request).
          Show 'غير محدد' when the value isn't set instead of hiding
          the row, so the admin always sees the pricing slot even
