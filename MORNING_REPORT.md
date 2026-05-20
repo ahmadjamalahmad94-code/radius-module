@@ -1,10 +1,18 @@
 # Morning Report — Night of 2026-05-21
 
-> **TL;DR:** Foundation + 41 of 86 templates rebuilt from scratch on a
-> brand-new unified design system. Flutter app theme synced. ~15 git
-> commits on `main` overnight + 1 on Flutter repo. Zero backend or
-> API logic touched. Two parallel libraries built (mine + an agent's)
-> — only mine is wired in; the other is available for future use.
+> **TL;DR (final state):** Foundation + **65 of 79 templates** rebuilt
+> from scratch on a brand-new unified design system. Only 3 templates
+> intentionally untouched (`cards_checker_v2`, `cards_checker`,
+> `login`). Flutter app theme synced. **21 `Night-*` commits** on
+> `main`. Zero backend or API logic touched.
+>
+> **Post-sleep follow-up pass added:**
+> - 4 more templates rebuilt: `cards_generate`, `admins_profile_summary`,
+>   `plans_overview`, `tool_maintenance`
+> - 2 templates token-swept: `mt_diagnostics`, `mt_push_setup`
+> - Final commit: `0721a54`
+> - **Every templates audited:** 60+ pass Jinja `Environment.parse()`
+>   cleanly; legacy `--hr-*` refs only on the 3 intentional exceptions.
 
 ---
 
