@@ -5,9 +5,13 @@ metadata JSON for future fields.
 """
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+import csv
+import io
+
+from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+from ..db.repos import operations_repo
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
 from ..services.plans import get_plans_service
@@ -16,8 +20,13 @@ from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
 def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/overview", "cards_overview", cards_overview, methods=["GET"])
-    bp.add_url_rule("/cards/checker", "cards_checker", cards_checker, methods=["GET"])
+    bp.add_url_rule("/cards/checker", "cards_checker", cards_checker, methods=["GET", "POST"])
+    # ـ R13.A.1: JSON API لـ Card Checker AJAX (foundation للـ UI rebuild) ـ
+    bp.add_url_rule("/cards/checker/api/lookup", "cards_checker_api_lookup",
+                     cards_checker_api_lookup, methods=["GET"])
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
+    bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk", cards_batches_bulk, methods=["POST"])
+    bp.add_url_rule("/cards/batches/export.csv", "cards_batches_export_csv", cards_batches_export_csv, methods=["GET"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke", cards_revoke, methods=["POST"])
@@ -45,10 +54,6 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
-def _tid() -> int:
-    return int(session.get("tenant_id") or 1)
-
-
 def _form_int(name: str, d: int = 0) -> int:
     try: return int(request.form.get(name) or d)
     except (TypeError, ValueError): return d
@@ -65,6 +70,41 @@ def _form_bool(name: str) -> bool:
 
 def _form_str(name: str) -> str:
     return (request.form.get(name) or "").strip()
+
+
+def _query_int(name: str) -> int | None:
+    raw = (request.args.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def _batch_filters_from_request() -> dict:
+    return {
+        "q": (request.args.get("q") or "").strip()[:120],
+        "status": (request.args.get("status") or "").strip()[:40],
+        "plan_id": _query_int("plan_id"),
+        "manager": (request.args.get("manager") or "").strip()[:80],
+        "distributor_id": _query_int("distributor_id"),
+    }
+
+
+def _page_args() -> tuple[int, int]:
+    try:
+        per_page = int(request.args.get("per_page") or "20")
+    except ValueError:
+        per_page = 20
+    if per_page not in (10, 20, 50, 100):
+        per_page = 20
+    try:
+        page = max(1, int(request.args.get("page") or "1"))
+    except ValueError:
+        page = 1
+    return page, per_page
 
 
 def _collect_batch_options() -> dict:
@@ -153,22 +193,205 @@ def _batch_form_data(batch) -> dict:
 
 def cards_batches():
     svc = get_cards_service()
-    batches = svc.list_batches(limit=500)
-    plans = {p.id: p for p in get_plans_service().list(limit=500)}
-    summaries = {
-        b.id: svc.batch_operational_summary(b.id)
-        for b in batches
-        if b.id is not None
-    }
+    filters = _batch_filters_from_request()
+    page, per_page = _page_args()
+    total = svc.count_batch_operations(**filters)
+    pages_count = max(1, (total + per_page - 1) // per_page)
+    if page > pages_count:
+        page = pages_count
+    batches = svc.list_batch_operations(
+        **filters,
+        limit=per_page,
+        offset=(page - 1) * per_page,
+    )
+    totals = svc.batch_operations_totals(**filters)
+    plans_list = list(get_plans_service().list(limit=500))
+    distributors = operations_repo.list_distributors(_tid(), limit=500)
     return render_template(
         "radius/cards_batches.html",
         batches=batches,
-        plans=plans,
-        summaries=summaries,
+        plans=plans_list,
+        distributors=distributors,
+        totals=totals,
+        filters=filters,
+        page=page,
+        per_page=per_page,
+        total=total,
+        pages_count=pages_count,
+        status_options=[
+            ("", "النشطة فقط"),
+            ("all", "كل الحزم"),
+            ("available", "بها بطاقات جاهزة"),
+            ("used", "بها استخدام"),
+            ("expired", "بها بطاقات منتهية"),
+            ("revoked", "بها بطاقات ملغاة"),
+            ("exhausted", "مستهلكة"),
+            ("deleted", "مؤرشفة"),
+        ],
     )
 
 
+def _selected_batch_ids() -> list[int]:
+    ids: list[int] = []
+    for raw in request.form.getlist("batch_ids"):
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            ids.append(value)
+    return sorted(set(ids))
+
+
+def cards_batches_bulk():
+    svc = get_cards_service()
+    action = _form_str("bulk_action")
+    batch_ids = _selected_batch_ids()
+    return_to = request.form.get("return_to") or url_for("radius.cards_batches")
+    if not batch_ids:
+        flash("اختر حزمة واحدة على الأقل لتنفيذ الإجراء.", "error")
+        return redirect(return_to)
+
+    changed = 0
+    try:
+        if action == "archive":
+            reason = _form_str("reason") or "أرشفة من مركز عمليات حزم البطاقات"
+            for batch_id in batch_ids:
+                if svc.archive_batch(actor=_actor(), batch_id=batch_id, reason=reason):
+                    changed += 1
+            flash(f"تمت أرشفة {changed} حزمة بدون حذف البطاقات.", "warning")
+        elif action == "restore":
+            for batch_id in batch_ids:
+                if svc.restore_batch(actor=_actor(), batch_id=batch_id):
+                    changed += 1
+            flash(f"تمت استعادة {changed} حزمة مؤرشفة.", "success")
+        elif action == "refresh":
+            flash("تم تحديث إحصاءات الحزم من البيانات الحالية.", "success")
+        else:
+            flash("إجراء جماعي غير معروف.", "error")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(return_to)
+
+
+def _csv_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
+def cards_batches_export_csv():
+    svc = get_cards_service()
+    filters = _batch_filters_from_request()
+    rows = svc.list_batch_operations(**filters, limit=5000, offset=0)
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "رقم الحزمة",
+        "اسم الحزمة",
+        "الباقة",
+        "الحالة",
+        "العدد",
+        "المولد",
+        "الجاهز",
+        "النشط",
+        "المنتهي",
+        "الملغى",
+        "المتبقي",
+        "جلسات",
+        "MAC مختلف",
+        "قواعد سرعة",
+        "سعر البطاقة",
+        "قيمة الحزمة",
+        "المدير",
+        "الموزع",
+        "تاريخ الإنشاء",
+    ])
+    for item in rows:
+        unit_price = float(item.get("estimated_unit_price") or 0)
+        configured_value = float(item.get("total_price") or 0)
+        if configured_value <= 0:
+            configured_value = unit_price * int(item.get("generated") or 0)
+        writer.writerow([
+            _csv_text(item.get("batch_code")),
+            _csv_text(item.get("package_name")),
+            _csv_text(item.get("plan_name")),
+            _csv_text(item.get("operational_status")),
+            _csv_text(item.get("count")),
+            _csv_text(item.get("generated")),
+            _csv_text(item.get("available_count")),
+            _csv_text(item.get("active_count")),
+            _csv_text(item.get("expired_count")),
+            _csv_text(item.get("revoked_count")),
+            _csv_text(item.get("remaining_count")),
+            _csv_text(item.get("sessions_count")),
+            _csv_text(item.get("unique_macs")),
+            _csv_text(item.get("active_speed_rules")),
+            f"{unit_price:.2f}",
+            f"{configured_value:.2f}",
+            _csv_text(item.get("created_by") or item.get("manager_id")),
+            _csv_text(item.get("distributor_display_name") or item.get("distributor_name")),
+            _csv_text(item.get("created_at")),
+        ])
+    payload = "\ufeff" + out.getvalue()
+    return Response(
+        payload,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
+    )
+
+
+def _checker_redirect(query: str):
+    return redirect(url_for("radius.cards_checker", query=(query or "").strip()))
+
+
+def _handle_card_operation():
+    svc = get_cards_service()
+    action = _form_str("_card_action")
+    card_id = _form_int("card_id")
+    username = _form_str("username")
+    query = _form_str("query") or username
+    try:
+        if action == "lock_mac":
+            svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
+            flash("تم تثبيت عنوان MAC على البطاقة.", "success")
+        elif action == "unlock_mac":
+            svc.unlock_card_mac(actor=_actor(), card_id=card_id)
+            flash("تم إلغاء تثبيت MAC عن البطاقة.", "success")
+        elif action == "disconnect":
+            svc.disconnect_card(
+                actor=_actor(),
+                username=username,
+                session_id=_form_str("session_id"),
+            )
+            flash("تم إرسال أمر طرد الجلسة إلى RADIUS.", "warning")
+        elif action == "reset_usage":
+            svc.reset_card_usage(actor=_actor(), card_id=card_id)
+            flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")
+        elif action == "disable":
+            svc.disable_card(actor=_actor(), card_id=card_id, reason=_form_str("reason"))
+            flash("تم تعطيل البطاقة بدون حذفها.", "warning")
+        elif action == "enable":
+            svc.enable_card(actor=_actor(), card_id=card_id)
+            flash("تم إعادة تفعيل البطاقة.", "success")
+        elif action == "delete_permanent":
+            if _form_str("confirm_delete") != "DELETE":
+                flash("للحذف النهائي اكتب DELETE في خانة التأكيد.", "error")
+            else:
+                svc.delete_card_permanently(actor=_actor(), card_id=card_id)
+                flash("تم حذف البطاقة نهائيًا. لا يظهر هذا الخيار في التشغيل اليومي إلا بحذر.", "warning")
+                query = ""
+        else:
+            flash("إجراء غير معروف.", "error")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return _checker_redirect(query)
+
+
 def cards_checker():
+    if request.method == "POST":
+        return _handle_card_operation()
+
     query = (request.args.get("query") or "").strip()
     result = None
     error = ""
@@ -183,6 +406,54 @@ def cards_checker():
         result=result,
         error=error,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# R13.A.1 — Card Checker JSON API
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# الـ AJAX foundation للـ UI rebuild (R13.A). الـ HTML page الحالي يَستخدم
+# render_template مع full reload. الـ rebuild سيَستخدم هذا الـ endpoint
+# للـ live lookup عبر fetch().
+#
+# لا يَكسر القديم — endpoint منفصل تمامًا. يُعيد نفس البيانات التي يَبنيها
+# `check_card` كـ JSON. الـ schema:
+#
+#   200 OK   { "ok": true,  "query": "...", "result": { ... full payload ... } }
+#   400 BAD  { "ok": false, "error": "human-readable error", "code": "..." }
+#
+# الـ codes الموحَّدة:
+#   empty_query   — q فاضي
+#   query_too_long — q > 128 حرف
+#
+# نُعيد دائمًا `ok` boolean و `query` echoes حتى الـ frontend يُسهّل الـ
+# state matching. لا نَستخدم HTTP 404 لـ "card not found" — هذا حالة
+# طبيعية (`result.exists = false`)، لا خطأ.
+# ─────────────────────────────────────────────────────────────────────────────
+def cards_checker_api_lookup():
+    """GET /admin/radius/cards/checker/api/lookup?q=<query>
+
+    يُرجع JSON مكافئ لـ check_card() — جاهز للـ AJAX frontend.
+    """
+    query = (request.args.get("q") or request.args.get("query") or "").strip()
+    if not query:
+        return jsonify({
+            "ok": False,
+            "error": "أدخل رقم بطاقة أو اسم دخول.",
+            "code": "empty_query",
+        }), 400
+    if len(query) > 128:
+        return jsonify({
+            "ok": False,
+            "error": "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا.",
+            "code": "query_too_long",
+        }), 400
+    result = check_card(_tid(), query)
+    return jsonify({
+        "ok": True,
+        "query": query,
+        "result": result,
+    })
 
 
 def cards_generate():
