@@ -6,7 +6,10 @@ CardsStore helpers used by the web admin.
 """
 from __future__ import annotations
 
-from flask import Blueprint, g, request
+import csv
+import io
+
+from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusError, RadiusValidationError
 from ..access_control import batch_in_scope, current_distributor, deny_out_of_scope
@@ -27,6 +30,10 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_generate), methods=["POST"])
     bp.add_url_rule("/cards/batches", "cards_batches_list",
                     require_api_token(cards_batches_list), methods=["GET"])
+    bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk",
+                    require_api_token(cards_batches_bulk), methods=["POST"])
+    bp.add_url_rule("/cards/batches/export.csv", "cards_batches_export_csv",
+                    require_api_token(cards_batches_export_csv), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_get",
                     require_api_token(cards_batch_get), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_update",
@@ -152,6 +159,52 @@ def _body() -> dict:
     return body if isinstance(body, dict) else {}
 
 
+def _arg_int(name: str, default: int | None = None) -> int | None:
+    raw = request.args.get(name)
+    if raw in (None, ""):
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value
+
+
+def _batch_operation_filters() -> dict:
+    filters = {
+        "q": (request.args.get("q") or request.args.get("query") or "").strip()[:120],
+        "status": (request.args.get("status") or "").strip()[:40],
+        "plan_id": _arg_int("plan_id"),
+        "manager": (request.args.get("manager") or "").strip()[:80],
+        "distributor_id": _arg_int("distributor_id"),
+    }
+    dist = current_distributor()
+    if dist:
+        filters["distributor_id"] = int(dist["id"])
+    return filters
+
+
+def _pagination() -> tuple[int, int, int, int]:
+    limit = _arg_int("limit")
+    offset = _arg_int("offset")
+    if limit is not None or offset is not None:
+        final_limit = min(max(limit or 100, 1), 500)
+        final_offset = max(offset or 0, 0)
+        page = (final_offset // final_limit) + 1
+        return final_limit, final_offset, page, final_limit
+    page = max(_arg_int("page", 1) or 1, 1)
+    per_page = _arg_int("per_page", 20) or 20
+    if per_page not in (10, 20, 50, 100):
+        per_page = 20
+    return per_page, (page - 1) * per_page, page, per_page
+
+
+def _csv_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
 # ─────────────── views ───────────────
 
 def cards_generate():
@@ -211,17 +264,141 @@ def cards_generate():
 
 
 def cards_batches_list():
-    try:
-        limit = min(int(request.args.get("limit") or 100), 500)
-        offset = max(int(request.args.get("offset") or 0), 0)
-    except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
     from ...radius.services.cards import get_cards_service
-    items = get_cards_service().list_batches(limit=limit, offset=offset)
-    dist = current_distributor()
-    if dist:
-        items = [b for b in items if int(b.distributor_id or 0) == int(dist["id"])]
-    return ok({"items": [_serialize_batch(b) for b in items], "count": len(items)})
+
+    limit, offset, page, per_page = _pagination()
+    filters = _batch_operation_filters()
+    svc = get_cards_service()
+    items = svc.list_batch_operations(**filters, limit=limit, offset=offset)
+    total = svc.count_batch_operations(**filters)
+    return ok({
+        "items": items,
+        "count": len(items),
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": max(1, (total + per_page - 1) // per_page),
+        "totals": svc.batch_operations_totals(**filters),
+        "filters": filters,
+    })
+
+
+def cards_batches_bulk():
+    body = _body()
+    action = str(body.get("action") or body.get("bulk_action") or "").strip()
+    raw_ids = body.get("batch_ids") or body.get("ids") or []
+    if not isinstance(raw_ids, list):
+        return fail("validation_error", "batch_ids must be a list", status=422)
+    batch_ids: list[int] = []
+    for raw in raw_ids:
+        try:
+            batch_id = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if batch_id > 0 and batch_id not in batch_ids:
+            batch_ids.append(batch_id)
+    if not batch_ids:
+        return fail("validation_error", "select at least one batch", status=422)
+    for batch_id in batch_ids:
+        if not batch_in_scope(batch_id):
+            return deny_out_of_scope()
+
+    from ...radius.services.cards import get_cards_service
+
+    svc = get_cards_service()
+    changed = 0
+    reason = str(body.get("reason") or "")[:300]
+    try:
+        if action == "archive":
+            reason = reason or "Archived from card batch operations API"
+            for batch_id in batch_ids:
+                if svc.archive_batch(actor=_actor(), batch_id=batch_id, reason=reason):
+                    changed += 1
+        elif action == "restore":
+            for batch_id in batch_ids:
+                if svc.restore_batch(actor=_actor(), batch_id=batch_id):
+                    changed += 1
+        elif action == "refresh":
+            changed = 0
+        else:
+            return fail("validation_error", "unknown bulk action", status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({
+        "action": action,
+        "requested": len(batch_ids),
+        "changed": changed,
+        "batch_ids": batch_ids,
+    })
+
+
+def cards_batches_export_csv():
+    from ...radius.services.cards import get_cards_service
+
+    filters = _batch_operation_filters()
+    rows = get_cards_service().list_batch_operations(
+        **filters,
+        limit=5000,
+        offset=0,
+    )
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "batch_code",
+        "package_name",
+        "plan_name",
+        "operational_status",
+        "count",
+        "generated",
+        "available_count",
+        "active_count",
+        "expired_count",
+        "revoked_count",
+        "remaining_count",
+        "sessions_count",
+        "unique_macs",
+        "active_speed_rules",
+        "estimated_unit_price",
+        "estimated_value",
+        "created_by",
+        "distributor",
+        "created_at",
+    ])
+    for item in rows:
+        unit_price = float(item.get("estimated_unit_price") or 0)
+        configured_value = float(item.get("total_price") or 0)
+        if configured_value <= 0:
+            configured_value = unit_price * int(item.get("generated") or 0)
+        writer.writerow([
+            _csv_text(item.get("batch_code")),
+            _csv_text(item.get("package_name")),
+            _csv_text(item.get("plan_name")),
+            _csv_text(item.get("operational_status")),
+            _csv_text(item.get("count")),
+            _csv_text(item.get("generated")),
+            _csv_text(item.get("available_count")),
+            _csv_text(item.get("active_count")),
+            _csv_text(item.get("expired_count")),
+            _csv_text(item.get("revoked_count")),
+            _csv_text(item.get("remaining_count")),
+            _csv_text(item.get("sessions_count")),
+            _csv_text(item.get("unique_macs")),
+            _csv_text(item.get("active_speed_rules")),
+            f"{unit_price:.2f}",
+            f"{configured_value:.2f}",
+            _csv_text(item.get("created_by") or item.get("manager_id")),
+            _csv_text(
+                item.get("distributor_display_name")
+                or item.get("distributor_name")
+            ),
+            _csv_text(item.get("created_at")),
+        ])
+    payload = "\ufeff" + out.getvalue()
+    return Response(
+        payload,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
+    )
 
 
 def cards_batch_get(batch_id: int):

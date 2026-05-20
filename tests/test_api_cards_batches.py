@@ -66,6 +66,39 @@ def test_batches_list_pagination(client, auth_headers):
     assert len(res.get_json()["data"]["items"]) <= 1
 
 
+def test_batches_operations_list_supports_filters_and_totals(client, auth_headers):
+    created = client.post(
+        "/api/v1/cards/generate",
+        json={
+            "plan_id": 1,
+            "count": 2,
+            "username_prefix": "ops",
+            "package_name": "API Ops Batch",
+            "price_per_card": 2.5,
+        },
+        headers=auth_headers,
+    )
+    assert created.status_code == 201, created.get_json()
+    batch = created.get_json()["data"]["batch"]
+    cards = created.get_json()["data"]["cards"]
+
+    res = client.get(
+        "/api/v1/cards/batches",
+        query_string={"q": batch["batch_code"], "per_page": 10},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["total"] >= 1
+    assert data["totals"]["batch_count"] >= 1
+    assert data["items"][0]["batch_code"] == batch["batch_code"]
+    assert data["items"][0]["available_count"] >= 2
+    assert data["items"][0]["estimated_unit_price"] == 2.5
+    assert "password" not in data["items"][0]
+    for card in cards:
+        assert card["password"] not in str(data)
+
+
 def test_batch_get_round_trips(client, auth_headers, fresh_batch_id):
     res = client.get(
         f"/api/v1/cards/batches/{fresh_batch_id}", headers=auth_headers
@@ -76,6 +109,37 @@ def test_batch_get_round_trips(client, auth_headers, fresh_batch_id):
     assert data["count"] == 3
     assert data["generated"] == 3
     assert data["batch_code"].startswith("B-")
+
+
+def test_batches_export_csv_uses_current_filters_and_hides_passwords(
+    client,
+    auth_headers,
+):
+    created = client.post(
+        "/api/v1/cards/generate",
+        json={
+            "plan_id": 1,
+            "count": 1,
+            "username_prefix": "csv",
+            "package_name": "CSV API Batch",
+        },
+        headers=auth_headers,
+    )
+    assert created.status_code == 201, created.get_json()
+    batch = created.get_json()["data"]["batch"]
+    card = created.get_json()["data"]["cards"][0]
+
+    res = client.get(
+        "/api/v1/cards/batches/export.csv",
+        query_string={"q": batch["batch_code"]},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    assert res.headers["Content-Type"].startswith("text/csv")
+    csv_text = res.get_data(as_text=True)
+    assert "batch_code" in csv_text
+    assert batch["batch_code"] in csv_text
+    assert card["password"] not in csv_text
 
 
 def test_batch_get_404_on_missing(client, auth_headers):
@@ -124,3 +188,53 @@ def test_cards_of_batch_404_on_missing(client, auth_headers):
     )
     assert res.status_code == 404
     assert res.get_json()["error"]["code"] == "not_found"
+
+
+def test_batches_bulk_archive_and_restore_are_soft(client, auth_headers):
+    from app.radius.db.repos import cards_repo
+
+    created = client.post(
+        "/api/v1/cards/generate",
+        json={"plan_id": 1, "count": 2, "username_prefix": "bulkapi"},
+        headers=auth_headers,
+    )
+    assert created.status_code == 201, created.get_json()
+    batch_id = created.get_json()["data"]["batch"]["id"]
+
+    archived = client.post(
+        "/api/v1/cards/batches/bulk",
+        json={
+            "action": "archive",
+            "batch_ids": [batch_id],
+            "reason": "api test archive",
+        },
+        headers=auth_headers,
+    )
+    assert archived.status_code == 200, archived.get_json()
+    assert archived.get_json()["data"]["changed"] == 1
+    batch = cards_repo.get_batch(1, batch_id)
+    assert batch is not None
+    assert batch.deleted_at is not None
+    assert batch.delete_reason == "api test archive"
+    assert len(cards_repo.list_cards(1, batch_id=batch_id)) == 2
+
+    restored = client.post(
+        "/api/v1/cards/batches/bulk",
+        json={"action": "restore", "batch_ids": [batch_id]},
+        headers=auth_headers,
+    )
+    assert restored.status_code == 200, restored.get_json()
+    assert restored.get_json()["data"]["changed"] == 1
+    batch = cards_repo.get_batch(1, batch_id)
+    assert batch is not None
+    assert batch.deleted_at is None
+
+
+def test_batches_bulk_rejects_unknown_action(client, auth_headers, fresh_batch_id):
+    res = client.post(
+        "/api/v1/cards/batches/bulk",
+        json={"action": "delete", "batch_ids": [fresh_batch_id]},
+        headers=auth_headers,
+    )
+    assert res.status_code == 422
+    assert res.get_json()["error"]["code"] == "validation_error"
