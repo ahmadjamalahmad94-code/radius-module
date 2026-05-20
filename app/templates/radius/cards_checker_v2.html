@@ -264,65 +264,66 @@
       </div>
     </div>
 
-    <div class="cc-card-info">{# pricing + manager rows only — package & plan moved to the side-info above #}
+    {# Left-side info — same frosted pill style as the right .cc-card-side-info
+       so both sides read as one consistent system. #}
+    <div class="cc-card-info cc-card-side-info">{# pricing + manager rows only — package & plan moved to the side-info above #}
       {# Sale price + bulk price — ALWAYS rendered (user request).
          Show 'غير محدد' when the value isn't set instead of hiding
          the row, so the admin always sees the pricing slot even
          when empty. #}
-      <div class="cc-card-info-row" data-cc-field="price">
-        <div class="cc-card-info-label">سعر البيع</div>
-        <div class="cc-card-info-value">
+      <div class="cc-card-side-row" data-cc-field="price">
+        <span class="cc-card-side-label">سعر البيع</span>
+        <span class="cc-card-side-value">
           {% if card.batch and (card.batch.unit_price or 0) > 0 %}
-            <span class="cc-card-price">{{ '%.2f' % card.batch.unit_price }}</span>
-            <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+            {{ '%.2f' % card.batch.unit_price }}
+            <span style="opacity:.75;font-size:11px">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
           {% else %}
-            <span class="cc-card-price-empty">غير محدد</span>
+            <span class="cc-card-side-empty">غير محدد</span>
           {% endif %}
-        </div>
+        </span>
       </div>
-      <div class="cc-card-info-row" data-cc-field="price_bulk">
-        <div class="cc-card-info-label">سعر الجملة</div>
-        <div class="cc-card-info-value">
+      <div class="cc-card-side-row" data-cc-field="price_bulk">
+        <span class="cc-card-side-label">سعر الجملة</span>
+        <span class="cc-card-side-value">
           {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
-            <span class="cc-card-price">{{ '%.2f' % card.batch.price_bulk }}</span>
-            <span class="cc-card-currency">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+            {{ '%.2f' % card.batch.price_bulk }}
+            <span style="opacity:.75;font-size:11px">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
           {% else %}
-            <span class="cc-card-price-empty">غير محدد</span>
+            <span class="cc-card-side-empty">غير محدد</span>
           {% endif %}
-        </div>
+        </span>
       </div>
       {% if card.batch and card.batch.created_by_name %}
-      <div class="cc-card-info-row" data-cc-field="created_by_name">
-        <div class="cc-card-info-label">المدير المُنشئ</div>
-        <div class="cc-card-info-value">
+      <div class="cc-card-side-row" data-cc-field="created_by_name">
+        <span class="cc-card-side-label">المُنشئ</span>
+        <span class="cc-card-side-value">
           <i class="fa-solid fa-user-pen" style="font-size:11px;opacity:.85"></i>
           {{ card.batch.created_by_name }}
-        </div>
+        </span>
       </div>
       {% endif %}
       {% if card.batch and card.batch.manager_name %}
-      <div class="cc-card-info-row" data-cc-field="manager_name">
-        <div class="cc-card-info-label">المدير المالك</div>
-        <div class="cc-card-info-value">
+      <div class="cc-card-side-row" data-cc-field="manager_name">
+        <span class="cc-card-side-label">المالك</span>
+        <span class="cc-card-side-value">
           <i class="fa-solid fa-user-shield" style="font-size:11px;opacity:.85"></i>
           {{ card.batch.manager_name }}
-        </div>
+        </span>
       </div>
       {% endif %}
 
       {# Distributor / seller — ALWAYS rendered (per user request) in
-         the same left-column style as the manager rows. Shows 'غير
-         محدد' if the batch wasn't assigned to a distributor. #}
-      <div class="cc-card-info-row" data-cc-field="distributor">
-        <div class="cc-card-info-label">الموزّع</div>
-        <div class="cc-card-info-value">
+         the same frosted pill style as the rest. #}
+      <div class="cc-card-side-row" data-cc-field="distributor">
+        <span class="cc-card-side-label">الموزّع</span>
+        <span class="cc-card-side-value">
           <i class="fa-solid fa-people-arrows" style="font-size:11px;opacity:.85"></i>
           {% if card.batch and card.batch.distributor_name %}
             {{ card.batch.distributor_name }}
           {% else %}
-            <span class="cc-card-price-empty">غير محدد</span>
+            <span class="cc-card-side-empty">غير محدد</span>
           {% endif %}
-        </div>
+        </span>
       </div>
     </div>
   </div>

@@ -2017,3 +2017,44 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-size:13px !important;
 }
 .cc-card-password-value{ font-size:13.5px !important }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  Hero — unified pill side-rows (left & right) + further squeeze    ║
+   ║                                                                      ║
+   ║  Sale price, bulk price, creator, owner, distributor — all now use  ║
+   ║  the same .cc-card-side-row frosted-pill style as الحزمة/الاشتراك. ║
+   ║  Constrain side-row max-width so the pill doesn't stretch to fill   ║
+   ║  the column when content is short ('غير محدد', 2.50 JOD, …).       ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+.cc-card-side-row{
+  /* Fit the content; don't stretch to fill the column. */
+  width:fit-content;
+  max-width:100%;
+  padding:5px 12px !important;
+  font-size:12px !important;
+  line-height:1.4;
+}
+.cc-card-side-label{
+  min-width:0 !important;
+  font-size:10.5px !important;
+}
+.cc-card-side-value{
+  font-size:12px !important;
+}
+
+/* Tighter gap on both info columns now they use the same pill style */
+.cc-card-info.cc-card-side-info,
+.cc-card-side-info{
+  margin-top:0 !important;
+  gap:6px !important;
+}
+
+/* And one more height squeeze: nudge the hero overall paddings */
+.cc-card-hero{
+  padding:12px 16px !important;
+}
+.cc-card-main{ gap:14px !important }
+.cc-card-bottom{
+  margin-top:6px !important;
+  padding-top:6px !important;
+}
