@@ -405,7 +405,10 @@ body[data-hb-side="collapsed"] .hb-side-user-caret{
 }
 
 body[data-hb-side="collapsed"] .hb-side-brand{
-  justify-content:center;padding:14px 8px 12px;
+  justify-content:center;
+  /* Extra bottom padding to make room for the FAB INSIDE the brand
+     block (instead of straddling the divider). */
+  padding:14px 8px 46px;
 }
 /* In collapsed mode the inner logo wrapper had `flex:1` (so the
    logo + label text could span the row in opened mode). With the
@@ -420,28 +423,29 @@ body[data-hb-side="collapsed"] .hb-side-logo{
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn{
   position:absolute;
-  /* Centered FAB beneath the logo square, straddling the brand/nav
-     divider. `left:50% + translateX(-50%)` works the same in RTL/LTR
-     because it operates on the visual axis, not the inline axis.
-     Clear any inline-axis positioning that may carry over from the
-     opened-state flex layout. */
-  bottom:-16px;
+  /* Tucked INSIDE the brand block now (not poking out). The extra
+     `padding-bottom: 46px` on the brand block reserves the space.
+     `left:50% + translateX(-50%)` centers it horizontally beneath
+     the Ho mark in both RTL and LTR. */
+  bottom:10px;
   left:50%;
   right:auto;
+  top:auto;
   inset-inline-start:auto;
   inset-inline-end:auto;
   transform:translateX(-50%);
-  width:32px;height:32px;
+  width:26px;height:26px;                 /* smaller, more discreet */
   background:var(--hb-purple) !important;
   color:#fff !important;
   border:2px solid #fff;
-  box-shadow:0 4px 12px rgba(107,90,237,.35);
+  font-size:9px;
+  box-shadow:0 3px 8px rgba(107,90,237,.30);
   z-index:3;
 }
 body[data-hb-side="collapsed"] .hb-side-collapse-btn:hover{
   background:var(--hb-purple-deep) !important;
-  /* keep the centering — only ADD the scale */
-  transform:translateX(-50%) scale(1.08);
+  /* Preserve centering when scaling on hover. */
+  transform:translateX(-50%) scale(1.10);
 }
 
 body[data-hb-side="collapsed"] .hb-side-nav{padding:10px 8px 16px}
