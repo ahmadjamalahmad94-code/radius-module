@@ -2135,3 +2135,27 @@ body:has(.cc-hero) .page-head{display:none !important}
   border-radius:6px;
   direction:ltr;
 }
+
+/* Sessions / multi-MAC picker — select-all / select-none toolbar */
+.cc-gmodal-toolbar{
+  display:flex; gap:6px;
+  margin:6px 0 8px;
+}
+.cc-gmodal-toolbar-btn{
+  flex:1;
+  padding:6px 10px;
+  border-radius:8px;
+  border:1px solid #E5E0F5;
+  background:#fff;
+  color:#475569;
+  font-family:inherit;
+  font-size:11.5px;font-weight:700;
+  cursor:pointer;
+  transition:.15s ease;
+  display:inline-flex; align-items:center; justify-content:center; gap:5px;
+}
+.cc-gmodal-toolbar-btn:hover{
+  background:#F4F1FE;
+  color:#6B5AED;
+  border-color:#D5CCF5;
+}

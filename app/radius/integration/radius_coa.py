@@ -426,19 +426,25 @@ def _broadcast(label: str, results: list[CoaResult],
     return CoaResult(ok=ok, code=0, code_name=name, reply_message=msg)
 
 
-def disconnect_user(tenant_id: int, username: str) -> CoaResult:
-    """Kick EVERY active session for `username` — not just the newest.
+def disconnect_user(tenant_id: int, username: str,
+                     *, session_ids: list[str] | None = None) -> CoaResult:
+    """Disconnect one or more active sessions for `username`.
 
-    Cards with multiple concurrent devices (3 phones on one card,
-    family sharing, …) have multiple radacct rows. The old behaviour
-    here picked the most recent one with `LIMIT 1`, so the other
-    devices kept running. Now we iterate every active session and
-    send a Disconnect-Request to each.
+    `session_ids` selects WHICH sessions to kick:
+       • None or empty list → kick EVERY active session (bulk).
+       • Non-empty list     → kick only sessions whose acctsessionid is
+                              in the list; the others keep running.
 
-    Returns a summarised CoaResult (see `_broadcast`) so the caller's
-    existing `.ok` / `.code_name` checks keep working.
+    A card with multiple concurrent devices (3 phones, family sharing,
+    …) has multiple radacct rows. The Card Checker's Disconnect picker
+    sends the IDs of the rows the operator selected; speed/time
+    changes still pass None to affect all sessions on the card.
     """
     sessions = find_all_nas_for_sessions(tenant_id, username)
+    if session_ids:
+        wanted = {s.strip() for s in session_ids if s and s.strip()}
+        if wanted:
+            sessions = [s for s in sessions if s["session_id"] in wanted]
     if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
                           reply_message=f"لا جلسة نشطة لـ {username}")

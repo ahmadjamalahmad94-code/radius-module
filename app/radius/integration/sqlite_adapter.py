@@ -232,7 +232,9 @@ class SqliteAdapter(RadiusAdapter):
                     return out
         return out
 
-    def disconnect(self, username: str, *, session_id: Optional[str] = None) -> None:
+    def disconnect(self, username: str, *,
+                    session_id: Optional[str] = None,
+                    session_ids: Optional[list[str]] = None) -> None:
         """R11.16: يستخدم CoA Disconnect-Request (RFC 5176, UDP/3799) بدل
         sync_queue → MT API (TCP/8728).
 
@@ -257,7 +259,13 @@ class SqliteAdapter(RadiusAdapter):
         from ..db.connection import transaction
         from .radius_coa import disconnect_user
 
-        res = disconnect_user(_tid(), username)
+        # Normalise: prefer the list form. The single `session_id`
+        # parameter is kept for the legacy callers that pass one ID
+        # directly (e.g. /admin/radius/online's per-row kick button).
+        ids = list(session_ids) if session_ids else (
+            [session_id] if session_id else None
+        )
+        res = disconnect_user(_tid(), username, session_ids=ids)
         if not res.ok:
             _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
                           username, res.code_name, res.reply_message)

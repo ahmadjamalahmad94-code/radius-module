@@ -556,11 +556,26 @@ class CardsService:
         self._audit.record(actor=actor, action="card.delete_permanent",
                            target_type="card", target_id=str(card_id))
 
-    def disconnect_card(self, *, actor: str, username: str, session_id: str = "") -> None:
-        self._adapter.disconnect(username, session_id=session_id or None)
+    def disconnect_card(self, *, actor: str, username: str,
+                          session_id: str = "",
+                          session_ids: list[str] | None = None) -> None:
+        """Kick one, many, or all active sessions for the card.
+
+        Selection rules (most-specific wins):
+          • session_ids non-empty → kick exactly those.
+          • session_id given      → kick that single one (legacy path).
+          • neither               → kick every active session ('all').
+        """
+        ids = list(session_ids) if session_ids else (
+            [session_id] if session_id else None
+        )
+        self._adapter.disconnect(username, session_ids=ids)
         self._audit.record(actor=actor, action="card.disconnect",
                            target_type="card", target_id=username,
-                           payload={"session_id": session_id or ""})
+                           payload={
+                               "session_ids": ids or "all",
+                               "count":       len(ids) if ids else None,
+                           })
 
     def archive_batch(self, *, actor: str, batch_id: int, reason: str = "") -> bool:
         archived = cards_repo.archive_batch(

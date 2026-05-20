@@ -368,12 +368,24 @@ def _handle_card_operation():
             svc.unlock_card_mac(actor=_actor(), card_id=card_id)
             flash("تم إلغاء تثبيت MAC عن البطاقة.", "success")
         elif action == "disconnect":
+            # session_ids = comma-separated acctsessionids (from the
+            # per-device picker). Empty / missing → kick all.
+            ids_raw = _form_str("session_ids")
+            ids = [s.strip() for s in ids_raw.split(",") if s.strip()] if ids_raw else None
             svc.disconnect_card(
                 actor=_actor(),
                 username=username,
                 session_id=_form_str("session_id"),
+                session_ids=ids,
             )
-            flash("تم إرسال أمر طرد الجلسة إلى RADIUS.", "warning")
+            if ids:
+                flash(
+                    f"تم إرسال أمر قطع لـ {len(ids)} جلسة"
+                    + (" مختارة." if len(ids) > 1 else "."),
+                    "warning",
+                )
+            else:
+                flash("تم إرسال أمر قطع لكل الجلسات النشطة.", "warning")
         elif action == "reset_usage":
             svc.reset_card_usage(actor=_actor(), card_id=card_id)
             flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")

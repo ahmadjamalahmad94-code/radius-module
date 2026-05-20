@@ -795,22 +795,38 @@
              the modal's confirm handler submits the hidden form. #}
           <div class="cc-actions">
 
+            {# Disconnect — picker over the card's CURRENTLY active
+               sessions. The admin picks which device(s) to kick (or
+               'select all'); other active sessions keep running.
+               session_ids is a CSV of acctsessionid strings.
+
+               Build a minimal payload (id/mac/ip/duration/started_at)
+               for the JS picker — the full session dict is too big
+               for an attribute and we only need these 5 fields. #}
+            {% set _active_sessions = [] %}
+            {% for ses in (s.latest_sessions or []) if ses.online %}
+              {% set _ = _active_sessions.append({
+                'id':       ses.session_id or (ses.id|string),
+                'mac':      ses.mac_address or '',
+                'ip':       ses.ip_address or '',
+                'duration': ses.duration_seconds or 0,
+                'started':  ses.started_at or '',
+              }) %}
+            {% endfor %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="disconnect">
               <input type="hidden" name="op" value="disconnect">
+              <input type="hidden" name="session_ids" data-cc-disc-field>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" {% if not ops.can_disconnect %}disabled{% endif %}
+              <button class="cc-action" type="button"
+                      {% if not ops.can_disconnect %}disabled{% endif %}
                       data-cc-op="disconnect"
-                      onclick="window.ccModal && window.ccModal.confirm({
-                        icon:'warn', title:'قطع الجلسة',
-                        body:'سيتم طرد الجلسة الحيّة لـ <strong>{{ card.username }}</strong> من MikroTik. ' +
-                             'يمكنه الاتصال من جديد بعد ذلك.',
-                        confirmText:'قطع',
-                        onConfirm: () => this.closest('form').submit()
-                      });">
+                      data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">قطع الجلسة</div>
-                  <div class="cc-action-sub">طرد فوري من MikroTik</div>
+                  <div class="cc-action-sub">
+                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                  </div>
                 </div>
               </button>
             </form>
@@ -1437,13 +1453,108 @@
       show();
     }
 
+    function sessionsPicker(opts){
+      // Multi-select picker over the card's currently-active sessions.
+      // Each row shows MAC + IP + duration. Includes a 'select all'
+      // toggle. onConfirm receives a comma-joined string of session
+      // IDs picked, ready for submission.
+      opts = opts || {};
+      var sessions = (opts.sessions || []).filter(Boolean);
+      var fmtDur = function(secs){
+        secs = parseInt(secs, 10) || 0;
+        var h = Math.floor(secs / 3600);
+        var m = Math.floor((secs % 3600) / 60);
+        return (h ? h + 'س ' : '') + m + 'د';
+      };
+      var rowsHtml = '';
+      if (sessions.length){
+        for (var i=0;i<sessions.length;i++){
+          var s = sessions[i];
+          rowsHtml += '<label class="cc-gmodal-mac-row" data-sess="' + esc(s.id) + '">' +
+            '<input type="checkbox" class="cc-gmodal-mac-check" data-sess-check value="' + esc(s.id) + '">' +
+            '<span class="cc-gmodal-mac-row-ic"><i class="fa-solid fa-wifi"></i></span>' +
+            '<div class="cc-gmodal-mac-row-body">' +
+              '<div class="cc-gmodal-mac-row-mac">' + esc(s.mac || '—') + '</div>' +
+              '<div class="cc-gmodal-mac-row-meta">' +
+                'IP ' + esc(s.ip || '—') + ' · ' + fmtDur(s.duration) +
+              '</div>' +
+            '</div></label>';
+        }
+      } else {
+        rowsHtml = '<div class="cc-gmodal-mac-list-empty">' +
+                   'لا أجهزة متّصلة الآن.</div>';
+      }
+      box.innerHTML =
+        head(Object.assign({icon:'warn'}, opts)) +
+        '<div class="cc-gmodal-body">' +
+          'اختر الأجهزة التي تريد قطعها. <strong>الباقي يبقى متّصل</strong> دون مساس.' +
+        '</div>' +
+        (sessions.length > 1
+          ? '<div class="cc-gmodal-toolbar">' +
+              '<button type="button" class="cc-gmodal-toolbar-btn" data-select-all>' +
+                '<i class="fa-solid fa-check-double"></i> تحديد الكل' +
+              '</button>' +
+              '<button type="button" class="cc-gmodal-toolbar-btn" data-select-none>' +
+                '<i class="fa-regular fa-square"></i> تفريغ' +
+              '</button>' +
+            '</div>'
+          : '') +
+        '<div class="cc-gmodal-mac-list">' + rowsHtml + '</div>' +
+        '<div class="cc-gmodal-mac-summary" data-sess-summary></div>' +
+        actions('قطع', 'إلغاء', true /* dangerous */);
+
+      var checks  = box.querySelectorAll('[data-sess-check]');
+      var summary = box.querySelector('[data-sess-summary]');
+      function collect(){
+        var ids = [];
+        checks.forEach(function(c){ if (c.checked) ids.push(c.value); });
+        return ids;
+      }
+      function refresh(){
+        var picked = collect();
+        checks.forEach(function(c){
+          var row = c.closest('.cc-gmodal-mac-row');
+          if (row) row.classList.toggle('is-active', c.checked);
+        });
+        if (!picked.length){
+          summary.classList.remove('is-active');
+          summary.innerHTML = '';
+          return;
+        }
+        summary.classList.add('is-active');
+        summary.innerHTML =
+          '<div class="cc-gmodal-mac-summary-label">سيتم قطع ' + picked.length +
+          ' جلسة الآن.</div>';
+      }
+      checks.forEach(function(c){ c.addEventListener('change', refresh); });
+      var allBtn  = box.querySelector('[data-select-all]');
+      var noneBtn = box.querySelector('[data-select-none]');
+      if (allBtn) allBtn.addEventListener('click', function(){
+        checks.forEach(function(c){ c.checked = true; }); refresh();
+      });
+      if (noneBtn) noneBtn.addEventListener('click', function(){
+        checks.forEach(function(c){ c.checked = false; }); refresh();
+      });
+
+      wire(opts.onConfirm, function(){
+        var picked = collect();
+        if (!picked.length){
+          alert('اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».');
+          return false;
+        }
+        return picked.join(',');
+      });
+      show();
+    }
+
     window.ccModal = {
-      confirm:    confirm_,
-      reasonForm: reasonForm,
-      softDelete: softDelete,
-      macPicker:  macPicker,
-      speedForm:  speedForm,
-      close:      hide,
+      confirm:        confirm_,
+      reasonForm:     reasonForm,
+      softDelete:     softDelete,
+      macPicker:      macPicker,
+      speedForm:      speedForm,
+      sessionsPicker: sessionsPicker,
+      close:          hide,
     };
   })();
 </script>
@@ -1579,6 +1690,39 @@
       unitFld.value   = uEl.getAttribute('data-cc-unit-value');
       opFld.value     = opEl.getAttribute('data-cc-op-value');
       form.submit();
+    });
+  })();
+
+  // ── Disconnect button → per-session picker ─────────────────────────
+  // Loads the active sessions list from data-cc-active-sessions and
+  // opens window.ccModal.sessionsPicker so the operator picks WHICH
+  // device(s) to kick. The form's session_ids hidden field receives
+  // the comma-joined IDs on confirm.
+  (function(){
+    'use strict';
+    var btn = document.querySelector('[data-cc-op="disconnect"][data-cc-active-sessions]');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+      if (!window.ccModal || btn.disabled) return;
+      var sessions = [];
+      try {
+        sessions = JSON.parse(btn.getAttribute('data-cc-active-sessions') || '[]');
+        if (!Array.isArray(sessions)) sessions = [];
+      } catch(_){ sessions = []; }
+      if (!sessions.length){
+        alert('لا أجهزة متّصلة الآن.');
+        return;
+      }
+      window.ccModal.sessionsPicker({
+        title: 'قطع الجلسة',
+        sessions: sessions,
+        onConfirm: function(idsCsv){
+          var f = btn.closest('form');
+          if (!f) return;
+          f.querySelector('[data-cc-disc-field]').value = idsCsv;
+          f.submit();
+        },
+      });
     });
   })();
 
