@@ -1838,32 +1838,63 @@ body:has(.cc-hero) .page-head{display:none !important}
 }
 
 /* ╔════════════════════════════════════════════════════════════════════╗
-   ║  Metrics — explicit 5×2 grid when there are 10 tiles               ║
+   ║  Metrics — STRICT 5×2 grid (user: 'صفين إجباري فقط مش 3').          ║
+   ║                                                                      ║
+   ║  We HOLD 5 columns down to a much narrower container width by       ║
+   ║  shrinking the tiles themselves (smaller font, tighter padding,     ║
+   ║  smaller icon) instead of wrapping to extra rows. Only at really    ║
+   ║  cramped widths do we drop to 2 columns (5 rows of 2). The 4-col    ║
+   ║  and 3-col fallbacks are removed because they're exactly the 3-row  ║
+   ║  layouts the user does NOT want.                                     ║
    ╚════════════════════════════════════════════════════════════════════╝ */
 .cc-metrics.cc-metrics-2rows{
-  /* Always 5 columns on wide viewports → 10 tiles fall into 2 clean
-     rows. Override the more lenient auto-fit rule above. */
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 10px !important;
 }
-/* Wrap to fewer columns as the container gets narrower so the tiles
-   don't crush. Container queries (the page hosts cc-page) react to
-   the actual content width, not just the viewport. */
-@container cc-page (max-width: 1200px){
-  .cc-metrics.cc-metrics-2rows{
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
+
+/* Compact tile internals — scoped to the 2-rows variant so the old
+   5-tile layout (without .cc-metrics-2rows) keeps its larger size. */
+.cc-metrics.cc-metrics-2rows .cc-metric{
+  padding: 12px !important;
+  gap: 10px !important;
+  min-height: 0 !important;
 }
-@container cc-page (max-width: 980px){
-  .cc-metrics.cc-metrics-2rows{
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
+.cc-metrics.cc-metrics-2rows .cc-metric-body{ min-width: 0; }
+.cc-metrics.cc-metrics-2rows .cc-metric-label{
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
 }
-@container cc-page (max-width: 720px){
+.cc-metrics.cc-metrics-2rows .cc-metric-value{
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-metrics.cc-metrics-2rows .cc-metric-sub{
+  font-size: 10.5px !important;
+  line-height: 1.3 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-metrics.cc-metrics-2rows .cc-metric-icon{
+  width: 34px !important; height: 34px !important;
+  font-size: 13px !important;
+  flex: 0 0 34px !important;
+}
+
+/* Only when the container is really tight, fall back to 2-col (5×2
+   becomes 2×5). 3-col / 4-col fallbacks intentionally REMOVED because
+   the user explicitly does not want 3 rows. */
+@container cc-page (max-width: 640px){
   .cc-metrics.cc-metrics-2rows{
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
-@container cc-page (max-width: 480px){
+@container cc-page (max-width: 380px){
   .cc-metrics.cc-metrics-2rows{
     grid-template-columns: 1fr !important;
   }
