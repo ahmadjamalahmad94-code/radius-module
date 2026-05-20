@@ -458,6 +458,101 @@
   font-family: ui-monospace, Consolas, monospace;
 }
 
+/* ═════════════════════════ DEVICE BADGES (R13.A.6) ═════════════════════════ */
+.cc-device{
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--hr-card);
+  border: 1px solid var(--hr-border);
+  color: var(--hr-text);
+  white-space: nowrap;
+}
+.cc-device .cc-device-icon{
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.cc-device-meta{
+  color: var(--hr-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  margin-inline-start: 2px;
+}
+
+/* category colors — soft tinted backgrounds so the icon pops */
+.cc-device[data-cat="phone-ios"]      { background:#F1F5FF; border-color:#D8E3FB; }
+.cc-device[data-cat="phone-ios"] .cc-device-icon   { background:#D8E3FB; color:#2848B5; }
+.cc-device[data-cat="phone-android"]  { background:#F1FBF4; border-color:#CBE9D4; }
+.cc-device[data-cat="phone-android"] .cc-device-icon{ background:#CBE9D4; color:#1B7A4F; }
+.cc-device[data-cat="phone-random"]   { background:#FFF8E7; border-color:#F2E3B5; }
+.cc-device[data-cat="phone-random"] .cc-device-icon { background:#F2E3B5; color:#855906; }
+.cc-device[data-cat="laptop"]         { background:#F5F1FB; border-color:#E1D5F0; }
+.cc-device[data-cat="laptop"] .cc-device-icon      { background:#E1D5F0; color:#5934A8; }
+.cc-device[data-cat="desktop"]        { background:#EEF1F5; border-color:#D3DBE3; }
+.cc-device[data-cat="desktop"] .cc-device-icon     { background:#D3DBE3; color:#3F4A57; }
+.cc-device[data-cat="tablet"]         { background:#F0F9FE; border-color:#C5E3F2; }
+.cc-device[data-cat="tablet"] .cc-device-icon      { background:#C5E3F2; color:#1F8FB0; }
+.cc-device[data-cat="console"]        { background:#FFF0F3; border-color:#F2C5CE; }
+.cc-device[data-cat="console"] .cc-device-icon     { background:#F2C5CE; color:#9B1C1C; }
+.cc-device[data-cat="tv"]             { background:#FFF6EE; border-color:#F2D6BC; }
+.cc-device[data-cat="tv"] .cc-device-icon          { background:#F2D6BC; color:#A4540A; }
+.cc-device[data-cat="iot"]            { background:#EEFCF7; border-color:#BCEBD8; }
+.cc-device[data-cat="iot"] .cc-device-icon         { background:#BCEBD8; color:#1B7A4F; }
+.cc-device[data-cat="router"]         { background:#FBF5E9; border-color:#E6D9B5; }
+.cc-device[data-cat="router"] .cc-device-icon      { background:#E6D9B5; color:#7A5E1B; }
+.cc-device[data-cat="unknown"]        { background:#F4F1E8; border-color:#E2DBC7; }
+.cc-device[data-cat="unknown"] .cc-device-icon     { background:#E2DBC7; color:#8A93A0; }
+
+.cc-device-card{
+  margin-bottom: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, #FBF9F3 0%, #F4F1E5 100%);
+  border-radius: 10px;
+  border: 1px solid var(--hr-border);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+}
+.cc-device-card .cc-device-card-icon{
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--hr-cyan-100);
+  color: var(--hr-cyan-700);
+  border-radius: 10px;
+  font-size: 22px;
+  flex: 0 0 auto;
+}
+.cc-device-card .cc-device-card-body{
+  flex: 1; min-width: 0;
+}
+.cc-device-card .cc-device-card-label{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hr-navy-900);
+  margin-bottom: 2px;
+}
+.cc-device-card .cc-device-card-meta{
+  font-size: 12px;
+  color: var(--hr-text-muted);
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.cc-device-card .cc-device-card-meta .mono{
+  color: var(--hr-text-soft);
+}
+.cc-conf-pill{
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+.cc-conf-pill[data-conf="high"]   { background:#DDF3E9; color:#1B7A4F; }
+.cc-conf-pill[data-conf="medium"] { background:#FDF1CF; color:#855906; }
+.cc-conf-pill[data-conf="low"]    { background:#E5E2D6; color:#5A5446; }
+
 /* ═════════════════════════ PERMISSION GATING (R13.C) ═════════════════════════ */
 .cc-hidden-by-acl{ display: none !important; }
 

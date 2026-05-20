@@ -10,6 +10,7 @@ from typing import Any
 
 from ..db.helpers import parse_dt
 from ..db.repos import cards_repo
+from .device_fingerprint import infer_device
 
 
 def _utcnow() -> datetime:
@@ -140,6 +141,14 @@ def _session(row: dict, now: datetime) -> dict:
         "connect_info_stop": row.get("connectinfo_stop") or None,
         "terminate_cause": row.get("acctterminatecause") or None,
         "device_hint": row.get("connectinfo_start") or row.get("nasporttype") or None,
+        # R13.A.6: device fingerprint per session — vendor + category +
+        # icon + connection medium. Always present; "unknown" for missing
+        # data. UI uses `device.icon` + `device.label`.
+        "device": infer_device(
+            mac=row.get("callingstationid"),
+            nas_port_type=row.get("nasporttype"),
+            connect_info=row.get("connectinfo_start"),
+        ),
     }
 
 
@@ -161,6 +170,11 @@ def _summary(raw: dict, sessions: list[dict], macs: list[dict]) -> dict:
                 "sessions_count": _seconds(item.get("sessions_count")),
                 "online_sessions": _seconds(item.get("online_sessions")),
                 "last_seen_at": _iso(item.get("last_seen_at")),
+                # R13.A.6: device fingerprint per MAC. We don't carry
+                # nas_port_type at this aggregate level, so the inference
+                # leans on the OUI alone — still high-confidence for
+                # well-known vendors like Apple / Samsung.
+                "device": infer_device(mac=item.get("mac")),
             }
             for item in macs
         ],
@@ -285,6 +299,14 @@ def check_card(tenant_id: int, query: str) -> dict:
         "nas_address": (acct or {}).get("nasipaddress") or None,
         "active_session": None if not acct else not bool(acct.get("acctstoptime")),
         "last_session_seconds": _int_or_none((acct or {}).get("acctsessiontime")),
+        # R13.A.6: current/most-recent device fingerprint. Uses the latest
+        # acct row's full context (MAC + NAS-Port-Type + Connect-Info) so
+        # we can distinguish iPhone-on-WiFi from MacBook-on-WiFi etc.
+        "current_device": infer_device(
+            mac=mac_address,
+            nas_port_type=(acct or {}).get("nasporttype"),
+            connect_info=(acct or {}).get("connectinfo_start"),
+        ),
         "operations": {
             "can_disconnect": bool((acct or {}).get("acctstoptime") is None and acct),
             "can_lock_mac": bool(mac_address),

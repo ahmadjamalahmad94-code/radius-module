@@ -264,7 +264,12 @@ def test_card_checker_operations_show_accounting_and_lock_mac(client, auth_heade
     # data integrity — must still be visible regardless of layout
     assert "sess-online" in html
     assert "AA:BB:CC:DD:EE:01" in html
-    assert "android wifi" in html
+    # R13.A.6: device fingerprinting replaces the raw "android wifi"
+    # connect_info string with a parsed badge. The MAC AA:BB:CC has the
+    # U/L bit set (randomized) + connect_info contains "android" →
+    # infer_device labels it as a modern Android phone.
+    assert "أندرويد" in html, \
+        "device fingerprint badge for android-hinted random MAC must render"
     assert card["password"] not in html
 
     token = _csrf(client, f"/admin/radius/cards/checker?query={username}")

@@ -56,6 +56,41 @@
   <input type="hidden" name="card_id" value="{{ card.id }}">
 {%- endmacro %}
 
+{# R13.A.6: small device badge — inline (e.g. inside MAC chips, table cells). #}
+{% macro device_badge(device) -%}
+  {% if device and device.label %}
+  <span class="cc-device" data-cat="{{ device.category }}"
+        title="{{ device.vendor }} — ثقة {{ device.confidence }}">
+    <span class="cc-device-icon"><i class="fa-solid fa-{{ device.icon }}"></i></span>
+    {{ device.label }}
+  </span>
+  {% endif %}
+{%- endmacro %}
+
+{# R13.A.6: prominent device card — used in identity section. #}
+{% macro device_hero_card(device) -%}
+  {% if device and device.label %}
+  <div class="cc-device-card" data-cc-field="current_device">
+    <div class="cc-device-card-icon"><i class="fa-solid fa-{{ device.icon }}"></i></div>
+    <div class="cc-device-card-body">
+      <div class="cc-device-card-label">{{ device.label }}</div>
+      <div class="cc-device-card-meta">
+        <span><i class="fa-solid fa-industry"></i> {{ device.vendor }}</span>
+        {% if device.connection %}<span><i class="fa-solid fa-signal"></i> {{ device.connection }}</span>{% endif %}
+        <span class="cc-conf-pill" data-conf="{{ device.confidence }}">
+          ثقة {{ {'high':'عالية','medium':'متوسّطة','low':'محدودة'}.get(device.confidence, device.confidence) }}
+        </span>
+        {% if device.is_random_mac %}
+          <span class="cc-conf-pill" data-conf="medium" title="MAC مولّد عشوائيًا للحفاظ على الخصوصيّة">
+            <i class="fa-solid fa-shuffle"></i> MAC عشوائي
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{%- endmacro %}
+
 {% macro status_pill(card) -%}
   {%- if card.revoked -%}
     <span class="cc-pill cc-pill-red"><i class="fa-solid fa-ban"></i> ملغاة</span>
@@ -166,6 +201,11 @@
   <section class="cc-section" data-cc-section="identity">
     {{ section_head('id-card', 'هويّة البطاقة') }}
     <div class="cc-section-body">
+      {# R13.A.6: current device hero — only when we have a recent
+         session to fingerprint from. #}
+      {% if card.current_device and card.current_device.vendor and card.current_device.vendor != 'غير معروف' %}
+        {{ device_hero_card(card.current_device) }}
+      {% endif %}
       <div class="cc-identity">
         <div class="cc-identity-hero">
           <div class="cc-identity-username" data-cc-field="username">{{ card.username }}</div>
@@ -268,10 +308,14 @@
         {% for m in s.macs %}
           <div class="cc-mac" data-cc-mac="{{ m.mac }}">
             <div class="cc-mac-addr">{{ m.mac }}</div>
+            {# R13.A.6: device badge per MAC, OUI-only inference. #}
+            {% if m.device and m.device.label %}
+              <div style="margin-top:6px">{{ device_badge(m.device) }}</div>
+            {% endif %}
             <div class="cc-mac-meta">
-              <span data-cc-field="mac.sessions">{{ m.sessions or 0 }} جلسة</span>
-              <span data-cc-field="mac.online">{{ m.online or 0 }} حيّة</span>
-              <span class="mono" data-cc-field="mac.last_seen">{{ dt(m.last_seen) }}</span>
+              <span data-cc-field="mac.sessions">{{ m.sessions_count or 0 }} جلسة</span>
+              <span data-cc-field="mac.online">{{ m.online_sessions or 0 }} حيّة</span>
+              <span class="mono" data-cc-field="mac.last_seen">{{ dt(m.last_seen_at) }}</span>
             </div>
           </div>
         {% endfor %}
@@ -322,7 +366,14 @@
               <td class="mono" data-cc-col-cell="nas">{{ ses.nas or '—' }}</td>
               <td>{{ bytes_size(ses.upload_bytes) }}</td>
               <td>{{ bytes_size(ses.download_bytes) }}</td>
-              <td data-cc-col-cell="device_hint">{{ ses.device_hint or ses.connect_info or '—' }}</td>
+              <td data-cc-col-cell="device_hint">
+                {# R13.A.6: device badge replaces raw hint string. #}
+                {% if ses.device and ses.device.label %}
+                  {{ device_badge(ses.device) }}
+                {% else %}
+                  {{ ses.device_hint or ses.connect_info_start or '—' }}
+                {% endif %}
+              </td>
               <td>{{ ses.terminate_cause or '—' }}</td>
             </tr>
             {% endfor %}
