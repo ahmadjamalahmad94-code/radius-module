@@ -9,6 +9,19 @@ instead of duplicating business logic.
 Contract-only endpoints must return `501 not_implemented` until their storage
 and service layer are real. They must never return fake success.
 
+## Current Status Refresh
+
+This document started as a contract reservation file. Several domains listed
+below have since moved from `contract_only` to working foundations or partial
+implementations, including loans, payments, ledger, recycle bin, distributors,
+backups, bandwidth schedules, print templates, and ledger-based reports. For
+the current Web/Flutter parity source of truth, use
+`docs/api/WEB_FLUTTER_PARITY_MATRIX.md`.
+
+Do not rely on an older table row here if the parity matrix marks the endpoint
+as implemented, partial, or dry-run. The hard rule remains: a UI must not show
+an operation as complete when the API returns `not_implemented`.
+
 ## Response Envelope
 
 Implemented success:
