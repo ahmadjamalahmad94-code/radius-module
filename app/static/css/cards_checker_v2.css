@@ -487,59 +487,92 @@
 .cc-section-head-link:hover:not(.muted){ color: var(--cc-brand-ink); }
 .cc-section-body{ padding: 16px 18px; }
 
-/* ═════════════════════════ TIMELINE ═════════════════════════ */
+/* ═════════════════════════ TIMELINE (R13.A.9 Section A) ═════════════════════════ */
 .cc-timeline{
   position: relative;
-  padding-inline-start: 26px;
+  padding-inline-start: 30px;
 }
+/* The vertical rail. Soft gradient so it fades cleanly at top + bottom. */
 .cc-timeline::before{
   content: ""; position: absolute;
-  inset-inline-start: 9px; top: 8px; bottom: 8px;
+  inset-inline-start: 9px; top: 12px; bottom: 12px;
   width: 2px;
-  background: var(--cc-border);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--cc-border) 10%,
+    var(--cc-border) 90%,
+    transparent 100%);
 }
 .cc-tl-item{
   position: relative;
   display: grid;
   grid-template-columns: 1fr max-content;
-  gap: 14px;
-  padding: 10px 0;
+  gap: 16px;
+  padding: 12px 0;
+  transition: background-color var(--cc-anim-fast);
+  border-radius: 8px;
+  margin-inline-end: -8px;
+  padding-inline-end: 8px;
+}
+.cc-tl-item:hover{
+  background: linear-gradient(90deg, transparent 0%, rgba(107,90,237,.04) 100%);
 }
 .cc-tl-item + .cc-tl-item{
+  margin-top: 4px;
   border-top: 1px dashed var(--cc-border);
 }
+/* Dot: bigger (18px), thicker ring, lift-shadow so it pops off the line. */
 .cc-tl-dot{
   position: absolute;
-  inset-inline-start: -22px;
-  top: 16px;
-  width: 16px; height: 16px;
+  inset-inline-start: -23px;
+  top: 17px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   background: var(--cc-card-bg);
-  border: 3px solid var(--cc-brand);
-  box-shadow: 0 0 0 3px rgba(107,90,237,.15);
+  border: 4px solid var(--cc-brand);
+  box-shadow: 0 0 0 3px rgba(107,90,237,.16),
+              0 2px 4px rgba(107,90,237,.20);
 }
-.cc-tl-dot.green  { border-color:#26B673; box-shadow:0 0 0 3px rgba(38,182,115,.15); }
-.cc-tl-dot.amber  { border-color:#F39C12; box-shadow:0 0 0 3px rgba(243,156,18,.15); }
-.cc-tl-dot.blue   { border-color:#3D8DD6; box-shadow:0 0 0 3px rgba(61,141,214,.15); }
-.cc-tl-dot.grey   { border-color:#94A0AE; box-shadow:0 0 0 3px rgba(148,160,174,.15); }
+.cc-tl-dot.green  { border-color:#26B673; box-shadow:0 0 0 3px rgba(38,182,115,.18), 0 2px 4px rgba(38,182,115,.20); }
+.cc-tl-dot.amber  { border-color:#F39C12; box-shadow:0 0 0 3px rgba(243,156,18,.18), 0 2px 4px rgba(243,156,18,.20); }
+.cc-tl-dot.blue   { border-color:#3D8DD6; box-shadow:0 0 0 3px rgba(61,141,214,.18), 0 2px 4px rgba(61,141,214,.20); }
+.cc-tl-dot.grey   { border-color:#94A0AE; box-shadow:0 0 0 3px rgba(148,160,174,.18), 0 2px 4px rgba(148,160,174,.20); }
+/* Pulsing animation for the live (green) dot only. */
+.cc-tl-dot.green{
+  animation: cc-tl-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cc-tl-pulse{
+  0%, 100% { box-shadow: 0 0 0 3px rgba(38,182,115,.18), 0 2px 4px rgba(38,182,115,.20); }
+  50%      { box-shadow: 0 0 0 8px rgba(38,182,115,0),   0 2px 4px rgba(38,182,115,.10); }
+}
+
 .cc-tl-body{ min-width: 0; }
 .cc-tl-title{
-  font-size: 13px; font-weight: 700; color: var(--cc-text);
+  font-size: 13.5px; font-weight: 800; color: var(--cc-text);
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .cc-tl-desc{
-  font-size: 12px; color: var(--cc-text-soft);
-  line-height: 1.5;
+  font-size: 12.5px;
+  color: var(--cc-text-soft);
+  line-height: 1.55;
 }
 .cc-tl-time{
   text-align: end; white-space: nowrap; align-self: start;
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 11.5px; color: var(--cc-text-mute);
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: 2px;
 }
-.cc-tl-time .hour{ font-weight: 700; color: var(--cc-text); font-size: 12px; }
-.cc-tl-time .day{ font-size: 10.5px; }
+.cc-tl-time .hour{
+  font-weight: 800; color: var(--cc-text); font-size: 13px;
+  font-family: ui-monospace, Consolas, monospace;
+  letter-spacing: .5px;
+}
+.cc-tl-time .day{
+  font-size: 10.5px;
+  color: var(--cc-text-mute);
+  font-family: ui-monospace, Consolas, monospace;
+}
 
 /* ═════════════════════════ DEVICE CARD (R13.A.9 Section B) ═════════════════════════ */
 .cc-device-card{
