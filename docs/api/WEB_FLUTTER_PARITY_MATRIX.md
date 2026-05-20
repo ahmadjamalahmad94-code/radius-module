@@ -35,14 +35,14 @@ Status values:
 | Bandwidth schedules | `/admin/radius/bandwidth-schedules` | `/api/v1/bandwidth-schedules` | `/bandwidth-schedules` | dry_run | Saved schedules and resolver exist. Live apply depends on backend flag and RADIUS adapter verification. |
 | Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates` | `/print-templates` | partial | Saved layout and preview exist. Real PDF/export renderer is not complete. |
 | MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | `/mikrotik` | done | Flutter now supports list/create/edit/delete plus saved and unsaved connectivity tests. Saved passwords are not returned. |
-| Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | partial | partial | Config/test/deliveries API exists; Flutter UI is still missing. |
-| System status | `/admin/radius/status` | `/api/v1/system/status` | missing | partial | API exists; Flutter screen is next. |
-| Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | missing | partial | API exists; Flutter screen is next. |
-| Sync queue | `/admin/radius/sync` | `/api/v1/system/sync`, retry/cancel | missing | partial | API exists; Flutter queue screen is next. |
-| Reconcile | `/admin/radius/reconcile` | `/api/v1/system/reconcile` | missing | partial | API exists and runs backend reconciler; Flutter must show result clearly. |
-| Settings | `/admin/radius/settings` | `/api/v1/settings` | missing | partial | API exists; Flutter screen is still missing. |
-| API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | missing | partial | API exists; token secret is shown once only on create. Flutter screen is still missing. |
-| Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | missing | partial | API exists; Flutter screen is still missing. |
+| Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | `/admin-control` | done | Config save, test dispatch, and deliveries viewer are API-backed in Flutter. |
+| System status | `/admin/radius/status` | `/api/v1/system/status` | `/system-operations` | done | Flutter shows backend counters, routers, and sync summary from the real API. |
+| Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | `/system-operations` | partial | Flutter displays diagnostics; live router/API verdicts still require VPS acceptance tests. |
+| Sync queue | `/admin/radius/sync` | `/api/v1/system/sync`, retry/cancel | `/system-operations` | done | Queue list, retry, and cancel are API-backed with confirmation where needed. |
+| Reconcile | `/admin/radius/reconcile` | `/api/v1/system/reconcile` | `/system-operations` | partial | Flutter triggers backend reconcile and shows stats; real NAS side effects need VPS acceptance tests. |
+| Settings | `/admin/radius/settings` | `/api/v1/settings` | `/admin-control` | done | Flutter can view and edit settings through the JSON API. |
+| API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | `/admin-control` | done | Flutter can create/revoke tokens; one-time token secret is shown only on create. |
+| Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | `/admin-control` | done | Flutter can list/create/update tenants with API-backed limits and status fields. |
 | Operational reports | `/admin/radius/reports/*` | `/api/v1/operational-reports/<slug>` | `/operational-reports` | partial | JSON API and Flutter viewer exist for sessions, failed logins, login status, MAC history, profile changes, API messages, CoA failures, manager events, manager login status, and user events. Needs export/pinned filters later. |
 | Tools: set speeds | `/admin/radius/tools/set-speeds` | `/api/v1/tools/set-speeds` | `/tools` | done | API supports dry-run and real plan speed updates; Flutter exposes both preview and apply. |
 | Tools: maintenance | `/admin/radius/tools/maintenance` | `/api/v1/tools/maintenance/preview`, `/api/v1/tools/maintenance/run` | `/tools` | done | API requires preview token and explicit confirmation phrase before run; Flutter uses that flow. |
