@@ -212,7 +212,17 @@ def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[A
 def _card_to_subscriber(card: Card) -> Subscriber:
     """يُحوّل كارت إلى Subscriber DTO للمعالجة الموحَّدة في policy_engine.
     حقول subscriber غير الموجودة على الكارت تأخذ defaults آمنة (لا quota، لا
-    bandwidth override، لا MAC lock — تأتي من الـ plan لو وُجدت)."""
+    bandwidth override، لا MAC lock — تأتي من الـ plan لو وُجدت).
+
+    Migration 024 — Per-card speed override:
+      عندما تكون قِيَم card_speed_down_kbps + card_speed_up_kbps > 0، نُمرّر
+      الـ override عبر حقول Subscriber.bandwidth_control_enabled/_kbps،
+      ليلتقطه الـ cascade الموجود في _build_accept_attrs (السطر الذي يفضّل
+      sub.bandwidth_control قبل plan.speed_*). لا حاجة لتغيير الـ cascade
+      نفسه — نستفيد من البنية القائمة.
+    """
+    has_speed_override = (card.card_speed_down_kbps > 0
+                           and card.card_speed_up_kbps > 0)
     return Subscriber(
         id=card.id,
         tenant_id=card.tenant_id,
@@ -226,6 +236,10 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac
         # لأنه observational وقد يُلتقط تلقائياً من أول استخدام.
         mac_lock=card.locked_mac or None,
+        # ── Per-card speed override (migration 024) ──
+        bandwidth_control_enabled=has_speed_override,
+        download_speed_kbps=card.card_speed_down_kbps if has_speed_override else 0,
+        upload_speed_kbps=card.card_speed_up_kbps   if has_speed_override else 0,
     )
 
 

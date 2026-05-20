@@ -86,6 +86,18 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
         user_reply.append(("Tunnel-Type", ":=", "VLAN"))
         user_reply.append(("Tunnel-Medium-Type", ":=", "IEEE-802"))
         user_reply.append(("Tunnel-Private-Group-Id", ":=", str(sub.vlan_id)))
+
+    # Per-user speed override — covers BOTH card-level override (migration
+    # 024) and the legacy subscriber-level bandwidth_control fields. The
+    # row gets written into radreply, which beats the plan-level
+    # radgroupreply for the same attribute. Skipped silently when both
+    # values are 0 (no override → plan default applies).
+    if (sub.bandwidth_control_enabled
+            and sub.download_speed_kbps > 0
+            and sub.upload_speed_kbps > 0):
+        rate = f"{int(sub.upload_speed_kbps)}k/{int(sub.download_speed_kbps)}k"
+        user_reply.append(("Mikrotik-Rate-Limit", "=", rate))
+
     freeradius_repo.replace_user_reply(tid, username, user_reply)
 
     # ─ radusergroup (link to plan) ─

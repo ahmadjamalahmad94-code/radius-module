@@ -337,6 +337,11 @@ class Card:
     disabled_at: Optional[datetime] = None
     disabled_by: str = ""
     created_at: Optional[datetime] = None
+    # ── Per-card speed override (migration 024) ──
+    # Both > 0 → write per-user Mikrotik-Rate-Limit in radreply, which beats
+    # the plan-level group reply. Either == 0 → fall back to plan defaults.
+    card_speed_down_kbps: int = 0
+    card_speed_up_kbps: int = 0
 
 
 @dataclass(frozen=True)

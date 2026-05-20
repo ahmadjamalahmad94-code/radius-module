@@ -293,6 +293,25 @@ class SqliteAdapter(RadiusAdapter):
                            tenant_id=_tid())
         except Exception: pass
 
+    def push_rate_limit(self, *, username: str, new_rate_limit: str):
+        """Best-effort CoA push to update Mikrotik-Rate-Limit on the live
+        session for `username`. Sister of push_session_timeout — same
+        contract: never raises on no-active-session or NAK.
+
+        An empty `new_rate_limit` is the documented way to CLEAR the
+        per-user override on MT (next Access-Accept will carry the plan
+        default again). On MT 7.x that effectively re-applies the plan's
+        rate.
+        """
+        from .radius_coa import change_user_rate
+        try:
+            return change_user_rate(_tid(), username, new_rate_limit=new_rate_limit)
+        except Exception as e:  # noqa: BLE001
+            _LOG.warning("push_rate_limit error for %s: %s", username, e)
+            from .radius_coa import CoaResult
+            return CoaResult(ok=False, code=0, code_name="exception",
+                              reply_message=str(e))
+
     def push_session_timeout(self, *, username: str, session_timeout: int):
         """Best-effort CoA push to update Session-Timeout on the live
         session for `username`. Used by CardsService.adjust_card_time

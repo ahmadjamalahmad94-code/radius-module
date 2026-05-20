@@ -338,6 +338,103 @@ class CardsService:
         self._audit.record(actor=actor, action="card.reset_usage",
                            target_type="card", target_id=str(card_id))
 
+    def set_card_speed(self, *, actor: str, card_id: int,
+                         down_kbps: int, up_kbps: int,
+                         username: str = "") -> dict:
+        """Persist a per-card Mikrotik-Rate-Limit override, write it
+        through to FreeRADIUS (radreply), and best-effort CoA-push it
+        to any live session for `username`.
+
+        Pass down_kbps=0 AND up_kbps=0 to CLEAR the override (falls back
+        to the plan default). Mixing 0 + nonzero is rejected because we
+        always emit a "up/down k" pair to MT.
+
+        Returns a dict with keys: {down, up, was_override, fr_synced,
+        coa_result}. Raises RadiusValidationError on bad input or missing
+        card.
+        """
+        down = int(down_kbps or 0)
+        up   = int(up_kbps   or 0)
+        if down < 0 or up < 0:
+            raise RadiusValidationError("لا تُقبل قيم سالبة للسرعة")
+        clearing = (down == 0 and up == 0)
+        if not clearing and (down == 0 or up == 0):
+            raise RadiusValidationError(
+                "يجب تحديد قيمتي التنزيل والرفع معًا (أو تصفير الاثنين لإلغاء التخصيص)."
+            )
+        tenant_id = self._store_tenant_id()
+
+        # ── 1) DB persist ──
+        result = cards_repo.set_card_speed_override(tenant_id, card_id, down, up)
+        if result is None:
+            raise RadiusValidationError("لم يتم العثور على البطاقة")
+        username = (username or result.get("username") or "").strip()
+
+        # ── 2) FreeRADIUS native path: re-sync radreply for this card's
+        #    subscriber-mirror so the new override appears in DB rows that
+        #    rlm_sql reads at next Access-Request. Best-effort — if no
+        #    subscriber mirror exists, the HTTP /api/internal/auth path
+        #    (policy_engine._card_to_subscriber) still picks the override
+        #    from the cards row directly.
+        fr_synced = False
+        try:
+            from ..db.repos import subscribers_repo, plans_repo
+            from . import freeradius_translator
+            sub = subscribers_repo.get_subscriber(tenant_id, username) if username else None
+            if sub is not None:
+                # Stamp the override onto the Subscriber DTO so sync_subscriber
+                # writes the same Mikrotik-Rate-Limit row we expect from the
+                # policy_engine path. Both paths end up with the same value.
+                from dataclasses import replace
+                stamped = replace(
+                    sub,
+                    bandwidth_control_enabled=(not clearing),
+                    download_speed_kbps=(down if not clearing else 0),
+                    upload_speed_kbps=(up   if not clearing else 0),
+                )
+                plan = plans_repo.get_plan(tenant_id, sub.plan_id) if sub.plan_id else None
+                freeradius_translator.sync_subscriber(stamped, plan)
+                fr_synced = True
+        except Exception as e:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "freeradius_translator re-sync failed for card %s: %s", username, e
+            )
+
+        # ── 3) Best-effort CoA push so live MT session picks the new
+        #    Mikrotik-Rate-Limit without waiting for re-auth. Same shape
+        #    as adjust_card_time but a different attribute.
+        coa_result = None
+        try:
+            push_coa = getattr(self._adapter, "push_rate_limit", None)
+            if callable(push_coa) and username:
+                rate = (f"{up}k/{down}k" if not clearing else "")
+                coa_result = push_coa(username=username, new_rate_limit=rate)
+        except Exception as e:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "CoA push_rate_limit failed for %s: %s", username, e
+            )
+
+        # ── 4) Audit ──
+        self._audit.record(
+            actor=actor, action="card.set_speed",
+            target_type="card", target_id=str(card_id),
+            payload={
+                "down_kbps":    down,
+                "up_kbps":      up,
+                "cleared":      clearing,
+                "was_override": result["was_override"],
+                "fr_synced":    fr_synced,
+                "coa_pushed":   bool(coa_result and getattr(coa_result, "ok", False)),
+            },
+        )
+        return {
+            **result,
+            "fr_synced":  fr_synced,
+            "coa_result": coa_result,
+        }
+
     def adjust_card_time(self, *, actor: str, card_id: int,
                           delta_seconds: int, username: str = "") -> dict:
         """Shift the card's expire_at by +/- delta_seconds and (best-effort)

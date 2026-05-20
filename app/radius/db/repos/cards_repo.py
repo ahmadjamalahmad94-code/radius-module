@@ -82,6 +82,9 @@ def _card_row(r) -> Card:
         disabled_at=parse_dt(_g(r, "disabled_at", None)),
         disabled_by=_g(r, "disabled_by", "") or "",
         created_at=parse_dt(r["created_at"]),
+        # migration 024 — safe getter so any pre-migration snapshot still loads
+        card_speed_down_kbps=int(_g(r, "card_speed_down_kbps", 0) or 0),
+        card_speed_up_kbps=int(_g(r, "card_speed_up_kbps", 0) or 0),
     )
 
 
@@ -940,6 +943,53 @@ def adjust_card_expire_at(tenant_id: int, card_id: int, delta_seconds: int):
             "expire_at_old":     old_expire,
             "expire_at_new":     new_expire,
             "remaining_seconds": max(0, remaining_s),
+        }
+
+
+def set_card_speed_override(tenant_id: int, card_id: int,
+                              down_kbps: int, up_kbps: int) -> dict | None:
+    """Persist a per-card speed override (or clear it when both are 0).
+
+    Returns dict {username, down, up, was_override} on success or None if
+    the card doesn't exist. `was_override` is True iff the row already had
+    a non-zero override BEFORE this update — useful for the service layer
+    to decide whether a CoA-revert is needed when clearing.
+
+    Both fields are non-negative integers (kbps). The migration enforces
+    NOT NULL DEFAULT 0 so we never have to worry about NULL semantics.
+    """
+    down = max(0, int(down_kbps or 0))
+    up   = max(0, int(up_kbps   or 0))
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT username, card_speed_down_kbps, card_speed_up_kbps "
+            "FROM cards WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            username = row.get("username") or ""
+            prev_d   = int(row.get("card_speed_down_kbps") or 0)
+            prev_u   = int(row.get("card_speed_up_kbps") or 0)
+        else:
+            username = row[0] or ""
+            prev_d   = int(row[1] or 0)
+            prev_u   = int(row[2] or 0)
+        cur = conn.execute(
+            "UPDATE cards "
+            "SET card_speed_down_kbps = ?, "
+            "    card_speed_up_kbps   = ? "
+            "WHERE tenant_id = ? AND id = ?",
+            (down, up, tenant_id, card_id),
+        )
+        if not cur.rowcount:
+            return None
+        return {
+            "username":     username,
+            "down":         down,
+            "up":           up,
+            "was_override": bool(prev_d or prev_u),
         }
 
 
