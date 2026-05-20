@@ -574,14 +574,38 @@
   font-family: ui-monospace, Consolas, monospace;
 }
 
-/* ═════════════════════════ DEVICE CARD (R13.A.9 Section B) ═════════════════════════ */
+/* ═════════════════════════ DEVICE CARD (R13.A.9 Section B + illustration) ═════════════════════════ */
 .cc-device-card{
   background: linear-gradient(135deg,#FBFAF7 0%,#F4F2EC 100%);
   border: 1px solid var(--cc-border);
   border-radius: var(--cc-r-tile);
   padding: 18px;
-  display: flex; align-items: flex-start; gap: 16px;
+  display: flex; align-items: center; gap: 18px;
 }
+/* The body sits on the START (right in RTL), the illustration on the END
+   (left in RTL) to mirror Reference A. */
+.cc-device-card-body{ order: 0; }
+.cc-device-card-illustration{
+  order: 1;
+  flex: 0 0 auto;
+  width: 130px;
+  height: 100px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--cc-brand-soft) 0%, #E8E1FB 100%);
+  border: 1px solid #E0D8F8;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(107,90,237,.10);
+}
+/* SVG inside the illustration sits centered, slightly larger than the box
+   so the illustration "fills" without overflow ambiguity. */
+.cc-device-card-illustration svg{
+  width: 90%; height: 90%;
+  display: block;
+}
+/* Fallback: the legacy .cc-device-card-icon still used in simple mode +
+   in places where we don't have a custom illustration. */
 .cc-device-card-icon{
   width: 64px; height: 64px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -632,7 +656,48 @@
   word-break: break-all;
 }
 
-/* ═════════════════════════ SESSION CARDS (R13.A.9 Section B) ═════════════════════════ */
+/* ═════════════════════════ SESSION LIST (simplified, matches reference) ═════════════════════════ */
+.cc-sessions-list{ display: flex; flex-direction: column; }
+.cc-session-row{
+  display: grid;
+  grid-template-columns: 36px 1fr max-content max-content;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-radius: 8px;
+  transition: background-color var(--cc-anim-fast);
+}
+.cc-session-row + .cc-session-row{
+  border-top: 1px dashed var(--cc-border);
+}
+.cc-session-row:hover{
+  background: rgba(107,90,237,.04);
+}
+.cc-session-row.cc-session-live-row{
+  background: linear-gradient(90deg, transparent 0%, rgba(38,182,115,.06) 100%);
+}
+.cc-session-row-body{ min-width: 0; }
+.cc-session-name{
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cc-text);
+  font-family: ui-monospace, Consolas, monospace;
+  margin-bottom: 2px;
+}
+.cc-session-meta{
+  font-size: 11.5px;
+  color: var(--cc-text-mute);
+}
+.cc-session-time{
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cc-text-soft);
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* ═════════════════════════ SESSION CARDS (legacy — kept for fallback) ═════════════════════════ */
 /* Real cards, not list rows. Each session has its own surface, icon
    block, status pill, MAC, and a labeled stats strip. */
 .cc-sessions-cards{
@@ -971,20 +1036,30 @@
   .cc-tl-title{ font-size: 12.5px; }
   .cc-tl-desc{ font-size: 11.5px; }
 
-  /* DEVICE CARD: keep icon + body in a row, tighter */
-  .cc-device-card{ padding: 14px; gap: 12px; }
+  /* DEVICE CARD: stack illustration above body on phones */
+  .cc-device-card{
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px; gap: 12px;
+  }
+  .cc-device-card-illustration{
+    width: 100%; height: 110px;
+    order: -1;
+  }
+  .cc-device-card-illustration svg{ width: 60%; height: 80%; }
   .cc-device-card-icon{ width: 52px; height: 52px; font-size: 22px; border-radius: 14px; }
   .cc-device-card-title{ font-size: 14px; }
   .cc-device-card-attrs{ font-size: 11.5px; gap: 6px 10px; }
 
-  /* SESSION CARDS: stats reduce to 2 columns under each header */
-  .cc-session-card{ padding: 12px; }
-  .cc-session-head{ grid-template-columns: 32px 1fr max-content; gap: 10px; }
+  /* SESSION LIST on mobile: tighter rows, hide time column to save space */
+  .cc-session-row{
+    grid-template-columns: 32px 1fr max-content;
+    gap: 10px; padding: 10px 4px;
+  }
+  .cc-session-row .cc-session-time{ display: none; }
   .cc-session-icon{ width: 32px; height: 32px; }
-  .cc-session-id{ font-size: 12.5px; }
-  .cc-session-stats{ grid-template-columns: 1fr 1fr; gap: 8px; }
-  .cc-session-stat-label{ font-size: 9.5px; }
-  .cc-session-stat-value{ font-size: 11.5px; }
+  .cc-session-name{ font-size: 12px; }
+  .cc-session-meta{ font-size: 10.5px; }
 
   /* ACTIONS: 1 per row, big touch targets (44px minimum recommended) */
   .cc-actions{ grid-template-columns: 1fr; gap: 8px; }
