@@ -364,7 +364,9 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
 
 def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = None) -> list[dict]:
     sql = """
-        SELECT l.subscriber_id, l.username, COUNT(*) AS count, COALESCE(SUM(l.amount), 0) AS total
+        SELECT l.subscriber_id, l.username, COUNT(*) AS count,
+               COALESCE(SUM(l.amount), 0) AS total,
+               MAX(l.created_at) AS last_entry_at
         FROM accounting_ledger_entries l
         LEFT JOIN accounting_ledger_entries orig
           ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
@@ -378,7 +380,7 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
-    sql += " GROUP BY l.subscriber_id, l.username ORDER BY total DESC, l.username LIMIT 200"
+    sql += " GROUP BY l.subscriber_id, l.username ORDER BY last_entry_at DESC, l.username LIMIT 200"
     return [dict(r) for r in db().execute(sql, vals).fetchall()]
 
 
