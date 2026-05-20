@@ -247,13 +247,19 @@ class SqliteAdapter(RadiusAdapter):
         على فشل (لا جلسة، CoA-NAK، timeout) نرفع RadiusError ليصل لـ flash
         الـ UI، بدل البلع الصامت الذي كان يحدث في enqueue path.
 
-        R11.18: بعد Disconnect-ACK ناجح، نُغلق كل rows المفتوحة لـ username
-        في radacct (acctstoptime IS NULL → datetime('now')). السبب أنّ MT لا
-        يُرسل دائمًا Acct-Stop بعد disconnect عبر CoA، فالـ row يبقى زومبي
-        ويظهر المستخدم في /admin/radius/online رغم أنه فعلاً مطرود. نُغلق
-        كل الـ rows المفتوحة لـ username (لا الأخير فقط) لأنّ نفس username
-        لا يجب أن يكون له أكثر من جلسة حيّة في نفس اللحظة — أي rows
-        مفتوحة قديمة هي زومبي بطبيعتها.
+        R11.18 + R26: بعد Disconnect-ACK ناجح، نُغلق rows المفتوحة في
+        radacct. الـ scoping مهم جدًا:
+
+          • session_ids مُحدَّد   → نُغلق فقط تلك الـ acctsessionid (per-device).
+          • session_ids = None    → broadcast: نُغلق كل rows المفتوحة لـ username.
+
+        قبل R26 كان الكود يُغلق دائمًا كل الـ rows المفتوحة لـ username بحجة
+        "نفس username لا يجب أن يكون له أكثر من جلسة حيّة". هذا الافتراض
+        كان صحيحًا أيام الجلسة الواحدة لكل بطاقة، لكن مع cards متعددة
+        الأجهزة (3 هواتف يتشاركون البطاقة) صار خاطئًا: لو الأدمن اختار
+        جهاز A فقط من الـ picker، CoA كان يكتفي بـ A، لكن DB كان يقفل
+        A و B و C — فالـ UI يظهر "0 متّصلين" والـ mt_reconciler لاحقًا
+        يفتح B و C من جديد لو وجدهم على MT (race ضوضاء بصرية).
         """
         from ..core.errors import RadiusError
         from ..db.connection import transaction
@@ -272,22 +278,38 @@ class SqliteAdapter(RadiusAdapter):
             raise RadiusError(
                 res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
             )
-        _LOG.info("Disconnect ok for %s: code=%s", username, res.code_name)
+        _LOG.info("Disconnect ok for %s: code=%s ids=%s",
+                  username, res.code_name, ids or "ALL")
 
-        # R11.18: غلِّق كل الـ rows المفتوحة لـ username
+        # Close radacct rows — scoped to the IDs we actually kicked
+        # when the caller gave a specific list; otherwise broadcast.
         try:
             with transaction() as c:
-                cur = c.execute(
-                    "UPDATE radacct SET "
-                    "  acctstoptime = datetime('now'), "
-                    "  acctterminatecause = 'Admin-Reset' "
-                    "WHERE tenant_id = ? AND username = ? "
-                    "  AND acctstoptime IS NULL",
-                    (_tid(), username),
-                )
+                if ids:
+                    placeholders = ",".join("?" for _ in ids)
+                    cur = c.execute(
+                        "UPDATE radacct SET "
+                        "  acctstoptime = datetime('now'), "
+                        "  acctterminatecause = 'Admin-Reset' "
+                        f"WHERE tenant_id = ? AND username = ? "
+                        f"  AND acctstoptime IS NULL "
+                        f"  AND acctsessionid IN ({placeholders})",
+                        (_tid(), username, *ids),
+                    )
+                else:
+                    cur = c.execute(
+                        "UPDATE radacct SET "
+                        "  acctstoptime = datetime('now'), "
+                        "  acctterminatecause = 'Admin-Reset' "
+                        "WHERE tenant_id = ? AND username = ? "
+                        "  AND acctstoptime IS NULL",
+                        (_tid(), username),
+                    )
                 if cur.rowcount:
-                    _LOG.info("Closed %d radacct row(s) for %s after Disconnect-ACK",
-                              cur.rowcount, username)
+                    _LOG.info(
+                        "Closed %d radacct row(s) for %s after Disconnect-ACK (scope=%s)",
+                        cur.rowcount, username, "selected" if ids else "all",
+                    )
         except Exception as e:
             # نسجّل لكن لا نرفع — الـ disconnect نفسه نجح، الـ DB close
             # مجرد cleanup. الـ stale row سيُغلق بـ accounting-on/off لاحقًا
