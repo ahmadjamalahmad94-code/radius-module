@@ -96,6 +96,7 @@ def create_payment(*, tenant_id: int, subscriber: dict, plan: dict | None,
                    discount_amount: float, discount_reason: str,
                    effective_price: float, earned_minutes: int,
                    rounding_mode: str, notes: str,
+                   distributor_id: int | None = None,
                    metadata: dict[str, Any] | None = None) -> dict:
     with transaction() as conn:
         cur = conn.execute(
