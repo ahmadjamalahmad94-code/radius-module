@@ -332,6 +332,10 @@ class Card:
     used_by_subscriber_id: Optional[int] = None
     expire_at: Optional[datetime] = None
     revoked: bool = False
+    locked_mac: str = ""
+    disabled_reason: str = ""
+    disabled_at: Optional[datetime] = None
+    disabled_by: str = ""
     created_at: Optional[datetime] = None
 
 

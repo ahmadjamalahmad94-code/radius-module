@@ -301,6 +301,55 @@ class CardsService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_REVOKE,
                            target_type="card", target_id=str(card_id))
 
+    def enable_card(self, *, actor: str, card_id: int) -> None:
+        if not cards_repo.set_card_revoked(self._store_tenant_id(), card_id, False, actor=actor):
+            raise RadiusValidationError("تعذر تفعيل البطاقة")
+        self._audit.record(actor=actor, action="card.enable",
+                           target_type="card", target_id=str(card_id))
+
+    def disable_card(self, *, actor: str, card_id: int, reason: str = "") -> None:
+        if not cards_repo.set_card_revoked(
+            self._store_tenant_id(), card_id, True, actor=actor, reason=reason,
+        ):
+            raise RadiusValidationError("تعذر تعطيل البطاقة")
+        self._audit.record(actor=actor, action="card.disable",
+                           target_type="card", target_id=str(card_id),
+                           payload={"reason": reason})
+
+    def lock_card_mac(self, *, actor: str, card_id: int, mac: str) -> None:
+        mac = (mac or "").strip()
+        if not mac:
+            raise RadiusValidationError("MAC مطلوب")
+        if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, mac, actor=actor):
+            raise RadiusValidationError("تعذر تثبيت MAC")
+        self._audit.record(actor=actor, action="card.lock_mac",
+                           target_type="card", target_id=str(card_id),
+                           payload={"mac": mac})
+
+    def unlock_card_mac(self, *, actor: str, card_id: int) -> None:
+        if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, "", actor=actor):
+            raise RadiusValidationError("تعذر إلغاء تثبيت MAC")
+        self._audit.record(actor=actor, action="card.unlock_mac",
+                           target_type="card", target_id=str(card_id))
+
+    def reset_card_usage(self, *, actor: str, card_id: int) -> None:
+        if not cards_repo.reset_card_usage(self._store_tenant_id(), card_id):
+            raise RadiusValidationError("تعذر تصفير استخدام البطاقة")
+        self._audit.record(actor=actor, action="card.reset_usage",
+                           target_type="card", target_id=str(card_id))
+
+    def delete_card_permanently(self, *, actor: str, card_id: int) -> None:
+        if not cards_repo.delete_card_permanently(self._store_tenant_id(), card_id):
+            raise RadiusValidationError("تعذر حذف البطاقة")
+        self._audit.record(actor=actor, action="card.delete_permanent",
+                           target_type="card", target_id=str(card_id))
+
+    def disconnect_card(self, *, actor: str, username: str, session_id: str = "") -> None:
+        self._adapter.disconnect(username, session_id=session_id or None)
+        self._audit.record(actor=actor, action="card.disconnect",
+                           target_type="card", target_id=username,
+                           payload={"session_id": session_id or ""})
+
     def archive_batch(self, *, actor: str, batch_id: int, reason: str = "") -> bool:
         archived = cards_repo.archive_batch(
             self._store_tenant_id(), batch_id, actor=actor, reason=reason,

@@ -1,129 +1,422 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}فحص بطاقة{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-magnifying-glass"></i>{% endblock %}
-{% block page_title %}فحص بطاقة{% endblock %}
-{% block page_sub %}<span class="sub">ابحث باسم الدخول أو رقم البطاقة</span>{% endblock %}
+{% block title %}مركز عمليات البطاقة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
+{% block page_title %}مركز عمليات البطاقة{% endblock %}
+{% block page_sub %}<span class="sub">فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.</span>{% endblock %}
+
+{% macro dt(value) -%}
+  {{ (value or '—')|replace('T', ' ')|replace('Z', '') }}
+{%- endmacro %}
+
+{% macro duration(seconds) -%}
+  {%- set s = (seconds or 0)|int -%}
+  {%- set d = s // 86400 -%}
+  {%- set h = (s % 86400) // 3600 -%}
+  {%- set m = (s % 3600) // 60 -%}
+  {%- if d > 0 -%}{{ d }} يوم {{ h }} ساعة
+  {%- elif h > 0 -%}{{ h }} ساعة {{ m }} دقيقة
+  {%- elif m > 0 -%}{{ m }} دقيقة
+  {%- else -%}{{ s }} ثانية
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro bytes_size(value) -%}
+  {%- set b = (value or 0)|int -%}
+  {%- if b >= 1073741824 -%}{{ (b / 1073741824)|round(2) }} GB
+  {%- elif b >= 1048576 -%}{{ (b / 1048576)|round(2) }} MB
+  {%- elif b >= 1024 -%}{{ (b / 1024)|round(1) }} KB
+  {%- else -%}{{ b }} B
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro hidden_ops(card, query) -%}
+  <input type="hidden" name="query" value="{{ query or card.username }}">
+  <input type="hidden" name="username" value="{{ card.username }}">
+  <input type="hidden" name="card_id" value="{{ card.id }}">
+{%- endmacro %}
 
 {% block head_extra %}
 <style>
-  .card-checker-grid{display:grid;grid-template-columns:minmax(280px,420px) minmax(0,1fr);gap:16px;align-items:start}
-  .card-checker-form{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
-  .card-checker-form .field{flex:1 1 240px}
-  .card-checker-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .cc-box{border:1px solid var(--hr-border);border-radius:8px;background:var(--hr-soft);padding:12px}
-  .cc-box .k{font-size:11px;color:var(--hr-text-muted);font-weight:800;margin-bottom:4px}
-  .cc-box .v{font-size:13px;color:var(--hr-text);font-weight:800;word-break:break-word}
-  .cc-wide{grid-column:1 / -1}
-  .cc-list{display:flex;gap:6px;flex-wrap:wrap}
-  @media(max-width:900px){.card-checker-grid,.card-checker-result{grid-template-columns:1fr}}
+  .ops-shell{display:grid;gap:16px}
+  .ops-hero{position:relative;overflow:hidden;border:1px solid rgba(40,166,198,.35);border-radius:10px;background:linear-gradient(135deg,#102033 0%,#1d344d 54%,#0f7186 100%);color:#fff;box-shadow:0 16px 36px rgba(15,32,51,.18)}
+  .ops-hero:before{content:"";position:absolute;inset:auto -80px -120px auto;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.08)}
+  .ops-hero-inner{position:relative;display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:16px;align-items:center;padding:22px}
+  .ops-title{margin:0;font-size:28px;font-weight:900;letter-spacing:0}
+  .ops-sub{margin:7px 0 0;color:rgba(255,255,255,.74);line-height:1.75}
+  .ops-search{display:flex;gap:8px;align-items:center;min-width:360px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:8px}
+  .ops-search input{height:42px;background:#fff;color:#172334;border:0}
+  .ops-search .btn{height:42px;white-space:nowrap}
+  .ops-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;align-items:start}
+  .ops-card{border:1px solid var(--hr-border);background:#fff;border-radius:10px;box-shadow:0 10px 26px rgba(22,32,48,.06)}
+  .ops-card-body{padding:16px}
+  .ops-card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 13px;font-size:18px;font-weight:900;color:var(--hr-text)}
+  .ops-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .ops-stat{border:1px solid #e6edf3;border-radius:9px;background:#f8fafc;padding:13px;min-height:86px}
+  .ops-stat .label{font-size:12px;color:#66758a;font-weight:800}
+  .ops-stat .value{margin-top:8px;font-size:21px;color:#172334;font-weight:950;word-break:break-word}
+  .ops-stat .subvalue{margin-top:4px;font-size:12px;color:#8592a4;line-height:1.55}
+  .ops-alert{border:1px solid #f4c46b;background:#fff8e6;color:#714a05;border-radius:9px;padding:12px;display:flex;gap:10px;align-items:flex-start;font-weight:800;line-height:1.7}
+  .ops-alert.danger{border-color:#f1a6a6;background:#fff1f1;color:#8d1f1f}
+  .ops-alert.info{border-color:#a8d8ef;background:#effaff;color:#19566c}
+  .ops-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .ops-field{border:1px dashed #d8e0ea;border-radius:9px;padding:10px;background:#fbfcfd}
+  .ops-field .k{font-size:11px;color:#7c899a;font-weight:900;margin-bottom:5px}
+  .ops-field .v{font-size:13px;color:#1c2939;font-weight:850;word-break:break-word}
+  .ops-actions{display:grid;gap:10px}
+  .ops-action{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fbfcfe}
+  .ops-action h4{margin:0 0 7px;font-size:14px;color:#172334}
+  .ops-action p{margin:0 0 9px;color:#718096;font-size:12px;line-height:1.6}
+  .ops-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ops-inline input{height:38px;min-width:190px}
+  .ops-inline .btn{height:38px}
+  .ops-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+  .ops-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1120px;background:#fff}
+  .ops-table th,.ops-table td{padding:10px 11px;border-bottom:1px solid #edf2f7;text-align:right;vertical-align:top;font-size:12px}
+  .ops-table th{position:sticky;top:0;background:#f8fafc;color:#42526a;font-size:11px;font-weight:950;z-index:1}
+  .ops-table tr:last-child td{border-bottom:0}
+  .ops-online{display:inline-flex;align-items:center;gap:6px;border:1px solid #b8ead1;background:#ecfff5;color:#0b7842;border-radius:999px;padding:4px 8px;font-weight:900}
+  .ops-offline{display:inline-flex;align-items:center;gap:6px;border:1px solid #d7dde6;background:#f7f8fa;color:#687386;border-radius:999px;padding:4px 8px;font-weight:900}
+  .ops-macs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ops-mac{border:1px solid #e2e8f0;border-radius:9px;padding:10px;background:#fff}
+  .ops-mac .mac{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-weight:950;color:#172334}
+  .ops-badges{display:flex;gap:6px;flex-wrap:wrap}
+  .ops-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid #dbe4ef;background:#f8fafc;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:850;color:#455367}
+  .ops-badge.ok{border-color:#b8ead1;background:#ecfff5;color:#0b7842}
+  .ops-badge.warn{border-color:#f4c46b;background:#fff8e6;color:#714a05}
+  .ops-badge.danger{border-color:#f1a6a6;background:#fff1f1;color:#8d1f1f}
+  .ops-empty{border:1px dashed #cbd5e1;border-radius:10px;padding:28px;text-align:center;color:#64748b;background:#fbfcfd;line-height:1.8;font-weight:800}
+  .ops-muted{color:#7c899a;font-size:12px;line-height:1.65}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  @media(max-width:1100px){.ops-grid,.ops-hero-inner{grid-template-columns:1fr}.ops-search{min-width:0}.ops-stat-grid,.ops-details,.ops-macs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:680px){.ops-stat-grid,.ops-details,.ops-macs{grid-template-columns:1fr}.ops-search{display:grid}.ops-title{font-size:23px}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card-checker-grid">
-  <div class="card">
-    <div class="card-body">
-      <form method="get" class="card-checker-form">
-        <div class="field">
-          <label>رقم البطاقة أو اسم الدخول</label>
-          <input type="text" name="query" value="{{ query or '' }}" maxlength="128"
-                 placeholder="مثال: 12345" autocomplete="off">
-          <div class="hint">اكتب اسم الدخول المطبوع على البطاقة أو رقمها الداخلي. لن يتم عرض كلمة المرور.</div>
-        </div>
+{% set card = result if result and result.exists else none %}
+{% set summary = card.accounting_summary if card else {} %}
+{% set sessions = summary.latest_sessions if summary else [] %}
+{% set macs = summary.macs if summary else [] %}
+{% set status_labels = {
+  'available':'متاحة',
+  'active':'مستخدمة',
+  'expired':'منتهية',
+  'revoked':'معطلة',
+  'not_found':'غير موجودة',
+  'unknown':'غير معروف'
+} %}
+{% set status_class = {
+  'available':'ok',
+  'active':'warn',
+  'expired':'danger',
+  'revoked':'danger'
+} %}
+
+<div class="ops-shell">
+  <section class="ops-hero">
+    <div class="ops-hero-inner">
+      <div>
+        <h2 class="ops-title">لوحة تحكم البطاقة</h2>
+        <p class="ops-sub">ابحث عن أي بطاقة وشاهد تاريخها التشغيلي، الأجهزة التي استخدمتها، الجلسات، وحالتها الحالية. الإجراءات الحساسة موجودة هنا حتى لا تضيع بين الصفحات.</p>
+      </div>
+      <form method="get" class="ops-search">
+        <input type="text" name="query" value="{{ query or '' }}" maxlength="128"
+               placeholder="رقم البطاقة أو اسم الدخول" autocomplete="off" autofocus>
         <button class="btn btn-primary" type="submit">
-          <i class="fa-solid fa-magnifying-glass"></i> فحص
+          <i class="fa-solid fa-magnifying-glass"></i> فحص البطاقة
         </button>
       </form>
-      {% if error %}
-        <div class="flash flash-error" style="margin-top:12px">{{ error }}</div>
-      {% endif %}
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="card-body">
-      {% if not query %}
-        <div class="empty">
-          <i class="fa-solid fa-id-card"></i>
-          أدخل رقم بطاقة أو اسم دخول لعرض حالتها ومصدرها.
-        </div>
-      {% elif result and not result.exists %}
-        <div class="empty">
-          <i class="fa-solid fa-circle-question"></i>
-          لا توجد بطاقة مطابقة لهذا البحث.
-        </div>
-      {% elif result %}
-        {% set status = result.status %}
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+  {% if error %}
+    <div class="flash flash-error">{{ error }}</div>
+  {% endif %}
+
+  {% if not query %}
+    <div class="ops-empty">
+      <i class="fa-solid fa-id-card"></i>
+      أدخل رقم البطاقة أو اسم الدخول لفتح مركز العمليات الخاص بها.
+    </div>
+  {% elif result and not result.exists %}
+    <div class="ops-empty">
+      <i class="fa-solid fa-circle-question"></i>
+      لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة أخرى.
+    </div>
+  {% elif card %}
+    <div class="ops-card">
+      <div class="ops-card-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
           <div>
-            <div class="hint">اسم الدخول</div>
-            <h3 style="margin:0;font-size:20px" class="mono">{{ result.username }}</h3>
+            <div class="ops-muted">اسم الدخول</div>
+            <h3 style="margin:2px 0 0;font-size:30px" class="mono">{{ card.username }}</h3>
+            <div class="ops-badges" style="margin-top:10px">
+              <span class="ops-badge {{ status_class.get(card.status, '') }}">
+                <i class="fa-solid fa-circle"></i> {{ status_labels.get(card.status, card.status or 'غير معروف') }}
+              </span>
+              {% if card.locked_mac %}
+                <span class="ops-badge ok"><i class="fa-solid fa-lock"></i> مثبتة على MAC</span>
+              {% endif %}
+              {% if card.active_session %}
+                <span class="ops-badge ok"><i class="fa-solid fa-wifi"></i> عليها جلسة متصلة</span>
+              {% endif %}
+              {% if card.revoked %}
+                <span class="ops-badge danger"><i class="fa-solid fa-ban"></i> الدخول موقوف</span>
+              {% endif %}
+            </div>
           </div>
-          {% if status == 'available' %}<span class="pill pill-success"><span class="pill-dot"></span> جاهزة</span>
-          {% elif status == 'active' %}<span class="pill pill-info"><span class="pill-dot"></span> مستخدمة</span>
-          {% elif status == 'expired' %}<span class="pill pill-warn">منتهية</span>
-          {% elif status == 'revoked' %}<span class="pill pill-danger">ملغاة</span>
-          {% else %}<span class="pill">{{ status or 'غير معروف' }}</span>{% endif %}
+          <div class="ops-badges">
+            <span class="ops-badge">مصادر البيانات: {{ (card.data_sources or [])|join('، ') }}</span>
+            <span class="ops-badge">كلمة المرور محفوظة: {{ 'نعم' if card.has_password else 'لا' }}</span>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div class="card-checker-result">
-          <div class="cc-box"><div class="k">هل لها كلمة مرور؟</div><div class="v">{{ 'نعم' if result.has_password else 'لا' }}</div></div>
-          <div class="cc-box"><div class="k">تاريخ الإنشاء</div><div class="v mono">{{ result.created_at or '—' }}</div></div>
-          <div class="cc-box"><div class="k">بداية الاستخدام</div><div class="v mono">{{ result.started_at or '—' }}</div></div>
-          <div class="cc-box"><div class="k">تاريخ الانتهاء</div><div class="v mono">{{ result.expires_at or '—' }}</div></div>
-          <div class="cc-box"><div class="k">آخر ظهور</div><div class="v mono">{{ result.last_seen_at or '—' }}</div></div>
-          <div class="cc-box"><div class="k">MAC</div><div class="v mono">{{ result.mac_address or '—' }}</div></div>
-          <div class="cc-box"><div class="k">IP</div><div class="v mono">{{ result.ip_address or '—' }}</div></div>
-          <div class="cc-box"><div class="k">NAS</div><div class="v mono">{{ result.nas_address or '—' }}</div></div>
+    {% if (summary.unique_macs or 0) >= 3 %}
+      <div class="ops-alert danger">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>هذه البطاقة اتصلت من {{ summary.unique_macs }} عناوين MAC مختلفة. راجع الجلسات قبل التصفير أو التثبيت حتى لا تقفل مستخدمًا شرعيًا بالخطأ.</div>
+      </div>
+    {% elif (summary.unique_macs or 0) > 1 %}
+      <div class="ops-alert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>تم رصد أكثر من MAC لهذه البطاقة. قد يكون تبديل جهاز طبيعيًا، أو مشاركة غير مرغوبة للبطاقة.</div>
+      </div>
+    {% endif %}
 
-          <div class="cc-box cc-wide">
-            <div class="k">الدفعة</div>
-            {% if result.batch %}
-              <div class="v">{{ result.batch.batch_code }}{% if result.batch.package_name %} — {{ result.batch.package_name }}{% endif %}</div>
-              <div class="hint">الحالة: {{ result.batch.status or 'غير معروف' }} · المنشئ: {{ result.batch.created_by or '—' }}</div>
-            {% else %}
-              <div class="v">غير مرتبطة بدفعة معروفة</div>
-            {% endif %}
+    <div class="ops-grid">
+      <section class="ops-card">
+        <div class="ops-card-body">
+          <h3 class="ops-card-title">
+            <span><i class="fa-solid fa-chart-line"></i> ملخص التشغيل</span>
+            <span class="ops-muted">من سجلات RADIUS المحفوظة</span>
+          </h3>
+          <div class="ops-stat-grid">
+            <div class="ops-stat"><div class="label">عدد الجلسات</div><div class="value">{{ summary.sessions_count or 0 }}</div><div class="subvalue">كل محاولات الاتصال المسجلة</div></div>
+            <div class="ops-stat"><div class="label">جلسات متصلة الآن</div><div class="value">{{ summary.online_sessions or 0 }}</div><div class="subvalue">بدون وقت إغلاق</div></div>
+            <div class="ops-stat"><div class="label">عدد MAC مختلف</div><div class="value">{{ summary.unique_macs or 0 }}</div><div class="subvalue">مؤشر مشاركة البطاقة</div></div>
+            <div class="ops-stat"><div class="label">الوقت المتبقي</div><div class="value">{{ duration(card.remaining_seconds) if card.remaining_seconds is not none else 'غير محدد' }}</div><div class="subvalue">حسب تاريخ انتهاء البطاقة</div></div>
+            <div class="ops-stat"><div class="label">إجمالي مدة الاتصال</div><div class="value">{{ duration(summary.total_session_seconds) }}</div><div class="subvalue">مجموع الجلسات</div></div>
+            <div class="ops-stat"><div class="label">الرفع</div><div class="value">{{ bytes_size(summary.total_upload_bytes) }}</div><div class="subvalue">من radacct</div></div>
+            <div class="ops-stat"><div class="label">التنزيل</div><div class="value">{{ bytes_size(summary.total_download_bytes) }}</div><div class="subvalue">من radacct</div></div>
+            <div class="ops-stat"><div class="label">عدد NAS</div><div class="value">{{ summary.unique_nas or 0 }}</div><div class="subvalue">خوادم/أجهزة مختلفة</div></div>
           </div>
+        </div>
+      </section>
 
-          <div class="cc-box cc-wide">
-            <div class="k">الباقة</div>
-            {% if result.profile %}
-              <div class="v">{{ result.profile.name }}</div>
-              <div class="hint">
-                تنزيل {{ result.profile.speed_down_kbps or 0 }} كيلوبت · رفع {{ result.profile.speed_up_kbps or 0 }} كيلوبت
-              </div>
-            {% else %}
-              <div class="v">لا توجد باقة مرتبطة</div>
-            {% endif %}
-          </div>
+      <section class="ops-card">
+        <div class="ops-card-body">
+          <h3 class="ops-card-title"><span><i class="fa-solid fa-screwdriver-wrench"></i> إجراءات البطاقة</span></h3>
+          <div class="ops-actions">
+            <div class="ops-action">
+              <h4>تثبيت MAC أو إلغاء التثبيت</h4>
+              <p>عند التثبيت، البطاقة لن تقبل دخولًا من جهاز آخر حسب سياسة الدخول.</p>
+              <form method="post" class="ops-inline">
+                {{ hidden_ops(card, query) }}
+                <input type="hidden" name="_card_action" value="lock_mac">
+                <input class="mono" type="text" name="mac" value="{{ card.locked_mac or card.mac_address or (macs[0].mac if macs else '') }}" placeholder="AA:BB:CC:DD:EE:FF">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-lock"></i> تثبيت</button>
+              </form>
+              <form method="post" class="ops-inline" style="margin-top:8px">
+                {{ hidden_ops(card, query) }}
+                <input type="hidden" name="_card_action" value="unlock_mac">
+                <button class="btn" type="submit"><i class="fa-solid fa-lock-open"></i> فك التثبيت</button>
+                <span class="ops-muted">الحالي: <span class="mono">{{ card.locked_mac or 'غير مثبتة' }}</span></span>
+              </form>
+            </div>
 
-          <div class="cc-box cc-wide">
-            <div class="k">حقول غير متوفرة حاليًا</div>
-            {% set labels = {
-              'assigned_to':'المستفيد المرتبط',
-              'batch':'الدفعة',
-              'cancelled_at':'وقت الإلغاء',
-              'created_at':'تاريخ الإنشاء',
-              'deleted_at':'وقت الأرشفة',
-              'expires_at':'تاريخ الانتهاء',
-              'last_seen_at':'آخر ظهور',
-              'mac_address':'MAC',
-              'ip_address':'IP',
-              'profile':'الباقة',
-              'sold_by':'البائع'
-            } %}
-            <div class="cc-list">
-              {% for item in result.missing_fields or [] %}
-                <span class="pill">{{ labels.get(item, item) }}</span>
-              {% else %}
-                <span class="pill pill-success">كل البيانات الأساسية متوفرة</span>
+            <div class="ops-action">
+              <h4>طرد الجلسة المتصلة</h4>
+              <p>يرسل أمر فصل إلى RADIUS. إذا لم تكن الجلسة متصلة، لن يظهر زر مفيد هنا.</p>
+              {% set has_online = false %}
+              {% for session in sessions if session.online %}
+                {% set has_online = true %}
+                <form method="post" class="ops-inline" style="margin-bottom:8px">
+                  {{ hidden_ops(card, query) }}
+                  <input type="hidden" name="_card_action" value="disconnect">
+                  <input type="hidden" name="session_id" value="{{ session.session_id }}">
+                  <button class="btn btn-warning" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> طرد جلسة {{ session.session_id or session.id }}</button>
+                  <span class="ops-muted mono">{{ session.mac_address or 'MAC غير معروف' }} · {{ session.ip_address or 'IP غير معروف' }}</span>
+                </form>
               {% endfor %}
+              {% if (summary.online_sessions or 0) == 0 %}
+                <div class="ops-muted">لا توجد جلسة متصلة حاليًا لهذه البطاقة.</div>
+              {% endif %}
+            </div>
+
+            <div class="ops-action">
+              <h4>تصفير الوقت والاستخدام</h4>
+              <p>يعيد البطاقة كغير مستخدمة ويمسح بداية الاستخدام والارتباط بالمستفيد، بدون حذف سجل الجلسات.</p>
+              <form method="post" class="ops-inline">
+                {{ hidden_ops(card, query) }}
+                <input type="hidden" name="_card_action" value="reset_usage">
+                <button class="btn btn-warning" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير الاستخدام</button>
+              </form>
+            </div>
+
+            <div class="ops-action">
+              <h4>تعطيل أو إعادة تفعيل</h4>
+              <p>التعطيل يمنع الدخول بدون حذف البطاقة. استخدم السبب حتى يبقى القرار مفهومًا لاحقًا.</p>
+              {% if card.revoked %}
+                <form method="post" class="ops-inline">
+                  {{ hidden_ops(card, query) }}
+                  <input type="hidden" name="_card_action" value="enable">
+                  <button class="btn btn-primary" type="submit"><i class="fa-solid fa-circle-check"></i> إعادة تفعيل</button>
+                  {% if card.disabled_reason %}<span class="ops-muted">سبب التعطيل: {{ card.disabled_reason }}</span>{% endif %}
+                </form>
+              {% else %}
+                <form method="post" class="ops-inline">
+                  {{ hidden_ops(card, query) }}
+                  <input type="hidden" name="_card_action" value="disable">
+                  <input type="text" name="reason" placeholder="سبب التعطيل" maxlength="220">
+                  <button class="btn btn-danger" type="submit"><i class="fa-solid fa-ban"></i> تعطيل</button>
+                </form>
+              {% endif %}
+            </div>
+
+            <div class="ops-action">
+              <h4>حذف نهائي</h4>
+              <p>خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات RADIUS السابقة المرتبطة باسم الدخول.</p>
+              <form method="post" class="ops-inline">
+                {{ hidden_ops(card, query) }}
+                <input type="hidden" name="_card_action" value="delete_permanent">
+                <input type="text" name="confirm_delete" placeholder="اكتب DELETE للتأكيد" maxlength="20">
+                <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> حذف نهائي</button>
+              </form>
             </div>
           </div>
         </div>
-      {% endif %}
+      </section>
     </div>
-  </div>
+
+    <section class="ops-card">
+      <div class="ops-card-body">
+        <h3 class="ops-card-title"><span><i class="fa-solid fa-circle-info"></i> بيانات البطاقة والباقات</span></h3>
+        <div class="ops-details">
+          <div class="ops-field"><div class="k">الدفعة</div><div class="v">{% if card.batch %}{{ card.batch.batch_code }}{% if card.batch.package_name %} · {{ card.batch.package_name }}{% endif %}{% else %}غير مرتبطة{% endif %}</div></div>
+          <div class="ops-field"><div class="k">حالة الدفعة</div><div class="v">{{ card.batch.status if card.batch else '—' }}</div></div>
+          <div class="ops-field"><div class="k">منشئ الدفعة</div><div class="v">{{ card.batch.created_by if card.batch else '—' }}</div></div>
+          <div class="ops-field"><div class="k">الباقة</div><div class="v">{{ card.profile.name if card.profile else 'غير مرتبطة' }}</div></div>
+          <div class="ops-field"><div class="k">سرعة التنزيل/الرفع</div><div class="v">{% if card.profile %}{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">الحصة</div><div class="v">{% if card.profile %}إجمالي {{ card.profile.quota_total_mb or 0 }} MB · يومي {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">تاريخ الإنشاء</div><div class="v mono">{{ dt(card.created_at) }}</div></div>
+          <div class="ops-field"><div class="k">بداية الاستخدام</div><div class="v mono">{{ dt(card.started_at) }}</div></div>
+          <div class="ops-field"><div class="k">تاريخ الانتهاء</div><div class="v mono">{{ dt(card.expires_at) }}</div></div>
+          <div class="ops-field"><div class="k">آخر ظهور</div><div class="v mono">{{ dt(card.last_seen_at) }}</div></div>
+          <div class="ops-field"><div class="k">آخر MAC</div><div class="v mono">{{ card.mac_address or '—' }}</div></div>
+          <div class="ops-field"><div class="k">آخر IP / NAS</div><div class="v mono">{{ card.ip_address or '—' }} · {{ card.nas_address or '—' }}</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ops-card">
+      <div class="ops-card-body">
+        <h3 class="ops-card-title">
+          <span><i class="fa-solid fa-network-wired"></i> الأجهزة التي استخدمت البطاقة</span>
+          <span class="ops-muted">{{ macs|length }} MAC معروض</span>
+        </h3>
+        {% if macs %}
+          <div class="ops-macs">
+            {% for item in macs %}
+              <div class="ops-mac">
+                <div class="mac">{{ item.mac }}</div>
+                <div class="ops-muted">الجلسات: {{ item.sessions_count }} · متصل الآن: {{ item.online_sessions }} · آخر ظهور: {{ dt(item.last_seen_at) }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="ops-empty">لا توجد MACات مسجلة لهذه البطاقة بعد.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="ops-card">
+      <div class="ops-card-body">
+        <h3 class="ops-card-title">
+          <span><i class="fa-solid fa-table-list"></i> جدول الجلسات التفصيلي</span>
+          <span class="ops-muted">آخر {{ sessions|length }} جلسة</span>
+        </h3>
+        {% if sessions %}
+          <div class="ops-table-wrap">
+            <table class="ops-table">
+              <thead>
+                <tr>
+                  <th>الحالة</th>
+                  <th>Session ID</th>
+                  <th>MAC</th>
+                  <th>IP</th>
+                  <th>NAS</th>
+                  <th>المنفذ</th>
+                  <th>بدأت</th>
+                  <th>آخر تحديث</th>
+                  <th>انتهت</th>
+                  <th>المدة</th>
+                  <th>رفع</th>
+                  <th>تنزيل</th>
+                  <th>نوع الخدمة</th>
+                  <th>نوع المنفذ/الجهاز</th>
+                  <th>سبب الإنهاء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for session in sessions %}
+                  <tr>
+                    <td>{% if session.online %}<span class="ops-online">متصلة</span>{% else %}<span class="ops-offline">منتهية</span>{% endif %}</td>
+                    <td class="mono">{{ session.session_id or session.id }}</td>
+                    <td class="mono">{{ session.mac_address or '—' }}</td>
+                    <td class="mono">{{ session.ip_address or session.ipv6_address or '—' }}</td>
+                    <td class="mono">{{ session.nas_address or '—' }}</td>
+                    <td class="mono">{{ session.nas_port or '—' }}</td>
+                    <td class="mono">{{ dt(session.started_at) }}</td>
+                    <td class="mono">{{ dt(session.updated_at) }}</td>
+                    <td class="mono">{{ dt(session.stopped_at) }}</td>
+                    <td>{{ duration(session.duration_seconds) }}</td>
+                    <td>{{ bytes_size(session.upload_bytes) }}</td>
+                    <td>{{ bytes_size(session.download_bytes) }}</td>
+                    <td>{{ session.service_type or '—' }}</td>
+                    <td>{{ session.device_hint or session.nas_port_type or 'غير متاح' }}</td>
+                    <td>{{ session.terminate_cause or '—' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="ops-empty">لا توجد جلسات محفوظة في radacct لهذه البطاقة بعد.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="ops-card">
+      <div class="ops-card-body">
+        <h3 class="ops-card-title"><span><i class="fa-solid fa-eye-slash"></i> بيانات غير متاحة حاليًا</span></h3>
+        <div class="ops-alert info">
+          <i class="fa-solid fa-lightbulb"></i>
+          <div>النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة المصنعة لا يتوفر عادة من RADIUS إلا إذا أرسله NAS داخل حقول الاتصال.</div>
+        </div>
+        <div class="ops-badges" style="margin-top:10px">
+          {% set labels = {
+            'assigned_to':'المستفيد المرتبط',
+            'batch':'الدفعة',
+            'cancelled_at':'وقت الإلغاء',
+            'created_at':'تاريخ الإنشاء',
+            'deleted_at':'وقت الأرشفة',
+            'expires_at':'تاريخ الانتهاء',
+            'last_seen_at':'آخر ظهور',
+            'mac_address':'MAC',
+            'ip_address':'IP',
+            'profile':'الباقة',
+            'sold_by':'البائع'
+          } %}
+          {% for item in card.missing_fields or [] %}
+            <span class="ops-badge">{{ labels.get(item, item) }}</span>
+          {% else %}
+            <span class="ops-badge ok">كل البيانات الأساسية متوفرة</span>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  {% endif %}
 </div>
 {% endblock %}

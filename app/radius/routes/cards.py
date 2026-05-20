@@ -24,6 +24,9 @@ def register_cards_routes(bp: Blueprint) -> None:
     # ـ R13.A.1: JSON API لـ Card Checker AJAX (foundation للـ UI rebuild) ـ
     bp.add_url_rule("/cards/checker/api/lookup", "cards_checker_api_lookup",
                      cards_checker_api_lookup, methods=["GET"])
+    # ـ R13.A.2: v2 template preview — side-by-side with v1 حتى A.4 ـ
+    bp.add_url_rule("/cards/checker/v2", "cards_checker_v2",
+                     cards_checker_v2, methods=["GET"])
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
     bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk", cards_batches_bulk, methods=["POST"])
     bp.add_url_rule("/cards/batches/export.csv", "cards_batches_export_csv", cards_batches_export_csv, methods=["GET"])
@@ -430,6 +433,29 @@ def cards_checker():
 # state matching. لا نَستخدم HTTP 404 لـ "card not found" — هذا حالة
 # طبيعية (`result.exists = false`)، لا خطأ.
 # ─────────────────────────────────────────────────────────────────────────────
+def cards_checker_v2():
+    """R13.A.2: GET /admin/radius/cards/checker/v2
+
+    Preview of the new operations-room layout. Side-by-side with v1
+    until A.4 swaps the default. Renders the same `result` payload as
+    v1 — no POST handling here; the v2 template's operation forms
+    submit back to the v1 route (proven path)."""
+    query = (request.args.get("query") or request.args.get("q") or "").strip()
+    result = None
+    error = ""
+    if query:
+        if len(query) > 128:
+            error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
+        else:
+            result = check_card(_tid(), query)
+    return render_template(
+        "radius/cards_checker_v2.html",
+        query=query,
+        result=result,
+        error=error,
+    )
+
+
 def cards_checker_api_lookup():
     """GET /admin/radius/cards/checker/api/lookup?q=<query>
 

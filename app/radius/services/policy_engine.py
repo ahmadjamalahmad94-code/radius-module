@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
+from ..core.constants import USER_TYPE_CARD
 from ..core.types import AccessPlan, Card, Subscriber
 from ..db.connection import db
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
@@ -219,11 +220,12 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         password=card.password,
         user_type="card",
         plan_id=card.plan_id,
+        card_batch_id=card.batch_id,
         status="disabled" if card.revoked else "enabled",
         expire_at=card.expire_at,
-        # نُبقي mac_lock None للكروت حتى لو used_by_mac موجود — قرار التقييد
-        # على MAC يعتمد على إعدادات الـ batch (lock_to_mac/switch_to_mac) ولا
-        # نُلزمه هنا بسرعة كي لا نُغلق الكارت قبل المسح الأول.
+        # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac
+        # لأنه observational وقد يُلتقط تلقائياً من أول استخدام.
+        mac_lock=card.locked_mac or None,
     )
 
 
@@ -242,7 +244,12 @@ def authorize(req: AuthRequest) -> AuthDecision:
 
     sub = subscribers_repo.get_subscriber(req.tenant_id, req.username)
     source = "subscriber"
-    if not sub:
+    if sub and (sub.user_type == USER_TYPE_CARD or sub.card_batch_id):
+        card = cards_repo.get_card_by_username(req.tenant_id, req.username)
+        if card:
+            sub = _card_to_subscriber(card)
+            source = "card"
+    elif not sub:
         # ـ fallback: حاول إيجاد الـ username كـ كارت ـ
         card = cards_repo.get_card_by_username(req.tenant_id, req.username)
         if card:

@@ -151,6 +151,86 @@ def test_card_first_used_at_set_on_accept(app):
         assert after["used_by_mac"] == "AA:BB:CC:DD:EE:FF"
 
 
+def test_generated_card_mirror_records_first_used_on_accept(app):
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, CardBatch, Subscriber
+        from app.radius.db.connection import db
+        from app.radius.db.repos import cards_repo, plans_repo, subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="VoucherMirrorR92", enabled=True,
+        ))
+        batch = cards_repo.create_batch(CardBatch(
+            id=None, tenant_id=1, batch_code="B-R92-MIRROR", plan_id=plan.id, count=1,
+        ))
+        card = cards_repo.generate_cards(
+            tenant_id=1, batch_id=batch.id, plan_id=plan.id, count=1)[0]
+        # Real batch generation creates a subscriber mirror. The policy engine
+        # must still update cards.first_used_at and enforce card state.
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None,
+            tenant_id=1,
+            username=card.username,
+            password=card.password,
+            user_type="card",
+            plan_id=plan.id,
+            card_batch_id=batch.id,
+            status="enabled",
+        ))
+
+        d = authorize(AuthRequest(
+            username=card.username,
+            password=card.password,
+            tenant_id=1,
+            calling_station_id="22:33:44:55:66:77",
+        ))
+        assert d.ok is True
+
+        row = db().execute(
+            "SELECT first_used_at, used, used_by_mac FROM cards WHERE id=?",
+            (card.id,),
+        ).fetchone()
+        assert row["first_used_at"] is not None
+        assert int(row["used"]) == 1
+        assert row["used_by_mac"] == "22:33:44:55:66:77"
+
+
+def test_generated_card_mirror_respects_card_revoked_state(app):
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, CardBatch, Subscriber
+        from app.radius.db.repos import cards_repo, plans_repo, subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="VoucherMirrorRevoked", enabled=True,
+        ))
+        batch = cards_repo.create_batch(CardBatch(
+            id=None, tenant_id=1, batch_code="B-R92-REVOKED", plan_id=plan.id, count=1,
+        ))
+        card = cards_repo.generate_cards(
+            tenant_id=1, batch_id=batch.id, plan_id=plan.id, count=1)[0]
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None,
+            tenant_id=1,
+            username=card.username,
+            password=card.password,
+            user_type="card",
+            plan_id=plan.id,
+            card_batch_id=batch.id,
+            status="enabled",
+        ))
+        cards_repo.set_card_revoked(1, card.id, True, actor="test", reason="blocked")
+
+        d = authorize(AuthRequest(
+            username=card.username,
+            password=card.password,
+            tenant_id=1,
+        ))
+        assert d.ok is False
+        assert d.reason == "disabled"
+
+
 def test_card_first_used_preserved_on_subsequent_use(app):
     with app.app_context():
         import time

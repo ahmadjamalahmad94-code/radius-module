@@ -197,14 +197,96 @@ def test_card_checker_ui_route_and_result_never_expose_password(client, auth_hea
     assert "الدفعة" in html
     assert "الباقة" in html
     assert "كلمة مرور" in html
+    assert "مركز عمليات البطاقة" in html
     assert card["password"] not in html
+
+
+def test_card_checker_operations_show_accounting_and_lock_mac(client, auth_headers):
+    from app.radius.db.connection import transaction
+    from app.radius.db.repos import cards_repo
+
+    data = _generate(client, auth_headers, count=1)
+    card = data["cards"][0]
+    username = card["username"]
+    with transaction() as conn:
+        conn.execute(
+            """
+            INSERT INTO radacct(
+                tenant_id, acctsessionid, acctuniqueid, username, nasipaddress,
+                nasportid, nasporttype, acctstarttime, acctupdatetime,
+                acctstoptime, acctsessiontime, acctinputoctets, acctoutputoctets,
+                callingstationid, calledstationid, framedipaddress, servicetype,
+                framedprotocol, connectinfo_start
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                1, "sess-online", "uniq-online", username, "10.10.0.1",
+                "ether1", "Wireless-802.11", "2026-05-20T08:00:00Z",
+                "2026-05-20T08:20:00Z", None, 1200, 2048, 4096,
+                "AA:BB:CC:DD:EE:01", "hotspot", "172.16.1.50", "Framed-User",
+                "PPP", "android wifi"
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO radacct(
+                tenant_id, acctsessionid, acctuniqueid, username, nasipaddress,
+                nasportid, nasporttype, acctstarttime, acctupdatetime,
+                acctstoptime, acctsessiontime, acctinputoctets, acctoutputoctets,
+                callingstationid, calledstationid, framedipaddress, servicetype,
+                framedprotocol, connectinfo_start, acctterminatecause
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                1, "sess-old", "uniq-old", username, "10.10.0.2",
+                "ether2", "Ethernet", "2026-05-19T08:00:00Z",
+                "2026-05-19T09:00:00Z", "2026-05-19T09:00:00Z",
+                3600, 1024, 2048, "AA:BB:CC:DD:EE:02", "hotspot",
+                "172.16.1.60", "Framed-User", "PPP", "windows", "User-Request"
+            ),
+        )
+
+    _web_login(client)
+    res = client.get(
+        "/admin/radius/cards/checker",
+        query_string={"query": username},
+    )
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "عدد MAC مختلف" in html
+    assert "جدول الجلسات التفصيلي" in html
+    assert "sess-online" in html
+    assert "AA:BB:CC:DD:EE:01" in html
+    assert "android wifi" in html
+    assert card["password"] not in html
+
+    token = _csrf(client, f"/admin/radius/cards/checker?query={username}")
+    lock = client.post(
+        "/admin/radius/cards/checker",
+        data={
+            "_csrf_token": token,
+            "_card_action": "lock_mac",
+            "query": username,
+            "username": username,
+            "card_id": str(card["id"]),
+            "mac": "AA:BB:CC:DD:EE:01",
+        },
+        follow_redirects=True,
+    )
+    assert lock.status_code == 200
+    updated = cards_repo.get_card_by_username(1, username)
+    assert updated is not None
+    assert updated.locked_mac == "AA:BB:CC:DD:EE:01"
+    assert "تم تثبيت عنوان MAC" in lock.get_data(as_text=True)
 
 
 def test_card_checker_ui_empty_and_long_query_are_safe(client):
     _web_login(client)
     empty = client.get("/admin/radius/cards/checker")
     assert empty.status_code == 200
-    assert "أدخل رقم بطاقة" in empty.get_data(as_text=True)
+    assert "مركز عمليات البطاقة" in empty.get_data(as_text=True)
 
     long_query = client.get(
         "/admin/radius/cards/checker",

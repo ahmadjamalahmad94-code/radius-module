@@ -32,6 +32,27 @@ def _int_or_none(value: Any) -> int | None:
         return None
 
 
+def _seconds(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _remaining_seconds(raw: Any, now: datetime) -> int | None:
+    expires = parse_dt(raw)
+    if not expires:
+        return None
+    return max(0, int((expires - now).total_seconds()))
+
+
+def _bytes(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _status(row: dict, now: datetime) -> str:
     batch_status = (row.get("batch_status") or "").strip().lower()
     if bool(row.get("card_revoked")) or row.get("batch_deleted_at") or batch_status in {
@@ -84,6 +105,66 @@ def _profile(row: dict) -> dict | None:
         "quota_monthly_mb": row.get("profile_quota_monthly_mb"),
         "duration_minutes": row.get("profile_duration_minutes"),
         "validity_days": row.get("profile_validity_days"),
+    }
+
+
+def _session(row: dict, now: datetime) -> dict:
+    start = parse_dt(row.get("acctstarttime"))
+    stop = parse_dt(row.get("acctstoptime"))
+    update = parse_dt(row.get("acctupdatetime"))
+    online = stop is None
+    duration = _seconds(row.get("acctsessiontime"))
+    if online and start:
+        duration = max(duration, int((now - start).total_seconds()))
+    return {
+        "id": row.get("radacctid"),
+        "session_id": row.get("acctsessionid") or "",
+        "unique_id": row.get("acctuniqueid") or "",
+        "started_at": _iso(row.get("acctstarttime")),
+        "updated_at": _iso(row.get("acctupdatetime")),
+        "stopped_at": _iso(row.get("acctstoptime")),
+        "online": online,
+        "duration_seconds": duration,
+        "upload_bytes": _bytes(row.get("acctinputoctets")),
+        "download_bytes": _bytes(row.get("acctoutputoctets")),
+        "mac_address": row.get("callingstationid") or None,
+        "called_station": row.get("calledstationid") or None,
+        "ip_address": row.get("framedipaddress") or None,
+        "ipv6_address": row.get("framedipv6address") or None,
+        "nas_address": row.get("nasipaddress") or None,
+        "nas_port": row.get("nasportid") or None,
+        "nas_port_type": row.get("nasporttype") or None,
+        "service_type": row.get("servicetype") or None,
+        "framed_protocol": row.get("framedprotocol") or None,
+        "connect_info_start": row.get("connectinfo_start") or None,
+        "connect_info_stop": row.get("connectinfo_stop") or None,
+        "terminate_cause": row.get("acctterminatecause") or None,
+        "device_hint": row.get("connectinfo_start") or row.get("nasporttype") or None,
+    }
+
+
+def _summary(raw: dict, sessions: list[dict], macs: list[dict]) -> dict:
+    return {
+        "sessions_count": _seconds(raw.get("sessions_count")),
+        "online_sessions": _seconds(raw.get("online_sessions")),
+        "unique_macs": _seconds(raw.get("unique_macs")),
+        "unique_ips": _seconds(raw.get("unique_ips")),
+        "unique_nas": _seconds(raw.get("unique_nas")),
+        "total_session_seconds": _seconds(raw.get("total_session_seconds")),
+        "total_upload_bytes": _bytes(raw.get("total_upload_bytes")),
+        "total_download_bytes": _bytes(raw.get("total_download_bytes")),
+        "first_session_at": _iso(raw.get("first_session_at")),
+        "last_session_at": _iso(raw.get("last_session_at")),
+        "macs": [
+            {
+                "mac": item.get("mac"),
+                "sessions_count": _seconds(item.get("sessions_count")),
+                "online_sessions": _seconds(item.get("online_sessions")),
+                "last_seen_at": _iso(item.get("last_seen_at")),
+            }
+            for item in macs
+        ],
+        "latest_sessions": sessions,
     }
 
 
@@ -153,7 +234,12 @@ def check_card(tenant_id: int, query: str) -> dict:
             ],
         }
 
+    now = _utcnow()
     acct = cards_repo.get_latest_card_accounting(tenant_id, record["username"])
+    session_rows = cards_repo.list_card_accounting(tenant_id, record["username"], limit=100)
+    sessions = [_session(row, now) for row in session_rows]
+    accounting_summary = cards_repo.summarize_card_accounting(tenant_id, record["username"])
+    macs = cards_repo.list_card_macs(tenant_id, record["username"], limit=30)
     data_sources = ["cards"]
     if record.get("batch_code") is not None:
         data_sources.append("card_batches")
@@ -173,16 +259,21 @@ def check_card(tenant_id: int, query: str) -> dict:
     ip_address = (acct or {}).get("framedipaddress") or record.get("subscriber_static_ip")
     card = {
         "exists": True,
-        "status": _status(record, _utcnow()),
+        "status": _status(record, now),
         "query": query,
         "id": record.get("card_id"),
         "username": record.get("username"),
         "has_password": bool(record.get("password")),
         "used": bool(record.get("card_used")),
         "revoked": bool(record.get("card_revoked")),
+        "locked_mac": record.get("locked_mac") or None,
+        "disabled_reason": record.get("disabled_reason") or "",
+        "disabled_at": _iso(record.get("disabled_at")),
+        "disabled_by": record.get("disabled_by") or "",
         "created_at": _iso(record.get("card_created_at")),
         "started_at": _iso(record.get("first_used_at")),
         "expires_at": _iso(record.get("card_expire_at")),
+        "remaining_seconds": _remaining_seconds(record.get("card_expire_at"), now),
         "batch": _batch(record),
         "profile": _profile(record),
         "created_by": record.get("batch_created_by") or None,
@@ -194,6 +285,15 @@ def check_card(tenant_id: int, query: str) -> dict:
         "nas_address": (acct or {}).get("nasipaddress") or None,
         "active_session": None if not acct else not bool(acct.get("acctstoptime")),
         "last_session_seconds": _int_or_none((acct or {}).get("acctsessiontime")),
+        "operations": {
+            "can_disconnect": bool((acct or {}).get("acctstoptime") is None and acct),
+            "can_lock_mac": bool(mac_address),
+            "can_reset_usage": True,
+            "can_disable": not bool(record.get("card_revoked")),
+            "can_enable": bool(record.get("card_revoked")),
+            "can_delete_permanently": True,
+        },
+        "accounting_summary": _summary(accounting_summary, sessions, macs),
         "data_sources": data_sources,
     }
     card["missing_fields"] = _missing_fields(card)
