@@ -1,0 +1,294 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}إعداد دفع DHCP من المايكروتيك{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-arrow-up-from-bracket"></i>{% endblock %}
+{% block page_title %}إعداد دفع DHCP من المايكروتيك{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    حلّ شامل لمشكلة "الجهاز / النظام" لمّا يكون الراوتر خلف NAT أو الـ API مسكر.
+  </span>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .pushp-card{
+    background:#fff;border:1px solid var(--hr-border);
+    border-radius:var(--hr-r-lg);box-shadow:var(--hr-shadow-sm);
+    margin-bottom:14px;padding:18px 22px;
+  }
+  .pushp-card h3{
+    margin:0 0 12px;font-size:15px;color:#5B4BD6;
+    display:flex;align-items:center;gap:8px;
+  }
+  .pushp-step{
+    counter-increment:pushp;
+    margin-bottom:10px;padding-inline-start:32px;position:relative;
+    font-size:13.5px;line-height:1.7;
+  }
+  .pushp-step::before{
+    content:counter(pushp);
+    position:absolute;inset-inline-start:0;top:1px;
+    background:#5B4BD6;color:#fff;
+    width:22px;height:22px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;
+  }
+  .pushp-steps{ counter-reset:pushp; }
+
+  .pushp-script{
+    background:#0f172a;color:#e2e8f0;
+    border-radius:10px;
+    padding:14px 16px;
+    margin-top:10px;
+    position:relative;
+    overflow:auto;
+  }
+  .pushp-script pre{
+    margin:0;font-family:var(--hr-mono);font-size:12.5px;
+    line-height:1.65;color:#bfdbfe;direction:ltr;
+    white-space:pre;
+  }
+  .pushp-script .copy-btn{
+    position:absolute;inset-inline-end:10px;top:10px;
+    background:#1e293b;color:#94a3b8;border:1px solid #334155;
+    padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:700;
+    cursor:pointer;
+  }
+  .pushp-script .copy-btn:hover{ color:#fff;background:#334155; }
+  .pushp-script .copy-btn.is-copied{ background:#16a34a;color:#fff;border-color:#16a34a; }
+
+  .pushp-config-row{
+    display:grid;grid-template-columns:140px 1fr;gap:10px;
+    margin-bottom:10px;align-items:center;
+  }
+  .pushp-config-row label{
+    font-size:13px;font-weight:700;color:#475569;
+  }
+  .pushp-config-row input{
+    width:100%;padding:8px 12px;
+    border:1px solid #D5CCF5;border-radius:8px;
+    font-family:var(--hr-mono);font-size:13px;
+    direction:ltr;
+  }
+  .pushp-config-row input:focus{
+    outline:none;border-color:#5B4BD6;
+    box-shadow:0 0 0 3px rgba(91,75,214,.12);
+  }
+  .pushp-warn{
+    background:#fffbeb;border:1px solid #fcd34d;color:#92400e;
+    padding:10px 14px;border-radius:8px;font-size:13px;
+    margin-bottom:14px;
+  }
+  .pushp-ok{
+    background:#f0fdf4;border:1px solid #86efac;color:#15803d;
+    padding:10px 14px;border-radius:8px;font-size:13px;
+    margin-bottom:14px;
+  }
+  .pushp-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 14px;
+    background:#5B4BD6;color:#fff;
+    border:none;border-radius:8px;
+    font-size:13px;font-weight:700;
+    cursor:pointer;
+  }
+  .pushp-btn:hover{ background:#4836b8; }
+  .pushp-btn.secondary{
+    background:#fff;color:#5B4BD6;border:1px solid #D5CCF5;
+  }
+  .pushp-btn.secondary:hover{ background:#F4F1FE; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-circle-info"></i> لماذا هذا الحلّ؟</h3>
+  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
+    عمود <strong>«الجهاز / النظام»</strong> في فحص البطاقة يحتاج معرفة اسم الجهاز
+    (host-name) ونوع نظام التشغيل (DHCP option 60) لكل MAC. الحلّ الأصلي كان
+    أن يسحب الخادم هذه البيانات من MT API على البورت <code>8728</code>،
+    لكن لمّا الراوتر خلف NAT أو الفايروول مسكّر، الـ API لا يصل من الخادم.
+  </p>
+  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:8px 0 0">
+    هذا الحلّ يعكس الاتجاه: نخلّي <strong>الراوتر يدفع</strong> البيانات إلى
+    الخادم عبر HTTPS كل دقيقتين. الـ outbound HTTPS مفتوح في كل الراوترات
+    تقريبًا (لأنه نفس المنفذ المستخدم للوصول للإنترنت)، فلا يحتاج فتح
+    منافذ خارجية ولا VPN ولا port forwarding.
+  </p>
+</div>
+
+{% if not tokens %}
+<div class="pushp-warn">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  لا يوجد لديك أي API token. أنشئ واحد من
+  <a href="{{ url_for('radius.tokens_list') }}" style="font-weight:800">إدارة Tokens</a>
+  ثم ارجع لهذه الصفحة.
+</div>
+{% else %}
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-screwdriver-wrench"></i> الإعدادات</h3>
+  <div class="pushp-config-row">
+    <label>عنوان الخادم</label>
+    <input type="text" id="pushp-url" value="{{ base_url }}" dir="ltr">
+  </div>
+  <div class="pushp-config-row">
+    <label>API Token</label>
+    <input type="text" id="pushp-token"
+           value="ضع الـ token هنا — لن نُظهر القيمة لأمان"
+           placeholder="ضع قيمة الـ token من إدارة Tokens">
+  </div>
+  <p style="font-size:12.5px;color:#64748B;margin:4px 0 0">
+    اسم Token المقترح: <strong>{{ suggested_token_name or '—' }}</strong>.
+    Token الكامل لا يُحفظ بالـ DB إلا hash منه، فلازم تنسخه من شاشة إنشاء
+    الـ Token الأصلية أو تُنشئ جديدًا.
+  </p>
+</div>
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-list-ol"></i> الخطوات (3 دقائق)</h3>
+  <div class="pushp-steps">
+    <div class="pushp-step">
+      افتح Winbox أو WebFig على الراوتر، ادخل على <strong>Terminal</strong> (الزرّ الأسود يمين أعلى Winbox).
+    </div>
+    <div class="pushp-step">
+      عبّئ الـ URL والـ token بالأعلى. الـ script رح يتولّد تلقائيًا بالأسفل.
+    </div>
+    <div class="pushp-step">
+      اضغط زر <strong>نسخ</strong> بجوار الـ script.
+    </div>
+    <div class="pushp-step">
+      الصقه في Terminal الراوتر واضغط Enter. رح ترى مهمّة جديدة في <code>/system/scheduler</code>.
+    </div>
+    <div class="pushp-step">
+      انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.
+    </div>
+  </div>
+</div>
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-code"></i> سكربت MikroTik</h3>
+  <div class="pushp-script">
+    <button class="copy-btn" type="button" data-copy-script>
+      <i class="fa-solid fa-copy"></i> نسخ
+    </button>
+<pre id="pushp-script-body" dir="ltr">جارٍ توليد السكربت…</pre>
+  </div>
+</div>
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-vial"></i> اختبار سريع</h3>
+  <p style="font-size:13px;color:#475569;margin:0 0 10px">
+    تأكّد من وصول الراوتر قبل ما تركّب الـ scheduler: انسخ الأمر التالي وألصقه في الراوتر.
+    لازم يرجع <code>{"ok":true,"data":{"ingested":1,...}}</code>.
+  </p>
+  <div class="pushp-script">
+    <button class="copy-btn" type="button" data-copy-test>
+      <i class="fa-solid fa-copy"></i> نسخ
+    </button>
+<pre id="pushp-test-body" dir="ltr">جارٍ توليد الأمر…</pre>
+  </div>
+</div>
+
+<div class="pushp-card">
+  <h3><i class="fa-solid fa-broom"></i> إزالة الـ scheduler</h3>
+  <p style="font-size:13px;color:#475569;margin:0 0 10px">
+    إذا تريد تعطيل الدفع (مثلاً بعد إصلاح API على الراوتر) نفّذ:
+  </p>
+  <div class="pushp-script">
+<pre dir="ltr">/system scheduler remove [find name=hoberadius-push-dhcp]</pre>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var urlInp   = document.getElementById('pushp-url');
+  var tokInp   = document.getElementById('pushp-token');
+  var scriptEl = document.getElementById('pushp-script-body');
+  var testEl   = document.getElementById('pushp-test-body');
+
+  function rebuild(){
+    var url = (urlInp.value || '').trim().replace(/\/+$/, '');
+    var tok = (tokInp.value || '').trim();
+    var endpoint = url + '/api/v1/devices/ingest';
+
+    // ── Main scheduler script ────────────────────────────
+    // Builds a JSON array from /ip/dhcp-server/lease and POSTs every
+    // 2 minutes. RouterOS quoting rules:
+    //  - Double quotes must be escaped \"
+    //  - Variables expand in double-quoted strings
+    //  - We use only ASCII-safe content for the body to avoid encoding issues
+    var script =
+      '# HobeRadius — DHCP push to ' + url + '\n' +
+      '# Removes any previous installation so the script is idempotent.\n' +
+      '/system scheduler remove [find name=hoberadius-push-dhcp]\n' +
+      '\n' +
+      '/system scheduler add name="hoberadius-push-dhcp" interval=2m \\\n' +
+      '    start-time=startup comment="HobeRadius DHCP push" \\\n' +
+      '    on-event="\n' +
+      ':local body \\"[\\";\n' +
+      ':local first true;\n' +
+      ':foreach lease in=[/ip/dhcp-server/lease/find] do={\n' +
+      '  :local mac [/ip/dhcp-server/lease/get \\$lease active-mac-address];\n' +
+      '  :if ([:len \\$mac] = 0) do={ :set mac [/ip/dhcp-server/lease/get \\$lease mac-address] };\n' +
+      '  :if ([:len \\$mac] > 0) do={\n' +
+      '    :local host [/ip/dhcp-server/lease/get \\$lease active-host-name];\n' +
+      '    :local cid  [/ip/dhcp-server/lease/get \\$lease active-client-id];\n' +
+      '    :local ip   [/ip/dhcp-server/lease/get \\$lease active-address];\n' +
+      '    :if (!\\$first) do={ :set body (\\$body . \\",\\") };\n' +
+      '    :set body (\\$body . \\"{\\\\\\"mac\\\\\\":\\\\\\"\\" . \\$mac . \\"\\\\\\",\\\\\\"hostname\\\\\\":\\\\\\"\\" . \\$host . \\"\\\\\\",\\\\\\"class_id\\\\\\":\\\\\\"\\" . \\$cid . \\"\\\\\\",\\\\\\"ip\\\\\\":\\\\\\"\\" . \\$ip . \\"\\\\\\"}\\");\n' +
+      '    :set first false;\n' +
+      '  };\n' +
+      '};\n' +
+      ':set body (\\$body . \\"]\\");\n' +
+      '/tool fetch url=\\"' + endpoint + '\\" \\\\\n' +
+      '    http-method=post mode=https check-certificate=no \\\\\n' +
+      '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer ' + tok + '\\" \\\\\n' +
+      '    http-data=\\$body output=none;\n' +
+      '"';
+
+    scriptEl.textContent = script;
+
+    // ── One-shot test command (manual, no scheduler) ─────
+    var testCmd =
+      '/tool fetch url="' + endpoint + '" \\\n' +
+      '    http-method=post mode=https check-certificate=no \\\n' +
+      '    http-header-field="Content-Type: application/json,Authorization: Bearer ' + tok + '" \\\n' +
+      '    http-data="[{\\"mac\\":\\"AA:BB:CC:DD:EE:FF\\",\\"hostname\\":\\"test-device\\",\\"class_id\\":\\"android-dhcp-11\\",\\"ip\\":\\"10.20.30.99\\"}]" \\\n' +
+      '    output=user';
+    testEl.textContent = testCmd;
+  }
+
+  function copyToClipboard(text, btn){
+    navigator.clipboard.writeText(text).then(function(){
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> منسوخ';
+      btn.classList.add('is-copied');
+      setTimeout(function(){
+        btn.innerHTML = orig;
+        btn.classList.remove('is-copied');
+      }, 1800);
+    });
+  }
+
+  urlInp.addEventListener('input', rebuild);
+  tokInp.addEventListener('input', rebuild);
+  // Reveal token field on focus (was deliberately greyed for security)
+  tokInp.addEventListener('focus', function(){
+    if (tokInp.value.indexOf('ضع') === 0) tokInp.value = '';
+  });
+
+  document.querySelector('[data-copy-script]').addEventListener('click', function(){
+    copyToClipboard(scriptEl.textContent, this);
+  });
+  document.querySelector('[data-copy-test]').addEventListener('click', function(){
+    copyToClipboard(testEl.textContent, this);
+  });
+
+  rebuild();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

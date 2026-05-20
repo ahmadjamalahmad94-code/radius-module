@@ -229,6 +229,18 @@
 
   {# ─── Fix commands (only on failure) ─── #}
   {% if r.status == 'tcp_failed' %}
+  <div style="margin:0 16px 8px;padding:10px 14px;background:#f0fdf4;
+              border:1px solid #86efac;color:#15803d;border-radius:8px;
+              font-size:13px;display:flex;align-items:center;gap:10px">
+    <i class="fa-solid fa-lightbulb"></i>
+    <span>
+      الحلّ الجذري لمشكلة الـ API المسكر: استخدم
+      <a href="{{ url_for('radius.mt_push_setup') }}"
+         style="font-weight:800;color:#15803d;text-decoration:underline">
+        إعداد دفع DHCP من المايكروتيك</a>
+      — يخلّي الراوتر يدفع البيانات إلى الخادم عبر outbound HTTPS بدل ما الخادم يحاول يوصله.
+    </span>
+  </div>
   <div class="mtd-fix">
     <button class="copy-btn" type="button"
             onclick="navigator.clipboard.writeText(this.nextElementSibling.nextElementSibling.textContent); this.textContent='منسوخ ✓'">نسخ</button>

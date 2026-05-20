@@ -30,6 +30,39 @@ def register_status_routes(bp: Blueprint) -> None:
                     reconcile_now, methods=["POST", "GET"])
     bp.add_url_rule("/diagnostics", "diagnostics",
                     diagnostics, methods=["GET"])
+    bp.add_url_rule("/mt-push-setup", "mt_push_setup",
+                    mt_push_setup, methods=["GET"])
+
+
+def mt_push_setup():
+    """Generates a MikroTik scheduler script the operator pastes into
+    Winbox/terminal so the router pushes DHCP leases to us via HTTPS.
+
+    Used when the standard PULL mode (VPS → MT API on 8728) is blocked
+    by firewall/NAT — outbound HTTPS from the router almost always
+    works, so this path is the universal fallback.
+    """
+    from ..db.repos import api_tokens_repo
+
+    # Best-effort: pick the first non-revoked API token for this tenant
+    # to suggest. Operator can override on the page if they have many.
+    tid = _tid()
+    tokens = [t for t in api_tokens_repo.list_tokens(tid) if not t.get("revoked")]
+    suggested_token_name = tokens[0]["name"] if tokens else ""
+
+    # The VPS public URL — best-effort detection from request headers.
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    forwarded_host  = request.headers.get("X-Forwarded-Host", "")
+    proto = forwarded_proto or ("https" if request.is_secure else "http")
+    host  = forwarded_host  or request.host
+    base_url = f"{proto}://{host}"
+
+    return render_template(
+        "radius/mt_push_setup.html",
+        base_url=base_url,
+        tokens=tokens,
+        suggested_token_name=suggested_token_name,
+    )
 
 
 def diagnostics():

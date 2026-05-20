@@ -1,15 +1,24 @@
-"""Devices endpoints — DHCP fingerprint lookups.
+"""Devices endpoints — DHCP fingerprint lookups + push-ingest.
 
-Single-MAC and list views over the `device_fingerprints` table
-(migration 026). The table is populated by the background DHCP-lease
-worker pulling `/ip/dhcp-server/lease/print` from every enabled
-MikroTik router every ~2 minutes.
+Two ingest paths supplying the `device_fingerprints` table (migration
+026), used because routers across the public internet often have
+their MT API port firewalled even when outbound HTTPS works fine:
 
+  PULL mode (device_fingerprint_worker):
+    VPS → MT API on 8728. Requires inbound TCP open on MT.
+
+  PUSH mode (this endpoint):
+    MT → VPS via /tool fetch. Requires only outbound HTTPS on MT.
+    The operator pastes a scheduler script (generated on the setup
+    page) that POSTs DHCP leases here every ~2 minutes.
+
+Endpoints
   GET  /api/v1/devices/by-mac/<mac>    → one fingerprint
   GET  /api/v1/devices                 → list (filters: os, limit, offset)
-  POST /api/v1/devices/sync            → trigger on-demand sync now
+  POST /api/v1/devices/sync            → trigger PULL sync now
+  POST /api/v1/devices/ingest          → PUSH from MT script (batch)
 
-All endpoints scoped to the caller's tenant.
+All endpoints scoped to the caller's tenant via the API token.
 """
 from __future__ import annotations
 
@@ -31,6 +40,10 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule(
         "/devices/sync", "devices_sync",
         require_api_token(devices_sync), methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/devices/ingest", "devices_ingest",
+        require_api_token(devices_ingest), methods=["POST"],
     )
 
 
@@ -78,3 +91,96 @@ def devices_sync():
     from ...radius.services import device_fingerprint_sync
     macs_seen = device_fingerprint_sync.sync_tenant(_tid())
     return ok({"macs_seen": macs_seen})
+
+
+def devices_ingest():
+    """Push-mode bulk ingest from a MikroTik /tool fetch script.
+
+    Accepts either:
+      • JSON array of lease dicts            → [{mac, hostname, ...}, ...]
+      • JSON object with `leases` key        → {"leases": [...]}
+      • Plain text body of JSON array        → same as first form
+        (MT's /tool fetch with http-data sends content-type=text/plain
+        by default unless headers are crafted; we accept both).
+
+    Each lease dict can have:
+      mac        (required, normalized to lower)
+      hostname   (optional, "Redmi-Note-12-Pro")
+      class_id   (optional, DHCP option 60, "android-dhcp-11")
+      ip         (optional)
+      nas_id     (optional — kept for the source NAS, not required)
+
+    Returns {ingested, skipped, total}. Bad rows are silently skipped
+    so a single malformed lease doesn't fail the whole batch — the
+    MikroTik script must be resilient.
+    """
+    import json
+    from ...radius.db.repos import device_fingerprints_repo
+    from ...radius.services.device_fingerprint_sync import (
+        parse_class_id, parse_hostname,
+    )
+
+    raw = request.get_data(as_text=True) or ""
+    raw = raw.strip()
+    if not raw:
+        return fail("empty_body", "no payload", status=400)
+
+    # Accept both JSON and text-as-JSON
+    try:
+        body = json.loads(raw)
+    except (ValueError, TypeError):
+        return fail("invalid_json", "body is not valid JSON", status=400)
+
+    if isinstance(body, dict) and "leases" in body:
+        leases = body["leases"]
+    elif isinstance(body, list):
+        leases = body
+    else:
+        return fail("invalid_shape",
+                    "expected JSON array or {leases: [...]}",
+                    status=400)
+
+    if not isinstance(leases, list):
+        return fail("invalid_shape", "leases must be a list", status=400)
+
+    tenant_id = _tid()
+    ingested = 0
+    skipped = 0
+    for row in leases:
+        if not isinstance(row, dict):
+            skipped += 1
+            continue
+        mac = (row.get("mac") or row.get("active-mac-address") or "").strip()
+        if not mac:
+            skipped += 1
+            continue
+        hostname = (row.get("hostname") or row.get("active-host-name") or "").strip()
+        class_id = (row.get("class_id")
+                    or row.get("active-client-id")
+                    or row.get("class-id") or "").strip()
+        ip_addr  = (row.get("ip") or row.get("active-address") or "").strip()
+
+        os_family, os_version = parse_class_id(class_id)
+        brand, model = parse_hostname(hostname)
+        try:
+            device_fingerprints_repo.upsert(
+                tenant_id=tenant_id,
+                mac=mac,
+                hostname=hostname,
+                dhcp_class_id=class_id,
+                os_family=os_family,
+                os_version=os_version,
+                device_brand=brand,
+                device_model=model,
+                ip_address=ip_addr,
+                nas_id=None,
+            )
+            ingested += 1
+        except Exception:  # noqa: BLE001
+            skipped += 1
+
+    return ok({
+        "ingested": ingested,
+        "skipped":  skipped,
+        "total":    len(leases),
+    })

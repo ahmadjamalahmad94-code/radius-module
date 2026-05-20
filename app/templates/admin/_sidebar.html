@@ -70,6 +70,7 @@
 {%- set m_pools       = '/pools' in path -%}
 {%- set m_mt          = '/mt' in path -%}
 {%- set m_diag        = '/diagnostics' in path -%}
+{%- set m_push        = '/mt-push-setup' in path -%}
 
 {# Accounting #}
 {%- set m_invoices    = '/invoices' in path -%}
@@ -204,7 +205,8 @@
         {{ sub_item('radius.devices_list', 'أجهزة الشبكة',     m_devices) }}
         {{ sub_item('radius.pool_list',    'IP Pool',          m_pools) }}
         {{ sub_item('radius.mt_list',      'اتصالات MikroTik', m_mt) }}
-        {{ sub_item('radius.diagnostics',  'تشخيص الراوترات',  m_diag) }}
+        {{ sub_item('radius.diagnostics',     'تشخيص الراوترات',  m_diag) }}
+        {{ sub_item('radius.mt_push_setup',   'دفع DHCP (MT Push)', m_push) }}
       </div></div>
     </div>
 
