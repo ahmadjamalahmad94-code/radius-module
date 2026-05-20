@@ -127,6 +127,28 @@
 </head>
 <body>
 
+{# Decorative network background — animated WiFi pulse rings + pulsing
+   network nodes + drifting "data packets". Pure CSS animations, sits
+   behind everything (z-index:-1), pointer-events:none so it never
+   intercepts clicks. Respects prefers-reduced-motion. See the
+   '.hb-bg-net' block in admin_layout.css for the styling. #}
+<div class="hb-bg-net" aria-hidden="true">
+  <span class="hb-wifi hb-wifi-a1"></span>
+  <span class="hb-wifi hb-wifi-a2"></span>
+  <span class="hb-wifi hb-wifi-a3"></span>
+  <span class="hb-wifi hb-wifi-b1"></span>
+  <span class="hb-wifi hb-wifi-b2"></span>
+  <span class="hb-wifi hb-wifi-b3"></span>
+  <span class="hb-node hb-node-1"></span>
+  <span class="hb-node hb-node-2"></span>
+  <span class="hb-node hb-node-3"></span>
+  <span class="hb-node hb-node-4"></span>
+  <span class="hb-node hb-node-5"></span>
+  <span class="hb-pkt  hb-pkt-1"></span>
+  <span class="hb-pkt  hb-pkt-2"></span>
+  <span class="hb-pkt  hb-pkt-3"></span>
+</div>
+
 <header class="topbar">
   <button type="button" class="hb-burger" data-hb-mobile-open aria-label="فتح القائمة">
     <i class="fa-solid fa-bars"></i>

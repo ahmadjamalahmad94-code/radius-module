@@ -481,3 +481,177 @@ a:hover{color:var(--hr-cyan-700)}
   .sidebar.is-open{transform:translateX(0)}
   .main{margin-right:0}
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  PAGE BACKGROUND — soft animated network theme                       ║
+   ║                                                                      ║
+   ║  Five layered effects, all pointer-events:none and z-index:-1 so    ║
+   ║  they sit behind content without ever intercepting clicks:          ║
+   ║    1. body::before  — slow-drifting purple orb (60s loop)           ║
+   ║    2. body::after   — slow-drifting blue orb (drifts the other way) ║
+   ║    3. .hb-bg-net    — fixed SVG layer with WiFi pulse rings + dots  ║
+   ║    4. dot-grid texture (very faint, repeating)                      ║
+   ║    5. animated "data packets" drifting diagonally                   ║
+   ║                                                                      ║
+   ║  Honors prefers-reduced-motion: pauses all motion.                  ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+
+/* Layer 1: ambient orb behind body — drifts slowly across the screen */
+body::before{
+  content:"";
+  position:fixed;
+  top:-20%; left:-10%;
+  width:60vw; height:60vw;
+  max-width:900px; max-height:900px;
+  background:radial-gradient(circle at center,
+                              rgba(107,90,237,.10) 0%,
+                              rgba(107,90,237,.04) 35%,
+                              transparent 65%);
+  border-radius:50%;
+  z-index:-2;
+  pointer-events:none;
+  filter:blur(20px);
+  animation:hb-orb-a 60s ease-in-out infinite;
+}
+body::after{
+  content:"";
+  position:fixed;
+  bottom:-25%; right:-15%;
+  width:55vw; height:55vw;
+  max-width:850px; max-height:850px;
+  background:radial-gradient(circle at center,
+                              rgba(59,130,246,.08) 0%,
+                              rgba(139,92,246,.04) 40%,
+                              transparent 70%);
+  border-radius:50%;
+  z-index:-2;
+  pointer-events:none;
+  filter:blur(24px);
+  animation:hb-orb-b 75s ease-in-out infinite;
+}
+@keyframes hb-orb-a{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  50%   { transform:translate(8vw, 4vw) scale(1.08); }
+}
+@keyframes hb-orb-b{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  50%   { transform:translate(-7vw, -5vw) scale(1.10); }
+}
+
+/* Layer 3: network theme — SVG WiFi rings + scattered nodes.
+   Rendered via an injected element (hb-bg-net) and a CSS background
+   inline SVG so the file stays self-contained — no extra fetch. */
+.hb-bg-net{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  overflow:hidden;
+}
+
+/* Layer 4: subtle dot-grid texture, very low opacity */
+.hb-bg-net::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:
+    radial-gradient(circle, rgba(107,90,237,.08) 1px, transparent 1.5px);
+  background-size:32px 32px;
+  background-position:0 0;
+  opacity:.55;
+  mask-image:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.9) 0%,
+                              rgba(0,0,0,.6) 50%, transparent 95%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.9) 0%,
+                              rgba(0,0,0,.6) 50%, transparent 95%);
+}
+
+/* WiFi pulse rings — three concentric rings expanding outward, fading.
+   Two anchor points on opposite corners so the rhythm feels balanced. */
+.hb-bg-net .hb-wifi{
+  position:absolute;
+  width:280px; height:280px;
+  border-radius:50%;
+  border:2px solid rgba(107,90,237,.18);
+  opacity:0;
+  animation:hb-wifi 5.5s ease-out infinite;
+}
+.hb-bg-net .hb-wifi-a1{ top:8%;   left:6%;  animation-delay:0s; }
+.hb-bg-net .hb-wifi-a2{ top:8%;   left:6%;  animation-delay:1.8s; }
+.hb-bg-net .hb-wifi-a3{ top:8%;   left:6%;  animation-delay:3.6s; }
+
+.hb-bg-net .hb-wifi-b1{ bottom:6%; right:5%; animation-delay:.9s;
+  border-color:rgba(59,130,246,.18); }
+.hb-bg-net .hb-wifi-b2{ bottom:6%; right:5%; animation-delay:2.7s;
+  border-color:rgba(59,130,246,.18); }
+.hb-bg-net .hb-wifi-b3{ bottom:6%; right:5%; animation-delay:4.5s;
+  border-color:rgba(59,130,246,.18); }
+
+@keyframes hb-wifi{
+  0%   { transform:scale(.25); opacity:0; }
+  15%  { opacity:.55; }
+  100% { transform:scale(1.8);  opacity:0; }
+}
+
+/* Network "nodes" — tiny dots that pulse like blinking lights on a
+   switch. Pure CSS, no SVG needed. */
+.hb-bg-net .hb-node{
+  position:absolute;
+  width:6px; height:6px;
+  border-radius:50%;
+  background:#6B5AED;
+  box-shadow:0 0 0 0 rgba(107,90,237,.4);
+  animation:hb-node 3s ease-in-out infinite;
+  opacity:.55;
+}
+.hb-bg-net .hb-node-1{ top:22%; left:18%; animation-delay:0s;   }
+.hb-bg-net .hb-node-2{ top:65%; left:12%; animation-delay:.7s;
+  background:#3B82F6; box-shadow:0 0 0 0 rgba(59,130,246,.4); }
+.hb-bg-net .hb-node-3{ top:38%; right:14%; animation-delay:1.4s;
+  background:#22C55E; box-shadow:0 0 0 0 rgba(34,197,94,.4); }
+.hb-bg-net .hb-node-4{ top:78%; right:30%; animation-delay:2.1s; }
+.hb-bg-net .hb-node-5{ top:14%; right:42%; animation-delay:.4s;
+  background:#A78BFA; box-shadow:0 0 0 0 rgba(167,139,250,.4); }
+
+@keyframes hb-node{
+  0%,100%{ box-shadow:0 0 0 0 rgba(107,90,237,.40); transform:scale(1); }
+  50%   { box-shadow:0 0 0 8px rgba(107,90,237,0);  transform:scale(1.25); }
+}
+
+/* Layer 5: floating "data packets" — small horizontal lines that drift
+   across the page, like packets traversing a wire. */
+.hb-bg-net .hb-pkt{
+  position:absolute;
+  width:30px; height:2px;
+  background:linear-gradient(90deg, transparent, #6B5AED, transparent);
+  opacity:.35;
+  animation:hb-pkt 9s linear infinite;
+  border-radius:2px;
+}
+.hb-bg-net .hb-pkt-1{ top:30%; right:-40px; animation-delay:0s;   }
+.hb-bg-net .hb-pkt-2{ top:55%; right:-40px; animation-delay:2.5s;
+  background:linear-gradient(90deg, transparent, #3B82F6, transparent); }
+.hb-bg-net .hb-pkt-3{ top:80%; right:-40px; animation-delay:5s;
+  background:linear-gradient(90deg, transparent, #A78BFA, transparent); }
+
+@keyframes hb-pkt{
+  0%   { transform:translateX(0);     opacity:0; }
+  10%  { opacity:.4; }
+  90%  { opacity:.4; }
+  100% { transform:translateX(-110vw); opacity:0; }
+}
+
+/* Respect users who don't want motion. */
+@media (prefers-reduced-motion: reduce){
+  body::before,
+  body::after,
+  .hb-bg-net .hb-wifi,
+  .hb-bg-net .hb-node,
+  .hb-bg-net .hb-pkt{
+    animation:none !important;
+  }
+}
+
+/* Don't render the decorations on print. */
+@media print{
+  body::before, body::after, .hb-bg-net{ display:none !important; }
+}
