@@ -224,6 +224,39 @@
 </div>
 
 <div class="pushp-card">
+  <h3><i class="fa-solid fa-magnifying-glass-chart"></i> التحقّق + استكشاف الأخطاء</h3>
+  <p style="font-size:13px;color:#475569;margin:0 0 8px">
+    لو ركّبت الـ scheduler بس البيانات ما ظهرت، نفّذ الأوامر التالية على الراوتر للتحقّق:
+  </p>
+  <div class="pushp-script">
+<pre dir="ltr"># 1) تحقق أن الـ scheduler موجود وفعّال
+/system scheduler print where name=hoberadius-push-dhcp
+
+# 2) شغّل المهمة فورًا بدون انتظار 2 دقيقة (للاختبار)
+/system scheduler run [find name=hoberadius-push-dhcp]
+
+# 3) شوف آخر سجلات info (الـ /tool fetch بسجّل النتيجة هنا)
+/log print where topics~"info" message~"hoberadius"
+
+# 4) شوف الـ errors لو موجودة
+/log print where topics~"error" message~"fetch"
+
+# 5) شوف عدد الـ DHCP leases الموجودة
+:put [:len [/ip/dhcp-server/lease/find]]
+
+# 6) شوف أول lease كمثال (تأكد أن host-name وclient-id فيهم بيانات)
+/ip/dhcp-server/lease/print detail count-only=2</pre>
+  </div>
+  <p style="font-size:12.5px;color:#92400e;background:#fffbeb;
+            border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;margin-top:10px">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <strong>تنبيه شائع:</strong> لو الـ URL يبدأ بـ <code>http://</code> (مش https)
+    فلازم يكون <code>mode=http</code> في الـ fetch — وليس <code>mode=https</code>.
+    السكربت أعلاه يضبط هذا تلقائيًا بناءً على عنوان الخادم.
+  </p>
+</div>
+
+<div class="pushp-card">
   <h3><i class="fa-solid fa-broom"></i> إزالة الـ scheduler</h3>
   <p style="font-size:13px;color:#475569;margin:0 0 10px">
     إذا تريد تعطيل الدفع (مثلاً بعد إصلاح API على الراوتر) نفّذ:
@@ -245,6 +278,15 @@
     var url = (urlInp.value || '').trim().replace(/\/+$/, '');
     var tok = (tokInp.value || '').trim();
     var endpoint = url + '/api/v1/devices/ingest';
+
+    // mode= must match the URL scheme — MT will silently fail if the
+    // URL is http:// but mode=https (it'll try TLS handshake and time
+    // out). On http://, omit check-certificate flag entirely. On
+    // https://, keep check-certificate=no for self-signed certs.
+    var isHttps = /^https:\/\//i.test(url);
+    var modeAndCert = isHttps
+      ? 'mode=https check-certificate=no'
+      : 'mode=http';
 
     // ── Main scheduler script ────────────────────────────
     // Builds a JSON array from /ip/dhcp-server/lease and POSTs every
@@ -276,7 +318,7 @@
       '};\n' +
       ':set body (\\$body . \\"]\\");\n' +
       '/tool fetch url=\\"' + endpoint + '\\" \\\\\n' +
-      '    http-method=post mode=https check-certificate=no \\\\\n' +
+      '    http-method=post ' + modeAndCert + ' \\\\\n' +
       '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer ' + tok + '\\" \\\\\n' +
       '    http-data=\\$body output=none;\n' +
       '"';
@@ -286,7 +328,7 @@
     // ── One-shot test command (manual, no scheduler) ─────
     var testCmd =
       '/tool fetch url="' + endpoint + '" \\\n' +
-      '    http-method=post mode=https check-certificate=no \\\n' +
+      '    http-method=post ' + modeAndCert + ' \\\n' +
       '    http-header-field="Content-Type: application/json,Authorization: Bearer ' + tok + '" \\\n' +
       '    http-data="[{\\"mac\\":\\"AA:BB:CC:DD:EE:FF\\",\\"hostname\\":\\"test-device\\",\\"class_id\\":\\"android-dhcp-11\\",\\"ip\\":\\"10.20.30.99\\"}]" \\\n' +
       '    output=user';
