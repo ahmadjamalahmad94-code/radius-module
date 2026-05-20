@@ -23,4 +23,38 @@ def register(bp: Blueprint) -> None:
 
 def dashboard_get():
     from ...radius.services.dashboard_metrics import build_dashboard_metrics
-    return ok(build_dashboard_metrics())
+    data = build_dashboard_metrics()
+    return ok(_with_flat_counter_aliases(data))
+
+
+def _with_flat_counter_aliases(data: dict) -> dict:
+    """Keep nested dashboard data, and add stable flat counter aliases.
+
+    Older Flutter builds and lightweight clients historically read top-level
+    names such as `online_now` and `total_cards`. The web dashboard service
+    returns richer nested sections. Returning both shapes keeps the endpoint
+    backward-compatible and prevents counters from rendering as zero when a
+    client is deployed against a slightly different server revision.
+    """
+    subscribers = data.get("subscribers") if isinstance(data.get("subscribers"), dict) else {}
+    cards = data.get("cards") if isinstance(data.get("cards"), dict) else {}
+    plans = data.get("plans") if isinstance(data.get("plans"), dict) else {}
+    nas = data.get("nas") if isinstance(data.get("nas"), dict) else {}
+
+    merged = dict(data)
+    merged.update({
+        "total_subscribers": subscribers.get("total", 0),
+        "active_subscribers": (
+            subscribers.get("active")
+            if subscribers.get("active") is not None
+            else subscribers.get("enabled", 0)
+        ),
+        "online_now": subscribers.get("online", 0),
+        "plans_total": plans.get("total", 0),
+        "total_cards": cards.get("total", 0),
+        "used_cards": cards.get("used", 0),
+        "available_cards": cards.get("available", 0),
+        "total_batches": cards.get("batches", 0),
+        "nas_devices": nas.get("total", 0),
+    })
+    return merged
