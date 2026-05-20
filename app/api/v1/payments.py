@@ -5,6 +5,7 @@ from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusValidationError
 from ...radius.services.accounting import service_from_context
+from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -28,8 +29,12 @@ def payments_list():
         limit = min(int(request.args.get("limit") or 100), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
         subscriber_id = request.args.get("subscriber_id")
+        dist = current_distributor()
+        if subscriber_id and not subscriber_in_scope(subscriber_id=int(subscriber_id)):
+            return deny_out_of_scope()
         items = service_from_context().list_payments(
             subscriber_id=int(subscriber_id) if subscriber_id else None,
+            distributor_id=int(dist["id"]) if dist else None,
             limit=limit,
             offset=offset,
         )
@@ -40,8 +45,18 @@ def payments_list():
 
 def payments_create():
     body = request.get_json(silent=True) or {}
+    dist = current_distributor()
+    if dist and not subscriber_in_scope(
+        username=str(body.get("username") or "").strip(),
+        subscriber_id=body.get("subscriber_id"),
+    ):
+        return deny_out_of_scope()
     try:
-        payment = service_from_context().create_payment(body, actor=_actor())
+        payment = service_from_context().create_payment(
+            body,
+            actor=_actor(),
+            distributor_id=int(dist["id"]) if dist else None,
+        )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422, details=e.details)
     return ok({"payment": payment}, status=201)

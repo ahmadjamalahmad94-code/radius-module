@@ -9,6 +9,7 @@ from __future__ import annotations
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusError, RadiusValidationError
+from ..access_control import batch_in_scope, current_distributor, deny_out_of_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -140,10 +141,15 @@ def cards_batches_list():
         return fail("validation_error", "limit/offset must be int", status=422)
     from ...radius.services.cards import get_cards_service
     items = get_cards_service().list_batches(limit=limit, offset=offset)
+    dist = current_distributor()
+    if dist:
+        items = [b for b in items if int(b.distributor_id or 0) == int(dist["id"])]
     return ok({"items": [_serialize_batch(b) for b in items], "count": len(items)})
 
 
 def cards_batch_get(batch_id: int):
+    if not batch_in_scope(batch_id):
+        return deny_out_of_scope()
     from ...radius.db.repos import cards_repo
     batch = cards_repo.get_batch(_tid(), batch_id)
     if not batch:
@@ -152,6 +158,8 @@ def cards_batch_get(batch_id: int):
 
 
 def cards_batch_summary(batch_id: int):
+    if not batch_in_scope(batch_id):
+        return deny_out_of_scope()
     from ...radius.db.repos import cards_repo
     summary = cards_repo.batch_operational_summary(_tid(), batch_id)
     if not summary:
@@ -173,6 +181,8 @@ def cards_of_batch(batch_id: int):
     revoked_bool = None if revoked is None else revoked.lower() in ("1", "true", "yes")
 
     from ...radius.db.repos import cards_repo
+    if not batch_in_scope(batch_id):
+        return deny_out_of_scope()
     if not cards_repo.get_batch(_tid(), batch_id):
         return fail("not_found", f"batch {batch_id} غير موجود", status=404)
     items = cards_repo.list_cards(

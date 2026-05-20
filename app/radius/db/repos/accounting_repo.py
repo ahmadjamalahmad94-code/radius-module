@@ -104,9 +104,9 @@ def create_payment(*, tenant_id: int, subscriber: dict, plan: dict | None,
                 tenant_id, subscriber_id, username, plan_id, amount, currency,
                 method, status, plan_price, custom_price, discount_amount,
                 discount_reason, effective_price, earned_minutes, rounding_mode,
-                created_by, notes, metadata_json, created_at
+                created_by, notes, metadata_json, distributor_id, created_at
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 tenant_id, subscriber["id"], subscriber["username"],
@@ -114,6 +114,7 @@ def create_payment(*, tenant_id: int, subscriber: dict, plan: dict | None,
                 "posted", plan_price, custom_price, discount_amount,
                 discount_reason, effective_price, earned_minutes,
                 rounding_mode, created_by, notes, json_dump(metadata or {}),
+                distributor_id,
                 now_iso(),
             ),
         )
@@ -159,12 +160,16 @@ def get_payment(tenant_id: int, payment_id: int) -> Optional[dict]:
 
 
 def list_payments(tenant_id: int, *, subscriber_id: int | None = None,
+                  distributor_id: int | None = None,
                   limit: int = 100, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM payment_transactions WHERE tenant_id = ?"
     vals: list[Any] = [tenant_id]
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
+    if distributor_id:
+        sql += " AND distributor_id = ?"
+        vals.append(distributor_id)
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals.extend([limit, offset])
     return [dict(r) for r in db().execute(sql, vals).fetchall()]

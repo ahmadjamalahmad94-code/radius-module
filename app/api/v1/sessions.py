@@ -5,6 +5,7 @@ from dataclasses import asdict
 
 from flask import Blueprint, g, request
 
+from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -68,6 +69,8 @@ def sessions_online():
             if hasattr(value, "isoformat"):
                 data[key] = value.isoformat() + "Z"
         enriched = _enrich_session(data)
+        if not subscriber_in_scope(username=enriched.get("username") or ""):
+            continue
         if _matches_query(enriched, query):
             items.append(enriched)
 
@@ -82,6 +85,8 @@ def sessions_disconnect():
     username = (body.get("username") or "").strip()
     if not username:
         return fail("validation_error", "username مطلوب", status=422)
+    if not subscriber_in_scope(username=username):
+        return deny_out_of_scope()
     session_id = body.get("session_id")
     try:
         _svc().disconnect(actor=_actor(), username=username, session_id=session_id)

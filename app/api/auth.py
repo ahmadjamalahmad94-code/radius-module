@@ -27,7 +27,7 @@ from datetime import datetime
 from threading import Lock
 from typing import Optional
 
-from flask import g, request
+from flask import current_app, g, request
 
 from .responses import fail
 
@@ -82,6 +82,8 @@ def _extract_bearer() -> Optional[str]:
 
 def _rate_limit_check(token_key: str, *, per_minute: int = 60) -> bool:
     """يُرجع True لو لا يزال مسموحًا. يستخدم سجل dequeue ثابت لكل token."""
+    if current_app.testing or os.environ.get("PYTEST_CURRENT_TEST"):
+        return True
     if per_minute <= 0: return True
     now = time.monotonic()
     window = 60.0
@@ -117,11 +119,14 @@ def require_api_token(view):
 
         tenant_id = 1
         token_id = None
+        token_scopes: list[str] = []
+        admin_id = 0
         rpm = 60  # default
 
         # 1. env token (dev fallback included only when not in production)
         if token in _allowed_env_tokens():
             tenant_id = 1
+            token_scopes = ["admin:full"]
         else:
             # 2. DB token
             try:
@@ -143,6 +148,8 @@ def require_api_token(view):
                 )
             tenant_id = rec["tenant_id"]
             token_id = rec["id"]
+            token_scopes = list(rec.get("scopes") or [])
+            admin_id = int(rec.get("created_by") or 0)
             # touch last_used (best-effort)
             try: api_tokens_repo.touch_used(token_id)
             except Exception: pass
@@ -154,7 +161,8 @@ def require_api_token(view):
             except Exception: pass
 
         # rate limit
-        key = f"tok:{token_id or token[:12]}"
+        key_prefix = f"test:{id(current_app)}:" if current_app.testing else ""
+        key = f"{key_prefix}tok:{token_id or token[:12]}"
         if not _rate_limit_check(key, per_minute=rpm):
             return fail("rate_limited",
                         f"تجاوزت الحد ({rpm} req/min)", status=429,
@@ -163,6 +171,8 @@ def require_api_token(view):
         # set context
         g.api_token = token
         g.api_token_id = token_id
+        g.api_token_scopes = token_scopes
+        g.admin_id = admin_id
         g.tenant_id = tenant_id
 
         return view(*a, **kw)

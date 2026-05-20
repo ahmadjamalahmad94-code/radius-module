@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, g, request
 
 from ...radius.services.card_checker import check_card
+from ..access_control import batch_in_scope, deny_out_of_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -33,4 +34,8 @@ def cards_check():
             f"query must be {_MAX_QUERY_LENGTH} characters or less",
             status=422,
         )
-    return ok({"card": check_card(_tid(), query)})
+    card = check_card(_tid(), query)
+    batch_id = ((card.get("batch") or {}).get("id") if card.get("exists") else None)
+    if batch_id and not batch_in_scope(int(batch_id)):
+        return deny_out_of_scope()
+    return ok({"card": card})

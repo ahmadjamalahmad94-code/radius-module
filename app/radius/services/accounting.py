@@ -118,7 +118,8 @@ class AccountingService:
             raise RadiusValidationError("ledger entry not found")
         return entry
 
-    def create_payment(self, body: dict, *, actor: str) -> dict:
+    def create_payment(self, body: dict, *, actor: str,
+                       distributor_id: int | None = None) -> dict:
         subscriber = self.resolve_subscriber(body)
         plan_id = body.get("plan_id") or subscriber.get("plan_id")
         plan = accounting_repo.resolve_plan(self.tenant_id, int(plan_id)) if plan_id else None
@@ -163,6 +164,7 @@ class AccountingService:
             earned_minutes=earned_minutes,
             rounding_mode=rounding,
             notes=notes,
+            distributor_id=distributor_id,
             metadata={
                 "base_minutes": base_minutes,
                 "activation_application": "not_applied_in_foundation_slice",
@@ -202,10 +204,12 @@ class AccountingService:
         return payment
 
     def list_payments(self, *, subscriber_id: int | None = None,
+                      distributor_id: int | None = None,
                       limit: int = 100, offset: int = 0) -> list[dict]:
         return accounting_repo.list_payments(
             self.tenant_id,
             subscriber_id=subscriber_id,
+            distributor_id=distributor_id,
             limit=limit,
             offset=offset,
         )

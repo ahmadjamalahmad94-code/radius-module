@@ -89,6 +89,16 @@ def get_distributor(tenant_id: int, distributor_id: int) -> Optional[dict]:
     return _hydrate_json_fields(_row(row), "permissions_json", "scope_json", "metadata_json")
 
 
+def get_distributor_by_admin(tenant_id: int, admin_id: int) -> Optional[dict]:
+    row = db().execute(
+        "SELECT * FROM distributors WHERE tenant_id = ? AND admin_id = ? AND status = 'active'",
+        (tenant_id, admin_id),
+    ).fetchone()
+    if not row:
+        return None
+    return _hydrate_json_fields(_row(row), "permissions_json", "scope_json", "metadata_json")
+
+
 def assign_batch(tenant_id: int, *, distributor_id: int, batch_id: int,
                  actor: str, notes: str = "") -> dict:
     now = now_iso()
@@ -117,6 +127,59 @@ def assign_batch(tenant_id: int, *, distributor_id: int, batch_id: int,
             (distributor_id, str(distributor_id), tenant_id, batch_id),
         )
     return get_assignment(tenant_id, batch_id) or {}
+
+
+def batch_assigned_to_distributor(tenant_id: int, batch_id: int,
+                                  distributor_id: int) -> bool:
+    row = db().execute(
+        """
+        SELECT 1
+        FROM card_batch_assignments
+        WHERE tenant_id = ? AND batch_id = ? AND distributor_id = ?
+          AND status = 'assigned'
+        LIMIT 1
+        """,
+        (tenant_id, batch_id, distributor_id),
+    ).fetchone()
+    return row is not None
+
+
+def assigned_batch_ids(tenant_id: int, distributor_id: int) -> list[int]:
+    rows = db().execute(
+        """
+        SELECT batch_id
+        FROM card_batch_assignments
+        WHERE tenant_id = ? AND distributor_id = ? AND status = 'assigned'
+        """,
+        (tenant_id, distributor_id),
+    ).fetchall()
+    return [int(r["batch_id"]) for r in rows]
+
+
+def subscriber_in_distributor_scope(tenant_id: int, distributor_id: int, *,
+                                    username: str = "",
+                                    subscriber_id: int | None = None) -> bool:
+    sql = """
+        SELECT s.id
+        FROM subscribers s
+        JOIN card_batch_assignments a
+          ON a.tenant_id = s.tenant_id
+         AND a.batch_id = s.card_batch_id
+         AND a.status = 'assigned'
+        WHERE s.tenant_id = ? AND a.distributor_id = ?
+          AND s.deleted_at IS NULL
+    """
+    vals: list[Any] = [tenant_id, distributor_id]
+    if subscriber_id:
+        sql += " AND s.id = ?"
+        vals.append(subscriber_id)
+    elif username:
+        sql += " AND s.username = ?"
+        vals.append(username)
+    else:
+        return False
+    sql += " LIMIT 1"
+    return db().execute(sql, vals).fetchone() is not None
 
 
 def get_assignment(tenant_id: int, batch_id: int) -> Optional[dict]:
