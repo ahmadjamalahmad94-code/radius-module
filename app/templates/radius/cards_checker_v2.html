@@ -445,16 +445,40 @@
         </div>
       </div>
 
-      {# Row 2: metric tiles — order per user spec:
-           sessions / unique MACs / connected devices / remaining time /
-           total usage / remaining quota / total quota.
-           Auto-fit grid wraps as needed. #}
+      {# Row 2: metric tiles — 10 tiles laid out in TWO rows of 5
+         per user request. Row A (top) = connectivity story:
+            sessions · unique MACs · active devices · remaining time ·
+            accounting method.
+         Row B (bottom) = data/quota story:
+            download total · upload total · combined usage ·
+            remaining quota · total quota.
+         The CSS forces 5 columns on wide viewports and auto-wraps on
+         narrow ones — see .cc-metrics-2rows override in CSS. #}
       {% set p = card.profile or {} %}
       {% set quota_total_mb = (p.quota_total_mb or 0)|int %}
       {% set used_mb = (((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)) / 1048576)|int %}
       {% set remaining_mb = (quota_total_mb - used_mb) if quota_total_mb > 0 else 0 %}
       {% if remaining_mb < 0 %}{% set remaining_mb = 0 %}{% endif %}
-      <div class="cc-metrics" data-cc-section="stats">
+      {# Accounting method — derived from plan fields. If the plan has
+         BOTH a duration AND a data quota, it's combined; otherwise
+         whichever one is set wins; if neither is set we call it
+         unlimited. #}
+      {% set has_time = (p.duration_minutes or 0) > 0 %}
+      {% set has_data = quota_total_mb > 0 %}
+      {% if has_time and has_data %}
+        {% set accounting_label = 'وقت + كمية' %}
+        {% set accounting_sub   = 'مزدوج' %}
+      {% elif has_time %}
+        {% set accounting_label = 'بالوقت' %}
+        {% set accounting_sub   = (p.duration_minutes|string + ' دقيقة') %}
+      {% elif has_data %}
+        {% set accounting_label = 'بالكمية' %}
+        {% set accounting_sub   = (quota_total_mb|string + ' MB') %}
+      {% else %}
+        {% set accounting_label = 'بدون قيد' %}
+        {% set accounting_sub   = 'مفتوحة' %}
+      {% endif %}
+      <div class="cc-metrics cc-metrics-2rows" data-cc-section="stats">
         {{ metric('الجلسات',           s.sessions_count or 0,
                   'wave-square',  'purple',
                   'نشطة الآن: ' + (s.online_sessions or 0)|string,
@@ -471,6 +495,19 @@
                   'clock',        'amber',
                   '',
                   'remaining_seconds') }}
+        {{ metric('طريقة الاحتساب',    accounting_label,
+                  'sliders',      'purple',
+                  accounting_sub,
+                  'stats.accounting_method') }}
+
+        {{ metric('إجمالي التنزيل',    bytes_size(s.total_download_bytes or 0),
+                  'arrow-down',   'cyan',
+                  'مجموع كل الجلسات',
+                  'stats.total_download') }}
+        {{ metric('إجمالي الرفع',      bytes_size(s.total_upload_bytes or 0),
+                  'arrow-up',     'amber',
+                  'مجموع كل الجلسات',
+                  'stats.total_upload') }}
         {{ metric('إجمالي الاستهلاك',  bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)),
                   'arrow-up-from-bracket', 'green',
                   'رفع + تحميل',

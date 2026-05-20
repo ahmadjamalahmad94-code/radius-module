@@ -1832,3 +1832,35 @@ body:has(.cc-hero) .page-head{display:none !important}
 @container cc-page (max-width: 900px){
   .cc-sessions-table{ font-size:12px }
 }
+
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  Metrics — explicit 5×2 grid when there are 10 tiles               ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+.cc-metrics.cc-metrics-2rows{
+  /* Always 5 columns on wide viewports → 10 tiles fall into 2 clean
+     rows. Override the more lenient auto-fit rule above. */
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+/* Wrap to fewer columns as the container gets narrower so the tiles
+   don't crush. Container queries (the page hosts cc-page) react to
+   the actual content width, not just the viewport. */
+@container cc-page (max-width: 1200px){
+  .cc-metrics.cc-metrics-2rows{
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+@container cc-page (max-width: 980px){
+  .cc-metrics.cc-metrics-2rows{
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@container cc-page (max-width: 720px){
+  .cc-metrics.cc-metrics-2rows{
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@container cc-page (max-width: 480px){
+  .cc-metrics.cc-metrics-2rows{
+    grid-template-columns: 1fr !important;
+  }
+}
