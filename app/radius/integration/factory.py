@@ -10,21 +10,23 @@ from __future__ import annotations
 
 import logging
 import os
+from importlib import import_module
 from threading import Lock
 from typing import Optional
 
 from .adapter import RadiusAdapter, get_adapter
-
-# تحميل المسجِّلات
-from . import manual_adapter  # noqa: F401
-from . import sqlite_adapter  # noqa: F401
-from . import mikrotik_adapter  # noqa: F401
 
 _LOG = logging.getLogger(__name__)
 
 _lock = Lock()
 _cached: Optional[RadiusAdapter] = None
 _cached_mode: Optional[str] = None
+
+_ADAPTER_MODULES = {
+    "manual": "app.radius.integration.manual_adapter",
+    "sqlite": "app.radius.integration.sqlite_adapter",
+    "direct": "app.radius.integration.mikrotik_adapter",
+}
 
 
 def _resolve_mode() -> str:
@@ -42,6 +44,7 @@ def get_radius_adapter() -> RadiusAdapter:
         if _cached is not None:
             return _cached
         mode = _resolve_mode()
+        import_module(_ADAPTER_MODULES[mode])
         _cached = get_adapter(mode)
         _cached_mode = mode
         _LOG.info("radius adapter initialized: mode=%s", mode)
