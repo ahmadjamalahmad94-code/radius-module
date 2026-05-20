@@ -61,10 +61,16 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
 /* ═════════════════════════ SIDEBAR SHELL ═════════════════════════
    In Arabic RTL the conventional sidebar lives on the RIGHT edge.
    `inset-inline-start: 0` resolves to the visual RIGHT in RTL
-   (and LEFT in LTR), so the partial works correctly in both modes. */
+   (and LEFT in LTR), so the partial works correctly in both modes.
+
+   `top: 0` (not below the topbar) — the topbar now sits BESIDE the
+   sidebar (see admin_layout.html inline override), so the sidebar
+   gets to claim the full viewport height including the strip above
+   its brand block. z-index:60 puts it above the topbar so a future
+   topbar overlap is forgiven. */
 .hb-side{
   position:fixed;
-  top:var(--hr-topbar-h, 50px);
+  top:0;
   inset-inline-start:0;
   bottom:0;
   width:var(--hb-side-current-w);
@@ -72,7 +78,7 @@ body:not([data-hb-side]){ --hb-side-current-w: var(--hb-side-w); }
   color:var(--hb-text);
   border-inline-end:1px solid var(--hb-border);
   box-shadow:var(--hb-shadow-card);
-  z-index:40;
+  z-index:60;
   display:flex;
   flex-direction:column;
   transition:width .2s ease, transform .2s ease;
