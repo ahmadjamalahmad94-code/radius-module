@@ -1,331 +1,321 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Dashboard — REBUILT (Night N3, 2026-05-21)
+
+   Full rebuild from scratch using the unified hub-v2 design system
+   (app/static/css/hub_v2.css + app/templates/_partials/hub.html).
+   No backend change — consumes the same `snap` + `metrics` dicts the
+   existing dashboard route already provides.
+
+   Layout:
+     1. Page hero
+     2. Top alerts (system-wide warnings)
+     3. KPI strip (4 main cards)
+     4. Quick actions (6 tiles)
+     5. Subscribers section (6 tiles + progress)
+     6. Cards + recent batches (tiles + list)
+     7. Plans section (tiles + top plan)
+     8. System health (8 tiles)
+     9. Bottom: top-plans table + recent activity (2-col grid)
+   ═══════════════════════════════════════════════════════════════════════ #}
+
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
 {% block title %}لوحة التحكم — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}لوحة التحكم{% endblock %}
-{% block page_sub %}<span class="sub">(نظرة عامة)</span>{% endblock %}
+{% block page_sub %}<span class="sub">نظرة شاملة على النظام</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-/* RM-H2 — dashboard grouped sections (cream/navy/cyan tokens) */
-.dh-alerts{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}
-.dh-alert{padding:10px 14px;border-radius:var(--hr-r,6px);font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;border:1px solid transparent}
-.dh-alert .a-msg{flex:1}
-.dh-alert .a-link{font-size:12px;font-weight:800;text-decoration:underline;color:inherit;opacity:.85}
-.dh-alert .a-link:hover{opacity:1}
-.dh-al-danger{background:var(--hr-badge-danger-bg);color:#9B1C1C;border-color:rgba(155,28,28,.18)}
-.dh-al-warn  {background:var(--hr-badge-warn-bg);color:#7A4E0E;border-color:rgba(122,78,14,.18)}
-.dh-al-info  {background:var(--hr-badge-info-bg);color:#1F3D5A;border-color:rgba(31,61,90,.18)}
-
-.dh-group{margin:18px 0 6px}
-.dh-group-title{
-  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;
-  color:var(--hr-text-soft);margin:0 0 10px;padding:0 4px;
+/* Page-local tweaks — auto-refresh badge */
+.dash-refresh{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; color:var(--hub-text-mute);
+  padding:5px 11px;
+  background:var(--hub-bg-soft);
+  border:1px solid var(--hub-border-soft);
+  border-radius:999px;
+  font-weight:600;
 }
-.dh-group-title .gt-bar{width:3px;height:16px;background:var(--hr-cyan-500);border-radius:2px}
-.dh-group-title .gt-meta{margin-inline-start:auto;font-size:11.5px;font-weight:700;color:var(--hr-text-muted)}
+.dash-refresh i{ font-size:10px; color:var(--hub-green); animation:dash-pulse 2s ease infinite; }
+@keyframes dash-pulse{ 0%,100%{opacity:.4}50%{opacity:1} }
 
-.dh-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.dh-mini{
-  padding:13px 15px;background:var(--hr-card,#fff);border:1px solid var(--hr-border);
-  border-radius:var(--hr-r-lg,8px);display:flex;flex-direction:column;gap:3px;
-  transition:.15s ease;box-shadow:var(--hr-shadow-sm);
+/* Recent activity row */
+.dash-act{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px;
+  font-size:12.5px;
+  border-bottom:1px solid var(--hub-border-soft);
+  transition:background var(--hub-anim-fast) var(--hub-ease);
 }
-.dh-mini:hover{border-color:var(--hr-cyan-500)}
-.dh-mini .mi-lbl{font-size:11.5px;color:var(--hr-text-muted);font-weight:700;display:flex;align-items:center;gap:6px}
-.dh-mini .mi-lbl i{font-size:10.5px;opacity:.7}
-.dh-mini .mi-val{font-size:21px;font-weight:800;color:var(--hr-text);line-height:1.05;font-family:"Cairo",sans-serif}
-.dh-mini .mi-help{font-size:10.5px;color:var(--hr-text-muted);margin-top:1px}
-.dh-mini.is-danger .mi-val  {color:#B91C1C}
-.dh-mini.is-warn  .mi-val   {color:#92500c}
-.dh-mini.is-ok    .mi-val   {color:var(--hr-green)}
-.dh-mini.is-muted .mi-val   {color:var(--hr-text-muted)}
-.dh-mini .mi-bar{margin-top:5px;height:4px;border-radius:2px;background:var(--hr-stripe);overflow:hidden}
-.dh-mini .mi-bar > span{display:block;height:100%;background:var(--hr-cyan-500);transition:width .4s ease}
-.dh-mini.is-danger .mi-bar > span{background:#B91C1C}
-.dh-mini.is-warn   .mi-bar > span{background:#92500c}
-.dh-mini.is-ok     .mi-bar > span{background:var(--hr-green)}
+.dash-act:last-child{ border-bottom:none; }
+.dash-act:hover{ background:var(--hub-bg-soft); }
+.dash-act-actor{ font-weight:700; color:var(--hub-text); }
+.dash-act-target{ color:var(--hub-text-mute); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dash-act-time{ font-family:var(--hub-mono); font-size:11.5px; color:var(--hub-text-mute); }
 
-.dh-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800}
-.dh-pill-ok  {background:var(--hr-badge-success-bg);color:var(--hr-badge-success-fg)}
-.dh-pill-bad {background:var(--hr-badge-danger-bg);color:#9B1C1C}
-.dh-pill-mute{background:var(--hr-badge-mute-bg);color:var(--hr-text-muted)}
-
-.dh-batches-list{display:flex;flex-direction:column;gap:6px;margin-top:2px}
-.dh-batch-row{
-  display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--hr-soft);
-  border:1px solid var(--hr-border);border-radius:var(--hr-r,6px);font-size:12.5px;
+/* Alert callouts */
+.dash-alert{
+  display:flex; align-items:center; gap:10px;
+  padding:11px 16px;
+  font-size:13px; font-weight:700;
+  border-radius:var(--hub-r-lg);
+  border:1px solid transparent;
+  margin-bottom:8px;
 }
-.dh-batch-row .b-code{font-family:monospace;font-weight:800;color:var(--hr-cyan-700)}
-.dh-batch-row .b-name{flex:1;color:var(--hr-text)}
-.dh-batch-row .b-count{font-family:monospace;color:var(--hr-text-muted)}
+.dash-alert i{ font-size:14px; }
+.dash-alert .msg{ flex:1; }
+.dash-alert a{ font-weight:800; text-decoration:underline; opacity:.85; color:inherit; }
+.dash-alert--danger{ background:var(--hub-red-soft); color:var(--hub-red-ink); border-color:#fca5a5; }
+.dash-alert--warn  { background:var(--hub-amber-soft); color:var(--hub-amber-ink); border-color:#fcd34d; }
+.dash-alert--info  { background:var(--hub-blue-soft); color:var(--hub-blue-ink); border-color:#bfdbfe; }
+
+/* Batch row inside Cards section */
+.dash-batch{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px;
+  background:var(--hub-bg-soft);
+  border:1px solid var(--hub-border-soft);
+  border-radius:var(--hub-r-md);
+  font-size:12.5px;
+}
+.dash-batch .code{ font-family:var(--hub-mono); font-weight:800; color:var(--hub-brand-ink); }
+.dash-batch .name{ flex:1; color:var(--hub-text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dash-batch .cnt{ font-family:var(--hub-mono); color:var(--hub-text-mute); font-size:11.5px; }
+.dash-batches{ display:flex; flex-direction:column; gap:6px; }
+
+/* Top plan bar */
+.dash-bar{
+  position:relative;
+  height:8px;
+  border-radius:999px;
+  background:var(--hub-border-soft);
+  overflow:hidden;
+  flex:1;
+}
+.dash-bar > span{
+  position:absolute; inset-block:0;
+  inset-inline-start:0;
+  background:linear-gradient(90deg, var(--hub-brand), var(--hub-brand-ink));
+  transition:width var(--hub-anim-med) var(--hub-ease);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
-{# ─────────────── RM-H2: التنبيهات العلوية ─────────────── #}
+{# ───── Page Hero ───────────────────────────────────────────── #}
+{{ hub.hero(
+  "لوحة التحكم",
+  subtitle="ملخّص النظام والأداء الحالي للراديوس",
+  icon="gauge-high",
+  actions_html='<span class="dash-refresh"><i class="fa-solid fa-circle"></i> تحديث تلقائي</span>'
+) }}
+
+{# ───── Top Alerts ──────────────────────────────────────────── #}
 {% if metrics and metrics.alerts %}
-<div class="dh-alerts">
+<div style="margin-bottom:var(--hub-gap-section)">
   {% for al in metrics.alerts[:6] %}
-  <div class="dh-alert dh-al-{{ al.level or 'info' }}">
+  <div class="dash-alert dash-alert--{{ al.level or 'info' }}">
     <i class="fa-solid {{ 'fa-circle-exclamation' if al.level == 'danger' else ('fa-triangle-exclamation' if al.level == 'warn' else 'fa-circle-info') }}"></i>
-    <span class="a-msg">{{ al.message }}</span>
+    <span class="msg">{{ al.message }}</span>
     {% if al.link_endpoint %}
-      <a class="a-link" href="{{ url_for(al.link_endpoint) }}">عرض ←</a>
+      <a href="{{ url_for(al.link_endpoint) }}">عرض ←</a>
     {% endif %}
   </div>
   {% endfor %}
 </div>
 {% endif %}
 
-<div class="kpi-strip">
-  <div class="kpi-card kpi-dark">
-    <div class="right">
-      <div class="lbl">متصلون الآن</div>
-      <div class="val">{{ snap.online_now }}</div>
-    </div>
-    <div class="ico"><i class="fa-solid fa-wifi"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right">
-      <div class="lbl">إجمالي المشتركين</div>
-      <div class="val">{{ snap.total_subscribers }}</div>
-    </div>
-    <div class="ico"><i class="fa-solid fa-users"></i></div>
-  </div>
-  <div class="kpi-card kpi-green">
-    <div class="right">
-      <div class="lbl">البطاقات المُولَّدة</div>
-      <div class="val">{{ snap.total_cards }}</div>
-    </div>
-    <div class="ico"><i class="fa-solid fa-id-card"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right">
-      <div class="lbl">إيراد الشهر</div>
-      <div class="val">{{ "%.2f"|format(snap.revenue_month) }}</div>
-    </div>
-    <div class="ico"><i class="fa-solid fa-coins"></i></div>
-  </div>
+{# ───── KPI Strip ───────────────────────────────────────────── #}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("متصلون الآن",       snap.online_now,        icon="wifi",     variant="brand") }}
+  {{ hub.kpi("إجمالي المشتركين",   snap.total_subscribers, icon="users",    variant="blue")  }}
+  {{ hub.kpi("البطاقات المُولَّدة", snap.total_cards,       icon="id-card",  variant="green") }}
+  {{ hub.kpi("إيراد الشهر",        "%.2f"|format(snap.revenue_month), icon="coins", variant="amber") }}
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:8px;margin-top:14px">
-  <a class="quick-action" href="{{ url_for('radius.users_new') }}">
-    <div class="ico"><i class="fa-solid fa-user-plus"></i></div>
-    <div><div class="ttl">إضافة مشترك</div><div class="sub">مستخدم جديد</div></div>
-  </a>
-  <a class="quick-action" href="{{ url_for('radius.cards_generate') }}">
-    <div class="ico"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-    <div><div class="ttl">إنشاء كروت</div><div class="sub">دفعة جاهزة</div></div>
-  </a>
-  <a class="quick-action" href="{{ url_for('radius.plans_new') }}">
-    <div class="ico"><i class="fa-solid fa-circle-plus"></i></div>
-    <div><div class="ttl">إضافة عرض</div><div class="sub">باقة جديدة</div></div>
-  </a>
-  <a class="quick-action" href="{{ url_for('radius.online_list') }}">
-    <div class="ico"><i class="fa-solid fa-wifi"></i></div>
-    <div><div class="ttl">المتصلون الآن</div><div class="sub">رؤية حية</div></div>
-  </a>
-  <a class="quick-action" href="{{ url_for('radius.devices_list') }}">
-    <div class="ico"><i class="fa-solid fa-server"></i></div>
-    <div><div class="ttl">أجهزة الشبكة</div><div class="sub">إدارة أجهزة RADIUS</div></div>
-  </a>
-  <a class="quick-action" href="{{ url_for('radius.admins_list') }}">
-    <div class="ico"><i class="fa-solid fa-user-shield"></i></div>
-    <div><div class="ttl">المدراء</div><div class="sub">والصلاحيات</div></div>
-  </a>
-</div>
+{# ───── Quick Actions ──────────────────────────────────────── #}
+{% call hub.section("إجراءات سريعة", icon="bolt") %}
+  <div class="hub-actions">
+    {{ hub.action_card("إضافة مشترك",  sub="مستخدم جديد",       icon="user-plus",            href=url_for('radius.users_new'),    variant="brand") }}
+    {{ hub.action_card("إنشاء كروت",   sub="دفعة جاهزة",        icon="wand-magic-sparkles",  href=url_for('radius.cards_generate'), variant="green") }}
+    {{ hub.action_card("إضافة عرض",    sub="باقة جديدة",        icon="circle-plus",          href=url_for('radius.plans_new'),    variant="amber") }}
+    {{ hub.action_card("المتصلون الآن", sub="رؤية حيّة",         icon="wifi",                 href=url_for('radius.online_list'), variant="blue") }}
+    {{ hub.action_card("أجهزة الشبكة", sub="إدارة أجهزة RADIUS", icon="server",               href=url_for('radius.devices_list'), variant="grey") }}
+    {{ hub.action_card("المدراء",      sub="والصلاحيات",         icon="user-shield",          href=url_for('radius.admins_list'), variant="grey") }}
+  </div>
+{% endcall %}
 
-{# ─────────────── RM-H2: الأقسام المُجمَّعة ─────────────── #}
 {% if metrics %}
   {% set subs = metrics.subscribers or {} %}
-  {% set cd = metrics.cards or {} %}
-  {% set pl = metrics.plans or {} %}
-  {% set sy = metrics.system or {} %}
-  {% set ns = metrics.nas or {} %}
+  {% set cd   = metrics.cards or {} %}
+  {% set pl   = metrics.plans or {} %}
+  {% set sy   = metrics.system or {} %}
+  {% set ns   = metrics.nas or {} %}
 
-  {# ── المشتركون والاتصال ── #}
-  <div class="dh-group">
-    <div class="dh-group-title">
-      <span class="gt-bar"></span>
-      <i class="fa-solid fa-users"></i> المشتركون والاتصال
-      <span class="gt-meta">إجمالي: {{ subs.total or 0 }}</span>
+  {# ───── Subscribers section ────────────────────────────── #}
+  {% call hub.section("المشتركون والاتصال", icon="users", meta="إجمالي: "+(subs.total or 0)|string) %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("نشطون",                subs.active or 0,        icon="circle-check",     variant="ok") }}
+      {{ hub.tile("متصلون الآن",         subs.online or 0,        icon="wifi",             variant="brand") }}
+      {{ hub.tile("ينتهون خلال 3 أيام", subs.expiring_soon or 0, icon="hourglass-end",   variant="warn") }}
+      {{ hub.tile("منتهية اشتراكاتهم",   subs.expired or 0,       icon="ban",              variant="danger") }}
+      {{ hub.tile("معطَّلون",              subs.disabled or 0,      icon="pause") }}
+      {{ hub.tile("موقوفون",              subs.suspended or 0,     icon="user-slash") }}
     </div>
-    <div class="dh-mini-grid">
-      <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-circle-check"></i> نشطون</div>
-        <div class="mi-val">{{ subs.active or 0 }}</div></div>
-      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-wifi"></i> متصلون الآن</div>
-        <div class="mi-val">{{ subs.online or 0 }}</div>
-        <div class="mi-help">من جدول الجلسات المفتوحة</div></div>
-      <div class="dh-mini is-warn"><div class="mi-lbl"><i class="fa-solid fa-hourglass-end"></i> ينتهون خلال 3 أيام</div>
-        <div class="mi-val">{{ subs.expiring_soon or 0 }}</div></div>
-      <div class="dh-mini is-danger"><div class="mi-lbl"><i class="fa-solid fa-ban"></i> منتهية اشتراكاتهم</div>
-        <div class="mi-val">{{ subs.expired or 0 }}</div></div>
-      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-pause"></i> معطَّلون</div>
-        <div class="mi-val">{{ subs.disabled or 0 }}</div></div>
-      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-user-slash"></i> موقوفون</div>
-        <div class="mi-val">{{ subs.suspended or 0 }}</div></div>
-    </div>
-  </div>
+  {% endcall %}
 
-  {# ── الكروت ── #}
-  <div class="dh-group">
-    <div class="dh-group-title">
-      <span class="gt-bar"></span>
-      <i class="fa-solid fa-id-card"></i> الكروت والحزم
-      <span class="gt-meta">{{ cd.batches or 0 }} حزمة</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="dh-mini-grid">
-        <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-layer-group"></i> الإجمالي</div>
-          <div class="mi-val">{{ cd.total or 0 }}</div></div>
-        <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-box-open"></i> متاحة</div>
-          <div class="mi-val">{{ cd.available or 0 }}</div></div>
-        <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-handshake"></i> مُستخدَمة</div>
-          <div class="mi-val">{{ cd.used or 0 }}</div></div>
+  {# ───── Cards section ──────────────────────────────────── #}
+  {% call hub.section("الكروت والحزم", icon="id-card", meta=(cd.batches or 0)|string + " حزمة") %}
+    <div class="hub-grid-2">
+      <div>
+        <div class="hub-tile-grid">
+          {{ hub.tile("الإجمالي",   cd.total or 0,     icon="layer-group", variant="brand") }}
+          {{ hub.tile("متاحة",     cd.available or 0, icon="box-open",    variant="ok") }}
+          {{ hub.tile("مُستخدَمة", cd.used or 0,      icon="handshake") }}
+        </div>
       </div>
       <div>
-        <div style="font-size:11.5px;color:var(--hr-text-muted);font-weight:700;margin-bottom:6px;padding-inline-start:4px">
-          آخر الحزم
+        <div class="hub-tile-label" style="margin-bottom:8px">
+          <i class="fa-solid fa-clock"></i> آخر الحزم
         </div>
         {% if metrics.recent_batches %}
-        <div class="dh-batches-list">
+          <div class="dash-batches">
           {% for b in metrics.recent_batches %}
-          <div class="dh-batch-row">
-            <span class="b-code">{{ b.batch_code or '—' }}</span>
-            <span class="b-name">{{ b.package_name or '(بدون اسم)' }}</span>
-            <span class="b-count">{{ b.used or 0 }}/{{ b.count or 0 }}</span>
-          </div>
+            <div class="dash-batch">
+              <span class="code">{{ b.batch_code or '—' }}</span>
+              <span class="name">{{ b.package_name or '(بدون اسم)' }}</span>
+              <span class="cnt">{{ b.used or 0 }}/{{ b.count or 0 }}</span>
+            </div>
           {% endfor %}
-        </div>
+          </div>
         {% else %}
-        <div class="dh-batch-row" style="justify-content:center;color:var(--hr-text-muted)">
-          لا توجد حزم بعد
-        </div>
+          {{ hub.empty("لا توجد حزم بعد", icon="layer-group") }}
         {% endif %}
       </div>
     </div>
-  </div>
+  {% endcall %}
 
-  {# ── العروض / الخطط ── #}
-  <div class="dh-group">
-    <div class="dh-group-title">
-      <span class="gt-bar"></span>
-      <i class="fa-solid fa-tags"></i> العروض / الخطط
-      <span class="gt-meta">إجمالي: {{ pl.total or 0 }}</span>
+  {# ───── Plans section ──────────────────────────────────── #}
+  {% call hub.section("العروض والخطط", icon="tags", meta="إجمالي: "+(pl.total or 0)|string) %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("مفعَّلة",  pl.enabled or 0,  icon="toggle-on",  variant="ok") }}
+      {{ hub.tile("معطَّلة",  pl.disabled or 0, icon="toggle-off") }}
+      {% if pl.top %}
+        <div class="hub-tile hub-tile--brand" style="grid-column:span 2">
+          <div class="hub-tile-label"><i class="fa-solid fa-trophy"></i> الأكثر استخدامًا</div>
+          <div class="hub-tile-value" style="font-size:15px">{{ pl.top.name }}</div>
+          <div class="hub-tile-sub">{{ pl.top.subs }} مشترك</div>
+        </div>
+      {% endif %}
     </div>
-    <div class="dh-mini-grid">
-      <div class="dh-mini is-ok"><div class="mi-lbl"><i class="fa-solid fa-toggle-on"></i> مفعَّلة</div>
-        <div class="mi-val">{{ pl.enabled or 0 }}</div></div>
-      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-toggle-off"></i> معطَّلة</div>
-        <div class="mi-val">{{ pl.disabled or 0 }}</div></div>
-      <div class="dh-mini" style="grid-column:span 2"><div class="mi-lbl"><i class="fa-solid fa-trophy"></i> الأكثر استخدامًا</div>
-        {% if pl.top %}
-          <div class="mi-val" style="font-size:15px">{{ pl.top.name }}</div>
-          <div class="mi-help">{{ pl.top.subs }} مشترك</div>
-        {% else %}
-          <div class="mi-val" style="font-size:14px;color:var(--hr-text-muted)">— لا بيانات بعد —</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+  {% endcall %}
 
-  {# ── صحة النظام ── #}
-  {% macro pct_class(v) %}{% if v is none %}{% elif v >= 90 %}is-danger{% elif v >= 75 %}is-warn{% else %}is-ok{% endif %}{% endmacro %}
-  <div class="dh-group">
-    <div class="dh-group-title">
-      <span class="gt-bar"></span>
-      <i class="fa-solid fa-heart-pulse"></i> صحة النظام
-      <span class="gt-meta">تحديث كل 30 ثانية</span>
+  {# ───── System Health ─────────────────────────────────── #}
+  {% call hub.section("صحة النظام", icon="heart-pulse", meta="تحديث كل 30 ثانية") %}
+    <div class="hub-tile-grid">
+      <div class="hub-tile">
+        <div class="hub-tile-label"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
+        <div style="margin-top:4px">
+          {% if sy.db_ok %}{{ hub.pill("سليم", variant="green") }}
+          {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
+        </div>
+      </div>
+      <div class="hub-tile">
+        <div class="hub-tile-label"><i class="fa-solid fa-tower-broadcast"></i> موصِّل RADIUS</div>
+        <div style="margin-top:4px">
+          {% if sy.radius_ok %}{{ hub.pill("جاهز", variant="green") }}
+          {% else %}{{ hub.pill("غير جاهز", variant="red") }}{% endif %}
+        </div>
+      </div>
+      {{ hub.tile("أجهزة الشبكة", (ns.enabled or 0)|string+" / "+(ns.total or 0)|string, icon="network-wired", sub="مفعَّلة من الإجمالي") }}
+      {{ hub.tile("وقت التشغيل", sy.process_uptime or "—", icon="power-off", sub=("النظام: "+sy.system_uptime) if sy.system_uptime else "") }}
+
+      {% if sy.cpu_pct is not none %}
+        {% set cpu = sy.cpu_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if cpu >= 90 else ('hub-tile--warn' if cpu >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-microchip"></i> المعالج</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % cpu }}</div>
+          <div style="margin-top:6px">{{ hub.progress(cpu) }}</div>
+        </div>
+      {% endif %}
+      {% if sy.ram_pct is not none %}
+        {% set ram = sy.ram_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if ram >= 90 else ('hub-tile--warn' if ram >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-memory"></i> الذاكرة</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % ram }}</div>
+          <div style="margin-top:6px">{{ hub.progress(ram) }}</div>
+        </div>
+      {% endif %}
+      {% if sy.disk_pct is not none %}
+        {% set dsk = sy.disk_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if dsk >= 90 else ('hub-tile--warn' if dsk >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-hard-drive"></i> التخزين</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % dsk }}</div>
+          <div style="margin-top:6px">{{ hub.progress(dsk) }}</div>
+        </div>
+      {% endif %}
+      {{ hub.tile("المضيف", sy.hostname or "—", icon="server") }}
     </div>
-    <div class="dh-mini-grid">
-      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
-        <div class="mi-val" style="font-size:14px">
-          {% if sy.db_ok %}<span class="dh-pill dh-pill-ok"><i class="fa-solid fa-check"></i> سليم</span>
-          {% else %}<span class="dh-pill dh-pill-bad"><i class="fa-solid fa-xmark"></i> فشل</span>{% endif %}
-        </div></div>
-      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-tower-broadcast"></i> موصل RADIUS</div>
-        <div class="mi-val" style="font-size:14px">
-          {% if sy.radius_ok %}<span class="dh-pill dh-pill-ok"><i class="fa-solid fa-check"></i> جاهز</span>
-          {% else %}<span class="dh-pill dh-pill-bad"><i class="fa-solid fa-xmark"></i> غير جاهز</span>{% endif %}
-        </div></div>
-      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-network-wired"></i> أجهزة الشبكة</div>
-        <div class="mi-val">{{ ns.enabled or 0 }} / {{ ns.total or 0 }}</div>
-        <div class="mi-help">مفعَّلة من الإجمالي</div></div>
-      <div class="dh-mini"><div class="mi-lbl"><i class="fa-solid fa-power-off"></i> وقت تشغيل التطبيق</div>
-        <div class="mi-val" style="font-size:15px">{{ sy.process_uptime or '—' }}</div>
-        {% if sy.system_uptime %}<div class="mi-help">النظام: {{ sy.system_uptime }}</div>{% endif %}
-      </div>
-      <div class="dh-mini {{ pct_class(sy.cpu_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-microchip"></i> المعالج</div>
-        <div class="mi-val">{{ '%.1f%%' % sy.cpu_pct if sy.cpu_pct is not none else '—' }}</div>
-        {% if sy.cpu_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.cpu_pct }}%"></span></div>{% endif %}
-      </div>
-      <div class="dh-mini {{ pct_class(sy.ram_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-memory"></i> الذاكرة</div>
-        <div class="mi-val">{{ '%.1f%%' % sy.ram_pct if sy.ram_pct is not none else '—' }}</div>
-        {% if sy.ram_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.ram_pct }}%"></span></div>{% endif %}
-      </div>
-      <div class="dh-mini {{ pct_class(sy.disk_pct) }}"><div class="mi-lbl"><i class="fa-solid fa-hard-drive"></i> التخزين</div>
-        <div class="mi-val">{{ '%.1f%%' % sy.disk_pct if sy.disk_pct is not none else '—' }}</div>
-        {% if sy.disk_pct is not none %}<div class="mi-bar"><span style="width:{{ sy.disk_pct }}%"></span></div>{% endif %}
-      </div>
-      <div class="dh-mini is-muted"><div class="mi-lbl"><i class="fa-solid fa-server"></i> المضيف</div>
-        <div class="mi-val" style="font-size:13px;font-family:monospace">{{ sy.hostname or '—' }}</div>
-      </div>
-    </div>
-  </div>
+  {% endcall %}
 {% endif %}
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px">
+{# ───── Bottom Grid: Top Plans + Recent Activity ────────── #}
+<div class="hub-grid-2">
+  {# Top plans table #}
+  {% call hub.section("أكثر الباقات استخدامًا", icon="chart-pie", meta="أعلى 5", flush=True) %}
+    {% if snap.top_plans %}
+      {% set top_total = snap.top_plans|map(attribute=1)|sum %}
+      <div class="hub-table-wrap" style="border:none">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>الباقة</th>
+              <th class="num" style="width:120px">عدد المشتركين</th>
+              <th style="width:180px">النسبة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for name, cnt in snap.top_plans %}
+            <tr>
+              <td><strong>{{ name }}</strong></td>
+              <td class="num">{{ cnt }}</td>
+              <td>
+                <div class="hub-flex-row" style="gap:8px">
+                  <div class="dash-bar"><span style="width: {{ (cnt/top_total*100) if top_total else 0 }}%"></span></div>
+                  <span class="hub-text-mute" style="font-size:11.5px;min-width:36px">{{ '%.0f%%' % ((cnt/top_total*100) if top_total else 0) }}</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding:18px">{{ hub.empty("لا بيانات بعد", icon="chart-pie") }}</div>
+    {% endif %}
+  {% endcall %}
 
-  <div class="card">
-    <div class="card-header">
-      <span class="title"><i class="fa-solid fa-chart-pie"></i>&nbsp; أكثر الباقات استخدامًا</span>
-      <span class="meta">أعلى 5</span>
-    </div>
-    <div class="card-body card-body--flush">
-      {% if snap.top_plans %}
-      <table class="hr-table">
-        <thead><tr><th>الباقة</th><th style="width:140px">عدد المشتركين</th><th style="width:160px">النسبة</th></tr></thead>
-        <tbody>
-          {% set top_total = snap.top_plans|map(attribute=1)|sum %}
-          {% for name, cnt in snap.top_plans %}
-          <tr>
-            <td><strong>{{ name }}</strong></td>
-            <td class="num">{{ cnt }}</td>
-            <td>
-              <div class="progress-bar"><span style="width: {{ (cnt/top_total*100) if top_total else 0 }}%"></span></div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="empty"><i class="fa-solid fa-chart-pie"></i>لا بيانات</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <span class="title"><i class="fa-solid fa-clock-rotate-left"></i>&nbsp; آخر النشاطات</span>
-    </div>
-    <div class="card-body">
-      {% if snap.recent_actions %}
+  {# Recent activity #}
+  {% call hub.section("آخر النشاطات", icon="clock-rotate-left", flush=True) %}
+    {% if snap.recent_actions %}
+      <div class="hub-list">
         {% for e in snap.recent_actions %}
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--hr-border);font-size:12.5px">
-          <span class="pill pill-cyan">{{ e.action }}</span>
-          <span style="font-weight:700">{{ e.actor }}</span>
-          <span style="color:var(--hr-text-muted);flex:1">{{ e.target_type }} · {{ e.target_id }}</span>
-          <span class="mono">{{ e.created_at.strftime('%H:%M') if e.created_at else '' }}</span>
-        </div>
+          <div class="dash-act">
+            {{ hub.pill(e.action, variant="brand", dot=False) }}
+            <span class="dash-act-actor">{{ e.actor }}</span>
+            <span class="dash-act-target">{{ e.target_type }} · {{ e.target_id }}</span>
+            <span class="dash-act-time">{{ e.created_at.strftime('%H:%M') if e.created_at else '' }}</span>
+          </div>
         {% endfor %}
-      {% else %}
-        <div class="empty"><i class="fa-solid fa-clock-rotate-left"></i>لا نشاطات</div>
-      {% endif %}
-    </div>
-  </div>
-
+      </div>
+    {% else %}
+      <div style="padding:18px">{{ hub.empty("لا نشاطات بعد", icon="clock-rotate-left") }}</div>
+    {% endif %}
+  {% endcall %}
 </div>
 
 {% endblock %}
