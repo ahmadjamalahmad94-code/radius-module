@@ -1,0 +1,478 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Access-schedule picker — reusable day/time window block.
+
+   Single Jinja macro that renders the same UI everywhere we need a
+   "when can this account connect" schedule (subscribers, groups, plans,
+   future: card batches, share groups, …).
+
+   Usage:
+     {% from "_partials/access_schedule.html" import access_schedule_picker %}
+     {{ access_schedule_picker(name="connection_schedule",
+                               value=sub.connection_schedule,
+                               id="acs-sub") }}
+
+   The block submits ONE hidden field whose value is the JSON produced by
+   `app.radius.core.access_schedule.serialize()` (the macro and the JS
+   keep their state in sync with that hidden field on every change).
+
+   See SERVICES_COOKBOOK §17 for the data model + integration recipe.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{%- set ACS_DAYS_AR = {
+    "sat":"السبت","sun":"الأحد","mon":"الإثنين","tue":"الثلاثاء",
+    "wed":"الأربعاء","thu":"الخميس","fri":"الجمعة",
+} -%}
+{%- set ACS_DAYS_ORDER = ["sat","sun","mon","tue","wed","thu","fri"] -%}
+
+
+{# ── one-time CSS + JS ──────────────────────────────────────────── #}
+{% macro access_schedule_assets() -%}
+<style>
+  /* Container card */
+  .acs-card{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-lg);
+    padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .acs-head{
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .acs-title{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 800; color: var(--hub-text); font-size: 14px;
+  }
+  .acs-title i{ color: var(--hub-brand-ink); }
+  .acs-help{ font-size: 11.5px; color: var(--hub-text-mute); }
+
+  /* Mode toggle (simple ↔ advanced) */
+  .acs-mode{
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 8px;
+    background: #fafbff; border: 1px solid var(--hub-border);
+    cursor: pointer; font-size: 12.5px; font-weight: 700;
+  }
+  .acs-mode input{ width: 16px; height: 16px; }
+
+  /* Day chips (sat..fri) */
+  .acs-days{ display: flex; gap: 6px; flex-wrap: wrap; }
+  .acs-day{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: 999px;
+    font-size: 13px; font-weight: 700;
+    color: var(--hub-text-soft);
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-day:hover{ background:#f6f4ff; }
+  .acs-day input{ display: none; }
+  .acs-day.is-on{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    border-color: transparent; color: #fff;
+    box-shadow: 0 2px 6px rgba(107,90,237,.25);
+  }
+
+  /* Time windows */
+  .acs-windows{ display: flex; flex-direction: column; gap: 8px; }
+  .acs-window{
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    background: #fafbff; border: 1px solid var(--hub-border);
+    border-radius: 10px;
+  }
+  .acs-window-icon{
+    color: var(--hub-brand-ink); width: 22px; flex-shrink: 0;
+  }
+  .acs-window-label{ font-size: 12px; color: var(--hub-text-mute); }
+  .acs-window input[type="time"]{
+    background: #fff; border: 1px solid var(--hub-border);
+    border-radius: 6px; padding: 5px 8px;
+    font-family: var(--hub-mono); font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .acs-window input[type="time"]:focus{
+    border-color: var(--hub-brand);
+    outline: 0; box-shadow: 0 0 0 3px var(--hub-brand-soft);
+  }
+  .acs-window-rm{
+    margin-inline-start: auto;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: transparent; border: 0; color: var(--hub-red);
+    cursor: pointer;
+  }
+  .acs-window-rm:hover{ background: var(--hub-red-soft); }
+  .acs-window-add{
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+    border: 1px dashed var(--hub-brand);
+    border-radius: 8px;
+    font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+  }
+  .acs-window-add:hover{ background: #ece9ff; }
+
+  /* Advanced — per-day blocks */
+  .acs-per-day{ display: none; flex-direction: column; gap: 10px; }
+  .acs-card.is-advanced .acs-simple{ display: none; }
+  .acs-card.is-advanced .acs-per-day{ display: flex; }
+
+  .acs-pd-block{
+    background: #fafbff; border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md); padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .acs-pd-head{
+    display: flex; align-items: center; gap: 10px;
+  }
+  .acs-pd-day{
+    font-weight: 800; color: var(--hub-text); font-size: 13.5px;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+    padding: 4px 12px; border-radius: 999px;
+  }
+  .acs-pd-rm{
+    margin-inline-start: auto;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: transparent; border: 0; color: var(--hub-red);
+    cursor: pointer; font-size: 14px;
+  }
+  .acs-pd-rm:hover{ background: var(--hub-red-soft); }
+  .acs-pd-add{
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+    border: 1px dashed var(--hub-brand); border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .acs-pd-add:hover{ background: #ece9ff; }
+  .acs-pd-add select{
+    background: transparent; border: 0; color: inherit;
+    font-family: inherit; font-weight: 700; font-size: 13px;
+    cursor: pointer; outline: none;
+  }
+</style>
+
+<script>
+(function(){
+  if (window.__acsInitialized) return;
+  window.__acsInitialized = true;
+
+  const DAYS = ["sat","sun","mon","tue","wed","thu","fri"];
+  const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
+                      wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
+
+  function readState(card){
+    try { return JSON.parse(card.dataset.acsInitial || '{}'); }
+    catch(_) { return { windows: [] }; }
+  }
+
+  function timeInput(value){
+    const i = document.createElement("input");
+    i.type = "time"; i.value = value || "";
+    return i;
+  }
+
+  function makeWindow(state){
+    const row = document.createElement("div");
+    row.className = "acs-window";
+    row.innerHTML = `
+      <span class="acs-window-icon"><i class="fa-solid fa-clock"></i></span>
+      <span class="acs-window-label">من</span>`;
+    const from = timeInput(state.from); row.appendChild(from);
+    const lbl = document.createElement("span"); lbl.className = "acs-window-label";
+    lbl.textContent = "إلى"; row.appendChild(lbl);
+    const to = timeInput(state.to); row.appendChild(to);
+    const rm = document.createElement("button");
+    rm.type = "button"; rm.className = "acs-window-rm";
+    rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    row.appendChild(rm);
+    row.dataset.from = state.from || "";
+    row.dataset.to   = state.to   || "";
+    from.addEventListener("input", () => { row.dataset.from = from.value || ""; });
+    to.addEventListener("input",   () => { row.dataset.to   = to.value   || ""; });
+    return { row, rm };
+  }
+
+  function initCard(card){
+    const hidden = card.querySelector("[data-acs-hidden]");
+    const modeCb = card.querySelector("[data-acs-mode]");
+    const daysWrap   = card.querySelector("[data-acs-days]");
+    const winsWrap   = card.querySelector("[data-acs-windows]");
+    const addWinBtn  = card.querySelector("[data-acs-add-window]");
+    const perDayWrap = card.querySelector("[data-acs-perday]");
+    const addDaySel  = card.querySelector("[data-acs-add-day]");
+
+    // ── 1. Hydrate state from data-acs-initial ─────────────
+    const initial = readState(card);
+    const initialWins = (initial.windows || []);
+    // Detect advanced: any single-day window when there's more than one
+    // window total → likely "per-day" layout. Simpler heuristic: if any
+    // window has exactly 1 day AND there are 2+ windows with different
+    // single-day sets, switch to advanced.
+    let advanced = false;
+    if (initialWins.length > 1) {
+      const singleDayWindows = initialWins.filter(w => (w.days||[]).length === 1);
+      const distinctDays = new Set(singleDayWindows.map(w => w.days[0]));
+      if (singleDayWindows.length === initialWins.length && distinctDays.size > 1) {
+        advanced = true;
+      }
+    }
+    if (modeCb) modeCb.checked = advanced;
+    card.classList.toggle("is-advanced", advanced);
+
+    // ── 2. Simple section: day chips + flat window list ─────
+    // Render day chips
+    daysWrap.innerHTML = "";
+    const simpleDays = new Set();
+    if (!advanced) {
+      // The union of all days from non-empty `days[]`.
+      initialWins.forEach(w => (w.days || []).forEach(d => simpleDays.add(d)));
+    }
+    DAYS.forEach(code => {
+      const chip = document.createElement("label");
+      chip.className = "acs-day" + (simpleDays.has(code) ? " is-on" : "");
+      chip.dataset.day = code;
+      chip.innerHTML = `<input type="checkbox" ${simpleDays.has(code) ? "checked" : ""}>
+                       <span>${DAY_NAMES[code]}</span>`;
+      const cb = chip.querySelector("input");
+      cb.addEventListener("change", () => {
+        chip.classList.toggle("is-on", cb.checked);
+        sync();
+      });
+      daysWrap.appendChild(chip);
+    });
+
+    // Render simple windows (or single empty placeholder if none)
+    function pushSimpleWindow(state){
+      const w = makeWindow(state);
+      w.rm.addEventListener("click", () => { w.row.remove(); sync(); });
+      w.row.addEventListener("input", sync);
+      winsWrap.appendChild(w.row);
+    }
+    winsWrap.innerHTML = "";
+    if (!advanced) {
+      // Flatten: every window's from/to but ignore days (chips own them)
+      initialWins.forEach(w => pushSimpleWindow({ from: w.from || "", to: w.to || "" }));
+    }
+
+    addWinBtn.addEventListener("click", () => { pushSimpleWindow({}); sync(); });
+
+    // ── 3. Advanced section: per-day blocks ─────────────────
+    perDayWrap.innerHTML = "";
+    function buildPerDayBlock(dayCode, windows){
+      const block = document.createElement("div");
+      block.className = "acs-pd-block";
+      block.dataset.day = dayCode;
+      const head = document.createElement("div");
+      head.className = "acs-pd-head";
+      head.innerHTML = `<span class="acs-pd-day">${DAY_NAMES[dayCode]}</span>`;
+      const rm = document.createElement("button");
+      rm.type = "button"; rm.className = "acs-pd-rm";
+      rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      rm.addEventListener("click", () => { block.remove(); refreshAddDay(); sync(); });
+      head.appendChild(rm);
+      block.appendChild(head);
+
+      const list = document.createElement("div");
+      list.className = "acs-windows";
+      block.appendChild(list);
+
+      function add(state){
+        const w = makeWindow(state);
+        w.rm.addEventListener("click", () => { w.row.remove(); sync(); });
+        w.row.addEventListener("input", sync);
+        list.appendChild(w.row);
+      }
+      (windows.length ? windows : [{from:"",to:""}]).forEach(add);
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button"; addBtn.className = "acs-window-add";
+      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> فترة';
+      addBtn.addEventListener("click", () => { add({}); sync(); });
+      block.appendChild(addBtn);
+
+      return block;
+    }
+    function refreshAddDay(){
+      const used = new Set([...perDayWrap.querySelectorAll(".acs-pd-block")]
+                            .map(b => b.dataset.day));
+      addDaySel.innerHTML = '<option value="">+ إضافة يوم</option>';
+      DAYS.forEach(code => {
+        if (used.has(code)) return;
+        const o = document.createElement("option");
+        o.value = code; o.textContent = DAY_NAMES[code];
+        addDaySel.appendChild(o);
+      });
+    }
+    if (advanced) {
+      // Group initial windows by single-day code
+      const byDay = {};
+      initialWins.forEach(w => {
+        const d = (w.days || [])[0];
+        if (!d) return;
+        (byDay[d] = byDay[d] || []).push({ from: w.from || "", to: w.to || "" });
+      });
+      DAYS.forEach(code => {
+        if (byDay[code]) perDayWrap.appendChild(buildPerDayBlock(code, byDay[code]));
+      });
+    }
+    refreshAddDay();
+    addDaySel.addEventListener("change", () => {
+      const code = addDaySel.value;
+      if (!code) return;
+      perDayWrap.appendChild(buildPerDayBlock(code, []));
+      addDaySel.value = "";
+      refreshAddDay();
+      sync();
+    });
+
+    // ── 4. Mode toggle ──────────────────────────────────────
+    if (modeCb) {
+      modeCb.addEventListener("change", () => {
+        const adv = modeCb.checked;
+        card.classList.toggle("is-advanced", adv);
+        // Migration of state between modes: derive a fresh layout from the
+        // hidden field's current value.
+        const cur = JSON.parse(hidden.value || '{"windows":[]}');
+        if (adv) {
+          // simple → advanced: expand each chip-day into a per-day block
+          //                    with the current flat windows.
+          const flatWins = cur.windows.map(w => ({ from: w.from || "", to: w.to || "" }));
+          const days = Array.from(daysWrap.querySelectorAll(".acs-day.is-on"))
+                            .map(c => c.dataset.day);
+          perDayWrap.innerHTML = "";
+          (days.length ? days : []).forEach(code => {
+            perDayWrap.appendChild(buildPerDayBlock(code, flatWins));
+          });
+          refreshAddDay();
+        } else {
+          // advanced → simple: union of all days; concat all unique from/to
+          //                    pairs (dedupe).
+          const days = new Set();
+          const pairs = new Set();
+          cur.windows.forEach(w => {
+            (w.days || []).forEach(d => days.add(d));
+            pairs.add((w.from || "") + "|" + (w.to || ""));
+          });
+          // re-render chips
+          daysWrap.querySelectorAll(".acs-day").forEach(chip => {
+            const on = days.has(chip.dataset.day);
+            chip.classList.toggle("is-on", on);
+            chip.querySelector("input").checked = on;
+          });
+          winsWrap.innerHTML = "";
+          pairs.forEach(p => {
+            const [f, t] = p.split("|");
+            pushSimpleWindow({ from: f, to: t });
+          });
+          if (!winsWrap.children.length) pushSimpleWindow({});
+        }
+        sync();
+      });
+    }
+
+    // ── 5. Serializer — write JSON to the hidden input ──────
+    function readSimple(){
+      const days = Array.from(daysWrap.querySelectorAll(".acs-day.is-on"))
+                        .map(c => c.dataset.day);
+      const windows = Array.from(winsWrap.querySelectorAll(".acs-window"))
+                            .map(r => ({
+                              days: days.slice(),
+                              from: r.dataset.from || "",
+                              to:   r.dataset.to   || "",
+                            }))
+                            .filter(w => w.days.length || w.from || w.to);
+      if (!windows.length && days.length) {
+        // Days only — emit one window with no times
+        return { windows: [{ days: days.slice(), from: "", to: "" }] };
+      }
+      if (!windows.length && !days.length) {
+        return { windows: [] };
+      }
+      return { windows };
+    }
+    function readAdvanced(){
+      const windows = [];
+      perDayWrap.querySelectorAll(".acs-pd-block").forEach(block => {
+        const day = block.dataset.day;
+        block.querySelectorAll(".acs-window").forEach(r => {
+          windows.push({
+            days: [day],
+            from: r.dataset.from || "",
+            to:   r.dataset.to   || "",
+          });
+        });
+      });
+      return { windows };
+    }
+    function sync(){
+      const data = card.classList.contains("is-advanced") ? readAdvanced() : readSimple();
+      hidden.value = data.windows.length ? JSON.stringify(data) : "";
+    }
+    sync();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-acs-card]").forEach(initCard);
+  });
+  // Also init right now if DOM already parsed (Jinja partial included late).
+  if (document.readyState !== "loading") {
+    document.querySelectorAll("[data-acs-card]")
+            .forEach(c => { if (!c.__acsInit) { c.__acsInit = true; initCard(c); } });
+  }
+})();
+</script>
+{%- endmacro %}
+
+
+{# ── the picker itself ──────────────────────────────────────────── #}
+{% macro access_schedule_picker(name, value="", id="acs-1", title="الأيام والأوقات المسموحة") -%}
+{# value: JSON string (from DB) or empty string. The macro hands it to the
+   JS via data-acs-initial — JS does normalization + rendering. #}
+{{ access_schedule_assets() }}
+
+<div class="acs-card" data-acs-card id="{{ id }}"
+     data-acs-initial="{{ value or '' }}">
+  <div class="acs-head">
+    <span class="acs-title"><i class="fa-solid fa-calendar-days"></i> {{ title }}</span>
+    <label class="acs-mode">
+      <input type="checkbox" data-acs-mode>
+      <span>وضع متقدم — أوقات مختلفة لكل يوم</span>
+    </label>
+  </div>
+
+  {# Simple section ── days + global windows #}
+  <div class="acs-simple">
+    <div class="acs-help">
+      <strong>الأيام:</strong> اختاري أي يوم تسمحين فيه (فاضي = كل الأيام).
+    </div>
+    <div class="acs-days" data-acs-days></div>
+
+    <div class="acs-help">
+      <strong>الفترات الزمنية:</strong> أضيفي فترة أو أكثر (فاضي = طول اليوم).
+    </div>
+    <div class="acs-windows" data-acs-windows></div>
+    <button type="button" class="acs-window-add" data-acs-add-window>
+      <i class="fa-solid fa-plus"></i> إضافة فترة
+    </button>
+  </div>
+
+  {# Advanced section ── per-day blocks #}
+  <div class="acs-per-day" data-acs-perday></div>
+  <div>
+    <label class="acs-pd-add">
+      <i class="fa-solid fa-plus"></i>
+      <select data-acs-add-day><option value="">+ إضافة يوم</option></select>
+    </label>
+  </div>
+
+  <input type="hidden" name="{{ name }}" value="{{ value or '' }}" data-acs-hidden>
+</div>
+{%- endmacro %}
