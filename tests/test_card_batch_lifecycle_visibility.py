@@ -153,6 +153,63 @@ def test_card_batches_operations_page_filters_and_exports_csv(client, auth_heade
         assert card["password"] not in csv_text
 
 
+def test_card_batches_web_import_external_file_is_safe_bookkeeping(client, auth_headers):
+    from app.radius.db.connection import db
+
+    _web_login(client)
+    page = client.get("/admin/radius/cards/batches/import")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert "استيراد ملف كروت" in html
+    assert "ملف خارجي" in html
+
+    token = _csrf(client, "/admin/radius/cards/batches/import")
+    username_one = "web-external-qa-1-" + secrets.token_hex(4)
+    username_two = "web-external-qa-2-" + secrets.token_hex(4)
+    secret_one = "visible-secret-one"
+    secret_two = "visible-secret-two"
+    res = client.post(
+        "/admin/radius/cards/batches/import",
+        data={
+            "_csrf_token": token,
+            "plan_id": "1",
+            "source_type": "external",
+            "package_name": "Web External Import QA",
+            "price_per_card": "1.50",
+            "csv_text": f"username,password\n{username_one},{secret_one}\n{username_two},{secret_two}\n",
+            "sync_to_radius": "1",
+        },
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Web External Import QA" in html
+    assert username_one not in html
+    assert secret_one not in html
+    assert secret_two not in html
+
+    external_batch = db().execute(
+        """
+        SELECT id, source_type, original_count, generated
+        FROM card_batches
+        WHERE package_name = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        ("Web External Import QA",),
+    ).fetchone()
+    assert external_batch is not None
+    assert external_batch["source_type"] == "external"
+    assert external_batch["original_count"] == 2
+    assert external_batch["generated"] == 2
+
+    radius_accounts = db().execute(
+        "SELECT username FROM subscribers WHERE username IN (?, ?)",
+        (username_one, username_two),
+    ).fetchall()
+    assert radius_accounts == []
+
+
 def test_card_batches_bulk_archive_is_soft_and_preserves_cards(client, auth_headers):
     from app.radius.db.repos import cards_repo
 

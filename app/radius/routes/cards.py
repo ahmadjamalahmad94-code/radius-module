@@ -10,7 +10,7 @@ import io
 
 from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
 
-from ..core.errors import RadiusError
+from ..core.errors import RadiusError, RadiusValidationError
 from ..db.repos import operations_repo
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
@@ -34,6 +34,7 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
     bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk", cards_batches_bulk, methods=["POST"])
     bp.add_url_rule("/cards/batches/export.csv", "cards_batches_export_csv", cards_batches_export_csv, methods=["GET"])
+    bp.add_url_rule("/cards/batches/import", "cards_batches_import", cards_batches_import, methods=["GET", "POST"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke", cards_revoke, methods=["POST"])
@@ -112,6 +113,43 @@ def _page_args() -> tuple[int, int]:
     except ValueError:
         page = 1
     return page, per_page
+
+
+def _parse_import_cards_text(raw: str) -> list[dict[str, str]]:
+    text = (raw or "").strip()
+    if not text:
+        return []
+    reader = csv.reader(io.StringIO(text))
+    rows = [[cell.strip() for cell in row] for row in reader if any(cell.strip() for cell in row)]
+    if not rows:
+        return []
+
+    header = [cell.lower().replace(" ", "_") for cell in rows[0]]
+    has_header = any(cell in {"username", "user", "login", "card", "password", "pass"} for cell in header)
+    if has_header:
+        username_idx = next((i for i, cell in enumerate(header) if cell in {"username", "user", "login", "card"}), 0)
+        password_idx = next((i for i, cell in enumerate(header) if cell in {"password", "pass"}), None)
+        data_rows = rows[1:]
+    else:
+        username_idx = 0
+        password_idx = 1 if len(rows[0]) > 1 else None
+        data_rows = rows
+
+    cards: list[dict[str, str]] = []
+    for row in data_rows:
+        username = row[username_idx].strip() if username_idx < len(row) else ""
+        password = row[password_idx].strip() if password_idx is not None and password_idx < len(row) else ""
+        if username:
+            cards.append({"username": username, "password": password})
+    return cards
+
+
+def _import_form_context() -> dict:
+    return {
+        "plans": list(get_plans_service().list(limit=500)),
+        "form": request.form,
+        "preview_rows": [],
+    }
 
 
 def _collect_batch_options() -> dict:
@@ -236,6 +274,60 @@ def cards_batches():
             ("deleted", "مؤرشفة"),
         ],
     )
+
+
+def cards_batches_import():
+    if request.method == "GET":
+        return render_template("radius/cards_import.html", **_import_form_context())
+
+    plan_id = _form_int("plan_id")
+    source_type = (_form_str("source_type") or "external").lower()
+    csv_text = request.form.get("csv_text") or ""
+    rows = _parse_import_cards_text(csv_text)
+
+    if source_type not in {"external", "imported"}:
+        flash("نوع الملف يجب أن يكون خارجي أو مستورد.", "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 422
+    if not plan_id:
+        flash("اختر الباقة المرتبطة قبل الاستيراد.", "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 422
+    if not rows:
+        flash("أدخل كروت للاستيراد بصيغة username,password أو عمود username فقط.", "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 422
+    if len(rows) > 5000:
+        flash("الحد الأقصى للاستيراد هو 5000 بطاقة في العملية الواحدة.", "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 422
+
+    try:
+        result = get_cards_service().import_batch(
+            actor=_actor(),
+            plan_id=plan_id,
+            cards=rows,
+            source_type=source_type,
+            package_name=_form_str("package_name"),
+            service_name=_form_str("service_name"),
+            notes=_form_str("notes"),
+            price_per_card=_form_float("price_per_card"),
+            total_price=_form_float("total_price"),
+            sync_to_radius=_form_bool("sync_to_radius") and source_type != "external",
+        )
+    except RadiusValidationError as exc:
+        flash(exc.message, "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 422
+    except RadiusError as exc:
+        flash(exc.message, "error")
+        return render_template("radius/cards_import.html", **_import_form_context()), 500
+
+    batch = result["batch"]
+    skipped = result["skipped_count"]
+    synced = result["radius_synced_count"]
+    sync_label = f" وتمت مزامنة {synced} حساب RADIUS." if result["radius_sync_enabled"] else ""
+    skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
+    flash(
+        f"تم استيراد {result['inserted_count']} بطاقة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
+        "success",
+    )
+    return redirect(url_for("radius.cards_batches", q=batch.batch_code, status="all"))
 
 
 def _selected_batch_ids() -> list[int]:

@@ -1,0 +1,127 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}استيراد ملف كروت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
+{% block page_title %}استيراد ملف كروت{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .ci-form{max-width:1120px;margin:0 auto}
+  .ci-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .ci-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .ci-field label{font-size:12.5px;font-weight:800;color:var(--hub-text-soft)}
+  .ci-field.full{grid-column:1/-1}
+  .ci-help{font-size:11.5px;color:var(--hub-text-mute);line-height:1.8}
+  .ci-textarea{min-height:260px;font-family:ui-monospace,Consolas,monospace;direction:ltr;text-align:left}
+  .ci-note{
+    padding:12px 14px;border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);background:var(--hub-bg-soft);
+    color:var(--hub-text-soft);font-size:12px;line-height:1.9
+  }
+  @media (max-width:900px){.ci-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "استيراد ملف كروت",
+  subtitle="ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع RADIUS عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.",
+  icon="file-import",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للحزم
+    </a>
+    <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.cards_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء توليدي
+    </a>
+  '
+) }}
+
+<div class="ci-form">
+  <form method="post" action="{{ url_for('radius.cards_batches_import') }}">
+    {% call hub.section("بيانات الملف", icon="box-archive") %}
+      <div class="ci-grid">
+        <div class="ci-field">
+          <label for="plan_id">الباقة المرتبطة <span class="req">*</span></label>
+          <select class="hub-select" id="plan_id" name="plan_id" required>
+            <option value="">اختر الباقة</option>
+            {% for p in plans %}
+              <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>
+                {{ p.name }} · {{ "%.2f"|format(p.price or 0) }} {{ p.currency }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="ci-help">تستخدم للتصنيف والعدادات، ولا تعني تطبيقًا على الشبكة إذا كان الملف خارجيًا.</div>
+        </div>
+
+        <div class="ci-field">
+          <label for="source_type">نوع المصدر</label>
+          <select class="hub-select" id="source_type" name="source_type">
+            <option value="external" {% if (form.get('source_type') or 'external') == 'external' %}selected{% endif %}>
+              ملف خارجي للحساب فقط
+            </option>
+            <option value="imported" {% if form.get('source_type') == 'imported' %}selected{% endif %}>
+              ملف مستورد داخل RADIUS
+            </option>
+          </select>
+          <div class="ci-help">الخارجي لا ينشئ حسابات RADIUS ولا ينفذ أي إجراء على NAS.</div>
+        </div>
+
+        <div class="ci-field">
+          <label for="package_name">اسم الحزمة</label>
+          <input class="hub-input" id="package_name" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="مثال: ملف شهر 6">
+        </div>
+
+        <div class="ci-field">
+          <label for="price_per_card">سعر البطاقة</label>
+          <input class="hub-input" id="price_per_card" name="price_per_card" type="number" step="0.01" min="0" value="{{ form.get('price_per_card') or 0 }}">
+        </div>
+
+        <div class="ci-field">
+          <label for="total_price">السعر الإجمالي</label>
+          <input class="hub-input" id="total_price" name="total_price" type="number" step="0.01" min="0" value="{{ form.get('total_price') or 0 }}">
+        </div>
+
+        <div class="ci-field">
+          <label for="service_name">اسم الخدمة</label>
+          <input class="hub-input" id="service_name" name="service_name" value="{{ form.get('service_name') or '' }}" placeholder="اختياري">
+        </div>
+
+        <div class="ci-field full">
+          <label class="hub-flex-row" style="gap:8px;align-items:center">
+            <input type="checkbox" name="sync_to_radius" value="1" {% if form.get('sync_to_radius') %}checked{% endif %}>
+            مزامنة حسابات RADIUS للملف المستورد
+          </label>
+          <div class="ci-note">
+            يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات RADIUS فعلية.
+          </div>
+        </div>
+      </div>
+    {% endcall %}
+
+    {% call hub.section("محتوى الملف", icon="file-lines") %}
+      <div class="ci-field">
+        <label for="csv_text">الكروت</label>
+        <textarea class="hub-input ci-textarea" id="csv_text" name="csv_text" required
+          placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
+        <div class="ci-help">
+          الصيغ المقبولة: سطر لكل كرت، أو CSV يحتوي الأعمدة username,password. يمكن ترك كلمة المرور فارغة، ولن تظهر كلمات المرور بعد الاستيراد.
+        </div>
+      </div>
+    {% endcall %}
+
+    {% call hub.section("اعتماد الاستيراد", icon="shield-halved") %}
+      <div class="ci-field">
+        <label for="notes">ملاحظات</label>
+        <textarea class="hub-input" id="notes" name="notes" rows="3" placeholder="سبب الاستيراد أو مرجع الملف">{{ form.get('notes') or '' }}</textarea>
+      </div>
+      <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
+        {{ hub.btn("استيراد الملف", icon="file-import", type="submit", variant="primary") }}
+        {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_batches'), variant="secondary") }}
+      </div>
+    {% endcall %}
+  </form>
+</div>
+{% endblock %}
