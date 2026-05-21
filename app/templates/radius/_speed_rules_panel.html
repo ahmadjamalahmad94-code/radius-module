@@ -71,12 +71,126 @@
     background: #fff;
     border: 1.5px solid var(--hub-border);
     border-radius: 14px;
-    padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 12px;
+    padding: 0;                       /* summary/detail handle their own */
+    display: flex; flex-direction: column; gap: 0;
     position: relative;
+    overflow: hidden;
+    transition: border-color var(--hub-anim-fast) var(--hub-ease),
+                box-shadow  var(--hub-anim-fast) var(--hub-ease),
+                background  var(--hub-anim-fast) var(--hub-ease);
+  }
+  /* Enabled rule: emerald accent strip on the start edge + subtle tint. */
+  .sr2-rule:not(.is-disabled){
+    border-inline-start: 4px solid #10b981;
+    background: linear-gradient(90deg, #ecfdf5 0%, #fff 18%);
+  }
+  /* Disabled rule: muted neutral with a rose accent strip — quickly
+     readable as «off» without screaming. */
+  .sr2-rule.is-disabled{
+    opacity: 1;
+    border-inline-start: 4px solid #f5a3b3;
+    background: linear-gradient(90deg, #fff5f6 0%, #fff 18%);
+    color: var(--hub-text-soft);
+  }
+  /* Expanded — operator is actively editing this rule. Brand accent. */
+  .sr2-rule.is-expanded{
+    border-inline-start-color: var(--hub-brand);
+    background: linear-gradient(90deg, var(--hub-brand-soft) 0%, #fff 22%);
+    box-shadow: 0 4px 14px rgba(107, 90, 237, .12);
   }
   .sr2-rule:hover{ border-color: var(--hub-brand-line); }
-  .sr2-rule.is-disabled{ opacity: .65; }
+
+  /* ── Summary row (default view) ─────────────────────────── */
+  .sr2-rule-summary{
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px;
+    font-size: 13px; color: var(--hub-text);
+  }
+  .sr2-rule.is-expanded .sr2-rule-summary{ display: none; }
+  .sr2-sum-pulse{
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #d4d4d8; flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.85);
+  }
+  .sr2-sum-pulse.is-on{
+    background: #10b981;
+    animation: sr2-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes sr2-pulse{
+    0%, 100%{ box-shadow: 0 0 0 0 rgba(16, 185, 129, .45); }
+    50%     { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  }
+  .sr2-sum-name{
+    font-weight: 800; color: var(--hub-text);
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sr2-rule.is-disabled .sr2-sum-name{ color: var(--hub-text-mute); text-decoration: line-through; }
+  .sr2-sum-time, .sr2-sum-speed, .sr2-sum-days{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 700;
+    color: var(--hub-text-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(107, 90, 237, .07);
+    border: 1px solid rgba(107, 90, 237, .12);
+  }
+  .sr2-sum-time i{ color: var(--hub-brand-ink); font-size: 11px; }
+  .sr2-sum-speed i{ color: var(--hub-brand-ink); font-size: 11px; }
+  .sr2-sum-sep{ opacity: .4; margin: 0 4px; }
+  .sr2-rule.is-disabled .sr2-sum-time,
+  .sr2-rule.is-disabled .sr2-sum-speed,
+  .sr2-rule.is-disabled .sr2-sum-days{
+    background: rgba(0,0,0,.04);
+    border-color: rgba(0,0,0,.08);
+    color: var(--hub-text-mute);
+  }
+  .sr2-sum-status{
+    font-size: 12px; font-weight: 800;
+    color: #047857;
+  }
+  .sr2-rule.is-disabled .sr2-sum-status{ color: #be123c; }
+  .sr2-sum-spacer{ flex: 1; }
+  .sr2-sum-edit, .sr2-sum-del{
+    border: 0;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12px; font-weight: 800;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .sr2-sum-edit{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+  }
+  .sr2-sum-edit:hover{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(107, 90, 237, .3);
+  }
+  .sr2-sum-del{
+    background: rgba(244, 63, 94, .08);
+    color: #be123c;
+    padding: 6px 9px;
+  }
+  .sr2-sum-del:hover{
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(244, 63, 94, .3);
+  }
+
+  /* ── Detail block (expanded view) ─────────────────────── */
+  .sr2-rule-detail{
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    border-top: 1px dashed var(--hub-border);
+    animation: sr2-expand .18s ease-out;
+  }
+  @keyframes sr2-expand{
+    from{ opacity: 0; transform: translateY(-4px); }
+    to  { opacity: 1; transform: translateY(0); }
+  }
 
   .sr2-row{
     display: grid;
@@ -218,12 +332,71 @@
       </div>
     {% else %}
       {% for rule in speed_rules_panel.rules %}
-      {%- set sel_days = (rule.days_csv or '').split(',') -%}
-      <div class="sr2-rule {% if not rule.enabled %}is-disabled{% endif %}">
+      {%- set sel_days = (rule.days_csv or '').split(',')|reject('equalto','')|list -%}
+      {%- set day_label_map = dict(ALL_DAYS) -%}
+      {%- set d_kbps  = rule.speed_down_kbps or 0 -%}
+      {%- set u_kbps  = rule.speed_up_kbps or 0 -%}
+      <div class="sr2-rule {% if not rule.enabled %}is-disabled{% endif %}" data-rule-id="{{ rule.id }}">
         <input type="hidden" name="sr_edit_cir_down_kbps_{{ rule.id }}" value="{{ rule.cir_down_kbps or 0 }}">
         <input type="hidden" name="sr_edit_cir_up_kbps_{{ rule.id }}"   value="{{ rule.cir_up_kbps or 0 }}">
         <input type="hidden" name="sr_edit_notes_{{ rule.id }}"          value="{{ rule.notes or '' }}">
 
+        {# ── Compact summary view (default). One line per rule with
+           the essential info + edit/delete + a JS-only enabled toggle
+           that gets persisted by the main «حفظ» (sync helper in
+           users.py). #}
+        <div class="sr2-rule-summary">
+          <span class="sr2-sum-pulse {% if rule.enabled %}is-on{% endif %}"></span>
+          <span class="sr2-sum-name">{{ rule.name or 'قاعدة سرعة' }}</span>
+          <span class="sr2-sum-time">
+            <i class="fa-regular fa-clock"></i>
+            <span class="sr2-sum-time-text"
+                  data-from="{{ rule.starts_at_time or '' }}"
+                  data-to="{{ rule.ends_at_time or '' }}"
+            >{{ rule.starts_at_time or '--:--' }} ← {{ rule.ends_at_time or '--:--' }}</span>
+          </span>
+          <span class="sr2-sum-speed">
+            <i class="fa-solid fa-arrow-down" title="تنزيل"></i>
+            {%- if d_kbps >= 1024 and (d_kbps % 1024 == 0) %} {{ (d_kbps // 1024) }} Mbps
+            {%- elif d_kbps >= 1024 %} {{ '%.1f' % (d_kbps / 1024) }} Mbps
+            {%- else %} {{ d_kbps }} Kbps
+            {%- endif -%}
+            <span class="sr2-sum-sep">·</span>
+            <i class="fa-solid fa-arrow-up" title="رفع"></i>
+            {%- if u_kbps >= 1024 and (u_kbps % 1024 == 0) %} {{ (u_kbps // 1024) }} Mbps
+            {%- elif u_kbps >= 1024 %} {{ '%.1f' % (u_kbps / 1024) }} Mbps
+            {%- else %} {{ u_kbps }} Kbps
+            {%- endif -%}
+          </span>
+          <span class="sr2-sum-days">
+            {%- if sel_days|length == 0 or sel_days|length == 7 -%}
+              كل الأيام
+            {%- elif sel_days|length <= 3 -%}
+              {%- for d in sel_days -%}{{ day_label_map.get(d, d) }}{% if not loop.last %} · {% endif %}{%- endfor -%}
+            {%- else -%}
+              {{ sel_days|length }} أيام
+            {%- endif -%}
+          </span>
+          <span class="sr2-sum-spacer"></span>
+          <span class="sr2-sum-status">
+            {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> مفعَّلة
+            {% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
+          </span>
+          <button type="button" class="sr2-sum-edit" data-toggle-rule="{{ rule.id }}">
+            <i class="fa-solid fa-pen"></i> تعديل
+          </button>
+          <button class="sr2-sum-del" type="submit"
+                  name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
+                  title="حذف القاعدة"
+                  onclick="return confirm('حذف هذه القاعدة؟');">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+
+        {# ── Full editable detail view. Hidden by default; toggled via
+           the «تعديل» button. All inputs stay in the DOM so they POST
+           with the main form. #}
+        <div class="sr2-rule-detail" hidden>
         {# Row 1: name + days #}
         <div class="sr2-row">
           <div class="sr2-field">
@@ -285,22 +458,25 @@
           </div>
         </div>
 
-        {# Footer: status + actions #}
+        {# Footer: status (the canonical enabled checkbox lives here +
+           is mirrored in the summary header for at-a-glance state) +
+           actions. #}
         <div class="sr2-foot">
           <label class="sr2-foot-status {% if rule.enabled %}ok{% else %}off{% endif %}">
             <input type="checkbox" name="sr_edit_enabled_{{ rule.id }}" value="1"
               {% if rule.enabled %}checked{% endif %}>
-            {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> مفعَّلة{% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
+            <span class="sr2-foot-status-text">
+              {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> مفعَّلة{% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
+            </span>
           </label>
           <div class="sr2-foot-actions">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
+                    data-collapse-rule="{{ rule.id }}">
+              <i class="fa-solid fa-xmark"></i> إغلاق
+            </button>
             <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
                     name="_speed_rule_action" value="update:{{ rule.id }}" formnovalidate>
               <i class="fa-solid fa-floppy-disk"></i> تحديث
-            </button>
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
-                    name="_speed_rule_action" value="toggle:{{ rule.id }}" formnovalidate>
-              <i class="fa-solid fa-power-off"></i>
-              {% if rule.enabled %}تعطيل{% else %}تفعيل{% endif %}
             </button>
             <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                     name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
@@ -309,6 +485,7 @@
             </button>
           </div>
         </div>
+        </div>{# /.sr2-rule-detail #}
       </div>
       {% endfor %}
     {% endif %}
@@ -408,4 +585,30 @@
     </div>
   </div>
 </section>
+
+{# Expand / collapse a rule's detail panel — idempotent via guard
+   so the macro is safe to render multiple times. #}
+<script>
+(function(){
+  if (window.__sr2RuleToggleInit) return;
+  window.__sr2RuleToggleInit = true;
+  document.addEventListener('click', function(e){
+    var openBtn  = e.target.closest('[data-toggle-rule]');
+    var closeBtn = e.target.closest('[data-collapse-rule]');
+    if (!openBtn && !closeBtn) return;
+    var btn  = openBtn || closeBtn;
+    var rule = btn.closest('.sr2-rule');
+    if (!rule) return;
+    var detail = rule.querySelector('.sr2-rule-detail');
+    if (!detail) return;
+    if (openBtn){
+      rule.classList.add('is-expanded');
+      detail.hidden = false;
+    } else {
+      rule.classList.remove('is-expanded');
+      detail.hidden = true;
+    }
+  });
+})();
+</script>
 {% endif %}
