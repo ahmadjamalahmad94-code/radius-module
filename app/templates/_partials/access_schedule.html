@@ -146,15 +146,18 @@
   }
   .acs-window-rm:hover{ background: var(--hub-red-soft); }
 
-  /* Inline row: [من picker] → [إلى picker] · المدة */
+  /* Inline row: [من picker]  ←  [إلى picker]
+     Each picker is a column: label + stepper + 6 vertical chips.
+     The arrow sits centered vertically between them. */
   .acs-window-row{
-    display: flex; align-items: flex-end; justify-content: center;
-    gap: 12px; flex-wrap: wrap;
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 14px; flex-wrap: wrap;
   }
   .acs-window-sep{
-    color: var(--hub-text-mute);
-    font-size: 16px; font-weight: 700;
-    align-self: flex-end; padding-block-end: 6px;
+    color: var(--hub-brand-ink);
+    font-size: 18px; font-weight: 700;
+    align-self: center;
+    padding-top: 24px;  /* push down to align with the stepper centre */
   }
   @media (max-width: 520px){
     .acs-window-sep{ display: none; }
@@ -175,27 +178,31 @@
   .acs-duration i{ font-size: 11px; }
   .acs-duration:empty{ visibility: hidden; }
 
-  /* Smart range presets at the bottom of the window */
-  .acs-presets{
-    display: flex; gap: 5px; flex-wrap: wrap;
+  /* Per-picker vertical quick chips (6 stacked) */
+  .acs-time-quick{
+    display: flex; flex-direction: column;
+    gap: 4px;
+    align-self: stretch;
+    margin-top: 4px;
   }
-  .acs-preset{
+  .acs-time-chip{
     background: #fff; border: 1px solid var(--hub-border);
-    border-radius: 999px;
-    padding: 3px 11px;
+    border-radius: 8px;
+    padding: 5px 10px;
     font-size: 11.5px; font-weight: 700;
     color: var(--hub-text-soft);
     cursor: pointer;
     transition: all var(--hub-anim-fast) var(--hub-ease);
     font-family: inherit;
-    display: inline-flex; align-items: center; gap: 4px;
+    text-align: center;
+    line-height: 1.4;
   }
-  .acs-preset:hover{
+  .acs-time-chip:hover{
     background: var(--hub-brand-soft);
     color: var(--hub-brand-ink);
     border-color: var(--hub-brand);
   }
-  .acs-preset.is-active{
+  .acs-time-chip.is-active{
     background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
     border-color: transparent;
     color: #fff;
@@ -266,8 +273,8 @@
     align-self: center;
   }
 
-  /* (per-picker quick chips removed — replaced by shared range presets
-     at the window bottom; see .acs-presets above.) */
+  /* (per-picker quick chips moved to vertical stack below — see
+     .acs-time-quick / .acs-time-chip further down.) */
 
   /* ─── Add buttons ──────────────────────────────────────────── */
   .acs-add-window{
@@ -350,14 +357,15 @@
   const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
                       wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
 
-  // Smart range presets: ONE click fills BOTH from + to.
-  // Covers the 5 most common operator wishes for «when can they connect».
-  const RANGE_PRESETS = [
-    { label: "🌅 الصباح",    from: "06:00", to: "12:00" },
-    { label: "☀️ الظهر",     from: "12:00", to: "18:00" },
-    { label: "🌆 المساء",    from: "18:00", to: "23:59" },
-    { label: "🌙 الليل",     from: "00:00", to: "06:00" },
-    { label: "🕐 طوال اليوم", from: "00:00", to: "23:59" },
+  // Per-picker time presets: each chip sets ONE time on its own picker.
+  // 6 chips, stacked vertically next to each picker — cover the whole day.
+  const TIME_PRESETS = [
+    { label: "🌙 00:00", value: "00:00" },
+    { label: "🌃 03:00", value: "03:00" },
+    { label: "🌅 06:00", value: "06:00" },
+    { label: "☀️ 12:00", value: "12:00" },
+    { label: "🌆 18:00", value: "18:00" },
+    { label: "🌜 22:00", value: "22:00" },
   ];
 
   function readState(card){
@@ -378,6 +386,11 @@
     const wrap = document.createElement("div");
     wrap.className = "acs-time";
     wrap.dataset.timeWrap = "1";
+
+    // Internal sync — assigned later (after chips exist). Stepper handlers
+    // (bump/blur/wheel) call this; it both highlights the active chip and
+    // notifies the parent's onChange.
+    let sync = () => {};
 
     // label
     const lbl = document.createElement("div");
@@ -450,13 +463,33 @@
     const colon = document.createElement("span");
     colon.className = "acs-time-colon"; colon.textContent = ":";
 
-    // DOM order is minute, colon, hour — combined with `direction: ltr`
-    // on the stepper, the visual order becomes minute on the LEFT and
-    // hour on the RIGHT (matches what the user expects in this RTL UI).
-    stepper.appendChild(mSeg.seg);
-    stepper.appendChild(colon);
+    // DOM order is hour, colon, minute — combined with `direction: ltr`
+    // on the stepper, the visual order is HH on the LEFT and MM on the
+    // RIGHT (matches the universal HH:MM convention).
     stepper.appendChild(hSeg.seg);
+    stepper.appendChild(colon);
+    stepper.appendChild(mSeg.seg);
     wrap.appendChild(stepper);
+
+    // Per-picker vertical preset chips (6 stacked rows).
+    const quick = document.createElement("div");
+    quick.className = "acs-time-quick";
+    const quickBtns = [];
+    TIME_PRESETS.forEach(p => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "acs-time-chip";
+      b.dataset.value = p.value;
+      b.textContent = p.label;
+      b.addEventListener("click", () => wrap.setValue(p.value));
+      quick.appendChild(b);
+      quickBtns.push(b);
+    });
+    wrap.appendChild(quick);
+
+    function refreshActiveChip(){
+      const v = wrap.readValue();
+      quickBtns.forEach(b => b.classList.toggle("is-active", b.dataset.value === v));
+    }
 
     // Public API: read current value as "HH:MM" or "" if blank
     wrap.readValue = function(){
@@ -465,7 +498,7 @@
       if (!hv && !mv) return "";
       return pad2(parseInt(hv,10) || 0) + ":" + pad2(parseInt(mv,10) || 0);
     };
-    // Allow programmatic set from a range preset.
+    // Allow programmatic set from a preset chip.
     wrap.setValue = function(hhmm){
       const [h, m] = (hhmm || "00:00").split(":").map(x => parseInt(x,10) || 0);
       hSeg.inp.value = pad2(h);
@@ -473,9 +506,12 @@
       sync();
     };
 
-    // Sync hook — set by the parent.
-    let sync = () => {};
-    wrap.bindSync = function(fn){ sync = fn; };
+    // Sync hook — set by the parent. The local `sync` (used by the
+    // stepper's bump/blur/wheel handlers) ALSO refreshes the active
+    // chip highlight, so chips stay in lock-step with the steppers.
+    let externalSync = () => {};
+    sync = function(){ refreshActiveChip(); externalSync(); };
+    wrap.bindSync = function(fn){ externalSync = fn; refreshActiveChip(); };
 
     return wrap;
   }
@@ -494,7 +530,7 @@
     rm.addEventListener("click", onRemove);
     card.appendChild(rm);
 
-    // ── Row 1: pickers + small arrow ──────────────────────────
+    // ── Row 1: pickers side-by-side (each holds its own vertical chips)
     const row = document.createElement("div");
     row.className = "acs-window-row";
     const fromPicker = makeTimePicker("من", state.from || "");
@@ -507,29 +543,12 @@
     row.appendChild(toPicker);
     card.appendChild(row);
 
-    // ── Row 2: duration + range presets ───────────────────────
+    // ── Row 2: duration text only ─────────────────────────────
     const meta = document.createElement("div");
     meta.className = "acs-window-meta";
-
     const dur = document.createElement("span");
     dur.className = "acs-duration";
     meta.appendChild(dur);
-
-    const presets = document.createElement("div");
-    presets.className = "acs-presets";
-    RANGE_PRESETS.forEach(p => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "acs-preset";
-      b.textContent = p.label;
-      b.dataset.from = p.from; b.dataset.to = p.to;
-      b.addEventListener("click", () => {
-        fromPicker.setValue(p.from);
-        toPicker.setValue(p.to);
-        refreshActive();
-      });
-      presets.appendChild(b);
-    });
-    meta.appendChild(presets);
     card.appendChild(meta);
 
     function fmtDuration(from, to){
@@ -544,19 +563,16 @@
       if (h)      return `${h} ${h === 1 ? "ساعة" : (h === 2 ? "ساعتان" : "ساعات")}`;
       return `${m} دقيقة`;
     }
-    function refreshActive(){
+    function refreshDuration(){
       const f = fromPicker.readValue(), t = toPicker.readValue();
       const txt = fmtDuration(f, t);
       dur.innerHTML = txt ? `<i class="fa-solid fa-stopwatch"></i> المدة: ${txt}` : "";
-      presets.querySelectorAll(".acs-preset").forEach(b => {
-        b.classList.toggle("is-active", b.dataset.from === f && b.dataset.to === t);
-      });
     }
 
-    const composed = () => { refreshActive(); onChange(); };
+    const composed = () => { refreshDuration(); onChange(); };
     fromPicker.bindSync(composed);
     toPicker.bindSync(composed);
-    refreshActive();
+    refreshDuration();
 
     card.readValue = function(){
       return { from: fromPicker.readValue(), to: toPicker.readValue() };
