@@ -19,8 +19,14 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 
 
+{# Reuse the canonical circular clock-face picker for every time
+   input inside this block. We pull in its CSS + JS once via the
+   shared assets helper. #}
+{% from "_partials/time_picker_circular.html" import time_picker_circular_assets %}
+
 {# ── one-time CSS + JS ──────────────────────────────────────────── #}
 {% macro access_schedule_assets() -%}
+{{ time_picker_circular_assets() }}
 <style>
   /* ─── Card shell ───────────────────────────────────────────── */
   .acs-card{
@@ -210,7 +216,30 @@
     box-shadow: 0 2px 6px rgba(107,90,237,.25);
   }
 
-  /* ─── Time picker (stepper + quick chips) — compact ────────── */
+  /* ─── Time picker — canonical circular trigger + quick chips ─
+     The stepper / AM-PM toggle / numeric inputs were retired in favor
+     of the analog clock pop-up (time_picker_circular). What remains
+     here is the small per-picker wrapper (label + clickable pill +
+     6 preset chips). Many of the legacy .acs-time-* rules below are
+     kept defensive but mostly no-op on the new structure. */
+  .acs-time{
+    display: flex; flex-direction: column; gap: 8px;
+    min-width: 0;
+  }
+  .acs-time-trigger.tpc-wrap{
+    /* Fit the existing card row width. */
+    display: inline-flex; width: 100%;
+  }
+  .acs-time-trigger .tpc-trigger{
+    width: 100%;
+    background: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .acs-time-trigger .tpc-trigger.is-empty .tpc-text{
+    color: var(--hub-text-mute);
+  }
+
+  /* Legacy stepper rules kept inert (no .acs-time-stepper rendered now). */
   /* Two-cell grid: label spans both rows on top, then [stepper] [chips]
      sit side-by-side underneath. Chips form a 3-column × 2-row inner
      grid (six total). */
@@ -442,18 +471,19 @@
     return { hour: h12, minute: m, ampm: isPm ? "pm" : "am" };
   }
 
-  /* Build a single time stepper (12h HH:MM + ▲▼ + ص/م toggle + chips). */
+  /* Build a single time picker that uses the canonical circular
+     clock-face popup (time_picker_circular). Clicking the pill opens
+     the analog clock; chips below still offer one-tap presets.
+     Public API stays identical: readValue / setValue / bindSync. */
   function makeTimePicker(label, initial){
     const wrap = document.createElement("div");
     wrap.className = "acs-time";
     wrap.dataset.timeWrap = "1";
 
-    // Source of truth. Always 24-hour HH:MM. Mutated by bumps / setValue.
     let value24 = (initial && /^\d{1,2}:\d{2}$/.test(initial))
                   ? pad2(parseInt(initial.split(":")[0], 10)) + ":" +
                     pad2(parseInt(initial.split(":")[1], 10))
-                  : "00:00";
-
+                  : "";
     let externalSync = () => {};
 
     // label
@@ -462,106 +492,43 @@
     lbl.innerHTML = `<i class="fa-solid fa-clock"></i> ${label}`;
     wrap.appendChild(lbl);
 
-    // stepper container
-    const stepper = document.createElement("div");
-    stepper.className = "acs-time-stepper";
+    // Trigger structure that mirrors what time_picker_circular renders
+    // on the server side, so window.tpcRewire() can pick it up.
+    const trigWrap = document.createElement("span");
+    trigWrap.className = "tpc-wrap acs-time-trigger";
+    trigWrap.setAttribute("data-tpc", "");
 
-    // Two segments — but only their INPUTS hold a value. The bump logic
-    // mutates value24 (in 24h modular space), then render() pushes the
-    // 12h-derived values back to the inputs.
-    function segment(part){
-      const seg = document.createElement("div");
-      seg.className = "acs-time-segment";
+    const trigBtn = document.createElement("button");
+    trigBtn.type = "button";
+    trigBtn.className = "tpc-trigger";
+    trigBtn.setAttribute("data-tpc-trigger", "");
+    trigBtn.innerHTML =
+      '<i class="fa-regular fa-clock tpc-icon"></i>' +
+      '<span class="tpc-text">--:--</span>';
 
-      const up = document.createElement("button");
-      up.type = "button"; up.className = "acs-time-step";
-      up.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.value = value24;
+    hidden.setAttribute("data-tpc-hidden", "");
 
-      const inp = document.createElement("input");
-      inp.type = "text"; inp.className = "acs-time-input";
-      inp.dataset.part = part;
-      inp.inputMode = "numeric";
-      inp.maxLength = 2;
+    trigWrap.appendChild(trigBtn);
+    trigWrap.appendChild(hidden);
+    wrap.appendChild(trigWrap);
 
-      const down = document.createElement("button");
-      down.type = "button"; down.className = "acs-time-step";
-      down.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-
-      function bump(dir){
-        const [h, m] = value24.split(":").map(Number);
-        if (part === "hour")   value24 = pad2((h + dir + 24) % 24) + ":" + pad2(m);
-        else                   value24 = pad2(h) + ":" + pad2((m + dir + 60) % 60);
-        render();
-      }
-      up.addEventListener("click",   () => bump(1));
-      down.addEventListener("click", () => bump(-1));
-
-      // While typing — only update the input string (lazy commit on blur).
-      inp.addEventListener("input", () => {
-        inp.value = inp.value.replace(/\D/g, "").slice(0, 2);
-      });
-      // On blur — validate, clamp, fold into value24 with current AM/PM.
-      inp.addEventListener("blur", () => {
-        const cur = parseInt(inp.value, 10);
-        if (part === "hour"){
-          const h12 = isNaN(cur) ? 12 : Math.max(1, Math.min(12, cur));
-          const [_, m] = value24.split(":").map(Number);
-          const isPm = ampmBtn.dataset.value === "pm";
-          let h24 = h12 % 12;                 // 12 → 0
-          if (isPm) h24 += 12;                // PM offset
-          value24 = pad2(h24) + ":" + pad2(m);
-        } else {
-          const m = isNaN(cur) ? 0 : Math.max(0, Math.min(59, cur));
-          const [h] = value24.split(":").map(Number);
-          value24 = pad2(h) + ":" + pad2(m);
-        }
-        render();
-      });
-      inp.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowUp")   { e.preventDefault(); bump(1); }
-        if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); }
-      });
-      inp.addEventListener("wheel", (e) => {
-        if (document.activeElement !== inp) return;
-        e.preventDefault();
-        bump(e.deltaY < 0 ? 1 : -1);
-      }, { passive: false });
-
-      seg.appendChild(up); seg.appendChild(inp); seg.appendChild(down);
-      return { seg, inp };
-    }
-
-    const hSeg = segment("hour");
-    const mSeg = segment("minute");
-
-    const colon = document.createElement("span");
-    colon.className = "acs-time-colon"; colon.textContent = ":";
-
-    // AM / PM toggle button (ص = AM, م = PM).
-    const ampmBtn = document.createElement("button");
-    ampmBtn.type = "button"; ampmBtn.className = "acs-time-ampm";
-    ampmBtn.addEventListener("click", () => {
-      const [h, m] = value24.split(":").map(Number);
-      value24 = pad2((h + 12) % 24) + ":" + pad2(m);
+    // Sync upstream when the circular modal commits a value.
+    hidden.addEventListener("change", () => {
+      value24 = hidden.value || "";
       render();
     });
 
-    // DOM order (with `direction: ltr` on the stepper):
-    //   [hour ▲▼]  :  [minute ▲▼]  [ص/م]
-    stepper.appendChild(hSeg.seg);
-    stepper.appendChild(colon);
-    stepper.appendChild(mSeg.seg);
-    stepper.appendChild(ampmBtn);
-    wrap.appendChild(stepper);
-
-    // Per-picker quick-pick chips (3-col × 2-row grid, 12h labels).
+    // Per-picker quick-pick chips (still useful for one-tap presets).
     const quick = document.createElement("div");
     quick.className = "acs-time-quick";
     const quickBtns = [];
     TIME_PRESETS.forEach(p => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "acs-time-chip";
-      b.dataset.value = p.value;    // value still 24h
+      b.dataset.value = p.value;
       b.textContent = p.label;
       b.addEventListener("click", () => wrap.setValue(p.value));
       quick.appendChild(b);
@@ -569,16 +536,31 @@
     });
     wrap.appendChild(quick);
 
+    function fmtDisplay(v){
+      if (!v || !/^\d{1,2}:\d{2}$/.test(v)) return "--:--";
+      const [h, m] = v.split(":").map(Number);
+      const mm = pad2(m);
+      if (h === 0)   return "12:" + mm + " ص";
+      if (h < 12)    return pad2(h) + ":" + mm + " ص";
+      if (h === 12)  return "12:" + mm + " م";
+      return pad2(h - 12) + ":" + mm + " م";
+    }
+
     function render(){
-      const v = to12h(value24);
-      hSeg.inp.value = pad2(v.hour);
-      mSeg.inp.value = pad2(v.minute);
-      ampmBtn.dataset.value = v.ampm;
-      ampmBtn.textContent = v.ampm === "pm" ? "م" : "ص";
-      // Highlight matching chip (compared against 24h value).
+      hidden.value = value24 || "";
+      const txt = trigBtn.querySelector(".tpc-text");
+      if (txt) txt.textContent = fmtDisplay(value24);
+      trigBtn.classList.toggle("is-empty", !value24);
       quickBtns.forEach(b => b.classList.toggle("is-active", b.dataset.value === value24));
       externalSync();
     }
+
+    // Wire the trigger to the canonical circular picker once this wrap
+    // is appended to the DOM. tpcRewire is idempotent (each trigger
+    // tracks its own __tpcWired flag), so multiple calls are safe.
+    requestAnimationFrame(() => {
+      if (window.tpcRewire) window.tpcRewire();
+    });
 
     // Public API — always speaks 24-hour HH:MM externally.
     wrap.readValue = function(){ return value24; };
