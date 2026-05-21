@@ -322,6 +322,55 @@
   .uf-row3 .tpc-trigger{ min-height: 40px; }
   .uf-row3 .ui-wrap{ display: inline-flex; }   /* defensive */
 
+  /* «Rich» hero bar — the section header carries an extra mini-tag,
+     a master toggle, and a help line so the whole sub-section reads as
+     one cohesive row at the top of the section. Used by uf-section--speed. */
+  .uf-section-head--rich{
+    gap: 10px;
+  }
+  .uf-section-head--rich .uf-section-tag{
+    display: inline-flex; align-items: center;
+    padding: 3px 10px;
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 800;
+    border: 1px solid color-mix(in srgb, var(--hub-brand) 15%, transparent);
+    white-space: nowrap;
+  }
+  .uf-section-head--rich .uf-section-control{
+    /* Wraps the toggle. onclick=event.stopPropagation() keeps clicks
+       from collapsing the section when flipping the switch. */
+    display: inline-flex; align-items: center;
+  }
+  .uf-section-head--rich .tsw{
+    padding: 4px 10px; min-height: 30px; gap: 8px;
+    background: #fff;
+    border: 1px solid var(--hub-border);
+    border-radius: 999px;
+  }
+  .uf-section-head--rich .tsw:hover{ border-color: var(--hub-brand-line); }
+  .uf-section-head--rich .tsw .tsw-track{ width: 32px; height: 18px; }
+  .uf-section-head--rich .tsw .tsw-thumb{ width: 14px; height: 14px; }
+  .uf-section-head--rich .tsw input:checked + .tsw-track .tsw-thumb{ inset-inline-start: 16px; }
+  .uf-section-head--rich .tsw .tsw-label{ font-size: 12px; }
+  .uf-section-head--rich .uf-section-help{
+    font-size: 12px; color: var(--hub-text-soft); line-height: 1.55;
+    margin-inline-start: auto;
+    padding-inline-start: 14px;
+    border-inline-start: 1px solid var(--hub-border);
+    max-width: 45%;
+    text-align: end;
+  }
+  @media (max-width: 820px){
+    .uf-section-head--rich{ flex-wrap: wrap; }
+    .uf-section-head--rich .uf-section-help{
+      flex-basis: 100%; margin-inline-start: 0; max-width: 100%;
+      border-inline-start: 0; padding-inline-start: 0;
+      text-align: start; padding-top: 6px;
+    }
+  }
+
   /* Sub-section heading inside a merged uf-section (e.g. Speed). ─────
      A clean one-row bar: brand-accent strip + dot + title + toggle on
      the start side, help text pushed to the end. Subtle soft-brand
@@ -596,28 +645,27 @@
        Both live inside ONE collapsible card so the operator sees the
        complete speed picture in one place. #}
     <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed">
-      <header class="uf-section-head">
+      {# Hero bar now hosts the «سرعة أساسية» mini-tag, the master
+         toggle, and the help text — collapsed in one professional row
+         per user request («بنفس شريط الهيرو تبع القسم مع كلمة السرعة
+         بشكل لطيف»). The .uf-section-head--rich variant styles the
+         extra elements; the toggle wrapper stops click propagation so
+         flipping it doesn't collapse the section. #}
+      <header class="uf-section-head uf-section-head--rich">
         <span class="uf-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
         <span class="uf-section-title">السرعة</span>
-        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
-      </header>
-      <div class="uf-section-body">
-
-        {# 2A. Base custom speed ─────────────────────────────────────
-           Sub-header now hosts the «تفعيل التحكم بالسرعة» toggle
-           next to the title (per user feedback). Two 3-col rows:
-             - speeds row: download + upload + custom_speed toggle
-             - temporary row: temporary_speed toggle + from + to. #}
-        <div class="uf-sub-head">
-          <span class="uf-sub-dot"></span>
-          <span class="uf-sub-title">سرعة أساسية مخصّصة</span>
+        <span class="uf-section-tag">سرعة أساسية</span>
+        <span class="uf-section-control" onclick="event.stopPropagation()">
           {{ toggle_switch(name="bandwidth_control_enabled",
                            checked=sub.bandwidth_control_enabled,
                            id="bw-en",
                            on_label="مفعَّل",
                            off_label="معطَّل") }}
-          <span class="uf-sub-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
-        </div>
+        </span>
+        <span class="uf-section-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
 
         {# Row A: download + upload + «سرعة مخصصة» toggle. #}
         <div class="uf-row3">
