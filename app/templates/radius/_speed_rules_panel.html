@@ -18,6 +18,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% if speed_rules_panel %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
+{% from "_partials/time_picker_circular.html" import time_picker_circular %}
 
 {%- set ALL_DAYS = [
   ('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),
@@ -237,11 +238,11 @@
         <div class="sr2-row">
           <div class="sr2-field">
             <label>من الساعة</label>
-            <input type="time" name="sr_edit_starts_at_time_{{ rule.id }}" value="{{ rule.starts_at_time }}">
+            {{ time_picker_circular(name="sr_edit_starts_at_time_" ~ rule.id|string, value=rule.starts_at_time or "") }}
           </div>
           <div class="sr2-field">
             <label>إلى الساعة</label>
-            <input type="time" name="sr_edit_ends_at_time_{{ rule.id }}" value="{{ rule.ends_at_time }}">
+            {{ time_picker_circular(name="sr_edit_ends_at_time_" ~ rule.id|string, value=rule.ends_at_time or "") }}
           </div>
         </div>
 
@@ -327,11 +328,11 @@
     <div class="sr2-row">
       <div class="sr2-field">
         <label>من الساعة</label>
-        <input type="time" name="sr_starts_at_time">
+        {{ time_picker_circular(name="sr_starts_at_time", value="") }}
       </div>
       <div class="sr2-field">
         <label>إلى الساعة</label>
-        <input type="time" name="sr_ends_at_time">
+        {{ time_picker_circular(name="sr_ends_at_time", value="") }}
       </div>
     </div>
 

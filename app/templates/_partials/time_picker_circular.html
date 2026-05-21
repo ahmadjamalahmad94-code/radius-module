@@ -1,0 +1,456 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   time_picker_circular — canonical analog-clock time picker (2026-05-21).
+
+   Renders a compact, clickable pill that opens a circular clock-face
+   modal for picking hour → minute → ص/م. Stores the final value as a
+   24-hour HH:MM string in a hidden <input name=...> so the server side
+   stays identical to a plain <input type="time">.
+
+   Usage:
+     {% from "_partials/time_picker_circular.html" import time_picker_circular %}
+     {{ time_picker_circular(name="sr_starts_at_time", value="22:00") }}
+
+   Storage: HH:MM 24-hour (e.g. "22:00", "06:30"). Empty string allowed.
+
+   Required peer: FontAwesome (already loaded by _admin_layout).
+   No external JS deps.
+
+   See SERVICES_COOKBOOK §20.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{% macro time_picker_circular_assets() -%}
+<style>
+  /* ── Trigger pill ──────────────────────────────────────────── */
+  .tpc-trigger{
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    width: 100%; min-height: 38px;
+    background: #fff;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    color: var(--hub-text);
+    font-family: var(--hub-font); font-size: 14px; font-weight: 700;
+    cursor: pointer; outline: none;
+    transition: border-color var(--hub-anim-fast) var(--hub-ease),
+                box-shadow  var(--hub-anim-fast) var(--hub-ease);
+    text-align: start;
+  }
+  .tpc-trigger:hover{ border-color: var(--hub-brand-line); }
+  .tpc-trigger:focus,
+  .tpc-trigger.is-open{
+    border-color: var(--hub-brand);
+    box-shadow: 0 0 0 3px var(--hub-brand-soft);
+  }
+  .tpc-trigger .tpc-icon{
+    color: var(--hub-brand-ink);
+    width: 16px; text-align: center;
+  }
+  .tpc-trigger .tpc-text{
+    flex: 1; font-variant-numeric: tabular-nums;
+  }
+  .tpc-trigger.is-empty .tpc-text{
+    color: var(--hub-text-mute); font-weight: 600;
+  }
+
+  /* ── Overlay + modal ───────────────────────────────────────── */
+  .tpc-overlay{
+    position: fixed; inset: 0; z-index: 99999;
+    background: rgba(20, 18, 50, .42);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+    animation: tpc-fade .14s ease-out;
+  }
+  .tpc-overlay.is-open{ display: flex; }
+  @keyframes tpc-fade{ from{opacity:0} to{opacity:1} }
+
+  .tpc-modal{
+    width: 320px; max-width: 100%;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 24px 48px rgba(30, 20, 80, .25),
+                0 4px 12px rgba(30, 20, 80, .12);
+    padding: 18px 18px 16px;
+    direction: rtl;
+    animation: tpc-pop .18s cubic-bezier(.2,.7,.3,1.1);
+  }
+  @keyframes tpc-pop{
+    from{ transform: scale(.9); opacity: 0; }
+    to  { transform: scale(1);  opacity: 1; }
+  }
+
+  /* ── Top display ──────────────────────────────────────────── */
+  .tpc-display{
+    display: flex; align-items: stretch; justify-content: center; gap: 4px;
+    margin-bottom: 12px;
+    user-select: none;
+  }
+  .tpc-display-num{
+    font-family: var(--hub-font);
+    font-size: 36px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--hub-text-mute);
+    padding: 4px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+    min-width: 56px; text-align: center;
+  }
+  .tpc-display-num:hover{ background: var(--hub-brand-soft); }
+  .tpc-display-num.is-active{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(107, 90, 237, .3);
+  }
+  .tpc-display-colon{
+    font-size: 36px; font-weight: 800; color: var(--hub-text-soft);
+    padding: 4px 2px;
+  }
+  .tpc-ampm{
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 4px; margin-inline-start: 10px;
+  }
+  .tpc-ampm-btn{
+    background: #f3f1ff;
+    color: var(--hub-text-soft);
+    border: 0;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-family: inherit; font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .tpc-ampm-btn.is-active{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(107, 90, 237, .3);
+  }
+
+  /* ── Clock face ───────────────────────────────────────────── */
+  .tpc-clock{
+    position: relative;
+    width: 248px; height: 248px;
+    margin: 4px auto 12px;
+    background: radial-gradient(circle at 50% 50%, #fbfaff 0%, #f0ecff 100%);
+    border-radius: 50%;
+    border: 1.5px solid var(--hub-brand-line);
+    box-shadow: inset 0 2px 6px rgba(107, 90, 237, .08);
+    user-select: none;
+    touch-action: none;
+  }
+  .tpc-svg{
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .tpc-num{
+    position: absolute;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--hub-font);
+    font-size: 15px; font-weight: 800;
+    color: var(--hub-text);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: background var(--hub-anim-fast) var(--hub-ease),
+                color      var(--hub-anim-fast) var(--hub-ease);
+    z-index: 2;
+    font-variant-numeric: tabular-nums;
+  }
+  .tpc-num:hover{ background: rgba(107, 90, 237, .14); }
+  .tpc-num.is-selected{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(107, 90, 237, .35);
+  }
+  .tpc-num.is-minor{
+    font-size: 11px; font-weight: 700; color: var(--hub-text-mute);
+    width: 28px; height: 28px;
+  }
+  .tpc-num.is-minor.is-selected{ color: #fff; }
+
+  /* ── Action row ───────────────────────────────────────────── */
+  .tpc-actions{
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding-top: 10px;
+    border-top: 1px dashed var(--hub-border);
+  }
+  .tpc-now{
+    background: transparent; border: 0;
+    color: var(--hub-brand-ink); font-weight: 800; font-size: 12.5px;
+    cursor: pointer; padding: 6px 8px; border-radius: 8px;
+    font-family: inherit;
+  }
+  .tpc-now:hover{ background: var(--hub-brand-soft); }
+  .tpc-btns{ display: flex; gap: 6px; }
+  .tpc-btn{
+    border: 0; padding: 7px 16px; border-radius: 10px;
+    font-family: inherit; font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .tpc-btn:active{ transform: translateY(1px); }
+  .tpc-btn--cancel{
+    background: #f5f4fb; color: var(--hub-text-soft);
+  }
+  .tpc-btn--cancel:hover{ background: #ebeaf3; }
+  .tpc-btn--ok{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(107, 90, 237, .3);
+  }
+  .tpc-btn--ok:hover{ filter: brightness(1.05); }
+</style>
+
+<script>
+(function(){
+  if (window.__tpcInit) return;
+  window.__tpcInit = true;
+
+  // ── shared overlay (mounted lazily on first open) ──────────
+  let overlayEl = null, modalEl = null, current = null;
+  const state = { h: 9, m: 0, ampm: 'AM', mode: 'h' };
+
+  function fmt2(n){ return (n < 10 ? '0' : '') + n; }
+  function pad(v){ return String(v).padStart(2, '0'); }
+
+  function parse24(s){
+    const m = /^(\d{1,2}):(\d{2})$/.exec((s || '').trim());
+    if (!m) return null;
+    const h = +m[1], mn = +m[2];
+    if (h < 0 || h > 23 || mn < 0 || mn > 59) return null;
+    return { h, m: mn };
+  }
+  function to12(h24){
+    if (h24 === 0)   return { h: 12, ampm: 'AM' };
+    if (h24 === 12)  return { h: 12, ampm: 'PM' };
+    if (h24 > 12)    return { h: h24 - 12, ampm: 'PM' };
+    return             { h: h24, ampm: 'AM' };
+  }
+  function to24(h12, ampm){
+    if (ampm === 'AM') return h12 === 12 ? 0 : h12;
+    return h12 === 12 ? 12 : h12 + 12;
+  }
+
+  function ensureOverlay(){
+    if (overlayEl) return;
+    overlayEl = document.createElement('div');
+    overlayEl.className = 'tpc-overlay';
+    overlayEl.innerHTML = `
+      <div class="tpc-modal" role="dialog" aria-modal="true">
+        <div class="tpc-display">
+          <span class="tpc-display-num" data-tpc-pick="h"></span>
+          <span class="tpc-display-colon">:</span>
+          <span class="tpc-display-num" data-tpc-pick="m"></span>
+          <span class="tpc-ampm">
+            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="AM">ص</button>
+            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="PM">م</button>
+          </span>
+        </div>
+        <div class="tpc-clock" data-tpc-clock>
+          <svg class="tpc-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <circle cx="50" cy="50" r="2.5" fill="var(--hub-brand-ink)"/>
+            <line   data-tpc-hand x1="50" y1="50" x2="50" y2="18"
+                    stroke="var(--hub-brand)" stroke-width="1.7"
+                    stroke-linecap="round"/>
+            <circle data-tpc-tip cx="50" cy="18" r="3.5"
+                    fill="var(--hub-brand)"/>
+          </svg>
+        </div>
+        <div class="tpc-actions">
+          <button type="button" class="tpc-now" data-tpc-now>
+            <i class="fa-regular fa-clock"></i> الآن
+          </button>
+          <div class="tpc-btns">
+            <button type="button" class="tpc-btn tpc-btn--cancel" data-tpc-cancel>إلغاء</button>
+            <button type="button" class="tpc-btn tpc-btn--ok"     data-tpc-ok>تم</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlayEl);
+    modalEl = overlayEl.querySelector('.tpc-modal');
+
+    // outside click → cancel
+    overlayEl.addEventListener('click', (e) => {
+      if (e.target === overlayEl) close(false);
+    });
+    overlayEl.querySelector('[data-tpc-cancel]').addEventListener('click', () => close(false));
+    overlayEl.querySelector('[data-tpc-ok]').addEventListener('click', () => close(true));
+    overlayEl.querySelector('[data-tpc-now]').addEventListener('click', () => {
+      const d = new Date();
+      const t12 = to12(d.getHours());
+      state.h = t12.h; state.m = d.getMinutes(); state.ampm = t12.ampm; state.mode = 'h';
+      render();
+    });
+
+    overlayEl.querySelectorAll('[data-tpc-pick]').forEach(el => {
+      el.addEventListener('click', () => { state.mode = el.dataset.tpcPick; render(); });
+    });
+    overlayEl.querySelectorAll('[data-tpc-ampm]').forEach(el => {
+      el.addEventListener('click', () => { state.ampm = el.dataset.tpcAmpm; render(); });
+    });
+
+    // ESC → cancel
+    document.addEventListener('keydown', (e) => {
+      if (overlayEl.classList.contains('is-open') && e.key === 'Escape') {
+        close(false);
+      }
+    });
+
+    // click on a number → set + advance
+    overlayEl.querySelector('.tpc-clock').addEventListener('click', (e) => {
+      const n = e.target.closest('[data-tpc-num]');
+      if (!n) return;
+      const val = +n.dataset.tpcNum;
+      if (state.mode === 'h'){ state.h = val; state.mode = 'm'; }
+      else                   { state.m = val; }
+      render();
+    });
+  }
+
+  function render(){
+    const dispH = overlayEl.querySelector('[data-tpc-pick="h"]');
+    const dispM = overlayEl.querySelector('[data-tpc-pick="m"]');
+    dispH.textContent = fmt2(state.h);
+    dispM.textContent = fmt2(state.m);
+    dispH.classList.toggle('is-active', state.mode === 'h');
+    dispM.classList.toggle('is-active', state.mode === 'm');
+    overlayEl.querySelectorAll('[data-tpc-ampm]').forEach(el => {
+      el.classList.toggle('is-active', el.dataset.tpcAmpm === state.ampm);
+    });
+    renderFace();
+  }
+
+  function renderFace(){
+    const clock = overlayEl.querySelector('.tpc-clock');
+    // wipe old numbers (keep svg)
+    clock.querySelectorAll('[data-tpc-num]').forEach(n => n.remove());
+
+    const radius = 96;            // px from center
+    const cx = 124, cy = 124;     // clock is 248x248
+    let nums, selected, isMinor = false;
+
+    if (state.mode === 'h'){
+      // 12 around the face: 12 at top, 1..11 clockwise
+      nums = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+      selected = state.h;
+    } else {
+      // 12 positions at 5-min steps: 00 at top, 05, 10, ... 55 clockwise
+      nums = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+      selected = state.m - (state.m % 5);
+      isMinor  = false;          // still big enough at 5-min granularity
+    }
+
+    nums.forEach((v, i) => {
+      const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      const el = document.createElement('div');
+      el.className = 'tpc-num' + (isMinor ? ' is-minor' : '') +
+                     (v === selected ? ' is-selected' : '');
+      el.dataset.tpcNum = String(v);
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      el.textContent = state.mode === 'm' ? pad(v) : String(v);
+      clock.appendChild(el);
+    });
+
+    // Move the hand to the selected position.
+    const idx = nums.indexOf(selected);
+    const useIdx = idx >= 0 ? idx : 0;
+    const ang = (useIdx / 12) * Math.PI * 2 - Math.PI / 2;
+    const handR = 32;             // in svg viewBox units (100-wide)
+    const tipX = 50 + handR * Math.cos(ang);
+    const tipY = 50 + handR * Math.sin(ang);
+    const hand = overlayEl.querySelector('[data-tpc-hand]');
+    const tip  = overlayEl.querySelector('[data-tpc-tip]');
+    hand.setAttribute('x2', tipX.toFixed(2));
+    hand.setAttribute('y2', tipY.toFixed(2));
+    tip.setAttribute('cx', tipX.toFixed(2));
+    tip.setAttribute('cy', tipY.toFixed(2));
+  }
+
+  function open(triggerEl){
+    ensureOverlay();
+    current = triggerEl;
+    const hidden = triggerEl.parentNode.querySelector('[data-tpc-hidden]');
+    const seeded = parse24(hidden.value);
+    if (seeded){
+      const t12 = to12(seeded.h);
+      state.h = t12.h; state.m = seeded.m; state.ampm = t12.ampm;
+    } else {
+      state.h = 9; state.m = 0; state.ampm = 'AM';
+    }
+    state.mode = 'h';
+    render();
+    overlayEl.classList.add('is-open');
+    triggerEl.classList.add('is-open');
+  }
+
+  function close(commit){
+    if (!overlayEl) return;
+    if (commit && current){
+      const h24 = to24(state.h, state.ampm);
+      const value = pad(h24) + ':' + pad(state.m);
+      const hidden = current.parentNode.querySelector('[data-tpc-hidden]');
+      const text   = current.querySelector('.tpc-text');
+      hidden.value = value;
+      const t12 = to12(h24);
+      text.textContent = fmt2(t12.h) + ':' + fmt2(state.m) +
+                         ' ' + (t12.ampm === 'AM' ? 'ص' : 'م');
+      current.classList.remove('is-empty');
+      // fire 'change' on the hidden input so any listener (e.g. form
+      // dirty-checker) sees it.
+      hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    overlayEl.classList.remove('is-open');
+    if (current) current.classList.remove('is-open');
+    current = null;
+  }
+
+  function wireTriggers(root){
+    (root || document).querySelectorAll('[data-tpc-trigger]').forEach(t => {
+      if (t.__tpcWired) return;
+      t.__tpcWired = true;
+      t.addEventListener('click', () => open(t));
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => wireTriggers(document));
+  if (document.readyState !== 'loading') wireTriggers(document);
+
+  // expose for templates that add triggers dynamically.
+  window.tpcRewire = () => wireTriggers(document);
+})();
+</script>
+{%- endmacro %}
+
+
+{# ── the picker itself ────────────────────────────────────────── #}
+{% macro time_picker_circular(name, value="", placeholder="--:--") -%}
+{{ time_picker_circular_assets() }}
+{%- set v = (value or "").strip() -%}
+{%- set show = placeholder -%}
+{%- if v and ":" in v -%}
+  {%- set parts = v.split(":") -%}
+  {%- set h24 = parts[0]|int -%}
+  {%- set mn  = parts[1]|int -%}
+  {%- if h24 == 0 -%}{%- set h12 = 12 -%}{%- set ap = "ص" -%}
+  {%- elif h24 == 12 -%}{%- set h12 = 12 -%}{%- set ap = "م" -%}
+  {%- elif h24 > 12 -%}{%- set h12 = h24 - 12 -%}{%- set ap = "م" -%}
+  {%- else -%}{%- set h12 = h24 -%}{%- set ap = "ص" -%}{%- endif -%}
+  {%- set show = "%02d:%02d %s" | format(h12, mn, ap) -%}
+{%- endif -%}
+<span class="tpc-wrap" data-tpc>
+  <button type="button"
+          class="tpc-trigger {% if not v %}is-empty{% endif %}"
+          data-tpc-trigger>
+    <i class="fa-regular fa-clock tpc-icon"></i>
+    <span class="tpc-text">{{ show }}</span>
+  </button>
+  <input type="hidden" name="{{ name }}" value="{{ v }}" data-tpc-hidden>
+</span>
+{%- endmacro %}
