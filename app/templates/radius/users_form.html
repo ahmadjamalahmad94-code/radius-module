@@ -780,7 +780,9 @@
             hidden.value = on ? '1' : '0';
             if (statusEl){
               statusEl.classList.toggle('is-on', on);
-              statusEl.textContent = on ? 'سرعة أساسية — مفعَّلة' : 'سرعة أساسية';
+              // Off → «سرعة أساسية» (plan default).
+              // On  → «سرعة مخصصة فعالة» (any of the three modes is in effect).
+              statusEl.textContent = on ? 'سرعة مخصصة فعالة' : 'سرعة أساسية';
             }
           }
           function handle(el){
