@@ -27,6 +27,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/print-templates/<int:template_id>/preview-fragment",
+        "print_templates_preview_fragment",
+        print_templates_preview_fragment,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/print-templates/<int:template_id>/delete",
         "print_templates_delete",
         print_templates_delete,
@@ -195,6 +201,84 @@ def print_templates_preview(template_id: int):
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(url_for("radius.print_templates"))
+
+
+_PREVIEW_FRAGMENT_OVERRIDE_KEYS = (
+    "brand_name",
+    "card_title",
+    "footer_text",
+    "hotspot_address",
+    "price_text",
+    "validity_text",
+)
+
+
+def print_templates_preview_fragment(template_id: int):
+    """Live mini-preview for the export center: renders up to 4 real cards
+    from the chosen batch using the chosen template's layout. Returns an
+    HTML fragment, not a full page — the export UI swaps it into a
+    placeholder via fetch(). Password is never included; the fragment
+    masks it to ••••••••, same as the live designer canvas.
+    """
+    ops = get_operations_service()
+    template = None
+    try:
+        templates = ops.list_print_templates(tenant_id=_tid(), limit=10_000)
+        for row in templates:
+            if int(row.get("id") or 0) == int(template_id):
+                template = row
+                break
+    except Exception:  # pragma: no cover — defensive
+        template = None
+
+    batch = None
+    cards: list = []
+    error: str | None = None
+
+    batch_id_raw = request.args.get("batch_id") or ""
+    try:
+        batch_id = int(batch_id_raw) if batch_id_raw else None
+    except ValueError:
+        batch_id = None
+        error = "معرّف الحزمة غير صحيح."
+
+    if template is None:
+        error = error or "القالب غير موجود."
+    elif batch_id is not None:
+        try:
+            cards_service = get_cards_service()
+            batch_obj = cards_service._store.get_batch(batch_id)
+            if batch_obj is None:
+                error = "الحزمة غير موجودة."
+            else:
+                # CardBatch is a dataclass; the template only reads a few
+                # attributes so we expose it as a dict for simpler Jinja.
+                batch = {
+                    "id": getattr(batch_obj, "id", batch_id),
+                    "batch_name": getattr(batch_obj, "batch_name", "") or "",
+                    "count_to_make": getattr(batch_obj, "count_to_make", 0) or 0,
+                    "created_count": getattr(batch_obj, "created_count", 0) or 0,
+                }
+                cards = cards_service.list_cards(batch_id=batch_id, limit=4, offset=0)
+        except RadiusError as exc:
+            error = exc.message
+        except Exception as exc:  # pragma: no cover — defensive
+            error = str(exc) or "تعذّر جلب بطاقات الحزمة."
+
+    overrides = {
+        key: (request.args.get(key) or "").strip()
+        for key in _PREVIEW_FRAGMENT_OVERRIDE_KEYS
+    }
+    overrides = {k: v for k, v in overrides.items() if v}
+
+    return render_template(
+        "radius/_print_template_preview_fragment.html",
+        template=template,
+        batch=batch,
+        cards=cards,
+        overrides=overrides,
+        error=error,
+    )
 
 
 def print_templates_delete(template_id: int):

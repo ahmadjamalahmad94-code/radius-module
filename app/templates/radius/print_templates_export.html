@@ -42,6 +42,16 @@
   .progress-step{display:flex;align-items:center;gap:8px;opacity:.48}
   .progress-step.is-active,.progress-step.is-done{opacity:1}
   .progress-step.is-done{color:#15803d}
+  /* Live preview-fragment styling (Commit 2) */
+  .pt-fragment{display:grid;gap:12px}
+  .pt-fragment-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pt-fragment-head strong{display:block;color:var(--hub-text);font-weight:950}
+  .pt-fragment-head small{display:block;color:var(--hub-text-mute);font-weight:800}
+  .pt-fragment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media(max-width:720px){.pt-fragment-grid{grid-template-columns:1fr}}
+  .pt-fragment-grid .pr-card-preview{width:100%;max-width:none;font-size:11px}
+  .pt-fragment-note{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.6}
+  .pt-fragment-loading{opacity:.55;pointer-events:none;transition:opacity .15s}
 </style>
 {% endblock %}
 
@@ -160,6 +170,18 @@
       </div>
     </section>
   </div>
+
+  <section class="export-panel" data-export-live-preview>
+    <div class="export-head">
+      <h3><i class="fa-solid fa-eye"></i> معاينة حية</h3>
+      <span class="hub-pill hub-pill--cyan" data-preview-hint>اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية</span>
+    </div>
+    <div class="export-body">
+      <div data-preview-mount>
+        <div class="hub-empty">لم تُختَر بطاقة بعد. اضغط على قالب من الأعلى ثم اختر حزمة من الإعدادات.</div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -171,7 +193,15 @@
   const progress = root.querySelector('[data-export-progress]');
   const progressBar = root.querySelector('[data-progress-bar]');
   const progressTitle = root.querySelector('[data-progress-title]');
+  const previewMount = root.querySelector('[data-preview-mount]');
+  const previewHint = root.querySelector('[data-preview-hint]');
   let selectedTemplateId = '';
+  let previewSeq = 0;
+  let previewTimer = null;
+  const PREVIEW_OVERRIDE_FIELDS = new Set([
+    'brand_name','card_title','footer_text',
+    'hotspot_address','price_text','validity_text'
+  ]);
 
   function queryString(){
     const params = new URLSearchParams();
@@ -212,18 +242,59 @@
     }, 1050);
   }
 
-  if(batchSelect) batchSelect.addEventListener('change', updateLinks);
+  function previewParams(){
+    const params = new URLSearchParams();
+    if(batchSelect && batchSelect.value) params.set('batch_id', batchSelect.value);
+    overrideFields.forEach(field => {
+      const value = (field.value || '').trim();
+      if(value && PREVIEW_OVERRIDE_FIELDS.has(field.name)) params.set(field.name, value);
+    });
+    return params.toString();
+  }
+  function refreshPreview(){
+    if(!previewMount) return;
+    if(!selectedTemplateId){
+      previewMount.innerHTML = '<div class="hub-empty">اضغط على قالب من الأعلى لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية.</div>';
+      if(previewHint) previewHint.textContent = 'اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية';
+      return;
+    }
+    const seq = ++previewSeq;
+    previewMount.classList.add('pt-fragment-loading');
+    if(previewHint) previewHint.textContent = batchSelect && batchSelect.value ? 'جاري جلب أول ٤ بطاقات من الحزمة...' : 'اختر حزمة لمعاينة بيانات حقيقية (وإلا ستظهر تجربة فارغة).';
+    const qs = previewParams();
+    const url = `{{ url_for('radius.print_templates_preview_fragment', template_id=0) }}`.replace(/\/0\/preview-fragment$/, '/'+selectedTemplateId+'/preview-fragment') + (qs ? '?' + qs : '');
+    fetch(url, {headers: {'X-Requested-With':'fetch'}, credentials:'same-origin'})
+      .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)))
+      .then(html => {
+        if(seq !== previewSeq) return;
+        previewMount.innerHTML = html;
+        previewMount.classList.remove('pt-fragment-loading');
+        if(previewHint) previewHint.textContent = batchSelect && batchSelect.value ? 'معاينة فعلية من بطاقات الحزمة المختارة.' : 'اختر حزمة لاستبدال البطاقات بعينة فعلية.';
+      })
+      .catch(err => {
+        if(seq !== previewSeq) return;
+        previewMount.classList.remove('pt-fragment-loading');
+        previewMount.innerHTML = '<div class="hub-empty">تعذّر جلب المعاينة ('+ (err && err.message || err) +').</div>';
+      });
+  }
+  function schedulePreview(){
+    if(previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(refreshPreview, 180);
+  }
+
+  if(batchSelect) batchSelect.addEventListener('change', () => { updateLinks(); schedulePreview(); });
   overrideFields.forEach(field => {
-    field.addEventListener('input', updateLinks);
-    field.addEventListener('change', updateLinks);
+    field.addEventListener('input', () => { updateLinks(); schedulePreview(); });
+    field.addEventListener('change', () => { updateLinks(); schedulePreview(); });
   });
   root.querySelectorAll('[data-export-template-card]').forEach(card => {
     card.addEventListener('click', event => {
-      if(event.target.closest('a')) return;
+      if(event.target.closest('a, button, form')) return;
       selectedTemplateId = card.dataset.templateId || '';
       root.querySelectorAll('[data-export-template-card]').forEach(item => item.classList.remove('is-selected'));
       card.classList.add('is-selected');
       setProgress(batchSelect && batchSelect.value ? 1 : 0, batchSelect && batchSelect.value ? 40 : 15, 'تم اختيار القالب.');
+      schedulePreview();
     });
   });
   root.querySelectorAll('[data-export-batch-link]').forEach(link => {
