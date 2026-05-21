@@ -49,13 +49,23 @@ def _form_to_kwargs() -> dict:
             return int(v) if v else None
         except ValueError:
             return None
+    # connection_schedule comes from the access_schedule_picker partial
+    # as JSON; working_days is the derived legacy CSV cache.
+    sched_raw = (f.get("connection_schedule") or "").strip()
+    try:
+        from ..core.access_schedule import serialize, derive_working_days
+        sched_clean = serialize(sched_raw) if sched_raw else ""
+        derived_days = derive_working_days(sched_raw) if sched_raw else ""
+    except Exception:  # noqa: BLE001
+        sched_clean, derived_days = "", ""
     return {
         "name":                  (f.get("name") or "").strip(),
         "description":           (f.get("description") or "").strip(),
         "bandwidth_schedule_id": _int_or_none("bandwidth_schedule_id"),
         "default_plan_id":       _int_or_none("default_plan_id"),
         "default_auto_renewal":  bool(f.get("default_auto_renewal")),
-        "working_days":          ",".join(f.getlist("working_days")),
+        "working_days":          derived_days,
+        "connection_schedule":   sched_clean,
     }
 
 

@@ -3,6 +3,7 @@
    Pattern: SERVICES_COOKBOOK §15. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/access_schedule.html" import access_schedule_picker %}
 
 {%- set is_new = (group is none) -%}
 {%- set title_ar = "إضافة مجموعة مشتركين" if is_new else ("تعديل: " + group.name) -%}
@@ -124,19 +125,17 @@
         </label>
       </div>
 
-      <div class="sgf-field">
-        <label>أيام العمل المسموحة</label>
-        {%- set selected_days = (group.working_days if group else '').split(',') -%}
-        <div class="sgf-days">
-          {% for code, label in all_days %}
-          <label>
-            <input type="checkbox" name="working_days" value="{{ code }}"
-              {% if code in selected_days %}checked{% endif %}>
-            <span>{{ label }}</span>
-          </label>
-          {% endfor %}
-        </div>
-        <div class="help">إذا تُركت جميعها فارغة، يُسمح بالاتصال طوال الأسبوع.</div>
+      <div class="sgf-field" style="grid-column: 1 / -1">
+        {# SERVICES_COOKBOOK §17 — same picker as the subscriber form,
+           hooked up to the group's connection_schedule. The route will
+           also derive working_days from it so the legacy column stays
+           in sync. #}
+        {{ access_schedule_picker(
+             name="connection_schedule",
+             value=(group.connection_schedule if group else "") or "",
+             id="sgf-acs",
+             title="الأيام والأوقات المسموحة لأعضاء المجموعة"
+           ) }}
       </div>
     </div>
   {% endcall %}

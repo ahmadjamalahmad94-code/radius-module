@@ -28,7 +28,8 @@ class SubscriberGroupsService:
                bandwidth_schedule_id: Optional[int] = None,
                default_plan_id: Optional[int] = None,
                default_auto_renewal: bool = True,
-               working_days: str = "") -> dict:
+               working_days: str = "",
+               connection_schedule: str = "") -> dict:
         name = (name or "").strip()
         if not name:
             raise RadiusValidationError("اسم المجموعة مطلوب")
@@ -41,6 +42,7 @@ class SubscriberGroupsService:
             default_plan_id=default_plan_id,
             default_auto_renewal=default_auto_renewal,
             working_days=working_days,
+            connection_schedule=connection_schedule,
         )
         self._audit.record(
             actor=actor, action="subscriber_group.create",

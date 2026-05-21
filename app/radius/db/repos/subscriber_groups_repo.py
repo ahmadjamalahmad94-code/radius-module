@@ -8,6 +8,9 @@ from ..helpers import now_iso
 
 
 def _row(r) -> dict:
+    # connection_schedule was added in migration 029. Use index access via
+    # keys() check so older row shapes still work.
+    keys = r.keys() if hasattr(r, "keys") else []
     return {
         "id":                     r["id"],
         "tenant_id":              r["tenant_id"],
@@ -17,6 +20,7 @@ def _row(r) -> dict:
         "default_plan_id":        r["default_plan_id"],
         "default_auto_renewal":   bool(r["default_auto_renewal"]),
         "working_days":           r["working_days"] or "",
+        "connection_schedule":    (r["connection_schedule"] or "") if "connection_schedule" in keys else "",
         "created_at":             r["created_at"],
         "updated_at":             r["updated_at"],
     }
@@ -64,7 +68,8 @@ def create(*, tenant_id: int, name: str, description: str = "",
            bandwidth_schedule_id: Optional[int] = None,
            default_plan_id: Optional[int] = None,
            default_auto_renewal: bool = True,
-           working_days: str = "") -> int:
+           working_days: str = "",
+           connection_schedule: str = "") -> int:
     name = (name or "").strip()
     if not name:
         raise ValueError("group name required")
@@ -73,12 +78,13 @@ def create(*, tenant_id: int, name: str, description: str = "",
             INSERT INTO subscriber_groups(
                 tenant_id, name, description,
                 bandwidth_schedule_id, default_plan_id,
-                default_auto_renewal, working_days, created_at)
-            VALUES(?,?,?,?,?,?,?,?)
+                default_auto_renewal, working_days,
+                connection_schedule, created_at)
+            VALUES(?,?,?,?,?,?,?,?,?)
         """, (tenant_id, name, description or "",
               bandwidth_schedule_id, default_plan_id,
               int(bool(default_auto_renewal)),
-              working_days or "", now_iso()))
+              working_days or "", connection_schedule or "", now_iso()))
         return int(cur.lastrowid)
 
 
@@ -87,6 +93,7 @@ def update(tenant_id: int, gid: int, **changes) -> Optional[dict]:
         "name", "description",
         "bandwidth_schedule_id", "default_plan_id",
         "default_auto_renewal", "working_days",
+        "connection_schedule",
     )
     sets, vals = [], []
     for k, v in changes.items():
