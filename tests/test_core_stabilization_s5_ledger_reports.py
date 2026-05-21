@@ -59,3 +59,19 @@ def test_financial_report_snapshots_freeze_current_report(client):
     fetched = client.get(f"/api/v1/reports/snapshots/{snapshot['id']}", headers=AUTH)
     assert fetched.status_code == 200, fetched.get_json()
     assert fetched.get_json()["data"]["snapshot"]["id"] == snapshot["id"]
+
+
+def test_financial_report_csv_export_is_real(client):
+    item = subscriber(client)
+    client.post(
+        "/api/v1/payments",
+        json={"username": item["username"], "plan_id": 1, "amount": 19},
+        headers=AUTH,
+    )
+    export = client.get("/api/v1/reports/payments/export.csv", headers=AUTH)
+    assert export.status_code == 200
+    assert export.headers["Content-Type"].startswith("text/csv")
+    text = export.get_data(as_text=True)
+    assert "username" in text
+    assert item["username"] in text
+    assert "19" in text

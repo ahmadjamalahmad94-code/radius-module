@@ -1,7 +1,7 @@
 """Web admin accounting screens for payments, loans, and ledger."""
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
 from ..services.accounting import service_from_context
@@ -12,6 +12,12 @@ def register_accounting_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/finance/ledger", "finance_ledger", finance_ledger, methods=["GET"])
     bp.add_url_rule("/finance/ledger/void", "finance_ledger_void", finance_ledger_void, methods=["POST"])
     bp.add_url_rule("/finance/reports", "finance_reports", finance_reports, methods=["GET"])
+    bp.add_url_rule(
+        "/finance/reports/export.csv",
+        "finance_reports_export_csv",
+        finance_reports_export_csv,
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/finance/reports/snapshot",
         "finance_reports_snapshot",
@@ -205,6 +211,24 @@ def finance_reports():
         reports=_REPORTS,
         items=items,
         snapshots=snapshots,
+    )
+
+
+def finance_reports_export_csv():
+    report_type = (request.args.get("type") or "daily").strip()
+    if report_type not in _REPORTS:
+        report_type = "daily"
+    try:
+        csv_text = _svc().report_csv(report_type=report_type)
+    except RadiusValidationError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.finance_reports", type=report_type))
+    return Response(
+        csv_text,
+        mimetype="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="hoberadius-{report_type}.csv"',
+        },
     )
 
 

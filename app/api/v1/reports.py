@@ -1,7 +1,7 @@
 """Customer service report API foundations."""
 from __future__ import annotations
 
-from flask import Blueprint, g, request
+from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusValidationError
 from ...radius.services.accounting import service_from_context
@@ -46,6 +46,12 @@ def register(bp: Blueprint) -> None:
             require_api_token(_report_view(report_type)),
             methods=["GET"],
         )
+        bp.add_url_rule(
+            f"/reports/{slug}/export.csv",
+            "reports_" + slug.replace("/", "_").replace("-", "_") + "_export_csv",
+            require_api_token(_report_csv_view(report_type, slug)),
+            methods=["GET"],
+        )
 
 def _report_view(report_type: str):
     def _view():
@@ -56,6 +62,24 @@ def _report_view(report_type: str):
         return ok({"items": items, "count": len(items), "report_type": report_type})
 
     _view.__name__ = f"reports_{report_type}_view"
+    return _view
+
+
+def _report_csv_view(report_type: str, slug: str):
+    def _view():
+        try:
+            csv_text = service_from_context().report_csv(report_type=report_type)
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
+        return Response(
+            csv_text,
+            mimetype="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="hoberadius-{slug.replace("/", "-")}.csv"',
+            },
+        )
+
+    _view.__name__ = f"reports_{report_type}_export_csv_view"
     return _view
 
 

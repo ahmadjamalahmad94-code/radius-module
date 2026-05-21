@@ -1,6 +1,8 @@
 """Accounting + loans foundation service."""
 from __future__ import annotations
 
+import csv
+import io
 import math
 import os
 from datetime import datetime, timedelta
@@ -350,6 +352,22 @@ class AccountingService:
         if report_type == "distributor_debts":
             return accounting_repo.distributor_debts_report(self.tenant_id)
         raise RadiusValidationError("unsupported report type")
+
+    def report_csv(self, *, report_type: str) -> str:
+        items = self.reports(report_type=report_type)
+        if not items:
+            return "\ufeff"
+        columns = list(items[0].keys())
+        for item in items[1:]:
+            for key in item.keys():
+                if key not in columns:
+                    columns.append(key)
+        out = io.StringIO()
+        out.write("\ufeff")
+        writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(items)
+        return out.getvalue()
 
     def create_report_snapshot(self, *, report_type: str, actor: str = "",
                                date_from: str = "", date_to: str = "",

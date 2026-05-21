@@ -204,3 +204,8 @@ def test_financial_reports_page_reads_ledger_reports(client):
     snapshot_html = snapshot.get_data(as_text=True)
     assert "تم حفظ لقطة ثابتة للتقرير" in snapshot_html
     assert "آخر اللقطات الثابتة" in snapshot_html
+
+    csv_export = client.get("/admin/radius/finance/reports/export.csv?type=subscriber_payments")
+    assert csv_export.status_code == 200
+    assert csv_export.headers["Content-Type"].startswith("text/csv")
+    assert sub["username"] in csv_export.get_data(as_text=True)

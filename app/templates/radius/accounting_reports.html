@@ -35,7 +35,7 @@
   </select>
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
-  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm", attrs='disabled aria-disabled="true" title="سيتم تفعيل التصدير الحقيقي في شريحة export/PDF"') }}
+  {{ hub.btn("CSV", href=url_for('radius.finance_reports_export_csv', type=report_type), icon="file-csv", variant="secondary", size="sm") }}
   {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
 </form>
 
