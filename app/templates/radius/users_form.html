@@ -12,6 +12,7 @@
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set title_ar = "إضافة مشترك" if is_new else ("تعديل " + (sub.username or "مشترك")) %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -298,6 +299,51 @@
   .uf-toggle-label{ font-size: 13px; font-weight: 700; color: var(--hub-text); }
   .uf-toggle-label::before{ content: attr(data-off); }
   .uf-toggle input:checked ~ .uf-toggle-label::before{ content: attr(data-on); color: var(--hub-brand-ink); }
+
+  /* Sub-section heading inside a merged uf-section (e.g. Speed). ───── */
+  .uf-sub-head{
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--hub-border);
+  }
+  .uf-sub-dot{
+    width: 8px; height: 8px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px var(--hub-brand-soft);
+  }
+  .uf-sub-title{
+    font-weight: 800; font-size: 13.5px;
+    color: var(--hub-brand-ink);
+    white-space: nowrap;
+  }
+  .uf-sub-help{
+    font-size: 12px; color: var(--hub-text-mute); line-height: 1.6;
+    flex: 1;
+  }
+  /* When the speed-rules panel is nested inside the merged section,
+     drop its outer card chrome — the parent section already provides it. */
+  .uf-section--speed .sr2-panel{
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-inline-start: 0;
+  }
+  .uf-section--speed .sr2-panel > .sr2-head{
+    /* Keep the bulk-actions row visible, but drop the duplicate title
+       block — the .uf-sub-head above already labels this sub-section. */
+    margin: 0 0 8px 0; padding: 0 0 8px 0;
+    border-bottom: 1px dashed var(--hub-border);
+  }
+  .uf-section--speed .sr2-panel > .sr2-head > div:first-child{ display: none; }
+  .uf-section--speed .sr2-panel > .sr2-head:not(:has(.sr2-bulk)){
+    /* No bulk buttons (= no existing rules) → header has nothing to
+       show, so collapse it entirely. */
+    display: none;
+  }
 </style>
 {% endblock %}
 
@@ -485,21 +531,36 @@
       </div>
     </section>
 
-    {# ── 2. Speed ───────────────────────────────────────── #}
+    {# ── 2. Speed (merged): base custom speed + scheduled rules. ─
+       Merged on 2026-05-21 per user feedback («ادمج قسم السرعة الخاصة
+       مع قسم جداول السرعة»). Two sub-blocks:
+         - 2A: السرعة الأساسية (base custom speed + temporary window)
+         - 2B: قواعد السرعة المجدولة (bandwidth_schedules — cookbook §19)
+       Both live inside ONE collapsible card so the operator sees the
+       complete speed picture in one place. #}
     <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="uf-section-title">سرعة خاصة للمشترك</span>
+        <span class="uf-section-title">السرعة</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
+
+        {# 2A. Base custom speed ───────────────────────────────── #}
+        <div class="uf-sub-head">
+          <span class="uf-sub-dot"></span>
+          <span class="uf-sub-title">سرعة أساسية مخصّصة</span>
+          <span class="uf-sub-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
+        </div>
+
         <div class="uf-grid">
           <div class="uf-field">
             <label>تفعيل التحكم بالسرعة</label>
-            <div class="uf-chk">
-              <input type="checkbox" name="bandwidth_control_enabled" id="bw-en" value="1" {% if sub.bandwidth_control_enabled %}checked{% endif %}>
-              <label for="bw-en">مفعَّل (يتجاوز سرعة الباقة)</label>
-            </div>
+            {{ toggle_switch(name="bandwidth_control_enabled",
+                             checked=sub.bandwidth_control_enabled,
+                             id="bw-en",
+                             on_label="مفعَّل (يتجاوز الباقة)",
+                             off_label="معطَّل") }}
           </div>
           <div class="uf-field">
             <label>سرعة التنزيل</label>
@@ -513,17 +574,15 @@
           </div>
           <div class="uf-field">
             <label>سرعة مخصصة</label>
-            <div class="uf-chk">
-              <input type="checkbox" name="custom_speed" id="cs" value="1" {% if sub.custom_speed %}checked{% endif %}>
-              <label for="cs">مفعَّل</label>
-            </div>
+            {{ toggle_switch(name="custom_speed",
+                             checked=sub.custom_speed,
+                             id="cs") }}
           </div>
           <div class="uf-field">
             <label>سرعة مؤقتة</label>
-            <div class="uf-chk">
-              <input type="checkbox" name="temporary_speed" id="ts" value="1" {% if sub.temporary_speed %}checked{% endif %}>
-              <label for="ts">مفعَّل</label>
-            </div>
+            {{ toggle_switch(name="temporary_speed",
+                             checked=sub.temporary_speed,
+                             id="ts") }}
             <div class="help">رفع مؤقت بدون تغيير الباقة.</div>
           </div>
           <div class="uf-field full">
@@ -541,15 +600,18 @@
             <div class="help">الفترة التي تعمل فيها السرعة المؤقتة.</div>
           </div>
         </div>
+
+        {# 2B. Scheduled speed rules (per-subscriber, cookbook §19) ─
+           Renders in both new + edit mode. The panel handles its own
+           empty/pending state via sr_pending. #}
+        <div class="uf-sub-head" style="margin-top: 18px;">
+          <span class="uf-sub-dot"></span>
+          <span class="uf-sub-title">قواعد سرعة مجدوَلة</span>
+          <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة، أولوية أعلى من قواعد الباقة والمجموعة.</span>
+        </div>
+        {% include "radius/_speed_rules_panel.html" %}
       </div>
     </section>
-
-    {# ── 2b. Speed schedules — bandwidth_schedules per-subscriber. ──
-       Cookbook §19. Renders in BOTH new + edit mode:
-         - new mode: empty rule list + add-card; rule saved with the
-           subscriber via users_create() when the main button is clicked.
-         - edit mode: full panel with per-rule actions. #}
-    {% include "radius/_speed_rules_panel.html" %}
 
     {# ── 3. PPPoE ───────────────────────────────────────── #}
     <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
