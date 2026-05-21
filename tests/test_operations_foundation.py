@@ -223,53 +223,42 @@ def test_print_template_persistence_and_json_preview(client):
 
 
 def test_print_template_presets_update_batch_export_and_jobs(client):
-    from app.radius.services.operations import (
-        _card_snapshot_metrics,
-        _pdf_safe_latin,
-        _scaled_card_rect,
+    # The old helpers (_card_snapshot_metrics, _pdf_safe_latin,
+    # _scaled_card_rect) were removed when the PDF export moved onto
+    # the unified card_renderer. The behaviour they used to validate
+    # — pure builder, consistent canvas units — is now covered by
+    # tests/test_card_renderer.py. Keep one minimal smoke-check on
+    # the new renderer so this end-to-end test still exercises the
+    # rendering pipeline before driving the HTTP API below.
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
     )
 
-    assert _pdf_safe_latin("بطاقة إنترنت", "Internet Card") == "Internet Card"
-    assert _pdf_safe_latin("Internet Card", "fallback") == "Internet Card"
-    draw_x, draw_y, draw_w, draw_h, scale = _scaled_card_rect(
-        slot_x=0,
-        slot_y=0,
-        slot_width=120,
-        slot_height=50,
-        design_width=200,
-        design_height=100,
-    )
-    assert (draw_x, draw_y, draw_w, draw_h, scale) == (10, 0, 100, 50, 0.5)
-    template_metrics = {
-        "username_x": 10,
-        "username_y": 15,
-        "password_x": 10,
-        "password_y": 25,
-        "qr_x": 60,
-        "qr_y": 12,
+    smoke_template = {
+        "username_x": 10, "username_y": 15,
+        "password_x": 10, "password_y": 25,
+        "qr_x": 60, "qr_y": 12,
+        "layout_json": {
+            "card_orientation": "horizontal",
+            "card_width_mm": 200, "card_height_mm": 100,
+            "brand_name": "HobeRadius", "card_title": "Smoke",
+            "show_brand": True, "show_username": True,
+            "show_password": True, "show_qr": True,
+        },
     }
-    layout_metrics = {"background_image_data_url": "data:image/png;base64,abc"}
-    snapshot_a = _card_snapshot_metrics(
-        template=template_metrics,
-        layout=layout_metrics,
-        design_width=200,
-        design_height=100,
-        font_size=14,
-        mm_unit=2,
+    smoke_model = build_card_render_model(
+        smoke_template, {"id": 1, "username": "USR-A", "password": "PWD-A"}
     )
-    snapshot_b = _card_snapshot_metrics(
-        template=template_metrics,
-        layout=layout_metrics,
-        design_width=200,
-        design_height=100,
-        font_size=14,
-        mm_unit=2,
+    assert smoke_model["canvas"] == {"width": 1000, "height": 600}
+    # The builder is deterministic for the same input.
+    assert smoke_model == build_card_render_model(
+        smoke_template, {"id": 1, "username": "USR-A", "password": "PWD-A"}
     )
-    assert snapshot_a == snapshot_b
-    assert snapshot_a["font_size"] == 14
-    assert snapshot_a["qr_size"] == 32
-    assert snapshot_a["username_ratio"] == (0.1, 0.7)
-    assert snapshot_a["qr_ratio"] == (0.6, 0.76)
+    # SVG embeds the username, masks the password.
+    svg = render_card_svg(smoke_model)
+    assert "USR-A" in svg
+    assert "PWD-A" not in svg
 
     presets = client.get("/api/v1/print-templates/presets", headers=_auth(client))
     assert presets.status_code == 200, presets.get_json()
