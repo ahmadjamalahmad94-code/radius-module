@@ -539,7 +539,14 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
 
 
 def _pdf_qr(pdf, el: dict, ch: float) -> None:
-    """Draw a QR symbol using the same QrCodeWidget as the SVG path."""
+    """Draw a QR symbol using the same QrCodeWidget as the SVG path.
+
+    Tight white panel: `barBorder=0` strips the QrCodeWidget's built-in
+    4-module quiet zone (which used to leave a large empty white band
+    around the actual QR pattern). The remaining 4% inner padding plus
+    the white background rectangle itself give the scanner enough
+    quiet area without making the panel visually oversized.
+    """
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics import renderPDF
     from reportlab.graphics.shapes import Drawing
@@ -549,18 +556,18 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
     pdf_y_top = ch - el["y"]  # top of the QR box in PDF coords
     pdf_y_bottom = pdf_y_top - size
 
-    # White rounded background — readers need the quiet zone.
+    # White rounded background sits at the model's allocated size.
     pdf.setFillColor(colors.white)
     pdf.roundRect(el["x"], pdf_y_bottom, size, size, size * 0.10,
                   stroke=0, fill=1)
 
     payload = str(el.get("payload") or "SAMPLE")
     try:
-        widget = QrCodeWidget(payload)
+        widget = QrCodeWidget(payload, barBorder=0)
         bounds = widget.getBounds()
         w = bounds[2] - bounds[0]
         h = bounds[3] - bounds[1]
-        inner = size * 0.84  # 8 % quiet zone on each side
+        inner = size * 0.92  # 4% padding each side — visually tight
         scale_x = inner / max(w, 1)
         scale_y = inner / max(h, 1)
         drawing = Drawing(inner, inner,
@@ -873,7 +880,9 @@ def _svg_qr_placeholder(el: dict) -> str:
     x = float(el["x"]); y = float(el["y"])
     bg = el.get("bg", "#fff")
     fg = el.get("fg", "#0f172a")
-    pad = size * 0.08
+    # 4 % inner padding to match the PDF adapter — keeps the white
+    # panel hugging the QR symbol instead of floating around it.
+    pad = size * 0.04
     inner = _qr_inline_svg(payload, x + pad, y + pad, size - 2 * pad, fg)
     return (
         f'<g class="card-qr">'
