@@ -16,6 +16,90 @@ _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _SERVICE_SCOPES = {"hotspot", "broadband", "both"}
 _SESSION_FROZEN_STATUSES = {"disabled", "suspended", "frozen", "banned"}
 _PRINT_ORIENTATIONS = {"portrait", "landscape"}
+_PRINT_PRESETS: dict[str, dict[str, Any]] = {
+    "modern": {
+        "label": "حديث",
+        "gradient_start": "#0f172a",
+        "gradient_end": "#22a7bd",
+        "accent_color": "#f59e0b",
+        "text_color": "#ffffff",
+        "surface_color": "#e8f7fb",
+        "qr_style": "boxed",
+        "brand_name": "HobeRadius",
+        "card_title": "بطاقة إنترنت",
+        "footer_text": "احتفظ ببيانات الدخول حتى نهاية الصلاحية",
+    },
+    "dark": {
+        "label": "داكن احترافي",
+        "gradient_start": "#111827",
+        "gradient_end": "#334155",
+        "accent_color": "#38bdf8",
+        "text_color": "#ffffff",
+        "surface_color": "#dbeafe",
+        "qr_style": "boxed",
+        "brand_name": "HobeRadius",
+        "card_title": "Hotspot Voucher",
+        "footer_text": "الدعم الفني متاح عبر نقطة البيع",
+    },
+    "gold": {
+        "label": "ذهبي",
+        "gradient_start": "#3b2f1c",
+        "gradient_end": "#b7791f",
+        "accent_color": "#facc15",
+        "text_color": "#fff7ed",
+        "surface_color": "#fff7d6",
+        "qr_style": "boxed",
+        "brand_name": "HobeRadius",
+        "card_title": "بطاقة مميزة",
+        "footer_text": "سرعة ثابتة وتجربة أفضل",
+    },
+    "minimal": {
+        "label": "بسيط",
+        "gradient_start": "#ffffff",
+        "gradient_end": "#f8fafc",
+        "accent_color": "#0ea5e9",
+        "text_color": "#0f172a",
+        "surface_color": "#eff6ff",
+        "qr_style": "clean",
+        "brand_name": "HobeRadius",
+        "card_title": "بطاقة دخول",
+        "footer_text": "اسم المستخدم وكلمة المرور للاستخدام مرة واحدة",
+    },
+    "telecom": {
+        "label": "اتصالات",
+        "gradient_start": "#083344",
+        "gradient_end": "#0891b2",
+        "accent_color": "#67e8f9",
+        "text_color": "#ecfeff",
+        "surface_color": "#cffafe",
+        "qr_style": "rounded",
+        "brand_name": "HobeRadius",
+        "card_title": "شبكة لاسلكية",
+        "footer_text": "امسح QR أو أدخل البيانات يدويًا",
+    },
+    "neon": {
+        "label": "نيون",
+        "gradient_start": "#240046",
+        "gradient_end": "#00b4d8",
+        "accent_color": "#c8ff00",
+        "text_color": "#ffffff",
+        "surface_color": "#e0f2fe",
+        "qr_style": "boxed",
+        "brand_name": "HobeRadius",
+        "card_title": "بطاقة سرعة",
+        "footer_text": "مررها للعميل بعد الدفع مباشرة",
+    },
+}
+_PRINT_BOOL_FIELDS = {
+    "show_username",
+    "show_password",
+    "show_price",
+    "show_hotspot",
+    "show_validity",
+    "show_serial",
+    "show_guides",
+    "show_brand",
+}
 
 
 def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> int:
@@ -43,6 +127,82 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
     if value < minimum:
         raise RadiusValidationError(f"{key} must be >= {minimum:g}")
     return value
+
+
+def _safe_hex(value: Any, default: str) -> str:
+    raw = str(value or default).strip()
+    if re.fullmatch(r"#?[0-9a-fA-F]{6}", raw):
+        return raw if raw.startswith("#") else f"#{raw}"
+    return default
+
+
+def _boolish(value: Any, default: bool = False) -> bool:
+    if value in (None, ""):
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
+def _template_layout(data: dict) -> dict:
+    layout = data.get("layout") if isinstance(data.get("layout"), dict) else {}
+    merged = {**layout, **data}
+    preset_name = str(merged.get("design_preset") or "modern").strip()
+    if preset_name not in _PRINT_PRESETS:
+        preset_name = "modern"
+    preset = _PRINT_PRESETS[preset_name]
+
+    def _text(key: str, default: str = "", max_len: int = 140) -> str:
+        return str(merged.get(key) or default).strip()[:max_len]
+
+    normalized = {
+        **layout,
+        "preview_mode": "visual_design_room",
+        "design_preset": preset_name,
+        "card_width_mm": _float_field(merged, "card_width_mm", minimum=1, default=85),
+        "card_height_mm": _float_field(merged, "card_height_mm", minimum=1, default=54),
+        "gradient_start": _safe_hex(merged.get("gradient_start"), preset["gradient_start"]),
+        "gradient_end": _safe_hex(merged.get("gradient_end"), preset["gradient_end"]),
+        "accent_color": _safe_hex(merged.get("accent_color"), preset["accent_color"]),
+        "text_color": _safe_hex(merged.get("text_color") or merged.get("color"), preset["text_color"]),
+        "surface_color": _safe_hex(merged.get("surface_color"), preset["surface_color"]),
+        "qr_style": _text("qr_style", preset["qr_style"], 30),
+        "brand_name": _text("brand_name", preset["brand_name"], 80),
+        "card_title": _text("card_title", preset["card_title"], 80),
+        "footer_text": _text("footer_text", preset["footer_text"], 180),
+        "hotspot_address": _text("hotspot_address", "hotspot.local", 120),
+        "price_text": _text("price_text", "", 60),
+        "validity_text": _text("validity_text", "", 60),
+        "instructions_text": _text(
+            "instructions_text",
+            "استخدم اسم المستخدم وكلمة المرور أو QR للدخول.",
+            180,
+        ),
+        "background_style": _text("background_style", "gradient", 30),
+        "bleed_marks": _boolish(merged.get("bleed_marks"), False),
+    }
+    defaults = {
+        "show_username": True,
+        "show_password": True,
+        "show_price": False,
+        "show_hotspot": True,
+        "show_validity": True,
+        "show_serial": True,
+        "show_guides": False,
+        "show_brand": True,
+    }
+    for key, default in defaults.items():
+        normalized[key] = _boolish(merged.get(key), default)
+    return normalized
+
+
+def _print_presets_list() -> list[dict]:
+    return [
+        {"key": key, "label": value["label"], "layout": {**value, "design_preset": key}}
+        for key, value in _PRINT_PRESETS.items()
+    ]
 
 
 def validate_service_scope(value: str) -> str:
@@ -528,6 +688,7 @@ class OperationsService:
         orientation = (data.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
             raise RadiusValidationError("orientation must be portrait or landscape")
+        layout = _template_layout(data)
         normalized = {
             "name": name,
             "orientation": orientation,
@@ -542,8 +703,8 @@ class OperationsService:
             "qr_x": _float_field(data, "qr_x", default=0),
             "qr_y": _float_field(data, "qr_y", default=0),
             "font_size": _int_field(data, "font_size", minimum=6, default=12),
-            "color": (data.get("color") or "#1f2937").strip(),
-            "layout": data.get("layout") or {},
+            "color": _safe_hex(data.get("color") or layout.get("text_color"), "#1f2937"),
+            "layout": layout,
         }
         try:
             saved = operations_repo.create_print_template(
@@ -560,9 +721,62 @@ class OperationsService:
         )
         return saved
 
+    def update_print_template(self, *, tenant_id: int, actor: str,
+                              template_id: int, data: dict) -> dict:
+        current = operations_repo.get_print_template(tenant_id, template_id)
+        if not current:
+            raise RadiusNotFound("print template not found")
+        merged = {**current, **data}
+        if isinstance(current.get("layout_json"), dict):
+            merged["layout"] = {**current["layout_json"], **(data.get("layout") or {})}
+        if "name" in data and not str(data.get("name") or "").strip():
+            raise RadiusValidationError("name is required")
+        orientation = str(merged.get("orientation") or "portrait").strip().lower()
+        if orientation not in _PRINT_ORIENTATIONS:
+            raise RadiusValidationError("orientation must be portrait or landscape")
+        layout = _template_layout(merged)
+        normalized = {
+            "name": str(merged.get("name") or "").strip(),
+            "orientation": orientation,
+            "cards_per_row": _int_field(merged, "cards_per_row", minimum=1, default=2),
+            "cards_per_column": _int_field(merged, "cards_per_column", minimum=1, default=5),
+            "page_size": str(merged.get("page_size") or "A4").strip(),
+            "show_qr": _boolish(merged.get("show_qr"), True),
+            "username_x": _float_field(merged, "username_x", default=0),
+            "username_y": _float_field(merged, "username_y", default=0),
+            "password_x": _float_field(merged, "password_x", default=0),
+            "password_y": _float_field(merged, "password_y", default=0),
+            "qr_x": _float_field(merged, "qr_x", default=0),
+            "qr_y": _float_field(merged, "qr_y", default=0),
+            "font_size": _int_field(merged, "font_size", minimum=6, default=12),
+            "color": _safe_hex(merged.get("color") or layout.get("text_color"), "#1f2937"),
+            "layout": layout,
+        }
+        try:
+            saved = operations_repo.update_print_template(
+                tenant_id, template_id, normalized, actor=actor
+            )
+        except sqlite3.IntegrityError:
+            raise RadiusValidationError("print template name already exists")
+        self._audit.record(
+            actor=actor,
+            action="card_print_template.update",
+            target_type="card_print_template",
+            target_id=str(template_id),
+            payload={"name": saved.get("name")},
+        )
+        return saved
+
     def list_print_templates(self, *, tenant_id: int,
                              limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_print_templates(tenant_id, limit=limit, offset=offset)
+
+    def list_print_template_presets(self) -> list[dict]:
+        return _print_presets_list()
+
+    def list_print_jobs(self, *, tenant_id: int,
+                        limit: int = 50, offset: int = 0) -> list[dict]:
+        return operations_repo.list_print_jobs(tenant_id, limit=limit, offset=offset)
 
     def render_print_template_preview(self, *, tenant_id: int, template_id: int,
                                       sample: Optional[dict] = None) -> dict:
@@ -572,6 +786,7 @@ class OperationsService:
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
+        layout = _template_layout({**template, "layout": layout})
         width_mm = max(float(layout.get("card_width_mm") or 85), 1.0)
         height_mm = max(float(layout.get("card_height_mm") or 54), 1.0)
 
@@ -585,10 +800,14 @@ class OperationsService:
                 "y_percent": max(0, min(100, round((y_mm / height_mm) * 100, 2))),
             }
 
-        sample_payload = sample or {
-            "username": "CARD1234",
-            "has_password": True,
-            "qr_payload": "CARD1234",
+        raw_sample = sample if isinstance(sample, dict) else {}
+        sample_username = str(raw_sample.get("username") or "CARD1234")
+        sample_payload = {
+            "username": sample_username,
+            "has_password": bool(raw_sample.get("has_password", True)),
+            "qr_payload": str(raw_sample.get("qr_payload") or sample_username),
+            "price": str(raw_sample.get("price") or layout.get("price_text") or ""),
+            "validity": str(raw_sample.get("validity") or layout.get("validity_text") or ""),
         }
         return {
             "template": template,
@@ -602,6 +821,22 @@ class OperationsService:
                     "height_mm": height_mm,
                     "font_size": int(template.get("font_size") or 12),
                     "color": template.get("color") or "#1f2937",
+                    "layout": layout,
+                },
+                "design": {
+                    "preset": layout.get("design_preset"),
+                    "brand_name": layout.get("brand_name"),
+                    "card_title": layout.get("card_title"),
+                    "gradient_start": layout.get("gradient_start"),
+                    "gradient_end": layout.get("gradient_end"),
+                    "accent_color": layout.get("accent_color"),
+                    "text_color": layout.get("text_color"),
+                    "surface_color": layout.get("surface_color"),
+                    "qr_style": layout.get("qr_style"),
+                    "footer_text": layout.get("footer_text"),
+                    "hotspot_address": layout.get("hotspot_address"),
+                    "price_text": layout.get("price_text"),
+                    "validity_text": layout.get("validity_text"),
                 },
                 "placements": {
                     "username": _placement("username"),
@@ -609,12 +844,21 @@ class OperationsService:
                     "qr": _placement("qr"),
                 },
                 "sample": sample_payload,
+                "capabilities": {
+                    "sample_pdf": True,
+                    "batch_pdf": True,
+                    "csv": True,
+                    "excel": False,
+                    "png": False,
+                },
             },
             "export_generated": False,
         }
 
     def export_print_template_pdf(self, *, tenant_id: int, template_id: int,
-                                  sample: Optional[dict] = None) -> bytes:
+                                  sample: Optional[dict] = None,
+                                  batch_id: int | None = None,
+                                  actor: str = "system") -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
             raise RadiusNotFound("print template not found")
@@ -627,6 +871,7 @@ class OperationsService:
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
+        layout = _template_layout({**template, "layout": layout})
 
         page_size = str(template.get("page_size") or "A4").strip().lower()
         base_size = letter if page_size == "letter" else A4
@@ -643,53 +888,129 @@ class OperationsService:
         card_width = min(max(float(layout.get("card_width_mm") or 85), 1.0) * mm, fit_width)
         card_height = min(max(float(layout.get("card_height_mm") or 54), 1.0) * mm, fit_height)
         font_size = max(min(int(template.get("font_size") or 12), 36), 6)
-        text_color = _reportlab_color(str(template.get("color") or "#1f2937"))
+        text_color = _reportlab_color(str(layout.get("text_color") or template.get("color") or "#1f2937"))
         show_qr = bool(template.get("show_qr"))
 
         sample_payload = sample or {}
-        cards = sample_payload.get("cards")
-        if not isinstance(cards, list) or not cards:
-            cards = [{
-                "username": sample_payload.get("username") or "CARD1234",
-                "password": sample_payload.get("password") or "********",
-                "qr_payload": sample_payload.get("qr_payload") or sample_payload.get("username") or "CARD1234",
-            }]
-        cards_per_page = rows * cols
-        while len(cards) < cards_per_page:
-            index = len(cards) + 1
-            cards.append({
-                "username": f"CARD{index:04d}",
-                "password": "********",
-                "qr_payload": f"CARD{index:04d}",
-            })
+        export_type = "sample_pdf"
+        batch = None
+        cards: list[dict]
+        if batch_id:
+            batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
+            if not batch:
+                raise RadiusNotFound("card batch not found")
+            raw_cards = cards_repo.list_cards(tenant_id, batch_id=batch_id, limit=20000, offset=0)
+            cards = [
+                {
+                    "username": c.username,
+                    "password": c.password,
+                    "qr_payload": c.username,
+                    "serial": str(c.id or ""),
+                    "price": layout.get("price_text") or "",
+                    "validity": layout.get("validity_text") or "",
+                    "batch_code": batch.batch_code,
+                    "package_name": batch.package_name,
+                    "expire_at": c.expire_at.isoformat() if c.expire_at else "",
+                }
+                for c in raw_cards
+            ]
+            export_type = "batch_pdf"
+        else:
+            cards = sample_payload.get("cards") if isinstance(sample_payload.get("cards"), list) else []
+            if not cards:
+                cards = [{
+                    "username": sample_payload.get("username") or "CARD1234",
+                    "password": sample_payload.get("password") or "********",
+                    "qr_payload": sample_payload.get("qr_payload") or sample_payload.get("username") or "CARD1234",
+                    "serial": "SAMPLE",
+                    "price": sample_payload.get("price") or layout.get("price_text") or "",
+                    "validity": sample_payload.get("validity") or layout.get("validity_text") or "",
+                    "batch_code": "DEMO",
+                    "package_name": layout.get("card_title") or "",
+                }]
+        if not cards:
+            raise RadiusValidationError("selected batch has no cards")
 
         output = BytesIO()
         pdf = canvas.Canvas(output, pagesize=pagesize)
         pdf.setTitle(f"Card print template - {template.get('name') or template_id}")
         pdf.setAuthor("HobeRadius")
 
-        for idx, card in enumerate(cards[:cards_per_page]):
-            row = idx // cols
-            col = idx % cols
-            x = margin + col * (card_width + gap)
-            y = page_height - margin - card_height - row * (card_height + gap)
-            _draw_template_card(
-                pdf,
-                x=x,
-                y=y,
-                width=card_width,
-                height=card_height,
-                template=template,
-                card=card if isinstance(card, dict) else {},
-                font_size=font_size,
-                text_color=text_color,
-                show_qr=show_qr,
-                mm_unit=mm,
-            )
+        cards_per_page = rows * cols
+        file_name = f"cards-template-{template_id}.pdf"
+        if batch_id:
+            file_name = f"cards-batch-{batch_id}-template-{template_id}.pdf"
+        job = operations_repo.create_print_job(
+            tenant_id,
+            template_id=template_id,
+            batch_id=batch_id,
+            export_type=export_type,
+            status="started",
+            card_count=len(cards),
+            file_name=file_name,
+            metadata={"template_name": template.get("name"), "batch_code": getattr(batch, "batch_code", "") if batch else ""},
+            actor=actor,
+        )
+        try:
+            for idx, card in enumerate(cards):
+                if idx and idx % cards_per_page == 0:
+                    pdf.showPage()
+                slot = idx % cards_per_page
+                row = slot // cols
+                col = slot % cols
+                x = margin + col * (card_width + gap)
+                y = page_height - margin - card_height - row * (card_height + gap)
+                _draw_template_card(
+                    pdf,
+                    x=x,
+                    y=y,
+                    width=card_width,
+                    height=card_height,
+                    template=template,
+                    layout=layout,
+                    card=card if isinstance(card, dict) else {},
+                    font_size=font_size,
+                    text_color=text_color,
+                    show_qr=show_qr,
+                    mm_unit=mm,
+                )
 
-        pdf.showPage()
-        pdf.save()
-        return output.getvalue()
+            pdf.showPage()
+            pdf.save()
+            payload = output.getvalue()
+            operations_repo.finish_print_job(
+                tenant_id,
+                int(job.get("id") or 0),
+                status="success",
+                card_count=len(cards),
+                file_name=file_name,
+                message=f"Generated {len(cards)} card(s).",
+                metadata={
+                    "template_name": template.get("name"),
+                    "batch_id": batch_id,
+                    "cards_per_page": cards_per_page,
+                    "bytes": len(payload),
+                },
+            )
+            self._audit.record(
+                actor=actor,
+                action="card_print_template.export_pdf",
+                target_type="card_print_template",
+                target_id=str(template_id),
+                payload={"batch_id": batch_id, "card_count": len(cards), "job_id": job.get("id")},
+            )
+            return payload
+        except Exception as exc:
+            operations_repo.finish_print_job(
+                tenant_id,
+                int(job.get("id") or 0),
+                status="failed",
+                card_count=len(cards),
+                file_name=file_name,
+                message=str(exc),
+                metadata={"template_name": template.get("name"), "batch_id": batch_id},
+            )
+            raise
 
     def backup_status(self, *, tenant_id: int) -> dict:
         return operations_repo.backup_status(tenant_id)
@@ -739,16 +1060,32 @@ def _reportlab_color(value: str):
 
 
 def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
-                        template: dict, card: dict, font_size: int,
+                        template: dict, layout: dict, card: dict, font_size: int,
                         text_color, show_qr: bool, mm_unit: float) -> None:
     from reportlab.lib import colors
+    from reportlab.graphics import renderPDF
+    from reportlab.graphics.barcode.qr import QrCodeWidget
+    from reportlab.graphics.shapes import Drawing
 
-    pdf.setStrokeColor(colors.HexColor("#22a7bd"))
-    pdf.setFillColor(colors.HexColor("#ffffff"))
-    pdf.roundRect(x, y, width, height, 7, stroke=1, fill=1)
-    pdf.setStrokeColor(colors.HexColor("#d8edf3"))
-    pdf.line(x + 5 * mm_unit, y + height - 10 * mm_unit,
-             x + width - 5 * mm_unit, y + height - 10 * mm_unit)
+    bg = _reportlab_color(str(layout.get("gradient_start") or "#0f172a"))
+    bg2 = _reportlab_color(str(layout.get("gradient_end") or "#22a7bd"))
+    accent = _reportlab_color(str(layout.get("accent_color") or "#f59e0b"))
+    surface = _reportlab_color(str(layout.get("surface_color") or "#e8f7fb"))
+
+    radius = 7
+    pdf.setStrokeColor(colors.Color(1, 1, 1, alpha=0.35))
+    pdf.setFillColor(bg)
+    pdf.roundRect(x, y, width, height, radius, stroke=0, fill=1)
+    pdf.setFillColor(bg2)
+    pdf.roundRect(x + width * 0.55, y, width * 0.45, height, radius, stroke=0, fill=1)
+    pdf.setFillColor(accent)
+    pdf.roundRect(x + 4 * mm_unit, y + height - 6 * mm_unit, width - 8 * mm_unit, 2 * mm_unit, 1.2, stroke=0, fill=1)
+
+    if layout.get("show_guides"):
+        pdf.setStrokeColor(colors.Color(1, 1, 1, alpha=0.22))
+        pdf.setLineWidth(0.3)
+        pdf.line(x + width / 2, y + 2 * mm_unit, x + width / 2, y + height - 2 * mm_unit)
+        pdf.line(x + 2 * mm_unit, y + height / 2, x + width - 2 * mm_unit, y + height / 2)
 
     def _coord(prefix: str) -> tuple[float, float]:
         x_mm = float(template.get(f"{prefix}_x") or 0)
@@ -760,22 +1097,63 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
     qr_payload = str(card.get("qr_payload") or username)
 
     pdf.setFillColor(text_color)
-    pdf.setFont("Helvetica-Bold", font_size)
+    pdf.setFont("Helvetica-Bold", max(font_size + 1, 7))
+    if layout.get("show_brand"):
+        pdf.drawString(x + 7 * mm_unit, y + height - 12 * mm_unit, str(layout.get("brand_name") or "HobeRadius")[:38])
+    pdf.setFont("Helvetica-Bold", max(font_size, 7))
+    pdf.drawString(x + 7 * mm_unit, y + height - 20 * mm_unit, str(layout.get("card_title") or "Internet Card")[:44])
+
+    label_size = max(font_size - 3, 5)
+    pdf.setFont("Helvetica", label_size)
     ux, uy = _coord("username")
-    pdf.drawString(ux, uy, username)
+    if layout.get("show_username", True):
+        pdf.setFillColor(surface)
+        pdf.roundRect(ux - 2 * mm_unit, uy - 4 * mm_unit, width * 0.42, 8 * mm_unit, 3, stroke=0, fill=1)
+        pdf.setFillColor(colors.HexColor("#0f172a"))
+        pdf.drawString(ux, uy + 1 * mm_unit, "USER")
+        pdf.setFont("Helvetica-Bold", font_size)
+        pdf.drawString(ux + 13 * mm_unit, uy + 1 * mm_unit, username[:24])
     px, py = _coord("password")
-    pdf.setFont("Helvetica", max(font_size - 1, 6))
-    pdf.drawString(px, py, password)
+    if layout.get("show_password", True):
+        pdf.setFillColor(surface)
+        pdf.roundRect(px - 2 * mm_unit, py - 4 * mm_unit, width * 0.42, 8 * mm_unit, 3, stroke=0, fill=1)
+        pdf.setFillColor(colors.HexColor("#0f172a"))
+        pdf.setFont("Helvetica", label_size)
+        pdf.drawString(px, py + 1 * mm_unit, "PASS")
+        pdf.setFont("Helvetica-Bold", font_size)
+        pdf.drawString(px + 13 * mm_unit, py + 1 * mm_unit, password[:24])
 
     if show_qr:
         qx, qy = _coord("qr")
         size = 16 * mm_unit
-        pdf.setStrokeColor(text_color)
-        pdf.rect(qx, qy - size, size, size, stroke=1, fill=0)
-        pdf.setFont("Helvetica-Bold", 7)
-        pdf.drawCentredString(qx + size / 2, qy - size / 2 - 2, "QR")
-        pdf.setFont("Helvetica", 5)
-        pdf.drawCentredString(qx + size / 2, qy - size - 5, qr_payload[:18])
+        pdf.setFillColor(colors.white)
+        pdf.roundRect(qx - 1.5 * mm_unit, qy - size - 1.5 * mm_unit,
+                      size + 3 * mm_unit, size + 3 * mm_unit, 4, stroke=0, fill=1)
+        qr = QrCodeWidget(qr_payload)
+        bounds = qr.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        drawing = Drawing(size, size, transform=[size / qr_width, 0, 0, size / qr_height, 0, 0])
+        drawing.add(qr)
+        renderPDF.draw(drawing, pdf, qx, qy - size)
+
+    pdf.setFillColor(text_color)
+    pdf.setFont("Helvetica", max(font_size - 3, 5))
+    meta_parts = []
+    if layout.get("show_price") and (card.get("price") or layout.get("price_text")):
+        meta_parts.append(str(card.get("price") or layout.get("price_text"))[:22])
+    if layout.get("show_validity") and (card.get("validity") or layout.get("validity_text")):
+        meta_parts.append(str(card.get("validity") or layout.get("validity_text"))[:22])
+    if layout.get("show_hotspot") and layout.get("hotspot_address"):
+        meta_parts.append(str(layout.get("hotspot_address"))[:28])
+    if meta_parts:
+        pdf.drawString(x + 7 * mm_unit, y + 8 * mm_unit, "  |  ".join(meta_parts)[:86])
+    if layout.get("show_serial") and card.get("serial"):
+        pdf.drawRightString(x + width - 6 * mm_unit, y + 8 * mm_unit, f"#{card.get('serial')}")
+    footer = str(layout.get("footer_text") or "")[:80]
+    if footer:
+        pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.82))
+        pdf.drawString(x + 7 * mm_unit, y + 3.2 * mm_unit, footer[:70])
 
 
 def get_operations_service() -> OperationsService:

@@ -222,6 +222,78 @@ def test_print_template_persistence_and_json_preview(client):
     assert export.data.startswith(b"%PDF")
 
 
+def test_print_template_presets_update_batch_export_and_jobs(client):
+    presets = client.get("/api/v1/print-templates/presets", headers=_auth(client))
+    assert presets.status_code == 200, presets.get_json()
+    preset_items = presets.get_json()["data"]["items"]
+    assert {item["key"] for item in preset_items} >= {"modern", "telecom"}
+
+    created = client.post(
+        "/api/v1/print-templates",
+        json={
+            "name": "ops_room_" + secrets.token_hex(4),
+            "orientation": "portrait",
+            "cards_per_row": 2,
+            "cards_per_column": 5,
+            "page_size": "A4",
+            "show_qr": True,
+            "layout": {
+                "design_preset": "telecom",
+                "brand_name": "HobeRadius",
+                "card_title": "Internet Voucher",
+                "show_password": True,
+            },
+        },
+        headers=_auth(client),
+    )
+    assert created.status_code == 201, created.get_json()
+    template = created.get_json()["data"]["template"]
+
+    updated = client.patch(
+        f"/api/v1/print-templates/{template['id']}",
+        json={
+            "name": template["name"] + " updated",
+            "layout": {
+                "design_preset": "gold",
+                "brand_name": "HobeRadius ISP",
+                "card_title": "VIP Internet",
+            },
+        },
+        headers=_auth(client),
+    )
+    assert updated.status_code == 200, updated.get_json()
+    updated_template = updated.get_json()["data"]["template"]
+    assert updated_template["name"].endswith("updated")
+    assert updated_template["layout_json"]["design_preset"] == "gold"
+    assert updated_template["layout_json"]["brand_name"] == "HobeRadius ISP"
+
+    preview = client.post(
+        f"/api/v1/print-templates/{template['id']}/render",
+        json={"sample": {"username": "SAFE123", "password": "SHOULD_NOT_LEAK"}},
+        headers=_auth(client),
+    )
+    assert preview.status_code == 200, preview.get_json()
+    preview_text = str(preview.get_json())
+    assert "SHOULD_NOT_LEAK" not in preview_text
+
+    batch = _batch(client)
+    export = client.get(
+        f"/api/v1/print-templates/{template['id']}/export.pdf?batch_id={batch['id']}",
+        headers=_auth(client),
+    )
+    assert export.status_code == 200, export.get_json()
+    assert export.content_type.startswith("application/pdf")
+    assert export.data.startswith(b"%PDF")
+
+    jobs = client.get("/api/v1/print-jobs", headers=_auth(client))
+    assert jobs.status_code == 200, jobs.get_json()
+    job_items = jobs.get_json()["data"]["items"]
+    assert job_items[0]["template_id"] == template["id"]
+    assert job_items[0]["batch_id"] == batch["id"]
+    assert job_items[0]["status"] == "success"
+    assert job_items[0]["card_count"] == batch["count"]
+
+
 def test_backup_status_and_local_run_are_non_destructive(client):
     status = client.get("/api/v1/backups/status", headers=_auth(client))
     assert status.status_code == 200, status.get_json()

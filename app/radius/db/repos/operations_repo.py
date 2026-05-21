@@ -647,6 +647,37 @@ def create_print_template(tenant_id: int, data: dict, *, actor: str) -> dict:
     return get_print_template(tenant_id, template_id) or {}
 
 
+def update_print_template(tenant_id: int, template_id: int, data: dict, *, actor: str) -> dict:
+    current = get_print_template(tenant_id, template_id)
+    if not current:
+        return {}
+    merged = {**current, **data}
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE card_print_templates
+            SET name = ?, orientation = ?, cards_per_row = ?, cards_per_column = ?,
+                page_size = ?, show_qr = ?, username_x = ?, username_y = ?,
+                password_x = ?, password_y = ?, qr_x = ?, qr_y = ?,
+                font_size = ?, color = ?, layout_json = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                merged["name"], merged.get("orientation") or "portrait",
+                merged.get("cards_per_row") or 2, merged.get("cards_per_column") or 5,
+                merged.get("page_size") or "A4", 1 if merged.get("show_qr", True) else 0,
+                float(merged.get("username_x") or 0), float(merged.get("username_y") or 0),
+                float(merged.get("password_x") or 0), float(merged.get("password_y") or 0),
+                float(merged.get("qr_x") or 0), float(merged.get("qr_y") or 0),
+                int(merged.get("font_size") or 12), merged.get("color") or "#1f2937",
+                _json(merged.get("layout") or merged.get("layout_json"), {}), now,
+                tenant_id, template_id,
+            ),
+        )
+    return get_print_template(tenant_id, template_id) or {}
+
+
 def list_print_templates(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[dict]:
     rows = db().execute(
         """
@@ -667,6 +698,95 @@ def get_print_template(tenant_id: int, template_id: int) -> Optional[dict]:
     if not row:
         return None
     return _hydrate_json_fields(_row(row), "layout_json")
+
+
+def create_print_job(
+    tenant_id: int,
+    *,
+    template_id: int | None,
+    batch_id: int | None,
+    export_type: str,
+    status: str,
+    card_count: int = 0,
+    file_name: str = "",
+    message: str = "",
+    metadata: dict | None = None,
+    actor: str = "",
+) -> dict:
+    now = now_iso()
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO print_jobs(
+                tenant_id, template_id, batch_id, export_type, status,
+                card_count, file_name, message, metadata_json, created_by,
+                created_at, completed_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                tenant_id, template_id, batch_id, export_type, status,
+                int(card_count or 0), file_name, message, _json(metadata or {}, {}),
+                actor, now, now if status in {"success", "failed"} else None,
+            ),
+        )
+        job_id = cur.lastrowid
+    return get_print_job(tenant_id, job_id) or {}
+
+
+def finish_print_job(
+    tenant_id: int,
+    job_id: int,
+    *,
+    status: str,
+    card_count: int,
+    file_name: str,
+    message: str = "",
+    metadata: dict | None = None,
+) -> dict:
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE print_jobs
+            SET status = ?, card_count = ?, file_name = ?, message = ?,
+                metadata_json = ?, completed_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                status, int(card_count or 0), file_name, message,
+                _json(metadata or {}, {}), now, tenant_id, job_id,
+            ),
+        )
+    return get_print_job(tenant_id, job_id) or {}
+
+
+def get_print_job(tenant_id: int, job_id: int) -> Optional[dict]:
+    row = db().execute(
+        "SELECT * FROM print_jobs WHERE tenant_id = ? AND id = ?",
+        (tenant_id, job_id),
+    ).fetchone()
+    if not row:
+        return None
+    return _hydrate_json_fields(_row(row), "metadata_json")
+
+
+def list_print_jobs(tenant_id: int, *, limit: int = 50, offset: int = 0) -> list[dict]:
+    rows = db().execute(
+        """
+        SELECT j.*, t.name AS template_name, b.batch_code, b.package_name
+        FROM print_jobs j
+        LEFT JOIN card_print_templates t
+          ON t.tenant_id = j.tenant_id AND t.id = j.template_id
+        LEFT JOIN card_batches b
+          ON b.tenant_id = j.tenant_id AND b.id = j.batch_id
+        WHERE j.tenant_id = ?
+        ORDER BY j.id DESC
+        LIMIT ? OFFSET ?
+        """,
+        (tenant_id, limit, offset),
+    ).fetchall()
+    return [_hydrate_json_fields(_row(r), "metadata_json") for r in rows]
 
 
 def ensure_backup_job(tenant_id: int, *, actor: str = "system") -> dict:
