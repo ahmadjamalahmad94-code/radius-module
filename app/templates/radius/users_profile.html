@@ -1,0 +1,636 @@
+{# ═══════════════════════════════════════════════════════════════════
+   Subscriber 360° profile — premium hub-v2.
+
+   Backend: app/radius/routes/users.py::users_profile
+   Pattern: SERVICES_COOKBOOK §14 (Subscriber 360 view)
+
+   Layout:
+     1. Hero  : avatar + name + phone + status + quick actions
+     2. KPI   : speed (down/up) + used / quota / remaining + balance
+     3. Tabs  : 10 sections (info, events, invoices, recharges,
+                sessions, daily usage, manager events, bandwidth,
+                used cards, ledger)
+   ═══════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}ملف المشترك — {{ sub.username }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-badge"></i>{% endblock %}
+{% block page_title %}ملف المشترك{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── Hero strip (custom — richer than the default hub.hero) ── */
+  .p360-hero{
+    display:flex; align-items:center; gap:18px;
+    padding:18px 22px;
+    background: linear-gradient(135deg, #ffffff 0%, #faf8ff 100%);
+    border:1px solid var(--hub-border);
+    border-radius: var(--hub-r-xl);
+    box-shadow: var(--hub-sh-sm);
+    margin-bottom: var(--hub-gap-section);
+    position: relative; overflow: hidden;
+  }
+  .p360-hero::before{
+    content:""; position:absolute; inset-inline-start:0; top:0; bottom:0;
+    width:5px;
+    background: linear-gradient(180deg, var(--hub-brand), var(--hub-brand-ink));
+  }
+  .p360-avatar{
+    width:72px; height:72px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:26px;
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    box-shadow: 0 6px 18px rgba(107,90,237,.28);
+    flex-shrink:0;
+  }
+  .p360-id{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .p360-id h1{
+    margin:0; font-size:22px; font-weight:800; color:var(--hub-text);
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .p360-id .uname{
+    font-family:var(--hub-mono); font-size:14px; color:var(--hub-text-mute);
+    background:#f6f4ff; border:1px solid var(--hub-border);
+    padding:2px 8px; border-radius:6px;
+  }
+  .p360-id .meta{
+    display:flex; gap:14px; flex-wrap:wrap; color:var(--hub-text-soft);
+    font-size:13px;
+  }
+  .p360-id .meta i{ color:var(--hub-brand-ink); margin-inline-end:5px; }
+  .p360-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* ── Tabs ────────────────────────────────────────────────── */
+  .p360-tabs{
+    display:flex; gap:4px; flex-wrap:wrap;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-lg);
+    padding: 6px;
+    margin-bottom: var(--hub-gap-section);
+    box-shadow: var(--hub-sh-sm);
+  }
+  .p360-tab{
+    background: transparent; border:0;
+    padding: 9px 14px; border-radius: 8px;
+    font-family:inherit; font-size:13px; font-weight:700;
+    color: var(--hub-text-soft); cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition: background var(--hub-anim-fast) var(--hub-ease),
+                color var(--hub-anim-fast) var(--hub-ease);
+  }
+  .p360-tab:hover{ background:#f6f4ff; color: var(--hub-text); }
+  .p360-tab.is-active{
+    background: linear-gradient(180deg, var(--hub-brand), var(--hub-brand-ink));
+    color:#fff;
+    box-shadow: 0 2px 8px rgba(107,90,237,.30);
+  }
+  .p360-tab .count{
+    font-size:11px; font-weight:800;
+    background: rgba(255,255,255,.25);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .p360-tab:not(.is-active) .count{
+    background: #ece9ff; color: var(--hub-brand-ink);
+  }
+  .p360-pane{ display:none; }
+  .p360-pane.is-active{ display:block; }
+
+  /* ── Info card (key/value rows) ──────────────────────────── */
+  .p360-kv{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+    gap: 6px 18px;
+  }
+  .p360-kv .row{
+    display:flex; justify-content:space-between; gap:10px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--hub-border-soft);
+    font-size: 13px;
+  }
+  .p360-kv .row .k{ color: var(--hub-text-mute); font-weight:600; }
+  .p360-kv .row .v{
+    color: var(--hub-text); font-weight:700;
+    text-align:end; overflow:hidden; text-overflow:ellipsis;
+    max-width: 60%;
+  }
+  .p360-kv .row .v.mono{ font-family: var(--hub-mono); font-size:12.5px; }
+  .p360-kv .row .v.muted{ color: var(--hub-text-mute); font-weight:500; }
+
+  /* ── Quota bar ──────────────────────────────────────────── */
+  .p360-quota{
+    background:#fafbff; border:1px solid var(--hub-border);
+    border-radius: var(--hub-r-lg); padding: 14px 16px;
+    margin-bottom: var(--hub-gap-md);
+  }
+  .p360-quota .head{
+    display:flex; justify-content:space-between; margin-bottom:8px;
+    font-size:13px; font-weight:700; color:var(--hub-text);
+  }
+  .p360-quota .sub{
+    margin-top:6px; font-size:11.5px; color:var(--hub-text-mute);
+    display:flex; justify-content:space-between;
+  }
+</style>
+{% endblock %}
+
+{# ── helper macros (formatting) ─────────────────────────── #}
+{% macro fmt_bytes_mb(mb) -%}
+  {%- set mb = mb|float -%}
+  {%- if mb >= 1024 * 1024 -%}{{ "%.2f TB"|format(mb / 1024 / 1024) }}
+  {%- elif mb >= 1024 -%}{{ "%.2f GB"|format(mb / 1024) }}
+  {%- else -%}{{ "%.0f MB"|format(mb) }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_speed(kbps) -%}
+  {%- set k = kbps|int -%}
+  {%- if k >= 1024 -%}{{ "%.1f Mbps"|format(k / 1024) }}
+  {%- elif k > 0 -%}{{ k }} Kbps
+  {%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_dur(secs) -%}
+  {%- set s = secs|int -%}
+  {%- if s >= 86400 -%}{{ (s // 86400) }} يوم {{ ((s % 86400) // 3600) }}س
+  {%- elif s >= 3600 -%}{{ (s // 3600) }}س {{ ((s % 3600) // 60) }}د
+  {%- elif s >= 60 -%}{{ (s // 60) }}د
+  {%- else -%}{{ s }}ث{%- endif -%}
+{%- endmacro %}
+
+{% macro status_pill(s) -%}
+  {%- if s == "enabled" -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- elif s == "disabled" -%}{{ hub.pill("معطَّل", variant="red") }}
+  {%- elif s == "expired" -%}{{ hub.pill("منتهٍ", variant="amber") }}
+  {%- elif s == "suspended" -%}{{ hub.pill("مجمَّد", variant="amber") }}
+  {%- elif s == "pending" -%}{{ hub.pill("معلَّق", variant="grey") }}
+  {%- elif s == "banned" -%}{{ hub.pill("محظور", variant="red") }}
+  {%- else -%}{{ hub.pill(s or "—", variant="grey") }}{%- endif -%}
+{%- endmacro %}
+
+
+{% block content %}
+
+{# ═══ 1. HERO ═════════════════════════════════════════════════ #}
+{%- set initials = (sub.full_name or sub.username)[:2]|upper -%}
+<div class="p360-hero">
+  <div class="p360-avatar">{{ initials }}</div>
+  <div class="p360-id">
+    <h1>
+      {{ sub.full_name or sub.username }}
+      <span class="uname">@{{ sub.username }}</span>
+      {{ status_pill(sub.status) }}
+      {% if profile.online_now > 0 %}{{ hub.pill("متصل الآن", variant="green") }}{% endif %}
+    </h1>
+    <div class="meta">
+      {% if sub.mobile %}<span><i class="fa-solid fa-phone"></i>{{ sub.mobile }}</span>{% endif %}
+      {% if sub.email %}<span><i class="fa-solid fa-envelope"></i>{{ sub.email }}</span>{% endif %}
+      {% if plan %}<span><i class="fa-solid fa-box-open"></i>{{ plan.name }}</span>{% endif %}
+      {% if sub.city or sub.address %}<span><i class="fa-solid fa-location-dot"></i>{{ sub.city }}{% if sub.address %} — {{ sub.address }}{% endif %}</span>{% endif %}
+      {% if sub.expire_at %}<span><i class="fa-solid fa-hourglass-half"></i>ينتهي: {{ sub.expire_at }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="p360-actions">
+    {{ hub.btn("تعديل", href=url_for("radius.users_edit", username=sub.username), variant="primary", icon="pen-to-square") }}
+    {{ hub.btn("الماليّة", href=url_for("radius.users_finance", username=sub.username), variant="secondary", icon="wallet") }}
+    {{ hub.btn("القائمة", href=url_for("radius.users_list"), variant="ghost", icon="list") }}
+  </div>
+</div>
+
+
+{# ═══ 2. KPI STRIP ════════════════════════════════════════════ #}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("سرعة التنزيل", fmt_speed(profile.speed_dn), icon="download",  variant="brand") }}
+  {{ hub.kpi("سرعة الرفع",   fmt_speed(profile.speed_up), icon="upload",    variant="blue") }}
+  {{ hub.kpi("الكوتا الكلية", fmt_bytes_mb(profile.quota_total_mb), icon="database", variant="amber",
+             sub="حدّ مسموح") }}
+  {{ hub.kpi("المستخدم",      fmt_bytes_mb(profile.used_mb),        icon="gauge",    variant="green",
+             sub=(profile.n_sessions|string + " جلسة")) }}
+  {{ hub.kpi("المتبقّي",      fmt_bytes_mb(profile.remaining_mb),   icon="hourglass-half", variant="red") }}
+  {{ hub.kpi("الرصيد",        "%.2f"|format(profile.balance|float), icon="coins",    variant="green") }}
+</div>
+
+
+{# ═══ 3. TABS NAV ═════════════════════════════════════════════ #}
+<div class="p360-tabs" role="tablist">
+  <button type="button" class="p360-tab is-active" data-tab="info">
+    <i class="fa-solid fa-circle-info"></i> معلومات
+  </button>
+  <button type="button" class="p360-tab" data-tab="events">
+    <i class="fa-solid fa-clock-rotate-left"></i> الأحداث
+    {% if own_events %}<span class="count">{{ own_events|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="invoices">
+    <i class="fa-solid fa-file-invoice-dollar"></i> فواتير
+    {% if invoices %}<span class="count">{{ invoices|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="recharges">
+    <i class="fa-solid fa-money-bill-trend-up"></i> عمليات شحن
+    {% if payments %}<span class="count">{{ payments|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="sessions">
+    <i class="fa-solid fa-plug"></i> الجلسات
+    {% if session_rows %}<span class="count">{{ session_rows|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="daily">
+    <i class="fa-solid fa-calendar-day"></i> الاستخدام اليومي
+  </button>
+  <button type="button" class="p360-tab" data-tab="mgr">
+    <i class="fa-solid fa-user-tie"></i> أحداث المدراء
+    {% if manager_events %}<span class="count">{{ manager_events|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="bw">
+    <i class="fa-solid fa-gauge-high"></i> باندويث
+  </button>
+  <button type="button" class="p360-tab" data-tab="cards">
+    <i class="fa-solid fa-id-card"></i> الكروت المستخدمة
+    {% if used_cards %}<span class="count">{{ used_cards|length }}</span>{% endif %}
+  </button>
+  <button type="button" class="p360-tab" data-tab="ledger">
+    <i class="fa-solid fa-book"></i> كشف الحساب
+  </button>
+</div>
+
+
+{# ═══ 4. TAB PANES ════════════════════════════════════════════ #}
+
+{# ─── pane: INFO ─── #}
+<div class="p360-pane is-active" data-pane="info">
+
+  <div class="p360-quota">
+    <div class="head">
+      <span><i class="fa-solid fa-database"></i> استهلاك الكوتا</span>
+      <span>{{ fmt_bytes_mb(profile.used_mb) }} / {{ fmt_bytes_mb(profile.quota_total_mb) }}</span>
+    </div>
+    {%- set pct = (profile.used_mb / profile.quota_total_mb * 100) if profile.quota_total_mb else 0 -%}
+    {{ hub.progress(pct) }}
+    <div class="sub">
+      <span>متبقّي: {{ fmt_bytes_mb(profile.remaining_mb) }}</span>
+      <span>{{ "%.1f%%"|format(pct) }}</span>
+    </div>
+  </div>
+
+  <div class="hub-grid-1-1">
+    {% call hub.section("بيانات الحساب", icon="user") %}
+      <div class="p360-kv">
+        <div class="row"><span class="k">اسم المستخدم</span><span class="v mono">{{ sub.username }}</span></div>
+        <div class="row"><span class="k">الاسم الكامل</span><span class="v">{{ sub.full_name or "—" }}</span></div>
+        <div class="row"><span class="k">اسم الأب</span><span class="v">{{ sub.father_name or "—" }}</span></div>
+        <div class="row"><span class="k">الجوّال</span><span class="v mono">{{ sub.mobile or "—" }}</span></div>
+        <div class="row"><span class="k">البريد</span><span class="v">{{ sub.email or "—" }}</span></div>
+        <div class="row"><span class="k">الجنسية</span><span class="v">{{ sub.nationality or "—" }}</span></div>
+        <div class="row"><span class="k">الرقم الوطني</span><span class="v mono">{{ sub.national_id or "—" }}</span></div>
+        <div class="row"><span class="k">المدينة</span><span class="v">{{ sub.city or "—" }}</span></div>
+        <div class="row"><span class="k">المنطقة</span><span class="v">{{ sub.district or "—" }}</span></div>
+        <div class="row"><span class="k">العنوان</span><span class="v">{{ sub.address or "—" }}</span></div>
+        <div class="row"><span class="k">نوع الحساب</span><span class="v">{{ sub.account_type or "—" }}</span></div>
+        <div class="row"><span class="k">المجموعة</span><span class="v">{{ sub.group or "—" }}</span></div>
+      </div>
+    {% endcall %}
+
+    {% call hub.section("الباقة + الشبكة", icon="network-wired") %}
+      <div class="p360-kv">
+        <div class="row"><span class="k">الباقة</span><span class="v">{{ plan.name if plan else "—" }}</span></div>
+        <div class="row"><span class="k">نوع الخدمة</span><span class="v">{{ sub.service_type or "—" }}</span></div>
+        <div class="row"><span class="k">نوع المستخدم</span><span class="v">{{ sub.user_type or "—" }}</span></div>
+        <div class="row"><span class="k">سرعة التنزيل</span><span class="v">{{ fmt_speed(profile.speed_dn) }}</span></div>
+        <div class="row"><span class="k">سرعة الرفع</span><span class="v">{{ fmt_speed(profile.speed_up) }}</span></div>
+        <div class="row"><span class="k">سرعة مخصّصة</span><span class="v">{{ "نعم" if sub.custom_speed else "لا" }}</span></div>
+        <div class="row"><span class="k">سرعة مؤقّتة</span><span class="v">{{ "نعم" if sub.temporary_speed else "لا" }}</span></div>
+        <div class="row"><span class="k">MAC مقفل</span><span class="v mono">{{ sub.mac_lock or "—" }}</span></div>
+        <div class="row"><span class="k">IP ثابت</span><span class="v mono">{{ sub.static_ip or "—" }}</span></div>
+        <div class="row"><span class="k">VLAN</span><span class="v">{{ sub.vlan_id or "—" }}</span></div>
+        <div class="row"><span class="k">حد الجلسات المتزامنة</span><span class="v">{{ sub.override_concurrent or "—" }}</span></div>
+        <div class="row"><span class="k">حد الأجهزة</span><span class="v">{{ sub.device_count or "—" }}</span></div>
+        <div class="row"><span class="k">Pool</span><span class="v mono">{{ sub.pool or "—" }}</span></div>
+        <div class="row"><span class="k">Caller-ID</span><span class="v mono">{{ sub.caller_id or "—" }}</span></div>
+      </div>
+    {% endcall %}
+  </div>
+
+  <div class="hub-grid-1-1">
+    {% call hub.section("الحالة + الوقت", icon="clock") %}
+      <div class="p360-kv">
+        <div class="row"><span class="k">الحالة</span><span class="v">{{ status_pill(sub.status) }}</span></div>
+        <div class="row"><span class="k">التجديد التلقائي</span><span class="v">{{ "مُفعَّل" if sub.auto_renewal else "لا" }}</span></div>
+        <div class="row"><span class="k">أوّل دخول</span><span class="v muted">{{ sub.first_login_at or "—" }}</span></div>
+        <div class="row"><span class="k">آخر دخول</span><span class="v muted">{{ sub.last_login_at or "—" }}</span></div>
+        <div class="row"><span class="k">آخر ظهور</span><span class="v muted">{{ sub.last_seen_at or "—" }}</span></div>
+        <div class="row"><span class="k">تاريخ الانتهاء</span><span class="v muted">{{ sub.expire_at or "—" }}</span></div>
+        <div class="row"><span class="k">تاريخ الإنشاء</span><span class="v muted">{{ sub.created_at or "—" }}</span></div>
+        <div class="row"><span class="k">آخر تعديل</span><span class="v muted">{{ sub.updated_at or "—" }}</span></div>
+      </div>
+    {% endcall %}
+
+    {% call hub.section("الحدود + الكوتا", icon="ruler-combined") %}
+      <div class="p360-kv">
+        <div class="row"><span class="k">كوتا التنزيل</span><span class="v">{{ fmt_bytes_mb(sub.download_quota_mb) if sub.download_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">كوتا الرفع</span><span class="v">{{ fmt_bytes_mb(sub.upload_quota_mb) if sub.upload_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">كوتا مدمجة</span><span class="v">{{ fmt_bytes_mb(sub.combined_quota_mb) if sub.combined_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">إجمالي وقت الاتصال (دقائق)</span><span class="v">{{ sub.total_connection_time_min or "—" }}</span></div>
+        <div class="row"><span class="k">حد الاتصال اليومي (دقائق)</span><span class="v">{{ sub.daily_connection_time_min or "—" }}</span></div>
+        <div class="row"><span class="k">أيام العمل</span><span class="v">{{ sub.working_days or "—" }}</span></div>
+        <div class="row"><span class="k">MACs المسموحة</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
+        <div class="row"><span class="k">الرصيد</span><span class="v">{{ "%.2f"|format(sub.balance|float) }}</span></div>
+        <div class="row"><span class="k">المرجع المالي</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
+        <div class="row"><span class="k">طريقة الدفع</span><span class="v">{{ sub.payment_method or "—" }}</span></div>
+      </div>
+    {% endcall %}
+  </div>
+
+  {% if sub.remark %}
+    {% call hub.section("ملاحظات", icon="note-sticky") %}
+      <div style="white-space:pre-wrap; color:var(--hub-text); font-size:13px;">{{ sub.remark }}</div>
+    {% endcall %}
+  {% endif %}
+</div>
+
+
+{# ─── pane: EVENTS (own events) ─── #}
+<div class="p360-pane" data-pane="events">
+  {% if own_events %}
+    {% call hub.section("الأحداث الخاصّة بالمشترك", icon="clock-rotate-left",
+                        meta=(own_events|length)|string + " حدث", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>الوقت</th><th>الحدث</th><th>المنفِّذ</th><th>تفاصيل</th>
+          </tr></thead>
+          <tbody>
+            {% for e in own_events %}
+            <tr>
+              <td class="small muted">{{ e.created_at or e.ts or "—" }}</td>
+              <td><strong>{{ e.action or e.event or "—" }}</strong></td>
+              <td class="small">{{ e.actor or "—" }}</td>
+              <td class="small mono">{{ (e.payload or {})|tojson if e.payload else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا أحداث مسجَّلة", sub="لا يوجد سجلّ لهذا المشترك بعد.", icon="clock-rotate-left") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: INVOICES ─── #}
+<div class="p360-pane" data-pane="invoices">
+  {% if invoices %}
+    {% call hub.section("فواتير المشترك", icon="file-invoice-dollar",
+                        meta=(invoices|length)|string + " فاتورة", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>#</th><th>التاريخ</th><th>الوصف</th>
+            <th class="num">المبلغ</th><th>الحالة</th>
+          </tr></thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td class="mono">{{ inv.id or inv.invoice_number or "—" }}</td>
+              <td class="small muted">{{ inv.created_at or inv.issued_at or "—" }}</td>
+              <td>{{ inv.description or inv.plan_name or "—" }}</td>
+              <td class="num">{{ "%.2f"|format((inv.amount or 0)|float) }}</td>
+              <td>
+                {%- set st = inv.status or "pending" -%}
+                {%- if st == "paid" -%}{{ hub.pill("مدفوعة", variant="green") }}
+                {%- elif st == "overdue" -%}{{ hub.pill("متأخّرة", variant="red") }}
+                {%- else -%}{{ hub.pill(st, variant="grey") }}{%- endif -%}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا فواتير", sub="لم تُصدَر أيّ فاتورة لهذا المشترك بعد.", icon="file-invoice") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: RECHARGES (payments / card recharges) ─── #}
+<div class="p360-pane" data-pane="recharges">
+  {% if payments %}
+    {% call hub.section("عمليات الشحن", icon="money-bill-trend-up",
+                        meta=(payments|length)|string + " عملية", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>التاريخ</th><th>الطريقة</th><th>المرجع</th>
+            <th class="num">المبلغ</th><th>ملاحظة</th>
+          </tr></thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td class="small muted">{{ p.created_at or p.paid_at or "—" }}</td>
+              <td>{{ p.method or "—" }}</td>
+              <td class="mono small">{{ p.reference or p.txn_id or "—" }}</td>
+              <td class="num">{{ "%.2f"|format((p.amount or 0)|float) }}</td>
+              <td class="small">{{ p.note or "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا عمليات شحن", sub="لم تُسجَّل أيّ مدفوعات لهذا المشترك.", icon="money-bill") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: SESSIONS ─── #}
+<div class="p360-pane" data-pane="sessions">
+  {% if session_rows %}
+    {% call hub.section("جلسات الاتصال", icon="plug",
+                        meta=(session_rows|length)|string + " جلسة", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>البداية</th><th>المدّة</th>
+            <th>MAC</th><th>IP</th><th>NAS</th>
+            <th class="num">تنزيل</th><th class="num">رفع</th><th>الحالة</th>
+          </tr></thead>
+          <tbody>
+            {% for s in session_rows %}
+            {%- set live = not s.acctstoptime -%}
+            <tr class="{% if live %}is-live{% endif %}">
+              <td class="small muted">{{ s.acctstarttime or "—" }}</td>
+              <td class="small">{{ fmt_dur(s.acctsessiontime or 0) }}</td>
+              <td class="mono small">{{ s.callingstationid or "—" }}</td>
+              <td class="mono small">{{ s.framedipaddress or "—" }}</td>
+              <td class="small">{{ s.nasipaddress or "—" }}</td>
+              <td class="num">{{ fmt_bytes_mb(((s.acctinputoctets or 0) / 1024 / 1024)) }}</td>
+              <td class="num">{{ fmt_bytes_mb(((s.acctoutputoctets or 0) / 1024 / 1024)) }}</td>
+              <td>
+                {%- if live -%}{{ hub.pill("متصل", variant="green") }}
+                {%- else -%}{{ hub.pill("منتهية", variant="grey") }}{%- endif -%}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا جلسات", sub="لم يسجِّل المشترك أيّ جلسة اتصال بعد.", icon="plug-circle-xmark") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: DAILY USAGE (placeholder) ─── #}
+<div class="p360-pane" data-pane="daily">
+  {{ hub.empty(
+    "الاستخدام اليومي",
+    sub="رسم بياني تفصيلي للاستهلاك اليومي — قريبًا.",
+    icon="chart-line"
+  ) }}
+</div>
+
+
+{# ─── pane: MANAGER EVENTS ─── #}
+<div class="p360-pane" data-pane="mgr">
+  {% if manager_events %}
+    {% call hub.section("الأحداث الإداريّة", icon="user-tie",
+                        meta=(manager_events|length)|string + " حدث", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>الوقت</th><th>المنفِّذ</th><th>الإجراء</th><th>تفاصيل</th>
+          </tr></thead>
+          <tbody>
+            {% for e in manager_events %}
+            <tr>
+              <td class="small muted">{{ e.created_at or e.ts or "—" }}</td>
+              <td><strong>{{ e.actor or "—" }}</strong></td>
+              <td>{{ e.action or e.event or "—" }}</td>
+              <td class="small mono">{{ (e.payload or {})|tojson if e.payload else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا أحداث إداريّة", sub="لم يتدخّل أيّ مدير على هذا المشترك بعد.", icon="user-tie") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: BANDWIDTH (placeholder) ─── #}
+<div class="p360-pane" data-pane="bw">
+  {{ hub.empty(
+    "الباندويث اللحظي",
+    sub="مخطّط لحظي للسرعة (RX/TX) — قريبًا.",
+    icon="gauge-high"
+  ) }}
+</div>
+
+
+{# ─── pane: USED CARDS ─── #}
+<div class="p360-pane" data-pane="cards">
+  {% if used_cards %}
+    {% call hub.section("الكروت المُستخدَمة", icon="id-card",
+                        meta=(used_cards|length)|string + " كرت", flush=True) %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>
+            <th>اسم المستخدم</th><th>كلمة السرّ</th>
+            <th>الباتش</th><th>أوّل استخدام</th>
+            <th>MAC</th><th>الانتهاء</th><th>الحالة</th>
+          </tr></thead>
+          <tbody>
+            {% for c in used_cards %}
+            <tr>
+              <td class="mono">{{ c.username }}</td>
+              <td class="mono small">{{ c.password }}</td>
+              <td class="small">#{{ c.batch_id or "—" }}</td>
+              <td class="small muted">{{ c.first_used_at or "—" }}</td>
+              <td class="mono small">{{ c.used_by_mac or "—" }}</td>
+              <td class="small muted">{{ c.expire_at or "—" }}</td>
+              <td>
+                {%- if c.revoked -%}{{ hub.pill("ملغى", variant="red") }}
+                {%- elif c.used -%}{{ hub.pill("مستخدَم", variant="amber") }}
+                {%- else -%}{{ hub.pill("متاح", variant="green") }}{%- endif -%}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty("لا كروت مرتبطة", sub="لم يستخدم هذا المشترك أيّ كرت.", icon="id-card-clip") }}
+  {% endif %}
+</div>
+
+
+{# ─── pane: LEDGER (loans + ledger overview) ─── #}
+<div class="p360-pane" data-pane="ledger">
+  <div class="hub-grid-1-1">
+    {% call hub.section("القروض / الديون", icon="hand-holding-dollar", flush=True) %}
+      {% if loans %}
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead><tr>
+              <th>التاريخ</th><th>المبلغ</th><th>المتبقّي</th><th>الحالة</th>
+            </tr></thead>
+            <tbody>
+              {% for l in loans %}
+              <tr>
+                <td class="small muted">{{ l.created_at or "—" }}</td>
+                <td class="num">{{ "%.2f"|format((l.amount or 0)|float) }}</td>
+                <td class="num">{{ "%.2f"|format((l.remaining or 0)|float) }}</td>
+                <td>{{ hub.pill(l.status or "نشط", variant="amber") }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ hub.empty("لا قروض", icon="hand-holding-dollar") }}
+      {% endif %}
+    {% endcall %}
+
+    {% call hub.section("ملخّص الحساب", icon="book") %}
+      <div class="p360-kv">
+        <div class="row"><span class="k">الرصيد الحالي</span><span class="v">{{ "%.2f"|format(profile.balance|float) }}</span></div>
+        <div class="row"><span class="k">إجمالي عمليات الشحن</span><span class="v">{{ payments|length }}</span></div>
+        <div class="row"><span class="k">إجمالي الفواتير</span><span class="v">{{ invoices|length }}</span></div>
+        <div class="row"><span class="k">إجمالي القروض</span><span class="v">{{ loans|length }}</span></div>
+        <div class="row"><span class="k">إجمالي الجلسات</span><span class="v">{{ profile.n_sessions }}</span></div>
+        <div class="row"><span class="k">إجمالي وقت الاتصال</span><span class="v">{{ fmt_dur(profile.total_secs) }}</span></div>
+      </div>
+      <div style="margin-top:12px; text-align:start;">
+        {{ hub.btn("فتح صفحة الماليّة الكاملة", href=url_for("radius.users_finance", username=sub.username),
+                   variant="primary", icon="arrow-up-right-from-square") }}
+      </div>
+    {% endcall %}
+  </div>
+</div>
+
+
+{# ═══ 5. TAB JS ════════════════════════════════════════════════ #}
+<script>
+(function(){
+  const tabs  = document.querySelectorAll(".p360-tab");
+  const panes = document.querySelectorAll(".p360-pane");
+  function activate(name){
+    tabs.forEach(t => t.classList.toggle("is-active", t.dataset.tab === name));
+    panes.forEach(p => p.classList.toggle("is-active", p.dataset.pane === name));
+    try { history.replaceState(null, "", "#" + name); } catch(_) {}
+  }
+  tabs.forEach(t => t.addEventListener("click", () => activate(t.dataset.tab)));
+  // open from URL hash
+  const initial = (location.hash || "").replace("#", "");
+  if (initial && document.querySelector('.p360-pane[data-pane="' + initial + '"]')) {
+    activate(initial);
+  }
+})();
+</script>
+
+{% endblock %}

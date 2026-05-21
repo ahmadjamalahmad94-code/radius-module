@@ -84,6 +84,7 @@ def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
     bp.add_url_rule("/users/new", "users_new", users_new, methods=["GET"])
     bp.add_url_rule("/users", "users_create", users_create, methods=["POST"])
+    bp.add_url_rule("/users/<username>/profile", "users_profile", users_profile, methods=["GET"])
     bp.add_url_rule("/users/<username>/edit", "users_edit", users_edit, methods=["GET"])
     bp.add_url_rule("/users/<username>", "users_update", users_update, methods=["POST"])
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
@@ -257,6 +258,151 @@ def users_create():
             user_types=USER_TYPES, is_new=True, speed_rules_panel=None), 400
     flash(f"تم إنشاء المستخدم «{saved.username}».", "success")
     return redirect(url_for("radius.users_list"))
+
+
+def users_profile(username: str):
+    """Subscriber 360° view — premium read-mostly profile page.
+
+    Gathers every public-facing data slice for one subscriber and
+    hands it to the template. The template owns presentation
+    (tabs, hero, KPIs); this function owns DATA aggregation only.
+
+    All queries are READ-ONLY. Mutating actions on this page go
+    through existing routes (users_toggle / users_extend / users_delete
+    / cards.disconnect / etc.) — see SERVICES_COOKBOOK §14.
+    """
+    from ..db.connection import db
+    from ..db.repos import (
+        accounting_repo, audit_repo, cards_repo, invoices_repo, plans_repo,
+        subscribers_repo,
+    )
+
+    tid = _tid()
+    sub_obj = subscribers_repo.get_subscriber(tid, username)
+    if not sub_obj:
+        abort(404)
+
+    plan = plans_repo.get_plan(tid, sub_obj.plan_id) if sub_obj.plan_id else None
+
+    # ── 1. Sessions — same query the Card Checker uses for cards;
+    #    callingstationid + nasporttype + bytes give us the full row.
+    try:
+        session_rows = cards_repo.list_card_accounting(tid, username, limit=200)
+    except Exception:
+        session_rows = []
+
+    # ── 2. Audit events targeting this subscriber.
+    #    audit_repo doesn't have a per-target filter yet — pull recent and
+    #    filter in-memory (cheap for the typical 200-row window).
+    try:
+        all_events = audit_repo.recent(tid, limit=500)
+        events = [
+            e for e in all_events
+            if (e.get("target_type") == "subscriber" and e.get("target_id") == username)
+            or (e.get("target_type") == "card" and e.get("payload", {}).get("username") == username)
+        ][:100]
+    except Exception:
+        events = []
+
+    # Split: actions BY this user vs actions ON this user
+    manager_events = [e for e in events if e.get("actor", "").lower() != username.lower()][:50]
+    own_events     = [e for e in events if e.get("actor", "").lower() == username.lower()][:50]
+
+    # ── 3. Invoices for this subscriber.
+    try:
+        invoices = invoices_repo.list_all(tid, limit=200)
+        invoices = [i for i in invoices if (
+            getattr(i, "subscriber_id", None) == sub_obj.id
+            or getattr(i, "username", "") == username
+        )][:50]
+    except Exception:
+        invoices = []
+
+    # ── 4. Cards used by this subscriber.
+    try:
+        used_cards = db().execute(
+            "SELECT id, username, password, batch_id, used, revoked, "
+            "       expire_at, first_used_at, used_by_mac "
+            "  FROM cards "
+            " WHERE tenant_id = ? AND used_by_subscriber_id = ? "
+            " ORDER BY first_used_at DESC LIMIT 50",
+            (tid, sub_obj.id),
+        ).fetchall()
+        used_cards = [dict(r) for r in used_cards]
+    except Exception:
+        used_cards = []
+
+    # ── 5. Payments + loans + ledger.
+    try:
+        payments = accounting_repo.list_payments(
+            tid, subscriber_id=sub_obj.id, limit=50,
+        )
+    except Exception:
+        payments = []
+    try:
+        loans = accounting_repo.list_loans(
+            tid, subscriber_id=sub_obj.id, limit=50,
+        )
+    except Exception:
+        loans = []
+
+    # ── 6. Aggregates for the KPI strip.
+    # Bytes used: sum of acctinputoctets + acctoutputoctets for THIS username.
+    try:
+        agg_row = db().execute(
+            """SELECT COALESCE(SUM(acctinputoctets), 0)  AS dn,
+                      COALESCE(SUM(acctoutputoctets), 0) AS up,
+                      COALESCE(SUM(acctsessiontime), 0)  AS total_secs,
+                      COUNT(*)                            AS n_sessions,
+                      SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online
+                 FROM radacct
+                WHERE tenant_id = ? AND username = ?""",
+            (tid, username),
+        ).fetchone()
+        agg = dict(agg_row) if agg_row else {}
+    except Exception:
+        agg = {}
+
+    # ── 7. Quota limits — prefer subscriber override, fall back to plan.
+    quota_dn_mb = sub_obj.download_quota_mb or (plan.quota_total_mb if plan else 0) or 0
+    quota_up_mb = sub_obj.upload_quota_mb or 0
+    quota_total_mb = sub_obj.combined_quota_mb or (quota_dn_mb + quota_up_mb)
+    used_bytes = (agg.get("dn") or 0) + (agg.get("up") or 0)
+    used_mb    = used_bytes / (1024 * 1024)
+    remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
+
+    speed_dn = sub_obj.download_speed_kbps or (plan.speed_down_kbps if plan else 0) or 0
+    speed_up = sub_obj.upload_speed_kbps or (plan.speed_up_kbps   if plan else 0) or 0
+
+    profile = {
+        "agg":           agg,
+        "quota_dn_mb":   quota_dn_mb,
+        "quota_up_mb":   quota_up_mb,
+        "quota_total_mb": quota_total_mb,
+        "used_mb":       used_mb,
+        "remaining_mb":  remaining_mb,
+        "speed_dn":      speed_dn,
+        "speed_up":      speed_up,
+        "balance":       sub_obj.balance or 0,
+        "online_now":    int(agg.get("online") or 0),
+        "n_sessions":    int(agg.get("n_sessions") or 0),
+        "total_secs":    int(agg.get("total_secs") or 0),
+    }
+
+    return render_template(
+        "radius/users_profile.html",
+        sub=sub_obj,
+        plan=plan,
+        profile=profile,
+        session_rows=session_rows,
+        events=events,
+        manager_events=manager_events,
+        own_events=own_events,
+        invoices=invoices,
+        used_cards=used_cards,
+        payments=payments,
+        loans=loans,
+    )
 
 
 def users_edit(username: str):
