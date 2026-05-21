@@ -41,29 +41,64 @@
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
   .pr-stage{position:sticky;top:92px}
   .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:520px;display:grid;place-items:center}
-  .pr-card-preview{position:relative;width:min(100%,520px);aspect-ratio:1.575;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,var(--card-a,#0f172a),var(--card-b,#22a7bd));box-shadow:0 24px 70px rgba(15,23,42,.28);color:var(--card-text,#fff);direction:ltr;text-align:left}
+  /* ──────────────────────────────────────────────────────────────────
+     LOCKED CARD DESIGN (Commit 5)
+     The card behaves like a fixed snapshot: when the container shrinks
+     (more cards per row, narrow preview column, mobile, anything),
+     EVERY inner element — text, pills, QR, accent, paddings, radii,
+     shadows — scales together as one locked block. No more "card got
+     smaller but text stayed huge" distortion.
+
+     How it works:
+       1. .pr-card-preview is a CSS container (container-type: inline-size).
+       2. Its `font-size` is tied to its own width via `cqw` units —
+          1em ≈ 3.5% of the card's own width.
+       3. Every child sizes its font + padding + radius + box-shadow in
+          em units, so they all scale linearly with the card.
+       4. Positions stay in % of the card (they already were) so layout
+          relationships are preserved.
+
+     Net effect: drop the card into a 200px slot or a 600px slot, it
+     looks identical, just at different scales. Same is true for the
+     PDF export — see _draw_scaled_template_card in operations.py,
+     which uses pdf.beginForm + pdf.scale() to do the same on paper. */
+  .pr-card-preview{
+    position:relative;width:min(100%,520px);aspect-ratio:1.575;
+    border-radius:1em;overflow:hidden;
+    background:linear-gradient(135deg,var(--card-a,#0f172a),var(--card-b,#22a7bd));
+    box-shadow:0 1.3em 3.9em rgba(15,23,42,.28);
+    color:var(--card-text,#fff);direction:ltr;text-align:left;
+    container-type:inline-size;
+    font-size:3.5cqw;          /* 1em = 3.5% of the card's own width */
+    line-height:1.15;
+  }
+  /* Fallback for browsers without container queries: keep the old
+     viewport-based clamp so the card never looks totally unstyled. */
+  @supports not (container-type:inline-size){
+    .pr-card-preview{font-size:clamp(10px,1.4vw,18px)}
+  }
   .pr-card-preview:before{content:"";position:absolute;inset:auto -10% -35% 40%;height:80%;background:radial-gradient(circle,rgba(255,255,255,.24),transparent 60%)}
   .pr-card-preview:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background:repeating-linear-gradient(90deg,rgba(255,255,255,.8) 0 2px,transparent 2px 12px);mask:linear-gradient(180deg,transparent 0 70%,#000 74% 100%)}
   .pr-card-preview[data-pattern="wave"]:after{opacity:.18;background:radial-gradient(circle at 20% 30%,rgba(255,255,255,.9),transparent 9%),radial-gradient(circle at 70% 70%,rgba(255,255,255,.7),transparent 13%)}
-  .pr-card-preview[data-pattern="grid"]:after{opacity:.18;background:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:18px 18px;mask:none}
+  .pr-card-preview[data-pattern="grid"]:after{opacity:.18;background:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:1em 1em;mask:none}
   .pr-card-preview[data-pattern="clean"]:after{display:none}
   .pr-card-bg-image{position:absolute;inset:0;background-image:var(--card-image,none);background-size:cover;background-position:center;opacity:var(--card-image-opacity,.82);display:none}
   .pr-card-preview.has-image .pr-card-bg-image{display:block}
   .pr-card-preview.has-image:before{background:linear-gradient(135deg,rgba(15,23,42,.68),rgba(34,167,189,.28))}
   .pr-card-bg-image,.pr-card-accent,.pr-brand,.pr-title,.pr-pill,.pr-qr,.pr-meta,.pr-footer{z-index:1}
   .pr-card-preview:before,.pr-card-preview:after{z-index:0}
-  .pr-card-accent{position:absolute;left:5%;right:5%;top:7%;height:2%;border-radius:999px;background:var(--card-accent,#f59e0b)}
-  .pr-brand{position:absolute;left:6%;top:16%;font-size:clamp(13px,1.35vw,18px);font-weight:900;letter-spacing:.01em;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pr-title{position:absolute;left:6%;top:29%;font-size:clamp(15px,1.7vw,24px);font-weight:950;max-width:52%;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pr-pill{position:absolute;left:6%;right:auto;display:grid;grid-template-columns:minmax(30px,26%) minmax(0,1fr);align-items:center;gap:6px;width:46%;border-radius:10px;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:6px 8px;font-weight:900;box-shadow:0 10px 24px rgba(15,23,42,.12)}
-  .pr-pill small{font-size:clamp(8px,.9vw,10px);color:#64748b;font-weight:900}.pr-pill span{font-size:clamp(11px,1.25vw,17px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-card-accent{position:absolute;left:5%;right:5%;top:7%;height:.18em;border-radius:999px;background:var(--card-accent,#f59e0b)}
+  .pr-brand{position:absolute;left:6%;top:16%;font-size:1em;font-weight:900;letter-spacing:.01em;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-title{position:absolute;left:6%;top:29%;font-size:1.4em;font-weight:950;max-width:52%;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-pill{position:absolute;left:6%;right:auto;display:grid;grid-template-columns:minmax(2em,26%) minmax(0,1fr);align-items:center;gap:.35em;width:46%;border-radius:.55em;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:.4em .55em;font-weight:900;box-shadow:0 .55em 1.3em rgba(15,23,42,.12)}
+  .pr-pill small{font-size:.55em;color:#64748b;font-weight:900}.pr-pill span{font-size:.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pr-user{top:44%}.pr-pass{top:60%}
-  .pr-qr{position:absolute;right:7%;top:36%;width:27%;aspect-ratio:1;border-radius:14px;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:clamp(18px,2.5vw,34px);font-weight:950;box-shadow:0 12px 30px rgba(15,23,42,.18)}
+  .pr-qr{position:absolute;right:7%;top:36%;width:27%;aspect-ratio:1;border-radius:.78em;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:2em;font-weight:950;box-shadow:0 .65em 1.65em rgba(15,23,42,.18)}
   .pr-pill,.pr-qr{touch-action:none;cursor:grab;user-select:none}
   .pr-pill:active,.pr-qr:active{cursor:grabbing}
-  .pr-meta{position:absolute;left:6%;right:6%;bottom:16%;font-weight:800;font-size:clamp(9px,.95vw,13px);display:flex;gap:7px;flex-wrap:wrap}
-  .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 10px}
-  .pr-footer{position:absolute;left:6%;right:6%;bottom:5%;color:rgba(255,255,255,.82);font-size:clamp(8px,.86vw,11px);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-meta{position:absolute;left:6%;right:6%;bottom:16%;font-weight:800;font-size:.72em;display:flex;gap:.4em;flex-wrap:wrap}
+  .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:.35em .65em}
+  .pr-footer{position:absolute;left:6%;right:6%;bottom:5%;color:rgba(255,255,255,.82);font-size:.62em;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pr-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
   @media(max-width:1000px){.pr-data{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .pr-kpi{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-card);padding:12px}
@@ -132,7 +167,11 @@
   .pt-fragment-head small{display:block;color:var(--hub-text-mute);font-weight:800}
   .pt-fragment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   @media(max-width:720px){.pt-fragment-grid{grid-template-columns:1fr}}
-  .pt-fragment-grid .pr-card-preview{width:100%;max-width:none;font-size:11px}
+  /* Override .pr-card-preview's width cap so the grid cell drives the
+     card width — the container-query font-size kicks in from cqw and
+     scales every text element with the card. NO font-size override
+     here, otherwise the cqw chain breaks. */
+  .pt-fragment-grid .pr-card-preview{width:100%;max-width:none}
   .pt-fragment-note{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.6}
   .pt-fragment-loading{opacity:.55;pointer-events:none;transition:opacity .15s}
   /* Default-template marker (Commit 4) */
@@ -245,7 +284,12 @@
       <section class="export-panel">
         <div class="pr-panel-head">
           <h3><i class="fa-solid fa-eye"></i> معاينة حية</h3>
-          <span class="hub-pill hub-pill--cyan" data-preview-hint>اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية</span>
+          <div class="hub-flex-row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="hub-pill" title="التصميم مغلق كقطعة واحدة — يكبر ويصغر بدون تشوّه عند تغيير المقاسات أو عدد البطاقات بالصف">
+              <i class="fa-solid fa-lock"></i> تصميم مغلق
+            </span>
+            <span class="hub-pill hub-pill--cyan" data-preview-hint>اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية</span>
+          </div>
         </div>
         <div class="pr-export-body">
           <div data-preview-mount>
