@@ -1199,6 +1199,193 @@ page can adopt it.
 
 ---
 
+## 15. Subscriber groups (bundle services for many subscribers)
+
+**What it does.** Per-tenant named groups that bundle reusable services
+for a set of subscribers. Each group can optionally bind:
+  - `bandwidth_schedule_id` — a schedule from §22 (auto-applies to members)
+  - `default_plan_id`       — plan auto-assigned to new members
+  - `default_auto_renewal`  — renewal default for members
+  - `working_days`          — CSV of allowed days (sat,sun,mon,...)
+
+The subscriber form's «المجموعة» dropdown is sourced from this list.
+
+### 15.1 Schema (migration 027)
+
+```sql
+CREATE TABLE subscriber_groups (
+    id INTEGER PRIMARY KEY,
+    tenant_id INTEGER NOT NULL,
+    name TEXT NOT NULL,                       -- UNIQUE per tenant
+    description TEXT,
+    bandwidth_schedule_id INTEGER,
+    default_plan_id INTEGER,
+    default_auto_renewal INTEGER DEFAULT 1,
+    working_days TEXT,                        -- CSV
+    created_at TEXT, updated_at TEXT, deleted_at TEXT
+);
+-- + ALTER TABLE subscribers ADD subscriber_group_id INTEGER (FK, nullable)
+```
+
+The `subscriber_group_id` column on `subscribers` is reserved for a
+future FK-based link. The current UI stores the group **name** in the
+legacy `subscribers.group` text column — simpler and avoids touching
+the Subscriber dataclass.
+
+### 15.2 Routes (under `/admin/radius/subscriber-groups`)
+
+| URL | Endpoint | Method |
+|---|---|---|
+| `/`                   | `subscriber_groups_list`   | GET |
+| `/new`                | `subscriber_groups_new`    | GET |
+| `/`                   | `subscriber_groups_create` | POST |
+| `/<gid>/edit`         | `subscriber_groups_edit`   | GET |
+| `/<gid>`              | `subscriber_groups_update` | POST |
+| `/<gid>/delete`       | `subscriber_groups_delete` | POST |
+
+### 15.3 Repo + service
+
+  - `app/radius/db/repos/subscriber_groups_repo.py`
+    — pure SQL (`list_groups / get / get_by_name / create / update /
+    delete (soft) / list_members`). Soft-delete also detaches members
+    by setting `subscribers.subscriber_group_id = NULL`.
+  - `app/radius/services/subscriber_groups.py`
+    — thin wrapper. Adds duplicate-name guard, audit on every mutation.
+
+### 15.4 Templates
+
+  - `radius/subscriber_groups_list.html` — premium hero + 4 KPIs +
+    table with bound-services pills.
+  - `radius/subscriber_groups_form.html` — identity card + services
+    card (schedule + plan + auto-renewal toggle + day chips) + member
+    preview (edit mode only, linking to each 360° profile).
+
+### 15.5 Sidebar
+
+A new item «مجموعات المشتركين» sits under Subscribers, between «إضافة
+مشترك» and «المشتركون المتصلون». Match flag: `m_subscriber_groups =
+('/subscriber-groups' in path)`. Note: the users-list match was
+explicitly narrowed to exclude `/subscriber-groups` so the two don't
+double-highlight.
+
+### 15.6 Edge cases
+
+- Duplicate `(tenant_id, name)` rejected at service layer.
+- Soft-delete detaches members (doesn't cascade-delete them).
+- Repo methods wrap every SQL hit; routes additionally swallow
+  schedule/plan lookup errors with try/except so a broken sub-repo
+  never breaks the form render.
+
+### 15.7 Reusable in
+
+- Future automation: a worker can scan groups and apply
+  `default_auto_renewal` + `bandwidth_schedule_id` to members.
+- Operations: a bulk action could "assign all expired in plan X to
+  group Y" in one shot.
+
+---
+
+## 16. Subscriber form — حساب الإنترنت section pattern
+
+**What it does.** The "Internet account" card at the top of
+`users_form.html` follows a tight set of rules so it stays consistent
+across edits.
+
+### 16.1 What lives in this section (and what doesn't)
+
+| Field | In section | Notes |
+|---|---|---|
+| `username`             | ✅ | readonly on edit |
+| `password`             | ✅ | with eye-toggle reveal button |
+| `service_type`         | ✅ | TWO cards: `hotspot` + `pppoe`; stored as `hotspot`/`pppoe`/`both` |
+| `plan_id`              | ✅ | shows `p.display_name or p.name` |
+| `status`               | ✅ | enabled / disabled / expired / suspended / pending |
+| `manager_id`           | ✅ | dropdown of active admins (full_name + username) |
+| `group`                | ✅ | dropdown sourced from `subscriber_groups_repo.list_groups` |
+| `auto_renewal`         | ✅ | single checkbox |
+| `user_type`            | ❌ | always hard-coded "subscriber" in `_form_dto` |
+| `beneficiary_ref`      | ❌ visible, ✅ hidden | retained via `<input type="hidden">` so existing values round-trip on edit |
+
+### 16.2 The password reveal pattern
+
+```html
+<div class="uf-pw">
+  <input class="hub-input uf-pw-input" type="password" name="password" ...>
+  <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
+          aria-label="إظهار/إخفاء كلمة المرور">
+    <i class="fa-solid fa-eye"></i>
+  </button>
+</div>
+```
+
+JS (inside the bottom IIFE of `users_form.html`):
+```js
+document.querySelectorAll('[data-uf-pw-toggle]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var input = btn.parentElement.querySelector('input.uf-pw-input');
+    var icon  = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text';
+      icon.classList.replace('fa-eye','fa-eye-slash'); }
+    else { input.type = 'password';
+      icon.classList.replace('fa-eye-slash','fa-eye'); }
+  });
+});
+```
+
+Reusable in any form with a sensitive field — wrap input + button in
+`.uf-pw` and add `data-uf-pw-toggle` to the button.
+
+### 16.3 Multi-select service cards
+
+Two `<label class="uf-svc-card">` blocks, each containing a hidden
+`<input type="checkbox" name="service_type" value="hotspot|pppoe">`.
+The DTO combines both checked → `"both"`; one checked → that name;
+neither → falls back to the legacy `service_type` single-field.
+
+CSS uses `:has(input:checked)` for the active style, with a
+`.is-checked` class mirror set by JS so older browsers still get the
+visual.
+
+### 16.4 The "manager + group from DB" pattern
+
+The route hands the template two extras via `_form_select_options()`:
+
+```python
+def _form_select_options() -> dict:
+    tid = _tid()
+    try: from ..db.repos import admins_repo
+    ; admins = [a for a in admins_repo.list_admins() if a.status == "active"]
+    except Exception: admins = []
+    try: from ..db.repos import subscriber_groups_repo
+    ; sgroups = subscriber_groups_repo.list_groups(tid)
+    except Exception: sgroups = []
+    return {"admins": admins, "subscriber_groups": sgroups}
+```
+
+Both calls are wrapped in try/except — if a sub-repo errors the form
+still renders.
+
+### 16.5 Edge cases
+
+- Existing `beneficiary_ref` value is round-tripped via hidden input
+  so removing the visible field doesn't wipe legacy data on save.
+- `user_type` is hard-coded `"subscriber"` in `_form_dto` — never read
+  from the form (the input was removed because this form is
+  subscribers-only).
+- Manager dropdown lists admins globally — admins are not
+  tenant-scoped in this codebase (`list_admins()` takes no `tenant_id`).
+- Group dropdown stores group **name** (not id) — the legacy text
+  column on `subscribers` keeps working without a Subscriber dataclass
+  change.
+
+### 16.6 Reusable in
+
+- Any rich form needing a password reveal button (`.uf-pw` is generic).
+- Any multi-select that should look like cards rather than a list of
+  checkboxes — copy `.uf-svc-cards / .uf-svc-card` styles.
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
