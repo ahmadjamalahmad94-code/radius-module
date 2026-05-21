@@ -40,7 +40,18 @@
   .pr-preset .sw{height:34px;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.4)}
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
   .pr-stage{position:sticky;top:92px}
-  .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:520px;display:grid;place-items:center}
+  /* The designer canvas now caps the card at ~50 % of a comfortable
+     editing area in BOTH directions. Without the max-height, switching
+     to vertical (3:5) lets the card grow to 866 px tall, the text
+     stays tiny, and the user has to scroll to see the whole card.
+     With these caps:
+       landscape (5:3): ~360 × 216 px
+       portrait  (3:5): ~216 × 360 px
+     — both visible without scrolling, font-size still scales via
+     `font-size:3.5cqw`. */
+  .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:420px;display:grid;place-items:center}
+  .pr-canvas-wrap .pr-card-preview{width:min(100%,360px);max-height:46vh;height:auto}
+  .pr-canvas-wrap .pr-card-preview.is-vertical{width:auto;max-width:60%;max-height:50vh;height:50vh}
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
@@ -111,6 +122,23 @@
   .pr-meta{position:absolute;left:6%;right:6%;top:84%;font-weight:800;font-size:.86em;display:flex;gap:.4em;flex-wrap:wrap;line-height:1}
   .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:.25em .55em}
   .pr-footer{position:absolute;left:6%;right:6%;top:95%;color:rgba(255,255,255,.82);font-size:.77em;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Strict file picker for the background image. Replaces the bare
+     <input type=file> with explicit name + size + preview + clear
+     button so the user always sees what they uploaded and gets an
+     inline error when the file is too big / wrong type. */
+  .pr-file-picker{display:grid;gap:8px}
+  .pr-file-trigger{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:9px 14px;border:1px dashed var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-soft);color:var(--hub-text);font-weight:900;cursor:pointer;font-family:inherit;font-size:13px;transition:border-color .15s,background .15s}
+  .pr-file-trigger:hover{border-color:var(--pr-cyan);background:#f0fafd}
+  .pr-file-trigger.is-drag{border-style:solid;border-color:var(--pr-cyan);background:#e6f6fa}
+  .pr-file-info{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-card)}
+  .pr-file-thumb{width:48px;height:32px;object-fit:cover;border-radius:8px;border:1px solid rgba(15,23,42,.12);background:#0f172a}
+  .pr-file-meta{min-width:0;line-height:1.25;direction:ltr;text-align:start}
+  .pr-file-meta strong{display:block;font-size:13px;font-weight:900;color:var(--hub-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pr-file-meta small{display:block;color:var(--hub-text-mute);font-weight:800;font-size:11px}
+  .pr-file-clear{display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border:1px solid var(--hub-border-soft);border-radius:8px;background:transparent;color:var(--hub-text-mute);cursor:pointer;font-family:inherit;font-weight:900;font-size:12px}
+  .pr-file-clear:hover{color:#b91c1c;border-color:#fecaca;background:#fee2e2}
+  .pr-file-error{margin:0;color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800;line-height:1.5}
+  .pr-file-hint{margin:0;color:var(--hub-text-mute);font-weight:700;font-size:11.5px;line-height:1.6}
   .pr-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
   @media(max-width:1000px){.pr-data{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .pr-kpi{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-card);padding:12px}
@@ -438,10 +466,41 @@
               <label class="pr-field">لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="#e8f7fb" data-preview="surfaceColor"></label>
               <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="#ffffff"></label>
             </div>
-            <label class="pr-field" style="margin-top:12px">صورة خلفية من الجهاز
-              <input class="hub-input" type="file" name="background_image" accept="image/png,image/jpeg,image/webp" data-background-image>
-              <small>تظهر فورًا في المعاينة، وتُحفظ داخل القالب في قاعدة البيانات. الحد الحالي 1.5MB.</small>
-            </label>
+            {# Background-image picker (strict).
+               - File input is hidden; the trigger button + drag&drop
+                 zone replaces the bare native widget.
+               - Client-side validation enforces type (png/jpeg/webp)
+                 and size (≤ 1.5 MB) BEFORE the form is submitted,
+                 matching the server-side limits in
+                 routes/print_templates._uploaded_background().
+               - Selected file is shown with its name + human-readable
+                 size + thumbnail; a clear button removes it cleanly
+                 (also resets --card-image on the live preview).
+               - All copy is in Arabic, matching the rest of the form. #}
+            <div class="pr-field" style="margin-top:12px">
+              صورة خلفية من الجهاز
+              <div class="pr-file-picker" data-bg-picker>
+                <input type="file" name="background_image"
+                       accept="image/png,image/jpeg,image/webp"
+                       data-background-image hidden>
+                <button type="button" class="pr-file-trigger" data-bg-trigger>
+                  <i class="fa-solid fa-image"></i> اختر صورة الخلفية
+                </button>
+                <div class="pr-file-info" hidden data-bg-info>
+                  <img class="pr-file-thumb" data-bg-thumb alt="">
+                  <div class="pr-file-meta">
+                    <strong data-bg-name></strong>
+                    <small data-bg-size></small>
+                  </div>
+                  <button type="button" class="pr-file-clear" data-bg-clear
+                          title="إزالة الصورة">
+                    <i class="fa-solid fa-xmark"></i> إزالة
+                  </button>
+                </div>
+                <p class="pr-file-error" hidden data-bg-error role="alert"></p>
+                <small class="pr-file-hint">PNG / JPG / WEBP — حد أقصى 1.5MB. تُحفظ داخل القالب نفسه (data URL).</small>
+              </div>
+            </div>
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
@@ -751,24 +810,103 @@
   }));
   if(form) form.addEventListener('input', update);
   if(form) form.addEventListener('change', update);
-  const bgInput = form && form.querySelector('[data-background-image]');
-  if(bgInput){
-    bgInput.addEventListener('change', () => {
-      const file = bgInput.files && bgInput.files[0];
-      if(!file){
-        card.style.setProperty('--card-image', 'none');
-        card.classList.remove('has-image');
+  // Background-image picker — strict client-side validation that
+  // mirrors the server side (`_uploaded_background` in
+  // routes/print_templates.py). 1.5 MB cap, png/jpg/webp only,
+  // inline error on rejection, thumbnail + filename + human-readable
+  // size on acceptance, and a clear button that fully resets state.
+  (function bgPicker(){
+    const picker = root.querySelector('[data-bg-picker]');
+    if(!picker || !card) return;
+    const input   = picker.querySelector('[data-background-image]');
+    const trigger = picker.querySelector('[data-bg-trigger]');
+    const info    = picker.querySelector('[data-bg-info]');
+    const thumb   = picker.querySelector('[data-bg-thumb]');
+    const nameEl  = picker.querySelector('[data-bg-name]');
+    const sizeEl  = picker.querySelector('[data-bg-size]');
+    const clearBtn= picker.querySelector('[data-bg-clear]');
+    const errorEl = picker.querySelector('[data-bg-error]');
+    if(!input || !trigger) return;
+    const MAX_BYTES = 1_500_000; // matches RadiusError("حجم صورة الخلفية ...")
+    const ALLOWED = new Set(['image/png','image/jpeg','image/jpg','image/webp']);
+    function setError(msg){
+      if(!errorEl) return;
+      if(msg){ errorEl.textContent = msg; errorEl.hidden = false; }
+      else   { errorEl.textContent = '';  errorEl.hidden = true;  }
+    }
+    function formatSize(b){
+      if(b < 1024) return b + ' B';
+      if(b < 1048576) return (Math.round(b/102.4)/10).toFixed(1) + ' KB';
+      return (Math.round(b/10485.76)/100).toFixed(2) + ' MB';
+    }
+    function resetCardBg(){
+      card.style.setProperty('--card-image', 'none');
+      card.classList.remove('has-image');
+    }
+    function clearAll(){
+      input.value = '';
+      if(info) info.hidden = true;
+      if(thumb) thumb.removeAttribute('src');
+      if(nameEl) nameEl.textContent = '';
+      if(sizeEl) sizeEl.textContent = '';
+      setError('');
+      resetCardBg();
+      update();
+    }
+    function accept(file){
+      const mime = (file.type || '').toLowerCase();
+      if(!ALLOWED.has(mime)){
+        clearAll();
+        setError('نوع الملف غير مدعوم. اختر صورة بصيغة PNG أو JPG أو WEBP.');
         return;
       }
+      if(file.size > MAX_BYTES){
+        clearAll();
+        setError('حجم الصورة ' + formatSize(file.size) + ' تجاوز الحد المسموح 1.5MB. اختر صورة أصغر أو اضغطها.');
+        return;
+      }
+      setError('');
+      if(nameEl) nameEl.textContent = file.name;
+      if(sizeEl) sizeEl.textContent = formatSize(file.size) + ' · ' + (mime.split('/')[1] || '').toUpperCase();
+      if(info) info.hidden = false;
       const reader = new FileReader();
       reader.onload = () => {
-        card.style.setProperty('--card-image', `url("${reader.result}")`);
+        const url = reader.result;
+        if(thumb) thumb.src = url;
+        card.style.setProperty('--card-image', `url("${url}")`);
         card.classList.add('has-image');
         update();
       };
+      reader.onerror = () => setError('تعذّر قراءة الملف. حاول مرة أخرى.');
       reader.readAsDataURL(file);
+    }
+    trigger.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if(file) accept(file); else clearAll();
     });
-  }
+    if(clearBtn) clearBtn.addEventListener('click', clearAll);
+    // Drag & drop on the trigger zone.
+    ['dragenter','dragover'].forEach(evt =>
+      trigger.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation();
+        trigger.classList.add('is-drag');
+      }));
+    ['dragleave','drop'].forEach(evt =>
+      trigger.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation();
+        trigger.classList.remove('is-drag');
+      }));
+    trigger.addEventListener('drop', e => {
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(!file) return;
+      // Re-feed via DataTransfer so the form submits the file too.
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      accept(file);
+    });
+  })();
   function bindDrag(el){
     const prefix = el && el.dataset.drag;
     if(!el || !prefix || !form) return;
