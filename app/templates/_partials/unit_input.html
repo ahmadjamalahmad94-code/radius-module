@@ -97,20 +97,29 @@
   .ui-unit{
     border: 0;
     border-inline-start: 1px solid var(--hub-border);
-    background: linear-gradient(180deg, #faf8ff 0%, #f1edff 100%);
+    /* gradient + dropdown chevron together via shorthand-then-image */
+    background-color: #f1edff;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%236B5AED' d='M1 3l4 5 4-5z'/></svg>"),
+      linear-gradient(180deg, #faf8ff 0%, #f1edff 100%);
+    background-repeat: no-repeat, no-repeat;
+    /* Chevron pinned next to the unit text on the start side (RTL: right,
+       LTR: left) — never above the text. */
+    background-position: left 9px center, 0 0;
+    background-size: 10px 10px, 100% 100%;
     color: var(--hub-brand-ink);
     font-family: inherit;
     font-size: 12.5px; font-weight: 800;
-    padding: 0 24px 0 10px;
+    /* Padding leaves 22px on left (chevron room) + 12px on right (text air) */
+    padding: 0 12px 0 22px;
     cursor: pointer;
     outline: none;
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%236B5AED' d='M5 7 1 3h8z'/></svg>");
-    background-repeat: no-repeat;
-    background-position: left 8px center;
-    background-size: 10px 10px;
-    min-width: 64px;
+    min-width: 78px;
+    text-align: center;
+    line-height: 1;
+    box-sizing: border-box;
   }
   .ui-unit:hover{ background-color: #ece9ff; }
 </style>
@@ -173,16 +182,40 @@
 
 
 {# ── the picker itself ────────────────────────────────────────── #}
-{% macro unit_input_picker(name, value=0, kind="speed", placeholder="0", min=0, step="any") -%}
+{# Optional `units` arg: restrict the dropdown to a subset of the kind's
+   units. Pass codes like ["kbps","Mbps"] to hide Gbps from speed inputs,
+   or ["min","hr"] to hide day/month from a daily-time input. Order is
+   preserved from UI_LABELS — the first matching code becomes the default
+   for zero values.
+
+   Example calls:
+     {{ unit_input_picker(name="download_speed_kbps", value=v, kind="speed",
+                          units=["kbps","Mbps"]) }}
+     {{ unit_input_picker(name="daily_time_limit",   value=v, kind="time",
+                          units=["min","hr"]) }}
+#}
+{% macro unit_input_picker(name, value=0, kind="speed", placeholder="0",
+                           min=0, step="any", units=None) -%}
 {{ unit_input_assets() }}
-{# Pick the best display unit for the supplied base value, then compute
-   the displayed number in that unit. JS still owns the actual sync. #}
+{# Filter the kind's labels by the optional `units` whitelist. #}
+{%- set _labels = [] -%}
+{%- for code, label in UI_LABELS[kind] -%}
+  {%- if units is none or code in units -%}
+    {%- set _ = _labels.append((code, label)) -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if not _labels -%}{# fallback: empty whitelist → use full set #}
+  {%- set _labels = UI_LABELS[kind] -%}
+{%- endif -%}
+{%- set _default_unit = _labels[0][0] -%}
+{# Pick the best display unit for the supplied base value, restricted to
+   the allowed `_labels`. JS still owns the actual sync. #}
 {%- set base = (value|int(default=0)) -%}
 {%- set ratios = UI_RATIOS[kind] -%}
-{%- set _ns = namespace(unit=UI_LABELS[kind][0][0]) -%}
+{%- set _ns = namespace(unit=_default_unit) -%}
 {%- if base > 0 -%}
-  {%- for code, _label in UI_LABELS[kind]|reverse -%}
-    {%- if _ns.unit == UI_LABELS[kind][0][0] and base >= ratios[code] and base % ratios[code] == 0 -%}
+  {%- for code, _label in _labels|reverse -%}
+    {%- if _ns.unit == _default_unit and base >= ratios[code] and base % ratios[code] == 0 -%}
       {%- set _ns.unit = code -%}
     {%- endif -%}
   {%- endfor -%}
@@ -196,7 +229,7 @@
          placeholder="{{ placeholder }}"
          min="{{ min }}" step="{{ step }}">
   <select class="ui-unit">
-    {%- for code, label in UI_LABELS[kind] -%}
+    {%- for code, label in _labels -%}
       <option value="{{ code }}" {% if code == _ns.unit %}selected{% endif %}>{{ label }}</option>
     {%- endfor -%}
   </select>
