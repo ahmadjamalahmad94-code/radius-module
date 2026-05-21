@@ -340,10 +340,33 @@
       </div>
     </div>
 
+    <div class="sr2-row">
+      <div class="sr2-field">
+        <label>جدول محفوظ</label>
+        <select name="sr_source_schedule_id">
+          <option value="">اختيار من الجداول المحفوظة</option>
+          {% for preset in speed_rules_panel.presets or [] %}
+            <option value="{{ preset.id }}">
+              {{ preset.name or ('#' ~ preset.id) }} —
+              {{ preset.target_type }} · {{ preset.starts_at_time }} → {{ preset.ends_at_time }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="sr2-field">
+        <label>اسم النسخة</label>
+        <input name="sr_copy_name" placeholder="اختياري عند النسخ من جدول محفوظ">
+      </div>
+    </div>
+
     <div class="sr2-foot">
       <span class="sr2-help" style="flex:1">
         لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
       </span>
+      <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
+              name="_speed_rule_action" value="copy" formnovalidate>
+        <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+      </button>
       <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
               name="_speed_rule_action" value="manual" formnovalidate>
         <i class="fa-solid fa-check"></i> اعتماد القاعدة
