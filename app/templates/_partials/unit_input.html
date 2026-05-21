@@ -1,0 +1,205 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Unit input picker — reusable "number + unit" form control.
+
+   Usage:
+     {% from "_partials/unit_input.html" import unit_input_picker %}
+     {{ unit_input_picker(
+          name="download_speed_kbps",
+          value=sub.download_speed_kbps or 0,
+          kind="speed"
+        ) }}
+
+   Renders a compact pill: [ numeric input ] [ unit dropdown ]
+   plus a hidden field carrying the value in the canonical base unit
+   (kbps for speed, MB for quota, min for time, KB for size).
+
+   On unit change, the displayed number is automatically converted so
+   the underlying base value stays the same. On value-or-unit change
+   the hidden field is updated.
+
+   Kinds (must mirror app/radius/core/units.py):
+     - speed : kbps (base) / Mbps / Gbps
+     - quota : MB   (base) / GB   / TB
+     - time  : min  (base) / hr   / day  / month
+     - size  : KB   (base) / MB   / GB
+
+   See SERVICES_COOKBOOK §18.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{%- set UI_LABELS = {
+    "speed": [("kbps","Kbps"),("Mbps","Mbps"),("Gbps","Gbps")],
+    "quota": [("MB","MB"),("GB","GB"),("TB","TB")],
+    "time":  [("min","دقائق"),("hr","ساعات"),("day","أيام"),("month","شهور")],
+    "size":  [("KB","KB"),("MB","MB"),("GB","GB")],
+} -%}
+
+{%- set UI_RATIOS = {
+    "speed": {"kbps": 1, "Mbps": 1024, "Gbps": 1048576},
+    "quota": {"MB":   1, "GB":   1024, "TB":   1048576},
+    "time":  {"min":  1, "hr":     60, "day":  1440, "month": 43200},
+    "size":  {"KB":   1, "MB":   1024, "GB":   1048576},
+} -%}
+
+
+{# ── Best-unit picker (Jinja side) — mirrors core/units.py::best_unit ── #}
+{%- macro _best_unit(value, kind) -%}
+{%- set v = (value|int(default=0)) -%}
+{%- if v == 0 -%}
+  {{ UI_LABELS[kind][0][0] }}
+{%- else -%}
+  {%- set best = UI_LABELS[kind][0][0] -%}
+  {%- for code, _label in UI_LABELS[kind]|reverse -%}
+    {%- if best == UI_LABELS[kind][0][0] and v >= UI_RATIOS[kind][code] and v % UI_RATIOS[kind][code] == 0 -%}
+      {%- set best = code -%}
+      {%- if true %}{{ code }}{% endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+
+{# ── one-time CSS + JS ────────────────────────────────────────── #}
+{% macro unit_input_assets() -%}
+<style>
+  .ui-wrap{
+    display: inline-flex; align-items: stretch;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    overflow: hidden;
+    background: var(--hub-bg-card);
+    transition: border-color var(--hub-anim-fast) var(--hub-ease),
+                box-shadow  var(--hub-anim-fast) var(--hub-ease);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .ui-wrap:focus-within{
+    border-color: var(--hub-brand);
+    box-shadow: 0 0 0 3px var(--hub-brand-soft);
+  }
+  .ui-value{
+    flex: 1; min-width: 0;
+    border: 0; outline: none;
+    background: transparent;
+    padding: 8px 12px;
+    font-family: var(--hub-font);
+    font-size: 14px; font-weight: 700;
+    color: var(--hub-text);
+    text-align: start;
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-value::-webkit-outer-spin-button,
+  .ui-value::-webkit-inner-spin-button{
+    -webkit-appearance: none; margin: 0;
+  }
+  .ui-value{ -moz-appearance: textfield; }
+
+  .ui-unit{
+    border: 0;
+    border-inline-start: 1px solid var(--hub-border);
+    background: linear-gradient(180deg, #faf8ff 0%, #f1edff 100%);
+    color: var(--hub-brand-ink);
+    font-family: inherit;
+    font-size: 12.5px; font-weight: 800;
+    padding: 0 24px 0 10px;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%236B5AED' d='M5 7 1 3h8z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: left 8px center;
+    background-size: 10px 10px;
+    min-width: 64px;
+  }
+  .ui-unit:hover{ background-color: #ece9ff; }
+</style>
+
+<script>
+(function(){
+  if (window.__uiInitialized) return;
+  window.__uiInitialized = true;
+
+  const RATIOS = {
+    speed: { kbps: 1, Mbps: 1024, Gbps: 1048576 },
+    quota: { MB:   1, GB:   1024, TB:   1048576 },
+    time:  { min:  1, hr:     60, day:  1440, month: 43200 },
+    size:  { KB:   1, MB:   1024, GB:   1048576 },
+  };
+
+  function round2(n){ return Math.round(n * 100) / 100; }
+
+  function initOne(wrap){
+    const kind   = wrap.dataset.uiKind;
+    const valInp = wrap.querySelector(".ui-value");
+    const unitSel= wrap.querySelector(".ui-unit");
+    const hidden = wrap.querySelector("[data-ui-hidden]");
+    const ratios = RATIOS[kind];
+    if (!ratios) return;
+
+    function sync(){
+      const v = parseFloat(valInp.value);
+      const u = unitSel.value;
+      const base = isFinite(v) ? Math.round(v * ratios[u]) : 0;
+      hidden.value = String(base);
+    }
+    function changeUnit(){
+      // When unit changes, recompute the displayed value so the BASE
+      // value stays the same as it was a moment ago.
+      const baseBefore = parseInt(hidden.value, 10) || 0;
+      const newU = unitSel.value;
+      const displayed = round2(baseBefore / ratios[newU]);
+      valInp.value = displayed;
+      sync();   // make sure hidden is exact
+    }
+    valInp.addEventListener("input", sync);
+    valInp.addEventListener("blur",  sync);
+    unitSel.addEventListener("change", changeUnit);
+
+    sync();   // initial: hidden field already has the right value
+              // from the server-rendered initial display.
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-ui-card]").forEach(initOne);
+  });
+  if (document.readyState !== "loading") {
+    document.querySelectorAll("[data-ui-card]")
+            .forEach(w => { if (!w.__uiInit) { w.__uiInit = true; initOne(w); } });
+  }
+})();
+</script>
+{%- endmacro %}
+
+
+{# ── the picker itself ────────────────────────────────────────── #}
+{% macro unit_input_picker(name, value=0, kind="speed", placeholder="0", min=0, step="any") -%}
+{{ unit_input_assets() }}
+{# Pick the best display unit for the supplied base value, then compute
+   the displayed number in that unit. JS still owns the actual sync. #}
+{%- set base = (value|int(default=0)) -%}
+{%- set ratios = UI_RATIOS[kind] -%}
+{%- set _ns = namespace(unit=UI_LABELS[kind][0][0]) -%}
+{%- if base > 0 -%}
+  {%- for code, _label in UI_LABELS[kind]|reverse -%}
+    {%- if _ns.unit == UI_LABELS[kind][0][0] and base >= ratios[code] and base % ratios[code] == 0 -%}
+      {%- set _ns.unit = code -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- set display = (base / ratios[_ns.unit]) -%}
+{%- if display == display|int -%}{%- set display = display|int -%}{%- endif -%}
+
+<span class="ui-wrap" data-ui-card data-ui-kind="{{ kind }}">
+  <input type="number" class="ui-value"
+         value="{{ display }}"
+         placeholder="{{ placeholder }}"
+         min="{{ min }}" step="{{ step }}">
+  <select class="ui-unit">
+    {%- for code, label in UI_LABELS[kind] -%}
+      <option value="{{ code }}" {% if code == _ns.unit %}selected{% endif %}>{{ label }}</option>
+    {%- endfor -%}
+  </select>
+  <input type="hidden" name="{{ name }}" value="{{ base }}" data-ui-hidden>
+</span>
+{%- endmacro %}
