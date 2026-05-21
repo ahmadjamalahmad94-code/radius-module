@@ -405,6 +405,49 @@ def test_batch_pdf_export_includes_real_card_credentials(client):
     assert jobs[0]["status"] == "success"
 
 
+def test_designer_form_defaults_match_renderer_default_positions(client):
+    """Designer/export/PDF parity guard.
+
+    The interactive designer canvas (`.pr-card-preview` in
+    print_templates.html) renders USER/PASS/QR at the same percentages
+    listed in `_DEFAULT_POSITIONS` inside card_renderer.py. For a
+    newly-created template to look identical in the export preview
+    and the PDF, the designer's mm-based position inputs must default
+    to 0 — that triggers the renderer's fallback to those same
+    canonical fractions instead of treating "10 mm / 24 mm" as a real
+    custom coordinate.
+
+    This test reads the rendered HTML of the designer page and pins
+    each position field's `value=` attribute at 0.
+    """
+    _web_login(client)
+    page = client.get("/admin/radius/print-templates")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    for name in (
+        "username_x", "username_y",
+        "password_x", "password_y",
+        "qr_x", "qr_y",
+    ):
+        # Whitespace-tolerant: matches `name="username_x" ... value="0"`
+        # in either attribute order.
+        assert (
+            f'name="{name}"' in html
+        ), f"position field {name} is missing from the designer form"
+        # The literal value="0" must be present on the same input.
+        # We split around the name= attribute to scope the search to
+        # that input's tag.
+        before, after = html.split(f'name="{name}"', 1)
+        tag_end = after.find(">")
+        assert tag_end != -1
+        tag_attrs = after[:tag_end]
+        # Either order: `value="0"` directly inside the input tag.
+        assert 'value="0"' in tag_attrs, (
+            f'designer form field `{name}` must default to value="0" so '
+            f'the renderer falls back to _DEFAULT_POSITIONS — got: <input ... {name}{tag_attrs}>'
+        )
+
+
 def test_preview_fragment_uses_unified_svg(client):
     """The live preview-fragment HTML must embed the renderer's SVG —
     no leftover HTML card-mock markup."""

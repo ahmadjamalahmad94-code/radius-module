@@ -42,38 +42,48 @@
   .pr-stage{position:sticky;top:92px}
   .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:520px;display:grid;place-items:center}
   /* ──────────────────────────────────────────────────────────────────
-     LOCKED CARD DESIGN (Commit 5)
-     The card behaves like a fixed snapshot: when the container shrinks
-     (more cards per row, narrow preview column, mobile, anything),
-     EVERY inner element — text, pills, QR, accent, paddings, radii,
-     shadows — scales together as one locked block. No more "card got
-     smaller but text stayed huge" distortion.
+     CARD CANVAS — single source of truth, aligned with card_renderer.py
+     ──────────────────────────────────────────────────────────────────
+     Every position and font size below corresponds 1:1 with the
+     `_DEFAULT_POSITIONS` dict in `app/radius/services/card_renderer.py`
+     so the designer canvas (this CSS), the export-preview SVG and the
+     PDF all render at the same proportions.
 
-     How it works:
-       1. .pr-card-preview is a CSS container (container-type: inline-size).
-       2. Its `font-size` is tied to its own width via `cqw` units —
-          1em ≈ 3.5% of the card's own width.
-       3. Every child sizes its font + padding + radius + box-shadow in
-          em units, so they all scale linearly with the card.
-       4. Positions stay in % of the card (they already were) so layout
-          relationships are preserved.
+       Renderer canvas: 1000 × 600 landscape  (5:3)
+                         600 × 1000 portrait (3:5)
+       Root font-size : 3.5cqw → 1em ≈ 3.5 % of card width
+                                       ≈ 35 canvas units on landscape.
 
-     Net effect: drop the card into a 200px slot or a 600px slot, it
-     looks identical, just at different scales. Same is true for the
-     PDF export — see _draw_scaled_template_card in operations.py,
-     which uses pdf.beginForm + pdf.scale() to do the same on paper. */
+       Element       renderer (y, height/size)    → CSS
+       accent        y=0.07,  h=0.018             → top:7%;     height:1.8%
+       brand         y=0.20,  size=0.075·H        → top:20%;    font:1.29em
+       title         y=0.33,  size=0.105·H        → top:33%;    font:1.80em
+       user pill     y=0.50,  h=0.13·H            → top:50%;    height:13%
+       pass pill     y=0.66,  h=0.13·H            → top:66%;    height:13%
+       qr            y=0.36,  x=0.66, size=0.27·W → top:36%;    left:66%;  width:27%
+       meta          y=0.84,  size=0.05·H         → top:84%;    font:0.86em
+       footer        y=0.95,  size=0.045·H        → top:95%;    font:0.77em
+
+     The card is a CSS container (`container-type:inline-size`) so the
+     whole composition scales as a locked block — drop it into a 200 px
+     slot or a 600 px slot, it looks identical, just at different
+     scales. The PDF gets the same property from `pdf.beginForm` +
+     `pdf.scale()` in `card_renderer.render_card_pdf`. */
   .pr-card-preview{
-    position:relative;width:min(100%,520px);aspect-ratio:1.575;
+    position:relative;width:min(100%,520px);
+    aspect-ratio:5/3;             /* = CANVAS_LANDSCAPE 1000:600 */
     border-radius:1em;overflow:hidden;
     background:linear-gradient(135deg,var(--card-a,#0f172a),var(--card-b,#22a7bd));
     box-shadow:0 1.3em 3.9em rgba(15,23,42,.28);
     color:var(--card-text,#fff);direction:ltr;text-align:left;
     container-type:inline-size;
-    font-size:3.5cqw;          /* 1em = 3.5% of the card's own width */
+    font-size:3.5cqw;             /* 1em = 3.5 % of card width */
     line-height:1.15;
   }
-  /* Fallback for browsers without container queries: keep the old
-     viewport-based clamp so the card never looks totally unstyled. */
+  /* Portrait variant uses the renderer's 3:5 canvas. */
+  .pr-card-preview.is-vertical{aspect-ratio:3/5}
+  /* Fallback for browsers without container queries: keep readable
+     text via the legacy viewport clamp. */
   @supports not (container-type:inline-size){
     .pr-card-preview{font-size:clamp(10px,1.4vw,18px)}
   }
@@ -87,18 +97,20 @@
   .pr-card-preview.has-image:before{background:linear-gradient(135deg,rgba(15,23,42,.68),rgba(34,167,189,.28))}
   .pr-card-bg-image,.pr-card-accent,.pr-brand,.pr-title,.pr-pill,.pr-qr,.pr-meta,.pr-footer{z-index:1}
   .pr-card-preview:before,.pr-card-preview:after{z-index:0}
-  .pr-card-accent{position:absolute;left:5%;right:5%;top:7%;height:.18em;border-radius:999px;background:var(--card-accent,#f59e0b)}
-  .pr-brand{position:absolute;left:6%;top:16%;font-size:1em;font-weight:900;letter-spacing:.01em;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pr-title{position:absolute;left:6%;top:29%;font-size:1.4em;font-weight:950;max-width:52%;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pr-pill{position:absolute;left:6%;right:auto;display:grid;grid-template-columns:minmax(2em,26%) minmax(0,1fr);align-items:center;gap:.35em;width:46%;border-radius:.55em;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:.4em .55em;font-weight:900;box-shadow:0 .55em 1.3em rgba(15,23,42,.12)}
-  .pr-pill small{font-size:.55em;color:#64748b;font-weight:900}.pr-pill span{font-size:.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pr-user{top:44%}.pr-pass{top:60%}
-  .pr-qr{position:absolute;right:7%;top:36%;width:27%;aspect-ratio:1;border-radius:.78em;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:2em;font-weight:950;box-shadow:0 .65em 1.65em rgba(15,23,42,.18)}
+  /* Positions + sizes mirror card_renderer._DEFAULT_POSITIONS. */
+  .pr-card-accent{position:absolute;left:5%;right:5%;top:7%;height:1.8%;border-radius:999px;background:var(--card-accent,#f59e0b)}
+  .pr-brand{position:absolute;left:6%;top:20%;font-size:1.29em;font-weight:900;letter-spacing:.01em;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-title{position:absolute;left:6%;top:33%;font-size:1.8em;font-weight:950;max-width:55%;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-pill{position:absolute;left:6%;right:auto;display:grid;grid-template-columns:minmax(2.2em,26%) minmax(0,1fr);align-items:center;gap:.35em;width:46%;height:13%;border-radius:.55em;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:0 .55em;font-weight:900;box-shadow:0 .55em 1.3em rgba(15,23,42,.12);overflow:hidden}
+  .pr-pill small{font-size:.67em;color:#64748b;font-weight:900;line-height:1}
+  .pr-pill span{font-size:1.16em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-user{top:50%}.pr-pass{top:66%}
+  .pr-qr{position:absolute;left:66%;top:36%;width:27%;aspect-ratio:1;border-radius:.78em;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:2em;font-weight:950;box-shadow:0 .65em 1.65em rgba(15,23,42,.18)}
   .pr-pill,.pr-qr{touch-action:none;cursor:grab;user-select:none}
   .pr-pill:active,.pr-qr:active{cursor:grabbing}
-  .pr-meta{position:absolute;left:6%;right:6%;bottom:16%;font-weight:800;font-size:.72em;display:flex;gap:.4em;flex-wrap:wrap}
-  .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:.35em .65em}
-  .pr-footer{position:absolute;left:6%;right:6%;bottom:5%;color:rgba(255,255,255,.82);font-size:.62em;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-meta{position:absolute;left:6%;right:6%;top:84%;font-weight:800;font-size:.86em;display:flex;gap:.4em;flex-wrap:wrap;line-height:1}
+  .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:.25em .55em}
+  .pr-footer{position:absolute;left:6%;right:6%;top:95%;color:rgba(255,255,255,.82);font-size:.77em;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pr-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
   @media(max-width:1000px){.pr-data{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .pr-kpi{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-card);padding:12px}
@@ -467,13 +479,19 @@
               <label class="pr-field">ارتفاع الكرت mm<input class="hub-input" type="number" name="card_height_mm" min="1" step="0.1" value="54"></label>
               <label class="pr-field">حجم الخط<input class="hub-input" type="number" name="font_size" min="6" value="12"></label>
             </div>
+            {# Custom-position fields (mm). Default to 0 so the
+               unified renderer falls back to the canonical
+               `_DEFAULT_POSITIONS` (user 6%/50%, pass 6%/66%,
+               qr 66%/36%) — exactly what the CSS above renders. As
+               soon as the user drags a pill the JS writes the new
+               value here and the renderer honours it. #}
             <div class="pr-grid3" style="margin-top:12px">
-              <label class="pr-field">User X<input class="hub-input" type="number" name="username_x" step="0.1" value="10"></label>
-              <label class="pr-field">User Y<input class="hub-input" type="number" name="username_y" step="0.1" value="24"></label>
-              <label class="pr-field">Pass X<input class="hub-input" type="number" name="password_x" step="0.1" value="10"></label>
-              <label class="pr-field">Pass Y<input class="hub-input" type="number" name="password_y" step="0.1" value="34"></label>
-              <label class="pr-field">QR X<input class="hub-input" type="number" name="qr_x" step="0.1" value="58"></label>
-              <label class="pr-field">QR Y<input class="hub-input" type="number" name="qr_y" step="0.1" value="18"></label>
+              <label class="pr-field">User X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="username_x" step="0.1" value="0"></label>
+              <label class="pr-field">User Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="username_y" step="0.1" value="0"></label>
+              <label class="pr-field">Pass X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="password_x" step="0.1" value="0"></label>
+              <label class="pr-field">Pass Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="password_y" step="0.1" value="0"></label>
+              <label class="pr-field">QR X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="qr_x" step="0.1" value="0"></label>
+              <label class="pr-field">QR Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="qr_y" step="0.1" value="0"></label>
             </div>
           </div>
 
@@ -635,6 +653,12 @@
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
   function cardSize(){
+    // mm card_width_mm / card_height_mm are only used to translate
+    // legacy drag-positions into the renderer's fraction system.
+    // The visual aspect ratio is owned by the CSS class
+    // (.pr-card-preview / .is-vertical), matching the unified
+    // renderer's fixed 1000x600 / 600x1000 canvas — see
+    // _DEFAULT_POSITIONS in card_renderer.py.
     let w = numeric('card_width_mm', 85);
     let h = numeric('card_height_mm', 54);
     if(val('card_orientation','horizontal') === 'vertical' && w > h){
@@ -647,16 +671,30 @@
   function placeElement(selector, prefix, w, h){
     const el = root.querySelector(selector);
     if(!el) return;
-    const x = Math.max(0, Math.min(w, parseFloat(val(`${prefix}_x`, 0)) || 0));
-    const y = Math.max(0, Math.min(h, parseFloat(val(`${prefix}_y`, 0)) || 0));
+    const rawX = parseFloat(val(`${prefix}_x`, 0)) || 0;
+    const rawY = parseFloat(val(`${prefix}_y`, 0)) || 0;
+    // (0, 0) means "use renderer / CSS default position". Clearing the
+    // inline left/top here lets the stylesheet's canonical values from
+    // _DEFAULT_POSITIONS take effect — designer ⇄ export ⇄ PDF parity.
+    if(rawX === 0 && rawY === 0){
+      el.style.left = '';
+      el.style.top = '';
+      el.style.right = '';
+      return;
+    }
+    const x = Math.max(0, Math.min(w, rawX));
+    const y = Math.max(0, Math.min(h, rawY));
     el.style.right = 'auto';
     el.style.left = `${Math.max(0, Math.min(94, (x / w) * 100))}%`;
     el.style.top = `${Math.max(0, Math.min(92, (y / h) * 100))}%`;
   }
   function update(){
     if(!card || !form) return;
-    const size = cardSize();
-    card.style.aspectRatio = `${size.w} / ${size.h}`;
+    // Orientation toggle uses the renderer's canvas ratio (5:3 / 3:5)
+    // rather than the mm dimensions — keeps the designer locked to
+    // exactly what the SVG/PDF will render.
+    const isVertical = val('card_orientation','horizontal') === 'vertical';
+    card.classList.toggle('is-vertical', isVertical);
     card.style.setProperty('--card-a', val('gradient_start','#0f172a'));
     card.style.setProperty('--card-b', val('gradient_end','#22a7bd'));
     card.style.setProperty('--card-accent', val('accent_color','#f59e0b'));
@@ -677,6 +715,11 @@
     show('.pr-user', form.show_username && form.show_username.checked);
     show('.pr-pass', form.show_password && form.show_password.checked);
     show('.pr-qr', form.show_qr && form.show_qr.checked);
+    // `size` is the mm card (default 85x54) — only relevant when a
+    // user has dragged an element to a non-default position; otherwise
+    // placeElement leaves the CSS defaults in place (parity with the
+    // renderer's _DEFAULT_POSITIONS).
+    const size = cardSize();
     placeElement('.pr-user', 'username', size.w, size.h);
     placeElement('.pr-pass', 'password', size.w, size.h);
     placeElement('.pr-qr', 'qr', size.w, size.h);
