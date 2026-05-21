@@ -316,11 +316,22 @@
   @media (max-width: 820px){ .uf-row3{ grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px){ .uf-row3{ grid-template-columns: 1fr; } }
   /* Lock control heights inside .uf-row3 so toggle / unit-picker /
-     time-picker share a baseline. */
+     time-picker render with the SAME pixel-perfect height — no
+     wiggling between rows. height (not min-height) + box-sizing make
+     the three boxes share an identical footprint regardless of their
+     internal padding. */
   .uf-row3 .tsw,
   .uf-row3 .ui-wrap,
-  .uf-row3 .tpc-trigger{ min-height: 40px; }
+  .uf-row3 .tpc-trigger{
+    height: 42px; min-height: 42px;
+    box-sizing: border-box;
+    align-items: center;
+  }
   .uf-row3 .ui-wrap{ display: inline-flex; }   /* defensive */
+  /* The picker's number input sits inside .ui-wrap — center it
+     vertically inside the locked 42px box. */
+  .uf-row3 .ui-wrap .ui-value{ padding-block: 0; height: 100%; }
+  .uf-row3 .ui-wrap .ui-unit { padding-block: 0; height: 100%; }
 
   /* «Rich» hero bar — the section header carries an extra mini-tag,
      a master toggle, and a help line so the whole sub-section reads as
