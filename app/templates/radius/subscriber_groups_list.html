@@ -1,0 +1,101 @@
+{# Subscriber groups list — premium hub-v2.
+   Backend: app/radius/routes/subscriber_groups.py::sg_list
+   Pattern: SERVICES_COOKBOOK §15. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مجموعات المشتركين{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-group"></i>{% endblock %}
+{% block page_title %}مجموعات المشتركين{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "مجموعات المشتركين",
+  subtitle="تجميع المشتركين تحت اسم واحد لتطبيق خدمات مشتركة عليهم: جدولة سرعة، تجديد تلقائي، باقة افتراضية، أيام العمل.",
+  icon="people-group",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.subscriber_groups_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة مجموعة
+    </a>
+  '
+) }}
+
+{# ── KPIs ─────────────────────────────────────────────── #}
+{%- set total_members = items|sum(attribute='members') -%}
+{%- set with_schedule = items|selectattr('bandwidth_schedule_id')|list|length -%}
+{%- set with_plan = items|selectattr('default_plan_id')|list|length -%}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("عدد المجموعات", count, icon="people-group", variant="brand") }}
+  {{ hub.kpi("إجمالي الأعضاء", total_members, icon="users", variant="blue") }}
+  {{ hub.kpi("بجدولة سرعة", with_schedule, icon="gauge-high", variant="amber") }}
+  {{ hub.kpi("ببلاقة افتراضية", with_plan, icon="box-open", variant="green") }}
+</div>
+
+{# ── Table ────────────────────────────────────────────── #}
+{% if not items %}
+  {{ hub.empty(
+    "لا توجد مجموعات بعد",
+    sub="اضغطي «إضافة مجموعة» لإنشاء أوّل مجموعة وربط خدمات بها.",
+    icon="people-group"
+  ) }}
+{% else %}
+  {% call hub.section("المجموعات", icon="table-list",
+                      meta=(items|length)|string + " مجموعة", flush=True) %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead><tr>
+          <th>الاسم</th>
+          <th>الوصف</th>
+          <th class="num">الأعضاء</th>
+          <th>الخدمات المربوطة</th>
+          <th>أيام العمل</th>
+          <th style="width:160px">إجراءات</th>
+        </tr></thead>
+        <tbody>
+          {% for g in items %}
+          <tr>
+            <td>
+              <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}"
+                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+                {{ g.name }}
+              </a>
+            </td>
+            <td class="small muted">{{ g.description or '—' }}</td>
+            <td class="num">{{ g.members }}</td>
+            <td>
+              <div class="hub-flex-row" style="gap:6px;flex-wrap:wrap">
+                {% if g.bandwidth_schedule_id %}{{ hub.pill("جدولة سرعة", variant="amber") }}{% endif %}
+                {% if g.default_plan_id %}{{ hub.pill("باقة افتراضية", variant="brand") }}{% endif %}
+                {% if g.default_auto_renewal %}{{ hub.pill("تجديد تلقائي", variant="green") }}{% endif %}
+                {% if not g.bandwidth_schedule_id and not g.default_plan_id and not g.default_auto_renewal %}
+                  <span class="hub-text-mute">—</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="small">{{ g.working_days or '—' }}</td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                   href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post"
+                      action="{{ url_for('radius.subscriber_groups_delete', gid=g.id) }}"
+                      onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها (لن يُحذفوا).');"
+                      style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endif %}
+
+{% endblock %}
