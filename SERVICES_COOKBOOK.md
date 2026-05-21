@@ -1611,12 +1611,26 @@ form classes (`.uf-*`, `.acs-*`, `.hub-*`).
 
 ---
 
-## 19. Speed-rule schedules — per-subscriber bandwidth windows
+## 19. Speed-rule schedules — per-target bandwidth windows
 
-**What it does.** Operator-facing per-subscriber speed schedule: a list
-of «day + time → speed» rules. Each rule overrides the base plan/account
-speed during its window. When no rule is currently active, the
-subscriber gets their base speed back (restore_mode = profile_default).
+> 🟢 **STATUS: CANONICAL** (2026-05-21). This is the approved block
+> for «specific speed + scheduled speeds» on any target (subscriber,
+> plan/offer, card batch, subscriber group). Do NOT roll a new speed
+> scheduler; embed `_speed_rules_panel.html` instead.
+
+**What it does.** Operator-facing speed schedule: a list of
+«day + time → speed» rules. Each rule overrides the base speed during
+its window. When no rule is currently active, the target gets its
+base speed back (restore_mode = profile_default).
+
+**Live integration sites (all four targets):**
+
+| Page | target_type | Form file |
+|---|---|---|
+| Subscriber (/users/<u>/edit) | `subscriber` | `users_form.html` |
+| Plan / Offer (/plans/<id>/edit) | `plan` | `plans_form.html` |
+| Card batch (/cards/batches/<id>) | `card_batch` | `cards_batch_edit.html` |
+| Subscriber group (/subscriber-groups/<id>/edit) | `subscriber_group` | `subscriber_groups_form.html` |
 
 ### 19.1 Storage — `bandwidth_schedules` table (existing + extended)
 
