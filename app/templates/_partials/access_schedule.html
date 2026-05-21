@@ -288,6 +288,37 @@
     align-self: center;
   }
 
+  /* AM/PM toggle button — sits inside the stepper, after the minute seg. */
+  .acs-time-ampm{
+    margin-inline-start: 6px;
+    align-self: center;
+    background: #fff;
+    border: 1px solid var(--hub-brand-line);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px; font-weight: 800;
+    color: var(--hub-brand-ink);
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 32px;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-time-ampm:hover{
+    background: var(--hub-brand);
+    color: #fff;
+    border-color: transparent;
+  }
+  .acs-time-ampm[data-value="pm"]{
+    background: linear-gradient(135deg, var(--hub-amber-soft), #fff);
+    color: var(--hub-amber-ink);
+    border-color: var(--hub-amber);
+  }
+  .acs-time-ampm[data-value="pm"]:hover{
+    background: var(--hub-amber);
+    color: #fff;
+    border-color: transparent;
+  }
+
   /* (per-picker quick chips moved to vertical stack below — see
      .acs-time-quick / .acs-time-chip further down.) */
 
@@ -372,15 +403,16 @@
   const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
                       wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
 
-  // Per-picker time presets: each chip sets ONE time on its own picker.
-  // 6 chips, stacked vertically next to each picker — cover the whole day.
+  // Per-picker time presets. Labels are 12h with ص/م for display,
+  // but `value` STAYS 24-hour HH:MM — that's what we serialize to JSON
+  // and what server-side access_schedule expects.
   const TIME_PRESETS = [
-    { label: "🌙 00:00", value: "00:00" },
-    { label: "🌃 03:00", value: "03:00" },
-    { label: "🌅 06:00", value: "06:00" },
-    { label: "☀️ 12:00", value: "12:00" },
-    { label: "🌆 18:00", value: "18:00" },
-    { label: "🌜 22:00", value: "22:00" },
+    { label: "🌙 12:00 ص", value: "00:00" },   // midnight
+    { label: "🌃 03:00 ص", value: "03:00" },
+    { label: "🌅 06:00 ص", value: "06:00" },
+    { label: "☀️ 12:00 م", value: "12:00" },   // noon
+    { label: "🌆 06:00 م", value: "18:00" },
+    { label: "🌜 10:00 م", value: "22:00" },
   ];
 
   function readState(card){
@@ -396,16 +428,30 @@
   }
   function pad2(n){ return String(n).padStart(2, "0"); }
 
-  /* Build a single time stepper (HH:MM + ▲▼ + quick chips). */
+  /* 12h ↔ 24h conversion helpers.
+     value24: canonical "HH:MM" in 24-hour (the source of truth + what we
+     save to JSON). The picker DISPLAYS the same time in 12-hour with an
+     ص (AM) / م (PM) toggle. */
+  function to12h(value24){
+    const [h, m] = (value24 || "00:00").split(":").map(x => parseInt(x, 10) || 0);
+    const isPm = h >= 12;
+    let h12 = h % 12; if (h12 === 0) h12 = 12;
+    return { hour: h12, minute: m, ampm: isPm ? "pm" : "am" };
+  }
+
+  /* Build a single time stepper (12h HH:MM + ▲▼ + ص/م toggle + chips). */
   function makeTimePicker(label, initial){
     const wrap = document.createElement("div");
     wrap.className = "acs-time";
     wrap.dataset.timeWrap = "1";
 
-    // Internal sync — assigned later (after chips exist). Stepper handlers
-    // (bump/blur/wheel) call this; it both highlights the active chip and
-    // notifies the parent's onChange.
-    let sync = () => {};
+    // Source of truth. Always 24-hour HH:MM. Mutated by bumps / setValue.
+    let value24 = (initial && /^\d{1,2}:\d{2}$/.test(initial))
+                  ? pad2(parseInt(initial.split(":")[0], 10)) + ":" +
+                    pad2(parseInt(initial.split(":")[1], 10))
+                  : "00:00";
+
+    let externalSync = () => {};
 
     // label
     const lbl = document.createElement("div");
@@ -413,11 +459,14 @@
     lbl.innerHTML = `<i class="fa-solid fa-clock"></i> ${label}`;
     wrap.appendChild(lbl);
 
-    // stepper
+    // stepper container
     const stepper = document.createElement("div");
     stepper.className = "acs-time-stepper";
 
-    function segment(part, value){
+    // Two segments — but only their INPUTS hold a value. The bump logic
+    // mutates value24 (in 24h modular space), then render() pushes the
+    // 12h-derived values back to the inputs.
+    function segment(part){
       const seg = document.createElement("div");
       seg.className = "acs-time-segment";
 
@@ -428,7 +477,6 @@
       const inp = document.createElement("input");
       inp.type = "text"; inp.className = "acs-time-input";
       inp.dataset.part = part;
-      inp.value = pad2(value);
       inp.inputMode = "numeric";
       inp.maxLength = 2;
 
@@ -436,31 +484,40 @@
       down.type = "button"; down.className = "acs-time-step";
       down.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
 
-      const lim = part === "hour" ? [0, 23] : [0, 59];
       function bump(dir){
-        const cur = parseInt(inp.value, 10) || 0;
-        inp.value = pad2(clamp(cur + dir, lim[0], lim[1]));
-        sync();
+        const [h, m] = value24.split(":").map(Number);
+        if (part === "hour")   value24 = pad2((h + dir + 24) % 24) + ":" + pad2(m);
+        else                   value24 = pad2(h) + ":" + pad2((m + dir + 60) % 60);
+        render();
       }
-      up.addEventListener("click", () => bump(1));
+      up.addEventListener("click",   () => bump(1));
       down.addEventListener("click", () => bump(-1));
+
+      // While typing — only update the input string (lazy commit on blur).
       inp.addEventListener("input", () => {
-        const v = inp.value.replace(/\D/g, "").slice(0, 2);
-        inp.value = v;
-        sync();
+        inp.value = inp.value.replace(/\D/g, "").slice(0, 2);
       });
+      // On blur — validate, clamp, fold into value24 with current AM/PM.
       inp.addEventListener("blur", () => {
         const cur = parseInt(inp.value, 10);
-        if (isNaN(cur)) inp.value = pad2(lim[0]);
-        else inp.value = pad2(Math.max(lim[0], Math.min(lim[1], cur)));
-        sync();
+        if (part === "hour"){
+          const h12 = isNaN(cur) ? 12 : Math.max(1, Math.min(12, cur));
+          const [_, m] = value24.split(":").map(Number);
+          const isPm = ampmBtn.dataset.value === "pm";
+          let h24 = h12 % 12;                 // 12 → 0
+          if (isPm) h24 += 12;                // PM offset
+          value24 = pad2(h24) + ":" + pad2(m);
+        } else {
+          const m = isNaN(cur) ? 0 : Math.max(0, Math.min(59, cur));
+          const [h] = value24.split(":").map(Number);
+          value24 = pad2(h) + ":" + pad2(m);
+        }
+        render();
       });
-      // Arrow keys
       inp.addEventListener("keydown", (e) => {
         if (e.key === "ArrowUp")   { e.preventDefault(); bump(1); }
         if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); }
       });
-      // Wheel (mousewheel up/down)
       inp.addEventListener("wheel", (e) => {
         if (document.activeElement !== inp) return;
         e.preventDefault();
@@ -471,29 +528,37 @@
       return { seg, inp };
     }
 
-    const [h, m] = (initial || "00:00").split(":").map(x => parseInt(x, 10) || 0);
-    const hSeg = segment("hour", h);
-    const mSeg = segment("minute", m);
+    const hSeg = segment("hour");
+    const mSeg = segment("minute");
 
     const colon = document.createElement("span");
     colon.className = "acs-time-colon"; colon.textContent = ":";
 
-    // DOM order is hour, colon, minute — combined with `direction: ltr`
-    // on the stepper, the visual order is HH on the LEFT and MM on the
-    // RIGHT (matches the universal HH:MM convention).
+    // AM / PM toggle button (ص = AM, م = PM).
+    const ampmBtn = document.createElement("button");
+    ampmBtn.type = "button"; ampmBtn.className = "acs-time-ampm";
+    ampmBtn.addEventListener("click", () => {
+      const [h, m] = value24.split(":").map(Number);
+      value24 = pad2((h + 12) % 24) + ":" + pad2(m);
+      render();
+    });
+
+    // DOM order (with `direction: ltr` on the stepper):
+    //   [hour ▲▼]  :  [minute ▲▼]  [ص/م]
     stepper.appendChild(hSeg.seg);
     stepper.appendChild(colon);
     stepper.appendChild(mSeg.seg);
+    stepper.appendChild(ampmBtn);
     wrap.appendChild(stepper);
 
-    // Per-picker vertical preset chips (6 stacked rows).
+    // Per-picker quick-pick chips (3-col × 2-row grid, 12h labels).
     const quick = document.createElement("div");
     quick.className = "acs-time-quick";
     const quickBtns = [];
     TIME_PRESETS.forEach(p => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "acs-time-chip";
-      b.dataset.value = p.value;
+      b.dataset.value = p.value;    // value still 24h
       b.textContent = p.label;
       b.addEventListener("click", () => wrap.setValue(p.value));
       quick.appendChild(b);
@@ -501,33 +566,31 @@
     });
     wrap.appendChild(quick);
 
-    function refreshActiveChip(){
-      const v = wrap.readValue();
-      quickBtns.forEach(b => b.classList.toggle("is-active", b.dataset.value === v));
+    function render(){
+      const v = to12h(value24);
+      hSeg.inp.value = pad2(v.hour);
+      mSeg.inp.value = pad2(v.minute);
+      ampmBtn.dataset.value = v.ampm;
+      ampmBtn.textContent = v.ampm === "pm" ? "م" : "ص";
+      // Highlight matching chip (compared against 24h value).
+      quickBtns.forEach(b => b.classList.toggle("is-active", b.dataset.value === value24));
+      externalSync();
     }
 
-    // Public API: read current value as "HH:MM" or "" if blank
-    wrap.readValue = function(){
-      const hv = (hSeg.inp.value || "").trim();
-      const mv = (mSeg.inp.value || "").trim();
-      if (!hv && !mv) return "";
-      return pad2(parseInt(hv,10) || 0) + ":" + pad2(parseInt(mv,10) || 0);
-    };
-    // Allow programmatic set from a preset chip.
+    // Public API — always speaks 24-hour HH:MM externally.
+    wrap.readValue = function(){ return value24; };
     wrap.setValue = function(hhmm){
-      const [h, m] = (hhmm || "00:00").split(":").map(x => parseInt(x,10) || 0);
-      hSeg.inp.value = pad2(h);
-      mSeg.inp.value = pad2(m);
-      sync();
+      if (hhmm && /^\d{1,2}:\d{2}$/.test(hhmm)){
+        const [h, m] = hhmm.split(":").map(Number);
+        value24 = pad2(Math.max(0, Math.min(23, h))) + ":" + pad2(Math.max(0, Math.min(59, m)));
+      } else {
+        value24 = "00:00";
+      }
+      render();
     };
+    wrap.bindSync = function(fn){ externalSync = fn; render(); };
 
-    // Sync hook — set by the parent. The local `sync` (used by the
-    // stepper's bump/blur/wheel handlers) ALSO refreshes the active
-    // chip highlight, so chips stay in lock-step with the steppers.
-    let externalSync = () => {};
-    sync = function(){ refreshActiveChip(); externalSync(); };
-    wrap.bindSync = function(fn){ externalSync = fn; refreshActiveChip(); };
-
+    render();
     return wrap;
   }
 
