@@ -1,6 +1,7 @@
 {# MikroTik connection form — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set ttl = "إضافة اتصال MikroTik" if is_new else "تعديل: " + (item.name or 'اتصال MikroTik') %}
 {% block title %}{{ ttl }}{% endblock %}
@@ -90,24 +91,19 @@
       <div class="mt-field">
         <label>تفعيل TLS</label>
         <div class="mt-chk">
-          <input type="checkbox" name="use_tls" id="mt-tls" value="1" {% if item.use_tls %}checked{% endif %}>
-          <label for="mt-tls" style="margin:0">تشفير الاتصال (TLS)</label>
+          {{ toggle_switch(name="use_tls", checked=item.use_tls, value="1", id="mt-tls", on_label="تشفير الاتصال (TLS)", off_label="بدون TLS") }}
         </div>
       </div>
       <div class="mt-field">
         <label>تحقّق من الشهادة</label>
         <div class="mt-chk">
-          <input type="checkbox" name="verify_tls" id="mt-vtls" value="1"
-                 {% if item.verify_tls or is_new %}checked{% endif %}>
-          <label for="mt-vtls" style="margin:0">رفض الشهادات غير الموثّقة</label>
+          {{ toggle_switch(name="verify_tls", checked=(item.verify_tls or is_new), value="1", id="mt-vtls", on_label="رفض الشهادات غير الموثّقة", off_label="قبول الكل") }}
         </div>
       </div>
       <div class="mt-field full">
         <label>الحالة</label>
         <div class="mt-chk">
-          <input type="checkbox" name="enabled" id="mt-en" value="1"
-                 {% if item.enabled or is_new %}checked{% endif %}>
-          <label for="mt-en" style="margin:0">الاتصال مفعَّل ضمن العاملين</label>
+          {{ toggle_switch(name="enabled", checked=(item.enabled or is_new), value="1", id="mt-en", on_label="الاتصال مفعَّل ضمن العاملين", off_label="معطَّل") }}
         </div>
       </div>
     </div>

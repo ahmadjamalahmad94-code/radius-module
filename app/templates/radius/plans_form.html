@@ -5,6 +5,7 @@
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -223,8 +224,7 @@
             </select></div>
           <div class="pl-field"><label>الحالة</label>
             <div class="pl-chk">
-              <input type="checkbox" name="enabled" id="pl-en" value="1" {% if plan.enabled or is_new %}checked{% endif %}>
-              <label for="pl-en">مفعَّل</label>
+              {{ toggle_switch(name="enabled", checked=(plan.enabled or is_new), value="1", id="pl-en") }}
             </div></div>
           <div class="pl-field"><label>اللون</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}"></div>
@@ -261,7 +261,7 @@
       <div class="pl-section-body">
         <div class="pl-grid">
           <div class="pl-field"><label>تفعيل التحكم بالسرعة</label>
-            <div class="pl-chk"><input type="checkbox" name="speed_control_enabled" id="sc-en" value="1" {% if plan.speed_control_enabled %}checked{% endif %}><label for="sc-en">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="speed_control_enabled", checked=plan.speed_control_enabled, value="1", id="sc-en") }}</div></div>
           <div class="pl-field"><label>سرعة التنزيل</label>
             {{ unit_input_picker(name="speed_down_kbps", value=plan.speed_down_kbps or 0, kind="speed") }}
           </div>
@@ -275,9 +275,9 @@
             {{ unit_input_picker(name="cir_up_kbps", value=plan.cir_up_kbps or 0, kind="speed") }}
           </div>
           <div class="pl-field"><label>السرعة المؤقتة (Burst)</label>
-            <div class="pl-chk"><input type="checkbox" name="burst_enabled" id="b-en" value="1" {% if plan.burst_enabled %}checked{% endif %}><label for="b-en">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="burst_enabled", checked=plan.burst_enabled, value="1", id="b-en") }}</div></div>
           <div class="pl-field"><label>غير محدود ليلًا</label>
-            <div class="pl-chk"><input type="checkbox" name="nightly_unlimited_enabled" id="nu-en" value="1" {% if plan.nightly_unlimited_enabled %}checked{% endif %}><label for="nu-en">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="nightly_unlimited_enabled", checked=plan.nightly_unlimited_enabled, value="1", id="nu-en") }}</div></div>
           <div class="pl-field"><label>سرعة Burst التنزيل</label>
             <input class="hub-input" type="number" min="0" name="burst_down_kbps" value="{{ plan.burst_down_kbps or 0 }}"></div>
           <div class="pl-field"><label>سرعة Burst الرفع</label>
@@ -287,9 +287,9 @@
           <div class="pl-field"><label>مدة Burst (ث)</label>
             <input class="hub-input" type="number" min="0" name="burst_time_sec" value="{{ plan.burst_time_sec or 0 }}"></div>
           <div class="pl-field"><label>توزيع متساوٍ للتنزيل</label>
-            <div class="pl-chk"><input type="checkbox" name="equal_download_speed" id="eds" value="1" {% if plan.equal_download_speed in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eds">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="equal_download_speed", checked=(plan.equal_download_speed in [True,1,'1','t','true','on']), value="1", id="eds") }}</div></div>
           <div class="pl-field"><label>توزيع متساوٍ للرفع</label>
-            <div class="pl-chk"><input type="checkbox" name="equal_upload_speed" id="eus" value="1" {% if plan.equal_upload_speed in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eus">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="equal_upload_speed", checked=(plan.equal_upload_speed in [True,1,'1','t','true','on']), value="1", id="eus") }}</div></div>
         </div>
       </div>
     </section>
@@ -347,15 +347,15 @@
           <div class="pl-field"><label>مهلة الخمول (ث)</label>
             <input class="hub-input" type="number" min="0" name="idle_timeout_sec" value="{{ plan.idle_timeout_sec or 0 }}"></div>
           <div class="pl-field"><label>استخدام مرة واحدة</label>
-            <div class="pl-chk"><input type="checkbox" name="single_use_once" id="suo" value="1" {% if plan.single_use_once %}checked{% endif %}><label for="suo">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="single_use_once", checked=plan.single_use_once, value="1", id="suo") }}</div></div>
           <div class="pl-field"><label>عدد مرات الاستهلاك</label>
             <input class="hub-input" type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}"></div>
           <div class="pl-field"><label>توزيع متساوٍ للكوتا</label>
-            <div class="pl-chk"><input type="checkbox" name="equal_quota_sharing" id="eqs" value="1" {% if plan.equal_quota_sharing in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="eqs">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="equal_quota_sharing", checked=(plan.equal_quota_sharing in [True,1,'1','t','true','on']), value="1", id="eqs") }}</div></div>
           <div class="pl-field"><label>إيقاف عند انتهاء الوقت</label>
-            <div class="pl-chk"><input type="checkbox" name="stop_user_when_time_expires" id="sut" value="1" {% if plan.stop_user_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="sut">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="stop_user_when_time_expires", checked=(plan.stop_user_when_time_expires in [True,1,'1','t','true','on']), value="1", id="sut") }}</div></div>
           <div class="pl-field"><label>تنبيه عند نفاد الكوتا</label>
-            <div class="pl-chk"><input type="checkbox" name="notify_when_quota_reaches_zero" id="nwq" value="1" {% if plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on'] %}checked{% endif %}><label for="nwq">مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="notify_when_quota_reaches_zero", checked=(plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on']), value="1", id="nwq") }}</div></div>
         </div>
       </div>
     </section>
@@ -372,9 +372,9 @@
           <div class="pl-field"><label>صلاحية التذاكر (أيام)</label>
             <input class="hub-input" type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}"></div>
           <div class="pl-field"><label>مشاركة عادلة (FUP)</label>
-            <div class="pl-chk"><input type="checkbox" name="shared_voucher_fup" value="1" {% if plan.shared_voucher_fup in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="shared_voucher_fup", checked=(plan.shared_voucher_fup in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>إرسال تنبيهات</label>
-            <div class="pl-chk"><input type="checkbox" name="send_alerts" value="1" {% if plan.send_alerts in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="send_alerts", checked=(plan.send_alerts in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>طريقة التجديد</label>
             <input class="hub-input" type="text" name="renewal_method" value="{{ plan.renewal_method or '' }}" placeholder="تلقائي / يدوي"></div>
           <div class="pl-field"><label>طريقة الدفع (مرجعي)</label>
@@ -382,31 +382,31 @@
           <div class="pl-field"><label>تاريخ انتهاء الاشتراك</label>
             <input class="hub-input" type="date" name="subscription_expiry_date" value="{{ plan.subscription_expiry_date or '' }}"></div>
           <div class="pl-field"><label>المشترك يقدر يغيّر العرض</label>
-            <div class="pl-chk"><input type="checkbox" name="user_can_change_offer" value="1" {% if plan.user_can_change_offer in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="user_can_change_offer", checked=(plan.user_can_change_offer in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div></div>
           <div class="pl-field"><label>المشترك يطلب تغيير</label>
-            <div class="pl-chk"><input type="checkbox" name="user_can_request_offer_change" value="1" {% if plan.user_can_request_offer_change in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مسموح</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="user_can_request_offer_change", checked=(plan.user_can_request_offer_change in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div></div>
           <div class="pl-field"><label>إجبار شراء بطاقة</label>
-            <div class="pl-chk"><input type="checkbox" name="force_subscriber_to_purchase_card" value="1" {% if plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="force_subscriber_to_purchase_card", checked=(plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>إخفاء الفاتورة</label>
-            <div class="pl-chk"><input type="checkbox" name="hide_invoice" value="1" {% if plan.hide_invoice in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="hide_invoice", checked=(plan.hide_invoice in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>لوحة تحكم المشترك</label>
-            <div class="pl-chk"><input type="checkbox" name="subscriber_control_panel_enabled" value="1" {% if plan.subscriber_control_panel_enabled in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="subscriber_control_panel_enabled", checked=(plan.subscriber_control_panel_enabled in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>منع تغيير الاشتراك (مستخدم)</label>
-            <div class="pl-chk"><input type="checkbox" name="prevent_user_from_changing_subscription" value="1" {% if plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="prevent_user_from_changing_subscription", checked=(plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>منع المدير من تغيير الاشتراك</label>
-            <div class="pl-chk"><input type="checkbox" name="prevent_admin_from_changing_user_subscription" value="1" {% if plan.prevent_admin_from_changing_user_subscription in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="prevent_admin_from_changing_user_subscription", checked=(plan.prevent_admin_from_changing_user_subscription in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>وقت اتصال يومي (دقيقة)</label>
             <input class="hub-input" type="number" min="0" name="daily_connection_time" value="{{ plan.daily_connection_time or '' }}"></div>
           <div class="pl-field"><label>وقت اتصال إنترنت (دقيقة)</label>
             <input class="hub-input" type="number" min="0" name="internet_connection_time" value="{{ plan.internet_connection_time or '' }}"></div>
           <div class="pl-field"><label>حفظ الكوتا عند التفعيل</label>
-            <div class="pl-chk"><input type="checkbox" name="save_remaining_quota_on_activation" value="1" {% if plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="save_remaining_quota_on_activation", checked=(plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>استخدام الكوتا القديمة</label>
-            <div class="pl-chk"><input type="checkbox" name="use_old_quota_and_sessions_on_activation" value="1" {% if plan.use_old_quota_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="use_old_quota_and_sessions_on_activation", checked=(plan.use_old_quota_and_sessions_on_activation in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>حذف الاستخدام القديم</label>
-            <div class="pl-chk"><input type="checkbox" name="delete_usage_data_and_sessions_on_activation" value="1" {% if plan.delete_usage_data_and_sessions_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="delete_usage_data_and_sessions_on_activation", checked=(plan.delete_usage_data_and_sessions_on_activation in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>ترحيل الوقت المتبقي</label>
-            <div class="pl-chk"><input type="checkbox" name="carry_remaining_time_on_activation" value="1" {% if plan.carry_remaining_time_on_activation in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="carry_remaining_time_on_activation", checked=(plan.carry_remaining_time_on_activation in [True,1,'1','t','true','on']), value="1") }}</div></div>
         </div>
       </div>
     </section>
@@ -441,17 +441,17 @@
       <div class="pl-section-body">
         <div class="pl-grid">
           <div class="pl-field"><label>تجديد تلقائي عند انتهاء الكوتا</label>
-            <div class="pl-chk"><input type="checkbox" name="auto_renew_when_quota_expires" value="1" {% if plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_quota_expires", checked=(plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>تجديد تلقائي عند انتهاء الوقت</label>
-            <div class="pl-chk"><input type="checkbox" name="auto_renew_when_time_expires" value="1" {% if plan.auto_renew_when_time_expires in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_time_expires", checked=(plan.auto_renew_when_time_expires in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>سياسة انتهاء الوقت</label>
             <input class="hub-input" type="text" name="time_expiry_policy" value="{{ plan.time_expiry_policy or '' }}" placeholder="حظر / إضافة للطابور / تنبيه فقط"></div>
           <div class="pl-field"><label>متاح لـ</label>
             <input class="hub-input" type="text" name="only_available_for" value="{{ plan.only_available_for or '' }}" placeholder="مجموعة أو وسم"></div>
           <div class="pl-field"><label>متاح للكل</label>
-            <div class="pl-chk"><input type="checkbox" name="available_for_all" value="1" {% if plan.available_for_all in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="available_for_all", checked=(plan.available_for_all in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>كل الأيام</label>
-            <div class="pl-chk"><input type="checkbox" name="all_days" value="1" {% if plan.all_days in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="all_days", checked=(plan.all_days in [True,1,'1','t','true','on']), value="1") }}</div></div>
         </div>
       </div>
     </section>
@@ -474,13 +474,13 @@
           <div class="pl-field"><label>VLAN</label>
             <input class="hub-input" type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}"></div>
           <div class="pl-field"><label>ربط MAC</label>
-            <div class="pl-chk"><input type="checkbox" name="bind_mac" value="1" {% if plan.bind_mac %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="bind_mac", checked=plan.bind_mac, value="1") }}</div></div>
           <div class="pl-field"><label>ربط IP</label>
-            <div class="pl-chk"><input type="checkbox" name="bind_ip" value="1" {% if plan.bind_ip %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="bind_ip", checked=plan.bind_ip, value="1") }}</div></div>
           <div class="pl-field"><label>Hotspot مفعَّل</label>
-            <div class="pl-chk"><input type="checkbox" name="hotspot_enabled" value="1" {% if plan.hotspot_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="hotspot_enabled", checked=plan.hotspot_enabled, value="1") }}</div></div>
           <div class="pl-field"><label>PPP مفعَّل</label>
-            <div class="pl-chk"><input type="checkbox" name="ppp_enabled" value="1" {% if plan.ppp_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="ppp_enabled", checked=plan.ppp_enabled, value="1") }}</div></div>
           <div class="pl-field"><label>نطاق الخدمة</label>
             <select class="hub-select" name="service_scope">
               <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>هوتسبوت وبرودباند</option>
@@ -488,17 +488,17 @@
               <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>برودباند فقط</option>
             </select></div>
           <div class="pl-field"><label>السلفة مسموحة</label>
-            <div class="pl-chk"><input type="checkbox" name="loan_enabled" value="1" {% if plan.loan_enabled %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="loan_enabled", checked=plan.loan_enabled, value="1") }}</div></div>
           <div class="pl-field"><label>أقصى مدة سلفة (دقيقة)</label>
             <input class="hub-input" type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}"></div>
           <div class="pl-field"><label>تجاوز سرعة المستفيد</label>
-            <div class="pl-chk"><input type="checkbox" name="speed_override_allowed" value="1" {% if plan.speed_override_allowed %}checked{% endif %}><label>مسموح</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="speed_override_allowed", checked=plan.speed_override_allowed, value="1", on_label="مسموح", off_label="ممنوع") }}</div></div>
           <div class="pl-field"><label>تفعيل MTU</label>
-            <div class="pl-chk"><input type="checkbox" name="enable_mtu" value="1" {% if plan.enable_mtu in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="enable_mtu", checked=(plan.enable_mtu in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>حد بأيام الانتهاء</label>
-            <div class="pl-chk"><input type="checkbox" name="expiry_day_limit_toggle" value="1" {% if plan.expiry_day_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="expiry_day_limit_toggle", checked=(plan.expiry_day_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>حد بساعات الانتهاء</label>
-            <div class="pl-chk"><input type="checkbox" name="expiry_hour_limit_toggle" value="1" {% if plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on'] %}checked{% endif %}><label>مفعَّل</label></div></div>
+            <div class="pl-chk">{{ toggle_switch(name="expiry_hour_limit_toggle", checked=(plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>قائمة عناوين MikroTik</label>
             <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}"></div>
           <div class="pl-field"><label>سلسلة فلترة MikroTik</label>
