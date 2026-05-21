@@ -113,6 +113,21 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
     plan_id = request.form.get("plan_id")
     manager_id = request.form.get("manager_id")
 
+    # service_type — multi-checkbox (hotspot + pppoe). Falls back to the
+    # legacy single field for back-compat with old POSTs.
+    svc_types = request.form.getlist("service_type")
+    has_hs   = "hotspot" in svc_types or "Hotspot" in svc_types
+    has_pppoe = "pppoe" in svc_types
+    if has_hs and has_pppoe:
+        service_type = "both"
+    elif has_pppoe:
+        service_type = "pppoe"
+    elif has_hs:
+        service_type = "hotspot"
+    else:
+        # legacy single-select fallback
+        service_type = _s("service_type") or "hotspot"
+
     # metadata: نجمع الحقول المسطّحة من الـ form ثم نُجمّعها
     flat_meta = {}
     for mf in _META_FIELDS:
@@ -123,11 +138,13 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
 
     return Subscriber(
         id=sub_id,
-        # حساب الإنترنت أساسي
+        # حساب الإنترنت أساسي — user_type is always "subscriber" on this
+        # form (the subscribers form is subscribers-only; cards have their
+        # own batch flow).
         username=_s("username"),
         password=_s("password"),
-        user_type=_s("user_type") or "subscriber",
-        service_type=_s("service_type") or "Hotspot",
+        user_type="subscriber",
+        service_type=service_type,
         plan_id=int(plan_id) if plan_id else None,
         manager_id=int(manager_id) if manager_id else None,
         group=_s("group"),
@@ -184,7 +201,9 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         allowed_macs=_s("allowed_macs"),
         # metadata JSON
         metadata=meta_json,
-        # ربط
+        # ربط — beneficiary_ref (HobeHub link) input was removed from the
+        # visible form, but the template keeps it as a hidden field so
+        # the existing value round-trips on edit and is empty on create.
         beneficiary_ref=_s("beneficiary_ref"),
         remark=_s("remark"),
     )
@@ -237,13 +256,33 @@ def users_list():
         dhcp_by_username=dhcp_by_username)
 
 
+def _form_select_options() -> dict:
+    """Admins + subscriber_groups for the form dropdowns. Both wrapped so
+    a broken sub-repo never breaks the form render. See SERVICES_COOKBOOK §16."""
+    tid = _tid()
+    try:
+        from ..db.repos import admins_repo
+        # admins are global (not tenant-scoped) in this codebase.
+        admins = [a for a in admins_repo.list_admins()
+                  if getattr(a, "status", "active") == "active"]
+    except Exception:  # noqa: BLE001
+        admins = []
+    try:
+        from ..db.repos import subscriber_groups_repo
+        sgroups = subscriber_groups_repo.list_groups(tid)
+    except Exception:  # noqa: BLE001
+        sgroups = []
+    return {"admins": admins, "subscriber_groups": sgroups}
+
+
 def users_new():
     plans = list(get_plans_service().list(limit=500))
     empty = Subscriber(id=None, username="", password="", status="enabled")
     return render_template("radius/users_form.html",
         sub=_sub_with_meta_for_template(empty),
         plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES,
-        is_new=True, speed_rules_panel=None)
+        is_new=True, speed_rules_panel=None,
+        **_form_select_options())
 
 
 def users_create():
@@ -255,7 +294,8 @@ def users_create():
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
-            user_types=USER_TYPES, is_new=True, speed_rules_panel=None), 400
+            user_types=USER_TYPES, is_new=True, speed_rules_panel=None,
+            **_form_select_options()), 400
     flash(f"تم إنشاء المستخدم «{saved.username}».", "success")
     return redirect(url_for("radius.users_list"))
 
@@ -416,6 +456,7 @@ def users_edit(username: str):
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
+        **_form_select_options(),
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
             target_type="subscriber",
