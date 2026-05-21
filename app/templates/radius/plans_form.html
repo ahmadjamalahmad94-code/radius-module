@@ -3,6 +3,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
+{% from "_partials/time_picker_circular.html" import time_picker_circular %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
@@ -240,9 +241,9 @@
           <div class="pl-field"><label>DNS ثانوي (PPP)</label>
             <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ plan.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
           <div class="pl-field"><label>ساعات العرض — من</label>
-            <input class="hub-input" type="time" name="offer_hours_from" value="{{ plan.offer_hours_from or '' }}"></div>
+            {{ time_picker_circular(name="offer_hours_from", value=plan.offer_hours_from or "") }}</div>
           <div class="pl-field"><label>ساعات العرض — إلى</label>
-            <input class="hub-input" type="time" name="offer_hours_to" value="{{ plan.offer_hours_to or '' }}"></div>
+            {{ time_picker_circular(name="offer_hours_to", value=plan.offer_hours_to or "") }}</div>
           <div class="pl-field"><label>محدد الجلسة (دقيقة)</label>
             <input class="hub-input" type="number" min="0" name="working_hours_limit" value="{{ plan.working_hours_limit or 0 }}"></div>
           <div class="pl-field full"><label>الوصف</label>

@@ -11,6 +11,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
+{% from "_partials/time_picker_circular.html" import time_picker_circular %}
 
 {% set title_ar = "إضافة مشترك" if is_new else ("تعديل " + (sub.username or "مشترك")) %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -529,13 +530,11 @@
             <label>وقت السرعة المؤقتة</label>
             <div class="uf-time-range">
               <div>
-                <input class="hub-input" type="time" name="temporary_speed_from" id="temporary-speed-from"
-                       value="{{ sub.temporary_speed_from or '' }}">
+                {{ time_picker_circular(name="temporary_speed_from", value=sub.temporary_speed_from or "") }}
                 <div class="help">من الساعة</div>
               </div>
               <div>
-                <input class="hub-input" type="time" name="temporary_speed_to" id="temporary-speed-to"
-                       value="{{ sub.temporary_speed_to or '' }}">
+                {{ time_picker_circular(name="temporary_speed_to", value=sub.temporary_speed_to or "") }}
                 <div class="help">إلى الساعة</div>
               </div>
             </div>

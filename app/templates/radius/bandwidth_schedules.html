@@ -1,6 +1,7 @@
 {# Bandwidth schedules — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/time_picker_circular.html" import time_picker_circular %}
 
 {% block title %}جدولة السرعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock"></i>{% endblock %}
@@ -104,11 +105,11 @@
       <div class="bs-row">
         <label class="fld">
           من الساعة
-          <input class="hub-input mono" type="time" name="starts_at_time" required>
+          {{ time_picker_circular(name="starts_at_time", value="") }}
         </label>
         <label class="fld">
           إلى الساعة
-          <input class="hub-input mono" type="time" name="ends_at_time" required>
+          {{ time_picker_circular(name="ends_at_time", value="") }}
         </label>
       </div>
 
