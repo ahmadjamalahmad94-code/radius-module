@@ -312,34 +312,63 @@
   @media (max-width: 820px){ .uf-row3{ grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px){ .uf-row3{ grid-template-columns: 1fr; } }
 
-  /* Sub-section heading inside a merged uf-section (e.g. Speed). ───── */
+  /* Sub-section heading inside a merged uf-section (e.g. Speed). ─────
+     A clean one-row bar: brand-accent strip + dot + title + toggle on
+     the start side, help text pushed to the end. Subtle soft-brand
+     wash so the bar reads as one cohesive header (not a stack of bits). */
   .uf-sub-head{
-    display: flex; align-items: center; gap: 10px;
-    margin: 4px 0 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--hub-border);
+    display: flex; align-items: center; gap: 12px;
+    margin: 6px 0 14px;
+    padding: 8px 14px;
+    background: linear-gradient(90deg,
+                                var(--hub-brand-soft) 0%,
+                                rgba(255,255,255,0) 70%);
+    border-inline-start: 3px solid var(--hub-brand);
+    border-radius: var(--hub-r-md);
   }
   .uf-sub-dot{
     width: 8px; height: 8px; border-radius: 50%;
     background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
     flex-shrink: 0;
-    box-shadow: 0 0 0 3px var(--hub-brand-soft);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.85);
   }
   .uf-sub-title{
     font-weight: 800; font-size: 13.5px;
     color: var(--hub-brand-ink);
     white-space: nowrap;
+    letter-spacing: .1px;
   }
+  /* Slim divider between the title/toggle cluster and the help text so
+     they read as two distinct zones. ::before puts a vertical hairline
+     before the help item, but only when help is present. */
   .uf-sub-help{
-    font-size: 12px; color: var(--hub-text-mute); line-height: 1.6;
-    flex: 1;
+    font-size: 12px; color: var(--hub-text-soft);
+    line-height: 1.55;
+    margin-inline-start: auto;      /* push to row end (RTL: leftmost) */
+    padding-inline-start: 14px;
+    border-inline-start: 1px solid var(--hub-border);
+    max-width: 60%;
+    text-align: end;
+  }
+  @media (max-width: 720px){
+    .uf-sub-help{
+      margin-inline-start: 0;
+      max-width: 100%;
+      border-inline-start: 0;
+      padding-inline-start: 0;
+      flex-basis: 100%;
+    }
   }
   /* Toggle nested into the sub-header (e.g. «تفعيل التحكم بالسرعة») —
-     compact so it doesn't dominate the title row. */
+     compact so it doesn't dominate the title row, with a thin shell so
+     it still looks tappable. */
   .uf-sub-head .tsw{
-    padding: 4px 10px; min-height: 30px; background: transparent;
-    border: 0; gap: 8px;
+    padding: 4px 10px; min-height: 30px; gap: 8px;
+    background: #fff;
+    border: 1px solid var(--hub-border);
+    border-radius: 999px;
   }
+  .uf-sub-head .tsw:hover{ border-color: var(--hub-brand-line); }
   .uf-sub-head .tsw .tsw-track{ width: 32px; height: 18px; }
   .uf-sub-head .tsw .tsw-thumb{ width: 14px; height: 14px; }
   .uf-sub-head .tsw input:checked + .tsw-track .tsw-thumb{ inset-inline-start: 16px; }
