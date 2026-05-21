@@ -473,17 +473,19 @@
     box-shadow: none;
     border-inline-start: 0;
   }
-  .uf-section--speed .sr2-panel > .sr2-head{
-    /* Keep the bulk-actions row visible, but drop the duplicate title
-       block — the .uf-sub-head above already labels this sub-section. */
-    margin: 0 0 8px 0; padding: 0 0 8px 0;
-    border-bottom: 1px dashed var(--hub-border);
+  /* The panel's own header is fully redundant here — its title +
+     help + bulk buttons all live in .uf-sub-head--sched above now. */
+  .uf-section--speed .sr2-panel > .sr2-head{ display: none; }
+
+  /* Bulk-action cluster inside the scheduled sub-header — sits between
+     the master toggle and the help text, compact ghost buttons. */
+  .uf-sub-head--sched .uf-sub-bulk{
+    display: inline-flex; gap: 4px;
   }
-  .uf-section--speed .sr2-panel > .sr2-head > div:first-child{ display: none; }
-  .uf-section--speed .sr2-panel > .sr2-head:not(:has(.sr2-bulk)){
-    /* No bulk buttons (= no existing rules) → header has nothing to
-       show, so collapse it entirely. */
-    display: none;
+  .uf-sub-head--sched .uf-sub-bulk .hub-btn{
+    padding: 4px 10px;
+    font-size: 12px;
+    min-height: 30px;
   }
 </style>
 {% endblock %}
@@ -735,7 +737,7 @@
            header flips every existing rule's «enabled» checkbox via JS
            (bulk action — same effect as clicking «تفعيل الكل/تعطيل الكل»
            inside the panel, but reachable at the sub-section level). #}
-        <div class="uf-sub-head" style="margin-top: 18px;">
+        <div class="uf-sub-head uf-sub-head--sched" style="margin-top: 18px;">
           <span class="uf-sub-dot"></span>
           <span class="uf-sub-title">قواعد سرعة مجدوَلة</span>
           <label class="tsw" onclick="event.stopPropagation()" data-sched-master-wrap>
@@ -743,6 +745,22 @@
             <span class="tsw-track"><span class="tsw-thumb"></span></span>
             <span class="tsw-label" data-on="مفعَّلة" data-off="معطَّلة"></span>
           </label>
+          {# Bulk-action buttons promoted from the panel head into the
+             sub-header (per user feedback «حط تفعيل وتعطيل بنفس الشريط
+             اقل ضغط، واختصر النص»). Same submit semantics as the
+             original .sr2-bulk in _speed_rules_panel.html. #}
+          <span class="uf-sub-bulk">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
+                    name="_speed_rule_action" value="enable_all" formnovalidate
+                    title="تفعيل كل القواعد">
+              <i class="fa-solid fa-toggle-on"></i> فعّل
+            </button>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
+                    name="_speed_rule_action" value="disable_all" formnovalidate
+                    title="تعطيل كل القواعد">
+              <i class="fa-solid fa-toggle-off"></i> عطّل
+            </button>
+          </span>
           <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة، أولوية أعلى من قواعد الباقة والمجموعة.</span>
         </div>
         {% include "radius/_speed_rules_panel.html" %}
