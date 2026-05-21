@@ -300,6 +300,18 @@
   .uf-toggle-label::before{ content: attr(data-off); }
   .uf-toggle input:checked ~ .uf-toggle-label::before{ content: attr(data-on); color: var(--hub-brand-ink); }
 
+  /* 3-col row used for the speed sub-section so toggles + speed pickers
+     + time pickers each fit naturally side-by-side. */
+  .uf-row3{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 820px){ .uf-row3{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px){ .uf-row3{ grid-template-columns: 1fr; } }
+
   /* Sub-section heading inside a merged uf-section (e.g. Speed). ───── */
   .uf-sub-head{
     display: flex; align-items: center; gap: 10px;
@@ -322,6 +334,16 @@
     font-size: 12px; color: var(--hub-text-mute); line-height: 1.6;
     flex: 1;
   }
+  /* Toggle nested into the sub-header (e.g. «تفعيل التحكم بالسرعة») —
+     compact so it doesn't dominate the title row. */
+  .uf-sub-head .tsw{
+    padding: 4px 10px; min-height: 30px; background: transparent;
+    border: 0; gap: 8px;
+  }
+  .uf-sub-head .tsw .tsw-track{ width: 32px; height: 18px; }
+  .uf-sub-head .tsw .tsw-thumb{ width: 14px; height: 14px; }
+  .uf-sub-head .tsw input:checked + .tsw-track .tsw-thumb{ inset-inline-start: 16px; }
+  .uf-sub-head .tsw .tsw-label{ font-size: 12px; }
   /* When the speed-rules panel is nested inside the merged section,
      drop its outer card chrome — the parent section already provides it. */
   .uf-section--speed .sr2-panel{
@@ -542,58 +564,54 @@
       </header>
       <div class="uf-section-body">
 
-        {# 2A. Base custom speed ───────────────────────────────── #}
+        {# 2A. Base custom speed ─────────────────────────────────────
+           Sub-header now hosts the «تفعيل التحكم بالسرعة» toggle
+           next to the title (per user feedback). Two 3-col rows:
+             - speeds row: download + upload + custom_speed toggle
+             - temporary row: temporary_speed toggle + from + to. #}
         <div class="uf-sub-head">
           <span class="uf-sub-dot"></span>
           <span class="uf-sub-title">سرعة أساسية مخصّصة</span>
+          {{ toggle_switch(name="bandwidth_control_enabled",
+                           checked=sub.bandwidth_control_enabled,
+                           id="bw-en",
+                           on_label="مفعَّل",
+                           off_label="معطَّل") }}
           <span class="uf-sub-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
         </div>
 
-        <div class="uf-grid">
-          <div class="uf-field">
-            <label>تفعيل التحكم بالسرعة</label>
-            {{ toggle_switch(name="bandwidth_control_enabled",
-                             checked=sub.bandwidth_control_enabled,
-                             id="bw-en",
-                             on_label="مفعَّل (يتجاوز الباقة)",
-                             off_label="معطَّل") }}
-          </div>
+        {# Row A: download + upload + «سرعة مخصصة» toggle. #}
+        <div class="uf-row3">
           <div class="uf-field">
             <label>سرعة التنزيل</label>
-            {{ unit_input_picker(name="download_speed_kbps", value=sub.download_speed_kbps or 0, kind="speed") }}
+            {{ unit_input_picker(name="download_speed_kbps", value=sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
             <div class="help">0 = استخدم قيمة الباقة.</div>
           </div>
           <div class="uf-field">
             <label>سرعة الرفع</label>
-            {{ unit_input_picker(name="upload_speed_kbps", value=sub.upload_speed_kbps or 0, kind="speed") }}
+            {{ unit_input_picker(name="upload_speed_kbps", value=sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
             <div class="help">0 = استخدم قيمة الباقة.</div>
           </div>
           <div class="uf-field">
             <label>سرعة مخصصة</label>
-            {{ toggle_switch(name="custom_speed",
-                             checked=sub.custom_speed,
-                             id="cs") }}
+            {{ toggle_switch(name="custom_speed", checked=sub.custom_speed, id="cs") }}
           </div>
+        </div>
+
+        {# Row B: «سرعة مؤقتة» toggle + temporary_speed_from + to. #}
+        <div class="uf-row3">
           <div class="uf-field">
             <label>سرعة مؤقتة</label>
-            {{ toggle_switch(name="temporary_speed",
-                             checked=sub.temporary_speed,
-                             id="ts") }}
+            {{ toggle_switch(name="temporary_speed", checked=sub.temporary_speed, id="ts") }}
             <div class="help">رفع مؤقت بدون تغيير الباقة.</div>
           </div>
-          <div class="uf-field full">
-            <label>وقت السرعة المؤقتة</label>
-            <div class="uf-time-range">
-              <div>
-                {{ time_picker_circular(name="temporary_speed_from", value=sub.temporary_speed_from or "") }}
-                <div class="help">من الساعة</div>
-              </div>
-              <div>
-                {{ time_picker_circular(name="temporary_speed_to", value=sub.temporary_speed_to or "") }}
-                <div class="help">إلى الساعة</div>
-              </div>
-            </div>
-            <div class="help">الفترة التي تعمل فيها السرعة المؤقتة.</div>
+          <div class="uf-field">
+            <label>من الساعة</label>
+            {{ time_picker_circular(name="temporary_speed_from", value=sub.temporary_speed_from or "") }}
+          </div>
+          <div class="uf-field">
+            <label>إلى الساعة</label>
+            {{ time_picker_circular(name="temporary_speed_to", value=sub.temporary_speed_to or "") }}
           </div>
         </div>
 
