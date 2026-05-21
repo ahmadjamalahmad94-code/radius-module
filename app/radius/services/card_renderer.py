@@ -270,11 +270,20 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
     bg = model.get("background") or {}
 
     parts: list[str] = []
+    # `direction="ltr"` is critical: the admin UI ships with
+    # <html dir="rtl"> and every nested <text> inherits that direction
+    # by default. In RTL, `text-anchor="start"` means the right edge of
+    # the text box — so an LTR string like "HobeRadius" rendered at
+    # x=60 walks off the LEFT side of the card and only the last few
+    # characters stay visible inside the viewBox. Forcing ltr on the
+    # SVG root (and on each <text> below) keeps card text laid out
+    # left-to-right regardless of the document direction.
     parts.append(
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {w} {h}" preserveAspectRatio="xMidYMid meet" '
         f'role="img" class="card-svg" '
-        f'style="width:100%;height:auto;display:block">'
+        f'direction="ltr" '
+        f'style="width:100%;height:auto;display:block;direction:ltr">'
     )
     parts.append('<defs>')
     parts.extend(_svg_defs(bg, w, h))
@@ -821,12 +830,18 @@ def _svg_rect(el: dict) -> str:
 def _svg_text(el: dict) -> str:
     weight = el.get("weight", 700)
     opacity = el.get("opacity", 1.0)
+    # `direction="ltr"` + `text-anchor="start"` defended belt-and-braces:
+    # even if the parent <svg>'s direction attribute is ignored by an
+    # older SVG renderer, each <text> still pins itself LTR. Without
+    # this the admin's `<html dir="rtl">` makes "start" mean "right
+    # edge" and the text walks off-canvas to the left.
     return (
         f'<text x="{el["x"]:.1f}" y="{el["y"]:.1f}" '
+        f'direction="ltr" '
         f'font-family="\'Cairo\', \'Helvetica Neue\', Arial, sans-serif" '
         f'font-size="{el["size"]:.1f}" font-weight="{weight}" '
         f'fill="{_xml(el.get("color", "#fff"))}" opacity="{opacity:.2f}" '
-        f'dominant-baseline="hanging" text-anchor="start">'
+        f'dominant-baseline="hanging" text-anchor="start" xml:space="preserve">'
         f'{_xml(el["text"])}'
         f'</text>'
     )
@@ -849,15 +864,19 @@ def _svg_pill(el: dict, *, mask_password: bool) -> str:
         f'rx="{h*0.20:.1f}" ry="{h*0.20:.1f}" '
         f'fill="{_xml(el["surface"])}" opacity="0.95"/>'
         f'<text x="{x+pad:.1f}" y="{label_y:.1f}" '
+        f'direction="ltr" '
         f'font-family="\'Cairo\', \'Helvetica Neue\', Arial, sans-serif" '
         f'font-size="{label_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["label_color"])}" '
-        f'dominant-baseline="middle">{_xml(el["label"])}</text>'
+        f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
+        f'{_xml(el["label"])}</text>'
         f'<text x="{x+pad:.1f}" y="{value_y:.1f}" '
+        f'direction="ltr" '
         f'font-family="\'Menlo\', \'Consolas\', monospace" '
         f'font-size="{value_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["ink"])}" '
-        f'dominant-baseline="middle">{_xml(value)}</text>'
+        f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
+        f'{_xml(value)}</text>'
         f'</g>'
     )
 

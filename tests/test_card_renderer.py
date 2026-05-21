@@ -260,6 +260,58 @@ def test_portrait_vs_landscape_canvases():
     assert (m_p["canvas"]["width"], m_p["canvas"]["height"]) == CANVAS_PORTRAIT
 
 
+def test_svg_text_pinned_ltr_even_inside_rtl_document():
+    """Regression: the admin UI ships `<html dir="rtl">`. Every
+    <text> in the rendered card SVG must carry `direction="ltr"`
+    (and the root <svg> too) so English card labels don't walk off
+    the left edge of the card. This was visible as USER pills
+    rendering only the last character of the username, footer text
+    floating outside the card, and a stray Arabic glyph at the
+    top-right corner where brand/title used to sit.
+    """
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    template = _make_template(layout={
+        "brand_name": "HobeRadius",
+        "card_title": "Internet Card",
+        "footer_text": "Keep login data",
+        "hotspot_address": "hotspot.local",
+    })
+    svg = render_card_svg(build_card_render_model(
+        template, {"id": 1, "username": "card1234", "password": "pw"}
+    ))
+
+    # Root SVG must declare direction explicitly.
+    assert 'direction="ltr"' in svg[:400], "root <svg> missing direction=\"ltr\""
+
+    # Every <text> must carry direction="ltr" + text-anchor="start"
+    # so the inheritance from the outer <html dir=rtl> is overridden
+    # even on renderers that ignore the SVG-level direction attribute.
+    text_count = svg.count("<text x=")
+    ltr_on_text = sum(
+        1 for chunk in svg.split("<text x=")[1:]
+        if 'direction="ltr"' in chunk.split(">", 1)[0]
+    )
+    anchor_start = sum(
+        1 for chunk in svg.split("<text x=")[1:]
+        if 'text-anchor="start"' in chunk.split(">", 1)[0]
+    )
+    assert text_count >= 5, f"expected at least 5 text elements, got {text_count}"
+    assert ltr_on_text == text_count, (
+        f"only {ltr_on_text}/{text_count} <text> elements carry "
+        f"direction=\"ltr\" — remaining ones will inherit the page's "
+        f"rtl direction and render off-canvas."
+    )
+    assert anchor_start == text_count, (
+        f"only {anchor_start}/{text_count} <text> elements carry "
+        f"text-anchor=\"start\" — pills will lose the start anchor "
+        f"in RTL mode."
+    )
+
+
 def test_svg_xml_escapes_user_text():
     """Render must escape XML — a malicious card name shouldn't break the SVG."""
     from app.radius.services.card_renderer import (
