@@ -4,6 +4,21 @@ from __future__ import annotations
 from ..core.errors import RadiusValidationError
 from ..services.operations import get_operations_service
 
+_DAY_CODES = {"sat", "sun", "mon", "tue", "wed", "thu", "fri"}
+
+
+def _days_from_form(form, prefix: str) -> str:
+    """Normalize multi-value form input → canonical CSV (sat,sun,mon,...)."""
+    raw = form.getlist(prefix) if hasattr(form, "getlist") else (form.get(prefix) or "").split(",")
+    seen = []
+    for d in raw:
+        code = (d or "").strip().lower()
+        if code in _DAY_CODES and code not in seen:
+            seen.append(code)
+    # canonical sort order
+    order = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
+    return ",".join(d for d in order if d in seen)
+
 
 def speed_rules_panel(
     *,
@@ -126,6 +141,7 @@ def handle_embedded_speed_rule(
                 "name": form.get(f"sr_edit_name_{suffix}"),
                 "starts_at_time": form.get(f"sr_edit_starts_at_time_{suffix}"),
                 "ends_at_time": form.get(f"sr_edit_ends_at_time_{suffix}"),
+                "days_csv": _days_from_form(form, f"sr_edit_days_{suffix}"),
                 "speed_down_kbps": form.get(f"sr_edit_speed_down_kbps_{suffix}") or 0,
                 "speed_up_kbps": form.get(f"sr_edit_speed_up_kbps_{suffix}") or 0,
                 "cir_down_kbps": form.get(f"sr_edit_cir_down_kbps_{suffix}") or 0,
@@ -170,6 +186,7 @@ def handle_embedded_speed_rule(
             "name": form.get("sr_name") or "قاعدة سرعة",
             "starts_at_time": form.get("sr_starts_at_time"),
             "ends_at_time": form.get("sr_ends_at_time"),
+            "days_csv": _days_from_form(form, "sr_days"),
             "speed_down_kbps": form.get("sr_speed_down_kbps") or 0,
             "speed_up_kbps": form.get("sr_speed_up_kbps") or 0,
             "cir_down_kbps": form.get("sr_cir_down_kbps") or 0,

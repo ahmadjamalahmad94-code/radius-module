@@ -307,17 +307,18 @@ def create_bandwidth_schedule(tenant_id: int, data: dict, *, actor: str) -> dict
             """
             INSERT INTO bandwidth_schedules(
                 tenant_id, plan_id, target_type, subscriber_username, card_batch_id,
-                priority, name, starts_at_time, ends_at_time,
+                priority, name, starts_at_time, ends_at_time, days_csv,
                 speed_down_kbps, speed_up_kbps, cir_down_kbps, cir_up_kbps,
                 restore_mode, enabled, created_by, notes, metadata_json, created_at
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 tenant_id, data["plan_id"], data.get("target_type") or "plan",
                 data.get("subscriber_username") or "", data.get("card_batch_id"),
                 int(data.get("priority") or 100), data["name"], data["starts_at_time"],
-                data["ends_at_time"], data.get("speed_down_kbps") or 0,
+                data["ends_at_time"], data.get("days_csv") or "",
+                data.get("speed_down_kbps") or 0,
                 data.get("speed_up_kbps") or 0, data.get("cir_down_kbps") or 0,
                 data.get("cir_up_kbps") or 0,
                 data.get("restore_mode") or "profile_default",
@@ -372,7 +373,7 @@ def update_bandwidth_schedule(tenant_id: int, schedule_id: int, data: dict) -> d
         conn.execute(
             """
             UPDATE bandwidth_schedules
-            SET name = ?, starts_at_time = ?, ends_at_time = ?,
+            SET name = ?, starts_at_time = ?, ends_at_time = ?, days_csv = ?,
                 speed_down_kbps = ?, speed_up_kbps = ?,
                 cir_down_kbps = ?, cir_up_kbps = ?,
                 restore_mode = ?, priority = ?, enabled = ?,
@@ -381,6 +382,7 @@ def update_bandwidth_schedule(tenant_id: int, schedule_id: int, data: dict) -> d
             """,
             (
                 data["name"], data["starts_at_time"], data["ends_at_time"],
+                data.get("days_csv") or "",
                 data.get("speed_down_kbps") or 0, data.get("speed_up_kbps") or 0,
                 data.get("cir_down_kbps") or 0, data.get("cir_up_kbps") or 0,
                 data.get("restore_mode") or "profile_default",
