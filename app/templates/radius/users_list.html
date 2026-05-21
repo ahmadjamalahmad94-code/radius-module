@@ -87,7 +87,7 @@
           <th>الحالة</th>
           <th>تنتهي</th>
           <th class="num">الاستهلاك</th>
-          <th style="width:160px">إجراءات</th>
+          <th style="width:200px">إجراءات</th>
         </tr>
       </thead>
       <tbody>
@@ -96,8 +96,9 @@
           <td><input type="checkbox" aria-label="تحديد"></td>
           <td class="num mono">{{ u.id or '—' }}</td>
           <td>
-            <a href="{{ url_for('radius.users_edit', username=u.username) }}"
-               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+            <a href="{{ url_for('radius.users_profile', username=u.username) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none"
+               title="فتح ملف 360°">
               {{ u.username }}
             </a>
           </td>
@@ -128,6 +129,10 @@
           <td class="num mono">{{ "%.1f"|format((u.used_bytes_in or 0)/1048576) }} MB</td>
           <td>
             <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--primary hub-btn--icon" title="ملف 360°"
+                 href="{{ url_for('radius.users_profile', username=u.username) }}">
+                <i class="fa-solid fa-id-badge"></i>
+              </a>
               <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
                  href="{{ url_for('radius.users_edit', username=u.username) }}">
                 <i class="fa-solid fa-pen"></i>
