@@ -1,6 +1,7 @@
 {# Admin form — REBUILT (Night N10) on hub-v2. Same backend. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set title_ar = "إضافة مدير" if is_new else "تعديل: " + (admin.username or 'مدير') %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -105,8 +106,7 @@
           <div class="help">الدور يحدّد الصلاحيات الفعلية.</div></div>
         <div class="ad-field"><label>الحالة</label>
           <div class="ad-chk">
-            <input type="checkbox" name="enabled" id="ad-en" value="1" {% if (not admin) or admin.enabled %}checked{% endif %}>
-            <label for="ad-en">مفعَّل</label>
+            {{ toggle_switch(name="enabled", checked=((not admin) or admin.enabled), value="1", id="ad-en") }}
           </div></div>
       </div>
     </div>

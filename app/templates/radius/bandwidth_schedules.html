@@ -2,6 +2,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}جدولة السرعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock"></i>{% endblock %}
@@ -150,8 +151,7 @@
       </label>
 
       <div class="bs-check">
-        <input type="checkbox" name="enabled" id="bs-en" value="1" checked>
-        <label for="bs-en" style="margin:0">مفعَّل</label>
+        {{ toggle_switch(name="enabled", checked=True, value="1", id="bs-en") }}
       </div>
 
       <button class="hub-btn hub-btn--primary" type="submit">

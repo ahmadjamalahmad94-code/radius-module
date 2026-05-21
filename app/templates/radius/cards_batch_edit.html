@@ -1,6 +1,7 @@
 {# Cards batch edit — REBUILT N8 (hub-v2). Backend data: batch, plans, form, speed_rules_panel. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}تعديل باقة كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-pen-to-square"></i>{% endblock %}
@@ -158,10 +159,9 @@
         </div>
         <div class="hub-field">
           <label class="hub-field-label">تضمين رقم الباقة</label>
-          <label class="hub-flex-row" style="gap:8px;padding:9px 0;font-size:13px;font-weight:600;color:var(--hub-text)">
-            <input type="checkbox" name="include_batch_number" value="1" {{ checked('include_batch_number') }}
-                   style="width:16px;height:16px;cursor:pointer;accent-color:var(--hub-brand)"> مفعّل
-          </label>
+          <div style="padding:5px 0">
+            {{ toggle_switch(name="include_batch_number", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1") }}
+          </div>
         </div>
       </div>
     {% endcall %}
@@ -229,10 +229,9 @@
           ('phone_only_login',            'دخول برقم الجوال فقط'),
         ] %}
         {% for nm, lbl in opts %}
-          <label class="hub-flex-row" style="gap:8px;padding:7px 11px;font-size:13px;font-weight:600;color:var(--hub-text);background:var(--hub-bg-soft);border:1px solid var(--hub-border-soft);border-radius:var(--hub-r-md);cursor:pointer">
-            <input type="checkbox" name="{{ nm }}" value="1" {{ checked(nm) }}
-                   style="width:16px;height:16px;cursor:pointer;accent-color:var(--hub-brand)"> {{ lbl }}
-          </label>
+          <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+            {{ toggle_switch(name=nm, checked=(form.get(nm) in [true, 1, '1', 'true', 'on', 'yes']), value="1", on_label=lbl, off_label=lbl) }}
+          </div>
         {% endfor %}
       </div>
     {% endcall %}
