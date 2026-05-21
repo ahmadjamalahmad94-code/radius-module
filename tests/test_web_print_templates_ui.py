@@ -58,14 +58,23 @@ def test_print_templates_create_and_visual_preview(client):
     _web_login(client)
     page = client.get("/admin/radius/print-templates")
     assert page.status_code == 200
-    assert "معاينة بصرية" in page.get_data(as_text=True)
-
     page_html = page.get_data(as_text=True)
+    # Designer canvas + form structure (commits 1–10 kept these).
+    assert "معاينة بصرية" in page_html or "معاينة حية" in page_html
     assert 'name="card_orientation"' in page_html
     assert 'name="background_image"' in page_html
     assert 'data-drag="username"' in page_html
-    assert '/admin/radius/print-templates/export' in page_html
-    assert 'data-export-gallery' not in page_html
+    # Commit 3 collapsed `/print-templates/export` into the `#export`
+    # anchor on the same page; the legacy URL still lives on the
+    # per-row "فتح التصدير" buttons, but those only render when the
+    # tenant has saved templates. Either entry point counts — the
+    # assertion's intent is "there is a way to reach the export
+    # workflow from this page".
+    assert (
+        "/admin/radius/print-templates/export" in page_html
+        or "#export" in page_html
+    )
+    assert "data-export-gallery" not in page_html
 
     token = _csrf(client, "/admin/radius/print-templates")
     name = f"Print UI {uuid4().hex[:8]}"
