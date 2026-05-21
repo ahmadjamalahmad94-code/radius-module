@@ -85,6 +85,9 @@
     display: flex; align-items: stretch; justify-content: center; gap: 4px;
     margin-bottom: 12px;
     user-select: none;
+    /* Force LTR so the digital readout reads HH : MM left-to-right
+       even though the rest of the modal is RTL. */
+    direction: ltr;
   }
   .tpc-display-num{
     font-family: var(--hub-font);
