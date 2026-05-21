@@ -27,6 +27,18 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/print-templates/<int:template_id>/delete",
+        "print_templates_delete",
+        print_templates_delete,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/print-templates/cleanup-fixtures",
+        "print_templates_cleanup_fixtures",
+        print_templates_cleanup_fixtures,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/print-templates/<int:template_id>/export.pdf",
         "print_templates_export_pdf",
         print_templates_export_pdf,
@@ -183,6 +195,40 @@ def print_templates_preview(template_id: int):
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(url_for("radius.print_templates"))
+
+
+def print_templates_delete(template_id: int):
+    try:
+        get_operations_service().delete_print_template(
+            tenant_id=_tid(),
+            actor=_actor(),
+            template_id=template_id,
+        )
+        flash("تم حذف القالب.", "success")
+    except RadiusError as exc:
+        flash(exc.message, "error")
+    next_url = request.form.get("next") or url_for("radius.print_templates")
+    return redirect(next_url)
+
+
+def print_templates_cleanup_fixtures():
+    try:
+        purged = get_operations_service().purge_test_fixture_print_templates(
+            tenant_id=_tid(),
+            actor=_actor(),
+        )
+    except RadiusError as exc:
+        flash(exc.message, "error")
+        return redirect(url_for("radius.print_templates"))
+    if purged:
+        flash(
+            f"تم تنظيف {len(purged)} قالب اختبار من القائمة.",
+            "success",
+        )
+    else:
+        flash("لا توجد قوالب اختبار للتنظيف.", "info")
+    next_url = request.form.get("next") or url_for("radius.print_templates")
+    return redirect(next_url)
 
 
 def print_templates_export_pdf(template_id: int):

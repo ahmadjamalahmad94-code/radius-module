@@ -700,6 +700,15 @@ def get_print_template(tenant_id: int, template_id: int) -> Optional[dict]:
     return _hydrate_json_fields(_row(row), "layout_json")
 
 
+def delete_print_template(tenant_id: int, template_id: int) -> bool:
+    with transaction() as conn:
+        cur = conn.execute(
+            "DELETE FROM card_print_templates WHERE tenant_id = ? AND id = ?",
+            (tenant_id, template_id),
+        )
+        return cur.rowcount > 0
+
+
 def create_print_job(
     tenant_id: int,
     *,

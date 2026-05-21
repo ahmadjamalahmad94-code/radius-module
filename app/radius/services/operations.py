@@ -830,6 +830,52 @@ class OperationsService:
                              limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_print_templates(tenant_id, limit=limit, offset=offset)
 
+    def delete_print_template(self, *, tenant_id: int, actor: str,
+                              template_id: int) -> bool:
+        current = operations_repo.get_print_template(tenant_id, template_id)
+        if not current:
+            raise RadiusNotFound("print template not found")
+        ok = operations_repo.delete_print_template(tenant_id, template_id)
+        if ok:
+            self._audit.record(
+                actor=actor,
+                action="card_print_template.delete",
+                target_type="card_print_template",
+                target_id=str(template_id),
+                payload={"name": current.get("name")},
+            )
+        return ok
+
+    # Names like "Print UI ab12cd34", "ops_room_ab12cd34", "template_ab12cd"
+    # are emitted by the integration test suite and end up in the dev DB
+    # when developers run the full test pass against their working copy.
+    # Exposed as a single regex so the route + the test for the route stay
+    # honest about what it deletes.
+    PURGEABLE_TEMPLATE_PATTERN = re.compile(
+        r"^(?:Print UI |ops_room_|template_)[A-Fa-f0-9]{4,}\s*$"
+    )
+
+    def purge_test_fixture_print_templates(
+        self, *, tenant_id: int, actor: str
+    ) -> list[dict]:
+        rows = operations_repo.list_print_templates(tenant_id, limit=10_000, offset=0)
+        purged: list[dict] = []
+        for row in rows:
+            name = str(row.get("name") or "")
+            if not self.PURGEABLE_TEMPLATE_PATTERN.match(name):
+                continue
+            if operations_repo.delete_print_template(tenant_id, int(row["id"])):
+                purged.append({"id": row["id"], "name": name})
+        if purged:
+            self._audit.record(
+                actor=actor,
+                action="card_print_template.purge_fixtures",
+                target_type="card_print_template",
+                target_id="*",
+                payload={"count": len(purged), "names": [p["name"] for p in purged]},
+            )
+        return purged
+
     def list_print_template_presets(self) -> list[dict]:
         return _print_presets_list()
 
