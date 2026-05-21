@@ -138,6 +138,8 @@ def test_card_batches_operations_page_filters_and_exports_csv(client, auth_heade
     assert batch["batch_code"] in html
     assert "bops-table" in html
     assert "CSV" in html
+    assert "Excel" in html
+    assert "PDF" in html
     assert "أرشفة آمنة" in html
 
     export = client.get(
@@ -151,6 +153,24 @@ def test_card_batches_operations_page_filters_and_exports_csv(client, auth_heade
     assert "رقم الحزمة" in csv_text
     for card in data["cards"]:
         assert card["password"] not in csv_text
+
+    xlsx = client.get(
+        "/admin/radius/cards/batches/export.xlsx",
+        query_string={"q": batch["batch_code"]},
+    )
+    assert xlsx.status_code == 200
+    assert xlsx.headers["Content-Type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert xlsx.data.startswith(b"PK")
+
+    pdf = client.get(
+        "/admin/radius/cards/batches/export.pdf",
+        query_string={"q": batch["batch_code"]},
+    )
+    assert pdf.status_code == 200
+    assert pdf.headers["Content-Type"].startswith("application/pdf")
+    assert pdf.data.startswith(b"%PDF")
 
 
 def test_card_batches_web_import_external_file_is_safe_bookkeeping(client, auth_headers):

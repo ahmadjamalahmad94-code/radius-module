@@ -34,6 +34,8 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches", "cards_batches", cards_batches, methods=["GET"])
     bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk", cards_batches_bulk, methods=["POST"])
     bp.add_url_rule("/cards/batches/export.csv", "cards_batches_export_csv", cards_batches_export_csv, methods=["GET"])
+    bp.add_url_rule("/cards/batches/export.xlsx", "cards_batches_export_xlsx", cards_batches_export_xlsx, methods=["GET"])
+    bp.add_url_rule("/cards/batches/export.pdf", "cards_batches_export_pdf", cards_batches_export_pdf, methods=["GET"])
     bp.add_url_rule("/cards/batches/import", "cards_batches_import", cards_batches_import, methods=["GET", "POST"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
@@ -437,6 +439,123 @@ def cards_batches_export_csv():
         payload,
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
+    )
+
+
+def _batch_export_rows() -> list[dict]:
+    svc = get_cards_service()
+    filters = _batch_filters_from_request()
+    return svc.list_batch_operations(**filters, limit=5000, offset=0)
+
+
+def _batch_export_value(item: dict, key: str):
+    if key == "estimated_value":
+        unit_price = float(item.get("estimated_unit_price") or 0)
+        configured_value = float(item.get("total_price") or 0)
+        if configured_value <= 0:
+            configured_value = unit_price * int(item.get("generated") or 0)
+        return f"{configured_value:.2f}"
+    if key == "estimated_unit_price":
+        return f"{float(item.get('estimated_unit_price') or 0):.2f}"
+    if key == "created_by":
+        return item.get("created_by") or item.get("manager_id")
+    if key == "distributor":
+        return item.get("distributor_display_name") or item.get("distributor_name")
+    return item.get(key)
+
+
+_BATCH_EXPORT_COLUMNS = [
+    ("batch_code", "batch_code"),
+    ("package_name", "package_name"),
+    ("plan_name", "plan_name"),
+    ("operational_status", "operational_status"),
+    ("source_type", "source_type"),
+    ("original_count", "original_count"),
+    ("count", "count"),
+    ("generated", "generated"),
+    ("available_count", "available_count"),
+    ("active_count", "active_count"),
+    ("expired_count", "expired_count"),
+    ("archived_count", "archived_count"),
+    ("pending_archive_count", "pending_archive_count"),
+    ("revoked_count", "revoked_count"),
+    ("remaining_count", "remaining_count"),
+    ("operational_remaining_count", "operational_remaining_count"),
+    ("sessions_count", "sessions_count"),
+    ("unique_macs", "unique_macs"),
+    ("active_speed_rules", "active_speed_rules"),
+    ("estimated_unit_price", "estimated_unit_price"),
+    ("estimated_value", "estimated_value"),
+    ("created_by", "created_by"),
+    ("distributor", "distributor"),
+    ("created_at", "created_at"),
+]
+
+
+def _batch_export_table(rows: list[dict]) -> list[list[str]]:
+    table = [[label for _, label in _BATCH_EXPORT_COLUMNS]]
+    for item in rows:
+        table.append([
+            _csv_text(_batch_export_value(item, key))
+            for key, _label in _BATCH_EXPORT_COLUMNS
+        ])
+    return table
+
+
+def cards_batches_export_xlsx():
+    from copy import copy
+
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Card Batches"
+    for row in _batch_export_table(_batch_export_rows()):
+        sheet.append(row)
+    for cell in sheet[1]:
+        font = copy(cell.font)
+        font.bold = True
+        cell.font = font
+    out = io.BytesIO()
+    workbook.save(out)
+    return Response(
+        out.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=card-batches.xlsx"},
+    )
+
+
+def cards_batches_export_pdf():
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+
+    rows = _batch_export_table(_batch_export_rows())
+    pdf_columns = [0, 1, 2, 3, 5, 8, 10, 11, 19, 20, 23]
+    pdf_rows = [[row[i] for i in pdf_columns] for row in rows[:101]]
+    out = io.BytesIO()
+    doc = SimpleDocTemplate(
+        out,
+        pagesize=landscape(A4),
+        leftMargin=18,
+        rightMargin=18,
+        topMargin=18,
+        bottomMargin=18,
+    )
+    table = Table(pdf_rows, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123056")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d8dee8")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f7fb")]),
+    ]))
+    doc.build([table, Spacer(1, 6)])
+    return Response(
+        out.getvalue(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=card-batches.pdf"},
     )
 
 

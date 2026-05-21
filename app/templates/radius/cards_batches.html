@@ -25,6 +25,12 @@
 {% set current_export = url_for('radius.cards_batches_export_csv', q=filters.q, status=filters.status,
                                 plan_id=filters.plan_id or '', manager=filters.manager,
                                 distributor_id=filters.distributor_id or '') %}
+{% set current_export_xlsx = url_for('radius.cards_batches_export_xlsx', q=filters.q, status=filters.status,
+                                     plan_id=filters.plan_id or '', manager=filters.manager,
+                                     distributor_id=filters.distributor_id or '') %}
+{% set current_export_pdf = url_for('radius.cards_batches_export_pdf', q=filters.q, status=filters.status,
+                                    plan_id=filters.plan_id or '', manager=filters.manager,
+                                    distributor_id=filters.distributor_id or '') %}
 
 {{ hub.hero(
   "مركز عمليات حزم البطاقات",
@@ -39,6 +45,12 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + current_export + '">
       <i class="fa-solid fa-file-csv"></i> CSV
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + current_export_xlsx + '">
+      <i class="fa-solid fa-file-excel"></i> Excel
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + current_export_pdf + '">
+      <i class="fa-solid fa-file-pdf"></i> PDF
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_list') + '">
       <i class="fa-solid fa-list"></i> كل البطاقات

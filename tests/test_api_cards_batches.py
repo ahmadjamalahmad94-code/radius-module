@@ -227,6 +227,44 @@ def test_batches_export_csv_uses_current_filters_and_hides_passwords(
     assert card["password"] not in csv_text
 
 
+def test_batches_export_xlsx_and_pdf_are_real_files(client, auth_headers):
+    created = client.post(
+        "/api/v1/cards/generate",
+        json={
+            "plan_id": 1,
+            "count": 1,
+            "username_prefix": "batch-export",
+            "package_name": "Export API Batch",
+        },
+        headers=auth_headers,
+    )
+    assert created.status_code == 201, created.get_json()
+    batch = created.get_json()["data"]["batch"]
+    password = created.get_json()["data"]["cards"][0]["password"]
+
+    xlsx = client.get(
+        "/api/v1/cards/batches/export.xlsx",
+        query_string={"q": batch["batch_code"]},
+        headers=auth_headers,
+    )
+    assert xlsx.status_code == 200, xlsx.get_data(as_text=True)
+    assert xlsx.headers["Content-Type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert xlsx.data.startswith(b"PK")
+    assert password.encode() not in xlsx.data
+
+    pdf = client.get(
+        "/api/v1/cards/batches/export.pdf",
+        query_string={"q": batch["batch_code"]},
+        headers=auth_headers,
+    )
+    assert pdf.status_code == 200, pdf.get_data(as_text=True)
+    assert pdf.headers["Content-Type"].startswith("application/pdf")
+    assert pdf.data.startswith(b"%PDF")
+    assert password.encode() not in pdf.data
+
+
 def test_batch_get_404_on_missing(client, auth_headers):
     res = client.get("/api/v1/cards/batches/999999", headers=auth_headers)
     assert res.status_code == 404

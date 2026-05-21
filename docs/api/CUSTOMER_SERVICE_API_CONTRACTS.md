@@ -185,12 +185,14 @@ and later sales ownership.
 | `/api/v1/cards/batches/{batch_id}` | GET | Bearer | implemented | Yes |
 | `/api/v1/cards/batches/{batch_id}/cards` | GET | Bearer | implemented | Yes |
 | `/api/v1/cards/batches/import` | POST | Bearer | implemented | Yes; supports imported/external bookkeeping files |
-| `/api/v1/cards/batches/export.csv` | GET | Bearer | implemented | Yes; CSV only |
+| `/api/v1/cards/batches/export.csv` | GET | Bearer | implemented | Yes |
+| `/api/v1/cards/batches/export.xlsx` | GET | Bearer | implemented | Yes |
+| `/api/v1/cards/batches/export.pdf` | GET | Bearer | implemented | Yes |
 | `/api/v1/cards/generate` | POST | Bearer | implemented | Existing behavior |
 | Batch bulk/archive/restore operations | POST | Bearer | partial | Existing supported actions only |
 
-Remaining work: true Excel/PDF export, final operational UX acceptance, and
-continued no-password export tests.
+Remaining work: final operational UX acceptance and continued no-password
+export tests.
 
 ### 7. Card Checker
 
