@@ -170,7 +170,11 @@ def print_templates():
 
 
 def print_templates_export_center():
-    return render_template("radius/print_templates_export.html", **_page_context())
+    # The standalone export center has been merged into /print-templates
+    # (Commit 3: single 3-column page). Keep the legacy URL alive as a
+    # 302 to the #export anchor so bookmarks and links from
+    # cards_batches keep working.
+    return redirect(url_for("radius.print_templates") + "#export")
 
 
 def print_templates_create():

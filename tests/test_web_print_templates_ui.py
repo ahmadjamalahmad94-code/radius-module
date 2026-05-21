@@ -102,12 +102,24 @@ def test_print_templates_create_and_visual_preview(client):
     assert name in created_html
     assert "فتح التصدير" in created_html
 
-    export_center = client.get("/admin/radius/print-templates/export")
+    # Commit 3: the legacy /export URL now redirects to the merged
+    # /print-templates#export anchor. Make sure the redirect lands on
+    # the canonical page and that page contains the export-room markup.
+    export_redirect = client.get("/admin/radius/print-templates/export")
+    assert export_redirect.status_code == 302
+    assert export_redirect.headers["Location"].endswith(
+        "/admin/radius/print-templates#export"
+    )
+    export_center = client.get(
+        "/admin/radius/print-templates/export", follow_redirects=True
+    )
     assert export_center.status_code == 200
     export_html = export_center.get_data(as_text=True)
     assert "data-export-room" in export_html
     assert "data-export-template-card" in export_html
     assert "data-export-progress" in export_html
+    assert "data-preview-mount" in export_html  # live preview-fragment mount
+    assert "pr-designer-drawer" in export_html  # designer collapsed into drawer
     assert name in export_html
 
     from app.radius.db.repos import operations_repo

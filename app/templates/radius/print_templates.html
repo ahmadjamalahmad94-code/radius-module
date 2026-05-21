@@ -96,6 +96,45 @@
   .pr-template-card p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.55}
   .pr-template-card.is-selected{outline:3px solid rgba(34,167,189,.32);border-color:rgba(34,167,189,.7)}
   .pr-export-note{border:1px dashed rgba(34,167,189,.35);background:rgba(34,167,189,.08);border-radius:14px;padding:11px;color:var(--hub-text-soft);font-size:12px;font-weight:800;line-height:1.7}
+  /* J3-commit3 — 3-column export room (left: batch+overrides, center: live preview, right: template chips) */
+  .pr-export-room-shell{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.3fr) minmax(220px,.7fr);gap:14px;align-items:start;margin-top:8px}
+  @media(max-width:1180px){.pr-export-room-shell{grid-template-columns:minmax(260px,.85fr) minmax(0,1.4fr)}.pr-export-room-shell .pr-chip-list-panel{grid-column:1 / -1}}
+  @media(max-width:820px){.pr-export-room-shell{grid-template-columns:1fr}}
+  .pr-export-room-shell .export-panel,
+  .pr-export-room-shell .pr-panel{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+  .pr-export-body{padding:14px;display:grid;gap:12px}
+  .pr-export-progress{display:none;border:1px solid rgba(34,167,189,.28);background:rgba(34,167,189,.08);border-radius:14px;padding:12px}
+  .pr-export-progress.is-active{display:grid;gap:9px}
+  .pr-progress-track{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+  .pr-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#22a7bd,#0f172a);border-radius:999px;transition:width .25s ease}
+  .pr-progress-steps{display:grid;gap:6px;font-size:12px;font-weight:900;color:var(--hub-text-soft)}
+  .pr-progress-step{display:flex;align-items:center;gap:8px;opacity:.48}
+  .pr-progress-step.is-active,.pr-progress-step.is-done{opacity:1}.pr-progress-step.is-done{color:#15803d}
+  .pr-chip-list{display:grid;gap:8px;max-height:560px;overflow:auto}
+  .pr-chip{display:flex;align-items:center;gap:10px;border:1px solid var(--hub-border-soft);border-radius:12px;padding:8px;background:var(--hub-bg-card);cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text)}
+  .pr-chip:hover{border-color:rgba(34,167,189,.45)}
+  .pr-chip.is-selected{outline:3px solid rgba(34,167,189,.32);border-color:rgba(34,167,189,.7);background:rgba(34,167,189,.06)}
+  .pr-chip-swatch{width:46px;height:30px;border-radius:8px;flex:0 0 auto;background:linear-gradient(135deg,var(--ca,#0f172a),var(--cb,#22a7bd));box-shadow:inset 0 -3px 0 var(--cacc,#f59e0b);border:1px solid rgba(15,23,42,.18)}
+  .pr-chip-meta{flex:1;min-width:0}
+  .pr-chip-meta strong{display:block;font-size:13px;font-weight:950;color:var(--hub-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-chip-meta small{display:block;font-size:11px;color:var(--hub-text-mute);font-weight:800}
+  .pr-chip-actions{display:flex;gap:4px}
+  /* Designer drawer (J3-commit3) */
+  .pr-designer-drawer{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+  .pr-designer-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:var(--hub-bg-soft);font-weight:950;color:var(--hub-text);font-size:15px;list-style:none}
+  .pr-designer-summary::-webkit-details-marker{display:none}
+  .pr-designer-summary small{font-weight:800;color:var(--hub-text-mute);font-size:12px}
+  .pr-designer-drawer[open] > .pr-designer-summary{border-bottom:1px solid var(--hub-border-soft)}
+  /* Preview-fragment styling (mirrors the export.html copy so the same partial renders here) */
+  .pt-fragment{display:grid;gap:12px}
+  .pt-fragment-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pt-fragment-head strong{display:block;color:var(--hub-text);font-weight:950}
+  .pt-fragment-head small{display:block;color:var(--hub-text-mute);font-weight:800}
+  .pt-fragment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media(max-width:720px){.pt-fragment-grid{grid-template-columns:1fr}}
+  .pt-fragment-grid .pr-card-preview{width:100%;max-width:none;font-size:11px}
+  .pt-fragment-note{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.6}
+  .pt-fragment-loading{opacity:.55;pointer-events:none;transition:opacity .15s}
 </style>
 {% endblock %}
 
@@ -105,8 +144,8 @@
     <h2>غرفة عمليات تصميم وتصدير البطاقات</h2>
     <p>صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.</p>
     <div class="pr-actions">
-      <a class="hub-btn hub-btn--primary" href="#designer"><i class="fa-solid fa-wand-magic-sparkles"></i> ابدأ التصميم</a>
-      <a class="hub-btn" href="{{ url_for('radius.print_templates_export_center') }}"><i class="fa-solid fa-file-export"></i> غرفة التصدير</a>
+      <a class="hub-btn hub-btn--primary" href="#export"><i class="fa-solid fa-file-export"></i> غرفة التصدير</a>
+      <a class="hub-btn" href="#designer"><i class="fa-solid fa-wand-magic-sparkles"></i> فتح المصمم</a>
       <a class="hub-btn" href="#templates"><i class="fa-solid fa-layer-group"></i> القوالب المحفوظة</a>
       <a class="hub-btn" href="#jobs"><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</a>
       <form method="POST"
@@ -128,7 +167,127 @@
     <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
   </div>
 
-  <div class="pr-shell" id="designer">
+  {# Export room — primary surface. 3 columns on wide screens:
+     left   = batch + overrides + actions
+     center = live preview of the chosen template against the chosen batch
+     right  = compact list of saved templates as clickable chips
+     Each part used to live on /print-templates/export — that page now
+     redirects here so there is one canonical surface. #}
+  <section id="export" data-export-room>
+    <div class="pr-export-room-shell">
+      <section class="export-panel">
+        <div class="pr-panel-head">
+          <h3><i class="fa-solid fa-list-check"></i> إعداد التصدير</h3>
+          <span class="hub-pill hub-pill--blue">{{ batches|length }} حزمة</span>
+        </div>
+        <div class="pr-export-body">
+          <label class="pr-field">الحزمة
+            <select class="hub-select" data-export-batch-select>
+              <option value="">اختر حزمة بطاقات</option>
+              {% for b in batches %}
+                <option value="{{ b.id }}">{{ b.batch_code }} - {{ b.package_name or b.plan_name or 'حزمة' }} ({{ b.total_cards or b.generated or 0 }} بطاقة)</option>
+              {% endfor %}
+            </select>
+            <small>يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات.</small>
+          </label>
+          <div class="pr-grid2">
+            <label class="pr-field">عنوان Hotspot/DNS
+              <input class="hub-input" name="hotspot_address" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
+            </label>
+            <label class="pr-field">السعر الظاهر
+              <input class="hub-input" name="price_text" data-export-override placeholder="مثال: JOD 1.00">
+            </label>
+            <label class="pr-field">الصلاحية الظاهرة
+              <input class="hub-input" name="validity_text" data-export-override placeholder="مثال: 4 ساعات">
+            </label>
+            <label class="pr-field">النص أسفل البطاقة
+              <input class="hub-input" name="footer_text" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
+            </label>
+          </div>
+          <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
+            <a class="hub-btn hub-btn--primary" data-export-pdf-link
+               href="#" title="اختر قالبًا وحزمة أولًا">
+              <i class="fa-solid fa-print"></i> تصدير PDF للحزمة
+            </a>
+            <a class="hub-btn" data-export-sample-link href="#" title="اختر قالبًا">
+              <i class="fa-solid fa-file-pdf"></i> PDF عينة
+            </a>
+            <form method="POST"
+                  action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
+                  onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
+                  style="margin:0">
+              <button type="submit" class="hub-btn"
+                      title="يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.">
+                <i class="fa-solid fa-broom"></i> تنظيف القوالب التجريبية
+              </button>
+            </form>
+          </div>
+          <div class="pr-export-progress" data-export-progress>
+            <strong data-progress-title>جاهز للتصدير</strong>
+            <div class="pr-progress-track"><div class="pr-progress-bar" data-progress-bar></div></div>
+            <div class="pr-progress-steps">
+              <div class="pr-progress-step" data-progress-step="0"><i class="fa-solid fa-check-circle"></i> اختيار الحزمة</div>
+              <div class="pr-progress-step" data-progress-step="1"><i class="fa-solid fa-palette"></i> اختيار القالب</div>
+              <div class="pr-progress-step" data-progress-step="2"><i class="fa-solid fa-gears"></i> تجهيز ملف التصدير</div>
+              <div class="pr-progress-step" data-progress-step="3"><i class="fa-solid fa-download"></i> بدء تنزيل PDF</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="export-panel">
+        <div class="pr-panel-head">
+          <h3><i class="fa-solid fa-eye"></i> معاينة حية</h3>
+          <span class="hub-pill hub-pill--cyan" data-preview-hint>اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية</span>
+        </div>
+        <div class="pr-export-body">
+          <div data-preview-mount>
+            <div class="hub-empty">لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="export-panel pr-chip-list-panel">
+        <div class="pr-panel-head">
+          <h3><i class="fa-solid fa-images"></i> القوالب</h3>
+          <span class="hub-pill hub-pill--green">{{ templates|length }}</span>
+        </div>
+        <div class="pr-export-body">
+          <div class="pr-chip-list">
+            {% for item in templates %}
+              {% set layout = item.layout_json or {} %}
+              <button type="button" class="pr-chip" data-export-template-card data-template-id="{{ item.id }}">
+                <span class="pr-chip-swatch"
+                      style="--ca:{{ layout.gradient_start or '#0f172a' }};--cb:{{ layout.gradient_end or '#22a7bd' }};--cacc:{{ layout.accent_color or '#f59e0b' }}"></span>
+                <span class="pr-chip-meta">
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ layout.design_preset or 'custom' }} · {{ item.cards_per_row }}×{{ item.cards_per_column }}</small>
+                </span>
+                <span class="pr-chip-actions">
+                  <a class="hub-btn hub-btn--sm" title="عينة PDF"
+                     href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}"
+                     onclick="event.stopPropagation()">
+                    <i class="fa-solid fa-file-pdf"></i>
+                  </a>
+                </span>
+              </button>
+            {% else %}
+              <div class="hub-empty">لا توجد قوالب. افتح المصمم أسفل الصفحة وأنشئ أول قالب.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  {# Designer drawer: closed by default — the export workflow above is the
+     primary surface; the full designer opens on-demand. #}
+  <details class="pr-designer-drawer" id="designer" {% if preview %}open{% endif %}>
+    <summary class="pr-designer-summary">
+      <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب</span>
+      <small>افتح لعرض/تعديل القوالب أو إنشاء قالب جديد</small>
+    </summary>
+  <div class="pr-shell">
     <section class="pr-panel">
       <div class="pr-panel-head">
         <h3><i class="fa-solid fa-sliders"></i> محرر القالب</h3>
@@ -285,6 +444,7 @@
       {% endif %}
     </section>
   </div>
+  </details>
 
   <section class="pr-panel" id="templates">
     <div class="pr-panel-head">
@@ -533,22 +693,148 @@
       link.title = id ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة من غرفة التصدير';
     });
   }
+  // Selected template + live preview wiring (J3-commit3). Used by the
+  // 3-column export room. Re-uses the existing batchSelects /
+  // exportOverrides plumbing above.
+  let selectedExportTemplateId = '';
+  const exportProgress    = $('[data-export-progress]');
+  const exportProgressBar = $('[data-progress-bar]');
+  const exportProgressTitle = $('[data-progress-title]');
+  const exportPdfLink     = $('[data-export-pdf-link]');
+  const exportSampleLink  = $('[data-export-sample-link]');
+  const previewMount      = $('[data-preview-mount]');
+  const previewHint       = $('[data-preview-hint]');
+  const PREVIEW_OVERRIDE_FIELDS = new Set([
+    'brand_name','card_title','footer_text',
+    'hotspot_address','price_text','validity_text'
+  ]);
+  const PREVIEW_FRAGMENT_URL_TEMPLATE =
+    `{{ url_for('radius.print_templates_preview_fragment', template_id=0) }}`;
+  const EXPORT_PDF_URL_TEMPLATE =
+    `{{ url_for('radius.print_templates_export_pdf', template_id=0) }}`;
+  function urlForTemplate(template, id){
+    return template.replace(/\/0(\/[^?]*)$/, '/'+id+'$1').replace(/\/0$/, '/'+id);
+  }
+  function setExportProgress(step, percent, text){
+    if(exportProgress) exportProgress.classList.add('is-active');
+    if(exportProgressBar) exportProgressBar.style.width = percent + '%';
+    if(exportProgressTitle) exportProgressTitle.textContent = text;
+    $$('[data-progress-step]').forEach(item => {
+      const index = parseInt(item.dataset.progressStep || '0', 10);
+      item.classList.toggle('is-done', index < step);
+      item.classList.toggle('is-active', index === step);
+    });
+  }
+  function updateExportActionLinks(){
+    const qs = exportQueryString();
+    const batchId = selectedBatchId();
+    if(exportPdfLink){
+      if(selectedExportTemplateId){
+        const base = urlForTemplate(EXPORT_PDF_URL_TEMPLATE, selectedExportTemplateId);
+        exportPdfLink.href = qs ? base + '?' + qs : base;
+        exportPdfLink.classList.toggle('is-disabled', !batchId);
+        exportPdfLink.title = batchId ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة لتفعيل التصدير';
+      } else {
+        exportPdfLink.href = '#';
+        exportPdfLink.classList.add('is-disabled');
+        exportPdfLink.title = 'اختر قالبًا من القائمة على اليمين أولًا';
+      }
+    }
+    if(exportSampleLink){
+      if(selectedExportTemplateId){
+        exportSampleLink.href = urlForTemplate(EXPORT_PDF_URL_TEMPLATE, selectedExportTemplateId);
+        exportSampleLink.classList.remove('is-disabled');
+      } else {
+        exportSampleLink.href = '#';
+        exportSampleLink.classList.add('is-disabled');
+      }
+    }
+  }
+  let previewSeq = 0;
+  let previewTimer = null;
+  function refreshLivePreview(){
+    if(!previewMount) return;
+    if(!selectedExportTemplateId){
+      previewMount.innerHTML = '<div class="hub-empty">اضغط على قالب من القائمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية.</div>';
+      if(previewHint) previewHint.textContent = 'اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية';
+      return;
+    }
+    const seq = ++previewSeq;
+    previewMount.classList.add('pt-fragment-loading');
+    if(previewHint) previewHint.textContent = selectedBatchId()
+      ? 'جاري جلب أول ٤ بطاقات من الحزمة...'
+      : 'اختر حزمة لمعاينة بيانات حقيقية.';
+    const params = new URLSearchParams();
+    if(selectedBatchId()) params.set('batch_id', selectedBatchId());
+    exportOverrides.forEach(field => {
+      const value = (field.value || '').trim();
+      if(value && PREVIEW_OVERRIDE_FIELDS.has(field.name)) params.set(field.name, value);
+    });
+    const qs = params.toString();
+    const url = urlForTemplate(PREVIEW_FRAGMENT_URL_TEMPLATE, selectedExportTemplateId) + (qs ? '?' + qs : '');
+    fetch(url, {headers: {'X-Requested-With':'fetch'}, credentials:'same-origin'})
+      .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)))
+      .then(html => {
+        if(seq !== previewSeq) return;
+        previewMount.innerHTML = html;
+        previewMount.classList.remove('pt-fragment-loading');
+        if(previewHint) previewHint.textContent = selectedBatchId()
+          ? 'معاينة فعلية من بطاقات الحزمة المختارة.'
+          : 'اختر حزمة لاستبدال البطاقات بعينة فعلية.';
+      })
+      .catch(err => {
+        if(seq !== previewSeq) return;
+        previewMount.classList.remove('pt-fragment-loading');
+        previewMount.innerHTML = '<div class="hub-empty">تعذّر جلب المعاينة ('+ (err && err.message || err) +').</div>';
+      });
+  }
+  function scheduleLivePreview(){
+    if(previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(refreshLivePreview, 180);
+  }
   batchSelects.forEach(select => select.addEventListener('change', () => {
     batchSelects.forEach(other => {
       if(other !== select) other.value = select.value;
     });
     updateBatchLinks();
+    updateExportActionLinks();
+    scheduleLivePreview();
+    if(selectedBatchId()) setExportProgress(selectedExportTemplateId ? 2 : 0, selectedExportTemplateId ? 60 : 25, 'تم اختيار الحزمة.');
   }));
   exportOverrides.forEach(field => {
-    field.addEventListener('input', updateBatchLinks);
-    field.addEventListener('change', updateBatchLinks);
+    field.addEventListener('input', () => { updateBatchLinks(); updateExportActionLinks(); scheduleLivePreview(); });
+    field.addEventListener('change', () => { updateBatchLinks(); updateExportActionLinks(); scheduleLivePreview(); });
   });
   $$('[data-export-template-card]').forEach(cardEl => {
-    cardEl.addEventListener('click', () => {
+    cardEl.addEventListener('click', event => {
+      if(event.target.closest('a, button:not([data-export-template-card]), form')) return;
       $$('[data-export-template-card]').forEach(el => el.classList.remove('is-selected'));
       cardEl.classList.add('is-selected');
+      selectedExportTemplateId = cardEl.dataset.templateId || '';
+      updateExportActionLinks();
+      scheduleLivePreview();
+      setExportProgress(selectedBatchId() ? 2 : 1, selectedBatchId() ? 65 : 40, 'تم اختيار القالب.');
     });
   });
+  if(exportPdfLink){
+    exportPdfLink.addEventListener('click', event => {
+      if(exportPdfLink.classList.contains('is-disabled')){
+        event.preventDefault();
+        setExportProgress(selectedBatchId() ? 1 : 0, 25, selectedExportTemplateId ? 'اختر حزمة قبل التصدير.' : 'اختر قالبًا أولًا.');
+        return;
+      }
+      setExportProgress(3, 100, 'بدأ تنزيل ملف PDF. إذا لم يبدأ التحميل اضغط الزر مرة أخرى.');
+    });
+  }
+  if(exportSampleLink){
+    exportSampleLink.addEventListener('click', event => {
+      if(exportSampleLink.classList.contains('is-disabled')){
+        event.preventDefault();
+      }
+    });
+  }
+  updateExportActionLinks();
+  refreshLivePreview();
   function initPaginators(){
     $$('[data-paginated-table]').forEach(tableWrap => {
       const rows = Array.from(tableWrap.querySelectorAll('[data-page-row]'));
