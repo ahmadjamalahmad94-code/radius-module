@@ -183,10 +183,16 @@
   /* ── Detail block (expanded view) ─────────────────────── */
   .sr2-rule-detail{
     padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 12px;
+    flex-direction: column; gap: 12px;
     border-top: 1px dashed var(--hub-border);
     animation: sr2-expand .18s ease-out;
   }
+  /* Default: detail is hidden. The display:flex flag is added by the
+     .is-expanded class so the explicit «display» here doesn't override
+     the HTML [hidden] attribute. */
+  .sr2-rule:not(.is-expanded) .sr2-rule-detail{ display: none; }
+  .sr2-rule.is-expanded   .sr2-rule-detail{ display: flex; }
+  .sr2-rule-detail[hidden]{ display: none !important; }
   @keyframes sr2-expand{
     from{ opacity: 0; transform: translateY(-4px); }
     to  { opacity: 1; transform: translateY(0); }
