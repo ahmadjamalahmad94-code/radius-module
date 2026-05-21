@@ -151,3 +151,71 @@ def test_print_templates_create_and_visual_preview(client):
     assert export.status_code == 200
     assert export.content_type.startswith("application/pdf")
     assert export.data.startswith(b"%PDF")
+
+
+def test_print_templates_set_default_marks_unique_template(client):
+    """Commit 4: starring a template marks it default, clears any prior
+    default, persists in layout_json, and shows the افتراضي badge."""
+    _web_login(client)
+    from app.radius.db.repos import operations_repo
+    from app.radius.services.operations import get_operations_service
+
+    ops = get_operations_service()
+    # Two templates so we can assert the previous default is cleared
+    # when a new one is starred.
+    name_a = f"Default A {uuid4().hex[:8]}"
+    name_b = f"Default B {uuid4().hex[:8]}"
+    for nm in (name_a, name_b):
+        token = _csrf(client, "/admin/radius/print-templates")
+        client.post(
+            "/admin/radius/print-templates",
+            data={
+                "_csrf_token": token,
+                "name": nm,
+                "orientation": "portrait",
+                "page_size": "A4",
+                "cards_per_row": 2,
+                "cards_per_column": 5,
+                "design_preset": "modern",
+                "font_size": 12,
+                "color": "#1f2937",
+            },
+            follow_redirects=True,
+        )
+
+    templates = operations_repo.list_print_templates(1, limit=1000)
+    a = next(t for t in templates if t["name"] == name_a)
+    b = next(t for t in templates if t["name"] == name_b)
+
+    # Star A
+    token = _csrf(client, "/admin/radius/print-templates")
+    r1 = client.post(
+        f"/admin/radius/print-templates/{a['id']}/set-default",
+        data={"_csrf_token": token},
+        follow_redirects=False,
+    )
+    assert r1.status_code in {302, 303}
+    assert ops.get_default_print_template_id(tenant_id=1) == a["id"]
+    a_after = operations_repo.get_print_template(1, a["id"])
+    assert a_after["layout_json"].get("is_default") is True
+
+    # Star B — A must be cleared, B must become the default
+    token = _csrf(client, "/admin/radius/print-templates")
+    r2 = client.post(
+        f"/admin/radius/print-templates/{b['id']}/set-default",
+        data={"_csrf_token": token},
+        follow_redirects=False,
+    )
+    assert r2.status_code in {302, 303}
+    assert ops.get_default_print_template_id(tenant_id=1) == b["id"]
+    assert operations_repo.get_print_template(1, a["id"])["layout_json"].get("is_default") in (False, None)
+    assert operations_repo.get_print_template(1, b["id"])["layout_json"].get("is_default") is True
+
+    # The page should advertise the default via the افتراضي badge + the
+    # data-is-default attribute the JS uses for auto-select.
+    page = client.get("/admin/radius/print-templates")
+    assert page.status_code == 200
+    html = page.get_data(as_text=True)
+    assert "افتراضي" in html
+    assert f'data-template-id="{b["id"]}"' in html
+    assert "data-is-default" in html

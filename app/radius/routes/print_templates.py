@@ -45,6 +45,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/print-templates/<int:template_id>/set-default",
+        "print_templates_set_default",
+        print_templates_set_default,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/print-templates/<int:template_id>/export.pdf",
         "print_templates_export_pdf",
         print_templates_export_pdf,
@@ -156,12 +162,17 @@ def _payload() -> dict:
 
 def _page_context(*, preview: dict | None = None) -> dict:
     ops = get_operations_service()
+    tenant_id = _tid()
     return {
-        "templates": ops.list_print_templates(tenant_id=_tid(), limit=500),
+        "templates": ops.list_print_templates(tenant_id=tenant_id, limit=500),
         "batches": get_cards_service().list_batch_operations(limit=200, offset=0),
-        "jobs": ops.list_print_jobs(tenant_id=_tid(), limit=30),
+        "jobs": ops.list_print_jobs(tenant_id=tenant_id, limit=30),
         "presets": ops.list_print_template_presets(),
         "preview": preview,
+        # Commit 4: id of the tenant's default template (or None) so the
+        # export room can auto-pick it on page load and the UI can star
+        # the matching row.
+        "default_template_id": ops.get_default_print_template_id(tenant_id=tenant_id),
     }
 
 
@@ -296,6 +307,22 @@ def print_templates_delete(template_id: int):
     except RadiusError as exc:
         flash(exc.message, "error")
     next_url = request.form.get("next") or url_for("radius.print_templates")
+    return redirect(next_url)
+
+
+def print_templates_set_default(template_id: int):
+    try:
+        get_operations_service().set_default_print_template(
+            tenant_id=_tid(),
+            actor=_actor(),
+            template_id=template_id,
+        )
+        flash("تم اعتماد هذا القالب كقالب افتراضي.", "success")
+    except RadiusError as exc:
+        flash(exc.message, "error")
+    next_url = request.form.get("next") or (
+        url_for("radius.print_templates") + "#export"
+    )
     return redirect(next_url)
 
 

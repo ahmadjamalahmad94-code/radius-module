@@ -879,6 +879,54 @@ class OperationsService:
     def list_print_template_presets(self) -> list[dict]:
         return _print_presets_list()
 
+    def set_default_print_template(
+        self, *, tenant_id: int, actor: str, template_id: int
+    ) -> dict:
+        """Mark exactly one print template as the tenant default.
+
+        We deliberately do NOT add a new DB column for this — the flag is
+        stored inside the existing `layout_json` payload as `is_default`,
+        which keeps the schema unchanged and naturally hydrates back out
+        through `list_print_templates`. The service enforces uniqueness
+        by clearing the flag on every other template in the same tenant
+        before flipping the chosen one on.
+        """
+        target = operations_repo.get_print_template(tenant_id, template_id)
+        if not target:
+            raise RadiusNotFound("print template not found")
+        for row in operations_repo.list_print_templates(tenant_id, limit=10_000):
+            layout = dict(row.get("layout_json") or {})
+            wants_on = int(row["id"]) == int(template_id)
+            had = bool(layout.get("is_default"))
+            if had == wants_on:
+                continue
+            layout["is_default"] = wants_on
+            # update_print_template re-validates the row through the same
+            # normaliser used by create — by passing only `layout` we keep
+            # the rest of the columns untouched.
+            self.update_print_template(
+                tenant_id=tenant_id,
+                actor=actor,
+                template_id=int(row["id"]),
+                data={"layout": layout},
+            )
+        self._audit.record(
+            actor=actor,
+            action="card_print_template.set_default",
+            target_type="card_print_template",
+            target_id=str(template_id),
+            payload={"name": target.get("name")},
+        )
+        return operations_repo.get_print_template(tenant_id, template_id) or {}
+
+    def get_default_print_template_id(self, *, tenant_id: int) -> int | None:
+        """Returns the id of the tenant's default print template, if any."""
+        for row in operations_repo.list_print_templates(tenant_id, limit=10_000):
+            layout = row.get("layout_json") or {}
+            if layout.get("is_default"):
+                return int(row["id"])
+        return None
+
     def list_print_jobs(self, *, tenant_id: int,
                         limit: int = 50, offset: int = 0) -> list[dict]:
         return operations_repo.list_print_jobs(tenant_id, limit=limit, offset=offset)
