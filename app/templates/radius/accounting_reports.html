@@ -36,6 +36,7 @@
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {{ hub.btn("CSV", href=url_for('radius.finance_reports_export_csv', type=report_type), icon="file-csv", variant="secondary", size="sm") }}
+  {{ hub.btn("Excel", href=url_for('radius.finance_reports_export_xlsx', type=report_type), icon="file-excel", variant="secondary", size="sm") }}
   {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
 </form>
 

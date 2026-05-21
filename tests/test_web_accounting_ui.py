@@ -209,3 +209,10 @@ def test_financial_reports_page_reads_ledger_reports(client):
     assert csv_export.status_code == 200
     assert csv_export.headers["Content-Type"].startswith("text/csv")
     assert sub["username"] in csv_export.get_data(as_text=True)
+
+    xlsx_export = client.get("/admin/radius/finance/reports/export.xlsx?type=subscriber_payments")
+    assert xlsx_export.status_code == 200
+    assert xlsx_export.headers["Content-Type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert xlsx_export.data[:2] == b"PK"

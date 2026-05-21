@@ -52,6 +52,12 @@ def register(bp: Blueprint) -> None:
             require_api_token(_report_csv_view(report_type, slug)),
             methods=["GET"],
         )
+        bp.add_url_rule(
+            f"/reports/{slug}/export.xlsx",
+            "reports_" + slug.replace("/", "_").replace("-", "_") + "_export_xlsx",
+            require_api_token(_report_xlsx_view(report_type, slug)),
+            methods=["GET"],
+        )
 
 def _report_view(report_type: str):
     def _view():
@@ -80,6 +86,24 @@ def _report_csv_view(report_type: str, slug: str):
         )
 
     _view.__name__ = f"reports_{report_type}_export_csv_view"
+    return _view
+
+
+def _report_xlsx_view(report_type: str, slug: str):
+    def _view():
+        try:
+            xlsx_bytes = service_from_context().report_xlsx(report_type=report_type)
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
+        return Response(
+            xlsx_bytes,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="hoberadius-{slug.replace("/", "-")}.xlsx"',
+            },
+        )
+
+    _view.__name__ = f"reports_{report_type}_export_xlsx_view"
     return _view
 
 

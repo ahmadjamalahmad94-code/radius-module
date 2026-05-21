@@ -19,6 +19,12 @@ def register_accounting_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/finance/reports/export.xlsx",
+        "finance_reports_export_xlsx",
+        finance_reports_export_xlsx,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/finance/reports/snapshot",
         "finance_reports_snapshot",
         finance_reports_snapshot,
@@ -228,6 +234,24 @@ def finance_reports_export_csv():
         mimetype="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": f'attachment; filename="hoberadius-{report_type}.csv"',
+        },
+    )
+
+
+def finance_reports_export_xlsx():
+    report_type = (request.args.get("type") or "daily").strip()
+    if report_type not in _REPORTS:
+        report_type = "daily"
+    try:
+        xlsx_bytes = _svc().report_xlsx(report_type=report_type)
+    except RadiusValidationError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.finance_reports", type=report_type))
+    return Response(
+        xlsx_bytes,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="hoberadius-{report_type}.xlsx"',
         },
     )
 

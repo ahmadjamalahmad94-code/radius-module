@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import math
 import os
 from datetime import datetime, timedelta
@@ -354,20 +355,55 @@ class AccountingService:
         raise RadiusValidationError("unsupported report type")
 
     def report_csv(self, *, report_type: str) -> str:
-        items = self.reports(report_type=report_type)
+        items, columns = self._report_export_rows(report_type=report_type)
         if not items:
             return "\ufeff"
+        out = io.StringIO()
+        out.write("\ufeff")
+        writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(
+            {
+                column: self._export_value(item.get(column))
+                for column in columns
+            }
+            for item in items
+        )
+        return out.getvalue()
+
+    def report_xlsx(self, *, report_type: str) -> bytes:
+        from openpyxl import Workbook
+
+        items, columns = self._report_export_rows(report_type=report_type)
+        out = io.BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "report"
+        if columns:
+            ws.append(columns)
+        for item in items:
+            ws.append([self._export_value(item.get(column)) for column in columns])
+        wb.save(out)
+        return out.getvalue()
+
+    def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
+        items = self.reports(report_type=report_type)
+        if not items:
+            return [], []
         columns = list(items[0].keys())
         for item in items[1:]:
             for key in item.keys():
                 if key not in columns:
                     columns.append(key)
-        out = io.StringIO()
-        out.write("\ufeff")
-        writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(items)
-        return out.getvalue()
+        return items, columns
+
+    @staticmethod
+    def _export_value(value: Any) -> Any:
+        if value is None:
+            return ""
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, ensure_ascii=False)
+        return value
 
     def create_report_snapshot(self, *, report_type: str, actor: str = "",
                                date_from: str = "", date_to: str = "",

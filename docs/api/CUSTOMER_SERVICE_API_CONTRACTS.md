@@ -243,8 +243,10 @@ debts.
 | `/api/v1/reports/card-sales` | GET | Bearer | partial | Yes |
 | `/api/v1/reports/profit-loss` | GET | Bearer | partial | Yes |
 | `/api/v1/reports/distributor-debts` | GET | Bearer | partial | Yes |
+| `/api/v1/reports/<slug>/export.csv` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/<slug>/export.xlsx` | GET | Bearer | implemented | Yes |
 
-Remaining work: immutable report snapshot/export UX and customer acceptance of
+Remaining work: real PDF export renderer and customer acceptance of
 date-range/filter behavior.
 
 ### 9. Online Users / Live Sessions

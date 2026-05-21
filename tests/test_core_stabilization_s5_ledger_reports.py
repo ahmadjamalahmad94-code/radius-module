@@ -1,6 +1,10 @@
 """Core Stabilization S5 ledger report tests."""
 from __future__ import annotations
 
+import io
+
+from openpyxl import load_workbook
+
 from core_stabilization_helpers import AUTH, app, client, configured_plan, subscriber
 
 
@@ -75,3 +79,23 @@ def test_financial_report_csv_export_is_real(client):
     assert "username" in text
     assert item["username"] in text
     assert "19" in text
+
+
+def test_financial_report_xlsx_export_is_real(client):
+    item = subscriber(client)
+    client.post(
+        "/api/v1/payments",
+        json={"username": item["username"], "plan_id": 1, "amount": 21},
+        headers=AUTH,
+    )
+    export = client.get("/api/v1/reports/payments/export.xlsx", headers=AUTH)
+    assert export.status_code == 200
+    assert export.headers["Content-Type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert export.data[:2] == b"PK"
+    workbook = load_workbook(io.BytesIO(export.data), read_only=True)
+    sheet = workbook.active
+    rows = list(sheet.iter_rows(values_only=True))
+    assert "username" in rows[0]
+    assert any(item["username"] in row for row in rows[1:])
