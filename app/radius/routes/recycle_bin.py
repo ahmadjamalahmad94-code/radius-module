@@ -6,6 +6,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from ..db.connection import db
 from ..db.helpers import row_to_dict
 from ..db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
+from ..services.lifecycle import retention_status
 
 
 _ENTITY_TABLES = {
@@ -56,6 +57,7 @@ def _label(row: dict) -> str:
 
 
 def _serialize(table: str, row: dict) -> dict:
+    retention = retention_status(row)
     return {
         "entity_type": _table_to_entity(table),
         "table": table,
@@ -65,6 +67,11 @@ def _serialize(table: str, row: dict) -> dict:
         "deleted_at": row.get("deleted_at"),
         "deleted_by": row.get("deleted_by") or "",
         "delete_reason": row.get("delete_reason") or "",
+        "archive_source": row.get("archive_source") or ("manual" if row.get("deleted_at") else ""),
+        "archive_policy_id": row.get("archive_policy_id"),
+        "retention_expires_at": row.get("retention_expires_at"),
+        "restore_allowed": retention["restore_allowed"],
+        "retention_expired": retention["retention_expired"],
     }
 
 

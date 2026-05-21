@@ -162,6 +162,7 @@ def _start_workers(app: Flask) -> None:
     try:
         from app.workers import (start_accounting_puller,
                                   start_device_fingerprint_worker,
+                                  start_lifecycle_worker,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
                                   start_sync_worker)
@@ -169,6 +170,7 @@ def _start_workers(app: Flask) -> None:
         start_accounting_puller()
         start_stale_session_reaper()
         start_device_fingerprint_worker()
+        start_lifecycle_worker()
         start_mt_reconciler()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")

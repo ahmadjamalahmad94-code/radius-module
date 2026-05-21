@@ -62,6 +62,13 @@ def _batch_row(r) -> CardBatch:
         deleted_at=parse_dt(_g(r, "deleted_at", None)),
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
+        source_type=_g(r, "source_type", "generated") or "generated",
+        original_count=int(_g(r, "original_count", r["count"]) or 0),
+        settlement_count=int(_g(r, "settlement_count", _g(r, "original_count", r["count"])) or 0),
+        archive_source=_g(r, "archive_source", "") or "",
+        archive_policy_id=_g(r, "archive_policy_id", None),
+        retention_expires_at=parse_dt(_g(r, "retention_expires_at", None)),
+        auto_archive_at=parse_dt(_g(r, "auto_archive_at", None)),
         assigned_to=_g(r, "assigned_to", "") or "",
         distributor_id=_g(r, "distributor_id", None),
         created_at=parse_dt(r["created_at"]),
@@ -130,18 +137,22 @@ def _batch_operations_base_sql() -> str:
             SELECT
                 batch_id,
                 COUNT(*) AS total_cards,
-                COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
+                COALESCE(SUM(CASE WHEN deleted_at IS NULL AND revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
                 COALESCE(SUM(CASE
-                    WHEN revoked = 0 AND used = 1
+                    WHEN deleted_at IS NULL AND revoked = 0 AND used = 1
                      AND (expire_at IS NULL OR expire_at >= ?)
                     THEN 1 ELSE 0 END), 0) AS active_count,
                 COALESCE(SUM(CASE
-                    WHEN revoked = 0 AND used = 0
+                    WHEN deleted_at IS NULL AND revoked = 0 AND used = 0
                      AND (expire_at IS NULL OR expire_at >= ?)
                     THEN 1 ELSE 0 END), 0) AS available_count,
                 COALESCE(SUM(CASE
-                    WHEN revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                    WHEN deleted_at IS NULL AND revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
                     THEN 1 ELSE 0 END), 0) AS expired_count
+                ,COALESCE(SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS archived_count,
+                COALESCE(SUM(CASE
+                    WHEN deleted_at IS NULL AND revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                    THEN 1 ELSE 0 END), 0) AS pending_archive_count
             FROM cards
             WHERE tenant_id = ?
             GROUP BY batch_id
@@ -264,7 +275,10 @@ def list_batch_operations(
             COALESCE(cs.active_count, 0) AS active_count,
             COALESCE(cs.expired_count, 0) AS expired_count,
             COALESCE(cs.revoked_count, 0) AS revoked_count,
+            COALESCE(cs.archived_count, 0) AS archived_count,
+            COALESCE(cs.pending_archive_count, 0) AS pending_archive_count,
             COALESCE(cs.available_count, 0) AS remaining_count,
+            COALESCE(cs.available_count, 0) + COALESCE(cs.active_count, 0) AS operational_remaining_count,
             COALESCE(a.sessions_count, 0) AS sessions_count,
             COALESCE(a.unique_macs, 0) AS unique_macs,
             COALESCE(a.online_sessions, 0) AS online_sessions,
@@ -288,7 +302,7 @@ def list_batch_operations(
         ORDER BY b.id DESC
         LIMIT ? OFFSET ?
     """
-    params = [now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals, limit, offset]
+    params = [now, now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals, limit, offset]
     rows = [row_to_dict(row) for row in db().execute(sql, params).fetchall()]
     for item in rows:
         item["operational_status"] = _operation_status_from_row(item)
@@ -322,7 +336,7 @@ def count_batch_operations(
     """
     row = db().execute(
         sql,
-        [now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals],
+        [now, now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals],
     ).fetchone()
     return int(row["c"] or 0) if row else 0
 
@@ -384,7 +398,7 @@ def batch_operations_totals(
         WHERE {" AND ".join(where)}
     """
     params = [
-        now, now, now, tenant_id, tenant_id, tenant_id,
+        now, now, now, now, tenant_id, tenant_id, tenant_id,
         today, month, year, today, month, year,
         tenant_id, *vals,
     ]
@@ -445,6 +459,22 @@ def create_batch(b: CardBatch) -> CardBatch:
               int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
               b.total_price, b.metadata or "{}"))
         new_id = cur.lastrowid
+        original_count = int(getattr(b, "original_count", 0) or b.count or 0)
+        settlement_count = int(getattr(b, "settlement_count", 0) or original_count)
+        conn.execute(
+            """
+            UPDATE card_batches
+            SET source_type = ?, original_count = ?, settlement_count = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                getattr(b, "source_type", "") or "generated",
+                original_count,
+                settlement_count,
+                b.tenant_id,
+                new_id,
+            ),
+        )
     return get_batch(b.tenant_id, new_id)
 
 
@@ -551,7 +581,9 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
     with transaction() as conn:
         cur = conn.execute("""
             UPDATE card_batches
-            SET deleted_at = ?, deleted_by = ?, delete_reason = ?, status = 'deleted'
+            SET deleted_at = ?, deleted_by = ?, delete_reason = ?, status = 'deleted',
+                archive_source = 'manual', archive_policy_id = NULL,
+                retention_expires_at = NULL, auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
         """, (now_iso(), actor or "system", (reason or "")[:300], tenant_id, batch_id))
         return cur.rowcount > 0
@@ -561,7 +593,9 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
     with transaction() as conn:
         cur = conn.execute("""
             UPDATE card_batches
-            SET deleted_at = NULL, deleted_by = '', delete_reason = '', status = 'active'
+            SET deleted_at = NULL, deleted_by = '', delete_reason = '', status = 'active',
+                archive_source = '', archive_policy_id = NULL,
+                retention_expires_at = NULL, auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
         """, (tenant_id, batch_id))
         return cur.rowcount > 0
@@ -578,26 +612,32 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
         """
         SELECT
             COUNT(*) AS total_cards,
-            COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
+            COALESCE(SUM(CASE WHEN deleted_at IS NULL AND revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked_count,
             COALESCE(SUM(CASE
-                WHEN revoked = 0 AND used = 1 AND (expire_at IS NULL OR expire_at >= ?)
+                WHEN deleted_at IS NULL AND revoked = 0 AND used = 1 AND (expire_at IS NULL OR expire_at >= ?)
                 THEN 1 ELSE 0 END), 0) AS active_count,
             COALESCE(SUM(CASE
-                WHEN revoked = 0 AND used = 0 AND (expire_at IS NULL OR expire_at >= ?)
+                WHEN deleted_at IS NULL AND revoked = 0 AND used = 0 AND (expire_at IS NULL OR expire_at >= ?)
                 THEN 1 ELSE 0 END), 0) AS available_count,
             COALESCE(SUM(CASE
-                WHEN revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                WHEN deleted_at IS NULL AND revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
                 THEN 1 ELSE 0 END), 0) AS expired_count
+            ,COALESCE(SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS archived_count,
+            COALESCE(SUM(CASE
+                WHEN deleted_at IS NULL AND revoked = 0 AND expire_at IS NOT NULL AND expire_at < ?
+                THEN 1 ELSE 0 END), 0) AS pending_archive_count
         FROM cards
         WHERE tenant_id = ? AND batch_id = ?
         """,
-        (now, now, now, tenant_id, batch_id),
+        (now, now, now, now, tenant_id, batch_id),
     ).fetchone()
     total_cards = int(row["total_cards"] or 0)
     available_count = int(row["available_count"] or 0)
     active_count = int(row["active_count"] or 0)
     expired_count = int(row["expired_count"] or 0)
     revoked_count = int(row["revoked_count"] or 0)
+    archived_count = int(row["archived_count"] or 0)
+    pending_archive_count = int(row["pending_archive_count"] or 0)
 
     normalized_status = (batch.status or "active").strip().lower()
     if batch.deleted_at:
@@ -616,6 +656,9 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
         "status": batch.status,
         "operational_status": operational_status,
         "configured_count": batch.count,
+        "source_type": batch.source_type,
+        "original_count": batch.original_count or batch.count or batch.generated,
+        "settlement_count": batch.settlement_count or batch.original_count or batch.count,
         "generated_count": batch.generated,
         "used_counter": batch.used,
         "total_cards": total_cards,
@@ -623,10 +666,16 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
         "active_count": active_count,
         "expired_count": expired_count,
         "revoked_count": revoked_count,
+        "archived_count": archived_count,
+        "pending_archive_count": pending_archive_count,
         "remaining_count": available_count,
+        "operational_remaining_count": available_count + active_count,
         "deleted_at": dt_to_iso(batch.deleted_at),
         "deleted_by": batch.deleted_by or None,
         "delete_reason": batch.delete_reason or None,
+        "archive_source": batch.archive_source or None,
+        "archive_policy_id": batch.archive_policy_id,
+        "retention_expires_at": dt_to_iso(batch.retention_expires_at),
         "created_at": dt_to_iso(batch.created_at),
         "expires_at": dt_to_iso(batch.expire_at),
     }
@@ -1119,7 +1168,11 @@ def soft_delete_card(tenant_id: int, card_id: int, *,
             SET deleted_at = ?,
                 deleted_by = ?,
                 delete_reason = ?,
-                revoked = 1
+                revoked = 1,
+                archive_source = 'manual',
+                archive_policy_id = NULL,
+                retention_expires_at = NULL,
+                auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
             """,
             (now, actor, reason, tenant_id, card_id),
@@ -1136,7 +1189,11 @@ def restore_card_from_bin(tenant_id: int, card_id: int) -> bool:
             UPDATE cards
             SET deleted_at = NULL,
                 deleted_by = '',
-                delete_reason = ''
+                delete_reason = '',
+                archive_source = '',
+                archive_policy_id = NULL,
+                retention_expires_at = NULL,
+                auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
             """,
             (tenant_id, card_id),

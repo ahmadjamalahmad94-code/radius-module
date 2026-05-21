@@ -12,6 +12,7 @@ from flask import Blueprint, g, request
 from ...radius.db.connection import db
 from ...radius.db.helpers import row_to_dict
 from ...radius.db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
+from ...radius.services.lifecycle import retention_status
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -80,6 +81,7 @@ def _serialize_deleted(table: str, row: dict) -> dict:
         or row.get("display_name")
         or str(row.get("id"))
     )
+    retention = retention_status(row)
     return {
         "entity_type": table,
         "id": row.get("id"),
@@ -88,6 +90,11 @@ def _serialize_deleted(table: str, row: dict) -> dict:
         "deleted_at": row.get("deleted_at"),
         "deleted_by": row.get("deleted_by") or "",
         "delete_reason": row.get("delete_reason") or "",
+        "archive_source": row.get("archive_source") or ("manual" if row.get("deleted_at") else ""),
+        "archive_policy_id": row.get("archive_policy_id"),
+        "retention_expires_at": row.get("retention_expires_at"),
+        "restore_allowed": retention["restore_allowed"],
+        "retention_expired": retention["retention_expired"],
     }
 
 

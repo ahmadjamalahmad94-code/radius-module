@@ -168,11 +168,15 @@
             <td>{{ b.plan_name or '—' }}</td>
             <td class="num mono">
               {{ num(b.count) }}
+              <div class="hub-text-mute" style="font-size:11px">الأصلي {{ num(b.original_count or b.count) }}</div>
               <div class="hub-text-mute" style="font-size:11px">مولّد {{ num(b.generated) }}</div>
             </td>
             <td class="num mono">{{ num(b.available_count) }}</td>
             <td class="num mono">{{ num(b.active_count) }}</td>
-            <td class="num mono">{{ num(b.expired_count) }}</td>
+            <td class="num mono">
+              {{ num(b.expired_count) }}
+              <div class="hub-text-mute" style="font-size:11px">مؤرشف {{ num(b.archived_count) }} · قادم {{ num(b.pending_archive_count) }}</div>
+            </td>
             <td class="num mono">{{ num(b.revoked_count) }}</td>
             <td class="num mono">
               {{ num(b.sessions_count) }}
@@ -227,6 +231,7 @@
               {{ hub.progress(pct) }}
               <div class="hub-text-mute" style="font-size:11px;margin-top:3px">
                 {{ "%.0f"|format(pct) }}% مستخدم
+                <div>متبقي تشغيليًا {{ num(b.operational_remaining_count or b.remaining_count) }}</div>
               </div>
             </td>
             <td>

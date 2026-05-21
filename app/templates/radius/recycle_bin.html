@@ -77,6 +77,8 @@
           <th>العنصر</th>
           <th>الحالة</th>
           <th>وقت الأرشفة</th>
+          <th>مصدر الأرشفة</th>
+          <th>الاحتفاظ</th>
           <th>بواسطة</th>
           <th>السبب</th>
           <th style="width:120px">إجراء</th>
@@ -98,6 +100,22 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td class="mono small">{{ item.deleted_at or '—' }}</td>
+          <td>
+            {% if item.archive_source == 'auto' %}
+              {{ hub.pill("تلقائية", variant="blue") }}
+            {% else %}
+              {{ hub.pill("يدوية", variant="grey") }}
+            {% endif %}
+            {% if item.archive_policy_id %}
+              <div class="mono small hub-text-mute">policy #{{ item.archive_policy_id }}</div>
+            {% endif %}
+          </td>
+          <td class="mono small">
+            {{ item.retention_expires_at or 'غير محدد' }}
+            {% if item.retention_expired %}
+              <div class="hub-text-mute">انتهت مدة الاحتفاظ</div>
+            {% endif %}
+          </td>
           <td>{{ item.deleted_by or '—' }}</td>
           <td class="hub-text-mute" style="max-width:320px;font-size:12.5px;line-height:1.7">
             {{ item.delete_reason or 'لم يتم تسجيل سبب.' }}
@@ -107,7 +125,7 @@
                   action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
                   onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');"
                   style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm">
+              <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" {% if not item.restore_allowed %}disabled{% endif %}>
                 <i class="fa-solid fa-rotate-left"></i> استعادة
               </button>
             </form>

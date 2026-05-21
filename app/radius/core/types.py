@@ -314,6 +314,13 @@ class CardBatch:
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""
+    source_type: str = "generated"            # radius/generated/imported/external
+    original_count: int = 0                   # ثابت للمحاسبة بعد إنشاء الحزمة
+    settlement_count: int = 0                 # عدد المحاسبة عند التسوية
+    archive_source: str = ""                  # manual/auto
+    archive_policy_id: Optional[int] = None
+    retention_expires_at: Optional[datetime] = None
+    auto_archive_at: Optional[datetime] = None
     assigned_to: str = ""
     distributor_id: Optional[int] = None
 

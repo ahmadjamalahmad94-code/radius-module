@@ -90,6 +90,7 @@
 {%- set m_roles       = '/roles' in path -%}
 {%- set m_recycle     = '/recycle-bin' in path -%}
 {%- set m_backups     = '/backups' in path -%}
+{%- set m_lifecycle   = '/lifecycle' in path -%}
 
 {# Integration #}
 {%- set m_webhooks    = '/webhooks' in path -%}
@@ -102,7 +103,7 @@
 {%- set sec_network_active  = m_devices or m_pools or m_mt -%}
 {%- set sec_billing_active  = m_invoices or m_vouchers or m_ledger or m_finance_rep -%}
 {%- set sec_support_active  = m_tickets or m_services -%}
-{%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups -%}
+{%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups or m_lifecycle -%}
 {%- set sec_integration_active = m_webhooks or m_tokens -%}
 
 {# Standalone Dashboard #}
@@ -261,6 +262,7 @@
         {{ sub_item('radius.roles_list',        'الأدوار والصلاحيات', m_roles) }}
         {{ sub_item('radius.recycle_bin',       'سلة المحذوفات',       m_recycle) }}
         {{ sub_item('radius.backups',           'النسخ الاحتياطي',     m_backups) }}
+        {{ sub_item('radius.lifecycle_settings','الأرشفة التلقائية',   m_lifecycle) }}
       </div></div>
     </div>
 
