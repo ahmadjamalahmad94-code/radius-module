@@ -1,32 +1,31 @@
-{# Fragment: a small grid of real-card previews rendered with a saved
-   template. Returned by /print-templates/<id>/preview-fragment so the
-   export center can show a live "this is what your batch will look like
-   with THIS template" instead of an identical mock for every template.
+{# Fragment: a grid of real-card previews rendered with a saved template.
 
-   Context:
+   IMPORTANT — single source of truth.
+   ──────────────────────────────────
+   This partial does NOT contain any card layout. Each card is rendered
+   server-side as inline SVG by `card_renderer.render_card_svg`, the
+   same renderer the PDF export consumes. Whatever you see here is
+   exactly what the PDF will draw (up to uniform scaling on the sheet).
+
+   Do NOT add HTML "card mock" markup back to this file — that path is
+   what caused the historical preview/PDF mismatch.
+
+   Context passed in by the route:
      - template      : the saved print template (id, name, layout_json …)
      - batch         : the chosen batch dict (or None if no batch picked)
      - cards         : list of Card objects (up to 4)
-     - overrides     : optional dict of overridden text fields (brand_name,
-                       card_title, footer_text, hotspot_address …)
+     - card_svgs     : list of (Card, svg_string) pairs aligned 1:1
+                       with `cards`. The route builds these from the
+                       unified renderer.
      - error         : optional error string to render in place of the grid
-
-   No password is ever rendered here — only an `••••••••` mask, matching
-   what the existing live designer preview does. The real password only
-   appears inside the exported PDF.
 #}
 {% set layout = (template.layout_json or {}) if template else {} %}
-{% set show = overrides or {} %}
-{% set brand_name   = show.brand_name   or layout.brand_name   or 'HobeRadius' %}
-{% set card_title   = show.card_title   or layout.card_title   or 'Internet Card' %}
-{% set footer_text  = show.footer_text  or layout.footer_text  or '' %}
-{% set hotspot_addr = show.hotspot_address or layout.hotspot_address or '' %}
-{% set pattern      = layout.pattern_style or 'signal' %}
-{% set orient       = layout.card_orientation or 'horizontal' %}
+{% set orient = layout.card_orientation or 'horizontal' %}
 
 <div class="pt-fragment" data-preview-fragment
      data-template-id="{{ template.id if template else '' }}"
-     data-batch-id="{{ batch.id if batch else '' }}">
+     data-batch-id="{{ batch.id if batch else '' }}"
+     data-orientation="{{ orient }}">
   <header class="pt-fragment-head">
     <div>
       <strong>{{ template.name if template else 'بدون قالب' }}</strong>
@@ -46,53 +45,24 @@
   {% if error %}
     <div class="hub-empty">{{ error }}</div>
   {% else %}
-    <div class="pt-fragment-grid">
-      {% for card in cards %}
-        <article class="pr-card-preview pt-visual-card{% if orient == 'vertical' %} is-vertical{% endif %}{% if layout.background_image_data_url %} has-image{% endif %}"
-                 data-pattern="{{ pattern }}"
-                 style="--card-a:{{ layout.gradient_start or '#0f172a' }};
-                        --card-b:{{ layout.gradient_end or '#22a7bd' }};
-                        --card-accent:{{ layout.accent_color or '#f59e0b' }};
-                        --card-text:{{ layout.text_color or '#ffffff' }};
-                        --card-surface:{{ layout.surface_color or '#e8f7fb' }};
-                        {% if layout.background_image_data_url %}--card-image:url('{{ layout.background_image_data_url }}');{% endif %}
-                        --card-image-opacity:{{ layout.image_opacity or 0.82 }};">
-          {% if layout.background_image_data_url %}
-            <div class="pr-card-bg-image"></div>
-          {% endif %}
-          <div class="pr-card-accent"></div>
-          {% if layout.show_brand is not defined or layout.show_brand %}
-            <div class="pr-brand">{{ brand_name }}</div>
-          {% endif %}
-          <div class="pr-title">{{ card_title }}</div>
-          {% if layout.show_username is not defined or layout.show_username %}
-            <div class="pr-pill pr-user"><small>USER</small><span>{{ card.username }}</span></div>
-          {% endif %}
-          {% if layout.show_password is not defined or layout.show_password %}
-            <div class="pr-pill pr-pass"><small>PASS</small><span>••••••••</span></div>
-          {% endif %}
-          <div class="pr-qr">QR</div>
-          <div class="pr-meta">
-            {% if hotspot_addr and (layout.show_hotspot is not defined or layout.show_hotspot) %}
-              <span>{{ hotspot_addr }}</span>
-            {% endif %}
-            {% if layout.show_serial is not defined or layout.show_serial %}
-              <span>#{{ card.id }}</span>
-            {% endif %}
-          </div>
-          {% if footer_text %}
-            <div class="pr-footer">{{ footer_text }}</div>
-          {% endif %}
+    <div class="pt-fragment-grid pt-svg-grid {% if orient == 'vertical' %}is-vertical{% endif %}">
+      {% for entry in card_svgs %}
+        <article class="pt-svg-card">
+          {# SVG is pre-rendered by card_renderer.render_card_svg —
+             safe to mark | safe because the renderer XML-escapes all
+             user-supplied text before emitting the markup. #}
+          {{ entry.svg | safe }}
         </article>
       {% else %}
         <div class="hub-empty">هذه الحزمة لا تحتوي بطاقات بعد. ولّد البطاقات داخل الحزمة أولًا.</div>
       {% endfor %}
     </div>
 
-    {% if cards %}
+    {% if card_svgs %}
       <p class="pt-fragment-note">
         <i class="fa-solid fa-circle-info"></i>
-        أول {{ cards|length }} بطاقة من الحزمة كمعاينة فعلية. كلمات المرور تظهر فقط داخل PDF التصدير.
+        أول {{ card_svgs|length }} بطاقة من الحزمة كمعاينة فعلية، مرسومة بنفس المحرّك الذي يولّد PDF.
+        كلمات المرور تظهر فقط داخل PDF التصدير.
       </p>
     {% endif %}
   {% endif %}

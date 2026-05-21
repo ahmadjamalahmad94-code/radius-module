@@ -7,6 +7,7 @@ from pathlib import PurePath
 from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+from ..services.card_renderer import build_card_render_model, render_card_svg
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
 
@@ -286,11 +287,33 @@ def print_templates_preview_fragment(template_id: int):
     }
     overrides = {k: v for k, v in overrides.items() if v}
 
+    # Build SVG strings via the unified renderer — single source of truth
+    # shared with the PDF adapter. The route does this server-side so the
+    # partial stays markup-only.
+    card_svgs: list[dict] = []
+    if template is not None and error is None:
+        if cards:
+            for card in cards:
+                model = build_card_render_model(template, card, overrides=overrides)
+                card_svgs.append({
+                    "card": card,
+                    "svg": render_card_svg(model, mask_password=True),
+                })
+        else:
+            # No batch chosen yet — show a single sample card so the user
+            # can still see what the template looks like with real layout.
+            model = build_card_render_model(template, None, overrides=overrides)
+            card_svgs.append({
+                "card": None,
+                "svg": render_card_svg(model, mask_password=True),
+            })
+
     return render_template(
         "radius/_print_template_preview_fragment.html",
         template=template,
         batch=batch,
         cards=cards,
+        card_svgs=card_svgs,
         overrides=overrides,
         error=error,
     )
