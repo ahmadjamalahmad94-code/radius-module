@@ -282,11 +282,13 @@ Purpose: store reusable card-print layouts with template options.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/print-templates` | GET | Bearer | partial | Yes |
-| `/api/v1/print-templates` | POST | Bearer | partial | Yes |
-| `/api/v1/print-templates/{template_id}/render` | POST | Bearer | partial | Yes; preview only |
+| `/api/v1/print-templates` | GET | Bearer | done | Yes |
+| `/api/v1/print-templates` | POST | Bearer | done | Yes |
+| `/api/v1/print-templates/{template_id}/render` | POST | Bearer | done | Yes; visual preview |
+| `/api/v1/print-templates/{template_id}/export.pdf` | GET/POST | Bearer | done | Yes; real PDF sample export |
 
-Remaining work: real PDF/export renderer before showing PDF as complete.
+Remaining work: binding print templates to a selected real card batch for full
+production card-sheet export.
 
 ### 12. Backup / Google Drive Readiness
 

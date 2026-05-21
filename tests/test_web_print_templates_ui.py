@@ -102,3 +102,11 @@ def test_print_templates_create_and_visual_preview(client):
     assert "visual_card_preview" in html
     assert "pt-visual-card" in html
     assert "QA123" in html
+
+    export = client.get(
+        f"/admin/radius/print-templates/{template['id']}/export.pdf",
+        follow_redirects=False,
+    )
+    assert export.status_code == 200
+    assert export.content_type.startswith("application/pdf")
+    assert export.data.startswith(b"%PDF")

@@ -613,6 +613,84 @@ class OperationsService:
             "export_generated": False,
         }
 
+    def export_print_template_pdf(self, *, tenant_id: int, template_id: int,
+                                  sample: Optional[dict] = None) -> bytes:
+        template = operations_repo.get_print_template(tenant_id, template_id)
+        if not template:
+            raise RadiusNotFound("print template not found")
+
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4, letter, landscape, portrait
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+
+        layout = template.get("layout_json")
+        if not isinstance(layout, dict):
+            layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
+
+        page_size = str(template.get("page_size") or "A4").strip().lower()
+        base_size = letter if page_size == "letter" else A4
+        orientation = str(template.get("orientation") or "portrait").lower()
+        pagesize = landscape(base_size) if orientation == "landscape" else portrait(base_size)
+        page_width, page_height = pagesize
+
+        rows = max(int(template.get("cards_per_column") or 1), 1)
+        cols = max(int(template.get("cards_per_row") or 1), 1)
+        margin = 10 * mm
+        gap = 4 * mm
+        fit_width = (page_width - (margin * 2) - (gap * (cols - 1))) / cols
+        fit_height = (page_height - (margin * 2) - (gap * (rows - 1))) / rows
+        card_width = min(max(float(layout.get("card_width_mm") or 85), 1.0) * mm, fit_width)
+        card_height = min(max(float(layout.get("card_height_mm") or 54), 1.0) * mm, fit_height)
+        font_size = max(min(int(template.get("font_size") or 12), 36), 6)
+        text_color = _reportlab_color(str(template.get("color") or "#1f2937"))
+        show_qr = bool(template.get("show_qr"))
+
+        sample_payload = sample or {}
+        cards = sample_payload.get("cards")
+        if not isinstance(cards, list) or not cards:
+            cards = [{
+                "username": sample_payload.get("username") or "CARD1234",
+                "password": sample_payload.get("password") or "********",
+                "qr_payload": sample_payload.get("qr_payload") or sample_payload.get("username") or "CARD1234",
+            }]
+        cards_per_page = rows * cols
+        while len(cards) < cards_per_page:
+            index = len(cards) + 1
+            cards.append({
+                "username": f"CARD{index:04d}",
+                "password": "********",
+                "qr_payload": f"CARD{index:04d}",
+            })
+
+        output = BytesIO()
+        pdf = canvas.Canvas(output, pagesize=pagesize)
+        pdf.setTitle(f"Card print template - {template.get('name') or template_id}")
+        pdf.setAuthor("HobeRadius")
+
+        for idx, card in enumerate(cards[:cards_per_page]):
+            row = idx // cols
+            col = idx % cols
+            x = margin + col * (card_width + gap)
+            y = page_height - margin - card_height - row * (card_height + gap)
+            _draw_template_card(
+                pdf,
+                x=x,
+                y=y,
+                width=card_width,
+                height=card_height,
+                template=template,
+                card=card if isinstance(card, dict) else {},
+                font_size=font_size,
+                text_color=text_color,
+                show_qr=show_qr,
+                mm_unit=mm,
+            )
+
+        pdf.showPage()
+        pdf.save()
+        return output.getvalue()
+
     def backup_status(self, *, tenant_id: int) -> dict:
         return operations_repo.backup_status(tenant_id)
 
@@ -648,6 +726,56 @@ class OperationsService:
             payload={"status": status, "verified": verified},
         )
         return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
+
+
+def _reportlab_color(value: str):
+    from reportlab.lib import colors
+
+    raw = (value or "#1f2937").strip()
+    try:
+        return colors.HexColor(raw if raw.startswith("#") else f"#{raw}")
+    except Exception:
+        return colors.HexColor("#1f2937")
+
+
+def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
+                        template: dict, card: dict, font_size: int,
+                        text_color, show_qr: bool, mm_unit: float) -> None:
+    from reportlab.lib import colors
+
+    pdf.setStrokeColor(colors.HexColor("#22a7bd"))
+    pdf.setFillColor(colors.HexColor("#ffffff"))
+    pdf.roundRect(x, y, width, height, 7, stroke=1, fill=1)
+    pdf.setStrokeColor(colors.HexColor("#d8edf3"))
+    pdf.line(x + 5 * mm_unit, y + height - 10 * mm_unit,
+             x + width - 5 * mm_unit, y + height - 10 * mm_unit)
+
+    def _coord(prefix: str) -> tuple[float, float]:
+        x_mm = float(template.get(f"{prefix}_x") or 0)
+        y_mm = float(template.get(f"{prefix}_y") or 0)
+        return x + x_mm * mm_unit, y + height - y_mm * mm_unit
+
+    username = str(card.get("username") or "CARD1234")
+    password = str(card.get("password") or "********")
+    qr_payload = str(card.get("qr_payload") or username)
+
+    pdf.setFillColor(text_color)
+    pdf.setFont("Helvetica-Bold", font_size)
+    ux, uy = _coord("username")
+    pdf.drawString(ux, uy, username)
+    px, py = _coord("password")
+    pdf.setFont("Helvetica", max(font_size - 1, 6))
+    pdf.drawString(px, py, password)
+
+    if show_qr:
+        qx, qy = _coord("qr")
+        size = 16 * mm_unit
+        pdf.setStrokeColor(text_color)
+        pdf.rect(qx, qy - size, size, size, stroke=1, fill=0)
+        pdf.setFont("Helvetica-Bold", 7)
+        pdf.drawCentredString(qx + size / 2, qy - size / 2 - 2, "QR")
+        pdf.setFont("Helvetica", 5)
+        pdf.drawCentredString(qx + size / 2, qy - size - 5, qr_payload[:18])
 
 
 def get_operations_service() -> OperationsService:

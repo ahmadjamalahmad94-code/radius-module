@@ -213,6 +213,14 @@ def test_print_template_persistence_and_json_preview(client):
     assert "username" in data["preview"]["placements"]
     assert data["export_generated"] is False
 
+    export = client.get(
+        f"/api/v1/print-templates/{template['id']}/export.pdf",
+        headers=_auth(client),
+    )
+    assert export.status_code == 200, export.get_json()
+    assert export.content_type.startswith("application/pdf")
+    assert export.data.startswith(b"%PDF")
+
 
 def test_backup_status_and_local_run_are_non_destructive(client):
     status = client.get("/api/v1/backups/status", headers=_auth(client))

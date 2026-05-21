@@ -1,7 +1,7 @@
 """Card print template API foundation."""
 from __future__ import annotations
 
-from flask import Blueprint, g, request
+from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
 from ..auth import require_api_token
@@ -31,6 +31,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates/<int:template_id>/render",
                     "print_templates_render",
                     require_api_token(print_templates_render), methods=["POST"])
+    bp.add_url_rule("/print-templates/<int:template_id>/export.pdf",
+                    "print_templates_export_pdf",
+                    require_api_token(print_templates_export_pdf), methods=["GET", "POST"])
 
 
 def print_templates_list():
@@ -67,3 +70,22 @@ def print_templates_render(template_id: int):
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     return ok(result)
+
+
+def print_templates_export_pdf(template_id: int):
+    body = request.get_json(silent=True) or {}
+    try:
+        payload = _svc().export_print_template_pdf(
+            tenant_id=_tid(),
+            template_id=template_id,
+            sample=body.get("sample") if isinstance(body.get("sample"), dict) else None,
+        )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    return Response(
+        payload,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="print-template-{template_id}.pdf"'
+        },
+    )

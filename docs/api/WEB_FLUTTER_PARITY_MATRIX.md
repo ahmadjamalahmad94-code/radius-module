@@ -36,7 +36,7 @@ Status values:
 | Lifecycle retention | `/admin/radius/lifecycle` | `/api/v1/lifecycle/*` | `/lifecycle` | done | Policies, preview, manual run, events, and retention fields exist. Worker is opt-in via VPS env. |
 | Backups | `/admin/radius/backups` | `/api/v1/backups/status`, `/api/v1/backups/run` | `/backups` | partial | Local backup is real. Google Drive is planned_disabled until OAuth/storage is real. |
 | Bandwidth schedules | `/admin/radius/bandwidth-schedules` | `/api/v1/bandwidth-schedules` | `/bandwidth-schedules` | dry_run | Saved schedules and resolver exist. Live apply depends on backend flag and RADIUS adapter verification. |
-| Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates` | `/print-templates` | partial | Saved layout and preview exist. Real PDF/export renderer is not complete. |
+| Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates`, `/api/v1/print-templates/<id>/export.pdf` | `/print-templates` | done | Saved layouts, visual preview, and real PDF sample export exist. Remaining future slice is batch-bound full card-sheet rendering. |
 | MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | `/mikrotik` | done | Flutter now supports list/create/edit/delete plus saved and unsaved connectivity tests. Saved passwords are not returned. |
 | Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | `/admin-control` | done | Config save, test dispatch, and deliveries viewer are API-backed in Flutter. |
 | System status | `/admin/radius/status` | `/api/v1/system/status` | `/system-operations` | done | Flutter shows backend counters, routers, and sync summary from the real API. |

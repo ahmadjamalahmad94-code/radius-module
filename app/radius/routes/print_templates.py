@@ -1,7 +1,7 @@
 """Web UI for card print templates."""
 from __future__ import annotations
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
 from ..services.operations import get_operations_service
@@ -20,6 +20,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         "print_templates_preview",
         print_templates_preview,
         methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/print-templates/<int:template_id>/export.pdf",
+        "print_templates_export_pdf",
+        print_templates_export_pdf,
+        methods=["GET"],
     )
 
 
@@ -111,3 +117,26 @@ def print_templates_preview(template_id: int):
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(url_for("radius.print_templates"))
+
+
+def print_templates_export_pdf(template_id: int):
+    try:
+        payload = get_operations_service().export_print_template_pdf(
+            tenant_id=_tid(),
+            template_id=template_id,
+            sample={
+                "username": request.args.get("sample_username") or "CARD1234",
+                "password": request.args.get("sample_password") or "********",
+                "qr_payload": request.args.get("sample_username") or "CARD1234",
+            },
+        )
+    except RadiusError as exc:
+        flash(exc.message, "error")
+        return redirect(url_for("radius.print_templates"))
+    return Response(
+        payload,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="print-template-{template_id}.pdf"'
+        },
+    )
