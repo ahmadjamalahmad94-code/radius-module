@@ -189,8 +189,9 @@
   }
 
   /* ── Account-section additions (B2 redesign) ─────────────────── */
-  /* Full-width field that spans both grid columns. */
-  .uf-field--full{ grid-column: 1 / -1; }
+  /* Field that spans 2 columns in the 4-col grid. */
+  .uf-field.span-2{ grid-column: span 2; }
+  @media (max-width: 920px){ .uf-field.span-2{ grid-column: span 1; } }
 
   /* Password input + eye toggle on the right (start-edge in RTL). */
   .uf-pw{ position: relative; }
@@ -241,6 +242,47 @@
   .uf-svc-body{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .uf-svc-title{ font-weight: 800; color: var(--hub-text); font-size: 14px; }
   .uf-svc-sub  { font-size: 11.5px; color: var(--hub-text-mute); }
+
+  /* iOS-style toggle (used for auto_renewal). Sits inside a .uf-field so
+     it lines up vertically with neighbouring selects. */
+  .uf-toggle{
+    display:flex; align-items:center; gap:10px;
+    padding: 9px 12px;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: 10px;
+    cursor: pointer;
+    height: 40px;          /* match .hub-input height for clean alignment */
+    box-sizing: border-box;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-toggle:hover{ border-color: var(--hub-brand-line); }
+  .uf-toggle input{ display: none; }
+  .uf-toggle-track{
+    position: relative;
+    width: 38px; height: 22px;
+    background: #d4d4d8;
+    border-radius: 999px;
+    flex-shrink: 0;
+    transition: background var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-toggle-thumb{
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    transition: inset-inline-start var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-toggle input:checked + .uf-toggle-track{ background: var(--hub-brand); }
+  .uf-toggle input:checked + .uf-toggle-track .uf-toggle-thumb{
+    inset-inline-start: 18px;
+  }
+  .uf-toggle-label{ font-size: 13px; font-weight: 700; color: var(--hub-text); }
+  .uf-toggle-label::before{ content: attr(data-off); }
+  .uf-toggle input:checked ~ .uf-toggle-label::before{ content: attr(data-on); color: var(--hub-brand-ink); }
 </style>
 {% endblock %}
 
@@ -298,6 +340,10 @@
       <div class="uf-section-body">
         <input type="hidden" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
 
+        {# Layout (4-col grid, no holes):
+           Row 1: username (1) | password (2) | status (1)
+           Row 2: service-type cards (full = 4)
+           Row 3: plan (1) | manager (1) | group (1) | auto_renewal (1) #}
         <div class="uf-grid">
           <div class="uf-field">
             <label>اسم الدخول <span class="req">*</span></label>
@@ -306,7 +352,7 @@
             <div class="help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
           </div>
 
-          <div class="uf-field">
+          <div class="uf-field span-2">
             <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
             <div class="uf-pw">
               <input class="hub-input uf-pw-input" type="password" name="password"
@@ -322,7 +368,19 @@
             <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب.</div>
           </div>
 
-          <div class="uf-field uf-field--full">
+          <div class="uf-field">
+            <label>الحالة</label>
+            <select class="hub-select" name="status">
+              {% for s in statuses %}
+                <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
+                  {% if s == 'enabled' %}مفعَّل{% elif s == 'disabled' %}معطَّل{% elif s == 'expired' %}منتهٍ{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+          </div>
+
+          <div class="uf-field full">
             <label>نوع الخدمة</label>
             {%- set svc = (sub.service_type or '')|lower -%}
             {%- set svc_hs = svc in ('hotspot','both') -%}
@@ -364,18 +422,6 @@
           </div>
 
           <div class="uf-field">
-            <label>الحالة</label>
-            <select class="hub-select" name="status">
-              {% for s in statuses %}
-                <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
-                  {% if s == 'enabled' %}مفعَّل{% elif s == 'disabled' %}معطَّل{% elif s == 'expired' %}منتهٍ{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-            <div class="help">عند التعطيل لن يستطيع المشترك الدخول.</div>
-          </div>
-
-          <div class="uf-field">
             <label>المدير المسؤول</label>
             <select class="hub-select" name="manager_id">
               <option value="">— بدون —</option>
@@ -400,18 +446,19 @@
               {% endfor %}
             </select>
             <div class="help">
-              المجموعات تُدار من
+              تُدار من
               <a href="{{ url_for('radius.subscriber_groups_list') }}"
-                 style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">قسم مجموعات المشتركين</a>.
+                 style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">مجموعات المشتركين</a>.
             </div>
           </div>
 
           <div class="uf-field">
             <label>تجديد تلقائي</label>
-            <div class="uf-chk">
+            <label class="uf-toggle">
               <input type="checkbox" name="auto_renewal" id="auto-renew" value="1" {% if sub.auto_renewal %}checked{% endif %}>
-              <label for="auto-renew">مفعَّل</label>
-            </div>
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
             <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
           </div>
         </div>
