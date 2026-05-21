@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}مجموعات المشاركة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}مجموعات المشاركة (Share Groups){% endblock %}
@@ -9,6 +10,12 @@
   </a>
 {% endblock %}
 {% block content %}
+{{ hub.hero(
+  "مجموعات المشاركة (Share Groups)",
+  subtitle="مجموعات لمشاركة الكروت/الباقات بين الموزّعين",
+  icon="people-arrows"
+) }}
+
 <div class="card"><div class="card-body card-body--flush">
   {% if items %}
   <table class="hr-table">

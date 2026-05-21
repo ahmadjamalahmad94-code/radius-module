@@ -1,10 +1,17 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}النسخ الاحتياطي{% endblock %}
 {% block page_title %}النسخ الاحتياطي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
 {% block page_sub %}<span class="sub">نسخة محلية آمنة الآن، وGoogle Drive لاحقًا</span>{% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "النسخ الاحتياطي",
+  subtitle="إنشاء واستعادة نسخ احتياطية",
+  icon="database"
+) }}
+
 <style>
   .bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
   .bk-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}

@@ -1,9 +1,16 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}عمليات جماعية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}عمليات جماعية على المستخدمين{% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "عمليات جماعية على المستخدمين",
+  subtitle="عمليات جماعية على المشتركين",
+  icon="layer-group"
+) }}
+
 <form method="post">
   <div class="card">
     <div class="card-header"><span class="title">قائمة المستخدمين</span></div>

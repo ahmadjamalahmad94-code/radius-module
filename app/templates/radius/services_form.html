@@ -1,9 +1,16 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% set ttl = "إضافة معدّة" if is_new else "تعديل معدّة" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
 {% block content %}
+{{ hub.hero(
+  ttl,
+  subtitle="تعريف خدمة قابلة لإسنادها لمشتركين أو باقات",
+  icon="toolbox"
+) }}
+
 <form method="post"
       action="{{ url_for('radius.svc_update', sid=item.id) if not is_new else url_for('radius.svc_create') }}">
   <div class="card"><div class="card-header"><span class="title">المعطيات</span></div><div class="card-body">

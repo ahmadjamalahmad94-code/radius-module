@@ -1,10 +1,17 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}Audit Log{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock-rotate-left"></i>{% endblock %}
 {% block page_title %}Audit Log{% endblock %}
 {% block page_sub %}<span class="sub">(آخر 300 عملية)</span>{% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "Audit Log",
+  subtitle="سجلّ كامل لكل أحداث النظام",
+  icon="clock-rotate-left"
+) }}
+
 <div class="card"><div class="card-body card-body--flush">
   {% if items %}
   <table class="hr-table">

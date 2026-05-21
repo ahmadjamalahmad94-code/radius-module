@@ -1,9 +1,16 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}طابور المزامنة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
 {% block page_title %}طابور المزامنة إلى MikroTik{% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "طابور المزامنة إلى MikroTik",
+  subtitle="مراقبة طابور المزامنة إلى أجهزة MikroTik",
+  icon="arrows-rotate"
+) }}
+
 <div class="kpi-strip">
   <div class="kpi-card">
     <div class="right"><div class="lbl">في الانتظار</div><div class="val">{{ stats.queued }}</div></div>

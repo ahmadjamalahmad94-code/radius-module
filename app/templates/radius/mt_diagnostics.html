@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
@@ -113,6 +114,12 @@
 {% endblock %}
 
 {% block content %}
+
+{{ hub.hero(
+  "تشخيص اتصال الراوترات",
+  subtitle="تشخيص اتصال الراوترات وأحدث الأخطاء",
+  icon="stethoscope"
+) }}
 
 {# ─────────── Top summary cards ─────────── #}
 <div class="mtd-summary">

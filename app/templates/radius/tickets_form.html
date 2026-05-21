@@ -1,8 +1,15 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}تذكرة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة جديدة{% endblock %}
 {% block content %}
+{{ hub.hero(
+  "تذكرة جديدة",
+  subtitle="افتح تذكرة دعم جديدة",
+  icon="headset"
+) }}
+
 <form method="post">
   <div class="card"><div class="card-header"><span class="title">المعلومات</span></div><div class="card-body">
     <div class="form-row"><label>المشترك *</label>

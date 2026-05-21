@@ -1,10 +1,17 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% set ttl = "إضافة مجموعة" if is_new else "تعديل مجموعة" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  ttl,
+  subtitle="تعريف مجموعة مشاركة بين الموزّعين",
+  icon="people-arrows"
+) }}
+
 <form method="post"
       action="{{ url_for('radius.sgrp_update', gid=item.id) if not is_new else url_for('radius.sgrp_create') }}">
   <div class="card">

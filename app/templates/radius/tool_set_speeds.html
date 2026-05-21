@@ -1,9 +1,16 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}تعديل السرعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}تعديل سرعات الباقات (جماعي){% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "تعديل سرعات الباقات (جماعي)",
+  subtitle="تعديل سرعة عدد من الباقات في عملية واحدة",
+  icon="gauge-high"
+) }}
+
 <form method="post">
   <div class="card">
     <div class="card-header"><span class="title">اختر الباقات</span></div>

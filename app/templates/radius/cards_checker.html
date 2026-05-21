@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}مركز عمليات البطاقة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}مركز عمليات البطاقة{% endblock %}
@@ -93,6 +94,12 @@
 {% endblock %}
 
 {% block content %}
+{{ hub.hero(
+  "مركز عمليات البطاقة",
+  subtitle="النسخة القديمة من مركز عمليات البطاقة",
+  icon="id-card-clip"
+) }}
+
 {% set card = result if result and result.exists else none %}
 {% set summary = card.accounting_summary if card else {} %}
 {% set sessions = summary.latest_sessions if summary else [] %}
