@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}استيراد ملف كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
@@ -90,10 +91,7 @@
         </div>
 
         <div class="ci-field full">
-          <label class="hub-flex-row" style="gap:8px;align-items:center">
-            <input type="checkbox" name="sync_to_radius" value="1" {% if form.get('sync_to_radius') %}checked{% endif %}>
-            مزامنة حسابات RADIUS للملف المستورد
-          </label>
+          {{ toggle_switch(name="sync_to_radius", checked=form.get('sync_to_radius'), value="1", on_label="مزامنة حسابات RADIUS للملف المستورد", off_label="بدون مزامنة RADIUS") }}
           <div class="ci-note">
             يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات RADIUS فعلية.
           </div>

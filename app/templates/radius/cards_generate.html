@@ -3,6 +3,7 @@
    route (radius.cards_generate) + same form field names. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}إنشاء كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
@@ -161,13 +162,11 @@
           <div class="help">للتوافق مع الإعداد القديم.</div></div>
         <div class="cg-field"><label>تضمين رقم الحزمة</label>
           <div class="cg-chk">
-            <input type="checkbox" name="include_batch_number" id="ibn" value="1" {% if form.get('include_batch_number') %}checked{% endif %}>
-            <label for="ibn">B{id}-... قبل الاسم</label>
+            {{ toggle_switch(name="include_batch_number", checked=form.get('include_batch_number'), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
           </div></div>
         <div class="cg-field"><label>توليد عشوائي</label>
           <div class="cg-chk">
-            <input type="checkbox" name="random_generation_enabled" id="rge" value="1" {% if form.get('random_generation_enabled') or not form %}checked{% endif %}>
-            <label for="rge">مفعَّل</label>
+            {{ toggle_switch(name="random_generation_enabled", checked=(form.get('random_generation_enabled') or not form), value="1", id="rge") }}
           </div></div>
       </div>
     </div>
@@ -205,13 +204,11 @@
           <input class="hub-input" type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
         <div class="cg-field"><label>العدّ من أول اتصال</label>
           <div class="cg-chk">
-            <input type="checkbox" name="count_from_first_connect" id="cfc" value="1" {% if form.get('count_from_first_connect') or not form %}checked{% endif %}>
-            <label for="cfc">مفعَّل (وإلا من تاريخ الإنشاء)</label>
+            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label="مفعَّل (وإلا من تاريخ الإنشاء)", off_label="من تاريخ الإنشاء") }}
           </div></div>
         <div class="cg-field"><label>العدّ بالثواني</label>
           <div class="cg-chk">
-            <input type="checkbox" name="count_by_seconds" id="cbs" value="1" {% if form.get('count_by_seconds') %}checked{% endif %}>
-            <label for="cbs">مفعَّل</label>
+            {{ toggle_switch(name="count_by_seconds", checked=form.get('count_by_seconds'), value="1", id="cbs") }}
           </div></div>
       </div>
     </div>
@@ -235,38 +232,31 @@
           </select></div>
         <div class="cg-field"><label>تجديد تلقائي بعد أول استخدام</label>
           <div class="cg-chk">
-            <input type="checkbox" name="auto_renew_after_first_use" id="arfu" value="1" {% if form.get('auto_renew_after_first_use') %}checked{% endif %}>
-            <label for="arfu">مفعَّل</label>
+            {{ toggle_switch(name="auto_renew_after_first_use", checked=form.get('auto_renew_after_first_use'), value="1", id="arfu") }}
           </div></div>
         <div class="cg-field"><label>تحويل إلى حالة طالب</label>
           <div class="cg-chk">
-            <input type="checkbox" name="transfer_to_student_status_on_connect" id="ts" value="1" {% if form.get('transfer_to_student_status_on_connect') %}checked{% endif %}>
-            <label for="ts">عند الاتصال</label>
+            {{ toggle_switch(name="transfer_to_student_status_on_connect", checked=form.get('transfer_to_student_status_on_connect'), value="1", id="ts", on_label="عند الاتصال", off_label="معطَّل") }}
           </div></div>
         <div class="cg-field"><label>إغلاق جلسة المستخدم</label>
           <div class="cg-chk">
-            <input type="checkbox" name="close_user_session_on_disconnect" id="cus" value="1" {% if form.get('close_user_session_on_disconnect') %}checked{% endif %}>
-            <label for="cus">عند الفصل</label>
+            {{ toggle_switch(name="close_user_session_on_disconnect", checked=form.get('close_user_session_on_disconnect'), value="1", id="cus", on_label="عند الفصل", off_label="معطَّل") }}
           </div></div>
         <div class="cg-field"><label>ربط MAC عند الاتصال</label>
           <div class="cg-chk">
-            <input type="checkbox" name="switch_to_mac_on_connect" id="smc" value="1" {% if form.get('switch_to_mac_on_connect') %}checked{% endif %}>
-            <label for="smc">مفعَّل</label>
+            {{ toggle_switch(name="switch_to_mac_on_connect", checked=form.get('switch_to_mac_on_connect'), value="1", id="smc") }}
           </div></div>
         <div class="cg-field"><label>قفل MAC عند الإغلاق</label>
           <div class="cg-chk">
-            <input type="checkbox" name="lock_to_mac_on_close" id="lmc" value="1" {% if form.get('lock_to_mac_on_close') %}checked{% endif %}>
-            <label for="lmc">مفعَّل</label>
+            {{ toggle_switch(name="lock_to_mac_on_close", checked=form.get('lock_to_mac_on_close'), value="1", id="lmc") }}
           </div></div>
         <div class="cg-field"><label>دخول برقم الجوال فقط</label>
           <div class="cg-chk">
-            <input type="checkbox" name="phone_only_login" id="pol" value="1" {% if form.get('phone_only_login') %}checked{% endif %}>
-            <label for="pol">مفعَّل</label>
+            {{ toggle_switch(name="phone_only_login", checked=form.get('phone_only_login'), value="1", id="pol") }}
           </div></div>
         <div class="cg-field full"><label>السماح بالدخول ببطاقة سابقة (فلسطين فقط)</label>
           <div class="cg-chk">
-            <input type="checkbox" name="allow_entry_by_previous_card_palestine" id="aep" value="1" {% if form.get('allow_entry_by_previous_card_palestine') %}checked{% endif %}>
-            <label for="aep">مفعَّل</label>
+            {{ toggle_switch(name="allow_entry_by_previous_card_palestine", checked=form.get('allow_entry_by_previous_card_palestine'), value="1", id="aep") }}
           </div></div>
         <div class="cg-field full"><label>ملاحظات</label>
           <textarea class="hub-textarea" name="notes">{{ form.get('notes') or '' }}</textarea></div>

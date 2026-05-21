@@ -1,6 +1,7 @@
 {# Devices (NAS) form — REBUILT (Night N8) on hub-v2. Same backend. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set title_ar = "إضافة جهاز شبكة" if is_new else "تعديل: " + (device.name or 'جهاز') %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -121,14 +122,11 @@
         <div class="nd-field"><label>وسوم (CSV)</label>
           <input class="hub-input" type="text" name="tags" value="{{ device.tags or '' }}" placeholder="إنتاج، مبنى أ"></div>
         <div class="nd-field"><label>الحالة</label>
-          <div class="nd-chk"><input type="checkbox" name="enabled" id="nd-en" value="1" {% if device.enabled or is_new %}checked{% endif %}>
-            <label for="nd-en">مفعَّل</label></div></div>
+          <div class="nd-chk">{{ toggle_switch(name="enabled", checked=(device.enabled or is_new), value="1", id="nd-en") }}</div></div>
         <div class="nd-field"><label>المراقبة الدورية</label>
-          <div class="nd-chk"><input type="checkbox" name="monitoring_enabled" id="nd-mon" value="1" {% if device.monitoring_enabled or is_new %}checked{% endif %}>
-            <label for="nd-mon">مفعَّلة</label></div></div>
+          <div class="nd-chk">{{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label="مفعَّلة", off_label="معطَّلة") }}</div></div>
         <div class="nd-field"><label>التحقق من رسالة RADIUS</label>
-          <div class="nd-chk"><input type="checkbox" name="require_message_authenticator" id="nd-ma" value="1" {% if device.require_message_authenticator %}checked{% endif %}>
-            <label for="nd-ma">إلزامي</label></div></div>
+          <div class="nd-chk">{{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label="إلزامي", off_label="اختياري") }}</div></div>
         <div class="nd-field full"><label>الوصف</label>
           <textarea class="hub-textarea" name="description">{{ device.description or '' }}</textarea></div>
       </div>
@@ -177,8 +175,7 @@
         <div class="nd-field"><label>كلمة مرور MikroTik</label>
           <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}"></div>
         <div class="nd-field"><label>اتصال TLS آمن</label>
-          <div class="nd-chk"><input type="checkbox" name="api_use_tls" id="api-tls" value="1" {% if device.api_use_tls %}checked{% endif %}>
-            <label for="api-tls">8729 (TLS)</label></div></div>
+          <div class="nd-chk">{{ toggle_switch(name="api_use_tls", checked=device.api_use_tls, value="1", id="api-tls", on_label="8729 (TLS)", off_label="8728") }}</div></div>
         <div class="nd-field full"><label>مجتمع SNMP</label>
           <input class="hub-input" type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public"></div>
       </div>
