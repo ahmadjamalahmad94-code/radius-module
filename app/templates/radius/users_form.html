@@ -735,10 +735,11 @@
         </div>
         {% include "radius/_speed_rules_panel.html" %}
 
-        {# Derive bandwidth_control_enabled + bulk-sync scheduled master.
-           Smart UX per user feedback: the section is «active» whenever
-           any of the three inner controls is on. The hidden hub field
-           updates in real time and posts the right value at submit. #}
+        {# Mutually-exclusive speed mode + derived master.
+           Per user feedback: the three modes (custom / temporary /
+           scheduled) cannot coexist — flipping one ON automatically
+           flips the other two OFF. The hidden bandwidth_control_enabled
+           field is then derived: «on» whenever any of the three is on. #}
         <script>
         (function(){
           var sched   = document.querySelector('[data-sched-master]');
@@ -755,6 +756,21 @@
           function anyRuleOn(){
             return ruleInputs().some(function(c){ return c.checked; });
           }
+          function disableScheduled(){
+            ruleInputs().forEach(function(c){ c.checked = false; });
+            if (sched) sched.checked = false;
+          }
+          function makeExclusive(activated){
+            // Turn off the other two siblings.
+            [customSpeed, temporarySpeed, sched].forEach(function(el){
+              if (!el || el === activated) return;
+              if (!el.checked) return;
+              el.checked = false;
+              if (el === sched){
+                ruleInputs().forEach(function(c){ c.checked = false; });
+              }
+            });
+          }
           function syncMaster(){
             if (!hidden) return;
             var on = (customSpeed && customSpeed.checked) ||
@@ -767,23 +783,27 @@
               statusEl.textContent = on ? 'سرعة أساسية — مفعَّلة' : 'سرعة أساسية';
             }
           }
-          // initial sched master state mirrors any-rule-on
+          function handle(el){
+            if (el.checked) makeExclusive(el);
+            if (el === sched){
+              ruleInputs().forEach(function(c){ c.checked = sched.checked; });
+            }
+            syncMaster();
+          }
+          if (customSpeed)    customSpeed.addEventListener('change',    function(){ handle(customSpeed); });
+          if (temporarySpeed) temporarySpeed.addEventListener('change', function(){ handle(temporarySpeed); });
           if (sched){
             sched.checked = anyRuleOn();
-            sched.addEventListener('change', function(){
-              ruleInputs().forEach(function(c){ c.checked = sched.checked; });
-              syncMaster();
-            });
+            sched.addEventListener('change', function(){ handle(sched); });
           }
-          [customSpeed, temporarySpeed].forEach(function(el){
-            if (el) el.addEventListener('change', syncMaster);
-          });
-          // when an individual rule's enabled flips, re-derive
+          // Enabling an individual rule means scheduled mode is the
+          // active one — apply exclusivity against custom/temporary too.
           document.addEventListener('change', function(e){
-            if (e.target.matches('input[type="checkbox"][name^="sr_edit_enabled_"]')){
-              if (sched) sched.checked = anyRuleOn();
-              syncMaster();
-            }
+            if (!e.target.matches('input[type="checkbox"][name^="sr_edit_enabled_"]')) return;
+            var nowAny = anyRuleOn();
+            if (sched) sched.checked = nowAny;
+            if (nowAny) makeExclusive(sched || e.target);
+            syncMaster();
           });
           syncMaster();
         })();
