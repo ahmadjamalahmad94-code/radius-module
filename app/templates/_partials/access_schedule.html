@@ -229,6 +229,12 @@
   }
   .acs-time-label i{ color: var(--hub-brand-ink); font-size: 9px; }
 
+  /* "من" picker — flip grid order so its chips sit on the FAR side
+     (away from the central arrow). Makes the whole window read as a
+     mirrored pair: [chips إلى] [stepper إلى]  ←  [stepper من] [chips من] */
+  .acs-time--from .acs-time-stepper{ grid-column: 2; }
+  .acs-time--from .acs-time-quick{   grid-column: 1; }
+
   /* The stepper container is forced LTR so HH:MM always reads
      left-to-right (the universal convention), regardless of the
      surrounding RTL flow. Hour is on the LEFT, minute on the RIGHT. */
@@ -543,6 +549,8 @@
     const row = document.createElement("div");
     row.className = "acs-window-row";
     const fromPicker = makeTimePicker("من", state.from || "");
+    // Flag the "من" picker so its CSS flips chips to the far side.
+    fromPicker.classList.add("acs-time--from");
     const sep = document.createElement("span");
     sep.className = "acs-window-sep";
     sep.innerHTML = '<i class="fa-solid fa-arrow-left-long"></i>';
