@@ -24,7 +24,7 @@ Status values:
 | Subscribers | `/admin/radius/users` | `/api/v1/accounts` | `/subscribers` | done | Create/edit/archive/enable/disable/extend flows are API-backed. |
 | Subscriber finance | `/admin/radius/users/<username>/finance` | `/api/v1/payments`, `/api/v1/loans`, `/api/v1/ledger` | `/subscribers/<username>/finance`, `/ledger` | vps_acceptance_required | Apply-to-RADIUS has dry-run/live result fields; final proof needs real VPS/RADIUS acceptance. |
 | Plans / offers | `/admin/radius/plans` | `/api/v1/profiles` | `/plans` | partial | Advanced plan fields exist; inline speed-rule editing must be rechecked on mobile. |
-| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches`, `/api/v1/cards/batches/import` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions/import exist. Web/Flutter import UI and real Excel/PDF export are still missing. |
+| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches`, `/api/v1/cards/batches/import` | `/cards`, `/cards/batches/<id>`, `/cards/import` | partial | API-backed list/detail/actions/import exist on Web and Flutter. Real Excel/PDF export is still missing and must not be shown as complete. |
 | Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | vps_acceptance_required | Real API-backed operations exist; no password exposure. Live disconnect must be verified against NAS/CoA. |
 | Online sessions | `/admin/radius/sessions` | `/api/v1/sessions/online`, `/api/v1/sessions/disconnect` | `/sessions` | vps_acceptance_required | List/search/type filters are API-backed. Disconnect requires real CoA/NAS acceptance on VPS. |
 | NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas`, `/device-fingerprints` | vps_acceptance_required | NAS CRUD and device fingerprints browser/sync exist. Live DHCP/MikroTik sync must be accepted per customer VPS. |
@@ -58,7 +58,7 @@ Status values:
 | Tickets | `/admin/radius/tickets` | `/api/v1/tickets` | `/saas-modules` | done | API list/create/update/reply exists; Flutter exposes create and reply. |
 | Services | `/admin/radius/services` | `/api/v1/services` | `/saas-modules` | done | API CRUD exists; Flutter generic SaaS module screen covers create/list/delete. |
 | Share groups | `/admin/radius/share-groups` | `/api/v1/share-groups` | `/saas-modules` | done | API CRUD/member management exists; Flutter exposes core create/list/delete. |
-| External card files | `/admin/radius/cards/batches` | `/api/v1/cards/batches/import` | `/cards` | partial | Backend import API exists for imported/external batches; Web and Flutter import screens are still missing. |
+| External card files | `/admin/radius/cards/batches/import` | `/api/v1/cards/batches/import` | `/cards/import` | done | Web and Flutter can import `external` bookkeeping batches and `imported` batches through the real API. `external` never syncs to RADIUS; passwords are not displayed after import. |
 | Google Drive backup | `/admin/radius/backups` | planned OAuth/storage API | `/backups` | planned_disabled | Must stay disabled until real OAuth/storage integration exists. |
 
 ## Implementation Order
