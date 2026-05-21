@@ -140,6 +140,11 @@
     </div>
   {% endcall %}
 
+  {# ── 2b. Speed schedules for this group (edit only) ──── #}
+  {% if not is_new %}
+    {% include "radius/_speed_rules_panel.html" %}
+  {% endif %}
+
   {# ── 3. Members preview (edit only) ──────────────────── #}
   {% if not is_new and members %}
     {% call hub.section("الأعضاء", icon="users",

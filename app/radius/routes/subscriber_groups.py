@@ -15,6 +15,7 @@ from ..core.errors import RadiusError
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import operations_repo, plans_repo
 from ..services.subscriber_groups import get_subscriber_groups_service
+from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
 
 def register_subscriber_groups_routes(bp: Blueprint) -> None:
@@ -129,10 +130,36 @@ def sg_edit(gid: int):
         all_days=[("sat","السبت"),("sun","الأحد"),("mon","الإثنين"),
                   ("tue","الثلاثاء"),("wed","الأربعاء"),("thu","الخميس"),
                   ("fri","الجمعة")],
+        speed_rules_panel=speed_rules_panel(
+            tenant_id=_tid(),
+            target_type="subscriber_group",
+            subscriber_group_id=gid,
+            return_to=request.path,
+            title="قواعد سرعة المجموعة",
+            help_text=(
+                "كل قاعدة تطبق سرعة مختلفة في أوقات معينة على كل أعضاء "
+                "هذه المجموعة. الأولوية الأقل تفوز عند التداخل."
+            ),
+        ),
     )
 
 
 def sg_update(gid: int):
+    # If the submit was a speed-rule action, handle it and short-circuit.
+    if request.form.get("_speed_rule_action"):
+        try:
+            handle_embedded_speed_rule(
+                tenant_id=_tid(),
+                actor=_actor(),
+                form=request.form,
+                target_type="subscriber_group",
+                subscriber_group_id=gid,
+            )
+            flash("تم تطبيق إجراء قاعدة السرعة.", "success")
+        except RadiusError as e:
+            flash(str(e), "error")
+        return redirect(url_for("radius.subscriber_groups_edit", gid=gid))
+
     kwargs = _form_to_kwargs()
     try:
         get_subscriber_groups_service().update(
