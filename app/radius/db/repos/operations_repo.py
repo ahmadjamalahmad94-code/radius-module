@@ -307,15 +307,17 @@ def create_bandwidth_schedule(tenant_id: int, data: dict, *, actor: str) -> dict
             """
             INSERT INTO bandwidth_schedules(
                 tenant_id, plan_id, target_type, subscriber_username, card_batch_id,
+                subscriber_group_id,
                 priority, name, starts_at_time, ends_at_time, days_csv,
                 speed_down_kbps, speed_up_kbps, cir_down_kbps, cir_up_kbps,
                 restore_mode, enabled, created_by, notes, metadata_json, created_at
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 tenant_id, data["plan_id"], data.get("target_type") or "plan",
                 data.get("subscriber_username") or "", data.get("card_batch_id"),
+                data.get("subscriber_group_id"),
                 int(data.get("priority") or 100), data["name"], data["starts_at_time"],
                 data["ends_at_time"], data.get("days_csv") or "",
                 data.get("speed_down_kbps") or 0,
@@ -334,6 +336,7 @@ def list_bandwidth_schedules(tenant_id: int, *, plan_id: int | None = None,
                              target_type: str | None = None,
                              subscriber_username: str | None = None,
                              card_batch_id: int | None = None,
+                             subscriber_group_id: int | None = None,
                              limit: int = 200, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM bandwidth_schedules WHERE tenant_id = ?"
     vals: list[Any] = [tenant_id]
@@ -349,6 +352,9 @@ def list_bandwidth_schedules(tenant_id: int, *, plan_id: int | None = None,
     if card_batch_id is not None:
         sql += " AND card_batch_id = ?"
         vals.append(card_batch_id)
+    if subscriber_group_id is not None:
+        sql += " AND subscriber_group_id = ?"
+        vals.append(subscriber_group_id)
     sql += " ORDER BY target_type, plan_id, subscriber_username, card_batch_id, priority, starts_at_time LIMIT ? OFFSET ?"
     vals += [limit, offset]
     return [
@@ -415,6 +421,7 @@ def set_bandwidth_schedules_enabled_for_target(
     plan_id: int | None = None,
     subscriber_username: str = "",
     card_batch_id: int | None = None,
+    subscriber_group_id: int | None = None,
 ) -> int:
     sql = "UPDATE bandwidth_schedules SET enabled = ?, updated_at = ? WHERE tenant_id = ? AND target_type = ?"
     vals: list[Any] = [1 if enabled else 0, now_iso(), tenant_id, target_type]
@@ -424,6 +431,9 @@ def set_bandwidth_schedules_enabled_for_target(
     elif target_type == "card_batch":
         sql += " AND card_batch_id = ?"
         vals.append(card_batch_id)
+    elif target_type == "subscriber_group":
+        sql += " AND subscriber_group_id = ?"
+        vals.append(subscriber_group_id)
     else:
         sql += " AND plan_id = ?"
         vals.append(plan_id)

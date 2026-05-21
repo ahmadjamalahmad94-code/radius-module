@@ -206,12 +206,14 @@ class OperationsService:
         if not name:
             raise RadiusValidationError("name is required")
         target_type = (data.get("target_type") or "plan").strip().lower()
-        if target_type not in {"plan", "subscriber", "card_batch"}:
-            raise RadiusValidationError("target_type must be plan, subscriber, or card_batch")
+        if target_type not in {"plan", "subscriber", "card_batch", "subscriber_group"}:
+            raise RadiusValidationError(
+                "target_type must be plan, subscriber, card_batch, or subscriber_group")
 
         plan_id = _int_field(data, "plan_id", minimum=0, default=0) or None
         subscriber_username = ""
         card_batch_id = None
+        subscriber_group_id = None
         if target_type == "plan":
             if not plan_id:
                 raise RadiusValidationError("plan_id is required")
@@ -228,18 +230,26 @@ class OperationsService:
             plan_id = sub.plan_id or plan_id
             if not plan_id:
                 raise RadiusValidationError("subscriber has no plan_id; set plan_id first")
-        else:
+        elif target_type == "card_batch":
             from ..db.repos import cards_repo
             card_batch_id = _int_field(data, "card_batch_id", minimum=1)
             batch = cards_repo.get_batch(tenant_id, card_batch_id, include_deleted=True)
             if not batch:
                 raise RadiusNotFound("card batch not found")
             plan_id = batch.plan_id or plan_id
+        else:  # subscriber_group
+            from ..db.repos import subscriber_groups_repo
+            subscriber_group_id = _int_field(data, "subscriber_group_id", minimum=1)
+            grp = subscriber_groups_repo.get(tenant_id, subscriber_group_id)
+            if not grp:
+                raise RadiusNotFound("subscriber group not found")
+            plan_id = grp.get("default_plan_id") or plan_id
         normalized = {
             "plan_id": plan_id,
             "target_type": target_type,
             "subscriber_username": subscriber_username,
             "card_batch_id": card_batch_id,
+            "subscriber_group_id": subscriber_group_id,
             "priority": _int_field(data, "priority", minimum=1, default=100),
             "name": name,
             "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
@@ -279,6 +289,7 @@ class OperationsService:
                                  target_type: str | None = None,
                                  subscriber_username: str | None = None,
                                  card_batch_id: int | None = None,
+                                 subscriber_group_id: int | None = None,
                                  limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_bandwidth_schedules(
             tenant_id,
@@ -286,6 +297,7 @@ class OperationsService:
             target_type=target_type,
             subscriber_username=subscriber_username,
             card_batch_id=card_batch_id,
+            subscriber_group_id=subscriber_group_id,
             limit=limit,
             offset=offset,
         )
@@ -348,6 +360,7 @@ class OperationsService:
         plan_id: int | None = None,
         subscriber_username: str = "",
         card_batch_id: int | None = None,
+        subscriber_group_id: int | None = None,
     ) -> int:
         count = operations_repo.set_bandwidth_schedules_enabled_for_target(
             tenant_id,
@@ -356,12 +369,13 @@ class OperationsService:
             plan_id=plan_id,
             subscriber_username=subscriber_username,
             card_batch_id=card_batch_id,
+            subscriber_group_id=subscriber_group_id,
         )
         self._audit.record(
             actor=actor,
             action="bandwidth_schedule.bulk_enable" if enabled else "bandwidth_schedule.bulk_disable",
             target_type=target_type,
-            target_id=str(plan_id or subscriber_username or card_batch_id or ""),
+            target_id=str(plan_id or subscriber_username or card_batch_id or subscriber_group_id or ""),
             payload={"enabled": enabled, "count": count},
         )
         return count
