@@ -301,6 +301,311 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
 
 
 # ───────────────────────────────────────────────────────────────────
+# PDF adapter
+# ───────────────────────────────────────────────────────────────────
+
+def render_card_pdf(pdf, model: dict, *, form_name: str,
+                     expose_password: bool = True) -> None:
+    """Draw the model into a ReportLab named form at canvas coordinates.
+
+    The adapter writes the card into `beginForm(form_name, 0, 0, W, H)`
+    with W/H equal to the model's canvas. The caller is responsible
+    for `pdf.translate(...)` + `pdf.scale(...)` + `pdf.doForm(form_name)`
+    when placing the finished card on a sheet, and for choosing whether
+    to render multiple cards as multiple forms.
+
+    `expose_password=True` (default for PDF) renders the real password.
+    Pass False to keep the password masked — useful for designer PDF
+    samples that should not leak credentials.
+    """
+    cw = float(model["canvas"]["width"])
+    ch = float(model["canvas"]["height"])
+
+    pdf.beginForm(form_name, 0, 0, cw, ch)
+    try:
+        _pdf_background(pdf, model.get("background") or {}, cw, ch)
+        for el in model["elements"]:
+            kind = el.get("kind")
+            if kind == "rect":
+                _pdf_rect(pdf, el, ch)
+            elif kind == "text":
+                _pdf_text(pdf, el, ch)
+            elif kind == "pill":
+                _pdf_pill(pdf, el, ch, expose_password=expose_password)
+            elif kind == "qr":
+                _pdf_qr(pdf, el, ch)
+    finally:
+        pdf.endForm()
+
+
+def place_card_form_uniform(pdf, model: dict, *, form_name: str,
+                              slot_x: float, slot_y: float,
+                              slot_width: float, slot_height: float) -> None:
+    """Place an already-built form into a sheet slot with UNIFORM scale.
+
+    The card is centered inside the slot and scaled by `min(slot_w/cw,
+    slot_h/ch)` so its internal proportions (text size, QR shape,
+    pill widths, accent bar position) are preserved exactly. This is
+    the PDF equivalent of `preserveAspectRatio="xMidYMid meet"` in
+    SVG.
+
+    Increasing cards_per_row or cards_per_column only changes the
+    slot size — it never changes what is inside the form.
+    """
+    cw = float(model["canvas"]["width"])
+    ch = float(model["canvas"]["height"])
+    fit = min(slot_width / max(cw, 1.0), slot_height / max(ch, 1.0))
+    draw_w = cw * fit
+    draw_h = ch * fit
+    dx = slot_x + (slot_width - draw_w) / 2.0
+    dy = slot_y + (slot_height - draw_h) / 2.0
+    pdf.saveState()
+    try:
+        pdf.translate(dx, dy)
+        pdf.scale(fit, fit)
+        pdf.doForm(form_name)
+    finally:
+        pdf.restoreState()
+
+
+def _pdf_color(value: str):
+    """Return a reportlab Color for a hex string (cached import)."""
+    from reportlab.lib import colors
+
+    raw = (value or "#000000").strip()
+    if not raw.startswith("#"):
+        raw = "#" + raw
+    try:
+        return colors.HexColor(raw)
+    except Exception:
+        return colors.HexColor("#1f2937")
+
+
+def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
+    """Draw the card's background: gradient (faked as a 2-stop split),
+    optional bitmap image, optional decorative pattern.
+
+    ReportLab does not have native linear-gradient support, so we
+    approximate by stacking a horizontal band of intermediate
+    colour stops. For most card uses the human eye reads this as a
+    smooth gradient, and on the printed page it is indistinguishable
+    from the SVG preview at the same scale.
+    """
+    from reportlab.lib import colors
+
+    start = _pdf_color(bg.get("gradient_start", "#0f172a"))
+    end = _pdf_color(bg.get("gradient_end", "#22a7bd"))
+    # 24 horizontal bands of interpolated colour.
+    bands = 24
+    band_h = ch / bands
+    for i in range(bands):
+        t = i / max(bands - 1, 1)
+        r = start.red   + (end.red   - start.red)   * t
+        g = start.green + (end.green - start.green) * t
+        b = start.blue  + (end.blue  - start.blue)  * t
+        pdf.setFillColor(colors.Color(r, g, b))
+        # PDF origin is bottom-left; band i (top→bottom in the model)
+        # sits at (ch - (i+1)*band_h) in PDF space.
+        pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
+
+    # Optional bitmap.
+    image_url = bg.get("image_data_url") or ""
+    if image_url.startswith("data:image/") and ";base64," in image_url:
+        try:
+            from io import BytesIO
+            from reportlab.lib.utils import ImageReader
+
+            mime_part, encoded = image_url.split(";base64,", 1)
+            if mime_part in {"data:image/png", "data:image/jpeg", "data:image/jpg"}:
+                image = ImageReader(BytesIO(base64.b64decode(encoded)))
+                opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 0.82)))
+                pdf.saveState()
+                # ReportLab doesn't support image alpha directly, but we
+                # can stack a translucent dark overlay on top so the
+                # image looks "dimmed" the same way the SVG preview does.
+                pdf.drawImage(image, 0, 0, width=cw, height=ch,
+                              preserveAspectRatio=False, mask="auto")
+                pdf.setFillColor(colors.Color(0, 0, 0, alpha=max(0, 1 - opacity)))
+                pdf.rect(0, 0, cw, ch, stroke=0, fill=1)
+                pdf.restoreState()
+        except Exception:
+            pass
+
+    # Decorative pattern overlay.
+    pattern = bg.get("pattern") or "signal"
+    if pattern == "grid":
+        pdf.setStrokeColor(colors.Color(1, 1, 1, alpha=0.30))
+        pdf.setLineWidth(0.6)
+        step = max(cw * 0.045, 12)
+        x = 0.0
+        while x <= cw:
+            pdf.line(x, 0, x, ch)
+            x += step
+        y = 0.0
+        while y <= ch:
+            pdf.line(0, y, cw, y)
+            y += step
+    elif pattern == "signal":
+        pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.35))
+        bar_w = max(cw * 0.005, 2.0)
+        gap = max(cw * 0.020, 6.0)
+        x = 0.0
+        bar_h = ch * 0.30
+        while x <= cw:
+            pdf.rect(x, 0, bar_w, bar_h, stroke=0, fill=1)
+            x += bar_w + gap
+    elif pattern == "wave":
+        # Single faint highlight in the top-left quadrant.
+        pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.18))
+        pdf.circle(cw * 0.25, ch * 0.70, min(cw, ch) * 0.30, stroke=0, fill=1)
+
+
+def _pdf_rect(pdf, el: dict, ch: float) -> None:
+    """Filled rounded rect at model coordinates (top-left)."""
+    pdf.setFillColor(_pdf_color(el.get("fill", "#ffffff")))
+    pdf_y = ch - el["y"] - el["height"]
+    rx = float(el.get("rx", 0))
+    if rx > 0:
+        pdf.roundRect(el["x"], pdf_y, el["width"], el["height"], rx,
+                      stroke=0, fill=1)
+    else:
+        pdf.rect(el["x"], pdf_y, el["width"], el["height"],
+                 stroke=0, fill=1)
+
+
+def _pdf_text(pdf, el: dict, ch: float) -> None:
+    """Draw a text run. The model gives top-left of the text box; we
+    convert to PDF baseline by dropping the cap-height (~0.78 × size).
+    """
+    from reportlab.lib import colors
+
+    size = max(float(el.get("size", 12)), 1.0)
+    weight = int(el.get("weight", 700))
+    font = "Helvetica-Bold" if weight >= 700 else "Helvetica"
+    pdf.setFont(font, size)
+    color = _pdf_color(el.get("color", "#ffffff"))
+    opacity = float(el.get("opacity", 1.0))
+    if opacity < 1.0:
+        # The default font fill respects alpha when wrapped in a
+        # reportlab Color with alpha; just rebuild it.
+        pdf.setFillColor(colors.Color(color.red, color.green, color.blue,
+                                       alpha=max(0.0, min(1.0, opacity))))
+    else:
+        pdf.setFillColor(color)
+    text = _pdf_safe_text(el.get("text", ""))
+    if not text:
+        return
+    # SVG dominant-baseline="hanging" puts the text top at y. PDF's
+    # drawString uses the baseline. Cap height ≈ 0.78 of font size for
+    # Helvetica, so drop y by that amount to align visually.
+    baseline = ch - el["y"] - size * 0.78
+    max_width = float(el.get("max_width") or 0)
+    if max_width > 0:
+        text = _shrink_to_fit(pdf, text, font, size, max_width)
+    pdf.drawString(el["x"], baseline, text)
+
+
+def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
+    """Draw the surface rect + label + value of a USER/PASS pill."""
+    pdf.setFillColor(_pdf_color(el["surface"]))
+    pdf_y = ch - el["y"] - el["height"]
+    pdf.roundRect(el["x"], pdf_y, el["width"], el["height"],
+                  el["height"] * 0.20, stroke=0, fill=1)
+    # Label (USER / PASS)
+    label_size = max(float(el["label_font_size"]), 4.0)
+    pdf.setFont("Helvetica-Bold", label_size)
+    pdf.setFillColor(_pdf_color(el["label_color"]))
+    label_top = el["y"] + el["height"] * 0.18
+    pdf.drawString(el["x"] + el["padding_x"],
+                   ch - label_top - label_size * 0.78,
+                   _pdf_safe_text(el["label"]))
+    # Value (the real credential — masked if expose_password is False
+    # and this pill carries the password).
+    value = el["value"]
+    if el.get("is_password") and not expose_password:
+        value = "•" * min(max(len(value), 6), 10)
+    value_size = max(float(el["value_font_size"]), 5.0)
+    pdf.setFont("Helvetica-Bold", value_size)
+    pdf.setFillColor(_pdf_color(el["ink"]))
+    value_top = el["y"] + el["height"] * 0.46
+    text = _pdf_safe_text(value)
+    max_value_width = el["width"] - 2 * el["padding_x"]
+    if max_value_width > 0:
+        text = _shrink_to_fit(pdf, text, "Helvetica-Bold", value_size,
+                              max_value_width)
+    pdf.drawString(el["x"] + el["padding_x"],
+                   ch - value_top - value_size * 0.78,
+                   text)
+
+
+def _pdf_qr(pdf, el: dict, ch: float) -> None:
+    """Draw a QR symbol using the same QrCodeWidget as the SVG path."""
+    from reportlab.graphics.barcode.qr import QrCodeWidget
+    from reportlab.graphics import renderPDF
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.lib import colors
+
+    size = float(el["size"])
+    pdf_y_top = ch - el["y"]  # top of the QR box in PDF coords
+    pdf_y_bottom = pdf_y_top - size
+
+    # White rounded background — readers need the quiet zone.
+    pdf.setFillColor(colors.white)
+    pdf.roundRect(el["x"], pdf_y_bottom, size, size, size * 0.10,
+                  stroke=0, fill=1)
+
+    payload = str(el.get("payload") or "SAMPLE")
+    try:
+        widget = QrCodeWidget(payload)
+        bounds = widget.getBounds()
+        w = bounds[2] - bounds[0]
+        h = bounds[3] - bounds[1]
+        inner = size * 0.84  # 8 % quiet zone on each side
+        scale_x = inner / max(w, 1)
+        scale_y = inner / max(h, 1)
+        drawing = Drawing(inner, inner,
+                          transform=[scale_x, 0, 0, scale_y, 0, 0])
+        drawing.add(widget)
+        renderPDF.draw(drawing, pdf,
+                       el["x"] + (size - inner) / 2,
+                       pdf_y_bottom + (size - inner) / 2)
+    except Exception:
+        pass
+
+
+def _pdf_safe_text(value: Any) -> str:
+    """Strip characters the built-in PDF font cannot render.
+
+    ReportLab's default Helvetica is Latin-only. Rather than crash on
+    Arabic glyphs we drop them — Arabic is intentionally rendered in
+    the SVG preview (the page font carries Cairo) but does not yet
+    have a shaped Arabic engine for PDF. This is documented as a
+    follow-up in the print-templates redesign report.
+    """
+    raw = str(value or "")
+    if not raw:
+        return ""
+    try:
+        raw.encode("latin-1")
+        return raw
+    except UnicodeEncodeError:
+        return raw.encode("latin-1", "ignore").decode("latin-1")
+
+
+def _shrink_to_fit(pdf, text: str, font: str, size: float,
+                    max_width: float) -> str:
+    """Trim text with an ellipsis until it fits inside max_width."""
+    if pdf.stringWidth(text, font, size) <= max_width:
+        return text
+    ellipsis = "…"
+    # Walk from the end, dropping one char at a time.
+    out = text
+    while out and pdf.stringWidth(out + ellipsis, font, size) > max_width:
+        out = out[:-1]
+    return (out + ellipsis) if out else ellipsis
+
+
+# ───────────────────────────────────────────────────────────────────
 # Internal helpers — model assembly
 # ───────────────────────────────────────────────────────────────────
 

@@ -1022,28 +1022,33 @@ class OperationsService:
         from reportlab.lib.units import mm
         from reportlab.pdfgen import canvas
 
-        layout = template.get("layout_json")
-        if not isinstance(layout, dict):
-            layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
-        if layout_overrides:
-            allowed = {
-                "brand_name",
-                "card_title",
-                "footer_text",
-                "hotspot_address",
-                "price_text",
-                "validity_text",
-            }
-            layout = {
-                **layout,
-                **{
-                    key: value
-                    for key, value in layout_overrides.items()
-                    if key in allowed and value is not None and str(value).strip()
-                },
-            }
-        layout = _template_layout({**template, "layout": layout})
+        from .card_renderer import (
+            build_card_render_model,
+            render_card_pdf,
+            place_card_form_uniform,
+        )
 
+        # Allowed override keys from the export-center "tweak these
+        # texts" fields. We pass them through to the unified renderer
+        # rather than mutating layout_json here — same path the web
+        # preview uses.
+        allowed_override_keys = {
+            "brand_name",
+            "card_title",
+            "footer_text",
+            "hotspot_address",
+            "price_text",
+            "validity_text",
+        }
+        overrides = {
+            key: str(value).strip()
+            for key, value in (layout_overrides or {}).items()
+            if key in allowed_override_keys
+            and value is not None
+            and str(value).strip()
+        }
+
+        # Page geometry.
         page_size = str(template.get("page_size") or "A4").strip().lower()
         base_size = letter if page_size == "letter" else A4
         orientation = str(template.get("orientation") or "portrait").lower()
@@ -1056,12 +1061,8 @@ class OperationsService:
         gap = 4 * mm
         slot_width = (page_width - (margin * 2) - (gap * (cols - 1))) / cols
         slot_height = (page_height - (margin * 2) - (gap * (rows - 1))) / rows
-        design_card_width = max(float(layout.get("card_width_mm") or 85), 1.0) * mm
-        design_card_height = max(float(layout.get("card_height_mm") or 54), 1.0) * mm
-        font_size = max(min(int(template.get("font_size") or 12), 36), 6)
-        text_color = _reportlab_color(str(layout.get("text_color") or template.get("color") or "#1f2937"))
-        show_qr = bool(template.get("show_qr"))
 
+        # Resolve which cards to render.
         sample_payload = sample or {}
         export_type = "sample_pdf"
         batch = None
@@ -1071,17 +1072,14 @@ class OperationsService:
             if not batch:
                 raise RadiusNotFound("card batch not found")
             raw_cards = cards_repo.list_cards(tenant_id, batch_id=batch_id, limit=20000, offset=0)
+            # Username + password MUST be carried through to the renderer
+            # — the unified model guarantees they appear in the PDF.
             cards = [
                 {
+                    "id": c.id,
                     "username": c.username,
                     "password": c.password,
-                    "qr_payload": c.username,
                     "serial": str(c.id or ""),
-                    "price": layout.get("price_text") or "",
-                    "validity": layout.get("validity_text") or "",
-                    "batch_code": batch.batch_code,
-                    "package_name": batch.package_name,
-                    "expire_at": c.expire_at.isoformat() if c.expire_at else "",
                 }
                 for c in raw_cards
             ]
@@ -1090,14 +1088,10 @@ class OperationsService:
             cards = sample_payload.get("cards") if isinstance(sample_payload.get("cards"), list) else []
             if not cards:
                 cards = [{
+                    "id": "",
                     "username": sample_payload.get("username") or "CARD1234",
                     "password": sample_payload.get("password") or "********",
-                    "qr_payload": sample_payload.get("qr_payload") or sample_payload.get("username") or "CARD1234",
                     "serial": "SAMPLE",
-                    "price": sample_payload.get("price") or layout.get("price_text") or "",
-                    "validity": sample_payload.get("validity") or layout.get("validity_text") or "",
-                    "batch_code": "DEMO",
-                    "package_name": layout.get("card_title") or "",
                 }]
         if not cards:
             raise RadiusValidationError("selected batch has no cards")
@@ -1131,22 +1125,24 @@ class OperationsService:
                 col = slot % cols
                 slot_x = margin + col * (slot_width + gap)
                 slot_y = page_height - margin - slot_height - row * (slot_height + gap)
-                _draw_scaled_template_card(
-                    pdf,
-                    slot_x=slot_x,
-                    slot_y=slot_y,
-                    slot_width=slot_width,
-                    slot_height=slot_height,
-                    design_width=design_card_width,
-                    design_height=design_card_height,
-                    template=template,
-                    layout=layout,
-                    card=card if isinstance(card, dict) else {},
-                    font_size=font_size,
-                    text_color=text_color,
-                    show_qr=show_qr,
-                    mm_unit=mm,
-                    form_name=f"card_{template_id}_{idx}",
+                # Build the render model for this card via the SAME
+                # builder the live preview uses.
+                model = build_card_render_model(
+                    template,
+                    card if isinstance(card, dict) else {},
+                    overrides=overrides,
+                )
+                form_name = f"card_{template_id}_{idx}"
+                # Render the card into a named form at canvas coords …
+                render_card_pdf(pdf, model, form_name=form_name,
+                                expose_password=True)
+                # … then place that form into the sheet slot with
+                # UNIFORM scale. cards_per_row/column only affect the
+                # slot — never the contents of the form.
+                place_card_form_uniform(
+                    pdf, model, form_name=form_name,
+                    slot_x=slot_x, slot_y=slot_y,
+                    slot_width=slot_width, slot_height=slot_height,
                 )
 
             pdf.showPage()
@@ -1163,9 +1159,7 @@ class OperationsService:
                     "template_name": template.get("name"),
                     "batch_id": batch_id,
                     "cards_per_page": cards_per_page,
-                    "render_mode": "card_snapshot_form_scaled_uniformly",
-                    "design_card_width_mm": float(layout.get("card_width_mm") or 85),
-                    "design_card_height_mm": float(layout.get("card_height_mm") or 54),
+                    "render_mode": "unified_renderer_form_scaled_uniformly",
                     "bytes": len(payload),
                 },
             )
