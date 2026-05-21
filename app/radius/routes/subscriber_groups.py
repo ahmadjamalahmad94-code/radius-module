@@ -1,0 +1,141 @@
+"""Subscriber Groups routes — CRUD UI.
+
+URL prefix (under the radius blueprint): /admin/radius/subscriber-groups
+
+Pattern reference: SERVICES_COOKBOOK §15.
+"""
+from __future__ import annotations
+
+from flask import (
+    Blueprint, abort, flash, redirect, render_template, request, session,
+    url_for,
+)
+
+from ..core.errors import RadiusError
+from ..core.tenant import DEFAULT_TENANT_ID
+from ..db.repos import operations_repo, plans_repo
+from ..services.subscriber_groups import get_subscriber_groups_service
+
+
+def register_subscriber_groups_routes(bp: Blueprint) -> None:
+    bp.add_url_rule("/subscriber-groups", "subscriber_groups_list",
+                    sg_list, methods=["GET"])
+    bp.add_url_rule("/subscriber-groups/new", "subscriber_groups_new",
+                    sg_new, methods=["GET"])
+    bp.add_url_rule("/subscriber-groups", "subscriber_groups_create",
+                    sg_create, methods=["POST"])
+    bp.add_url_rule("/subscriber-groups/<int:gid>/edit",
+                    "subscriber_groups_edit", sg_edit, methods=["GET"])
+    bp.add_url_rule("/subscriber-groups/<int:gid>",
+                    "subscriber_groups_update", sg_update, methods=["POST"])
+    bp.add_url_rule("/subscriber-groups/<int:gid>/delete",
+                    "subscriber_groups_delete", sg_delete, methods=["POST"])
+
+
+# ────────────────────────── helpers ─────────────────────────────
+def _tid() -> int:
+    return session.get("tenant_id") or DEFAULT_TENANT_ID
+
+
+def _actor() -> str:
+    return session.get("admin_username") or "system"
+
+
+def _form_to_kwargs() -> dict:
+    f = request.form
+    def _int_or_none(key: str):
+        v = (f.get(key) or "").strip()
+        try:
+            return int(v) if v else None
+        except ValueError:
+            return None
+    return {
+        "name":                  (f.get("name") or "").strip(),
+        "description":           (f.get("description") or "").strip(),
+        "bandwidth_schedule_id": _int_or_none("bandwidth_schedule_id"),
+        "default_plan_id":       _int_or_none("default_plan_id"),
+        "default_auto_renewal":  bool(f.get("default_auto_renewal")),
+        "working_days":          ",".join(f.getlist("working_days")),
+    }
+
+
+def _select_options(tid: int) -> dict:
+    """Schedules + plans dropdowns. Both calls swallow errors so a broken
+    sub-repo never breaks the form render."""
+    try:
+        schedules = operations_repo.list_bandwidth_schedules(tid)
+    except Exception:  # noqa: BLE001
+        schedules = []
+    try:
+        plans = list(plans_repo.list_plans(tid, limit=500))
+    except Exception:  # noqa: BLE001
+        plans = []
+    return {"schedules": schedules, "plans": plans}
+
+
+# ────────────────────────── views ───────────────────────────────
+def sg_list():
+    svc = get_subscriber_groups_service()
+    items = svc.list(tenant_id=_tid())
+    return render_template(
+        "radius/subscriber_groups_list.html",
+        items=items, count=len(items),
+    )
+
+
+def sg_new():
+    opts = _select_options(_tid())
+    return render_template(
+        "radius/subscriber_groups_form.html",
+        is_new=True, group=None, **opts,
+        all_days=[("sat","السبت"),("sun","الأحد"),("mon","الإثنين"),
+                  ("tue","الثلاثاء"),("wed","الأربعاء"),("thu","الخميس"),
+                  ("fri","الجمعة")],
+    )
+
+
+def sg_create():
+    kwargs = _form_to_kwargs()
+    try:
+        get_subscriber_groups_service().create(
+            actor=_actor(), tenant_id=_tid(), **kwargs)
+    except RadiusError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.subscriber_groups_new"))
+    flash(f"تم إنشاء مجموعة «{kwargs['name']}»", "success")
+    return redirect(url_for("radius.subscriber_groups_list"))
+
+
+def sg_edit(gid: int):
+    svc = get_subscriber_groups_service()
+    g = svc.get(tenant_id=_tid(), gid=gid)
+    if not g:
+        abort(404)
+    opts = _select_options(_tid())
+    return render_template(
+        "radius/subscriber_groups_form.html",
+        is_new=False, group=g, **opts,
+        members=svc.members(tenant_id=_tid(), gid=gid, limit=200),
+        all_days=[("sat","السبت"),("sun","الأحد"),("mon","الإثنين"),
+                  ("tue","الثلاثاء"),("wed","الأربعاء"),("thu","الخميس"),
+                  ("fri","الجمعة")],
+    )
+
+
+def sg_update(gid: int):
+    kwargs = _form_to_kwargs()
+    try:
+        get_subscriber_groups_service().update(
+            actor=_actor(), tenant_id=_tid(), gid=gid, **kwargs)
+    except RadiusError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.subscriber_groups_edit", gid=gid))
+    flash("تم حفظ تعديلات المجموعة.", "success")
+    return redirect(url_for("radius.subscriber_groups_list"))
+
+
+def sg_delete(gid: int):
+    get_subscriber_groups_service().delete(
+        actor=_actor(), tenant_id=_tid(), gid=gid)
+    flash("تم حذف المجموعة (تم فصل المشتركين عنها).", "info")
+    return redirect(url_for("radius.subscriber_groups_list"))

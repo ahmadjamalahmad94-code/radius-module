@@ -47,9 +47,10 @@
 {%- set endpoint = request.endpoint or '' -%}
 
 {# Subscribers #}
-{%- set m_users_list   = ('/users' in path and '/users/new' not in path and '/overview' not in path) -%}
+{%- set m_users_list   = ('/users' in path and '/users/new' not in path and '/overview' not in path and '/subscriber-groups' not in path) -%}
 {%- set m_users_new    = (path == url_for('radius.users_new')) -%}
 {%- set m_online_users = (path == url_for('radius.online_list') and request.args.get('type') != 'card') -%}
+{%- set m_subscriber_groups = ('/subscriber-groups' in path) -%}
 
 {# Cards #}
 {%- set m_cards_overview   = '/cards/overview' in path -%}
@@ -95,7 +96,7 @@
 {%- set m_tokens      = '/tokens' in path -%}
 
 {# Section-level active flags (used to auto-open parent of active link) #}
-{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users -%}
+{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt -%}
@@ -153,6 +154,7 @@
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.users_list',  'قائمة المشتركين', m_users_list) }}
         {{ sub_item('radius.users_new',   'إضافة مشترك',     m_users_new) }}
+        {{ sub_item('radius.subscriber_groups_list', 'مجموعات المشتركين', m_subscriber_groups) }}
         {{ sub_item('radius.online_list', 'المشتركون المتصلون', m_online_users) }}
       </div></div>
     </div>
