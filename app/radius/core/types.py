@@ -148,6 +148,8 @@ class AccessPlan:
     # ساعات العرض
     offer_hours_from: str = ""
     offer_hours_to: str = ""
+    # Unified access schedule (JSON) — see app/radius/core/access_schedule.py
+    connection_schedule: str = ""
     # metadata JSON ـ مُجمَّعة {general, subscription, advanced, mikrotik, notifications}
     metadata: str = "{}"
     deleted_at: Optional[datetime] = None

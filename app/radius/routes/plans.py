@@ -217,8 +217,20 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         speed_override_allowed=_b("speed_override_allowed"),
         offer_hours_from=_s("offer_hours_from"),
         offer_hours_to=_s("offer_hours_to"),
+        connection_schedule=_normalize_connection_schedule(_s("connection_schedule")),
         metadata=meta_json,
     )
+
+
+def _normalize_connection_schedule(raw: str) -> str:
+    """Validated round-trip through access_schedule.serialize."""
+    if not raw:
+        return ""
+    try:
+        from ..core.access_schedule import serialize
+        return serialize(raw)
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 # ─────────────── views ───────────────

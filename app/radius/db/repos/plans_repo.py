@@ -42,6 +42,7 @@ _COLS = (
     "hotspot_enabled","ppp_enabled",
     "service_scope","loan_enabled","max_loan_minutes","speed_override_allowed",
     "offer_hours_from","offer_hours_to",
+    "connection_schedule",
     "metadata",
     "deleted_at","deleted_by","delete_reason",
 )
@@ -109,6 +110,7 @@ def _row(r) -> AccessPlan:
         speed_override_allowed=bool(_g(r,"speed_override_allowed",0)),
         offer_hours_from=_g(r,"offer_hours_from","") or "",
         offer_hours_to=_g(r,"offer_hours_to","") or "",
+        connection_schedule=_g(r,"connection_schedule","") or "",
         metadata=_g(r,"metadata","{}") or "{}",
         deleted_at=parse_dt(_g(r, "deleted_at", None)),
         deleted_by=_g(r, "deleted_by", "") or "",
@@ -172,6 +174,7 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         int(p.hotspot_enabled), int(p.ppp_enabled),
         p.service_scope, int(p.loan_enabled), p.max_loan_minutes, int(p.speed_override_allowed),
         p.offer_hours_from, p.offer_hours_to,
+        p.connection_schedule or "",
         p.metadata or "{}",
         dt_to_iso(p.deleted_at), p.deleted_by, p.delete_reason,
     )

@@ -2,6 +2,7 @@
    Same backend route + field names — zero backend touched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/access_schedule.html" import access_schedule_picker %}
 
 {% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -506,26 +507,15 @@
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
-        {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
-        {% set sel_days = plan.allowed_days or ('mon','tue','wed','thu','fri','sat','sun') %}
-        <div class="pl-day-chips">
-          {% for d, lbl in day_labels %}
-            <label class="pl-day-chip {% if d in sel_days %}is-on{% endif %}" data-day="{{ d }}">
-              <input type="checkbox" name="allowed_days" value="{{ d }}" {% if d in sel_days %}checked{% endif %}>
-              {{ lbl }}
-            </label>
-          {% endfor %}
-        </div>
-        <div class="help" style="font-size:11px;color:var(--hub-text-mute);margin-top:8px">
-          اترك جميع الأيام محدَّدة للسماح طوال الأسبوع.
-        </div>
-        <div class="pl-grid" style="margin-top:14px;grid-template-columns:repeat(2,1fr);max-width:520px">
-          <div class="pl-field"><label>من ساعة</label>
-            <input class="hub-input" type="time" name="allowed_hours_from" value="{{ plan.allowed_hours_from or '' }}"></div>
-          <div class="pl-field"><label>إلى ساعة</label>
-            <input class="hub-input" type="time" name="allowed_hours_to" value="{{ plan.allowed_hours_to or '' }}">
-            <div class="help">مدى يعبر منتصف الليل مسموح (22:00 → 06:00).</div></div>
-        </div>
+        {# SERVICES_COOKBOOK §17 — replaces the legacy day chips + allowed-hours
+           pair with the reusable access-schedule picker. The route serializes
+           the JSON via access_schedule.serialize() before persisting. #}
+        {{ access_schedule_picker(
+             name="connection_schedule",
+             value=plan.connection_schedule or "",
+             id="pl-acs",
+             title="الأيام والأوقات المسموحة للاتصال على هذه الباقة"
+           ) }}
       </div>
     </section>
 
