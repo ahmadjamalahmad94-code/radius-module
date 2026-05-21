@@ -329,14 +329,34 @@
     gap: 10px;
   }
   .uf-section-head--rich .uf-section-tag{
-    display: inline-flex; align-items: center;
+    display: inline-flex; align-items: center; gap: 6px;
     padding: 3px 10px;
-    background: var(--hub-brand-soft);
-    color: var(--hub-brand-ink);
+    background: var(--hub-bg-soft, #f5f4fb);
+    color: var(--hub-text-mute);
     border-radius: 999px;
     font-size: 11.5px; font-weight: 800;
-    border: 1px solid color-mix(in srgb, var(--hub-brand) 15%, transparent);
+    border: 1px solid var(--hub-border);
     white-space: nowrap;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  /* Active state: the derived bandwidth_control_enabled flips this pill
+     to brand colors and adds a pulsing dot so the operator can see at a
+     glance that the section is "live". */
+  .uf-section-head--rich .uf-section-tag.is-on{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    border-color: color-mix(in srgb, var(--hub-brand) 25%, transparent);
+  }
+  .uf-section-head--rich .uf-section-tag.is-on::before{
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hub-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--hub-brand) 22%, transparent);
+    animation: uf-bw-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes uf-bw-pulse{
+    0%, 100%{ opacity: 1; transform: scale(1); }
+    50%     { opacity: .55; transform: scale(.85); }
   }
   .uf-section-head--rich .uf-section-control{
     /* Wraps the toggle. onclick=event.stopPropagation() keeps clicks
@@ -645,23 +665,19 @@
        Both live inside ONE collapsible card so the operator sees the
        complete speed picture in one place. #}
     <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed">
-      {# Hero bar now hosts the «سرعة أساسية» mini-tag, the master
-         toggle, and the help text — collapsed in one professional row
-         per user request («بنفس شريط الهيرو تبع القسم مع كلمة السرعة
-         بشكل لطيف»). The .uf-section-head--rich variant styles the
-         extra elements; the toggle wrapper stops click propagation so
-         flipping it doesn't collapse the section. #}
+      {# Hero bar — no more master toggle. The «bandwidth_control_enabled»
+         field is now an INVISIBLE hidden input whose value is derived by
+         JS from the three inner controls (custom_speed / temporary_speed
+         / scheduled-rules-master). The bar just hosts the title + a
+         status pill that mirrors the derived state, plus the help line.
+         Per user feedback: «الغي الزر هذا. خلي التفعيل يعتمد عالازرار
+         الداخلية». #}
       <header class="uf-section-head uf-section-head--rich">
         <span class="uf-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
         <span class="uf-section-title">السرعة</span>
-        <span class="uf-section-tag">سرعة أساسية</span>
-        <span class="uf-section-control" onclick="event.stopPropagation()">
-          {{ toggle_switch(name="bandwidth_control_enabled",
-                           checked=sub.bandwidth_control_enabled,
-                           id="bw-en",
-                           on_label="مفعَّل",
-                           off_label="معطَّل") }}
-        </span>
+        <span class="uf-section-tag" data-bw-status>سرعة أساسية</span>
+        <input type="hidden" name="bandwidth_control_enabled" id="bw-en-hidden"
+               value="{{ 1 if sub.bandwidth_control_enabled else 0 }}">
         <span class="uf-section-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
@@ -703,14 +719,75 @@
         </div>
 
         {# 2B. Scheduled speed rules (per-subscriber, cookbook §19) ─
-           Renders in both new + edit mode. The panel handles its own
-           empty/pending state via sr_pending. #}
+           Renders in both new + edit mode. Master toggle in the sub-
+           header flips every existing rule's «enabled» checkbox via JS
+           (bulk action — same effect as clicking «تفعيل الكل/تعطيل الكل»
+           inside the panel, but reachable at the sub-section level). #}
         <div class="uf-sub-head" style="margin-top: 18px;">
           <span class="uf-sub-dot"></span>
           <span class="uf-sub-title">قواعد سرعة مجدوَلة</span>
+          <label class="tsw" onclick="event.stopPropagation()" data-sched-master-wrap>
+            <input type="checkbox" data-sched-master>
+            <span class="tsw-track"><span class="tsw-thumb"></span></span>
+            <span class="tsw-label" data-on="مفعَّلة" data-off="معطَّلة"></span>
+          </label>
           <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة، أولوية أعلى من قواعد الباقة والمجموعة.</span>
         </div>
         {% include "radius/_speed_rules_panel.html" %}
+
+        {# Derive bandwidth_control_enabled + bulk-sync scheduled master.
+           Smart UX per user feedback: the section is «active» whenever
+           any of the three inner controls is on. The hidden hub field
+           updates in real time and posts the right value at submit. #}
+        <script>
+        (function(){
+          var sched   = document.querySelector('[data-sched-master]');
+          var hidden  = document.getElementById('bw-en-hidden');
+          var statusEl = document.querySelector('[data-bw-status]');
+          var customSpeed     = document.getElementById('cs');
+          var temporarySpeed  = document.getElementById('ts');
+
+          function ruleInputs(){
+            return Array.from(document.querySelectorAll(
+              'input[type="checkbox"][name^="sr_edit_enabled_"]'
+            ));
+          }
+          function anyRuleOn(){
+            return ruleInputs().some(function(c){ return c.checked; });
+          }
+          function syncMaster(){
+            if (!hidden) return;
+            var on = (customSpeed && customSpeed.checked) ||
+                     (temporarySpeed && temporarySpeed.checked) ||
+                     (sched && sched.checked) ||
+                     anyRuleOn();
+            hidden.value = on ? '1' : '0';
+            if (statusEl){
+              statusEl.classList.toggle('is-on', on);
+              statusEl.textContent = on ? 'سرعة أساسية — مفعَّلة' : 'سرعة أساسية';
+            }
+          }
+          // initial sched master state mirrors any-rule-on
+          if (sched){
+            sched.checked = anyRuleOn();
+            sched.addEventListener('change', function(){
+              ruleInputs().forEach(function(c){ c.checked = sched.checked; });
+              syncMaster();
+            });
+          }
+          [customSpeed, temporarySpeed].forEach(function(el){
+            if (el) el.addEventListener('change', syncMaster);
+          });
+          // when an individual rule's enabled flips, re-derive
+          document.addEventListener('change', function(e){
+            if (e.target.matches('input[type="checkbox"][name^="sr_edit_enabled_"]')){
+              if (sched) sched.checked = anyRuleOn();
+              syncMaster();
+            }
+          });
+          syncMaster();
+        })();
+        </script>
       </div>
     </section>
 
