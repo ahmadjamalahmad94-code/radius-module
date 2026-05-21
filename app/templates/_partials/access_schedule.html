@@ -123,13 +123,13 @@
   }
   .acs-day.is-on .acs-day-check{ opacity: 1; }
 
-  /* ─── Window card (compact) ────────────────────────────────── */
-  .acs-windows{ display: flex; flex-direction: column; gap: 8px; }
+  /* ─── Window card (minimal, no clutter) ────────────────────── */
+  .acs-windows{ display: flex; flex-direction: column; gap: 10px; }
   .acs-window{
     background: #fff;
-    border: 1.5px solid var(--hub-border);
+    border: 1px solid var(--hub-border);
     border-radius: 12px;
-    padding: 8px 12px;
+    padding: 12px 16px;
     position: relative;
     transition: border-color var(--hub-anim-fast) var(--hub-ease);
   }
@@ -146,53 +146,61 @@
   }
   .acs-window-rm:hover{ background: var(--hub-red-soft); }
 
-  .acs-window-body{
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    gap: 14px;
-    flex-wrap: wrap;
+  /* Inline row: [من picker] → [إلى picker] · المدة */
+  .acs-window-row{
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
   }
-  @media (max-width: 600px){
-    .acs-window-arrow{ display: none; }
-    .acs-window-body{ flex-direction: column; align-items: center; }
+  .acs-window-sep{
+    color: var(--hub-text-mute);
+    font-size: 16px; font-weight: 700;
+    align-self: flex-end; padding-block-end: 6px;
   }
-  .acs-window-arrow{
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 4px;
-    min-width: 90px;
-    color: var(--hub-brand-ink);
-    position: relative;
+  @media (max-width: 520px){
+    .acs-window-sep{ display: none; }
+    .acs-window-row{ flex-direction: column; align-items: center; }
   }
-  .acs-window-arrow::before,
-  .acs-window-arrow::after{
-    content: ""; flex: 1; min-height: 1px;
-    background: repeating-linear-gradient(to right,
-      var(--hub-brand-line) 0 4px, transparent 4px 8px);
-    align-self: stretch;
-    margin: 0 4px;
+
+  .acs-window-meta{
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--hub-border);
   }
-  .acs-window-arrow-icon{
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
-    border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: #fff;
-    font-size: 12px;
-    box-shadow: 0 3px 8px rgba(107,90,237,.28);
-    flex-shrink: 0;
-  }
-  .acs-window-arrow-duration{
-    font-size: 11px; font-weight: 800;
-    color: var(--hub-brand-ink);
-    background: var(--hub-brand-soft);
-    padding: 2px 9px; border-radius: 999px;
-    white-space: nowrap;
+  .acs-duration{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--hub-brand-ink);
     min-height: 18px;
-    display: inline-flex; align-items: center;
   }
-  .acs-window-arrow-duration:empty{ visibility: hidden; }
+  .acs-duration i{ font-size: 11px; }
+  .acs-duration:empty{ visibility: hidden; }
+
+  /* Smart range presets at the bottom of the window */
+  .acs-presets{
+    display: flex; gap: 5px; flex-wrap: wrap;
+  }
+  .acs-preset{
+    background: #fff; border: 1px solid var(--hub-border);
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 11.5px; font-weight: 700;
+    color: var(--hub-text-soft);
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .acs-preset:hover{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    border-color: var(--hub-brand);
+  }
+  .acs-preset.is-active{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(107,90,237,.25);
+  }
 
   /* ─── Time picker (stepper + quick chips) — compact ────────── */
   .acs-time{
@@ -258,24 +266,8 @@
     align-self: center;
   }
 
-  .acs-time-quick{
-    display: flex; gap: 4px; flex-wrap: wrap;
-  }
-  .acs-time-chip{
-    background: #fff; border: 1px solid var(--hub-border);
-    border-radius: 999px;
-    padding: 2px 9px;
-    font-size: 10.5px; font-weight: 700;
-    color: var(--hub-text-soft);
-    cursor: pointer;
-    transition: all var(--hub-anim-fast) var(--hub-ease);
-    font-family: inherit;
-  }
-  .acs-time-chip:hover{
-    background: var(--hub-brand-soft);
-    color: var(--hub-brand-ink);
-    border-color: var(--hub-brand);
-  }
+  /* (per-picker quick chips removed — replaced by shared range presets
+     at the window bottom; see .acs-presets above.) */
 
   /* ─── Add buttons ──────────────────────────────────────────── */
   .acs-add-window{
@@ -358,11 +350,14 @@
   const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
                       wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
 
-  const TIME_QUICKS = [
-    { label: "06:00", icon: "🌅", value: "06:00" },
-    { label: "12:00", icon: "☀️", value: "12:00" },
-    { label: "18:00", icon: "🌆", value: "18:00" },
-    { label: "00:00", icon: "🌙", value: "00:00" },
+  // Smart range presets: ONE click fills BOTH from + to.
+  // Covers the 5 most common operator wishes for «when can they connect».
+  const RANGE_PRESETS = [
+    { label: "🌅 الصباح",    from: "06:00", to: "12:00" },
+    { label: "☀️ الظهر",     from: "12:00", to: "18:00" },
+    { label: "🌆 المساء",    from: "18:00", to: "23:59" },
+    { label: "🌙 الليل",     from: "00:00", to: "06:00" },
+    { label: "🕐 طوال اليوم", from: "00:00", to: "23:59" },
   ];
 
   function readState(card){
@@ -463,29 +458,19 @@
     stepper.appendChild(hSeg.seg);
     wrap.appendChild(stepper);
 
-    // Quick chips
-    const quick = document.createElement("div");
-    quick.className = "acs-time-quick";
-    TIME_QUICKS.forEach(q => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "acs-time-chip";
-      b.textContent = `${q.icon} ${q.label}`;
-      b.addEventListener("click", () => {
-        const [qh, qm] = q.value.split(":").map(x => parseInt(x, 10));
-        hSeg.inp.value = pad2(qh);
-        mSeg.inp.value = pad2(qm);
-        sync();
-      });
-      quick.appendChild(b);
-    });
-    wrap.appendChild(quick);
-
     // Public API: read current value as "HH:MM" or "" if blank
     wrap.readValue = function(){
       const hv = (hSeg.inp.value || "").trim();
       const mv = (mSeg.inp.value || "").trim();
       if (!hv && !mv) return "";
       return pad2(parseInt(hv,10) || 0) + ":" + pad2(parseInt(mv,10) || 0);
+    };
+    // Allow programmatic set from a range preset.
+    wrap.setValue = function(hhmm){
+      const [h, m] = (hhmm || "00:00").split(":").map(x => parseInt(x,10) || 0);
+      hSeg.inp.value = pad2(h);
+      mSeg.inp.value = pad2(m);
+      sync();
     };
 
     // Sync hook — set by the parent.
@@ -495,8 +480,9 @@
     return wrap;
   }
 
-  /* Build a single window card with two time pickers + remove button.
-     No header — the labels من / إلى on each side are enough. */
+  /* Build a single window card. Layout:
+       Row 1: [from picker]  →  [to picker]
+       Row 2: ⏱ المدة: ...     |  [🌅 الصباح] [☀️ الظهر] ... presets */
   function makeWindow(state, onRemove, onChange){
     const card = document.createElement("div");
     card.className = "acs-window";
@@ -508,25 +494,43 @@
     rm.addEventListener("click", onRemove);
     card.appendChild(rm);
 
-    const body = document.createElement("div");
-    body.className = "acs-window-body";
-
+    // ── Row 1: pickers + small arrow ──────────────────────────
+    const row = document.createElement("div");
+    row.className = "acs-window-row";
     const fromPicker = makeTimePicker("من", state.from || "");
-    const arrow = document.createElement("div");
-    arrow.className = "acs-window-arrow";
-    const durBadge = document.createElement("span");
-    durBadge.className = "acs-window-arrow-duration";
-    const iconBubble = document.createElement("span");
-    iconBubble.className = "acs-window-arrow-icon";
-    iconBubble.innerHTML = '<i class="fa-solid fa-arrow-left-long"></i>';
-    arrow.appendChild(durBadge);
-    arrow.appendChild(iconBubble);
+    const sep = document.createElement("span");
+    sep.className = "acs-window-sep";
+    sep.innerHTML = '<i class="fa-solid fa-arrow-left-long"></i>';
     const toPicker = makeTimePicker("إلى", state.to || "");
+    row.appendChild(fromPicker);
+    row.appendChild(sep);
+    row.appendChild(toPicker);
+    card.appendChild(row);
 
-    body.appendChild(fromPicker);
-    body.appendChild(arrow);
-    body.appendChild(toPicker);
-    card.appendChild(body);
+    // ── Row 2: duration + range presets ───────────────────────
+    const meta = document.createElement("div");
+    meta.className = "acs-window-meta";
+
+    const dur = document.createElement("span");
+    dur.className = "acs-duration";
+    meta.appendChild(dur);
+
+    const presets = document.createElement("div");
+    presets.className = "acs-presets";
+    RANGE_PRESETS.forEach(p => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "acs-preset";
+      b.textContent = p.label;
+      b.dataset.from = p.from; b.dataset.to = p.to;
+      b.addEventListener("click", () => {
+        fromPicker.setValue(p.from);
+        toPicker.setValue(p.to);
+        refreshActive();
+      });
+      presets.appendChild(b);
+    });
+    meta.appendChild(presets);
+    card.appendChild(meta);
 
     function fmtDuration(from, to){
       if (!from || !to) return "";
@@ -540,14 +544,19 @@
       if (h)      return `${h} ${h === 1 ? "ساعة" : (h === 2 ? "ساعتان" : "ساعات")}`;
       return `${m} دقيقة`;
     }
-    function updateDuration(){
-      durBadge.textContent = fmtDuration(fromPicker.readValue(), toPicker.readValue());
+    function refreshActive(){
+      const f = fromPicker.readValue(), t = toPicker.readValue();
+      const txt = fmtDuration(f, t);
+      dur.innerHTML = txt ? `<i class="fa-solid fa-stopwatch"></i> المدة: ${txt}` : "";
+      presets.querySelectorAll(".acs-preset").forEach(b => {
+        b.classList.toggle("is-active", b.dataset.from === f && b.dataset.to === t);
+      });
     }
 
-    const composed = () => { updateDuration(); onChange(); };
+    const composed = () => { refreshActive(); onChange(); };
     fromPicker.bindSync(composed);
     toPicker.bindSync(composed);
-    updateDuration();
+    refreshActive();
 
     card.readValue = function(){
       return { from: fromPicker.readValue(), to: toPicker.readValue() };
