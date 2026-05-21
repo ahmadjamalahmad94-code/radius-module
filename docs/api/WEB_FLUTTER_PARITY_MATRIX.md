@@ -10,6 +10,8 @@ Status values:
 - `done`: Web, API, Flutter, and tests exist for the current scope.
 - `partial`: Some layers exist, but important actions or fields are missing.
 - `dry_run`: The user can preview the operation, but it is not applied live.
+- `vps_acceptance_required`: Code/API/UI exist, but the final proof requires
+  a real customer VPS/NAS/RADIUS environment.
 - `missing`: No usable Flutter/API parity yet.
 - `web_only_until_api`: Web exists, but there is no safe JSON API yet.
 - `planned_disabled`: Intentionally disabled until the backend integration is real.
@@ -20,26 +22,27 @@ Status values:
 | --- | --- | --- | --- | --- | --- |
 | Dashboard counters | `/admin/radius/` | `/api/v1/dashboard` | `/` dashboard | done | API exposes stable flat counter aliases and Flutter reads nested/flat shapes; live values still depend on each VPS database. |
 | Subscribers | `/admin/radius/users` | `/api/v1/accounts` | `/subscribers` | done | Create/edit/archive/enable/disable/extend flows are API-backed. |
-| Subscriber finance | `/admin/radius/users/<username>/finance` | `/api/v1/payments`, `/api/v1/loans`, `/api/v1/ledger` | `/subscribers/<username>/finance`, `/ledger` | partial | Apply-to-RADIUS has dry-run/live result fields; needs more manual VPS verification. |
+| Subscriber finance | `/admin/radius/users/<username>/finance` | `/api/v1/payments`, `/api/v1/loans`, `/api/v1/ledger` | `/subscribers/<username>/finance`, `/ledger` | vps_acceptance_required | Apply-to-RADIUS has dry-run/live result fields; final proof needs real VPS/RADIUS acceptance. |
 | Plans / offers | `/admin/radius/plans` | `/api/v1/profiles` | `/plans` | partial | Advanced plan fields exist; inline speed-rule editing must be rechecked on mobile. |
-| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions exist; mobile layout is stabilized. Remaining work is live VPS acceptance for operational counters/export behavior. |
-| Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | partial | Real API-backed operations exist; no password exposure. Mobile visual layout is stabilized; live disconnect must be verified against NAS/CoA. |
-| Online sessions | `/admin/radius/sessions` | `/api/v1/sessions/online`, `/api/v1/sessions/disconnect` | `/sessions` | partial | Disconnect is API-backed; must verify against real CoA/NAS on VPS. |
-| NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas`, `/device-fingerprints` | partial | NAS CRUD and device fingerprints browser/sync now exist in Flutter. Live DHCP/MikroTik sync still needs VPS acceptance tests per customer server. |
+| Card batches | `/admin/radius/cards/batches` | `/api/v1/cards/batches` | `/cards`, `/cards/batches/<id>` | partial | API-backed list/detail/actions exist. External/imported file import and real Excel/PDF export are still missing. |
+| Card checker / operations | `/admin/radius/cards/checker` | `/api/v1/cards/check`, `/api/v1/cards/<id>/...` | `/cards/checker` | vps_acceptance_required | Real API-backed operations exist; no password exposure. Live disconnect must be verified against NAS/CoA. |
+| Online sessions | `/admin/radius/sessions` | `/api/v1/sessions/online`, `/api/v1/sessions/disconnect` | `/sessions` | vps_acceptance_required | List/search/type filters are API-backed. Disconnect requires real CoA/NAS acceptance on VPS. |
+| NAS / devices | `/admin/radius/devices` | `/api/v1/nas`, `/api/v1/devices`, `/api/v1/devices/sync` | `/nas`, `/device-fingerprints` | vps_acceptance_required | NAS CRUD and device fingerprints browser/sync exist. Live DHCP/MikroTik sync must be accepted per customer VPS. |
 | Admins / roles | `/admin/radius/admins`, `/admin/radius/roles` | `/api/v1/admins`, `/api/v1/roles` | `/admins`, `/roles` | done | Role editor is API-backed; permission enforcement still needs continuous testing. |
 | Distributors | `/admin/radius/distributors` | `/api/v1/distributors` | `/distributors` | partial | API/UI exist; scoped visibility must stay covered by tests before new data views. |
 | Audit log | `/admin/radius/audit` | `/api/v1/audit` | `/audit` | done | Flutter viewer exists; payload rendering should stay Arabic-friendly. |
-| Financial reports | `/admin/radius/finance/reports` | `/api/v1/reports/*` | `/reports` | partial | Ledger-based foundations exist; immutable snapshot/export UX is not complete. |
-| Recycle bin | `/admin/radius/recycle-bin` | `/api/v1/recycle-bin` | `/recycle-bin` | partial | Archive/restore exists for core domains; verify all old delete buttons archive safely. |
-| Backups | `/admin/radius/backups` | `/api/v1/backups/status`, `/api/v1/backups/run` | `/backups` | partial | Local backup is real. Google Drive is intentionally disabled. |
+| Financial reports | `/admin/radius/finance/reports` | `/api/v1/reports/*` | `/reports` | partial | Ledger-based reports exist. Immutable snapshot/export UX is not complete. |
+| Recycle bin | `/admin/radius/recycle-bin` | `/api/v1/recycle-bin` | `/recycle-bin` | partial | Archive/restore exists for core domains with lifecycle metadata. Remaining work is full old-delete audit and recycle UX acceptance. |
+| Lifecycle retention | `/admin/radius/lifecycle` | `/api/v1/lifecycle/*` | `/lifecycle` | done | Policies, preview, manual run, events, and retention fields exist. Worker is opt-in via VPS env. |
+| Backups | `/admin/radius/backups` | `/api/v1/backups/status`, `/api/v1/backups/run` | `/backups` | partial | Local backup is real. Google Drive is planned_disabled until OAuth/storage is real. |
 | Bandwidth schedules | `/admin/radius/bandwidth-schedules` | `/api/v1/bandwidth-schedules` | `/bandwidth-schedules` | dry_run | Saved schedules and resolver exist. Live apply depends on backend flag and RADIUS adapter verification. |
 | Print templates | `/admin/radius/print-templates` | `/api/v1/print-templates` | `/print-templates` | partial | Saved layout and preview exist. Real PDF/export renderer is not complete. |
 | MikroTik configs | `/admin/radius/integrations/mikrotik` | `/api/v1/mikrotik` | `/mikrotik` | done | Flutter now supports list/create/edit/delete plus saved and unsaved connectivity tests. Saved passwords are not returned. |
 | Webhooks | `/admin/radius/integrations/webhooks` | `/api/v1/webhooks/*` | `/admin-control` | done | Config save, test dispatch, and deliveries viewer are API-backed in Flutter. |
 | System status | `/admin/radius/status` | `/api/v1/system/status` | `/system-operations` | done | Flutter shows backend counters, routers, and sync summary from the real API. |
-| Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | `/system-operations` | partial | Flutter displays diagnostics; live router/API verdicts still require VPS acceptance tests. |
+| Diagnostics | `/admin/radius/diagnostics` | `/api/v1/system/diagnostics` | `/system-operations` | vps_acceptance_required | Flutter displays diagnostics; live router/API verdicts require VPS acceptance tests. |
 | Sync queue | `/admin/radius/sync` | `/api/v1/system/sync`, retry/cancel | `/system-operations` | done | Queue list, retry, and cancel are API-backed with confirmation where needed. |
-| Reconcile | `/admin/radius/reconcile` | `/api/v1/system/reconcile` | `/system-operations` | partial | Flutter triggers backend reconcile and shows stats; real NAS side effects need VPS acceptance tests. |
+| Reconcile | `/admin/radius/reconcile` | `/api/v1/system/reconcile` | `/system-operations` | vps_acceptance_required | Flutter triggers backend reconcile and shows stats; real NAS side effects need VPS acceptance tests. |
 | Settings | `/admin/radius/settings` | `/api/v1/settings` | `/admin-control` | done | Flutter can view and edit settings through the JSON API. |
 | API tokens | `/admin/radius/tokens` | `/api/v1/tokens` | `/admin-control` | done | Flutter can create/revoke tokens; one-time token secret is shown only on create. |
 | Tenants | `/admin/radius/tenants` | `/api/v1/tenants` | `/admin-control` | done | Flutter can list/create/update tenants with API-backed limits and status fields. |
@@ -55,6 +58,8 @@ Status values:
 | Tickets | `/admin/radius/tickets` | `/api/v1/tickets` | `/saas-modules` | done | API list/create/update/reply exists; Flutter exposes create and reply. |
 | Services | `/admin/radius/services` | `/api/v1/services` | `/saas-modules` | done | API CRUD exists; Flutter generic SaaS module screen covers create/list/delete. |
 | Share groups | `/admin/radius/share-groups` | `/api/v1/share-groups` | `/saas-modules` | done | API CRUD/member management exists; Flutter exposes core create/list/delete. |
+| External card files | `/admin/radius/cards/batches` | planned import API | `/cards` | missing | Batch source fields exist, but upload/import UI and API are not implemented yet. |
+| Google Drive backup | `/admin/radius/backups` | planned OAuth/storage API | `/backups` | planned_disabled | Must stay disabled until real OAuth/storage integration exists. |
 
 ## Implementation Order
 

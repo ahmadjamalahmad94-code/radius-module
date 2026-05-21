@@ -37,6 +37,7 @@ def create_app() -> Flask:
     _register_radius(app)
     _register_api(app)
     _register_root(app)
+    _install_cli(app)
     _install_mt_health_context(app)
     _seed_demo(app)
     _start_workers(app)
@@ -195,11 +196,43 @@ def _install_tenant(app: Flask) -> None:
 def _seed_demo(app: Flask) -> None:
     if os.environ.get("HOBERADIUS_NO_SEED"):
         return
+    env = (
+        os.environ.get("HOBERADIUS_ENV")
+        or os.environ.get("FLASK_ENV")
+        or ""
+    ).strip().lower()
+    prod = env in {"prod", "production"}
+    explicit = (os.environ.get("HOBERADIUS_DEMO_SEED") or "").strip().lower()
+    if prod and explicit not in {"1", "true", "yes", "on"}:
+        return
     try:
         from app.radius.seed import seed_demo_data
         seed_demo_data()
     except Exception:  # noqa: BLE001
         app.logger.exception("seed failed (non-fatal)")
+
+
+def _install_cli(app: Flask) -> None:
+    """Local operator commands.
+
+    These commands are intentionally explicit. They make local/demo data visible
+    without requiring unsafe production auto-seeding.
+    """
+    import click
+
+    @app.cli.command("seed-demo")
+    @click.option(
+        "--force",
+        is_flag=True,
+        help="Top up existing demo data as well as empty demo databases.",
+    )
+    def _seed_demo_command(force: bool = False) -> None:
+        from app.radius.seed import seed_demo_data
+
+        summary = seed_demo_data(force=force)
+        click.echo("HobeRadius demo data ready:")
+        for key in sorted(summary):
+            click.echo(f"- {key}: {summary[key]}")
 
 
 # ─────────────── stubs (تحاكي HobeHub) ───────────────
