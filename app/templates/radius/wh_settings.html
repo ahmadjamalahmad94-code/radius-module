@@ -1,6 +1,7 @@
 {# Webhook settings — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}إعدادات إشعارات الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
@@ -60,9 +61,7 @@
       <div class="wh-field">
         <label>الحالة</label>
         <div class="wh-chk">
-          <input type="checkbox" name="enabled" id="wh-en" value="1"
-                 {% if (current and current.enabled) or not current %}checked{% endif %}>
-          <label for="wh-en" style="margin:0">مُفعَّل — إرسال الإشعارات للرابط أعلاه</label>
+          {{ toggle_switch(name="enabled", checked=((current and current.enabled) or not current), value="1", id="wh-en", on_label="مُفعَّل — إرسال الإشعارات للرابط أعلاه", off_label="معطَّل") }}
         </div>
       </div>
     {% endcall %}

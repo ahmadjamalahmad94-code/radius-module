@@ -1,6 +1,7 @@
 {# Subscriber finance — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
@@ -88,8 +89,8 @@
         <textarea class="hub-textarea" name="notes" rows="2"></textarea>
       </label>
       <div class="uf-checks wide">
-        <label class="uf-chk"><input type="checkbox" name="apply_to_radius" value="1"> تطبيق على RADIUS</label>
-        <label class="uf-chk"><input type="checkbox" name="dry_run" value="1" checked> تجربة فقط</label>
+        {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق على RADIUS", off_label="بدون تطبيق RADIUS") }}
+        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="تجربة فقط", off_label="تنفيذ فعلي") }}
       </div>
       <div class="wide">
         <button class="hub-btn hub-btn--primary" type="submit">
@@ -118,8 +119,8 @@
                   placeholder="اكتب سببًا واضحًا ليسهل الرجوع له لاحقًا."></textarea>
       </label>
       <div class="uf-checks wide">
-        <label class="uf-chk"><input type="checkbox" name="apply_to_radius" value="1"> تطبيق مؤقت على RADIUS</label>
-        <label class="uf-chk"><input type="checkbox" name="dry_run" value="1" checked> تجربة فقط</label>
+        {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق مؤقت على RADIUS", off_label="بدون تطبيق RADIUS") }}
+        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="تجربة فقط", off_label="تنفيذ فعلي") }}
       </div>
       <div class="wide">
         <button class="hub-btn hub-btn--primary" type="submit">
