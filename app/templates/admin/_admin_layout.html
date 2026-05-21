@@ -272,16 +272,10 @@
 
 <main class="main">
 
-  <div class="page-head">
-    <div class="title">
-      {% block page_icon %}<i class="fa-solid fa-circle-dot"></i>{% endblock %}
-      <span>{% block page_title %}{% endblock %}</span>
-      {% block page_sub %}{% endblock %}
-    </div>
-    <div class="head-actions">
-      {% block head_buttons %}{% endblock %}
-    </div>
-  </div>
+  {# The legacy slim page-head bar was removed — every page now uses
+     hub.hero (or a custom hero) as its single visible title. The
+     `page_title` / `page_icon` blocks still exist (they feed the
+     <title> tag and any future toolbar) and so does `head_buttons`. #}
 
   {# MT-unreachable banner — sourced from in-memory heartbeats published
      by mt_reconciler each 30s tick. Shows when at least one router has
