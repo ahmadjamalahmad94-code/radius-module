@@ -187,6 +187,60 @@
     flex-wrap: wrap;
     padding: 12px 4px 0;
   }
+
+  /* ── Account-section additions (B2 redesign) ─────────────────── */
+  /* Full-width field that spans both grid columns. */
+  .uf-field--full{ grid-column: 1 / -1; }
+
+  /* Password input + eye toggle on the right (start-edge in RTL). */
+  .uf-pw{ position: relative; }
+  .uf-pw-input{ padding-inline-start: 42px; }
+  .uf-pw-toggle{
+    position: absolute;
+    inset-inline-start: 6px;
+    top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 0; border-radius: 6px;
+    color: var(--hub-text-mute); cursor: pointer;
+    transition: background var(--hub-anim-fast) var(--hub-ease),
+                color var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-pw-toggle:hover{ background: #f6f4ff; color: var(--hub-brand-ink); }
+
+  /* Service-type cards (Hotspot + Broadband, multi-select) */
+  .uf-svc-cards{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .uf-svc-card{
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-lg);
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-svc-card input{ display: none; }
+  .uf-svc-card:hover{ border-color: var(--hub-brand-line); }
+  .uf-svc-card.is-checked,
+  .uf-svc-card:has(input:checked){
+    background: linear-gradient(135deg, var(--hub-brand-soft), #fff);
+    border-color: var(--hub-brand);
+    box-shadow: 0 2px 8px rgba(107,90,237,.15);
+  }
+  .uf-svc-icon{
+    width: 38px; height: 38px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+    font-size: 16px;
+  }
+  .uf-svc-body{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .uf-svc-title{ font-weight: 800; color: var(--hub-text); font-size: 14px; }
+  .uf-svc-sub  { font-size: 11.5px; color: var(--hub-text-mute); }
 </style>
 {% endblock %}
 
@@ -228,12 +282,22 @@
         action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
 
     {# ── 1. Account ─────────────────────────────────────── #}
+    {# Per SERVICES_COOKBOOK §16 redesign:
+       - Removed: نوع الحساب (form is subscribers-only), مرجع HobeHub.
+       - Password gets an eye-toggle reveal button.
+       - Service type → two cards (Hotspot, Broadband=PPPoE) multi-select.
+       - Plan name uses display name from DB.
+       - Manager + Group are dropdowns sourced from DB.
+       - beneficiary_ref kept as a hidden field so existing values aren't
+         wiped on edit. #}
     <section class="uf-section uf-section--acct" id="uf-account">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-wifi"></i></span>
         <span class="uf-section-title">حساب الإنترنت</span>
       </header>
       <div class="uf-section-body">
+        <input type="hidden" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
+
         <div class="uf-grid">
           <div class="uf-field">
             <label>اسم الدخول <span class="req">*</span></label>
@@ -244,41 +308,57 @@
 
           <div class="uf-field">
             <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
-            <input class="hub-input" type="text" name="password" {% if is_new %}required{% endif %}
-                   placeholder="{{ '••••••••' if not is_new else '' }}"
-                   value="{{ sub.password if is_new else '' }}">
+            <div class="uf-pw">
+              <input class="hub-input uf-pw-input" type="password" name="password"
+                     id="uf-password" {% if is_new %}required{% endif %}
+                     placeholder="{{ '••••••••' if not is_new else '' }}"
+                     value="{{ sub.password if is_new else '' }}"
+                     autocomplete="new-password">
+              <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
+                      aria-label="إظهار/إخفاء كلمة المرور" title="إظهار/إخفاء">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
             <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب.</div>
           </div>
 
-          <div class="uf-field">
-            <label>نوع الحساب</label>
-            <select class="hub-select" name="user_type">
-              {% for t in user_types %}
-                <option value="{{ t }}" {% if sub.user_type == t %}selected{% endif %}>
-                  {% if t == 'subscriber' %}مشترك{% elif t == 'card' %}بطاقة دخول{% elif t == 'trial' %}تجريبي{% else %}{{ t }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-            <div class="help">اختر نوع الحساب حسب طريقة استخدامه.</div>
-          </div>
-
-          <div class="uf-field">
+          <div class="uf-field uf-field--full">
             <label>نوع الخدمة</label>
-            <select class="hub-select" name="service_type">
-              {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
-                <option value="{{ t }}" {% if sub.service_type == t %}selected{% endif %}>
-                  {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-            <div class="help">طريقة الدخول إلى الشبكة.</div>
+            {%- set svc = (sub.service_type or '')|lower -%}
+            {%- set svc_hs = svc in ('hotspot','both') -%}
+            {%- set svc_pppoe = svc in ('pppoe','both','broadband') -%}
+            <div class="uf-svc-cards">
+              <label class="uf-svc-card {% if svc_hs %}is-checked{% endif %}">
+                <input type="checkbox" name="service_type" value="hotspot"
+                  {% if svc_hs %}checked{% endif %}>
+                <span class="uf-svc-icon"><i class="fa-solid fa-wifi"></i></span>
+                <span class="uf-svc-body">
+                  <span class="uf-svc-title">هوت سبوت</span>
+                  <span class="uf-svc-sub">دخول عبر صفحة Captive Portal</span>
+                </span>
+              </label>
+              <label class="uf-svc-card {% if svc_pppoe %}is-checked{% endif %}">
+                <input type="checkbox" name="service_type" value="pppoe"
+                  {% if svc_pppoe %}checked{% endif %}>
+                <span class="uf-svc-icon"><i class="fa-solid fa-plug"></i></span>
+                <span class="uf-svc-body">
+                  <span class="uf-svc-title">برود باند (PPPoE)</span>
+                  <span class="uf-svc-sub">اتصال DSL/Fiber باسم وكلمة سرّ</span>
+                </span>
+              </label>
+            </div>
+            <div class="help">يمكنك اختيار خدمة واحدة أو الاثنتين معًا.</div>
           </div>
 
           <div class="uf-field">
             <label>باقة الخدمة</label>
             <select class="hub-select" name="plan_id">
               <option value="">— بدون —</option>
-              {% for p in plans %}<option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+              {% for p in plans %}
+                <option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>
+                  {{ p.display_name or p.name }}
+                </option>
+              {% endfor %}
             </select>
             <div class="help">تحدد السرعة والحصة ومدة الاستخدام.</div>
           </div>
@@ -296,14 +376,34 @@
           </div>
 
           <div class="uf-field">
-            <label>رقم المدير المسؤول</label>
-            <input class="hub-input" type="number" name="manager_id" value="{{ sub.manager_id or '' }}" placeholder="—">
+            <label>المدير المسؤول</label>
+            <select class="hub-select" name="manager_id">
+              <option value="">— بدون —</option>
+              {% for a in admins %}
+                <option value="{{ a.id }}" {% if sub.manager_id == a.id %}selected{% endif %}>
+                  {{ a.full_name or a.username }}
+                  {%- if a.full_name and a.username != a.full_name %} ({{ a.username }}){% endif -%}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">اختر المدير الذي يتابع هذا الحساب.</div>
           </div>
 
           <div class="uf-field">
             <label>المجموعة</label>
-            <input class="hub-input" type="text" name="group" value="{{ sub.group or '' }}" placeholder="default">
-            <div class="help">اسم مجموعة اختيارية لتنظيم المشتركين.</div>
+            <select class="hub-select" name="group">
+              <option value="">— بدون —</option>
+              {% for g in subscriber_groups %}
+                <option value="{{ g.name }}" {% if sub.group == g.name %}selected{% endif %}>
+                  {{ g.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="help">
+              المجموعات تُدار من
+              <a href="{{ url_for('radius.subscriber_groups_list') }}"
+                 style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">قسم مجموعات المشتركين</a>.
+            </div>
           </div>
 
           <div class="uf-field">
@@ -313,12 +413,6 @@
               <label for="auto-renew">مفعَّل</label>
             </div>
             <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
-          </div>
-
-          <div class="uf-field">
-            <label>مرجع HobeHub</label>
-            <input class="hub-input" type="text" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
-            <div class="help">لربط الحساب بسجل HobeHub خارجي.</div>
           </div>
         </div>
       </div>
@@ -691,6 +785,30 @@
     tempSpeed.addEventListener('change', syncTemporarySpeedTimes);
     syncTemporarySpeedTimes();
   }
+
+  // ── Password reveal toggle (eye button) ──────────────────────
+  document.querySelectorAll('[data-uf-pw-toggle]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = btn.parentElement.querySelector('input.uf-pw-input');
+      if (!input) return;
+      var icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+      } else {
+        input.type = 'password';
+        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+      }
+    });
+  });
+
+  // ── Service-type cards: mirror checked state to .is-checked class
+  //    so the visual stays in sync on browsers without :has() support.
+  document.querySelectorAll('.uf-svc-card input[type=checkbox]').forEach(function(cb){
+    function refresh(){ cb.closest('.uf-svc-card').classList.toggle('is-checked', cb.checked); }
+    cb.addEventListener('change', refresh);
+    refresh();
+  });
 })();
 </script>
 {% endblock %}
