@@ -550,19 +550,24 @@ def users_edit(username: str):
         ))
 
 
-def _sync_subscriber_rules_enabled(tenant_id: int, actor, form, username: str) -> None:
-    """Sync the `enabled` flag of every existing bandwidth_schedule rule
-    that belongs to this subscriber to whatever the form currently says.
+def _sync_subscriber_rules(tenant_id: int, actor, form, username: str) -> None:
+    """Persist every existing bandwidth_schedule rule for this subscriber
+    from the form data on the main «حفظ» click. No-op when nothing
+    changed.
 
-    Called from users_update so that JS-only bulk actions «فعّل / عطّل»
-    (which flip sr_edit_enabled_* checkboxes locally without a network
-    roundtrip) actually persist when the operator clicks main «حفظ».
-
-    Looks at every `sr_edit_name_<id>` key (always posted), reads the
-    corresponding `sr_edit_enabled_<id>` (absent → unchecked), and
-    issues an update only when the new state differs from the DB row.
+    JS-only buttons inside _speed_rules_panel.html («تم» / «فعّل الكل»
+    / «عطّل الكل»; the sub-section master toggle; rule-level enabled
+    checkboxes) update DOM state without a roundtrip. This helper —
+    called from users_update right after the subscriber save —
+    persists those staged changes by iterating every `sr_edit_name_<id>`
+    key in the form (always sent for existing rules), gathering the
+    full sr_edit_*_<id> payload, comparing against the DB row, and
+    issuing a single update_bandwidth_schedule per actually-modified
+    rule. Reload happens once at the end of users_update — never per
+    inline action.
     """
     from ..services.operations import get_operations_service
+    from .speed_rules_ui import _days_from_form
     svc = get_operations_service()
 
     rule_ids = set()
@@ -576,20 +581,41 @@ def _sync_subscriber_rules_enabled(tenant_id: int, actor, form, username: str) -
     if not rule_ids:
         return
 
+    def _as_int(v, default=0):
+        try:
+            return int(v) if v not in (None, "") else default
+        except (TypeError, ValueError):
+            return default
+
     for rid in rule_ids:
         try:
-            rule = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=rid)
+            existing = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=rid)
         except Exception:
             continue
-        if not rule or rule.get("subscriber_username") != username:
+        if not existing or existing.get("subscriber_username") != username:
             continue
-        new_enabled = (form.get(f"sr_edit_enabled_{rid}") or "").lower() in {"1", "true", "on", "yes"}
-        if bool(rule.get("enabled")) == new_enabled:
+        sfx = str(rid)
+        new_data = {
+            "name": (form.get(f"sr_edit_name_{sfx}") or "").strip() or existing.get("name"),
+            "starts_at_time": form.get(f"sr_edit_starts_at_time_{sfx}") or existing.get("starts_at_time"),
+            "ends_at_time":   form.get(f"sr_edit_ends_at_time_{sfx}")   or existing.get("ends_at_time"),
+            "days_csv":  _days_from_form(form, f"sr_edit_days_{sfx}"),
+            "speed_down_kbps": _as_int(form.get(f"sr_edit_speed_down_kbps_{sfx}"), existing.get("speed_down_kbps") or 0),
+            "speed_up_kbps":   _as_int(form.get(f"sr_edit_speed_up_kbps_{sfx}"),   existing.get("speed_up_kbps") or 0),
+            "cir_down_kbps":   _as_int(form.get(f"sr_edit_cir_down_kbps_{sfx}"),   existing.get("cir_down_kbps") or 0),
+            "cir_up_kbps":     _as_int(form.get(f"sr_edit_cir_up_kbps_{sfx}"),     existing.get("cir_up_kbps") or 0),
+            "restore_mode": form.get(f"sr_edit_restore_mode_{sfx}") or existing.get("restore_mode") or "profile_default",
+            "priority": _as_int(form.get(f"sr_edit_priority_{sfx}"), existing.get("priority") or 5),
+            "enabled": (form.get(f"sr_edit_enabled_{sfx}") or "").lower() in {"1", "true", "on", "yes"},
+            "notes": form.get(f"sr_edit_notes_{sfx}") or existing.get("notes") or "",
+        }
+        # Skip the DB write when nothing actually changed.
+        if all(str(existing.get(k) or "") == str(new_data.get(k) or "") for k in new_data):
             continue
         try:
             svc.update_bandwidth_schedule(
                 tenant_id=tenant_id, actor=actor, schedule_id=rid,
-                data={**rule, "enabled": new_enabled},
+                data=new_data,
             )
         except RadiusError:
             continue
@@ -624,8 +650,9 @@ def users_update(username: str):
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
             user_types=USER_TYPES, is_new=False, speed_rules_panel=None), 400
-    # Persist any JS-flipped rule.enabled changes (bulk فعّل / عطّل etc).
-    _sync_subscriber_rules_enabled(_tid(), _actor(), request.form, username)
+    # Persist any JS-staged rule edits (bulk فعّل/عطّل, «تم», master
+    # toggle, per-row enabled flips) — all in one redirect at the end.
+    _sync_subscriber_rules(_tid(), _actor(), request.form, username)
     flash("تم التحديث.", "success")
     return redirect(url_for("radius.users_list"))
 

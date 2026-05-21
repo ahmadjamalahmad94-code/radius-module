@@ -197,6 +197,13 @@
     from{ opacity: 0; transform: translateY(-4px); }
     to  { opacity: 1; transform: translateY(0); }
   }
+  /* Visual confirmation that «تم» landed (since we don't reload). */
+  .sr2-rule--flash{ animation: sr2-flash .6s ease-out; }
+  @keyframes sr2-flash{
+    0%  { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    35% { box-shadow: 0 0 0 6px rgba(16, 185, 129, .22); }
+    100%{ box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
 
   .sr2-row{
     display: grid;
@@ -480,9 +487,13 @@
                     data-collapse-rule="{{ rule.id }}">
               <i class="fa-solid fa-xmark"></i> إغلاق
             </button>
-            <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-                    name="_speed_rule_action" value="update:{{ rule.id }}" formnovalidate>
-              <i class="fa-solid fa-floppy-disk"></i> تحديث
+            {# «تم» = JS-only: refresh the summary preview from the
+               current inputs, collapse, and flash. The actual write
+               happens at the main «حفظ» click (users.py iterates
+               sr_edit_*_<id> for every rule and persists in one go). #}
+            <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
+                    data-update-rule="{{ rule.id }}">
+              <i class="fa-solid fa-check"></i> تم
             </button>
             <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                     name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
@@ -598,22 +609,112 @@
 (function(){
   if (window.__sr2RuleToggleInit) return;
   window.__sr2RuleToggleInit = true;
+
+  function fmtKbps(v){
+    var n = parseInt(v, 10) || 0;
+    if (n >= 1024 && n % 1024 === 0) return (n / 1024) + ' Mbps';
+    if (n >= 1024) return (n / 1024).toFixed(1) + ' Mbps';
+    return n + ' Kbps';
+  }
+  function fmtTime(s){
+    if (!s || s.indexOf(':') === -1) return '--:--';
+    var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
+    if (isNaN(h)) return '--:--';
+    if (h === 0)  return '12:' + m + ' ص';
+    if (h < 12)   return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
+    if (h === 12) return '12:' + m + ' م';
+    var h12 = h - 12;
+    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+  }
+
+  function updateSummary(rule){
+    var rid = rule.getAttribute('data-rule-id');
+    if (!rid) return;
+    function $(n){ return rule.querySelector('[name="sr_edit_' + n + '_' + rid + '"]'); }
+
+    // Name
+    var nameInp = $('name');
+    var sumName = rule.querySelector('.sr2-sum-name');
+    if (nameInp && sumName) sumName.textContent = nameInp.value || 'قاعدة سرعة';
+
+    // Time range
+    var fromVal = ($('starts_at_time') || {}).value || '';
+    var toVal   = ($('ends_at_time')   || {}).value || '';
+    var timeText = rule.querySelector('.sr2-sum-time-text');
+    if (timeText) timeText.textContent = fmtTime(fromVal) + ' ← ' + fmtTime(toVal);
+
+    // Speeds — read the hidden field that unit_input_picker syncs.
+    var dInp = $('speed_down_kbps');
+    var uInp = $('speed_up_kbps');
+    var sumSpeed = rule.querySelector('.sr2-sum-speed');
+    if (sumSpeed){
+      sumSpeed.innerHTML =
+        '<i class="fa-solid fa-arrow-down" title="تنزيل"></i> ' + fmtKbps(dInp && dInp.value) +
+        '<span class="sr2-sum-sep">·</span>' +
+        '<i class="fa-solid fa-arrow-up" title="رفع"></i> '   + fmtKbps(uInp && uInp.value);
+    }
+
+    // Days
+    var dayInputs = Array.from(
+      rule.querySelectorAll('input[type="checkbox"][name="sr_edit_days_' + rid + '"]:checked')
+    );
+    var sumDays = rule.querySelector('.sr2-sum-days');
+    if (sumDays){
+      if (dayInputs.length === 0 || dayInputs.length === 7){
+        sumDays.textContent = 'كل الأيام';
+      } else if (dayInputs.length <= 3){
+        sumDays.textContent = dayInputs.map(function(i){
+          var lbl = i.closest('label'); var sp = lbl && lbl.querySelector('span');
+          return sp ? sp.textContent : i.value;
+        }).join(' · ');
+      } else {
+        sumDays.textContent = dayInputs.length + ' أيام';
+      }
+    }
+
+    // Enabled state — drives the row tint (.is-disabled / .is-on dot /
+    // status text). Reads the checkbox inside the detail.
+    var enabledCb = rule.querySelector('input[type="checkbox"][name="sr_edit_enabled_' + rid + '"]');
+    var enabled = !!(enabledCb && enabledCb.checked);
+    rule.classList.toggle('is-disabled', !enabled);
+    var dot = rule.querySelector('.sr2-sum-pulse');
+    if (dot) dot.classList.toggle('is-on', enabled);
+    var st = rule.querySelector('.sr2-sum-status');
+    if (st){
+      st.innerHTML = enabled
+        ? '<i class="fa-solid fa-circle-check"></i> مفعَّلة'
+        : '<i class="fa-solid fa-circle-pause"></i> معطَّلة';
+    }
+  }
+
+  function flash(rule){
+    rule.classList.remove('sr2-rule--flash');
+    void rule.offsetWidth;
+    rule.classList.add('sr2-rule--flash');
+  }
+
   document.addEventListener('click', function(e){
-    var openBtn  = e.target.closest('[data-toggle-rule]');
-    var closeBtn = e.target.closest('[data-collapse-rule]');
-    if (!openBtn && !closeBtn) return;
-    var btn  = openBtn || closeBtn;
+    var openBtn   = e.target.closest('[data-toggle-rule]');
+    var closeBtn  = e.target.closest('[data-collapse-rule]');
+    var updateBtn = e.target.closest('[data-update-rule]');
+    if (!openBtn && !closeBtn && !updateBtn) return;
+    var btn  = openBtn || closeBtn || updateBtn;
     var rule = btn.closest('.sr2-rule');
     if (!rule) return;
     var detail = rule.querySelector('.sr2-rule-detail');
     if (!detail) return;
+
     if (openBtn){
       rule.classList.add('is-expanded');
       detail.hidden = false;
-    } else {
-      rule.classList.remove('is-expanded');
-      detail.hidden = true;
+      return;
     }
+    if (updateBtn){
+      updateSummary(rule);
+      flash(rule);
+    }
+    rule.classList.remove('is-expanded');
+    detail.hidden = true;
   });
 })();
 </script>
