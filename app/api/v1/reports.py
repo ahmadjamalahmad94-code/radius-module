@@ -58,6 +58,12 @@ def register(bp: Blueprint) -> None:
             require_api_token(_report_xlsx_view(report_type, slug)),
             methods=["GET"],
         )
+        bp.add_url_rule(
+            f"/reports/{slug}/export.pdf",
+            "reports_" + slug.replace("/", "_").replace("-", "_") + "_export_pdf",
+            require_api_token(_report_pdf_view(report_type, slug)),
+            methods=["GET"],
+        )
 
 def _report_view(report_type: str):
     def _view():
@@ -104,6 +110,24 @@ def _report_xlsx_view(report_type: str, slug: str):
         )
 
     _view.__name__ = f"reports_{report_type}_export_xlsx_view"
+    return _view
+
+
+def _report_pdf_view(report_type: str, slug: str):
+    def _view():
+        try:
+            pdf_bytes = service_from_context().report_pdf(report_type=report_type)
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="hoberadius-{slug.replace("/", "-")}.pdf"',
+            },
+        )
+
+    _view.__name__ = f"reports_{report_type}_export_pdf_view"
     return _view
 
 

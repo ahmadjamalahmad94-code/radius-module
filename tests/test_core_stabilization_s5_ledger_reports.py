@@ -99,3 +99,16 @@ def test_financial_report_xlsx_export_is_real(client):
     rows = list(sheet.iter_rows(values_only=True))
     assert "username" in rows[0]
     assert any(item["username"] in row for row in rows[1:])
+
+
+def test_financial_report_pdf_export_is_real(client):
+    item = subscriber(client)
+    client.post(
+        "/api/v1/payments",
+        json={"username": item["username"], "plan_id": 1, "amount": 23},
+        headers=AUTH,
+    )
+    export = client.get("/api/v1/reports/payments/export.pdf", headers=AUTH)
+    assert export.status_code == 200
+    assert export.headers["Content-Type"].startswith("application/pdf")
+    assert export.data.startswith(b"%PDF")

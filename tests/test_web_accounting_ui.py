@@ -216,3 +216,8 @@ def test_financial_reports_page_reads_ledger_reports(client):
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     assert xlsx_export.data[:2] == b"PK"
+
+    pdf_export = client.get("/admin/radius/finance/reports/export.pdf?type=subscriber_payments")
+    assert pdf_export.status_code == 200
+    assert pdf_export.headers["Content-Type"].startswith("application/pdf")
+    assert pdf_export.data.startswith(b"%PDF")

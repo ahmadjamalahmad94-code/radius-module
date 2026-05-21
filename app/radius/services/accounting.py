@@ -386,6 +386,53 @@ class AccountingService:
         wb.save(out)
         return out.getvalue()
 
+    def report_pdf(self, *, report_type: str) -> bytes:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+        items, columns = self._report_export_rows(report_type=report_type)
+        out = io.BytesIO()
+        doc = SimpleDocTemplate(
+            out,
+            pagesize=landscape(A4),
+            rightMargin=18,
+            leftMargin=18,
+            topMargin=18,
+            bottomMargin=18,
+        )
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph(f"HobeRadius financial report: {report_type}", styles["Title"]),
+            Spacer(1, 10),
+        ]
+        if not items:
+            data = [["No data"]]
+        else:
+            data = [columns]
+            data.extend(
+                [str(self._export_value(item.get(column))) for column in columns]
+                for item in items
+            )
+        table = Table(data, repeatRows=1)
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+                ]
+            )
+        )
+        story.append(table)
+        doc.build(story)
+        return out.getvalue()
+
     def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
         items = self.reports(report_type=report_type)
         if not items:
