@@ -10,6 +10,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% set title_ar = "إضافة مشترك" if is_new else ("تعديل " + (sub.username or "مشترك")) %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -500,13 +501,13 @@
             </div>
           </div>
           <div class="uf-field">
-            <label>سرعة التنزيل (Kbps)</label>
-            <input class="hub-input" type="number" min="0" name="download_speed_kbps" value="{{ sub.download_speed_kbps or 0 }}">
-            <div class="help">0 = استخدم قيمة الباقة. 1024 = 1 ميجابت.</div>
+            <label>سرعة التنزيل</label>
+            {{ unit_input_picker(name="download_speed_kbps", value=sub.download_speed_kbps or 0, kind="speed") }}
+            <div class="help">0 = استخدم قيمة الباقة.</div>
           </div>
           <div class="uf-field">
-            <label>سرعة الرفع (Kbps)</label>
-            <input class="hub-input" type="number" min="0" name="upload_speed_kbps" value="{{ sub.upload_speed_kbps or 0 }}">
+            <label>سرعة الرفع</label>
+            {{ unit_input_picker(name="upload_speed_kbps", value=sub.upload_speed_kbps or 0, kind="speed") }}
             <div class="help">0 = استخدم قيمة الباقة.</div>
           </div>
           <div class="uf-field">
@@ -664,18 +665,20 @@
       </header>
       <div class="uf-section-body">
         <div class="uf-grid">
-          <div class="uf-field"><label>إجمالي وقت الاتصال (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="total_connection_time_min" value="{{ sub.total_connection_time_min or 0 }}">
+          <div class="uf-field"><label>إجمالي وقت الاتصال</label>
+            {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time") }}
             <div class="help">0 = بلا حد خاص.</div></div>
-          <div class="uf-field"><label>وقت الاتصال اليومي (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="daily_connection_time_min" value="{{ sub.daily_connection_time_min or 0 }}"></div>
-          <div class="uf-field"><label>كوتا التنزيل (MB)</label>
-            <input class="hub-input" type="number" min="0" name="download_quota_mb" value="{{ sub.download_quota_mb or 0 }}">
-            <div class="help">0 = غير محدودة. 1024 = 1 GB.</div></div>
-          <div class="uf-field"><label>كوتا الرفع (MB)</label>
-            <input class="hub-input" type="number" min="0" name="upload_quota_mb" value="{{ sub.upload_quota_mb or 0 }}"></div>
-          <div class="uf-field full"><label>كوتا مدمجة (MB)</label>
-            <input class="hub-input" type="number" min="0" name="combined_quota_mb" value="{{ sub.combined_quota_mb or 0 }}">
+          <div class="uf-field"><label>وقت الاتصال اليومي</label>
+            {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time") }}
+          </div>
+          <div class="uf-field"><label>كوتا التنزيل</label>
+            {{ unit_input_picker(name="download_quota_mb", value=sub.download_quota_mb or 0, kind="quota") }}
+            <div class="help">0 = غير محدودة.</div></div>
+          <div class="uf-field"><label>كوتا الرفع</label>
+            {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota") }}
+          </div>
+          <div class="uf-field full"><label>كوتا مدمجة</label>
+            {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota") }}
             <div class="help">إن حُدِّدت، تحلّ محل الكوتا المنفصلة.</div></div>
           <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
             <label class="uf-toggle">
