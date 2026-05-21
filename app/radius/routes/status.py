@@ -14,6 +14,7 @@ from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..db.repos import mikrotik_repo, sync_queue_repo, webhooks_repo
+from ..services import system_probe
 
 
 def _tid() -> int:
@@ -109,6 +110,7 @@ def _gather_status(tenant_id: int) -> dict:
     sync_stats = sync_queue_repo.stats(tenant_id)
     mt_configs = mikrotik_repo.list_configs(tenant_id)
     enabled_mt = [c for c in mt_configs if c["enabled"]]
+    vps = system_probe.get_vps_status()
 
     # webhook deliveries summary
     cur = db().execute("""
@@ -142,6 +144,18 @@ def _gather_status(tenant_id: int) -> dict:
                       for c in mt_configs],
         },
         "counts": counts,
+        "vps": vps,
+        "system": {
+            "hostname": vps.get("hostname"),
+            "platform": vps.get("platform"),
+            "process_uptime": vps.get("process_uptime"),
+            "system_uptime": vps.get("system_uptime"),
+            "cpu_pct": vps.get("cpu_pct"),
+            "ram_pct": (vps.get("memory") or {}).get("percent"),
+            "disk_pct": (vps.get("disk") or {}).get("percent"),
+            "load": vps.get("load"),
+            "network": vps.get("network"),
+        },
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 

@@ -14,8 +14,8 @@
      5. Subscribers section (6 tiles + progress)
      6. Cards + recent batches (tiles + list)
      7. Plans section (tiles + top plan)
-     8. System health (8 tiles)
-     9. Bottom: top-plans table + recent activity (2-col grid)
+     8. Bottom: top-plans table + recent activity (2-col grid)
+     9. System health (VPS/runtime details)
    ═══════════════════════════════════════════════════════════════════════ #}
 
 {% extends "admin/_admin_layout.html" %}
@@ -214,53 +214,6 @@
     </div>
   {% endcall %}
 
-  {# ───── System Health ─────────────────────────────────── #}
-  {% call hub.section("صحة النظام", icon="heart-pulse", meta="تحديث كل 30 ثانية") %}
-    <div class="hub-tile-grid">
-      <div class="hub-tile">
-        <div class="hub-tile-label"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
-        <div style="margin-top:4px">
-          {% if sy.db_ok %}{{ hub.pill("سليم", variant="green") }}
-          {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
-        </div>
-      </div>
-      <div class="hub-tile">
-        <div class="hub-tile-label"><i class="fa-solid fa-tower-broadcast"></i> موصِّل RADIUS</div>
-        <div style="margin-top:4px">
-          {% if sy.radius_ok %}{{ hub.pill("جاهز", variant="green") }}
-          {% else %}{{ hub.pill("غير جاهز", variant="red") }}{% endif %}
-        </div>
-      </div>
-      {{ hub.tile("أجهزة الشبكة", (ns.enabled or 0)|string+" / "+(ns.total or 0)|string, icon="network-wired", sub="مفعَّلة من الإجمالي") }}
-      {{ hub.tile("وقت التشغيل", sy.process_uptime or "—", icon="power-off", sub=("النظام: "+sy.system_uptime) if sy.system_uptime else "") }}
-
-      {% if sy.cpu_pct is not none %}
-        {% set cpu = sy.cpu_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if cpu >= 90 else ('hub-tile--warn' if cpu >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-microchip"></i> المعالج</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % cpu }}</div>
-          <div style="margin-top:6px">{{ hub.progress(cpu) }}</div>
-        </div>
-      {% endif %}
-      {% if sy.ram_pct is not none %}
-        {% set ram = sy.ram_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if ram >= 90 else ('hub-tile--warn' if ram >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-memory"></i> الذاكرة</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % ram }}</div>
-          <div style="margin-top:6px">{{ hub.progress(ram) }}</div>
-        </div>
-      {% endif %}
-      {% if sy.disk_pct is not none %}
-        {% set dsk = sy.disk_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if dsk >= 90 else ('hub-tile--warn' if dsk >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-hard-drive"></i> التخزين</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % dsk }}</div>
-          <div style="margin-top:6px">{{ hub.progress(dsk) }}</div>
-        </div>
-      {% endif %}
-      {{ hub.tile("المضيف", sy.hostname or "—", icon="server") }}
-    </div>
-  {% endcall %}
 {% endif %}
 
 {# ───── Bottom Grid: Top Plans + Recent Activity ────────── #}
@@ -317,5 +270,84 @@
     {% endif %}
   {% endcall %}
 </div>
+
+{% if metrics %}
+  {% set sy = metrics.system or {} %}
+  {% set ns = metrics.nas or {} %}
+  {# ───── Bottom System Health ───────────────────────────── #}
+  {% call hub.section("صحة النظام", icon="heart-pulse", meta="بيانات مباشرة من VPS") %}
+    <div class="hub-tile-grid">
+      <div class="hub-tile">
+        <div class="hub-tile-label"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
+        <div style="margin-top:4px">
+          {% if sy.db_ok %}{{ hub.pill("سليم", variant="green") }}
+          {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
+        </div>
+      </div>
+      <div class="hub-tile">
+        <div class="hub-tile-label"><i class="fa-solid fa-tower-broadcast"></i> موصِّل RADIUS</div>
+        <div style="margin-top:4px">
+          {% if sy.radius_ok %}{{ hub.pill("جاهز", variant="green") }}
+          {% else %}{{ hub.pill("غير جاهز", variant="red") }}{% endif %}
+        </div>
+      </div>
+      {{ hub.tile("أجهزة الشبكة", (ns.enabled or 0)|string+" / "+(ns.total or 0)|string, icon="network-wired", sub="مفعَّلة من الإجمالي") }}
+      {{ hub.tile("المضيف", sy.hostname or "—", icon="server", sub=sy.platform or "") }}
+      {{ hub.tile("تشغيل التطبيق", sy.process_uptime or "—", icon="stopwatch", sub="منذ آخر restart للخدمة") }}
+      {{ hub.tile("تشغيل النظام", sy.system_uptime or "—", icon="power-off", sub="Uptime للـ VPS") }}
+
+      {% if sy.cpu_pct is not none %}
+        {% set cpu = sy.cpu_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if cpu >= 90 else ('hub-tile--warn' if cpu >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-microchip"></i> المعالج</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % cpu }}</div>
+          <div style="margin-top:6px">{{ hub.progress(cpu) }}</div>
+          <div class="hub-tile-sub">الأنوية: {{ sy.cpu_count or "—" }}</div>
+        </div>
+      {% endif %}
+      {% if sy.ram_pct is not none %}
+        {% set ram = sy.ram_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if ram >= 90 else ('hub-tile--warn' if ram >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-memory"></i> الذاكرة</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % ram }}</div>
+          <div style="margin-top:6px">{{ hub.progress(ram) }}</div>
+          {% if sy.memory %}
+            <div class="hub-tile-sub">المستخدم: {{ sy.memory.used_human or "—" }} · المتاح: {{ sy.memory.available_human or "—" }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+      {% if sy.disk_pct is not none %}
+        {% set dsk = sy.disk_pct|float %}
+        <div class="hub-tile {{ 'hub-tile--danger' if dsk >= 90 else ('hub-tile--warn' if dsk >= 75 else 'hub-tile--ok') }}">
+          <div class="hub-tile-label"><i class="fa-solid fa-hard-drive"></i> التخزين</div>
+          <div class="hub-tile-value">{{ '%.1f%%' % dsk }}</div>
+          <div style="margin-top:6px">{{ hub.progress(dsk) }}</div>
+          {% if sy.disk %}
+            <div class="hub-tile-sub">المتاح: {{ sy.disk.free_human or "—" }} · {{ sy.disk.path or "" }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+      {% if sy.load %}
+        {{ hub.tile("حمل النظام", (sy.load.one if sy.load.one is not none else "—")|string, icon="gauge-high", sub=("5د: " ~ sy.load.five ~ " / 15د: " ~ sy.load.fifteen) if sy.load.five is not none else "") }}
+      {% endif %}
+      {% if sy.network %}
+        <div class="hub-tile">
+          <div class="hub-tile-label"><i class="fa-solid fa-earth-americas"></i> الاتصال الخارجي</div>
+          <div style="margin-top:4px">
+            {% if sy.network.ping_ok %}{{ hub.pill("Ping Google سليم", variant="green") }}
+            {% else %}{{ hub.pill("Ping Google فشل", variant="red") }}{% endif %}
+            {% if sy.network.dns_ok %}{{ hub.pill("DNS سليم", variant="green") }}
+            {% else %}{{ hub.pill("DNS فشل", variant="red") }}{% endif %}
+          </div>
+          <div class="hub-tile-sub" style="margin-top:6px">
+            {{ sy.network.ping_host or "8.8.8.8" }}
+            {% if sy.network.ping_ms is not none %} · {{ sy.network.ping_ms }}ms{% endif %}
+            {% if sy.network.dns_ip %} · DNS IP: {{ sy.network.dns_ip }}{% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endcall %}
+{% endif %}
 
 {% endblock %}

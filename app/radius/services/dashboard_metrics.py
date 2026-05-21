@@ -5,15 +5,11 @@ DashboardMetricsService — مجموعة helpers تُجمّع KPIs الـ Dashbo
 التصميم:
 - كل قسم في دالة مستقلة، يرفض السقوط — fallback آمن إلى dict فارغ/قيم 0/None.
 - لا queries ثقيلة في الـ template — كل الحسابات هنا.
-- System health مع caching قصير (30s) لأن psutil/socket قد يكونان أبطأ.
-- لا external network calls حقيقية — فحوصات محلية فقط (DB ping بـ SELECT 1).
+- System health مع caching قصير (30s) لأن فحص VPS والشبكة قد يكون أبطأ.
 - متعدد الـ tenant: يقرأ tenant_id من Flask `g` كباقي الخدمات.
 """
 from __future__ import annotations
 
-import os
-import shutil
-import socket
 import time
 from typing import Optional
 
@@ -145,7 +141,6 @@ def get_nas_summary(tenant_id: Optional[int] = None) -> dict:
 # ────────────────────────────────────────────────────────────────
 # 6. System health (cached 30s — psutil قد يكون بطيء)
 # ────────────────────────────────────────────────────────────────
-_BOOT_TIME = time.time()
 _SYS_CACHE: dict = {"at": 0.0, "data": None}
 _SYS_CACHE_TTL = 30.0
 
@@ -161,21 +156,40 @@ def _format_uptime(seconds: float) -> str:
 
 
 def get_system_health() -> dict:
-    """صحة النظام مع caching 30s. لا external pings — سريع وآمن.
-    fallback لكل metric — لا يفشل أبدًا."""
+    """صحة النظام مع caching 30s. fallback لكل metric — لا يفشل أبدًا."""
     now = time.time()
     if _SYS_CACHE["data"] is not None and (now - _SYS_CACHE["at"]) < _SYS_CACHE_TTL:
         return _SYS_CACHE["data"]
 
+    try:
+        from .system_probe import get_vps_status
+        vps = get_vps_status()
+    except Exception:
+        vps = {}
+
+    memory = vps.get("memory") if isinstance(vps.get("memory"), dict) else {}
+    disk = vps.get("disk") if isinstance(vps.get("disk"), dict) else {}
+    network = vps.get("network") if isinstance(vps.get("network"), dict) else {}
+
     out = {
         "db_ok":          False,
         "radius_ok":      False,
-        "process_uptime": _format_uptime(now - _BOOT_TIME),
-        "system_uptime":  None,
-        "cpu_pct":        None,
-        "ram_pct":        None,
-        "disk_pct":       None,
-        "hostname":       "",
+        "process_uptime": vps.get("process_uptime") or "",
+        "system_uptime":  vps.get("system_uptime") or None,
+        "cpu_pct":        vps.get("cpu_pct"),
+        "ram_pct":        memory.get("percent"),
+        "disk_pct":       disk.get("percent"),
+        "hostname":       vps.get("hostname") or "",
+        "platform":       vps.get("platform") or "",
+        "cpu_count":      vps.get("cpu_count") or 0,
+        "load":           vps.get("load") or {},
+        "memory":         memory,
+        "disk":           disk,
+        "network":        network,
+        "ping_ms":        network.get("ping_ms"),
+        "ping_ok":        network.get("ping_ok"),
+        "dns_ok":         network.get("dns_ok"),
+        "vps":            vps,
     }
 
     # DB ping
@@ -191,25 +205,6 @@ def get_system_health() -> dict:
         out["radius_ok"] = bool(get_radius_adapter().healthcheck())
     except Exception:
         out["radius_ok"] = False
-
-    # hostname
-    try: out["hostname"] = socket.gethostname()
-    except Exception: pass
-
-    # psutil — optional
-    try:
-        import psutil  # type: ignore
-        out["cpu_pct"]  = round(psutil.cpu_percent(interval=0.05), 1)
-        out["ram_pct"]  = round(psutil.virtual_memory().percent, 1)
-        out["disk_pct"] = round(psutil.disk_usage(os.getcwd()).percent, 1)
-        out["system_uptime"] = _format_uptime(time.time() - psutil.boot_time())
-    except Exception:
-        # fallback: disk عبر shutil (لا CPU/RAM بدون psutil)
-        try:
-            u = shutil.disk_usage(os.getcwd())
-            if u.total: out["disk_pct"] = round((u.total - u.free) / u.total * 100, 1)
-        except Exception:
-            pass
 
     _SYS_CACHE["at"] = now
     _SYS_CACHE["data"] = out

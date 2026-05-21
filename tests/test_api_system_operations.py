@@ -63,6 +63,44 @@ def test_system_status_returns_counts_and_sync_stats(client):
     assert "counts" in data
     assert "sync_queue" in data
     assert "workers" in data
+    assert "vps" in data
+    assert "system" in data
+    assert "network" in data["vps"]
+
+
+def test_system_status_includes_vps_probe_payload(client, monkeypatch):
+    from app.radius.routes import status as status_routes
+
+    monkeypatch.setattr(
+        status_routes.system_probe,
+        "get_vps_status",
+        lambda: {
+            "hostname": "vps-1",
+            "platform": "Linux-test",
+            "process_uptime": "3س 4د",
+            "system_uptime": "9ي 1س 0د",
+            "cpu_pct": 12.5,
+            "memory": {"percent": 44.0, "available_human": "2.0 GB"},
+            "disk": {"percent": 55.0, "free_human": "20.0 GB", "path": "/"},
+            "load": {"one": 0.2, "five": 0.3, "fifteen": 0.4},
+            "network": {
+                "ping_host": "8.8.8.8",
+                "ping_ok": True,
+                "ping_ms": 22.4,
+                "dns_host": "google.com",
+                "dns_ok": True,
+            },
+        },
+    )
+
+    res = client.get("/api/v1/system/status", headers=AUTH)
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["vps"]["hostname"] == "vps-1"
+    assert data["system"]["cpu_pct"] == 12.5
+    assert data["system"]["ram_pct"] == 44.0
+    assert data["system"]["disk_pct"] == 55.0
+    assert data["system"]["network"]["ping_ms"] == 22.4
 
 
 def test_system_diagnostics_uses_backend_service(client, monkeypatch):
