@@ -9,6 +9,7 @@
 
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/access_schedule.html" import access_schedule_picker %}
 
 {% set title_ar = "إضافة مشترك" if is_new else ("تعديل " + (sub.username or "مشترك")) %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -697,18 +698,15 @@
               <label for="esu">مفعَّل</label>
             </div></div>
           <div class="uf-field full">
-            <label>أيام العمل المسموحة</label>
-            {% set day_labels = [('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة')] %}
-            {% set chosen = (sub.working_days or '').split(',') %}
-            <div class="uf-day-chips" id="uf-day-chips">
-              {% for d, lbl in day_labels %}
-              <label class="uf-day-chip {% if d in chosen %}is-on{% endif %}" data-day="{{ d }}">
-                <input type="checkbox" value="{{ d }}" {% if d in chosen %}checked{% endif %}> {{ lbl }}
-              </label>
-              {% endfor %}
-            </div>
-            <input type="hidden" name="working_days" id="working_days_hidden" value="{{ sub.working_days or '' }}">
-            <div class="help">اترك الكل غير محدَّد للسماح طوال الأسبوع.</div>
+            {# Replaces the legacy day-chips with the reusable access-schedule
+               picker (SERVICES_COOKBOOK §17). Submits a JSON via
+               `connection_schedule`; the route derives working_days from it. #}
+            {{ access_schedule_picker(
+                 name="connection_schedule",
+                 value=sub.connection_schedule or "",
+                 id="uf-acs",
+                 title="الأيام والأوقات المسموحة للاتصال"
+               ) }}
           </div>
         </div>
       </div>
@@ -798,25 +796,8 @@
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
     });
   });
-  // Day chips → hidden CSV
-  var hidden = document.getElementById('working_days_hidden');
-  var chips = document.querySelectorAll('#uf-day-chips .uf-day-chip');
-  function sync(){
-    var chosen = [];
-    chips.forEach(function(c){
-      var cb = c.querySelector('input[type=checkbox]');
-      if (cb && cb.checked) chosen.push(c.dataset.day);
-    });
-    if (hidden) hidden.value = chosen.join(',');
-  }
-  chips.forEach(function(c){
-    c.addEventListener('click', function(e){
-      var cb = c.querySelector('input[type=checkbox]');
-      if (e.target !== cb) cb.checked = !cb.checked;
-      c.classList.toggle('is-on', cb.checked);
-      sync();
-    });
-  });
+  // Day chips were replaced by the access_schedule_picker partial,
+  // which owns its own state + hidden input. Nothing to wire here.
   // Smooth-scroll nav with auto-open of collapsed targets
   document.querySelectorAll('.uf-side-list a[href^="#"]').forEach(function(link){
     link.addEventListener('click', function(e){

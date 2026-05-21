@@ -229,7 +229,8 @@ class Subscriber:
     equal_share_download: bool = False
     equal_share_upload: bool = False
     # أيام + أجهزة إضافية
-    working_days: str = ""            # CSV: sat,sun,mon...
+    working_days: str = ""            # CSV: sat,sun,mon... (derived cache of connection_schedule)
+    connection_schedule: str = ""     # JSON — see app/radius/core/access_schedule.py
     device_count: int = 1
     allowed_macs: str = ""            # CSV
     # metadata JSON ـ مُجمَّعة {mikrotik,radius,advanced,notifications}

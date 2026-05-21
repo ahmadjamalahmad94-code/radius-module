@@ -100,6 +100,30 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _normalize_connection_schedule(raw: str) -> str:
+    """Round-trip the schedule JSON via access_schedule.serialize so we
+    store the canonical, validated form (or "" for empty)."""
+    if not raw:
+        return ""
+    try:
+        from ..core.access_schedule import serialize
+        return serialize(raw)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _derive_working_days_from_form() -> str:
+    """Compute the working_days CSV cache from the submitted schedule JSON."""
+    raw = (request.form.get("connection_schedule") or "").strip()
+    if not raw:
+        return ""
+    try:
+        from ..core.access_schedule import derive_working_days
+        return derive_working_days(raw)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _form_dto(*, sub_id: int | None = None) -> Subscriber:
     """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata)."""
     def _i(n, d=0):
@@ -195,8 +219,10 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         quota_limit_enabled=_b("quota_limit_enabled"),
         equal_share_download=_b("equal_share_download"),
         equal_share_upload=_b("equal_share_upload"),
-        # أيام + أجهزة + MACs
-        working_days=_s("working_days"),
+        # أيام + أجهزة + MACs — connection_schedule is the source of truth;
+        # working_days is a derived CSV cache for legacy consumers.
+        connection_schedule=_normalize_connection_schedule(_s("connection_schedule")),
+        working_days=_derive_working_days_from_form(),
         device_count=_i("device_count", 1) or 1,
         allowed_macs=_s("allowed_macs"),
         # metadata JSON
