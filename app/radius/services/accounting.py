@@ -351,6 +351,40 @@ class AccountingService:
             return accounting_repo.distributor_debts_report(self.tenant_id)
         raise RadiusValidationError("unsupported report type")
 
+    def create_report_snapshot(self, *, report_type: str, actor: str = "",
+                               date_from: str = "", date_to: str = "",
+                               parameters: dict | None = None) -> dict:
+        items = self.reports(report_type=report_type)
+        payload = {
+            "items": items,
+            "count": len(items),
+            "report_type": report_type,
+        }
+        return accounting_repo.create_report_snapshot(
+            self.tenant_id,
+            report_type=report_type,
+            result=payload,
+            created_by=actor,
+            date_from=date_from,
+            date_to=date_to,
+            parameters=parameters or {},
+        )
+
+    def list_report_snapshots(self, *, report_type: str = "",
+                              limit: int = 50, offset: int = 0) -> list[dict]:
+        return accounting_repo.list_report_snapshots(
+            self.tenant_id,
+            report_type=report_type,
+            limit=limit,
+            offset=offset,
+        )
+
+    def get_report_snapshot(self, snapshot_id: int) -> dict:
+        snapshot = accounting_repo.get_report_snapshot(self.tenant_id, snapshot_id)
+        if not snapshot:
+            raise RadiusValidationError("report snapshot not found")
+        return snapshot
+
 
 def service_from_context() -> AccountingService:
     from flask import g

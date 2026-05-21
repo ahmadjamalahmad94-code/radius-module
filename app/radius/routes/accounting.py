@@ -12,6 +12,12 @@ def register_accounting_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/finance/ledger", "finance_ledger", finance_ledger, methods=["GET"])
     bp.add_url_rule("/finance/ledger/void", "finance_ledger_void", finance_ledger_void, methods=["POST"])
     bp.add_url_rule("/finance/reports", "finance_reports", finance_reports, methods=["GET"])
+    bp.add_url_rule(
+        "/finance/reports/snapshot",
+        "finance_reports_snapshot",
+        finance_reports_snapshot,
+        methods=["POST"],
+    )
     bp.add_url_rule("/users/<username>/finance", "users_finance", users_finance, methods=["GET"])
     bp.add_url_rule("/users/<username>/payments", "users_payment_create", users_payment_create, methods=["POST"])
     bp.add_url_rule("/users/<username>/loans", "users_loan_create", users_loan_create, methods=["POST"])
@@ -187,13 +193,32 @@ def finance_reports():
         report_type = "daily"
     try:
         items = _svc().reports(report_type=report_type)
+        snapshots = _svc().list_report_snapshots(report_type=report_type, limit=10)
     except RadiusValidationError as e:
         flash(e.message, "error")
         items = []
+        snapshots = []
     return render_template(
         "radius/accounting_reports.html",
         report_type=report_type,
         report_label=_REPORTS[report_type],
         reports=_REPORTS,
         items=items,
+        snapshots=snapshots,
     )
+
+
+def finance_reports_snapshot():
+    report_type = _field("report_type") or "daily"
+    if report_type not in _REPORTS:
+        report_type = "daily"
+    try:
+        snapshot = _svc().create_report_snapshot(
+            report_type=report_type,
+            actor=_actor(),
+            parameters={"web_route": "finance_reports"},
+        )
+        flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}.", "success")
+    except RadiusValidationError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.finance_reports", type=report_type))

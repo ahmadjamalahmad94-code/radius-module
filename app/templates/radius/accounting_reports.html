@@ -35,9 +35,49 @@
   </select>
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
-  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
+  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm", attrs='disabled aria-disabled="true" title="سيتم تفعيل التصدير الحقيقي في شريحة export/PDF"') }}
   {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
 </form>
+
+<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" class="hub-filterbar" style="margin-top:-8px">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="report_type" value="{{ report_type }}">
+  <div class="small muted grow">
+    اللقطة تحفظ نتيجة التقرير الحالية كما هي، حتى تبقى قابلة للمراجعة لاحقًا بعد أي تصحيح أو قيد عكسي.
+  </div>
+  {{ hub.btn("حفظ لقطة ثابتة", icon="lock", variant="secondary", type="submit", size="sm") }}
+</form>
+
+{% if snapshots %}
+  {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>النوع</th>
+            <th>المصدر</th>
+            <th>عدد الصفوف</th>
+            <th>أنشئت بواسطة</th>
+            <th>الوقت</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for snap in snapshots %}
+          <tr>
+            <td class="mono small">{{ snap.id }}</td>
+            <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
+            <td>{{ snap.source }}</td>
+            <td class="mono small">{{ (snap.result or {}).get('count', 0) }}</td>
+            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="mono small">{{ snap.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endif %}
 
 {% if items %}
   {% set columns = items[0].keys()|list %}

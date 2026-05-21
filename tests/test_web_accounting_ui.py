@@ -194,3 +194,13 @@ def test_financial_reports_page_reads_ledger_reports(client):
     assert "دفعات المستفيدين" in html
     assert sub["username"] in html
     assert "25" in html
+
+    snapshot = client.post(
+        "/admin/radius/finance/reports/snapshot",
+        data={"_csrf_token": token, "report_type": "subscriber_payments"},
+        follow_redirects=True,
+    )
+    assert snapshot.status_code == 200
+    snapshot_html = snapshot.get_data(as_text=True)
+    assert "تم حفظ لقطة ثابتة للتقرير" in snapshot_html
+    assert "آخر اللقطات الثابتة" in snapshot_html

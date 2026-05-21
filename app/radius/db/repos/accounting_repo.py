@@ -555,4 +555,34 @@ def create_report_snapshot(tenant_id: int, *, report_type: str,
         "SELECT * FROM financial_report_snapshots WHERE id = ?",
         (cur.lastrowid,),
     ).fetchone()
-    return row_to_dict(row)
+    return _serialize_report_snapshot(row_to_dict(row))
+
+
+def _serialize_report_snapshot(row: dict) -> dict:
+    if not row:
+        return {}
+    data = dict(row)
+    data["parameters"] = json_load(data.pop("parameters_json", "{}"), {})
+    data["result"] = json_load(data.pop("result_json", "{}"), {})
+    return data
+
+
+def list_report_snapshots(tenant_id: int, *, report_type: str = "",
+                          limit: int = 50, offset: int = 0) -> list[dict]:
+    sql = "SELECT * FROM financial_report_snapshots WHERE tenant_id = ?"
+    vals: list[Any] = [tenant_id]
+    if report_type:
+        sql += " AND report_type = ?"
+        vals.append(report_type)
+    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    vals.extend([limit, offset])
+    rows = db().execute(sql, vals).fetchall()
+    return [_serialize_report_snapshot(row_to_dict(r)) for r in rows]
+
+
+def get_report_snapshot(tenant_id: int, snapshot_id: int) -> dict | None:
+    row = db().execute(
+        "SELECT * FROM financial_report_snapshots WHERE tenant_id = ? AND id = ?",
+        (tenant_id, snapshot_id),
+    ).fetchone()
+    return _serialize_report_snapshot(row_to_dict(row)) if row else None
