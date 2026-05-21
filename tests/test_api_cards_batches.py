@@ -10,6 +10,8 @@ Covers:
 """
 from __future__ import annotations
 
+import uuid
+
 import pytest
 
 
@@ -97,6 +99,89 @@ def test_batches_operations_list_supports_filters_and_totals(client, auth_header
     assert "password" not in data["items"][0]
     for card in cards:
         assert card["password"] not in str(data)
+
+
+def test_batches_import_external_file_is_bookkeeping_only(client, auth_headers):
+    from app.radius.db.connection import db
+
+    suffix = uuid.uuid4().hex[:8]
+    usernames = [f"external-{suffix}-1", f"external-{suffix}-2"]
+    res = client.post(
+        "/api/v1/cards/batches/import",
+        json={
+            "plan_id": 1,
+            "source_type": "external",
+            "package_name": "External API file",
+            "price_per_card": 1.25,
+            "cards": [
+                {"username": usernames[0], "password": "p1"},
+                {"username": usernames[1], "password": "p2"},
+            ],
+            "sync_to_radius": True,
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code == 201, res.get_json()
+    data = res.get_json()["data"]
+    assert data["batch"]["source_type"] == "external"
+    assert data["batch"]["original_count"] == 2
+    assert data["batch"]["generated"] == 2
+    assert data["inserted_count"] == 2
+    assert data["radius_sync_enabled"] is False
+    assert data["radius_synced_count"] == 0
+    assert "p1" not in str(data["cards"])
+    assert "p2" not in str(data["cards"])
+    assert all("password" not in card for card in data["cards"])
+    assert all(card["has_password"] is True for card in data["cards"])
+
+    existing = db().execute(
+        "SELECT username FROM subscribers WHERE username IN (?, ?)",
+        usernames,
+    ).fetchall()
+    assert existing == []
+
+    listed = client.get(
+        "/api/v1/cards/batches",
+        query_string={"q": data["batch"]["batch_code"]},
+        headers=auth_headers,
+    )
+    assert listed.status_code == 200, listed.get_json()
+    item = listed.get_json()["data"]["items"][0]
+    assert item["source_type"] == "external"
+    assert item["original_count"] == 2
+
+
+def test_batches_import_skips_existing_duplicate_usernames(client, auth_headers):
+    username = f"import-dup-{uuid.uuid4().hex[:8]}"
+    first = client.post(
+        "/api/v1/cards/batches/import",
+        json={
+            "plan_id": 1,
+            "source_type": "imported",
+            "package_name": "First import",
+            "cards": [{"username": username, "password": "one"}],
+        },
+        headers=auth_headers,
+    )
+    assert first.status_code == 201, first.get_json()
+
+    second = client.post(
+        "/api/v1/cards/batches/import",
+        json={
+            "plan_id": 1,
+            "source_type": "imported",
+            "package_name": "Second import",
+            "csv_text": f"username,password\n{username},again\n{username}-new,two\n",
+        },
+        headers=auth_headers,
+    )
+    assert second.status_code == 201, second.get_json()
+    data = second.get_json()["data"]
+    assert data["batch"]["source_type"] == "imported"
+    assert data["batch"]["original_count"] == 2
+    assert data["inserted_count"] == 1
+    assert data["skipped_count"] == 1
+    assert data["skipped"][0]["reason"] == "duplicate"
 
 
 def test_batch_get_round_trips(client, auth_headers, fresh_batch_id):

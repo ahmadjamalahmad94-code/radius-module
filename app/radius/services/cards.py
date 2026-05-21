@@ -202,6 +202,101 @@ class CardsService:
         )
         return self._store.get_batch(batch.id), cards
 
+    def import_batch(
+        self,
+        *,
+        actor: str,
+        plan_id: int,
+        cards: list[dict[str, str]],
+        source_type: str = "imported",
+        package_name: str = "",
+        service_name: str = "",
+        notes: str = "",
+        price_per_card: float = 0.0,
+        total_price: float = 0.0,
+        sync_to_radius: bool = False,
+    ) -> dict:
+        """Import explicit card credentials as an operational card batch.
+
+        `source_type=external` is a bookkeeping-only file and never syncs to
+        FreeRADIUS/MikroTik. `source_type=imported` may sync only when the caller
+        asks for it explicitly.
+        """
+        source = (source_type or "imported").strip().lower()
+        if source not in {"imported", "external"}:
+            raise RadiusValidationError("source_type must be imported or external")
+        if not cards:
+            raise RadiusValidationError("cards list is required")
+        if len(cards) > 5000:
+            raise RadiusValidationError("import supports up to 5000 cards per batch")
+        if not plan_id:
+            raise RadiusValidationError("plan_id مطلوب")
+        plan = self._adapter.get_profile(plan_id)
+
+        should_sync = bool(sync_to_radius) and source != "external"
+        batch = self._store.create_batch(CardBatch(
+            id=None,
+            batch_code="",
+            plan_id=plan_id,
+            count=len(cards),
+            package_name=package_name or ("ملف خارجي" if source == "external" else "ملف مستورد"),
+            service_name=service_name,
+            notes=notes,
+            created_by=actor,
+            price_per_card=price_per_card,
+            total_price=total_price,
+            source_type=source,
+            original_count=len(cards),
+            settlement_count=len(cards),
+            metadata='{"imported":true}',
+        ))
+        inserted_cards, skipped = cards_repo.import_cards(
+            tenant_id=self._store_tenant_id(),
+            batch_id=int(batch.id),
+            plan_id=plan_id,
+            rows=cards,
+            expire_at=None,
+        )
+        radius_synced = 0
+        if should_sync:
+            for card in inserted_cards:
+                self._adapter.upsert_account(Subscriber(
+                    id=None,
+                    username=card.username,
+                    password=card.password,
+                    user_type=USER_TYPE_CARD,
+                    plan_id=plan_id,
+                    expire_at=card.expire_at,
+                    card_batch_id=batch.id,
+                    created_by=actor,
+                ))
+                radius_synced += 1
+
+        self._audit.record(
+            actor=actor,
+            action="card_batch.import",
+            target_type="card_batch",
+            target_id=str(batch.id),
+            payload={
+                "plan_id": plan_id,
+                "plan_name": getattr(plan, "name", ""),
+                "source_type": source,
+                "requested": len(cards),
+                "inserted": len(inserted_cards),
+                "skipped": len(skipped),
+                "radius_synced": radius_synced,
+            },
+        )
+        return {
+            "batch": self._store.get_batch(int(batch.id)),
+            "cards": inserted_cards,
+            "skipped": skipped,
+            "inserted_count": len(inserted_cards),
+            "skipped_count": len(skipped),
+            "radius_synced_count": radius_synced,
+            "radius_sync_enabled": should_sync,
+        }
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:

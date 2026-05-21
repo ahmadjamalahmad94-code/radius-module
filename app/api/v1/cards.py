@@ -28,6 +28,8 @@ def _actor() -> str:
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/generate", "cards_generate",
                     require_api_token(cards_generate), methods=["POST"])
+    bp.add_url_rule("/cards/batches/import", "cards_batches_import",
+                    require_api_token(cards_batches_import), methods=["POST"])
     bp.add_url_rule("/cards/batches", "cards_batches_list",
                     require_api_token(cards_batches_list), methods=["GET"])
     bp.add_url_rule("/cards/batches/bulk", "cards_batches_bulk",
@@ -143,6 +145,21 @@ def _serialize_card(c) -> dict:
     }
 
 
+def _serialize_import_card(c) -> dict:
+    return {
+        "id": c.id,
+        "batch_id": c.batch_id,
+        "plan_id": c.plan_id,
+        "username": c.username,
+        "has_password": bool(c.password),
+        "used": c.used,
+        "revoked": c.revoked,
+        "expire_at": c.expire_at.isoformat() + "Z" if c.expire_at else None,
+        "first_used_at": c.first_used_at.isoformat() + "Z" if c.first_used_at else None,
+        "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
+    }
+
+
 def _card_or_response(card_id: int):
     from ...radius.db.repos import cards_repo
 
@@ -214,6 +231,52 @@ def _csv_text(value) -> str:
     return str(value)
 
 
+def _parse_import_cards(body: dict) -> list[dict[str, str]]:
+    cards = body.get("cards")
+    parsed: list[dict[str, str]] = []
+    if isinstance(cards, list):
+        for item in cards:
+            if not isinstance(item, dict):
+                continue
+            username = str(item.get("username") or item.get("card") or "").strip()
+            password = str(item.get("password") or "").strip()
+            if username:
+                parsed.append({"username": username, "password": password})
+    csv_text = str(body.get("csv_text") or "").strip()
+    if csv_text:
+        reader = csv.reader(io.StringIO(csv_text))
+        rows = [row for row in reader if any((cell or "").strip() for cell in row)]
+        if rows:
+            header = [cell.strip().lower() for cell in rows[0]]
+            has_header = any(cell in {"username", "user", "card", "password", "pass"} for cell in header)
+            start = 1 if has_header else 0
+            username_idx = 0
+            password_idx = 1
+            if has_header:
+                for candidate in ("username", "user", "card"):
+                    if candidate in header:
+                        username_idx = header.index(candidate)
+                        break
+                for candidate in ("password", "pass"):
+                    if candidate in header:
+                        password_idx = header.index(candidate)
+                        break
+            for row in rows[start:]:
+                username = row[username_idx].strip() if len(row) > username_idx else ""
+                password = row[password_idx].strip() if len(row) > password_idx else ""
+                if username:
+                    parsed.append({"username": username, "password": password})
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in parsed:
+        username = item["username"][:120]
+        if not username or username in seen:
+            continue
+        seen.add(username)
+        deduped.append({"username": username, "password": item.get("password", "")[:160]})
+    return deduped
+
+
 # ─────────────── views ───────────────
 
 def cards_generate():
@@ -269,6 +332,49 @@ def cards_generate():
     return ok({
         "batch": _serialize_batch(batch),
         "cards": [_serialize_card(c) for c in cards],
+    }, status=201)
+
+
+def cards_batches_import():
+    body = _body()
+    plan_id = body.get("plan_id")
+    if not plan_id:
+        return fail("validation_error", "plan_id مطلوب", status=422)
+    rows = _parse_import_cards(body)
+    if not rows:
+        return fail("validation_error", "cards or csv_text is required", status=422)
+    if len(rows) > 5000:
+        return fail("validation_error", "maximum import size is 5000 cards", status=422)
+    source_type = str(body.get("source_type") or "imported").strip().lower()
+    if source_type not in {"imported", "external"}:
+        return fail("validation_error", "source_type must be imported or external", status=422)
+    sync_to_radius = bool(body.get("sync_to_radius")) and source_type != "external"
+    from ...radius.services.cards import get_cards_service
+    try:
+        result = get_cards_service().import_batch(
+            actor=_actor(),
+            plan_id=int(plan_id),
+            cards=rows,
+            source_type=source_type,
+            package_name=str(body.get("package_name") or "").strip()[:160],
+            service_name=str(body.get("service_name") or "").strip()[:160],
+            notes=str(body.get("notes") or "")[:300],
+            price_per_card=float(body.get("price_per_card") or 0),
+            total_price=float(body.get("total_price") or 0),
+            sync_to_radius=sync_to_radius,
+        )
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({
+        "batch": _serialize_batch(result["batch"]),
+        "cards": [_serialize_import_card(c) for c in result["cards"]],
+        "inserted_count": result["inserted_count"],
+        "skipped_count": result["skipped_count"],
+        "skipped": result["skipped"],
+        "radius_sync_enabled": result["radius_sync_enabled"],
+        "radius_synced_count": result["radius_synced_count"],
     }, status=201)
 
 

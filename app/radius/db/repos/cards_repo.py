@@ -1,6 +1,7 @@
 """Card batches + Cards repo."""
 from __future__ import annotations
 
+import sqlite3
 import secrets
 import string
 from datetime import datetime
@@ -1355,6 +1356,68 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         (tenant_id, batch_id, count)
     )
     return [_card_row(r) for r in cur.fetchall()]
+
+
+def import_cards(
+    *,
+    tenant_id: int,
+    batch_id: int,
+    plan_id: int,
+    rows: list[dict[str, str]],
+    expire_at: Optional[datetime] = None,
+) -> tuple[list[Card], list[dict[str, str]]]:
+    """Insert explicit card credentials into a fresh imported/external batch.
+
+    The import path is intentionally dumb and side-effect free: it writes card
+    rows and updates batch counters only. Any optional RADIUS account sync is a
+    service-level decision so external files cannot accidentally touch NAS state.
+    Duplicate usernames are skipped and returned to the caller.
+    """
+    now = now_iso()
+    inserted = 0
+    skipped: list[dict[str, str]] = []
+    with transaction() as conn:
+        for idx, item in enumerate(rows, start=1):
+            username = (item.get("username") or "").strip()
+            password = (item.get("password") or "").strip()
+            if not username:
+                skipped.append({"row": str(idx), "reason": "missing_username"})
+                continue
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO cards(
+                        tenant_id, batch_id, username, password, plan_id,
+                        used, expire_at, revoked, created_at
+                    )
+                    VALUES(?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        tenant_id,
+                        batch_id,
+                        username,
+                        password,
+                        plan_id,
+                        0,
+                        dt_to_iso(expire_at),
+                        0,
+                        now,
+                    ),
+                )
+                inserted += 1
+            except sqlite3.IntegrityError:
+                skipped.append({"row": str(idx), "username": username, "reason": "duplicate"})
+        if inserted:
+            conn.execute(
+                """
+                UPDATE card_batches
+                SET generated = generated + ?
+                WHERE tenant_id = ? AND id = ?
+                """,
+                (inserted, tenant_id, batch_id),
+            )
+    cards = list_cards(tenant_id, batch_id=batch_id, limit=inserted or 1, offset=0)
+    return cards, skipped
 
 
 def revoke_card(tenant_id: int, card_id: int) -> None:
