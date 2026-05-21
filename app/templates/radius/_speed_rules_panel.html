@@ -89,15 +89,26 @@
   .sr2-field label{
     font-size: 11.5px; font-weight: 700; color: var(--hub-text-soft);
   }
-  .sr2-field input, .sr2-field select{
+  .sr2-field > input, .sr2-field > select{
     padding: 7px 10px; font-family: inherit; font-size: 13px;
     border: 1px solid var(--hub-border); border-radius: var(--hub-r-md);
     background: #fff; color: var(--hub-text);
     outline: none; width: 100%; box-sizing: border-box;
   }
-  .sr2-field input:focus, .sr2-field select:focus{
+  .sr2-field > input:focus, .sr2-field > select:focus{
     border-color: var(--hub-brand);
     box-shadow: 0 0 0 3px var(--hub-brand-soft);
+  }
+  /* unit_input_picker lives inside .sr2-field — don't let the rules above
+     stretch its inner number input + unit select. Restore the picker's
+     own flex layout (1fr number + auto-sized unit). */
+  .sr2-field .ui-wrap{ width: 100%; }
+  .sr2-field .ui-wrap .ui-value{
+    width: auto; flex: 1 1 auto; min-width: 0;
+    border: 0; box-shadow: none;
+  }
+  .sr2-field .ui-wrap .ui-unit{
+    width: auto; flex: 0 0 auto;
   }
 
   /* Day chips strip (mirrors .acs-day style) */
