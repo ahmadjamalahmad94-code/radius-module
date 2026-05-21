@@ -1,9 +1,10 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Access-schedule picker — reusable day/time window block.
+   Access-schedule picker — reusable day/time window block (v2 redesign).
 
-   Single Jinja macro that renders the same UI everywhere we need a
-   "when can this account connect" schedule (subscribers, groups, plans,
-   future: card batches, share groups, …).
+   Same data model as v1 (JSON: {"windows":[{"days":[],"from":"","to":""}]})
+   but a much more modern + tactile UI: segment control for mode switch,
+   bigger day pills with checkmarks, per-window cards, and a custom
+   time stepper with quick-pick chips (06/12/18/00).
 
    Usage:
      {% from "_partials/access_schedule.html" import access_schedule_picker %}
@@ -11,151 +12,303 @@
                                value=sub.connection_schedule,
                                id="acs-sub") }}
 
-   The block submits ONE hidden field whose value is the JSON produced by
-   `app.radius.core.access_schedule.serialize()` (the macro and the JS
-   keep their state in sync with that hidden field on every change).
+   The block submits ONE hidden field whose value is JSON produced by
+   `app.radius.core.access_schedule.serialize()`.
 
-   See SERVICES_COOKBOOK §17 for the data model + integration recipe.
+   See SERVICES_COOKBOOK §17.
    ═══════════════════════════════════════════════════════════════════════ #}
-
-{%- set ACS_DAYS_AR = {
-    "sat":"السبت","sun":"الأحد","mon":"الإثنين","tue":"الثلاثاء",
-    "wed":"الأربعاء","thu":"الخميس","fri":"الجمعة",
-} -%}
-{%- set ACS_DAYS_ORDER = ["sat","sun","mon","tue","wed","thu","fri"] -%}
 
 
 {# ── one-time CSS + JS ──────────────────────────────────────────── #}
 {% macro access_schedule_assets() -%}
 <style>
-  /* Container card */
+  /* ─── Card shell ───────────────────────────────────────────── */
   .acs-card{
-    background: var(--hub-bg-card);
+    background: linear-gradient(180deg, #fbfbff 0%, #ffffff 60%);
     border: 1px solid var(--hub-border);
-    border-radius: var(--hub-r-lg);
-    padding: 16px 18px;
-    display: flex; flex-direction: column; gap: 14px;
+    border-radius: var(--hub-r-xl);
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 18px;
+    box-shadow: var(--hub-sh-sm);
   }
+
+  /* ─── Header: title + segment control ──────────────────────── */
   .acs-head{
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap;
+    gap: 16px; flex-wrap: wrap;
   }
   .acs-title{
-    display: inline-flex; align-items: center; gap: 8px;
-    font-weight: 800; color: var(--hub-text); font-size: 14px;
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 800; color: var(--hub-text); font-size: 15px;
   }
-  .acs-title i{ color: var(--hub-brand-ink); }
-  .acs-help{ font-size: 11.5px; color: var(--hub-text-mute); }
-
-  /* Mode toggle (simple ↔ advanced) */
-  .acs-mode{
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px; border-radius: 8px;
-    background: #fafbff; border: 1px solid var(--hub-border);
-    cursor: pointer; font-size: 12.5px; font-weight: 700;
+  .acs-title-icon{
+    width: 32px; height: 32px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
   }
-  .acs-mode input{ width: 16px; height: 16px; }
 
-  /* Day chips (sat..fri) */
-  .acs-days{ display: flex; gap: 6px; flex-wrap: wrap; }
-  .acs-day{
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 12px;
-    background: var(--hub-bg-card);
-    border: 1px solid var(--hub-border);
-    border-radius: 999px;
-    font-size: 13px; font-weight: 700;
+  /* Segment control (replaces the checkbox toggle) */
+  .acs-segment{
+    display: inline-flex;
+    padding: 3px;
+    background: #eeeaff;
+    border-radius: 10px;
+    gap: 2px;
+  }
+  .acs-segment-btn{
+    border: 0; background: transparent;
+    padding: 7px 18px; border-radius: 8px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
     color: var(--hub-text-soft);
     cursor: pointer;
     transition: all var(--hub-anim-fast) var(--hub-ease);
   }
-  .acs-day:hover{ background:#f6f4ff; }
+  .acs-segment-btn:hover{ color: var(--hub-text); }
+  .acs-segment-btn.is-active{
+    background: #fff;
+    color: var(--hub-brand-ink);
+    box-shadow: 0 1px 4px rgba(60,40,140,.10);
+  }
+
+  /* ─── Section block (days, windows) ─────────────────────────── */
+  .acs-block{
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .acs-block-label{
+    font-size: 12.5px; font-weight: 800; color: var(--hub-text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .acs-block-hint{
+    font-size: 11px; color: var(--hub-text-mute); margin-inline-start: auto;
+    font-weight: 500;
+  }
+
+  /* ─── Day pills (sat..fri) ─────────────────────────────────── */
+  .acs-days{ display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  @media (max-width: 700px){ .acs-days{ grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 460px){ .acs-days{ grid-template-columns: repeat(3, 1fr); } }
+
+  .acs-day{
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px 8px;
+    background: #fff;
+    border: 1.5px solid var(--hub-border);
+    border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+    color: var(--hub-text-soft);
+    cursor: pointer;
+    position: relative;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-day:hover{
+    border-color: var(--hub-brand-line);
+    background: #fafaff;
+  }
   .acs-day input{ display: none; }
   .acs-day.is-on{
-    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
-    border-color: transparent; color: #fff;
-    box-shadow: 0 2px 6px rgba(107,90,237,.25);
+    background: linear-gradient(135deg, var(--hub-brand) 0%, var(--hub-brand-ink) 100%);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(107,90,237,.30);
+    transform: translateY(-1px);
   }
+  .acs-day-check{
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.25);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    opacity: 0;
+    transition: opacity var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-day.is-on .acs-day-check{ opacity: 1; }
 
-  /* Time windows */
-  .acs-windows{ display: flex; flex-direction: column; gap: 8px; }
+  /* ─── Window card ──────────────────────────────────────────── */
+  .acs-windows{ display: flex; flex-direction: column; gap: 12px; }
   .acs-window{
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px;
-    background: #fafbff; border: 1px solid var(--hub-border);
-    border-radius: 10px;
+    background: #fff;
+    border: 1.5px solid var(--hub-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    position: relative;
+    transition: border-color var(--hub-anim-fast) var(--hub-ease);
   }
-  .acs-window-icon{
-    color: var(--hub-brand-ink); width: 22px; flex-shrink: 0;
+  .acs-window:hover{ border-color: var(--hub-brand-line); }
+  .acs-window-head{
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; font-weight: 700; color: var(--hub-text-mute);
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 12px;
   }
-  .acs-window-label{ font-size: 12px; color: var(--hub-text-mute); }
-  .acs-window input[type="time"]{
-    background: #fff; border: 1px solid var(--hub-border);
-    border-radius: 6px; padding: 5px 8px;
-    font-family: var(--hub-mono); font-size: 13px;
-    font-variant-numeric: tabular-nums;
-  }
-  .acs-window input[type="time"]:focus{
-    border-color: var(--hub-brand);
-    outline: 0; box-shadow: 0 0 0 3px var(--hub-brand-soft);
-  }
+  .acs-window-head i{ color: var(--hub-brand-ink); }
   .acs-window-rm{
-    margin-inline-start: auto;
-    width: 28px; height: 28px; border-radius: 6px;
-    background: transparent; border: 0; color: var(--hub-red);
-    cursor: pointer;
+    position: absolute; inset-block-start: 10px; inset-inline-end: 10px;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: transparent; border: 0;
+    color: var(--hub-red); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--hub-anim-fast) var(--hub-ease);
   }
   .acs-window-rm:hover{ background: var(--hub-red-soft); }
-  .acs-window-add{
-    align-self: flex-start;
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px;
-    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
-    border: 1px dashed var(--hub-brand);
-    border-radius: 8px;
-    font-size: 12.5px; font-weight: 700;
-    cursor: pointer;
-  }
-  .acs-window-add:hover{ background: #ece9ff; }
 
-  /* Advanced — per-day blocks */
-  .acs-per-day{ display: none; flex-direction: column; gap: 10px; }
+  .acs-window-body{
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 14px; align-items: end;
+  }
+  @media (max-width: 600px){
+    .acs-window-body{ grid-template-columns: 1fr; }
+    .acs-window-arrow{ display: none; }
+  }
+  .acs-window-arrow{
+    align-self: center; padding-block-end: 12px;
+    color: var(--hub-text-mute); font-size: 18px;
+  }
+
+  /* ─── Time picker (stepper + quick chips) ──────────────────── */
+  .acs-time{
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .acs-time-label{
+    font-size: 11.5px; font-weight: 800; color: var(--hub-text-soft);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .acs-time-label i{ color: var(--hub-brand-ink); font-size: 10px; }
+
+  .acs-time-stepper{
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    background: linear-gradient(180deg, #f6f4ff 0%, #ece8ff 100%);
+    border: 1px solid var(--hub-brand-line);
+    border-radius: 12px;
+    padding: 8px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  .acs-time-segment{
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .acs-time-step{
+    width: 22px; height: 18px;
+    background: transparent; border: 0;
+    color: var(--hub-brand-ink);
+    cursor: pointer; padding: 0;
+    font-size: 11px;
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-time-step:hover{ background: rgba(107,90,237,.15); }
+  .acs-time-step:active{ background: rgba(107,90,237,.25); }
+  .acs-time-input{
+    width: 48px;
+    background: transparent;
+    border: 0;
+    text-align: center;
+    font-family: var(--hub-mono);
+    font-weight: 800;
+    font-size: 24px;
+    color: var(--hub-brand-ink);
+    padding: 2px 0;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+  }
+  .acs-time-input:focus{
+    background: rgba(255,255,255,.7);
+    border-radius: 6px;
+  }
+  .acs-time-colon{
+    font-family: var(--hub-mono);
+    font-weight: 800; font-size: 22px;
+    color: var(--hub-brand-ink);
+    align-self: center;
+    padding-block-end: 1px;
+  }
+
+  .acs-time-quick{
+    display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;
+  }
+  .acs-time-chip{
+    background: #fff; border: 1px solid var(--hub-border);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 11.5px; font-weight: 700;
+    color: var(--hub-text-soft);
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+    font-family: inherit;
+  }
+  .acs-time-chip:hover{
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    border-color: var(--hub-brand);
+  }
+
+  /* ─── Add buttons ──────────────────────────────────────────── */
+  .acs-add-window{
+    align-self: stretch;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 16px;
+    background: #fff;
+    color: var(--hub-brand-ink);
+    border: 1.5px dashed var(--hub-brand);
+    border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+    font-family: inherit;
+  }
+  .acs-add-window:hover{
+    background: var(--hub-brand-soft);
+  }
+  .acs-add-window i{ font-size: 11px; }
+
+  /* ─── Per-day blocks (advanced mode) ───────────────────────── */
+  .acs-per-day{ display: none; flex-direction: column; gap: 14px; }
   .acs-card.is-advanced .acs-simple{ display: none; }
   .acs-card.is-advanced .acs-per-day{ display: flex; }
 
   .acs-pd-block{
-    background: #fafbff; border: 1px solid var(--hub-border);
-    border-radius: var(--hub-r-md); padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 8px;
+    background: #fff;
+    border: 1.5px solid var(--hub-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 12px;
   }
   .acs-pd-head{
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 12px;
   }
-  .acs-pd-day{
-    font-weight: 800; color: var(--hub-text); font-size: 13.5px;
-    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
-    padding: 4px 12px; border-radius: 999px;
+  .acs-pd-day-badge{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 800; font-size: 13px;
+    box-shadow: 0 2px 6px rgba(107,90,237,.25);
   }
   .acs-pd-rm{
     margin-inline-start: auto;
-    width: 28px; height: 28px; border-radius: 6px;
-    background: transparent; border: 0; color: var(--hub-red);
-    cursor: pointer; font-size: 14px;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; border: 0;
+    color: var(--hub-red); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
   }
   .acs-pd-rm:hover{ background: var(--hub-red-soft); }
-  .acs-pd-add{
-    align-self: flex-start;
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px;
-    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
-    border: 1px dashed var(--hub-brand); border-radius: 8px;
-    font-size: 13px; font-weight: 700; cursor: pointer;
+
+  .acs-add-day-wrap{
+    display: flex; justify-content: center;
   }
-  .acs-pd-add:hover{ background: #ece9ff; }
-  .acs-pd-add select{
+  .acs-add-day{
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px;
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+    border: 1.5px dashed var(--hub-brand); border-radius: 12px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+  .acs-add-day:hover{ background: #ece9ff; }
+  .acs-add-day select{
     background: transparent; border: 0; color: inherit;
     font-family: inherit; font-weight: 700; font-size: 13px;
-    cursor: pointer; outline: none;
+    cursor: pointer; outline: none; padding: 0 4px;
   }
 </style>
 
@@ -168,114 +321,262 @@
   const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
                       wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
 
+  const TIME_QUICKS = [
+    { label: "06:00", icon: "🌅", value: "06:00" },
+    { label: "12:00", icon: "☀️", value: "12:00" },
+    { label: "18:00", icon: "🌆", value: "18:00" },
+    { label: "00:00", icon: "🌙", value: "00:00" },
+  ];
+
   function readState(card){
     try { return JSON.parse(card.dataset.acsInitial || '{}'); }
     catch(_) { return { windows: [] }; }
   }
 
-  function timeInput(value){
-    const i = document.createElement("input");
-    i.type = "time"; i.value = value || "";
-    return i;
+  function clamp(n, lo, hi){
+    if (isNaN(n)) return lo;
+    if (n < lo) return hi;        // wrap around (▼ on 00 → 23)
+    if (n > hi) return lo;        // wrap around (▲ on 23 → 00)
+    return n;
+  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+
+  /* Build a single time stepper (HH:MM + ▲▼ + quick chips). */
+  function makeTimePicker(label, initial){
+    const wrap = document.createElement("div");
+    wrap.className = "acs-time";
+    wrap.dataset.timeWrap = "1";
+
+    // label
+    const lbl = document.createElement("div");
+    lbl.className = "acs-time-label";
+    lbl.innerHTML = `<i class="fa-solid fa-clock"></i> ${label}`;
+    wrap.appendChild(lbl);
+
+    // stepper
+    const stepper = document.createElement("div");
+    stepper.className = "acs-time-stepper";
+
+    function segment(part, value){
+      const seg = document.createElement("div");
+      seg.className = "acs-time-segment";
+
+      const up = document.createElement("button");
+      up.type = "button"; up.className = "acs-time-step";
+      up.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
+
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.className = "acs-time-input";
+      inp.dataset.part = part;
+      inp.value = pad2(value);
+      inp.inputMode = "numeric";
+      inp.maxLength = 2;
+
+      const down = document.createElement("button");
+      down.type = "button"; down.className = "acs-time-step";
+      down.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+
+      const lim = part === "hour" ? [0, 23] : [0, 59];
+      function bump(dir){
+        const cur = parseInt(inp.value, 10) || 0;
+        inp.value = pad2(clamp(cur + dir, lim[0], lim[1]));
+        sync();
+      }
+      up.addEventListener("click", () => bump(1));
+      down.addEventListener("click", () => bump(-1));
+      inp.addEventListener("input", () => {
+        const v = inp.value.replace(/\D/g, "").slice(0, 2);
+        inp.value = v;
+        sync();
+      });
+      inp.addEventListener("blur", () => {
+        const cur = parseInt(inp.value, 10);
+        if (isNaN(cur)) inp.value = pad2(lim[0]);
+        else inp.value = pad2(Math.max(lim[0], Math.min(lim[1], cur)));
+        sync();
+      });
+      // Arrow keys
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowUp")   { e.preventDefault(); bump(1); }
+        if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); }
+      });
+      // Wheel (mousewheel up/down)
+      inp.addEventListener("wheel", (e) => {
+        if (document.activeElement !== inp) return;
+        e.preventDefault();
+        bump(e.deltaY < 0 ? 1 : -1);
+      }, { passive: false });
+
+      seg.appendChild(up); seg.appendChild(inp); seg.appendChild(down);
+      return { seg, inp };
+    }
+
+    const [h, m] = (initial || "00:00").split(":").map(x => parseInt(x, 10) || 0);
+    const hSeg = segment("hour", h);
+    const mSeg = segment("minute", m);
+
+    const colon = document.createElement("span");
+    colon.className = "acs-time-colon"; colon.textContent = ":";
+
+    stepper.appendChild(hSeg.seg);
+    stepper.appendChild(colon);
+    stepper.appendChild(mSeg.seg);
+    wrap.appendChild(stepper);
+
+    // Quick chips
+    const quick = document.createElement("div");
+    quick.className = "acs-time-quick";
+    TIME_QUICKS.forEach(q => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "acs-time-chip";
+      b.textContent = `${q.icon} ${q.label}`;
+      b.addEventListener("click", () => {
+        const [qh, qm] = q.value.split(":").map(x => parseInt(x, 10));
+        hSeg.inp.value = pad2(qh);
+        mSeg.inp.value = pad2(qm);
+        sync();
+      });
+      quick.appendChild(b);
+    });
+    wrap.appendChild(quick);
+
+    // Public API: read current value as "HH:MM" or "" if blank
+    wrap.readValue = function(){
+      const hv = (hSeg.inp.value || "").trim();
+      const mv = (mSeg.inp.value || "").trim();
+      if (!hv && !mv) return "";
+      return pad2(parseInt(hv,10) || 0) + ":" + pad2(parseInt(mv,10) || 0);
+    };
+
+    // Sync hook — set by the parent.
+    let sync = () => {};
+    wrap.bindSync = function(fn){ sync = fn; };
+
+    return wrap;
   }
 
-  function makeWindow(state){
-    const row = document.createElement("div");
-    row.className = "acs-window";
-    row.innerHTML = `
-      <span class="acs-window-icon"><i class="fa-solid fa-clock"></i></span>
-      <span class="acs-window-label">من</span>`;
-    const from = timeInput(state.from); row.appendChild(from);
-    const lbl = document.createElement("span"); lbl.className = "acs-window-label";
-    lbl.textContent = "إلى"; row.appendChild(lbl);
-    const to = timeInput(state.to); row.appendChild(to);
+  /* Build a single window card with two time pickers + remove button. */
+  function makeWindow(state, onRemove, onChange){
+    const card = document.createElement("div");
+    card.className = "acs-window";
+
+    const head = document.createElement("div");
+    head.className = "acs-window-head";
+    head.innerHTML = '<i class="fa-solid fa-clock"></i> فترة زمنية';
+    card.appendChild(head);
+
     const rm = document.createElement("button");
     rm.type = "button"; rm.className = "acs-window-rm";
     rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    row.appendChild(rm);
-    row.dataset.from = state.from || "";
-    row.dataset.to   = state.to   || "";
-    from.addEventListener("input", () => { row.dataset.from = from.value || ""; });
-    to.addEventListener("input",   () => { row.dataset.to   = to.value   || ""; });
-    return { row, rm };
+    rm.title = "حذف الفترة";
+    rm.addEventListener("click", onRemove);
+    card.appendChild(rm);
+
+    const body = document.createElement("div");
+    body.className = "acs-window-body";
+
+    const fromPicker = makeTimePicker("من", state.from || "");
+    const arrow = document.createElement("div");
+    arrow.className = "acs-window-arrow";
+    arrow.innerHTML = '<i class="fa-solid fa-arrow-left-long"></i>';
+    const toPicker = makeTimePicker("إلى", state.to || "");
+
+    body.appendChild(fromPicker);
+    body.appendChild(arrow);
+    body.appendChild(toPicker);
+    card.appendChild(body);
+
+    fromPicker.bindSync(onChange);
+    toPicker.bindSync(onChange);
+
+    card.readValue = function(){
+      return { from: fromPicker.readValue(), to: toPicker.readValue() };
+    };
+    return card;
   }
 
+  /* Build a single day pill. */
+  function makeDayPill(code, on, onToggle){
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "acs-day" + (on ? " is-on" : "");
+    pill.dataset.day = code;
+    pill.innerHTML = `
+      <span class="acs-day-check"><i class="fa-solid fa-check"></i></span>
+      <span>${DAY_NAMES[code]}</span>`;
+    pill.addEventListener("click", () => {
+      pill.classList.toggle("is-on");
+      onToggle();
+    });
+    return pill;
+  }
+
+  /* Initialize one .acs-card. */
   function initCard(card){
-    const hidden = card.querySelector("[data-acs-hidden]");
-    const modeCb = card.querySelector("[data-acs-mode]");
+    const hidden     = card.querySelector("[data-acs-hidden]");
     const daysWrap   = card.querySelector("[data-acs-days]");
     const winsWrap   = card.querySelector("[data-acs-windows]");
     const addWinBtn  = card.querySelector("[data-acs-add-window]");
     const perDayWrap = card.querySelector("[data-acs-perday]");
     const addDaySel  = card.querySelector("[data-acs-add-day]");
+    const segBtns    = card.querySelectorAll("[data-acs-mode-btn]");
 
-    // ── 1. Hydrate state from data-acs-initial ─────────────
     const initial = readState(card);
     const initialWins = (initial.windows || []);
-    // Detect advanced: any single-day window when there's more than one
-    // window total → likely "per-day" layout. Simpler heuristic: if any
-    // window has exactly 1 day AND there are 2+ windows with different
-    // single-day sets, switch to advanced.
+
+    // Decide initial mode: advanced if there are 2+ windows, each tied to a
+    // single distinct day. Otherwise simple.
     let advanced = false;
     if (initialWins.length > 1) {
-      const singleDayWindows = initialWins.filter(w => (w.days||[]).length === 1);
-      const distinctDays = new Set(singleDayWindows.map(w => w.days[0]));
-      if (singleDayWindows.length === initialWins.length && distinctDays.size > 1) {
-        advanced = true;
-      }
+      const sdays = initialWins.filter(w => (w.days||[]).length === 1);
+      const distinct = new Set(sdays.map(w => w.days[0]));
+      if (sdays.length === initialWins.length && distinct.size > 1) advanced = true;
     }
-    if (modeCb) modeCb.checked = advanced;
-    card.classList.toggle("is-advanced", advanced);
+    setMode(advanced);
 
-    // ── 2. Simple section: day chips + flat window list ─────
-    // Render day chips
-    daysWrap.innerHTML = "";
-    const simpleDays = new Set();
-    if (!advanced) {
-      // The union of all days from non-empty `days[]`.
-      initialWins.forEach(w => (w.days || []).forEach(d => simpleDays.add(d)));
+    function setMode(adv){
+      advanced = adv;
+      card.classList.toggle("is-advanced", adv);
+      segBtns.forEach(b => b.classList.toggle("is-active", b.dataset.acsModeBtn === (adv ? "advanced" : "simple")));
     }
+
+    // ── Days (simple mode) ──────────────────────────────────────
+    const simpleDays = new Set();
+    if (!advanced) initialWins.forEach(w => (w.days || []).forEach(d => simpleDays.add(d)));
+
+    daysWrap.innerHTML = "";
     DAYS.forEach(code => {
-      const chip = document.createElement("label");
-      chip.className = "acs-day" + (simpleDays.has(code) ? " is-on" : "");
-      chip.dataset.day = code;
-      chip.innerHTML = `<input type="checkbox" ${simpleDays.has(code) ? "checked" : ""}>
-                       <span>${DAY_NAMES[code]}</span>`;
-      const cb = chip.querySelector("input");
-      cb.addEventListener("change", () => {
-        chip.classList.toggle("is-on", cb.checked);
-        sync();
-      });
-      daysWrap.appendChild(chip);
+      daysWrap.appendChild(makeDayPill(code, simpleDays.has(code), sync));
     });
 
-    // Render simple windows (or single empty placeholder if none)
-    function pushSimpleWindow(state){
-      const w = makeWindow(state);
-      w.rm.addEventListener("click", () => { w.row.remove(); sync(); });
-      w.row.addEventListener("input", sync);
-      winsWrap.appendChild(w.row);
-    }
+    // ── Simple windows ──────────────────────────────────────────
     winsWrap.innerHTML = "";
+    function pushSimpleWindow(state){
+      const card = makeWindow(state,
+        () => { card.remove(); sync(); },
+        sync
+      );
+      winsWrap.appendChild(card);
+    }
     if (!advanced) {
-      // Flatten: every window's from/to but ignore days (chips own them)
       initialWins.forEach(w => pushSimpleWindow({ from: w.from || "", to: w.to || "" }));
     }
-
     addWinBtn.addEventListener("click", () => { pushSimpleWindow({}); sync(); });
 
-    // ── 3. Advanced section: per-day blocks ─────────────────
+    // ── Per-day (advanced mode) ─────────────────────────────────
     perDayWrap.innerHTML = "";
     function buildPerDayBlock(dayCode, windows){
       const block = document.createElement("div");
       block.className = "acs-pd-block";
       block.dataset.day = dayCode;
+
       const head = document.createElement("div");
       head.className = "acs-pd-head";
-      head.innerHTML = `<span class="acs-pd-day">${DAY_NAMES[dayCode]}</span>`;
+      head.innerHTML = `<span class="acs-pd-day-badge">${DAY_NAMES[dayCode]}</span>`;
       const rm = document.createElement("button");
       rm.type = "button"; rm.className = "acs-pd-rm";
       rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      rm.title = "حذف هذا اليوم";
       rm.addEventListener("click", () => { block.remove(); refreshAddDay(); sync(); });
       head.appendChild(rm);
       block.appendChild(head);
@@ -284,18 +585,19 @@
       list.className = "acs-windows";
       block.appendChild(list);
 
-      function add(state){
-        const w = makeWindow(state);
-        w.rm.addEventListener("click", () => { w.row.remove(); sync(); });
-        w.row.addEventListener("input", sync);
-        list.appendChild(w.row);
+      function addWin(state){
+        const c = makeWindow(state,
+          () => { c.remove(); sync(); },
+          sync
+        );
+        list.appendChild(c);
       }
-      (windows.length ? windows : [{from:"",to:""}]).forEach(add);
+      (windows.length ? windows : [{from:"",to:""}]).forEach(addWin);
 
       const addBtn = document.createElement("button");
-      addBtn.type = "button"; addBtn.className = "acs-window-add";
-      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> فترة';
-      addBtn.addEventListener("click", () => { add({}); sync(); });
+      addBtn.type = "button"; addBtn.className = "acs-add-window";
+      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة فترة لـ ' + DAY_NAMES[dayCode];
+      addBtn.addEventListener("click", () => { addWin({}); sync(); });
       block.appendChild(addBtn);
 
       return block;
@@ -303,7 +605,7 @@
     function refreshAddDay(){
       const used = new Set([...perDayWrap.querySelectorAll(".acs-pd-block")]
                             .map(b => b.dataset.day));
-      addDaySel.innerHTML = '<option value="">+ إضافة يوم</option>';
+      addDaySel.innerHTML = '<option value="">+ إضافة يوم آخر</option>';
       DAYS.forEach(code => {
         if (used.has(code)) return;
         const o = document.createElement("option");
@@ -312,7 +614,6 @@
       });
     }
     if (advanced) {
-      // Group initial windows by single-day code
       const byDay = {};
       initialWins.forEach(w => {
         const d = (w.days || [])[0];
@@ -333,81 +634,64 @@
       sync();
     });
 
-    // ── 4. Mode toggle ──────────────────────────────────────
-    if (modeCb) {
-      modeCb.addEventListener("change", () => {
-        const adv = modeCb.checked;
-        card.classList.toggle("is-advanced", adv);
-        // Migration of state between modes: derive a fresh layout from the
-        // hidden field's current value.
-        const cur = JSON.parse(hidden.value || '{"windows":[]}');
-        if (adv) {
-          // simple → advanced: expand each chip-day into a per-day block
-          //                    with the current flat windows.
-          const flatWins = cur.windows.map(w => ({ from: w.from || "", to: w.to || "" }));
-          const days = Array.from(daysWrap.querySelectorAll(".acs-day.is-on"))
-                            .map(c => c.dataset.day);
-          perDayWrap.innerHTML = "";
-          (days.length ? days : []).forEach(code => {
-            perDayWrap.appendChild(buildPerDayBlock(code, flatWins));
-          });
-          refreshAddDay();
-        } else {
-          // advanced → simple: union of all days; concat all unique from/to
-          //                    pairs (dedupe).
-          const days = new Set();
-          const pairs = new Set();
-          cur.windows.forEach(w => {
-            (w.days || []).forEach(d => days.add(d));
-            pairs.add((w.from || "") + "|" + (w.to || ""));
-          });
-          // re-render chips
-          daysWrap.querySelectorAll(".acs-day").forEach(chip => {
-            const on = days.has(chip.dataset.day);
-            chip.classList.toggle("is-on", on);
-            chip.querySelector("input").checked = on;
-          });
-          winsWrap.innerHTML = "";
-          pairs.forEach(p => {
-            const [f, t] = p.split("|");
-            pushSimpleWindow({ from: f, to: t });
-          });
-          if (!winsWrap.children.length) pushSimpleWindow({});
-        }
-        sync();
-      });
-    }
+    // ── Mode segment (simple ↔ advanced) ────────────────────────
+    segBtns.forEach(btn => btn.addEventListener("click", () => {
+      const target = btn.dataset.acsModeBtn;
+      if ((target === "advanced") === advanced) return;
+      const cur = JSON.parse(hidden.value || '{"windows":[]}');
+      if (target === "advanced") {
+        // simple → advanced: explode chosen days × current windows
+        const flatWins = cur.windows.map(w => ({ from: w.from || "", to: w.to || "" }));
+        const days = Array.from(daysWrap.querySelectorAll(".acs-day.is-on"))
+                          .map(c => c.dataset.day);
+        perDayWrap.innerHTML = "";
+        days.forEach(code => perDayWrap.appendChild(buildPerDayBlock(code, flatWins)));
+        refreshAddDay();
+      } else {
+        // advanced → simple: union of days + dedupe of windows
+        const days = new Set();
+        const pairs = new Set();
+        cur.windows.forEach(w => {
+          (w.days || []).forEach(d => days.add(d));
+          pairs.add((w.from || "") + "|" + (w.to || ""));
+        });
+        daysWrap.querySelectorAll(".acs-day").forEach(p => {
+          p.classList.toggle("is-on", days.has(p.dataset.day));
+        });
+        winsWrap.innerHTML = "";
+        pairs.forEach(p => {
+          const [f, t] = p.split("|");
+          pushSimpleWindow({ from: f, to: t });
+        });
+        if (!winsWrap.children.length) pushSimpleWindow({});
+      }
+      setMode(target === "advanced");
+      sync();
+    }));
 
-    // ── 5. Serializer — write JSON to the hidden input ──────
+    // ── Serializer ──────────────────────────────────────────────
     function readSimple(){
       const days = Array.from(daysWrap.querySelectorAll(".acs-day.is-on"))
                         .map(c => c.dataset.day);
-      const windows = Array.from(winsWrap.querySelectorAll(".acs-window"))
-                            .map(r => ({
-                              days: days.slice(),
-                              from: r.dataset.from || "",
-                              to:   r.dataset.to   || "",
-                            }))
+      const windows = Array.from(winsWrap.children)
+                            .map(c => {
+                              const v = c.readValue();
+                              return { days: days.slice(), from: v.from, to: v.to };
+                            })
                             .filter(w => w.days.length || w.from || w.to);
       if (!windows.length && days.length) {
-        // Days only — emit one window with no times
         return { windows: [{ days: days.slice(), from: "", to: "" }] };
       }
-      if (!windows.length && !days.length) {
-        return { windows: [] };
-      }
+      if (!windows.length) return { windows: [] };
       return { windows };
     }
     function readAdvanced(){
       const windows = [];
       perDayWrap.querySelectorAll(".acs-pd-block").forEach(block => {
         const day = block.dataset.day;
-        block.querySelectorAll(".acs-window").forEach(r => {
-          windows.push({
-            days: [day],
-            from: r.dataset.from || "",
-            to:   r.dataset.to   || "",
-          });
+        block.querySelectorAll(".acs-window").forEach(c => {
+          const v = c.readValue();
+          windows.push({ days: [day], from: v.from, to: v.to });
         });
       });
       return { windows };
@@ -422,7 +706,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-acs-card]").forEach(initCard);
   });
-  // Also init right now if DOM already parsed (Jinja partial included late).
   if (document.readyState !== "loading") {
     document.querySelectorAll("[data-acs-card]")
             .forEach(c => { if (!c.__acsInit) { c.__acsInit = true; initCard(c); } });
@@ -434,42 +717,55 @@
 
 {# ── the picker itself ──────────────────────────────────────────── #}
 {% macro access_schedule_picker(name, value="", id="acs-1", title="الأيام والأوقات المسموحة") -%}
-{# value: JSON string (from DB) or empty string. The macro hands it to the
-   JS via data-acs-initial — JS does normalization + rendering. #}
 {{ access_schedule_assets() }}
 
 <div class="acs-card" data-acs-card id="{{ id }}"
      data-acs-initial="{{ value or '' }}">
+
+  {# ── Header: title + segment control ──────────────────────── #}
   <div class="acs-head">
-    <span class="acs-title"><i class="fa-solid fa-calendar-days"></i> {{ title }}</span>
-    <label class="acs-mode">
-      <input type="checkbox" data-acs-mode>
-      <span>وضع متقدم — أوقات مختلفة لكل يوم</span>
-    </label>
+    <span class="acs-title">
+      <span class="acs-title-icon"><i class="fa-solid fa-calendar-days"></i></span>
+      {{ title }}
+    </span>
+    <div class="acs-segment" role="tablist" aria-label="وضع الجدولة">
+      <button type="button" class="acs-segment-btn is-active"
+              data-acs-mode-btn="simple">بسيط</button>
+      <button type="button" class="acs-segment-btn"
+              data-acs-mode-btn="advanced">متقدم</button>
+    </div>
   </div>
 
-  {# Simple section ── days + global windows #}
+  {# ── Simple section ───────────────────────────────────────── #}
   <div class="acs-simple">
-    <div class="acs-help">
-      <strong>الأيام:</strong> اختاري أي يوم تسمحين فيه (فاضي = كل الأيام).
+    <div class="acs-block">
+      <div class="acs-block-label">
+        <i class="fa-solid fa-calendar"></i> أيام السماح
+        <span class="acs-block-hint">اتركيها فاضية = كل الأيام</span>
+      </div>
+      <div class="acs-days" data-acs-days></div>
     </div>
-    <div class="acs-days" data-acs-days></div>
 
-    <div class="acs-help">
-      <strong>الفترات الزمنية:</strong> أضيفي فترة أو أكثر (فاضي = طول اليوم).
+    <div class="acs-block">
+      <div class="acs-block-label">
+        <i class="fa-solid fa-clock"></i> الفترات الزمنية
+        <span class="acs-block-hint">اتركي الأوقات فاضية = طول اليوم</span>
+      </div>
+      <div class="acs-windows" data-acs-windows></div>
+      <button type="button" class="acs-add-window" data-acs-add-window>
+        <i class="fa-solid fa-plus"></i> إضافة فترة جديدة
+      </button>
     </div>
-    <div class="acs-windows" data-acs-windows></div>
-    <button type="button" class="acs-window-add" data-acs-add-window>
-      <i class="fa-solid fa-plus"></i> إضافة فترة
-    </button>
   </div>
 
-  {# Advanced section ── per-day blocks #}
+  {# ── Advanced section (per-day blocks) ────────────────────── #}
   <div class="acs-per-day" data-acs-perday></div>
-  <div>
-    <label class="acs-pd-add">
+  <div class="acs-add-day-wrap">
+    <label class="acs-add-day">
       <i class="fa-solid fa-plus"></i>
-      <select data-acs-add-day><option value="">+ إضافة يوم</option></select>
+      <select data-acs-add-day>
+        <option value="">+ إضافة يوم آخر</option>
+      </select>
     </label>
   </div>
 
