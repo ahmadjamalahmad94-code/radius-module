@@ -301,13 +301,34 @@ def _form_select_options() -> dict:
     return {"admins": admins, "subscriber_groups": sgroups}
 
 
+def _new_subscriber_speed_panel():
+    """Empty-list panel shown on the «add new subscriber» page so the
+    operator can compose a first rule alongside the subscriber.
+    subscriber_username="" is the trigger for new-mode rendering."""
+    return {
+        "target_type": "subscriber",
+        "plan_id": None,
+        "subscriber_username": "",
+        "card_batch_id": None,
+        "subscriber_group_id": None,
+        "return_to": request.path if request else "",
+        "title": "قواعد السرعة",
+        "help_text": (
+            "اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا "
+            "مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة."
+        ),
+        "rules": [],
+        "presets": [],
+    }
+
+
 def users_new():
     plans = list(get_plans_service().list(limit=500))
     empty = Subscriber(id=None, username="", password="", status="enabled")
     return render_template("radius/users_form.html",
         sub=_sub_with_meta_for_template(empty),
         plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES,
-        is_new=True, speed_rules_panel=None,
+        is_new=True, speed_rules_panel=_new_subscriber_speed_panel(),
         **_form_select_options())
 
 
@@ -320,8 +341,43 @@ def users_create():
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
-            user_types=USER_TYPES, is_new=True, speed_rules_panel=None,
+            user_types=USER_TYPES, is_new=True,
+            speed_rules_panel=_new_subscriber_speed_panel(),
             **_form_select_options()), 400
+
+    # Inline first speed-rule (optional): if the form has rule fields
+    # filled, create it now that the subscriber row exists. We bypass
+    # handle_embedded_speed_rule because it requires _speed_rule_action
+    # — here the operator clicked the main «حفظ» button, not a panel one.
+    if (request.form.get("sr_starts_at_time") or "").strip():
+        try:
+            from ..services.operations import get_operations_service
+            from .speed_rules_ui import _days_from_form
+            get_operations_service().create_bandwidth_schedule(
+                tenant_id=_tid(), actor=_actor(),
+                data={
+                    "target_type": "subscriber",
+                    "subscriber_username": saved.username,
+                    "name": (request.form.get("sr_name") or "قاعدة سرعة").strip(),
+                    "starts_at_time": request.form.get("sr_starts_at_time"),
+                    "ends_at_time": request.form.get("sr_ends_at_time"),
+                    "days_csv": _days_from_form(request.form, "sr_days"),
+                    "speed_down_kbps": request.form.get("sr_speed_down_kbps") or 0,
+                    "speed_up_kbps":   request.form.get("sr_speed_up_kbps") or 0,
+                    "restore_mode": (request.form.get("sr_restore_mode")
+                                     or "profile_default"),
+                    "priority": request.form.get("sr_priority") or 100,
+                    "notes": request.form.get("sr_notes") or "",
+                    "metadata": {"embedded_target": "subscriber",
+                                 "created_with_subscriber": True},
+                },
+            )
+        except RadiusError as e:
+            flash(
+                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {e.message}",
+                "warning",
+            )
+
     flash(f"تم إنشاء المستخدم «{saved.username}».", "success")
     return redirect(url_for("radius.users_list"))
 

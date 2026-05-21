@@ -24,6 +24,16 @@
   ('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة'),
 ] -%}
 
+{# Pending-target mode: the parent form is creating a NEW subscriber /
+   plan / batch / group, so the target ID isn't known yet. The panel
+   still renders so the operator can fill ONE inline rule alongside the
+   main form. The per-rule action buttons are hidden — the rule is saved
+   via the parent route's main «حفظ» button. #}
+{%- set sr_pending = not (speed_rules_panel.subscriber_username
+                          or speed_rules_panel.plan_id
+                          or speed_rules_panel.card_batch_id
+                          or speed_rules_panel.subscriber_group_id) -%}
+
 <style>
   /* ── Panel shell ───────────────────────────────────────────── */
   .sr2-panel{
@@ -360,17 +370,24 @@
     </div>
 
     <div class="sr2-foot">
-      <span class="sr2-help" style="flex:1">
-        لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
-      </span>
-      <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-              name="_speed_rule_action" value="copy" formnovalidate>
-        <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
-      </button>
-      <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-              name="_speed_rule_action" value="manual" formnovalidate>
-        <i class="fa-solid fa-check"></i> اعتماد القاعدة
-      </button>
+      {% if sr_pending %}
+        <span class="sr2-help" style="flex:1; color: var(--hub-brand-ink); font-weight:700">
+          <i class="fa-solid fa-circle-info"></i>
+          املئي الحقول هنا وستُحفظ القاعدة مع المشترك تلقائيًا عند الضغط على «حفظ المشترك» أسفل الصفحة.
+        </span>
+      {% else %}
+        <span class="sr2-help" style="flex:1">
+          لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
+        </span>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
+                name="_speed_rule_action" value="copy" formnovalidate>
+          <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+        </button>
+        <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
+                name="_speed_rule_action" value="manual" formnovalidate>
+          <i class="fa-solid fa-check"></i> اعتماد القاعدة
+        </button>
+      {% endif %}
     </div>
   </div>
 </section>

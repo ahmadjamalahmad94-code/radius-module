@@ -546,10 +546,11 @@
     </section>
 
     {# ── 2b. Speed schedules — bandwidth_schedules per-subscriber. ──
-       Cookbook §19. Edit-mode only (needs a real subscriber row). #}
-    {% if not is_new %}
-      {% include "radius/_speed_rules_panel.html" %}
-    {% endif %}
+       Cookbook §19. Renders in BOTH new + edit mode:
+         - new mode: empty rule list + add-card; rule saved with the
+           subscriber via users_create() when the main button is clicked.
+         - edit mode: full panel with per-rule actions. #}
+    {% include "radius/_speed_rules_panel.html" %}
 
     {# ── 3. PPPoE ───────────────────────────────────────── #}
     <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
