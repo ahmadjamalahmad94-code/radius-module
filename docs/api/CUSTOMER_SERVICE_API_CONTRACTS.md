@@ -7,20 +7,22 @@ and accounting. Web admin and Flutter clients should consume these contracts
 instead of duplicating business logic.
 
 Contract-only endpoints must return `501 not_implemented` until their storage
-and service layer are real. They must never return fake success.
+and service layer are real. They must never return fake success. Endpoints
+marked `implemented`, `partial`, or `dry_run` below are backed by real Flask
+routes and must keep using the same authenticated response envelope.
 
 ## Current Status Refresh
 
-This document started as a contract reservation file. Several domains listed
-below have since moved from `contract_only` to working foundations or partial
-implementations, including loans, payments, ledger, recycle bin, distributors,
-backups, bandwidth schedules, print templates, and ledger-based reports. For
-the current Web/Flutter parity source of truth, use
-`docs/api/WEB_FLUTTER_PARITY_MATRIX.md`.
+This document started as a contract reservation file. It is now aligned with
+the current Web/Flutter parity matrix as of 2026-05-21. Several domains have
+moved from `contract_only` to working foundations or partial implementations:
+loans, payments, ledger, recycle bin, distributors, local backups, bandwidth
+schedules, print templates, lifecycle retention, and ledger-based reports.
 
-Do not rely on an older table row here if the parity matrix marks the endpoint
-as implemented, partial, or dry-run. The hard rule remains: a UI must not show
-an operation as complete when the API returns `not_implemented`.
+For product-level parity, also check
+`docs/api/WEB_FLUTTER_PARITY_MATRIX.md`. The hard rule remains: a UI must not
+show an operation as complete when the API returns `not_implemented` or when a
+feature is intentionally `dry_run` / `planned_disabled`.
 
 ## Response Envelope
 
@@ -64,6 +66,14 @@ Contract-only response:
 ## Status Terms
 
 - `implemented`: endpoint exists and performs real backend work.
+- `partial`: endpoint performs real backend work, but the product flow still
+  needs richer UX, export, old-delete audit, or VPS acceptance.
+- `dry_run`: endpoint can preview safely; live apply is gated or requires VPS
+  proof.
+- `vps_acceptance_required`: endpoint/UI exist, but final correctness depends
+  on a real NAS/RADIUS VPS.
+- `planned_disabled`: intentionally visible as disabled until an integration is
+  real.
 - `contract_only`: route is reserved and authenticated, but returns 501.
 - `planned`: documented only; no route yet because an existing endpoint covers
   the discovery need or the domain needs design first.
@@ -79,10 +89,10 @@ value, reason, and settle it later without mixing RADIUS actions with finance.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/loans` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/loans` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/loans/{loan_id}` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/loans/{loan_id}/settle` | POST | Bearer | contract_only | Yes, returns 501 |
+| `/api/v1/loans` | GET | Bearer | implemented | Yes |
+| `/api/v1/loans` | POST | Bearer | vps_acceptance_required | Yes; supports dry-run/live result fields through accounting apply flow |
+| `/api/v1/loans/{loan_id}` | GET | Bearer | implemented | Yes |
+| `/api/v1/loans/{loan_id}/settle` | POST | Bearer | implemented | Yes |
 
 Request shape later:
 
@@ -97,8 +107,9 @@ Request shape later:
 }
 ```
 
-Future work: loan tables, settlement rules, max limits, approval state,
-permission checks, ledger posting, audit events.
+Remaining work: real VPS acceptance for activation/apply behavior, manager
+approval workflow, richer max-limit policy controls, and customer-facing copy
+that clearly distinguishes dry-run from live apply.
 
 Flutter/Web impact: subscriber detail needs loan grant, loan history, and
 settlement views.
@@ -109,12 +120,13 @@ Purpose: stop losing sensitive operational history through hard delete.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/recycle-bin` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/recycle-bin/{entity_type}/{entity_id}/archive` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
-| `/api/v1/recycle-bin/{entity_type}/{entity_id}/restore` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
+| `/api/v1/recycle-bin` | GET | Bearer | partial | Yes |
+| `/api/v1/recycle-bin/{entity_type}/{entity_id}/archive` | POST | Bearer | partial | Yes; archives supported operational domains |
+| `/api/v1/recycle-bin/{entity_type}/{entity_id}/restore` | POST | Bearer | partial | Yes; restores supported operational domains |
 
-Future work: additive archive columns, restore rules, delete compatibility,
-financial void/reversal policy. See `docs/roadmap/DELETE_RISK_MAP.md`.
+Remaining work: complete audit of older web delete paths, stronger UX acceptance,
+and no automatic purge for sensitive records until backup/export safeguards are
+real. See `docs/roadmap/DELETE_RISK_MAP.md`.
 
 Flutter/Web impact: trash list, restore/cancel flows, visible archive status.
 
@@ -125,14 +137,11 @@ discounts, settlements, distributor profit, and immutable reports.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/ledger` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/ledger/void` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
+| `/api/v1/ledger` | GET | Bearer | implemented | Yes |
+| `/api/v1/ledger/void` | POST | Bearer | implemented | Yes; creates reversal/void entries |
 
-Existing overlap: `/api/v1/accounting` is implemented, but it reads RADIUS
-`radacct` sessions only. It is not a financial ledger.
-
-Future work: append-only ledger entries, source typing, void/reversal entries,
-period-close policy, invariants tests.
+Remaining work: period-close policy, immutable snapshot/export UX, and final
+financial-report acceptance against customer accounting expectations.
 
 ### 4. Payments / Partial Payments
 
@@ -141,12 +150,12 @@ and payment allocations without mutating financial history.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/payments` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/payments` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/payments/{payment_id}/void` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
+| `/api/v1/payments` | GET | Bearer | implemented | Yes |
+| `/api/v1/payments` | POST | Bearer | vps_acceptance_required | Yes; records payment and optional RADIUS apply result |
+| `/api/v1/payments/{payment_id}/void` | POST | Bearer | implemented | Yes; uses void/reversal behavior |
 
-Future work: payment table, allocation service, ledger posting, receipt/audit
-records, void behavior.
+Remaining work: real VPS acceptance for activation/apply behavior, richer
+receipt/export UX, and stricter period-close semantics.
 
 ### 5. Distributor / Manager Scoped Operations
 
@@ -155,16 +164,15 @@ sales ownership, debt/profit, and settlements.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/distributors` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/distributors` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/distributors/{distributor_id}/summary` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/distributors/{distributor_id}/settle` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
+| `/api/v1/distributors` | GET | Bearer | partial | Yes |
+| `/api/v1/distributors` | POST | Bearer | partial | Yes |
+| `/api/v1/distributors/{distributor_id}/summary` | GET | Bearer | partial | Yes |
+| `/api/v1/distributors/{distributor_id}/batches` | GET | Bearer | partial | Yes |
+| `/api/v1/distributors/{distributor_id}/assign-batch` | POST | Bearer | partial | Yes |
+| `/api/v1/distributors/{distributor_id}/settle` | POST | Bearer | partial | Yes; posts ledger-style settlement entry |
 
-Existing overlap: admins/roles APIs exist, but distributor-specific scoping and
-financial ownership are not implemented.
-
-Future work: scope model, permission enforcement, assigned batch ownership,
-debt/profit ledger accounts.
+Remaining work: continuous enforcement tests for every sensitive API and deeper
+debt/profit accounting acceptance.
 
 ### 6. Card Batches Advanced Operations
 
@@ -176,11 +184,13 @@ and later sales ownership.
 | `/api/v1/cards/batches` | GET | Bearer | implemented | Yes |
 | `/api/v1/cards/batches/{batch_id}` | GET | Bearer | implemented | Yes |
 | `/api/v1/cards/batches/{batch_id}/cards` | GET | Bearer | implemented | Yes |
+| `/api/v1/cards/batches/import` | POST | Bearer | implemented | Yes; supports imported/external bookkeeping files |
+| `/api/v1/cards/batches/export.csv` | GET | Bearer | implemented | Yes; CSV only |
 | `/api/v1/cards/generate` | POST | Bearer | implemented | Existing behavior |
-| Batch assignment/cancel endpoints | TBD | Bearer | planned | No route yet |
+| Batch bulk/archive/restore operations | POST | Bearer | partial | Existing supported actions only |
 
-Future work: status taxonomy, assignment/reassignment endpoint, cancel/archive
-batch behavior, distributor ownership, no hard-delete batch policy.
+Remaining work: true Excel/PDF export, final operational UX acceptance, and
+continued no-password export tests.
 
 ### 7. Card Checker
 
@@ -223,14 +233,19 @@ debts.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/reports/sales` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/reports/payments` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/reports/activations` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/reports/card-sales` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/reports/profit-loss` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/reports/distributor-debts` | GET | Bearer | contract_only | Yes, returns 501 |
+| `/api/v1/reports/sales` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/sales/daily` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/sales/monthly` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/sales/yearly` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/payments` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/loans` | GET | Bearer | implemented | Yes |
+| `/api/v1/reports/activations` | GET | Bearer | partial | Yes |
+| `/api/v1/reports/card-sales` | GET | Bearer | partial | Yes |
+| `/api/v1/reports/profit-loss` | GET | Bearer | partial | Yes |
+| `/api/v1/reports/distributor-debts` | GET | Bearer | partial | Yes |
 
-Future work: ledger-backed report service and immutable report semantics.
+Remaining work: immutable report snapshot/export UX and customer acceptance of
+date-range/filter behavior.
 
 ### 9. Online Users / Live Sessions
 
@@ -249,12 +264,13 @@ Purpose: time-based speed schedules now, pressure-based policies later.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/bandwidth-schedules` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/bandwidth-schedules` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/bandwidth-schedules/{schedule_id}/apply` | POST | Bearer | dangerous_until_foundation | Yes, returns 501 |
+| `/api/v1/bandwidth-schedules` | GET | Bearer | dry_run | Yes |
+| `/api/v1/bandwidth-schedules` | POST | Bearer | dry_run | Yes |
+| `/api/v1/bandwidth-schedules/effective` | GET | Bearer | implemented | Yes |
+| `/api/v1/bandwidth-schedules/{schedule_id}/apply` | POST | Bearer | dry_run | Yes; live apply is gated and needs VPS proof |
 
-Future work: schedule table, overlap validation, timezone policy, worker logs,
-router apply/revert safety.
+Remaining work: real VPS/NAS live-apply acceptance and clear UI copy whenever
+the operation is only a dry run.
 
 ### 11. Card Print Templates
 
@@ -262,11 +278,11 @@ Purpose: store reusable card-print layouts with template options.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/print-templates` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/print-templates` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/print-templates/{template_id}/render` | POST | Bearer | contract_only | Yes, returns 501 |
+| `/api/v1/print-templates` | GET | Bearer | partial | Yes |
+| `/api/v1/print-templates` | POST | Bearer | partial | Yes |
+| `/api/v1/print-templates/{template_id}/render` | POST | Bearer | partial | Yes; preview only |
 
-Future work: template table, versioning, safe renderer/export path, print tests.
+Remaining work: real PDF/export renderer before showing PDF as complete.
 
 ### 12. Backup / Google Drive Readiness
 
@@ -275,12 +291,12 @@ restore behavior yet.
 
 | Endpoint | Method | Auth | Status | Safe now |
 | --- | --- | --- | --- | --- |
-| `/api/v1/backups/status` | GET | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/backups/run` | POST | Bearer | contract_only | Yes, returns 501 |
-| `/api/v1/backups/google-drive/connect` | POST | Bearer | contract_only | Yes, returns 501 |
+| `/api/v1/backups/status` | GET | Bearer | partial | Yes; local backup status is real |
+| `/api/v1/backups/run` | POST | Bearer | partial | Yes; local backup run/verify is real |
+| `/api/v1/backups/google-drive/connect` | POST | Bearer | planned_disabled | Yes; returns 501 intentionally |
 
-Future work: scheduler, credential storage policy, Google Drive OAuth/service
-account decision, restore-test flow.
+Remaining work: real Google Drive OAuth/storage and restore-test flow. Until
+then, the UI must show Google Drive as disabled, not successful.
 
 ### 13. NAS / Server Management Alignment
 
