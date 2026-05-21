@@ -1,0 +1,118 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   toggle_switch — canonical modern on/off toggle (2026-05-21).
+
+   The ONLY accepted form of a boolean on/off control across the project.
+   Designated by the user on 2026-05-21:
+     «اعتمده هذا وعدله بكل مكان في تغيير ساعة … وبخصوص متاح التشيك بوكس
+      التقليدي ما بدي اياه. غيرهم كلهم بالموقع كله بمفتاح السوتش الحديث».
+
+   Renders a 38×22 track + sliding thumb + optional on/off label. Posts
+   a regular form value (unchecked → field absent, checked → `value`) so
+   server-side handling is identical to a plain <input type="checkbox">.
+
+   Usage:
+     {% from "_partials/toggle_switch.html" import toggle_switch %}
+     {{ toggle_switch(name="auto_renewal", checked=sub.auto_renewal) }}
+
+   Optional args:
+     - value:     posted value when checked (default "1")
+     - id:        id attribute on the input (for <label for=>)
+     - on_label / off_label: text shown next to the track (Arabic
+                  defaults: «مفعَّل» / «معطَّل»)
+     - show_label: hide the text entirely if False (compact mode)
+     - size:      "md" (default) or "sm"
+
+   Do NOT use a plain checkbox for boolean settings. Tables that need
+   row-selection checkboxes are the only exception.
+
+   See SERVICES_COOKBOOK §21.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{% macro toggle_switch_assets() -%}
+<style>
+  .tsw{
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: var(--hub-bg-soft, #f7f6fb);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    cursor: pointer; user-select: none;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+    min-height: 40px; box-sizing: border-box;
+  }
+  .tsw:hover{ border-color: var(--hub-brand-line); }
+  .tsw input{
+    /* keep accessible but invisible — focus styles travel via track */
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+  }
+  .tsw-track{
+    position: relative; flex-shrink: 0;
+    width: 38px; height: 22px;
+    background: #d4d4d8;
+    border-radius: 999px;
+    transition: background var(--hub-anim-fast) var(--hub-ease),
+                box-shadow var(--hub-anim-fast) var(--hub-ease);
+  }
+  .tsw-thumb{
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,.22);
+    transition: inset-inline-start var(--hub-anim-fast) var(--hub-ease);
+  }
+  .tsw input:checked + .tsw-track{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    box-shadow: 0 2px 8px rgba(107, 90, 237, .35);
+  }
+  .tsw input:checked + .tsw-track .tsw-thumb{
+    inset-inline-start: 18px;
+  }
+  .tsw input:focus-visible + .tsw-track{
+    box-shadow: 0 0 0 3px var(--hub-brand-soft),
+                0 2px 8px rgba(107, 90, 237, .35);
+  }
+  .tsw-label{
+    font-size: 13px; font-weight: 700; color: var(--hub-text-soft);
+    line-height: 1;
+  }
+  .tsw-label::before{ content: attr(data-off); }
+  .tsw input:checked ~ .tsw-label::before{
+    content: attr(data-on);
+    color: var(--hub-brand-ink);
+  }
+
+  /* Small variant */
+  .tsw.tsw--sm{ padding: 4px 10px; min-height: 30px; gap: 8px; }
+  .tsw.tsw--sm .tsw-track{ width: 32px; height: 18px; }
+  .tsw.tsw--sm .tsw-thumb{ width: 14px; height: 14px; }
+  .tsw.tsw--sm input:checked + .tsw-track .tsw-thumb{ inset-inline-start: 16px; }
+  .tsw.tsw--sm .tsw-label{ font-size: 12px; }
+
+  /* Bare variant (no shell box — for use inside table cells / etc.) */
+  .tsw.tsw--bare{
+    padding: 0; background: transparent; border: 0; min-height: 0;
+  }
+  .tsw.tsw--bare:hover{ border-color: transparent; }
+</style>
+{%- endmacro %}
+
+{% macro toggle_switch(name, checked=False, value="1", id=None,
+                       on_label="مفعَّل", off_label="معطَّل",
+                       show_label=True, size="md", bare=False) -%}
+{{ toggle_switch_assets() }}
+<label class="tsw{% if size == 'sm' %} tsw--sm{% endif %}{% if bare %} tsw--bare{% endif %}">
+  <input type="checkbox"
+         name="{{ name }}"
+         {% if id %}id="{{ id }}"{% endif %}
+         value="{{ value }}"
+         {% if checked %}checked{% endif %}>
+  <span class="tsw-track"><span class="tsw-thumb"></span></span>
+  {%- if show_label %}
+  <span class="tsw-label" data-on="{{ on_label }}" data-off="{{ off_label }}"></span>
+  {%- endif %}
+</label>
+{%- endmacro %}
