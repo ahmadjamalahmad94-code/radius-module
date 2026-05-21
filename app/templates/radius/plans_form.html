@@ -3,6 +3,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
 {% block title %}{{ title_ar }}{% endblock %}
@@ -260,16 +261,18 @@
         <div class="pl-grid">
           <div class="pl-field"><label>تفعيل التحكم بالسرعة</label>
             <div class="pl-chk"><input type="checkbox" name="speed_control_enabled" id="sc-en" value="1" {% if plan.speed_control_enabled %}checked{% endif %}><label for="sc-en">مفعَّل</label></div></div>
-          <div class="pl-field"><label>سرعة التنزيل (Kbps)</label>
-            <input class="hub-input" type="number" min="0" name="speed_down_kbps" value="{{ plan.speed_down_kbps or 0 }}">
-            <div class="help">1024 = 1 Mbps.</div></div>
-          <div class="pl-field"><label>سرعة الرفع (Kbps)</label>
-            <input class="hub-input" type="number" min="0" name="speed_up_kbps" value="{{ plan.speed_up_kbps or 0 }}"></div>
+          <div class="pl-field"><label>سرعة التنزيل</label>
+            {{ unit_input_picker(name="speed_down_kbps", value=plan.speed_down_kbps or 0, kind="speed") }}
+          </div>
+          <div class="pl-field"><label>سرعة الرفع</label>
+            {{ unit_input_picker(name="speed_up_kbps", value=plan.speed_up_kbps or 0, kind="speed") }}
+          </div>
           <div class="pl-field"><label>سرعة مضمونة CIR للتنزيل</label>
-            <input class="hub-input" type="number" min="0" name="cir_down_kbps" value="{{ plan.cir_down_kbps or 0 }}">
+            {{ unit_input_picker(name="cir_down_kbps", value=plan.cir_down_kbps or 0, kind="speed") }}
             <div class="help">الحد الأدنى عند الازدحام.</div></div>
           <div class="pl-field"><label>سرعة مضمونة CIR للرفع</label>
-            <input class="hub-input" type="number" min="0" name="cir_up_kbps" value="{{ plan.cir_up_kbps or 0 }}"></div>
+            {{ unit_input_picker(name="cir_up_kbps", value=plan.cir_up_kbps or 0, kind="speed") }}
+          </div>
           <div class="pl-field"><label>السرعة المؤقتة (Burst)</label>
             <div class="pl-chk"><input type="checkbox" name="burst_enabled" id="b-en" value="1" {% if plan.burst_enabled %}checked{% endif %}><label for="b-en">مفعَّل</label></div></div>
           <div class="pl-field"><label>غير محدود ليلًا</label>
@@ -299,35 +302,45 @@
       </header>
       <div class="pl-section-body">
         <div class="pl-grid">
-          <div class="pl-field"><label>كوتا إجمالية (MB)</label>
-            <input class="hub-input" type="number" min="0" name="quota_total_mb" value="{{ plan.quota_total_mb or 0 }}"></div>
+          <div class="pl-field"><label>كوتا إجمالية</label>
+            {{ unit_input_picker(name="quota_total_mb", value=plan.quota_total_mb or 0, kind="quota") }}
+          </div>
           <div class="pl-field"><label>سياسة الإعادة</label>
             <select class="hub-select" name="quota_reset_strategy">
               {% for s in ['rolling','monthly','never'] %}<option value="{{ s }}" {% if plan.quota_reset_strategy == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
             </select></div>
-          <div class="pl-field"><label>مدة الجلسة (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="duration_minutes" value="{{ plan.duration_minutes or 0 }}"></div>
+          <div class="pl-field"><label>مدة الجلسة</label>
+            {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time") }}
+          </div>
           <div class="pl-field"><label>صلاحية (أيام)</label>
             <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}"></div>
           <div class="pl-field"><label>كوتا تنزيل شهرية</label>
-            <input class="hub-input" type="number" min="0" name="monthly_download_quota_mb" value="{{ plan.monthly_download_quota_mb or 0 }}"></div>
+            {{ unit_input_picker(name="monthly_download_quota_mb", value=plan.monthly_download_quota_mb or 0, kind="quota") }}
+          </div>
           <div class="pl-field"><label>كوتا رفع شهرية</label>
-            <input class="hub-input" type="number" min="0" name="monthly_upload_quota_mb" value="{{ plan.monthly_upload_quota_mb or 0 }}"></div>
+            {{ unit_input_picker(name="monthly_upload_quota_mb", value=plan.monthly_upload_quota_mb or 0, kind="quota") }}
+          </div>
           <div class="pl-field"><label>كوتا شهرية مدمجة</label>
-            <input class="hub-input" type="number" min="0" name="monthly_combined_quota_mb" value="{{ plan.monthly_combined_quota_mb or 0 }}">
+            {{ unit_input_picker(name="monthly_combined_quota_mb", value=plan.monthly_combined_quota_mb or 0, kind="quota") }}
             <div class="help">تحلّ محل التنزيل+الرفع المنفصلين.</div></div>
           <div class="pl-field"><label>كوتا تنزيل يومية</label>
-            <input class="hub-input" type="number" min="0" name="daily_download_quota_mb" value="{{ plan.daily_download_quota_mb or 0 }}"></div>
+            {{ unit_input_picker(name="daily_download_quota_mb", value=plan.daily_download_quota_mb or 0, kind="quota") }}
+          </div>
           <div class="pl-field"><label>كوتا رفع يومية</label>
-            <input class="hub-input" type="number" min="0" name="daily_upload_quota_mb" value="{{ plan.daily_upload_quota_mb or 0 }}"></div>
+            {{ unit_input_picker(name="daily_upload_quota_mb", value=plan.daily_upload_quota_mb or 0, kind="quota") }}
+          </div>
           <div class="pl-field"><label>كوتا يومية مدمجة</label>
-            <input class="hub-input" type="number" min="0" name="daily_combined_quota_mb" value="{{ plan.daily_combined_quota_mb or 0 }}"></div>
-          <div class="pl-field"><label>حد يومي (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="max_daily_minutes" value="{{ plan.max_daily_minutes or 0 }}"></div>
-          <div class="pl-field"><label>حد أسبوعي (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="max_weekly_minutes" value="{{ plan.max_weekly_minutes or 0 }}"></div>
-          <div class="pl-field"><label>حد شهري (دقيقة)</label>
-            <input class="hub-input" type="number" min="0" name="max_monthly_minutes" value="{{ plan.max_monthly_minutes or 0 }}"></div>
+            {{ unit_input_picker(name="daily_combined_quota_mb", value=plan.daily_combined_quota_mb or 0, kind="quota") }}
+          </div>
+          <div class="pl-field"><label>حد يومي</label>
+            {{ unit_input_picker(name="max_daily_minutes", value=plan.max_daily_minutes or 0, kind="time") }}
+          </div>
+          <div class="pl-field"><label>حد أسبوعي</label>
+            {{ unit_input_picker(name="max_weekly_minutes", value=plan.max_weekly_minutes or 0, kind="time") }}
+          </div>
+          <div class="pl-field"><label>حد شهري</label>
+            {{ unit_input_picker(name="max_monthly_minutes", value=plan.max_monthly_minutes or 0, kind="time") }}
+          </div>
           <div class="pl-field"><label>مدة الجلسة (ث)</label>
             <input class="hub-input" type="number" min="0" name="session_timeout_sec" value="{{ plan.session_timeout_sec or 0 }}"></div>
           <div class="pl-field"><label>مهلة الخمول (ث)</label>

@@ -1509,6 +1509,99 @@ every save. This keeps old callers / reports working.
 
 ---
 
+## 18. Unit input picker — "value + unit" form control
+
+**What it does.** A reusable Jinja macro that renders a number input
+next to a unit dropdown, so the operator can type a value in whichever
+unit makes sense (Mbps instead of 5120 Kbps, GB instead of 1024 MB,
+ساعات instead of 60 دقائق). The submitted column name + value still
+uses the canonical base unit — zero DB/schema impact.
+
+### 18.1 Helpers (`core/units.py`)
+
+Single registry of "kinds" with their unit ladder and ratios to base:
+
+| Kind   | Base | Ladder                              |
+|--------|------|-------------------------------------|
+| speed  | kbps | kbps → Mbps (×1024) → Gbps (×1024²) |
+| quota  | MB   | MB → GB (×1024) → TB (×1024²)        |
+| time   | min  | min → hr (×60) → day (×1440) → month (×43200) |
+| size   | KB   | KB → MB (×1024) → GB (×1024²)        |
+
+Functions:
+
+  - `to_base(value, unit, kind)` → int (in base unit)
+  - `from_base(base, unit, kind)` → float
+  - `best_unit(base, kind)` → str (largest unit that divides cleanly;
+    5120 speed → "Mbps", 5121 → "kbps")
+  - `format_pair(base, kind)` → (display_value, unit_code)
+  - `format_human(base, kind)` → "5 Mbps" / "2 ساعات"
+
+13 pytest cases cover roundtrip, clean-division edge cases, zero,
+Arabic time labels, error handling.
+
+### 18.2 Macro (`_partials/unit_input.html`)
+
+```jinja
+{% from "_partials/unit_input.html" import unit_input_picker %}
+{{ unit_input_picker(name="download_speed_kbps",
+                     value=sub.download_speed_kbps or 0,
+                     kind="speed") }}
+```
+
+What it renders:
+
+  - One container: `[ number input ][ unit dropdown ]`
+  - Plus a hidden field named after the form column, value in base.
+  - Server-side initial render picks the best display unit via the
+    same logic as `core.units.best_unit()`.
+  - JS keeps the hidden field in lock-step on every input/blur, and
+    on dropdown change recomputes the displayed value from the
+    stored base so the underlying value never drifts.
+
+UI_LABELS + UI_RATIOS Jinja dicts mirror the Python `KINDS` exactly;
+if you change one, change the other.
+
+### 18.3 Integration sites (today)
+
+| Form | Kind | Fields |
+|---|---|---|
+| `users_form` | speed | `download_speed_kbps`, `upload_speed_kbps` |
+| `users_form` | quota | `download_quota_mb`, `upload_quota_mb`, `combined_quota_mb` |
+| `users_form` | time  | `total_connection_time_min`, `daily_connection_time_min` |
+| `plans_form` | speed | `speed_down_kbps`, `speed_up_kbps`, `cir_down_kbps`, `cir_up_kbps` |
+| `plans_form` | quota | `quota_total_mb`, `monthly_*_quota_mb`, `daily_*_quota_mb` (6 fields) |
+| `plans_form` | time  | `duration_minutes`, `max_daily_minutes`, `max_weekly_minutes`, `max_monthly_minutes` |
+
+Zero column rename, zero `_form_dto` change, zero migration. Forms
+submit the same names with the same base-unit numbers; the picker is
+purely a display layer.
+
+### 18.4 Edge cases
+
+- **Server initial value is `0`**: picker shows `0` in the smallest
+  unit (kbps / MB / min). The dropdown defaults to the base unit.
+- **Server value doesn't divide cleanly**: e.g. 5121 kbps → stays as
+  `5121 Kbps` (server-side `best_unit` returns `kbps`). The operator
+  can flip the dropdown manually to `Mbps` and the displayed value
+  becomes `5.001` — still stores 5121.
+- **Negative numbers**: input has `min="0"`. Form-side validation in
+  the existing `_form_dto` still applies.
+- **Fractional MBPS**: JS uses `Math.round(value * ratio)` so 0.5
+  Mbps → 512 kbps. `core.units.to_base` does the same via Python.
+
+### 18.5 Reusable in
+
+- Card batch generation form (per-card quota / time)
+- Bandwidth schedules (speed)
+- Any future numeric form field where the operator thinks in a
+  bigger unit than the DB base unit.
+
+The component is namespaced `.ui-*` to avoid collision with other
+form classes (`.uf-*`, `.acs-*`, `.hub-*`).
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
