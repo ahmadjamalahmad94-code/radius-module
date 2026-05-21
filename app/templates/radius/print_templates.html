@@ -1,6 +1,7 @@
 {# Print templates — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}قوالب طباعة الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
@@ -62,7 +63,7 @@
 
 {{ hub.hero(
   "قوالب طباعة الكروت",
-  subtitle="حفظ تخطيط الطباعة ومعاينة بصرية حقيقية — بدون تصدير PDF نهائي بعد",
+  subtitle="حفظ تخطيط الطباعة ومعاينة بصرية حقيقية مع تصدير PDF فعلي لنموذج القالب",
   icon="print"
 ) }}
 
@@ -71,7 +72,7 @@
             background:var(--hub-amber-soft);color:var(--hub-amber-ink);line-height:1.8">
   <i class="fa-solid fa-circle-info"></i>
   هذه المرحلة تحفظ قوالب الطباعة وتعرض معاينة بصرية للمواضع والألوان.
-  <strong>لا يتم إنشاء PDF أو ملف طباعة نهائي الآن</strong>، حتى لا تظهر الميزة كأنها مكتملة أكثر من وضعها الحقيقي.
+  <strong>تصدير PDF الآن ينشئ ملفًا حقيقيًا لنموذج القالب</strong> للفحص قبل ربطه بملف بطاقات حقيقي.
 </div>
 
 {% if preview %}
@@ -209,8 +210,7 @@
       </div>
 
       <div class="pt-chk">
-        <input type="checkbox" name="show_qr" id="pt-qr" value="1" checked>
-        <label for="pt-qr" style="margin:0">إظهار QR على الكرت</label>
+        {{ toggle_switch(name="show_qr", checked=True, value="1", id="pt-qr", on_label="إظهار QR على الكرت", off_label="بدون QR") }}
       </div>
 
       <button class="hub-btn hub-btn--primary" type="submit">
@@ -254,7 +254,7 @@
                     {{ hub.pill("بدون QR", variant="grey", dot=False) }}
                   {% endif %}
                   <div class="small hub-text-mute" style="margin-top:3px">
-                    <i class="fa-solid fa-circle-info"></i> PDF renderer غير مضاف بعد
+                    <i class="fa-solid fa-circle-info"></i> PDF renderer فعّال لنموذج القالب
                   </div>
                 </td>
                 <td>
@@ -264,6 +264,11 @@
                       <i class="fa-solid fa-eye"></i> معاينة بصرية
                     </button>
                   </form>
+                  <a class="hub-btn hub-btn--primary hub-btn--sm"
+                     href="{{ url_for('radius.print_templates_export_pdf', template_id=item.get('id')) }}"
+                     style="margin-top:6px">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                  </a>
                 </td>
               </tr>
               {% endfor %}

@@ -4,6 +4,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {%- set is_new = (group is none) -%}
 {%- set title_ar = "إضافة مجموعة مشتركين" if is_new else ("تعديل: " + group.name) -%}
@@ -118,11 +119,7 @@
     <div class="hub-form-row" style="margin-top: var(--hub-gap-md)">
       <div class="sgf-field">
         <label>التجديد التلقائي</label>
-        <label class="sgf-switch">
-          <input type="checkbox" name="default_auto_renewal" value="1"
-            {% if not group or group.default_auto_renewal %}checked{% endif %}>
-          <span>تفعيل التجديد التلقائي افتراضيًا للأعضاء</span>
-        </label>
+        {{ toggle_switch(name="default_auto_renewal", checked=(not group or group.default_auto_renewal), value="1", on_label="تفعيل التجديد التلقائي افتراضيًا للأعضاء", off_label="بدون تجديد تلقائي") }}
       </div>
 
       <div class="sgf-field" style="grid-column: 1 / -1">

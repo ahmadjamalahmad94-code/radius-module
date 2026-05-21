@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 {% set ttl = "إضافة مجموعة" if is_new else "تعديل مجموعة" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
@@ -34,10 +35,7 @@
         <div class="field"><input type="number" name="max_members" min="0"
           value="{{ item.max_members if item else 0 }}"></div></div>
       <div class="form-row"><label>الحالة</label>
-        <div class="field"><label class="toggle">
-          <input type="checkbox" name="enabled" value="1" {% if (not item) or item.enabled %}checked{% endif %}>
-          <span class="track"><span class="lbl-on">نعم</span><span class="lbl-off">لا</span></span>
-        </label></div></div>
+        <div class="field">{{ toggle_switch(name="enabled", checked=((not item) or item.enabled), value="1", on_label="نعم", off_label="لا") }}</div></div>
     </div>
   </div>
   <div class="actions-bar">
