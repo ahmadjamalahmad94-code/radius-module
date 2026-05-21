@@ -477,15 +477,73 @@
      help + bulk buttons all live in .uf-sub-head--sched above now. */
   .uf-section--speed .sr2-panel > .sr2-head{ display: none; }
 
-  /* Bulk-action cluster inside the scheduled sub-header — sits between
-     the master toggle and the help text, compact ghost buttons. */
+  /* Bulk-action cluster inside the scheduled sub-header. Two pill
+     buttons with color differentiation (green = ON, red = OFF) and
+     a satisfying hover/active animation so the operator feels the
+     bulk action land. */
   .uf-sub-head--sched .uf-sub-bulk{
-    display: inline-flex; gap: 4px;
+    display: inline-flex; gap: 6px;
   }
-  .uf-sub-head--sched .uf-sub-bulk .hub-btn{
-    padding: 4px 10px;
-    font-size: 12px;
-    min-height: 30px;
+  .uf-bulk-btn{
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px;
+    font-size: 12px; font-weight: 800;
+    font-family: inherit;
+    border-radius: 999px;
+    cursor: pointer;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(20, 18, 50, .04);
+    transition: background var(--hub-anim-fast) var(--hub-ease),
+                border-color var(--hub-anim-fast) var(--hub-ease),
+                color var(--hub-anim-fast) var(--hub-ease),
+                box-shadow var(--hub-anim-fast) var(--hub-ease),
+                transform var(--hub-anim-fast) var(--hub-ease);
+    user-select: none;
+  }
+  .uf-bulk-btn:focus-visible{ outline: none; }
+  .uf-bulk-btn i{
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-bulk-btn:active{ transform: translateY(1px) scale(.97); }
+
+  /* ON variant — emerald/green. Idle: thin tint; hover: filled; active
+     click: a punch ring. */
+  .uf-bulk-btn--on{
+    color: #047857;                            /* emerald-700 */
+    border: 1px solid #a7f3d0;                  /* emerald-200 */
+    background: #ecfdf5;                        /* emerald-50  */
+  }
+  .uf-bulk-btn--on:hover{
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, .35);
+  }
+  .uf-bulk-btn--on:hover i{ transform: scale(1.15) rotate(-6deg); }
+
+  /* OFF variant — coral/red, mirrored animation. */
+  .uf-bulk-btn--off{
+    color: #be123c;                            /* rose-700  */
+    border: 1px solid #fecdd3;                  /* rose-200  */
+    background: #fff1f2;                        /* rose-50   */
+  }
+  .uf-bulk-btn--off:hover{
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(244, 63, 94, .35);
+  }
+  .uf-bulk-btn--off:hover i{ transform: scale(1.15) rotate(6deg); }
+
+  /* Brief flash on the BUTTON when it actually fires (.is-firing
+     added/removed by the JS click handler). */
+  .uf-bulk-btn.is-firing{
+    animation: uf-bulk-pulse .55s ease-out;
+  }
+  @keyframes uf-bulk-pulse{
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(107, 90, 237, .12); }
+    100% { transform: scale(1); box-shadow: 0 1px 3px rgba(20, 18, 50, .04); }
   }
 </style>
 {% endblock %}
@@ -750,13 +808,15 @@
              let the rest of the form keep its in-progress state. The
              actual persistence happens at the main «حفظ» click. #}
           <span class="uf-sub-bulk">
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
+            <button class="uf-bulk-btn uf-bulk-btn--on" type="button"
                     data-bulk="enable" title="تفعيل كل القواعد">
-              <i class="fa-solid fa-toggle-on"></i> فعّل
+              <i class="fa-solid fa-toggle-on"></i>
+              <span>فعّل الكل</span>
             </button>
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
+            <button class="uf-bulk-btn uf-bulk-btn--off" type="button"
                     data-bulk="disable" title="تعطيل كل القواعد">
-              <i class="fa-solid fa-toggle-off"></i> عطّل
+              <i class="fa-solid fa-toggle-off"></i>
+              <span>عطّل الكل</span>
             </button>
           </span>
           <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة</span>
@@ -839,7 +899,8 @@
           // Bulk-action buttons (data-bulk=enable / data-bulk=disable):
           // flip every existing rule's «enabled» checkbox in place. No
           // network roundtrip, no reload — the new states are sent with
-          // the main form when the user clicks «حفظ».
+          // the main form when the user clicks «حفظ». A short
+          // .is-firing pulse on the button confirms the action landed.
           document.querySelectorAll('[data-bulk]').forEach(function(btn){
             btn.addEventListener('click', function(){
               var on = btn.getAttribute('data-bulk') === 'enable';
@@ -849,6 +910,10 @@
                 if (on) makeExclusive(sched);
               }
               syncMaster();
+              btn.classList.remove('is-firing');
+              // force reflow so the animation restarts on repeated clicks
+              void btn.offsetWidth;
+              btn.classList.add('is-firing');
             });
           });
           syncMaster();
