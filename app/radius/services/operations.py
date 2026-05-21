@@ -264,8 +264,12 @@ class OperationsService:
             "notes": (data.get("notes") or "")[:500],
             "metadata": data.get("metadata") or {},
         }
-        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]):
-            raise RadiusValidationError("speed_down_kbps or speed_up_kbps is required")
+        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]) \
+                and normalized["restore_mode"] != "disconnect":
+            raise RadiusValidationError(
+                "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
+                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
+            )
         saved = operations_repo.create_bandwidth_schedule(
             tenant_id, normalized, actor=actor
         )
@@ -324,8 +328,12 @@ class OperationsService:
             "enabled": bool(data.get("enabled", True)),
             "notes": (data.get("notes") or "")[:500],
         }
-        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]):
-            raise RadiusValidationError("speed_down_kbps or speed_up_kbps is required")
+        if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]) \
+                and normalized["restore_mode"] != "disconnect":
+            raise RadiusValidationError(
+                "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
+                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
+            )
         saved = operations_repo.update_bandwidth_schedule(tenant_id, schedule_id, normalized)
         self._audit.record(
             actor=actor,
