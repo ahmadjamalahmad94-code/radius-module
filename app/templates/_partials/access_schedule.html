@@ -216,6 +216,101 @@
     box-shadow: 0 2px 6px rgba(107,90,237,.25);
   }
 
+  /* ─── Window editor (two equal pickers + اعتماد) ───────────── */
+  .acs-window-editor{
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  @media (max-width: 720px){
+    .acs-window-editor{
+      grid-template-columns: 1fr;
+    }
+    .acs-window-editor .acs-window-sep{ display: none; }
+  }
+  .acs-window-editor .acs-window-sep{
+    align-self: center;
+    color: var(--hub-brand-ink); font-size: 16px;
+    padding-top: 26px;     /* line up with the trigger box, not the label */
+  }
+  .acs-window-confirm{
+    align-self: end;
+    border: 0;
+    padding: 9px 16px;
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff;
+    border-radius: var(--hub-r-md);
+    font-family: inherit; font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    box-shadow: 0 4px 12px rgba(107, 90, 237, .25);
+    transition: transform var(--hub-anim-fast) var(--hub-ease),
+                box-shadow var(--hub-anim-fast) var(--hub-ease),
+                filter var(--hub-anim-fast) var(--hub-ease);
+    height: 42px; box-sizing: border-box;
+  }
+  .acs-window-confirm:hover{ filter: brightness(1.05); }
+  .acs-window-confirm:active{ transform: translateY(1px); }
+
+  /* ─── Window summary (collapsed view after اعتماد) ─────────── */
+  .acs-window-summary{
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 6px 4px;
+  }
+  .acs-window-sum-text{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--hub-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .acs-window-sum-text i{ color: var(--hub-brand-ink); }
+  .acs-window-sum-text strong{
+    font-weight: 800;
+    padding: 4px 10px;
+    background: var(--hub-brand-soft);
+    border-radius: 999px;
+    color: var(--hub-brand-ink);
+  }
+  .acs-window-sum-duration{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--hub-text-soft);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.04);
+  }
+  .acs-window-spacer{ flex: 1; }
+  .acs-window-edit, .acs-window-del{
+    border: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: inherit; font-size: 12px; font-weight: 800;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .acs-window-edit{
+    background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+  }
+  .acs-window-edit:hover{
+    background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-ink));
+    color: #fff; box-shadow: 0 4px 12px rgba(107, 90, 237, .3);
+  }
+  .acs-window-del{
+    background: rgba(244, 63, 94, .08); color: #be123c;
+  }
+  .acs-window-del:hover{
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    color: #fff; box-shadow: 0 4px 10px rgba(244, 63, 94, .3);
+  }
+
+  /* Shake hint when اعتماد is clicked with empty values. */
+  .acs-window.is-shake{ animation: acs-shake .4s ease-in-out; }
+  @keyframes acs-shake{
+    0%, 100%{ transform: translateX(0); }
+    25%     { transform: translateX(-4px); }
+    75%     { transform: translateX(4px); }
+  }
+
   /* ─── Time picker — canonical circular trigger + quick chips ─
      The stepper / AM-PM toggle / numeric inputs were retired in favor
      of the analog clock pop-up (time_picker_circular). What remains
@@ -521,20 +616,10 @@
       render();
     });
 
-    // Per-picker quick-pick chips (still useful for one-tap presets).
-    const quick = document.createElement("div");
-    quick.className = "acs-time-quick";
+    // Quick-pick chips were retired here per user feedback («بدون
+     الفترات الجاهزة للاختيار»). One-tap presets live elsewhere if
+     ever needed.
     const quickBtns = [];
-    TIME_PRESETS.forEach(p => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "acs-time-chip";
-      b.dataset.value = p.value;
-      b.textContent = p.label;
-      b.addEventListener("click", () => wrap.setValue(p.value));
-      quick.appendChild(b);
-      quickBtns.push(b);
-    });
-    wrap.appendChild(quick);
 
     function fmtDisplay(v){
       if (!v || !/^\d{1,2}:\d{2}$/.test(v)) return "--:--";
@@ -579,65 +664,121 @@
     return wrap;
   }
 
-  /* Build a single window card. Layout:
-       Row 1: [from picker]  →  [to picker]
-       Row 2: ⏱ المدة: ...     |  [🌅 الصباح] [☀️ الظهر] ... presets */
+  /* Build a single window card with two visual states:
+       1. editor  → two equal-sized time pickers + اعتماد button.
+       2. summary → compact «من … ← … | ⏱ المدة» + تعديل + حذف.
+     New windows (no preset from/to) start in editor; loaded windows
+     start in summary so the operator immediately sees the saved value. */
   function makeWindow(state, onRemove, onChange){
     const card = document.createElement("div");
     card.className = "acs-window";
 
-    const rm = document.createElement("button");
-    rm.type = "button"; rm.className = "acs-window-rm";
-    rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    rm.title = "حذف الفترة";
-    rm.addEventListener("click", onRemove);
-    card.appendChild(rm);
-
-    // ── Row 1: pickers side-by-side (each holds its own vertical chips)
-    const row = document.createElement("div");
-    row.className = "acs-window-row";
     const fromPicker = makeTimePicker("من", state.from || "");
-    // Flag the "من" picker so its CSS flips chips to the far side.
-    fromPicker.classList.add("acs-time--from");
+    const toPicker   = makeTimePicker("إلى", state.to   || "");
+
+    // ── EDITOR view ────────────────────────────────────────────
+    const editor = document.createElement("div");
+    editor.className = "acs-window-editor";
     const sep = document.createElement("span");
     sep.className = "acs-window-sep";
     sep.innerHTML = '<i class="fa-solid fa-arrow-left-long"></i>';
-    const toPicker = makeTimePicker("إلى", state.to || "");
-    row.appendChild(fromPicker);
-    row.appendChild(sep);
-    row.appendChild(toPicker);
-    card.appendChild(row);
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.className = "acs-window-confirm";
+    confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> اعتماد';
+    editor.appendChild(fromPicker);
+    editor.appendChild(sep);
+    editor.appendChild(toPicker);
+    editor.appendChild(confirmBtn);
 
-    // ── Row 2: duration text only ─────────────────────────────
-    const meta = document.createElement("div");
-    meta.className = "acs-window-meta";
-    const dur = document.createElement("span");
-    dur.className = "acs-duration";
-    meta.appendChild(dur);
-    card.appendChild(meta);
+    // ── SUMMARY view ───────────────────────────────────────────
+    const summary = document.createElement("div");
+    summary.className = "acs-window-summary";
+    const sumText = document.createElement("span");
+    sumText.className = "acs-window-sum-text";
+    const sumDur = document.createElement("span");
+    sumDur.className = "acs-window-sum-duration";
+    const editBtn = document.createElement("button");
+    editBtn.type = "button"; editBtn.className = "acs-window-edit";
+    editBtn.innerHTML = '<i class="fa-solid fa-pen"></i> تعديل';
+    const delBtn = document.createElement("button");
+    delBtn.type = "button"; delBtn.className = "acs-window-del";
+    delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> حذف';
+    summary.appendChild(sumText);
+    summary.appendChild(sumDur);
+    summary.appendChild(document.createElement("span")).className = "acs-window-spacer";
+    summary.appendChild(editBtn);
+    summary.appendChild(delBtn);
 
+    card.appendChild(editor);
+    card.appendChild(summary);
+
+    // ── State management ──────────────────────────────────────
+    function fmt12(v){
+      if (!v || !/^\d{1,2}:\d{2}$/.test(v)) return "--:--";
+      const [h, m] = v.split(":").map(Number);
+      const mm = pad2(m);
+      if (h === 0)   return "12:" + mm + " ص";
+      if (h < 12)    return pad2(h) + ":" + mm + " ص";
+      if (h === 12)  return "12:" + mm + " م";
+      return pad2(h - 12) + ":" + mm + " م";
+    }
     function fmtDuration(from, to){
       if (!from || !to) return "";
       const [fh, fm] = from.split(":").map(x => parseInt(x, 10));
       const [th, tm] = to.split(":").map(x => parseInt(x, 10));
       let mins = (th * 60 + tm) - (fh * 60 + fm);
-      if (mins <= 0) mins += 24 * 60;   // cross-midnight
+      if (mins <= 0) mins += 24 * 60;
       if (mins === 24 * 60) return "24 ساعة";
       const h = Math.floor(mins / 60), m = mins % 60;
       if (h && m) return `${h}س ${m}د`;
       if (h)      return `${h} ${h === 1 ? "ساعة" : (h === 2 ? "ساعتان" : "ساعات")}`;
       return `${m} دقيقة`;
     }
-    function refreshDuration(){
+    function refreshSummary(){
       const f = fromPicker.readValue(), t = toPicker.readValue();
-      const txt = fmtDuration(f, t);
-      dur.innerHTML = txt ? `<i class="fa-solid fa-stopwatch"></i> المدة: ${txt}` : "";
+      sumText.innerHTML =
+        '<i class="fa-regular fa-clock"></i> ' +
+        '<strong>' + fmt12(f) + '</strong> ← ' +
+        '<strong>' + fmt12(t) + '</strong>';
+      const d = fmtDuration(f, t);
+      sumDur.innerHTML = d ? '<i class="fa-solid fa-stopwatch"></i> ' + d : '';
+    }
+    function setMode(mode){
+      card.classList.toggle("is-editing", mode === "editor");
+      card.classList.toggle("is-summary", mode === "summary");
+      editor.hidden  = mode !== "editor";
+      summary.hidden = mode !== "summary";
+      if (mode === "summary") refreshSummary();
     }
 
-    const composed = () => { refreshDuration(); onChange(); };
+    confirmBtn.addEventListener("click", () => {
+      const f = fromPicker.readValue(), t = toPicker.readValue();
+      if (!f || !t){
+        // Tiny inline toast — uses the existing uf-toast hook if the host
+        // page provides one, otherwise falls back to a card-shake.
+        if (typeof window.acsToast === "function"){
+          window.acsToast("اختاري وقت البداية والنهاية", "error");
+        }
+        card.classList.remove("is-shake");
+        void card.offsetWidth;
+        card.classList.add("is-shake");
+        return;
+      }
+      setMode("summary");
+    });
+    editBtn.addEventListener("click", () => setMode("editor"));
+    delBtn .addEventListener("click", onRemove);
+
+    // Continuous sync — values flow to JSON as they change. The
+    // editor/summary toggle is purely a UI layer.
+    const composed = () => { refreshSummary(); onChange(); };
     fromPicker.bindSync(composed);
     toPicker.bindSync(composed);
-    refreshDuration();
+
+    // Initial mode: summary when both values are pre-loaded; editor for
+    // a fresh, empty window.
+    setMode((state.from && state.to) ? "summary" : "editor");
 
     card.readValue = function(){
       return { from: fromPicker.readValue(), to: toPicker.readValue() };
