@@ -683,8 +683,13 @@
       </header>
       <div class="uf-section-body">
 
-        {# Row A: download + upload + «سرعة مخصصة» toggle. #}
+        {# Row A: «سرعة مخصصة» toggle (now first → renders on the row's
+           visual RIGHT in RTL per user feedback) + download + upload. #}
         <div class="uf-row3">
+          <div class="uf-field">
+            <label>سرعة مخصصة</label>
+            {{ toggle_switch(name="custom_speed", checked=sub.custom_speed, id="cs") }}
+          </div>
           <div class="uf-field">
             <label>سرعة التنزيل</label>
             {{ unit_input_picker(name="download_speed_kbps", value=sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
@@ -694,10 +699,6 @@
             <label>سرعة الرفع</label>
             {{ unit_input_picker(name="upload_speed_kbps", value=sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
             <div class="help">0 = استخدم قيمة الباقة.</div>
-          </div>
-          <div class="uf-field">
-            <label>سرعة مخصصة</label>
-            {{ toggle_switch(name="custom_speed", checked=sub.custom_speed, id="cs") }}
           </div>
         </div>
 
