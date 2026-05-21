@@ -178,24 +178,26 @@
   .acs-duration i{ font-size: 11px; }
   .acs-duration:empty{ visibility: hidden; }
 
-  /* Per-picker vertical quick chips (6 stacked) */
+  /* Per-picker quick chips — 3-column × 2-row grid that sits to the
+     side of the stepper (next to it, not below). */
   .acs-time-quick{
-    display: flex; flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(64px, auto));
     gap: 4px;
-    align-self: stretch;
-    margin-top: 4px;
+    align-self: center;
   }
   .acs-time-chip{
     background: #fff; border: 1px solid var(--hub-border);
     border-radius: 8px;
-    padding: 5px 10px;
-    font-size: 11.5px; font-weight: 700;
+    padding: 5px 8px;
+    font-size: 11px; font-weight: 700;
     color: var(--hub-text-soft);
     cursor: pointer;
     transition: all var(--hub-anim-fast) var(--hub-ease);
     font-family: inherit;
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.3;
+    white-space: nowrap;
   }
   .acs-time-chip:hover{
     background: var(--hub-brand-soft);
@@ -210,11 +212,18 @@
   }
 
   /* ─── Time picker (stepper + quick chips) — compact ────────── */
+  /* Two-cell grid: label spans both rows on top, then [stepper] [chips]
+     sit side-by-side underneath. Chips form a 3-column × 2-row inner
+     grid (six total). */
   .acs-time{
-    display: flex; flex-direction: column; gap: 5px;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 5px 10px;
+    align-items: center;
     min-width: 0;
   }
   .acs-time-label{
+    grid-column: 1 / -1;
     font-size: 11px; font-weight: 800; color: var(--hub-text-soft);
     display: flex; align-items: center; gap: 5px;
   }
