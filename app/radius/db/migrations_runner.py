@@ -19,6 +19,13 @@ _MIGRATION_ALIASES = {
         "020_core_soft_delete.sql",
         "021_financial_report_snapshots.sql",
     ),
+    # Lifecycle retention was first applied with a 027 prefix on some dev
+    # DBs, then renamed to 028 once subscriber_groups took the 027 slot.
+    # Treat the old name as covering the new file too, so the runner doesn't
+    # try to re-apply it and hit "duplicate column source_type".
+    "027_lifecycle_retention.sql": (
+        "028_lifecycle_retention.sql",
+    ),
 }
 
 
