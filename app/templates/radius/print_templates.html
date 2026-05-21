@@ -40,18 +40,28 @@
   .pr-preset .sw{height:34px;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.4)}
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
   .pr-stage{position:sticky;top:92px}
-  /* The designer canvas now caps the card at ~50 % of a comfortable
-     editing area in BOTH directions. Without the max-height, switching
-     to vertical (3:5) lets the card grow to 866 px tall, the text
-     stays tiny, and the user has to scroll to see the whole card.
-     With these caps:
-       landscape (5:3): ~360 × 216 px
-       portrait  (3:5): ~216 × 360 px
-     — both visible without scrolling, font-size still scales via
-     `font-size:3.5cqw`. */
-  .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:420px;display:grid;place-items:center}
-  .pr-canvas-wrap .pr-card-preview{width:min(100%,360px);max-height:46vh;height:auto}
-  .pr-canvas-wrap .pr-card-preview.is-vertical{width:auto;max-width:60%;max-height:50vh;height:50vh}
+  /* Designer canvas size policy
+     ────────────────────────────
+     The card must stay READABLE in both orientations. Earlier we
+     constrained portrait by height (`height:50vh; width:auto`) which
+     made the browser solve `width = height * 3/5` and pushed the
+     card down to ~210 × 350 — the text width became unusable and
+     every label truncated to its first letter ("H…", "USE…",
+     "PAS…", "Q").
+
+     Fix: control the WIDTH only, in both orientations, and let
+     `aspect-ratio` derive the height naturally. The canvas-wrap is
+     tall enough to fit either shape without scrolling.
+
+       landscape (5:3): width ≤ 380 px → ~380 × 228 px
+       portrait  (3:5): width ≤ 300 px → ~300 × 500 px
+
+     Font-size still tracks each card's own width via
+     `font-size:3.5cqw`, so brand / title / pills auto-scale and the
+     whole composition stays one locked block. */
+  .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:560px;display:grid;place-items:center}
+  .pr-canvas-wrap .pr-card-preview{width:min(85%,380px);max-height:none;height:auto}
+  .pr-canvas-wrap .pr-card-preview.is-vertical{width:min(55%,300px)}
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
