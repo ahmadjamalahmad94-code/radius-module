@@ -1388,6 +1388,10 @@ still renders.
 
 ## 17. Access-schedule picker — reusable day/time window block
 
+> 🟢 **STATUS: CANONICAL** (2026-05-21). This is the approved block
+> for every day/time window in the project. Do NOT roll a new picker
+> from scratch. Extend this partial if a new requirement appears.
+
 **What it does.** One Jinja macro that hosts a premium-looking
 day/time picker for the «when can this account connect» concept.
 Lives on three sites today (subscriber, subscriber-group, plan) and
@@ -1510,6 +1514,11 @@ every save. This keeps old callers / reports working.
 ---
 
 ## 18. Unit input picker — "value + unit" form control
+
+> 🟢 **STATUS: CANONICAL** (2026-05-21). This is the approved block
+> for every "number + unit" field (speed, quota, time, size). Do NOT
+> add a bare `<input type="number">` for these — use the picker so the
+> operator can think in Mbps / GB / ساعات instead of Kbps / MB / دقائق.
 
 **What it does.** A reusable Jinja macro that renders a number input
 next to a unit dropdown, so the operator can type a value in whichever
