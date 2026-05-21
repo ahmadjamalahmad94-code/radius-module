@@ -333,6 +333,46 @@
   .uf-row3 .ui-wrap .ui-value{ padding-block: 0; height: 100%; }
   .uf-row3 .ui-wrap .ui-unit { padding-block: 0; height: 100%; }
 
+  /* Pending-rule badge + visual variant on the inline rule card,
+     and the floating toast popup for inline validation feedback. */
+  .sr2-rule--pending{ border-inline-start: 4px solid #f59e0b !important; }
+  .sr2-rule--pending{ background: linear-gradient(90deg, #fffbeb 0%, #fff 18%) !important; }
+  .sr2-pending-badge{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: #fef3c7; color: #92400e;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 800;
+  }
+  .uf-toast-root{
+    position: fixed; bottom: 24px; inset-inline-start: 24px;
+    z-index: 99999;
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: none;
+  }
+  .uf-toast{
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    border-radius: var(--hub-r-md);
+    background: #fff;
+    color: var(--hub-text);
+    font-size: 13px; font-weight: 700;
+    box-shadow: 0 12px 32px rgba(20, 18, 50, .18),
+                0 2px 6px rgba(20, 18, 50, .08);
+    opacity: 0; transform: translateX(-12px);
+    transition: opacity .22s ease, transform .22s ease;
+    pointer-events: auto;
+    direction: rtl;
+    min-width: 240px;
+  }
+  .uf-toast.is-shown{ opacity: 1; transform: translateX(0); }
+  .uf-toast i{ font-size: 16px; }
+  .uf-toast--ok    { border-inline-start: 4px solid #10b981; }
+  .uf-toast--ok i  { color: #10b981; }
+  .uf-toast--error { border-inline-start: 4px solid #f43f5e; }
+  .uf-toast--error i{ color: #f43f5e; }
+
   /* «Rich» hero bar — the section header carries an extra mini-tag,
      a master toggle, and a help line so the whole sub-section reads as
      one cohesive row at the top of the section. Used by uf-section--speed. */
@@ -735,7 +775,7 @@
          - 2B: قواعد السرعة المجدولة (bandwidth_schedules — cookbook §19)
        Both live inside ONE collapsible card so the operator sees the
        complete speed picture in one place. #}
-    <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed">
+    <section class="uf-section uf-section--speed is-collapsible is-collapsed" data-sec="speed" id="uf-speed" data-defer-add="true">
       {# Hero bar — no more master toggle. The «bandwidth_control_enabled»
          field is now an INVISIBLE hidden input whose value is derived by
          JS from the three inner controls (custom_speed / temporary_speed
@@ -895,6 +935,206 @@
             if (nowAny) makeExclusive(sched || e.target);
             syncMaster();
           });
+
+          // ── Toast (floating popup) for inline validation feedback. ──
+          var toastRoot;
+          function ensureToastRoot(){
+            if (toastRoot) return toastRoot;
+            toastRoot = document.createElement('div');
+            toastRoot.className = 'uf-toast-root';
+            document.body.appendChild(toastRoot);
+            return toastRoot;
+          }
+          function toast(msg, kind){
+            ensureToastRoot();
+            var el = document.createElement('div');
+            el.className = 'uf-toast uf-toast--' + (kind || 'ok');
+            el.innerHTML = (kind === 'error'
+              ? '<i class="fa-solid fa-circle-exclamation"></i>'
+              : '<i class="fa-solid fa-circle-check"></i>')
+              + '<span>' + msg + '</span>';
+            toastRoot.appendChild(el);
+            // animate in
+            requestAnimationFrame(function(){ el.classList.add('is-shown'); });
+            setTimeout(function(){
+              el.classList.remove('is-shown');
+              setTimeout(function(){ el.remove(); }, 250);
+            }, 3200);
+          }
+
+          // ── «اعتماد القاعدة» + «نسخ من جدول محفوظ» — JS-only inside
+          //    the speed section. Builds a pending hidden block whose
+          //    fields backend reads on main save (sr_new_<n>_*). #}
+          var pendingIdx = 0;
+          var hostSection = document.querySelector('[data-defer-add="true"]');
+          if (hostSection){
+            var presetsEl = hostSection.querySelector('[data-sr-presets]');
+            var presets = [];
+            try { presets = presetsEl ? JSON.parse(presetsEl.textContent) : []; } catch(_){ }
+
+            function addCardField(name){
+              return hostSection.querySelector('[name="' + name + '"]');
+            }
+            function fmtKbpsHuman(v){
+              var n = parseInt(v, 10) || 0;
+              if (n >= 1024 && n % 1024 === 0) return (n / 1024) + ' Mbps';
+              if (n >= 1024) return (n / 1024).toFixed(1) + ' Mbps';
+              return n + ' Kbps';
+            }
+            function readAddCard(){
+              var dayInputs = Array.from(hostSection.querySelectorAll(
+                '.sr2-add input[type="checkbox"][name="sr_days"]:checked'
+              ));
+              return {
+                name: ((addCardField('sr_name') || {}).value || '').trim() || 'قاعدة سرعة',
+                days_csv: dayInputs.map(function(c){ return c.value; }).join(','),
+                days_labels: dayInputs.map(function(c){
+                  var lbl = c.closest('label'); var sp = lbl && lbl.querySelector('span');
+                  return sp ? sp.textContent : c.value;
+                }),
+                starts_at_time: (addCardField('sr_starts_at_time') || {}).value || '',
+                ends_at_time:   (addCardField('sr_ends_at_time')   || {}).value || '',
+                speed_down_kbps: (addCardField('sr_speed_down_kbps') || {}).value || '0',
+                speed_up_kbps:   (addCardField('sr_speed_up_kbps')   || {}).value || '0',
+                restore_mode: (addCardField('sr_restore_mode') || {}).value || 'profile_default',
+                priority: (addCardField('sr_priority') || {}).value || '5',
+                source_schedule_id: (addCardField('sr_source_schedule_id') || {}).value || '',
+              };
+            }
+            function clearAddCard(){
+              var n = addCardField('sr_name'); if (n) n.value = '';
+              hostSection.querySelectorAll(
+                '.sr2-add input[type="checkbox"][name="sr_days"]'
+              ).forEach(function(c){ c.checked = false; });
+              var src = addCardField('sr_source_schedule_id'); if (src) src.value = '';
+            }
+            function appendPending(data){
+              pendingIdx += 1;
+              var idx = pendingIdx;
+              var fmtTime = function(s){
+                if (!s || s.indexOf(':') < 0) return '--:--';
+                var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
+                if (isNaN(h)) return '--:--';
+                if (h === 0) return '12:' + m + ' ص';
+                if (h < 12)  return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
+                if (h === 12) return '12:' + m + ' م';
+                var h12 = h - 12;
+                return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+              };
+              var daysText;
+              if (!data.days_labels || data.days_labels.length === 0 ||
+                  data.days_labels.length === 7) {
+                daysText = 'كل الأيام';
+              } else if (data.days_labels.length <= 3) {
+                daysText = data.days_labels.join(' · ');
+              } else {
+                daysText = data.days_labels.length + ' أيام';
+              }
+              var wrap = document.createElement('div');
+              wrap.className = 'sr2-rule sr2-rule--pending';
+              wrap.innerHTML = ''
+                + '<div class="sr2-rule-summary">'
+                + '  <span class="sr2-sum-pulse is-on"></span>'
+                + '  <span class="sr2-sum-name">' + escapeHtml(data.name) + '</span>'
+                + '  <span class="sr2-sum-time"><i class="fa-regular fa-clock"></i>'
+                + '    ' + fmtTime(data.starts_at_time) + ' ← ' + fmtTime(data.ends_at_time)
+                + '  </span>'
+                + '  <span class="sr2-sum-speed">'
+                + '    <i class="fa-solid fa-arrow-down"></i> ' + fmtKbpsHuman(data.speed_down_kbps)
+                + '    <span class="sr2-sum-sep">·</span>'
+                + '    <i class="fa-solid fa-arrow-up"></i> ' + fmtKbpsHuman(data.speed_up_kbps)
+                + '  </span>'
+                + '  <span class="sr2-sum-days">' + escapeHtml(daysText) + '</span>'
+                + '  <span class="sr2-sum-spacer"></span>'
+                + '  <span class="sr2-pending-badge">'
+                + '    <i class="fa-solid fa-clock-rotate-left"></i> سيُحفظ مع المشترك'
+                + '  </span>'
+                + '  <button type="button" class="sr2-sum-del" data-drop-pending'
+                + '          title="إزالة"><i class="fa-solid fa-xmark"></i></button>'
+                + '</div>';
+              // Hidden form fields that the backend reads on main save.
+              ['name','days_csv','starts_at_time','ends_at_time',
+               'speed_down_kbps','speed_up_kbps','restore_mode','priority',
+               'source_schedule_id'].forEach(function(k){
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'sr_new_' + idx + '_' + k;
+                inp.value = data[k] != null ? String(data[k]) : '';
+                wrap.appendChild(inp);
+              });
+              // enabled defaults to 1 (the operator just confirmed it).
+              var en = document.createElement('input');
+              en.type = 'hidden'; en.name = 'sr_new_' + idx + '_enabled'; en.value = '1';
+              wrap.appendChild(en);
+              // Insert AFTER the last existing/pending rule, BEFORE the
+              // add-card so the visual stack stays «list above, add below».
+              var list = hostSection.querySelector('.sr2-rules');
+              if (list) list.appendChild(wrap);
+              // remove «empty list» placeholder if present
+              var empty = list && list.querySelector('.sr2-empty');
+              if (empty) empty.remove();
+            }
+            function escapeHtml(s){
+              return String(s || '').replace(/[&<>"']/g, function(c){
+                return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+              });
+            }
+
+            hostSection.addEventListener('click', function(e){
+              var btn = e.target.closest('[data-add-action]');
+              if (btn){
+                e.preventDefault();
+                var data = readAddCard();
+                if (btn.dataset.addAction === 'copy'){
+                  if (!data.source_schedule_id){
+                    toast('اختاري جدول سرعة محفوظ أولًا', 'error');
+                    return;
+                  }
+                  var src = presets.find(function(p){
+                    return String(p.id) === String(data.source_schedule_id);
+                  });
+                  if (!src){ toast('الجدول المصدر غير موجود', 'error'); return; }
+                  // Fill the add-card with source values; the operator
+                  // can adjust + then click «اعتماد».
+                  var n = addCardField('sr_name');
+                  if (n && !n.value.trim()) n.value = 'نسخة من ' + (src.name || 'جدول محفوظ');
+                  ['starts_at_time','ends_at_time','speed_down_kbps',
+                   'speed_up_kbps','restore_mode','priority'].forEach(function(k){
+                    var inp = addCardField('sr_' + k);
+                    if (inp && src[k] != null) inp.value = src[k];
+                  });
+                  // Notify any synced UI (unit picker, time picker) that
+                  // their hidden value changed so their visible bit
+                  // refreshes. Simplest: trigger 'change'.
+                  hostSection.querySelectorAll('.sr2-add input[type="hidden"]').forEach(function(h){
+                    h.dispatchEvent(new Event('change', { bubbles: true }));
+                  });
+                  toast('تم نسخ القيم — راجعيها ثم اعتمدي القاعدة', 'ok');
+                  return;
+                }
+                // manual
+                if (!data.starts_at_time || !data.ends_at_time){
+                  toast('أدخلي وقت البداية والنهاية', 'error');
+                  return;
+                }
+                var dKb = parseInt(data.speed_down_kbps, 10) || 0;
+                var uKb = parseInt(data.speed_up_kbps,   10) || 0;
+                if (dKb === 0 && uKb === 0 && data.restore_mode !== 'disconnect'){
+                  toast('أدخلي سرعة التنزيل أو الرفع (واحدة على الأقل)', 'error');
+                  return;
+                }
+                appendPending(data);
+                clearAddCard();
+                toast('تم — ستُحفظ مع المشترك', 'ok');
+                return;
+              }
+              var drop = e.target.closest('[data-drop-pending]');
+              if (drop){
+                var pendingRule = drop.closest('.sr2-rule--pending');
+                if (pendingRule) pendingRule.remove();
+              }
+            });
+          }
 
           // Bulk-action buttons (data-bulk=enable / data-bulk=disable):
           // flip every existing rule's «enabled» checkbox in place. No

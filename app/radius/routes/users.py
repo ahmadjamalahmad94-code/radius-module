@@ -620,6 +620,45 @@ def _sync_subscriber_rules(tenant_id: int, actor, form, username: str) -> None:
         except RadiusError:
             continue
 
+    # ── Newly-staged rules from JS «اعتماد القاعدة» ──────────────
+    # The frontend emits hidden inputs sr_new_<n>_* for each rule the
+    # operator confirmed locally. Create them now (one create per index).
+    new_indices = set()
+    for key in form.keys():
+        if not key.startswith("sr_new_"):
+            continue
+        rest = key[len("sr_new_"):]
+        idx_part = rest.split("_", 1)[0]
+        try:
+            new_indices.add(int(idx_part))
+        except ValueError:
+            continue
+    for nidx in sorted(new_indices):
+        sfx = str(nidx)
+        starts = form.get(f"sr_new_{sfx}_starts_at_time") or ""
+        ends   = form.get(f"sr_new_{sfx}_ends_at_time") or ""
+        if not starts.strip() or not ends.strip():
+            continue
+        payload = {
+            "target_type": "subscriber",
+            "subscriber_username": username,
+            "name": (form.get(f"sr_new_{sfx}_name") or "").strip() or "قاعدة سرعة",
+            "starts_at_time": starts,
+            "ends_at_time":   ends,
+            "days_csv": form.get(f"sr_new_{sfx}_days_csv") or "",
+            "speed_down_kbps": _as_int(form.get(f"sr_new_{sfx}_speed_down_kbps"), 0),
+            "speed_up_kbps":   _as_int(form.get(f"sr_new_{sfx}_speed_up_kbps"),   0),
+            "restore_mode": form.get(f"sr_new_{sfx}_restore_mode") or "profile_default",
+            "priority": _as_int(form.get(f"sr_new_{sfx}_priority"), 5),
+            "enabled": (form.get(f"sr_new_{sfx}_enabled") or "1").lower() in {"1","true","on","yes"},
+            "notes": "",
+            "metadata": {"embedded_target": "subscriber", "added_via": "users_form_defer"},
+        }
+        try:
+            svc.create_bandwidth_schedule(tenant_id=tenant_id, actor=actor, data=payload)
+        except RadiusError:
+            continue
+
 
 def users_update(username: str):
     if request.form.get("_speed_rule_action"):

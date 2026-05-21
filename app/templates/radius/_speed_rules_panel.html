@@ -590,16 +590,32 @@
         <span class="sr2-help" style="flex:1">
           لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
         </span>
+        {# Buttons stay type=submit by default (other forms keep the old
+           reload semantics). When the panel is wrapped in a host that
+           sets data-defer-add="true" (currently users_form), the JS
+           below intercepts the click, validates locally, and stages a
+           new rule into the form — the actual create happens at the
+           main «حفظ». #}
         <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-                name="_speed_rule_action" value="copy" formnovalidate>
+                name="_speed_rule_action" value="copy" formnovalidate
+                data-add-action="copy">
           <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
         </button>
         <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-                name="_speed_rule_action" value="manual" formnovalidate>
+                name="_speed_rule_action" value="manual" formnovalidate
+                data-add-action="manual">
           <i class="fa-solid fa-check"></i> اعتماد القاعدة
         </button>
       {% endif %}
     </div>
+
+    {# Presets data for the JS «نسخ» handler — only emitted in non-
+       pending mode (we have actual presets to copy from). #}
+    {% if not sr_pending %}
+    <script type="application/json" data-sr-presets>
+      {{ (speed_rules_panel.presets or []) | tojson }}
+    </script>
+    {% endif %}
   </div>
 </section>
 
