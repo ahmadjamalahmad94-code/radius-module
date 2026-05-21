@@ -677,26 +677,34 @@
           <div class="uf-field full"><label>كوتا مدمجة (MB)</label>
             <input class="hub-input" type="number" min="0" name="combined_quota_mb" value="{{ sub.combined_quota_mb or 0 }}">
             <div class="help">إن حُدِّدت، تحلّ محل الكوتا المنفصلة.</div></div>
-          <div class="uf-field"><label>حد وقت الاتصال</label>
-            <div class="uf-chk">
+          <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
+            <label class="uf-toggle">
               <input type="checkbox" name="connection_time_limit_enabled" id="ctl" value="1" {% if sub.connection_time_limit_enabled %}checked{% endif %}>
-              <label for="ctl">مفعَّل</label>
-            </div></div>
-          <div class="uf-field"><label>حد الكوتا</label>
-            <div class="uf-chk">
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
+            <div class="help">عند التفعيل، يُطبَّق إجمالي وقت الاتصال والوقت اليومي أعلاه. لو معطَّل، يُتجاهَل الحدّ حتى لو وُضعت أرقام.</div></div>
+          <div class="uf-field"><label>تطبيق حد الكوتا</label>
+            <label class="uf-toggle">
               <input type="checkbox" name="quota_limit_enabled" id="ql" value="1" {% if sub.quota_limit_enabled %}checked{% endif %}>
-              <label for="ql">مفعَّل</label>
-            </div></div>
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
+            <div class="help">عند التفعيل، تُطبَّق كوتا التنزيل/الرفع/المدمجة. لو معطَّل، يُسمح باستخدام غير محدود.</div></div>
           <div class="uf-field"><label>توزيع متساوٍ للتنزيل</label>
-            <div class="uf-chk">
+            <label class="uf-toggle">
               <input type="checkbox" name="equal_share_download" id="esd" value="1" {% if sub.equal_share_download %}checked{% endif %}>
-              <label for="esd">مفعَّل</label>
-            </div></div>
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
+            <div class="help">يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.</div></div>
           <div class="uf-field"><label>توزيع متساوٍ للرفع</label>
-            <div class="uf-chk">
+            <label class="uf-toggle">
               <input type="checkbox" name="equal_share_upload" id="esu" value="1" {% if sub.equal_share_upload %}checked{% endif %}>
-              <label for="esu">مفعَّل</label>
-            </div></div>
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
+            <div class="help">يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.</div></div>
           <div class="uf-field full">
             {# Replaces the legacy day-chips with the reusable access-schedule
                picker (SERVICES_COOKBOOK §17). Submits a JSON via

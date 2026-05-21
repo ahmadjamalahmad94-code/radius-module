@@ -123,114 +123,114 @@
   }
   .acs-day.is-on .acs-day-check{ opacity: 1; }
 
-  /* ─── Window card ──────────────────────────────────────────── */
-  .acs-windows{ display: flex; flex-direction: column; gap: 12px; }
+  /* ─── Window card (compact) ────────────────────────────────── */
+  .acs-windows{ display: flex; flex-direction: column; gap: 8px; }
   .acs-window{
     background: #fff;
     border: 1.5px solid var(--hub-border);
-    border-radius: 14px;
-    padding: 14px 16px;
+    border-radius: 12px;
+    padding: 8px 12px;
     position: relative;
     transition: border-color var(--hub-anim-fast) var(--hub-ease);
   }
   .acs-window:hover{ border-color: var(--hub-brand-line); }
-  .acs-window-head{
-    display: flex; align-items: center; gap: 8px;
-    font-size: 11.5px; font-weight: 700; color: var(--hub-text-mute);
-    text-transform: uppercase; letter-spacing: .5px;
-    margin-bottom: 12px;
-  }
-  .acs-window-head i{ color: var(--hub-brand-ink); }
   .acs-window-rm{
-    position: absolute; inset-block-start: 10px; inset-inline-end: 10px;
-    width: 28px; height: 28px; border-radius: 8px;
+    position: absolute; inset-block-start: 6px; inset-inline-end: 6px;
+    width: 22px; height: 22px; border-radius: 6px;
     background: transparent; border: 0;
     color: var(--hub-red); cursor: pointer;
+    font-size: 11px;
     display: inline-flex; align-items: center; justify-content: center;
     transition: background var(--hub-anim-fast) var(--hub-ease);
+    z-index: 2;
   }
   .acs-window-rm:hover{ background: var(--hub-red-soft); }
 
   .acs-window-body{
     display: grid; grid-template-columns: 1fr auto 1fr;
-    gap: 14px; align-items: end;
+    gap: 10px; align-items: center;
   }
   @media (max-width: 600px){
     .acs-window-body{ grid-template-columns: 1fr; }
     .acs-window-arrow{ display: none; }
   }
   .acs-window-arrow{
-    align-self: center; padding-block-end: 12px;
-    color: var(--hub-text-mute); font-size: 18px;
+    align-self: center;
+    color: var(--hub-text-mute); font-size: 14px;
   }
 
-  /* ─── Time picker (stepper + quick chips) ──────────────────── */
+  /* ─── Time picker (stepper + quick chips) — compact ────────── */
   .acs-time{
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 5px;
+    min-width: 0;
   }
   .acs-time-label{
-    font-size: 11.5px; font-weight: 800; color: var(--hub-text-soft);
-    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; color: var(--hub-text-soft);
+    display: flex; align-items: center; gap: 5px;
   }
-  .acs-time-label i{ color: var(--hub-brand-ink); font-size: 10px; }
+  .acs-time-label i{ color: var(--hub-brand-ink); font-size: 9px; }
 
+  /* The stepper container is forced LTR so HH:MM always reads
+     left-to-right (the universal convention), regardless of the
+     surrounding RTL flow. Hour is on the LEFT, minute on the RIGHT. */
   .acs-time-stepper{
-    display: flex; align-items: center; justify-content: center;
-    gap: 6px;
+    direction: ltr;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 4px;
     background: linear-gradient(180deg, #f6f4ff 0%, #ece8ff 100%);
     border: 1px solid var(--hub-brand-line);
-    border-radius: 12px;
-    padding: 8px 14px;
+    border-radius: 10px;
+    padding: 4px 10px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+    align-self: flex-start;
   }
   .acs-time-segment{
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
   }
   .acs-time-step{
-    width: 22px; height: 18px;
+    width: 22px; height: 14px;
     background: transparent; border: 0;
     color: var(--hub-brand-ink);
     cursor: pointer; padding: 0;
-    font-size: 11px;
-    border-radius: 4px;
+    font-size: 9px;
+    border-radius: 3px;
     display: inline-flex; align-items: center; justify-content: center;
     transition: background var(--hub-anim-fast) var(--hub-ease);
   }
   .acs-time-step:hover{ background: rgba(107,90,237,.15); }
   .acs-time-step:active{ background: rgba(107,90,237,.25); }
   .acs-time-input{
-    width: 48px;
+    width: 38px;
     background: transparent;
     border: 0;
     text-align: center;
     font-family: var(--hub-mono);
     font-weight: 800;
-    font-size: 24px;
+    font-size: 18px;
     color: var(--hub-brand-ink);
-    padding: 2px 0;
+    padding: 1px 0;
     font-variant-numeric: tabular-nums;
     outline: none;
   }
   .acs-time-input:focus{
     background: rgba(255,255,255,.7);
-    border-radius: 6px;
+    border-radius: 4px;
   }
   .acs-time-colon{
     font-family: var(--hub-mono);
-    font-weight: 800; font-size: 22px;
+    font-weight: 800; font-size: 16px;
     color: var(--hub-brand-ink);
     align-self: center;
-    padding-block-end: 1px;
   }
 
   .acs-time-quick{
-    display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;
+    display: flex; gap: 4px; flex-wrap: wrap;
   }
   .acs-time-chip{
     background: #fff; border: 1px solid var(--hub-border);
     border-radius: 999px;
-    padding: 4px 11px;
-    font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px;
+    font-size: 10.5px; font-weight: 700;
     color: var(--hub-text-soft);
     cursor: pointer;
     transition: all var(--hub-anim-fast) var(--hub-ease);
@@ -265,6 +265,8 @@
   .acs-per-day{ display: none; flex-direction: column; gap: 14px; }
   .acs-card.is-advanced .acs-simple{ display: none; }
   .acs-card.is-advanced .acs-per-day{ display: flex; }
+  /* "إضافة يوم آخر" is meaningless in simple mode — hide it there. */
+  .acs-card:not(.is-advanced) .acs-add-day-wrap{ display: none; }
 
   .acs-pd-block{
     background: #fff;
@@ -418,9 +420,12 @@
     const colon = document.createElement("span");
     colon.className = "acs-time-colon"; colon.textContent = ":";
 
-    stepper.appendChild(hSeg.seg);
-    stepper.appendChild(colon);
+    // DOM order is minute, colon, hour — combined with `direction: ltr`
+    // on the stepper, the visual order becomes minute on the LEFT and
+    // hour on the RIGHT (matches what the user expects in this RTL UI).
     stepper.appendChild(mSeg.seg);
+    stepper.appendChild(colon);
+    stepper.appendChild(hSeg.seg);
     wrap.appendChild(stepper);
 
     // Quick chips
@@ -455,15 +460,11 @@
     return wrap;
   }
 
-  /* Build a single window card with two time pickers + remove button. */
+  /* Build a single window card with two time pickers + remove button.
+     No header — the labels من / إلى on each side are enough. */
   function makeWindow(state, onRemove, onChange){
     const card = document.createElement("div");
     card.className = "acs-window";
-
-    const head = document.createElement("div");
-    head.className = "acs-window-head";
-    head.innerHTML = '<i class="fa-solid fa-clock"></i> فترة زمنية';
-    card.appendChild(head);
 
     const rm = document.createElement("button");
     rm.type = "button"; rm.className = "acs-window-rm";
