@@ -550,6 +550,51 @@ def users_edit(username: str):
         ))
 
 
+def _sync_subscriber_rules_enabled(tenant_id: int, actor, form, username: str) -> None:
+    """Sync the `enabled` flag of every existing bandwidth_schedule rule
+    that belongs to this subscriber to whatever the form currently says.
+
+    Called from users_update so that JS-only bulk actions «فعّل / عطّل»
+    (which flip sr_edit_enabled_* checkboxes locally without a network
+    roundtrip) actually persist when the operator clicks main «حفظ».
+
+    Looks at every `sr_edit_name_<id>` key (always posted), reads the
+    corresponding `sr_edit_enabled_<id>` (absent → unchecked), and
+    issues an update only when the new state differs from the DB row.
+    """
+    from ..services.operations import get_operations_service
+    svc = get_operations_service()
+
+    rule_ids = set()
+    for key in form.keys():
+        if not key.startswith("sr_edit_name_"):
+            continue
+        try:
+            rule_ids.add(int(key[len("sr_edit_name_"):]))
+        except ValueError:
+            continue
+    if not rule_ids:
+        return
+
+    for rid in rule_ids:
+        try:
+            rule = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=rid)
+        except Exception:
+            continue
+        if not rule or rule.get("subscriber_username") != username:
+            continue
+        new_enabled = (form.get(f"sr_edit_enabled_{rid}") or "").lower() in {"1", "true", "on", "yes"}
+        if bool(rule.get("enabled")) == new_enabled:
+            continue
+        try:
+            svc.update_bandwidth_schedule(
+                tenant_id=tenant_id, actor=actor, schedule_id=rid,
+                data={**rule, "enabled": new_enabled},
+            )
+        except RadiusError:
+            continue
+
+
 def users_update(username: str):
     if request.form.get("_speed_rule_action"):
         try:
@@ -579,6 +624,8 @@ def users_update(username: str):
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
             user_types=USER_TYPES, is_new=False, speed_rules_panel=None), 400
+    # Persist any JS-flipped rule.enabled changes (bulk فعّل / عطّل etc).
+    _sync_subscriber_rules_enabled(_tid(), _actor(), request.form, username)
     flash("تم التحديث.", "success")
     return redirect(url_for("radius.users_list"))
 

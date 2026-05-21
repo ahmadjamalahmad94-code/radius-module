@@ -745,23 +745,21 @@
             <span class="tsw-track"><span class="tsw-thumb"></span></span>
             <span class="tsw-label" data-on="مفعَّلة" data-off="معطَّلة"></span>
           </label>
-          {# Bulk-action buttons promoted from the panel head into the
-             sub-header (per user feedback «حط تفعيل وتعطيل بنفس الشريط
-             اقل ضغط، واختصر النص»). Same submit semantics as the
-             original .sr2-bulk in _speed_rules_panel.html. #}
+          {# Bulk-action buttons — JS-only, NO page reload.
+             They flip every sr_edit_enabled_* checkbox in the DOM and
+             let the rest of the form keep its in-progress state. The
+             actual persistence happens at the main «حفظ» click. #}
           <span class="uf-sub-bulk">
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
-                    name="_speed_rule_action" value="enable_all" formnovalidate
-                    title="تفعيل كل القواعد">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
+                    data-bulk="enable" title="تفعيل كل القواعد">
               <i class="fa-solid fa-toggle-on"></i> فعّل
             </button>
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
-                    name="_speed_rule_action" value="disable_all" formnovalidate
-                    title="تعطيل كل القواعد">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
+                    data-bulk="disable" title="تعطيل كل القواعد">
               <i class="fa-solid fa-toggle-off"></i> عطّل
             </button>
           </span>
-          <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة، أولوية أعلى من قواعد الباقة والمجموعة.</span>
+          <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة</span>
         </div>
         {% include "radius/_speed_rules_panel.html" %}
 
@@ -836,6 +834,22 @@
             if (sched) sched.checked = nowAny;
             if (nowAny) makeExclusive(sched || e.target);
             syncMaster();
+          });
+
+          // Bulk-action buttons (data-bulk=enable / data-bulk=disable):
+          // flip every existing rule's «enabled» checkbox in place. No
+          // network roundtrip, no reload — the new states are sent with
+          // the main form when the user clicks «حفظ».
+          document.querySelectorAll('[data-bulk]').forEach(function(btn){
+            btn.addEventListener('click', function(){
+              var on = btn.getAttribute('data-bulk') === 'enable';
+              ruleInputs().forEach(function(c){ c.checked = on; });
+              if (sched){
+                sched.checked = on;
+                if (on) makeExclusive(sched);
+              }
+              syncMaster();
+            });
           });
           syncMaster();
         })();
