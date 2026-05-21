@@ -616,9 +616,9 @@
       render();
     });
 
-    // Quick-pick chips were retired here per user feedback («بدون
-     الفترات الجاهزة للاختيار»). One-tap presets live elsewhere if
-     ever needed.
+    // Quick-pick chips were retired here per user feedback
+    // («بدون الفترات الجاهزة للاختيار»). The render() loop below
+    // still iterates `quickBtns` so we keep an empty array — safe no-op.
     const quickBtns = [];
 
     function fmtDisplay(v){
