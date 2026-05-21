@@ -40,28 +40,57 @@
   .pr-preset .sw{height:34px;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.4)}
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
   .pr-stage{position:sticky;top:92px}
-  /* Designer canvas size policy
-     ────────────────────────────
-     The card must stay READABLE in both orientations. Earlier we
-     constrained portrait by height (`height:50vh; width:auto`) which
-     made the browser solve `width = height * 3/5` and pushed the
-     card down to ~210 × 350 — the text width became unusable and
-     every label truncated to its first letter ("H…", "USE…",
-     "PAS…", "Q").
+  /* Designer canvas size policy — "fit to viewport"
+     ─────────────────────────────────────────────────
+     Earlier attempts at this had one of two failure modes:
+       (a) Constrain by width only → portrait card grows to 500 px
+           tall, sticky panel exceeds viewport, BOTTOM of the card
+           (footer + meta) gets clipped behind the page fold.
+       (b) Constrain by height (`height:50vh; width:auto`) → browser
+           solves `width = height * 3/5` and produces a 210×350
+           sliver where USER/PASS/QR all truncate to first letters.
 
-     Fix: control the WIDTH only, in both orientations, and let
-     `aspect-ratio` derive the height naturally. The canvas-wrap is
-     tall enough to fit either shape without scrolling.
+     What the user actually wants is "fit to screen" — the whole
+     card visible inside the preview panel without scrolling, in
+     both orientations, with `contain`-style aspect-ratio behaviour.
 
-       landscape (5:3): width ≤ 380 px → ~380 × 228 px
-       portrait  (3:5): width ≤ 300 px → ~300 × 500 px
-
-     Font-size still tracks each card's own width via
-     `font-size:3.5cqw`, so brand / title / pills auto-scale and the
-     whole composition stays one locked block. */
-  .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:560px;display:grid;place-items:center}
-  .pr-canvas-wrap .pr-card-preview{width:min(85%,380px);max-height:none;height:auto}
-  .pr-canvas-wrap .pr-card-preview.is-vertical{width:min(55%,300px)}
+     CSS solution
+     ────────────
+     1. The canvas-wrap is itself a FIXED viewport. Its width is
+        capped (max-width: 500 px) and its height is capped at
+        `min(480px, 60vh)` so it always fits within the visible
+        page on any reasonable viewport (≥ 600 px tall).
+     2. The card's width is then derived as
+        `width = min(100% of viewport_w, viewport_h * card_aspect)`.
+        That is exactly the "object-fit: contain" formula — the
+        card's longest side hits the viewport edge first, the other
+        side derives from aspect-ratio, nothing overflows.
+     3. The `aspect-ratio` rule on `.pr-card-preview` handles the
+        height. The base rule sets 5:3, `.is-vertical` overrides to
+        3:5 (renderer canvas constants).
+     4. `font-size:3.5cqw` on the card still scales every inner
+        element (brand, title, pills, QR, footer) with the card's
+        width — no element drifts out of position, no manual
+        per-size tweaks needed when the viewport changes shape. */
+  .pr-canvas-wrap{
+    --vp-w: 100%;
+    --vp-h: min(480px, 60vh);
+    background:linear-gradient(180deg,#f8fafc,#eef7fb);
+    padding:22px;border-radius:0 0 16px 16px;
+    width:100%;max-width:540px;
+    height:calc(var(--vp-h) + 44px);  /* +padding for breathing room */
+    margin:0 auto;
+    display:grid;place-items:center;
+  }
+  /* Landscape: width = min(vp_w, vp_h * 5/3) */
+  .pr-canvas-wrap .pr-card-preview{
+    width:min(100%, calc(var(--vp-h) * 5 / 3));
+    max-width:100%;max-height:100%;height:auto;
+  }
+  /* Portrait: width = min(vp_w, vp_h * 3/5) */
+  .pr-canvas-wrap .pr-card-preview.is-vertical{
+    width:min(100%, calc(var(--vp-h) * 3 / 5));
+  }
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
