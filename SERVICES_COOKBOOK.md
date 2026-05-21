@@ -1112,6 +1112,93 @@ Key behaviors:
 
 ---
 
+## 14. Subscriber 360° profile page
+
+**What it does.** One premium read-mostly page per subscriber:
+hero (avatar + name + phone + status pill + quick actions), KPI strip
+(speed up/down, used / quota / remaining, balance), then 10 tabs
+(info / events / invoices / recharges / sessions / daily usage /
+manager events / bandwidth / used cards / ledger).
+
+**Pattern: the route owns DATA aggregation, not mutations.** All write
+actions on the page (edit, finance, disable…) go to the existing routes
+(`users_edit`, `users_finance`, `users_toggle`, etc.) — never invent a
+new mutation route here.
+
+### 14.1 Route + endpoint
+
+```python
+# app/radius/routes/users.py
+bp.add_url_rule(
+    "/users/<username>/profile", "users_profile",
+    users_profile, methods=["GET"],
+)
+```
+
+URL: `/admin/radius/users/<username>/profile`.
+
+### 14.2 Data slices the view collects
+
+| Slice | Source | Filter |
+|---|---|---|
+| Subscriber DTO | `subscribers_repo.get_subscriber(tid, username)` | 404 if missing |
+| Plan | `plans_repo.get_plan(tid, sub.plan_id)` | optional |
+| Sessions | `cards_repo.list_card_accounting(tid, username, limit=200)` | per-user |
+| Audit events | `audit_repo.recent(tid, limit=500)` → in-memory filter | `target_type in ("subscriber","card") and target==username` |
+| Invoices | `invoices_repo.list_all(tid, limit=200)` → filter | `subscriber_id == sub.id or username == username` |
+| Used cards | direct SQL on `cards` table | `used_by_subscriber_id = sub.id` |
+| Payments | `accounting_repo.list_payments(tid, subscriber_id=sub.id)` | per-user |
+| Loans | `accounting_repo.list_loans(tid, subscriber_id=sub.id)` | per-user |
+| KPI aggregate | direct SQL on `radacct`, `SUM(in+out) / SUM(time) / COUNT(*) / SUM(online)` | per-user |
+
+The aggregate is one SQL hit, NOT a loop over `session_rows`. Loops
+double the cost when the user has 100+ sessions.
+
+### 14.3 Template structure (`radius/users_profile.html`)
+
+Built on hub-v2 only — no card-checker classes:
+
+1. **Hero** — custom `.p360-hero` (avatar + name + uname chip + status
+   + "متصل الآن" pill if `online_now > 0`, plus quick-action buttons).
+2. **KPI strip** — `hub.kpi` × 6 (speed-down, speed-up, quota, used,
+   remaining, balance).
+3. **Tab nav** — `.p360-tabs` with 10 buttons; one is `.is-active`.
+4. **Tab panes** — `.p360-pane` siblings; only one has `.is-active`.
+5. **Tiny JS** — toggles `.is-active` on tab+pane on click; also reads
+   `location.hash` to deep-link a tab.
+
+Formatting helpers are local Jinja macros at the top of the template
+(`fmt_bytes_mb`, `fmt_speed`, `fmt_dur`, `status_pill`) — no global
+Jinja filters needed.
+
+### 14.4 Entry point
+
+The username column in `users_list.html` links to
+`url_for('radius.users_profile', username=u.username)`; row actions
+also include an "id-badge" primary button. This is the canonical entry —
+do NOT add a separate sidebar item (one row per subscriber, not a
+global section).
+
+### 14.5 Edge cases
+
+- Subscriber missing → `abort(404)`.
+- Each data slice is wrapped in `try/except` and falls back to `[]`/`{}`
+  so a broken sub-repo never 500s the whole page.
+- Quota fallback: subscriber override → plan quota → 0.
+- `pct = used / quota * 100` guarded with `if quota_total_mb`.
+- Hash-based deep-link uses `replaceState` so back-button still works.
+
+### 14.6 Reusable in
+
+- Distributor 360 (`distributors_detail.html` — same hero/KPI/tabs shape).
+- Card-batch 360 (per-batch summary page).
+- Plan 360 (per-plan stats: subscribers, revenue, churn).
+
+The CSS namespace `.p360-*` is intentionally generic — any future "360"
+page can adopt it.
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
