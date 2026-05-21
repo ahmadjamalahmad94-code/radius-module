@@ -341,9 +341,9 @@
         <input type="hidden" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
 
         {# Layout (4-col grid, no holes):
-           Row 1: username (1) | password (2) | status (1)
+           Row 1: username (1) | password (1) | status (1) | auto_renewal (1)
            Row 2: service-type cards (full = 4)
-           Row 3: plan (1) | manager (1) | group (1) | auto_renewal (1) #}
+           Row 3: plan (1) | manager (1) | group (span-2) #}
         <div class="uf-grid">
           <div class="uf-field">
             <label>اسم الدخول <span class="req">*</span></label>
@@ -352,7 +352,7 @@
             <div class="help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
           </div>
 
-          <div class="uf-field span-2">
+          <div class="uf-field">
             <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
             <div class="uf-pw">
               <input class="hub-input uf-pw-input" type="password" name="password"
@@ -378,6 +378,16 @@
               {% endfor %}
             </select>
             <div class="help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+          </div>
+
+          <div class="uf-field">
+            <label>تجديد تلقائي</label>
+            <label class="uf-toggle">
+              <input type="checkbox" name="auto_renewal" id="auto-renew" value="1" {% if sub.auto_renewal %}checked{% endif %}>
+              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
+              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
+            </label>
+            <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
           </div>
 
           <div class="uf-field full">
@@ -435,7 +445,7 @@
             <div class="help">اختر المدير الذي يتابع هذا الحساب.</div>
           </div>
 
-          <div class="uf-field">
+          <div class="uf-field span-2">
             <label>المجموعة</label>
             <select class="hub-select" name="group">
               <option value="">— بدون —</option>
@@ -450,16 +460,6 @@
               <a href="{{ url_for('radius.subscriber_groups_list') }}"
                  style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">مجموعات المشتركين</a>.
             </div>
-          </div>
-
-          <div class="uf-field">
-            <label>تجديد تلقائي</label>
-            <label class="uf-toggle">
-              <input type="checkbox" name="auto_renewal" id="auto-renew" value="1" {% if sub.auto_renewal %}checked{% endif %}>
-              <span class="uf-toggle-track"><span class="uf-toggle-thumb"></span></span>
-              <span class="uf-toggle-label" data-on="مفعَّل" data-off="معطَّل"></span>
-            </label>
-            <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
           </div>
         </div>
       </div>
