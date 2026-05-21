@@ -457,6 +457,87 @@ def test_batch_pdf_export_includes_real_card_credentials(client):
     assert jobs[0]["status"] == "success"
 
 
+def test_pdf_export_carries_arabic_via_almarai_font(client):
+    """Arabic text (brand / title / footer) must reach the PDF
+    rendered with the Almarai TTF — not stripped, not replaced with
+    boxes. Latin text (username, hotspot) stays on Helvetica.
+    """
+    _web_login(client)
+    from app.radius.services.operations import get_operations_service
+
+    ops = get_operations_service()
+    template = ops.create_print_template(
+        tenant_id=1,
+        actor="render-test",
+        data={
+            "name": f"AR PDF {uuid4().hex[:6]}",
+            "orientation": "portrait",
+            "cards_per_row": 2,
+            "cards_per_column": 5,
+            "page_size": "A4",
+            "font_size": 12,
+            "color": "#1f2937",
+            "layout": {
+                "card_orientation": "horizontal",
+                "card_width_mm": 85,
+                "card_height_mm": 54,
+                "gradient_start": "#0f172a",
+                "gradient_end": "#22a7bd",
+                "accent_color": "#f59e0b",
+                "text_color": "#ffffff",
+                "surface_color": "#e8f7fb",
+                "brand_name": "هوب راديوس",
+                "card_title": "بطاقة إنترنت",
+                "footer_text": "احفظ بياناتك حتى نهاية الصلاحية",
+                "hotspot_address": "hotspot.local",
+                "pattern_style": "signal",
+                "show_brand": True, "show_username": True,
+                "show_password": True, "show_qr": True,
+                "show_hotspot": True, "show_serial": True,
+            },
+        },
+    )
+
+    res = client.get(
+        f"/admin/radius/print-templates/{template['id']}/export.pdf",
+        query_string={"sample_username": "CARD7", "sample_password": "PW7"},
+        follow_redirects=False,
+    )
+    assert res.status_code == 200
+    body = res.data
+    assert body.startswith(b"%PDF")
+
+    # Almarai must be embedded so Arabic glyphs actually render.
+    assert b"Almarai" in body, "Almarai TTF was not embedded into the PDF"
+    # Helvetica is still in use for the Latin parts (USER/PASS labels,
+    # the hotspot/serial meta line, the username/password values).
+    assert b"Helvetica" in body, "Latin runs should still use Helvetica"
+    # The Latin sample data the route accepted must end up in the
+    # decoded stream.
+    text_blob = _pdf_text_blob(body)
+    assert b"CARD7" in text_blob
+    assert b"PW7" in text_blob
+
+
+def test_arabic_shaping_pipeline_runs():
+    """Smoke check: the renderer's _shape_arabic helper produces a
+    different (shaped + bidi-reversed) string than the input when fed
+    raw Arabic. Defends against the libs being uninstalled in a
+    future environment refresh.
+    """
+    from app.radius.services.card_renderer import _shape_arabic, _has_arabic
+
+    raw = "بطاقة إنترنت"
+    assert _has_arabic(raw)
+    shaped = _shape_arabic(raw)
+    assert shaped != raw, "arabic-reshaper / python-bidi pipeline did nothing"
+    # The shaped output should contain at least one Arabic presentation
+    # form glyph (range U+FE70..U+FEFF).
+    assert any("ﹰ" <= ch <= "﻿" for ch in shaped), (
+        "shaped output has no Arabic presentation forms — reshaper did not run"
+    )
+
+
 def test_designer_form_defaults_match_renderer_default_positions(client):
     """Designer/export/PDF parity guard.
 

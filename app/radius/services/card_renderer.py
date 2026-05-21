@@ -1,5 +1,25 @@
 """Unified card renderer — one render model, two output adapters.
 
+Arabic support note
+===================
+Card text (brand, title, footer, hotspot, …) can be any mix of Arabic
+and Latin. ReportLab's built-in Helvetica covers Latin only, so we
+ship the Almarai TTF font under app/static/fonts/ and register it on
+first import. The PDF adapter inspects each text run:
+
+  - All-Latin    → Helvetica / Helvetica-Bold (unchanged)
+  - Contains AR → Almarai / Almarai-Bold, after the run is reshaped
+                   with `arabic-reshaper` (joins isolated letters into
+                   their initial / medial / final / isolated glyph
+                   forms) and re-ordered with `python-bidi` (so the
+                   text flows right-to-left visually even when the PDF
+                   only knows about LTR glyph runs).
+
+The SVG adapter already handled Arabic correctly because the admin
+page font (Cairo) carries Arabic glyphs and the browser handles bidi
+shaping natively.
+
+
 Why this module exists
 ======================
 Before this module the live preview built a card with one set of
@@ -47,6 +67,7 @@ into the top-left corner like the old PDF path did.
 from __future__ import annotations
 
 import base64
+import os
 import re
 from typing import Any, Iterable
 
@@ -56,6 +77,99 @@ CANVAS_LANDSCAPE = (1000, 600)
 CANVAS_PORTRAIT = (600, 1000)
 
 _HEX_RE = re.compile(r"^#?[0-9a-fA-F]{3,8}$")
+
+# ─── Arabic font + shaping ─────────────────────────────────────────
+# Almarai is shipped under app/static/fonts/. Registration is lazy so
+# importing this module never fails — if ReportLab or the TTF is
+# missing for any reason the PDF adapter quietly falls back to
+# Helvetica and the text-strip behaviour, exactly like before.
+
+_FONTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "static", "fonts",
+)
+_ALMARAI_REGULAR_PATH = os.path.join(_FONTS_DIR, "Almarai-Regular.ttf")
+_ALMARAI_BOLD_PATH = os.path.join(_FONTS_DIR, "Almarai-Bold.ttf")
+
+PDF_FONT_LATIN = "Helvetica"
+PDF_FONT_LATIN_BOLD = "Helvetica-Bold"
+PDF_FONT_ARABIC = "Almarai"
+PDF_FONT_ARABIC_BOLD = "Almarai-Bold"
+
+# Arabic block ranges that should trigger the Almarai path.
+#   U+0600–U+06FF  Arabic
+#   U+0750–U+077F  Arabic Supplement
+#   U+08A0–U+08FF  Arabic Extended-A
+#   U+FB50–U+FDFF  Arabic Presentation Forms-A
+#   U+FE70–U+FEFF  Arabic Presentation Forms-B
+_ARABIC_RE = re.compile(
+    r"[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]"
+)
+
+_arabic_fonts_ready: bool | None = None
+
+
+def _ensure_arabic_fonts() -> bool:
+    """Register Almarai with ReportLab. Cached after the first call."""
+    global _arabic_fonts_ready
+    if _arabic_fonts_ready is not None:
+        return _arabic_fonts_ready
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+
+        if not (os.path.isfile(_ALMARAI_REGULAR_PATH)
+                and os.path.isfile(_ALMARAI_BOLD_PATH)):
+            _arabic_fonts_ready = False
+            return False
+        # Re-registering the same font is a no-op in ReportLab, but we
+        # only do it once anyway.
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, _ALMARAI_REGULAR_PATH))
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, _ALMARAI_BOLD_PATH))
+        _arabic_fonts_ready = True
+    except Exception:  # pragma: no cover — defensive
+        _arabic_fonts_ready = False
+    return _arabic_fonts_ready
+
+
+def _has_arabic(text: str) -> bool:
+    return bool(text) and bool(_ARABIC_RE.search(text))
+
+
+def _shape_arabic(text: str) -> str:
+    """Apply arabic-reshaper + bidi so ReportLab can lay out RTL text.
+
+    arabic-reshaper turns isolated Unicode letters into their proper
+    initial/medial/final/isolated presentation forms. python-bidi then
+    applies the Unicode Bidirectional Algorithm so the resulting
+    glyphs end up in visual (RTL) order — which is what ReportLab
+    will draw left-to-right but the human reads right-to-left.
+
+    Falls back to the original text if either library fails, so a
+    missing dependency at runtime never blows up the PDF export.
+    """
+    if not text:
+        return text
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+
+        return get_display(arabic_reshaper.reshape(text))
+    except Exception:  # pragma: no cover — defensive
+        return text
+
+
+def _pick_pdf_font(text: str, *, bold: bool) -> str:
+    """Choose the right font for a text run.
+
+    Arabic strings need Almarai (shipped TTF). Pure Latin strings stay
+    on Helvetica so existing receipts look identical to before. If
+    Almarai isn't available for any reason we fall back to Helvetica
+    — the Arabic glyphs won't render, but the PDF still opens.
+    """
+    if _has_arabic(text) and _ensure_arabic_fonts():
+        return PDF_FONT_ARABIC_BOLD if bold else PDF_FONT_ARABIC
+    return PDF_FONT_LATIN_BOLD if bold else PDF_FONT_LATIN
 
 # Default element placements as fractions of the canvas. They mirror the
 # percentage positions used by the live preview's `.pr-card-preview`
@@ -490,28 +604,39 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
 
     size = max(float(el.get("size", 12)), 1.0)
     weight = int(el.get("weight", 700))
-    font = "Helvetica-Bold" if weight >= 700 else "Helvetica"
+    raw_text = str(el.get("text", ""))
+    if not raw_text:
+        return
+    # Pick the right font for the text content and shape Arabic so
+    # ReportLab gets the correctly-ordered presentation glyphs.
+    font = _pick_pdf_font(raw_text, bold=weight >= 700)
+    text = _shape_arabic(raw_text) if _has_arabic(raw_text) else raw_text
     pdf.setFont(font, size)
     color = _pdf_color(el.get("color", "#ffffff"))
     opacity = float(el.get("opacity", 1.0))
     if opacity < 1.0:
-        # The default font fill respects alpha when wrapped in a
-        # reportlab Color with alpha; just rebuild it.
         pdf.setFillColor(colors.Color(color.red, color.green, color.blue,
                                        alpha=max(0.0, min(1.0, opacity))))
     else:
         pdf.setFillColor(color)
-    text = _pdf_safe_text(el.get("text", ""))
-    if not text:
-        return
     # SVG dominant-baseline="hanging" puts the text top at y. PDF's
     # drawString uses the baseline. Cap height ≈ 0.78 of font size for
-    # Helvetica, so drop y by that amount to align visually.
+    # Helvetica/Almarai, so drop y by that amount to align visually.
     baseline = ch - el["y"] - size * 0.78
     max_width = float(el.get("max_width") or 0)
     if max_width > 0:
         text = _shrink_to_fit(pdf, text, font, size, max_width)
-    pdf.drawString(el["x"], baseline, text)
+    # Arabic flows right-to-left visually but ReportLab draws left-to-
+    # right runs. After bidi reordering we anchor the run at its right
+    # edge so the visual start sits at el["x"] + max_width when known,
+    # otherwise at el["x"] (so short Arabic still appears in the same
+    # column as Latin).
+    if _has_arabic(raw_text):
+        right_edge = el["x"] + (max_width if max_width > 0 else
+                                 pdf.stringWidth(text, font, size))
+        pdf.drawRightString(right_edge, baseline, text)
+    else:
+        pdf.drawString(el["x"], baseline, text)
 
 
 def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
@@ -520,31 +645,36 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     pdf_y = ch - el["y"] - el["height"]
     pdf.roundRect(el["x"], pdf_y, el["width"], el["height"],
                   el["height"] * 0.20, stroke=0, fill=1)
-    # Label (USER / PASS)
+    # Label (USER / PASS) — labels are Latin in every preset; keep
+    # Helvetica for consistency.
+    label_raw = str(el["label"])
+    label_font = _pick_pdf_font(label_raw, bold=True)
+    label_text = _shape_arabic(label_raw) if _has_arabic(label_raw) else label_raw
     label_size = max(float(el["label_font_size"]), 4.0)
-    pdf.setFont("Helvetica-Bold", label_size)
+    pdf.setFont(label_font, label_size)
     pdf.setFillColor(_pdf_color(el["label_color"]))
     label_top = el["y"] + el["height"] * 0.18
     pdf.drawString(el["x"] + el["padding_x"],
                    ch - label_top - label_size * 0.78,
-                   _pdf_safe_text(el["label"]))
+                   label_text)
     # Value (the real credential — masked if expose_password is False
     # and this pill carries the password).
-    value = el["value"]
+    raw_value = el["value"]
     if el.get("is_password") and not expose_password:
-        value = "•" * min(max(len(value), 6), 10)
+        raw_value = "•" * min(max(len(raw_value), 6), 10)
+    value_font = _pick_pdf_font(raw_value, bold=True)
+    value_text = _shape_arabic(raw_value) if _has_arabic(raw_value) else raw_value
     value_size = max(float(el["value_font_size"]), 5.0)
-    pdf.setFont("Helvetica-Bold", value_size)
+    pdf.setFont(value_font, value_size)
     pdf.setFillColor(_pdf_color(el["ink"]))
     value_top = el["y"] + el["height"] * 0.46
-    text = _pdf_safe_text(value)
     max_value_width = el["width"] - 2 * el["padding_x"]
     if max_value_width > 0:
-        text = _shrink_to_fit(pdf, text, "Helvetica-Bold", value_size,
-                              max_value_width)
+        value_text = _shrink_to_fit(pdf, value_text, value_font,
+                                     value_size, max_value_width)
     pdf.drawString(el["x"] + el["padding_x"],
                    ch - value_top - value_size * 0.78,
-                   text)
+                   value_text)
 
 
 def _pdf_qr(pdf, el: dict, ch: float) -> None:
@@ -590,22 +720,16 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
 
 
 def _pdf_safe_text(value: Any) -> str:
-    """Strip characters the built-in PDF font cannot render.
+    """Legacy no-op kept for backward compatibility.
 
-    ReportLab's default Helvetica is Latin-only. Rather than crash on
-    Arabic glyphs we drop them — Arabic is intentionally rendered in
-    the SVG preview (the page font carries Cairo) but does not yet
-    have a shaped Arabic engine for PDF. This is documented as a
-    follow-up in the print-templates redesign report.
+    Pre-Almarai this helper stripped non-Latin-1 characters so the
+    default Helvetica font wouldn't crash on Arabic glyphs. Now that
+    the renderer registers Almarai and shapes Arabic via
+    arabic-reshaper + python-bidi, the strip is no longer needed and
+    actively harmful (it would drop the very glyphs the new path
+    knows how to render). The helper just coerces to str.
     """
-    raw = str(value or "")
-    if not raw:
-        return ""
-    try:
-        raw.encode("latin-1")
-        return raw
-    except UnicodeEncodeError:
-        return raw.encode("latin-1", "ignore").decode("latin-1")
+    return str(value or "")
 
 
 def _shrink_to_fit(pdf, text: str, font: str, size: float,
