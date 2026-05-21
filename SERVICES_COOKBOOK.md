@@ -1386,6 +1386,129 @@ still renders.
 
 ---
 
+## 17. Access-schedule picker — reusable day/time window block
+
+**What it does.** One Jinja macro that hosts a premium-looking
+day/time picker for the «when can this account connect» concept.
+Lives on three sites today (subscriber, subscriber-group, plan) and
+is the canonical answer to any future «pick days + times» need.
+
+### 17.1 Data model — windows[]
+
+Schedules are JSON. One key — `windows` — a list of windows, each with:
+
+```json
+{ "days": ["sat","mon"], "from": "01:00", "to": "03:00" }
+```
+
+Rules:
+
+- `windows` empty / missing → access ALLOWED (no restriction).
+- A window's `days` empty → applies to every day.
+- A window's `from`/`to` empty → covers the full day.
+- Access is allowed if ANY window matches (windows OR-ed).
+- `to <= from` → window wraps past midnight
+  (e.g. 22:00 → 02:00 means [22:00, 24:00) ∪ [00:00, 02:00)).
+
+This single model represents all four cases the operator can think
+in: days-only, times-only, days + uniform times, per-day times.
+
+### 17.2 Helpers — `app/radius/core/access_schedule.py`
+
+| Function | Purpose |
+|---|---|
+| `parse(raw)`              | normalize any input (str/dict/None) → dict |
+| `serialize(schedule)`     | dict → JSON string for DB (empty → `""`) |
+| `validate(schedule)`      | alias of `parse`; raises `AccessScheduleError` |
+| `is_allowed(s, when=None)`| evaluate at a datetime (defaults to `now()`) |
+| `derive_working_days(s)`  | union of days → CSV cache for legacy column |
+| `empty_schedule()`        | convenience constructor `{"windows": []}` |
+
+Tests live in `tests/test_access_schedule.py` (21 cases, covering
+parsing edge cases, mode coverage, cross-midnight, CSV derivation).
+
+### 17.3 Macro — `_partials/access_schedule.html`
+
+```jinja
+{% from "_partials/access_schedule.html" import access_schedule_picker %}
+
+{{ access_schedule_picker(
+     name="connection_schedule",
+     value=sub.connection_schedule,
+     id="acs-sub",
+     title="الأيام والأوقات المسموحة للاتصال"
+   ) }}
+```
+
+What you get:
+
+- One card with day chips, time-window list, "advanced mode" toggle.
+- A hidden input named after the `name` argument carrying the
+  serialized JSON. The macro and JS keep this in sync on every change.
+- CSS namespace: `.acs-*` (avoids collision with `.uf-*` form styles).
+- Auto-init on `DOMContentLoaded` AND on late inclusion (`readyState`
+  check). The `window.__acsInitialized` guard means the assets block
+  only emits once per page even if the macro is called more than once.
+
+### 17.4 Storage — `connection_schedule` column (migration 029)
+
+A `TEXT NOT NULL DEFAULT ''` column on:
+
+  - `subscribers.connection_schedule`
+  - `subscriber_groups.connection_schedule`
+  - `access_plans.connection_schedule`
+
+Empty string = no restriction. Otherwise stores the JSON produced by
+`access_schedule.serialize()`.
+
+The legacy `working_days` CSV cache on subscribers + subscriber_groups
+stays as a denormalization, populated from `derive_working_days()` on
+every save. This keeps old callers / reports working.
+
+### 17.5 Integration recipe (3 steps for any new form)
+
+1. **Template** — import + invoke the macro:
+   ```jinja
+   {% from "_partials/access_schedule.html" import access_schedule_picker %}
+   {{ access_schedule_picker(name="connection_schedule",
+                             value=obj.connection_schedule or "") }}
+   ```
+
+2. **Route** — pipe POST through `serialize()`:
+   ```python
+   raw = (request.form.get("connection_schedule") or "").strip()
+   from app.radius.core.access_schedule import serialize, derive_working_days
+   sched_clean   = serialize(raw)
+   derived_days  = derive_working_days(raw)   # if you keep working_days
+   ```
+
+3. **Repo** — persist the clean JSON in the `connection_schedule` column.
+   For Subscriber/AccessPlan dataclasses, add a `connection_schedule:
+   str = ""` field and extend `_COLS`, `_row()`, and the upsert values
+   tuple in lockstep.
+
+### 17.6 Edge cases
+
+- Empty `connection_schedule` on a fresh record is fine — the picker
+  starts empty, the schedule means "no restriction".
+- `working_days` is now a *derived* cache: never read it as the source
+  of truth. Either consult `connection_schedule` or recompute the CSV.
+- The picker's JS re-renders the UI from `data-acs-initial` at init,
+  so the hidden field's `value` (server-rendered) is always the source
+  of truth. Sometime later, sync() overwrites it with the live state.
+- HTML-escaping of the JSON in the `data-acs-initial` attribute is
+  normal; the JS reads `dataset.acsInitial` and the browser decodes it.
+
+### 17.7 Reusable in
+
+- Card batches (per-batch schedule)
+- Share groups (cross-distributor schedule)
+- NAS devices (per-NAS allowed-windows)
+- Any future "when is this allowed" question — never write a custom
+  day picker again.
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
