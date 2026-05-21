@@ -1,6 +1,9 @@
 """Web UI for card print template operations room."""
 from __future__ import annotations
 
+import base64
+from pathlib import PurePath
+
 from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
@@ -11,6 +14,12 @@ from ..services.operations import get_operations_service
 def register_print_template_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates", "print_templates", print_templates, methods=["GET"])
     bp.add_url_rule("/print-templates", "print_templates_create", print_templates_create, methods=["POST"])
+    bp.add_url_rule(
+        "/print-templates/export",
+        "print_templates_export_center",
+        print_templates_export_center,
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/print-templates/<int:template_id>/preview",
         "print_templates_preview",
@@ -53,17 +62,41 @@ def _checked(name: str, default: bool = False) -> bool:
     return request.form.get(name) in {"1", "true", "on", "yes"}
 
 
+def _uploaded_background() -> dict:
+    upload = request.files.get("background_image")
+    if not upload or not upload.filename:
+        return {}
+    raw = upload.read()
+    if not raw:
+        return {}
+    if len(raw) > 1_500_000:
+        raise RadiusError("حجم صورة الخلفية كبير جدًا. الحد الحالي 1.5MB.")
+    mime = (upload.mimetype or "").lower()
+    if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+        raise RadiusError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+    safe_name = PurePath(upload.filename).name[:120]
+    encoded = base64.b64encode(raw).decode("ascii")
+    return {
+        "background_image_data_url": f"data:{mime};base64,{encoded}",
+        "background_image_name": safe_name,
+        "background_image_mime": mime,
+    }
+
+
 def _payload() -> dict:
     layout = {
         "preview_mode": "visual_design_room",
         "card_width_mm": _float("card_width_mm", 85),
         "card_height_mm": _float("card_height_mm", 54),
+        "card_orientation": request.form.get("card_orientation") or "horizontal",
         "design_preset": request.form.get("design_preset") or "modern",
         "gradient_start": request.form.get("gradient_start") or "#0f172a",
         "gradient_end": request.form.get("gradient_end") or "#22a7bd",
         "accent_color": request.form.get("accent_color") or "#f59e0b",
         "text_color": request.form.get("text_color") or request.form.get("color") or "#ffffff",
         "surface_color": request.form.get("surface_color") or "#e8f7fb",
+        "pattern_style": request.form.get("pattern_style") or "signal",
+        "image_opacity": _float("image_opacity", 0.82),
         "qr_style": request.form.get("qr_style") or "boxed",
         "brand_name": request.form.get("brand_name") or "HobeRadius",
         "card_title": request.form.get("card_title") or "بطاقة إنترنت",
@@ -83,6 +116,7 @@ def _payload() -> dict:
         "show_guides": _checked("show_guides"),
         "show_brand": _checked("show_brand", True),
     }
+    layout.update(_uploaded_background())
     return {
         "name": request.form.get("name"),
         "orientation": request.form.get("orientation") or "portrait",
@@ -115,6 +149,10 @@ def _page_context(*, preview: dict | None = None) -> dict:
 
 def print_templates():
     return render_template("radius/print_templates.html", **_page_context())
+
+
+def print_templates_export_center():
+    return render_template("radius/print_templates_export.html", **_page_context())
 
 
 def print_templates_create():
@@ -154,6 +192,18 @@ def print_templates_export_pdf(template_id: int):
     except ValueError:
         flash("معرّف الحزمة غير صحيح.", "error")
         return redirect(url_for("radius.print_templates"))
+    layout_overrides = {
+        key: (request.args.get(key) or "").strip()
+        for key in (
+            "brand_name",
+            "card_title",
+            "footer_text",
+            "hotspot_address",
+            "price_text",
+            "validity_text",
+        )
+    }
+    layout_overrides = {key: value for key, value in layout_overrides.items() if value}
     try:
         payload = get_operations_service().export_print_template_pdf(
             tenant_id=_tid(),
@@ -164,6 +214,7 @@ def print_templates_export_pdf(template_id: int):
                 "qr_payload": request.args.get("sample_username") or "CARD1234",
             },
             batch_id=batch_id,
+            layout_overrides=layout_overrides,
             actor=_actor(),
         )
     except RadiusError as exc:

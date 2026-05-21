@@ -43,16 +43,27 @@
   .pr-canvas-wrap{background:linear-gradient(180deg,#f8fafc,#eef7fb);padding:22px;border-radius:0 0 16px 16px;min-height:520px;display:grid;place-items:center}
   .pr-card-preview{position:relative;width:min(100%,520px);aspect-ratio:1.575;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,var(--card-a,#0f172a),var(--card-b,#22a7bd));box-shadow:0 24px 70px rgba(15,23,42,.28);color:var(--card-text,#fff);direction:ltr;text-align:left}
   .pr-card-preview:before{content:"";position:absolute;inset:auto -10% -35% 40%;height:80%;background:radial-gradient(circle,rgba(255,255,255,.24),transparent 60%)}
-  .pr-card-accent{position:absolute;inset:18px 20px auto 20px;height:5px;border-radius:999px;background:var(--card-accent,#f59e0b)}
-  .pr-brand{position:absolute;left:24px;top:34px;font-size:18px;font-weight:900;letter-spacing:.01em}
-  .pr-title{position:absolute;left:24px;top:66px;font-size:28px;font-weight:950;max-width:62%;line-height:1.05}
-  .pr-pill{position:absolute;left:24px;right:auto;display:flex;align-items:center;gap:8px;min-width:210px;border-radius:14px;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:9px 12px;font-weight:900;box-shadow:0 10px 24px rgba(15,23,42,.12)}
-  .pr-pill small{font-size:10px;color:#64748b;font-weight:900}.pr-pill span{font-size:17px}
-  .pr-user{top:126px}.pr-pass{top:176px}
-  .pr-qr{position:absolute;right:28px;top:108px;width:112px;height:112px;border-radius:18px;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:34px;font-weight:950;box-shadow:0 12px 30px rgba(15,23,42,.18)}
-  .pr-meta{position:absolute;left:24px;right:24px;bottom:36px;font-weight:800;font-size:13px;display:flex;gap:10px;flex-wrap:wrap}
+  .pr-card-preview:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background:repeating-linear-gradient(90deg,rgba(255,255,255,.8) 0 2px,transparent 2px 12px);mask:linear-gradient(180deg,transparent 0 70%,#000 74% 100%)}
+  .pr-card-preview[data-pattern="wave"]:after{opacity:.18;background:radial-gradient(circle at 20% 30%,rgba(255,255,255,.9),transparent 9%),radial-gradient(circle at 70% 70%,rgba(255,255,255,.7),transparent 13%)}
+  .pr-card-preview[data-pattern="grid"]:after{opacity:.18;background:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:18px 18px;mask:none}
+  .pr-card-preview[data-pattern="clean"]:after{display:none}
+  .pr-card-bg-image{position:absolute;inset:0;background-image:var(--card-image,none);background-size:cover;background-position:center;opacity:var(--card-image-opacity,.82);display:none}
+  .pr-card-preview.has-image .pr-card-bg-image{display:block}
+  .pr-card-preview.has-image:before{background:linear-gradient(135deg,rgba(15,23,42,.68),rgba(34,167,189,.28))}
+  .pr-card-bg-image,.pr-card-accent,.pr-brand,.pr-title,.pr-pill,.pr-qr,.pr-meta,.pr-footer{z-index:1}
+  .pr-card-preview:before,.pr-card-preview:after{z-index:0}
+  .pr-card-accent{position:absolute;left:5%;right:5%;top:7%;height:2%;border-radius:999px;background:var(--card-accent,#f59e0b)}
+  .pr-brand{position:absolute;left:6%;top:16%;font-size:clamp(13px,1.35vw,18px);font-weight:900;letter-spacing:.01em;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-title{position:absolute;left:6%;top:29%;font-size:clamp(15px,1.7vw,24px);font-weight:950;max-width:52%;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-pill{position:absolute;left:6%;right:auto;display:grid;grid-template-columns:minmax(30px,26%) minmax(0,1fr);align-items:center;gap:6px;width:46%;border-radius:10px;background:var(--card-surface,#e8f7fb);color:#0f172a;padding:6px 8px;font-weight:900;box-shadow:0 10px 24px rgba(15,23,42,.12)}
+  .pr-pill small{font-size:clamp(8px,.9vw,10px);color:#64748b;font-weight:900}.pr-pill span{font-size:clamp(11px,1.25vw,17px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-user{top:44%}.pr-pass{top:60%}
+  .pr-qr{position:absolute;right:7%;top:36%;width:27%;aspect-ratio:1;border-radius:14px;background:#fff;color:#0f172a;display:grid;place-items:center;font-size:clamp(18px,2.5vw,34px);font-weight:950;box-shadow:0 12px 30px rgba(15,23,42,.18)}
+  .pr-pill,.pr-qr{touch-action:none;cursor:grab;user-select:none}
+  .pr-pill:active,.pr-qr:active{cursor:grabbing}
+  .pr-meta{position:absolute;left:6%;right:6%;bottom:16%;font-weight:800;font-size:clamp(9px,.95vw,13px);display:flex;gap:7px;flex-wrap:wrap}
   .pr-meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 10px}
-  .pr-footer{position:absolute;left:24px;right:24px;bottom:12px;color:rgba(255,255,255,.82);font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-footer{position:absolute;left:6%;right:6%;bottom:5%;color:rgba(255,255,255,.82);font-size:clamp(8px,.86vw,11px);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pr-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
   @media(max-width:1000px){.pr-data{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .pr-kpi{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-card);padding:12px}
@@ -62,6 +73,29 @@
   .pr-pager-buttons{display:flex;gap:8px;align-items:center}
   .pr-pager button[disabled]{opacity:.48;cursor:not-allowed}
   .pr-json{direction:ltr;text-align:left;white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:12px;font-size:11px;overflow:auto;max-height:260px}
+  .pr-export-grid{display:grid;gap:10px;margin-top:12px}
+  .pr-export-card{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-soft);padding:12px;display:grid;gap:10px}
+  .pr-export-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .pr-export-card strong{color:var(--hub-text);font-weight:950}
+  .pr-export-card small{color:var(--hub-text-mute);font-weight:800;line-height:1.5}
+  .pr-export-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .pr-export-room{border:1px solid rgba(34,167,189,.22);box-shadow:0 18px 44px rgba(15,23,42,.08)}
+  .pr-export-chooser{display:grid;grid-template-columns:minmax(240px,.9fr) minmax(0,1.1fr);gap:14px;align-items:start}
+  @media(max-width:920px){.pr-export-chooser{grid-template-columns:1fr}}
+  .pr-export-copy{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  @media(max-width:720px){.pr-export-copy{grid-template-columns:1fr}}
+  .pr-template-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+  .pr-template-card{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 28px rgba(15,23,42,.05)}
+  .pr-template-thumb{height:128px;border-radius:14px;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--thumb-a,#0f172a),var(--thumb-b,#22a7bd));box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+  .pr-template-thumb.is-vertical{height:150px;width:108px;margin-inline:auto}
+  .pr-template-thumb:before{content:"";position:absolute;left:10%;right:10%;top:12%;height:6px;border-radius:999px;background:var(--thumb-accent,#f59e0b)}
+  .pr-template-thumb:after{content:"USER  CARD1234\A PASS  ******";white-space:pre;position:absolute;left:10%;top:34%;width:48%;border-radius:9px;background:rgba(255,255,255,.92);color:#0f172a;padding:8px;font-size:11px;font-weight:950;line-height:1.7}
+  .pr-template-qr{position:absolute;right:10%;top:34%;width:25%;aspect-ratio:1;border-radius:10px;background:#fff;color:#0f172a;display:grid;place-items:center;font-weight:950;font-size:15px}
+  .pr-template-image-badge{position:absolute;left:10px;bottom:10px;background:rgba(15,23,42,.76);color:#fff;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}
+  .pr-template-card h4{margin:0;color:var(--hub-text);font-size:15px;font-weight:950}
+  .pr-template-card p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.55}
+  .pr-template-card.is-selected{outline:3px solid rgba(34,167,189,.32);border-color:rgba(34,167,189,.7)}
+  .pr-export-note{border:1px dashed rgba(34,167,189,.35);background:rgba(34,167,189,.08);border-radius:14px;padding:11px;color:var(--hub-text-soft);font-size:12px;font-weight:800;line-height:1.7}
 </style>
 {% endblock %}
 
@@ -72,6 +106,7 @@
     <p>صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.</p>
     <div class="pr-actions">
       <a class="hub-btn hub-btn--primary" href="#designer"><i class="fa-solid fa-wand-magic-sparkles"></i> ابدأ التصميم</a>
+      <a class="hub-btn" href="{{ url_for('radius.print_templates_export_center') }}"><i class="fa-solid fa-file-export"></i> غرفة التصدير</a>
       <a class="hub-btn" href="#templates"><i class="fa-solid fa-layer-group"></i> القوالب المحفوظة</a>
       <a class="hub-btn" href="#jobs"><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</a>
     </div>
@@ -91,12 +126,11 @@
         <span class="hub-pill hub-pill--blue">Live Preview</span>
       </div>
       <div class="pr-panel-body">
-        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_create') }}" data-pr-form>
+        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form>
           <div class="pr-tabs" role="tablist">
             <button class="pr-tab is-active" type="button" data-pr-tab="design">التصميم</button>
             <button class="pr-tab" type="button" data-pr-tab="content">المحتوى</button>
             <button class="pr-tab" type="button" data-pr-tab="layout">المقاسات</button>
-            <button class="pr-tab" type="button" data-pr-tab="export">الحزمة والتصدير</button>
           </div>
 
           <div class="pr-pane is-active" data-pr-pane="design">
@@ -129,6 +163,21 @@
               {% endfor %}
             </div>
             <div class="pr-grid3" style="margin-top:12px">
+              <label class="pr-field">اتجاه الكرت
+                <select class="hub-select" name="card_orientation" data-preview="cardOrientation">
+                  <option value="horizontal">أفقي</option>
+                  <option value="vertical">عمودي</option>
+                </select>
+              </label>
+              <label class="pr-field">نمط الزخرفة
+                <select class="hub-select" name="pattern_style" data-preview="patternStyle">
+                  <option value="signal">إشارة وشبكات</option>
+                  <option value="wave">موجات ضوئية</option>
+                  <option value="grid">شبكة تقنية</option>
+                  <option value="clean">نظيف</option>
+                </select>
+              </label>
+              <label class="pr-field">شفافية الصورة<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="0.82" data-preview="imageOpacity"></label>
               <label class="pr-field">بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="#0f172a" data-preview="gradientStart"></label>
               <label class="pr-field">نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="#22a7bd" data-preview="gradientEnd"></label>
               <label class="pr-field">لون التمييز<input class="hub-input" type="color" name="accent_color" value="#f59e0b" data-preview="accent"></label>
@@ -136,12 +185,16 @@
               <label class="pr-field">لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="#e8f7fb" data-preview="surfaceColor"></label>
               <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="#ffffff"></label>
             </div>
+            <label class="pr-field" style="margin-top:12px">صورة خلفية من الجهاز
+              <input class="hub-input" type="file" name="background_image" accept="image/png,image/jpeg,image/webp" data-background-image>
+              <small>تظهر فورًا في المعاينة، وتُحفظ داخل القالب في قاعدة البيانات. الحد الحالي 1.5MB.</small>
+            </label>
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
             <div class="pr-grid2">
               <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="HobeRadius" data-preview="brand"></label>
-              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="بطاقة إنترنت" data-preview="title"></label>
+              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="Internet Card" data-preview="title"></label>
               <label class="pr-field">عنوان Hotspot/DNS<input class="hub-input" name="hotspot_address" value="hotspot.local" data-preview="hotspot"></label>
               <label class="pr-field">السعر<input class="hub-input" name="price_text" placeholder="مثال: JOD 1.00" data-preview="price"></label>
               <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
@@ -150,10 +203,10 @@
               </label>
             </div>
             <label class="pr-field">نص أسفل البطاقة
-              <input class="hub-input" name="footer_text" value="احتفظ ببيانات الدخول حتى نهاية الصلاحية" data-preview="footer">
+              <input class="hub-input" name="footer_text" value="Keep login data until expiry" data-preview="footer">
             </label>
             <label class="pr-field">تعليمات الاستخدام
-              <textarea class="hub-input" name="instructions_text" rows="3">استخدم اسم المستخدم وكلمة المرور أو QR للدخول.</textarea>
+              <textarea class="hub-input" name="instructions_text" rows="3">Use the username, password, or QR code to log in.</textarea>
             </label>
             <div class="pr-checks">
               {% for key,label,checked in [
@@ -188,18 +241,6 @@
             </div>
           </div>
 
-          <div class="pr-pane" data-pr-pane="export">
-            <label class="pr-field">الحزمة الافتراضية للتصدير
-              <select class="hub-select" data-batch-select>
-                <option value="">PDF عينة بدون حزمة</option>
-                {% for b in batches %}
-                  <option value="{{ b.id }}">{{ b.batch_code }} - {{ b.package_name or b.plan_name or 'حزمة' }} ({{ b.total_cards or b.generated or 0 }} بطاقة)</option>
-                {% endfor %}
-              </select>
-              <small>اختيار الحزمة هنا يجهز روابط التصدير في جدول القوالب المحفوظة.</small>
-            </label>
-          </div>
-
           <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</button>
         </form>
       </div>
@@ -212,18 +253,19 @@
       </div>
       <div class="pr-canvas-wrap">
         <div class="pr-card-preview pt-visual-card" data-card-preview>
+          <div class="pr-card-bg-image" data-card-bg-image></div>
           <div class="pr-card-accent"></div>
           <div class="pr-brand" data-out="brand">HobeRadius</div>
-          <div class="pr-title" data-out="title">بطاقة إنترنت</div>
-          <div class="pr-pill pr-user"><small>USER</small><span>CARD1234</span></div>
-          <div class="pr-pill pr-pass"><small>PASS</small><span>••••••••</span></div>
-          <div class="pr-qr" data-out="qr">QR</div>
+          <div class="pr-title" data-out="title">Internet Card</div>
+          <div class="pr-pill pr-user" data-drag="username"><small>USER</small><span>CARD1234</span></div>
+          <div class="pr-pill pr-pass" data-drag="password"><small>PASS</small><span>••••••••</span></div>
+          <div class="pr-qr" data-out="qr" data-drag="qr">QR</div>
           <div class="pr-meta">
             <span data-out="price" style="display:none">JOD 1.00</span>
             <span data-out="validity" style="display:none">4 ساعات</span>
             <span data-out="hotspot">hotspot.local</span>
           </div>
-          <div class="pr-footer" data-out="footer">احتفظ ببيانات الدخول حتى نهاية الصلاحية</div>
+          <div class="pr-footer" data-out="footer">Keep login data until expiry</div>
         </div>
       </div>
       {% if preview %}
@@ -258,7 +300,7 @@
                   <button class="hub-btn hub-btn--sm" type="submit"><i class="fa-solid fa-eye"></i> معاينة</button>
                 </form>
                 <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}"><i class="fa-solid fa-file-pdf"></i> PDF عينة</a>
-                <a class="hub-btn hub-btn--sm hub-btn--primary" data-export-batch-link href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}"><i class="fa-solid fa-print"></i> PDF حزمة</a>
+                <a class="hub-btn hub-btn--sm hub-btn--primary" href="{{ url_for('radius.print_templates_export_center') }}"><i class="fa-solid fa-print"></i> فتح التصدير</a>
               </div>
             </td>
           </tr>
@@ -329,16 +371,43 @@
     const el = root.querySelector(sel);
     if(el) el.style.display = enabled ? '' : 'none';
   }
+  function numeric(name, fallback){
+    const parsed = parseFloat(val(name, fallback));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  }
+  function cardSize(){
+    let w = numeric('card_width_mm', 85);
+    let h = numeric('card_height_mm', 54);
+    if(val('card_orientation','horizontal') === 'vertical' && w > h){
+      const nextW = h;
+      h = w;
+      w = nextW;
+    }
+    return {w, h};
+  }
+  function placeElement(selector, prefix, w, h){
+    const el = root.querySelector(selector);
+    if(!el) return;
+    const x = Math.max(0, Math.min(w, parseFloat(val(`${prefix}_x`, 0)) || 0));
+    const y = Math.max(0, Math.min(h, parseFloat(val(`${prefix}_y`, 0)) || 0));
+    el.style.right = 'auto';
+    el.style.left = `${Math.max(0, Math.min(94, (x / w) * 100))}%`;
+    el.style.top = `${Math.max(0, Math.min(92, (y / h) * 100))}%`;
+  }
   function update(){
     if(!card || !form) return;
+    const size = cardSize();
+    card.style.aspectRatio = `${size.w} / ${size.h}`;
     card.style.setProperty('--card-a', val('gradient_start','#0f172a'));
     card.style.setProperty('--card-b', val('gradient_end','#22a7bd'));
     card.style.setProperty('--card-accent', val('accent_color','#f59e0b'));
     card.style.setProperty('--card-text', val('text_color','#ffffff'));
     card.style.setProperty('--card-surface', val('surface_color','#e8f7fb'));
+    card.style.setProperty('--card-image-opacity', val('image_opacity','.82'));
+    card.dataset.pattern = val('pattern_style','signal');
     out('brand', val('brand_name','HobeRadius'));
-    out('title', val('card_title','بطاقة إنترنت'));
-    out('footer', val('footer_text',''));
+    out('title', val('card_title','Internet Card'));
+    out('footer', val('footer_text','Keep login data until expiry'));
     out('hotspot', val('hotspot_address','hotspot.local'));
     out('price', val('price_text',''));
     out('validity', val('validity_text',''));
@@ -349,6 +418,9 @@
     show('.pr-user', form.show_username && form.show_username.checked);
     show('.pr-pass', form.show_password && form.show_password.checked);
     show('.pr-qr', form.show_qr && form.show_qr.checked);
+    placeElement('.pr-user', 'username', size.w, size.h);
+    placeElement('.pr-pass', 'password', size.w, size.h);
+    placeElement('.pr-qr', 'qr', size.w, size.h);
   }
   $$('[data-pr-tab]').forEach(btn => btn.addEventListener('click', () => {
     $$('[data-pr-tab]').forEach(x => x.classList.remove('is-active'));
@@ -372,17 +444,94 @@
   }));
   if(form) form.addEventListener('input', update);
   if(form) form.addEventListener('change', update);
-  const batchSelect = root.querySelector('[data-batch-select]');
-  function updateBatchLinks(){
-    const id = batchSelect && batchSelect.value;
-    $$('[data-export-batch-link]').forEach(link => {
-      const base = link.href.split('?')[0];
-      link.href = id ? `${base}?batch_id=${encodeURIComponent(id)}` : base;
-      link.classList.toggle('is-disabled', !id);
-      link.title = id ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة من تبويب الحزمة والتصدير';
+  const bgInput = form && form.querySelector('[data-background-image]');
+  if(bgInput){
+    bgInput.addEventListener('change', () => {
+      const file = bgInput.files && bgInput.files[0];
+      if(!file){
+        card.style.setProperty('--card-image', 'none');
+        card.classList.remove('has-image');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        card.style.setProperty('--card-image', `url("${reader.result}")`);
+        card.classList.add('has-image');
+        update();
+      };
+      reader.readAsDataURL(file);
     });
   }
-  if(batchSelect) batchSelect.addEventListener('change', updateBatchLinks);
+  function bindDrag(el){
+    const prefix = el && el.dataset.drag;
+    if(!el || !prefix || !form) return;
+    const xInput = form.querySelector(`[name="${prefix}_x"]`);
+    const yInput = form.querySelector(`[name="${prefix}_y"]`);
+    if(!xInput || !yInput) return;
+    let dragging = false;
+    function move(event){
+      if(!dragging) return;
+      const rect = card.getBoundingClientRect();
+      const size = cardSize();
+      const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+      xInput.value = ((x / rect.width) * size.w).toFixed(1);
+      yInput.value = ((y / rect.height) * size.h).toFixed(1);
+      update();
+    }
+    el.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      el.setPointerCapture && el.setPointerCapture(event.pointerId);
+      event.preventDefault();
+      move(event);
+    });
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', () => { dragging = false; });
+    el.addEventListener('pointercancel', () => { dragging = false; });
+  }
+  $$('[data-drag]').forEach(bindDrag);
+  const batchSelects = $$('[data-export-batch-select]');
+  const exportOverrides = $$('[data-export-override]');
+  function selectedBatchId(){
+    const selected = batchSelects.find(select => select && select.value);
+    return selected ? selected.value : '';
+  }
+  function exportQueryString(){
+    const params = new URLSearchParams();
+    const id = selectedBatchId();
+    if(id) params.set('batch_id', id);
+    exportOverrides.forEach(field => {
+      const value = (field.value || '').trim();
+      if(value) params.set(field.name, value);
+    });
+    return params.toString();
+  }
+  function updateBatchLinks(){
+    const id = selectedBatchId();
+    const qs = exportQueryString();
+    $$('[data-export-batch-link]').forEach(link => {
+      const base = link.href.split('?')[0];
+      link.href = qs ? `${base}?${qs}` : base;
+      link.classList.toggle('is-disabled', !id);
+      link.title = id ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة من غرفة التصدير';
+    });
+  }
+  batchSelects.forEach(select => select.addEventListener('change', () => {
+    batchSelects.forEach(other => {
+      if(other !== select) other.value = select.value;
+    });
+    updateBatchLinks();
+  }));
+  exportOverrides.forEach(field => {
+    field.addEventListener('input', updateBatchLinks);
+    field.addEventListener('change', updateBatchLinks);
+  });
+  $$('[data-export-template-card]').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      $$('[data-export-template-card]').forEach(el => el.classList.remove('is-selected'));
+      cardEl.classList.add('is-selected');
+    });
+  });
   function initPaginators(){
     $$('[data-paginated-table]').forEach(tableWrap => {
       const rows = Array.from(tableWrap.querySelectorAll('[data-page-row]'));

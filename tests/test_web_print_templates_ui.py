@@ -1,6 +1,7 @@
 """Web UI smoke tests for card print templates."""
 from __future__ import annotations
 
+from io import BytesIO
 from uuid import uuid4
 
 import pytest
@@ -59,6 +60,13 @@ def test_print_templates_create_and_visual_preview(client):
     assert page.status_code == 200
     assert "معاينة بصرية" in page.get_data(as_text=True)
 
+    page_html = page.get_data(as_text=True)
+    assert 'name="card_orientation"' in page_html
+    assert 'name="background_image"' in page_html
+    assert 'data-drag="username"' in page_html
+    assert '/admin/radius/print-templates/export' in page_html
+    assert 'data-export-gallery' not in page_html
+
     token = _csrf(client, "/admin/radius/print-templates")
     name = f"Print UI {uuid4().hex[:8]}"
     created = client.post(
@@ -81,16 +89,36 @@ def test_print_templates_create_and_visual_preview(client):
             "color": "#1f2937",
             "card_width_mm": "85",
             "card_height_mm": "54",
+            "card_orientation": "vertical",
+            "pattern_style": "grid",
+            "image_opacity": "0.7",
+            "background_image": (BytesIO(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"), "card-bg.png"),
         },
+        content_type="multipart/form-data",
         follow_redirects=True,
     )
     assert created.status_code == 200
-    assert name in created.get_data(as_text=True)
+    created_html = created.get_data(as_text=True)
+    assert name in created_html
+    assert "فتح التصدير" in created_html
+
+    export_center = client.get("/admin/radius/print-templates/export")
+    assert export_center.status_code == 200
+    export_html = export_center.get_data(as_text=True)
+    assert "data-export-room" in export_html
+    assert "data-export-template-card" in export_html
+    assert "data-export-progress" in export_html
+    assert name in export_html
 
     from app.radius.db.repos import operations_repo
 
     templates = operations_repo.list_print_templates(1, limit=1000)
     template = next(item for item in templates if item["name"] == name)
+    layout = template["layout_json"]
+    assert layout["card_orientation"] == "vertical"
+    assert layout["pattern_style"] == "grid"
+    assert layout["background_image_name"] == "card-bg.png"
+    assert layout["background_image_data_url"].startswith("data:image/png;base64,")
 
     preview = client.post(
         f"/admin/radius/print-templates/{template['id']}/preview",
@@ -105,6 +133,7 @@ def test_print_templates_create_and_visual_preview(client):
 
     export = client.get(
         f"/admin/radius/print-templates/{template['id']}/export.pdf",
+        query_string={"price_text": "JOD 9", "hotspot_address": "demo.hotspot"},
         follow_redirects=False,
     )
     assert export.status_code == 200

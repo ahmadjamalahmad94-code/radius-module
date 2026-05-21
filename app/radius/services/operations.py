@@ -26,8 +26,8 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#e8f7fb",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة إنترنت",
-        "footer_text": "احتفظ ببيانات الدخول حتى نهاية الصلاحية",
+        "card_title": "Internet Card",
+        "footer_text": "Keep login data until expiry",
     },
     "dark": {
         "label": "داكن احترافي",
@@ -39,7 +39,7 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
         "card_title": "Hotspot Voucher",
-        "footer_text": "الدعم الفني متاح عبر نقطة البيع",
+        "footer_text": "Technical support is available at the sales point",
     },
     "gold": {
         "label": "ذهبي",
@@ -50,8 +50,8 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#fff7d6",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة مميزة",
-        "footer_text": "سرعة ثابتة وتجربة أفضل",
+        "card_title": "Premium Card",
+        "footer_text": "Stable speed and a better experience",
     },
     "minimal": {
         "label": "بسيط",
@@ -62,8 +62,8 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#eff6ff",
         "qr_style": "clean",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة دخول",
-        "footer_text": "اسم المستخدم وكلمة المرور للاستخدام مرة واحدة",
+        "card_title": "Access Card",
+        "footer_text": "Use the username and password once",
     },
     "telecom": {
         "label": "اتصالات",
@@ -74,8 +74,8 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#cffafe",
         "qr_style": "rounded",
         "brand_name": "HobeRadius",
-        "card_title": "شبكة لاسلكية",
-        "footer_text": "امسح QR أو أدخل البيانات يدويًا",
+        "card_title": "WiFi Access",
+        "footer_text": "Scan QR or enter credentials manually",
     },
     "neon": {
         "label": "نيون",
@@ -86,8 +86,56 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#e0f2fe",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة سرعة",
-        "footer_text": "مررها للعميل بعد الدفع مباشرة",
+        "card_title": "Speed Card",
+        "footer_text": "Give this card to the customer after payment",
+    },
+    "aurora": {
+        "label": "Aurora",
+        "gradient_start": "#172554",
+        "gradient_end": "#14b8a6",
+        "accent_color": "#f472b6",
+        "text_color": "#ffffff",
+        "surface_color": "#ecfeff",
+        "qr_style": "rounded",
+        "brand_name": "HobeRadius",
+        "card_title": "Smart WiFi Pass",
+        "footer_text": "Scan, connect, and enjoy reliable access",
+    },
+    "fiber": {
+        "label": "Fiber Pro",
+        "gradient_start": "#020617",
+        "gradient_end": "#2563eb",
+        "accent_color": "#38bdf8",
+        "text_color": "#ffffff",
+        "surface_color": "#dbeafe",
+        "qr_style": "boxed",
+        "brand_name": "HobeRadius Fiber",
+        "card_title": "Fiber Access",
+        "footer_text": "High speed access card",
+    },
+    "sunset": {
+        "label": "Sunset",
+        "gradient_start": "#7c2d12",
+        "gradient_end": "#db2777",
+        "accent_color": "#fde047",
+        "text_color": "#fff7ed",
+        "surface_color": "#ffedd5",
+        "qr_style": "rounded",
+        "brand_name": "HobeRadius",
+        "card_title": "Golden Voucher",
+        "footer_text": "Keep this card until the subscription expires",
+    },
+    "matrix": {
+        "label": "Matrix",
+        "gradient_start": "#022c22",
+        "gradient_end": "#0f172a",
+        "accent_color": "#22c55e",
+        "text_color": "#dcfce7",
+        "surface_color": "#d1fae5",
+        "qr_style": "clean",
+        "brand_name": "HobeRadius",
+        "card_title": "Access Token",
+        "footer_text": "Secure access token for hotspot login",
     },
 }
 _PRINT_BOOL_FIELDS = {
@@ -163,11 +211,14 @@ def _template_layout(data: dict) -> dict:
         "design_preset": preset_name,
         "card_width_mm": _float_field(merged, "card_width_mm", minimum=1, default=85),
         "card_height_mm": _float_field(merged, "card_height_mm", minimum=1, default=54),
+        "card_orientation": _text("card_orientation", "horizontal", 20),
         "gradient_start": _safe_hex(merged.get("gradient_start"), preset["gradient_start"]),
         "gradient_end": _safe_hex(merged.get("gradient_end"), preset["gradient_end"]),
         "accent_color": _safe_hex(merged.get("accent_color"), preset["accent_color"]),
         "text_color": _safe_hex(merged.get("text_color") or merged.get("color"), preset["text_color"]),
         "surface_color": _safe_hex(merged.get("surface_color"), preset["surface_color"]),
+        "pattern_style": _text("pattern_style", "signal", 30),
+        "image_opacity": max(0, min(1, _float_field(merged, "image_opacity", minimum=0, default=0.82))),
         "qr_style": _text("qr_style", preset["qr_style"], 30),
         "brand_name": _text("brand_name", preset["brand_name"], 80),
         "card_title": _text("card_title", preset["card_title"], 80),
@@ -177,10 +228,13 @@ def _template_layout(data: dict) -> dict:
         "validity_text": _text("validity_text", "", 60),
         "instructions_text": _text(
             "instructions_text",
-            "استخدم اسم المستخدم وكلمة المرور أو QR للدخول.",
+            "Use the username, password, or QR code to log in.",
             180,
         ),
         "background_style": _text("background_style", "gradient", 30),
+        "background_image_data_url": _text("background_image_data_url", "", 2_100_000),
+        "background_image_name": _text("background_image_name", "", 140),
+        "background_image_mime": _text("background_image_mime", "", 60),
         "bleed_marks": _boolish(merged.get("bleed_marks"), False),
     }
     defaults = {
@@ -195,6 +249,11 @@ def _template_layout(data: dict) -> dict:
     }
     for key, default in defaults.items():
         normalized[key] = _boolish(merged.get(key), default)
+    if normalized["card_orientation"] == "vertical" and normalized["card_width_mm"] > normalized["card_height_mm"]:
+        normalized["card_width_mm"], normalized["card_height_mm"] = (
+            normalized["card_height_mm"],
+            normalized["card_width_mm"],
+        )
     return normalized
 
 
@@ -858,6 +917,7 @@ class OperationsService:
     def export_print_template_pdf(self, *, tenant_id: int, template_id: int,
                                   sample: Optional[dict] = None,
                                   batch_id: int | None = None,
+                                  layout_overrides: Optional[dict] = None,
                                   actor: str = "system") -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
@@ -871,6 +931,23 @@ class OperationsService:
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
+        if layout_overrides:
+            allowed = {
+                "brand_name",
+                "card_title",
+                "footer_text",
+                "hotspot_address",
+                "price_text",
+                "validity_text",
+            }
+            layout = {
+                **layout,
+                **{
+                    key: value
+                    for key, value in layout_overrides.items()
+                    if key in allowed and value is not None and str(value).strip()
+                },
+            }
         layout = _template_layout({**template, "layout": layout})
 
         page_size = str(template.get("page_size") or "A4").strip().lower()
@@ -883,10 +960,10 @@ class OperationsService:
         cols = max(int(template.get("cards_per_row") or 1), 1)
         margin = 10 * mm
         gap = 4 * mm
-        fit_width = (page_width - (margin * 2) - (gap * (cols - 1))) / cols
-        fit_height = (page_height - (margin * 2) - (gap * (rows - 1))) / rows
-        card_width = min(max(float(layout.get("card_width_mm") or 85), 1.0) * mm, fit_width)
-        card_height = min(max(float(layout.get("card_height_mm") or 54), 1.0) * mm, fit_height)
+        slot_width = (page_width - (margin * 2) - (gap * (cols - 1))) / cols
+        slot_height = (page_height - (margin * 2) - (gap * (rows - 1))) / rows
+        design_card_width = max(float(layout.get("card_width_mm") or 85), 1.0) * mm
+        design_card_height = max(float(layout.get("card_height_mm") or 54), 1.0) * mm
         font_size = max(min(int(template.get("font_size") or 12), 36), 6)
         text_color = _reportlab_color(str(layout.get("text_color") or template.get("color") or "#1f2937"))
         show_qr = bool(template.get("show_qr"))
@@ -958,14 +1035,16 @@ class OperationsService:
                 slot = idx % cards_per_page
                 row = slot // cols
                 col = slot % cols
-                x = margin + col * (card_width + gap)
-                y = page_height - margin - card_height - row * (card_height + gap)
-                _draw_template_card(
+                slot_x = margin + col * (slot_width + gap)
+                slot_y = page_height - margin - slot_height - row * (slot_height + gap)
+                _draw_scaled_template_card(
                     pdf,
-                    x=x,
-                    y=y,
-                    width=card_width,
-                    height=card_height,
+                    slot_x=slot_x,
+                    slot_y=slot_y,
+                    slot_width=slot_width,
+                    slot_height=slot_height,
+                    design_width=design_card_width,
+                    design_height=design_card_height,
                     template=template,
                     layout=layout,
                     card=card if isinstance(card, dict) else {},
@@ -973,6 +1052,7 @@ class OperationsService:
                     text_color=text_color,
                     show_qr=show_qr,
                     mm_unit=mm,
+                    form_name=f"card_{template_id}_{idx}",
                 )
 
             pdf.showPage()
@@ -989,6 +1069,9 @@ class OperationsService:
                     "template_name": template.get("name"),
                     "batch_id": batch_id,
                     "cards_per_page": cards_per_page,
+                    "render_mode": "card_snapshot_form_scaled_uniformly",
+                    "design_card_width_mm": float(layout.get("card_width_mm") or 85),
+                    "design_card_height_mm": float(layout.get("card_height_mm") or 54),
                     "bytes": len(payload),
                 },
             )
@@ -1059,13 +1142,139 @@ def _reportlab_color(value: str):
         return colors.HexColor("#1f2937")
 
 
+def _pdf_safe_latin(value: Any, fallback: str = "") -> str:
+    """Return text that the default ReportLab PDF font can render cleanly.
+
+    The browser preview can render Arabic through the page font, but the
+    lightweight ReportLab renderer uses built-in Latin fonts. Passing Arabic
+    there produces square glyph artifacts on printed cards, so exported PDF
+    defaults fall back to clean print-safe text until a shaped Arabic font
+    renderer is added.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return fallback
+    try:
+        raw.encode("latin-1")
+    except UnicodeEncodeError:
+        return fallback
+    return raw
+
+
+def _scaled_card_rect(*, slot_x: float, slot_y: float, slot_width: float,
+                      slot_height: float, design_width: float,
+                      design_height: float) -> tuple[float, float, float, float, float]:
+    """Fit a complete fixed card design inside a print slot.
+
+    The card is rendered internally at its original design size, then the whole
+    finished design is scaled into the sheet cell. This keeps username,
+    password, QR, font proportions, and background alignment identical to the
+    preview regardless of cards-per-row/cards-per-column changes.
+    """
+    safe_design_width = max(float(design_width or 1), 1.0)
+    safe_design_height = max(float(design_height or 1), 1.0)
+    scale = min(slot_width / safe_design_width, slot_height / safe_design_height)
+    draw_width = safe_design_width * scale
+    draw_height = safe_design_height * scale
+    draw_x = slot_x + (slot_width - draw_width) / 2
+    draw_y = slot_y + (slot_height - draw_height) / 2
+    return draw_x, draw_y, draw_width, draw_height, scale
+
+
+def _card_snapshot_metrics(*, template: dict, layout: dict, design_width: float,
+                           design_height: float, font_size: int,
+                           mm_unit: float) -> dict:
+    """Return internal fixed-canvas metrics before the card is placed on paper.
+
+    The PDF renderer treats these values as the source snapshot dimensions.
+    Sheet cells may scale the finished object, but they must not recalculate
+    font, QR, or placement sizes independently.
+    """
+    def _coord(prefix: str) -> tuple[float, float]:
+        x_mm = float(template.get(f"{prefix}_x") or 0)
+        y_mm = float(template.get(f"{prefix}_y") or 0)
+        return x_mm * mm_unit, design_height - y_mm * mm_unit
+
+    qr_size = 16 * mm_unit
+    return {
+        "design_width": design_width,
+        "design_height": design_height,
+        "font_size": max(min(int(font_size or 12), 36), 6),
+        "label_size": max(max(min(int(font_size or 12), 36), 6) - 3, 5),
+        "qr_size": qr_size,
+        "username": _coord("username"),
+        "password": _coord("password"),
+        "qr": _coord("qr"),
+        "username_ratio": (
+            _coord("username")[0] / max(design_width, 1),
+            _coord("username")[1] / max(design_height, 1),
+        ),
+        "qr_ratio": (
+            _coord("qr")[0] / max(design_width, 1),
+            _coord("qr")[1] / max(design_height, 1),
+        ),
+        "has_background_image": bool(layout.get("background_image_data_url")),
+    }
+
+
+def _draw_scaled_template_card(pdf, *, slot_x: float, slot_y: float,
+                               slot_width: float, slot_height: float,
+                               design_width: float, design_height: float,
+                               template: dict, layout: dict, card: dict,
+                               font_size: int, text_color, show_qr: bool,
+                               mm_unit: float, form_name: str) -> None:
+    draw_x, draw_y, _draw_width, _draw_height, scale = _scaled_card_rect(
+        slot_x=slot_x,
+        slot_y=slot_y,
+        slot_width=slot_width,
+        slot_height=slot_height,
+        design_width=design_width,
+        design_height=design_height,
+    )
+    _card_snapshot_metrics(
+        template=template,
+        layout=layout,
+        design_width=design_width,
+        design_height=design_height,
+        font_size=font_size,
+        mm_unit=mm_unit,
+    )
+    # Build one complete vector snapshot first, then scale that finished
+    # snapshot into the PDF sheet cell. This preserves preview proportions.
+    pdf.beginForm(form_name, 0, 0, design_width, design_height)
+    _draw_template_card(
+        pdf,
+        x=0,
+        y=0,
+        width=design_width,
+        height=design_height,
+        template=template,
+        layout=layout,
+        card=card,
+        font_size=font_size,
+        text_color=text_color,
+        show_qr=show_qr,
+        mm_unit=mm_unit,
+    )
+    pdf.endForm()
+    pdf.saveState()
+    pdf.translate(draw_x, draw_y)
+    pdf.scale(scale, scale)
+    pdf.doForm(form_name)
+    pdf.restoreState()
+
+
 def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
                         template: dict, layout: dict, card: dict, font_size: int,
                         text_color, show_qr: bool, mm_unit: float) -> None:
+    import base64
+    from io import BytesIO
+
     from reportlab.lib import colors
     from reportlab.graphics import renderPDF
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics.shapes import Drawing
+    from reportlab.lib.utils import ImageReader
 
     bg = _reportlab_color(str(layout.get("gradient_start") or "#0f172a"))
     bg2 = _reportlab_color(str(layout.get("gradient_end") or "#22a7bd"))
@@ -1078,6 +1287,26 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
     pdf.roundRect(x, y, width, height, radius, stroke=0, fill=1)
     pdf.setFillColor(bg2)
     pdf.roundRect(x + width * 0.55, y, width * 0.45, height, radius, stroke=0, fill=1)
+    image_data_url = str(layout.get("background_image_data_url") or "")
+    if image_data_url.startswith("data:image/") and ";base64," in image_data_url:
+        mime, encoded = image_data_url.split(";base64,", 1)
+        if mime in {"data:image/png", "data:image/jpeg", "data:image/jpg"}:
+            try:
+                image = ImageReader(BytesIO(base64.b64decode(encoded)))
+                pdf.drawImage(
+                    image,
+                    x,
+                    y,
+                    width=width,
+                    height=height,
+                    preserveAspectRatio=False,
+                    mask="auto",
+                )
+                image_opacity = max(0, min(1, float(layout.get("image_opacity") or 0.82)))
+                pdf.setFillColor(colors.Color(0, 0, 0, alpha=max(0, 1 - image_opacity)))
+                pdf.roundRect(x, y, width, height, radius, stroke=0, fill=1)
+            except Exception:
+                pass
     pdf.setFillColor(accent)
     pdf.roundRect(x + 4 * mm_unit, y + height - 6 * mm_unit, width - 8 * mm_unit, 2 * mm_unit, 1.2, stroke=0, fill=1)
 
@@ -1099,9 +1328,11 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
     pdf.setFillColor(text_color)
     pdf.setFont("Helvetica-Bold", max(font_size + 1, 7))
     if layout.get("show_brand"):
-        pdf.drawString(x + 7 * mm_unit, y + height - 12 * mm_unit, str(layout.get("brand_name") or "HobeRadius")[:38])
+        brand = _pdf_safe_latin(layout.get("brand_name"), "HobeRadius")
+        pdf.drawString(x + 7 * mm_unit, y + height - 12 * mm_unit, brand[:38])
     pdf.setFont("Helvetica-Bold", max(font_size, 7))
-    pdf.drawString(x + 7 * mm_unit, y + height - 20 * mm_unit, str(layout.get("card_title") or "Internet Card")[:44])
+    title = _pdf_safe_latin(layout.get("card_title"), "Internet Card")
+    pdf.drawString(x + 7 * mm_unit, y + height - 20 * mm_unit, title[:44])
 
     label_size = max(font_size - 3, 5)
     pdf.setFont("Helvetica", label_size)
@@ -1112,7 +1343,7 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
         pdf.setFillColor(colors.HexColor("#0f172a"))
         pdf.drawString(ux, uy + 1 * mm_unit, "USER")
         pdf.setFont("Helvetica-Bold", font_size)
-        pdf.drawString(ux + 13 * mm_unit, uy + 1 * mm_unit, username[:24])
+        pdf.drawString(ux + 16 * mm_unit, uy + 1 * mm_unit, username[:20])
     px, py = _coord("password")
     if layout.get("show_password", True):
         pdf.setFillColor(surface)
@@ -1121,7 +1352,7 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
         pdf.setFont("Helvetica", label_size)
         pdf.drawString(px, py + 1 * mm_unit, "PASS")
         pdf.setFont("Helvetica-Bold", font_size)
-        pdf.drawString(px + 13 * mm_unit, py + 1 * mm_unit, password[:24])
+        pdf.drawString(px + 16 * mm_unit, py + 1 * mm_unit, password[:20])
 
     if show_qr:
         qx, qy = _coord("qr")
@@ -1150,7 +1381,7 @@ def _draw_template_card(pdf, *, x: float, y: float, width: float, height: float,
         pdf.drawString(x + 7 * mm_unit, y + 8 * mm_unit, "  |  ".join(meta_parts)[:86])
     if layout.get("show_serial") and card.get("serial"):
         pdf.drawRightString(x + width - 6 * mm_unit, y + 8 * mm_unit, f"#{card.get('serial')}")
-    footer = str(layout.get("footer_text") or "")[:80]
+    footer = _pdf_safe_latin(layout.get("footer_text"), "Keep login data until expiry")[:80]
     if footer:
         pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.82))
         pdf.drawString(x + 7 * mm_unit, y + 3.2 * mm_unit, footer[:70])

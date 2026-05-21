@@ -223,10 +223,60 @@ def test_print_template_persistence_and_json_preview(client):
 
 
 def test_print_template_presets_update_batch_export_and_jobs(client):
+    from app.radius.services.operations import (
+        _card_snapshot_metrics,
+        _pdf_safe_latin,
+        _scaled_card_rect,
+    )
+
+    assert _pdf_safe_latin("بطاقة إنترنت", "Internet Card") == "Internet Card"
+    assert _pdf_safe_latin("Internet Card", "fallback") == "Internet Card"
+    draw_x, draw_y, draw_w, draw_h, scale = _scaled_card_rect(
+        slot_x=0,
+        slot_y=0,
+        slot_width=120,
+        slot_height=50,
+        design_width=200,
+        design_height=100,
+    )
+    assert (draw_x, draw_y, draw_w, draw_h, scale) == (10, 0, 100, 50, 0.5)
+    template_metrics = {
+        "username_x": 10,
+        "username_y": 15,
+        "password_x": 10,
+        "password_y": 25,
+        "qr_x": 60,
+        "qr_y": 12,
+    }
+    layout_metrics = {"background_image_data_url": "data:image/png;base64,abc"}
+    snapshot_a = _card_snapshot_metrics(
+        template=template_metrics,
+        layout=layout_metrics,
+        design_width=200,
+        design_height=100,
+        font_size=14,
+        mm_unit=2,
+    )
+    snapshot_b = _card_snapshot_metrics(
+        template=template_metrics,
+        layout=layout_metrics,
+        design_width=200,
+        design_height=100,
+        font_size=14,
+        mm_unit=2,
+    )
+    assert snapshot_a == snapshot_b
+    assert snapshot_a["font_size"] == 14
+    assert snapshot_a["qr_size"] == 32
+    assert snapshot_a["username_ratio"] == (0.1, 0.7)
+    assert snapshot_a["qr_ratio"] == (0.6, 0.76)
+
     presets = client.get("/api/v1/print-templates/presets", headers=_auth(client))
     assert presets.status_code == 200, presets.get_json()
     preset_items = presets.get_json()["data"]["items"]
-    assert {item["key"] for item in preset_items} >= {"modern", "telecom"}
+    assert {item["key"] for item in preset_items} >= {
+        "modern", "telecom", "aurora", "fiber", "sunset", "matrix"
+    }
 
     created = client.post(
         "/api/v1/print-templates",
@@ -239,6 +289,11 @@ def test_print_template_presets_update_batch_export_and_jobs(client):
             "show_qr": True,
             "layout": {
                 "design_preset": "telecom",
+                "card_orientation": "vertical",
+                "pattern_style": "wave",
+                "image_opacity": 0.7,
+                "background_image_data_url": "data:image/png;base64,iVBORw0KGgo=",
+                "background_image_name": "bg.png",
                 "brand_name": "HobeRadius",
                 "card_title": "Internet Voucher",
                 "show_password": True,
@@ -248,6 +303,9 @@ def test_print_template_presets_update_batch_export_and_jobs(client):
     )
     assert created.status_code == 201, created.get_json()
     template = created.get_json()["data"]["template"]
+    assert template["layout_json"]["card_orientation"] == "vertical"
+    assert template["layout_json"]["card_width_mm"] <= template["layout_json"]["card_height_mm"]
+    assert template["layout_json"]["background_image_name"] == "bg.png"
 
     updated = client.patch(
         f"/api/v1/print-templates/{template['id']}",
@@ -284,6 +342,20 @@ def test_print_template_presets_update_batch_export_and_jobs(client):
     assert export.status_code == 200, export.get_json()
     assert export.content_type.startswith("application/pdf")
     assert export.data.startswith(b"%PDF")
+
+    resized_sheet = client.patch(
+        f"/api/v1/print-templates/{template['id']}",
+        json={"cards_per_row": 4, "cards_per_column": 7},
+        headers=_auth(client),
+    )
+    assert resized_sheet.status_code == 200, resized_sheet.get_json()
+    export_resized = client.get(
+        f"/api/v1/print-templates/{template['id']}/export.pdf?batch_id={batch['id']}",
+        headers=_auth(client),
+    )
+    assert export_resized.status_code == 200, export_resized.get_json()
+    assert export_resized.content_type.startswith("application/pdf")
+    assert export_resized.data.startswith(b"%PDF")
 
     jobs = client.get("/api/v1/print-jobs", headers=_auth(client))
     assert jobs.status_code == 200, jobs.get_json()
