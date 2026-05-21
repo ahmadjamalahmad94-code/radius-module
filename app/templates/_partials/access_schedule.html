@@ -157,7 +157,6 @@
     color: var(--hub-brand-ink);
     font-size: 18px; font-weight: 700;
     align-self: center;
-    padding-top: 24px;  /* push down to align with the stepper centre */
   }
   @media (max-width: 520px){
     .acs-window-sep{ display: none; }
@@ -234,6 +233,10 @@
      mirrored pair: [chips إلى] [stepper إلى]  ←  [stepper من] [chips من] */
   .acs-time--from .acs-time-stepper{ grid-column: 2; }
   .acs-time--from .acs-time-quick{   grid-column: 1; }
+  /* Label sits above the STEPPER, not the chips — for the من side that
+     means right-aligning it inside the row (since the stepper is in
+     col 2 = left in RTL, the label still needs to be near the stepper). */
+  .acs-time--from .acs-time-label{ justify-content: flex-end; }
 
   /* The stepper container is forced LTR so HH:MM always reads
      left-to-right (the universal convention), regardless of the
