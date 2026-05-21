@@ -545,6 +545,12 @@
       </div>
     </section>
 
+    {# ── 2b. Speed schedules — bandwidth_schedules per-subscriber. ──
+       Cookbook §19. Edit-mode only (needs a real subscriber row). #}
+    {% if not is_new %}
+      {% include "radius/_speed_rules_panel.html" %}
+    {% endif %}
+
     {# ── 3. PPPoE ───────────────────────────────────────── #}
     <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
       <header class="uf-section-head">
@@ -773,11 +779,6 @@
         </div>
       </div>
     </section>
-
-    {# ── 9. Embedded speed-rules panel (edit mode only) #}
-    {% if not is_new %}
-      {% include "radius/_speed_rules_panel.html" %}
-    {% endif %}
 
     {# ── Action bar ───────────────────────────────────── #}
     <div class="uf-actions">

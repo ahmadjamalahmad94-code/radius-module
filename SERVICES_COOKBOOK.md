@@ -1611,6 +1611,102 @@ form classes (`.uf-*`, `.acs-*`, `.hub-*`).
 
 ---
 
+## 19. Speed-rule schedules — per-subscriber bandwidth windows
+
+**What it does.** Operator-facing per-subscriber speed schedule: a list
+of «day + time → speed» rules. Each rule overrides the base plan/account
+speed during its window. When no rule is currently active, the
+subscriber gets their base speed back (restore_mode = profile_default).
+
+### 19.1 Storage — `bandwidth_schedules` table (existing + extended)
+
+The table was added back in migration 022 with `target_type` /
+`subscriber_username` / `card_batch_id` already in place. Migration 030
+adds **`days_csv`** (canonical sat,sun,mon,tue,wed,thu,fri) so a rule
+can be restricted to specific days. Empty days_csv = every day.
+
+Relevant columns:
+
+  - `target_type`         — "plan" / "subscriber" / "card_batch"
+  - `subscriber_username` — set when target_type = "subscriber"
+  - `days_csv`            — CSV restricting days (empty = all days)
+  - `starts_at_time`      — `HH:MM` window start
+  - `ends_at_time`        — `HH:MM` window end (cross-midnight ok)
+  - `speed_down_kbps`     — base unit
+  - `speed_up_kbps`       — base unit
+  - `restore_mode`        — `profile_default` / `keep_current` / `disconnect`
+  - `priority`            — lower = higher priority on overlap
+  - `enabled`             — boolean
+
+### 19.2 Backend layers
+
+  - `operations_repo.create_bandwidth_schedule / update_bandwidth_schedule`
+    accept `days_csv`; INSERT/UPDATE both include the new column.
+  - `services/operations.py` normalizers carry `days_csv` from caller
+    payload into the repo dict, otherwise pass it through as empty.
+  - `routes/speed_rules_ui.py` exposes the embedded panel + handles
+    every form action (`manual`, `update:<id>`, `toggle:<id>`,
+    `delete:<id>`, `enable_all`, `disable_all`, `copy`). New helper
+    `_days_from_form()` reads `getlist()` of the multi-checkbox days
+    field and serializes them in canonical order.
+
+### 19.3 UI — `_speed_rules_panel.html` (D3 redesign)
+
+Each existing rule = a card with four rows of fields:
+
+```
+┌─ قاعدة سرعة #N ─────────────────────────────────── 🗑 ─┐
+│  اسم القاعدة            │ أيام (chips: sat..fri)        │
+│  من الساعة             │ إلى الساعة                    │
+│  ⬇ تنزيل (unit_input)  │ ⬆ رفع (unit_input)            │
+│  بعد الانتهاء          │ الأولوية                      │
+│  ─── footer ───                                          │
+│  ☑ مفعَّلة                       [تحديث] [تعطيل] [حذف]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+Add-new card uses the same layout with a brand-soft + dashed border to
+invite the click. Days chips mirror `access_schedule`'s
+gradient-when-on style — keeps the visual language consistent across
+all the form's pickers.
+
+Speed inputs use the canonical `unit_input_picker` (kind="speed") so
+the operator types "5" + Mbps instead of 5120 + Kbps.
+
+### 19.4 Location in `users_form.html`
+
+The panel is included as section **2b** — immediately after the
+«سرعة خاصة للمشترك» section. Edit-mode only (`{% if not is_new %}`)
+because new subscribers don't yet have a username for the
+`subscriber_username` FK.
+
+For `plans_form.html`, the existing include at the bottom of the
+form still works; the panel is identical, just bound to
+`target_type="plan"` via the route's `speed_rules_panel()` call.
+
+### 19.5 Edge cases
+
+- Rules whose `days_csv` is empty match every day (current behaviour
+  for all pre-migration rows).
+- A time window of 22:00 → 06:00 is understood as "wraps past
+  midnight" by the radius_apply layer.
+- Two overlapping rules → the one with the smaller `priority` number
+  wins (radius_apply sorts by priority asc).
+- `enabled = 0` rules are still visible in the panel but greyed out
+  (`.is-disabled` class) so the operator can quickly re-enable.
+
+### 19.6 Reusable in
+
+- Plans (already used via `target_type="plan"`).
+- Card batches (via `target_type="card_batch"`).
+- Subscriber groups (could be added by routing through a `group_id`
+  fan-out when the group has a saved schedule).
+
+The card layout + day chips + `unit_input_picker` integration is the
+template for any "rule per time window" UI we build next.
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
