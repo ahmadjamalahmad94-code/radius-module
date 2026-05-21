@@ -3,6 +3,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% block title %}جدولة السرعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock"></i>{% endblock %}
@@ -98,8 +99,8 @@
       </label>
 
       <label class="fld">
-        الأولوية داخل نفس النطاق
-        <input class="hub-input" type="number" name="priority" min="1" step="1" value="100">
+        الأولوية داخل نفس النطاق (1-10)
+        <input class="hub-input" type="number" name="priority" min="1" max="10" step="1" value="5">
         <span class="bs-help">الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق.</span>
       </label>
 
@@ -116,23 +117,23 @@
 
       <div class="bs-row">
         <label class="fld">
-          سرعة التنزيل (Kbps)
-          <input class="hub-input" type="number" name="speed_down_kbps" min="0" step="1" value="0">
+          سرعة التنزيل
+          {{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
         </label>
         <label class="fld">
-          سرعة الرفع (Kbps)
-          <input class="hub-input" type="number" name="speed_up_kbps" min="0" step="1" value="0">
+          سرعة الرفع
+          {{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
         </label>
       </div>
 
       <div class="bs-row">
         <label class="fld">
-          CIR تنزيل (Kbps)
-          <input class="hub-input" type="number" name="cir_down_kbps" min="0" step="1" value="0">
+          CIR تنزيل
+          {{ unit_input_picker(name="cir_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
         </label>
         <label class="fld">
-          CIR رفع (Kbps)
-          <input class="hub-input" type="number" name="cir_up_kbps" min="0" step="1" value="0">
+          CIR رفع
+          {{ unit_input_picker(name="cir_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
         </label>
       </div>
 

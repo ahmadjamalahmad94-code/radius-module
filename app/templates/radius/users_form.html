@@ -748,19 +748,19 @@
       <div class="uf-section-body">
         <div class="uf-grid">
           <div class="uf-field"><label>إجمالي وقت الاتصال</label>
-            {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time") }}
+            {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time", units=["min","hr","day"]) }}
             <div class="help">0 = بلا حد خاص.</div></div>
           <div class="uf-field"><label>وقت الاتصال اليومي</label>
-            {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time") }}
+            {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time", units=["min","hr"]) }}
           </div>
           <div class="uf-field"><label>كوتا التنزيل</label>
-            {{ unit_input_picker(name="download_quota_mb", value=sub.download_quota_mb or 0, kind="quota") }}
+            {{ unit_input_picker(name="download_quota_mb", value=sub.download_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
             <div class="help">0 = غير محدودة.</div></div>
           <div class="uf-field"><label>كوتا الرفع</label>
-            {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota") }}
+            {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
           </div>
           <div class="uf-field full"><label>كوتا مدمجة</label>
-            {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota") }}
+            {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
             <div class="help">إن حُدِّدت، تحلّ محل الكوتا المنفصلة.</div></div>
           <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
             {{ toggle_switch(name="connection_time_limit_enabled", checked=sub.connection_time_limit_enabled, id="ctl") }}
