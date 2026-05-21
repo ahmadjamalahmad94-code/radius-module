@@ -1,10 +1,43 @@
-# Card Checker — Services Cookbook
+# Services Cookbook — Canonical Service Reference
 
-> **Purpose.** This is the canonical reference for every operator-facing
-> service that originated on the Card Checker page (`cards_checker_v2.html`).
-> Every pattern below is **production-tested** and matches what's live in the
-> codebase. When you need to add the same action to another page (subscribers,
-> sessions, etc.), copy from here — do not re-invent.
+> **Status: CANONICAL.** This document is the **single source of truth** for
+> every operator-facing service in the project — today and going forward.
+> Every pattern below is **production-tested** and matches what's live in
+> the codebase. When you need to add the same action to another page
+> (subscribers, sessions, etc.), copy from here — do not re-invent.
+>
+> ## 🔒 Maintenance protocol (READ FIRST)
+>
+> 1. **Before building or editing any service-bearing page**, read the
+>    relevant section here FIRST. Copy the canonical pattern — never
+>    re-derive a pattern that already exists in this file.
+>
+> 2. **Whenever a new service / operation is added** to ANY page, append
+>    a new section to this file in the SAME commit that ships the code.
+>    Follow the 9-field template (see "How to use" below). The cookbook
+>    is a living document; if it goes out of sync with the code it loses
+>    its value.
+>
+> 3. **When you discover a gotcha** (the kind that took an iteration to
+>    fix), add a one-liner row to **§E. Common gotchas** so the next
+>    person doesn't repeat the mistake.
+>
+> 4. **When code and cookbook disagree**, the cookbook is what we
+>    *intend*. Either fix the code to match, or update the cookbook in
+>    the same commit. Never let drift persist.
+>
+> 5. **Commit messages** that touch services should reference the
+>    cookbook section, e.g.:
+>    > `Subscribers — add per-user disconnect (see SERVICES_COOKBOOK §1)`
+>
+> Why this rule exists: it took many hours of trial-and-error to learn
+> the right way to do per-session disconnect / scoped radacct close /
+> can_disconnect derivation / multi-MAC enforcement / etc. The cookbook
+> captures all of it so we never repeat that pain.
+>
+> ## How to use
+>
+> Each service section follows the same template:
 >
 > **How to use.** Each service section follows the same template:
 >
@@ -20,6 +53,15 @@
 >
 > All snippets use the `hub-v2` design system. Backend code is Python 3.11+
 > with `dataclasses` + Flask. Frontend JS is vanilla — no framework.
+>
+> ---
+>
+> **Where this file lives:** repo root (`/SERVICES_COOKBOOK.md`).
+> **Companion files:**
+> - `DESIGN_SYSTEM.md` — visual identity rules (colors, spacing, typography)
+> - `SURVEY.md` — page-level inventory + priority tiers
+> - `app/static/css/hub_v2.css` + `app/templates/_partials/hub.html` — the
+>   actual design system components referenced throughout this cookbook
 
 ---
 
