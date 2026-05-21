@@ -30,6 +30,7 @@ def speed_rules_panel(
     plan_id: int | None = None,
     subscriber_username: str = "",
     card_batch_id: int | None = None,
+    subscriber_group_id: int | None = None,
 ) -> dict:
     svc = get_operations_service()
     rules = svc.list_bandwidth_schedules(
@@ -38,6 +39,7 @@ def speed_rules_panel(
         plan_id=plan_id if target_type == "plan" else None,
         subscriber_username=subscriber_username if target_type == "subscriber" else None,
         card_batch_id=card_batch_id if target_type == "card_batch" else None,
+        subscriber_group_id=subscriber_group_id if target_type == "subscriber_group" else None,
         limit=200,
     )
     presets = svc.list_bandwidth_schedules(tenant_id=tenant_id, limit=500)
@@ -46,6 +48,7 @@ def speed_rules_panel(
         "plan_id": plan_id,
         "subscriber_username": subscriber_username,
         "card_batch_id": card_batch_id,
+        "subscriber_group_id": subscriber_group_id,
         "return_to": return_to,
         "title": title,
         "help_text": help_text,
@@ -63,6 +66,7 @@ def handle_embedded_speed_rule(
     plan_id: int | None = None,
     subscriber_username: str = "",
     card_batch_id: int | None = None,
+    subscriber_group_id: int | None = None,
 ) -> bool:
     """Handle speed-rule actions from an edit page."""
     action = (form.get("_speed_rule_action") or "").strip()
@@ -75,6 +79,7 @@ def handle_embedded_speed_rule(
         "plan_id": plan_id,
         "subscriber_username": subscriber_username,
         "card_batch_id": card_batch_id,
+        "subscriber_group_id": subscriber_group_id,
         "priority": form.get("sr_priority") or 100,
         "enabled": True,
         "notes": form.get("sr_notes") or "",
@@ -96,6 +101,8 @@ def handle_embedded_speed_rule(
             raise RadiusValidationError("قاعدة السرعة لا تتبع هذا المشترك")
         if target_type == "card_batch" and int(rule.get("card_batch_id") or 0) != int(card_batch_id or 0):
             raise RadiusValidationError("قاعدة السرعة لا تتبع هذه الحزمة")
+        if target_type == "subscriber_group" and int(rule.get("subscriber_group_id") or 0) != int(subscriber_group_id or 0):
+            raise RadiusValidationError("قاعدة السرعة لا تتبع هذه المجموعة")
 
     if action in {"enable_all", "disable_all"}:
         svc.set_bandwidth_schedules_enabled_for_target(
@@ -106,6 +113,7 @@ def handle_embedded_speed_rule(
             plan_id=plan_id,
             subscriber_username=subscriber_username,
             card_batch_id=card_batch_id,
+            subscriber_group_id=subscriber_group_id,
         )
         return True
 
