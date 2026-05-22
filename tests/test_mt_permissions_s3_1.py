@@ -29,6 +29,13 @@ def test_allowlist_contains_every_documented_permission():
         "mikrotik.restore",
         "mikrotik.audit.view",
         "mikrotik.admin",
+        # VX2 — VPS site-exit routing surface.
+        "site_exit.view",
+        "site_exit.manage",
+        "site_exit.preview",
+        "site_exit.apply",
+        "site_exit.override_backup_warning",
+        "site_exit.enable_risky_groups",
     }
 
 
