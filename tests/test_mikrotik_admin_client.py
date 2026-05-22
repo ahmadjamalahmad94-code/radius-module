@@ -358,3 +358,92 @@ def test_ip_routes_calls_ip_route_print(fake_nas_direct):
     assert res.ok is True
     mock_client.print_.assert_called_once_with("/ip/route/print")
     assert res.data[0]["gateway"] == "10.10.0.1"
+
+
+# ─── K4.2: SSE generator tests ───────────────────────────────────
+
+
+def test_stream_interface_samples_yields_max_samples(fake_nas_direct):
+    """Generator emits exactly `max_samples` snapshots, sleeping
+    between them — and the injected `_sleep` is invoked one less
+    time than samples (no trailing sleep on the last yield)."""
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"rx-bits-per-second": "100"}},
+    ]
+    fake = _patched_pool(mock_client)
+    sleeps: list[float] = []
+
+    with patch.object(mac, "_pool_acquire", fake):
+        samples = list(mac.stream_interface_samples(
+            fake_nas_direct, "ether1",
+            period_sec=0.0, max_samples=3,
+            _sleep=sleeps.append,
+        ))
+
+    assert len(samples) == 3
+    assert all(s.ok for s in samples)
+    # 3 samples → 2 inter-sample sleeps
+    assert sleeps == [0.0, 0.0]
+    assert mock_client.run.call_count == 3
+
+
+def test_stream_interface_samples_bypasses_cache(fake_nas_direct):
+    """The SSE loop must NOT serve from cache — each tick is a
+    fresh dial. Pre-warm the regular cached fetcher first, then
+    confirm streaming still hits the wire twice."""
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"rx-bits-per-second": "1"}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        # Warm the cached endpoint to prove the SSE loop ignores it.
+        mac.interface_traffic(fake_nas_direct, "ether1")
+        list(mac.stream_interface_samples(
+            fake_nas_direct, "ether1",
+            period_sec=0.0, max_samples=2,
+            _sleep=lambda _s: None,
+        ))
+
+    # 1 cached + 2 streamed = 3 wire calls total.
+    assert mock_client.run.call_count == 3
+
+
+def test_stream_interface_samples_stops_on_error(fake_nas_direct):
+    """If the router goes away mid-stream, yield ONE error envelope
+    and then stop — don't loop forever hammering a dead router."""
+    from contextlib import contextmanager
+    from app.radius.integration.mikrotik.errors import ConnectError
+
+    calls = []
+
+    @contextmanager
+    def fake_acquire(cfg):
+        calls.append(1)
+        raise ConnectError("router gone")
+        yield  # pragma: no cover
+
+    with patch.object(mac, "_pool_acquire", fake_acquire):
+        samples = list(mac.stream_interface_samples(
+            fake_nas_direct, "ether1",
+            period_sec=0.0, max_samples=10,
+            _sleep=lambda _s: None,
+        ))
+
+    assert len(samples) == 1
+    assert samples[0].ok is False
+    assert "تعذر الاتصال" in samples[0].error
+    assert len(calls) == 1  # didn't retry
+
+
+def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
+    samples = list(mac.stream_interface_samples(
+        fake_nas_direct, "",
+        period_sec=0.0, max_samples=5,
+        _sleep=lambda _s: None,
+    ))
+    assert len(samples) == 1
+    assert samples[0].ok is False
+    assert "غير محدد" in samples[0].error

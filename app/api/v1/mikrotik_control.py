@@ -21,12 +21,15 @@ K3 endpoints — system stats:
 K4 endpoints — interfaces + network:
   GET /api/v1/mikrotik/<id>/interfaces
   GET /api/v1/mikrotik/<id>/interfaces/<name>/traffic
+  GET /api/v1/mikrotik/<id>/interfaces/<name>/sse  ← live SSE stream
   GET /api/v1/mikrotik/<id>/ip/addresses
   GET /api/v1/mikrotik/<id>/routes
 """
 from __future__ import annotations
 
-from flask import Blueprint, g
+import json
+
+from flask import Blueprint, Response, g
 
 from ...radius.db.connection import db
 from ...radius.services import mikrotik_admin_client as mac
@@ -83,6 +86,12 @@ def register(bp: Blueprint) -> None:
         "/mikrotik/<int:nas_id>/interfaces/<string:name>/traffic",
         "mt_interface_traffic",
         require_api_token(mt_interface_traffic),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/interfaces/<string:name>/sse",
+        "mt_interface_sse",
+        require_api_token(mt_interface_sse),
         methods=["GET"],
     )
     bp.add_url_rule(
@@ -236,3 +245,44 @@ def mt_ip_routes(nas_id: int):
         return fail("الراوتر غير موجود", code="not_found", status=404)
     result = mac.ip_routes(nas)
     return ok(_envelope(result, router_id=nas_id))
+
+
+def _format_sse(payload: dict) -> str:
+    """Serialise one event for an SSE stream. `ensure_ascii=False`
+    keeps the Arabic error text readable in browser devtools."""
+    body = json.dumps(payload, ensure_ascii=False)
+    return f"data: {body}\n\n"
+
+
+def mt_interface_sse(nas_id: int, name: str):
+    """Server-Sent Events stream — pushes one `MtResult.to_dict()`
+    every `SSE_DEFAULT_PERIOD_SEC` seconds for up to
+    `SSE_DEFAULT_MAX_SAMPLES` samples (≈ 5 minutes), then closes so
+    the browser's EventSource reconnects with a fresh DB lookup.
+
+    The actual sample loop lives in
+    `mikrotik_admin_client.stream_interface_samples`, which is
+    cache-bypassing so the UI sees live values.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("الراوتر غير موجود", code="not_found", status=404)
+
+    def gen():
+        for sample in mac.stream_interface_samples(nas, name):
+            payload = sample.to_dict()
+            payload["router_id"] = nas_id
+            payload["interface"] = name
+            yield _format_sse(payload)
+
+    return Response(
+        gen(),
+        mimetype="text/event-stream",
+        headers={
+            # Tell every middlebox not to buffer the stream — chunks
+            # need to reach the browser the instant we yield them.
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )

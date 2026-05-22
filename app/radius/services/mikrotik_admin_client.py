@@ -408,6 +408,60 @@ def ip_routes(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+# Default upper bound on SSE samples — 150 × 2 s ≈ 5 min, after
+# which the browser's EventSource auto-reconnects.
+SSE_DEFAULT_MAX_SAMPLES = 150
+SSE_DEFAULT_PERIOD_SEC = 2.0
+
+
+def stream_interface_samples(
+    nas: Mapping[str, Any],
+    name: str,
+    *,
+    period_sec: float = SSE_DEFAULT_PERIOD_SEC,
+    max_samples: int = SSE_DEFAULT_MAX_SAMPLES,
+    _sleep: Callable[[float], None] = time.sleep,
+):
+    """Yield live `MtResult` snapshots of one interface's traffic.
+
+    Bypasses the TTL cache on purpose — the consumer (Server-Sent
+    Events stream) wants fresh samples every `period_sec`. If a
+    sample fails (router went away mid-stream), we yield the error
+    envelope and stop; the EventSource client will reconnect on
+    its own schedule and we don't pin a worker hammering a dead
+    router.
+
+    Cooperative — yields one sample, then sleeps. Closing the
+    generator (client disconnects) breaks the loop on the next
+    yield.
+    """
+    iface = (name or "").strip()
+    if not iface:
+        yield MtResult(ok=False, error="اسم الواجهة غير محدد")
+        return
+
+    def _work(client):
+        rows = client.run(
+            "/interface/monitor-traffic",
+            attrs={"interface": iface, "once": ""},
+        )
+        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+
+    bound = max(1, int(max_samples))
+    for i in range(bound):
+        result = _safe_dial(
+            nas=nas,
+            operation=f"interface/sse:{iface}",
+            work=_work,
+        )
+        yield result
+        if not result.ok:
+            return
+        if i == bound - 1:
+            return
+        _sleep(period_sec)
+
+
 __all__ = [
     "MtResult",
     "TTL_SYSTEM",
@@ -425,4 +479,7 @@ __all__ = [
     "interface_traffic",
     "ip_addresses",
     "ip_routes",
+    "stream_interface_samples",
+    "SSE_DEFAULT_MAX_SAMPLES",
+    "SSE_DEFAULT_PERIOD_SEC",
 ]
