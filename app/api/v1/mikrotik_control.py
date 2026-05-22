@@ -140,7 +140,7 @@ def _envelope(result: mac.MtResult, *, router_id: int) -> dict:
 def mt_system_resource(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.system_resource(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -148,7 +148,7 @@ def mt_system_resource(nas_id: int):
 def mt_system_health(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.system_health(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -156,7 +156,7 @@ def mt_system_health(nas_id: int):
 def mt_system_identity(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.system_identity(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -164,7 +164,7 @@ def mt_system_identity(nas_id: int):
 def mt_system_clock(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.system_clock(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -172,7 +172,7 @@ def mt_system_clock(nas_id: int):
 def mt_system_routerboard(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.system_routerboard(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -187,7 +187,7 @@ def mt_system_overview(nas_id: int):
     deep-link) re-uses the warm value."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
 
     sections = {
         "resource": mac.system_resource(nas),
@@ -216,7 +216,7 @@ def mt_system_overview(nas_id: int):
 def mt_interfaces(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.interface_list(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -224,7 +224,7 @@ def mt_interfaces(nas_id: int):
 def mt_interface_traffic(nas_id: int, name: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.interface_traffic(nas, name)
     payload = _envelope(result, router_id=nas_id)
     payload["interface"] = name
@@ -234,7 +234,7 @@ def mt_interface_traffic(nas_id: int, name: str):
 def mt_ip_addresses(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ip_addresses(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -242,7 +242,7 @@ def mt_ip_addresses(nas_id: int):
 def mt_ip_routes(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ip_routes(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -266,7 +266,7 @@ def mt_interface_sse(nas_id: int, name: str):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("الراوتر غير موجود", code="not_found", status=404)
+        return fail("not_found", "الراوتر غير موجود", status=404)
 
     def gen():
         for sample in mac.stream_interface_samples(nas, name):
