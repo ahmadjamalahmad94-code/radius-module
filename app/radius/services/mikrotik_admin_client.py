@@ -449,6 +449,22 @@ def ip_routes(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+def ip_neighbors(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/neighbor/print` — devices discovered via MNDP/CDP/LLDP.
+
+    Each row carries identity, MAC, IPv4/IPv6, interface, version,
+    platform, board, and uptime. RouterOS rebuilds this list on
+    every discovery beacon (~ once per minute on most hardware),
+    so caching for TTL_SYSTEM is safe and keeps the page snappy.
+    """
+    return fetch_cached(
+        nas=nas,
+        operation="ip/neighbors",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/neighbor/print")),
+    )
+
+
 # ─── K5: hotspot + PPP active users ──────────────────────────────
 
 
@@ -1029,6 +1045,7 @@ __all__ = [
     "interface_traffic",
     "ip_addresses",
     "ip_routes",
+    "ip_neighbors",
     "hotspot_active",
     "ppp_active",
     "disconnect_hotspot_session",

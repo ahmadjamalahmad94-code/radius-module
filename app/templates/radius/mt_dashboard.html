@@ -337,11 +337,49 @@
     </section>
   </section>
 
-  {# ─── Placeholder panels (P4..P7 will fill them). Honest
+  {# ─── P4 — Neighbors tab (real data) ─────────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="neighbors"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-neighbors-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-people-arrows"></i> الجيران</h3>
+        <span class="mt-card-meta">
+          <span data-mt-neighbors-count>—</span> جهاز ·
+          <button type="button" class="mt-mini-btn"
+                  data-mt-neighbors-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-empty" data-mt-neighbors-msg>جارٍ التحميل…</p>
+        <p class="mt-tab-hint">
+          القائمة تأتي من /ip/neighbor (MNDP/CDP/LLDP) — قد تتأخّر
+          دقيقة أو أكثر بين الإشارات.
+        </p>
+        <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
+          <table class="mt-iface-table" data-mt-neighbors-table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>MAC</th>
+                <th>IPv4</th>
+                <th>الواجهة</th>
+                <th>المنصّة</th>
+                <th>اللوحة</th>
+                <th>الإصدار</th>
+              </tr>
+            </thead>
+            <tbody data-mt-neighbors-rows></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  {# ─── Placeholder panels (P5..P7 will fill them). Honest
        empty states — no fake buttons, no fake data. ─── #}
   {% set _placeholders = [
-    ('neighbors',   'الجيران',   'people-arrows',
-     'الأجهزة المكتشَفة عبر MNDP/CDP/LLDP — ينزل في P4.'),
     ('sessions',    'الجلسات',   'users',
      'Hotspot + PPP active users مع uptime + bytes — ينزل في P6.'),
     ('logs',        'السجلات',   'list',

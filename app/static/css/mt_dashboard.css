@@ -512,3 +512,16 @@
   color: #0F172A;
   border-color: #94A3B8;
 }
+
+/* Small hint line above a table — used by neighbors to explain
+   the discovery latency, and by future tabs that need to tell the
+   operator "this list isn't instant." */
+.mt-tab-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #64748B;
+  background: #F8FAFC;
+  border-inline-start: 3px solid #94A3B8;
+  padding: 8px 12px;
+  border-radius: 6px;
+}

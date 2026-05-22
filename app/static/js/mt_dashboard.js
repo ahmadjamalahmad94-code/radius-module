@@ -878,6 +878,40 @@
     },
   });
 
+  // ─── P4 — Neighbors (MNDP/CDP/LLDP) ───────────────────────────
+  initTableTab({
+    slug: "neighbors",
+    path: "/neighbors",
+    pollMs: 30_000,
+    cardSel: "[data-mt-neighbors-card]",
+    msgSel: "[data-mt-neighbors-msg]",
+    wrapSel: "[data-mt-neighbors-wrap]",
+    rowsSel: "[data-mt-neighbors-rows]",
+    countSel: "[data-mt-neighbors-count]",
+    refreshSel: "[data-mt-neighbors-refresh]",
+    emptyMsg: ("لم يكتشف الراوتر أيّ جيران بعد. "
+               + "تأكد من تفعيل MNDP/CDP/LLDP على الواجهة."),
+    errorFallback: "الراوتر لم يرد على /ip/neighbor/print.",
+    row: function (r) {
+      // RouterOS exposes a `discovered-by` field listing the
+      // protocols that saw this neighbor. Not all builds carry it,
+      // so fall back to a sensible default.
+      const identity = r.identity || r["system-description"]
+                       || r["mac-address"] || "—";
+      return [
+        '<tr>',
+        '<td class="mt-iface-name">', escapeText(identity), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
+        '<td>', escapeText(r.address || r["address4"] || "—"), '</td>',
+        '<td>', escapeText(r.interface || "—"), '</td>',
+        '<td>', escapeText(r.platform || "—"), '</td>',
+        '<td>', escapeText(r.board || "—"), '</td>',
+        '<td>', escapeText(r.version || "—"), '</td>',
+        '</tr>',
+      ].join("");
+    },
+  });
+
   // ─── P3.B — Routes ────────────────────────────────────────────
   initTableTab({
     slug: "routes",

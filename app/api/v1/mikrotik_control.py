@@ -138,6 +138,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_ip_routes),
         methods=["GET"],
     )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/neighbors",
+        "mt_ip_neighbors",
+        require_api_token(mt_ip_neighbors),
+        methods=["GET"],
+    )
     # K5 — hotspot + PPP active users
     bp.add_url_rule(
         "/mikrotik/<int:nas_id>/hotspot/active",
@@ -417,6 +423,14 @@ def mt_ip_addresses(nas_id: int):
     if not nas:
         return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ip_addresses(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_ip_neighbors(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.ip_neighbors(nas)
     return ok(_envelope(result, router_id=nas_id))
 
 
