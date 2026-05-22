@@ -1,0 +1,113 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}التنبيهات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
+{% block page_title %}التنبيهات الذكيّة{% endblock %}
+{% block page_sub %}<span class="sub">إشارات يجب أن تنتبه لها — قبل أن يتعطّل شيء</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-alerts-page>
+
+  {{ hub.hero(
+    "التنبيهات الذكيّة",
+    subtitle="الراوترات غير المتصلة، فشل تسجيل الدخول المتكرر، انتفاضات الترافيك — كلها تجتمع هنا.",
+    icon="triangle-exclamation",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
+      <span class="mt-card-meta">
+        <span data-mt-alerts-count>{{ rows|length }}</span> صف
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <form method="get" class="mt-program-form"
+            data-mt-alerts-filters>
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>الحالة</span>
+            <select name="status" data-mt-alerts-status>
+              <option value="open"     {% if filters.status == 'open'     %}selected{% endif %}>المفتوحة</option>
+              <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المُغلَقة</option>
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>الشدة</span>
+            <select name="severity" data-mt-alerts-severity>
+              <option value="">— الكل —</option>
+              {% for s in severities %}
+              <option value="{{ s }}"
+                {% if filters.severity == s %}selected{% endif %}>
+                {{ s }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>الراوتر</span>
+            <input type="text" name="router_id"
+                   value="{{ filters.router_id or '' }}"
+                   placeholder="مثلاً 42"
+                   data-mt-alerts-router>
+          </label>
+        </div>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn">
+            <i class="fa-solid fa-magnifying-glass"></i> طبّق
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list"></i> النتائج</h3>
+    </header>
+    <div class="mt-card-body">
+      {% if not rows %}
+      <p class="mt-empty" data-mt-alerts-empty>
+        لا توجد تنبيهات تطابق هذه الفلاتر — بشرى سارّة على الأرجح.
+      </p>
+      {% else %}
+      <ul class="mt-health-list" data-mt-alerts-rows>
+        {% for a in rows %}
+        <li class="mt-health-row mt-health-row--{{ a.severity }}"
+            data-mt-alert-row="{{ a.id }}">
+          <div class="mt-health-row-head">
+            {% if a.severity == 'critical' %}
+            <span class="mt-iface-state mt-iface-state--off">حرجة</span>
+            {% elif a.severity == 'warning' %}
+            <span class="mt-iface-state mt-iface-state--down">تحذير</span>
+            {% else %}
+            <span class="mt-iface-state mt-iface-state--up">معلومة</span>
+            {% endif %}
+            <span class="mt-health-row-msg">{{ a.title_ar }}</span>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#475569">
+            {% if a.router_id %}<span>راوتر #{{ a.router_id }}</span>{% endif %}
+            <span>القاعدة: <code>{{ a.rule }}</code></span>
+            <span>آخر رصد: <code>{{ a.last_seen }}</code></span>
+            <a class="mt-mini-btn"
+               href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+               data-mt-alert-detail="{{ a.id }}">
+              <i class="fa-solid fa-eye"></i> تفاصيل
+            </a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

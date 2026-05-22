@@ -1,0 +1,92 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تنبيه #{{ alert.id }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
+{% block page_title %}تنبيه #{{ alert.id }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ alert.rule }} · {{ alert.status }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard"
+         data-mt-alert-detail-page
+         data-mt-alert-id="{{ alert.id }}">
+
+  {{ hub.hero(alert.title_ar,
+              subtitle=alert.rule ~ " · " ~ alert.severity,
+              icon="triangle-exclamation") }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-info"></i> ملخّص</h3>
+      <span class="mt-card-meta">
+        {% if alert.severity == 'critical' %}
+        <span class="mt-iface-state mt-iface-state--off">حرجة</span>
+        {% elif alert.severity == 'warning' %}
+        <span class="mt-iface-state mt-iface-state--down">تحذير</span>
+        {% else %}
+        <span class="mt-iface-state mt-iface-state--up">معلومة</span>
+        {% endif %}
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary" data-mt-alert-meta>
+        {% if alert.router_id %}
+        <li>الراوتر: <code>#{{ alert.router_id }}</code></li>
+        {% endif %}
+        <li>القاعدة: <code>{{ alert.rule }}</code></li>
+        <li>الحالة: <strong>{{ alert.status }}</strong></li>
+        <li>أول رصد: <code>{{ alert.first_seen }}</code></li>
+        <li>آخر رصد: <code>{{ alert.last_seen }}</code></li>
+        {% if alert.resolved_at %}
+        <li>أُغلِق: <code>{{ alert.resolved_at }}</code></li>
+        {% endif %}
+      </ul>
+    </div>
+  </section>
+
+  {% if alert.explanation_ar %}
+  <section class="mt-card" data-mt-alert-explanation>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-comment"></i> الشرح</h3>
+    </header>
+    <div class="mt-card-body">
+      <p>{{ alert.explanation_ar }}</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if alert.recommended_action_ar %}
+  <section class="mt-card" data-mt-alert-action>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-lightbulb"></i> الإجراء المُقترح</h3>
+    </header>
+    <div class="mt-card-body">
+      <p>{{ alert.recommended_action_ar }}</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if alert.evidence %}
+  <section class="mt-card" data-mt-alert-evidence>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-microscope"></i> الدليل</h3>
+    </header>
+    <div class="mt-card-body">
+      <pre class="mt-logs-output">{{ alert.evidence | tojson(indent=2) }}</pre>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="mt-program-actions">
+    <a class="mt-mini-btn" href="{{ url_for('radius.mt_alerts_index') }}">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  </div>
+</section>
+
+{% endblock %}
