@@ -194,6 +194,19 @@ def test_password_masked_in_svg_exposed_in_pdf():
     assert "MyClearPw01" in svg_unmasked
 
 
+def test_show_title_flag_hides_card_title():
+    from app.radius.services.card_renderer import build_card_render_model
+
+    model = build_card_render_model(
+        _make_template(layout={"card_title": "TITLE_SHOULD_HIDE", "show_title": False}),
+        {"id": 1, "username": "u1", "password": "p1"},
+    )
+
+    element_ids = {item["id"] for item in model["elements"]}
+    assert "title" not in element_ids
+    assert all(item.get("text") != "TITLE_SHOULD_HIDE" for item in model["elements"])
+
+
 def test_internal_ratios_preserved_across_cards_per_row():
     """Same template at 2x5 vs 4x6: model elements must be IDENTICAL —
     cards_per_row only affects sheet slot size, never card contents."""
@@ -225,6 +238,58 @@ def test_qr_uses_canvas_units_not_sheet_cell():
     assert 100 < qr["size"] < 400
 
 
+def test_uploaded_design_layer_controls_drive_model_and_svg():
+    """Uploaded-image mode gets its own layer controls: QR size/color,
+    credential font/color, and removable credential backgrounds."""
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    template = _make_template(layout={
+        "background_style": "image",
+        "qr_size_pct": 18,
+        "qr_color": "#ff0000",
+        "qr_background_color": "#eeeeee",
+        "credential_text_color": "#123456",
+        "credential_label_color": "#654321",
+        "username_surface_enabled": False,
+        "password_surface_enabled": True,
+        "username_surface_color": "#abcdef",
+        "password_surface_color": "#fedcba",
+        "username_font_size": 44,
+        "password_font_size": 33,
+        "credential_label_font_size": 14,
+    })
+    model = build_card_render_model(
+        template,
+        {"id": 1, "username": "u-layer", "password": "p-layer"},
+    )
+    elements = {item["id"]: item for item in model["elements"]}
+    qr = elements["qr"]
+    user = elements["user"]
+    password = elements["pass"]
+
+    assert qr["size"] == pytest.approx(180)
+    assert qr["fg"] == "#ff0000"
+    assert qr["bg"] == "#eeeeee"
+    assert user["surface_enabled"] is False
+    assert password["surface_enabled"] is True
+    assert user["surface"] == "#abcdef"
+    assert password["surface"] == "#fedcba"
+    assert user["ink"] == "#123456"
+    assert user["label_color"] == "#654321"
+    assert user["value_font_size"] == 44
+    assert password["value_font_size"] == 33
+    assert user["label_font_size"] == 14
+
+    svg = render_card_svg(model)
+    assert 'fill="#ff0000"' in svg
+    assert 'fill="#123456"' in svg
+    assert 'fill="#abcdef"' not in svg
+    assert 'fill="#fedcba"' in svg
+
+
 def test_background_image_surfaces_in_model_and_svg():
     """Uploaded background image must flow into both the model and SVG."""
     from app.radius.services.card_renderer import (
@@ -245,6 +310,84 @@ def test_background_image_surfaces_in_model_and_svg():
     assert "data:image/png;base64," in svg
 
 
+def test_webp_background_image_is_embedded_in_pdf():
+    """Browser preview supports WebP data URLs; PDF export must not drop them."""
+    import base64
+    from reportlab.pdfgen import canvas
+
+    Image = pytest.importorskip("PIL.Image")
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_pdf,
+    )
+
+    image = Image.new("RGB", (3, 2), (36, 167, 189))
+    raw = BytesIO()
+    image.save(raw, format="WEBP")
+    data_url = "data:image/webp;base64," + base64.b64encode(raw.getvalue()).decode("ascii")
+
+    model = build_card_render_model(
+        _make_template(layout={"background_image_data_url": data_url, "image_opacity": 0.9}),
+        {"id": 1, "username": "u", "password": "p"},
+    )
+    out = BytesIO()
+    pdf = canvas.Canvas(out, pagesize=(300, 180))
+    render_card_pdf(pdf, model, form_name="webp_bg", expose_password=True)
+    pdf.doForm("webp_bg")
+    pdf.showPage()
+    pdf.save()
+
+    pdf_bytes = out.getvalue()
+    assert pdf_bytes.startswith(b"%PDF")
+    assert b"/Subtype /Image" in pdf_bytes
+
+
+def test_uploaded_background_has_separate_page_draw_engine():
+    """Uploaded artwork is drawn directly on the PDF page, outside reusable forms."""
+    import base64
+    from reportlab.pdfgen import canvas
+
+    Image = pytest.importorskip("PIL.Image")
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        draw_uploaded_background_uniform,
+        model_uses_uploaded_background,
+    )
+
+    image = Image.new("RGB", (31, 17), (193, 42, 84))
+    raw = BytesIO()
+    image.save(raw, format="PNG")
+    data_url = "data:image/png;base64," + base64.b64encode(raw.getvalue()).decode("ascii")
+    model = build_card_render_model(
+        _make_template(layout={
+            "background_style": "image",
+            "background_image_data_url": data_url,
+            "image_opacity": 1,
+        }),
+        {"id": 1, "username": "u", "password": "p"},
+    )
+
+    out = BytesIO()
+    pdf = canvas.Canvas(out, pagesize=(300, 180))
+    assert model_uses_uploaded_background(model) is True
+    assert draw_uploaded_background_uniform(
+        pdf,
+        model,
+        slot_x=10,
+        slot_y=20,
+        slot_width=200,
+        slot_height=100,
+    ) is True
+    pdf.showPage()
+    pdf.save()
+
+    pdf_bytes = out.getvalue()
+    assert pdf_bytes.startswith(b"%PDF")
+    assert b"/Subtype /Image" in pdf_bytes
+    assert b"/Width 31" in pdf_bytes
+    assert b"/Height 17" in pdf_bytes
+
+
 def test_portrait_vs_landscape_canvases():
     from app.radius.services.card_renderer import (
         build_card_render_model,
@@ -260,7 +403,7 @@ def test_portrait_vs_landscape_canvases():
     assert (m_p["canvas"]["width"], m_p["canvas"]["height"]) == CANVAS_PORTRAIT
 
 
-def test_svg_text_pinned_ltr_even_inside_rtl_document():
+def test_svg_latin_text_stays_ltr_even_inside_rtl_document():
     """Regression: the admin UI ships `<html dir="rtl">`. Every
     <text> in the rendered card SVG must carry `direction="ltr"`
     (and the root <svg> too) so English card labels don't walk off
@@ -287,7 +430,7 @@ def test_svg_text_pinned_ltr_even_inside_rtl_document():
     # Root SVG must declare direction explicitly.
     assert 'direction="ltr"' in svg[:400], "root <svg> missing direction=\"ltr\""
 
-    # Every <text> must carry direction="ltr" + text-anchor="start"
+    # Latin-only content must carry direction="ltr" + text-anchor="start"
     # so the inheritance from the outer <html dir=rtl> is overridden
     # even on renderers that ignore the SVG-level direction attribute.
     text_count = svg.count("<text x=")
@@ -312,6 +455,154 @@ def test_svg_text_pinned_ltr_even_inside_rtl_document():
     )
 
 
+def test_svg_supports_arabic_text_direction_and_labels():
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    template = _make_template(layout={
+        "brand_name": "هوب راديوس",
+        "card_title": "بطاقة إنترنت",
+        "footer_text": "احتفظ ببيانات الدخول",
+        "hotspot_address": "بوابة الدخول",
+        "text_direction": "rtl",
+        "credential_label_language": "arabic",
+    })
+    model = build_card_render_model(
+        template, {"id": 7, "username": "CARD1234", "password": "pw"}
+    )
+    svg = render_card_svg(model)
+
+    assert model["render_direction"] == "rtl"
+    assert "هوب راديوس" in svg
+    assert "بطاقة إنترنت" in svg
+    assert "اسم المستخدم" in svg
+    assert "كلمة المرور" in svg
+    assert 'direction="rtl"' in svg
+    assert 'text-anchor="end"' in svg
+    # Credential values stay LTR so numeric/user identifiers are not
+    # reordered by the Arabic card copy mode.
+    assert "CARD1234" in svg
+    value_chunks = [
+        chunk.split("</text>", 1)[0]
+        for chunk in svg.split("<text x=")[1:]
+        if "CARD1234" in chunk
+    ]
+    assert value_chunks and all('direction="ltr"' in chunk for chunk in value_chunks)
+
+
+def test_svg_arabic_text_is_pre_shaped_before_snapshot_export():
+    """The SVG itself is the source card snapshot for PDF export.
+
+    Arabic must be shaped before it reaches the SVG rasterizer; otherwise
+    the PDF can contain a card image with disconnected Arabic letters even
+    though the PDF wrapper is valid.
+    """
+    from app.radius.services.card_renderer import (
+        _shape_arabic,
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    brand = "\u0647\u0648\u0628 \u0631\u0627\u062f\u064a\u0648\u0633"
+    title = "\u0628\u0637\u0627\u0642\u0629 \u0625\u0646\u062a\u0631\u0646\u062a"
+    footer = "\u0627\u062d\u062a\u0641\u0638 \u0628\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062f\u062e\u0648\u0644"
+    user_label = "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645"
+    pass_label = "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"
+
+    template = _make_template(layout={
+        "brand_name": brand,
+        "card_title": title,
+        "footer_text": footer,
+        "hotspot_address": "\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u062f\u062e\u0648\u0644",
+        "text_direction": "rtl",
+        "credential_label_language": "arabic",
+        "render_engine": "ar_horizontal",
+    })
+    svg = render_card_svg(build_card_render_model(
+        template, {"id": 7, "username": "CARD1234", "password": "pw"}
+    ))
+
+    for original in (brand, title, footer, user_label, pass_label):
+        shaped = _shape_arabic(original)
+        assert f'data-original="{original}"' in svg
+        assert shaped != original
+        assert shaped in svg
+
+    for chunk in svg.split("<text x=")[1:]:
+        if 'data-render-direction="rtl"' in chunk.split(">", 1)[0]:
+            assert 'direction="ltr"' in chunk.split(">", 1)[0]
+            assert 'unicode-bidi="bidi-override"' in chunk.split(">", 1)[0]
+
+
+def test_arabic_render_engine_mirrors_layout_away_from_qr():
+    from app.radius.services.card_renderer import build_card_render_model
+
+    ltr_template = _make_template(layout={
+        "brand_name": "HobeRadius",
+        "card_title": "Internet Card",
+        "footer_text": "Keep login data",
+        "render_engine": "en_horizontal",
+    })
+    rtl_template = _make_template(layout={
+        "brand_name": "هوب راديوس",
+        "card_title": "بطاقة إنترنت",
+        "footer_text": "احتفظ ببيانات الدخول",
+        "render_engine": "ar_horizontal",
+    })
+
+    ltr = build_card_render_model(ltr_template, {"id": 1, "username": "CARD1234", "password": "pw"})
+    rtl = build_card_render_model(rtl_template, {"id": 1, "username": "CARD1234", "password": "pw"})
+
+    def by_id(model, item_id):
+        return next(el for el in model["elements"] if el.get("id") == item_id)
+
+    assert ltr["render_direction"] == "ltr"
+    assert rtl["render_direction"] == "rtl"
+    # English engine: text/pills left, QR right.
+    assert by_id(ltr, "brand")["x"] < by_id(ltr, "qr")["x"]
+    assert by_id(ltr, "user")["x"] < by_id(ltr, "qr")["x"]
+    # Arabic engine: the whole composition is flipped, so text/pills
+    # are right and QR/barcode is left. This prevents Arabic title/meta
+    # from sitting under the QR.
+    assert by_id(rtl, "brand")["x"] > by_id(rtl, "qr")["x"]
+    assert by_id(rtl, "user")["x"] > by_id(rtl, "qr")["x"]
+
+
+def test_four_explicit_render_engines_are_deterministic():
+    from app.radius.services.card_renderer import build_card_render_model
+
+    expected = {
+        "en_horizontal": ("horizontal", "ltr"),
+        "en_vertical": ("vertical", "ltr"),
+        "ar_horizontal": ("horizontal", "rtl"),
+        "ar_vertical": ("vertical", "rtl"),
+    }
+
+    def by_id(model, item_id):
+        return next(el for el in model["elements"] if el.get("id") == item_id)
+
+    for engine, (orientation, direction) in expected.items():
+        model = build_card_render_model(
+            _make_template(layout={"render_engine": engine}),
+            {"id": 1, "username": "CARD1234", "password": "pw"},
+        )
+        assert model["render_engine"] == engine
+        assert model["orientation"] == orientation
+        assert model["render_direction"] == direction
+        if orientation == "horizontal":
+            assert model["canvas"] == {"width": 1000, "height": 600}
+        else:
+            assert model["canvas"] == {"width": 600, "height": 1000}
+        if direction == "rtl":
+            assert by_id(model, "user")["x"] > by_id(model, "qr")["x"]
+            assert 0 <= by_id(model, "brand")["x"] <= model["canvas"]["width"]
+            assert 0 <= by_id(model, "title")["x"] <= model["canvas"]["width"]
+        else:
+            assert by_id(model, "user")["x"] < by_id(model, "qr")["x"]
+
+
 def test_svg_xml_escapes_user_text():
     """Render must escape XML — a malicious card name shouldn't break the SVG."""
     from app.radius.services.card_renderer import (
@@ -328,6 +619,24 @@ def test_svg_xml_escapes_user_text():
 # ───────────────────────────────────────────────────────────────────
 # PDF adapter — full export through the operations service
 # ───────────────────────────────────────────────────────────────────
+
+def test_svg_ids_are_unique_between_inline_cards():
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    first = render_card_svg(build_card_render_model(_make_template(layout={"render_engine": "ar_horizontal"})))
+    second = render_card_svg(build_card_render_model(_make_template(layout={"render_engine": "en_vertical"})))
+
+    assert first != second
+    assert "card-bg" not in first
+    assert "card-bg" not in second
+    assert 'unicode-bidi="plaintext"' not in first
+    assert 'unicode-bidi="plaintext"' not in second
+    assert first.count("-bg") >= 1
+    assert second.count("-bg") >= 1
+
 
 def _create_template_via_service(template_name: str, *, tenant_id: int = 1) -> dict:
     from app.radius.services.operations import get_operations_service
@@ -507,8 +816,12 @@ def test_pdf_export_carries_arabic_via_almarai_font(client):
     body = res.data
     assert body.startswith(b"%PDF")
 
-    # Almarai must be embedded so Arabic glyphs actually render.
-    assert b"Almarai" in body, "Almarai TTF was not embedded into the PDF"
+    assert b"/Title (HobeRadius card export template" in body
+    assert b"Card print template -" not in body
+    # Arabic card copy is rasterized into transparent image runs before
+    # placement in the PDF. That avoids PDF-viewer bidi/shaping drift
+    # while preserving the exact live-preview appearance.
+    assert b"/Subtype /Image" in body, "Arabic text image runs were not embedded"
     # Helvetica is still in use for the Latin parts (USER/PASS labels,
     # the hotspot/serial meta line, the username/password values).
     assert b"Helvetica" in body, "Latin runs should still use Helvetica"
@@ -536,6 +849,41 @@ def test_arabic_shaping_pipeline_runs():
     assert any("ﹰ" <= ch <= "﻿" for ch in shaped), (
         "shaped output has no Arabic presentation forms — reshaper did not run"
     )
+
+
+def test_arabic_text_image_renderer_outputs_png():
+    """Arabic PDF text uses a preview-like raster run, not raw PDF text.
+
+    This catches regressions where Arabic text falls back to ReportLab's
+    direct string drawing and appears as disconnected/reordered glyphs in
+    Chrome/Edge PDF viewers.
+    """
+    from app.radius.services.card_renderer import _build_arabic_text_image
+
+    rendered = _build_arabic_text_image(
+        "بطاقة إنترنت",
+        size=42,
+        color="#ffffff",
+        weight=900,
+        max_width=340,
+        direction="rtl",
+    )
+
+    assert rendered is not None
+    png, width, height = rendered
+    assert png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert width == 340
+    assert height > 42
+
+
+def test_arabic_text_image_prefers_presentation_form_safe_font():
+    from app.radius.services.card_renderer import _font_path_for_arabic
+
+    font_path = _font_path_for_arabic(bold=True).lower()
+    if "windows\\fonts" in font_path:
+        assert any(name in font_path for name in ("tahoma", "arial", "arabtype", "trado"))
+    else:
+        assert any(name in font_path for name in ("noto", "dejavu", "almarai"))
 
 
 def test_designer_form_defaults_match_renderer_default_positions(client):
