@@ -32,6 +32,13 @@
   <nav class="mt-router-quicknav" data-mt-router-quicknav
        aria-label="أدوات الراوتر">
     <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}"
+       data-mt-router-link="overview">
+      <i class="fa-solid fa-clipboard-check"></i>
+      <span class="mt-router-quicknav-label">نظرة عامة</span>
+      <span class="mt-router-quicknav-sub">حالة + أمان + إجراءات</span>
+    </a>
+    <a class="mt-router-quicknav-link"
        href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}"
        data-mt-router-link="program">
       <i class="fa-solid fa-diagram-project"></i>

@@ -1,0 +1,297 @@
+{# O1 — Router status overview.
+
+   Display-only. All values come pre-composed from
+   mt_router_overview.build_overview() — the template makes no
+   business decisions, no time-math, no severity choices.
+
+   Layout follows the existing mt-card / mt-iface-state /
+   mt-router-quicknav tokens. RTL Arabic.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set ov = overview %}
+
+{% block title %}نظرة عامة — {{ ov.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
+{% block page_title %}نظرة عامة على الراوتر — {{ ov.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard"
+         data-mt-router-overview
+         data-mt-router-id="{{ ov.nas_id }}"
+         data-mt-overview-safe="{{ 'true' if ov.safe_to_modify else 'false' }}">
+
+  {{ hub.hero(
+    "نظرة عامة — " ~ ov.name,
+    subtitle="حالة الراوتر، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوات يجب اتّخاذها.",
+    icon="clipboard-check",
+  ) }}
+
+  {# ── Safety banner — the single most important signal ── #}
+  {% if ov.safe_to_modify %}
+  <div class="mt-program-banner mt-program-banner--warn"
+       data-mt-overview-safe-banner="safe"
+       style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
+    <li><i class="fa-solid fa-circle-check"></i>
+      الراوتر آمن للتعديل حاليًا.</li>
+  </div>
+  {% else %}
+  <div class="mt-program-banner mt-program-banner--risk"
+       data-mt-overview-safe-banner="unsafe">
+    <i class="fa-solid fa-shield-halved"></i>
+    <strong>الراوتر غير آمن للتعديل الآن — راجع الأسباب:</strong>
+    {% for r in ov.safety_reasons %}
+    <li>{{ r }}</li>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Top KPI strip ── #}
+  <div class="hub-kpi-grid" data-mt-overview-kpis>
+
+    {# Connectivity #}
+    <div class="hub-kpi {{ 'hub-kpi--green' if ov.snapshot_status == 'fresh'
+                          else ('hub-kpi--amber' if ov.snapshot_status == 'stale'
+                                else 'hub-kpi--grey') }}"
+         data-mt-overview-kpi="snapshot"
+         data-mt-overview-status="{{ ov.snapshot_status }}">
+      <span class="hub-kpi-icon"><i class="fa-solid fa-signal"></i></span>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-label">حالة الاتصال</div>
+        <div class="hub-kpi-value">
+          {% if ov.snapshot_status == "fresh"   %}متصل
+          {% elif ov.snapshot_status == "stale" %}بيانات قديمة
+          {% elif ov.snapshot_status == "failed" %}فشل الاتصال
+          {% else %}غير معروف
+          {% endif %}
+        </div>
+        <div class="hub-kpi-sub">
+          {% if ov.snapshot_last_success_at %}
+          آخر نجاح: <code>{{ ov.snapshot_last_success_at }}</code>
+          {% else %}لا توجد بيانات{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Alerts #}
+    <div class="hub-kpi {{ 'hub-kpi--brand'
+                            if ov.active_alerts_critical > 0
+                            else ('hub-kpi--amber'
+                                  if ov.active_alerts_warning > 0
+                                  else 'hub-kpi--green') }}"
+         data-mt-overview-kpi="alerts"
+         data-mt-overview-alerts-total="{{ ov.active_alerts_total }}">
+      <span class="hub-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-label">التنبيهات النشطة</div>
+        <div class="hub-kpi-value">{{ ov.active_alerts_total }}</div>
+        <div class="hub-kpi-sub">
+          <span data-mt-overview-crit>{{ ov.active_alerts_critical }}</span> حرج ·
+          <span data-mt-overview-warn>{{ ov.active_alerts_warning }}</span> تحذير
+        </div>
+      </div>
+    </div>
+
+    {# Backup #}
+    <div class="hub-kpi {{ 'hub-kpi--green' if ov.backup_status == 'fresh'
+                          else ('hub-kpi--amber' if ov.backup_status == 'stale'
+                                else 'hub-kpi--grey') }}"
+         data-mt-overview-kpi="backup"
+         data-mt-overview-backup-status="{{ ov.backup_status }}">
+      <span class="hub-kpi-icon"><i class="fa-solid fa-floppy-disk"></i></span>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-label">آخر نسخة احتياطية</div>
+        <div class="hub-kpi-value">
+          {% if ov.backup_status == "fresh" %}حديثة
+          {% elif ov.backup_status == "stale" %}قديمة
+          {% elif ov.backup_status == "missing" %}لا توجد
+          {% elif ov.backup_status == "failed" %}آخر محاولة فشلت
+          {% else %}غير معروفة{% endif %}
+        </div>
+        <div class="hub-kpi-sub">
+          {% if ov.last_backup_at %}
+          <code>{{ ov.last_backup_at }}</code>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Last activity #}
+    <div class="hub-kpi hub-kpi--blue"
+         data-mt-overview-kpi="last-activity">
+      <span class="hub-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-label">آخر نشاط مسجَّل</div>
+        <div class="hub-kpi-value">
+          {% if ov.last_audit_action %}
+          <code>{{ ov.last_audit_action }}</code>
+          {% else %}—{% endif %}
+        </div>
+        <div class="hub-kpi-sub">
+          {{ ov.last_audit_at or '—' }}
+          {% if ov.last_audit_actor %} · {{ ov.last_audit_actor }}{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Suggested actions ── #}
+  {% if ov.suggested_actions %}
+  <section class="mt-card" data-mt-overview-actions>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list-check"></i> الخطوات الموصى بها</h3>
+    </header>
+    <div class="mt-card-body">
+      <div class="mt-router-quicknav">
+        {% for a in ov.suggested_actions %}
+        <a class="mt-router-quicknav-link"
+           href="{{ a.href }}"
+           data-mt-overview-action="{{ a.code }}"
+           data-mt-overview-action-severity="{{ a.severity }}">
+          {% if a.severity == "critical" %}
+          <i class="fa-solid fa-circle-exclamation"></i>
+          {% elif a.severity == "warning" %}
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {% else %}
+          <i class="fa-solid fa-arrow-right"></i>
+          {% endif %}
+          <span class="mt-router-quicknav-label">{{ a.label_ar }}</span>
+          <span class="mt-router-quicknav-sub">{{ a.severity }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Identity + connection details ── #}
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-info"></i> هوية الراوتر</h3>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary" data-mt-overview-identity>
+        <li>الاسم: <strong>{{ ov.name }}</strong></li>
+        <li>العنوان: <code>{{ ov.address }}</code></li>
+        <li>الحالة: {% if ov.enabled %}مفعّل{% else %}معطّل{% endif %}</li>
+        <li>نوع الاتصال:
+          {% if ov.connection_mode == "vpn" %}WireGuard
+          {% elif ov.connection_mode == "direct" %}اتصال مباشر
+          {% else %}{{ ov.connection_mode or '—' }}{% endif %}
+        </li>
+        {% if ov.vpn_peer_address %}
+        <li>عنوان WireGuard peer: <code>{{ ov.vpn_peer_address }}</code></li>
+        {% endif %}
+      </ul>
+    </div>
+  </section>
+
+  {# ── Snapshot details (counters/resource) ── #}
+  {% if ov.has_snapshot %}
+  <section class="mt-card" data-mt-overview-snapshot>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-camera"></i> آخر snapshot</h3>
+      <span class="mt-card-meta">
+        {% if ov.snapshot_status == "fresh" %}
+        <span class="mt-iface-state mt-iface-state--up">حديث</span>
+        {% elif ov.snapshot_status == "stale" %}
+        <span class="mt-iface-state mt-iface-state--down">قديم</span>
+        {% elif ov.snapshot_status == "failed" %}
+        <span class="mt-iface-state mt-iface-state--off">فشل</span>
+        {% else %}
+        <span class="mt-iface-state mt-iface-state--down">غير معروف</span>
+        {% endif %}
+      </span>
+    </header>
+    <div class="mt-card-body">
+      {% if ov.snapshot_last_error %}
+      <p style="color:#991B1B"><i class="fa-solid fa-circle-exclamation"></i>
+        آخر خطأ: {{ ov.snapshot_last_error }}</p>
+      {% endif %}
+      {% if ov.counters %}
+      <pre class="mt-logs-output" data-mt-overview-counters>{{ ov.counters | tojson(indent=2) }}</pre>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Last failed / last danger (if any) ── #}
+  {% if ov.last_failed_id or ov.last_danger_id %}
+  <section class="mt-card" data-mt-overview-recent-issues>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> أحداث تستحق الانتباه</h3>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary">
+        {% if ov.last_failed_id %}
+        <li>
+          <span class="mt-iface-state mt-iface-state--off">فشل</span>
+          <code>{{ ov.last_failed_action }}</code>
+          · {{ ov.last_failed_at }}
+          · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
+               data-mt-overview-last-failed-link>تفاصيل</a>
+        </li>
+        {% endif %}
+        {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
+        <li>
+          <span class="mt-iface-state mt-iface-state--down">حسّاسة</span>
+          <code>{{ ov.last_danger_action }}</code>
+          · {{ ov.last_danger_at }}
+          · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
+               data-mt-overview-last-danger-link>تفاصيل</a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Bottom links bar — full dashboards and centers ── #}
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-link"></i> روابط مرتبطة</h3>
+    </header>
+    <div class="mt-card-body">
+      <div class="mt-router-quicknav">
+        <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.mt_dashboard', nas_id=ov.nas_id) }}"
+           data-mt-overview-link="dashboard">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span class="mt-router-quicknav-label">لوحة الراوتر</span>
+          <span class="mt-router-quicknav-sub">KPI + tabs</span>
+        </a>
+        <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.audit_log_index') }}?router_id={{ ov.nas_id }}"
+           data-mt-overview-link="audit">
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span class="mt-router-quicknav-label">سجل عمليات الراوتر</span>
+          <span class="mt-router-quicknav-sub">audit · مفلتر</span>
+        </a>
+        <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.mt_alerts_index') }}?router_id={{ ov.nas_id }}"
+           data-mt-overview-link="alerts">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span class="mt-router-quicknav-label">تنبيهات الراوتر</span>
+          <span class="mt-router-quicknav-sub">مفلتر</span>
+        </a>
+        <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.mt_backups_list', nas_id=ov.nas_id) }}"
+           data-mt-overview-link="backups">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span class="mt-router-quicknav-label">النسخ الاحتياطية</span>
+          <span class="mt-router-quicknav-sub">حفظ + فحص</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}
