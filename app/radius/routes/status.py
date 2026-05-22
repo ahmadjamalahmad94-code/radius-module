@@ -70,19 +70,30 @@ def diagnostics():
     """Per-router health-check page. Runs TCP probe + API login test
     against every configured router and renders verdicts + fix hints +
     copyable MT commands.
+
+    O5 — the repair-script block in the template branches on each
+    router's connection_mode: 'vpn' rows get a WG-subnet rule
+    (so locking the API to the public VPS IP doesn't break the
+    tunnel-side reach), 'direct' rows get the public-IP rule.
+    Both subnet + public IP are passed to the template so it can
+    pick the right one without re-reading env.
     """
+    import os
     from ..services import mt_diagnostics
     report = mt_diagnostics.diagnose_tenant(_tid())
-    # VPS public IP — useful in the copyable MT commands ("allow this
-    # IP through firewall"). Best-effort detection; falls back to a
-    # placeholder the operator can replace.
     vps_ip = request.headers.get("X-Real-IP") or \
              request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or \
              request.remote_addr or "YOUR_VPS_IP"
+    # WG subnet for the VPN-mode repair branch. Falls back to the
+    # documented default if the env var isn't set yet.
+    wg_subnet = (
+        os.environ.get("HOBERADIUS_WG_SUBNET") or "10.10.0.0/24"
+    ).strip()
     return render_template(
         "radius/mt_diagnostics.html",
         report=report,
         vps_ip=vps_ip,
+        wg_subnet=wg_subnet,
     )
 
 

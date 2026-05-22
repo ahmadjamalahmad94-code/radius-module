@@ -106,28 +106,48 @@ def _collect_routers(tenant_id: int) -> list[dict[str, Any]]:
     docs/radius/POSTMORTEM_PHASE_K_L_M.md). Rows without a
     populated api_user are skipped: they can't be API-probed,
     and surfacing them as 'unreachable' just creates noise.
+
+    Reads via raw SQL so we can pull `connection_mode` /
+    `vpn_peer_address` (K1 columns) directly — those aren't on
+    the NasDevice dataclass yet, and we don't want to bend the
+    model around a UI concern.
     """
-    from ..db.repos import nas_repo
+    from ..db.connection import db
 
     out: dict[str, dict[str, Any]] = {}
     try:
-        for nas in nas_repo.list_nas(int(tenant_id), limit=1000):
-            host = (getattr(nas, "address", "") or "").strip()
-            api_user = getattr(nas, "api_user", "") or ""
+        cur = db().execute(
+            "SELECT id, name, address, api_port, api_user, api_password, "
+            "       api_use_tls, enabled, connection_mode, "
+            "       vpn_peer_address "
+            "FROM nas_devices "
+            "WHERE tenant_id = ? "
+            "  AND (deleted_at IS NULL OR deleted_at = '') "
+            "ORDER BY id",
+            (int(tenant_id),),
+        )
+        for row in cur.fetchall():
+            host = (row["address"] or "").strip()
+            api_user = (row["api_user"] or "").strip()
             if not host or not api_user or host in out:
                 continue
             out[host] = {
                 "source":      "nas_devices",
-                "id":          nas.id,
-                "name":        nas.name or host,
+                "id":          row["id"],
+                "name":        row["name"] or host,
                 "host":        host,
-                "port":        int(getattr(nas, "api_port", 8728) or 8728),
+                "port":        int(row["api_port"] or 8728),
                 "username":    api_user,
-                "password":    getattr(nas, "api_password", "") or "",
-                "use_tls":     bool(getattr(nas, "api_use_tls", False)),
+                "password":    row["api_password"] or "",
+                "use_tls":     bool(row["api_use_tls"]),
                 "verify_tls":  True,
                 "timeout_sec": 20,
-                "enabled":     bool(getattr(nas, "enabled", False)),
+                "enabled":     bool(row["enabled"]),
+                # O5 — drives the repair-script rendering on the
+                # diagnostics page (direct vs WireGuard).
+                "connection_mode": (row["connection_mode"] or "direct")
+                                     .strip().lower(),
+                "vpn_peer_address": (row["vpn_peer_address"] or "").strip(),
             }
     except Exception:  # noqa: BLE001
         pass
@@ -147,6 +167,10 @@ def diagnose_tenant(tenant_id: int) -> dict[str, Any]:
             "port":      cfg["port"],
             "source":    cfg["source"],
             "enabled":   cfg["enabled"],
+            # O5 — carry connection_mode into the verdict / template
+            # so the repair-script branch can be chosen correctly.
+            "connection_mode": cfg.get("connection_mode") or "direct",
+            "vpn_peer_address": cfg.get("vpn_peer_address") or "",
             "tcp":       None,
             "api":       None,
             "status":    "skipped",
