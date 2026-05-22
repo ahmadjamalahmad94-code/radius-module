@@ -97,10 +97,31 @@
     <section class="mt-card" data-mt-live-traffic>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-chart-line"></i> حركة الواجهات</h3>
-        <span class="mt-card-meta" data-mt-live-traffic-meta>—</span>
+        <span class="mt-card-meta">
+          <label class="mt-iface-label">الواجهة
+            <select class="mt-iface-select" data-mt-interface-select>
+              <option value="">— اختر الواجهة —</option>
+            </select>
+          </label>
+        </span>
       </header>
       <div class="mt-card-body" data-mt-live-traffic-body>
-        <p class="mt-empty">يتم إضافة المخطط الحيّ في K9.2.</p>
+        <div class="mt-traffic-readout">
+          <div class="mt-traffic-stat">
+            <span class="mt-traffic-stat-label">RX</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-rx>—</span>
+          </div>
+          <div class="mt-traffic-stat">
+            <span class="mt-traffic-stat-label">TX</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-tx>—</span>
+          </div>
+        </div>
+        <svg class="mt-spark" viewBox="0 0 300 80" preserveAspectRatio="none"
+             data-mt-spark aria-hidden="true">
+          <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
+          <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
+        </svg>
+        <p class="mt-empty" data-mt-traffic-msg>اختر واجهة لعرض الحركة الحيّة.</p>
       </div>
     </section>
 
@@ -113,7 +134,13 @@
         </span>
       </header>
       <div class="mt-card-body" data-mt-active-users-body>
-        <p class="mt-empty">تُحمَّل القائمة في K9.2.</p>
+        <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
+        <table class="mt-users-table" data-mt-active-users-table hidden>
+          <thead>
+            <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
+          </thead>
+          <tbody data-mt-active-users-rows></tbody>
+        </table>
       </div>
     </section>
   </div>

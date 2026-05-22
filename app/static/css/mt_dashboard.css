@@ -108,3 +108,91 @@
   padding: 10px 12px;
   font-size: 13px;
 }
+
+/* ── K9.2 live traffic ──────────────────────────────────────────── */
+.mt-iface-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+.mt-iface-select {
+  font: inherit;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #1F2937;
+  min-width: 140px;
+}
+.mt-iface-select:focus {
+  outline: 2px solid #6B5AED;
+  outline-offset: 1px;
+}
+.mt-traffic-readout {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.mt-traffic-stat {
+  flex: 1;
+  background: #F8FAFC;
+  border: 1px solid #EEEDF3;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.mt-traffic-stat-label {
+  display: block;
+  font-size: 11px;
+  color: #6B7280;
+  margin-bottom: 4px;
+}
+.mt-traffic-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1F2937;
+}
+.mt-spark {
+  width: 100%;
+  height: 80px;
+  display: block;
+}
+.mt-spark-rx, .mt-spark-tx {
+  fill: none;
+  stroke-width: 1.5;
+}
+.mt-spark-rx { stroke: #2563EB; }
+.mt-spark-tx { stroke: #9333EA; }
+
+/* ── K9.2 active users ──────────────────────────────────────────── */
+.mt-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.mt-users-table th, .mt-users-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #F1F0F6;
+  text-align: start;
+}
+.mt-users-table th {
+  background: #FAFAFC;
+  color: #6B7280;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.mt-users-table tr:last-child td { border-bottom: none; }
+.mt-users-table .mt-user-type {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #EEF2FF;
+  color: #4338CA;
+}
+.mt-users-table .mt-user-type--ppp {
+  background: #FAF5FF;
+  color: #6B21A8;
+}

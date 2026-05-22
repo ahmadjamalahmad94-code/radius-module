@@ -110,13 +110,19 @@ def test_dashboard_renders_shell_and_markers(app, client):
                  "version", "dialed"):
         assert f'data-mt-kpi="{kind}"' in html
 
-    # Empty-state placeholders for K9.2 + K9.3 panels exist so the
-    # markers are stable from K9.1.
+    # K9.2 panels — markers must be in place from this commit on.
     assert "data-mt-live-traffic" in html
+    assert "data-mt-interface-select" in html
+    assert "data-mt-traffic-rx" in html
+    assert "data-mt-traffic-tx" in html
+    assert "data-mt-spark" in html
     assert "data-mt-active-users" in html
-    assert "data-mt-quick-actions" in html
     assert "data-mt-hotspot-count" in html
     assert "data-mt-ppp-count" in html
+    assert "data-mt-active-users-rows" in html
+
+    # K9.3 quick-actions placeholder still exists (filled next commit).
+    assert "data-mt-quick-actions" in html
 
     # The router name lands in the title + meta strip.
     assert "main-gw" in html
