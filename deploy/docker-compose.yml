@@ -10,13 +10,14 @@ services:
     volumes:
       - ../instance:/app/instance              # SQLite DB persists
       - ../logs:/app/logs
-      # Phase M — WireGuard peer provisioning.
-      # The Flask container writes to wg0.conf via this mount but
-      # does NOT run `wg syncconf` itself (that needs the host's
-      # netns). A systemd path-unit on the host watches the file
-      # and reloads — see deploy/wg-reload.{path,service} and
-      # `deploy.sh init-wg-reloader`.
-      - /etc/wireguard:/etc/wireguard:rw
+      # Phase M — WireGuard peer provisioning, split design:
+      # • /etc/wireguard/wg0.conf  stays root-only on the host (it
+      #   holds the server private key). NOT mounted.
+      # • /etc/hoberadius/wg-peers.d/  is the container's domain;
+      #   one file per peer. The path-unit on the host watches it
+      #   and reloads `wg syncconf`. Created with gid=999 by
+      #   `deploy.sh init-wg-reloader`.
+      - /etc/hoberadius/wg-peers.d:/etc/hoberadius/wg-peers.d:rw
     networks: [hrnet]
     expose: ["8000"]
 

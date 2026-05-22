@@ -120,25 +120,79 @@ cmd_logs() {
 }
 
 cmd_init_wg_reloader() {
-    # Phase M — wires the host-side systemd path-unit that watches
-    # /etc/wireguard/wg0.conf and runs `wg syncconf wg0 <(wg-quick
-    # strip wg0)` whenever the container rewrites it. Idempotent.
-    log "1) check WireGuard is installed ..."
+    # Phase M — sets up the split WireGuard control plane:
+    #   • /etc/wireguard/wg0.conf       stays root-only (server priv key)
+    #   • /etc/hoberadius/wg-peers.d/   container-writable peer files
+    #   • /usr/local/bin/wg-reload.sh   merges + wg syncconf
+    #   • wg-reload.path + .service     watcher → reloader
+    # Idempotent — safe to re-run after upgrades.
+    local PEERS_DIR=/etc/hoberadius/wg-peers.d
+    local HR_GID=999    # matches the `hr` user inside the container
+
+    log "1) check WireGuard tools ..."
     if ! command -v wg >/dev/null || ! command -v wg-quick >/dev/null; then
         die "wireguard-tools not installed on the host. Run: apt install -y wireguard"
     fi
 
-    log "2) install systemd units ..."
+    log "2) prepare ${PEERS_DIR} (gid=${HR_GID} for container write access) ..."
+    mkdir -p "$PEERS_DIR"
+    # GID 999 is the `hr` group inside the container image. We
+    # don't need a matching host-side group name; numeric GID is
+    # enough for the bind-mount.
+    chgrp "$HR_GID" "$PEERS_DIR"
+    chmod 0775 "$PEERS_DIR"
+
+    log "3) migrate any existing [Peer] blocks out of wg0.conf ..."
+    if grep -q '^\[Peer\]' /etc/wireguard/wg0.conf 2>/dev/null; then
+        cp /etc/wireguard/wg0.conf /etc/wireguard/wg0.conf.pre-migrate.$(date +%s)
+        local mig_count
+        mig_count=$(awk '
+            BEGIN { in_peer = 0; idx = 0 }
+            /^\[Peer\]/ { idx++; in_peer = 1
+                          fname = "/etc/hoberadius/wg-peers.d/migrated-" idx ".conf"
+                          print "[Peer]" > fname
+                          next }
+            /^\[/ { in_peer = 0 }
+            { if (in_peer) print >> fname }
+            END { print idx }
+        ' /etc/wireguard/wg0.conf)
+        # Strip [Peer] sections from wg0.conf (keeps [Interface] only).
+        awk '
+            /^\[Peer\]/ { in_peer = 1; next }
+            /^\[/ { in_peer = 0 }
+            { if (!in_peer) print }
+        ' /etc/wireguard/wg0.conf > /etc/wireguard/wg0.conf.new
+        mv /etc/wireguard/wg0.conf.new /etc/wireguard/wg0.conf
+        chmod 0600 /etc/wireguard/wg0.conf
+        # Make the migrated files readable by container too.
+        chgrp "$HR_GID" "$PEERS_DIR"/migrated-*.conf 2>/dev/null || true
+        chmod 0660 "$PEERS_DIR"/migrated-*.conf 2>/dev/null || true
+        log "   migrated $mig_count peer(s) to $PEERS_DIR/"
+    else
+        log "   no [Peer] blocks in wg0.conf — nothing to migrate."
+    fi
+
+    log "4) install reload script ..."
+    install -m 0755 "$PROJECT_ROOT/deploy/wg-reload.sh" /usr/local/bin/wg-reload.sh
+
+    log "5) install systemd units ..."
     install -m 0644 "$PROJECT_ROOT/deploy/wg-reload.service" /etc/systemd/system/wg-reload.service
     install -m 0644 "$PROJECT_ROOT/deploy/wg-reload.path"    /etc/systemd/system/wg-reload.path
 
-    log "3) reload + enable ..."
+    log "6) reload + enable ..."
     systemctl daemon-reload
     systemctl enable --now wg-reload.path
 
-    log "4) status:"
-    systemctl --no-pager status wg-reload.path | head -10
-    log "✅ wg-reload watcher is active. Any write to wg0.conf will trigger a syncconf."
+    log "7) trigger one sync to apply migrated peers ..."
+    systemctl start wg-reload.service || true
+
+    log "8) verify:"
+    systemctl --no-pager status wg-reload.path | head -8
+    echo
+    ls -la "$PEERS_DIR" 2>&1 | head -10
+    echo
+    wg show wg0 2>&1 | head -20
+    log "✅ split WG control plane active. Container writes peer files; host reloads on every change."
 }
 
 main() {
