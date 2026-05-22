@@ -4,11 +4,13 @@ from __future__ import annotations
 import re
 import sqlite3
 import os
+import threading
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
 from ..core.errors import RadiusNotFound, RadiusValidationError
-from ..db.connection import db, db_path
+from ..db.connection import close_thread_conn, db, db_path
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
 from .audit import RadiusAuditService
 
@@ -16,6 +18,8 @@ _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _SERVICE_SCOPES = {"hotspot", "broadband", "both"}
 _SESSION_FROZEN_STATUSES = {"disabled", "suspended", "frozen", "banned"}
 _PRINT_ORIENTATIONS = {"portrait", "landscape"}
+_PRINT_EXPORT_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="print-export")
+_PRINT_EXPORT_LOCK = threading.Lock()
 _PRINT_PRESETS: dict[str, dict[str, Any]] = {
     "modern": {
         "label": "حديث",
@@ -147,6 +151,7 @@ _PRINT_BOOL_FIELDS = {
     "show_serial",
     "show_guides",
     "show_brand",
+    "show_title",
 }
 
 
@@ -174,6 +179,34 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
         raise RadiusValidationError(f"{key} must be numeric")
     if value < minimum:
         raise RadiusValidationError(f"{key} must be >= {minimum:g}")
+    return value
+
+
+def _optional_int_field(
+    data: dict,
+    key: str,
+    *,
+    minimum: int = 0,
+    maximum: int | None = None,
+    default: int = 0,
+) -> int:
+    value = _int_field(data, key, minimum=minimum, default=default)
+    if maximum is not None and value > maximum:
+        raise RadiusValidationError(f"{key} must be <= {maximum}")
+    return value
+
+
+def _optional_float_field(
+    data: dict,
+    key: str,
+    *,
+    minimum: float = 0.0,
+    maximum: float | None = None,
+    default: float = 0.0,
+) -> float:
+    value = _float_field(data, key, minimum=minimum, default=default)
+    if maximum is not None and value > maximum:
+        raise RadiusValidationError(f"{key} must be <= {maximum:g}")
     return value
 
 
@@ -205,6 +238,19 @@ def _template_layout(data: dict) -> dict:
     def _text(key: str, default: str = "", max_len: int = 140) -> str:
         return str(merged.get(key) or default).strip()[:max_len]
 
+    image_data_url = _text("background_image_data_url", "", 2_100_000)
+    raw_background_style = _text("background_style", "", 30).lower()
+    if raw_background_style in {"image", "stored_image", "photo", "upload", "uploaded"}:
+        background_style = "image"
+    elif raw_background_style in {"preset", "system", "graphics", "generated"}:
+        background_style = "preset"
+    elif raw_background_style == "gradient":
+        background_style = "image" if image_data_url.startswith("data:image/") else "preset"
+    else:
+        background_style = "image" if image_data_url.startswith("data:image/") else "preset"
+    if background_style == "image" and not image_data_url.startswith("data:image/"):
+        background_style = "preset"
+
     normalized = {
         **layout,
         "preview_mode": "visual_design_room",
@@ -217,6 +263,16 @@ def _template_layout(data: dict) -> dict:
         "accent_color": _safe_hex(merged.get("accent_color"), preset["accent_color"]),
         "text_color": _safe_hex(merged.get("text_color") or merged.get("color"), preset["text_color"]),
         "surface_color": _safe_hex(merged.get("surface_color"), preset["surface_color"]),
+        "credential_text_color": _safe_hex(merged.get("credential_text_color"), "#0f172a"),
+        "credential_label_color": _safe_hex(merged.get("credential_label_color"), "#64748b"),
+        "username_surface_color": _safe_hex(merged.get("username_surface_color"), _safe_hex(merged.get("surface_color"), preset["surface_color"])),
+        "password_surface_color": _safe_hex(merged.get("password_surface_color"), _safe_hex(merged.get("surface_color"), preset["surface_color"])),
+        "username_font_size": _optional_float_field(merged, "username_font_size", minimum=0, maximum=120, default=0),
+        "password_font_size": _optional_float_field(merged, "password_font_size", minimum=0, maximum=120, default=0),
+        "credential_label_font_size": _optional_float_field(merged, "credential_label_font_size", minimum=0, maximum=80, default=0),
+        "qr_color": _safe_hex(merged.get("qr_color"), "#0f172a"),
+        "qr_background_color": _safe_hex(merged.get("qr_background_color"), "#ffffff"),
+        "qr_size_pct": _optional_float_field(merged, "qr_size_pct", minimum=0, maximum=48, default=0),
         "pattern_style": _text("pattern_style", "signal", 30),
         "image_opacity": max(0, min(1, _float_field(merged, "image_opacity", minimum=0, default=0.82))),
         "qr_style": _text("qr_style", preset["qr_style"], 30),
@@ -231,8 +287,8 @@ def _template_layout(data: dict) -> dict:
             "Use the username, password, or QR code to log in.",
             180,
         ),
-        "background_style": _text("background_style", "gradient", 30),
-        "background_image_data_url": _text("background_image_data_url", "", 2_100_000),
+        "background_style": background_style,
+        "background_image_data_url": image_data_url,
         "background_image_name": _text("background_image_name", "", 140),
         "background_image_mime": _text("background_image_mime", "", 60),
         "bleed_marks": _boolish(merged.get("bleed_marks"), False),
@@ -246,6 +302,10 @@ def _template_layout(data: dict) -> dict:
         "show_serial": True,
         "show_guides": False,
         "show_brand": True,
+        "show_title": True,
+        "credential_background_enabled": True,
+        "username_surface_enabled": True,
+        "password_surface_enabled": True,
     }
     for key, default in defaults.items():
         normalized[key] = _boolish(merged.get(key), default)
@@ -255,6 +315,126 @@ def _template_layout(data: dict) -> dict:
             normalized["card_width_mm"],
         )
     return normalized
+
+
+def _print_sheet_settings(settings: Optional[dict]) -> dict:
+    """Normalize page imposition settings for export only.
+
+    These values describe how completed card snapshots are placed on a
+    printable sheet. They are intentionally separate from template design
+    fields, so changing rows, columns, gaps, or page margins never mutates the
+    saved card design.
+    """
+    raw = settings or {}
+    page_size = str(raw.get("print_page_size") or raw.get("page_size") or "A4").strip()
+    if page_size.lower() not in {"a4", "letter"}:
+        raise RadiusValidationError("print_page_size must be A4 or Letter")
+    orientation = str(
+        raw.get("print_orientation") or raw.get("orientation") or "portrait"
+    ).strip().lower()
+    if orientation not in _PRINT_ORIENTATIONS:
+        raise RadiusValidationError("print_orientation must be portrait or landscape")
+    margin_default = _optional_float_field(
+        raw, "print_margin_mm", minimum=0, maximum=80, default=10
+    )
+    return {
+        "page_size": "Letter" if page_size.lower() == "letter" else "A4",
+        "orientation": orientation,
+        "columns": _optional_int_field(
+            raw, "print_columns", minimum=1, maximum=12, default=2
+        ),
+        "rows": _optional_int_field(
+            raw, "print_rows", minimum=1, maximum=20, default=5
+        ),
+        "margin_top_mm": _optional_float_field(
+            raw, "print_margin_top_mm", minimum=0, maximum=80, default=margin_default
+        ),
+        "margin_right_mm": _optional_float_field(
+            raw, "print_margin_right_mm", minimum=0, maximum=80, default=margin_default
+        ),
+        "margin_bottom_mm": _optional_float_field(
+            raw, "print_margin_bottom_mm", minimum=0, maximum=80, default=margin_default
+        ),
+        "margin_left_mm": _optional_float_field(
+            raw, "print_margin_left_mm", minimum=0, maximum=80, default=margin_default
+        ),
+        "row_gap_mm": _optional_float_field(
+            raw, "print_row_gap_mm", minimum=0, maximum=60, default=4
+        ),
+        "column_gap_mm": _optional_float_field(
+            raw, "print_column_gap_mm", minimum=0, maximum=60, default=4
+        ),
+    }
+
+
+def _strict_print_geometry(*, page_width: float, page_height: float,
+                           canvas_width: float, canvas_height: float,
+                           sheet: dict, unit: float) -> dict:
+    """Calculate strict visible-card placement for a print sheet.
+
+    Rows, columns, gaps, and margins describe the finished card edge, not a
+    larger slot that later centers the card. This keeps row gaps and page
+    margins visually identical to the operator's print settings while the
+    card itself remains a single uniformly-scaled snapshot.
+    """
+    rows = int(sheet["rows"])
+    cols = int(sheet["columns"])
+    margin_top = float(sheet["margin_top_mm"]) * unit
+    margin_right = float(sheet["margin_right_mm"]) * unit
+    margin_bottom = float(sheet["margin_bottom_mm"]) * unit
+    margin_left = float(sheet["margin_left_mm"]) * unit
+    row_gap = float(sheet["row_gap_mm"]) * unit
+    column_gap = float(sheet["column_gap_mm"]) * unit
+
+    available_width = page_width - margin_left - margin_right - (column_gap * (cols - 1))
+    available_height = page_height - margin_top - margin_bottom - (row_gap * (rows - 1))
+    if available_width <= 0 or available_height <= 0:
+        raise RadiusValidationError("print settings leave no printable area")
+
+    aspect = float(canvas_width) / max(float(canvas_height), 1.0)
+    max_card_width = available_width / cols
+    max_card_height = available_height / rows
+    if max_card_width <= 0 or max_card_height <= 0:
+        raise RadiusValidationError("print settings leave no card area")
+
+    if (max_card_width / max_card_height) > aspect:
+        card_height = max_card_height
+        card_width = card_height * aspect
+        fit_limited_by = "height"
+    else:
+        card_width = max_card_width
+        card_height = card_width / aspect
+        fit_limited_by = "width"
+
+    positions = []
+    for row in range(rows):
+        for col in range(cols):
+            positions.append({
+                "row": row,
+                "col": col,
+                "x": margin_left + col * (card_width + column_gap),
+                "y": page_height - margin_top - card_height - row * (card_height + row_gap),
+            })
+
+    return {
+        "rows": rows,
+        "columns": cols,
+        "card_width": card_width,
+        "card_height": card_height,
+        "positions": positions,
+        "cards_per_page": rows * cols,
+        "fit_limited_by": fit_limited_by,
+        "margins": {
+            "top": margin_top,
+            "right": margin_right,
+            "bottom": margin_bottom,
+            "left": margin_left,
+        },
+        "gaps": {
+            "row": row_gap,
+            "column": column_gap,
+        },
+    }
 
 
 def _print_presets_list() -> list[dict]:
@@ -1012,7 +1192,9 @@ class OperationsService:
                                   sample: Optional[dict] = None,
                                   batch_id: int | None = None,
                                   layout_overrides: Optional[dict] = None,
-                                  actor: str = "system") -> bytes:
+                                  print_settings: Optional[dict] = None,
+                                  actor: str = "system",
+                                  job_id: int | None = None) -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
             raise RadiusNotFound("print template not found")
@@ -1026,6 +1208,8 @@ class OperationsService:
             build_card_render_model,
             render_card_pdf,
             place_card_form_uniform,
+            model_uses_uploaded_background,
+            draw_uploaded_background_uniform,
         )
 
         # Allowed override keys from the export-center "tweak these
@@ -1048,19 +1232,15 @@ class OperationsService:
             and str(value).strip()
         }
 
-        # Page geometry.
-        page_size = str(template.get("page_size") or "A4").strip().lower()
+        # Page geometry belongs to the export operation, not to the card
+        # template. The saved template defines only the finished card snapshot;
+        # these settings decide how many completed snapshots fit on paper.
+        sheet = _print_sheet_settings(print_settings)
+        page_size = str(sheet["page_size"]).strip().lower()
         base_size = letter if page_size == "letter" else A4
-        orientation = str(template.get("orientation") or "portrait").lower()
+        orientation = str(sheet["orientation"]).lower()
         pagesize = landscape(base_size) if orientation == "landscape" else portrait(base_size)
         page_width, page_height = pagesize
-
-        rows = max(int(template.get("cards_per_column") or 1), 1)
-        cols = max(int(template.get("cards_per_row") or 1), 1)
-        margin = 10 * mm
-        gap = 4 * mm
-        slot_width = (page_width - (margin * 2) - (gap * (cols - 1))) / cols
-        slot_height = (page_height - (margin * 2) - (gap * (rows - 1))) / rows
 
         # Resolve which cards to render.
         sample_payload = sample or {}
@@ -1096,56 +1276,161 @@ class OperationsService:
         if not cards:
             raise RadiusValidationError("selected batch has no cards")
 
+        first_model = build_card_render_model(
+            template,
+            cards[0] if isinstance(cards[0], dict) else {},
+            overrides=overrides,
+        )
+        geometry = _strict_print_geometry(
+            page_width=page_width,
+            page_height=page_height,
+            canvas_width=float(first_model["canvas"]["width"]),
+            canvas_height=float(first_model["canvas"]["height"]),
+            sheet=sheet,
+            unit=mm,
+        )
+        cols = int(geometry["columns"])
+        cards_per_page = int(geometry["cards_per_page"])
+        dynamic_element_ids = {"user", "pass", "qr", "meta"}
+
         output = BytesIO()
         pdf = canvas.Canvas(output, pagesize=pagesize)
-        pdf.setTitle(f"Card print template - {template.get('name') or template_id}")
+        # Chrome/Edge PDF viewer renders UTF-16 Arabic metadata titles
+        # as disconnected/reordered glyphs in the toolbar even when the
+        # card body itself renders correctly. Keep document metadata
+        # ASCII-only; the Arabic template name still appears in the UI
+        # and inside the rendered card where the Arabic image path is
+        # used.
+        pdf.setTitle(f"HobeRadius card export template {template_id}")
         pdf.setAuthor("HobeRadius")
 
-        cards_per_page = rows * cols
         file_name = f"cards-template-{template_id}.pdf"
         if batch_id:
             file_name = f"cards-batch-{batch_id}-template-{template_id}.pdf"
-        job = operations_repo.create_print_job(
-            tenant_id,
-            template_id=template_id,
-            batch_id=batch_id,
-            export_type=export_type,
-            status="started",
-            card_count=len(cards),
-            file_name=file_name,
-            metadata={"template_name": template.get("name"), "batch_code": getattr(batch, "batch_code", "") if batch else ""},
-            actor=actor,
-        )
+        job_metadata = {
+            "template_name": template.get("name"),
+            "batch_code": getattr(batch, "batch_code", "") if batch else "",
+            "progress": 8,
+            "stage": "started",
+            "stage_label": "بدأ تجهيز ملف PDF",
+        }
+        if job_id:
+            job = operations_repo.update_print_job(
+                tenant_id,
+                job_id,
+                status="started",
+                card_count=len(cards),
+                file_name=file_name,
+                message="Started PDF generation.",
+                metadata=job_metadata,
+            )
+        else:
+            job = operations_repo.create_print_job(
+                tenant_id,
+                template_id=template_id,
+                batch_id=batch_id,
+                export_type=export_type,
+                status="started",
+                card_count=len(cards),
+                file_name=file_name,
+                metadata=job_metadata,
+                actor=actor,
+            )
         try:
+            static_form_name = f"card_{template_id}_static"
+            uploaded_background_engine = model_uses_uploaded_background(first_model)
+            render_card_pdf(
+                pdf,
+                first_model,
+                form_name=static_form_name,
+                expose_password=False,
+                include_background=not uploaded_background_engine,
+                exclude_ids=dynamic_element_ids,
+            )
+            progress_every = max(1, min(250, len(cards) // 20 or 1))
             for idx, card in enumerate(cards):
                 if idx and idx % cards_per_page == 0:
                     pdf.showPage()
                 slot = idx % cards_per_page
-                row = slot // cols
-                col = slot % cols
-                slot_x = margin + col * (slot_width + gap)
-                slot_y = page_height - margin - slot_height - row * (slot_height + gap)
+                placement = geometry["positions"][slot]
                 # Build the render model for this card via the SAME
                 # builder the live preview uses.
-                model = build_card_render_model(
-                    template,
-                    card if isinstance(card, dict) else {},
-                    overrides=overrides,
-                )
-                form_name = f"card_{template_id}_{idx}"
+                if idx == 0:
+                    model = first_model
+                else:
+                    model = build_card_render_model(
+                        template,
+                        card if isinstance(card, dict) else {},
+                        overrides=overrides,
+                    )
+                dynamic_form_name = f"card_{template_id}_{idx}_dynamic"
                 # Render the card into a named form at canvas coords …
-                render_card_pdf(pdf, model, form_name=form_name,
-                                expose_password=True)
+                render_card_pdf(
+                    pdf,
+                    model,
+                    form_name=dynamic_form_name,
+                    expose_password=True,
+                    include_background=False,
+                    include_ids=dynamic_element_ids,
+                )
                 # … then place that form into the sheet slot with
                 # UNIFORM scale. cards_per_row/column only affect the
                 # slot — never the contents of the form.
+                if uploaded_background_engine:
+                    draw_uploaded_background_uniform(
+                        pdf,
+                        model,
+                        slot_x=float(placement["x"]),
+                        slot_y=float(placement["y"]),
+                        slot_width=float(geometry["card_width"]),
+                        slot_height=float(geometry["card_height"]),
+                    )
                 place_card_form_uniform(
-                    pdf, model, form_name=form_name,
-                    slot_x=slot_x, slot_y=slot_y,
-                    slot_width=slot_width, slot_height=slot_height,
+                    pdf, model, form_name=static_form_name,
+                    slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+                    slot_width=float(geometry["card_width"]),
+                    slot_height=float(geometry["card_height"]),
                 )
+                place_card_form_uniform(
+                    pdf, model, form_name=dynamic_form_name,
+                    slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+                    slot_width=float(geometry["card_width"]),
+                    slot_height=float(geometry["card_height"]),
+                )
+                if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
+                    progress = 12 + int(((idx + 1) / len(cards)) * 72)
+                    operations_repo.update_print_job(
+                        tenant_id,
+                        int(job.get("id") or 0),
+                        status="rendering",
+                        card_count=len(cards),
+                        file_name=file_name,
+                        message=f"Rendered {idx + 1} of {len(cards)} cards.",
+                        metadata={
+                            "progress": min(progress, 88),
+                            "stage": "rendering",
+                            "stage_label": "رسم البطاقات داخل ملف PDF",
+                            "rendered_cards": idx + 1,
+                            "total_cards": len(cards),
+                            "cards_per_page": cards_per_page,
+                        },
+                    )
 
             pdf.showPage()
+            operations_repo.update_print_job(
+                tenant_id,
+                int(job.get("id") or 0),
+                status="finalizing",
+                card_count=len(cards),
+                file_name=file_name,
+                message="Finalizing PDF bytes.",
+                metadata={
+                    "progress": 92,
+                    "stage": "finalizing",
+                    "stage_label": "إغلاق الملف وتجهيز التنزيل",
+                    "total_cards": len(cards),
+                },
+            )
             pdf.save()
             payload = output.getvalue()
             operations_repo.finish_print_job(
@@ -1159,8 +1444,18 @@ class OperationsService:
                     "template_name": template.get("name"),
                     "batch_id": batch_id,
                     "cards_per_page": cards_per_page,
-                    "render_mode": "unified_renderer_form_scaled_uniformly",
+                    "print_settings": {
+                        **sheet,
+                        "cards_per_page": cards_per_page,
+                        "card_width_pt": geometry["card_width"],
+                        "card_height_pt": geometry["card_height"],
+                        "fit_limited_by": geometry["fit_limited_by"],
+                    },
+                    "render_mode": "unified_renderer_static_form_plus_dynamic_layer",
                     "bytes": len(payload),
+                    "progress": 100,
+                    "stage": "completed",
+                    "stage_label": "اكتمل ملف PDF",
                 },
             )
             self._audit.record(
@@ -1182,6 +1477,170 @@ class OperationsService:
                 metadata={"template_name": template.get("name"), "batch_id": batch_id},
             )
             raise
+
+    def start_print_template_export_job(
+        self,
+        *,
+        tenant_id: int,
+        template_id: int,
+        sample: Optional[dict] = None,
+        batch_id: int | None = None,
+        layout_overrides: Optional[dict] = None,
+        print_settings: Optional[dict] = None,
+        actor: str = "system",
+    ) -> dict:
+        template = operations_repo.get_print_template(tenant_id, template_id)
+        if not template:
+            raise RadiusNotFound("print template not found")
+        batch = None
+        card_count = 1
+        export_type = "sample_pdf_async"
+        if batch_id:
+            batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
+            if not batch:
+                raise RadiusNotFound("card batch not found")
+            # Count cheaply from the existing batch list helper; this is only
+            # metadata for progress UX. The renderer resolves the actual cards.
+            card_count = int(getattr(batch, "total_cards", 0) or getattr(batch, "generated", 0) or 0)
+            export_type = "batch_pdf_async"
+        file_name = f"cards-template-{template_id}.pdf"
+        if batch_id:
+            file_name = f"cards-batch-{batch_id}-template-{template_id}.pdf"
+        job = operations_repo.create_print_job(
+            tenant_id,
+            template_id=template_id,
+            batch_id=batch_id,
+            export_type=export_type,
+            status="queued",
+            card_count=card_count,
+            file_name=file_name,
+            message="Queued PDF export job.",
+            metadata={
+                "experimental_async": True,
+                "progress": 2,
+                "stage": "queued",
+                "stage_label": "تم وضع المهمة في الطابور",
+                "template_name": template.get("name"),
+                "batch_code": getattr(batch, "batch_code", "") if batch else "",
+                "download_ready": False,
+            },
+            actor=actor,
+        )
+        _PRINT_EXPORT_EXECUTOR.submit(
+            self._run_print_template_export_job,
+            tenant_id,
+            int(job["id"]),
+            template_id,
+            sample or {},
+            batch_id,
+            layout_overrides or {},
+            print_settings or {},
+            actor,
+        )
+        return job
+
+    def _print_export_dir(self, tenant_id: int) -> Path:
+        target = Path(db_path()).parent / "print_exports" / str(int(tenant_id))
+        target.mkdir(parents=True, exist_ok=True)
+        return target
+
+    def _run_print_template_export_job(
+        self,
+        tenant_id: int,
+        job_id: int,
+        template_id: int,
+        sample: dict,
+        batch_id: int | None,
+        layout_overrides: dict,
+        print_settings: dict,
+        actor: str,
+    ) -> None:
+        try:
+            with _PRINT_EXPORT_LOCK:
+                operations_repo.update_print_job(
+                    tenant_id,
+                    job_id,
+                    status="started",
+                    message="Worker started PDF generation.",
+                    metadata={
+                        "progress": 5,
+                        "stage": "worker_started",
+                        "stage_label": "بدأ عامل التصدير",
+                    },
+                )
+                payload = self.export_print_template_pdf(
+                    tenant_id=tenant_id,
+                    template_id=template_id,
+                    sample=sample,
+                    batch_id=batch_id,
+                    layout_overrides=layout_overrides,
+                    print_settings=print_settings,
+                    actor=actor,
+                    job_id=job_id,
+                )
+                suffix = f"batch-{batch_id}" if batch_id else f"template-{template_id}"
+                file_name = f"cards-{suffix}-job-{job_id}.pdf"
+                file_path = self._print_export_dir(tenant_id) / file_name
+                file_path.write_bytes(payload)
+                job = operations_repo.get_print_job(tenant_id, job_id) or {}
+                metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+                metadata.update({
+                    "download_ready": True,
+                    "download_path": str(file_path),
+                    "bytes": len(payload),
+                    "progress": 100,
+                    "stage": "completed",
+                    "stage_label": "اكتمل ملف PDF وأصبح جاهزًا للتنزيل",
+                })
+                operations_repo.finish_print_job(
+                    tenant_id,
+                    job_id,
+                    status="success",
+                    card_count=int(job.get("card_count") or 0),
+                    file_name=file_name,
+                    message="PDF export completed.",
+                    metadata=metadata,
+                )
+        except Exception as exc:
+            operations_repo.finish_print_job(
+                tenant_id,
+                job_id,
+                status="failed",
+                card_count=0,
+                file_name="",
+                message=str(exc),
+                metadata={
+                    "experimental_async": True,
+                    "download_ready": False,
+                    "progress": 100,
+                    "stage": "failed",
+                    "stage_label": "فشل تجهيز ملف PDF",
+                },
+            )
+        finally:
+            close_thread_conn()
+
+    def get_print_job(self, *, tenant_id: int, job_id: int) -> dict:
+        job = operations_repo.get_print_job(tenant_id, job_id)
+        if not job:
+            raise RadiusNotFound("print job not found")
+        return job
+
+    def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:
+        job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
+        if job.get("status") != "success":
+            raise RadiusValidationError("print job is not ready")
+        metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+        raw_path = metadata.get("download_path")
+        if not raw_path:
+            raise RadiusNotFound("print job file not found")
+        base_dir = self._print_export_dir(tenant_id).resolve()
+        file_path = Path(str(raw_path)).resolve()
+        if base_dir not in file_path.parents and file_path != base_dir:
+            raise RadiusValidationError("invalid print job file path")
+        if not file_path.exists():
+            raise RadiusNotFound("print job file not found")
+        return file_path.read_bytes(), str(job.get("file_name") or file_path.name)
 
     def backup_status(self, *, tenant_id: int) -> dict:
         return operations_repo.backup_status(tenant_id)

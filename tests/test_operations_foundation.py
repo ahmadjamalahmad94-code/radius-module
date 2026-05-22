@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import secrets
+import time
 
 import pytest
 
@@ -325,12 +326,38 @@ def test_print_template_presets_update_batch_export_and_jobs(client):
 
     batch = _batch(client)
     export = client.get(
-        f"/api/v1/print-templates/{template['id']}/export.pdf?batch_id={batch['id']}",
+        f"/api/v1/print-templates/{template['id']}/export.pdf",
+        query_string={
+            "batch_id": batch["id"],
+            "print_columns": 3,
+            "print_rows": 4,
+            "print_column_gap_mm": 3,
+            "print_row_gap_mm": 5,
+            "print_margin_top_mm": 6,
+            "print_margin_right_mm": 7,
+            "print_margin_bottom_mm": 8,
+            "print_margin_left_mm": 9,
+        },
         headers=_auth(client),
     )
     assert export.status_code == 200, export.get_json()
     assert export.content_type.startswith("application/pdf")
     assert export.data.startswith(b"%PDF")
+
+    jobs = client.get("/api/v1/print-jobs", headers=_auth(client))
+    assert jobs.status_code == 200, jobs.get_json()
+    job_items = jobs.get_json()["data"]["items"]
+    matching_job = next(
+        item for item in job_items
+        if item["template_id"] == template["id"] and item["batch_id"] == batch["id"]
+    )
+    assert matching_job["status"] == "success"
+    assert matching_job["card_count"] == batch["count"]
+    assert matching_job["metadata_json"]["print_settings"]["columns"] == 3
+    assert matching_job["metadata_json"]["print_settings"]["rows"] == 4
+    assert matching_job["metadata_json"]["print_settings"]["column_gap_mm"] == 3.0
+    assert matching_job["metadata_json"]["print_settings"]["row_gap_mm"] == 5.0
+    assert matching_job["metadata_json"]["print_settings"]["margin_top_mm"] == 6.0
 
     resized_sheet = client.patch(
         f"/api/v1/print-templates/{template['id']}",
@@ -349,10 +376,103 @@ def test_print_template_presets_update_batch_export_and_jobs(client):
     jobs = client.get("/api/v1/print-jobs", headers=_auth(client))
     assert jobs.status_code == 200, jobs.get_json()
     job_items = jobs.get_json()["data"]["items"]
-    assert job_items[0]["template_id"] == template["id"]
-    assert job_items[0]["batch_id"] == batch["id"]
-    assert job_items[0]["status"] == "success"
-    assert job_items[0]["card_count"] == batch["count"]
+    matching_resized_job = next(
+        item for item in job_items
+        if item["template_id"] == template["id"] and item["batch_id"] == batch["id"]
+    )
+    assert matching_resized_job["status"] == "success"
+    assert matching_resized_job["card_count"] == batch["count"]
+
+
+def test_print_template_async_export_api_can_be_polled_and_downloaded(client):
+    created = client.post(
+        "/api/v1/print-templates",
+        json={
+            "name": "async_api_" + secrets.token_hex(4),
+            "orientation": "portrait",
+            "cards_per_row": 2,
+            "cards_per_column": 5,
+            "layout": {
+                "design_preset": "modern",
+                "render_engine": "en_horizontal",
+                "brand_name": "HobeRadius",
+                "card_title": "Internet Card",
+                "show_qr": True,
+            },
+        },
+        headers=_auth(client),
+    )
+    assert created.status_code == 201, created.get_json()
+    template = created.get_json()["data"]["template"]
+
+    started = client.post(
+        f"/api/v1/print-templates/{template['id']}/export-jobs",
+        json={"sample": {"username": "ASYNC-API", "password": "SECRET"}},
+        headers=_auth(client),
+    )
+    assert started.status_code == 202, started.get_json()
+    job = started.get_json()["data"]["job"]
+    assert job["status"] == "queued"
+    assert job["progress"] >= 0
+
+    status_payload = None
+    for _ in range(100):
+        status = client.get(f"/api/v1/print-jobs/{job['id']}", headers=_auth(client))
+        assert status.status_code == 200, status.get_json()
+        status_payload = status.get_json()["data"]["job"]
+        if status_payload["status"] == "success" and status_payload["download_ready"]:
+            break
+        time.sleep(0.05)
+
+    assert status_payload is not None
+    assert status_payload["status"] == "success"
+    assert status_payload["download_ready"] is True
+    assert status_payload["progress"] == 100
+
+    download = client.get(f"/api/v1/print-jobs/{job['id']}/download", headers=_auth(client))
+    assert download.status_code == 200, download.get_json()
+    assert download.content_type.startswith("application/pdf")
+    assert download.data.startswith(b"%PDF")
+
+
+def test_print_sheet_geometry_respects_visible_margins_and_gaps():
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    from app.radius.services.operations import (
+        _print_sheet_settings,
+        _strict_print_geometry,
+    )
+
+    sheet = _print_sheet_settings({
+        "print_columns": 5,
+        "print_rows": 3,
+        "print_column_gap_mm": 4,
+        "print_row_gap_mm": 9,
+        "print_margin_top_mm": 12,
+        "print_margin_right_mm": 13,
+        "print_margin_bottom_mm": 14,
+        "print_margin_left_mm": 10,
+    })
+    geometry = _strict_print_geometry(
+        page_width=A4[0],
+        page_height=A4[1],
+        canvas_width=1000,
+        canvas_height=600,
+        sheet=sheet,
+        unit=mm,
+    )
+
+    first = geometry["positions"][0]
+    second = geometry["positions"][1]
+    next_row = geometry["positions"][5]
+    card_width = geometry["card_width"]
+    card_height = geometry["card_height"]
+
+    assert first["x"] == pytest.approx(10 * mm)
+    assert A4[1] - (first["y"] + card_height) == pytest.approx(12 * mm)
+    assert second["x"] - (first["x"] + card_width) == pytest.approx(4 * mm)
+    assert first["y"] - (next_row["y"] + card_height) == pytest.approx(9 * mm)
 
 
 def test_backup_status_and_local_run_are_non_destructive(client):
