@@ -31,7 +31,7 @@ TAB_SLUGS = [
 # corresponding test_mt_dashboard_p<n>_*.py file then owns the
 # regression for that panel's contract.
 PLACEHOLDER_SLUGS = [
-    "sessions", "logs", "diagnostics",
+    "sessions", "diagnostics",
 ]
 
 
@@ -161,7 +161,7 @@ def test_placeholder_panels_carry_honest_arabic_copy(app, client):
     # Each placeholder cites its future P-step so operators can
     # ground their expectations in the roadmap. (P2/P3/P4 — interfaces,
     # ips, routes, neighbors — were promoted to real panels.)
-    for marker in ("P5", "P6", "P7"):
+    for marker in ("P6", "P7"):
         assert marker in html, (
             f"placeholder copy must reference roadmap step {marker}"
         )

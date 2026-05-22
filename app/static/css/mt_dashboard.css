@@ -525,3 +525,58 @@
   padding: 8px 12px;
   border-radius: 6px;
 }
+
+/* ───────────────────────────────────────────────────────────────
+   P5 — Logs viewer.
+   ─────────────────────────────────────────────────────────────── */
+.mt-logs-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.mt-logs-topic {
+  background: #F1F5F9;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.mt-logs-topic:hover { background: #E2E8F0; color: #0F172A; }
+.mt-logs-topic.is-active {
+  background: #2563EB;
+  color: #fff;
+  border-color: #2563EB;
+}
+.mt-logs-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+.mt-logs-output {
+  background: #0F172A;
+  color: #E2E8F0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, "Cairo", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 480px;
+  overflow: auto;
+  direction: ltr;
+  text-align: start;
+}
+.mt-logs-output:empty { display: none; }
+.mt-logs-line { padding: 1px 0; }
+.mt-logs-line--warn     { color: #FCD34D; }
+.mt-logs-line--error    { color: #FCA5A5; }
+.mt-logs-line--critical { color: #FCA5A5; background: rgba(220, 38, 38, .15); }

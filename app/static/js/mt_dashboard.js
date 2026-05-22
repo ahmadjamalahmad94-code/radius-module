@@ -878,6 +878,142 @@
     },
   });
 
+  // ─── P5 — Logs viewer ─────────────────────────────────────────
+  //
+  // Tails /api/v1/.../log with a topic filter. RouterOS stores
+  // topics as a CSV string on each row, and the backend just
+  // substring-matches whatever ?topics= we send. Multi-select on
+  // the chip strip is therefore an OR-join: any chip's slug present
+  // in the row keeps it.
+  (function initLogsTab() {
+    const POLL_MS = 5_000;
+    const LIMIT   = 250;
+    const card  = root.querySelector("[data-mt-logs-card]");
+    if (!card) return;
+    const msg     = card.querySelector("[data-mt-logs-msg]");
+    const output  = card.querySelector("[data-mt-logs-output]");
+    const count   = card.querySelector("[data-mt-logs-count]");
+    const refresh = card.querySelector("[data-mt-logs-refresh]");
+    const pauseCb = card.querySelector("[data-mt-logs-pause]");
+    const topicsBar = card.querySelector("[data-mt-logs-topics]");
+    const topicBtns = Array.from(
+      topicsBar.querySelectorAll("[data-mt-logs-topic]"));
+
+    let timer = null;
+    let inflight = false;
+    // The empty-string slug is "show all". An empty `selected` set
+    // is treated the same way.
+    const selected = new Set();
+
+    function setMsg(text) {
+      if (!msg) return;
+      msg.textContent = text || "";
+      msg.hidden = !text;
+    }
+
+    function activeTopicsCsv() {
+      const real = Array.from(selected).filter(s => s !== "");
+      return real.join(",");
+    }
+
+    function setActiveChips() {
+      topicBtns.forEach(b => {
+        const slug = b.dataset.mtLogsTopic;
+        const on = (slug === "" && selected.size === 0)
+                || selected.has(slug);
+        b.classList.toggle("is-active", on);
+      });
+    }
+
+    function rowLine(r) {
+      const time   = r.time || r["time"] || "";
+      const topics = r.topics || "";
+      const text   = r.message || "";
+      return time + "  [" + topics + "]  " + text;
+    }
+
+    function severityClass(topics) {
+      const t = (topics || "").toLowerCase();
+      if (t.includes("critical")) return "mt-logs-line--critical";
+      if (t.includes("error"))    return "mt-logs-line--error";
+      if (t.includes("warning"))  return "mt-logs-line--warn";
+      return "";
+    }
+
+    function escapeText(v) {
+      return String(v == null ? "" : v).replace(/[<>&"]/g, ch => ({
+        "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;",
+      }[ch]));
+    }
+
+    async function load() {
+      if (inflight) return;
+      if (pauseCb && pauseCb.checked) return;
+      inflight = true;
+      try {
+        const topicsCsv = activeTopicsCsv();
+        const qs = new URLSearchParams({ limit: String(LIMIT) });
+        if (topicsCsv) qs.set("topics", topicsCsv);
+        const { res, body } = await api(
+          "/mikrotik/" + CFG.routerId + "/log?" + qs.toString());
+        if (!res.ok || !body || body.ok === false) {
+          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          return;
+        }
+        const env = body.data || {};
+        if (env.ok === false) {
+          setMsg(env.error || "الراوتر لم يرد على /log/print.");
+          return;
+        }
+        const list = Array.isArray(env.data) ? env.data : [];
+        if (!list.length) {
+          setMsg("لا توجد سطور تطابق الفلتر الحالي.");
+          output.innerHTML = "";
+          if (count) count.textContent = "0";
+          return;
+        }
+        const html = list.map(r => {
+          const klass = severityClass(r.topics);
+          const cls = klass ? ' class="mt-logs-line ' + klass + '"'
+                            : ' class="mt-logs-line"';
+          return '<div' + cls + '>' + escapeText(rowLine(r)) + '</div>';
+        }).join("");
+        output.innerHTML = html;
+        if (count) count.textContent = String(list.length);
+        setMsg("");
+        // Auto-scroll to bottom (newest entries).
+        output.scrollTop = output.scrollHeight;
+      } catch (e) {
+        setMsg("خطأ في الشبكة: " + String(e));
+      } finally {
+        inflight = false;
+      }
+    }
+
+    function start() { load(); if (timer == null) timer = setInterval(load, POLL_MS); }
+    function stop()  { if (timer != null) { clearInterval(timer); timer = null; } }
+
+    root.addEventListener("mt:tab-change", (e) => {
+      if (e.detail && e.detail.slug === "logs") start();
+      else stop();
+    });
+    if (refresh) refresh.addEventListener("click", () => load());
+    topicBtns.forEach(b => {
+      b.addEventListener("click", () => {
+        const slug = b.dataset.mtLogsTopic;
+        if (slug === "") {
+          selected.clear();
+        } else {
+          if (selected.has(slug)) selected.delete(slug);
+          else selected.add(slug);
+        }
+        setActiveChips();
+        load();
+      });
+    });
+    if ((location.hash || "").replace(/^#/, "") === "tab-logs") start();
+  })();
+
   // ─── P4 — Neighbors (MNDP/CDP/LLDP) ───────────────────────────
   initTableTab({
     slug: "neighbors",

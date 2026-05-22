@@ -377,13 +377,61 @@
     </section>
   </section>
 
-  {# ─── Placeholder panels (P5..P7 will fill them). Honest
+  {# ─── P5 — Logs tab (real data) ──────────────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="logs"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-logs-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-list"></i> السجلات الحيّة</h3>
+        <span class="mt-card-meta">
+          <span data-mt-logs-count>—</span> سطر ·
+          <label class="mt-logs-pause">
+            <input type="checkbox" data-mt-logs-pause>
+            إيقاف مؤقّت
+          </label>
+          <button type="button" class="mt-mini-btn" data-mt-logs-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        {# Topic filter chips. RouterOS stores topics as a CSV string
+           on each row; the backend just substring-matches the chip
+           values, so multi-select is a simple "any-of." #}
+        <div class="mt-logs-topics" data-mt-logs-topics
+             aria-label="فلتر بالموضوع">
+          {% for slug, label in [
+            ('',         'الكلّ'),
+            ('error',    'أخطاء'),
+            ('warning',  'تحذيرات'),
+            ('critical', 'حرجة'),
+            ('info',     'معلومات'),
+            ('system',   'نظام'),
+            ('firewall', 'جدار حماية'),
+            ('account',  'محاسبة'),
+            ('hotspot',  'هوتسبوت'),
+            ('dhcp',     'DHCP'),
+          ] %}
+          <button type="button" class="mt-logs-topic
+                  {% if slug == '' %}is-active{% endif %}"
+                  data-mt-logs-topic="{{ slug }}">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <p class="mt-empty" data-mt-logs-msg>جارٍ التحميل…</p>
+        <pre class="mt-logs-output" data-mt-logs-output
+             aria-live="polite"></pre>
+      </div>
+    </section>
+  </section>
+
+  {# ─── Placeholder panels (P6..P7 will fill them). Honest
        empty states — no fake buttons, no fake data. ─── #}
   {% set _placeholders = [
     ('sessions',    'الجلسات',   'users',
      'Hotspot + PPP active users مع uptime + bytes — ينزل في P6.'),
-    ('logs',        'السجلات',   'list',
-     'عارض حيّ للـ /log مع فلاتر الموضوع — ينزل في P5.'),
     ('diagnostics', 'التشخيص',   'stethoscope',
      'تحليل إشارات الخطر (loop / flapping / overlap) — ينزل في P7.'),
   ] %}
