@@ -164,7 +164,11 @@ def _build_router_cfg(nas: Mapping[str, Any]) -> dict:
         "password": str(nas.get("api_password") or ""),
         "use_tls": bool(nas.get("api_use_tls") or 0),
         "verify_tls": True,
-        "timeout_sec": int(nas.get("api_timeout_sec") or 10),
+        # Default 3s — short enough to keep the dashboard snappy when
+        # a router is unreachable, long enough for a healthy router
+        # to respond inside one round-trip. Per-NAS override via the
+        # `api_timeout_sec` column when set > 0.
+        "timeout_sec": int(nas.get("api_timeout_sec") or 3),
     }
 
 

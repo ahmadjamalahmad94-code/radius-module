@@ -88,6 +88,41 @@ def test_k8_routes_registered(client):
 # ─── K8.1: files + backup ────────────────────────────────────────
 
 
+# ─── L8: parallel overview ───────────────────────────────────────
+
+
+def test_system_overview_runs_sub_calls_in_parallel(client, monkeypatch):
+    """5 sub-fetchers each sleep ~0.4s. Sequential would take ~2s,
+    parallel must finish well under 1s. The bound (1s) gives ample
+    slack for slow CI but still catches a regression to sequential."""
+    import time
+    from app.radius.services import mikrotik_admin_client as mac
+
+    def slow_ok(_nas):
+        time.sleep(0.4)
+        return mac.MtResult(ok=True, data=[{"k": "v"}])
+
+    monkeypatch.setattr(mac, "system_resource", slow_ok)
+    monkeypatch.setattr(mac, "system_health", slow_ok)
+    monkeypatch.setattr(mac, "system_identity", slow_ok)
+    monkeypatch.setattr(mac, "system_clock", slow_ok)
+    monkeypatch.setattr(mac, "system_routerboard", slow_ok)
+
+    started = time.perf_counter()
+    res = client.get("/api/v1/mikrotik/1/system/overview", headers=AUTH)
+    elapsed = time.perf_counter() - started
+
+    assert res.status_code == 200
+    body = res.get_json()
+    sections = body["data"]["sections"]
+    assert set(sections) == {"resource", "health", "identity",
+                              "clock", "routerboard"}
+    assert all(sections[k]["ok"] for k in sections)
+    # 5 × 0.4s sequential = 2.0s. Parallel + threadpool overhead
+    # < 1s on any normal box.
+    assert elapsed < 1.5, f"overview took {elapsed:.2f}s — likely serial"
+
+
 def test_files_list_success(client, monkeypatch):
     mc = MagicMock()
     mc.print_.return_value = [

@@ -55,6 +55,7 @@ K8 endpoints — files + backup + downloads + destructive actions:
 """
 from __future__ import annotations
 
+import concurrent.futures
 import json
 from datetime import datetime, timezone
 
@@ -331,20 +332,43 @@ def mt_system_overview(nas_id: int):
     a single response so the K9 page makes ONE HTTP request on
     refresh.
 
-    Each sub-call still goes through the per-operation cache, so a
-    follow-up sub-page request (e.g. just `/system/health` on a
-    deep-link) re-uses the warm value."""
+    Sub-calls run in parallel (5 threads) so an offline router
+    bottoms out at ~timeout_sec instead of 5×timeout_sec. Each
+    sub-call still goes through the per-operation cache, so a
+    follow-up sub-page request (e.g. just `/system/health`) re-uses
+    the warm value.
+    """
     nas = _load_nas(nas_id)
     if not nas:
         return fail("not_found", "الراوتر غير موجود", status=404)
 
-    sections = {
-        "resource": mac.system_resource(nas),
-        "health": mac.system_health(nas),
-        "identity": mac.system_identity(nas),
-        "clock": mac.system_clock(nas),
-        "routerboard": mac.system_routerboard(nas),
+    fetchers = {
+        "resource": mac.system_resource,
+        "health": mac.system_health,
+        "identity": mac.system_identity,
+        "clock": mac.system_clock,
+        "routerboard": mac.system_routerboard,
     }
+    sections: dict[str, mac.MtResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(fetchers),
+        thread_name_prefix="mt-ov",
+    ) as ex:
+        future_to_key = {
+            ex.submit(fn, nas): key for key, fn in fetchers.items()
+        }
+        for fut in concurrent.futures.as_completed(future_to_key):
+            key = future_to_key[fut]
+            try:
+                sections[key] = fut.result()
+            except Exception as exc:  # noqa: BLE001
+                # Defensive — `_safe_dial` already swallows MT errors
+                # into the MtResult envelope; this catch is for the
+                # truly-unexpected case so one bad sub-call doesn't
+                # 500 the whole overview.
+                sections[key] = mac.MtResult(
+                    ok=False, error=f"unhandled: {exc}",
+                )
     descriptor = resolve_connection_descriptor(nas)
     payload = {
         "router_id": nas_id,
