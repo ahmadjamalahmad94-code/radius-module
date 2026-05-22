@@ -160,6 +160,31 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_queues_simple_set),
         methods=["PUT"],
     )
+    # K6 — firewall (filter + nat read-only, address-lists CRUD)
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/firewall/filter",
+        "mt_firewall_filter",
+        require_api_token(mt_firewall_filter),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/firewall/nat",
+        "mt_firewall_nat",
+        require_api_token(mt_firewall_nat),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/firewall/address-lists",
+        "mt_address_lists",
+        require_api_token(mt_address_lists),
+        methods=["GET", "POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/firewall/address-lists/<string:entry_id>",
+        "mt_address_list_remove",
+        require_api_token(mt_address_list_remove),
+        methods=["DELETE"],
+    )
 
 
 # ─── helpers ─────────────────────────────────────────────────────
@@ -396,6 +421,69 @@ def mt_queues_simple_set(nas_id: int, queue_id: str):
     )
     payload = _envelope(result, router_id=nas_id)
     payload["queue_id"] = queue_id
+    return ok(payload)
+
+
+# ─── K6: firewall endpoints ──────────────────────────────────────
+
+
+def mt_firewall_filter(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    return ok(_envelope(mac.firewall_filter(nas), router_id=nas_id))
+
+
+def mt_firewall_nat(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    return ok(_envelope(mac.firewall_nat(nas), router_id=nas_id))
+
+
+def mt_address_lists(nas_id: int):
+    """GET → read every address-list entry; POST → add a new one.
+
+    The route handles two methods so the URL stays
+    `/firewall/address-lists` for both — RESTful and matches the K9
+    UI's form action.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+
+    if request.method == "GET":
+        return ok(_envelope(mac.address_list_list(nas), router_id=nas_id))
+
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+    result = mac.address_list_add(
+        nas,
+        list_name=str(body.get("list") or ""),
+        address=str(body.get("address") or ""),
+        comment=str(body.get("comment") or ""),
+        timeout=str(body.get("timeout") or ""),
+    )
+    _audit_mutation(
+        nas_id=nas_id, action="mt.firewall.address_list.add",
+        target_id=f"{body.get('list')}::{body.get('address')}",
+        result=result,
+    )
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_address_list_remove(nas_id: int, entry_id: str):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.address_list_remove(nas, entry_id)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.firewall.address_list.remove",
+        target_id=entry_id, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["entry_id"] = entry_id
     return ok(payload)
 
 

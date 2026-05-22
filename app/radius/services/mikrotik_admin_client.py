@@ -508,6 +508,88 @@ def queue_simple_set(
     )
 
 
+def firewall_filter(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/firewall/filter/print` — filter chain. Read-only by
+    design (per the plan): editing filter rules blind through an
+    API is too easy to lock yourself out with."""
+    return fetch_cached(
+        nas=nas,
+        operation="firewall/filter",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/firewall/filter/print")),
+    )
+
+
+def firewall_nat(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/firewall/nat/print` — NAT rules. Read-only."""
+    return fetch_cached(
+        nas=nas,
+        operation="firewall/nat",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/firewall/nat/print")),
+    )
+
+
+def address_list_list(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/firewall/address-list/print` — address-list entries.
+
+    The list is small and stable enough to share one cache bucket
+    across every list-name; the UI does the per-list filtering.
+    """
+    return fetch_cached(
+        nas=nas,
+        operation="firewall/address-list",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/firewall/address-list/print")),
+    )
+
+
+def address_list_add(
+    nas: Mapping[str, Any], *, list_name: str, address: str,
+    comment: str = "", timeout: str = "",
+) -> MtResult:
+    """`/ip/firewall/address-list/add list=<L> address=<A> ...`.
+
+    `address` may be a single IP, CIDR, or RouterOS-style range —
+    we don't validate here, the router will reject malformed input
+    and that surfaces as a clean MtResult error.
+    """
+    name = (list_name or "").strip()
+    addr = (address or "").strip()
+    if not name:
+        return MtResult(ok=False, error="اسم القائمة غير محدد")
+    if not addr:
+        return MtResult(ok=False, error="العنوان غير محدد")
+    attrs: dict = {"list": name, "address": addr}
+    if comment:
+        attrs["comment"] = str(comment)
+    if timeout:
+        attrs["timeout"] = str(timeout)
+    return _run_mutation(
+        nas,
+        operation="firewall/address-list/add",
+        work=lambda c: c.run("/ip/firewall/address-list/add", attrs=attrs),
+        invalidate=("firewall/address-list",),
+    )
+
+
+def address_list_remove(
+    nas: Mapping[str, Any], entry_id: str,
+) -> MtResult:
+    """`/ip/firewall/address-list/remove .id=<id>`."""
+    eid = (entry_id or "").strip()
+    if not eid:
+        return MtResult(ok=False, error="معرّف المدخل غير محدد")
+    return _run_mutation(
+        nas,
+        operation="firewall/address-list/remove",
+        work=lambda c: c.run(
+            "/ip/firewall/address-list/remove", attrs={".id": eid},
+        ),
+        invalidate=("firewall/address-list",),
+    )
+
+
 def _run_mutation(
     nas: Mapping[str, Any],
     *,
@@ -648,6 +730,11 @@ __all__ = [
     "queue_simple_list",
     "queue_simple_set",
     "QUEUE_SIMPLE_EDITABLE",
+    "firewall_filter",
+    "firewall_nat",
+    "address_list_list",
+    "address_list_add",
+    "address_list_remove",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",

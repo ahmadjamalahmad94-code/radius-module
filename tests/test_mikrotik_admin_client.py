@@ -643,6 +643,124 @@ def test_queue_simple_set_invalidates_list_cache(fake_nas_direct):
     assert mock_client.print_.call_count == 2
 
 
+# ─── K6.2: firewall + address-list ───────────────────────────────
+
+
+def test_firewall_filter_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "chain": "input", "action": "accept"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.firewall_filter(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/ip/firewall/filter/print")
+
+
+def test_firewall_nat_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "chain": "srcnat", "action": "masquerade"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.firewall_nat(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/ip/firewall/nat/print")
+
+
+def test_address_list_list_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "list": "blocked", "address": "1.1.1.1"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.address_list_list(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with(
+        "/ip/firewall/address-list/print",
+    )
+
+
+def test_address_list_add_sends_attrs(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.address_list_add(
+            fake_nas_direct,
+            list_name="blocked", address="2.2.2.2",
+            comment="bad bot", timeout="1h",
+        )
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/ip/firewall/address-list/add"
+    assert kwargs["attrs"]["list"] == "blocked"
+    assert kwargs["attrs"]["address"] == "2.2.2.2"
+    assert kwargs["attrs"]["comment"] == "bad bot"
+    assert kwargs["attrs"]["timeout"] == "1h"
+
+
+def test_address_list_add_rejects_empty(fake_nas_direct):
+    res = mac.address_list_add(
+        fake_nas_direct, list_name="", address="1.2.3.4",
+    )
+    assert res.ok is False
+    assert "اسم القائمة" in res.error
+
+    res2 = mac.address_list_add(
+        fake_nas_direct, list_name="blocked", address="",
+    )
+    assert res2.ok is False
+    assert "العنوان" in res2.error
+
+
+def test_address_list_add_invalidates_cache(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{".id": "*1"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.address_list_list(fake_nas_direct)
+        mac.address_list_add(
+            fake_nas_direct, list_name="x", address="3.3.3.3",
+        )
+        mac.address_list_list(fake_nas_direct)
+
+    assert mock_client.print_.call_count == 2
+
+
+def test_address_list_remove_sends_id(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.address_list_remove(fake_nas_direct, "*9")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/ip/firewall/address-list/remove"
+    assert kwargs["attrs"][".id"] == "*9"
+
+
+def test_address_list_remove_rejects_empty_id(fake_nas_direct):
+    res = mac.address_list_remove(fake_nas_direct, "")
+    assert res.ok is False
+    assert "غير محدد" in res.error
+
+
 def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
     samples = list(mac.stream_interface_samples(
         fake_nas_direct, "",
