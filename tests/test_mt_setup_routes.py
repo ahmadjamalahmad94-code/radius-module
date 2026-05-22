@@ -506,6 +506,35 @@ def test_v7_wizard_handles_missing_wg_env_gracefully(app, client, monkeypatch):
         ).fetchone() is None
 
 
+def test_operations_table_has_live_counter_markers(app, client):
+    """O2 — each router row must carry the data-* markers the
+    JS poll loop binds to: data-mt-row-counters,
+    data-mt-router-id, data-mt-row-status, data-mt-row-hotspot,
+    data-mt-row-ppp, data-mt-row-rx, data-mt-row-tx."""
+    _login(client)
+    _create_via_wizard(client, name="MT-O2-Live")
+    res = client.get("/admin/radius/mt/operations")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # Table-level config attributes for the JS bootstrap.
+    assert "data-mt-ops-table" in html
+    assert 'data-mt-api-base="/api/v1"' in html
+    assert "data-mt-api-token=" in html
+
+    # Per-row counter markers (rendered once per router).
+    assert "data-mt-row-counters" in html
+    assert "data-mt-router-id" in html
+    assert "data-mt-row-status" in html
+    assert "data-mt-row-hotspot" in html
+    assert "data-mt-row-ppp" in html
+    assert "data-mt-row-rx" in html
+    assert "data-mt-row-tx" in html
+
+    # The JS file itself is referenced (defer-loaded).
+    assert 'src="/static/js/mt_operations.js"' in html
+
+
 def test_operations_excludes_soft_deleted(app, client):
     """A NAS row with deleted_at set must NOT show up in the list."""
     _login(client)

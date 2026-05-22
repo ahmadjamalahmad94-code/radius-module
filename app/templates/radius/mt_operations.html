@@ -38,24 +38,26 @@
 
 {% call hub.section("الراوترات", icon="server",
                     meta=items|length|string + " راوتر", flush=True) %}
-<div class="hub-table-wrap" style="border:none;border-radius:0">
+<div class="hub-table-wrap" style="border:none;border-radius:0"
+     data-mt-ops-table
+     data-mt-api-base="/api/v1"
+     data-mt-api-token="{{ api_token }}">
   <table class="hub-table">
     <thead>
       <tr>
         <th class="num" style="width:60px">#</th>
         <th>الاسم</th>
         <th>العنوان</th>
-        <th>RouterOS</th>
-        <th>المنفذ</th>
-        <th>API user</th>
         <th>الحالة</th>
-        <th>آخر فحص</th>
+        <th>المتصلون</th>
+        <th>الترافيك</th>
+        <th>RouterOS</th>
         <th>إجراءات</th>
       </tr>
     </thead>
     <tbody>
     {% for item in items %}
-      <tr>
+      <tr data-mt-row-counters data-mt-router-id="{{ item.id }}">
         <td class="num">{{ item.display_num }}</td>
         <td>
           <a href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
@@ -69,33 +71,32 @@
         </td>
         <td><code>{{ item.address }}</code></td>
         <td>
-          {% if item.ros_version %}
-            RouterOS {{ item.ros_version }}.x
-          {% else %}
-            <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
-          {% endif %}
-        </td>
-        <td>{{ item.api_port }}</td>
-        <td><code>{{ item.api_user or '—' }}</code></td>
-        <td>
           {% if item.enabled %}
-            {{ hub.pill("مفعَّل", "green") }}
+            <span class="hub-pill hub-pill--grey" data-mt-row-status>
+              <span class="dot"></span>
+              <span data-mt-row-status-label>جارٍ الفحص…</span>
+            </span>
           {% else %}
             {{ hub.pill("معطَّل", "amber") }}
           {% endif %}
         </td>
         <td>
-          {% if item.last_check_status == 'reachable' %}
-            {{ hub.pill("متاح", "green") }}
-          {% elif item.last_check_status == 'timeout' %}
-            {{ hub.pill("بطيء", "amber") }}
-          {% elif item.last_check_status == 'unreachable' %}
-            {{ hub.pill("غير متاح", "red") }}
+          <span class="mt-row-users" data-mt-row-users>
+            <span data-mt-row-hotspot>—</span> hotspot ·
+            <span data-mt-row-ppp>—</span> ppp
+          </span>
+        </td>
+        <td>
+          <span class="mt-row-traffic">
+            ↓ <span data-mt-row-rx>—</span> ·
+            ↑ <span data-mt-row-tx>—</span>
+          </span>
+        </td>
+        <td>
+          {% if item.ros_version %}
+            RouterOS {{ item.ros_version }}.x
           {% else %}
-            <span class="hub-pill hub-pill--grey"><span class="dot"></span> —</span>
-          {% endif %}
-          {% if item.last_check_at %}
-            <br><small style="color:#6B7280">{{ item.last_check_at|truncate(19, true, '') }}</small>
+            <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
           {% endif %}
         </td>
         <td>
@@ -117,6 +118,17 @@
   </table>
 </div>
 {% endcall %}
+
+<script src="{{ url_for('static', filename='js/mt_operations.js') }}" defer></script>
+<style>
+  .mt-row-users, .mt-row-traffic { font-size: 12px; color: #475569; white-space: nowrap; }
+  [data-mt-row-status][data-mt-state="ok"]    { background: #DCFCE7; color: #166534; }
+  [data-mt-row-status][data-mt-state="ok"] .dot    { background: #16A34A; }
+  [data-mt-row-status][data-mt-state="error"] { background: #FEE2E2; color: #991B1B; }
+  [data-mt-row-status][data-mt-state="error"] .dot { background: #DC2626; }
+  [data-mt-row-status][data-mt-state="partial"] { background: #FEF3C7; color: #92400E; }
+  [data-mt-row-status][data-mt-state="partial"] .dot { background: #D97706; }
+</style>
 
 {% else %}
   {{ hub.empty("لا توجد راوترات بعد.",

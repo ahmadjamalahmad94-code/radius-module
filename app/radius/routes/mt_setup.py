@@ -118,7 +118,15 @@ def mt_operations():
             "api_user": row["api_user"] or "",
             "api_port": row["api_port"] or 8728,
         })
-    return render_template("radius/mt_operations.html", items=items)
+    # O2 — pass an api_token so the per-row counter poll JS can
+    # authenticate against /api/v1/mikrotik/<id>/counters without
+    # needing a separate session-bridging step.
+    from .mt_dashboard import _ui_api_token   # internal helper reuse
+    return render_template(
+        "radius/mt_operations.html",
+        items=items,
+        api_token=_ui_api_token(),
+    )
 
 
 def mt_setup_form():
