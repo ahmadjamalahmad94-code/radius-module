@@ -1,0 +1,170 @@
+{# O12 — Guided operations assistant.
+
+   Server-rendered checklist. Each step is one of the Phase O
+   foundation services. No JS state machine — the page is
+   pure HTML+CSS+server logic.
+
+   Operators read top-to-bottom: every step shows a state chip
+   and a one-line explanation. Blocking steps disable the
+   "متابعة" button; warnings keep it active but visible.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مساعد العمليات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-list-check"></i>{% endblock %}
+{% block page_title %}مساعد العمليات{% endblock %}
+{% block page_sub %}<span class="sub">{{ checklist.operation_label_ar }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<style>
+  .mt-guided-step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hub-border, #e6e9ee);
+  }
+  .mt-guided-step:last-child { border-bottom: 0; }
+  .mt-guided-step-chip {
+    flex: 0 0 28px; width: 28px; height: 28px;
+    border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .mt-guided-step-chip--ok       { background: rgba(36,162,80,0.16); color: #2c9a52; }
+  .mt-guided-step-chip--info     { background: rgba(43,170,204,0.16); color: #208ba6; }
+  .mt-guided-step-chip--warning  { background: rgba(255,180,0,0.16);  color: #b87f00; }
+  .mt-guided-step-chip--blocking { background: rgba(208,46,46,0.16);  color: #cc1f1f; }
+  .mt-guided-step-body { flex: 1; }
+  .mt-guided-step-label { font-weight: 600; font-size: 14px; }
+  .mt-guided-step-detail { color: var(--hub-text-muted, #717b8a);
+                            font-size: 13px; margin-top: 2px; }
+  .mt-guided-actions { margin-top: 12px; }
+  .mt-guided-cant-proceed {
+    color: var(--hub-text-muted, #717b8a);
+    background: rgba(208,46,46,0.06);
+    padding: 8px 12px; border-radius: 6px;
+    border: 1px solid rgba(208,46,46,0.25);
+    font-size: 13px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard"
+         data-mt-guided-op
+         data-mt-guided-nas="{{ nas_id }}"
+         data-mt-guided-operation="{{ operation }}"
+         data-mt-guided-can-proceed="{{ '1' if checklist.can_proceed else '0' }}">
+
+  {{ hub.hero(
+    "مساعد العمليات",
+    subtitle="قائمة فحص قبل تشغيل عملية حساسة — تجميعة لكل تنبيهات O2/O5/O7/O8.",
+    icon="list-check",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3>
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        اختر العملية
+      </h3>
+    </header>
+    <div class="mt-card-body">
+      <form method="get" class="mt-program-form"
+            data-mt-guided-op-form>
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>العملية</span>
+            <select name="op" data-mt-guided-op-select>
+              {% for op in all_operations %}
+              <option value="{{ op }}" {% if op == operation %}selected{% endif %}>
+                {{ op }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-mt-guided-op-submit>
+            <i class="fa-solid fa-arrows-rotate"></i>
+            أعد بناء القائمة
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3>
+        <i class="fa-solid fa-clipboard-check"></i>
+        قائمة الفحص — {{ checklist.operation_label_ar }}
+      </h3>
+      <span class="mt-card-meta">
+        {% if checklist.can_proceed %}
+        <span class="mt-iface-state mt-iface-state--up"
+              data-mt-guided-status>جاهزة للتنفيذ</span>
+        {% else %}
+        <span class="mt-iface-state mt-iface-state--off"
+              data-mt-guided-status>مُعطّلة بسبب مشكلة</span>
+        {% endif %}
+      </span>
+    </header>
+    <div class="mt-card-body">
+
+      <ol class="mt-guided-steps" data-mt-guided-steps
+          style="list-style:none; padding:0; margin:0;">
+        {% for s in checklist.steps %}
+        <li class="mt-guided-step"
+            data-mt-guided-step="{{ s.key }}"
+            data-mt-guided-step-state="{{ s.state }}">
+          <span class="mt-guided-step-chip mt-guided-step-chip--{{ s.state }}"
+                title="{{ s.state }}">
+            {% if s.state == 'ok' %}<i class="fa-solid fa-check"></i>
+            {% elif s.state == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>
+            {% elif s.state == 'blocking' %}<i class="fa-solid fa-ban"></i>
+            {% else %}<i class="fa-solid fa-circle-info"></i>
+            {% endif %}
+          </span>
+          <div class="mt-guided-step-body">
+            <div class="mt-guided-step-label">{{ s.label_ar }}</div>
+            <div class="mt-guided-step-detail">{{ s.detail_ar }}</div>
+            {% if s.href %}
+            <a class="mt-mini-btn" href="{{ s.href }}"
+               data-mt-guided-step-link>
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              افتح
+            </a>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <div class="mt-guided-actions">
+        {% if not checklist.can_proceed %}
+        <p class="mt-guided-cant-proceed"
+           data-mt-guided-blocked>
+          <i class="fa-solid fa-ban"></i>
+          لا يمكن المتابعة قبل حل {{ checklist.blocking_steps() | length }}
+          مشكلة موضّحة أعلاه.
+        </p>
+        {% else %}
+        <a class="mt-action-btn"
+           href="{{ checklist.apply_href }}"
+           data-mt-guided-proceed>
+          <i class="fa-solid fa-circle-play"></i>
+          متابعة إلى تنفيذ العملية
+        </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}
