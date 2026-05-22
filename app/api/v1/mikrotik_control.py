@@ -63,6 +63,7 @@ from flask import Blueprint, Response, g, request
 
 from ...radius.db.connection import db
 from ...radius.services import mikrotik_admin_client as mac
+from ...radius.services import mt_counters as counters_svc
 from ...radius.services.audit import get_audit_service
 from ...radius.services.nas_connection import resolve_connection_descriptor
 from ..auth import require_api_token
@@ -255,6 +256,13 @@ def register(bp: Blueprint) -> None:
         "mt_system_identity_set",
         require_api_token(mt_system_identity_set),
         methods=["POST"],
+    )
+    # O1 — Operations Center counters
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/counters",
+        "mt_counters",
+        require_api_token(mt_counters),
+        methods=["GET"],
     )
 
 
@@ -791,6 +799,24 @@ def mt_system_reboot(nas_id: int):
         result=result,
         extra={"reason": str(body.get("reason") or "")},
     )
+    return ok(_envelope(result, router_id=nas_id))
+
+
+# ─── O1: counters ────────────────────────────────────────────────
+
+
+def mt_counters(nas_id: int):
+    """Aggregated headline numbers for the Operations Center
+    row: hotspot+ppp active counts, byte totals, last-seen.
+
+    Returns the standard MtResult envelope (cached + dialed +
+    mode all inherited from the underlying K3 fetchers). UI
+    polls this every 10s per visible router.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = counters_svc.counters_for_nas(nas)
     return ok(_envelope(result, router_id=nas_id))
 
 
