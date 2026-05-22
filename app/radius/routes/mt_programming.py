@@ -11,6 +11,8 @@ the apply button disabled and a hint pointing to Q2.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from flask import Blueprint, abort, g, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -93,19 +95,24 @@ def mt_program_form(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
         abort(404)
+    kind = (request.args.get("kind") or "hotspot").strip().lower()
+    if kind not in {"hotspot", "pppoe"}:
+        kind = "hotspot"
     return render_template(
         "radius/mt_programming.html",
         nas=nas,
         plan=None,
-        form={},
+        form={"kind": kind},
+        kind=kind,
     )
 
 
-def mt_program_plan(nas_id: int):
-    nas = _load_nas(nas_id)
-    if not nas:
-        abort(404)
-    form = {
+def _read_form() -> dict:
+    """All possible programming form fields. Each route picks the
+    subset it needs; unused ones stay around so the template can
+    re-render them after a validation error."""
+    return {
+        "kind":         (request.form.get("kind") or "hotspot").strip(),
         "interface":    (request.form.get("interface")    or "").strip(),
         "cidr":         (request.form.get("cidr")         or "").strip(),
         "hotspot_name": (request.form.get("hotspot_name") or "").strip(),
@@ -116,34 +123,67 @@ def mt_program_plan(nas_id: int):
         "gateway":      (request.form.get("gateway")      or "").strip(),
         "lease_time":   (request.form.get("lease_time")   or "1h").strip(),
         "rate_limit":   (request.form.get("rate_limit")   or "").strip(),
+        "profile_name": (request.form.get("profile_name") or "").strip(),
+        "service_name": (request.form.get("service_name") or "").strip(),
+        "local_address":(request.form.get("local_address") or "").strip(),
     }
-    spec = mt_programming.HotspotProgrammingSpec(
-        interface=form["interface"],
-        cidr=form["cidr"],
-        hotspot_name=form["hotspot_name"],
-        dns_servers=form["dns_servers"],
-        pool_start=form["pool_start"],
-        pool_end=form["pool_end"],
-        gateway=form["gateway"],
-        lease_time=form["lease_time"],
-        rate_limit=form["rate_limit"],
-    )
-    error: str = ""
+
+
+def _plan_from_form(nas: dict, form: dict) -> tuple[Any, str]:
+    """Dispatch on form['kind'] and return (plan_or_None, error_str)."""
+    kind = form.get("kind") or "hotspot"
+    error = ""
     plan = None
     try:
         ifaces, addrs = _fetch_router_state(nas)
-        plan = mt_programming.plan_hotspot(
-            nas, spec,
-            existing_interfaces=ifaces,
-            existing_addresses=addrs,
-        )
+        if kind == "pppoe":
+            spec = mt_programming.PppoeProgrammingSpec(
+                interface=form["interface"], cidr=form["cidr"],
+                profile_name=form["profile_name"],
+                service_name=form["service_name"],
+                pool_start=form["pool_start"],
+                pool_end=form["pool_end"],
+                local_address=form["local_address"],
+                dns_servers=form["dns_servers"],
+            )
+            plan = mt_programming.plan_pppoe(
+                nas, spec,
+                existing_interfaces=ifaces,
+                existing_addresses=addrs,
+            )
+        else:
+            spec = mt_programming.HotspotProgrammingSpec(
+                interface=form["interface"], cidr=form["cidr"],
+                hotspot_name=form["hotspot_name"],
+                dns_servers=form["dns_servers"],
+                pool_start=form["pool_start"],
+                pool_end=form["pool_end"],
+                gateway=form["gateway"],
+                lease_time=form["lease_time"],
+                rate_limit=form["rate_limit"],
+            )
+            plan = mt_programming.plan_hotspot(
+                nas, spec,
+                existing_interfaces=ifaces,
+                existing_addresses=addrs,
+            )
     except ValueError as e:
         error = str(e)
+    return plan, error
+
+
+def mt_program_plan(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    form = _read_form()
+    plan, error = _plan_from_form(nas, form)
     return render_template(
         "radius/mt_programming.html",
         nas=nas,
         plan=plan,
         form=form,
+        kind=form["kind"],
         error=error,
     )
 
@@ -190,43 +230,10 @@ def mt_program_apply(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
         abort(404)
-    form = {
-        "interface":    (request.form.get("interface")    or "").strip(),
-        "cidr":         (request.form.get("cidr")         or "").strip(),
-        "hotspot_name": (request.form.get("hotspot_name") or "").strip(),
-        "dns_servers":  (request.form.get("dns_servers")
-                         or "8.8.8.8,1.1.1.1").strip(),
-        "pool_start":   (request.form.get("pool_start")   or "").strip(),
-        "pool_end":     (request.form.get("pool_end")     or "").strip(),
-        "gateway":      (request.form.get("gateway")      or "").strip(),
-        "lease_time":   (request.form.get("lease_time")   or "1h").strip(),
-        "rate_limit":   (request.form.get("rate_limit")   or "").strip(),
-    }
+    form = _read_form()
     confirmed = request.form.get("confirm") == "1"
-
-    spec = mt_programming.HotspotProgrammingSpec(
-        interface=form["interface"], cidr=form["cidr"],
-        hotspot_name=form["hotspot_name"],
-        dns_servers=form["dns_servers"],
-        pool_start=form["pool_start"], pool_end=form["pool_end"],
-        gateway=form["gateway"], lease_time=form["lease_time"],
-        rate_limit=form["rate_limit"],
-    )
-
-    error: str = ""
-    plan = None
+    plan, error = _plan_from_form(nas, form)
     apply_result = None
-
-    try:
-        ifaces, addrs = _fetch_router_state(nas)
-        plan = mt_programming.plan_hotspot(
-            nas, spec,
-            existing_interfaces=ifaces,
-            existing_addresses=addrs,
-        )
-    except ValueError as e:
-        error = str(e)
-        plan = None
 
     if plan is not None:
         if not confirmed:
@@ -251,13 +258,15 @@ def mt_program_apply(nas_id: int):
             actor = str(getattr(g, "admin_id", None) or "ui")
             get_audit_service().record(
                 actor=actor,
-                action="mt.programming.apply",
+                action=f"mt.programming.{plan.kind}.apply",
                 target_type="mikrotik_nas",
                 target_id=str(nas_id),
                 payload={
-                    "hotspot_name": form["hotspot_name"],
+                    "kind": plan.kind,
                     "interface": form["interface"],
                     "cidr": form["cidr"],
+                    "name": (form.get("hotspot_name")
+                             or form.get("profile_name") or ""),
                     "ok": bool(apply_result and apply_result.ok),
                     "summary": (apply_result.summary()
                                 if apply_result else None),
@@ -268,6 +277,7 @@ def mt_program_apply(nas_id: int):
     return render_template(
         "radius/mt_programming.html",
         nas=nas, plan=plan, form=form,
+        kind=form["kind"],
         error=error,
         apply_result=apply_result,
     )

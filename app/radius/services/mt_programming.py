@@ -70,6 +70,40 @@ class ValidatedHotspot:
 
 
 @dataclass
+class PppoeProgrammingSpec:
+    """PPPoE-server programming spec.
+
+    PPPoE auth flows through RADIUS (the wizard already configures
+    /radius), so this spec only owns the layer-3 side: pool, profile,
+    and the PPPoE-server listener. Secrets are NOT touched here —
+    those come from radcheck via FreeRADIUS.
+    """
+    interface: str
+    cidr: str            # network the pool draws from
+    profile_name: str    # name of the /ppp/profile we create
+    service_name: str    # PPPoE service-name advertised on the wire
+    pool_start: str = ""
+    pool_end: str = ""
+    local_address: str = ""
+    dns_servers: str = "8.8.8.8,1.1.1.1"
+
+    def validate(self) -> "ValidatedPppoe":
+        return _validate_pppoe(self)
+
+
+@dataclass
+class ValidatedPppoe:
+    interface: str
+    network: ipaddress.IPv4Network
+    local_address: ipaddress.IPv4Address
+    pool_start: ipaddress.IPv4Address
+    pool_end: ipaddress.IPv4Address
+    profile_name: str
+    service_name: str
+    dns_servers: list[str]
+
+
+@dataclass
 class Command:
     """One structured RouterOS API call.
 
@@ -182,6 +216,170 @@ def _validate_hotspot(spec: HotspotProgrammingSpec) -> ValidatedHotspot:
 
 
 # ─── Script generation ─────────────────────────────────────────
+
+
+_PPP_PROFILE_RE = re.compile(r"^[A-Za-z0-9\-_]{1,24}$")
+_PPP_SERVICE_RE = re.compile(r"^[A-Za-z0-9\-_]{1,24}$")
+
+
+def _validate_pppoe(spec: PppoeProgrammingSpec) -> ValidatedPppoe:
+    iface = (spec.interface or "").strip()
+    if not _INTERFACE_NAME_RE.match(iface):
+        raise ValueError("اسم الواجهة غير صالح.")
+
+    pname = (spec.profile_name or "").strip()
+    if not _PPP_PROFILE_RE.match(pname):
+        raise ValueError("اسم الـ profile غير صالح.")
+    sname = (spec.service_name or "").strip()
+    if not _PPP_SERVICE_RE.match(sname):
+        raise ValueError("اسم الخدمة (service-name) غير صالح.")
+
+    try:
+        net = ipaddress.IPv4Network((spec.cidr or "").strip(), strict=False)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError,
+            ValueError):
+        raise ValueError("CIDR غير صالح.")
+    if net.prefixlen >= 31 or net.is_loopback or net.is_link_local:
+        raise ValueError("نطاق العنوان لا يصلح لـ PPPoE.")
+
+    hosts = list(net.hosts())
+    local_raw = (spec.local_address or "").strip()
+    if local_raw:
+        try:
+            la = ipaddress.IPv4Address(local_raw)
+        except (ipaddress.AddressValueError, ValueError):
+            raise ValueError("local-address غير صالح.")
+        if la not in net:
+            raise ValueError("local-address خارج CIDR.")
+    else:
+        la = hosts[0]
+
+    pstart_default = hosts[min(9, len(hosts) - 1)]
+    pend_default   = hosts[-1]
+    try:
+        ps = ipaddress.IPv4Address(spec.pool_start) if spec.pool_start else pstart_default
+        pe = ipaddress.IPv4Address(spec.pool_end)   if spec.pool_end   else pend_default
+    except (ipaddress.AddressValueError, ValueError):
+        raise ValueError("بداية/نهاية الـ pool غير صالحة.")
+    if ps not in net or pe not in net:
+        raise ValueError("نطاق الـ pool خارج CIDR.")
+    if int(ps) > int(pe):
+        raise ValueError("بداية الـ pool بعد نهايتها.")
+    if int(ps) <= int(la) <= int(pe):
+        raise ValueError("local-address داخل الـ pool.")
+
+    dns_list = [s.strip() for s in (spec.dns_servers or "").split(",")
+                if s.strip()]
+    for s in dns_list:
+        try:
+            ipaddress.IPv4Address(s)
+        except (ipaddress.AddressValueError, ValueError):
+            raise ValueError(f"DNS غير صالح: {s}")
+    if not dns_list:
+        dns_list = ["8.8.8.8", "1.1.1.1"]
+
+    return ValidatedPppoe(
+        interface=iface, network=net, local_address=la,
+        pool_start=ps, pool_end=pe,
+        profile_name=pname, service_name=sname,
+        dns_servers=dns_list,
+    )
+
+
+def build_pppoe_commands(v: ValidatedPppoe) -> list[Command]:
+    """Structured Command list for PPPoE-server setup. Carries
+    `PPPOE_COMMENT` on every row so Q4 unprogram can find them
+    without colliding with hotspot objects."""
+    comment = PPPOE_COMMENT
+    pool_name = f"{v.profile_name}-pool"
+    return [
+        Command("/ip/pool/add", {
+            "name": pool_name,
+            "ranges": f"{v.pool_start}-{v.pool_end}",
+            "comment": comment,
+        }),
+        Command("/ppp/profile/add", {
+            "name": v.profile_name,
+            "local-address": str(v.local_address),
+            "remote-address": pool_name,
+            "dns-server": ",".join(v.dns_servers),
+            "use-encryption": "default",
+            "comment": comment,
+        }),
+        Command("/interface/pppoe-server/server/add", {
+            "service-name": v.service_name,
+            "interface": v.interface,
+            "default-profile": v.profile_name,
+            "authentication": "pap,chap,mschap1,mschap2",
+            "disabled": "no",
+            "comment": comment,
+        }),
+    ]
+
+
+def render_pppoe_script(v: ValidatedPppoe) -> str:
+    lines = [
+        "# === Hoberadius PPPoE-server programming script ===",
+        f"# Interface {v.interface}, profile {v.profile_name}, service {v.service_name}.",
+        f"# Every object carries comment={PPPOE_COMMENT}.",
+        "",
+    ]
+    for cmd in build_pppoe_commands(v):
+        lines.append(_command_to_script_line(cmd))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _pppoe_summary(v: ValidatedPppoe) -> list[str]:
+    return [
+        f"إعداد PPPoE-server باسم profile «{v.profile_name}» على "
+        f"الواجهة {v.interface}.",
+        f"الـ service-name: {v.service_name}.",
+        f"الـ pool: {v.pool_start} → {v.pool_end} داخل {v.network}.",
+        f"local-address: {v.local_address}.",
+        f"خوادم DNS: {', '.join(v.dns_servers)}.",
+        f"كل أمر يحمل comment={PPPOE_COMMENT}.",
+    ]
+
+
+def _pppoe_conflicts(
+    v: ValidatedPppoe,
+    addresses: list[dict],
+    interfaces: list[dict],
+) -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    risks: list[str] = []
+    iface_row = next(
+        (r for r in interfaces if (r.get("name") or "") == v.interface),
+        None,
+    )
+    if iface_row is None:
+        risks.append(
+            f"لم نجد الواجهة «{v.interface}» — البرمجة ستفشل.")
+    return warnings, risks
+
+
+def plan_pppoe(
+    nas: Mapping[str, Any],
+    spec: PppoeProgrammingSpec,
+    *,
+    existing_addresses: list[dict] | None = None,
+    existing_interfaces: list[dict] | None = None,
+) -> Plan:
+    v = spec.validate()
+    cmds = build_pppoe_commands(v)
+    script = render_pppoe_script(v)
+    summary = _pppoe_summary(v)
+    warnings, risks = _pppoe_conflicts(
+        v, existing_addresses or [], existing_interfaces or [])
+    return Plan(
+        kind="pppoe",
+        script=script,
+        summary=summary,
+        warnings=warnings,
+        risks=risks,
+        commands=cmds,
+    )
 
 
 def _q(s: str) -> str:
@@ -483,12 +681,17 @@ __all__ = [
     "PPPOE_COMMENT",
     "HotspotProgrammingSpec",
     "ValidatedHotspot",
+    "PppoeProgrammingSpec",
+    "ValidatedPppoe",
     "Command",
     "Plan",
     "StepResult",
     "ApplyResult",
     "plan_hotspot",
+    "plan_pppoe",
     "render_hotspot_script",
+    "render_pppoe_script",
     "build_hotspot_commands",
+    "build_pppoe_commands",
     "apply_commands",
 ]

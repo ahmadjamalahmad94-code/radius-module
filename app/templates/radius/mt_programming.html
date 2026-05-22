@@ -36,14 +36,36 @@
   </div>
   {% endif %}
 
+  {% set _kind = kind or form.kind or 'hotspot' %}
+
+  <nav class="mt-tabs" data-mt-program-kind-tabs role="tablist">
+    <a class="mt-tab {% if _kind == 'hotspot' %}is-active{% endif %}"
+       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=hotspot"
+       data-mt-program-kind="hotspot" role="tab">
+      <i class="fa-solid fa-wifi"></i> Hotspot
+    </a>
+    <a class="mt-tab {% if _kind == 'pppoe' %}is-active{% endif %}"
+       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=pppoe"
+       data-mt-program-kind="pppoe" role="tab">
+      <i class="fa-solid fa-plug"></i> PPPoE
+    </a>
+  </nav>
+
   <section class="mt-card">
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-network-wired"></i> إعداد Hotspot</h3>
+      <h3>
+        {% if _kind == 'pppoe' %}
+        <i class="fa-solid fa-plug"></i> إعداد PPPoE Server
+        {% else %}
+        <i class="fa-solid fa-network-wired"></i> إعداد Hotspot
+        {% endif %}
+      </h3>
     </header>
     <div class="mt-card-body">
       <form class="mt-program-form" method="post"
             action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
             data-mt-program-form>
+        <input type="hidden" name="kind" value="{{ _kind }}">
 
         <div class="mt-program-grid">
           <label class="mt-program-field">
@@ -62,6 +84,28 @@
                    data-mt-program-cidr>
           </label>
 
+          {% if _kind == 'pppoe' %}
+          <label class="mt-program-field">
+            <span>اسم الـ profile</span>
+            <input type="text" name="profile_name" required
+                   value="{{ form.profile_name or '' }}"
+                   placeholder="pppoe-prof"
+                   data-mt-program-profile>
+          </label>
+          <label class="mt-program-field">
+            <span>service-name</span>
+            <input type="text" name="service_name" required
+                   value="{{ form.service_name or '' }}"
+                   placeholder="hoberadius-pppoe"
+                   data-mt-program-service>
+          </label>
+          <label class="mt-program-field">
+            <span>local-address (اختياري)</span>
+            <input type="text" name="local_address"
+                   value="{{ form.local_address or '' }}"
+                   placeholder="افتراضيًا أول عنوان">
+          </label>
+          {% else %}
           <label class="mt-program-field">
             <span>اسم الـ hotspot</span>
             <input type="text" name="hotspot_name" required
@@ -69,19 +113,31 @@
                    placeholder="hs"
                    data-mt-program-name>
           </label>
+          <label class="mt-program-field">
+            <span>Gateway (اختياري)</span>
+            <input type="text" name="gateway"
+                   value="{{ form.gateway or '' }}"
+                   placeholder="افتراضيًا أول عنوان">
+          </label>
+          <label class="mt-program-field">
+            <span>مدة الـ lease</span>
+            <input type="text" name="lease_time"
+                   value="{{ form.lease_time or '1h' }}"
+                   placeholder="1h">
+          </label>
+          <label class="mt-program-field">
+            <span>Rate-limit الافتراضي (اختياري)</span>
+            <input type="text" name="rate_limit"
+                   value="{{ form.rate_limit or '' }}"
+                   placeholder="10M/10M">
+          </label>
+          {% endif %}
 
           <label class="mt-program-field">
             <span>خوادم DNS (مفصولة بفواصل)</span>
             <input type="text" name="dns_servers"
                    value="{{ form.dns_servers or '8.8.8.8,1.1.1.1' }}"
                    data-mt-program-dns>
-          </label>
-
-          <label class="mt-program-field">
-            <span>Gateway (اختياري)</span>
-            <input type="text" name="gateway"
-                   value="{{ form.gateway or '' }}"
-                   placeholder="افتراضيًا أول عنوان">
           </label>
 
           <label class="mt-program-field">
@@ -96,20 +152,6 @@
             <input type="text" name="pool_end"
                    value="{{ form.pool_end or '' }}"
                    placeholder="مثلًا 192.168.10.254">
-          </label>
-
-          <label class="mt-program-field">
-            <span>مدة الـ lease</span>
-            <input type="text" name="lease_time"
-                   value="{{ form.lease_time or '1h' }}"
-                   placeholder="1h">
-          </label>
-
-          <label class="mt-program-field">
-            <span>Rate-limit الافتراضي (اختياري)</span>
-            <input type="text" name="rate_limit"
-                   value="{{ form.rate_limit or '' }}"
-                   placeholder="10M/10M">
           </label>
         </div>
 
