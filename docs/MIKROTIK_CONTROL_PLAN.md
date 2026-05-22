@@ -364,6 +364,15 @@ Each day is a chunk of 4-6 commits.
 | K2   | `3667a3b` | `app/radius/services/mikrotik_admin_client.py` + 10 tests |
 | K3   | `1a266ef` | `app/api/v1/mikrotik_control.py` + `__init__.py` registration |
 
+### Session 2 — Day 3 (network surface)
+
+**Status: K4 done. +2 commits. +10 tests. Zero failures.**
+
+| Step | Commit | Files touched |
+|------|--------|---------------|
+| K4.1 | `e70a211` | `mikrotik_admin_client.py` (+4 fetchers) · `mikrotik_control.py` (+4 endpoints) · `__init__.py` comment · `test_mikrotik_admin_client.py` (+6 tests) |
+| K4.2 | `afd1e5b` | `mikrotik_admin_client.py` (+`stream_interface_samples`) · `mikrotik_control.py` (+SSE endpoint) · `test_mikrotik_admin_client.py` (+4 tests) |
+
 ### What ships today
 
 The operator can already (manually) provision a router on VPN and
@@ -385,20 +394,19 @@ hit live stats:
 Note: there is no admin-side UI for steps 1, 3 or 4 yet. The
 *endpoints* are production-ready; the *UI* lands in K9 / K10.
 
-### Resume here — Session 2 starting point
+### Resume here — Session 3 starting point
 
-Begin with **K4 (interfaces + network)**. The pattern is
-established: copy the K3 file layout, swap `system_*` for the
-interface fetchers, register the new endpoints in `__init__.py`.
+Begin with **K5 (hotspot + PPP active users)**. Pattern carries
+over from K4: add the fetchers to `mikrotik_admin_client.py`, the
+endpoints to `mikrotik_control.py`, extend
+`test_mikrotik_admin_client.py`. K5 also introduces the first
+mutation endpoints (`disconnect`) — these MUST call
+`invalidate_cache(router_id, "hotspot/active")` (or the relevant
+op tag) after success and require a confirmation step on the UI
+side (which lands in K9/K10, not here).
 
 Outstanding endpoint phases:
 
-- **K4** Interfaces + network (≈2 commits, ~250 LOC)
-    * `GET /api/v1/mikrotik/<id>/interfaces`
-    * `GET /api/v1/mikrotik/<id>/interfaces/<name>/traffic`
-    * `GET /api/v1/mikrotik/<id>/interfaces/<name>/sse`
-    * `GET /api/v1/mikrotik/<id>/ip/addresses`
-    * `GET /api/v1/mikrotik/<id>/routes`
 - **K5** Hotspot + PPP active (≈2 commits)
     * `GET /api/v1/mikrotik/<id>/hotspot/active`
     * `GET /api/v1/mikrotik/<id>/ppp/active`
@@ -456,11 +464,13 @@ python -m pytest \
   tests/test_mikrotik_admin_client.py \
   -q
 
-# Confirm the K3 routes are registered
+# Confirm the K3 + K4 routes are registered
 python -c "
 from app import create_app
 print([str(r) for r in create_app().url_map.iter_rules()
-       if 'mikrotik' in str(r) and 'system' in str(r)])
+       if 'mikrotik' in str(r) and
+          ('system' in str(r) or 'interfaces' in str(r) or
+           'routes' in str(r) or 'ip/' in str(r))])
 "
 
 # Quick check that the migration applied on a fresh DB
