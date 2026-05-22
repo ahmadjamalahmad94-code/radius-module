@@ -332,11 +332,18 @@ def validate_vars(values: dict[str, str]) -> dict[str, str]:
     return out
 
 
-def render(slug: str, values: dict[str, str]) -> str:
+def render(slug: str, values: dict[str, str],
+           *, with_autologin: bool = True) -> str:
     """Substitute Hoberadius variables in the chosen template.
 
     RouterOS `$(...)` placeholders are left untouched — the
     router fills them at request time.
+
+    `with_autologin` controls whether the R4 QR auto-login JS is
+    injected. Default is True because every page deployed via
+    R3 should accept QR scans; set False only when the caller is
+    composing the page for some other purpose (designer preview
+    keeps it on so the operator sees the final form).
     """
     tmpl = TEMPLATES_BY_SLUG.get(slug)
     if tmpl is None:
@@ -345,6 +352,8 @@ def render(slug: str, values: dict[str, str]) -> str:
     out = tmpl.html
     for k, v in safe.items():
         out = out.replace("{{" + k + "}}", v)
+    if with_autologin:
+        out = _inject_autologin_js(out)
     return out
 
 
@@ -398,15 +407,29 @@ def deploy_login(
     Returns a structured DeployResult so the route + audit log can
     surface the outcome consistently.
     """
-    html = render(slug, values)
-    # Defense in depth: the render path already validated the
-    # variables, but check the RouterOS contract one more time
-    # before we ship to the wire.
-    missing = validate_routeros_placeholders(html)
+    # Defense in depth: check the template carries every required
+    # RouterOS placeholder *before* render() — render() may inject
+    # JS or otherwise transform the body and we want the error
+    # message to point at the static template, not the rendered
+    # output.
+    tmpl = TEMPLATES_BY_SLUG.get(slug)
+    if tmpl is None:
+        return DeployResult(
+            ok=False, path=target_path, bytes=0,
+            error=f"قالب غير معروف: {slug!r}",
+        )
+    missing = validate_routeros_placeholders(tmpl.html)
     if missing:
         return DeployResult(
             ok=False, path=target_path, bytes=0,
             error=f"قالب ناقص placeholders: {', '.join(missing)}",
+        )
+    try:
+        html = render(slug, values)
+    except ValueError as e:
+        return DeployResult(
+            ok=False, path=target_path, bytes=0,
+            error=str(e),
         )
 
     try:
@@ -442,6 +465,78 @@ def deploy_login(
     return DeployResult(ok=True, path=target_path, bytes=len(html))
 
 
+# ─── R4 — QR auto-login URL ────────────────────────────────────
+
+
+# The auto-login query-string contract. The JS injected into every
+# login template reads exactly these two keys (`u` and `p`) from
+# `location.search` so we keep them short on the QR side and
+# avoid surfacing the literal word "password" in the URL bar.
+QR_AUTOLOGIN_USER_KEY = "u"
+QR_AUTOLOGIN_PASS_KEY = "p"
+
+
+_AUTOLOGIN_JS = (
+    "<script>\n"
+    "// R4 — QR auto-login. The card-printed QR encodes a URL like\n"
+    "// http://<gateway>/?u=USERNAME&p=PASSWORD; this snippet reads\n"
+    "// the keys, fills the form, and submits. If the keys are\n"
+    "// missing the form falls back to manual login.\n"
+    "(function () {\n"
+    '  try {\n'
+    '    var qs = new URLSearchParams(location.search);\n'
+    '    var u = qs.get("' + QR_AUTOLOGIN_USER_KEY + '");\n'
+    '    var p = qs.get("' + QR_AUTOLOGIN_PASS_KEY + '");\n'
+    '    if (!u || !p) return;\n'
+    '    var f = document.forms["login"];\n'
+    '    if (!f) return;\n'
+    '    var ui = f.username || f.elements["username"];\n'
+    '    var pi = f.password || f.elements["password"];\n'
+    '    if (ui) ui.value = u;\n'
+    '    if (pi) pi.value = p;\n'
+    '    // Small delay so RouterOS finishes setting up chap-id.\n'
+    "    setTimeout(function () { f.submit(); }, 150);\n"
+    "  } catch (e) {}\n"
+    "})();\n"
+    "</script>\n"
+)
+
+
+def _inject_autologin_js(html: str) -> str:
+    """Insert the auto-login JS just before `</body>`. Fails open:
+    if `</body>` is missing the template is broken anyway and we
+    don't want to silently produce an unrenderable string."""
+    if "</body>" not in html:
+        raise ValueError("template missing </body> — cannot inject autologin JS")
+    return html.replace("</body>", _AUTOLOGIN_JS + "</body>", 1)
+
+
+def card_autologin_url(
+    *, scheme: str, host: str, username: str, password: str,
+    path: str = "/",
+) -> str:
+    """Build the URL that the QR encodes.
+
+    `scheme` is "http" (captive portals are always HTTP at the
+    point a client connects pre-auth). `host` is the hotspot
+    gateway IP; the URL the QR carries must resolve before login
+    so it MUST be an IP, not a DNS name. We don't validate that
+    here — the caller (which has the nas_devices row) owns it.
+
+    Username/password go through `urllib.parse.quote` because
+    operator-generated voucher passwords can carry any byte.
+    """
+    from urllib.parse import quote
+    u = quote(username, safe="")
+    p = quote(password, safe="")
+    safe_path = path or "/"
+    if not safe_path.startswith("/"):
+        safe_path = "/" + safe_path
+    return (f"{scheme}://{host}{safe_path}"
+            f"?{QR_AUTOLOGIN_USER_KEY}={u}"
+            f"&{QR_AUTOLOGIN_PASS_KEY}={p}")
+
+
 __all__ = [
     "ROUTEROS_REQUIRED",
     "TemplateVariable",
@@ -457,4 +552,7 @@ __all__ = [
     "DEFAULT_LOGIN_PATH",
     "DeployResult",
     "deploy_login",
+    "QR_AUTOLOGIN_USER_KEY",
+    "QR_AUTOLOGIN_PASS_KEY",
+    "card_autologin_url",
 ]
