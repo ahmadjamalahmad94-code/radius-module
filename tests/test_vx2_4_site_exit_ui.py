@@ -144,10 +144,10 @@ def test_site_exit_page_renders_for_valid_router(app, client):
     assert "data-mt-site-exit-policy-form" in html
 
 
-def test_site_exit_apply_button_visible_but_disabled(app, client):
-    """When a policy exists, the apply card is rendered with
-    the button explicitly disabled until VX2.5/VX2.6 wire the
-    real safety + apply path."""
+def test_site_exit_apply_button_disabled_without_preview(app, client):
+    """When a policy exists but no preview has been generated
+    yet, the apply card renders with the button DISABLED. The
+    operator must run preview first."""
     _seed_nas(app, nas_id=12)
     _seed_policy(app, nas_id=12)
     _login(client)
@@ -155,7 +155,8 @@ def test_site_exit_apply_button_visible_but_disabled(app, client):
         "/admin/radius/mt/12/site-exit").get_data(as_text=True)
     assert "data-mt-site-exit-apply-button" in html
     # Find the apply-button element (multi-line attribute list)
-    # and confirm `disabled` is one of its attributes.
+    # and confirm `disabled` is one of its attributes (because
+    # no preview_plan was generated).
     import re
     btn = re.search(
         r"<button[^>]*data-mt-site-exit-apply-button[^>]*>",
@@ -163,9 +164,52 @@ def test_site_exit_apply_button_visible_but_disabled(app, client):
     )
     assert btn, "apply button tag not found"
     assert "disabled" in btn.group(0).lower()
-    # The dead-button reason is human-readable, not raw Jinja.
-    assert "apply_disabled_reason" not in html  # raw var
-    assert "VX2.5/VX2.6" in html
+    # Form is NOT yet rendered (no preview).
+    assert "data-mt-site-exit-apply-form" not in html
+    # Operator-facing reason is in human Arabic, not raw Jinja.
+    assert "apply_disabled_reason" not in html
+
+
+def test_site_exit_apply_form_renders_after_successful_preview(
+    app, client,
+):
+    """Once a preview lands successfully, the apply form is
+    rendered with all 5 confirmation checkboxes."""
+    _seed_nas(app, nas_id=13)
+    nid = _seed_node(app, name="vps-form")
+    pid = _seed_policy(app, nas_id=13, node_id=nid)
+    with app.app_context():
+        from app.radius.db.repos import (
+            site_exit_targets_repo as t,
+        )
+        t.add(policy_id=pid, value="speedtest.net",
+               normalized_value="speedtest.net",
+               target_type="domain",
+               group_name="speedtest_measurement")
+    _login(client)
+    html = _post(
+        client,
+        f"/admin/radius/mt/13/site-exit/policies/{pid}/preview",
+        {"wan_interface_list": "WAN"},
+    ).get_data(as_text=True)
+    # Form + all 5 confirmation checkboxes present.
+    assert "data-mt-site-exit-apply-form" in html
+    for name in (
+        "confirm_preview_seen",
+        "confirm_backup_status",
+        "confirm_vps_exit_understood",
+        "confirm_fail_mode_understood",
+        "confirm_selected_sites_only",
+    ):
+        assert f'name="{name}"' in html
+    # Submit button is NOT disabled when preview is ready.
+    import re
+    btn = re.search(
+        r"<button[^>]*data-mt-site-exit-apply-button[^>]*>",
+        html, re.DOTALL,
+    )
+    assert btn, "apply button tag not found after preview"
+    assert "disabled" not in btn.group(0).lower()
 
 
 def test_site_exit_page_lists_vps_nodes(app, client):
