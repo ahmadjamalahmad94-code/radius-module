@@ -198,12 +198,33 @@ def mt_program_plan(nas_id: int):
         abort(404)
     form = _read_form()
     plan, error = _plan_from_form(nas, form)
+    # O6 — build a structured before/after preview from the
+    # plan + the snapshot we just queried for the conflict
+    # check. Pure presentation; no extra router calls.
+    change_preview = None
+    if plan is not None:
+        try:
+            ifaces, addrs, _routes = _fetch_router_state(nas)
+        except Exception:  # noqa: BLE001
+            ifaces, addrs = [], []
+        from ..services import mt_change_preview as cp
+        from ..services.mt_router_overview import build_overview
+        ov = build_overview(tenant_id=_tid(),
+                              nas_id=int(nas_id))
+        change_preview = cp.preview_plan(
+            plan,
+            snapshot_status=(ov.snapshot_status
+                             if ov else "unknown"),
+            existing_interfaces=ifaces,
+            existing_addresses=addrs,
+        )
     return render_template(
         "radius/mt_programming.html",
         nas=nas,
         plan=plan,
         form=form,
         kind=form["kind"],
+        change_preview=change_preview,
         error=error,
     )
 

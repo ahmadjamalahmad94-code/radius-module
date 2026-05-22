@@ -195,6 +195,49 @@
         {% for s in plan.summary %}<li>{{ s }}</li>{% endfor %}
       </ul>
 
+      {# O6 — Before/after preview, only when computed. #}
+      {% if change_preview is not none %}
+      <section class="mt-card" data-mt-program-change-preview
+               data-mt-preview-total="{{ change_preview.total_changes() }}"
+               style="margin-bottom:16px">
+        <header class="mt-card-head">
+          <h3><i class="fa-solid fa-code-compare"></i> معاينة التغييرات</h3>
+        </header>
+        <div class="mt-card-body">
+          {% if change_preview.data_quality_warnings_ar %}
+          <div class="mt-program-banner mt-program-banner--warn"
+               data-mt-preview-quality>
+            {% for w in change_preview.data_quality_warnings_ar %}
+            <li><i class="fa-solid fa-triangle-exclamation"></i> {{ w }}</li>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if change_preview.impact_ar %}
+          <div class="mt-program-banner mt-program-banner--risk"
+               data-mt-preview-impact>
+            {% for i in change_preview.impact_ar %}
+            <li><i class="fa-solid fa-people-group"></i> {{ i }}</li>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if change_preview.items_to_add %}
+          <p style="margin:0 0 6px">سيُضاف ({{ change_preview.items_to_add|length }}):</p>
+          <ul class="mt-program-summary"
+              data-mt-preview-additions>
+            {% for it in change_preview.items_to_add %}
+            <li data-mt-preview-kind="{{ it.kind }}">
+              <strong>{{ it.kind }}</strong> · <code>{{ it.name }}</code>
+              <span style="color:#475569">— {{ it.detail_ar }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
       <pre class="mt-logs-output" data-mt-program-script>{{ plan.script }}</pre>
 
       <form method="post"
