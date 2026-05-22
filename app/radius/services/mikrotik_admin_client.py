@@ -630,6 +630,80 @@ def log_tail(
     )
 
 
+# Hard upper bounds — operator should NOT be able to flood the
+# router by asking for 10 000-packet pings or 100-hop traces.
+PING_MAX_COUNT = 20
+TRACEROUTE_MAX_COUNT = 5
+
+
+def _run_diagnostic(
+    nas: Mapping[str, Any], *, operation: str, work: Callable,
+) -> MtResult:
+    """Diagnostics (ping / traceroute / resolve) bypass the cache —
+    the whole point of running one is to get a fresh answer. Shape
+    is otherwise identical to a cached read."""
+    return _safe_dial(nas=nas, operation=operation, work=work)
+
+
+def tool_ping(
+    nas: Mapping[str, Any], *, target: str, count: int = 4,
+) -> MtResult:
+    """`/ping address=<t> count=<n>` — synchronous; returns one row
+    per packet plus a summary row."""
+    addr = (target or "").strip()
+    if not addr:
+        return MtResult(ok=False, error="عنوان الهدف غير محدد")
+    n = max(1, min(int(count or 1), PING_MAX_COUNT))
+
+    def work(client):
+        rows = client.run("/ping", attrs={"address": addr, "count": str(n)})
+        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+
+    return _run_diagnostic(nas, operation=f"tool/ping:{addr}", work=work)
+
+
+def tool_traceroute(
+    nas: Mapping[str, Any], *, target: str, count: int = 1,
+) -> MtResult:
+    """`/tool/traceroute address=<t> count=<n>` — one row per hop."""
+    addr = (target or "").strip()
+    if not addr:
+        return MtResult(ok=False, error="عنوان الهدف غير محدد")
+    n = max(1, min(int(count or 1), TRACEROUTE_MAX_COUNT))
+
+    def work(client):
+        rows = client.run(
+            "/tool/traceroute",
+            attrs={"address": addr, "count": str(n)},
+        )
+        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+
+    return _run_diagnostic(
+        nas, operation=f"tool/traceroute:{addr}", work=work,
+    )
+
+
+def tool_dns_resolve(
+    nas: Mapping[str, Any], *, name: str, server: str = "",
+) -> MtResult:
+    """`/resolve name=<n> [server=<s>]` — RouterOS 7+ resolver."""
+    target = (name or "").strip()
+    if not target:
+        return MtResult(ok=False, error="اسم النطاق غير محدد")
+    attrs: dict = {"name": target}
+    srv = (server or "").strip()
+    if srv:
+        attrs["server"] = srv
+
+    def work(client):
+        rows = client.run("/resolve", attrs=attrs)
+        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+
+    return _run_diagnostic(
+        nas, operation=f"tool/resolve:{target}", work=work,
+    )
+
+
 def _run_mutation(
     nas: Mapping[str, Any],
     *,
@@ -777,6 +851,11 @@ __all__ = [
     "address_list_remove",
     "log_tail",
     "TTL_LOG",
+    "tool_ping",
+    "tool_traceroute",
+    "tool_dns_resolve",
+    "PING_MAX_COUNT",
+    "TRACEROUTE_MAX_COUNT",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",

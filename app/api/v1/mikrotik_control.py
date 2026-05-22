@@ -198,6 +198,24 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_log_tail),
         methods=["GET"],
     )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/tools/ping",
+        "mt_tool_ping",
+        require_api_token(mt_tool_ping),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/tools/traceroute",
+        "mt_tool_traceroute",
+        require_api_token(mt_tool_traceroute),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/tools/dns-resolve",
+        "mt_tool_dns_resolve",
+        require_api_token(mt_tool_dns_resolve),
+        methods=["POST"],
+    )
 
 
 # ─── helpers ─────────────────────────────────────────────────────
@@ -525,6 +543,71 @@ def mt_log_tail(nas_id: int):
     payload = _envelope(result, router_id=nas_id)
     payload["topics"] = topics
     payload["limit"] = limit
+    return ok(payload)
+
+
+# ─── K7.2: diagnostic tools ──────────────────────────────────────
+
+
+def _tool_body() -> dict:
+    """JSON body shared by every /tools/* endpoint. Always returns a
+    dict so the handler can index it without guarding for None."""
+    body = request.get_json(silent=True) or {}
+    return body if isinstance(body, dict) else {}
+
+
+def mt_tool_ping(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = _tool_body()
+    target = str(body.get("target") or "")
+    count = int(body.get("count") or 4)
+    result = mac.tool_ping(nas, target=target, count=count)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.tools.ping",
+        target_id=target, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["target"] = target
+    payload["count"] = count
+    return ok(payload)
+
+
+def mt_tool_traceroute(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = _tool_body()
+    target = str(body.get("target") or "")
+    count = int(body.get("count") or 1)
+    result = mac.tool_traceroute(nas, target=target, count=count)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.tools.traceroute",
+        target_id=target, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["target"] = target
+    payload["count"] = count
+    return ok(payload)
+
+
+def mt_tool_dns_resolve(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = _tool_body()
+    name = str(body.get("name") or "")
+    server = str(body.get("server") or "")
+    result = mac.tool_dns_resolve(nas, name=name, server=server)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.tools.dns_resolve",
+        target_id=name, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["name"] = name
+    if server:
+        payload["server"] = server
     return ok(payload)
 
 

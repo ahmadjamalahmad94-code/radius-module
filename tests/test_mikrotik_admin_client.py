@@ -826,6 +826,135 @@ def test_log_tail_cache_key_per_filter(fake_nas_direct):
     assert mock_client.print_.call_count == 3
 
 
+# ─── K7.2: diagnostic tools ──────────────────────────────────────
+
+
+def test_tool_ping_sends_address_and_count(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"seq": "0", "time": "12ms"}},
+        {"reply": "!re", "attrs": {"seq": "1", "time": "11ms"}},
+        {"reply": "!done", "attrs": {}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.tool_ping(fake_nas_direct, target="8.8.8.8", count=2)
+
+    assert res.ok is True
+    assert len(res.data) == 2
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/ping"
+    assert kwargs["attrs"]["address"] == "8.8.8.8"
+    assert kwargs["attrs"]["count"] == "2"
+
+
+def test_tool_ping_caps_count(fake_nas_direct):
+    """Operator cannot ask for 1 000 packets - cap at PING_MAX_COUNT."""
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.tool_ping(fake_nas_direct, target="1.1.1.1", count=10_000)
+
+    _, kwargs = mock_client.run.call_args
+    assert kwargs["attrs"]["count"] == str(mac.PING_MAX_COUNT)
+
+
+def test_tool_ping_rejects_empty_target(fake_nas_direct):
+    res = mac.tool_ping(fake_nas_direct, target="")
+    assert res.ok is False
+    assert "غير محدد" in res.error
+
+
+def test_tool_traceroute_sends_address(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"address": "10.0.0.1"}},
+        {"reply": "!re", "attrs": {"address": "1.1.1.1"}},
+        {"reply": "!done", "attrs": {}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.tool_traceroute(fake_nas_direct, target="1.1.1.1")
+
+    assert res.ok is True
+    assert len(res.data) == 2
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/tool/traceroute"
+    assert kwargs["attrs"]["address"] == "1.1.1.1"
+
+
+def test_tool_traceroute_caps_count(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.tool_traceroute(fake_nas_direct, target="1.1.1.1", count=99)
+
+    _, kwargs = mock_client.run.call_args
+    assert kwargs["attrs"]["count"] == str(mac.TRACEROUTE_MAX_COUNT)
+
+
+def test_tool_dns_resolve_sends_name(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"name": "example.com", "address": "1.2.3.4"}},
+        {"reply": "!done", "attrs": {}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.tool_dns_resolve(fake_nas_direct, name="example.com")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/resolve"
+    assert kwargs["attrs"]["name"] == "example.com"
+    assert "server" not in kwargs["attrs"]
+
+
+def test_tool_dns_resolve_with_custom_server(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.tool_dns_resolve(
+            fake_nas_direct, name="example.com", server="8.8.8.8",
+        )
+
+    _, kwargs = mock_client.run.call_args
+    assert kwargs["attrs"]["server"] == "8.8.8.8"
+
+
+def test_tool_dns_resolve_rejects_empty_name(fake_nas_direct):
+    res = mac.tool_dns_resolve(fake_nas_direct, name="  ")
+    assert res.ok is False
+    assert "اسم النطاق" in res.error
+
+
+def test_diagnostics_are_never_cached(fake_nas_direct):
+    """Each ping/traceroute/resolve call must hit the wire fresh
+    even with identical args - cached diagnostics defeat the point."""
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.tool_ping(fake_nas_direct, target="1.1.1.1", count=1)
+        mac.tool_ping(fake_nas_direct, target="1.1.1.1", count=1)
+        mac.tool_traceroute(fake_nas_direct, target="1.1.1.1")
+        mac.tool_traceroute(fake_nas_direct, target="1.1.1.1")
+        mac.tool_dns_resolve(fake_nas_direct, name="a.com")
+        mac.tool_dns_resolve(fake_nas_direct, name="a.com")
+
+    assert mock_client.run.call_count == 6
+
+
 def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
     samples = list(mac.stream_interface_samples(
         fake_nas_direct, "",
