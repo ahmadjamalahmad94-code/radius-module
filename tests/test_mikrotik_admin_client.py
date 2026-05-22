@@ -913,6 +913,69 @@ def test_file_download_stream_raises_not_supported(fake_nas_direct):
         mac.file_download_stream(fake_nas_direct, "any.backup")
 
 
+# ─── K8.2: reboot + identity ─────────────────────────────────────
+
+
+def test_system_reboot_sends_command_and_drops_system_caches(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{"cpu-load": "5"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        # Warm the system/resource cache.
+        mac.system_resource(fake_nas_direct)
+        res = mac.system_reboot(fake_nas_direct)
+        # Re-read; cache must have been invalidated.
+        mac.system_resource(fake_nas_direct)
+
+    assert res.ok is True
+    args, _ = mock_client.run.call_args
+    assert args[0] == "/system/reboot"
+    assert mock_client.print_.call_count == 2
+
+
+def test_system_identity_set_sends_name(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.system_identity_set(fake_nas_direct, name="main-gw")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/system/identity/set"
+    assert kwargs["attrs"]["name"] == "main-gw"
+
+
+@pytest.mark.parametrize("bad", [
+    "", "   ",
+    "name with spaces",
+    "bad/slash",
+    "ctl\x01char",
+    "x" * 64,
+])
+def test_system_identity_set_rejects_bad_names(fake_nas_direct, bad):
+    res = mac.system_identity_set(fake_nas_direct, name=bad)
+    assert res.ok is False
+    assert res.error
+
+
+def test_system_identity_set_invalidates_identity_cache(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{"name": "old"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.system_identity(fake_nas_direct)
+        mac.system_identity_set(fake_nas_direct, name="new")
+        mac.system_identity(fake_nas_direct)
+
+    assert mock_client.print_.call_count == 2
+
+
 # ─── K7.2: diagnostic tools ──────────────────────────────────────
 
 

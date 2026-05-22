@@ -46,10 +46,12 @@ K7 endpoints — logs + diagnostics:
   POST /api/v1/mikrotik/<id>/tools/traceroute
   POST /api/v1/mikrotik/<id>/tools/dns-resolve
 
-K8 endpoints — files + backup + downloads:
+K8 endpoints — files + backup + downloads + destructive actions:
   GET  /api/v1/mikrotik/<id>/files
   POST /api/v1/mikrotik/<id>/system/backup/save
   GET  /api/v1/mikrotik/<id>/files/<name>/download   (501 — see K8.1b)
+  POST /api/v1/mikrotik/<id>/system/reboot           (confirm=true required)
+  POST /api/v1/mikrotik/<id>/system/identity/set     (confirm=true required)
 """
 from __future__ import annotations
 
@@ -241,6 +243,18 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_file_download),
         methods=["GET"],
     )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/system/reboot",
+        "mt_system_reboot",
+        require_api_token(mt_system_reboot),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/system/identity/set",
+        "mt_system_identity_set",
+        require_api_token(mt_system_identity_set),
+        methods=["POST"],
+    )
 
 
 # ─── helpers ─────────────────────────────────────────────────────
@@ -403,24 +417,32 @@ def mt_ppp_active(nas_id: int):
 
 def _audit_mutation(
     *, nas_id: int, action: str, target_id: str, result: mac.MtResult,
+    extra: dict | None = None,
 ) -> None:
     """Common audit hook for K5+ MT mutations. Survives audit-table
     failures (the service swallows internally) so the operator
-    still gets a useful HTTP response if the audit DB is down."""
+    still gets a useful HTTP response if the audit DB is down.
+
+    `extra` lets K8 destructive endpoints attach a `reason` field
+    without overloading `target_id`.
+    """
     actor = str(getattr(g, "admin_id", None) or "api")
+    payload = {
+        "session_id": target_id,
+        "ok": result.ok,
+        "error": result.error,
+        "took_ms": result.took_ms,
+        "dialed_address": result.dialed_address,
+        "mode": result.mode,
+    }
+    if extra:
+        payload.update(extra)
     get_audit_service().record(
         actor=actor,
         action=action,
         target_type="mikrotik_nas",
         target_id=str(nas_id),
-        payload={
-            "session_id": target_id,
-            "ok": result.ok,
-            "error": result.error,
-            "took_ms": result.took_ms,
-            "dialed_address": result.dialed_address,
-            "mode": result.mode,
-        },
+        payload=payload,
     )
 
 
@@ -647,6 +669,20 @@ def _default_backup_name() -> str:
     return f"backup-{stamp}"
 
 
+def _require_confirm(body: dict):
+    """Return a (response, status) tuple to early-return when
+    `confirm` is missing/false, else None. 409 (Conflict) is the
+    common 'precondition not met' shape this admin already uses
+    for similar protective gates."""
+    if body.get("confirm") is not True:
+        return fail(
+            "confirm_required",
+            'هذه العملية حسّاسة — مرّر "confirm": true في الجسم',
+            status=409,
+        )
+    return None
+
+
 def mt_files_list(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
@@ -712,6 +748,48 @@ def mt_file_download(nas_id: int, filename: str):
     return fail(  # pragma: no cover
         "not_supported", "تنزيل الملفات غير مدعوم", status=501,
     )
+
+
+def mt_system_reboot(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+    guard = _require_confirm(body)
+    if guard is not None:
+        return guard
+    result = mac.system_reboot(nas)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.reboot",
+        target_id=str(nas_id),
+        result=result,
+        extra={"reason": str(body.get("reason") or "")},
+    )
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_system_identity_set(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+    guard = _require_confirm(body)
+    if guard is not None:
+        return guard
+    name = str(body.get("name") or "")
+    result = mac.system_identity_set(nas, name=name)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.identity.set",
+        target_id=name, result=result,
+        extra={"reason": str(body.get("reason") or "")},
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["new_name"] = name
+    return ok(payload)
 
 
 

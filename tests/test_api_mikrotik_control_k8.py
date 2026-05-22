@@ -81,6 +81,8 @@ def test_k8_routes_registered(client):
     assert "/api/v1/mikrotik/<int:nas_id>/files" in rules
     assert "/api/v1/mikrotik/<int:nas_id>/system/backup/save" in rules
     assert "/api/v1/mikrotik/<int:nas_id>/files/<string:filename>/download" in rules
+    assert "/api/v1/mikrotik/<int:nas_id>/system/reboot" in rules
+    assert "/api/v1/mikrotik/<int:nas_id>/system/identity/set" in rules
 
 
 # ─── K8.1: files + backup ────────────────────────────────────────
@@ -209,5 +211,108 @@ def test_file_download_404_for_unknown_router(client):
     )
     assert res.status_code == 404
     assert res.get_json()["error"]["code"] == "not_found"
+
+
+# ─── K8.2: reboot + identity (confirm guard) ─────────────────────
+
+
+def test_reboot_without_confirm_returns_409(client):
+    res = client.post(
+        "/api/v1/mikrotik/1/system/reboot",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={},
+    )
+    assert res.status_code == 409
+    assert res.get_json()["error"]["code"] == "confirm_required"
+
+
+def test_reboot_with_confirm_false_returns_409(client):
+    res = client.post(
+        "/api/v1/mikrotik/1/system/reboot",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"confirm": False},
+    )
+    assert res.status_code == 409
+
+
+def test_reboot_with_confirm_true_calls_router(client, monkeypatch):
+    mc = MagicMock()
+    mc.run.return_value = [{"reply": "!done", "attrs": {}}]
+    _patch_pool(monkeypatch, mc)
+
+    res = client.post(
+        "/api/v1/mikrotik/1/system/reboot",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"confirm": True, "reason": "kernel panic"},
+    )
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["data"]["ok"] is True
+    args, _ = mc.run.call_args
+    assert args[0] == "/system/reboot"
+
+
+def test_reboot_unknown_router_404(client):
+    res = client.post(
+        "/api/v1/mikrotik/999/system/reboot",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"confirm": True},
+    )
+    assert res.status_code == 404
+
+
+def test_reboot_non_object_body_400(client):
+    res = client.post(
+        "/api/v1/mikrotik/1/system/reboot",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json="just-a-string",
+    )
+    assert res.status_code == 400
+
+
+def test_identity_set_without_confirm_returns_409(client):
+    res = client.post(
+        "/api/v1/mikrotik/1/system/identity/set",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"name": "main-gw"},
+    )
+    assert res.status_code == 409
+    assert res.get_json()["error"]["code"] == "confirm_required"
+
+
+def test_identity_set_rejects_bad_name_via_envelope(client, monkeypatch):
+    mc = MagicMock()
+    _patch_pool(monkeypatch, mc)
+
+    res = client.post(
+        "/api/v1/mikrotik/1/system/identity/set",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"confirm": True, "name": "bad name with spaces"},
+    )
+    # Sanitizer trips before the wire call → envelope-style failure
+    # (HTTP 200, data.ok = False).
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["data"]["ok"] is False
+    assert "[A-Za-z0-9._-]" in body["data"]["error"]
+    mc.run.assert_not_called()
+
+
+def test_identity_set_success_calls_router(client, monkeypatch):
+    mc = MagicMock()
+    mc.run.return_value = [{"reply": "!done", "attrs": {}}]
+    _patch_pool(monkeypatch, mc)
+
+    res = client.post(
+        "/api/v1/mikrotik/1/system/identity/set",
+        headers={**AUTH, "Content-Type": "application/json"},
+        json={"confirm": True, "name": "main-gw"},
+    )
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["data"]["new_name"] == "main-gw"
+    args, kwargs = mc.run.call_args
+    assert args[0] == "/system/identity/set"
+    assert kwargs["attrs"]["name"] == "main-gw"
 
 

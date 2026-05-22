@@ -832,6 +832,65 @@ def _sanitize_backup_name(raw: str) -> str:
     return name
 
 
+_IDENTITY_MAX_LEN = 32
+_IDENTITY_RE = re.compile(r"^[A-Za-z0-9._\-]{1,32}$")
+
+
+def _sanitize_identity(raw: str) -> str:
+    """RouterOS identity name. Letters/digits/dot/dash/underscore,
+    1-32 chars. Rejects control chars + spaces + path-traversal-
+    ish input. The router would reject some of these too; rejecting
+    here gives the operator an Arabic message instead of a trap."""
+    name = (raw or "").strip()
+    if not name:
+        raise ValueError("اسم الراوتر مطلوب")
+    if len(name) > _IDENTITY_MAX_LEN:
+        raise ValueError(f"اسم الراوتر أطول من {_IDENTITY_MAX_LEN} حرفًا")
+    if any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise ValueError("اسم الراوتر يحتوي على رموز تحكم")
+    if not _IDENTITY_RE.match(name):
+        raise ValueError(
+            "اسم الراوتر يجب أن يحوي [A-Za-z0-9._-] فقط"
+        )
+    return name
+
+
+def system_reboot(nas: Mapping[str, Any]) -> MtResult:
+    """`/system/reboot` — kicks the router. The router goes away
+    for a minute, so every system/* cache slot is dropped: the UI
+    will re-discover an offline router rather than serve stale
+    uptime / health figures."""
+    return _run_mutation(
+        nas,
+        operation="system/reboot",
+        work=lambda c: c.run("/system/reboot"),
+        invalidate=(
+            "system/resource", "system/health", "system/identity",
+            "system/clock", "system/routerboard",
+        ),
+    )
+
+
+def system_identity_set(
+    nas: Mapping[str, Any], *, name: str,
+) -> MtResult:
+    """`/system/identity/set name=<n>` — rename the router. Drops
+    the cached identity so the new name shows up on the next
+    refresh."""
+    try:
+        clean = _sanitize_identity(name)
+    except ValueError as exc:
+        return MtResult(ok=False, error=str(exc))
+    return _run_mutation(
+        nas,
+        operation="system/identity/set",
+        work=lambda c: c.run(
+            "/system/identity/set", attrs={"name": clean},
+        ),
+        invalidate=("system/identity",),
+    )
+
+
 class FileDownloadNotSupported(NotImplementedError):
     """Raised by `file_download_stream` until a real binary helper
     lands. Distinct exception type so route + tests can target it
@@ -992,4 +1051,6 @@ __all__ = [
     "backup_save",
     "file_download_stream",
     "FileDownloadNotSupported",
+    "system_reboot",
+    "system_identity_set",
 ]
