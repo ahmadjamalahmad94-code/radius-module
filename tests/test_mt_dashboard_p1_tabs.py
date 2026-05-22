@@ -30,9 +30,11 @@ TAB_SLUGS = [
 # P-step promotes one slug out of this list into a real panel — the
 # corresponding test_mt_dashboard_p<n>_*.py file then owns the
 # regression for that panel's contract.
-PLACEHOLDER_SLUGS = [
-    "diagnostics",
-]
+# After P7 lands every panel is a real card; the placeholder list
+# is empty. Tests that iterate it become no-ops, which is the right
+# behavior — the panel-promotion contract is captured in each
+# Pn test file's own "no_longer_placeholder" assertion.
+PLACEHOLDER_SLUGS: list[str] = []
 
 
 @pytest.fixture
@@ -152,19 +154,16 @@ def test_overview_still_carries_k9_markers(app, client):
         assert marker in html, f"K9 marker lost in P1 wrap: {marker}"
 
 
-def test_placeholder_panels_carry_honest_arabic_copy(app, client):
-    """No fake buttons / no fake data — each placeholder explains
-    which P-step will fill it."""
+def test_no_placeholder_panels_remain(app, client):
+    """After the full P-series lands, every tab is a real panel.
+    The shared `mt-tab-empty` placeholder shell must no longer
+    appear anywhere on the page — its presence would mean we
+    silently regressed a panel back to a fake."""
     html = _fetch_html(app, client)
-    # The shared "no fake buttons" line.
-    assert "لا توجد أزرار وهمية هنا" in html
-    # Each placeholder cites its future P-step so operators can
-    # ground their expectations in the roadmap. (P2/P3/P4 — interfaces,
-    # ips, routes, neighbors — were promoted to real panels.)
-    for marker in ("P7",):
-        assert marker in html, (
-            f"placeholder copy must reference roadmap step {marker}"
-        )
+    assert "mt-tab-empty" not in html, (
+        "no panel should render as a placeholder once P1..P7 have "
+        "all landed — find which panel slipped back"
+    )
 
 
 def test_tab_labels_are_arabic(app, client):

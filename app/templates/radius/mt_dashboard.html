@@ -500,28 +500,36 @@
     </section>
   </section>
 
-  {# ─── Placeholder panels (P7 will fill them). Honest
-       empty states — no fake buttons, no fake data. ─── #}
-  {% set _placeholders = [
-    ('diagnostics', 'التشخيص',   'stethoscope',
-     'تحليل إشارات الخطر (loop / flapping / overlap) — ينزل في P7.'),
-  ] %}
-  {% for slug, label, icon, message in _placeholders %}
-  <section class="mt-tab-panel"
-           data-mt-tab-panel="{{ slug }}" role="tabpanel" hidden>
-    <div class="mt-tab-empty">
-      <div class="mt-tab-empty-icon">
-        <i class="fa-solid fa-{{ icon }}"></i>
+  {# ─── P7 — Diagnostics tab (risk signals) ────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="diagnostics"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-health-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-stethoscope"></i>
+            تحليل إشارات الخطر</h3>
+        <span class="mt-card-meta">
+          <span class="mt-iface-state mt-iface-state--off"
+                data-mt-health-summary-critical>0 حرجة</span>
+          <span class="mt-iface-state mt-iface-state--down"
+                data-mt-health-summary-warning>0 تحذير</span>
+          <span class="mt-iface-state mt-iface-state--up"
+                data-mt-health-summary-ok>0 سليمة</span>
+          <button type="button" class="mt-mini-btn"
+                  data-mt-health-refresh>
+            <i class="fa-solid fa-rotate"></i> فحص الآن
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-tab-hint">
+          فحص محلي يعتمد على الردود المُخزّنة من
+          /interface و /ip/address — لا يُضيف ضغطًا على الراوتر.
+        </p>
+        <p class="mt-empty" data-mt-health-msg>جارٍ التحميل…</p>
+        <ul class="mt-health-list" data-mt-health-list></ul>
       </div>
-      <h3>{{ label }}</h3>
-      <p>{{ message }}</p>
-      <p class="mt-tab-empty-hint">
-        لا توجد أزرار وهمية هنا — كل قسم يضاف يعمل بالكامل من
-        أوّل commit يفعّله.
-      </p>
-    </div>
-  </section>
-  {% endfor %}
+    </section>
+  </section>{# /diagnostics panel — last of P-series #}
 
 </section>
 

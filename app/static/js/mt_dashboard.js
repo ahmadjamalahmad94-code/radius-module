@@ -878,6 +878,120 @@
     },
   });
 
+  // ─── P7 — Diagnostics (risk-signal scan) ──────────────────────
+  //
+  // Hits /api/v1/.../health, which on the backend re-uses the
+  // cached K4 readers — so polling here doesn't cost extra
+  // RouterOS calls. Each signal renders as a severity-tinted row
+  // with an expandable evidence block.
+  (function initHealthTab() {
+    const POLL_MS = 30_000;
+    const card = root.querySelector("[data-mt-health-card]");
+    if (!card) return;
+    const msg = card.querySelector("[data-mt-health-msg]");
+    const list = card.querySelector("[data-mt-health-list]");
+    const refresh = card.querySelector("[data-mt-health-refresh]");
+    const critEl = card.querySelector("[data-mt-health-summary-critical]");
+    const warnEl = card.querySelector("[data-mt-health-summary-warning]");
+    const okEl   = card.querySelector("[data-mt-health-summary-ok]");
+
+    let timer = null;
+    let inflight = false;
+
+    function setMsg(text) {
+      if (!msg) return;
+      msg.textContent = text || "";
+      msg.hidden = !text;
+    }
+
+    function escapeText(v) {
+      return String(v == null ? "" : v).replace(/[<>&"]/g, ch => ({
+        "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;",
+      }[ch]));
+    }
+
+    function evidenceHtml(ev) {
+      if (!Array.isArray(ev) || !ev.length) return "";
+      const pretty = JSON.stringify(ev, null, 2);
+      return ['<details class="mt-health-evidence">',
+              '<summary>عرض الدليل (', String(ev.length), ')</summary>',
+              '<pre>', escapeText(pretty), '</pre>',
+              '</details>'].join("");
+    }
+
+    function severityChip(sev) {
+      if (sev === "critical")
+        return '<span class="mt-iface-state mt-iface-state--off">حرجة</span>';
+      if (sev === "warning")
+        return '<span class="mt-iface-state mt-iface-state--down">تحذير</span>';
+      return '<span class="mt-iface-state mt-iface-state--up">سليمة</span>';
+    }
+
+    function render(report) {
+      const signals = (report && report.signals) || [];
+      const summary = (report && report.summary) || {};
+      if (critEl) critEl.textContent = (summary.critical || 0) + " حرجة";
+      if (warnEl) warnEl.textContent = (summary.warning  || 0) + " تحذير";
+      if (okEl)   okEl.textContent   = (summary.ok       || 0) + " سليمة";
+
+      if (!signals.length) {
+        list.innerHTML = "";
+        setMsg("لا توجد إشارات للفحص.");
+        return;
+      }
+      list.innerHTML = signals.map(s => {
+        const klass = "mt-health-row mt-health-row--" + (s.severity || "ok");
+        return [
+          '<li class="', klass, '" data-mt-health-kind="',
+          escapeText(s.kind || ""), '" data-mt-health-severity="',
+          escapeText(s.severity || ""), '">',
+          '<div class="mt-health-row-head">',
+            severityChip(s.severity),
+            '<span class="mt-health-row-msg">',
+              escapeText(s.message || s.kind || "—"),
+            '</span>',
+          '</div>',
+          evidenceHtml(s.evidence),
+          '</li>',
+        ].join("");
+      }).join("");
+      setMsg("");
+    }
+
+    async function load() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const { res, body } = await api(
+          "/mikrotik/" + CFG.routerId + "/health");
+        if (!res.ok || !body || body.ok === false) {
+          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          return;
+        }
+        const env = body.data || {};
+        if (env.ok === false) {
+          setMsg(env.error || "فشل فحص الإشارات.");
+          return;
+        }
+        render(env);
+      } catch (e) {
+        setMsg("خطأ في الشبكة: " + String(e));
+      } finally {
+        inflight = false;
+      }
+    }
+
+    function start() { load(); if (timer == null) timer = setInterval(load, POLL_MS); }
+    function stop()  { if (timer != null) { clearInterval(timer); timer = null; } }
+
+    root.addEventListener("mt:tab-change", (e) => {
+      if (e.detail && e.detail.slug === "diagnostics") start();
+      else stop();
+    });
+    if (refresh) refresh.addEventListener("click", () => load());
+    if ((location.hash || "").replace(/^#/, "") === "tab-diagnostics") start();
+  })();
+
   // ─── P6 — Sessions (hotspot + ppp, read-only) ─────────────────
   //
   // Both sub-cards live inside the `sessions` panel — they share

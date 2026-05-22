@@ -144,6 +144,13 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_ip_neighbors),
         methods=["GET"],
     )
+    # P7 — per-router risk signals (loops / flapping / overlap)
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/health",
+        "mt_router_health",
+        require_api_token(mt_router_health),
+        methods=["GET"],
+    )
     # K5 — hotspot + PPP active users
     bp.add_url_rule(
         "/mikrotik/<int:nas_id>/hotspot/active",
@@ -432,6 +439,20 @@ def mt_ip_neighbors(nas_id: int):
         return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ip_neighbors(nas)
     return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_router_health(nas_id: int):
+    """P7 — aggregate risk-signal scan for one router.
+
+    Reuses the cached K4 readers so a 30s UI poll never costs more
+    than the existing interfaces/addresses cache TTL would have."""
+    from ...radius.services import mt_health
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    report = mt_health.scan_router(nas)
+    report["router_id"] = nas_id
+    return ok(report)
 
 
 def mt_ip_routes(nas_id: int):
