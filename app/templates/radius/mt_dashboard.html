@@ -150,7 +150,41 @@
       <h3><i class="fa-solid fa-bolt"></i> إجراءات سريعة</h3>
     </header>
     <div class="mt-card-body">
-      <p class="mt-empty">تُضاف الأزرار الحقيقية في K9.3.</p>
+      <div class="mt-actions-grid">
+        <button type="button" class="mt-action-btn"
+                data-mt-action-backup>
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span class="mt-action-label">حفظ نسخة احتياطية</span>
+          <span class="mt-action-sub">POST /system/backup/save</span>
+        </button>
+        <button type="button" class="mt-action-btn mt-action-btn--danger"
+                data-mt-action-reboot>
+          <i class="fa-solid fa-power-off"></i>
+          <span class="mt-action-label">إعادة تشغيل</span>
+          <span class="mt-action-sub">يحتاج تأكيدًا</span>
+        </button>
+        <button type="button" class="mt-action-btn"
+                data-mt-action-ping>
+          <i class="fa-solid fa-bullseye"></i>
+          <span class="mt-action-label">Ping</span>
+          <span class="mt-action-sub">POST /tools/ping</span>
+        </button>
+        <button type="button" class="mt-action-btn mt-action-btn--danger"
+                data-mt-action-identity>
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span class="mt-action-label">تعديل اسم الراوتر</span>
+          <span class="mt-action-sub">يحتاج تأكيدًا</span>
+        </button>
+      </div>
+
+      {# Inline form area — populated per-action by JS. Stays empty
+         until an action is picked, so the page starts compact. #}
+      <div class="mt-action-form" data-mt-action-form hidden></div>
+
+      {# Truthful output area: echoes the actual API response. No
+         pre-baked success messages. #}
+      <pre class="mt-action-output" data-mt-action-output
+           aria-live="polite"></pre>
     </div>
   </section>
 

@@ -362,4 +362,195 @@
     refreshActiveUsers();
     setInterval(refreshActiveUsers, ACTIVE_POLL_MS);
   }
+
+  // ── K9.3 — quick actions ───────────────────────────────────────
+  //
+  // Each action opens a small inline form. The Submit button posts
+  // the JSON body the K8 endpoints expect (confirm: true for
+  // destructive ones). The output area prints the actual response
+  // verbatim — no fake "success" toast. Destructive actions
+  // additionally require the operator to tick a checkbox before
+  // the Submit button enables.
+
+  const actionFormEl = root.querySelector("[data-mt-action-form]");
+  const actionOutEl  = root.querySelector("[data-mt-action-output]");
+  const actionButtons = {
+    backup:   root.querySelector("[data-mt-action-backup]"),
+    reboot:   root.querySelector("[data-mt-action-reboot]"),
+    ping:     root.querySelector("[data-mt-action-ping]"),
+    identity: root.querySelector("[data-mt-action-identity]"),
+  };
+
+  function clearActiveButtons() {
+    for (const k in actionButtons) {
+      if (actionButtons[k]) actionButtons[k].classList.remove("is-active");
+    }
+  }
+
+  function writeOutput(payload, ok) {
+    if (!actionOutEl) return;
+    actionOutEl.textContent = JSON.stringify(payload, null, 2);
+    actionOutEl.classList.toggle("is-ok", !!ok);
+    actionOutEl.classList.toggle("is-fail", !ok);
+  }
+
+  function closeForm() {
+    if (!actionFormEl) return;
+    actionFormEl.hidden = true;
+    actionFormEl.textContent = "";
+    clearActiveButtons();
+  }
+
+  function openForm(key, html) {
+    if (!actionFormEl) return;
+    actionFormEl.hidden = false;
+    actionFormEl.innerHTML = html;
+    clearActiveButtons();
+    if (actionButtons[key]) actionButtons[key].classList.add("is-active");
+    const cancel = actionFormEl.querySelector(".mt-cancel");
+    if (cancel) cancel.addEventListener("click", closeForm);
+  }
+
+  async function postJson(path, body) {
+    const { res, body: env } = await api(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+    writeOutput(env || { status: res.status }, res.ok && env && env.ok !== false);
+    return { res, env };
+  }
+
+  // ── Backup ──
+  if (actionButtons.backup) {
+    actionButtons.backup.addEventListener("click", () => {
+      openForm("backup", `
+        <label>اسم النسخة (اختياري — افتراضي backup-YYYYMMDD-HHMMSS)
+          <input type="text" name="name" placeholder="weekly-1"
+                 maxlength="64" data-mt-backup-name>
+        </label>
+        <div class="mt-action-row">
+          <button type="submit">حفظ الآن</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        submit.disabled = true;
+        const name = actionFormEl.querySelector("[data-mt-backup-name]").value.trim();
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/system/backup/save",
+          name ? { name } : {},
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── Ping ──
+  if (actionButtons.ping) {
+    actionButtons.ping.addEventListener("click", () => {
+      openForm("ping", `
+        <label>الهدف
+          <input type="text" name="target" placeholder="8.8.8.8"
+                 data-mt-ping-target required>
+        </label>
+        <label>عدد الحزم (1-20)
+          <input type="number" name="count" min="1" max="20" value="4"
+                 data-mt-ping-count>
+        </label>
+        <div class="mt-action-row">
+          <button type="submit">شغّل ping</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const target = actionFormEl.querySelector("[data-mt-ping-target]").value.trim();
+        if (!target) { writeOutput({ error: "أدخل عنوان الهدف" }, false); return; }
+        const countRaw = actionFormEl.querySelector("[data-mt-ping-count]").value;
+        const count = Math.max(1, Math.min(20, parseInt(countRaw, 10) || 4));
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/tools/ping",
+          { target, count },
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── Reboot (destructive) ──
+  if (actionButtons.reboot) {
+    actionButtons.reboot.addEventListener("click", () => {
+      openForm("reboot", `
+        <label>سبب (اختياري — يُسجَّل في audit)
+          <input type="text" name="reason" placeholder="kernel panic" data-mt-reboot-reason>
+        </label>
+        <label class="mt-action-confirm">
+          <input type="checkbox" data-mt-reboot-confirm>
+          أؤكد إعادة تشغيل الراوتر — سيُقطع الاتصال لدقيقة
+        </label>
+        <div class="mt-action-row">
+          <button type="submit" disabled>إعادة التشغيل</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const cb = actionFormEl.querySelector("[data-mt-reboot-confirm]");
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      cb.addEventListener("change", () => { submit.disabled = !cb.checked; });
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (!cb.checked) return; // belt + suspenders
+        const reason = actionFormEl.querySelector("[data-mt-reboot-reason]").value.trim();
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/system/reboot",
+          { confirm: true, reason },
+        );
+      });
+    });
+  }
+
+  // ── Identity set (destructive) ──
+  if (actionButtons.identity) {
+    actionButtons.identity.addEventListener("click", () => {
+      openForm("identity", `
+        <label>الاسم الجديد ([A-Za-z0-9._-] حتى 32 حرفًا)
+          <input type="text" name="name" maxlength="32"
+                 pattern="[A-Za-z0-9._\\-]{1,32}"
+                 placeholder="main-gw" data-mt-identity-name required>
+        </label>
+        <label>سبب (اختياري)
+          <input type="text" name="reason" placeholder="rename for clarity" data-mt-identity-reason>
+        </label>
+        <label class="mt-action-confirm">
+          <input type="checkbox" data-mt-identity-confirm>
+          أؤكد تغيير اسم الراوتر
+        </label>
+        <div class="mt-action-row">
+          <button type="submit" disabled>تغيير الاسم</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const cb = actionFormEl.querySelector("[data-mt-identity-confirm]");
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      cb.addEventListener("change", () => { submit.disabled = !cb.checked; });
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (!cb.checked) return;
+        const name = actionFormEl.querySelector("[data-mt-identity-name]").value.trim();
+        if (!name) { writeOutput({ error: "أدخل الاسم الجديد" }, false); return; }
+        const reason = actionFormEl.querySelector("[data-mt-identity-reason]").value.trim();
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/system/identity/set",
+          { confirm: true, name, reason },
+        );
+        submit.disabled = false;
+      });
+    });
+  }
 })();

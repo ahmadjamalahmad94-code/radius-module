@@ -121,8 +121,14 @@ def test_dashboard_renders_shell_and_markers(app, client):
     assert "data-mt-ppp-count" in html
     assert "data-mt-active-users-rows" in html
 
-    # K9.3 quick-actions placeholder still exists (filled next commit).
+    # K9.3 quick-actions: every required marker is live.
     assert "data-mt-quick-actions" in html
+    assert "data-mt-action-backup" in html
+    assert "data-mt-action-reboot" in html
+    assert "data-mt-action-ping" in html
+    assert "data-mt-action-identity" in html
+    assert "data-mt-action-output" in html
+    assert "data-mt-action-form" in html
 
     # The router name lands in the title + meta strip.
     assert "main-gw" in html
