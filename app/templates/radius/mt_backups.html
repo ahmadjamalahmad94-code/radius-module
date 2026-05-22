@@ -1,0 +1,155 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}نسخ احتياطية — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-floppy-disk"></i>{% endblock %}
+{% block page_title %}النسخ الاحتياطية — {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-backups-page
+         data-mt-backups-router-id="{{ nas.id }}">
+
+  {{ hub.hero(
+    "النسخ الاحتياطية — " ~ nas.name,
+    subtitle="حفظ نسخة من إعدادات الراوتر — تطبيق الاستعادة معطّل في هذه المرحلة.",
+    icon="floppy-disk",
+  ) }}
+
+  <section class="mt-card" data-mt-backups-save-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-cloud-arrow-down"></i> حفظ نسخة جديدة</h3>
+    </header>
+    <div class="mt-card-body">
+      <p class="mt-tab-hint">
+        تطلب من الراوتر إنشاء ملف <code>.backup</code> ثنائي.
+        قد يحتوي بيانات حسّاسة، لذلك تنزيل الملف مقيّد بـ
+        صلاحية <code>mikrotik.backup</code>.
+      </p>
+      <form method="post"
+            action="{{ url_for('radius.mt_backups_save', nas_id=nas.id) }}"
+            class="mt-program-apply-form"
+            data-mt-backups-save-form>
+        {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-mt-backups-save-submit>
+            <i class="fa-solid fa-floppy-disk"></i> حفظ الآن
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-card" data-mt-backups-list-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list"></i> النسخ السابقة</h3>
+      <span class="mt-card-meta">
+        <span data-mt-backups-count>{{ backups|length }}</span> نسخة
+      </span>
+    </header>
+    <div class="mt-card-body">
+      {% if not backups %}
+      <p class="mt-empty" data-mt-backups-empty>
+        لا توجد نسخ احتياطية بعد.
+      </p>
+      {% else %}
+      <div class="mt-table-wrap">
+        <table class="mt-iface-table" data-mt-backups-table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>النوع</th>
+              <th>اسم الملف</th>
+              <th>الحالة</th>
+              <th>حسّاس</th>
+            </tr>
+          </thead>
+          <tbody data-mt-backups-rows>
+            {% for b in backups %}
+            <tr data-mt-backup-row="{{ b.id }}">
+              <td class="mt-iface-mac">{{ b.created_at }}</td>
+              <td>{{ b.backup_type }}</td>
+              <td class="mt-iface-name">{{ b.filename }}</td>
+              <td>
+                {% if b.status == 'success' %}
+                <span class="mt-iface-state mt-iface-state--up">نجح</span>
+                {% else %}
+                <span class="mt-iface-state mt-iface-state--off">فشل</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if b.sensitive %}
+                <span class="mt-iface-state mt-iface-state--down">نعم</span>
+                {% else %}
+                <span class="mt-iface-state mt-iface-state--up">لا</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# S8.4 — Restore planner (gated). #}
+  <section class="mt-card" data-mt-backups-restore-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-rotate-left"></i> خطة الاستعادة</h3>
+    </header>
+    <div class="mt-card-body">
+      <div class="mt-program-banner mt-program-banner--warn"
+           data-mt-backups-restore-disabled>
+        <li><i class="fa-solid fa-triangle-exclamation"></i>
+          {{ restore_disabled_reason }}</li>
+      </div>
+
+      <form method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('radius.mt_backups_restore_plan', nas_id=nas.id) }}"
+            class="mt-program-apply-form"
+            data-mt-backups-restore-form>
+        {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+        <label class="mt-program-field">
+          <span>ملف النسخة الاحتياطية للفحص</span>
+          <input type="file" name="backup_file"
+                 data-mt-backups-restore-file>
+        </label>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-mt-backups-restore-inspect>
+            <i class="fa-solid fa-magnifying-glass"></i> افحص الملف
+          </button>
+          <button type="button"
+                  class="mt-action-btn mt-action-btn--danger"
+                  disabled
+                  title="غير مفعّل في هذه المرحلة"
+                  data-mt-backups-restore-apply>
+            <i class="fa-solid fa-bolt"></i> تطبيق الاستعادة (معطّل)
+          </button>
+        </div>
+      </form>
+
+      {% if restore_error %}
+      <div class="mt-program-error" role="alert">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        {{ restore_error }}
+      </div>
+      {% endif %}
+
+      {% if restore_plan %}
+      <pre class="mt-logs-output" data-mt-backups-restore-plan>{{ restore_plan | tojson(indent=2) }}</pre>
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

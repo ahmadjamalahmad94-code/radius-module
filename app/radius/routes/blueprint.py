@@ -136,6 +136,9 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_alerts import register_mt_alerts_routes
     register_mt_alerts_routes(bp)
 
+    from .mt_backups import register_mt_backups_routes
+    register_mt_backups_routes(bp)
+
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 
