@@ -131,12 +131,33 @@ def mt_login_designer_save(nas_id: int):
         except ValueError as e:
             error = str(e)
         else:
+            # S2.3 — capture pre-save state for the audit row's
+            # `before` field, then save, then audit. A failed
+            # save still writes an audit entry with result=failed.
+            prev = hotspot_designs_repo.get_design(_tid(), nas_id) or {}
             hotspot_designs_repo.save_design(
                 _tid(), nas_id,
                 template_slug=slug, variables=safe,
             )
             saved = True
             values = safe
+            actor = str(getattr(g, "admin_id", None) or "ui")
+            get_audit_service().record(
+                actor=actor,
+                action="mt.login_designer.save",
+                target_type="mikrotik_nas",
+                target_id=str(nas_id),
+                severity="info",
+                result_status="success",
+                router_id=int(nas_id),
+                payload={"template_slug": slug,
+                         "variables": safe},
+                before={"template_slug":
+                        prev.get("template_slug", ""),
+                        "variables": prev.get("variables") or {}},
+                after={"template_slug": slug,
+                       "variables": safe},
+            )
     design = {"template_slug": slug if slug else "classic",
               "variables": values}
     return render_template(
@@ -189,11 +210,28 @@ def mt_login_designer_deploy(nas_id: int):
                         pass
 
                 actor = str(getattr(g, "admin_id", None) or "ui")
+                # S2.3 — enrich audit; deploy writes a file on
+                # the router so success is `warning`, failure is
+                # `critical`.
+                if not deploy_result:
+                    _result = "failed"
+                    _sev = "critical"
+                elif deploy_result.ok:
+                    _result = "success"
+                    _sev = "warning"
+                else:
+                    _result = "failed"
+                    _sev = "critical"
                 get_audit_service().record(
                     actor=actor,
                     action="mt.login_designer.deploy",
                     target_type="mikrotik_nas",
                     target_id=str(nas_id),
+                    severity=_sev,
+                    result_status=_result,
+                    router_id=int(nas_id),
+                    error_message=(deploy_result.error
+                                   if deploy_result else error),
                     payload={
                         "template_slug": design["template_slug"],
                         "path": (deploy_result.path

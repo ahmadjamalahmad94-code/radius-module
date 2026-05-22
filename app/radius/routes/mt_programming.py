@@ -262,18 +262,35 @@ def mt_program_apply(nas_id: int):
                     pass
 
             actor = str(getattr(g, "admin_id", None) or "ui")
+            # S2.3 — enrich audit with severity / router_id /
+            # result_status so the S2.2 UI can filter.
+            ok_flag = bool(apply_result and apply_result.ok)
+            if not apply_result:
+                _result = "failed"
+                _sev = "critical"
+            elif apply_result.ok:
+                _result = "success"
+                _sev = "info"
+            else:
+                _result = "failed"
+                _sev = "warning"
             get_audit_service().record(
                 actor=actor,
                 action=f"mt.programming.{plan.kind}.apply",
                 target_type="mikrotik_nas",
                 target_id=str(nas_id),
+                severity=_sev,
+                result_status=_result,
+                router_id=int(nas_id),
+                error_message=(apply_result.error
+                               if apply_result else error),
                 payload={
                     "kind": plan.kind,
                     "interface": form["interface"],
                     "cidr": form["cidr"],
                     "name": (form.get("hotspot_name")
                              or form.get("profile_name") or ""),
-                    "ok": bool(apply_result and apply_result.ok),
+                    "ok": ok_flag,
                     "summary": (apply_result.summary()
                                 if apply_result else None),
                     "error": (apply_result.error if apply_result else error),
@@ -323,11 +340,28 @@ def mt_program_unprogram(nas_id: int):
                 pass
 
         actor = str(getattr(g, "admin_id", None) or "ui")
+        # S2.3 — unprogram is always destructive, so even a
+        # successful run is `warning` severity (operator must
+        # see it in the filter).
+        if not unprogram_result:
+            _result = "failed"
+            _sev = "critical"
+        elif unprogram_result.ok:
+            _result = "success"
+            _sev = "warning"
+        else:
+            _result = "failed"
+            _sev = "critical"
         get_audit_service().record(
             actor=actor,
             action=f"mt.programming.{kind}.unprogram",
             target_type="mikrotik_nas",
             target_id=str(nas_id),
+            severity=_sev,
+            result_status=_result,
+            router_id=int(nas_id),
+            error_message=(unprogram_result.error
+                           if unprogram_result else error),
             payload={
                 "kind": kind,
                 "ok": bool(unprogram_result and unprogram_result.ok),
