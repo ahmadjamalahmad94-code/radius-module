@@ -155,6 +155,29 @@ def _seed_node(app, name="vps-x"):
     return r.create(tenant_id=1, name=name, enabled=True)
 
 
+def test_policy_create_with_arabic_name_falls_back_to_hash_slug(app):
+    """VX2.6b — Arabic-only names previously raised
+    `policy slug cannot be empty` because slugify stripped
+    every non-ASCII character. Now they get a deterministic
+    `policy-<sha1[:10]>` fallback so the form accepts Arabic
+    operator input without manual transliteration."""
+    with app.app_context():
+        from app.radius.db.repos import (
+            site_exit_policies_repo as p,
+        )
+        nid = _seed_node(app)
+        pid = p.create(
+            tenant_id=1, router_id=99, exit_node_id=nid,
+            name="سياسة سرعة الإنترنت",
+        )
+        row = p.get_by_id(1, pid)
+    # Slug is ASCII-safe.
+    assert row["slug"].startswith("policy-")
+    assert all(c.isascii() for c in row["slug"])
+    # Determinism — same Arabic input → same slug.
+    assert p.slugify("سياسة سرعة الإنترنت") == row["slug"]
+
+
 def test_policy_create_and_slugify(app):
     with app.app_context():
         from app.radius.db.repos import (

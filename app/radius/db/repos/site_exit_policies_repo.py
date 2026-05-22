@@ -38,12 +38,28 @@ _SLUG_RE = re.compile(r"[^a-z0-9-]+")
 
 
 def slugify(value: str) -> str:
-    """Lowercase, ASCII, dash-separated. Empty input → ''."""
+    """Lowercase, ASCII, dash-separated. Empty input → ''.
+
+    Arabic / Unicode names that contain no ASCII letters or
+    digits get a deterministic `policy-<hash>` fallback so the
+    operator's chosen name doesn't break URL routing. The
+    fallback is stable for the same input — re-creating with
+    the exact same Arabic name reuses the same slug, which
+    the (tenant_id, slug) UNIQUE index then catches as a
+    legitimate dup.
+    """
     if not value:
         return ""
     s = value.strip().lower().replace(" ", "-")
     s = _SLUG_RE.sub("-", s)
     s = s.strip("-")
+    if not s:
+        # No ASCII letters / digits in the input — Arabic-only
+        # name, emoji-only, etc. Generate a stable, URL-safe
+        # handle from a SHA-1 of the original.
+        import hashlib
+        h = hashlib.sha1(value.strip().encode("utf-8")).hexdigest()[:10]
+        return f"policy-{h}"
     return s[:64]
 
 
