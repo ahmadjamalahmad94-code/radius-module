@@ -28,12 +28,46 @@
 
 {% if items %}
 {% set _enabled  = items|selectattr('enabled')|list|length %}
-{% set _provisioned = items|selectattr('provisioned_at')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",  items|length,            icon="server",        variant="brand") }}
-  {{ hub.kpi("مفعَّل",     _enabled,                 icon="circle-check",  variant="green") }}
-  {{ hub.kpi("معالَج",     _provisioned,             icon="wand-magic-sparkles", variant="purple") }}
-  {{ hub.kpi("يدوي",       items|length - _provisioned, icon="hand",       variant="amber") }}
+{% set _disabled = items|length - _enabled %}
+{# O4 — Fleet health summary. Baseline counts come from the DB
+   on every page load (total / enabled / disabled). The three
+   live cells (متصل / غير متصل / جزئي) start at 0 + em-dash and
+   the JS counter loop updates them as each row's live status
+   pill changes. #}
+<div class="hub-kpi-grid" data-mt-fleet-summary>
+  {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
+  <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">متصل</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">تجاوب تامّ من الـ API</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-xmark"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">غير متصل</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">timeout / لا يرد</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="partial">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-half-stroke"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">جزئي</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">بعض المؤشرات فقط</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--grey" data-mt-fleet="disabled">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-power-off"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">معطَّل</div>
+      <div class="hub-kpi-value">{{ _disabled }}</div>
+      <div class="hub-kpi-sub">إداريًا مغلق</div>
+    </div>
+  </div>
 </div>
 
 {# O3: bulk action bar — only renders when there are routers

@@ -161,10 +161,33 @@
     }
   }
 
+  // O4 — fleet summary aggregator. After each batch of row
+  // refreshes, walk every row's status pill and recount the
+  // متصل / غير متصل / جزئي cards. The "معطَّل" card is
+  // server-rendered once + never changes per poll.
+  function updateFleetSummary() {
+    const counts = { connected: 0, unreachable: 0, partial: 0 };
+    for (const r of allRows) {
+      if ((r.dataset.mtEnabled || "true") !== "true") continue;
+      const pill = r.querySelector("[data-mt-row-status]");
+      const state = pill ? pill.getAttribute("data-mt-state") : null;
+      if (state === "ok") counts.connected++;
+      else if (state === "error") counts.unreachable++;
+      else if (state === "partial") counts.partial++;
+    }
+    for (const key of Object.keys(counts)) {
+      const card = document.querySelector(`[data-mt-fleet="${key}"]`);
+      if (!card) continue;
+      const val = card.querySelector("[data-mt-fleet-value]");
+      if (val) val.textContent = String(counts[key]);
+    }
+  }
+
   async function refreshAll() {
     // Fan-out — each row is independent, so we don't await in
     // series. A slow router doesn't block the others.
     await Promise.all(rows.map(refreshRow));
+    updateFleetSummary();
   }
 
   refreshAll();
