@@ -1,0 +1,215 @@
+/* L4 — Setup wizard styles.
+   Companion to mt_setup_form.html + mt_setup_script.html. Visual
+   language matches the rest of the hub (hub_v2 tokens). */
+
+/* ── Setup form ─────────────────────────────────────────────────── */
+.mt-setup-form-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 20px;
+  align-items: flex-start;
+}
+@media (max-width: 900px) {
+  .mt-setup-form-wrap { grid-template-columns: 1fr; }
+}
+
+.mt-setup-form {
+  display: grid;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1px solid #EEEDF3;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.mt-setup-field {
+  display: grid;
+  gap: 6px;
+}
+.mt-setup-field-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F2937;
+}
+.mt-setup-field-hint {
+  font-size: 11px;
+  color: #6B7280;
+  line-height: 1.6;
+}
+.mt-setup-field input[type="text"] {
+  font: inherit;
+  background: #FAFAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #1F2937;
+  transition: border-color .15s, background .15s;
+}
+.mt-setup-field input[type="text"]:focus {
+  background: #FFFFFF;
+  border-color: #6B5AED;
+  outline: 2px solid rgba(107,90,237,.18);
+  outline-offset: 1px;
+}
+.mt-setup-field input::placeholder {
+  color: #9CA3AF;
+}
+
+.mt-setup-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mt-setup-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #FAFAFC;
+  font-size: 13px;
+  color: #374151;
+  transition: border-color .12s, background .12s;
+}
+.mt-setup-radio:hover { border-color: #C7D2FE; }
+.mt-setup-radio input { accent-color: #6B5AED; }
+.mt-setup-radio:has(input:checked) {
+  background: #F4F1FE;
+  border-color: #6B5AED;
+  color: #1F2937;
+}
+
+.mt-setup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.mt-setup-aside {
+  background: #FAFAFC;
+  border: 1px solid #EEEDF3;
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.7;
+}
+.mt-setup-aside h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #1F2937;
+}
+.mt-setup-aside h4 + ul,
+.mt-setup-aside h4 + ol {
+  margin: 0 0 16px;
+  padding-inline-start: 18px;
+}
+.mt-setup-aside code {
+  background: #EEF2FF;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4338CA;
+}
+
+/* ── Script page ────────────────────────────────────────────────── */
+.mt-setup-script {
+  display: grid;
+  gap: 16px;
+}
+
+.mt-setup-script-head {
+  background: #FFFFFF;
+  border: 1px solid #EEEDF3;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.mt-setup-script-meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #475569;
+}
+.mt-setup-script-meta code {
+  background: #F1F0F6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1F2937;
+}
+
+.mt-setup-script-block {
+  background: #0F172A;
+  color: #E2E8F0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-family: ui-monospace, "Cairo", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+  direction: ltr;
+  text-align: start;
+  max-height: 60vh;
+}
+.mt-setup-script-block::selection { background: rgba(107,90,237,.35); }
+
+.mt-setup-script-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mt-setup-checklist {
+  background: #FFFFFF;
+  border: 1px solid #EEEDF3;
+  border-radius: 12px;
+  padding: 14px 28px 14px 18px;
+  margin: 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.9;
+}
+.mt-setup-checklist code {
+  background: #EEF2FF;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4338CA;
+}
+
+.mt-setup-script-warning {
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #78350F;
+  font-size: 13px;
+}
+.mt-setup-script-warning summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.mt-setup-script-warning ul {
+  margin: 10px 0 0;
+  padding-inline-start: 18px;
+}
+.mt-setup-script-warning code {
+  background: #FEF3C7;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #78350F;
+}
+
+/* Copy-button feedback state. */
+[data-mt-setup-copy].is-copied {
+  background: #16A34A !important;
+}
+[data-mt-setup-copy].is-copied::after {
+  content: "  ✓";
+}

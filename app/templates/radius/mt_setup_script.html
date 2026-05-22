@@ -8,6 +8,10 @@
 {% block page_icon %}<i class="fa-solid fa-code"></i>{% endblock %}
 {% block page_title %}سكربت إعداد {{ nas.name }}{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+{% endblock %}
+
 {% block content %}
 
 {{ hub.hero(
@@ -62,5 +66,7 @@
     </ul>
   </details>
 </section>
+
+<script src="{{ url_for('static', filename='js/mt_setup.js') }}" defer></script>
 
 {% endblock %}

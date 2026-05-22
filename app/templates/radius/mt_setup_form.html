@@ -8,6 +8,10 @@
 {% block page_icon %}<i class="fa-solid fa-magic-wand-sparkles"></i>{% endblock %}
 {% block page_title %}معالج إضافة راوتر MikroTik{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+{% endblock %}
+
 {% block content %}
 
 {{ hub.hero(
