@@ -411,120 +411,21 @@
     </div>
   </section>
 
-  {# ── 7) Apply (VX2.6a — guarded form with 5 confirmations) #}
+  {# ── 7) Apply (disabled until VX2.6) ──────────────────── #}
   <section class="mt-card" data-mt-site-exit-apply-card>
     <header class="mt-card-head">
       <h3><i class="fa-solid fa-circle-play"></i> التطبيق</h3>
-      <span class="mt-card-meta">
-        <i class="fa-solid fa-shield-halved"></i>
-        تطبيق آمن خلف فحص السلامة + 5 تأكيدات صريحة
-      </span>
     </header>
     <div class="mt-card-body">
-
-      {% if not preview_plan or not preview_plan.can_apply %}
       <div class="vx2-warning" data-mt-site-exit-apply-disabled>
         <i class="fa-solid fa-lock"></i>
-        ولّد معاينة ناجحة أولًا (بدون أخطاء مُعطِّلة) قبل
-        أن يصبح التطبيق ممكناً.
+        {{ apply_disabled_reason }}
       </div>
       <button class="mt-action-btn" disabled
               data-mt-site-exit-apply-button
-              title="ولّد معاينة ناجحة أولاً">
+              title="{{ apply_disabled_reason }}">
         <i class="fa-solid fa-circle-play"></i> تطبيق على الراوتر
       </button>
-      {% else %}
-
-      <form method="post"
-            action="{{ url_for('radius.site_exit_apply',
-                               nas_id=nas.id, policy_id=policy.id) }}"
-            data-mt-site-exit-apply-form>
-
-        <p style="margin-top:0;color:#cc1f1f;font-weight:600">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          عملية تنفّذ تعديلاً مباشراً على الراوتر — راجع
-          السكربتات أعلاه ثم وافق على التأكيدات الخمسة:
-        </p>
-
-        <div data-mt-site-exit-confirmations
-             style="display:grid;gap:8px;font-size:13px;
-                    background:var(--hub-surface-2,#f7f8fa);
-                    padding:12px;border-radius:6px;margin:8px 0">
-
-          <label style="display:flex;gap:8px;align-items:flex-start">
-            <input type="checkbox" name="confirm_preview_seen"
-                   value="1" required>
-            <span>قرأتُ المعاينة الكاملة وفهمت كل الأوامر
-              المُولَّدة.</span>
-          </label>
-
-          <label style="display:flex;gap:8px;align-items:flex-start">
-            <input type="checkbox" name="confirm_backup_status"
-                   value="1" required>
-            <span>تحقّقتُ من توفّر نسخة احتياطية حديثة على
-              الراوتر، أو أقبل المخاطرة الموثّقة.</span>
-          </label>
-
-          <label style="display:flex;gap:8px;align-items:flex-start">
-            <input type="checkbox"
-                   name="confirm_vps_exit_understood"
-                   value="1" required>
-            <span>أفهم أنّ ترافيك الوجهات المختارة سيخرج عبر
-              IP الـ VPS العام، وليس IP الراوتر.</span>
-          </label>
-
-          <label style="display:flex;gap:8px;align-items:flex-start">
-            <input type="checkbox"
-                   name="confirm_fail_mode_understood"
-                   value="1" required>
-            <span>أفهم سلوك وضع الفشل المختار
-              (<code>{{ policy.fail_mode }}</code>).</span>
-          </label>
-
-          <label style="display:flex;gap:8px;align-items:flex-start">
-            <input type="checkbox"
-                   name="confirm_selected_sites_only"
-                   value="1" required>
-            <span>تأكّدتُ أنّ هذه السياسة <strong>لا</strong>
-              تُوجِّه كل ترافيك الإنترنت — فقط الوجهات
-              الموجودة في address-list المُدارة.</span>
-          </label>
-        </div>
-
-        <details style="margin:8px 0;font-size:12.5px">
-          <summary><strong>إعدادات إضافية</strong></summary>
-          <div style="padding:8px 0">
-            <label style="display:flex;gap:8px;align-items:flex-start">
-              <input type="checkbox"
-                     name="override_backup_warning" value="1">
-              <span>تجاهل تحذير النسخة الاحتياطية المفقودة/
-                القديمة (يتطلّب صلاحية
-                <code>site_exit.override_backup_warning</code>).</span>
-            </label>
-            <label class="mt-program-field" style="margin-top:8px">
-              <span>WAN interface-list</span>
-              <input type="text" name="wan_interface_list"
-                     value="{{ request.form.get('wan_interface_list', 'WAN') }}"
-                     placeholder="WAN"
-                     style="padding:6px 8px;border:1px solid var(--hub-border,#d8dee5);border-radius:6px">
-            </label>
-          </div>
-        </details>
-
-        <div class="mt-program-actions" style="margin-top:8px">
-          <button type="submit"
-                  class="mt-action-btn"
-                  data-mt-site-exit-apply-button
-                  style="background:#cc1f1f;color:#fff">
-            <i class="fa-solid fa-circle-play"></i>
-            تطبيق على الراوتر الآن
-          </button>
-          <span class="vx2-empty" style="margin-inline-start:8px">
-            سيُسجَّل في سجل العمليات + سجل النشر.
-          </span>
-        </div>
-      </form>
-      {% endif %}
     </div>
   </section>
 
