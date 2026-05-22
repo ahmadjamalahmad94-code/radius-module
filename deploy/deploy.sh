@@ -183,10 +183,15 @@ cmd_init_wg_reloader() {
     systemctl daemon-reload
     systemctl enable --now wg-reload.path
 
-    log "7) trigger one sync to apply migrated peers ..."
-    systemctl start wg-reload.service || true
+    log "7) reset wg0 to a clean state (in case a prior bad reload"
+    log "   wiped its private key or listen port) ..."
+    ip link delete wg0 2>/dev/null || true
+    wg-quick up wg0
 
-    log "8) verify:"
+    log "8) apply peers.d via the reload script ..."
+    /usr/local/bin/wg-reload.sh
+
+    log "9) verify:"
     systemctl --no-pager status wg-reload.path | head -8
     echo
     ls -la "$PEERS_DIR" 2>&1 | head -10

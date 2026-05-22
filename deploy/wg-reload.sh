@@ -1,42 +1,37 @@
 #!/bin/bash
 # HobeRadius — host-side WG sync helper.
 #
-# Triggered by wg-reload.path on any change to
-# /etc/hoberadius/wg-peers.d/*.conf (HobeRadius container writes
-# there) OR /etc/wireguard/wg0.conf (root edits).
+# Triggered by wg-reload.path on any change inside
+# /etc/hoberadius/wg-peers.d/ (HobeRadius container's domain).
+# Concatenates every *.conf in that directory (each file is
+# already a peer-only fragment) and feeds the result straight to
+# `wg syncconf`. The wg0 interface keeps its [Interface] block
+# from /etc/wireguard/wg0.conf as set by wg-quick@wg0 — we never
+# touch that file, never re-create the interface, and handshakes
+# survive across reloads.
 #
-# Merges the static interface block in wg0.conf with every
-# per-peer file under wg-peers.d/, then pushes the union into the
-# running wg0 interface via `wg syncconf`. The interface itself is
-# never re-created — handshakes survive across reloads.
+# Earlier draft tried to merge wg0.conf + peers.d via `wg-quick
+# strip`, but strip rejects tmpfile names that don't follow the
+# `<interface_name>.conf` pattern. The simpler peer-only path is
+# both correct and immune to that picky parser.
 set -e
 
 INTERFACE=wg0
-MAIN_CONF=/etc/wireguard/wg0.conf
 PEERS_DIR=/etc/hoberadius/wg-peers.d
 
-if [ ! -f "$MAIN_CONF" ]; then
-    echo "wg-reload: $MAIN_CONF missing — nothing to sync" >&2
-    exit 0
-fi
-
-TMP=$(mktemp -p /run wg-reload-XXXXXX.conf)
+TMP=$(mktemp -p /run wg-reload-XXXXXX)
 chmod 0600 "$TMP"
 trap 'rm -f "$TMP"' EXIT
 
-# 1) main interface block (server private key, address, listen-port).
-cat "$MAIN_CONF" > "$TMP"
-
-# 2) every per-peer file, separated by a blank line so [Peer]
-#    sections never run into each other.
+# Concatenate every peer fragment. An empty directory results in
+# an empty TMP — `wg syncconf wg0 <empty>` removes every peer,
+# which is what we want when the operator deletes all of them.
 if [ -d "$PEERS_DIR" ]; then
     shopt -s nullglob
     for f in "$PEERS_DIR"/*.conf; do
-        echo "" >> "$TMP"
         cat "$f" >> "$TMP"
+        echo "" >> "$TMP"
     done
 fi
 
-# 3) syncconf accepts only the peer set; wg-quick strip filters the
-#    [Interface] section out.
-/usr/bin/wg syncconf "$INTERFACE" <(/usr/bin/wg-quick strip "$TMP")
+/usr/bin/wg syncconf "$INTERFACE" "$TMP"

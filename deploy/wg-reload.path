@@ -1,12 +1,15 @@
 [Unit]
-Description=HobeRadius — watch wg0.conf + peers.d for changes
+Description=HobeRadius — watch peers.d for peer changes
 
 [Path]
-# Fires when:
-#   a) root edits the main wg0.conf (rare)
-#   b) the HobeRadius container creates / modifies / deletes a file
-#      under /etc/hoberadius/wg-peers.d/  (the regular case)
-PathChanged=/etc/wireguard/wg0.conf
+# Fires when the HobeRadius container creates / modifies / deletes
+# a file under /etc/hoberadius/wg-peers.d/. We deliberately do NOT
+# watch /etc/wireguard/wg0.conf — that file holds the server's
+# [Interface] block (private key + address + listen port). A
+# reload triggered by editing it would feed wg syncconf an empty
+# peer set (the file has no [Peer] blocks) and remove every peer.
+# If root edits wg0.conf, the right reload is `systemctl restart
+# wg-quick@wg0` — not this path-unit.
 PathChanged=/etc/hoberadius/wg-peers.d
 Unit=wg-reload.service
 
