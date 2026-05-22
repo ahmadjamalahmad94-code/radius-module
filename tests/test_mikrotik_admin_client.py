@@ -254,3 +254,107 @@ def test_mt_result_to_dict_round_trips():
     assert d["data"] == {"x": 1}
     assert d["dialed_address"] == "10.0.0.1"
     assert d["mode"] == "vpn"
+
+
+# ─── K4: interfaces + network fetcher tests ──────────────────────
+
+
+def test_interface_list_calls_interface_print(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {"name": "ether1", "rx-byte": "1000", "tx-byte": "500", "running": "true"},
+        {"name": "wg0", "rx-byte": "200", "tx-byte": "100", "running": "true"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.interface_list(fake_nas_direct)
+
+    assert res.ok is True
+    assert len(res.data) == 2
+    assert res.data[0]["name"] == "ether1"
+    mock_client.print_.assert_called_once_with("/interface/print")
+
+
+def test_interface_traffic_runs_monitor_traffic_once(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {
+            "name": "ether1",
+            "rx-bits-per-second": "1234567",
+            "tx-bits-per-second": "987654",
+        }},
+        {"reply": "!done", "attrs": {}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.interface_traffic(fake_nas_direct, "ether1")
+
+    assert res.ok is True
+    assert res.data == [{
+        "name": "ether1",
+        "rx-bits-per-second": "1234567",
+        "tx-bits-per-second": "987654",
+    }]
+    # Make sure the right RouterOS command + attrs were sent.
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/interface/monitor-traffic"
+    assert kwargs["attrs"]["interface"] == "ether1"
+    assert "once" in kwargs["attrs"]
+
+
+def test_interface_traffic_empty_name_short_circuits(fake_nas_direct):
+    """Don't dial the router when the caller forgot the interface
+    name — the route handler still gets a clean envelope."""
+    res = mac.interface_traffic(fake_nas_direct, "")
+    assert res.ok is False
+    assert "غير محدد" in res.error
+
+
+def test_interface_traffic_cache_is_per_interface(fake_nas_direct):
+    """Two different interfaces must not share a cache slot."""
+    mock_client = MagicMock()
+    mock_client.run.return_value = [
+        {"reply": "!re", "attrs": {"rx-bits-per-second": "1"}},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.interface_traffic(fake_nas_direct, "ether1")
+        mac.interface_traffic(fake_nas_direct, "ether2")
+        # Re-hitting the first one must come from cache.
+        again = mac.interface_traffic(fake_nas_direct, "ether1")
+
+    assert mock_client.run.call_count == 2
+    assert again.cached is True
+
+
+def test_ip_addresses_calls_ip_address_print(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {"address": "10.10.0.5/24", "interface": "wg0"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.ip_addresses(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/ip/address/print")
+    assert res.data[0]["interface"] == "wg0"
+
+
+def test_ip_routes_calls_ip_route_print(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {"dst-address": "0.0.0.0/0", "gateway": "10.10.0.1", "active": "true"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.ip_routes(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/ip/route/print")
+    assert res.data[0]["gateway"] == "10.10.0.1"

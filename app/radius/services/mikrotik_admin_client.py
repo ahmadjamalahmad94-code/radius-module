@@ -342,6 +342,72 @@ def system_routerboard(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+# ─── K4: interfaces + network fetchers ───────────────────────────
+
+
+def interface_list(nas: Mapping[str, Any]) -> MtResult:
+    """`/interface/print` — every interface with rx/tx-byte counters,
+    MAC, type, running flag. The dashboard renders this as a table
+    and the SSE stream (K4.2) uses one of the names from it."""
+    return fetch_cached(
+        nas=nas,
+        operation="interface/list",
+        ttl_sec=TTL_INTERFACES,
+        work=lambda c: list(c.print_("/interface/print")),
+    )
+
+
+def interface_traffic(nas: Mapping[str, Any], name: str) -> MtResult:
+    """`/interface/monitor-traffic once=` — one snapshot of
+    rx/tx-bits-per-second + packets-per-second for a named iface.
+
+    Cache TTL is short (≈ TTL_INTERFACES) so two quick polls don't
+    pin the CPU, but a 5-second refresh cadence still feels live.
+
+    `name` is passed straight to the router as the `=interface=`
+    attribute; the wire client escapes it. We still strip empty /
+    whitespace input client-side so a missing path-segment surfaces
+    as a clean error envelope rather than a router trap.
+    """
+    iface = (name or "").strip()
+    if not iface:
+        return MtResult(ok=False, error="اسم الواجهة غير محدد")
+
+    def work(client):
+        rows = client.run(
+            "/interface/monitor-traffic",
+            attrs={"interface": iface, "once": ""},
+        )
+        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+
+    return fetch_cached(
+        nas=nas,
+        operation=f"interface/traffic:{iface}",
+        ttl_sec=TTL_INTERFACES,
+        work=work,
+    )
+
+
+def ip_addresses(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/address/print` — address ↔ interface map."""
+    return fetch_cached(
+        nas=nas,
+        operation="ip/addresses",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/address/print")),
+    )
+
+
+def ip_routes(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/route/print` — routing table snapshot."""
+    return fetch_cached(
+        nas=nas,
+        operation="ip/routes",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/ip/route/print")),
+    )
+
+
 __all__ = [
     "MtResult",
     "TTL_SYSTEM",
@@ -355,4 +421,8 @@ __all__ = [
     "system_identity",
     "system_clock",
     "system_routerboard",
+    "interface_list",
+    "interface_traffic",
+    "ip_addresses",
+    "ip_routes",
 ]

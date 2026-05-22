@@ -40,7 +40,7 @@ def register_v1(parent: Blueprint) -> None:
     accounting.register(v1)
     webhooks.register(v1)
     mikrotik.register(v1)
-    mikrotik_control.register(v1)  # K3: system/* + overview endpoints
+    mikrotik_control.register(v1)  # K3: system/*  · K4: interfaces + network
     internal_auth.register(v1)
     dashboard.register(v1)
     admins.register(v1)

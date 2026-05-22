@@ -1,27 +1,28 @@
-"""K3 — MikroTik control endpoints (system stats subset).
+"""K3 + K4 — MikroTik control endpoints (system + network).
 
-This file ships the first batch of "live operations" endpoints that
-the K9 dashboard consumes. Every call:
+This file ships the live-operations endpoints that the K9 dashboard
+and the K10 sub-pages consume. Every call:
 
 1. Looks up the `nas_devices` row by id (admin scoped to tenant).
-2. Pipes it through `mikrotik_admin_client.system_*(nas)` —
-   which honours the VPN connection mode, applies the TTL cache,
-   and wraps every error in a clean envelope.
+2. Pipes it through a `mikrotik_admin_client.*` fetcher — which
+   honours the VPN connection mode, applies the TTL cache, and
+   wraps every error in a clean envelope.
 3. Returns JSON `{ok, data, error, took_ms, cached, dialed_address,
    mode}`.
 
-Endpoints in this commit:
+K3 endpoints — system stats:
   GET /api/v1/mikrotik/<id>/system/resource
   GET /api/v1/mikrotik/<id>/system/health
   GET /api/v1/mikrotik/<id>/system/identity
   GET /api/v1/mikrotik/<id>/system/clock
   GET /api/v1/mikrotik/<id>/system/routerboard
-  GET /api/v1/mikrotik/<id>/system/overview  ← combined call, all-in-one
+  GET /api/v1/mikrotik/<id>/system/overview  ← combined dashboard call
 
-The dashboard hits `/system/overview` on first load and on
-auto-refresh — one HTTP request, five parallel-cached fetches under
-the hood. Subsequent specific endpoints exist for sub-pages that
-care about one section deeply.
+K4 endpoints — interfaces + network:
+  GET /api/v1/mikrotik/<id>/interfaces
+  GET /api/v1/mikrotik/<id>/interfaces/<name>/traffic
+  GET /api/v1/mikrotik/<id>/ip/addresses
+  GET /api/v1/mikrotik/<id>/routes
 """
 from __future__ import annotations
 
@@ -69,6 +70,31 @@ def register(bp: Blueprint) -> None:
         "/mikrotik/<int:nas_id>/system/overview",
         "mt_system_overview",
         require_api_token(mt_system_overview),
+        methods=["GET"],
+    )
+    # K4 — interfaces + network
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/interfaces",
+        "mt_interfaces",
+        require_api_token(mt_interfaces),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/interfaces/<string:name>/traffic",
+        "mt_interface_traffic",
+        require_api_token(mt_interface_traffic),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/ip/addresses",
+        "mt_ip_addresses",
+        require_api_token(mt_ip_addresses),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/routes",
+        "mt_ip_routes",
+        require_api_token(mt_ip_routes),
         methods=["GET"],
     )
 
@@ -173,3 +199,40 @@ def mt_system_overview(nas_id: int):
         "all_ok": all(r.ok for r in sections.values()),
     }
     return ok(payload)
+
+
+# ─── K4: interfaces + network endpoints ──────────────────────────
+
+
+def mt_interfaces(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("الراوتر غير موجود", code="not_found", status=404)
+    result = mac.interface_list(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_interface_traffic(nas_id: int, name: str):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("الراوتر غير موجود", code="not_found", status=404)
+    result = mac.interface_traffic(nas, name)
+    payload = _envelope(result, router_id=nas_id)
+    payload["interface"] = name
+    return ok(payload)
+
+
+def mt_ip_addresses(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("الراوتر غير موجود", code="not_found", status=404)
+    result = mac.ip_addresses(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_ip_routes(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("الراوتر غير موجود", code="not_found", status=404)
+    result = mac.ip_routes(nas)
+    return ok(_envelope(result, router_id=nas_id))
