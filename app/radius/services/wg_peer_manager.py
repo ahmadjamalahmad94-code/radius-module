@@ -44,6 +44,7 @@ import ipaddress
 import logging
 import os
 import re
+import secrets
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
@@ -177,12 +178,34 @@ _PEER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
 def _slugify_router_name(name: str) -> str:
-    """Turn a free-form router name into a safe filename stem."""
-    cleaned = re.sub(r"\s+", "-", (name or "").strip())
+    """Turn a free-form router name into a safe filename stem.
+
+    N5: when the operator types a name that sanitizes down to
+    nothing useful (Arabic-only input, pure digits, etc.), fall
+    back to a stable `nas-<6hex>` stem rather than producing
+    something like `2.conf` that's impossible to identify on the
+    host. The full original name still goes into the peer file's
+    `# router: ...` comment line, so the mapping isn't lost.
+
+    Truly empty input (whitespace only / None) still raises — the
+    fallback only triggers when the user supplied a name we just
+    couldn't ASCII-fy.
+    """
+    raw = (name or "").strip()
+    if not raw:
+        raise ValueError("اسم الراوتر فارغ بعد التنظيف")
+
+    cleaned = re.sub(r"\s+", "-", raw)
     cleaned = re.sub(r"[^A-Za-z0-9._-]", "", cleaned)
     cleaned = cleaned.strip("-._")
-    if not cleaned:
-        raise ValueError("اسم الراوتر فارغ بعد التنظيف")
+
+    # If the cleaned stem has no Latin letter (e.g. Arabic input
+    # left us with just a digit, or input was punctuation-only),
+    # use a random nas-XXXXXX stem instead.
+    has_letter = bool(re.search(r"[A-Za-z]", cleaned))
+    if not cleaned or not has_letter:
+        cleaned = "nas-" + secrets.token_hex(3)
+
     if not _PEER_NAME_RE.match(cleaned):
         raise ValueError(
             f"اسم الراوتر بعد التنظيف لا يتطابق مع النمط: {cleaned!r}"

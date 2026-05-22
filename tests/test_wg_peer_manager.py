@@ -258,6 +258,47 @@ def test_deprovision_peer_idempotent(env):
     assert wpm.deprovision_peer("never-was") is False
 
 
+# ─── N5: slug fallback for non-ASCII / digit-only names ──────────
+
+
+def test_slugify_falls_back_for_arabic_only_name(env):
+    """The wizard accepts Arabic names; the slugifier must not
+    fail or produce something useless. After N5 it should yield
+    a stable `nas-<6hex>` stem instead of just the leftover digit."""
+    import re as _re
+    res = wpm.provision_peer("سي سي ار تجريب 2")
+    # Should NOT be just "2" — must use the fallback shape.
+    assert res.slug != "2"
+    assert _re.match(r"^nas-[0-9a-f]{6}$", res.slug), \
+        f"unexpected slug: {res.slug!r}"
+    # The peer file lives at nas-XXXXXX.conf, not 2.conf.
+    assert res.peer_file.name.startswith("nas-")
+    assert res.peer_file.name.endswith(".conf")
+    # The full original name still goes into the peer file's
+    # comment line so an operator inspecting peers.d can map back.
+    assert "سي سي ار تجريب 2" in res.peer_file.read_text(encoding="utf-8")
+
+
+def test_slugify_falls_back_for_pure_digits(env):
+    res = wpm.provision_peer("12345")
+    import re as _re
+    assert _re.match(r"^nas-[0-9a-f]{6}$", res.slug)
+
+
+def test_slugify_keeps_ascii_names_unchanged(env):
+    """Names with Latin letters still get a meaningful slug — the
+    fallback should only trigger when there's no usable letter."""
+    res = wpm.provision_peer("MT-Office-1")
+    assert res.slug == "MT-Office-1"
+
+
+def test_slugify_empty_input_still_raises(env):
+    """Truly empty input (whitespace only) doesn't trigger the
+    fallback; it raises so the wizard rejects the form."""
+    with pytest.raises(ValueError, match="فارغ"):
+        wpm.provision_peer("   ")
+
+
 def test_provision_then_deprovision_frees_ip(env):
     """The IP allocator must reclaim a freed slot — otherwise the
     254-IP /24 would slowly run out as routers churn."""
