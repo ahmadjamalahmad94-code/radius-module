@@ -1,0 +1,158 @@
+{# O11 — Permission review matrix.
+
+   Read-only audit view. Each row is an admin, each column a
+   MikroTik permission. Cells are check / dash chips, never
+   editable controls. Operators change roles in the existing
+   admins page; this view only surfaces current state.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مصفوفة الصلاحيات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
+{% block page_title %}مصفوفة الصلاحيات{% endblock %}
+{% block page_sub %}<span class="sub">من يستطيع فعل ماذا على MikroTik</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<style>
+  .mt-perm-matrix { width: 100%; border-collapse: collapse; }
+  .mt-perm-matrix th, .mt-perm-matrix td {
+    padding: 8px 10px; text-align: center; font-size: 13px;
+    border-bottom: 1px solid var(--hub-border, #e6e9ee);
+  }
+  .mt-perm-matrix th { background: var(--hub-surface-2, #f7f8fa); }
+  .mt-perm-matrix tbody tr:hover { background: rgba(43,170,204,0.04); }
+  .mt-perm-cell--admin { text-align: start; font-weight: 600; }
+  .mt-perm-cell-role { color: var(--hub-text-muted, #717b8a);
+                       font-size: 12px; font-weight: 400; }
+  .mt-perm-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--hub-surface-2, #eef2f6);
+    color: var(--hub-text-muted, #99a0aa);
+  }
+  .mt-perm-chip--yes { background: rgba(43,170,204,0.14);
+                       color: #208ba6; }
+  .mt-perm-chip--super { background: rgba(255,193,7,0.18);
+                          color: #b87f00; }
+  .mt-perm-chip--admin { background: rgba(102,16,242,0.13);
+                          color: #6610f2; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-permission-matrix>
+
+  {{ hub.hero(
+    "مصفوفة الصلاحيات",
+    subtitle="نظرة للقراءة فقط على صلاحيات الأدمنز على MikroTik. للتعديل: من صفحة الأدمنز.",
+    icon="user-shield",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list-check"></i> الأدمنز والصلاحيات</h3>
+      <span class="mt-card-meta">
+        <span data-mt-perm-total-admins>{{ total_admins }}</span>
+        أدمن نشط
+      </span>
+    </header>
+    <div class="mt-card-body">
+
+      {% if not matrix.rows %}
+      <p class="mt-empty" data-mt-perm-empty>
+        لا يوجد أدمنز نشطون.
+      </p>
+      {% else %}
+
+      <div style="overflow-x:auto;">
+      <table class="mt-perm-matrix" data-mt-perm-table>
+        <thead>
+          <tr>
+            <th class="mt-perm-cell--admin">الأدمن</th>
+            {% for p in matrix.permissions %}
+            <th data-mt-perm-col="{{ p }}" title="{{ p }}">
+              {{ perm_labels.get(p, p) }}
+            </th>
+            {% endfor %}
+            <th>إجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in matrix.rows %}
+          <tr data-mt-perm-row="{{ r.admin_id }}"
+              data-mt-perm-super="{{ '1' if r.is_super_admin else '0' }}"
+              data-mt-perm-via-admin="{{ '1' if r.via_admin else '0' }}">
+            <td class="mt-perm-cell--admin">
+              {{ r.username }}
+              {% if r.full_name %}
+                <div class="mt-perm-cell-role">{{ r.full_name }}
+                  {% if r.role_name %} · {{ r.role_name }}{% endif %}
+                </div>
+              {% elif r.role_name %}
+                <div class="mt-perm-cell-role">{{ r.role_name }}</div>
+              {% endif %}
+            </td>
+            {% for p in matrix.permissions %}
+            {% set granted = r.granted.get(p, False) %}
+            <td data-mt-perm-cell="{{ p }}"
+                data-mt-perm-granted="{{ '1' if granted else '0' }}">
+              {% if granted and r.is_super_admin %}
+                <span class="mt-perm-chip mt-perm-chip--super"
+                      title="super_admin">
+                  <i class="fa-solid fa-crown"></i>
+                </span>
+              {% elif granted and r.via_admin %}
+                <span class="mt-perm-chip mt-perm-chip--admin"
+                      title="mikrotik.admin">
+                  <i class="fa-solid fa-check"></i>
+                </span>
+              {% elif granted %}
+                <span class="mt-perm-chip mt-perm-chip--yes">
+                  <i class="fa-solid fa-check"></i>
+                </span>
+              {% else %}
+                <span class="mt-perm-chip">
+                  <i class="fa-solid fa-minus"></i>
+                </span>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <td data-mt-perm-count>{{ r.granted_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="mt-perm-cell--admin">الإجمالي</th>
+            {% for p in matrix.permissions %}
+            <th data-mt-perm-col-count="{{ p }}">
+              {{ grant_counts.get(p, 0) }} / {{ total_admins }}
+            </th>
+            {% endfor %}
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+
+      <p class="mt-empty" style="margin-top:12px; text-align:start;
+                                  color:var(--hub-text-muted,#717b8a);">
+        <i class="fa-solid fa-info-circle"></i>
+        <strong>التاج</strong> = super_admin (يمتلك كل شيء)،
+        <strong>الدائرة البنفسجية</strong> = صلاحية mikrotik.admin
+        (تشمل الباقي ضمنيًا)، <strong>الدائرة الفيروزية</strong> =
+        صلاحية مضافة مباشرةً للدور.
+        لتعديل الصلاحيات افتح
+        <a href="{{ url_for('radius.admins_list') }}">صفحة الأدمنز</a>.
+      </p>
+
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

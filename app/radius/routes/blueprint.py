@@ -154,6 +154,11 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 
+    from .mt_permission_matrix import (
+        register_mt_permission_matrix_routes,
+    )
+    register_mt_permission_matrix_routes(bp)
+
     from .tokens import register_tokens_routes
     register_tokens_routes(bp)
 
