@@ -119,6 +119,28 @@ cmd_logs() {
     $COMPOSE logs --tail=200 -f app
 }
 
+cmd_init_wg_reloader() {
+    # Phase M — wires the host-side systemd path-unit that watches
+    # /etc/wireguard/wg0.conf and runs `wg syncconf wg0 <(wg-quick
+    # strip wg0)` whenever the container rewrites it. Idempotent.
+    log "1) check WireGuard is installed ..."
+    if ! command -v wg >/dev/null || ! command -v wg-quick >/dev/null; then
+        die "wireguard-tools not installed on the host. Run: apt install -y wireguard"
+    fi
+
+    log "2) install systemd units ..."
+    install -m 0644 "$PROJECT_ROOT/deploy/wg-reload.service" /etc/systemd/system/wg-reload.service
+    install -m 0644 "$PROJECT_ROOT/deploy/wg-reload.path"    /etc/systemd/system/wg-reload.path
+
+    log "3) reload + enable ..."
+    systemctl daemon-reload
+    systemctl enable --now wg-reload.path
+
+    log "4) status:"
+    systemctl --no-pager status wg-reload.path | head -10
+    log "✅ wg-reload watcher is active. Any write to wg0.conf will trigger a syncconf."
+}
+
 main() {
     local cmd="${1:-help}"; shift || true
     case "$cmd" in
@@ -128,15 +150,18 @@ main() {
         status)  cmd_status ;;
         backup)  cmd_backup ;;
         logs)    cmd_logs ;;
+        init-wg-reloader) cmd_init_wg_reloader ;;
         *)
             cat <<EOF
 HobeRadius deploy.sh — أوامر:
-  init           أول تثبيت كامل
-  upgrade        git pull + إعادة بناء
-  tls DOMAIN     إصدار شهادة Let's Encrypt + auto-renew
-  status         حالة containers + healthcheck + قرص
-  backup         backup يدوي
-  logs           متابعة logs الـ app
+  init               أول تثبيت كامل
+  upgrade            git pull + إعادة بناء
+  tls DOMAIN         إصدار شهادة Let's Encrypt + auto-renew
+  status             حالة containers + healthcheck + قرص
+  backup             backup يدوي
+  logs               متابعة logs الـ app
+  init-wg-reloader   تنصيب systemd path-unit يراقب wg0.conf
+                     (Phase M — auto-sync بعد كل إضافة peer)
 EOF
             ;;
     esac

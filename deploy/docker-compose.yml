@@ -8,8 +8,15 @@ services:
     restart: unless-stopped
     env_file: ../.env
     volumes:
-      - ../instance:/app/instance      # SQLite DB persists
+      - ../instance:/app/instance              # SQLite DB persists
       - ../logs:/app/logs
+      # Phase M — WireGuard peer provisioning.
+      # The Flask container writes to wg0.conf via this mount but
+      # does NOT run `wg syncconf` itself (that needs the host's
+      # netns). A systemd path-unit on the host watches the file
+      # and reloads — see deploy/wg-reload.{path,service} and
+      # `deploy.sh init-wg-reloader`.
+      - /etc/wireguard:/etc/wireguard:rw
     networks: [hrnet]
     expose: ["8000"]
 

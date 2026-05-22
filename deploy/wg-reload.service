@@ -1,0 +1,16 @@
+[Unit]
+Description=HobeRadius — sync WireGuard wg0 from /etc/wireguard/wg0.conf
+# Triggered by wg-reload.path when the conf file changes (the
+# HobeRadius container writes it via bind-mount). One-shot reload;
+# no daemon, no polling.
+After=wg-quick@wg0.service
+Requires=wg-quick@wg0.service
+
+[Service]
+Type=oneshot
+# `wg-quick strip` reads the conf, drops the [Interface] block, and
+# emits only the runtime peer set in the shape `wg syncconf` expects.
+ExecStart=/bin/bash -c '/usr/bin/wg syncconf wg0 <(/usr/bin/wg-quick strip wg0)'
+# Don't fail the unit if the marker isn't strictly cleared — the
+# next file change will re-trigger us anyway.
+SuccessExitStatus=0 1

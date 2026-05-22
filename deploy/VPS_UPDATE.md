@@ -1,7 +1,7 @@
 # تحديث الـ VPS — Cheat Sheet
 
 > تشغيل سريع بعد كل push على `origin/main`.
-> آخر تحديث: 2026-05-22 — Session 2 (K1 → K9).
+> آخر تحديث: 2026-05-22 — Phase L + M0b (WG bind-mount + reloader).
 
 ---
 
@@ -94,7 +94,28 @@ sudo bash deploy/deploy.sh upgrade  # يعيد البناء على الـ commit
 
 ---
 
-## 6) اختبار يدوي بعد كل تحديث
+## 6) إعداد WireGuard reloader (مرّة واحدة — Phase M)
+
+بعد أول `upgrade` يجلب M0b، نصّب الـ path-unit:
+
+```bash
+sudo bash /opt/hoberadius/deploy/deploy.sh init-wg-reloader
+```
+
+ما يفعله:
+- ينسخ `wg-reload.service` و `wg-reload.path` إلى `/etc/systemd/system/`
+- يفعّل `wg-reload.path` (يبدأ تلقائياً عند إعادة الإقلاع)
+- النتيجة: كل ما الـ container يكتب على `wg0.conf` → `wg syncconf wg0` يشتغل فوراً على الـ host
+
+تحقّق:
+```bash
+systemctl status wg-reload.path     # لازم active (waiting)
+journalctl -u wg-reload.service -n 20    # سجل آخر عمليات reload
+```
+
+---
+
+## 7) اختبار يدوي بعد كل تحديث
 
 من جهازك (PowerShell على Windows):
 
