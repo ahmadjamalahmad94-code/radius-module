@@ -8,10 +8,13 @@ from __future__ import annotations
 import pytest
 
 
-def test_library_has_exactly_four_templates():
+def test_library_carries_the_full_catalogue():
+    """R1 shipped 4 templates; R5 added the MikroTik-derived one.
+    Adding a new template = update this set + add a dedicated
+    test file (see test_hotspot_template_mikrotik_r5.py)."""
     from app.radius.services import hotspot_templates as ht
     slugs = {t.slug for t in ht.LIBRARY}
-    assert slugs == {"classic", "card", "dark", "minimal"}
+    assert slugs == {"classic", "card", "dark", "minimal", "mikrotik"}
 
 
 def test_every_template_carries_required_routeros_placeholders():
