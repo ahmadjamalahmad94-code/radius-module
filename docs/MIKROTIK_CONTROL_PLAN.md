@@ -342,3 +342,136 @@ Linked from the dashboard, each is a focused panel:
 7. **Day 7**: K12 (docs) + polish
 
 Each day is a chunk of 4-6 commits.
+
+---
+
+## Progress log
+
+> Updated at the end of each work session so the next session can
+> resume from the right spot without re-reading the whole plan.
+
+### Session 1 — Day 1 + Day 2 (foundation + system stats)
+
+**Status: K0 → K3 done. 7 commits. 40 tests. Zero failures.**
+
+| Step | Commit | Files added |
+|------|--------|-------------|
+| K0   | `1d27826` | `docs/MIKROTIK_CONTROL_PLAN.md` |
+| K1.1 | `f4dda38` | `app/radius/db/migrations/033_nas_vpn.sql` |
+| K1.2 | `9edd98b` | `app/radius/services/nas_connection.py` + 9 tests |
+| K1.3 | `dc2bad3` | `app/radius/services/vpn_probe.py` + 11 tests |
+| K1.4 + K1.5 | `0bd935c` | `app/radius/services/wireguard_config.py` + 10 tests |
+| K2   | `3667a3b` | `app/radius/services/mikrotik_admin_client.py` + 10 tests |
+| K3   | `1a266ef` | `app/api/v1/mikrotik_control.py` + `__init__.py` registration |
+
+### What ships today
+
+The operator can already (manually) provision a router on VPN and
+hit live stats:
+
+1. Insert a `nas_devices` row with `connection_mode='vpn'` +
+   `vpn_peer_address` + `vpn_public_key`.
+2. Generate the router-side WG block via
+   `wireguard_config.build_for_new_peer(...)` and paste into
+   RouterOS terminal.
+3. Paste the printed router pub-key back into the NAS row.
+4. Append the server-side block to `/etc/wireguard/wg0.conf`,
+   reload, and `wg show wg0` should show a handshake.
+5. `curl -H "Authorization: Bearer <token>"
+        https://radius.vps/api/v1/mikrotik/<id>/system/overview`
+   returns CPU / RAM / temp / uptime / RouterOS version through
+   the tunnel.
+
+Note: there is no admin-side UI for steps 1, 3 or 4 yet. The
+*endpoints* are production-ready; the *UI* lands in K9 / K10.
+
+### Resume here — Session 2 starting point
+
+Begin with **K4 (interfaces + network)**. The pattern is
+established: copy the K3 file layout, swap `system_*` for the
+interface fetchers, register the new endpoints in `__init__.py`.
+
+Outstanding endpoint phases:
+
+- **K4** Interfaces + network (≈2 commits, ~250 LOC)
+    * `GET /api/v1/mikrotik/<id>/interfaces`
+    * `GET /api/v1/mikrotik/<id>/interfaces/<name>/traffic`
+    * `GET /api/v1/mikrotik/<id>/interfaces/<name>/sse`
+    * `GET /api/v1/mikrotik/<id>/ip/addresses`
+    * `GET /api/v1/mikrotik/<id>/routes`
+- **K5** Hotspot + PPP active (≈2 commits)
+    * `GET /api/v1/mikrotik/<id>/hotspot/active`
+    * `GET /api/v1/mikrotik/<id>/ppp/active`
+    * `POST /api/v1/mikrotik/<id>/hotspot/active/<id>/disconnect`
+    * `POST /api/v1/mikrotik/<id>/ppp/active/<id>/disconnect`
+- **K6** Queues + firewall (≈2 commits)
+- **K7** Logs + diagnostics (≈2 commits)
+- **K8** Backup + reboot (≈2 commits)
+
+Outstanding UI phases:
+
+- **K9** Dashboard UI (≈3 commits)
+    * `/admin/radius/mt/<id>/dashboard` route + template
+    * KPI strip + live traffic chart + active users panel
+    * Quick actions strip (backup / reboot / ping / identity)
+- **K10** Sub-pages (≈5 commits) — one per surface
+
+Outstanding misc:
+
+- **K11** Tests (mock MT client + endpoint contracts + UI smoke,
+  ≈3 commits)
+- **K12** Documentation
+  (`docs/MIKROTIK_CONTROL_GUIDE.md` + `docs/WIREGUARD_SETUP.md`
+  + README update, ≈1 commit)
+
+### Conventions to keep
+
+- One logical commit per step. Commit messages start with the
+  step label (`K4.1:`, `K4.2:`, …).
+- Every new service file ships its own test file in the same
+  commit. Aim for ≥ 80 % branch coverage on the new code.
+- Every new endpoint returns the standard `MtResult` envelope
+  via `mikrotik_admin_client.fetch_cached(...)`.
+- Every mutation endpoint:
+    1. Requires `require_api_token`.
+    2. Calls `invalidate_cache(router_id, operation)` after
+       success.
+    3. Logs an audit event via the existing audit service.
+    4. Has a UI confirmation step (K9/K10 modals).
+- No `git add .`, no `--no-verify`, no force-push.
+- Don't touch unrelated dirty files (the long-standing
+  subscribers_repo / cards / sync_queue work-in-progress
+  must stay untouched).
+- Mobile admin remains unchanged — this is a web-only feature.
+- Arabic copy throughout the UI (mirrors the rest of the admin).
+
+### Useful one-liners for the next session
+
+```bash
+# Re-confirm the K-phase tests are green
+python -m pytest \
+  tests/test_nas_connection_resolver.py \
+  tests/test_vpn_probe.py \
+  tests/test_wireguard_config.py \
+  tests/test_mikrotik_admin_client.py \
+  -q
+
+# Confirm the K3 routes are registered
+python -c "
+from app import create_app
+print([str(r) for r in create_app().url_map.iter_rules()
+       if 'mikrotik' in str(r) and 'system' in str(r)])
+"
+
+# Quick check that the migration applied on a fresh DB
+python -c "
+from app import create_app
+app = create_app()
+with app.app_context():
+    from app.radius.db.connection import db
+    print([r['name'] for r in db().execute(
+        'PRAGMA table_info(nas_devices)')
+        if r['name'].startswith('vpn_') or
+           r['name'] == 'connection_mode'])
+"
+```
