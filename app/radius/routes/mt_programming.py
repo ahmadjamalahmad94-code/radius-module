@@ -75,6 +75,12 @@ def register_mt_programming_routes(bp: Blueprint) -> None:
         mt_program_apply,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/program/unprogram",
+        "mt_program_unprogram",
+        mt_program_unprogram,
+        methods=["POST"],
+    )
 
 
 def _fetch_router_state(nas: dict) -> tuple[list[dict], list[dict]]:
@@ -280,4 +286,62 @@ def mt_program_apply(nas_id: int):
         kind=form["kind"],
         error=error,
         apply_result=apply_result,
+    )
+
+
+def mt_program_unprogram(nas_id: int):
+    """Q4 — Remove every hoberadius:<kind> object from the router.
+
+    Destructive: this issues `/remove` against every matching row.
+    Confirmation is required. We re-validate `kind` against the
+    fixed allowlist before dispatching so a manipulated POST can't
+    sneak in a third arm.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    kind = (request.form.get("kind") or "").strip().lower()
+    confirmed = request.form.get("confirm") == "1"
+    error: str = ""
+    unprogram_result = None
+
+    if kind not in {"hotspot", "pppoe"}:
+        error = "نوع البرمجة غير معروف."
+    elif not confirmed:
+        error = "يجب تأكيد عملية الإزالة قبل تنفيذها."
+    else:
+        client = _connect_client(nas)
+        try:
+            client.connect()
+            unprogram_result = mt_programming.unprogram(client, kind)
+        except Exception as e:  # noqa: BLE001
+            error = "تعذّر الاتصال بالراوتر: " + str(e)
+        finally:
+            try:
+                client.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+        actor = str(getattr(g, "admin_id", None) or "ui")
+        get_audit_service().record(
+            actor=actor,
+            action=f"mt.programming.{kind}.unprogram",
+            target_type="mikrotik_nas",
+            target_id=str(nas_id),
+            payload={
+                "kind": kind,
+                "ok": bool(unprogram_result and unprogram_result.ok),
+                "summary": (unprogram_result.summary()
+                            if unprogram_result else None),
+                "error": (unprogram_result.error
+                          if unprogram_result else error),
+            },
+        )
+
+    return render_template(
+        "radius/mt_programming.html",
+        nas=nas, plan=None, form={"kind": kind or "hotspot"},
+        kind=kind or "hotspot",
+        error=error,
+        unprogram_result=unprogram_result,
     )

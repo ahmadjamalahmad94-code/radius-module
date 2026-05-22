@@ -675,6 +675,128 @@ def apply_commands(
     return ApplyResult(ok=True, steps=steps)
 
 
+# ─── Q4 — Unprogram / rollback ─────────────────────────────────
+
+
+# Resource paths to scan + remove for each kind.
+#
+# Order matters: RouterOS refuses to delete a /ip/address while a
+# /ip/dhcp-server still references the interface, refuses to delete
+# a /ip/pool while a /ip/dhcp-server still names it, etc. So we
+# walk from leaf (walled-garden entries) to root (pool / address)
+# — dependencies first.
+_HOTSPOT_RESOURCE_ORDER = [
+    "/ip/hotspot/walled-garden/ip",
+    "/ip/hotspot",
+    "/ip/hotspot/user/profile",
+    "/ip/hotspot/profile",
+    "/ip/dhcp-server",
+    "/ip/dhcp-server/network",
+    "/ip/address",
+    "/ip/pool",
+]
+_PPPOE_RESOURCE_ORDER = [
+    "/interface/pppoe-server/server",
+    "/ppp/profile",
+    "/ip/pool",
+]
+
+
+@dataclass
+class UnprogramStep:
+    path: str
+    id: str
+    ok: bool
+    error: str = ""
+
+
+@dataclass
+class UnprogramResult:
+    ok: bool
+    steps: list[UnprogramStep]
+    skipped_paths: list[str]   # paths that returned zero matching rows
+    error: str = ""
+
+    def summary(self) -> dict:
+        return {
+            "removed": sum(1 for s in self.steps if s.ok),
+            "failed":  sum(1 for s in self.steps if not s.ok),
+            "scanned": len(self.steps),
+        }
+
+
+def _print_path(path: str) -> str:
+    """Translate `/ip/pool` into `/ip/pool/print`. We pass `path`
+    as the canonical resource (matching what the apply path uses)
+    so the two are always consistent."""
+    return path + "/print"
+
+
+def _remove_path(path: str) -> str:
+    return path + "/remove"
+
+
+def unprogram(
+    client: Any, kind: str, *,
+    only_comment: str | None = None,
+) -> UnprogramResult:
+    """Remove every object that carries the hoberadius:<kind>
+    comment from the router behind `client`. Pure side-effect; no
+    DB writes here — the route owns the audit-log entry.
+
+    `only_comment` lets a future caller force a specific marker
+    (e.g. for an aborted half-applied plan with a one-off
+    comment). Default is the kind's canonical comment.
+    """
+    kind = (kind or "").lower()
+    if kind == "hotspot":
+        order   = _HOTSPOT_RESOURCE_ORDER
+        comment = only_comment or HOTSPOT_COMMENT
+    elif kind == "pppoe":
+        order   = _PPPOE_RESOURCE_ORDER
+        comment = only_comment or PPPOE_COMMENT
+    else:
+        return UnprogramResult(
+            ok=False, steps=[], skipped_paths=[],
+            error=f"unknown kind: {kind!r}",
+        )
+
+    steps: list[UnprogramStep] = []
+    skipped: list[str] = []
+    for path in order:
+        # Plain /print, no server-side filter — comment matching
+        # happens client-side. That keeps the wire interaction
+        # uniform across RouterOS versions (some builds reject
+        # `?comment=` query syntax on certain resources).
+        try:
+            rows = client.run(_print_path(path), attrs=None)
+        except Exception:  # noqa: BLE001
+            # The resource might not exist on this RouterOS build
+            # (e.g. /ip/hotspot/user/profile on a CHR without
+            # hotspot package). Skip and move on.
+            skipped.append(path)
+            continue
+        ids = [r.get(".id") or r.get("id") for r in rows
+               if (r.get("comment") or "") == comment]
+        ids = [i for i in ids if i]
+        if not ids:
+            skipped.append(path)
+            continue
+        for rid in ids:
+            try:
+                client.run(_remove_path(path), attrs={".id": rid})
+                steps.append(UnprogramStep(path=path, id=rid, ok=True))
+            except Exception as e:  # noqa: BLE001
+                steps.append(UnprogramStep(
+                    path=path, id=rid, ok=False, error=str(e)))
+    failed = sum(1 for s in steps if not s.ok)
+    return UnprogramResult(
+        ok=(failed == 0),
+        steps=steps,
+        skipped_paths=skipped,
+    )
+
+
 __all__ = [
     "HOBERADIUS_COMMENT_PREFIX",
     "HOTSPOT_COMMENT",
@@ -687,6 +809,8 @@ __all__ = [
     "Plan",
     "StepResult",
     "ApplyResult",
+    "UnprogramStep",
+    "UnprogramResult",
     "plan_hotspot",
     "plan_pppoe",
     "render_hotspot_script",
@@ -694,4 +818,5 @@ __all__ = [
     "build_hotspot_commands",
     "build_pppoe_commands",
     "apply_commands",
+    "unprogram",
 ]

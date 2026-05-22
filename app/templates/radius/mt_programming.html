@@ -230,6 +230,78 @@
   </section>
   {% endif %}
 
+  {# ── Q4 — Unprogram (rollback) ───────────────────────── #}
+  <section class="mt-card" data-mt-program-unprogram-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-trash-can"></i>
+          تراجع (إزالة برمجة سابقة)</h3>
+    </header>
+    <div class="mt-card-body">
+      <p class="mt-tab-hint">
+        يبحث عن كل الكائنات التي تحمل comment=hoberadius:{{ _kind }} على
+        الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء
+        من نقطة نظيفة.
+      </p>
+      <form method="post"
+            action="{{ url_for('radius.mt_program_unprogram', nas_id=nas.id) }}"
+            class="mt-program-apply-form"
+            data-mt-program-unprogram-form>
+        <input type="hidden" name="kind" value="{{ _kind }}">
+        <label class="mt-program-confirm">
+          <input type="checkbox" name="confirm" value="1"
+                 data-mt-program-unprogram-confirm>
+          أُؤكّد إزالة كل كائنات hoberadius:{{ _kind }} من هذا الراوتر.
+        </label>
+        <div class="mt-program-actions">
+          <button type="submit"
+                  class="mt-action-btn mt-action-btn--danger"
+                  data-mt-program-unprogram-submit>
+            <i class="fa-solid fa-eraser"></i>
+            تراجع وإزالة
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {% if unprogram_result %}
+  <section class="mt-card" data-mt-program-unprogram-result>
+    <header class="mt-card-head">
+      <h3>
+        <i class="fa-solid fa-{{ 'circle-check' if unprogram_result.ok else 'circle-exclamation' }}"></i>
+        نتيجة الإزالة
+      </h3>
+      <span class="mt-card-meta">
+        {% set _us = unprogram_result.summary() %}
+        <span class="mt-iface-state mt-iface-state--up"
+              data-mt-unprogram-removed>{{ _us.removed }} مُزال</span>
+        <span class="mt-iface-state mt-iface-state--off"
+              data-mt-unprogram-failed>{{ _us.failed }} فشل</span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      {% if unprogram_result.skipped_paths %}
+      <p class="mt-tab-hint">
+        لم نجد كائنات مطابقة في:
+        <code>{{ unprogram_result.skipped_paths|join(', ') }}</code>
+      </p>
+      {% endif %}
+      <ul class="mt-program-summary">
+        {% for step in unprogram_result.steps %}
+        <li>
+          <code>{{ step.path }} .id={{ step.id }}</code> ·
+          {% if step.ok %}
+            <span style="color:#166534">تمت الإزالة</span>
+          {% else %}
+            <span style="color:#991B1B">فشل — {{ step.error }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
   {% if apply_result %}
   <section class="mt-card" data-mt-program-apply-result>
     <header class="mt-card-head">
