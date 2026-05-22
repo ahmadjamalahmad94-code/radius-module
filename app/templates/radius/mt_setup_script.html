@@ -1,0 +1,66 @@
+{# L3 — Setup wizard step 2: copy-paste RouterOS script.
+   Minimal markup. L4 adds the copy-button JS, the syntax-highlighted
+   <pre>, and a step-by-step visual checklist. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}سكربت إعداد {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-code"></i>{% endblock %}
+{% block page_title %}سكربت إعداد {{ nas.name }}{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "السكربت الجاهز للنسخ — " ~ nas.name,
+  subtitle="انسخ السكربت كاملاً والصقه في RouterOS Terminal على " ~ nas.address ~ ". يحتاج 3 ثوانٍ تقريبًا.",
+  icon="code"
+) }}
+
+<section class="mt-setup-script" data-mt-setup-script
+         data-mt-nas-id="{{ nas.id }}">
+
+  <header class="mt-setup-script-head">
+    <div class="mt-setup-script-meta">
+      <span><strong>NAS #{{ nas.id }}</strong></span>
+      <span>RouterOS {{ ros_version }}.x</span>
+      <span>عنوان الراوتر: <code>{{ nas.address }}</code></span>
+      <span>السيرفر: <code>{{ server_ip or '—' }}</code></span>
+    </div>
+  </header>
+
+  <pre class="mt-setup-script-block"
+       data-mt-setup-script-text>{{ script }}</pre>
+
+  <div class="mt-setup-script-actions">
+    <button type="button" class="hub-btn hub-btn--primary"
+            data-mt-setup-copy>
+      <i class="fa-solid fa-copy"></i> نسخ السكربت
+    </button>
+    <a href="{{ dashboard_url }}" class="hub-btn"
+       data-mt-setup-test>
+      <i class="fa-solid fa-bolt"></i> اختبار الاتصال (Dashboard)
+    </a>
+    <a href="{{ url_for('radius.mt_setup_form') }}" class="hub-btn">
+      راوتر آخر
+    </a>
+  </div>
+
+  <ol class="mt-setup-checklist">
+    <li>افتح RouterOS Terminal (WinBox → New Terminal، أو SSH على <code>{{ nas.address }}</code>).</li>
+    <li>اضغط <strong>نسخ السكربت</strong> فوق ثم الصقه في الـ Terminal واضغط Enter.</li>
+    <li>تحقّق من السطر الأخير <code>HobeRadius provisioning done</code>.</li>
+    <li>ارجع هنا واضغط <strong>اختبار الاتصال</strong> — يفتح dashboard الراوتر.</li>
+    <li>لو طلعت 🟢 ”الراوتر متصل” — كل شيء جاهز.</li>
+  </ol>
+
+  <details class="mt-setup-script-warning">
+    <summary>⚠️ تنبيه أمان — اقرأه مرة واحدة</summary>
+    <ul>
+      <li>السكربت يحتوي على <strong>كلمة سرّ API + RADIUS secret</strong>. لا تشارك هذه الصفحة.</li>
+      <li>الـ user <code>{{ nas.api_user }}</code> له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.</li>
+      <li>لتدوير المفاتيح: احذف الـ NAS وأعد المعالج. القديم يبقى في الـ DB لكن لا يُستعمل.</li>
+    </ul>
+  </details>
+</section>
+
+{% endblock %}

@@ -1,0 +1,82 @@
+{# L3 — Setup wizard step 1: form.
+   Minimal markup here; L4 layers on the polished UX (icons, hints,
+   CSS, validation states). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}معالج إضافة راوتر MikroTik{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-magic-wand-sparkles"></i>{% endblock %}
+{% block page_title %}معالج إضافة راوتر MikroTik{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "معالج إضافة راوتر",
+  subtitle="اكتب الاسم والعنوان واختر نسخة RouterOS — النظام يولّد المستخدم وكلمات المرور والسكربت تلقائيًّا",
+  icon="magic-wand-sparkles"
+) }}
+
+<div class="mt-setup-form-wrap" data-mt-setup-form>
+  <form method="POST" action="{{ url_for('radius.mt_setup_create') }}" class="mt-setup-form">
+    {{ csrf_token_input() | safe }}
+    <label class="mt-setup-field">
+      <span class="mt-setup-field-label">اسم الراوتر</span>
+      <input type="text" name="name" required maxlength="64"
+             placeholder="مثال: MT-Office" autofocus>
+      <span class="mt-setup-field-hint">يظهر في لوحة الإدارة فقط.</span>
+    </label>
+
+    <label class="mt-setup-field">
+      <span class="mt-setup-field-label">عنوان الراوتر (IP أو دومين)</span>
+      <input type="text" name="address" required maxlength="128"
+             placeholder="مثال: 192.168.1.1 أو 10.10.0.5">
+      <span class="mt-setup-field-hint">العنوان اللي سيرفر HobeRadius يقدر يوصله. لو الراوتر خلف NAT، استعمل عنوانه عبر VPN.</span>
+    </label>
+
+    <fieldset class="mt-setup-field">
+      <legend class="mt-setup-field-label">نسخة RouterOS</legend>
+      <div class="mt-setup-radios">
+        {% for v in ros_versions %}
+          <label class="mt-setup-radio">
+            <input type="radio" name="ros_version" value="{{ v }}"
+                   {% if v == '7' %}checked{% endif %} required>
+            <span>RouterOS {{ v }}.x</span>
+          </label>
+        {% endfor %}
+      </div>
+      <span class="mt-setup-field-hint">إذا غير متأكّد، اختر 7. السكربت يطلع جاهز للنسخ بعد الحفظ.</span>
+    </fieldset>
+
+    <label class="mt-setup-field">
+      <span class="mt-setup-field-label">عنوان السيرفر (كما يراه الراوتر)</span>
+      <input type="text" name="server_ip" value="{{ default_server_ip }}"
+             placeholder="مثال: 187.77.70.18" maxlength="128">
+      <span class="mt-setup-field-hint">سيُدمج في سكربت RouterOS كـ RADIUS server. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا (مثل عنوان VPN).</span>
+    </label>
+
+    <div class="mt-setup-actions">
+      <button type="submit" class="hub-btn hub-btn--primary">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
+      </button>
+      <a href="{{ url_for('radius.devices_list') }}" class="hub-btn">إلغاء</a>
+    </div>
+  </form>
+
+  <aside class="mt-setup-aside">
+    <h4><i class="fa-solid fa-shield"></i> ما الذي يُولَّد تلقائيًّا؟</h4>
+    <ul>
+      <li>مستخدم API على شكل <code>hr-XXXXXX</code></li>
+      <li>كلمة سرّ API ٣٢ حرفًا عشوائيًّا</li>
+      <li>RADIUS shared secret ٣٢ حرفًا</li>
+      <li>سكربت RouterOS كامل بالقيم المُولَّدة، جاهز للنسخ</li>
+    </ul>
+    <h4><i class="fa-solid fa-list-check"></i> الخطوات بعد الحفظ</h4>
+    <ol>
+      <li>السيرفر يحفظ الصف ويعرض السكربت.</li>
+      <li>تنسخه وتلصقه في RouterOS Terminal.</li>
+      <li>تضغط "اختبار" — يفتح dashboard الراوتر مباشرة.</li>
+    </ol>
+  </aside>
+</div>
+
+{% endblock %}
