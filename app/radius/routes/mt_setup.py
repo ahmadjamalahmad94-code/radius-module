@@ -36,7 +36,9 @@ from ..db.connection import db, transaction
 from ..services.devices import get_nas_devices_service
 from ..services.mt_provisioner import (
     SUPPORTED_ROS_VERSIONS, generate_credentials, render_routeros_script,
+    render_wg_block,
 )
+from ..services import wg_peer_manager as wpm
 
 
 def _tid() -> int:
@@ -138,17 +140,50 @@ def mt_setup_create():
     if not name:
         flash("اكتب اسمًا للراوتر", "error")
         return redirect(url_for("radius.mt_setup_form"))
-    if not address:
-        flash("اكتب عنوان الراوتر (IP)", "error")
-        return redirect(url_for("radius.mt_setup_form"))
     if ros_version not in SUPPORTED_ROS_VERSIONS:
         flash("اختر نسخة RouterOS (6 أو 7)", "error")
         return redirect(url_for("radius.mt_setup_form"))
-    if not server_ip:
-        flash("لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا", "error")
+    # For v6 the operator MUST supply an address — RouterOS 6 has
+    # no native WireGuard, so we can't auto-provision a tunnel.
+    if ros_version == "6" and not address:
+        flash(
+            "RouterOS 6 لا يدعم WireGuard — اكتب عنوان الراوتر (IP) "
+            "للاتصال المباشر",
+            "error",
+        )
+        return redirect(url_for("radius.mt_setup_form"))
+    if ros_version == "7" and not server_ip:
+        flash(
+            "لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا أو اضبط "
+            "HOBERADIUS_PUBLIC_IP",
+            "error",
+        )
         return redirect(url_for("radius.mt_setup_form"))
 
     creds = generate_credentials()
+
+    # Phase M — for RouterOS 7 we auto-provision a WireGuard peer
+    # so the router never needs a public IP. The NAS row records
+    # the tunnel address as its `address`, and HobeRadius dials
+    # the router via that IP (connection_mode='vpn').
+    wg_provision = None
+    if ros_version == "7":
+        try:
+            wg_provision = wpm.provision_peer(name)
+        except ValueError as exc:
+            flash(f"تعذّر تجهيز WireGuard: {exc}", "error")
+            return redirect(url_for("radius.mt_setup_form"))
+        except Exception as exc:  # noqa: BLE001
+            flash(
+                "WG غير مهيّأ على السيرفر بعد — تأكّد أن "
+                "HOBERADIUS_WG_SERVER_PUBKEY و HOBERADIUS_WG_SERVER_ENDPOINT "
+                f"مضبوطين في .env. ({exc})",
+                "error",
+            )
+            return redirect(url_for("radius.mt_setup_form"))
+        # Override the operator-typed address with the WG-allocated one.
+        address = str(wg_provision.allowed_ip)
+
     dev = NasDevice(
         id=None,
         name=name,
@@ -166,12 +201,17 @@ def mt_setup_create():
     try:
         saved = get_nas_devices_service().create(actor=_actor(), device=dev)
     except Exception as exc:  # noqa: BLE001
+        # If we already created a WG peer, roll it back so the IP
+        # is reclaimed.
+        if wg_provision is not None:
+            try:
+                wpm.deprovision_peer(wg_provision.slug)
+            except Exception:
+                pass
         flash(f"فشل إنشاء صف الراوتر: {exc}", "error")
         return redirect(url_for("radius.mt_setup_form"))
 
-    # Backfill L2 columns. The NasDevice dataclass doesn't expose
-    # them today — the service writes the standard fields; we then
-    # add the wizard-specific ones with a direct UPDATE.
+    # Backfill L2 columns + (M2) the K1 VPN columns.
     now = datetime.now(timezone.utc).isoformat() + "Z"
     with transaction() as c:
         c.execute(
@@ -179,6 +219,24 @@ def mt_setup_create():
             "WHERE id=? AND tenant_id=?",
             (ros_version, now, saved.id, _tid()),
         )
+        if wg_provision is not None:
+            c.execute(
+                "UPDATE nas_devices SET connection_mode=?, "
+                "       vpn_peer_address=?, vpn_public_key=? "
+                "WHERE id=? AND tenant_id=?",
+                (
+                    "vpn",
+                    str(wg_provision.allowed_ip),
+                    wg_provision.router_public_key,
+                    saved.id, _tid(),
+                ),
+            )
+
+    # The router's PRIVATE key only exists in this request. It
+    # belongs on the router, never in our DB. Stash it on the
+    # session for the next-page render and delete it after one use.
+    if wg_provision is not None:
+        session[f"_wg_router_priv_{saved.id}"] = wg_provision.router_private_key
 
     return redirect(url_for(
         "radius.mt_setup_script",
@@ -196,21 +254,71 @@ def mt_setup_script(nas_id: int):
     if not row:
         abort(404)
     nas = dict(row)
-    server_ip = (request.args.get("server_ip") or _default_server_ip()).strip()
-    # The wizard always writes a version; legacy rows may have an
-    # empty ros_version. Fall back to v7 (the current default) so
-    # the script page never errors on those edge cases.
     ros_version = (nas.get("ros_version") or "7").strip()
+
+    # Phase M — for v7+VPN rows we render the WG block in front of
+    # the RADIUS commands. The router's private key only lives in
+    # the session for one render (see mt_setup_create), so a
+    # refresh after issuing intentionally gives a "key already
+    # shown — rotate to re-issue" notice rather than re-printing
+    # the secret.
+    wg_block = None
+    wg_priv_revealed = False
+    wg_priv = session.pop(f"_wg_router_priv_{nas_id}", None)
+    is_vpn_row = (nas.get("connection_mode") or "").strip().lower() == "vpn"
+
+    if ros_version == "7" and is_vpn_row:
+        try:
+            cfg = wpm.load_config()
+        except ValueError as exc:
+            flash(
+                f"تعذّر قراءة إعدادات WireGuard من البيئة: {exc}",
+                "error",
+            )
+            return redirect(url_for("radius.mt_setup_form"))
+        if wg_priv:
+            wg_priv_revealed = True
+            wg_block = render_wg_block(
+                nas_name=nas["name"],
+                router_private_key=wg_priv,
+                server_pubkey=cfg.server_pubkey,
+                server_endpoint=cfg.server_endpoint,
+                allowed_subnet=str(cfg.subnet),
+                router_tunnel_ip=f"{nas['address']}/{cfg.subnet.prefixlen}",
+                keepalive_sec=wpm.DEFAULT_KEEPALIVE_SEC,
+                ros_version="7",
+            )
+        # else: no private key in session → leave wg_block None.
+        # The template surfaces a "private key already issued" notice.
+
+    # For the RADIUS half of the script, `server_ip` is what the
+    # router will dial. For VPN rows that's the server's tunnel IP
+    # (10.10.0.1), for direct rows it's the operator-supplied IP
+    # from ?server_ip=… .
+    if is_vpn_row:
+        try:
+            cfg = wpm.load_config()
+            radius_server_ip = str(cfg.server_ip)
+        except ValueError:
+            radius_server_ip = (
+                request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
+            )
+    else:
+        radius_server_ip = (
+            request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
+        )
+
     try:
         script = render_routeros_script(
             nas_name=nas["name"],
             api_user=nas["api_user"],
             api_password=nas["api_password"],
             radius_secret=nas["secret"],
-            server_ip=server_ip or "<SERVER_IP>",
+            server_ip=radius_server_ip,
             ros_version=ros_version,
             api_port=int(nas.get("api_port") or 8728),
             coa_port=int(nas.get("coa_port") or 3799),
+            wg_block=wg_block,
         )
     except ValueError as exc:
         flash(f"تعذّر توليد السكربت: {exc}", "error")
@@ -220,7 +328,9 @@ def mt_setup_script(nas_id: int):
         "radius/mt_setup_script.html",
         nas=nas,
         script=script,
-        server_ip=server_ip,
+        server_ip=radius_server_ip,
         ros_version=ros_version,
+        is_vpn_row=is_vpn_row,
+        wg_priv_revealed=wg_priv_revealed,
         dashboard_url=url_for("radius.mt_dashboard", nas_id=nas["id"]),
     )

@@ -27,10 +27,25 @@
     <div class="mt-setup-script-meta">
       <span><strong>NAS #{{ nas.id }}</strong></span>
       <span>RouterOS {{ ros_version }}.x</span>
-      <span>عنوان الراوتر: <code>{{ nas.address }}</code></span>
+      <span>
+        {% if is_vpn_row %}
+          IP في الـ tunnel: <code>{{ nas.address }}</code>
+          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> WireGuard</span>
+        {% else %}
+          عنوان الراوتر: <code>{{ nas.address }}</code>
+        {% endif %}
+      </span>
       <span>السيرفر: <code>{{ server_ip or '—' }}</code></span>
     </div>
   </header>
+
+  {% if is_vpn_row and not wg_priv_revealed %}
+  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
+    <strong>⚠️ تنبيه:</strong> المفتاح الخاص للراوتر (router private key) تم إصداره مرة واحدة فقط
+    وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته،
+    احذف الراوتر وأعد المعالج لتدوير المفاتيح.
+  </div>
+  {% endif %}
 
   <pre class="mt-setup-script-block"
        data-mt-setup-script-text>{{ script }}</pre>

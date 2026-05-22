@@ -23,13 +23,25 @@ import pytest
 
 
 @pytest.fixture
-def app(monkeypatch):
+def app(monkeypatch, tmp_path):
     tmp = tempfile.mkdtemp(prefix="hr_l3_")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
+    # Phase M — point the WG peer manager at a tmp peers dir so
+    # the wizard's v7 path runs end-to-end without touching the
+    # host's real /etc/hoberadius/wg-peers.d.
+    peers = tmp_path / "wg-peers.d"
+    peers.mkdir()
+    monkeypatch.setenv("HOBERADIUS_WG_PEERS_DIR", str(peers))
+    monkeypatch.setenv("HOBERADIUS_WG_SUBNET", "10.10.0.0/24")
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "10.10.0.1")
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_PUBKEY",
+                        "TestServerPubKey00000000000000000000000000A=")
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT",
+                        "203.0.113.10:51820")
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -115,6 +127,9 @@ def test_form_renders_with_versions_and_default_ip(app, client):
 
 
 def test_post_creates_row_and_redirects(app, client):
+    """Original L3 happy-path test, adjusted for M2: v7 wizard now
+    ignores any operator-typed address and uses the WG-allocated
+    /32 instead (10.10.0.2 = first free in the tmp subnet)."""
     _login(client)
     token = _csrf(client)
     res = client.post(
@@ -122,7 +137,7 @@ def test_post_creates_row_and_redirects(app, client):
         data={
             "_csrf_token": token,
             "name": "MT-Wiz-Test",
-            "address": "10.50.0.1",
+            "address": "10.50.0.1",      # ignored for v7 — WG IP wins
             "ros_version": "7",
             "server_ip": "203.0.113.99",
         },
@@ -130,29 +145,31 @@ def test_post_creates_row_and_redirects(app, client):
     )
     assert res.status_code in {302, 303}
     loc = res.headers.get("Location", "")
-    # Redirects to /mt/<id>/script with the server_ip carried.
     assert "/script" in loc
     assert "server_ip=203.0.113.99" in loc
 
-    # Row was actually written + L2 columns backfilled.
     with app.app_context():
         from app.radius.db.connection import db
         row = db().execute(
             "SELECT name, address, ros_version, provisioned_at, "
-            "       api_user, api_password, secret "
+            "       api_user, api_password, secret, connection_mode "
             "FROM nas_devices WHERE name = 'MT-Wiz-Test'"
         ).fetchone()
     assert row is not None
-    assert row["address"] == "10.50.0.1"
+    # M2: address comes from the WG allocator, NOT the form.
+    assert row["address"] == "10.10.0.2"
+    assert row["connection_mode"] == "vpn"
     assert row["ros_version"] == "7"
-    assert row["provisioned_at"]                     # non-empty timestamp
-    assert row["api_user"].startswith("hr-")         # generated, not blank
+    assert row["provisioned_at"]
+    assert row["api_user"].startswith("hr-")
     assert len(row["api_password"]) == 32
     assert len(row["secret"]) == 32
 
 
-@pytest.mark.parametrize("missing", ["name", "address", "ros_version"])
+@pytest.mark.parametrize("missing", ["name", "ros_version"])
 def test_post_rejects_missing_required(app, client, missing):
+    # M2: `address` is no longer required for v7 (WG auto-allocates).
+    # The v6 case lives in test_v6_wizard_rejects_missing_address.
     _login(client)
     token = _csrf(client)
     data = {
@@ -204,13 +221,13 @@ def _create_via_wizard(client, name="MT-Script-Test"):
 
 
 def test_script_page_renders_with_credentials_inlined(app, client):
+    import html as _html
     _login(client)
     nas_id, loc = _create_via_wizard(client)
     res = client.get(loc)
     assert res.status_code == 200
-    html = res.get_data(as_text=True)
+    body = _html.unescape(res.get_data(as_text=True))
 
-    # Pull the generated creds out of the DB for comparison.
     with app.app_context():
         from app.radius.db.connection import db
         row = db().execute(
@@ -219,14 +236,18 @@ def test_script_page_renders_with_credentials_inlined(app, client):
         ).fetchone()
 
     # Every credential appears verbatim in the rendered script.
-    assert row["api_user"] in html
-    assert row["api_password"] in html
-    assert row["secret"] in html
-    # Server IP from the query string is inlined too.
-    assert "198.51.100.20" in html
-    # And the script contains the canonical RouterOS commands.
-    assert "/radius add" in html
-    assert "/user add" in html
+    assert row["api_user"] in body
+    assert row["api_password"] in body
+    assert row["secret"] in body
+    # M2: for the v7 + VPN flow, the RADIUS block targets the
+    # server's WG-side IP (10.10.0.1 in the test config). The
+    # form's server_ip field is unused on this path — the WG
+    # endpoint comes from HOBERADIUS_WG_SERVER_ENDPOINT.
+    assert "/radius add address=10.10.0.1" in body
+    assert "/user add" in body
+    # The WG block carries the public endpoint from env.
+    assert "203.0.113.10" in body
+    assert "endpoint-port=51820" in body
 
 
 def test_script_page_404_for_unknown_nas(app, client):
@@ -263,13 +284,15 @@ def test_operations_empty_state(app, client):
 
 def test_operations_lists_wizard_provisioned_router(app, client):
     _login(client)
-    # Create a row via the wizard (so it has provisioned_at).
+    # Create a row via the wizard (v7 → WG-allocated 10.10.0.2).
     _, _ = _create_via_wizard(client, name="MT-Ops-Wiz")
     res = client.get("/admin/radius/mt/operations")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert "MT-Ops-Wiz" in html
-    assert "10.20.30.40" in html               # address from wizard
+    # M2: the row's address is now the WG-allocated tunnel IP,
+    # NOT the (ignored) operator-typed 10.20.30.40.
+    assert "10.10.0.2" in html
     assert "معالَج آليًّا" in html              # provisioned_at pill
     assert "RouterOS 7.x" in html               # ros_version cell
 
@@ -289,6 +312,179 @@ def test_operations_sequential_numbering(app, client):
     import re
     nums = re.findall(r'<td class="num">(\d+)</td>', html)
     assert nums[:3] == ["1", "2", "3"]
+
+
+# ─── M2: Wizard auto-provisions WG for v7 ────────────────────────
+
+
+def test_v7_wizard_provisions_wg_peer_and_marks_nas_vpn(app, client, monkeypatch):
+    """Submitting the wizard with ros_version=7 must:
+    • allocate a WG IP (10.10.0.2 — first free after server .1)
+    • write a peers.d/*.conf file
+    • set the NAS row's connection_mode='vpn' + vpn_peer_address
+    • carry the router's private key into the session for the
+      one-shot render on the script page."""
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={
+            "_csrf_token": token,
+            "name": "MT-WG-One",
+            "address": "",            # left blank on purpose for v7
+            "ros_version": "7",
+            "server_ip": "203.0.113.10",
+        },
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+
+    # 1) Peer file exists in the tmp peers.d.
+    peers_dir = os.environ["HOBERADIUS_WG_PEERS_DIR"]
+    peer_path = os.path.join(peers_dir, "MT-WG-One.conf")
+    assert os.path.isfile(peer_path), \
+        f"wizard should have written {peer_path}"
+    body = open(peer_path, encoding="utf-8").read()
+    assert "[Peer]" in body
+    assert "PublicKey =" in body
+    assert "AllowedIPs = 10.10.0.2/32" in body
+
+    # 2) NAS row reflects VPN mode + the WG IP.
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT address, connection_mode, vpn_peer_address, "
+            "       vpn_public_key, ros_version "
+            "FROM nas_devices WHERE name = ?", ("MT-WG-One",),
+        ).fetchone()
+    assert row is not None
+    assert row["address"] == "10.10.0.2"
+    assert row["connection_mode"] == "vpn"
+    assert row["vpn_peer_address"] == "10.10.0.2"
+    assert len(row["vpn_public_key"]) == 44   # base64-encoded x25519 pubkey
+    assert row["ros_version"] == "7"
+
+
+def test_v7_script_page_includes_wg_block_with_private_key(app, client):
+    """The first GET of the script page (right after POST) must
+    render the WG setup commands with the router's private key
+    inlined. A second GET (refresh) must NOT show the key —
+    private keys are issued exactly once."""
+    import html as _html
+    import re
+    _login(client)
+    token = _csrf(client)
+    post_res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-WG-Two",
+              "address": "", "ros_version": "7",
+              "server_ip": "203.0.113.10"},
+        follow_redirects=False,
+    )
+    loc = post_res.headers["Location"]
+
+    first = client.get(loc)
+    assert first.status_code == 200
+    # Jinja autoescapes the rendered script body inside <pre>, so
+    # `"`  appears as `&#34;`. Unescape before searching.
+    body = _html.unescape(first.get_data(as_text=True))
+
+    # WG block present.
+    assert "/interface/wireguard add name=hr-wg" in body
+    assert "/interface/wireguard/peers add" in body
+    assert "203.0.113.10" in body
+    assert "endpoint-port=51820" in body
+    # Router private key (44-char base64) appears exactly once.
+    matches = re.findall(r'private-key="([A-Za-z0-9+/=]{44})"', body)
+    assert len(matches) == 1, body[:600]
+    # Server pubkey appears too.
+    assert "TestServerPubKey00000000000000000000000000A=" in body
+    # RADIUS block uses the server's tunnel IP (10.10.0.1), NOT
+    # the public address.
+    assert "/radius add address=10.10.0.1" in body
+
+    # Refresh: private key gone, warning banner present.
+    second = client.get(loc)
+    assert second.status_code == 200
+    html2 = _html.unescape(second.get_data(as_text=True))
+    assert "تم إصداره مرة واحدة" in html2
+    # No private-key line on refresh.
+    matches2 = re.findall(r'private-key="([A-Za-z0-9+/=]{44})"', html2)
+    assert len(matches2) == 0
+
+
+def test_v6_wizard_skips_wg_and_keeps_direct_mode(app, client):
+    """v6 has no WG support — the wizard must accept an address
+    field, leave connection_mode='direct', and produce a script
+    with NO WG block."""
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-v6-Plain",
+              "address": "192.0.2.50",
+              "ros_version": "6", "server_ip": "203.0.113.10"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT address, connection_mode, vpn_peer_address "
+            "FROM nas_devices WHERE name = ?", ("MT-v6-Plain",),
+        ).fetchone()
+    assert row["address"] == "192.0.2.50"        # operator's IP kept
+    assert row["connection_mode"] == "direct"
+    assert row["vpn_peer_address"] == ""
+
+    # And the rendered script has no WG block.
+    loc = res.headers["Location"]
+    page = client.get(loc)
+    assert "wireguard" not in page.get_data(as_text=True).lower()
+
+
+def test_v6_wizard_rejects_missing_address(app, client):
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-v6-NoIP",
+              "address": "", "ros_version": "6",
+              "server_ip": "203.0.113.10"},
+        follow_redirects=False,
+    )
+    # Back to the form with a flashed error.
+    assert res.status_code in {302, 303}
+    assert "/mt/setup" in res.headers.get("Location", "")
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT 1 FROM nas_devices WHERE name = ?", ("MT-v6-NoIP",),
+        ).fetchone()
+    assert row is None     # no NAS row was created
+
+
+def test_v7_wizard_handles_missing_wg_env_gracefully(app, client, monkeypatch):
+    """If the operator deploys without setting HOBERADIUS_WG_SERVER_PUBKEY,
+    the wizard must error cleanly instead of writing a broken row."""
+    _login(client)
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_PUBKEY", "")
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-NoWG",
+              "address": "", "ros_version": "7",
+              "server_ip": "203.0.113.10"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    assert "/mt/setup" in res.headers.get("Location", "")
+    with app.app_context():
+        from app.radius.db.connection import db
+        assert db().execute(
+            "SELECT 1 FROM nas_devices WHERE name = ?", ("MT-NoWG",),
+        ).fetchone() is None
 
 
 def test_operations_excludes_soft_deleted(app, client):

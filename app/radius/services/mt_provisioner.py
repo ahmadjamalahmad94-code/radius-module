@@ -29,6 +29,7 @@ import secrets
 import string
 from datetime import datetime, timezone
 from typing import Optional
+from typing import Optional
 
 
 # Constants chosen to balance entropy against RouterOS field
@@ -81,6 +82,7 @@ def render_routeros_script(
     ros_version: str,
     api_port: int = 8728,
     coa_port: int = 3799,
+    wg_block: Optional[str] = None,
 ) -> str:
     """Build the copy-paste RouterOS script for one router.
 
@@ -115,7 +117,7 @@ def render_routeros_script(
     else:
         body = _SCRIPT_TEMPLATE_V6
 
-    return body.format(
+    rendered = body.format(
         nas_name=nas_name,
         api_user=api_user,
         api_password=api_password,
@@ -125,6 +127,78 @@ def render_routeros_script(
         coa_port=coa_port,
         generated_at=now,
     )
+    if wg_block:
+        # Prepend so the WG tunnel comes up BEFORE the router tries
+        # to reach the RADIUS server through it (the rest of the
+        # script uses server_ip which is the WG-side IP).
+        rendered = wg_block.rstrip() + "\n\n" + rendered
+    return rendered
+
+
+def render_wg_block(
+    *,
+    nas_name: str,
+    router_private_key: str,
+    server_pubkey: str,
+    server_endpoint: str,
+    allowed_subnet: str,
+    router_tunnel_ip: str,
+    keepalive_sec: int = 25,
+    wg_iface: str = "hr-wg",
+    ros_version: str = "7",
+) -> str:
+    """RouterOS-side WireGuard setup block.
+
+    Only meaningful for RouterOS 7+ — v6 has no native WireGuard
+    support, so callers must NOT render this for ros_version='6'.
+    Raises ValueError in that case so a downstream bug surfaces
+    early instead of producing a no-op script.
+    """
+    if ros_version != "7":
+        raise ValueError(
+            f"WireGuard block requires RouterOS 7+, got {ros_version!r}"
+        )
+    if not router_private_key or not server_pubkey or not server_endpoint:
+        raise ValueError("WireGuard block needs full credentials")
+    # Endpoint is `host:port`. Split for RouterOS's separate args.
+    if ":" not in server_endpoint:
+        raise ValueError(
+            f"server_endpoint must be host:port — got {server_endpoint!r}"
+        )
+    host, _, port = server_endpoint.rpartition(":")
+    if not port.isdigit():
+        raise ValueError(
+            f"server_endpoint port must be numeric — got {server_endpoint!r}"
+        )
+
+    return _WG_BLOCK_TEMPLATE_V7.format(
+        nas_name=nas_name,
+        wg_iface=wg_iface,
+        router_private_key=router_private_key,
+        server_pubkey=server_pubkey,
+        endpoint_host=host,
+        endpoint_port=port,
+        allowed_subnet=allowed_subnet,
+        router_tunnel_ip=router_tunnel_ip,
+        keepalive_sec=keepalive_sec,
+    )
+
+
+_WG_BLOCK_TEMPLATE_V7 = """# ── WireGuard tunnel (RouterOS 7+) ─────────────────────────────
+# 0a) Create the WG interface with the router-side private key.
+/interface/wireguard add name={wg_iface} private-key="{router_private_key}" \\
+    comment="HobeRadius tunnel for {nas_name}"
+
+# 0b) Add HobeRadius (the VPS) as the only peer.
+/interface/wireguard/peers add interface={wg_iface} \\
+    public-key="{server_pubkey}" \\
+    endpoint-address={endpoint_host} endpoint-port={endpoint_port} \\
+    allowed-address={allowed_subnet} \\
+    persistent-keepalive={keepalive_sec}s
+
+# 0c) Bind the tunnel IP that HobeRadius allocated for this router.
+/ip/address add interface={wg_iface} address={router_tunnel_ip}
+"""
 
 
 # ─── Script templates ────────────────────────────────────────────
@@ -189,5 +263,6 @@ _SCRIPT_TEMPLATE_V6 = """# HobeRadius — auto-provisioning script (RouterOS 6.x
 __all__ = [
     "generate_credentials",
     "render_routeros_script",
+    "render_wg_block",
     "SUPPORTED_ROS_VERSIONS",
 ]

@@ -30,11 +30,16 @@
       <span class="mt-setup-field-hint">يظهر في لوحة الإدارة فقط.</span>
     </label>
 
-    <label class="mt-setup-field">
+    <label class="mt-setup-field" data-mt-address-field>
       <span class="mt-setup-field-label">عنوان الراوتر (IP أو دومين)</span>
-      <input type="text" name="address" required maxlength="128"
-             placeholder="مثال: 192.168.1.1 أو 10.10.0.5">
-      <span class="mt-setup-field-hint">العنوان اللي سيرفر HobeRadius يقدر يوصله. لو الراوتر خلف NAT، استعمل عنوانه عبر VPN.</span>
+      <input type="text" name="address" maxlength="128"
+             placeholder="مثال: 192.168.1.1">
+      <span class="mt-setup-field-hint" data-mt-address-hint-v7>
+        <strong>RouterOS 7:</strong> يُولَّد تلقائيًّا عبر WireGuard — اتركه فارغًا.
+      </span>
+      <span class="mt-setup-field-hint" data-mt-address-hint-v6 hidden>
+        <strong>RouterOS 6:</strong> مطلوب — لا يدعم WireGuard، نحتاج IP مباشر للوصول.
+      </span>
     </label>
 
     <fieldset class="mt-setup-field">
@@ -72,15 +77,38 @@
       <li>مستخدم API على شكل <code>hr-XXXXXX</code></li>
       <li>كلمة سرّ API ٣٢ حرفًا عشوائيًّا</li>
       <li>RADIUS shared secret ٣٢ حرفًا</li>
+      <li><strong>WireGuard peer + IP داخل الـ tunnel</strong> (لـ RouterOS 7)</li>
       <li>سكربت RouterOS كامل بالقيم المُولَّدة، جاهز للنسخ</li>
     </ul>
     <h4><i class="fa-solid fa-list-check"></i> الخطوات بعد الحفظ</h4>
     <ol>
-      <li>السيرفر يحفظ الصف ويعرض السكربت.</li>
-      <li>تنسخه وتلصقه في RouterOS Terminal.</li>
-      <li>تضغط "اختبار" — يفتح dashboard الراوتر مباشرة.</li>
+      <li>السيرفر يحفظ الصف + يضيف WG peer (v7).</li>
+      <li>تنسخ السكربت وتلصقه في RouterOS Terminal.</li>
+      <li>الراوتر يتّصل بـ WG خلال ثوانٍ + يبدأ RADIUS.</li>
+      <li>تضغط "اختبار" — يفتح dashboard الراوتر.</li>
     </ol>
   </aside>
 </div>
+
+<script>
+// Toggle the address field's hint + required attribute based on
+// RouterOS version. v7 = WG-allocated, address field optional;
+// v6 = direct connection, address field required.
+(function () {
+  const radios = document.querySelectorAll('input[name="ros_version"]');
+  const addrInput = document.querySelector('[data-mt-address-field] input[name="address"]');
+  const hintV7 = document.querySelector('[data-mt-address-hint-v7]');
+  const hintV6 = document.querySelector('[data-mt-address-hint-v6]');
+  function apply() {
+    const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
+    const isV7 = v === "7";
+    if (addrInput) addrInput.required = !isV7;
+    if (hintV7) hintV7.hidden = !isV7;
+    if (hintV6) hintV6.hidden = isV7;
+  }
+  radios.forEach(r => r.addEventListener("change", apply));
+  apply();
+})();
+</script>
 
 {% endblock %}
