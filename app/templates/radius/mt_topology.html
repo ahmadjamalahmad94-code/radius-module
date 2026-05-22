@@ -47,6 +47,17 @@
             </select>
           </label>
           <label class="mt-program-field">
+            <span>الصحة</span>
+            <select name="health" data-mt-topology-health>
+              <option value="all"       {% if health == 'all'       %}selected{% endif %}>الكل</option>
+              <option value="healthy"   {% if health == 'healthy'   %}selected{% endif %}>سليم</option>
+              <option value="attention" {% if health == 'attention' %}selected{% endif %}>يحتاج انتباه</option>
+              <option value="risky"     {% if health == 'risky'     %}selected{% endif %}>خطر</option>
+              <option value="offline"   {% if health == 'offline'   %}selected{% endif %}>غير متصل</option>
+              <option value="unknown"   {% if health == 'unknown'   %}selected{% endif %}>غير معروف</option>
+            </select>
+          </label>
+          <label class="mt-program-field">
             <span>بحث</span>
             <input type="text" name="q"
                    value="{{ q }}"
@@ -95,7 +106,9 @@
            href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
            data-mt-topology-node="{{ r.id }}"
            data-mt-topology-status="{{ r.status }}"
-           data-mt-topology-mode="{{ r.connection_mode }}">
+           data-mt-topology-mode="{{ r.connection_mode }}"
+           data-mt-topology-health="{{ r.health_state or 'unknown' }}"
+           data-mt-topology-health-score="{{ r.health_score }}">
           {% if r.connection_mode == 'vpn' %}
           <i class="fa-solid fa-shield-halved"></i>
           {% else %}
@@ -117,6 +130,25 @@
             {% elif r.connection_mode == 'direct' %}اتصال مباشر
             {% else %}—{% endif %}
             {% if r.address %} · <code>{{ r.address }}</code>{% endif %}
+            {% if r.health_state %}
+              ·
+              {% if r.health_state == 'healthy' %}
+                <span class="mt-iface-state mt-iface-state--up"
+                      data-mt-topology-health-chip>سليم</span>
+              {% elif r.health_state == 'attention' %}
+                <span class="mt-iface-state mt-iface-state--down"
+                      data-mt-topology-health-chip>يحتاج انتباه</span>
+              {% elif r.health_state == 'risky' %}
+                <span class="mt-iface-state mt-iface-state--off"
+                      data-mt-topology-health-chip>خطر</span>
+              {% elif r.health_state == 'offline' %}
+                <span class="mt-iface-state mt-iface-state--off"
+                      data-mt-topology-health-chip>غير متصل</span>
+              {% else %}
+                <span class="mt-iface-state mt-iface-state--down"
+                      data-mt-topology-health-chip>غير معروف</span>
+              {% endif %}
+            {% endif %}
           </span>
         </a>
         {% endfor %}

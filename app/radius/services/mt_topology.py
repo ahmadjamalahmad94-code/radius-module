@@ -31,6 +31,10 @@ class TopologyNode:
     address: str = ""           # public/private address (never a secret)
     vpn_peer_address: str = ""  # tunnel endpoint when connection_mode=vpn
     risk: str = ""              # optional flag (e.g. from S6 alerts)
+    # O10 — operations-view overlay. Populated by overlay_health.
+    health_state: str = ""      # "" | healthy | attention | risky | offline | unknown
+    health_score: int = 0       # 0..100, 0 when no overlay applied
+    health_signal: str = ""     # short reason code (e.g. "no_data")
     meta: dict[str, Any] = field(default_factory=dict)
 
 
@@ -64,7 +68,9 @@ class Topology:
 _ALLOWED_NODE_KEYS = (
     "kind", "id", "label", "status",
     "connection_mode", "address",
-    "vpn_peer_address", "risk", "meta",
+    "vpn_peer_address", "risk",
+    "health_state", "health_score", "health_signal",
+    "meta",
 )
 
 
@@ -128,6 +134,37 @@ def build_topology(tenant_id: int) -> Topology:
     return Topology(server=server, routers=routers, links=links)
 
 
+def overlay_health(
+    topo: Topology,
+    healths: dict[str, dict[str, Any]] | None,
+) -> Topology:
+    """O10 hook — decorate router nodes with health state from
+    the O2 health scorer.
+
+    Callers pass `{router_id: {"state": str, "score": int,
+    "signal": str}}`. Unknown router_ids are skipped silently.
+
+    Pure function. Idempotent. Safe to call with `None` — it
+    returns the topology unchanged so the topology view stays
+    usable when health computation is unavailable.
+    """
+    if not healths:
+        return topo
+    updated = []
+    for n in topo.routers:
+        h = healths.get(n.id)
+        if h:
+            n.health_state = str(h.get("state") or "")
+            try:
+                n.health_score = int(h.get("score") or 0)
+            except (TypeError, ValueError):
+                n.health_score = 0
+            n.health_signal = str(h.get("signal") or "")
+        updated.append(n)
+    topo.routers = updated
+    return topo
+
+
 def overlay_snapshots(
     topo: Topology,
     snapshots: dict[str, dict[str, Any]] | None,
@@ -157,5 +194,5 @@ def overlay_snapshots(
 
 __all__ = [
     "TopologyNode", "TopologyLink", "Topology",
-    "build_topology", "overlay_snapshots",
+    "build_topology", "overlay_snapshots", "overlay_health",
 ]
