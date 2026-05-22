@@ -248,6 +248,10 @@ def test_script_page_renders_with_credentials_inlined(app, client):
     # The WG block carries the public endpoint from env.
     assert "203.0.113.10" in body
     assert "endpoint-port=51820" in body
+    # M3 — the script locks the API service to the WG subnet so
+    # newly-provisioned routers don't inherit a stale address
+    # restriction from earlier experiments.
+    assert "/ip service set api address=10.10.0.0/24" in body
 
 
 def test_script_page_404_for_unknown_nas(app, client):

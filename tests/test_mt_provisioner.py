@@ -127,3 +127,24 @@ def test_render_script_rejects_missing_server_ip(sample_args):
 def test_supported_versions_constant():
     """Pin the supported set; bumping it is a deliberate edit."""
     assert p.SUPPORTED_ROS_VERSIONS == ("6", "7")
+
+
+def test_render_script_omits_api_address_line_by_default(sample_args):
+    out = p.render_routeros_script(ros_version="7", **sample_args)
+    # No `set api address=` directive when the caller doesn't ask.
+    assert "set api address=" not in out
+
+
+def test_render_script_includes_api_address_line_when_supplied(sample_args):
+    """M3 — locks the API service to a single subnet. The wizard
+    passes the WG subnet so the API is reachable only over the
+    tunnel."""
+    out = p.render_routeros_script(
+        ros_version="7", api_allowed_address="10.10.0.0/24", **sample_args,
+    )
+    assert "/ip service set api address=10.10.0.0/24" in out
+    # Should sit AFTER the `set api disabled=no` line (order matters
+    # for RouterOS — the address must be set on an enabled service).
+    enabled_idx = out.index("set api disabled=no")
+    address_idx = out.index("set api address=10.10.0.0/24")
+    assert address_idx > enabled_idx

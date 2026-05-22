@@ -83,6 +83,7 @@ def render_routeros_script(
     api_port: int = 8728,
     coa_port: int = 3799,
     wg_block: Optional[str] = None,
+    api_allowed_address: Optional[str] = None,
 ) -> str:
     """Build the copy-paste RouterOS script for one router.
 
@@ -117,6 +118,16 @@ def render_routeros_script(
     else:
         body = _SCRIPT_TEMPLATE_V6
 
+    # If the caller wants the API exposed only on a specific
+    # subnet (typical for VPN-mode routers: lock it to the WG
+    # tunnel), emit the extra `set api address=` line; otherwise
+    # leave the API open to every interface (the legacy default).
+    api_address_line = ""
+    if api_allowed_address:
+        api_address_line = (
+            f"/ip service set api address={api_allowed_address}"
+        )
+
     rendered = body.format(
         nas_name=nas_name,
         api_user=api_user,
@@ -126,6 +137,7 @@ def render_routeros_script(
         api_port=api_port,
         coa_port=coa_port,
         generated_at=now,
+        api_address_line=api_address_line,
     )
     if wg_block:
         # Prepend so the WG tunnel comes up BEFORE the router tries
@@ -215,6 +227,7 @@ _SCRIPT_TEMPLATE_V7 = """# HobeRadius — auto-provisioning script (RouterOS 7.x
 
 # 2) Enable RouterOS API on the standard port.
 /ip service set api disabled=no port={api_port}
+{api_address_line}
 
 # 3) Point RADIUS at this HobeRadius instance.
 /radius add address={server_ip} service=hotspot,ppp,login \\
@@ -243,6 +256,7 @@ _SCRIPT_TEMPLATE_V6 = """# HobeRadius — auto-provisioning script (RouterOS 6.x
 
 # 2) Enable RouterOS API on the standard port.
 /ip service set api disabled=no port={api_port}
+{api_address_line}
 
 # 3) Point RADIUS at this HobeRadius instance.
 /radius add address={server_ip} service=hotspot,ppp,login \\

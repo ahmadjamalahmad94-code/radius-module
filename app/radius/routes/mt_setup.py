@@ -308,6 +308,15 @@ def mt_setup_script(nas_id: int):
             request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
         )
 
+    # For VPN rows, lock the router's API service to the WG subnet
+    # so the API can't be reached from the LAN/public interfaces.
+    # Direct-mode rows leave it open (operator firewalls as needed).
+    api_allowed_address = None
+    if is_vpn_row:
+        try:
+            api_allowed_address = str(wpm.load_config().subnet)
+        except ValueError:
+            api_allowed_address = None
     try:
         script = render_routeros_script(
             nas_name=nas["name"],
@@ -319,6 +328,7 @@ def mt_setup_script(nas_id: int):
             api_port=int(nas.get("api_port") or 8728),
             coa_port=int(nas.get("coa_port") or 3799),
             wg_block=wg_block,
+            api_allowed_address=api_allowed_address,
         )
     except ValueError as exc:
         flash(f"تعذّر توليد السكربت: {exc}", "error")
