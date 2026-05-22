@@ -183,6 +183,15 @@ def _alert_counts(tenant_id: int, nas_id: int) -> dict[str, int]:
                                   router_id=int(nas_id))
     counts = {"critical": 0, "warning": 0, "info": 0}
     for r in rows:
+        # Auto-generated alerts (rule="auto.*") are derivative
+        # — they surface problems already counted elsewhere in
+        # the overview (missing backup, stale snapshot, etc.)
+        # so excluding them here prevents the O9 generator's
+        # output from re-feeding into the alert-count problems
+        # on subsequent passes.
+        rule = (r.get("rule") or "").strip().lower()
+        if rule.startswith("auto."):
+            continue
         sev = (r.get("severity") or "info").strip().lower()
         if sev in counts:
             counts[sev] += 1
