@@ -770,50 +770,6 @@ def finish_print_job(
     return get_print_job(tenant_id, job_id) or {}
 
 
-def update_print_job(
-    tenant_id: int,
-    job_id: int,
-    *,
-    status: str | None = None,
-    card_count: int | None = None,
-    file_name: str | None = None,
-    message: str | None = None,
-    metadata: dict | None = None,
-    completed: bool = False,
-) -> dict:
-    current = get_print_job(tenant_id, job_id)
-    if not current:
-        return {}
-    next_metadata = current.get("metadata_json") if isinstance(current.get("metadata_json"), dict) else {}
-    if metadata:
-        next_metadata.update(metadata)
-    now = now_iso()
-    with transaction() as conn:
-        conn.execute(
-            """
-            UPDATE print_jobs
-            SET status = ?,
-                card_count = ?,
-                file_name = ?,
-                message = ?,
-                metadata_json = ?,
-                completed_at = ?
-            WHERE tenant_id = ? AND id = ?
-            """,
-            (
-                status if status is not None else current.get("status"),
-                int(card_count if card_count is not None else current.get("card_count") or 0),
-                file_name if file_name is not None else current.get("file_name") or "",
-                message if message is not None else current.get("message") or "",
-                _json(next_metadata, {}),
-                now if completed else current.get("completed_at"),
-                tenant_id,
-                job_id,
-            ),
-        )
-    return get_print_job(tenant_id, job_id) or {}
-
-
 def get_print_job(tenant_id: int, job_id: int) -> Optional[dict]:
     row = db().execute(
         "SELECT * FROM print_jobs WHERE tenant_id = ? AND id = ?",

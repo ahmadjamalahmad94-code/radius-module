@@ -28,74 +28,15 @@
   .pr-pane{display:none}.pr-pane.is-active{display:block}
   .pr-form{display:grid;gap:12px}.pr-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .pr-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-  .pr-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-  @media(max-width:720px){.pr-grid2,.pr-grid3,.pr-grid4{grid-template-columns:1fr}}
+  @media(max-width:720px){.pr-grid2,.pr-grid3{grid-template-columns:1fr}}
   .pr-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:var(--hub-text-soft)}
   .pr-field small{font-weight:700;color:var(--hub-text-mute);line-height:1.6}
   .pr-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   .pr-check{display:flex;align-items:center;gap:8px;border:1px solid var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-soft);padding:9px;font-size:12px;font-weight:900}
   .pr-check input{width:16px;height:16px;accent-color:var(--pr-cyan)}
-  .pr-engine-card{border:1px solid rgba(34,167,189,.28);background:linear-gradient(135deg,rgba(34,167,189,.08),rgba(124,58,237,.07));border-radius:14px;padding:12px;display:grid;gap:8px}
-  .pr-engine-card small{font-weight:800;color:var(--hub-text-mute);line-height:1.7}
-  .pr-engine-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-  .pr-engine-head strong{font-size:14px;color:var(--hub-text);font-weight:950}
-  .pr-engine-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
-  .pr-engine-options{display:grid;grid-template-columns:repeat(4,minmax(72px,1fr));gap:8px}
-  @media(max-width:520px){.pr-engine-options{gap:6px}.pr-engine-option{padding:8px 6px;min-height:70px}.pr-engine-mini{height:20px}.pr-engine-mini.is-vertical{width:26px;height:34px}.pr-engine-option span{font-size:10px}.pr-engine-option em{font-size:9px}}
-  .pr-engine-option{border:1px solid rgba(148,163,184,.35);background:#fff;border-radius:14px;padding:10px 8px;display:grid;place-items:center;gap:7px;min-height:76px;cursor:pointer;text-align:center;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
-  .pr-engine-option:hover,.pr-engine-option.is-selected{border-color:rgba(34,167,189,.8);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
-  .pr-engine-option.is-selected{outline:2px solid rgba(34,167,189,.18)}
-  .pr-engine-mini{width:100%;height:26px;border-radius:10px;background:linear-gradient(135deg,#0f172a,#22a7bd);position:relative;overflow:hidden;justify-self:center}
-  .pr-engine-mini::before{content:"";position:absolute;inset:6px auto auto 8px;width:42%;height:5px;border-radius:999px;background:#f59e0b}
-  .pr-engine-mini::after{content:"";position:absolute;right:9px;bottom:6px;width:26%;height:8px;border-radius:4px;background:#e8f7fb}
-  .pr-engine-mini.is-rtl::after{right:auto;left:9px}
-  .pr-engine-mini.is-vertical{width:32px;height:42px;justify-self:center}
-  .pr-engine-option span{font-size:12px;color:var(--hub-text);font-weight:950}
-  .pr-engine-option em{font-style:normal;font-size:10px;color:var(--hub-text-mute);font-weight:800}
-  .pr-engine-select-field{display:none!important}
-  .pr-design-source{border:1px solid rgba(34,167,189,.22);border-radius:14px;background:#fff;padding:12px;display:grid;gap:10px}
-  .pr-design-source-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-  .pr-design-source-head strong{font-size:14px;color:var(--hub-text);font-weight:950}
-  .pr-design-source-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
-  .pr-design-source-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-  @media(max-width:520px){.pr-design-source-options{grid-template-columns:1fr}}
-  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
-  .pr-design-source-option:hover,.pr-design-source-option.is-selected{border-color:rgba(34,167,189,.76);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
-  .pr-design-source-option.is-selected{outline:2px solid rgba(34,167,189,.18);background:#fff}
-  .pr-design-source-option i{width:38px;height:38px;border-radius:12px;background:rgba(34,167,189,.12);color:var(--pr-cyan);display:grid;place-items:center;font-size:18px}
-  .pr-design-source-option span{display:block;font-size:13px;font-weight:950;color:var(--hub-text)}
-  .pr-design-source-option em{display:block;font-style:normal;font-size:11px;font-weight:800;color:var(--hub-text-mute);line-height:1.55}
-  .pr-design-source-select-field{display:none!important}
-  .pr-form[data-design-source="image"] [data-system-design-only]{display:none!important}
-  .pr-form[data-design-source="preset"] [data-upload-design-only]{display:none!important}
-  .pr-layer-card{border:1px solid rgba(148,163,184,.22);border-radius:14px;background:linear-gradient(135deg,rgba(248,250,252,.95),rgba(236,254,255,.72));padding:12px;display:grid;gap:10px}
-  .pr-layer-card h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;display:flex;align-items:center;gap:8px}
-  .pr-layer-card h4 i{color:var(--pr-cyan)}
-  .pr-layer-note{margin:0;color:var(--hub-text-mute);font-size:11px;font-weight:800;line-height:1.7}
-  .pr-control-stack{display:grid;gap:12px;margin-top:12px}
-  .pr-control-section{border:1px solid rgba(148,163,184,.24);border-radius:16px;background:#fff;padding:13px;box-shadow:0 12px 28px rgba(15,23,42,.05);display:grid;gap:12px}
-  .pr-control-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(148,163,184,.18);padding-bottom:9px}
-  .pr-control-section-head h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;display:flex;align-items:center;gap:8px}
-  .pr-control-section-head h4 i{color:var(--pr-cyan)}
-  .pr-control-section-head small{font-size:11px;font-weight:800;color:var(--hub-text-mute);line-height:1.5;text-align:left}
-  .pr-slider-field{display:grid;gap:8px;color:var(--hub-text-soft);font-size:12px;font-weight:900}
-  .pr-slider-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .pr-slider-value{display:inline-flex;align-items:center;justify-content:center;min-width:62px;border-radius:999px;background:linear-gradient(135deg,rgba(34,167,189,.12),rgba(124,58,237,.10));color:var(--hub-text);font-weight:950;font-size:11px;padding:4px 8px;border:1px solid rgba(34,167,189,.22)}
-  .pr-range{width:100%;accent-color:var(--pr-cyan);cursor:pointer}
-  .pr-range::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,rgba(34,167,189,.22),rgba(15,23,42,.10))}
-  .pr-range::-webkit-slider-thumb{margin-top:-5px;width:18px;height:18px;border-radius:50%;background:var(--pr-cyan);border:3px solid #fff;box-shadow:0 6px 14px rgba(15,23,42,.22)}
-  .pr-range::-moz-range-track{height:8px;border-radius:999px;background:linear-gradient(90deg,rgba(34,167,189,.22),rgba(15,23,42,.10))}
-  .pr-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--pr-cyan);border:3px solid #fff;box-shadow:0 6px 14px rgba(15,23,42,.22)}
-  .pr-preset-picker{display:grid;gap:10px}
-  .pr-preset-picker-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-  .pr-preset-picker-head strong{font-size:14px;color:var(--hub-text);font-weight:950}
-  .pr-preset-picker-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
-  .pr-preset-select-field{display:none!important}
   .pr-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
   @media(max-width:680px){.pr-presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .pr-preset{border:1px solid var(--hub-border-soft);border-radius:14px;min-height:82px;padding:10px;cursor:pointer;background:#fff;text-align:right;transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease}
-  .pr-preset:hover,.pr-preset.is-selected{border-color:rgba(34,167,189,.75);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
-  .pr-preset.is-selected{outline:2px solid rgba(34,167,189,.18)}
+  .pr-preset{border:1px solid var(--hub-border-soft);border-radius:14px;min-height:82px;padding:10px;cursor:pointer;background:#fff;text-align:right}
   .pr-preset .sw{height:34px;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.4)}
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
   .pr-stage{position:sticky;top:92px}
@@ -140,57 +81,23 @@
   .pr-canvas-wrap{
     background:linear-gradient(180deg,#f8fafc,#eef7fb);
     padding:22px;border-radius:0 0 16px 16px;
-    width:100%;max-width:640px;
-    height:clamp(340px, calc(100vh - 240px), 560px);
-    box-sizing:border-box;
+    width:100%;max-width:540px;
+    height:min(520px, 64vh);
     margin:0 auto;
-    position:relative;
-    overflow:hidden;
+    display:grid;place-items:center;
   }
-  .pr-svg-stage{
-    position:absolute;inset:22px;
-    width:auto;height:auto;min-width:0;min-height:0;
-    display:flex;align-items:center;justify-content:center;
-    overflow:visible;
-  }
+  .pr-svg-stage{width:100%;height:100%;display:grid;place-items:center}
   .pr-svg-mount{
-    width:100%;
-    max-width:100%;
-    height:auto;
-    max-height:100%;
-    aspect-ratio:5/3;
-    flex:0 0 auto;
+    width:100%;height:100%;
     display:flex;align-items:center;justify-content:center;
     transition:filter .15s ease;
   }
-  .pr-svg-mount.is-horizontal{
-    width:calc(100% - 28px);
-    height:auto;
-    aspect-ratio:5/3;
-  }
-  .pr-svg-mount.is-vertical{
-    width:auto;
-    height:min(360px, 100%);
-    max-width:100%;
-    max-height:100%;
-    aspect-ratio:3/5;
-  }
   .pr-svg-mount.is-loading{filter:opacity(.55)}
-  .pr-svg-mount > svg{
-    width:100%!important;height:100%!important;
-    max-width:100%;max-height:100%;
-    display:block;filter:drop-shadow(0 18px 38px rgba(15,23,42,.2));
-  }
-  .pr-field:has([name="card_orientation"]),
-  .pr-field:has([name="text_direction"]),
-  .pr-field:has([name="credential_label_language"]){display:none}
+  .pr-svg-mount > svg{width:auto;height:auto;max-width:100%;max-height:100%;display:block;filter:drop-shadow(0 18px 38px rgba(15,23,42,.2))}
   .pr-svg-empty{
     display:flex;flex-direction:column;align-items:center;gap:8px;
     color:var(--hub-text-mute);font-weight:800;font-size:13px;
-    text-align:center;line-height:1.6;padding:14px 16px;border-radius:14px;
   }
-  .pr-svg-empty.is-error{color:#991b1b;background:#fff1f2;border:1px solid #fecdd3}
-  .pr-svg-empty.is-error i{color:#dc2626;opacity:.8}
   .pr-svg-empty i{font-size:22px;color:var(--hub-text-mute);opacity:.5}
   /* Draggable SVG groups — pointer-events stay enabled on USER/PASS/QR
      so the JS can attach pointerdown listeners after each fetch. */
@@ -198,6 +105,8 @@
   .pr-svg-mount svg .card-qr{cursor:grab;touch-action:none;user-select:none}
   .pr-svg-mount svg .card-pill:active,
   .pr-svg-mount svg .card-qr:active{cursor:grabbing}
+  .pr-svg-empty{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--hub-text-mute);font-weight:800;font-size:13px}
+  .pr-svg-empty i{font-size:22px;opacity:.5}
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
@@ -299,9 +208,6 @@
   .pr-export-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
   .pr-export-card strong{color:var(--hub-text);font-weight:950}
   .pr-export-card small{color:var(--hub-text-mute);font-weight:800;line-height:1.5}
-  .pr-export-sheet-settings{border:1px solid rgba(34,167,189,.24);border-radius:14px;background:linear-gradient(135deg,rgba(34,167,189,.08),rgba(124,58,237,.06));padding:12px;display:grid;gap:10px}
-  .pr-export-sheet-settings .pr-export-card-head strong{color:var(--hub-text);font-weight:950}
-  .pr-export-sheet-settings .pr-export-card-head small{color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
   .pr-export-actions{display:flex;flex-wrap:wrap;gap:8px}
   .pr-export-room{border:1px solid rgba(34,167,189,.22);box-shadow:0 18px 44px rgba(15,23,42,.08)}
   .pr-export-chooser{display:grid;grid-template-columns:minmax(240px,.9fr) minmax(0,1.1fr);gap:14px;align-items:start}
@@ -320,9 +226,9 @@
   .pr-template-card p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.55}
   .pr-template-card.is-selected{outline:3px solid rgba(34,167,189,.32);border-color:rgba(34,167,189,.7)}
   .pr-export-note{border:1px dashed rgba(34,167,189,.35);background:rgba(34,167,189,.08);border-radius:14px;padding:11px;color:var(--hub-text-soft);font-size:12px;font-weight:800;line-height:1.7}
-  /* Export room: setup + preview. Saved templates now open in a modal picker. */
-  .pr-export-room-shell{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(420px,1.35fr);gap:14px;align-items:start;margin-top:8px}
-  @media(max-width:1180px){.pr-export-room-shell{grid-template-columns:minmax(260px,.9fr) minmax(0,1.35fr)}}
+  /* J3-commit3 — 3-column export room (left: batch+overrides, center: live preview, right: template chips) */
+  .pr-export-room-shell{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.3fr) minmax(220px,.7fr);gap:14px;align-items:start;margin-top:8px}
+  @media(max-width:1180px){.pr-export-room-shell{grid-template-columns:minmax(260px,.85fr) minmax(0,1.4fr)}.pr-export-room-shell .pr-chip-list-panel{grid-column:1 / -1}}
   @media(max-width:820px){.pr-export-room-shell{grid-template-columns:1fr}}
   .pr-export-room-shell .export-panel,
   .pr-export-room-shell .pr-panel{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}
@@ -331,7 +237,6 @@
   .pr-export-progress.is-active{display:grid;gap:9px}
   .pr-progress-track{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
   .pr-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#22a7bd,#0f172a);border-radius:999px;transition:width .25s ease}
-  .pr-progress-detail{display:block;color:var(--hub-text-mute);font-weight:900;line-height:1.6}
   .pr-progress-steps{display:grid;gap:6px;font-size:12px;font-weight:900;color:var(--hub-text-soft)}
   .pr-progress-step{display:flex;align-items:center;gap:8px;opacity:.48}
   .pr-progress-step.is-active,.pr-progress-step.is-done{opacity:1}.pr-progress-step.is-done{color:#15803d}
@@ -383,24 +288,6 @@
   .pr-star-btn.is-default i.fa-star{font-weight:900}
   .pr-chip.is-default{box-shadow:inset 0 0 0 1px #f59e0b}
   .pr-default-pill{display:inline-flex;align-items:center;gap:4px;color:#b45309;background:#fff7e6;border:1px solid #f59e0b;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:900}
-
-  .pr-template-picker-card{border:1px solid rgba(34,167,189,.24);border-radius:14px;background:linear-gradient(135deg,rgba(34,167,189,.08),rgba(124,58,237,.06));padding:12px;display:grid;gap:10px}
-  .pr-template-picker-card strong{color:var(--hub-text);font-weight:950}.pr-template-picker-card small{color:var(--hub-text-mute);font-weight:800;line-height:1.6}
-  .pr-selected-template{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-card);padding:10px}
-  .pr-selected-template .pr-chip-swatch{width:58px;height:40px}.pr-selected-template strong{display:block;color:var(--hub-text);font-weight:950}.pr-selected-template small{display:block;color:var(--hub-text-mute);font-weight:800}
-  html.is-modal-open{overflow:hidden}
-  .pr-template-modal[hidden]{display:none!important}.pr-template-modal{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:24px}
-  .pr-template-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(6px)}
-  .pr-template-modal-panel{position:relative;width:min(1080px,96vw);max-height:min(760px,92vh);display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--hub-bg-card);border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 32px 90px rgba(15,23,42,.30);overflow:hidden}
-  .pr-template-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--hub-border-soft);background:linear-gradient(135deg,rgba(34,167,189,.08),rgba(124,58,237,.06))}
-  .pr-template-modal-head h3{margin:0;color:var(--hub-text);font-size:18px;font-weight:950}.pr-template-modal-head p{margin:4px 0 0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.6}
-  .pr-template-modal-body{padding:16px;overflow:auto}.pr-template-modal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-  .pr-template-choice{border:1px solid var(--hub-border-soft);border-radius:18px;background:#fff;padding:12px;display:grid;gap:10px;text-align:right;cursor:pointer;font-family:inherit;color:var(--hub-text);box-shadow:0 12px 26px rgba(15,23,42,.06);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
-  .pr-template-choice:hover,.pr-template-choice.is-selected{border-color:rgba(34,167,189,.72);box-shadow:0 18px 34px rgba(15,23,42,.10);transform:translateY(-1px)}
-  .pr-template-choice.is-selected{outline:3px solid rgba(34,167,189,.22)}
-  .pr-template-choice .pr-template-thumb{height:118px}.pr-template-choice .pr-template-thumb.is-vertical{height:136px;width:96px}
-  .pr-template-choice h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr-template-choice p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.5}
-  .pr-template-choice-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.pr-template-choice-actions .hub-btn{padding:6px 10px;font-size:12px}
 </style>
 {% endblock %}
 
@@ -433,9 +320,12 @@
     <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
   </div>
 
-  {# Export room — primary surface. The template list opens in a modal
-     picker so the export flow stays focused: choose batch, choose saved
-     design, review preview, then export. #}
+  {# Export room — primary surface. 3 columns on wide screens:
+     left   = batch + overrides + actions
+     center = live preview of the chosen template against the chosen batch
+     right  = compact list of saved templates as clickable chips
+     Each part used to live on /print-templates/export — that page now
+     redirects here so there is one canonical surface. #}
   <section id="export" data-export-room>
     <div class="pr-export-room-shell">
       <section class="export-panel">
@@ -453,72 +343,6 @@
             </select>
             <small>يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات.</small>
           </label>
-          <div class="pr-template-picker-card">
-            <div class="pr-export-card-head">
-              <div>
-                <strong><i class="fa-solid fa-images"></i> القالب المعتمد للتصدير</strong>
-                <small>اختر قالبًا محفوظًا من نافذة واضحة بالمصغرات. القالب المختار يصبح جاهزًا للمرحلة الثانية: المعاينة والتصدير.</small>
-              </div>
-              <button type="button" class="hub-btn hub-btn--primary" data-open-template-picker>
-                <i class="fa-solid fa-layer-group"></i> اختيار قالب محفوظ
-              </button>
-            </div>
-            <div class="pr-selected-template" data-selected-template-summary>
-              <span class="pr-chip-swatch" style="--ca:#0f172a;--cb:#22a7bd;--cacc:#f59e0b"></span>
-              <span>
-                <strong>لم يتم اختيار قالب بعد</strong>
-                <small>افتح نافذة القوالب المحفوظة واختر التصميم المناسب للحزمة.</small>
-              </span>
-            </div>
-          </div>
-          <div class="pr-export-sheet-settings">
-            <div class="pr-export-card-head">
-              <strong><i class="fa-solid fa-table-cells-large"></i> إعدادات الورقة والرص</strong>
-              <small>هذه الإعدادات خاصة بالتصدير فقط، ولا تغيّر شكل القالب المحفوظ.</small>
-            </div>
-            <div class="pr-grid2">
-              <label class="pr-field">حجم الورقة
-                <select class="hub-select" name="print_page_size" data-export-print-setting>
-                  <option value="A4" selected>A4</option>
-                  <option value="Letter">Letter</option>
-                </select>
-              </label>
-              <label class="pr-field">اتجاه الورقة
-                <select class="hub-select" name="print_orientation" data-export-print-setting>
-                  <option value="portrait" selected>عمودي</option>
-                  <option value="landscape">أفقي</option>
-                </select>
-              </label>
-              <label class="pr-field">عدد الأعمدة
-                <input class="hub-input" type="number" name="print_columns" min="1" max="12" value="2" data-export-print-setting>
-              </label>
-              <label class="pr-field">عدد الصفوف
-                <input class="hub-input" type="number" name="print_rows" min="1" max="20" value="5" data-export-print-setting>
-              </label>
-            </div>
-            <div class="pr-grid2">
-              <label class="pr-field">المسافة بين الأعمدة mm
-                <input class="hub-input" type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
-              </label>
-              <label class="pr-field">المسافة بين الصفوف mm
-                <input class="hub-input" type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
-              </label>
-            </div>
-            <div class="pr-grid4">
-              <label class="pr-field">هامش علوي mm
-                <input class="hub-input" type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
-              </label>
-              <label class="pr-field">هامش أيمن mm
-                <input class="hub-input" type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
-              </label>
-              <label class="pr-field">هامش سفلي mm
-                <input class="hub-input" type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
-              </label>
-              <label class="pr-field">هامش أيسر mm
-                <input class="hub-input" type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
-              </label>
-            </div>
-          </div>
           <div class="pr-grid2">
             <label class="pr-field">عنوان Hotspot/DNS
               <input class="hub-input" name="hotspot_address" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
@@ -535,7 +359,6 @@
           </div>
           <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
             <a class="hub-btn hub-btn--primary" data-export-pdf-link
-               data-export-job-url-template="{{ url_for('radius.print_templates_export_job_start', template_id=0) }}"
                href="#" title="اختر قالبًا وحزمة أولًا">
               <i class="fa-solid fa-print"></i> تصدير PDF للحزمة
             </a>
@@ -554,7 +377,6 @@
           </div>
           <div class="pr-export-progress" data-export-progress>
             <strong data-progress-title>جاهز للتصدير</strong>
-            <small class="pr-progress-detail" data-progress-detail></small>
             <div class="pr-progress-track"><div class="pr-progress-bar" data-progress-bar></div></div>
             <div class="pr-progress-steps">
               <div class="pr-progress-step" data-progress-step="0"><i class="fa-solid fa-check-circle"></i> اختيار الحزمة</div>
@@ -582,56 +404,43 @@
           </div>
         </div>
       </section>
-    </div>
-    <div class="pr-template-modal" data-template-modal hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="template-picker-title">
-      <div class="pr-template-modal-backdrop" data-close-template-picker></div>
-      <section class="pr-template-modal-panel">
-        <div class="pr-template-modal-head">
-          <div>
-            <h3 id="template-picker-title"><i class="fa-solid fa-images"></i> اختر قالبًا محفوظًا</h3>
-            <p>اختر قالبًا من المصغرات الواضحة ليصبح معتمدًا في مركز التصدير. يمكنك تعديل القالب أو حذفه من نفس النافذة.</p>
-          </div>
-          <button type="button" class="hub-btn" data-close-template-picker><i class="fa-solid fa-xmark"></i> إغلاق</button>
+
+      <section class="export-panel pr-chip-list-panel">
+        <div class="pr-panel-head">
+          <h3><i class="fa-solid fa-images"></i> القوالب</h3>
+          <span class="hub-pill hub-pill--green">{{ templates|length }}</span>
         </div>
-        <div class="pr-template-modal-body">
-          <div class="pr-template-modal-grid">
+        <div class="pr-export-body">
+          <div class="pr-chip-list">
             {% for item in templates %}
               {% set layout = item.layout_json or {} %}
               {% set is_default = layout.is_default or (default_template_id == item.id) %}
-              {% set orientation = layout.card_orientation or 'horizontal' %}
-              <article class="pr-template-choice{% if is_default %} is-default{% endif %}"
-                      role="button"
-                      tabindex="0"
-                      data-export-template-card
-                      data-template-id="{{ item.id }}"
-                      data-template-name="{{ item.name }}"
-                      data-template-meta="{{ layout.design_preset or 'custom' }} · {{ orientation }}"
-                      data-template-gradient-start="{{ layout.gradient_start or '#0f172a' }}"
-                      data-template-gradient-end="{{ layout.gradient_end or '#22a7bd' }}"
-                      data-template-accent="{{ layout.accent_color or '#f59e0b' }}"
-                      {% if is_default %}data-is-default="1"{% endif %}>
-                <span class="pr-template-thumb{% if orientation == 'vertical' %} is-vertical{% endif %}"
-                      style="--thumb-a:{{ layout.gradient_start or '#0f172a' }};--thumb-b:{{ layout.gradient_end or '#22a7bd' }};--thumb-accent:{{ layout.accent_color or '#f59e0b' }}">
-                  <span class="pr-template-qr">QR</span>
-                  {% if layout.background_image_data_url %}<span class="pr-template-image-badge"><i class="fa-solid fa-image"></i> صورة</span>{% endif %}
+              <button type="button" class="pr-chip{% if is_default %} is-default{% endif %}" data-export-template-card data-template-id="{{ item.id }}"{% if is_default %} data-is-default="1"{% endif %}>
+                <span class="pr-chip-swatch"
+                      style="--ca:{{ layout.gradient_start or '#0f172a' }};--cb:{{ layout.gradient_end or '#22a7bd' }};--cacc:{{ layout.accent_color or '#f59e0b' }}"></span>
+                <span class="pr-chip-meta">
+                  <strong>{{ item.name }}{% if is_default %} <span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}</strong>
+                  <small>{{ layout.design_preset or 'custom' }} · {{ item.cards_per_row }}×{{ item.cards_per_column }}</small>
                 </span>
-                <h4>{{ item.name }}{% if is_default %} <span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}</h4>
-                <p>{{ layout.design_preset or 'custom' }} · {{ orientation }}</p>
-                <span class="pr-template-choice-actions" onclick="event.stopPropagation()">
-                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer">
-                    <i class="fa-solid fa-pen"></i> تعديل
-                  </a>
-                  <form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
+                <span class="pr-chip-actions" onclick="event.stopPropagation()">
+                  <form method="POST"
+                        action="{{ url_for('radius.print_templates_set_default', template_id=item.id) }}"
+                        style="margin:0">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
-                    <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> حذف</button>
+                    <button type="submit"
+                            class="pr-star-btn{% if is_default %} is-default{% endif %}"
+                            title="{% if is_default %}القالب الافتراضي حاليًا{% else %}اعتمد كقالب افتراضي{% endif %}">
+                      <i class="fa-{% if is_default %}solid{% else %}regular{% endif %} fa-star"></i>
+                    </button>
                   </form>
-                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
-                    <i class="fa-solid fa-file-pdf"></i> عينة
+                  <a class="hub-btn hub-btn--sm" title="عينة PDF"
+                     href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
+                    <i class="fa-solid fa-file-pdf"></i>
                   </a>
                 </span>
-              </article>
+              </button>
             {% else %}
-              <div class="hub-empty">لا توجد قوالب محفوظة. افتح المصمم وأنشئ أول قالب.</div>
+              <div class="hub-empty">لا توجد قوالب. افتح المصمم أسفل الصفحة وأنشئ أول قالب.</div>
             {% endfor %}
           </div>
         </div>
@@ -641,7 +450,7 @@
 
   {# Designer drawer: closed by default — the export workflow above is the
      primary surface; the full designer opens on-demand. #}
-  <details class="pr-designer-drawer" id="designer" {% if preview or form_state %}open{% endif %}>
+  <details class="pr-designer-drawer" id="designer" {% if preview %}open{% endif %}>
     <summary class="pr-designer-summary">
       <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب</span>
       <small>افتح لعرض/تعديل القوالب أو إنشاء قالب جديد</small>
@@ -653,27 +462,7 @@
         <span class="hub-pill hub-pill--blue">Live Preview</span>
       </div>
       <div class="pr-panel-body">
-        {% set fs = form_state or {} %}
-        {% set fl = fs.layout or {} %}
-        {% set saved_engine = fl.render_engine or '' %}
-        {% set fallback_engine_lang = 'ar' if not fl or fl.text_direction == 'rtl' or fl.credential_label_language == 'arabic' else 'en' %}
-        {% set fallback_engine_orientation = 'vertical' if fl.card_orientation == 'vertical' else 'horizontal' %}
-        {% set active_render_engine = saved_engine if saved_engine in ['en_horizontal','en_vertical','ar_horizontal','ar_vertical'] else fallback_engine_lang ~ '_' ~ fallback_engine_orientation %}
-        {% set initial_bg_mode = fl.background_style or ('image' if fl.background_image_data_url else 'preset') %}
-        {% macro slider_field(label, name, value, min_value, max_value, step_value, unit='', hint='') -%}
-          <label class="pr-slider-field">
-            <span class="pr-slider-head">
-              <span>{{ label }}</span>
-              <output class="pr-slider-value" data-range-value="{{ name }}" data-unit="{{ unit }}">{{ value }}{{ unit }}</output>
-            </span>
-            <input class="hub-input pr-range" type="range" name="{{ name }}" min="{{ min_value }}" max="{{ max_value }}" step="{{ step_value }}" value="{{ value }}" data-range-input="{{ name }}" data-preview="{{ name }}">
-            {% if hint %}<small>{{ hint }}</small>{% endif %}
-          </label>
-        {%- endmacro %}
-        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}">
-          {% if form_error %}
-            <div class="pr-file-error" role="alert">{{ form_error }}</div>
-          {% endif %}
+        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form>
           <div class="pr-tabs" role="tablist">
             <button class="pr-tab is-active" type="button" data-pr-tab="design">التصميم</button>
             <button class="pr-tab" type="button" data-pr-tab="content">المحتوى</button>
@@ -681,139 +470,69 @@
           </div>
 
           <div class="pr-pane is-active" data-pr-pane="design">
-            <div class="pr-engine-card">
-              <div class="pr-engine-head">
-                <strong>اختر مود التصميم</strong>
-                <small>اختيار سريع قبل القوالب: اللغة + الاتجاه + شكل البطاقة.</small>
-              </div>
-              <div class="pr-engine-options" aria-label="اختيار محرك التصميم">
-                <button class="pr-engine-option{% if active_render_engine == 'ar_horizontal' %} is-selected{% endif %}" type="button" data-engine-option="ar_horizontal">
-                  <i class="pr-engine-mini is-rtl"></i>
-                  <span>عربي أفقي</span>
-                  <em>RTL / عرضي</em>
-                </button>
-                <button class="pr-engine-option{% if active_render_engine == 'ar_vertical' %} is-selected{% endif %}" type="button" data-engine-option="ar_vertical">
-                  <i class="pr-engine-mini is-rtl is-vertical"></i>
-                  <span>عربي عمودي</span>
-                  <em>RTL / طولاني</em>
-                </button>
-                <button class="pr-engine-option{% if active_render_engine == 'en_horizontal' %} is-selected{% endif %}" type="button" data-engine-option="en_horizontal">
-                  <i class="pr-engine-mini"></i>
-                  <span>English H</span>
-                  <em>LTR / wide</em>
-                </button>
-                <button class="pr-engine-option{% if active_render_engine == 'en_vertical' %} is-selected{% endif %}" type="button" data-engine-option="en_vertical">
-                  <i class="pr-engine-mini is-vertical"></i>
-                  <span>English V</span>
-                  <em>LTR / tall</em>
-                </button>
-              </div>
-              <label class="pr-field pr-engine-select-field">محرك التصميم المحكم
-                <select class="hub-select" name="render_engine" data-render-engine>
-                  <option value="ar_horizontal" {% if active_render_engine == 'ar_horizontal' %}selected{% endif %}>عربي أفقي</option>
-                  <option value="ar_vertical" {% if active_render_engine == 'ar_vertical' %}selected{% endif %}>عربي عمودي</option>
-                  <option value="en_horizontal" {% if active_render_engine == 'en_horizontal' %}selected{% endif %}>English Horizontal</option>
-                  <option value="en_vertical" {% if active_render_engine == 'en_vertical' %}selected{% endif %}>English Vertical</option>
-                </select>
-              </label>
-              <small>هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة كاملًا، والإنجليزي يبقى يسار إلى يمين.</small>
-            </div>
-            <div class="pr-design-source" aria-label="اختيار نظام التصميم">
-              <div class="pr-design-source-head">
-                <strong>اختر نظام التصميم</strong>
-                <small>مساران منفصلان تمامًا: صورة جاهزة من جهازك، أو تصميم مبني داخل النظام.</small>
-              </div>
-              <div class="pr-design-source-options">
-                <button class="pr-design-source-option{% if initial_bg_mode == 'image' %} is-selected{% endif %}" type="button" data-design-source-option="image">
-                  <i class="fa-solid fa-image"></i>
-                  <span>صورة مرفوعة</span>
-                  <em>نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط.</em>
-                </button>
-                <button class="pr-design-source-option{% if initial_bg_mode != 'image' %} is-selected{% endif %}" type="button" data-design-source-option="preset">
-                  <i class="fa-solid fa-layer-group"></i>
-                  <span>تصميم من النظام</span>
-                  <em>قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات.</em>
-                </button>
-              </div>
-            </div>
-            <div class="pr-preset-picker" aria-label="اختيار قالب جاهز" data-system-design-only>
-              <div class="pr-preset-picker-head">
-                <strong>اختر شكل القالب</strong>
-                <small>اختيار بصري سريع، ثم عدّل الألوان والنصوص كما تريد.</small>
-              </div>
-              <div class="pr-presets">
-                {% for preset in presets %}
-                  {% set l = preset.layout %}
-                  {% set selected_preset = (fl.design_preset or 'modern') == preset.key %}
-                  <button class="pr-preset{% if selected_preset %} is-selected{% endif %}" type="button"
-                          data-preset="{{ preset.key }}"
-                          data-gradient-start="{{ l.gradient_start }}"
-                          data-gradient-end="{{ l.gradient_end }}"
-                          data-accent="{{ l.accent_color }}"
-                          data-text="{{ l.text_color }}"
-                          data-surface="{{ l.surface_color }}"
-                          data-brand="{{ l.brand_name }}"
-                          data-title="{{ l.card_title }}"
-                          data-footer="{{ l.footer_text }}">
-                    <div class="sw" style="background:linear-gradient(135deg,{{ l.gradient_start }},{{ l.gradient_end }});box-shadow:inset 0 -4px 0 {{ l.accent_color }}"></div>
-                    <strong>{{ preset.label }}</strong>
-                  </button>
-                {% endfor %}
-              </div>
-            </div>
-            <label class="pr-field pr-preset-select-field" data-system-design-only>قوالب جاهزة
+            <label class="pr-field">اسم القالب
+              <input class="hub-input" name="name" required value="قالب حديث" data-preview="templateName">
+            </label>
+            <label class="pr-field">قوالب جاهزة
               <select class="hub-select" name="design_preset" data-preview="preset">
                 {% for preset in presets %}
-                  <option value="{{ preset.key }}" {% if (fl.design_preset or 'modern') == preset.key %}selected{% endif %}>{{ preset.label }}</option>
+                  <option value="{{ preset.key }}">{{ preset.label }}</option>
                 {% endfor %}
               </select>
             </label>
-            <label class="pr-field" style="margin-top:12px">اسم القالب
-              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName">
-            </label>
+            <div class="pr-presets">
+              {% for preset in presets %}
+                {% set l = preset.layout %}
+                <button class="pr-preset" type="button"
+                        data-preset="{{ preset.key }}"
+                        data-gradient-start="{{ l.gradient_start }}"
+                        data-gradient-end="{{ l.gradient_end }}"
+                        data-accent="{{ l.accent_color }}"
+                        data-text="{{ l.text_color }}"
+                        data-surface="{{ l.surface_color }}"
+                        data-brand="{{ l.brand_name }}"
+                        data-title="{{ l.card_title }}"
+                        data-footer="{{ l.footer_text }}">
+                  <div class="sw" style="background:linear-gradient(135deg,{{ l.gradient_start }},{{ l.gradient_end }});box-shadow:inset 0 -4px 0 {{ l.accent_color }}"></div>
+                  <strong>{{ preset.label }}</strong>
+                </button>
+              {% endfor %}
+            </div>
             <div class="pr-grid3" style="margin-top:12px">
               <label class="pr-field">اتجاه الكرت
                 <select class="hub-select" name="card_orientation" data-preview="cardOrientation">
-                  <option value="horizontal" {% if (fl.card_orientation or 'horizontal') == 'horizontal' %}selected{% endif %}>أفقي</option>
-                  <option value="vertical" {% if fl.card_orientation == 'vertical' %}selected{% endif %}>عمودي</option>
+                  <option value="horizontal">أفقي</option>
+                  <option value="vertical">عمودي</option>
                 </select>
               </label>
-              <label class="pr-field" data-system-design-only>نمط الزخرفة
+              <label class="pr-field">نمط الزخرفة
                 <select class="hub-select" name="pattern_style" data-preview="patternStyle">
-                  <option value="signal" {% if (fl.pattern_style or 'signal') == 'signal' %}selected{% endif %}>إشارة وشبكات</option>
-                  <option value="wave" {% if fl.pattern_style == 'wave' %}selected{% endif %}>موجات ضوئية</option>
-                  <option value="grid" {% if fl.pattern_style == 'grid' %}selected{% endif %}>شبكة تقنية</option>
-                  <option value="clean" {% if fl.pattern_style == 'clean' %}selected{% endif %}>نظيف</option>
+                  <option value="signal">إشارة وشبكات</option>
+                  <option value="wave">موجات ضوئية</option>
+                  <option value="grid">شبكة تقنية</option>
+                  <option value="clean">نظيف</option>
                 </select>
               </label>
-              {% set bg_mode = initial_bg_mode %}
-              <label class="pr-field pr-design-source-select-field">مصدر الخلفية
-                <select class="hub-select" name="background_style" data-background-style data-preview="backgroundStyle">
-                  <option value="preset" {% if bg_mode != 'image' %}selected{% endif %}>رسوم جاهزة من النظام</option>
-                  <option value="image" {% if bg_mode == 'image' %}selected{% endif %}>صورة محفوظة / مرفوعة</option>
-                </select>
-                <small>الرسوم الجاهزة والصورة المرفوعة لهما مساران منفصلان في المعاينة والتصدير.</small>
-              </label>
-              <label class="pr-field" data-upload-design-only>شفافية الصورة<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
-              <label class="pr-field" data-system-design-only>بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="{{ fl.gradient_start or '#0f172a' }}" data-preview="gradientStart"></label>
-              <label class="pr-field" data-system-design-only>نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="{{ fl.gradient_end or '#22a7bd' }}" data-preview="gradientEnd"></label>
-              <label class="pr-field" data-system-design-only>لون التمييز<input class="hub-input" type="color" name="accent_color" value="{{ fl.accent_color or '#f59e0b' }}" data-preview="accent"></label>
-              <label class="pr-field" data-system-design-only>لون النص<input class="hub-input" type="color" name="text_color" value="{{ fl.text_color or fs.color or '#ffffff' }}" data-preview="textColor"></label>
-              <label class="pr-field" data-system-design-only>لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-preview="surfaceColor"></label>
-              <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}"></label>
+              <label class="pr-field">شفافية الصورة<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="0.82" data-preview="imageOpacity"></label>
+              <label class="pr-field">بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="#0f172a" data-preview="gradientStart"></label>
+              <label class="pr-field">نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="#22a7bd" data-preview="gradientEnd"></label>
+              <label class="pr-field">لون التمييز<input class="hub-input" type="color" name="accent_color" value="#f59e0b" data-preview="accent"></label>
+              <label class="pr-field">لون النص<input class="hub-input" type="color" name="text_color" value="#ffffff" data-preview="textColor"></label>
+              <label class="pr-field">لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="#e8f7fb" data-preview="surfaceColor"></label>
+              <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="#ffffff"></label>
             </div>
             {# Background-image picker (strict).
                - File input is hidden; the trigger button + drag&drop
                  zone replaces the bare native widget.
                - Client-side validation enforces type (png/jpeg/webp)
-                 and size (≤ 8 MB) BEFORE the form is submitted.
-                 The server then converts/resizes/compresses it before
-                 saving so large customer images do not bloat PDF exports.
+                 and size (≤ 1.5 MB) BEFORE the form is submitted,
+                 matching the server-side limits in
+                 routes/print_templates._uploaded_background().
                - Selected file is shown with its name + human-readable
                  size + thumbnail; a clear button removes it cleanly
                  (also resets --card-image on the live preview).
                - All copy is in Arabic, matching the rest of the form. #}
-            <div class="pr-field" style="margin-top:12px" data-upload-design-only>
+            <div class="pr-field" style="margin-top:12px">
               صورة خلفية من الجهاز
               <div class="pr-file-picker" data-bg-picker>
                 <input type="file" name="background_image"
@@ -826,10 +545,8 @@
                    without the form having to re-upload the file on
                    every keystroke. The real file is still posted as
                    `background_image` when the user clicks Save. #}
-                 <input type="hidden" name="background_image_data_url"
-                        data-background-image-data-url value="{{ fl.background_image_data_url or '' }}">
-                 <input type="hidden" name="background_image_name"
-                        data-background-image-name value="{{ fl.background_image_name or '' }}">
+                <input type="hidden" name="background_image_data_url"
+                       data-background-image-data-url value="">
                 <button type="button" class="pr-file-trigger" data-bg-trigger>
                   <i class="fa-solid fa-image"></i> اختر صورة الخلفية
                 </button>
@@ -845,123 +562,68 @@
                   </button>
                 </div>
                 <p class="pr-file-error" hidden data-bg-error role="alert"></p>
-                <small class="pr-file-hint">PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.</small>
+                <small class="pr-file-hint">PNG / JPG / WEBP — حد أقصى 1.5MB. تُحفظ داخل القالب نفسه (data URL).</small>
               </div>
             </div>
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
             <div class="pr-grid2">
-              <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
-              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="{{ fl.card_title or 'Internet Card' }}" data-preview="title"></label>
-              <label class="pr-field">عنوان Hotspot/DNS<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
-              <label class="pr-field">السعر<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: JOD 1.00" data-preview="price"></label>
-              <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
+              <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="HobeRadius" data-preview="brand"></label>
+              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="Internet Card" data-preview="title"></label>
+              <label class="pr-field">عنوان Hotspot/DNS<input class="hub-input" name="hotspot_address" value="hotspot.local" data-preview="hotspot"></label>
+              <label class="pr-field">السعر<input class="hub-input" name="price_text" placeholder="مثال: JOD 1.00" data-preview="price"></label>
+              <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
               <label class="pr-field">نمط QR
-                <select class="hub-select" name="qr_style"><option value="boxed" {% if (fl.qr_style or 'boxed') == 'boxed' %}selected{% endif %}>مربع واضح</option><option value="rounded" {% if fl.qr_style == 'rounded' %}selected{% endif %}>ناعم</option><option value="clean" {% if fl.qr_style == 'clean' %}selected{% endif %}>بسيط</option></select>
-              </label>
-              <label class="pr-field">اتجاه النص
-                <select class="hub-select" name="text_direction">
-                  <option value="auto" {% if (fl.text_direction or 'auto') == 'auto' %}selected{% endif %}>تلقائي حسب اللغة</option>
-                  <option value="rtl" {% if fl.text_direction == 'rtl' %}selected{% endif %}>عربي RTL</option>
-                  <option value="ltr" {% if fl.text_direction == 'ltr' %}selected{% endif %}>إنجليزي LTR</option>
-                </select>
-              </label>
-              <label class="pr-field">تسميات اليوزر والباس
-                <select class="hub-select" name="credential_label_language">
-                  <option value="english" {% if (fl.credential_label_language or 'english') == 'english' %}selected{% endif %}>USER / PASS</option>
-                  <option value="arabic" {% if fl.credential_label_language == 'arabic' %}selected{% endif %}>اسم المستخدم / كلمة المرور</option>
-                </select>
+                <select class="hub-select" name="qr_style"><option value="boxed">مربع واضح</option><option value="rounded">ناعم</option><option value="clean">بسيط</option></select>
               </label>
             </div>
             <label class="pr-field">نص أسفل البطاقة
-              <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'Keep login data until expiry' }}" data-preview="footer">
+              <input class="hub-input" name="footer_text" value="Keep login data until expiry" data-preview="footer">
             </label>
             <label class="pr-field">تعليمات الاستخدام
-              <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or 'Use the username, password, or QR code to log in.' }}</textarea>
+              <textarea class="hub-input" name="instructions_text" rows="3">Use the username, password, or QR code to log in.</textarea>
             </label>
             <div class="pr-checks">
               {% for key,label,checked in [
                 ('show_brand','إظهار اسم الشبكة',true),('show_username','إظهار اسم المستخدم',true),
-                ('show_title','إظهار عنوان البطاقة',true),
                 ('show_password','إظهار كلمة المرور',true),('show_qr','إظهار QR',true),
                 ('show_price','إظهار السعر',false),('show_hotspot','إظهار العنوان',true),
                 ('show_validity','إظهار الصلاحية',true),('show_serial','إظهار الرقم التسلسلي',true),
                 ('show_guides','إظهار خطوط إرشاد',false),('bleed_marks','علامات قص في PDF',false)
               ] %}
-              {% set is_checked = fl[key] if key in fl else checked %}
-              <label class="pr-check"><input type="checkbox" name="{{ key }}" value="1" {% if is_checked %}checked{% endif %} data-preview-toggle="{{ key }}"> {{ label }}<input type="hidden" name="{{ key }}" value="0"></label>
+              <label class="pr-check"><input type="checkbox" name="{{ key }}" value="1" {% if checked %}checked{% endif %} data-preview-toggle="{{ key }}"> {{ label }}</label>
               {% endfor %}
             </div>
           </div>
 
           <div class="pr-pane" data-pr-pane="layout">
-            <input type="hidden" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}">
-            <div class="pr-control-stack">
-              <section class="pr-control-section">
-                <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-ruler-combined"></i> مقاس البطاقة العام</h4>
-                  <small>هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.</small>
-                </div>
-                <div class="pr-grid3">
-                  {{ slider_field('عرض البطاقة', 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm') }}
-                  {{ slider_field('ارتفاع البطاقة', 'card_height_mm', fl.card_height_mm or 54, 35, 110, 0.1, 'mm') }}
-                  {{ slider_field('حجم خط عام احتياطي', 'font_size', fs.font_size or 12, 6, 40, 1, 'px', 'يستخدم فقط كقيمة احتياطية للقوالب القديمة.') }}
-                </div>
-              </section>
-
-              <section class="pr-control-section" data-layer-section="username">
-                <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-user"></i> اسم المستخدم</h4>
-                  <small>حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.</small>
-                </div>
-                <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم خط اليوزر', 'username_font_size', fl.username_font_size or 0, 0, 90, 0.5, 'px', '0 يعني تلقائي حسب حجم البطاقة.') }}
-                  <label class="pr-field">لون اليوزر<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
-                  <label class="pr-field">خلفية اليوزر<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
-                  {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="username_surface_enabled" value="1" {% if user_bg %}checked{% endif %} data-preview-toggle="username_surface_enabled"> إظهار خلفية اليوزر<input type="hidden" name="username_surface_enabled" value="0"></label>
-                </div>
-              </section>
-
-              <section class="pr-control-section" data-layer-section="password">
-                <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-key"></i> كلمة المرور</h4>
-                  <small>تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.</small>
-                </div>
-                <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم خط الباسورد', 'password_font_size', fl.password_font_size or 0, 0, 90, 0.5, 'px', '0 يعني تلقائي حسب حجم البطاقة.') }}
-                  <label class="pr-field">لون التسميات<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
-                  <label class="pr-field">خلفية الباسورد<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
-                  {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> إظهار خلفية الباسورد<input type="hidden" name="password_surface_enabled" value="0"></label>
-                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', fl.credential_label_font_size or 0, 0, 50, 0.5, 'px', '0 يعني تلقائي.') }}
-                  {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> تفعيل خلفيات النصوص<input type="hidden" name="credential_background_enabled" value="0"></label>
-                </div>
-              </section>
-
-              <section class="pr-control-section" data-layer-section="barcode">
-                <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-qrcode"></i> QR / الباركود</h4>
-                  <small>مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.</small>
-                </div>
-                <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or 0, 0, 60, 0.5, '%', '0 يعني تلقائي. هذا كان سبب منع الحفظ سابقًا.') }}
-                  <label class="pr-field">لون QR<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
-                  <label class="pr-field">خلفية QR<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
-                </div>
-              </section>
+            <div class="pr-grid2">
+              <label class="pr-field">اتجاه الصفحة<select class="hub-select" name="orientation"><option value="portrait">عمودي</option><option value="landscape">أفقي</option></select></label>
+              <label class="pr-field">حجم الصفحة<select class="hub-select" name="page_size"><option value="A4">A4</option><option value="Letter">Letter</option></select></label>
+              <label class="pr-field">كروت في الصف<input class="hub-input" type="number" name="cards_per_row" min="1" value="2"></label>
+              <label class="pr-field">كروت في العمود<input class="hub-input" type="number" name="cards_per_column" min="1" value="5"></label>
+              <label class="pr-field">عرض الكرت mm<input class="hub-input" type="number" name="card_width_mm" min="1" step="0.1" value="85"></label>
+              <label class="pr-field">ارتفاع الكرت mm<input class="hub-input" type="number" name="card_height_mm" min="1" step="0.1" value="54"></label>
+              <label class="pr-field">حجم الخط<input class="hub-input" type="number" name="font_size" min="6" value="12"></label>
+            </div>
+            {# Custom-position fields (mm). Default to 0 so the
+               unified renderer falls back to the canonical
+               `_DEFAULT_POSITIONS` (user 6%/50%, pass 6%/66%,
+               qr 66%/36%) — exactly what the CSS above renders. As
+               soon as the user drags a pill the JS writes the new
+               value here and the renderer honours it. #}
+            <div class="pr-grid3" style="margin-top:12px">
+              <label class="pr-field">User X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="username_x" step="0.1" value="0"></label>
+              <label class="pr-field">User Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="username_y" step="0.1" value="0"></label>
+              <label class="pr-field">Pass X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="password_x" step="0.1" value="0"></label>
+              <label class="pr-field">Pass Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="password_y" step="0.1" value="0"></label>
+              <label class="pr-field">QR X mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="qr_x" step="0.1" value="0"></label>
+              <label class="pr-field">QR Y mm <small>(0 = افتراضي)</small><input class="hub-input" type="number" name="qr_y" step="0.1" value="0"></label>
             </div>
           </div>
 
-          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'تحديث القالب' if edit_template_id else 'حفظ القالب' }}</button>
+          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</button>
         </form>
       </div>
     </section>
@@ -969,7 +631,7 @@
     <section class="pr-panel pr-stage">
       <div class="pr-panel-head">
         <h3><i class="fa-solid fa-eye"></i> معاينة البطاقة</h3>
-        <span class="hub-pill hub-pill--green" data-preview-source-badge>{{ 'صورة مرفوعة' if initial_bg_mode == 'image' else 'تصميم من النظام' }}</span>
+        <span class="hub-pill hub-pill--green">تصميم من النظام</span>
       </div>
       {# Designer preview — pure SVG mount driven by the unified
          renderer. The legacy `.pr-card-preview` HTML / CSS was
@@ -1005,7 +667,7 @@
     </div>
     <div class="hub-table-wrap" style="border:none;border-radius:0" data-paginated-table data-page-size="10">
       <table class="hub-table">
-        <thead><tr><th>القالب</th><th>الشكل</th><th>البطاقة</th><th>الأمان</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>القالب</th><th>الشكل</th><th>الصفحة</th><th>الأمان</th><th>إجراءات</th></tr></thead>
         <tbody>
         {% for item in templates %}
           {% set layout = item.layout_json or {} %}
@@ -1017,7 +679,7 @@
               <div class="small hub-text-mute">{{ layout.brand_name or 'HobeRadius' }} · {{ layout.card_title or 'بطاقة إنترنت' }}</div>
             </td>
             <td><span class="hub-pill hub-pill--cyan">{{ layout.design_preset or 'modern' }}</span></td>
-            <td>{{ layout.card_orientation or 'horizontal' }} · {{ layout.card_width_mm or 85 }}×{{ layout.card_height_mm or 54 }} mm</td>
+            <td>{{ item.page_size }} / {{ item.orientation }} · {{ item.cards_per_row }}×{{ item.cards_per_column }}</td>
             <td><span class="hub-pill hub-pill--amber">كلمة المرور في PDF فقط</span></td>
             <td>
               <div class="pr-table-actions">
@@ -1100,7 +762,6 @@
   if(!root) return;
   const form = root.querySelector('[data-pr-form]');
   const svgMount = root.querySelector('[data-designer-svg-mount]');
-  const designerDrawer = root.querySelector('#designer');
   const $ = (sel) => root.querySelector(sel);
   const $$ = (sel) => Array.from(root.querySelectorAll(sel));
   function val(name, fallback=''){
@@ -1119,115 +780,6 @@
     }
     return {w, h};
   }
-  function syncRangeOutput(input){
-    if(!form || !input || !input.name) return;
-    const out = form.querySelector(`[data-range-value="${input.name}"]`);
-    if(!out) return;
-    out.textContent = `${input.value || '0'}${out.dataset.unit || ''}`;
-  }
-  function syncAllRangeOutputs(){
-    if(!form) return;
-    Array.from(form.querySelectorAll('[data-range-input]')).forEach(syncRangeOutput);
-  }
-  const renderEngines = {
-    ar_horizontal: {card_orientation: 'horizontal', text_direction: 'rtl', credential_label_language: 'arabic'},
-    ar_vertical: {card_orientation: 'vertical', text_direction: 'rtl', credential_label_language: 'arabic'},
-    en_horizontal: {card_orientation: 'horizontal', text_direction: 'ltr', credential_label_language: 'english'},
-    en_vertical: {card_orientation: 'vertical', text_direction: 'ltr', credential_label_language: 'english'},
-  };
-  const localizedDefaults = {
-    arabic: {
-      brand_name: 'هوب راديوس',
-      card_title: 'بطاقة إنترنت',
-      footer_text: 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
-      instructions_text: 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.',
-    },
-    english: {
-      brand_name: 'HobeRadius',
-      card_title: 'Internet Card',
-      footer_text: 'Keep login data until expiry',
-      instructions_text: 'Use the username, password, or QR code to log in.',
-    },
-  };
-  const defaultTextValues = {
-    brand_name: ['HobeRadius', 'HobeRadius Fiber', 'هوب راديوس', 'هوب راديوس فايبر'],
-    card_title: ['Internet Card', 'Hotspot Voucher', 'Premium Card', 'Access Card', 'WiFi Access', 'Speed Card', 'Smart WiFi Pass', 'Fiber Access', 'Golden Voucher', 'Access Token', 'بطاقة إنترنت'],
-    footer_text: [
-      'Keep login data until expiry',
-      'Technical support is available at the sales point',
-      'Stable speed and a better experience',
-      'Use the username and password once',
-      'Scan QR or enter credentials manually',
-      'Give this card to the customer after payment',
-      'Scan, connect, and enjoy reliable access',
-      'High speed access card',
-      'Keep this card until the subscription expires',
-      'Secure access token for hotspot login',
-      'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
-    ],
-    instructions_text: ['Use the username, password, or QR code to log in.', 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.'],
-  };
-  function setIfDefault(name, value){
-    const field = form && form.querySelector(`[name="${name}"]`);
-    if(!field) return;
-    const current = (field.value || '').trim();
-    const defaults = defaultTextValues[name] || [];
-    if(!current || defaults.includes(current)){
-      field.value = value;
-    }
-  }
-  function applyLanguageDefaults(language){
-    const defaults = localizedDefaults[language] || localizedDefaults.english;
-    Object.entries(defaults).forEach(([name, value]) => setIfDefault(name, value));
-  }
-  function setPresetSelection(key){
-    $$('[data-preset]').forEach(btn => btn.classList.toggle('is-selected', btn.dataset.preset === key));
-  }
-  function setBackgroundStyle(mode){
-    const field = form && form.querySelector('[name="background_style"]');
-    if(!field) return;
-    field.value = mode === 'image' ? 'image' : 'preset';
-  }
-  function setDesignSource(mode){
-    const source = mode === 'image' ? 'image' : 'preset';
-    if(form) form.dataset.designSource = source;
-    setBackgroundStyle(source);
-    $$('[data-design-source-option]').forEach(btn => {
-      btn.classList.toggle('is-selected', btn.dataset.designSourceOption === source);
-    });
-    const badge = root.querySelector('[data-preview-source-badge]');
-    if(badge) badge.textContent = source === 'image' ? 'صورة مرفوعة' : 'تصميم من النظام';
-  }
-  function setEngineSelection(key){
-    $$('[data-engine-option]').forEach(btn => {
-      btn.classList.toggle('is-selected', btn.dataset.engineOption === key);
-    });
-  }
-  function activeRenderEngine(){
-    const engineInput = form && form.querySelector('[name="render_engine"]');
-    return (engineInput && engineInput.value) || 'ar_horizontal';
-  }
-  function syncPreviewOrientation(){
-    if(!svgMount) return;
-    const engine = activeRenderEngine();
-    const isVertical = engine.endsWith('_vertical');
-    svgMount.classList.toggle('is-vertical', isVertical);
-    svgMount.classList.toggle('is-horizontal', !isVertical);
-    svgMount.dataset.renderEngine = engine;
-  }
-  function syncRenderEngine(){
-    if(!form) return;
-    const engineInput = form.querySelector('[name="render_engine"]');
-    const engineKey = (engineInput && engineInput.value) || 'ar_horizontal';
-    const profile = renderEngines[engineKey] || renderEngines.ar_horizontal;
-    setEngineSelection(engineKey);
-    Object.entries(profile).forEach(([name, value]) => {
-      const field = form.querySelector(`[name="${name}"]`);
-      if(field) field.value = value;
-    });
-    applyLanguageDefaults(profile.credential_label_language === 'arabic' ? 'arabic' : 'english');
-    syncPreviewOrientation();
-  }
 
   // ── Unified SVG preview ──────────────────────────────────────────
   // Single source of truth — the server's `render_card_svg` is the
@@ -1237,7 +789,6 @@
   // are re-attached after each fetch.
   let fetchSeq = 0;
   let fetchTimer = null;
-  let previewAbort = null;
   function buildFormData(){
     const data = new FormData(form);
     // file inputs would be too big to round-trip on every keystroke;
@@ -1246,80 +797,29 @@
     data.delete('background_image');
     return data;
   }
-  function showSvgPlaceholder(message, {error=false} = {}){
-    if(!svgMount) return;
-    const icon = error ? 'fa-triangle-exclamation' : 'fa-eye';
-    svgMount.innerHTML =
-      `<div class="pr-svg-empty${error ? ' is-error' : ''}">` +
-      `<i class="fa-solid ${icon}"></i>` +
-      `<span>${message}</span>` +
-      `</div>`;
-  }
-  async function fetchSvg(seq = ++fetchSeq){
+  async function fetchSvg(){
     if(!svgMount || !form) return;
-    if(seq !== fetchSeq) return;
-    if(previewAbort) previewAbort.abort();
-    previewAbort = new AbortController();
-    syncPreviewOrientation();
+    const seq = ++fetchSeq;
     svgMount.classList.add('is-loading');
-    if(!svgMount.querySelector('svg')){
-      showSvgPlaceholder('جارٍ تحضير المعاينة...');
-    }
-    const timeout = setTimeout(() => previewAbort && previewAbort.abort(), 10000);
     try {
-      const url = '{{ url_for("radius.print_templates_designer_svg") }}' + '?_=' + Date.now() + '&seq=' + seq;
       const res = await fetch(
-        url,
-        {
-          method: 'POST',
-          body: buildFormData(),
-          credentials: 'same-origin',
-          cache: 'no-store',
-          headers: {'X-Requested-With': 'fetch', 'Cache-Control': 'no-cache'},
-          signal: previewAbort.signal,
-        },
+        '{{ url_for("radius.print_templates_designer_svg") }}',
+        {method: 'POST', body: buildFormData(), credentials: 'same-origin'},
       );
       if(seq !== fetchSeq) return;
       const svg = await res.text();
       if(seq !== fetchSeq) return;
-      if(!res.ok){
-        throw new Error('HTTP ' + res.status);
-      }
-      if(!svg || !svg.includes('<svg')){
-        throw new Error('استجابة المعاينة ليست SVG');
-      }
       svgMount.innerHTML = svg;
-      syncPreviewOrientation();
       attachSvgDrag();
-    } catch (err) {
-      if(seq !== fetchSeq) return;
-      const wasAbort = err && err.name === 'AbortError';
-      if(wasAbort && seq !== fetchSeq) return;
-      const msg = wasAbort
-        ? 'استغرقت المعاينة وقتًا طويلًا. غيّر قيمة بسيطة أو أعد المحاولة.'
-        : 'تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.';
-      showSvgPlaceholder(msg, {error:true});
+    } catch (_) {
+      // leave the previous SVG in place — quietly skip on transient errors
     } finally {
-      clearTimeout(timeout);
       if(seq === fetchSeq) svgMount.classList.remove('is-loading');
     }
   }
   function scheduleFetch(){
-    const seq = ++fetchSeq;
-    syncPreviewOrientation();
-    if(previewAbort) previewAbort.abort();
     if(fetchTimer) clearTimeout(fetchTimer);
-    fetchTimer = setTimeout(() => fetchSvg(seq), 120);
-  }
-  function update(){
-    scheduleFetch();
-  }
-
-  function openDesignerDrawerFromHash(){
-    if(designerDrawer && window.location.hash === '#designer'){
-      designerDrawer.open = true;
-      syncPreviewOrientation();
-    }
+    fetchTimer = setTimeout(fetchSvg, 120);
   }
 
   // ── Drag inside the rendered SVG ────────────────────────────────
@@ -1360,8 +860,8 @@
         const yMm = (c.y / c.vbH) * mm.h;
         const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
         const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
-        if(xInput){ xInput.value = xMm.toFixed(1); syncRangeOutput(xInput); }
-        if(yInput){ yInput.value = yMm.toFixed(1); syncRangeOutput(yInput); }
+        if(xInput) xInput.value = xMm.toFixed(1);
+        if(yInput) yInput.value = yMm.toFixed(1);
         scheduleFetch();
       }
       el.addEventListener('pointerdown', (event) => {
@@ -1395,9 +895,7 @@
     if(pane) pane.classList.add('is-active');
   }));
   $$('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
-    const presetKey = btn.dataset.preset || 'modern';
-    form.design_preset.value = presetKey;
-    setPresetSelection(presetKey);
+    form.design_preset.value = btn.dataset.preset || 'modern';
     form.gradient_start.value = btn.dataset.gradientStart;
     form.gradient_end.value = btn.dataset.gradientEnd;
     form.accent_color.value = btn.dataset.accent;
@@ -1407,51 +905,18 @@
     form.brand_name.value = btn.dataset.brand;
     form.card_title.value = btn.dataset.title;
     form.footer_text.value = btn.dataset.footer;
-    setDesignSource('preset');
-    const engine = activeRenderEngine();
-    applyLanguageDefaults(engine.startsWith('ar_') ? 'arabic' : 'english');
     scheduleFetch();
   }));
-  $$('[data-engine-option]').forEach(btn => btn.addEventListener('click', () => {
-    const engineInput = form && form.querySelector('[name="render_engine"]');
-    if(engineInput) engineInput.value = btn.dataset.engineOption || 'ar_horizontal';
-    syncRenderEngine();
-    update();
-  }));
-  $$('[data-design-source-option]').forEach(btn => btn.addEventListener('click', () => {
-    setDesignSource(btn.dataset.designSourceOption || 'preset');
-    scheduleFetch();
-  }));
-  syncRenderEngine();
-  setDesignSource(form && form.background_style && form.background_style.value === 'image' ? 'image' : 'preset');
-  if(form && form.design_preset) setPresetSelection(form.design_preset.value || 'modern');
-  openDesignerDrawerFromHash();
-  $$('a[href="#designer"]').forEach(link => link.addEventListener('click', () => {
-    if(designerDrawer) designerDrawer.open = true;
-    syncPreviewOrientation();
-  }));
-  window.addEventListener('hashchange', openDesignerDrawerFromHash);
-  if(form) form.addEventListener('input', (event) => {
-    if(event.target && event.target.matches('[data-range-input]')){
-      syncRangeOutput(event.target);
-    }
-    update();
-  });
-  if(form) form.addEventListener('change', (event) => {
-    if(event.target && event.target.matches('[data-range-input]')){
-      syncRangeOutput(event.target);
-    }
-    if(event.target && event.target.name === 'render_engine') syncRenderEngine();
-    if(event.target && event.target.name === 'background_style') setDesignSource(event.target.value);
-    update();
-  });
-  syncAllRangeOutputs();
-  // Background-image picker. The browser accepts common image files up to
-  // 8 MB for a good preview; the server converts/resizes/compresses the
-  // uploaded image before saving it into the template JSON.
+  if(form) form.addEventListener('input', update);
+  if(form) form.addEventListener('change', update);
+  // Background-image picker — strict client-side validation that
+  // mirrors the server side (`_uploaded_background` in
+  // routes/print_templates.py). 1.5 MB cap, png/jpg/webp only,
+  // inline error on rejection, thumbnail + filename + human-readable
+  // size on acceptance, and a clear button that fully resets state.
   (function bgPicker(){
     const picker = root.querySelector('[data-bg-picker]');
-    if(!picker) return;
+    if(!picker || !card) return;
     const input   = picker.querySelector('[data-background-image]');
     const trigger = picker.querySelector('[data-bg-trigger]');
     const info    = picker.querySelector('[data-bg-info]');
@@ -1461,7 +926,7 @@
     const clearBtn= picker.querySelector('[data-bg-clear]');
     const errorEl = picker.querySelector('[data-bg-error]');
     if(!input || !trigger) return;
-    const MAX_BYTES = 8_000_000;
+    const MAX_BYTES = 1_500_000; // matches RadiusError("حجم صورة الخلفية ...")
     const ALLOWED = new Set(['image/png','image/jpeg','image/jpg','image/webp']);
     function setError(msg){
       if(!errorEl) return;
@@ -1474,12 +939,8 @@
       return (Math.round(b/10485.76)/100).toFixed(2) + ' MB';
     }
     const dataUrlField = picker.querySelector('[data-background-image-data-url]');
-    const imageNameField = picker.querySelector('[data-background-image-name]');
     function setDataUrl(url){
       if(dataUrlField) dataUrlField.value = url || '';
-    }
-    function setImageName(name){
-      if(imageNameField) imageNameField.value = name || '';
     }
     function clearAll(){
       input.value = '';
@@ -1489,8 +950,6 @@
       if(sizeEl) sizeEl.textContent = '';
       setError('');
       setDataUrl('');
-      setImageName('');
-      setDesignSource('preset');
       scheduleFetch();
     }
     function accept(file){
@@ -1502,12 +961,10 @@
       }
       if(file.size > MAX_BYTES){
         clearAll();
-        setError('حجم الصورة ' + formatSize(file.size) + ' تجاوز الحد المسموح 8MB. اختر صورة أصغر، وسيقوم النظام بضغط الصور المقبولة تلقائيًا.');
+        setError('حجم الصورة ' + formatSize(file.size) + ' تجاوز الحد المسموح 1.5MB. اختر صورة أصغر أو اضغطها.');
         return;
       }
       setError('');
-      setDesignSource('image');
-      setImageName(file.name || 'card-background');
       if(nameEl) nameEl.textContent = file.name;
       if(sizeEl) sizeEl.textContent = formatSize(file.size) + ' · ' + (mime.split('/')[1] || '').toUpperCase();
       if(info) info.hidden = false;
@@ -1551,8 +1008,6 @@
   function bindDrag(el){
     const prefix = el && el.dataset.drag;
     if(!el || !prefix || !form) return;
-    const card = root.querySelector('.pr-card-preview');
-    if(!card) return;
     const xInput = form.querySelector(`[name="${prefix}_x"]`);
     const yInput = form.querySelector(`[name="${prefix}_y"]`);
     if(!xInput || !yInput) return;
@@ -1560,7 +1015,7 @@
     function move(event){
       if(!dragging) return;
       const rect = card.getBoundingClientRect();
-      const size = cardSizeMm();
+      const size = cardSize();
       const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
       const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
       xInput.value = ((x / rect.width) * size.w).toFixed(1);
@@ -1580,7 +1035,6 @@
   $$('[data-drag]').forEach(bindDrag);
   const batchSelects = $$('[data-export-batch-select]');
   const exportOverrides = $$('[data-export-override]');
-  const exportPrintSettings = $$('[data-export-print-setting]');
   function selectedBatchId(){
     const selected = batchSelects.find(select => select && select.value);
     return selected ? selected.value : '';
@@ -1593,15 +1047,6 @@
       const value = (field.value || '').trim();
       if(value) params.set(field.name, value);
     });
-    exportPrintSettings.forEach(field => {
-      const value = (field.value || '').trim();
-      if(value) params.set(field.name, value);
-    });
-    return params.toString();
-  }
-  function exportJobBody(){
-    const params = new URLSearchParams(exportQueryString());
-    params.set('_csrf_token', '{{ csrf_token() }}');
     return params.toString();
   }
   function updateBatchLinks(){
@@ -1621,14 +1066,10 @@
   const exportProgress    = $('[data-export-progress]');
   const exportProgressBar = $('[data-progress-bar]');
   const exportProgressTitle = $('[data-progress-title]');
-  const exportProgressDetail = $('[data-progress-detail]');
   const exportPdfLink     = $('[data-export-pdf-link]');
   const exportSampleLink  = $('[data-export-sample-link]');
   const previewMount      = $('[data-preview-mount]');
   const previewHint       = $('[data-preview-hint]');
-  const templateModal     = $('[data-template-modal]');
-  const openTemplatePickerBtn = $('[data-open-template-picker]');
-  const selectedTemplateSummary = $('[data-selected-template-summary]');
   const PREVIEW_OVERRIDE_FIELDS = new Set([
     'brand_name','card_title','footer_text',
     'hotspot_address','price_text','validity_text'
@@ -1637,63 +1078,18 @@
     `{{ url_for('radius.print_templates_preview_fragment', template_id=0) }}`;
   const EXPORT_PDF_URL_TEMPLATE =
     `{{ url_for('radius.print_templates_export_pdf', template_id=0) }}`;
-  const EXPORT_JOB_URL_TEMPLATE = exportPdfLink ? (exportPdfLink.dataset.exportJobUrlTemplate || '') : '';
   function urlForTemplate(template, id){
     return template.replace(/\/0(\/[^?]*)$/, '/'+id+'$1').replace(/\/0$/, '/'+id);
   }
-  function setExportProgress(step, percent, text, detail){
+  function setExportProgress(step, percent, text){
     if(exportProgress) exportProgress.classList.add('is-active');
     if(exportProgressBar) exportProgressBar.style.width = percent + '%';
     if(exportProgressTitle) exportProgressTitle.textContent = text;
-    if(exportProgressDetail) exportProgressDetail.textContent = detail || '';
     $$('[data-progress-step]').forEach(item => {
       const index = parseInt(item.dataset.progressStep || '0', 10);
       item.classList.toggle('is-done', index < step);
       item.classList.toggle('is-active', index === step);
     });
-  }
-  function sleep(ms){
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-  function escapeHtml(value){
-    return String(value || '').replace(/[&<>"']/g, char => ({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    }[char]));
-  }
-  function openTemplatePicker(){
-    if(!templateModal) return;
-    templateModal.hidden = false;
-    templateModal.setAttribute('aria-hidden', 'false');
-    document.documentElement.classList.add('is-modal-open');
-    const selected = templateModal.querySelector('[data-export-template-card].is-selected') ||
-      templateModal.querySelector('[data-export-template-card]');
-    if(selected) selected.focus({preventScroll:true});
-  }
-  function closeTemplatePicker(){
-    if(!templateModal) return;
-    templateModal.hidden = true;
-    templateModal.setAttribute('aria-hidden', 'true');
-    document.documentElement.classList.remove('is-modal-open');
-    if(openTemplatePickerBtn) openTemplatePickerBtn.focus({preventScroll:true});
-  }
-  function updateSelectedTemplateSummary(cardEl){
-    if(!selectedTemplateSummary || !cardEl) return;
-    const name = cardEl.dataset.templateName || 'قالب محفوظ';
-    const meta = cardEl.dataset.templateMeta || 'custom';
-    const start = cardEl.dataset.templateGradientStart || '#0f172a';
-    const end = cardEl.dataset.templateGradientEnd || '#22a7bd';
-    const accent = cardEl.dataset.templateAccent || '#f59e0b';
-    selectedTemplateSummary.innerHTML = `
-      <span class="pr-chip-swatch" style="--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}"></span>
-      <span>
-        <strong>${escapeHtml(name)}</strong>
-        <small>${escapeHtml(meta)} · جاهز للمعاينة والتصدير</small>
-      </span>
-    `;
   }
   function updateExportActionLinks(){
     const qs = exportQueryString();
@@ -1703,11 +1099,11 @@
         const base = urlForTemplate(EXPORT_PDF_URL_TEMPLATE, selectedExportTemplateId);
         exportPdfLink.href = qs ? base + '?' + qs : base;
         exportPdfLink.classList.toggle('is-disabled', !batchId);
-        exportPdfLink.title = batchId ? '\u062a\u0635\u062f\u064a\u0631 PDF \u0644\u0644\u062d\u0632\u0645\u0629 \u0627\u0644\u0645\u062e\u062a\u0627\u0631\u0629' : '\u0627\u062e\u062a\u0631 \u062d\u0632\u0645\u0629 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
+        exportPdfLink.title = batchId ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة لتفعيل التصدير';
       } else {
         exportPdfLink.href = '#';
         exportPdfLink.classList.add('is-disabled');
-        exportPdfLink.title = '\u0627\u062e\u062a\u0631 \u0642\u0627\u0644\u0628\u064b\u0627 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0648\u0644\u064b\u0627';
+        exportPdfLink.title = 'اختر قالبًا من القائمة على اليمين أولًا';
       }
     }
     if(exportSampleLink){
@@ -1775,153 +1171,25 @@
     field.addEventListener('input', () => { updateBatchLinks(); updateExportActionLinks(); scheduleLivePreview(); });
     field.addEventListener('change', () => { updateBatchLinks(); updateExportActionLinks(); scheduleLivePreview(); });
   });
-  exportPrintSettings.forEach(field => {
-    field.addEventListener('input', () => { updateBatchLinks(); updateExportActionLinks(); });
-    field.addEventListener('change', () => { updateBatchLinks(); updateExportActionLinks(); });
-  });
-  if(openTemplatePickerBtn) openTemplatePickerBtn.addEventListener('click', openTemplatePicker);
-  $$('[data-close-template-picker]').forEach(btn => btn.addEventListener('click', closeTemplatePicker));
-  document.addEventListener('keydown', event => {
-    if(event.key === 'Escape' && templateModal && !templateModal.hidden) closeTemplatePicker();
-  });
   $$('[data-export-template-card]').forEach(cardEl => {
-    const chooseTemplate = event => {
+    cardEl.addEventListener('click', event => {
       if(event.target.closest('a, button:not([data-export-template-card]), form')) return;
       $$('[data-export-template-card]').forEach(el => el.classList.remove('is-selected'));
       cardEl.classList.add('is-selected');
       selectedExportTemplateId = cardEl.dataset.templateId || '';
-      updateSelectedTemplateSummary(cardEl);
       updateExportActionLinks();
       scheduleLivePreview();
-      closeTemplatePicker();
       setExportProgress(selectedBatchId() ? 2 : 1, selectedBatchId() ? 65 : 40, 'تم اختيار القالب.');
-    };
-    cardEl.addEventListener('click', chooseTemplate);
-    cardEl.addEventListener('keydown', event => {
-      if(event.key === 'Enter' || event.key === ' '){
-        event.preventDefault();
-        chooseTemplate(event);
-      }
     });
   });
   if(exportPdfLink){
-    exportPdfLink.addEventListener('click', async event => {
+    exportPdfLink.addEventListener('click', event => {
       if(exportPdfLink.classList.contains('is-disabled')){
         event.preventDefault();
-        setExportProgress(selectedBatchId() ? 1 : 0, 25, selectedExportTemplateId ? '\u0627\u062e\u062a\u0631 \u062d\u0632\u0645\u0629 \u0642\u0628\u0644 \u0627\u0644\u062a\u0635\u062f\u064a\u0631.' : '\u0627\u062e\u062a\u0631 \u0642\u0627\u0644\u0628\u064b\u0627 \u0623\u0648\u0644\u064b\u0627.');
+        setExportProgress(selectedBatchId() ? 1 : 0, 25, selectedExportTemplateId ? 'اختر حزمة قبل التصدير.' : 'اختر قالبًا أولًا.');
         return;
       }
-      event.preventDefault();
-      const startedAt = Date.now();
-      const oldText = exportPdfLink.innerHTML;
-      exportPdfLink.classList.add('is-disabled');
-      exportPdfLink.setAttribute('aria-busy', 'true');
-      exportPdfLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> \u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 PDF';
-      const batchText = (() => {
-        const selected = Array.from(batchSelects).find(item => item.value === selectedBatchId());
-        return selected && selected.options[selected.selectedIndex]
-          ? selected.options[selected.selectedIndex].text.trim()
-          : '\u0627\u0644\u062d\u0632\u0645\u0629 \u0627\u0644\u0645\u062e\u062a\u0627\u0631\u0629';
-      })();
-      const explain = [
-        '\u062a\u062b\u0628\u064a\u062a \u0627\u0644\u062d\u0632\u0645\u0629 \u0648\u0627\u0644\u0642\u0627\u0644\u0628',
-        '\u0642\u0631\u0627\u0621\u0629 \u0628\u0637\u0627\u0642\u0627\u062a \u0627\u0644\u062d\u0632\u0645\u0629 \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a',
-        '\u0625\u0639\u0627\u062f\u0629 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u062e\u0644\u0641\u064a\u0629 \u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u062b\u0627\u0628\u062a\u0629',
-        '\u0631\u0633\u0645 \u0627\u0644\u064a\u0648\u0632\u0631 \u0648\u0627\u0644\u0628\u0627\u0633 \u0648 QR \u0644\u0643\u0644 \u0628\u0637\u0627\u0642\u0629',
-        '\u0631\u0635 \u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062a \u0639\u0644\u0649 \u0635\u0641\u062d\u0627\u062a PDF',
-      ];
-      let tick = 0;
-      const timer = setInterval(() => {
-        tick += 1;
-        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-        const pct = Math.min(92, 18 + tick * 4);
-        const stage = explain[Math.min(explain.length - 1, Math.floor(tick / 4))];
-        setExportProgress(2, pct, '\u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 \u0645\u0644\u0641 PDF...', `${stage} \u00b7 ${batchText} \u00b7 ${elapsed}\u062b`);
-      }, 1000);
-      try{
-        setExportProgress(2, 18, '\u0628\u062f\u0623 \u062a\u062c\u0647\u064a\u0632 \u0645\u0644\u0641 PDF...', `\u0627\u0644\u062e\u0627\u062f\u0645 \u064a\u062c\u0647\u0632 ${batchText}. \u0644\u0627 \u062a\u063a\u0644\u0642 \u0627\u0644\u0635\u0641\u062d\u0629.`);
-        const jobBase = selectedExportTemplateId && EXPORT_JOB_URL_TEMPLATE
-          ? urlForTemplate(EXPORT_JOB_URL_TEMPLATE, selectedExportTemplateId)
-          : '';
-        if(!jobBase) throw new Error('تعذر بدء مهمة التصدير التجريبية.');
-        const jobBody = exportJobBody();
-        const jobResponse = await fetch(jobBase, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: {
-            'X-Requested-With': 'fetch',
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          },
-          body: jobBody,
-        });
-        let jobPayload = null;
-        try{ jobPayload = await jobResponse.json(); }catch(_err){}
-        if(!jobResponse.ok || !jobPayload || !jobPayload.ok){
-          const message = jobPayload && jobPayload.error && jobPayload.error.message
-            ? jobPayload.error.message
-            : '\u0641\u0634\u0644 \u0628\u062f\u0621 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
-          throw new Error(message + ' (HTTP ' + jobResponse.status + ')');
-        }
-        let statusUrl = jobPayload.status_url;
-        let downloadUrl = jobPayload.download_url;
-        let latestJob = jobPayload.job || {};
-        clearInterval(timer);
-        setExportProgress(2, Math.max(20, latestJob.progress || 20), 'تم إنشاء مهمة التصدير.', latestJob.stage_label || 'بدأ العامل تجهيز الملف في الخلفية.');
-        for(let poll = 0; poll < 900; poll += 1){
-          await sleep(1000);
-          const statusResponse = await fetch(statusUrl, {
-            credentials: 'same-origin',
-            headers: {'X-Requested-With': 'fetch'},
-          });
-          let statusPayload = null;
-          try{
-            statusPayload = await statusResponse.json();
-          }catch(_err){}
-          if(!statusResponse.ok || !statusPayload || !statusPayload.ok){
-            throw new Error('\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u062d\u0627\u0644\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631 (HTTP ' + statusResponse.status + ')');
-          }
-          latestJob = statusPayload.job || {};
-          downloadUrl = statusPayload.download_url || downloadUrl;
-          const pct = Math.max(20, Math.min(99, latestJob.progress || 20));
-          const rendered = latestJob.rendered_cards && latestJob.total_cards
-            ? ` \u00b7 ${latestJob.rendered_cards}/${latestJob.total_cards} \u0628\u0637\u0627\u0642\u0629`
-            : '';
-          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-          setExportProgress(2, pct, latestJob.stage_label || '\u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 PDF...', `${latestJob.message || ''}${rendered} \u00b7 ${elapsed}\u062b`);
-          if(latestJob.status === 'success' && latestJob.download_ready) break;
-          if(latestJob.status === 'failed') throw new Error(latestJob.message || '\u0641\u0634\u0644 \u062a\u0635\u062f\u064a\u0631 PDF.');
-        }
-        if(!latestJob || latestJob.status !== 'success' || !latestJob.download_ready){
-          throw new Error('\u0627\u0646\u062a\u0647\u062a \u0645\u062f\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631.');
-        }
-        setExportProgress(3, 96, '\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0644\u0641\u060c \u062c\u0627\u0631\u064a \u0628\u062f\u0621 \u0627\u0644\u062a\u0646\u0632\u064a\u0644...', '\u0648\u0635\u0644 \u0627\u0644\u0631\u062f \u0645\u0646 \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u064a\u062a\u0645 \u0627\u0644\u0622\u0646 \u062d\u0641\u0638 \u0627\u0644\u0645\u0644\u0641 \u0639\u0644\u0649 \u062c\u0647\u0627\u0632\u0643.');
-        const response = await fetch(downloadUrl, {
-          credentials: 'same-origin',
-          headers: {'X-Requested-With': 'fetch'},
-        });
-        if(!response.ok) throw new Error('\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 PDF \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 (HTTP ' + response.status + ')');
-        const blob = await response.blob();
-        const disposition = response.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename="?([^";]+)"?/i);
-        const filename = match ? match[1] : 'cards-export.pdf';
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-        const seconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-        setExportProgress(3, 100, '\u062a\u0645 \u062a\u0646\u0632\u064a\u0644 \u0645\u0644\u0641 PDF \u0628\u0646\u062c\u0627\u062d.', `\u0627\u0644\u062d\u062c\u0645 ${(blob.size / 1024 / 1024).toFixed(2)} MB \u00b7 \u0627\u0644\u0648\u0642\u062a ${seconds}\u062b`);
-      }catch(err){
-        setExportProgress(2, 100, '\u0641\u0634\u0644 \u062a\u0635\u062f\u064a\u0631 PDF.', (err && err.message) ? err.message : String(err));
-      }finally{
-        clearInterval(timer);
-        exportPdfLink.classList.remove('is-disabled');
-        exportPdfLink.removeAttribute('aria-busy');
-        exportPdfLink.innerHTML = oldText;
-      }
+      setExportProgress(3, 100, 'بدأ تنزيل ملف PDF. إذا لم يبدأ التحميل اضغط الزر مرة أخرى.');
     });
   }
   if(exportSampleLink){
@@ -1942,7 +1210,6 @@
     if(!defaultEl) return;
     defaultEl.classList.add('is-selected');
     selectedExportTemplateId = String(defaultId);
-    updateSelectedTemplateSummary(defaultEl);
     updateExportActionLinks();
   })();
   refreshLivePreview();

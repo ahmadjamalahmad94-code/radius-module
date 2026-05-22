@@ -61,29 +61,12 @@ PERM_AUDIT_VIEW     = "mikrotik.audit.view"
 # would otherwise need is_super_admin but doesn't (yet).
 PERM_ADMIN          = "mikrotik.admin"
 
-# VX2 — Selected Sites VPS Exit. The feature carries serious
-# routing semantics, so it carves its own permission surface
-# instead of reusing PERM_PROGRAM (whose holders should not
-# automatically gain VPS-exit authority).
-PERM_SITE_EXIT_VIEW                    = "site_exit.view"
-PERM_SITE_EXIT_MANAGE                  = "site_exit.manage"
-PERM_SITE_EXIT_PREVIEW                 = "site_exit.preview"
-PERM_SITE_EXIT_APPLY                   = "site_exit.apply"
-PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING = "site_exit.override_backup_warning"
-PERM_SITE_EXIT_ENABLE_RISKY_GROUPS     = "site_exit.enable_risky_groups"
-
 
 ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_VIEW, PERM_DIAGNOSTICS, PERM_MANAGE,
     PERM_PROGRAM, PERM_DEPLOY_LOGIN, PERM_ROLLBACK,
     PERM_BACKUP, PERM_RESTORE,
     PERM_AUDIT_VIEW, PERM_ADMIN,
-    # VX2 — keep these explicit in the list so the permission
-    # matrix page (O11) surfaces them.
-    PERM_SITE_EXIT_VIEW, PERM_SITE_EXIT_MANAGE,
-    PERM_SITE_EXIT_PREVIEW, PERM_SITE_EXIT_APPLY,
-    PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING,
-    PERM_SITE_EXIT_ENABLE_RISKY_GROUPS,
 )
 
 
@@ -95,13 +78,6 @@ _IMPLIED_BY_ADMIN: frozenset[str] = frozenset({
     PERM_VIEW, PERM_DIAGNOSTICS, PERM_MANAGE,
     PERM_PROGRAM, PERM_DEPLOY_LOGIN, PERM_ROLLBACK,
     PERM_BACKUP, PERM_RESTORE, PERM_AUDIT_VIEW,
-    # VX2 — PERM_ADMIN implies the read-side site-exit perms
-    # plus manage/preview (the day-to-day workflow). Apply +
-    # override + risky-groups are intentionally NOT auto-
-    # granted so even an admin must opt in explicitly to the
-    # destructive surface.
-    PERM_SITE_EXIT_VIEW, PERM_SITE_EXIT_MANAGE,
-    PERM_SITE_EXIT_PREVIEW,
 })
 
 
@@ -262,10 +238,6 @@ __all__ = [
     "PERM_VIEW", "PERM_DIAGNOSTICS", "PERM_MANAGE",
     "PERM_PROGRAM", "PERM_DEPLOY_LOGIN", "PERM_ROLLBACK",
     "PERM_BACKUP", "PERM_RESTORE",
-    "PERM_SITE_EXIT_VIEW", "PERM_SITE_EXIT_MANAGE",
-    "PERM_SITE_EXIT_PREVIEW", "PERM_SITE_EXIT_APPLY",
-    "PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING",
-    "PERM_SITE_EXIT_ENABLE_RISKY_GROUPS",
     "PERM_AUDIT_VIEW", "PERM_ADMIN",
     "ALL_PERMISSIONS",
     "admin_permissions",
