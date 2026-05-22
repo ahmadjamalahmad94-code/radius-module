@@ -1,7 +1,7 @@
 """mt_diagnostics — health-check every configured MT router.
 
-For each router known to this tenant (across mikrotik_configs and
-nas_devices), runs three tests in order:
+For each router in `nas_devices` (the canonical post-Phase-K
+table), runs three tests in order:
 
   1. TCP reachability — open a socket to host:port within timeout.
      Failure here means firewall / NAT / port-block; the API itself
@@ -100,30 +100,16 @@ def _api_probe(cfg: dict[str, Any]) -> dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────
 
 def _collect_routers(tenant_id: int) -> list[dict[str, Any]]:
-    """Merge mikrotik_configs + nas_devices with api_user; de-dupe."""
-    from ..db.repos import mikrotik_repo, nas_repo
+    """Read routers from `nas_devices` (the canonical Phase-K+
+    table). The legacy `mikrotik_configs` is no longer consulted
+    here — it's being decommissioned (see Phase N1/N2/N3 in
+    docs/radius/POSTMORTEM_PHASE_K_L_M.md). Rows without a
+    populated api_user are skipped: they can't be API-probed,
+    and surfacing them as 'unreachable' just creates noise.
+    """
+    from ..db.repos import nas_repo
 
     out: dict[str, dict[str, Any]] = {}
-    try:
-        for r in mikrotik_repo.list_configs(int(tenant_id)):
-            host = (r.get("host") or "").strip()
-            if not host:
-                continue
-            out[host] = {
-                "source":      "mikrotik_configs",
-                "id":          r["id"],
-                "name":        r.get("name") or host,
-                "host":        host,
-                "port":        int(r.get("port") or 8728),
-                "username":    r.get("username") or "admin",
-                "password":    r.get("password") or "",
-                "use_tls":     bool(r.get("use_tls")),
-                "verify_tls":  bool(r.get("verify_tls", True)),
-                "timeout_sec": int(r.get("timeout_sec") or 20),
-                "enabled":     bool(r.get("enabled")),
-            }
-    except Exception:  # noqa: BLE001
-        pass
     try:
         for nas in nas_repo.list_nas(int(tenant_id), limit=1000):
             host = (getattr(nas, "address", "") or "").strip()
