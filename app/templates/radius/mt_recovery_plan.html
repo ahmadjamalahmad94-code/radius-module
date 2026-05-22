@@ -1,0 +1,134 @@
+{# O8 — Recovery plan (read-only, advisory). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}خطة استعادة — عملية #{{ plan.audit_id }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-life-ring"></i>{% endblock %}
+{% block page_title %}خطة استعادة — عملية #{{ plan.audit_id }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ plan.operation }} · {{ plan.result_status or 'بدون' }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-recovery-plan
+         data-mt-recovery-audit-id="{{ plan.audit_id }}"
+         data-mt-recovery-router-id="{{ plan.router_id or '' }}">
+
+  {{ hub.hero(
+    "خطة استعادة — عملية #" ~ plan.audit_id,
+    subtitle=plan.operation ~ " · " ~ (plan.result_status or '—'),
+    icon="life-ring",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-info"></i> ملخّص العملية</h3>
+      <span class="mt-card-meta">
+        {% if plan.result_status == 'failed' %}
+        <span class="mt-iface-state mt-iface-state--off">فشل</span>
+        {% elif plan.result_status == 'partial' %}
+        <span class="mt-iface-state mt-iface-state--down">جزئي</span>
+        {% else %}
+        <span class="mt-iface-state mt-iface-state--down">{{ plan.risk_label_ar or 'حسّاسة' }}</span>
+        {% endif %}
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary" data-mt-recovery-meta>
+        <li>الإجراء: <code>{{ plan.operation }}</code></li>
+        <li>الفاعل: <strong>{{ plan.actor }}</strong></li>
+        {% if plan.router_id %}
+        <li>الراوتر: <code>#{{ plan.router_id }}</code></li>
+        {% endif %}
+        <li>الوقت: <code>{{ plan.timestamp }}</code></li>
+      </ul>
+      {% if plan.what_changed_ar %}
+      <div class="mt-program-banner mt-program-banner--warn"
+           data-mt-recovery-what-changed
+           style="background:#FFFBEB;border-color:#FDE68A;color:#92400E">
+        <li><i class="fa-solid fa-clock-rotate-left"></i>
+          {{ plan.what_changed_ar }}</li>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if plan.suggested_steps_ar %}
+  <section class="mt-card" data-mt-recovery-steps>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list-check"></i> خطوات الاستعادة الموصى بها</h3>
+    </header>
+    <div class="mt-card-body">
+      <ol class="mt-program-summary" style="list-style:decimal;padding-inline-start:24px">
+        {% for s in plan.suggested_steps_ar %}
+        <li>{{ s }}</li>
+        {% endfor %}
+      </ol>
+      <p class="mt-tab-hint">
+        هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في
+        هذه المرحلة.
+      </p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if plan.nearest_backup %}
+  <section class="mt-card" data-mt-recovery-nearest-backup>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-floppy-disk"></i> أقرب نسخة احتياطية قبل العملية</h3>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary">
+        <li>الملف: <code>{{ plan.nearest_backup.filename }}</code></li>
+        <li>تاريخ الإنشاء: <code>{{ plan.nearest_backup.created_at }}</code></li>
+        <li>السبب: <code>{{ plan.nearest_backup.reason }}</code></li>
+        <li>
+          <a class="mt-mini-btn"
+             href="{{ url_for('radius.mt_backups_list', nas_id=plan.router_id) }}"
+             data-mt-recovery-backup-link>
+            <i class="fa-solid fa-arrow-right"></i> صفحة النسخ
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if plan.related_job %}
+  <section class="mt-card" data-mt-recovery-related-job>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list-check"></i> مهمة مرتبطة</h3>
+    </header>
+    <div class="mt-card-body">
+      <p>
+        المهمة #{{ plan.related_job.id }} —
+        <a href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
+           class="mt-mini-btn"
+           data-mt-recovery-job-link>
+          <i class="fa-solid fa-magnifying-glass"></i> تفاصيل
+        </a>
+      </p>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="mt-program-actions">
+    <a class="mt-mini-btn"
+       href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">
+      <i class="fa-solid fa-clipboard-list"></i>
+      عرض سجل العملية الخام (JSON)
+    </a>
+    {% if plan.router_id %}
+    <a class="mt-mini-btn"
+       href="{{ url_for('radius.mt_router_overview', nas_id=plan.router_id) }}">
+      <i class="fa-solid fa-clipboard-check"></i>
+      نظرة عامة على الراوتر
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

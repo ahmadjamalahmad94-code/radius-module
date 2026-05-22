@@ -166,7 +166,7 @@
     </div>
   </section>
 
-  {% if backup_warning_ar %}
+  {% if backup_warning_ar is defined and backup_warning_ar %}
   <div class="mt-program-banner mt-program-banner--risk"
        data-mt-program-backup-warning>
     <li><i class="fa-solid fa-floppy-disk"></i>
@@ -211,7 +211,7 @@
       </ul>
 
       {# O6 — Before/after preview, only when computed. #}
-      {% if change_preview is not none %}
+      {% if change_preview is defined and change_preview %}
       <section class="mt-card" data-mt-program-change-preview
                data-mt-preview-total="{{ change_preview.total_changes() }}"
                style="margin-bottom:16px">

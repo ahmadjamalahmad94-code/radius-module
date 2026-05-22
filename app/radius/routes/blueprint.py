@@ -148,6 +148,9 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_audit_timeline import register_mt_audit_timeline_routes
     register_mt_audit_timeline_routes(bp)
 
+    from .mt_recovery_plan import register_mt_recovery_plan_routes
+    register_mt_recovery_plan_routes(bp)
+
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 
