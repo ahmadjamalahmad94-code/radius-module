@@ -1,10 +1,27 @@
-"""router_backups_repo — S8 backup metadata."""
+"""router_backups_repo — S8 backup metadata + O7 reason label."""
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Optional
 
 from ..connection import db, transaction
+
+
+# O7 — allowed reason labels. Enforced at the repo layer; the
+# DB column has no CHECK constraint to stay forward-compat.
+BACKUP_REASON_MANUAL             = "manual"
+BACKUP_REASON_SCHEDULED          = "scheduled"
+BACKUP_REASON_BEFORE_DANGEROUS   = "before_dangerous"
+BACKUP_REASON_BEFORE_PROGRAMMING = "before_programming"
+BACKUP_REASON_BEFORE_RECOVERY    = "before_recovery"
+
+ALLOWED_REASONS = frozenset({
+    BACKUP_REASON_MANUAL,
+    BACKUP_REASON_SCHEDULED,
+    BACKUP_REASON_BEFORE_DANGEROUS,
+    BACKUP_REASON_BEFORE_PROGRAMMING,
+    BACKUP_REASON_BEFORE_RECOVERY,
+})
 
 
 def _now() -> str:
@@ -21,7 +38,10 @@ def record(
     status: str = "success",
     error_message: str = "",
     created_by: Optional[int] = None,
+    reason: str = BACKUP_REASON_MANUAL,
 ) -> int:
+    if reason not in ALLOWED_REASONS:
+        reason = BACKUP_REASON_MANUAL
     with transaction() as c:
         cur = c.execute(
             """
@@ -29,8 +49,8 @@ def record(
                 (tenant_id, router_id, backup_type, filename,
                  storage_path, size_bytes, checksum, sensitive,
                  notes, status, error_message, created_by,
-                 created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 created_at, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (int(tenant_id), int(router_id), backup_type[:32],
              filename[:256], storage_path[:512],
@@ -38,7 +58,7 @@ def record(
              1 if sensitive else 0,
              notes[:500], status[:32],
              (error_message or "")[:2000],
-             created_by, _now()),
+             created_by, _now(), reason),
         )
         return int(cur.lastrowid)
 

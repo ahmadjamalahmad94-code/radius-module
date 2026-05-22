@@ -201,7 +201,10 @@ def mt_program_plan(nas_id: int):
     # O6 — build a structured before/after preview from the
     # plan + the snapshot we just queried for the conflict
     # check. Pure presentation; no extra router calls.
+    # O7 — also expose backup status so the template can warn
+    # operators when no recent backup exists.
     change_preview = None
+    backup_warning_ar = ""
     if plan is not None:
         try:
             ifaces, addrs, _routes = _fetch_router_state(nas)
@@ -218,6 +221,19 @@ def mt_program_plan(nas_id: int):
             existing_interfaces=ifaces,
             existing_addresses=addrs,
         )
+        # O7 — surface backup awareness on the apply screen
+        # itself. The safety check already gates the wire, but
+        # the operator should see the warning BEFORE clicking
+        # confirm.
+        if ov and ov.backup_status == "missing":
+            backup_warning_ar = (
+                "لا توجد نسخة احتياطية لهذا الراوتر. إن فشل "
+                "التطبيق لن تستطيع الاستعادة. ينصح بأخذ نسخة "
+                "احتياطية قبل المتابعة.")
+        elif ov and ov.backup_status == "stale":
+            backup_warning_ar = (
+                "آخر نسخة احتياطية قديمة — يُستحسن تحديثها "
+                "قبل أي تعديل.")
     return render_template(
         "radius/mt_programming.html",
         nas=nas,
@@ -225,6 +241,7 @@ def mt_program_plan(nas_id: int):
         form=form,
         kind=form["kind"],
         change_preview=change_preview,
+        backup_warning_ar=backup_warning_ar,
         error=error,
     )
 

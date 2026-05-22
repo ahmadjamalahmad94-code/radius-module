@@ -166,6 +166,21 @@
     </div>
   </section>
 
+  {% if backup_warning_ar %}
+  <div class="mt-program-banner mt-program-banner--risk"
+       data-mt-program-backup-warning>
+    <li><i class="fa-solid fa-floppy-disk"></i>
+      {{ backup_warning_ar }}
+      —
+      <a href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
+         class="mt-mini-btn"
+         data-mt-program-backup-link>
+        <i class="fa-solid fa-arrow-right"></i> اذهب لصفحة النسخ
+      </a>
+    </li>
+  </div>
+  {% endif %}
+
   {% if plan %}
   <section class="mt-card" data-mt-program-plan-card>
     <header class="mt-card-head">
