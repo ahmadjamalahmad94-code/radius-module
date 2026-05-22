@@ -400,6 +400,147 @@ no Latin chars. Track as a polish item.
 
 ---
 
+## 13) SQLite "attempt to write a readonly database" via `docker exec`
+
+**Symptom.** Trying to run an ad-hoc write from outside the
+gunicorn process:
+
+    docker exec hoberadius python -c "
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            c.execute(\"DELETE FROM mikrotik_configs WHERE host='10.10.0.2'\")
+    "
+    → sqlite3.OperationalError: attempt to write a readonly database
+
+The same error then surfaced through the web UI's legacy delete
+button (`/admin/radius/mt/<id>/delete` → 500 Internal Server
+Error).
+
+**Root cause.** Two containers share the SQLite DB but run as
+different uids:
+
+| container | uid:gid | role |
+|---|---|---|
+| `hoberadius` | 999:999 (hr) | Flask app + workers |
+| `hoberadius-freeradius` | 101:101 (freerad) | reads radcheck, writes radacct |
+
+SQLite in WAL mode needs all three files (`*.db`, `*.db-shm`,
+`*.db-wal`) to be writable. The two side-files were created by
+freeradius (uid 101) the last time it wrote a radacct row:
+
+    -rw-rw-r-- 1 hr  101 hoberadius.db
+    -rw-rw-r-- 1 101 101 hoberadius.db-wal       ← owned by 101
+    -rw-rw-r-- 1 101 101 hoberadius.db-shm       ← owned by 101
+
+User `hr` is in only one group (999, its own). Mode 0664 allows
+owner + group to write, world to read only. `hr` is neither
+the owner (101) nor in group 101, so it falls to "others" →
+**read-only**.
+
+The long-lived gunicorn process worked by luck: it opens the
+DB before freeradius touches it and holds the WAL across worker
+requests. ANY new connection (`docker exec python` is one) hits
+the permission check freshly and fails.
+
+**Workarounds used in the session.**
+- Delete the offending row from the host's root shell:
+
+      sqlite3 /opt/hoberadius/instance/hoberadius.db \
+        "DELETE FROM mikrotik_configs WHERE host='10.10.0.2'"
+
+  Root on the host can write anything regardless of mode.
+
+- Or `chown` the side-files to a common owner, then retry. This
+  works until freeradius re-creates them on the next radacct
+  write.
+
+**Permanent fix (Phase N — not yet shipped).**
+1. In the hoberadius Dockerfile, add `hr` to group 101 (the
+   freerad group):
+
+      RUN groupadd -r -g 101 freerad-shared \
+       && useradd  -r -g hr -G freerad-shared -d /app hr
+
+2. Add a startup hook that normalises ownership of any DB
+   side-files:
+
+      chown hr:101 /app/instance/hoberadius.db*   # best-effort
+
+**Prevention.**
+- Shared SQLite across multi-container deployments is fragile.
+  For commercial release, either:
+  a) Make all writers run with the SAME uid + group, or
+  b) Move to a real client-server DB (Postgres) where perms are
+     managed by the DB user, not the OS file ownership.
+- Never run ad-hoc writes via `docker exec python` against a
+  shared SQLite. Use either the web UI (which goes through the
+  long-lived gunicorn connection) or the host's root shell with
+  `sqlite3`.
+
+---
+
+## 14) Legacy `mikrotik_configs` table pollutes the diagnostics page
+
+**Symptom.** `/admin/radius/diagnostics` showed
+`1 راوتر مايكروتيك غير متاح حالياً` plus a row called `test`
+(10.10.0.2) flagged as TCP failed — even though no `test`
+router existed and no operator remembered creating it. The
+red-alert at the top of the page was effectively a false
+positive that the operator couldn't dismiss.
+
+**Root cause.** Two tables coexist for historical reasons:
+- `mikrotik_configs` — the original (pre-K) table for RouterOS
+  endpoints. Driven by the legacy routes in
+  [integrations.py](../app/radius/routes/integrations.py).
+- `nas_devices` — the AdvRadius-spec table we've used since
+  Phase K. Driven by the wizard / Operations Center / K9
+  dashboard.
+
+The diagnostics page (added before Phase L) reads from BOTH
+and joins the results. A test row planted in `mikrotik_configs`
+during early development persisted across every upgrade because
+nothing in Phase L–M ever pruned it.
+
+L7 already hid `mikrotik_configs` from the sidebar, but the
+underlying table + routes + diagnostics integration stayed
+intact.
+
+**Fix planned (Phase N — not yet shipped).**
+1. **N1** — restrict diagnostics to `nas_devices` only.
+2. **N2** — turn `/admin/radius/mt/{new,edit,delete,test}` into
+   HTTP 410 Gone with a redirect to the wizard.
+3. **N3** — migration `035_drop_mikrotik_configs.sql`: copy any
+   live rows into `nas_devices`, then `DROP TABLE`.
+
+**Operator workaround until Phase N lands.**
+
+    sqlite3 /opt/hoberadius/instance/hoberadius.db \
+      "DELETE FROM mikrotik_configs WHERE host='10.10.0.2'"
+
+**Prevention.**
+- When introducing a successor table (here `nas_devices`
+  superseding `mikrotik_configs`), commit the deprecation path
+  **in the same phase** that introduces the successor: migration
+  to copy data + DROP TABLE + removal of every UI surface that
+  reads the old table. Don't leave a legacy table as "we'll
+  clean it up later" — test data accumulates and confuses every
+  diagnostic page that still reads it.
+- Make the choice of "canonical table for X" explicit in a
+  short ADR (architecture decision record) doc so future
+  maintainers always know which one to write to.
+
+**Fix.** Future enhancement (not in any commit yet): fall back
+to `nas-<row_id>.conf` when the slug ends up too short or has
+no Latin chars. Track as a polish item.
+
+**Prevention.**
+- Slugifier for cross-language apps should always have a numeric
+  ID fallback.
+- Document the slug → filename mapping in the wizard's "What
+  gets generated?" aside so operators understand the file naming.
+
+---
+
 # Pre-Commercial-Release Checklist
 
 Before shipping a new VPS install to a paying subscriber, walk
@@ -539,6 +680,16 @@ customer asks.
 path. Every endpoint should have at least one "missing required
 field" and one "invalid auth" test before it ships.
 
+**Decommission the old surface in the same phase you ship the
+replacement.** Issues #13 and #14 are the same lesson in two
+flavours: `mikrotik_configs` was supposed to be replaced by
+`nas_devices` but stayed alive (sidebar hidden but routes still
+work, table never dropped, diagnostics still reads it). Whenever
+a successor table / page / endpoint lands, the same patch should
+delete the predecessor — otherwise the cleanup ages out and
+silently confuses operators (and accumulates stale test data
+that erodes trust in the diagnostics surface).
+
 ---
 
 # Where the fixes live in git
@@ -556,6 +707,23 @@ field" and one "invalid auth" test before it ships.
 | #9  | `aff1955` | M3: API restricted to WG subnet in script |
 | #10 | `d3e3e77` + `a8184c9` | M4: read_clients=yes + full client_query + nas sync |
 | #11 | (operational) | `.env.example` documents /24 default |
-| #12 | (pending) | future polish — slugifier nas-<id> fallback |
+| #12 | (Phase N pending) | future polish — slugifier nas-<id> fallback |
+| #13 | (Phase N pending) | hr in group 101 via Dockerfile + startup chown hook |
+| #14 | (Phase N pending) | N1 (diagnostics nas_devices-only) + N2 (legacy 410 Gone) + N3 (drop mikrotik_configs migration) |
 
 Every fix has tests; every test was green at the time of merge.
+
+---
+
+# Phase N — planned cleanup commits
+
+Drafted but not yet shipped (~30 min of work for the next
+session, addresses issues #12 / #13 / #14):
+
+| # | Step | Files |
+|---|---|---|
+| N1 | Diagnostics page reads only from `nas_devices`; ignores `mikrotik_configs` | `app/radius/routes/status.py` + `templates/radius/_status.html` |
+| N2 | Legacy `/admin/radius/mt/{new,edit,delete,test}` routes → 410 Gone with redirect-to-wizard message | `app/radius/routes/integrations.py` |
+| N3 | Migration `035_drop_mikrotik_configs.sql` — copy any live rows to `nas_devices` first, then `DROP TABLE` | `app/radius/db/migrations/` |
+| N4 | Dockerfile: add `hr` to GID 101 (freerad group) + entrypoint chowns DB side-files | `deploy/Dockerfile` + entrypoint |
+| N5 | Slugifier falls back to `nas-<id>.conf` when name has no ASCII chars | `app/radius/services/wg_peer_manager.py` + tests |
