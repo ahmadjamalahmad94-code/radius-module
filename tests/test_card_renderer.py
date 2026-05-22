@@ -171,7 +171,11 @@ def test_model_contains_user_pass_and_qr():
     elements_by_id = {e["id"]: e for e in model["elements"]}
     assert "user" in elements_by_id and elements_by_id["user"]["value"] == "d2-85104"
     assert "pass" in elements_by_id and elements_by_id["pass"]["value"] == "Secret_pw_1"
-    assert "qr" in elements_by_id and elements_by_id["qr"]["payload"] == "d2-85104"
+    assert (
+        "qr" in elements_by_id
+        and elements_by_id["qr"]["payload"]
+        == "http://hotspot.local/login?username=d2-85104&password=Secret_pw_1"
+    )
     # Sanity: the renderer-level password is captured for the PDF adapter.
     assert model["password"] == "Secret_pw_1"
 
@@ -240,9 +244,44 @@ def test_background_image_surfaces_in_model_and_svg():
     template = _make_template(layout={"background_image_data_url": data_url, "image_opacity": 0.6})
     model = build_card_render_model(template, {"id": 1, "username": "u", "password": "p"})
     assert model["background"]["image_data_url"].startswith("data:image/png;base64,")
-    assert abs(model["background"]["image_opacity"] - 0.6) < 1e-6
+    assert model["background"]["source"] == "image"
+    assert abs(model["background"]["image_opacity"] - 1.0) < 1e-6
     svg = render_card_svg(model)
     assert "data:image/png;base64," in svg
+
+
+def test_uploaded_ready_design_only_overlays_credentials_and_login_qr():
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    data_url = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgAAIAAAUAAen63NgAAAAASUVORK5CYII="
+    )
+    template = _make_template(layout={
+        "background_image_data_url": data_url,
+        "brand_name": "SHOULD_NOT_RENDER",
+        "card_title": "SHOULD_NOT_RENDER",
+        "footer_text": "SHOULD_NOT_RENDER",
+        "hotspot_address": "10.10.0.1",
+    })
+    model = build_card_render_model(
+        template,
+        {"id": 99, "username": "128304", "password": "445566"},
+    )
+    by_id = {item["id"]: item for item in model["elements"]}
+
+    assert set(by_id) == {"user", "pass", "qr"}
+    assert by_id["user"]["show_label"] is False
+    assert by_id["pass"]["show_label"] is False
+    assert by_id["qr"]["payload"] == "http://10.10.0.1/login?username=128304&password=445566"
+
+    svg = render_card_svg(model, mask_password=False)
+    assert "SHOULD_NOT_RENDER" not in svg
+    assert ">USER<" not in svg
+    assert ">PASS<" not in svg
 
 
 def test_portrait_vs_landscape_canvases():

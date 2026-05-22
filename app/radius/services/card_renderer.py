@@ -67,9 +67,11 @@ into the top-left corner like the old PDF path did.
 from __future__ import annotations
 
 import base64
+from io import BytesIO
 import os
 import re
 from typing import Any, Iterable
+from urllib.parse import quote_plus
 
 # Public canvas dimensions. Pinned constants so any drift between the
 # SVG adapter and the PDF adapter is impossible.
@@ -243,6 +245,7 @@ def build_card_render_model(
 
     positions = _resolve_positions(template, layout, (canvas_w, canvas_h))
     show = _resolve_show_flags(layout)
+    uploaded_design = _is_uploaded_design(layout)
 
     # ── Text + meta ──
     brand_text   = _override(overrides, "brand_name",   layout, "HobeRadius")
@@ -261,26 +264,27 @@ def build_card_render_model(
     elements: list[dict] = []
 
     # Accent bar — first so it sits beneath the text but above the bg.
-    acc = positions["accent"]
-    elements.append({
-        "kind": "rect",
-        "id": "accent",
-        "x": acc["x"] * canvas_w,
-        "y": acc["y"] * canvas_h,
-        "width":  acc["width"]  * canvas_w,
-        "height": acc["height"] * canvas_h,
-        "fill": accent_color,
-        "rx": (acc["height"] * canvas_h) / 2,
-    })
+    if not uploaded_design:
+        acc = positions["accent"]
+        elements.append({
+            "kind": "rect",
+            "id": "accent",
+            "x": acc["x"] * canvas_w,
+            "y": acc["y"] * canvas_h,
+            "width":  acc["width"]  * canvas_w,
+            "height": acc["height"] * canvas_h,
+            "fill": accent_color,
+            "rx": (acc["height"] * canvas_h) / 2,
+        })
 
-    if show["brand"] and brand_text:
+    if not uploaded_design and show["brand"] and brand_text:
         elements.append(_text_element(
             id="brand", text=brand_text, pos=positions["brand"],
             canvas=(canvas_w, canvas_h), color=text_color, weight=900,
             max_width_frac=0.55,
         ))
 
-    if title_text:
+    if not uploaded_design and title_text:
         elements.append(_text_element(
             id="title", text=title_text, pos=positions["title"],
             canvas=(canvas_w, canvas_h), color=text_color, weight=950,
@@ -292,6 +296,7 @@ def build_card_render_model(
             id="user", label="USER", value=username,
             pos=positions["user"], canvas=(canvas_w, canvas_h),
             surface_color=surface_color,
+            show_label=not uploaded_design,
         ))
 
     if show["password"] and password:
@@ -300,14 +305,12 @@ def build_card_render_model(
             pos=positions["pass"], canvas=(canvas_w, canvas_h),
             surface_color=surface_color,
             is_password=True,
+            show_label=not uploaded_design,
         ))
 
     if show["qr"]:
         qr = positions["qr"]
-        # QR payload prefers the username so a phone scanner gets the
-        # exact login identifier; falls back to card id; finally
-        # 'SAMPLE' so designer mock-ups still render a code.
-        payload = (username or card_id or "SAMPLE")
+        payload = _qr_login_payload(layout, username, password, card_id)
         elements.append({
             "kind": "qr",
             "id": "qr",
@@ -325,7 +328,7 @@ def build_card_render_model(
     if show["price"]    and price_text:   meta_parts.append(price_text)
     if show["validity"] and validity_txt: meta_parts.append(validity_txt)
     if show["serial"]   and card_id:      meta_parts.append("#" + str(card_id))
-    if meta_parts:
+    if not uploaded_design and meta_parts:
         meta_pos = positions["meta"]
         elements.append({
             "kind": "text",
@@ -339,7 +342,7 @@ def build_card_render_model(
             "max_width": canvas_w * 0.88,
         })
 
-    if footer_text:
+    if not uploaded_design and footer_text:
         footer_pos = positions["footer"]
         elements.append({
             "kind": "text",
@@ -516,6 +519,20 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
     """
     from reportlab.lib import colors
 
+    image_url = bg.get("image_data_url") or ""
+    if bg.get("source") == "image" and image_url.startswith("data:image/") and ";base64," in image_url:
+        try:
+            from reportlab.lib.utils import ImageReader
+
+            mime_part, encoded = image_url.split(";base64,", 1)
+            if mime_part in {"data:image/png", "data:image/jpeg", "data:image/jpg"}:
+                image = ImageReader(BytesIO(base64.b64decode(encoded)))
+                pdf.drawImage(image, 0, 0, width=cw, height=ch,
+                              preserveAspectRatio=False, mask="auto")
+                return
+        except Exception:
+            pass
+
     start = _pdf_color(bg.get("gradient_start", "#0f172a"))
     end = _pdf_color(bg.get("gradient_end", "#22a7bd"))
     # 24 horizontal bands of interpolated colour.
@@ -532,10 +549,8 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
         pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
 
     # Optional bitmap.
-    image_url = bg.get("image_data_url") or ""
     if image_url.startswith("data:image/") and ";base64," in image_url:
         try:
-            from io import BytesIO
             from reportlab.lib.utils import ImageReader
 
             mime_part, encoded = image_url.split(";base64,", 1)
@@ -641,22 +656,25 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
 
 def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     """Draw the surface rect + label + value of a USER/PASS pill."""
-    pdf.setFillColor(_pdf_color(el["surface"]))
     pdf_y = ch - el["y"] - el["height"]
-    pdf.roundRect(el["x"], pdf_y, el["width"], el["height"],
-                  el["height"] * 0.20, stroke=0, fill=1)
+    if el.get("surface_enabled", True):
+        pdf.setFillColor(_pdf_color(el["surface"]))
+        pdf.roundRect(el["x"], pdf_y, el["width"], el["height"],
+                      el["height"] * 0.20, stroke=0, fill=1)
     # Label (USER / PASS) — labels are Latin in every preset; keep
     # Helvetica for consistency.
-    label_raw = str(el["label"])
-    label_font = _pick_pdf_font(label_raw, bold=True)
-    label_text = _shape_arabic(label_raw) if _has_arabic(label_raw) else label_raw
-    label_size = max(float(el["label_font_size"]), 4.0)
-    pdf.setFont(label_font, label_size)
-    pdf.setFillColor(_pdf_color(el["label_color"]))
-    label_top = el["y"] + el["height"] * 0.18
-    pdf.drawString(el["x"] + el["padding_x"],
-                   ch - label_top - label_size * 0.78,
-                   label_text)
+    show_label = bool(el.get("show_label", True))
+    if show_label:
+        label_raw = str(el["label"])
+        label_font = _pick_pdf_font(label_raw, bold=True)
+        label_text = _shape_arabic(label_raw) if _has_arabic(label_raw) else label_raw
+        label_size = max(float(el["label_font_size"]), 4.0)
+        pdf.setFont(label_font, label_size)
+        pdf.setFillColor(_pdf_color(el["label_color"]))
+        label_top = el["y"] + el["height"] * 0.18
+        pdf.drawString(el["x"] + el["padding_x"],
+                       ch - label_top - label_size * 0.78,
+                       label_text)
     # Value (the real credential — masked if expose_password is False
     # and this pill carries the password).
     raw_value = el["value"]
@@ -667,7 +685,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     value_size = max(float(el["value_font_size"]), 5.0)
     pdf.setFont(value_font, value_size)
     pdf.setFillColor(_pdf_color(el["ink"]))
-    value_top = el["y"] + el["height"] * 0.46
+    value_top = el["y"] + el["height"] * (0.46 if show_label else 0.28)
     max_value_width = el["width"] - 2 * el["padding_x"]
     if max_value_width > 0:
         value_text = _shrink_to_fit(pdf, value_text, value_font,
@@ -799,13 +817,40 @@ def _resolve_show_flags(layout: dict) -> dict[str, bool]:
 
 def _background(layout: dict) -> dict:
     image_url = str(layout.get("background_image_data_url") or "")
+    uploaded_design = _is_uploaded_design(layout)
     return {
         "gradient_start": _safe_hex(layout.get("gradient_start"), "#0f172a"),
         "gradient_end":   _safe_hex(layout.get("gradient_end"),   "#22a7bd"),
-        "pattern":        str(layout.get("pattern_style") or "signal"),
+        "pattern":        "clean" if uploaded_design else str(layout.get("pattern_style") or "signal"),
+        "source":         "image" if uploaded_design else "preset",
         "image_data_url": image_url if image_url.startswith("data:image/") else "",
-        "image_opacity":  max(0.0, min(1.0, _float(layout.get("image_opacity"), 0.82))),
+        "image_opacity":  1.0 if uploaded_design else max(0.0, min(1.0, _float(layout.get("image_opacity"), 0.82))),
     }
+
+
+def _is_uploaded_design(layout: dict) -> bool:
+    image_url = str(layout.get("background_image_data_url") or "")
+    return image_url.startswith("data:image/")
+
+
+def _qr_login_payload(layout: dict, username: str, password: str, card_id: str) -> str:
+    login_user = username or card_id or "SAMPLE"
+    login_pass = "" if not password or password == "********" else password
+    host = str(
+        layout.get("hotspot_address")
+        or layout.get("hotspot")
+        or layout.get("login_url")
+        or "hotspot.local"
+    ).strip()
+    if not host:
+        host = "hotspot.local"
+    if "://" not in host:
+        host = "http://" + host
+    host = host.rstrip("/")
+    if not re.search(r"/login(?:$|[?#])", host):
+        host += "/login"
+    sep = "&" if "?" in host else "?"
+    return f"{host}{sep}username={quote_plus(login_user)}&password={quote_plus(login_pass)}"
 
 
 def _override(overrides: dict, key: str, layout: dict, default: str) -> str:
@@ -848,7 +893,7 @@ def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
 
 def _pill_element(*, id: str, label: str, value: str, pos: dict,
                    canvas: tuple[int, int], surface_color: str,
-                   is_password: bool = False) -> dict:
+                   is_password: bool = False, show_label: bool = True) -> dict:
     cw, ch = canvas
     width = pos.get("width", 0.46) * cw
     height = pos.get("height", 0.13) * ch
@@ -864,6 +909,7 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
         "surface": surface_color,
         "ink": "#0f172a",
         "label_color": "#64748b",
+        "show_label": show_label,
         "is_password": is_password,
         "value_font_size": height * 0.52,
         "label_font_size": height * 0.30,
@@ -914,9 +960,16 @@ def _svg_defs(bg: dict, w: int, h: int) -> Iterable[str]:
 
 
 def _svg_background(bg: dict, w: int, h: int) -> Iterable[str]:
+    image_url = bg.get("image_data_url") or ""
+    if bg.get("source") == "image" and image_url:
+        yield (
+            f'<image href="{_xml(image_url)}" x="0" y="0" '
+            f'width="{w}" height="{h}" '
+            f'preserveAspectRatio="xMidYMid slice" opacity="1"/>'
+        )
+        return
     yield f'<rect x="0" y="0" width="{w}" height="{h}" fill="url(#card-bg)"/>'
     # Optional background image (kept inside the clip-path).
-    image_url = bg.get("image_data_url") or ""
     if image_url:
         opacity = bg.get("image_opacity", 0.82)
         yield (
@@ -981,19 +1034,25 @@ def _svg_pill(el: dict, *, mask_password: bool) -> str:
     x, y = el["x"], el["y"]
     w, h = el["width"], el["height"]
     label_y = y + h * 0.36
-    value_y = y + h * 0.72
+    show_label = bool(el.get("show_label", True))
+    value_y = y + h * (0.72 if show_label else 0.54)
+    label_markup = ""
+    if show_label:
+        label_markup = (
+            f'<text x="{x+pad:.1f}" y="{label_y:.1f}" '
+            f'direction="ltr" '
+            f'font-family="\'Cairo\', \'Helvetica Neue\', Arial, sans-serif" '
+            f'font-size="{label_size:.1f}" font-weight="900" '
+            f'fill="{_xml(el["label_color"])}" '
+            f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
+            f'{_xml(el["label"])}</text>'
+        )
     return (
         f'<g class="card-pill">'
         f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" '
         f'rx="{h*0.20:.1f}" ry="{h*0.20:.1f}" '
         f'fill="{_xml(el["surface"])}" opacity="0.95"/>'
-        f'<text x="{x+pad:.1f}" y="{label_y:.1f}" '
-        f'direction="ltr" '
-        f'font-family="\'Cairo\', \'Helvetica Neue\', Arial, sans-serif" '
-        f'font-size="{label_size:.1f}" font-weight="900" '
-        f'fill="{_xml(el["label_color"])}" '
-        f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
-        f'{_xml(el["label"])}</text>'
+        f'{label_markup}'
         f'<text x="{x+pad:.1f}" y="{value_y:.1f}" '
         f'direction="ltr" '
         f'font-family="\'Menlo\', \'Consolas\', monospace" '
