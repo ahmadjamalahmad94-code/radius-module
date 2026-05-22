@@ -255,6 +255,30 @@ def mt_program_apply(nas_id: int):
     plan, error = _plan_from_form(nas, form)
     apply_result = None
 
+    # O5 — pre-execution safety check (advisory + blocking).
+    safety = None
+    if plan is not None:
+        from ..services import mt_safety_check as sc
+        from ..services.mt_permissions import _current_admin
+        safety = sc.evaluate(
+            tenant_id=_tid(), nas_id=int(nas_id),
+            admin=_current_admin(),
+            operation=f"mt.programming.{plan.kind}.apply",
+            override_admin=(
+                request.form.get("override_admin") == "1"),
+        )
+        if not safety.allowed:
+            error = "؛ ".join(safety.blocking_reasons) or (
+                "العملية محظورة بسبب فحص السلامة.")
+            # Skip the rest — apply path won't run.
+            return render_template(
+                "radius/mt_programming.html",
+                nas=nas, plan=plan, form=form,
+                kind=form["kind"],
+                error=error, apply_result=None,
+                safety=safety,
+            )
+
     if plan is not None:
         if not confirmed:
             error = "يجب تأكيد العملية قبل التطبيق."
@@ -308,6 +332,10 @@ def mt_program_apply(nas_id: int):
                     "summary": (apply_result.summary()
                                 if apply_result else None),
                     "error": (apply_result.error if apply_result else error),
+                    # O5 — safety check summary alongside apply
+                    # outcome for full post-mortem trail.
+                    "safety": (safety.to_dict()
+                                if safety else None),
                 },
             )
 
@@ -317,6 +345,7 @@ def mt_program_apply(nas_id: int):
         kind=form["kind"],
         error=error,
         apply_result=apply_result,
+        safety=safety,
     )
 
 
