@@ -42,6 +42,16 @@ from typing import Any, Iterable, Optional
 COMMENT_TAG = "HOBE_VX2_SITE_EXIT"
 
 
+# Operator-facing FastTrack advisory — emitted on every plan.
+# Localized in Arabic to match the rest of the operator UI.
+FASTTRACK_WARNING_AR = (
+    "FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، فينفذ "
+    "المسار عبر الـ WAN الأصلي بدل نفق VPS. استبعد عناوين "
+    "الـ address-list هذه من FastTrack يدويًا، أو تأكَّد أنّ "
+    "قاعدة FastTrack تأتي بعد قاعدة الـ mangle الخاصة بـ VX2."
+)
+
+
 def routing_table_name(policy_id: int) -> str:
     return f"HOBE_VX2_{int(policy_id)}"
 
@@ -427,6 +437,18 @@ def build_plan(
     # ── Rollback ── (same find-pattern shape as cleanup)
     rollback_ops = tuple(_rollback_ops(cprefix))
 
+    # ── FastTrack advisory ──
+    # MikroTik's FastTrack short-circuits connection-tracked
+    # traffic past the mangle table. If a connection is
+    # fast-tracked BEFORE this policy's mangle rule sees it,
+    # the routing mark is never applied → the connection exits
+    # via the main WAN, not the VPS tunnel. We do NOT touch
+    # FastTrack automatically (it's a tenant-wide performance
+    # knob). We just surface it loudly so operators know to
+    # exclude VX2-managed destinations from FastTrack in their
+    # /ip/firewall/filter table.
+    warnings.append(FASTTRACK_WARNING_AR)
+
     return ScriptPlan(
         policy_id=pid,
         address_list=al_name,
@@ -462,9 +484,23 @@ def _blocking(*, policy_id: int, reason: str) -> ScriptPlan:
 
 def _cleanup_ops(cprefix: str) -> list[PlanCommand]:
     """Forward-script cleanup: remove every prior managed rule
-    for this policy ID. Safe because the comment prefix is
-    unique per policy."""
-    pattern = cprefix.rstrip(":")
+    for this policy ID.
+
+    The pattern is an **anchored, exact-prefix regex** —
+    ``^HOBE_VX2_SITE_EXIT:<id>:`` — NOT a free substring. This
+    matters for two distinct correctness reasons:
+
+      1. Anchoring with ``^`` means a comment whose body just
+         *contains* the tag (e.g. a hand-written
+         "see HOBE_VX2_SITE_EXIT:1: notes" reminder on an
+         unmanaged rule) is NOT matched.
+      2. The trailing colon distinguishes policy ids — without
+         it, cleaning up policy 1 would also delete policy 10's
+         managed rules.
+    """
+    # `^PREFIX:` — RouterOS evaluates `comment~"..."` as POSIX
+    # regex against the comment column, so `^` is honoured.
+    pattern = f"^{cprefix}"
     # Order matters — remove rules that depend on others first.
     paths = [
         ("firewall-filter", "/ip/firewall/filter"),
@@ -544,7 +580,7 @@ def _is_root_domain(host: str) -> bool:
 
 
 __all__ = [
-    "COMMENT_TAG",
+    "COMMENT_TAG", "FASTTRACK_WARNING_AR",
     "routing_table_name", "address_list_name", "comment_prefix",
     "PlanCommand", "SkippedTarget", "ScriptPlan",
     "build_plan",

@@ -136,7 +136,9 @@ def test_every_managed_command_has_comment_prefix():
     # cleanup + add ops both carry the prefix — cleanup via
     # find_pattern, adds via attrs["comment"].
     for cmd in plan.cleanup_ops + plan.rollback_ops:
-        assert prefix.rstrip(":") in cmd.find_pattern
+        # VX2.3a — pattern is anchored with `^` and ends with
+        # the full prefix (trailing colon included).
+        assert cmd.find_pattern == f"^{prefix}", cmd.find_pattern
     for cmd in (
         plan.routing_table_ops + plan.route_ops
         + plan.address_list_ops + plan.dns_ops
@@ -145,6 +147,74 @@ def test_every_managed_command_has_comment_prefix():
         cm = cmd.attrs.get("comment", "")
         assert cm.startswith(prefix), \
             f"missing prefix on {cmd.path}: {cm!r}"
+
+
+def test_cleanup_pattern_is_anchored_and_colon_terminated():
+    """VX2.3a — cleanup must use `^HOBE_VX2_SITE_EXIT:<id>:`.
+    Without the `^` anchor an unmanaged comment like
+    `# see HOBE_VX2_SITE_EXIT:42: notes` would be deleted.
+    Without the trailing colon, policy 1 would also match
+    policy 10/11/100. Both bugs are silent and dangerous."""
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(),
+        exit_node=_node(),
+        targets=[_target()],
+    )
+    expected = f"^HOBE_VX2_SITE_EXIT:{plan.policy_id}:"
+    for cmd in plan.cleanup_ops:
+        assert cmd.find_pattern == expected, (
+            f"cleanup {cmd.path}: {cmd.find_pattern!r}")
+    for cmd in plan.rollback_ops:
+        assert cmd.find_pattern == expected
+
+
+def test_rendered_remove_line_uses_anchored_prefix():
+    from app.radius.services import site_exit_script_planner as p
+    from app.radius.services import site_exit_script_renderer as r
+    plan = p.build_plan(
+        policy=_policy(),
+        exit_node=_node(),
+        targets=[_target()],
+    )
+    forward = r.render_forward_script(plan)
+    rollback = r.render_rollback_script(plan)
+    anchored = '"^HOBE_VX2_SITE_EXIT:42:"'
+    # both forward (cleanup section) and rollback emit the
+    # anchored regex.
+    assert forward.count(anchored) == len(plan.cleanup_ops)
+    assert rollback.count(anchored) == len(plan.rollback_ops)
+    # The OLD unanchored variant must NOT appear anywhere.
+    assert '"HOBE_VX2_SITE_EXIT:42"' not in forward
+    assert '"HOBE_VX2_SITE_EXIT:42"' not in rollback
+
+
+def test_anchored_pattern_does_not_match_unmanaged_lookalike():
+    """Simulate RouterOS's POSIX-regex match on the comment
+    column to prove the anchored pattern only catches our own
+    rules. We use Python's re for the same semantics — `^`
+    anchors to start in both engines."""
+    import re
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(),
+        exit_node=_node(),
+        targets=[_target()],
+    )
+    pat = re.compile(plan.cleanup_ops[0].find_pattern)
+    # Managed comments — MUST match.
+    assert pat.match("HOBE_VX2_SITE_EXIT:42:routing-table")
+    assert pat.match("HOBE_VX2_SITE_EXIT:42:target:1:speedtest")
+    # Unmanaged lookalikes — MUST NOT match.
+    assert not pat.match("see HOBE_VX2_SITE_EXIT:42: in notes")
+    assert not pat.match("# HOBE_VX2_SITE_EXIT:42: reference")
+    assert not pat.match("MYHOBE_VX2_SITE_EXIT:42:bogus")
+    # Different policy id — MUST NOT match.
+    assert not pat.match("HOBE_VX2_SITE_EXIT:420:routing-table")
+    assert not pat.match("HOBE_VX2_SITE_EXIT:4:foo")  # not 42
+    # Same prefix without trailing colon — MUST NOT match
+    # (defends against accidental policy-id truncation).
+    assert not pat.match("HOBE_VX2_SITE_EXIT:42routing-table")
 
 
 def test_address_list_never_contains_catch_all():
@@ -607,6 +677,28 @@ def test_planner_is_pure_no_app_context_needed():
         targets=[_target()],
     )
     assert plan.policy_id == 42
+
+
+def test_every_plan_carries_a_fasttrack_warning():
+    """VX2.3a — FastTrack interferes with mangle-based policy
+    routing. The advisory must be on every plan that can apply,
+    regardless of fail_mode or include_subdomains."""
+    from app.radius.services import site_exit_script_planner as p
+    plan_a = p.build_plan(
+        policy=_policy(fail_mode="block_when_vps_down"),
+        exit_node=_node(),
+        targets=[_target()],
+        wan_interface_list="WAN",
+    )
+    plan_b = p.build_plan(
+        policy=_policy(fail_mode="fallback_to_wan",
+                        include_subdomains=1),
+        exit_node=_node(),
+        targets=[_target(include_subdomains=True)],
+    )
+    for plan in (plan_a, plan_b):
+        joined = " ".join(plan.warnings)
+        assert "FastTrack" in joined
 
 
 def test_renderer_command_count_matches_emitted_lines():
