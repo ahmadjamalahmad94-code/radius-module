@@ -23,6 +23,57 @@
     overviewIntervalMs: 10_000,
   };
 
+  // ── P1 — Tabs ───────────────────────────────────────────────────
+  //
+  // The hash format is "#tab-<slug>". We strip the prefix on read
+  // and add it on write so the URL stays readable and we don't
+  // clash with anchor fragments inside a panel.
+  (function initTabs() {
+    const tabsNav = root.querySelector("[data-mt-tabs]");
+    if (!tabsNav) return;
+    const tabs   = Array.from(tabsNav.querySelectorAll("[data-mt-tab]"));
+    const panels = Array.from(root.querySelectorAll("[data-mt-tab-panel]"));
+    if (!tabs.length || !panels.length) return;
+
+    const known = new Set(tabs.map(t => t.dataset.mtTab));
+
+    function show(slug) {
+      if (!known.has(slug)) slug = "overview";
+      tabs.forEach(t => {
+        const on = t.dataset.mtTab === slug;
+        t.classList.toggle("is-active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      panels.forEach(p => {
+        const on = p.dataset.mtTabPanel === slug;
+        p.classList.toggle("is-active", on);
+        if (on) p.removeAttribute("hidden");
+        else    p.setAttribute("hidden", "");
+      });
+    }
+
+    function fromHash() {
+      const h = (location.hash || "").replace(/^#/, "");
+      if (h.startsWith("tab-")) return h.slice(4);
+      return "overview";
+    }
+
+    tabs.forEach(t => {
+      t.addEventListener("click", () => {
+        const slug = t.dataset.mtTab;
+        show(slug);
+        // Update hash without scrolling the page to top.
+        const newHash = "#tab-" + slug;
+        if (location.hash !== newHash) {
+          history.replaceState(null, "", newHash);
+        }
+      });
+    });
+
+    window.addEventListener("hashchange", () => show(fromHash()));
+    show(fromHash());
+  })();
+
   // ── Status pill helpers ─────────────────────────────────────────
   const statusRow = root.querySelector("[data-mt-status]");
   const statusLabel = root.querySelector("[data-mt-status-label]");

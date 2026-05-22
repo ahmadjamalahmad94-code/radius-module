@@ -26,6 +26,49 @@
     icon="router"
   ) }}
 
+  {# P1 — Tabs strip. The current K9 dashboard goes under
+     'Overview'; the other tabs ship as honest empty states
+     until P2..P7 fill them in. Hash-based active state so
+     deep-links / refresh keep the operator on the same tab. #}
+  <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
+    <button type="button" class="mt-tab is-active"
+            data-mt-tab="overview" role="tab" aria-selected="true">
+      <i class="fa-solid fa-gauge-high"></i> نظرة عامة
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="interfaces" role="tab" aria-selected="false">
+      <i class="fa-solid fa-ethernet"></i> الواجهات
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="ips" role="tab" aria-selected="false">
+      <i class="fa-solid fa-network-wired"></i> العناوين
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="routes" role="tab" aria-selected="false">
+      <i class="fa-solid fa-route"></i> المسارات
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="neighbors" role="tab" aria-selected="false">
+      <i class="fa-solid fa-people-arrows"></i> الجيران
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="sessions" role="tab" aria-selected="false">
+      <i class="fa-solid fa-users"></i> الجلسات
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="logs" role="tab" aria-selected="false">
+      <i class="fa-solid fa-list"></i> السجلات
+    </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="diagnostics" role="tab" aria-selected="false">
+      <i class="fa-solid fa-stethoscope"></i> التشخيص
+    </button>
+  </nav>
+
+  {# ─── Overview panel (the existing K9 dashboard, untouched) ─── #}
+  <section class="mt-tab-panel is-active"
+           data-mt-tab-panel="overview" role="tabpanel">
+
   {# Connection / status row — filled by JS. The 'pending' label is
      real text shown until the first /system/overview call lands. #}
   <div class="mt-status-row" data-mt-status>
@@ -187,6 +230,43 @@
            aria-live="polite"></pre>
     </div>
   </section>
+
+  </section>{# /overview panel #}
+
+  {# ─── Placeholder panels (P2..P7 will fill them). Honest
+       empty states — no fake buttons, no fake data. ─── #}
+  {% set _placeholders = [
+    ('interfaces',  'الواجهات',  'ethernet',
+     'جدول الواجهات الكامل (نوع، السرعة، الترافيك، الأخطاء) ينزل في P2.'),
+    ('ips',         'العناوين',  'network-wired',
+     'جدول /ip/address على هذا الراوتر — ينزل في P3.'),
+    ('routes',      'المسارات',  'route',
+     'جدول /ip/route مع gateway/distance/active — ينزل في P3.'),
+    ('neighbors',   'الجيران',   'people-arrows',
+     'الأجهزة المكتشَفة عبر MNDP/CDP/LLDP — ينزل في P4.'),
+    ('sessions',    'الجلسات',   'users',
+     'Hotspot + PPP active users مع uptime + bytes — ينزل في P6.'),
+    ('logs',        'السجلات',   'list',
+     'عارض حيّ للـ /log مع فلاتر الموضوع — ينزل في P5.'),
+    ('diagnostics', 'التشخيص',   'stethoscope',
+     'تحليل إشارات الخطر (loop / flapping / overlap) — ينزل في P7.'),
+  ] %}
+  {% for slug, label, icon, message in _placeholders %}
+  <section class="mt-tab-panel"
+           data-mt-tab-panel="{{ slug }}" role="tabpanel" hidden>
+    <div class="mt-tab-empty">
+      <div class="mt-tab-empty-icon">
+        <i class="fa-solid fa-{{ icon }}"></i>
+      </div>
+      <h3>{{ label }}</h3>
+      <p>{{ message }}</p>
+      <p class="mt-tab-empty-hint">
+        لا توجد أزرار وهمية هنا — كل قسم يضاف يعمل بالكامل من
+        أوّل commit يفعّله.
+      </p>
+    </div>
+  </section>
+  {% endfor %}
 
 </section>
 

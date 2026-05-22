@@ -332,3 +332,101 @@
 .mt-action-output:empty { display: none; }
 .mt-action-output.is-ok { border-inline-start: 3px solid #16A34A; }
 .mt-action-output.is-fail { border-inline-start: 3px solid #DC2626; }
+
+/* ───────────────────────────────────────────────────────────────
+   P1 — Per-router tabs.
+
+   Horizontal strip of tab buttons with overflow-scroll on narrow
+   viewports. Active tab gets a brand-coloured underline + filled
+   icon. Inactive panels are `hidden`; JS toggles the attribute on
+   click + restores from `location.hash` on load so deep-links
+   land in the right tab.
+   ─────────────────────────────────────────────────────────────── */
+.mt-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid #E2E8F0;
+  margin: 4px 0 12px;
+  padding-bottom: 0;
+  scrollbar-width: thin;
+}
+.mt-tabs::-webkit-scrollbar { height: 6px; }
+.mt-tabs::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+.mt-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #475569;
+  cursor: pointer;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.mt-tab:hover {
+  color: #0F172A;
+  background: #F8FAFC;
+}
+.mt-tab:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+.mt-tab.is-active {
+  color: #2563EB;
+  border-bottom-color: #2563EB;
+  background: transparent;
+}
+.mt-tab.is-active i { color: #2563EB; }
+
+.mt-tab-panel { display: block; }
+.mt-tab-panel[hidden] { display: none; }
+
+.mt-tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 48px 24px;
+  color: #475569;
+}
+.mt-tab-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+.mt-tab-empty h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #0F172A;
+}
+.mt-tab-empty p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  max-width: 56ch;
+  line-height: 1.6;
+}
+.mt-tab-empty-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748B;
+}
