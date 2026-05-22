@@ -303,7 +303,8 @@
   {% endif %}
 
   {% if apply_result %}
-  <section class="mt-card" data-mt-program-apply-result>
+  <section class="mt-card" data-mt-program-apply-result
+           data-mt-apply-status="{{ apply_result.result_status() }}">
     <header class="mt-card-head">
       <h3>
         <i class="fa-solid fa-{{ 'circle-check' if apply_result.ok else 'circle-exclamation' }}"></i>
@@ -320,6 +321,17 @@
       </span>
     </header>
     <div class="mt-card-body">
+
+      {# S4.3 — partial-apply recovery guidance. Shown when the
+         apply loop got partway through then failed — the
+         operator must clean up before retrying. #}
+      {% if not apply_result.ok %}
+      <div class="mt-program-banner mt-program-banner--risk"
+           data-mt-apply-recovery>
+        <li><i class="fa-solid fa-life-ring"></i>
+          {{ apply_result.recovery_hint_ar() }}</li>
+      </div>
+      {% endif %}
       <ul class="mt-program-summary" data-mt-apply-steps>
         {% for step in apply_result.steps %}
         <li>

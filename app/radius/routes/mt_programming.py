@@ -276,8 +276,8 @@ def mt_program_apply(nas_id: int):
                     pass
 
             actor = str(getattr(g, "admin_id", None) or "ui")
-            # S2.3 — enrich audit with severity / router_id /
-            # result_status so the S2.2 UI can filter.
+            # S2.3 + S4.3 — surface partial vs failed and lift
+            # the severity for partial (operator must clean up).
             ok_flag = bool(apply_result and apply_result.ok)
             if not apply_result:
                 _result = "failed"
@@ -286,8 +286,8 @@ def mt_program_apply(nas_id: int):
                 _result = "success"
                 _sev = "info"
             else:
-                _result = "failed"
-                _sev = "warning"
+                _result = apply_result.result_status()  # 'partial' or 'failed'
+                _sev = "warning" if _result == "partial" else "critical"
             get_audit_service().record(
                 actor=actor,
                 action=f"mt.programming.{plan.kind}.apply",

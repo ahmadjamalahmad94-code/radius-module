@@ -679,6 +679,50 @@ class ApplyResult:
             "failed":  sum(1 for s in self.steps if not s.ok),
         }
 
+    # ─── S4.3 — partial-apply reporting ───────────────────
+
+    def was_partial(self) -> bool:
+        """True when *some* commands hit the router successfully
+        BEFORE another command failed. That state is dangerous —
+        the operator must clean up the partial config before
+        retrying or the router carries half a setup.
+
+        Distinct from `ok=False` alone, which can mean "nothing
+        was applied" (the first command failed). For the audit
+        log + UI, partial deserves its own treatment: a different
+        severity + a recovery hint.
+        """
+        if self.ok:
+            return False
+        applied = sum(1 for s in self.steps
+                       if s.ok and not s.skipped)
+        failed = sum(1 for s in self.steps if not s.ok)
+        return applied > 0 and failed > 0
+
+    def result_status(self) -> str:
+        """Mirror the audit_log.result_status convention:
+        success / failed / partial. Lets the audit wire-up
+        copy the value verbatim."""
+        if self.ok:
+            return "success"
+        return "partial" if self.was_partial() else "failed"
+
+    def recovery_hint_ar(self) -> str:
+        """Arabic operator-facing guidance, picked by status."""
+        if self.ok:
+            return ""
+        if self.was_partial():
+            return (
+                "تم تطبيق بعض الأوامر قبل أن يفشل أمر تالٍ. "
+                "الحالة جزئية وغير متّسقة — استخدم تراجع/Unprogram "
+                "لإزالة الكائنات التي حملت comment=hoberadius:* ثم "
+                "أعد التطبيق."
+            )
+        return (
+            "لم يُطبَّق أي أمر — يمكن إعادة المحاولة بعد تصحيح "
+            "السبب الموضّح في الخطأ أعلاه."
+        )
+
 
 # RouterOS error texts that mean "object already exists with these
 # attrs" — treating them as idempotent successes lets the operator
