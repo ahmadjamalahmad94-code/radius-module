@@ -24,3 +24,6 @@ docs/*
 !docs/radius/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
+
+# Sibling-automation working dirs (not part of this repo)
+.codex-recovery/

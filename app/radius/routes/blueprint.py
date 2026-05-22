@@ -162,6 +162,9 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_guided_op import register_mt_guided_op_routes
     register_mt_guided_op_routes(bp)
 
+    from .site_exit import register_site_exit_routes
+    register_site_exit_routes(bp)
+
     from .tokens import register_tokens_routes
     register_tokens_routes(bp)
 

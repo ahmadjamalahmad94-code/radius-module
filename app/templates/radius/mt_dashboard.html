@@ -66,6 +66,13 @@
       <span class="mt-router-quicknav-label">تشخيص الفليت</span>
       <span class="mt-router-quicknav-sub">سكربتات الإصلاح</span>
     </a>
+    <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.site_exit_page', nas_id=nas.id) }}"
+       data-mt-router-link="site-exit">
+      <i class="fa-solid fa-route"></i>
+      <span class="mt-router-quicknav-label">توجيه مواقع عبر VPS</span>
+      <span class="mt-router-quicknav-sub">VX2 — وجهات مختارة فقط</span>
+    </a>
   </nav>
 
   {# P1 — Tabs strip. The current K9 dashboard goes under
