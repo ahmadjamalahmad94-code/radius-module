@@ -7,6 +7,7 @@ from __future__ import annotations
 from flask import Blueprint, abort, g, render_template
 
 from ..core.tenant import DEFAULT_TENANT_ID
+from ..services.mt_health_score import score_health
 from ..services.mt_permissions import PERM_VIEW, requires_perm
 from ..services.mt_router_overview import build_overview
 
@@ -28,5 +29,6 @@ def mt_router_overview(nas_id: int):
     ov = build_overview(tenant_id=_tid(), nas_id=int(nas_id))
     if ov is None:
         abort(404)
+    health = score_health(ov)
     return render_template("radius/mt_router_overview.html",
-                           overview=ov)
+                           overview=ov, health=health)

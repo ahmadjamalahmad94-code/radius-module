@@ -26,13 +26,54 @@
 <section class="mt-dashboard"
          data-mt-router-overview
          data-mt-router-id="{{ ov.nas_id }}"
-         data-mt-overview-safe="{{ 'true' if ov.safe_to_modify else 'false' }}">
+         data-mt-overview-safe="{{ 'true' if ov.safe_to_modify else 'false' }}"
+         data-mt-health-state="{{ health.state }}"
+         data-mt-health-score="{{ health.score }}"
+         data-mt-health-signal="{{ health.primary_signal }}">
 
   {{ hub.hero(
     "نظرة عامة — " ~ ov.name,
     subtitle="حالة الراوتر، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوات يجب اتّخاذها.",
     icon="clipboard-check",
   ) }}
+
+  {# ── O2 Health pill — single-glance verdict ── #}
+  <div class="mt-program-banner
+              {% if health.state == 'healthy' %}mt-program-banner--warn{% elif health.state in ('risky', 'offline') %}mt-program-banner--risk{% else %}mt-program-banner--warn{% endif %}"
+       data-mt-health-pill
+       {% if health.state == 'healthy' %}
+       style="background:#DCFCE7;border-color:#86EFAC;color:#166534"
+       {% elif health.state == 'attention' %}
+       style="background:#FFFBEB;border-color:#FDE68A;color:#92400E"
+       {% elif health.state == 'unknown' %}
+       style="background:#F1F5F9;border-color:#CBD5E1;color:#475569"
+       {% endif %}>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      {% if health.state == 'healthy' %}
+      <i class="fa-solid fa-heart-pulse"></i>
+      <strong>الراوتر صحّي — score {{ health.score }}/100</strong>
+      {% elif health.state == 'attention' %}
+      <i class="fa-solid fa-circle-info"></i>
+      <strong>يحتاج انتباهًا — score {{ health.score }}/100</strong>
+      {% elif health.state == 'risky' %}
+      <i class="fa-solid fa-shield-halved"></i>
+      <strong>خطر تشغيلي — score {{ health.score }}/100</strong>
+      {% elif health.state == 'offline' %}
+      <i class="fa-solid fa-plug-circle-xmark"></i>
+      <strong>غير متصل — score {{ health.score }}/100</strong>
+      {% else %}
+      <i class="fa-solid fa-question"></i>
+      <strong>الحالة غير معروفة — لا توجد بيانات كافية</strong>
+      {% endif %}
+      <span data-mt-health-recommendation>{{ health.recommended_action_ar }}</span>
+    </div>
+    {% if health.reasons %}
+    <ul style="margin-top:6px;list-style:disc;padding-inline-start:24px"
+        data-mt-health-reasons>
+      {% for r in health.reasons %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
 
   {# ── Safety banner — the single most important signal ── #}
   {% if ov.safe_to_modify %}
