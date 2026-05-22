@@ -435,6 +435,79 @@ def ppp_active(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+# ─── K6: simple queues + firewall ────────────────────────────────
+
+
+def queue_simple_list(nas: Mapping[str, Any]) -> MtResult:
+    """`/queue/simple/print` — list of simple queues with limits."""
+    return fetch_cached(
+        nas=nas,
+        operation="queue/simple",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/queue/simple/print")),
+    )
+
+
+# Fields the admin UI may edit on a simple queue. Anything else is
+# refused — we don't blind-edit parent/target/type because those
+# would silently break the queue rather than just adjust a limit.
+QUEUE_SIMPLE_EDITABLE = frozenset({"max-limit", "disabled", "comment"})
+
+
+def _coerce_queue_attr(key: str, value: Any) -> str:
+    """Stringify an attr value for the wire client, with shape
+    checks for the few keys we accept."""
+    if key == "disabled":
+        # RouterOS expects 'yes'/'no'.
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        text = str(value).strip().lower()
+        if text in {"yes", "true", "1"}:
+            return "yes"
+        if text in {"no", "false", "0"}:
+            return "no"
+        raise ValueError("disabled يجب أن يكون true/false")
+    if value is None:
+        return ""
+    return str(value)
+
+
+def queue_simple_set(
+    nas: Mapping[str, Any], queue_id: str, attrs: Mapping[str, Any],
+) -> MtResult:
+    """`/queue/simple/set .id=<id> ...` — edit a queue's limits.
+
+    Only `max-limit`, `disabled`, `comment` may be set. Bad input
+    short-circuits to a clean error envelope; a router-side trap
+    surfaces as one too.
+    """
+    qid = (queue_id or "").strip()
+    if not qid:
+        return MtResult(ok=False, error="معرّف الطابور غير محدد")
+    if not attrs:
+        return MtResult(ok=False, error="لا توجد حقول للتحديث")
+
+    rejected = [k for k in attrs if k not in QUEUE_SIMPLE_EDITABLE]
+    if rejected:
+        return MtResult(
+            ok=False,
+            error=f"حقول غير مسموح بتعديلها: {', '.join(rejected)}",
+        )
+
+    try:
+        wire_attrs = {k: _coerce_queue_attr(k, v) for k, v in attrs.items()}
+    except ValueError as exc:
+        return MtResult(ok=False, error=str(exc))
+    wire_attrs[".id"] = qid
+
+    return _run_mutation(
+        nas,
+        operation="queue/simple/set",
+        work=lambda c: c.run("/queue/simple/set", attrs=wire_attrs),
+        invalidate=("queue/simple",),
+    )
+
+
 def _run_mutation(
     nas: Mapping[str, Any],
     *,
@@ -572,6 +645,9 @@ __all__ = [
     "ppp_active",
     "disconnect_hotspot_session",
     "disconnect_ppp_session",
+    "queue_simple_list",
+    "queue_simple_set",
+    "QUEUE_SIMPLE_EDITABLE",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",

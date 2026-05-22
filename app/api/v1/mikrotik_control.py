@@ -30,12 +30,21 @@ K5 endpoints — hotspot + PPP active users:
   GET  /api/v1/mikrotik/<id>/ppp/active
   POST /api/v1/mikrotik/<id>/hotspot/active/<sid>/disconnect
   POST /api/v1/mikrotik/<id>/ppp/active/<sid>/disconnect
+
+K6 endpoints — simple queues + firewall:
+  GET  /api/v1/mikrotik/<id>/queues/simple
+  PUT  /api/v1/mikrotik/<id>/queues/simple/<qid>
+  GET  /api/v1/mikrotik/<id>/firewall/filter
+  GET  /api/v1/mikrotik/<id>/firewall/nat
+  GET  /api/v1/mikrotik/<id>/firewall/address-lists
+  POST /api/v1/mikrotik/<id>/firewall/address-lists
+  DELETE /api/v1/mikrotik/<id>/firewall/address-lists/<eid>
 """
 from __future__ import annotations
 
 import json
 
-from flask import Blueprint, Response, g
+from flask import Blueprint, Response, g, request
 
 from ...radius.db.connection import db
 from ...radius.services import mikrotik_admin_client as mac
@@ -137,6 +146,19 @@ def register(bp: Blueprint) -> None:
         "mt_ppp_disconnect",
         require_api_token(mt_ppp_disconnect),
         methods=["POST"],
+    )
+    # K6 — simple queues
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/queues/simple",
+        "mt_queues_simple_list",
+        require_api_token(mt_queues_simple_list),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/queues/simple/<string:queue_id>",
+        "mt_queues_simple_set",
+        require_api_token(mt_queues_simple_set),
+        methods=["PUT"],
     )
 
 
@@ -346,6 +368,34 @@ def mt_ppp_disconnect(nas_id: int, session_id: str):
     )
     payload = _envelope(result, router_id=nas_id)
     payload["session_id"] = session_id
+    return ok(payload)
+
+
+# ─── K6: simple queues endpoints ─────────────────────────────────
+
+
+def mt_queues_simple_list(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.queue_simple_list(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_queues_simple_set(nas_id: int, queue_id: str):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+    result = mac.queue_simple_set(nas, queue_id, body)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.queue.simple.set",
+        target_id=queue_id, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["queue_id"] = queue_id
     return ok(payload)
 
 

@@ -559,6 +559,90 @@ def test_ppp_active_calls_right_path(fake_nas_direct):
     mock_client.print_.assert_called_once_with("/ppp/active/print")
 
 
+# ─── K6.1: simple queues ─────────────────────────────────────────
+
+
+def test_queue_simple_list_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "name": "q1", "target": "10.5.0.0/24",
+         "max-limit": "20M/20M", "disabled": "false"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.queue_simple_list(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/queue/simple/print")
+    assert res.data[0]["max-limit"] == "20M/20M"
+
+
+def test_queue_simple_set_sends_id_and_allowed_attrs(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.queue_simple_set(
+            fake_nas_direct, "*3",
+            {"max-limit": "30M/30M", "disabled": True},
+        )
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/queue/simple/set"
+    assert kwargs["attrs"][".id"] == "*3"
+    assert kwargs["attrs"]["max-limit"] == "30M/30M"
+    # disabled coerced bool→'yes'.
+    assert kwargs["attrs"]["disabled"] == "yes"
+
+
+def test_queue_simple_set_rejects_forbidden_fields(fake_nas_direct):
+    """Editing parent/target/type is dangerous — refuse early."""
+    res = mac.queue_simple_set(
+        fake_nas_direct, "*3", {"target": "0.0.0.0/0"},
+    )
+    assert res.ok is False
+    assert "غير مسموح" in res.error
+
+
+def test_queue_simple_set_rejects_empty_id(fake_nas_direct):
+    res = mac.queue_simple_set(fake_nas_direct, "", {"disabled": False})
+    assert res.ok is False
+    assert "غير محدد" in res.error
+
+
+def test_queue_simple_set_rejects_empty_attrs(fake_nas_direct):
+    res = mac.queue_simple_set(fake_nas_direct, "*3", {})
+    assert res.ok is False
+    assert "لا توجد حقول" in res.error
+
+
+def test_queue_simple_set_rejects_bad_disabled(fake_nas_direct):
+    res = mac.queue_simple_set(
+        fake_nas_direct, "*3", {"disabled": "maybe"},
+    )
+    assert res.ok is False
+    assert "true/false" in res.error
+
+
+def test_queue_simple_set_invalidates_list_cache(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{".id": "*1", "max-limit": "1M/1M"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.queue_simple_list(fake_nas_direct)
+        mac.queue_simple_set(
+            fake_nas_direct, "*1", {"max-limit": "5M/5M"},
+        )
+        mac.queue_simple_list(fake_nas_direct)
+
+    assert mock_client.print_.call_count == 2
+
+
 def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
     samples = list(mac.stream_interface_samples(
         fake_nas_direct, "",
