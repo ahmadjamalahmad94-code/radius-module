@@ -1,0 +1,93 @@
+/* Q1 — Network programming wizard.
+   Sits next to the dashboard styles; reuses .mt-card / .mt-action-btn /
+   .mt-logs-output from mt_dashboard.css. Only the programming-specific
+   form grid + banner + summary list live here. */
+
+.mt-program {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mt-program-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.mt-program-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+.mt-program-field input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  background: #fff;
+  color: #0F172A;
+  font: inherit;
+  font-size: 13px;
+}
+.mt-program-field input:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
+  border-color: #2563EB;
+}
+
+.mt-program-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mt-program-error {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mt-program-banner {
+  list-style: none;
+  padding: 12px 14px;
+  margin: 0 0 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mt-program-banner li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.mt-program-banner--risk {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #991B1B;
+}
+.mt-program-banner--warn {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+  color: #92400E;
+}
+
+.mt-program-summary {
+  list-style: disc;
+  padding-inline-start: 24px;
+  margin: 0 0 12px;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.7;
+}

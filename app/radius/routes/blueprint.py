@@ -118,6 +118,9 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_dashboard import register_mt_dashboard_routes
     register_mt_dashboard_routes(bp)
 
+    from .mt_programming import register_mt_programming_routes
+    register_mt_programming_routes(bp)
+
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 

@@ -1,0 +1,173 @@
+{# Q1 — Network programming wizard.
+
+   Read-only generator. Operator fills the form, server returns
+   the planned RouterOS script + a summary + any warnings / risks
+   detected against the router's current state. The apply button
+   is disabled and labelled "Q2" so it's clear the work landed in
+   layers.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}برمجة الشبكة — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
+{% block page_title %}برمجة الشبكة على {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }} · المرحلة Q1</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_programming.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-program" data-mt-program>
+
+  {{ hub.hero(
+    "برمجة الشبكة — " ~ nas.name,
+    subtitle="هذه المرحلة تُولّد script RouterOS فقط ولا تُطبّقه. زر التطبيق يصبح فعّالاً في Q2.",
+    icon="diagram-project",
+  ) }}
+
+  {% if error %}
+  <div class="mt-program-error" role="alert">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-network-wired"></i> إعداد Hotspot</h3>
+    </header>
+    <div class="mt-card-body">
+      <form class="mt-program-form" method="post"
+            action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
+            data-mt-program-form>
+
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>الواجهة</span>
+            <input type="text" name="interface" required
+                   value="{{ form.interface or '' }}"
+                   placeholder="ether2"
+                   data-mt-program-interface>
+          </label>
+
+          <label class="mt-program-field">
+            <span>نطاق العنوان (CIDR)</span>
+            <input type="text" name="cidr" required
+                   value="{{ form.cidr or '' }}"
+                   placeholder="192.168.10.0/24"
+                   data-mt-program-cidr>
+          </label>
+
+          <label class="mt-program-field">
+            <span>اسم الـ hotspot</span>
+            <input type="text" name="hotspot_name" required
+                   value="{{ form.hotspot_name or '' }}"
+                   placeholder="hs"
+                   data-mt-program-name>
+          </label>
+
+          <label class="mt-program-field">
+            <span>خوادم DNS (مفصولة بفواصل)</span>
+            <input type="text" name="dns_servers"
+                   value="{{ form.dns_servers or '8.8.8.8,1.1.1.1' }}"
+                   data-mt-program-dns>
+          </label>
+
+          <label class="mt-program-field">
+            <span>Gateway (اختياري)</span>
+            <input type="text" name="gateway"
+                   value="{{ form.gateway or '' }}"
+                   placeholder="افتراضيًا أول عنوان">
+          </label>
+
+          <label class="mt-program-field">
+            <span>بداية الـ pool (اختياري)</span>
+            <input type="text" name="pool_start"
+                   value="{{ form.pool_start or '' }}"
+                   placeholder="مثلًا 192.168.10.10">
+          </label>
+
+          <label class="mt-program-field">
+            <span>نهاية الـ pool (اختياري)</span>
+            <input type="text" name="pool_end"
+                   value="{{ form.pool_end or '' }}"
+                   placeholder="مثلًا 192.168.10.254">
+          </label>
+
+          <label class="mt-program-field">
+            <span>مدة الـ lease</span>
+            <input type="text" name="lease_time"
+                   value="{{ form.lease_time or '1h' }}"
+                   placeholder="1h">
+          </label>
+
+          <label class="mt-program-field">
+            <span>Rate-limit الافتراضي (اختياري)</span>
+            <input type="text" name="rate_limit"
+                   value="{{ form.rate_limit or '' }}"
+                   placeholder="10M/10M">
+          </label>
+        </div>
+
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-mt-program-submit>
+            <i class="fa-solid fa-rotate-right"></i>
+            توليد الـ script
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {% if plan %}
+  <section class="mt-card" data-mt-program-plan-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-file-code"></i> الـ Script المُولّد</h3>
+    </header>
+    <div class="mt-card-body">
+
+      {% if plan.risks %}
+      <ul class="mt-program-banner mt-program-banner--risk"
+          data-mt-program-risks>
+        {% for r in plan.risks %}
+        <li><i class="fa-solid fa-shield-halved"></i> {{ r }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if plan.warnings %}
+      <ul class="mt-program-banner mt-program-banner--warn"
+          data-mt-program-warnings>
+        {% for w in plan.warnings %}
+        <li><i class="fa-solid fa-triangle-exclamation"></i> {{ w }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <ul class="mt-program-summary" data-mt-program-summary>
+        {% for s in plan.summary %}<li>{{ s }}</li>{% endfor %}
+      </ul>
+
+      <pre class="mt-logs-output" data-mt-program-script>{{ plan.script }}</pre>
+
+      <div class="mt-program-actions">
+        <button type="button" class="mt-action-btn mt-action-btn--danger"
+                disabled
+                data-mt-program-apply
+                title="التطبيق متاح في Q2">
+          <i class="fa-solid fa-bolt"></i>
+          تطبيق على الراوتر (يُفعَّل في Q2)
+        </button>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+</section>
+
+{% endblock %}
