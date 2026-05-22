@@ -1,0 +1,120 @@
+{# O4 — Per-router human-readable activity timeline.
+
+   Reads from the same audit_log rows the existing center
+   shows; this view just formats them for operators. Each
+   item links back to the raw audit detail page.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}سجلّ نشاط — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
+{% block page_title %}سجلّ نشاط الراوتر — {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-audit-timeline
+         data-mt-timeline-router-id="{{ nas.id }}"
+         data-mt-timeline-count="{{ entries|length }}">
+
+  {{ hub.hero(
+    "سجلّ نشاط — " ~ nas.name,
+    subtitle="ما حدث على هذا الراوتر — بلغة المشغّل، لا الـ JSON.",
+    icon="timeline",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> آخر النشاط</h3>
+      <span class="mt-card-meta">
+        <span data-mt-timeline-total>{{ entries|length }}</span> حدث
+        ·
+        <a class="mt-mini-btn"
+           href="{{ url_for('radius.audit_log_index') }}?router_id={{ nas.id }}"
+           data-mt-timeline-raw-link>
+          <i class="fa-solid fa-code"></i> الراو (JSON)
+        </a>
+      </span>
+    </header>
+    <div class="mt-card-body">
+
+      {% if not entries %}
+      <p class="mt-empty" data-mt-timeline-empty>
+        لا يوجد نشاط مسجَّل لهذا الراوتر بعد.
+      </p>
+      {% else %}
+      <ul class="mt-health-list" data-mt-timeline-rows>
+        {% for e in entries %}
+        <li class="mt-health-row mt-health-row--{{ e.severity }}"
+            data-mt-timeline-entry="{{ e.audit_id }}"
+            data-mt-timeline-action="{{ e.action }}"
+            data-mt-timeline-severity="{{ e.severity }}"
+            data-mt-timeline-result="{{ e.result_status }}">
+          <div class="mt-health-row-head">
+            {% if e.severity == "critical" %}
+            <span class="mt-iface-state mt-iface-state--off">حرجة</span>
+            {% elif e.severity == "warning" %}
+            <span class="mt-iface-state mt-iface-state--down">تحذير</span>
+            {% else %}
+            <span class="mt-iface-state mt-iface-state--up">معلومة</span>
+            {% endif %}
+
+            {% if e.result_status == "success" %}
+            <span class="mt-iface-state mt-iface-state--up">نجح</span>
+            {% elif e.result_status == "failed" %}
+            <span class="mt-iface-state mt-iface-state--off">فشل</span>
+            {% elif e.result_status == "partial" %}
+            <span class="mt-iface-state mt-iface-state--down">جزئي</span>
+            {% endif %}
+
+            <span class="mt-health-row-msg">{{ e.headline_ar | safe }}</span>
+          </div>
+
+          {% if e.detail_ar %}
+          <p style="margin:4px 0 0;font-size:12px;color:#475569">
+            {{ e.detail_ar }}
+          </p>
+          {% endif %}
+
+          {% if e.recovery_hint_ar %}
+          <p style="margin-top:6px;font-size:12px;color:#92400E;
+                    background:#FFFBEB;border-inline-start:3px solid #FDE68A;
+                    padding:6px 10px;border-radius:6px"
+             data-mt-timeline-recovery>
+            <i class="fa-solid fa-life-ring"></i> {{ e.recovery_hint_ar }}
+          </p>
+          {% endif %}
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;
+                      margin-top:6px;font-size:12px;color:#64748B">
+            <span><code>{{ e.created_at }}</code></span>
+            <a href="{{ url_for('radius.audit_log_detail', audit_id=e.audit_id) }}"
+               class="mt-mini-btn"
+               data-mt-timeline-raw="{{ e.audit_id }}">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              تفاصيل الراو
+            </a>
+            {% if e.related_job_id %}
+            <a href="{{ url_for('radius.jobs_show', job_id=e.related_job_id) }}"
+               class="mt-mini-btn"
+               data-mt-timeline-job="{{ e.related_job_id }}">
+              <i class="fa-solid fa-list-check"></i>
+              مهمة #{{ e.related_job_id }}
+            </a>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

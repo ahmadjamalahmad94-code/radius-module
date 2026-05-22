@@ -309,11 +309,18 @@
           <span class="mt-router-quicknav-sub">KPI + tabs</span>
         </a>
         <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.mt_audit_timeline', nas_id=ov.nas_id) }}"
+           data-mt-overview-link="timeline">
+          <i class="fa-solid fa-timeline"></i>
+          <span class="mt-router-quicknav-label">سجلّ النشاط</span>
+          <span class="mt-router-quicknav-sub">مقروء بشريًا</span>
+        </a>
+        <a class="mt-router-quicknav-link"
            href="{{ url_for('radius.audit_log_index') }}?router_id={{ ov.nas_id }}"
            data-mt-overview-link="audit">
           <i class="fa-solid fa-clipboard-list"></i>
           <span class="mt-router-quicknav-label">سجل عمليات الراوتر</span>
-          <span class="mt-router-quicknav-sub">audit · مفلتر</span>
+          <span class="mt-router-quicknav-sub">JSON خام</span>
         </a>
         <a class="mt-router-quicknav-link"
            href="{{ url_for('radius.mt_alerts_index') }}?router_id={{ ov.nas_id }}"
