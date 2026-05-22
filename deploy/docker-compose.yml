@@ -45,8 +45,12 @@ services:
       - "3799:3799/udp"                # CoA / Disconnect-Request (RFC 5176)
     networks: [hrnet]
     healthcheck:
-      # ـ نتأكّد أنّ المنفذ UDP 1812 مفتوح داخل الـ container ـ
-      test: ["CMD-SHELL", "ss -lun | grep -q ':1812' || exit 1"]
+      # نتأكّد أنّ المنفذ UDP 1812 (RADIUS auth) مفتوح داخل الـ container.
+      # نستعمل /proc/net/udp بدلاً من `ss` لأن iproute2 غير مثبَّت في
+      # image الـ freeradius — أي بدون أي اعتمادات خارجية: شل + procfs فقط.
+      # 1812 hex = 0714. الـ space النهائي قبل '0' يطابق rem_address=0:0
+      # (السطر الذي يمثّل listening socket فعلاً، لا attached client).
+      test: ["CMD-SHELL", "grep -q ':0714 0' /proc/net/udp || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
