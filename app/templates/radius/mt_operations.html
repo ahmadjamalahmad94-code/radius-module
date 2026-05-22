@@ -199,6 +199,12 @@
              data-mt-row-link="login-designer">
             <i class="fa-solid fa-palette"></i> تصميم
           </a>
+          <a class="hub-btn hub-btn--sm"
+             href="{{ url_for('radius.mt_backups_list', nas_id=item.id) }}"
+             title="النسخ الاحتياطية"
+             data-mt-row-link="backups">
+            <i class="fa-solid fa-floppy-disk"></i> نسخ
+          </a>
           {% if item.ros_version %}
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_setup_script', nas_id=item.id) }}">
             <i class="fa-solid fa-code"></i> سكربت

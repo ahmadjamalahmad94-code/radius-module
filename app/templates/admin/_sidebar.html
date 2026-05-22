@@ -72,6 +72,11 @@
 {%- set m_mt          = '/mt' in path -%}
 {%- set m_diag        = '/diagnostics' in path -%}
 {%- set m_push        = '/mt-push-setup' in path -%}
+{# Phase S — new network surfaces #}
+{%- set m_topology    = ('/topology' in path) -%}
+{%- set m_alerts      = ('/alerts' in path) -%}
+{%- set m_audit_log   = ('/audit' in path) -%}
+{%- set m_jobs        = ('/jobs/' in path) -%}
 
 {# Accounting #}
 {%- set m_invoices    = '/invoices' in path -%}
@@ -89,7 +94,10 @@
 {%- set m_distributors= '/distributors' in path -%}
 {%- set m_roles       = '/roles' in path -%}
 {%- set m_recycle     = '/recycle-bin' in path -%}
-{%- set m_backups     = '/backups' in path -%}
+{# Global backups page lives under /admin/.../backups; per-router
+   backups live under /mt/<id>/backups — exclude the latter so the
+   sidebar doesn't double-highlight. #}
+{%- set m_backups     = ('/backups' in path) and ('/mt/' not in path) -%}
 {%- set m_lifecycle   = '/lifecycle' in path -%}
 
 {# Integration #}
@@ -100,7 +108,9 @@
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
-{%- set sec_network_active  = m_devices or m_pools or m_mt -%}
+{%- set sec_network_active  = m_devices or m_pools or m_mt
+                                or m_topology or m_alerts
+                                or m_audit_log or m_jobs -%}
 {%- set sec_billing_active  = m_invoices or m_vouchers or m_ledger or m_finance_rep -%}
 {%- set sec_support_active  = m_tickets or m_services -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups or m_lifecycle -%}
@@ -210,7 +220,10 @@
         {{ sub_item('radius.pool_list',       'IP Pool',              m_pools) }}
         {{ sub_item('radius.mt_operations',   'غرفة عمليات MikroTik', m_mt) }}
         {{ sub_item('radius.mt_setup_form',   'معالج إضافة راوتر',     m_mt) }}
+        {{ sub_item('radius.mt_topology',     'خريطة الشبكة',         m_topology) }}
         {{ sub_item('radius.diagnostics',     'تشخيص الراوترات',      m_diag) }}
+        {{ sub_item('radius.mt_alerts_index', 'التنبيهات الذكيّة',     m_alerts) }}
+        {{ sub_item('radius.audit_log_index', 'سجل العمليات',         m_audit_log) }}
         {{ sub_item('radius.mt_push_setup',   'دفع DHCP (MT Push)',   m_push) }}
       </div></div>
     </div>

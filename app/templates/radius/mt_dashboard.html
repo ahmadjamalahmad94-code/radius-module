@@ -46,6 +46,13 @@
       <span class="mt-router-quicknav-sub">قوالب + نشر</span>
     </a>
     <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
+       data-mt-router-link="backups">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span class="mt-router-quicknav-label">النسخ الاحتياطية</span>
+      <span class="mt-router-quicknav-sub">حفظ + فحص</span>
+    </a>
+    <a class="mt-router-quicknav-link"
        href="{{ url_for('radius.diagnostics') }}"
        data-mt-router-link="diagnostics">
       <i class="fa-solid fa-stethoscope"></i>
