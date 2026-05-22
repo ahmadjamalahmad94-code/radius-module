@@ -1,0 +1,39 @@
+{# N2 — 410 Gone for the legacy /admin/radius/mt CRUD pages.
+   The Phase L wizard + Operations Center replaced this surface; we
+   keep the endpoint names alive so url_for() keeps resolving, but
+   the rendered page is a redirect-by-click to the supported flows. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الصفحة انتقلت — استعمل المعالج الجديد{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
+{% block page_title %}الصفحة لم تعد متاحة{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "هذه الصفحة لم تعد متاحة",
+  subtitle="استبدلناها بمعالج إضافة راوتر تلقائي + غرفة عمليات موحّدة. كل ما كان هنا صار يصير بضغطتين بدل عشر.",
+  icon="circle-info"
+) }}
+
+<div class="mt-legacy-actions" data-mt-legacy-gone>
+  <a class="hub-btn hub-btn--primary" href="{{ wizard_url }}">
+    <i class="fa-solid fa-wand-magic-sparkles"></i> افتح معالج إضافة راوتر
+  </a>
+  <a class="hub-btn" href="{{ operations_url }}">
+    <i class="fa-solid fa-network-wired"></i> غرفة عمليات MikroTik
+  </a>
+</div>
+
+<section class="hub-section" style="margin-top:18px">
+  <h3 style="font-size:14px;color:#1F2937;margin:0 0 8px">لماذا تغيّرت؟</h3>
+  <ul style="font-size:13px;color:#475569;line-height:1.8;padding-inline-start:20px">
+    <li>الصفحة القديمة كانت تكتب على جدول مستقل (<code>mikrotik_configs</code>) لا يقرأه RADIUS ولا الـ K9 dashboard.</li>
+    <li>كنت تضطر لإدخال <em>host / port / user / password / secret / vendor</em> يدويًّا — أي حقل فاضي يكسر الـ flow.</li>
+    <li>الـ wizard الجديد يولّد كل ذلك ذاتيًّا (WireGuard tunnel + API user + RADIUS secret + سكربت RouterOS جاهز للنسخ).</li>
+    <li>غرفة العمليات تجمع كل الراوترات في مكان واحد + لوحة حيّة لكل واحد.</li>
+  </ul>
+</section>
+
+{% endblock %}
