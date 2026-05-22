@@ -155,15 +155,71 @@
 
       <pre class="mt-logs-output" data-mt-program-script>{{ plan.script }}</pre>
 
-      <div class="mt-program-actions">
-        <button type="button" class="mt-action-btn mt-action-btn--danger"
-                disabled
-                data-mt-program-apply
-                title="التطبيق متاح في Q2">
-          <i class="fa-solid fa-bolt"></i>
-          تطبيق على الراوتر (يُفعَّل في Q2)
-        </button>
-      </div>
+      <form method="post"
+            action="{{ url_for('radius.mt_program_apply', nas_id=nas.id) }}"
+            class="mt-program-apply-form"
+            data-mt-program-apply-form>
+        {# Re-post every field so the apply handler can re-validate.
+           This is the "never trust the client" principle in action. #}
+        {% for k, v in form.items() %}
+        <input type="hidden" name="{{ k }}" value="{{ v }}">
+        {% endfor %}
+
+        <label class="mt-program-confirm">
+          <input type="checkbox" name="confirm" value="1"
+                 data-mt-program-confirm
+                 {% if plan.risks %}disabled{% endif %}>
+          أُؤكّد قراءة التحذيرات وأرغب بتطبيق الـ script أعلاه على
+          هذا الراوتر.
+        </label>
+
+        <div class="mt-program-actions">
+          <button type="submit"
+                  class="mt-action-btn mt-action-btn--danger"
+                  data-mt-program-apply
+                  {% if plan.risks %}disabled{% endif %}
+                  {% if plan.risks %}title="عالج المخاطر أولاً"{% endif %}>
+            <i class="fa-solid fa-bolt"></i>
+            تطبيق على الراوتر
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if apply_result %}
+  <section class="mt-card" data-mt-program-apply-result>
+    <header class="mt-card-head">
+      <h3>
+        <i class="fa-solid fa-{{ 'circle-check' if apply_result.ok else 'circle-exclamation' }}"></i>
+        نتيجة التطبيق
+      </h3>
+      <span class="mt-card-meta">
+        {% set _s = apply_result.summary() %}
+        <span class="mt-iface-state mt-iface-state--up"
+              data-mt-apply-applied>{{ _s.applied }} مُطبَّقة</span>
+        <span class="mt-iface-state mt-iface-state--down"
+              data-mt-apply-skipped>{{ _s.skipped }} متجاهَلة</span>
+        <span class="mt-iface-state mt-iface-state--off"
+              data-mt-apply-failed>{{ _s.failed }} فاشلة</span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary" data-mt-apply-steps>
+        {% for step in apply_result.steps %}
+        <li>
+          <code>{{ step.path }}</code> ·
+          {% if step.skipped %}
+            <span style="color:#92400E">متجاهَل ({{ step.skipped }})</span>
+          {% elif step.ok %}
+            <span style="color:#166534">تم</span>
+          {% else %}
+            <span style="color:#991B1B">فشل — {{ step.error }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
     </div>
   </section>
   {% endif %}

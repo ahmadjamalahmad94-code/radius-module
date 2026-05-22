@@ -310,10 +310,10 @@ def test_program_form_renders_shell(app, client):
     assert "data-mt-program-plan-card" not in html
 
 
-def test_program_plan_renders_script_with_disabled_apply(app, client, monkeypatch):
-    """POST with a valid spec renders the script + an apply button
-    that's disabled in Q1. Q2 will flip it on with a confirmation
-    modal."""
+def test_program_plan_renders_script_and_apply_button(app, client, monkeypatch):
+    """POST with a valid spec renders the script + the apply form
+    (Q2 enables apply — but the button only goes live when the
+    operator ticks the confirm checkbox + no risks remain)."""
     _seed(app, nas_id=1)
     _login(client)
     # Don't actually hit the router during this UI test.
@@ -342,13 +342,8 @@ def test_program_plan_renders_script_with_disabled_apply(app, client, monkeypatc
     assert "data-mt-program-plan-card" in html
     assert "data-mt-program-script" in html
     assert "data-mt-program-apply" in html
-    # Apply must be disabled in Q1 — operator can't accidentally fire it.
-    apply_idx = html.index("data-mt-program-apply")
-    button_open = html.rfind("<button", 0, apply_idx)
-    button_block = html[button_open:apply_idx + 80]
-    assert "disabled" in button_block, (
-        "the Q1 apply button must render with `disabled` set"
-    )
+    # The confirm checkbox guards the apply path. (Q2.)
+    assert "data-mt-program-confirm" in html
     # The generated script is rendered in the page.
     assert "/ip pool add name=hs-pool" in html
     assert "hoberadius:hs" in html

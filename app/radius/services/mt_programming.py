@@ -70,6 +70,24 @@ class ValidatedHotspot:
 
 
 @dataclass
+class Command:
+    """One structured RouterOS API call.
+
+    `path` is the full command (e.g. "/ip/pool/add"); `attrs` are
+    the key=value pairs RouterOS expects. The renderer turns
+    `(path, attrs)` into a /import-style line for the script view,
+    and Q2 hands the same `(path, attrs)` directly to the API
+    client via `client.run(path, attrs=attrs)`.
+
+    Keeping the data structured means the apply path never has to
+    parse the rendered script — Q1 and Q2 share the same source
+    of truth.
+    """
+    path: str
+    attrs: dict[str, str]
+
+
+@dataclass
 class Plan:
     """What the route hands back to the template."""
     kind: str
@@ -77,6 +95,7 @@ class Plan:
     summary: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
+    commands: list[Command] = field(default_factory=list)
 
 
 # ─── Validators ────────────────────────────────────────────────
@@ -175,12 +194,12 @@ def _q(s: str) -> str:
     return s
 
 
-def render_hotspot_script(v: ValidatedHotspot) -> str:
-    """Build the /import-ready RouterOS script for hotspot.
+def build_hotspot_commands(v: ValidatedHotspot) -> list[Command]:
+    """Structured Command list — the canonical source of truth.
 
-    Every command carries the literal HOTSPOT_COMMENT so Q4
-    unprogram can find them. Keeping the comment string in one
-    place means a future rename only touches this module.
+    Both the readable script (operator preview) and the Q2 apply
+    path are derived from this list, so the two views can never
+    drift.
     """
     comment = HOTSPOT_COMMENT
     hs = v.hotspot_name
@@ -190,50 +209,85 @@ def render_hotspot_script(v: ValidatedHotspot) -> str:
     user_prof = f"{hs}-uprof"
     dns_csv = ",".join(v.dns_servers)
 
+    cmds: list[Command] = [
+        Command("/ip/pool/add", {
+            "name": pool_name,
+            "ranges": f"{v.pool_start}-{v.pool_end}",
+            "comment": comment,
+        }),
+        Command("/ip/address/add", {
+            "address": f"{v.gateway}/{v.network.prefixlen}",
+            "interface": v.interface,
+            "comment": comment,
+        }),
+        Command("/ip/dhcp-server/network/add", {
+            "address": str(v.network),
+            "gateway": str(v.gateway),
+            "dns-server": dns_csv,
+            "comment": comment,
+        }),
+        Command("/ip/dhcp-server/add", {
+            "name": dhcp_name,
+            "interface": v.interface,
+            "address-pool": pool_name,
+            "lease-time": v.lease_time,
+            "disabled": "no",
+            "comment": comment,
+        }),
+        Command("/ip/hotspot/profile/add", {
+            "name": prof_name,
+            "hotspot-address": str(v.gateway),
+            "dns-name": f"{hs}.local",
+            "html-directory": "hotspot",
+            "use-radius": "yes",
+            "comment": comment,
+        }),
+        Command("/ip/hotspot/add", {
+            "name": hs,
+            "interface": v.interface,
+            "address-pool": pool_name,
+            "profile": prof_name,
+            "disabled": "no",
+            "comment": comment,
+        }),
+    ]
+    if v.rate_limit:
+        cmds.append(Command("/ip/hotspot/user/profile/add", {
+            "name": user_prof,
+            "rate-limit": v.rate_limit,
+            "comment": comment,
+        }))
+    for dns in v.dns_servers:
+        cmds.append(Command("/ip/hotspot/walled-garden/ip/add", {
+            "dst-host": dns,
+            "action": "accept",
+            "comment": comment,
+        }))
+    return cmds
+
+
+def _command_to_script_line(cmd: Command) -> str:
+    """Render one Command as a /import-style line. Used only for
+    the human-readable preview — apply uses the Command directly."""
+    # `/ip/pool/add` → `/ip pool add`
+    parts = cmd.path.strip("/").split("/")
+    head = "/" + " ".join(parts)
+    attrs_str = " ".join(f"{k}={v}" for k, v in cmd.attrs.items())
+    return f"{head} {attrs_str}"
+
+
+def render_hotspot_script(v: ValidatedHotspot) -> str:
+    """Build the /import-ready RouterOS script for hotspot."""
+    comment = HOTSPOT_COMMENT
     lines = [
         "# === Hoberadius hotspot programming script ===",
         f"# Generated for interface {v.interface}, network {v.network}.",
         f"# Every object carries comment={comment} — unprogram looks",
         "# for that exact string.",
         "",
-        f"/ip pool add name={pool_name} "
-        f"ranges={v.pool_start}-{v.pool_end} comment={comment}",
-        "",
-        f"/ip address add address={v.gateway}/{v.network.prefixlen} "
-        f"interface={v.interface} comment={comment}",
-        "",
-        f"/ip dhcp-server network add address={v.network} "
-        f"gateway={v.gateway} dns-server={dns_csv} comment={comment}",
-        "",
-        f"/ip dhcp-server add name={dhcp_name} interface={v.interface} "
-        f"address-pool={pool_name} lease-time={v.lease_time} "
-        f"disabled=no comment={comment}",
-        "",
-        f"/ip hotspot profile add name={prof_name} "
-        f"hotspot-address={v.gateway} dns-name={hs}.local "
-        "html-directory=hotspot use-radius=yes "
-        f"comment={comment}",
-        "",
-        f"/ip hotspot add name={hs} interface={v.interface} "
-        f"address-pool={pool_name} profile={prof_name} "
-        f"disabled=no comment={comment}",
     ]
-    if v.rate_limit:
-        lines += [
-            "",
-            f"/ip hotspot user profile add name={user_prof} "
-            f"rate-limit={v.rate_limit} comment={comment}",
-        ]
-    lines += [
-        "",
-        "# DNS + NTP walled-garden entries so unauthenticated",
-        "# clients can resolve names and sync time before login.",
-    ]
-    for dns in v.dns_servers:
-        lines.append(
-            f"/ip hotspot walled-garden ip add dst-host={dns} "
-            f"action=accept comment={comment}"
-        )
+    for cmd in build_hotspot_commands(v):
+        lines.append(_command_to_script_line(cmd))
     lines.append("")
     return "\n".join(lines)
 
@@ -257,6 +311,7 @@ def plan_hotspot(
     warnings — that's fine for unit tests.
     """
     v = spec.validate()
+    cmds   = build_hotspot_commands(v)
     script = render_hotspot_script(v)
     summary = _hotspot_summary(v)
     warnings, risks = _hotspot_conflicts(
@@ -267,6 +322,7 @@ def plan_hotspot(
         summary=summary,
         warnings=warnings,
         risks=risks,
+        commands=cmds,
     )
 
 
@@ -340,13 +396,99 @@ def _hotspot_conflicts(
     return warnings, risks
 
 
+# ─── Q2 — Apply executor ───────────────────────────────────────
+
+
+@dataclass
+class StepResult:
+    """One row in the apply report. `ok=True` means RouterOS
+    accepted the command (or rejected it with a benign reason
+    like "already exists"); `ok=False` means real failure."""
+    path: str
+    attrs: dict[str, str]
+    ok: bool
+    error: str = ""
+    skipped: str = ""  # non-empty when the step was idempotent-skipped
+
+
+@dataclass
+class ApplyResult:
+    ok: bool
+    steps: list[StepResult]
+    error: str = ""
+
+    def summary(self) -> dict:
+        return {
+            "applied": sum(1 for s in self.steps
+                            if s.ok and not s.skipped),
+            "skipped": sum(1 for s in self.steps if s.skipped),
+            "failed":  sum(1 for s in self.steps if not s.ok),
+        }
+
+
+# RouterOS error texts that mean "object already exists with these
+# attrs" — treating them as idempotent successes lets the operator
+# re-apply a plan without first cleaning up the half-applied state.
+_BENIGN_ALREADY_EXISTS = (
+    "already have",          # /ip/address — "already have such address"
+    "already exists",        # /ip/pool, /ip/hotspot — generic
+    "already have such",     # variants on the above
+    "duplicate",             # walled-garden duplicate
+)
+
+
+def _is_benign_already_exists(err: str) -> bool:
+    low = (err or "").lower()
+    return any(s in low for s in _BENIGN_ALREADY_EXISTS)
+
+
+def apply_commands(
+    client: Any,
+    commands: list[Command],
+) -> ApplyResult:
+    """Run each command via the wire client. Stop on first hard
+    failure (returns ok=False); idempotent "already exists" rejects
+    are recorded as skipped and the loop continues.
+
+    `client` is anything with `.run(path, attrs=...)` — the test
+    suite passes a fake client that just records the calls; prod
+    code passes an open MikrotikClient.
+    """
+    steps: list[StepResult] = []
+    for cmd in commands:
+        try:
+            client.run(cmd.path, attrs=dict(cmd.attrs))
+            steps.append(StepResult(
+                path=cmd.path, attrs=cmd.attrs, ok=True,
+            ))
+        except Exception as e:  # noqa: BLE001
+            err = str(e)
+            if _is_benign_already_exists(err):
+                steps.append(StepResult(
+                    path=cmd.path, attrs=cmd.attrs, ok=True,
+                    skipped="already_exists",
+                ))
+                continue
+            steps.append(StepResult(
+                path=cmd.path, attrs=cmd.attrs, ok=False,
+                error=err,
+            ))
+            return ApplyResult(ok=False, steps=steps, error=err)
+    return ApplyResult(ok=True, steps=steps)
+
+
 __all__ = [
     "HOBERADIUS_COMMENT_PREFIX",
     "HOTSPOT_COMMENT",
     "PPPOE_COMMENT",
     "HotspotProgrammingSpec",
     "ValidatedHotspot",
+    "Command",
     "Plan",
+    "StepResult",
+    "ApplyResult",
     "plan_hotspot",
     "render_hotspot_script",
+    "build_hotspot_commands",
+    "apply_commands",
 ]

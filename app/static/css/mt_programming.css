@@ -91,3 +91,27 @@
   font-size: 13px;
   line-height: 1.7;
 }
+
+.mt-program-apply-form {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mt-program-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mt-program-confirm input[type="checkbox"]:disabled + ::after,
+.mt-program-confirm input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
