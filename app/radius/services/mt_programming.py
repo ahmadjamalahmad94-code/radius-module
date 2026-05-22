@@ -346,6 +346,7 @@ def _pppoe_conflicts(
     v: ValidatedPppoe,
     addresses: list[dict],
     interfaces: list[dict],
+    routes: list[dict] | None = None,
 ) -> tuple[list[str], list[str]]:
     warnings: list[str] = []
     risks: list[str] = []
@@ -356,6 +357,25 @@ def _pppoe_conflicts(
     if iface_row is None:
         risks.append(
             f"لم نجد الواجهة «{v.interface}» — البرمجة ستفشل.")
+        return warnings, risks
+
+    # S4.2 — same safety check as hotspot.
+    from . import mt_interface_safety as safety
+    verdict = safety.classify_interface(
+        iface_row,
+        routes=routes or (),
+        addresses=addresses or (),
+    )
+    if verdict.risk == safety.RISK_BLOCKED:
+        risks.append(
+            f"الواجهة «{v.interface}» محظورة للبرمجة: "
+            + " · ".join(verdict.reasons))
+    elif verdict.risk == safety.RISK_HIGH:
+        risks.append(
+            f"الواجهة «{v.interface}» مصنّفة عالية الخطورة: "
+            + " · ".join(verdict.reasons))
+    elif verdict.risk == safety.RISK_MEDIUM:
+        warnings.extend(verdict.reasons)
     return warnings, risks
 
 
@@ -365,13 +385,18 @@ def plan_pppoe(
     *,
     existing_addresses: list[dict] | None = None,
     existing_interfaces: list[dict] | None = None,
+    existing_routes: list[dict] | None = None,
 ) -> Plan:
     v = spec.validate()
     cmds = build_pppoe_commands(v)
     script = render_pppoe_script(v)
     summary = _pppoe_summary(v)
     warnings, risks = _pppoe_conflicts(
-        v, existing_addresses or [], existing_interfaces or [])
+        v,
+        existing_addresses or [],
+        existing_interfaces or [],
+        existing_routes or [],
+    )
     return Plan(
         kind="pppoe",
         script=script,
@@ -499,21 +524,27 @@ def plan_hotspot(
     *,
     existing_addresses: list[dict] | None = None,
     existing_interfaces: list[dict] | None = None,
+    existing_routes: list[dict] | None = None,
 ) -> Plan:
     """Build the full plan for a hotspot setup.
 
-    `existing_addresses` and `existing_interfaces` are passed in by
-    the caller (the route fetches them via the K4 readers); leaving
-    them out makes the planner stateless + testable without a
-    router. The plan still works, it just doesn't produce conflict
-    warnings — that's fine for unit tests.
+    `existing_addresses`, `existing_interfaces`, and
+    `existing_routes` are passed in by the caller (the route
+    fetches them via the K4 readers); leaving them out makes the
+    planner stateless + testable without a router. The plan
+    still works, it just doesn't surface the S4.1 safety
+    classifier signals when routes are missing.
     """
     v = spec.validate()
     cmds   = build_hotspot_commands(v)
     script = render_hotspot_script(v)
     summary = _hotspot_summary(v)
     warnings, risks = _hotspot_conflicts(
-        v, existing_addresses or [], existing_interfaces or [])
+        v,
+        existing_addresses or [],
+        existing_interfaces or [],
+        existing_routes or [],
+    )
     return Plan(
         kind="hotspot",
         script=script,
@@ -546,9 +577,12 @@ def _hotspot_conflicts(
     v: ValidatedHotspot,
     addresses: list[dict],
     interfaces: list[dict],
+    routes: list[dict] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Surface any obvious clashes between the plan and the
-    router's current state."""
+    router's current state. `routes` is optional but if the
+    caller has them, the S4.1 safety classifier uses them to
+    catch WAN / WG mistakes before they reach the wire."""
     warnings: list[str] = []
     risks: list[str] = []
 
@@ -566,6 +600,28 @@ def _hotspot_conflicts(
             warnings.append(
                 f"الواجهة «{v.interface}» معطّلة الآن — الـ hotspot لن "
                 "يعمل حتى تفعّلها.")
+
+        # S4.2 — feed S4.1's classifier with whatever we have.
+        # Missing routes is OK; the classifier just won't fire
+        # the WAN signal.
+        from . import mt_interface_safety as safety  # avoid cycle
+        verdict = safety.classify_interface(
+            iface_row,
+            routes=routes or (),
+            addresses=addresses or (),
+        )
+        if verdict.risk == safety.RISK_BLOCKED:
+            risks.append(
+                f"الواجهة «{v.interface}» محظورة للبرمجة: "
+                + " · ".join(verdict.reasons))
+        elif verdict.risk == safety.RISK_HIGH:
+            risks.append(
+                f"الواجهة «{v.interface}» مصنّفة عالية الخطورة: "
+                + " · ".join(verdict.reasons))
+        elif verdict.risk == safety.RISK_MEDIUM:
+            warnings.extend(verdict.reasons)
+        # LOW + UNKNOWN: no extra reasons — operator already sees
+        # the rest of the plan.
 
     # Existing IP on this interface?
     same_iface = [a for a in addresses

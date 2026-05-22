@@ -89,17 +89,23 @@ def register_mt_programming_routes(bp: Blueprint) -> None:
     )
 
 
-def _fetch_router_state(nas: dict) -> tuple[list[dict], list[dict]]:
-    """Pull the router's current interfaces + IP addresses so the
-    planner can surface conflicts. Failure is non-fatal — the plan
-    still generates, the conflict block just won't show specifics.
+def _fetch_router_state(
+    nas: dict,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Pull the router's current interfaces + IP addresses +
+    routes so the planner can surface conflicts AND let S4.1
+    classify the target interface. Failure is non-fatal — the
+    plan still generates, the safety check just degrades to
+    "what we have."
     """
     nas_call = _nas_for_mac(nas)
     iface_res = mac.interface_list(nas_call)
     addr_res  = mac.ip_addresses(nas_call)
+    route_res = mac.ip_routes(nas_call)
     return (
         list(iface_res.data) if iface_res.ok else [],
         list(addr_res.data)  if addr_res.ok else [],
+        list(route_res.data) if route_res.ok else [],
     )
 
 
@@ -147,7 +153,7 @@ def _plan_from_form(nas: dict, form: dict) -> tuple[Any, str]:
     error = ""
     plan = None
     try:
-        ifaces, addrs = _fetch_router_state(nas)
+        ifaces, addrs, routes = _fetch_router_state(nas)
         if kind == "pppoe":
             spec = mt_programming.PppoeProgrammingSpec(
                 interface=form["interface"], cidr=form["cidr"],
@@ -162,6 +168,7 @@ def _plan_from_form(nas: dict, form: dict) -> tuple[Any, str]:
                 nas, spec,
                 existing_interfaces=ifaces,
                 existing_addresses=addrs,
+                existing_routes=routes,
             )
         else:
             spec = mt_programming.HotspotProgrammingSpec(
@@ -178,6 +185,7 @@ def _plan_from_form(nas: dict, form: dict) -> tuple[Any, str]:
                 nas, spec,
                 existing_interfaces=ifaces,
                 existing_addresses=addrs,
+                existing_routes=routes,
             )
     except ValueError as e:
         error = str(e)
