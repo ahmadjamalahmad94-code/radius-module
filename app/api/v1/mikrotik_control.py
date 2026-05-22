@@ -39,6 +39,12 @@ K6 endpoints — simple queues + firewall:
   GET  /api/v1/mikrotik/<id>/firewall/address-lists
   POST /api/v1/mikrotik/<id>/firewall/address-lists
   DELETE /api/v1/mikrotik/<id>/firewall/address-lists/<eid>
+
+K7 endpoints — logs + diagnostics:
+  GET  /api/v1/mikrotik/<id>/log?topics=…&limit=…
+  POST /api/v1/mikrotik/<id>/tools/ping
+  POST /api/v1/mikrotik/<id>/tools/traceroute
+  POST /api/v1/mikrotik/<id>/tools/dns-resolve
 """
 from __future__ import annotations
 
@@ -184,6 +190,13 @@ def register(bp: Blueprint) -> None:
         "mt_address_list_remove",
         require_api_token(mt_address_list_remove),
         methods=["DELETE"],
+    )
+    # K7 — log tail
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/log",
+        "mt_log_tail",
+        require_api_token(mt_log_tail),
+        methods=["GET"],
     )
 
 
@@ -484,6 +497,34 @@ def mt_address_list_remove(nas_id: int, entry_id: str):
     )
     payload = _envelope(result, router_id=nas_id)
     payload["entry_id"] = entry_id
+    return ok(payload)
+
+
+# ─── K7: log tail ────────────────────────────────────────────────
+
+
+def _parse_limit(raw: str | None, *, default: int = 100, cap: int = 1000) -> int:
+    try:
+        n = int(raw) if raw else default
+    except (TypeError, ValueError):
+        n = default
+    return max(1, min(n, cap))
+
+
+def mt_log_tail(nas_id: int):
+    """`?topics=foo,bar&limit=200`. Topics are matched substring-wise
+    against each row's `topics` field (RouterOS stores topics as a
+    comma-separated string)."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    topics_raw = request.args.get("topics") or ""
+    topics = [t for t in topics_raw.split(",") if t.strip()]
+    limit = _parse_limit(request.args.get("limit"))
+    result = mac.log_tail(nas, topics=topics, limit=limit)
+    payload = _envelope(result, router_id=nas_id)
+    payload["topics"] = topics
+    payload["limit"] = limit
     return ok(payload)
 
 

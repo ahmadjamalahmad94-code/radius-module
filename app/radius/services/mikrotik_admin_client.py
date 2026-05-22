@@ -590,6 +590,46 @@ def address_list_remove(
     )
 
 
+# ─── K7: logs + diagnostics ──────────────────────────────────────
+
+
+TTL_LOG = 5.0  # log tail is interesting fresh — short cache only
+
+
+def log_tail(
+    nas: Mapping[str, Any],
+    *,
+    topics: Optional[Iterable[str]] = None,
+    limit: int = 100,
+) -> MtResult:
+    """`/log/print` with optional client-side topic filter + tail.
+
+    RouterOS returns the whole log buffer; the row's `topics` field
+    is a comma-separated string like 'system,info,account'. We
+    match if ANY of the requested topics appears in that field.
+    Filtering after the fetch keeps the router-side query simple
+    and lets the cache hold one entry per (topics, limit) bucket.
+    """
+    wanted = tuple(sorted({t.strip().lower() for t in (topics or []) if t}))
+    bound = max(1, min(int(limit or 100), 1000))
+
+    def work(client):
+        rows = list(client.print_("/log/print"))
+        if wanted:
+            kept = []
+            for row in rows:
+                row_topics = str(row.get("topics") or "").lower()
+                if any(t in row_topics for t in wanted):
+                    kept.append(row)
+            rows = kept
+        return rows[-bound:]
+
+    cache_key = f"log/tail::{','.join(wanted)}::{bound}"
+    return fetch_cached(
+        nas=nas, operation=cache_key, ttl_sec=TTL_LOG, work=work,
+    )
+
+
 def _run_mutation(
     nas: Mapping[str, Any],
     *,
@@ -735,6 +775,8 @@ __all__ = [
     "address_list_list",
     "address_list_add",
     "address_list_remove",
+    "log_tail",
+    "TTL_LOG",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",

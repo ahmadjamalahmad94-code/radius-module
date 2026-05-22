@@ -761,6 +761,71 @@ def test_address_list_remove_rejects_empty_id(fake_nas_direct):
     assert "غير محدد" in res.error
 
 
+# ─── K7.1: log tail ──────────────────────────────────────────────
+
+
+def test_log_tail_returns_all_when_no_topics(fake_nas_direct):
+    rows = [{"topics": "system,info", "message": str(i)} for i in range(5)]
+    mock_client = MagicMock()
+    mock_client.print_.return_value = rows
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.log_tail(fake_nas_direct, limit=10)
+
+    assert res.ok is True
+    assert len(res.data) == 5
+    mock_client.print_.assert_called_once_with("/log/print")
+
+
+def test_log_tail_filters_by_topic(fake_nas_direct):
+    rows = [
+        {"topics": "system,info", "message": "a"},
+        {"topics": "firewall,debug", "message": "b"},
+        {"topics": "system,error", "message": "c"},
+    ]
+    mock_client = MagicMock()
+    mock_client.print_.return_value = rows
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.log_tail(fake_nas_direct, topics=["firewall"], limit=100)
+
+    assert res.ok is True
+    assert len(res.data) == 1
+    assert res.data[0]["message"] == "b"
+
+
+def test_log_tail_respects_limit(fake_nas_direct):
+    rows = [{"topics": "system", "message": str(i)} for i in range(50)]
+    mock_client = MagicMock()
+    mock_client.print_.return_value = rows
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.log_tail(fake_nas_direct, limit=10)
+
+    # Tail (last N), not head.
+    assert len(res.data) == 10
+    assert res.data[0]["message"] == "40"
+    assert res.data[-1]["message"] == "49"
+
+
+def test_log_tail_cache_key_per_filter(fake_nas_direct):
+    """Different (topics, limit) combos must NOT share a cache slot."""
+    rows = [{"topics": "system", "message": "x"}]
+    mock_client = MagicMock()
+    mock_client.print_.return_value = rows
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.log_tail(fake_nas_direct, topics=["system"], limit=10)
+        mac.log_tail(fake_nas_direct, topics=["firewall"], limit=10)
+        mac.log_tail(fake_nas_direct, topics=["system"], limit=20)
+
+    assert mock_client.print_.call_count == 3
+
+
 def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
     samples = list(mac.stream_interface_samples(
         fake_nas_direct, "",
