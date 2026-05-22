@@ -37,14 +37,20 @@ sql {
     delete_stale_sessions = yes
 
     # ─ clients من جدول nas — مُفعَّل (Phase M4) ─
-    # migration 010_freeradius_schema.sql مطبَّق ويُنشئ جدول `nas`
-    # بالأعمدة nasname/shortname/type/secret. الـ M4 wizard sync
-    # يكتب صفًا في `nas` لكل راوتر تُنشئه (راجع mt_setup.py).
-    # FreeRADIUS يقرأها dynamically عند الإقلاع + يدعم HUP لإعادة
-    # القراءة (مع تأخير ~3s لاستلام أول request).
+    # migration 010_freeradius_schema.sql مطبَّق ويُنشئ جدول `nas`.
+    # الـ M4 wizard sync يكتب صفًا في `nas` لكل راوتر تُنشئه
+    # (راجع mt_setup.py).
+    #
+    # ملاحظة على الـ query: FR 3.2.x يتوقع **9 حقول بالضبط**:
+    #   id, nasname, shortname, type, secret, server, community,
+    #   description, require_message_authenticator.
+    # تقديم عدد أقل يطبع
+    #   "SELECT returned too few fields. Please do not edit client_query"
+    # ويُهمَل الـ client كلياً. عمودنا اسمه `require_ma` فنُسمّيه
+    # عبر AS لتطابق ما يتوقعه FR.
     client_table    = "nas"
     read_clients    = yes
-    client_query    = "SELECT nasname, shortname, type, secret FROM nas"
+    client_query    = "SELECT id, nasname, shortname, type, secret, server, community, description, require_ma AS require_message_authenticator FROM nas"
 
     # ـ lazy pool: لا تفتح أي connection عند startup ـ
     # نفس النمط المُستخدم في mods-enabled/rest. لو SQLite غير متاح وقت
