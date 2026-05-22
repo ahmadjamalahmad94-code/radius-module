@@ -39,6 +39,7 @@ from flask import Blueprint, Response, g
 
 from ...radius.db.connection import db
 from ...radius.services import mikrotik_admin_client as mac
+from ...radius.services.audit import get_audit_service
 from ...radius.services.nas_connection import resolve_connection_descriptor
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -124,6 +125,18 @@ def register(bp: Blueprint) -> None:
         "mt_ppp_active",
         require_api_token(mt_ppp_active),
         methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/hotspot/active/<string:session_id>/disconnect",
+        "mt_hotspot_disconnect",
+        require_api_token(mt_hotspot_disconnect),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/ppp/active/<string:session_id>/disconnect",
+        "mt_ppp_disconnect",
+        require_api_token(mt_ppp_disconnect),
+        methods=["POST"],
     )
 
 
@@ -283,6 +296,57 @@ def mt_ppp_active(nas_id: int):
         return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ppp_active(nas)
     return ok(_envelope(result, router_id=nas_id))
+
+
+def _audit_mutation(
+    *, nas_id: int, action: str, target_id: str, result: mac.MtResult,
+) -> None:
+    """Common audit hook for K5+ MT mutations. Survives audit-table
+    failures (the service swallows internally) so the operator
+    still gets a useful HTTP response if the audit DB is down."""
+    actor = str(getattr(g, "admin_id", None) or "api")
+    get_audit_service().record(
+        actor=actor,
+        action=action,
+        target_type="mikrotik_nas",
+        target_id=str(nas_id),
+        payload={
+            "session_id": target_id,
+            "ok": result.ok,
+            "error": result.error,
+            "took_ms": result.took_ms,
+            "dialed_address": result.dialed_address,
+            "mode": result.mode,
+        },
+    )
+
+
+def mt_hotspot_disconnect(nas_id: int, session_id: str):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.disconnect_hotspot_session(nas, session_id)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.hotspot.disconnect",
+        target_id=session_id, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["session_id"] = session_id
+    return ok(payload)
+
+
+def mt_ppp_disconnect(nas_id: int, session_id: str):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.disconnect_ppp_session(nas, session_id)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.ppp.disconnect",
+        target_id=session_id, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["session_id"] = session_id
+    return ok(payload)
 
 
 def _format_sse(payload: dict) -> str:

@@ -30,7 +30,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Optional, TypeVar
+from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar
 
 from ..integration.mikrotik.errors import (
     AuthError,
@@ -435,6 +435,68 @@ def ppp_active(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+def _run_mutation(
+    nas: Mapping[str, Any],
+    *,
+    operation: str,
+    work: Callable,
+    invalidate: Iterable[str] = (),
+) -> MtResult:
+    """Common scaffold for write operations.
+
+    Always bypasses the cache (mutation), then on success drops the
+    listed cache slots so the next read reflects the new state.
+    Failures leave the cache alone — last-known-good list is more
+    useful to the operator than an empty one."""
+    result = _safe_dial(nas=nas, operation=operation, work=work)
+    if result.ok:
+        router_id = int(nas.get("id") or 0)
+        for op in invalidate:
+            _cache.invalidate(router_id, op)
+    return result
+
+
+def disconnect_hotspot_session(
+    nas: Mapping[str, Any], session_id: str,
+) -> MtResult:
+    """`/ip/hotspot/active/remove .id=<sid>` — kick a hotspot user.
+
+    The `.id` is the value from a row returned by `hotspot_active`.
+    Invalidates the active-list cache on success so the UI refresh
+    immediately reflects the kick. Audit logging is the route
+    layer's job (it has the actor context).
+    """
+    sid = (session_id or "").strip()
+    if not sid:
+        return MtResult(ok=False, error="معرّف الجلسة غير محدد")
+    return _run_mutation(
+        nas,
+        operation="hotspot/active/remove",
+        work=lambda c: c.run(
+            "/ip/hotspot/active/remove", attrs={".id": sid},
+        ),
+        invalidate=("hotspot/active",),
+    )
+
+
+def disconnect_ppp_session(
+    nas: Mapping[str, Any], session_id: str,
+) -> MtResult:
+    """`/ppp/active/remove .id=<sid>` — kick a PPPoE / PPTP / L2TP
+    session. Same shape as the hotspot variant."""
+    sid = (session_id or "").strip()
+    if not sid:
+        return MtResult(ok=False, error="معرّف الجلسة غير محدد")
+    return _run_mutation(
+        nas,
+        operation="ppp/active/remove",
+        work=lambda c: c.run(
+            "/ppp/active/remove", attrs={".id": sid},
+        ),
+        invalidate=("ppp/active",),
+    )
+
+
 # Default upper bound on SSE samples — 150 × 2 s ≈ 5 min, after
 # which the browser's EventSource auto-reconnects.
 SSE_DEFAULT_MAX_SAMPLES = 150
@@ -508,6 +570,8 @@ __all__ = [
     "ip_routes",
     "hotspot_active",
     "ppp_active",
+    "disconnect_hotspot_session",
+    "disconnect_ppp_session",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",

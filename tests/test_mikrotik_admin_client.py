@@ -457,6 +457,93 @@ def test_hotspot_active_calls_right_path(fake_nas_direct):
     mock_client.print_.assert_called_once_with("/ip/hotspot/active/print")
 
 
+def test_disconnect_hotspot_invokes_remove(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.disconnect_hotspot_session(fake_nas_direct, "*7")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/ip/hotspot/active/remove"
+    assert kwargs["attrs"][".id"] == "*7"
+
+
+def test_disconnect_hotspot_empty_id_short_circuits(fake_nas_direct):
+    res = mac.disconnect_hotspot_session(fake_nas_direct, "")
+    assert res.ok is False
+    assert "غير محدد" in res.error
+
+
+def test_disconnect_hotspot_invalidates_active_cache(fake_nas_direct):
+    """Successful disconnect must drop the cached active list so the
+    next /hotspot/active read reflects the kick immediately."""
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{".id": "*1", "user": "a"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        # Warm the cache.
+        mac.hotspot_active(fake_nas_direct)
+        # Kick someone.
+        mac.disconnect_hotspot_session(fake_nas_direct, "*1")
+        # Next read must re-hit the wire (cache was dropped).
+        mac.hotspot_active(fake_nas_direct)
+
+    # Two print_ calls = re-fetch happened.
+    assert mock_client.print_.call_count == 2
+
+
+def test_disconnect_hotspot_keeps_cache_when_router_rejects(fake_nas_direct):
+    """Trap means 'router rejected the remove'. Don't drop the cache
+    — last-known-good list is more useful than re-fetching to get
+    the same row back."""
+    from contextlib import contextmanager
+    from app.radius.integration.mikrotik.errors import MikrotikTrap
+
+    # Warm the cache via a working mock first.
+    list_client = MagicMock()
+    list_client.print_.return_value = [{".id": "*1"}]
+    fake_list = _patched_pool(list_client)
+    with patch.object(mac, "_pool_acquire", fake_list):
+        mac.hotspot_active(fake_nas_direct)
+
+    @contextmanager
+    def trap_acquire(cfg):
+        client = MagicMock()
+        client.run.side_effect = MikrotikTrap("no such item")
+        yield client
+
+    with patch.object(mac, "_pool_acquire", trap_acquire):
+        res = mac.disconnect_hotspot_session(fake_nas_direct, "*999")
+
+    assert res.ok is False
+
+    # Cache survived — next list comes from cache (no wire call).
+    with patch.object(mac, "_pool_acquire", fake_list):
+        again = mac.hotspot_active(fake_nas_direct)
+    assert again.cached is True
+    # Only the original warming call hit the wire.
+    assert list_client.print_.call_count == 1
+
+
+def test_disconnect_ppp_invokes_remove(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.disconnect_ppp_session(fake_nas_direct, "*42")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/ppp/active/remove"
+    assert kwargs["attrs"][".id"] == "*42"
+
+
 def test_ppp_active_calls_right_path(fake_nas_direct):
     mock_client = MagicMock()
     mock_client.print_.return_value = [
