@@ -103,6 +103,67 @@
       </section>
     </form>
 
+    {# R3 — Deploy section (separate form so save and deploy
+       don't accidentally share a single submit). #}
+    <form method="post"
+          action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
+          class="mt-card mt-program-apply-form"
+          data-mt-designer-deploy-form>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-cloud-arrow-up"></i> نشر إلى الراوتر</h3>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-tab-hint">
+          يرفع ملف <code>hotspot/login.html</code> إلى الراوتر باستخدام
+          التصميم المحفوظ حاليًا. يتطلّب نجاح برمجة الـ hotspot أولًا
+          (راجع Q1/Q2).
+        </p>
+        <label class="mt-program-confirm">
+          <input type="checkbox" name="confirm" value="1"
+                 data-mt-designer-deploy-confirm>
+          أُؤكّد رفع الـ login.html إلى هذا الراوتر.
+        </label>
+        <div class="mt-program-actions">
+          <button type="submit"
+                  class="mt-action-btn mt-action-btn--danger"
+                  data-mt-designer-deploy-submit>
+            <i class="fa-solid fa-rocket"></i> نشر
+          </button>
+        </div>
+
+        {% if deploy_result %}
+        <section class="mt-card" data-mt-designer-deploy-result
+                 style="margin-top:16px">
+          <header class="mt-card-head">
+            <h3>
+              <i class="fa-solid fa-{{ 'circle-check' if deploy_result.ok else 'circle-exclamation' }}"></i>
+              نتيجة النشر
+            </h3>
+            <span class="mt-card-meta">
+              {% if deploy_result.ok %}
+              <span class="mt-iface-state mt-iface-state--up">
+                {{ deploy_result.bytes }} بايت رُفعت
+              </span>
+              {% else %}
+              <span class="mt-iface-state mt-iface-state--off">
+                فشل
+              </span>
+              {% endif %}
+            </span>
+          </header>
+          <div class="mt-card-body">
+            <p>
+              المسار على الراوتر: <code>{{ deploy_result.path }}</code>
+              {% if deploy_result.error %}
+              <br><span style="color:#991B1B">{{ deploy_result.error }}</span>
+              {% endif %}
+            </p>
+          </div>
+        </section>
+        {% endif %}
+      </div>
+    </form>
+
     {# ─── Right column: live preview iframe ─── #}
     <section class="mt-card mt-designer-preview-card">
       <header class="mt-card-head">

@@ -18,7 +18,9 @@ from flask import (
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..db.repos import hotspot_designs_repo
+from ..integration.mikrotik.client import MikrotikClient
 from ..services import hotspot_templates as ht
+from ..services.audit import get_audit_service
 
 
 def _tid() -> int:
@@ -50,6 +52,31 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/login-designer/preview",
         "mt_login_designer_preview", mt_login_designer_preview,
         methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/deploy",
+        "mt_login_designer_deploy", mt_login_designer_deploy,
+        methods=["POST"],
+    )
+
+
+def _connect_client(nas_id: int):
+    row = db().execute(
+        "SELECT address, api_port, api_user, api_password, "
+        "       api_use_tls "
+        "FROM nas_devices "
+        "WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    if not row:
+        return None
+    return MikrotikClient(
+        host=row["address"], port=int(row["api_port"] or 8728),
+        username=row["api_user"] or "admin",
+        password=row["api_password"] or "",
+        use_tls=bool(row["api_use_tls"]),
+        verify_tls=True, timeout=15.0,
     )
 
 
@@ -120,6 +147,74 @@ def mt_login_designer_save(nas_id: int):
         design=design,
         saved=saved,
         error=error,
+    )
+
+
+def mt_login_designer_deploy(nas_id: int):
+    """R3 — Render the saved design + upload login.html to the
+    router. Requires the confirm checkbox; refuses on validation
+    failure; writes one audit-log entry per attempt."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    confirmed = request.form.get("confirm") == "1"
+    error = ""
+    deploy_result = None
+    design = _current_design(nas_id)
+
+    if not confirmed:
+        error = "يجب تأكيد عملية النشر قبل تنفيذها."
+    else:
+        try:
+            safe = ht.validate_vars(design["variables"])
+        except ValueError as e:
+            error = str(e)
+            safe = None
+        if safe is not None:
+            client = _connect_client(nas_id)
+            if client is None:
+                error = "الراوتر غير موجود."
+            else:
+                try:
+                    client.connect()
+                    deploy_result = ht.deploy_login(
+                        client, design["template_slug"], safe,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    error = "تعذّر الاتصال بالراوتر: " + str(e)
+                finally:
+                    try:
+                        client.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+
+                actor = str(getattr(g, "admin_id", None) or "ui")
+                get_audit_service().record(
+                    actor=actor,
+                    action="mt.login_designer.deploy",
+                    target_type="mikrotik_nas",
+                    target_id=str(nas_id),
+                    payload={
+                        "template_slug": design["template_slug"],
+                        "path": (deploy_result.path
+                                 if deploy_result else ""),
+                        "bytes": (deploy_result.bytes
+                                  if deploy_result else 0),
+                        "ok": bool(deploy_result and deploy_result.ok),
+                        "error": (deploy_result.error
+                                  if deploy_result else error),
+                    },
+                )
+
+    return render_template(
+        "radius/mt_login_designer.html",
+        nas=nas,
+        library=ht.LIBRARY,
+        variables=ht.TEMPLATE_VARIABLES,
+        design=design,
+        saved=False,
+        error=error,
+        deploy_result=deploy_result,
     )
 
 

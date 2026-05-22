@@ -362,6 +362,86 @@ def preview(slug: str, values: dict[str, str]) -> str:
     return out
 
 
+# ─── R3 — Deploy ───────────────────────────────────────────────
+
+
+from dataclasses import dataclass as _dataclass
+
+
+# Default path on the router. The hotspot profile created by Q1
+# sets html-directory=hotspot, so the file must live there.
+DEFAULT_LOGIN_PATH = "hotspot/login.html"
+
+
+@_dataclass
+class DeployResult:
+    ok: bool
+    path: str
+    bytes: int
+    error: str = ""
+
+
+def deploy_login(
+    client: object, slug: str, values: dict[str, str],
+    *, target_path: str = DEFAULT_LOGIN_PATH,
+) -> DeployResult:
+    """Render the chosen template + upload it to the router.
+
+    Two-step on the wire because `/file/add` doesn't accept big
+    `contents=` arguments on every RouterOS build:
+
+      1. /file/print to check whether the file already exists.
+      2a. If yes — /file/set [.id=X] contents=<html>.
+      2b. If no  — /file/add name=<path> contents=<html>.
+
+    `client` is anything with a `.run(path, attrs=...)` method.
+    Returns a structured DeployResult so the route + audit log can
+    surface the outcome consistently.
+    """
+    html = render(slug, values)
+    # Defense in depth: the render path already validated the
+    # variables, but check the RouterOS contract one more time
+    # before we ship to the wire.
+    missing = validate_routeros_placeholders(html)
+    if missing:
+        return DeployResult(
+            ok=False, path=target_path, bytes=0,
+            error=f"قالب ناقص placeholders: {', '.join(missing)}",
+        )
+
+    try:
+        existing = client.run("/file/print",
+                              attrs={"where": "name=" + target_path})
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=target_path, bytes=0,
+            error=f"/file/print فشل: {e}",
+        )
+
+    found_id = None
+    for row in (existing or []):
+        if (row.get("name") or "") == target_path:
+            found_id = row.get(".id") or row.get("id")
+            break
+
+    try:
+        if found_id:
+            client.run("/file/set", attrs={
+                ".id": found_id, "contents": html,
+            })
+        else:
+            client.run("/file/add", attrs={
+                "name": target_path, "contents": html,
+            })
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=target_path, bytes=len(html),
+            error=f"رفع الملف فشل: {e}",
+        )
+
+    return DeployResult(ok=True, path=target_path, bytes=len(html))
+
+
 __all__ = [
     "ROUTEROS_REQUIRED",
     "TemplateVariable",
@@ -374,4 +454,7 @@ __all__ = [
     "validate_vars",
     "render",
     "preview",
+    "DEFAULT_LOGIN_PATH",
+    "DeployResult",
+    "deploy_login",
 ]
