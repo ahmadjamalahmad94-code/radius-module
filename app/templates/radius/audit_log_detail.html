@@ -1,0 +1,112 @@
+{# S2.2 — Single audit-log entry detail page.
+
+   Shows the full picture for one operation. Secrets in
+   payload/before/after are already "***" by repo-time
+   redaction; the template just renders them as JSON.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}عملية #{{ entry.id }} — {{ entry.action }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-list"></i>{% endblock %}
+{% block page_title %}عملية #{{ entry.id }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ entry.action }}</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-audit-detail-page
+         data-audit-id="{{ entry.id }}">
+
+  {{ hub.hero(
+    "عملية #" ~ entry.id,
+    subtitle=entry.action ~ " · " ~ entry.created_at,
+    icon="clipboard-list",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-info"></i> ملخّص</h3>
+      <span class="mt-card-meta">
+        {% if entry.severity == "critical" %}
+        <span class="mt-iface-state mt-iface-state--off">{{ entry.severity }}</span>
+        {% elif entry.severity == "warning" %}
+        <span class="mt-iface-state mt-iface-state--down">{{ entry.severity }}</span>
+        {% else %}
+        <span class="mt-iface-state mt-iface-state--up">{{ entry.severity }}</span>
+        {% endif %}
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-program-summary" data-audit-detail-meta>
+        <li>الفاعل: <strong>{{ entry.actor }}</strong></li>
+        <li>الإجراء: <code>{{ entry.action }}</code></li>
+        <li>الهدف: <code>{{ entry.target_type }}#{{ entry.target_id }}</code></li>
+        {% if entry.router_id %}
+        <li>الراوتر: <code>{{ entry.router_id }}</code></li>
+        {% endif %}
+        <li>الحالة: <strong>{{ entry.result_status or '—' }}</strong></li>
+        <li>الوقت: <code>{{ entry.created_at }}</code></li>
+        {% if entry.ip_address %}<li>IP: <code>{{ entry.ip_address }}</code></li>{% endif %}
+        {% if entry.user_agent %}<li>متصفّح: <code>{{ entry.user_agent }}</code></li>{% endif %}
+      </ul>
+
+      {% if entry.error_message %}
+      <div class="mt-program-banner mt-program-banner--risk"
+           data-audit-detail-error>
+        <li><i class="fa-solid fa-circle-exclamation"></i>
+          {{ entry.error_message }}</li>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if entry.payload %}
+  <section class="mt-card" data-audit-detail-payload>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-database"></i> بيانات العملية (payload)</h3>
+    </header>
+    <div class="mt-card-body">
+      <p class="mt-tab-hint">
+        المفاتيح الحساسة (كلمة المرور، السرّ، المفتاح الخاص...)
+        تظهر هنا كـ <code>***</code> بفعل آلية الإخفاء عند الكتابة.
+      </p>
+      <pre class="mt-logs-output">{{ entry.payload | tojson(indent=2) }}</pre>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if entry.before %}
+  <section class="mt-card" data-audit-detail-before>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> قبل التغيير</h3>
+    </header>
+    <div class="mt-card-body">
+      <pre class="mt-logs-output">{{ entry.before | tojson(indent=2) }}</pre>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if entry.after %}
+  <section class="mt-card" data-audit-detail-after>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-arrow-right-long"></i> بعد التغيير</h3>
+    </header>
+    <div class="mt-card-body">
+      <pre class="mt-logs-output">{{ entry.after | tojson(indent=2) }}</pre>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="mt-program-actions">
+    <a class="mt-mini-btn"
+       href="{{ url_for('radius.audit_log_index') }}">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  </div>
+</section>
+
+{% endblock %}

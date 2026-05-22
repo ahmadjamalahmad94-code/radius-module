@@ -1,0 +1,172 @@
+{# S2.2 — Operation audit log center.
+
+   Calm table view. Filter strip at the top, row per operation,
+   click-through to detail. RTL Arabic, reuses the mt-card +
+   mt-iface-table tokens so it sits inside the existing visual
+   language without new CSS.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}سجل العمليات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-list"></i>{% endblock %}
+{% block page_title %}سجل العمليات{% endblock %}
+{% block page_sub %}<span class="sub">من قام بماذا، متى، والنتيجة</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-audit-log-page>
+
+  {{ hub.hero(
+    "سجل العمليات",
+    subtitle="كل عملية حساسة على الراوترات والإعدادات تظهر هنا — مصدر واحد للحقيقة.",
+    icon="clipboard-list",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
+    </header>
+    <div class="mt-card-body">
+      <form method="get" class="mt-program-form"
+            data-audit-log-filters>
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>الراوتر (router_id)</span>
+            <input type="text" name="router_id"
+                   value="{{ filters.router_id or '' }}"
+                   placeholder="مثلاً 13"
+                   data-audit-filter-router>
+          </label>
+          <label class="mt-program-field">
+            <span>الإجراء</span>
+            <input type="text" name="action"
+                   value="{{ filters.action or '' }}"
+                   placeholder="مثلاً mt.programming.hotspot.apply"
+                   data-audit-filter-action>
+          </label>
+          <label class="mt-program-field">
+            <span>الشدة</span>
+            <select name="severity" data-audit-filter-severity>
+              <option value="">— الكل —</option>
+              {% for s in severities %}
+              <option value="{{ s }}"
+                {% if filters.severity == s %}selected{% endif %}>
+                {{ s }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>النتيجة</span>
+            <select name="result_status" data-audit-filter-result>
+              <option value="">— الكل —</option>
+              {% for r in result_statuses %}
+              <option value="{{ r }}"
+                {% if filters.result_status == r %}selected{% endif %}>
+                {{ r }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>بحث نصّي</span>
+            <input type="text" name="q"
+                   value="{{ filters.search or '' }}"
+                   placeholder="اسم المستخدم، الهدف، الإجراء"
+                   data-audit-filter-search>
+          </label>
+        </div>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-audit-filter-submit>
+            <i class="fa-solid fa-magnifying-glass"></i> طبّق الفلاتر
+          </button>
+          <a class="mt-mini-btn"
+             href="{{ url_for('radius.audit_log_index') }}"
+             data-audit-filter-clear>
+            <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-list"></i> العمليات الأخيرة</h3>
+      <span class="mt-card-meta">
+        <span data-audit-count>{{ rows|length }}</span> صف
+      </span>
+    </header>
+    <div class="mt-card-body">
+      {% if not rows %}
+      <p class="mt-empty" data-audit-empty>
+        لا توجد عمليات تطابق هذه الفلاتر.
+      </p>
+      {% else %}
+      <div class="mt-table-wrap">
+        <table class="mt-iface-table" data-audit-log-table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>الفاعل</th>
+              <th>الإجراء</th>
+              <th>الهدف</th>
+              <th>الراوتر</th>
+              <th>الشدة</th>
+              <th>النتيجة</th>
+              <th>تفاصيل</th>
+            </tr>
+          </thead>
+          <tbody data-audit-log-rows>
+            {% for r in rows %}
+            <tr data-audit-row="{{ r.id }}">
+              <td class="mt-iface-mac">{{ r.created_at }}</td>
+              <td>{{ r.actor }}</td>
+              <td class="mt-iface-name">{{ r.action }}</td>
+              <td>{{ r.target_type }}#{{ r.target_id }}</td>
+              <td>{% if r.router_id %}<code>{{ r.router_id }}</code>{% else %}—{% endif %}</td>
+              <td>
+                {% if r.severity == "critical" %}
+                <span class="mt-iface-state mt-iface-state--off">{{ r.severity }}</span>
+                {% elif r.severity == "warning" %}
+                <span class="mt-iface-state mt-iface-state--down">{{ r.severity }}</span>
+                {% else %}
+                <span class="mt-iface-state mt-iface-state--up">{{ r.severity }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if r.result_status %}
+                  {% if r.result_status == "success" %}
+                  <span class="mt-iface-state mt-iface-state--up">{{ r.result_status }}</span>
+                  {% elif r.result_status in ("failed", "cancelled") %}
+                  <span class="mt-iface-state mt-iface-state--off">{{ r.result_status }}</span>
+                  {% else %}
+                  <span class="mt-iface-state mt-iface-state--down">{{ r.result_status }}</span>
+                  {% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                <a class="mt-mini-btn"
+                   href="{{ url_for('radius.audit_log_detail', audit_id=r.id) }}"
+                   data-audit-detail-link="{{ r.id }}">
+                  <i class="fa-solid fa-eye"></i> عرض
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}
