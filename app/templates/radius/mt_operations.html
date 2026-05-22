@@ -36,6 +36,37 @@
   {{ hub.kpi("يدوي",       items|length - _provisioned, icon="hand",       variant="amber") }}
 </div>
 
+{# O3: bulk action bar — only renders when there are routers
+   to act on. Form posts to /admin/radius/devices/bulk-toggle
+   with the selected ids[] + action. Disabled buttons until the
+   user picks at least one checkbox (JS toggles `disabled`). #}
+{# O3: bulk action bar. The `id="mt-bulk-form"` is referenced by
+   every checkbox's `form=` attribute below so checkboxes that
+   sit OUTSIDE the form (inside the table) still submit with it.
+   Buttons start disabled; the JS enables them once 1+ row is
+   selected. #}
+{% if items %}
+<form id="mt-bulk-form"
+      method="POST" action="{{ url_for('radius.devices_bulk_toggle') }}"
+      class="mt-bulk-bar" data-mt-bulk-form>
+  {{ csrf_token_input() | safe }}
+  <span class="mt-bulk-label">
+    <span data-mt-bulk-count>0</span> راوتر مختار
+  </span>
+  <button type="submit" name="action" value="enable"
+          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
+    <i class="fa-solid fa-circle-check"></i> تفعيل المحدّد
+  </button>
+  <button type="submit" name="action" value="disable"
+          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
+    <i class="fa-solid fa-power-off"></i> تعطيل المحدّد
+  </button>
+  <span class="mt-bulk-hint">
+    اختر صفًّا أو أكثر بمربع الاختيار لتفعيل الأزرار.
+  </span>
+</form>
+{% endif %}
+
 {% call hub.section("الراوترات", icon="server",
                     meta=items|length|string + " راوتر", flush=True) %}
 <div class="hub-table-wrap" style="border:none;border-radius:0"
@@ -45,7 +76,11 @@
   <table class="hub-table">
     <thead>
       <tr>
-        <th class="num" style="width:60px">#</th>
+        <th style="width:38px">
+          <input type="checkbox" data-mt-bulk-toggle-all
+                 title="اختيار/إلغاء الكل">
+        </th>
+        <th class="num" style="width:50px">#</th>
         <th>الاسم</th>
         <th>العنوان</th>
         <th>الحالة</th>
@@ -57,7 +92,20 @@
     </thead>
     <tbody>
     {% for item in items %}
-      <tr data-mt-row-counters data-mt-router-id="{{ item.id }}">
+      <tr data-mt-row-counters
+          data-mt-router-id="{{ item.id }}"
+          data-mt-enabled="{{ 'true' if item.enabled else 'false' }}">
+        <td>
+          {# Checkbox sits OUTSIDE the bulk form (inside the
+             table), so `form=` ties it back to mt-bulk-form
+             for submit. name="ids" is the multi-value list
+             devices_bulk_toggle() reads via getlist(). #}
+          <input type="checkbox"
+                 data-mt-row-select
+                 form="mt-bulk-form"
+                 name="ids"
+                 value="{{ item.id }}">
+        </td>
         <td class="num">{{ item.display_num }}</td>
         <td>
           <a href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
@@ -108,6 +156,25 @@
             <i class="fa-solid fa-code"></i> سكربت
           </a>
           {% endif %}
+          {# O3: single-row enable/disable. Tiny inline form so
+             we don't need a global JS handler; CSRF token is
+             rendered inline. #}
+          <form method="POST"
+                action="{{ url_for('radius.devices_toggle', nas_id=item.id) }}"
+                style="display:inline">
+            {{ csrf_token_input() | safe }}
+            <input type="hidden" name="next" value="/admin/radius/mt/operations">
+            <input type="hidden" name="action"
+                   value="{{ 'disable' if item.enabled else 'enable' }}">
+            <button type="submit" class="hub-btn hub-btn--sm"
+                    title="{{ 'تعطيل الراوتر' if item.enabled else 'تفعيل الراوتر' }}">
+              {% if item.enabled %}
+                <i class="fa-solid fa-power-off"></i> تعطيل
+              {% else %}
+                <i class="fa-solid fa-circle-check"></i> تفعيل
+              {% endif %}
+            </button>
+          </form>
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
             <i class="fa-solid fa-pen-to-square"></i> تعديل
           </a>
@@ -128,6 +195,20 @@
   [data-mt-row-status][data-mt-state="error"] .dot { background: #DC2626; }
   [data-mt-row-status][data-mt-state="partial"] { background: #FEF3C7; color: #92400E; }
   [data-mt-row-status][data-mt-state="partial"] .dot { background: #D97706; }
+  /* O3: bulk action bar */
+  .mt-bulk-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #FAFAFC; border: 1px solid #EEEDF3; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 12px; font-size: 13px;
+  }
+  .mt-bulk-label  { color: #1F2937; font-weight: 700; }
+  .mt-bulk-hint   { color: #6B7280; font-size: 12px; margin-inline-start: auto; }
+  .hub-btn[disabled] { opacity: .55; cursor: not-allowed; }
+  /* O3: disabled-row visual cue + checkbox spacing */
+  tr[data-mt-enabled="false"] td { opacity: .6; }
+  tr[data-mt-enabled="false"] td:first-child { opacity: 1; }
+  input[type="checkbox"][data-mt-row-select],
+  input[type="checkbox"][data-mt-bulk-toggle-all] { width: 16px; height: 16px; cursor: pointer; accent-color: #6B5AED; }
 </style>
 
 {% else %}

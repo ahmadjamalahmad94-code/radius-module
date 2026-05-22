@@ -25,6 +25,15 @@ def register_devices_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/devices/<int:nas_id>", "devices_update", devices_update, methods=["POST"])
     bp.add_url_rule("/devices/<int:nas_id>/delete", "devices_delete", devices_delete, methods=["POST"])
     bp.add_url_rule("/devices/<int:nas_id>/test", "devices_test", devices_test, methods=["POST"])
+    # O3 — Operations Center toggle + bulk toggle
+    bp.add_url_rule(
+        "/devices/<int:nas_id>/toggle",
+        "devices_toggle", devices_toggle, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/devices/bulk-toggle",
+        "devices_bulk_toggle", devices_bulk_toggle, methods=["POST"],
+    )
 
 
 def _actor() -> str:
@@ -157,3 +166,99 @@ def devices_test(nas_id: int):
     except Exception:
         pass
     return redirect(url_for("radius.devices_list"))
+
+
+# ─── O3: enable/disable toggles ──────────────────────────────────
+
+
+def _flip_enabled(nas_id: int, *, action: str) -> bool:
+    """Flip enabled flag for one NAS row. `action` must be
+    'enable' or 'disable'. Returns True when a row was updated.
+    Goes through the service so the audit trail captures it.
+    """
+    if action not in ("enable", "disable"):
+        return False
+    svc = get_nas_devices_service()
+    try:
+        dev = svc.get(nas_id)
+    except RadiusError:
+        return False
+    if dev is None:
+        return False
+    from dataclasses import replace as _replace
+    new = _replace(dev, enabled=(action == "enable"))
+    try:
+        svc.update(actor=_actor(), device=new)
+    except RadiusError:
+        return False
+    return True
+
+
+def devices_toggle(nas_id: int):
+    """Per-row enable/disable from Operations Center. Accepts
+    `action=enable|disable` from form, otherwise auto-flips."""
+    requested = (request.form.get("action") or "").strip().lower()
+    if requested not in ("enable", "disable"):
+        # No explicit action → flip whichever way the row is now.
+        try:
+            dev = get_nas_devices_service().get(nas_id)
+        except RadiusError:
+            abort(404)
+        if dev is None:
+            abort(404)
+        requested = "disable" if dev.enabled else "enable"
+    ok = _flip_enabled(nas_id, action=requested)
+    if not ok:
+        flash("تعذّر تغيير حالة الراوتر — تأكّد من وجوده.", "error")
+    else:
+        flash(
+            "تم تفعيل الراوتر." if requested == "enable"
+            else "تم تعطيل الراوتر.",
+            "success",
+        )
+    # If the caller came from Operations Center, send them back
+    # there; otherwise the legacy devices list.
+    next_url = request.form.get("next") or request.referrer or ""
+    if "/mt/operations" in next_url:
+        return redirect(url_for("radius.mt_operations"))
+    return redirect(url_for("radius.devices_list"))
+
+
+def devices_bulk_toggle():
+    """Bulk enable/disable from Operations Center.
+
+    Form keys:
+        ids[]    — list of nas_id ints (HTML multi-value)
+        action   — 'enable' or 'disable'
+
+    Rejects unknown actions; silently skips ids that don't exist
+    (caller may have stale selections). The audit trail records
+    one update per affected NAS via the underlying service.
+    """
+    action = (request.form.get("action") or "").strip().lower()
+    if action not in ("enable", "disable"):
+        flash("إجراء غير معروف.", "error")
+        return redirect(url_for("radius.mt_operations"))
+
+    raw_ids = request.form.getlist("ids") or request.form.getlist("ids[]")
+    nas_ids: list[int] = []
+    for raw in raw_ids:
+        try:
+            nas_ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    if not nas_ids:
+        flash("لم تختر أي راوتر.", "error")
+        return redirect(url_for("radius.mt_operations"))
+
+    changed = 0
+    for nid in nas_ids:
+        if _flip_enabled(nid, action=action):
+            changed += 1
+
+    if changed:
+        verb = "تفعيل" if action == "enable" else "تعطيل"
+        flash(f"تم {verb} {changed} راوتر.", "success")
+    else:
+        flash("لم يتم تغيير أي راوتر — قد تكون الاختيارات قديمة.", "warning")
+    return redirect(url_for("radius.mt_operations"))

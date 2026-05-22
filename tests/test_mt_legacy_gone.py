@@ -150,7 +150,12 @@ def test_url_for_mt_list_still_resolves(app):
 
 def test_mt_create_does_not_write_to_legacy_table(app, client):
     """The whole point of N2: even if someone POSTs to the
-    deprecated URL, no row gets created in mikrotik_configs."""
+    deprecated URL, no row gets created in mikrotik_configs.
+
+    Post-N3 the table itself is gone. The behaviour we still
+    want to pin is: the request returns 410 (not 500), and
+    nothing was written.
+    """
     _login(client)
     token = _csrf(client)
     res = client.post(
@@ -164,8 +169,10 @@ def test_mt_create_does_not_write_to_legacy_table(app, client):
     assert res.status_code == 410
     with app.app_context():
         from app.radius.db.connection import db
-        row = db().execute(
-            "SELECT 1 FROM mikrotik_configs WHERE host = ?",
-            ("10.99.99.99",),
+        # Post-N3 the table is gone — sqlite_master is the canonical
+        # check.
+        tbl = db().execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='mikrotik_configs'"
         ).fetchone()
-    assert row is None
+    assert tbl is None, "mikrotik_configs should be dropped by N3"

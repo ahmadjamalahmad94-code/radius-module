@@ -35,8 +35,62 @@
     return;
   }
 
-  const rows = Array.from(
+  const allRows = Array.from(
     table.querySelectorAll("tr[data-mt-row-counters]")
+  );
+
+  // O3 — bulk selection wiring. Lives in this same JS file so we
+  // don't ship a second <script>. Always wire even when allRows
+  // is empty (the page still renders an empty bulk bar in that
+  // case).
+  (function wireBulk() {
+    const bulkForm = document.getElementById("mt-bulk-form");
+    if (!bulkForm) return;
+    const countEl   = bulkForm.querySelector("[data-mt-bulk-count]");
+    const actionBtns = Array.from(
+      bulkForm.querySelectorAll("[data-mt-bulk-action]")
+    );
+    const rowSelects = Array.from(
+      table.querySelectorAll("[data-mt-row-select]")
+    );
+    const selectAll  = table.querySelector("[data-mt-bulk-toggle-all]");
+
+    function refreshState() {
+      const selected = rowSelects.filter(cb => cb.checked).length;
+      if (countEl) countEl.textContent = String(selected);
+      const disabled = selected === 0;
+      actionBtns.forEach(b => { b.disabled = disabled; });
+      // Header checkbox tri-state for clarity.
+      if (selectAll) {
+        if (selected === 0) {
+          selectAll.checked = false;
+          selectAll.indeterminate = false;
+        } else if (selected === rowSelects.length) {
+          selectAll.checked = true;
+          selectAll.indeterminate = false;
+        } else {
+          selectAll.checked = false;
+          selectAll.indeterminate = true;
+        }
+      }
+    }
+
+    rowSelects.forEach(cb => cb.addEventListener("change", refreshState));
+    if (selectAll) {
+      selectAll.addEventListener("change", () => {
+        rowSelects.forEach(cb => { cb.checked = selectAll.checked; });
+        refreshState();
+      });
+    }
+    refreshState();
+  })();
+
+  // Only ENABLED rows are polled. Disabled rows are shown with a
+  // static "معطّل" badge by the server-render path; polling them
+  // would be wasted API calls + might confuse operators if a
+  // disabled-but-still-reachable router lit up green.
+  const rows = allRows.filter(
+    r => (r.dataset.mtEnabled || "true") === "true"
   );
   if (!rows.length) return;
 
