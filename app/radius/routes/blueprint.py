@@ -124,6 +124,9 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_login_designer import register_mt_login_designer_routes
     register_mt_login_designer_routes(bp)
 
+    from .jobs import register_jobs_routes
+    register_jobs_routes(bp)
+
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 
