@@ -35,14 +35,25 @@ class RadiusAuditService:
     def record(
         self, *, actor: str, action: str, target_type: str,
         target_id: str, payload: Optional[dict] = None,
+        # S2.1 — promoted columns. All optional + backward-compat.
+        severity: str = "info",
+        result_status: str = "",
+        router_id: Optional[int] = None,
+        error_message: str = "",
+        before: Optional[dict] = None,
+        after: Optional[dict] = None,
     ) -> RadiusAuditEntry:
         tid, ip, ua = _tenant_and_request()
         new_id = None
         try:
             new_id = audit_repo.record(
                 tenant_id=tid, actor=actor or "system",
-                action=action, target_type=target_type, target_id=str(target_id),
+                action=action, target_type=target_type,
+                target_id=str(target_id),
                 payload=payload or {}, ip_address=ip, user_agent=ua,
+                severity=severity, result_status=result_status,
+                router_id=router_id, error_message=error_message,
+                before=before, after=after,
             )
         except Exception:  # noqa: BLE001
             _LOG.warning("audit record failed", exc_info=True)
