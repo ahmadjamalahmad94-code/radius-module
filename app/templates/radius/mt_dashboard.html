@@ -233,11 +233,46 @@
 
   </section>{# /overview panel #}
 
-  {# ─── Placeholder panels (P2..P7 will fill them). Honest
+  {# ─── P2 — Interfaces tab (real data) ───────────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="interfaces"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-interfaces-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-ethernet"></i> الواجهات</h3>
+        <span class="mt-card-meta">
+          <span data-mt-interfaces-count>—</span> واجهة ·
+          <button type="button" class="mt-mini-btn"
+                  data-mt-interfaces-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-empty" data-mt-interfaces-msg>جارٍ التحميل…</p>
+        <div class="mt-table-wrap" data-mt-interfaces-wrap hidden>
+          <table class="mt-iface-table" data-mt-interfaces-table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>النوع</th>
+                <th>MAC</th>
+                <th>MTU</th>
+                <th>الحالة</th>
+                <th>RX</th>
+                <th>TX</th>
+                <th>أخطاء</th>
+              </tr>
+            </thead>
+            <tbody data-mt-interfaces-rows></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  {# ─── Placeholder panels (P3..P7 will fill them). Honest
        empty states — no fake buttons, no fake data. ─── #}
   {% set _placeholders = [
-    ('interfaces',  'الواجهات',  'ethernet',
-     'جدول الواجهات الكامل (نوع، السرعة، الترافيك، الأخطاء) ينزل في P2.'),
     ('ips',         'العناوين',  'network-wired',
      'جدول /ip/address على هذا الراوتر — ينزل في P3.'),
     ('routes',      'المسارات',  'route',

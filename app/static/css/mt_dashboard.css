@@ -430,3 +430,85 @@
   font-size: 12px;
   color: #64748B;
 }
+
+/* ───────────────────────────────────────────────────────────────
+   P2 — Interfaces tab.
+   ─────────────────────────────────────────────────────────────── */
+.mt-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+.mt-iface-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 720px;
+}
+.mt-iface-table thead th {
+  background: #F8FAFC;
+  text-align: start;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+.mt-iface-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+  white-space: nowrap;
+}
+.mt-iface-table tbody tr:last-child td { border-bottom: 0; }
+.mt-iface-table tbody tr:hover { background: #F8FAFC; }
+
+.mt-iface-name { font-weight: 600; }
+.mt-iface-mac {
+  font-family: ui-monospace, "Cairo", monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+.mt-iface-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.mt-iface-state--up   { background: #DCFCE7; color: #166534; }
+.mt-iface-state--down { background: #FEF3C7; color: #92400E; }
+.mt-iface-state--off  { background: #E2E8F0; color: #475569; }
+
+.mt-iface-errors {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #FEE2E2;
+  color: #991B1B;
+}
+.mt-iface-errors--ok { background: #F1F5F9; color: #64748B; }
+
+.mt-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.mt-mini-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}

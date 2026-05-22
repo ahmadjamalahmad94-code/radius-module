@@ -26,7 +26,13 @@ TAB_SLUGS = [
     "overview", "interfaces", "ips", "routes",
     "neighbors", "sessions", "logs", "diagnostics",
 ]
-PLACEHOLDER_SLUGS = [s for s in TAB_SLUGS if s != "overview"]
+# Slugs that still ship as honest "empty state" placeholders. Each
+# P-step promotes one slug out of this list into a real panel — the
+# corresponding test_mt_dashboard_p<n>_*.py file then owns the
+# regression for that panel's contract.
+PLACEHOLDER_SLUGS = [
+    "ips", "routes", "neighbors", "sessions", "logs", "diagnostics",
+]
 
 
 @pytest.fixture
@@ -153,8 +159,9 @@ def test_placeholder_panels_carry_honest_arabic_copy(app, client):
     # The shared "no fake buttons" line.
     assert "لا توجد أزرار وهمية هنا" in html
     # Each placeholder cites its future P-step so operators can
-    # ground their expectations in the roadmap.
-    for marker in ("P2", "P3", "P4", "P5", "P6", "P7"):
+    # ground their expectations in the roadmap. (P2 — interfaces —
+    # was promoted to a real panel in test_mt_dashboard_p2_*.)
+    for marker in ("P3", "P4", "P5", "P6", "P7"):
         assert marker in html, (
             f"placeholder copy must reference roadmap step {marker}"
         )

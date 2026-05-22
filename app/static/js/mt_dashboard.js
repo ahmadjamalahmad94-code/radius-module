@@ -50,6 +50,10 @@
         if (on) p.removeAttribute("hidden");
         else    p.setAttribute("hidden", "");
       });
+      // Per-tab modules listen for this event so they can lazy-load
+      // and pause polling when their panel is off-screen.
+      root.dispatchEvent(new CustomEvent("mt:tab-change",
+                                         { detail: { slug } }));
     }
 
     function fromHash() {
@@ -604,4 +608,149 @@
       });
     });
   }
+
+  // ── P2 — Interfaces tab ─────────────────────────────────────────
+  //
+  // Lazy load: first activation triggers a fetch. While the tab is
+  // open we re-poll every INTERFACES_POLL_MS so byte counters + the
+  // running-flag column stay live. Switching away clears the timer
+  // — no point hammering the router for a panel the operator
+  // isn't looking at.
+  (function initInterfacesTab() {
+    const INTERFACES_POLL_MS = 15_000;
+    const card  = root.querySelector("[data-mt-interfaces-card]");
+    if (!card) return;
+    const msg   = card.querySelector("[data-mt-interfaces-msg]");
+    const wrap  = card.querySelector("[data-mt-interfaces-wrap]");
+    const rows  = card.querySelector("[data-mt-interfaces-rows]");
+    const count = card.querySelector("[data-mt-interfaces-count]");
+    const refreshBtn = card.querySelector("[data-mt-interfaces-refresh]");
+
+    let timer = null;
+    let inflight = false;
+
+    function setMsg(text) {
+      if (!msg) return;
+      msg.textContent = text || "";
+      msg.hidden = !text;
+    }
+
+    function bytesHumanLocal(v) {
+      const n = parseFloat(v);
+      if (!Number.isFinite(n)) return "—";
+      if (n < 1024) return n.toFixed(0) + " B";
+      const units = ["KB", "MB", "GB", "TB", "PB"];
+      let val = n / 1024, i = 0;
+      while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+      return val.toFixed(val >= 100 ? 0 : 1) + " " + units[i];
+    }
+
+    function statusCell(row) {
+      const disabled = String(row["disabled"]) === "true";
+      const running  = String(row["running"])  === "true";
+      if (disabled) {
+        return ['<span class="mt-iface-state mt-iface-state--off">',
+                'معطّلة</span>'].join("");
+      }
+      if (running) {
+        return ['<span class="mt-iface-state mt-iface-state--up">',
+                'متصلة</span>'].join("");
+      }
+      return ['<span class="mt-iface-state mt-iface-state--down">',
+              'غير متصلة</span>'].join("");
+    }
+
+    function escapeText(v) {
+      return String(v == null ? "" : v).replace(/[<>&"]/g, ch => ({
+        "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;",
+      }[ch]));
+    }
+
+    function renderRows(list) {
+      const html = list.map(r => {
+        const rxErr = parseFloat(r["rx-error"]) || 0;
+        const txErr = parseFloat(r["tx-error"]) || 0;
+        const errs  = rxErr + txErr;
+        const errCell = errs > 0
+          ? '<span class="mt-iface-errors">' + errs + '</span>'
+          : '<span class="mt-iface-errors mt-iface-errors--ok">0</span>';
+        return [
+          '<tr data-mt-iface-row="', escapeText(r.name || ""), '">',
+          '<td class="mt-iface-name">', escapeText(r.name || "—"), '</td>',
+          '<td>', escapeText(r.type || "—"), '</td>',
+          '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
+          '<td>', escapeText(r.mtu || "—"), '</td>',
+          '<td>', statusCell(r), '</td>',
+          '<td>', bytesHumanLocal(r["rx-byte"]), '</td>',
+          '<td>', bytesHumanLocal(r["tx-byte"]), '</td>',
+          '<td>', errCell, '</td>',
+          '</tr>',
+        ].join("");
+      }).join("");
+      rows.innerHTML = html;
+    }
+
+    async function load() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const { res, body } = await api(
+          "/mikrotik/" + CFG.routerId + "/interfaces");
+        if (!res.ok || !body || body.ok === false) {
+          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          wrap.hidden = true;
+          if (count) count.textContent = "—";
+          return;
+        }
+        const env = body.data || {};
+        if (env.ok === false) {
+          setMsg(env.error
+                 || "الراوتر لم يرد على /interface/print.");
+          wrap.hidden = true;
+          if (count) count.textContent = "—";
+          return;
+        }
+        const list = Array.isArray(env.data) ? env.data : [];
+        if (!list.length) {
+          setMsg("لا توجد واجهات معروضة.");
+          wrap.hidden = true;
+          if (count) count.textContent = "0";
+          return;
+        }
+        renderRows(list);
+        if (count) count.textContent = String(list.length);
+        setMsg("");
+        wrap.hidden = false;
+      } catch (e) {
+        setMsg("خطأ في الشبكة: " + String(e));
+        wrap.hidden = true;
+      } finally {
+        inflight = false;
+      }
+    }
+
+    function start() {
+      load();
+      if (timer == null) {
+        timer = setInterval(load, INTERFACES_POLL_MS);
+      }
+    }
+    function stop() {
+      if (timer != null) { clearInterval(timer); timer = null; }
+    }
+
+    root.addEventListener("mt:tab-change", (e) => {
+      if (e.detail && e.detail.slug === "interfaces") start();
+      else stop();
+    });
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => load());
+    }
+    // If the page loads with #tab-interfaces already in the URL the
+    // tab module fires the event before this listener attaches; cover
+    // that case by checking the current hash on init.
+    if ((location.hash || "").replace(/^#/, "") === "tab-interfaces") {
+      start();
+    }
+  })();
 })();
