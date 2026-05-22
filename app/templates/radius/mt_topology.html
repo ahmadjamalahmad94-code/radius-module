@@ -1,0 +1,130 @@
+{# S5.2+S5.3 — Network topology map.
+
+   Simple card-grid view. Each card is a router; click goes
+   to the per-router dashboard. Filter strip at the top.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}خريطة الشبكة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
+{% block page_title %}خريطة الشبكة{% endblock %}
+{% block page_sub %}<span class="sub">VPS ← روتراتك ← الجيران</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-topology-page>
+
+  {{ hub.hero(
+    "خريطة الشبكة",
+    subtitle="نظرة عُلوية على VPS وعلاقتها بكل راوتر — بدون استهلاك رحلات شبكة على الراوترات.",
+    icon="diagram-project",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
+      <span class="mt-card-meta">
+        <span data-mt-topology-filtered-count>{{ filtered_count }}</span>
+        من <span data-mt-topology-total-count>{{ total_count }}</span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <form method="get" class="mt-program-form"
+            data-mt-topology-filters>
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>عرض</span>
+            <select name="show" data-mt-topology-show>
+              <option value="all"      {% if show == 'all'      %}selected{% endif %}>الكل</option>
+              <option value="offline"  {% if show == 'offline'  %}selected{% endif %}>غير المتصلين فقط</option>
+              <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>التي تحتاج انتباه</option>
+              <option value="vpn"      {% if show == 'vpn'      %}selected{% endif %}>VPN فقط</option>
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>بحث</span>
+            <input type="text" name="q"
+                   value="{{ q }}"
+                   placeholder="اسم الراوتر أو العنوان"
+                   data-mt-topology-search>
+          </label>
+        </div>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn"
+                  data-mt-topology-submit>
+            <i class="fa-solid fa-magnifying-glass"></i> طبّق
+          </button>
+          <a class="mt-mini-btn"
+             href="{{ url_for('radius.mt_topology') }}"
+             data-mt-topology-clear>
+            <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-server"></i> العقد</h3>
+    </header>
+    <div class="mt-card-body">
+
+      {# Server card sits at the top — visual anchor. #}
+      <div class="mt-router-quicknav" data-mt-topology-server>
+        <div class="mt-router-quicknav-link" style="cursor:default">
+          <i class="fa-solid fa-server"></i>
+          <span class="mt-router-quicknav-label">{{ server.label }}</span>
+          <span class="mt-router-quicknav-sub">قلب الشبكة — VPS</span>
+        </div>
+      </div>
+
+      {% if not routers %}
+      <p class="mt-empty" data-mt-topology-empty>
+        لا يوجد راوتر يطابق هذه الفلاتر.
+      </p>
+      {% else %}
+      <div class="mt-router-quicknav" data-mt-topology-routers>
+        {% for r in routers %}
+        <a class="mt-router-quicknav-link"
+           href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
+           data-mt-topology-node="{{ r.id }}"
+           data-mt-topology-status="{{ r.status }}"
+           data-mt-topology-mode="{{ r.connection_mode }}">
+          {% if r.connection_mode == 'vpn' %}
+          <i class="fa-solid fa-shield-halved"></i>
+          {% else %}
+          <i class="fa-solid fa-router"></i>
+          {% endif %}
+          <span class="mt-router-quicknav-label">{{ r.label }}</span>
+          <span class="mt-router-quicknav-sub">
+            {% if r.status == 'online' %}
+              <span class="mt-iface-state mt-iface-state--up">متصل</span>
+            {% elif r.status == 'offline' %}
+              <span class="mt-iface-state mt-iface-state--off">غير متصل</span>
+            {% elif r.status == 'disabled' %}
+              <span class="mt-iface-state mt-iface-state--off">معطّل</span>
+            {% else %}
+              <span class="mt-iface-state mt-iface-state--down">غير معروف</span>
+            {% endif %}
+            ·
+            {% if r.connection_mode == 'vpn' %}WireGuard
+            {% elif r.connection_mode == 'direct' %}اتصال مباشر
+            {% else %}—{% endif %}
+            {% if r.address %} · <code>{{ r.address }}</code>{% endif %}
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

@@ -130,6 +130,9 @@ def _register_all(bp: Blueprint) -> None:
     from .audit_log import register_audit_log_routes
     register_audit_log_routes(bp)
 
+    from .mt_topology import register_mt_topology_routes
+    register_mt_topology_routes(bp)
+
     from .mt_setup import register_mt_setup_routes
     register_mt_setup_routes(bp)
 
