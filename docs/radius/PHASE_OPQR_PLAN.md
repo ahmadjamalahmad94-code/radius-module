@@ -287,3 +287,52 @@ End-of-session checklist:
 - Every Phase O / P / Q / R sub-step is either committed +
   pushed OR documented as "deferred to next session" in
   POSTMORTEM_PHASE_K_L_M.md with a Phase X tag.
+
+---
+
+## Completion log
+
+All four phases shipped. Each row points at the commit and
+the dedicated test file(s) for that step. The operator-facing
+guide is in [MIKROTIK_OPERATIONS_CENTER.md](MIKROTIK_OPERATIONS_CENTER.md).
+
+| Step | Commit  | Tests file                          | Count |
+|------|---------|-------------------------------------|-------|
+| O1   | (prior) | test_mt_counters.py / O1 suite      | n/a   |
+| O2   | (prior) | test_operations_o2_counters.py      | n/a   |
+| O3   | (prior) | test_devices_o3.py                  | 14    |
+| O4   | (prior) | test_operations_o4_fleet.py         | 4     |
+| O5   | (prior) | test_diagnostics_o5_repair_modes.py | 7     |
+| P1   | 55b143f | test_mt_dashboard_p1_tabs.py        | 7     |
+| P2   | e0956b0 | test_mt_dashboard_p2_interfaces.py  | 5     |
+| P3   | 3144838 | test_mt_dashboard_p3_ips_routes.py  | 7     |
+| P4   | 9d6834e | test_mt_dashboard_p4_neighbors.py   | 6     |
+| P5   | 70f0327 | test_mt_dashboard_p5_logs.py        | 6     |
+| P6   | c2ec719 | test_mt_dashboard_p6_sessions.py    | 6     |
+| P7   | c3e4aa5 | test_mt_dashboard_p7_diagnostics.py | 13    |
+| Q1   | 430398e | test_mt_programming_q1.py           | 17    |
+| Q2   | c33fede | test_mt_programming_q2_apply.py     | 8     |
+| Q3   | f5df572 | test_mt_programming_q3_pppoe.py     | 10    |
+| Q4   | adc2306 | test_mt_programming_q4_unprogram.py | 9     |
+| R1   | 3b553ec | test_hotspot_templates_r1.py        | 13    |
+| R2   | 3b3e75c | test_mt_login_designer_r2.py        | 10    |
+| R3   | 3118146 | test_mt_login_designer_r3_deploy.py | 8     |
+| R4   | 6fca611 | test_hotspot_autologin_r4.py        | 7     |
+
+**Notes:**
+
+- Tests run with `python -m pytest -p no:randomly`. Each
+  test file has its own `app` fixture that does
+  `del sys.modules[k] for k.startswith("app.")` setup/teardown;
+  pytest-randomly re-ordering breaks the cleanup contract.
+- The Phase P placeholder loop in `mt_dashboard.html` shrank
+  with every step and is gone after P7. P1's
+  `test_no_placeholder_panels_remain` is the regression guard.
+- Phase Q persists nothing on the server side — apply talks
+  to the router, audit log records the attempt, but
+  HobeRadius does not maintain a per-router "applied program"
+  table. Q4 unprogram uses the `hoberadius:<kind>` comment
+  marker on RouterOS objects as the only source of truth.
+- Phase R adds one new table (`hotspot_designs`, migration
+  036) and one new file on the router (`hotspot/login.html`).
+  Nothing else is persisted.
