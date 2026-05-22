@@ -185,6 +185,20 @@
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
             <i class="fa-solid fa-chart-line"></i> لوحة
           </a>
+          {# S1 — direct links to the Q programming + R designer
+             pages so an operator can reach them in one click. #}
+          <a class="hub-btn hub-btn--sm"
+             href="{{ url_for('radius.mt_program_form', nas_id=item.id) }}"
+             title="برمجة الشبكة (Hotspot / PPPoE)"
+             data-mt-row-link="program">
+            <i class="fa-solid fa-diagram-project"></i> برمجة
+          </a>
+          <a class="hub-btn hub-btn--sm"
+             href="{{ url_for('radius.mt_login_designer', nas_id=item.id) }}"
+             title="مصمّم صفحة الدخول"
+             data-mt-row-link="login-designer">
+            <i class="fa-solid fa-palette"></i> تصميم
+          </a>
           {% if item.ros_version %}
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_setup_script', nas_id=item.id) }}">
             <i class="fa-solid fa-code"></i> سكربت
