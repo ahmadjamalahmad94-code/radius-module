@@ -115,6 +115,9 @@ def _register_all(bp: Blueprint) -> None:
     from .integrations import register_integration_routes
     register_integration_routes(bp)
 
+    from .mt_dashboard import register_mt_dashboard_routes
+    register_mt_dashboard_routes(bp)
+
     from .tokens import register_tokens_routes
     register_tokens_routes(bp)
 
