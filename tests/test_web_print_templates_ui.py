@@ -59,11 +59,15 @@ def test_print_templates_create_and_visual_preview(client):
     page = client.get("/admin/radius/print-templates")
     assert page.status_code == 200
     page_html = page.get_data(as_text=True)
-    # Designer canvas + form structure (commits 1–10 kept these).
-    assert "معاينة بصرية" in page_html or "معاينة حية" in page_html
+    # Designer canvas + form structure (post-SVG-rewrite).
+    assert "معاينة البطاقة" in page_html or "معاينة حية" in page_html
     assert 'name="card_orientation"' in page_html
     assert 'name="background_image"' in page_html
-    assert 'data-drag="username"' in page_html
+    # Legacy HTML drag handles (data-drag="username") were deleted
+    # when the designer preview moved to the unified SVG renderer.
+    # The new mount + endpoint take their place:
+    assert "data-designer-svg-mount" in page_html
+    assert "/print-templates/designer-svg" in page_html
     # Commit 3 collapsed `/print-templates/export` into the `#export`
     # anchor on the same page; the legacy URL still lives on the
     # per-row "فتح التصدير" buttons, but those only render when the
@@ -148,8 +152,11 @@ def test_print_templates_create_and_visual_preview(client):
     )
     assert preview.status_code == 200
     html = preview.get_data(as_text=True)
-    assert "visual_card_preview" in html
-    assert "pt-visual-card" in html
+    # Post-SVG-rewrite: the designer canvas no longer carries the
+    # legacy `pt-visual-card` / `visual_card_preview` HTML wrappers.
+    # The unified SVG renderer drives the canvas, so we assert the
+    # new mount + the per-card sample username.
+    assert "data-designer-svg-mount" in html
     assert "QA123" in html
 
     export = client.get(

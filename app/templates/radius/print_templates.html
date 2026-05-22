@@ -72,25 +72,41 @@
         element (brand, title, pills, QR, footer) with the card's
         width — no element drifts out of position, no manual
         per-size tweaks needed when the viewport changes shape. */
+  /* Designer preview is now a pure SVG mount. The wrap is a fixed
+     viewport; the SVG inside scales itself via its viewBox +
+     preserveAspectRatio="xMidYMid meet" (same `object-fit:contain`
+     behaviour as the export preview). No HTML card layout here —
+     the unified renderer is the single source of truth, end-to-end
+     parity with the PDF guaranteed. */
   .pr-canvas-wrap{
-    --vp-w: 100%;
-    --vp-h: min(480px, 60vh);
     background:linear-gradient(180deg,#f8fafc,#eef7fb);
     padding:22px;border-radius:0 0 16px 16px;
     width:100%;max-width:540px;
-    height:calc(var(--vp-h) + 44px);  /* +padding for breathing room */
+    height:min(520px, 64vh);
     margin:0 auto;
     display:grid;place-items:center;
   }
-  /* Landscape: width = min(vp_w, vp_h * 5/3) */
-  .pr-canvas-wrap .pr-card-preview{
-    width:min(100%, calc(var(--vp-h) * 5 / 3));
-    max-width:100%;max-height:100%;height:auto;
+  .pr-svg-stage{width:100%;height:100%;display:grid;place-items:center}
+  .pr-svg-mount{
+    width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;
+    transition:filter .15s ease;
   }
-  /* Portrait: width = min(vp_w, vp_h * 3/5) */
-  .pr-canvas-wrap .pr-card-preview.is-vertical{
-    width:min(100%, calc(var(--vp-h) * 3 / 5));
+  .pr-svg-mount.is-loading{filter:opacity(.55)}
+  .pr-svg-mount > svg{width:auto;height:auto;max-width:100%;max-height:100%;display:block;filter:drop-shadow(0 18px 38px rgba(15,23,42,.2))}
+  .pr-svg-empty{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    color:var(--hub-text-mute);font-weight:800;font-size:13px;
   }
+  .pr-svg-empty i{font-size:22px;color:var(--hub-text-mute);opacity:.5}
+  /* Draggable SVG groups — pointer-events stay enabled on USER/PASS/QR
+     so the JS can attach pointerdown listeners after each fetch. */
+  .pr-svg-mount svg .card-pill,
+  .pr-svg-mount svg .card-qr{cursor:grab;touch-action:none;user-select:none}
+  .pr-svg-mount svg .card-pill:active,
+  .pr-svg-mount svg .card-qr:active{cursor:grabbing}
+  .pr-svg-empty{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--hub-text-mute);font-weight:800;font-size:13px}
+  .pr-svg-empty i{font-size:22px;opacity:.5}
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
@@ -522,6 +538,15 @@
                 <input type="file" name="background_image"
                        accept="image/png,image/jpeg,image/webp"
                        data-background-image hidden>
+                {# Hidden field the picker fills with the chosen
+                   image's data URL. The designer-svg endpoint reads
+                   `background_image_data_url` directly into the
+                   layout so the live SVG preview shows the bitmap
+                   without the form having to re-upload the file on
+                   every keystroke. The real file is still posted as
+                   `background_image` when the user clicks Save. #}
+                <input type="hidden" name="background_image_data_url"
+                       data-background-image-data-url value="">
                 <button type="button" class="pr-file-trigger" data-bg-trigger>
                   <i class="fa-solid fa-image"></i> اختر صورة الخلفية
                 </button>
@@ -608,21 +633,21 @@
         <h3><i class="fa-solid fa-eye"></i> معاينة البطاقة</h3>
         <span class="hub-pill hub-pill--green">تصميم من النظام</span>
       </div>
+      {# Designer preview — pure SVG mount driven by the unified
+         renderer. The legacy `.pr-card-preview` HTML / CSS was
+         deleted: it was a second layout that drifted from the PDF
+         and from the export preview. Now the designer fetches the
+         SAME SVG `render_card_svg` produces server-side on every
+         form change. Drag interaction posts the resulting mm coords
+         back into the hidden form fields and re-fetches. #}
       <div class="pr-canvas-wrap">
-        <div class="pr-card-preview pt-visual-card" data-card-preview>
-          <div class="pr-card-bg-image" data-card-bg-image></div>
-          <div class="pr-card-accent"></div>
-          <div class="pr-brand" data-out="brand">HobeRadius</div>
-          <div class="pr-title" data-out="title">Internet Card</div>
-          <div class="pr-pill pr-user" data-drag="username"><small>USER</small><span>CARD1234</span></div>
-          <div class="pr-pill pr-pass" data-drag="password"><small>PASS</small><span>••••••••</span></div>
-          <div class="pr-qr" data-out="qr" data-drag="qr">QR</div>
-          <div class="pr-meta">
-            <span data-out="price" style="display:none">JOD 1.00</span>
-            <span data-out="validity" style="display:none">4 ساعات</span>
-            <span data-out="hotspot">hotspot.local</span>
+        <div class="pr-svg-stage" data-designer-svg-stage>
+          <div class="pr-svg-mount" data-designer-svg-mount>
+            <div class="pr-svg-empty">
+              <i class="fa-solid fa-eye"></i>
+              <span>جارٍ تحضير المعاينة...</span>
+            </div>
           </div>
-          <div class="pr-footer" data-out="footer">Keep login data until expiry</div>
         </div>
       </div>
       {% if preview %}
@@ -735,97 +760,132 @@
 (function(){
   const root = document.querySelector('[data-print-room]');
   if(!root) return;
-  const card = root.querySelector('[data-card-preview]');
   const form = root.querySelector('[data-pr-form]');
+  const svgMount = root.querySelector('[data-designer-svg-mount]');
   const $ = (sel) => root.querySelector(sel);
   const $$ = (sel) => Array.from(root.querySelectorAll(sel));
   function val(name, fallback=''){
     const el = form && form.querySelector(`[name="${name}"]`);
     return el ? el.value || fallback : fallback;
   }
-  function out(name, text){
-    const el = root.querySelector(`[data-out="${name}"]`);
-    if(el) el.textContent = text;
-  }
-  function show(sel, enabled){
-    const el = root.querySelector(sel);
-    if(el) el.style.display = enabled ? '' : 'none';
-  }
   function numeric(name, fallback){
     const parsed = parseFloat(val(name, fallback));
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
-  function cardSize(){
-    // mm card_width_mm / card_height_mm are only used to translate
-    // legacy drag-positions into the renderer's fraction system.
-    // The visual aspect ratio is owned by the CSS class
-    // (.pr-card-preview / .is-vertical), matching the unified
-    // renderer's fixed 1000x600 / 600x1000 canvas — see
-    // _DEFAULT_POSITIONS in card_renderer.py.
+  function cardSizeMm(){
     let w = numeric('card_width_mm', 85);
     let h = numeric('card_height_mm', 54);
     if(val('card_orientation','horizontal') === 'vertical' && w > h){
-      const nextW = h;
-      h = w;
-      w = nextW;
+      const nextW = h; h = w; w = nextW;
     }
     return {w, h};
   }
-  function placeElement(selector, prefix, w, h){
-    const el = root.querySelector(selector);
-    if(!el) return;
-    const rawX = parseFloat(val(`${prefix}_x`, 0)) || 0;
-    const rawY = parseFloat(val(`${prefix}_y`, 0)) || 0;
-    // (0, 0) means "use renderer / CSS default position". Clearing the
-    // inline left/top here lets the stylesheet's canonical values from
-    // _DEFAULT_POSITIONS take effect — designer ⇄ export ⇄ PDF parity.
-    if(rawX === 0 && rawY === 0){
-      el.style.left = '';
-      el.style.top = '';
-      el.style.right = '';
-      return;
-    }
-    const x = Math.max(0, Math.min(w, rawX));
-    const y = Math.max(0, Math.min(h, rawY));
-    el.style.right = 'auto';
-    el.style.left = `${Math.max(0, Math.min(94, (x / w) * 100))}%`;
-    el.style.top = `${Math.max(0, Math.min(92, (y / h) * 100))}%`;
+
+  // ── Unified SVG preview ──────────────────────────────────────────
+  // Single source of truth — the server's `render_card_svg` is the
+  // only thing that draws the designer card. Every form change POSTs
+  // the full form state to /print-templates/designer-svg and swaps
+  // the returned SVG into [data-designer-svg-mount]. Drag handlers
+  // are re-attached after each fetch.
+  let fetchSeq = 0;
+  let fetchTimer = null;
+  function buildFormData(){
+    const data = new FormData(form);
+    // file inputs would be too big to round-trip on every keystroke;
+    // exclude them. The background image data URL is stored inline by
+    // the bg-picker JS into a hidden field below.
+    data.delete('background_image');
+    return data;
   }
-  function update(){
-    if(!card || !form) return;
-    // Orientation toggle uses the renderer's canvas ratio (5:3 / 3:5)
-    // rather than the mm dimensions — keeps the designer locked to
-    // exactly what the SVG/PDF will render.
-    const isVertical = val('card_orientation','horizontal') === 'vertical';
-    card.classList.toggle('is-vertical', isVertical);
-    card.style.setProperty('--card-a', val('gradient_start','#0f172a'));
-    card.style.setProperty('--card-b', val('gradient_end','#22a7bd'));
-    card.style.setProperty('--card-accent', val('accent_color','#f59e0b'));
-    card.style.setProperty('--card-text', val('text_color','#ffffff'));
-    card.style.setProperty('--card-surface', val('surface_color','#e8f7fb'));
-    card.style.setProperty('--card-image-opacity', val('image_opacity','.82'));
-    card.dataset.pattern = val('pattern_style','signal');
-    out('brand', val('brand_name','HobeRadius'));
-    out('title', val('card_title','Internet Card'));
-    out('footer', val('footer_text','Keep login data until expiry'));
-    out('hotspot', val('hotspot_address','hotspot.local'));
-    out('price', val('price_text',''));
-    out('validity', val('validity_text',''));
-    show('[data-out="price"]', !!val('price_text') && form.show_price && form.show_price.checked);
-    show('[data-out="validity"]', !!val('validity_text') && form.show_validity && form.show_validity.checked);
-    show('[data-out="hotspot"]', form.show_hotspot && form.show_hotspot.checked);
-    show('[data-out="brand"]', form.show_brand && form.show_brand.checked);
-    show('.pr-user', form.show_username && form.show_username.checked);
-    show('.pr-pass', form.show_password && form.show_password.checked);
-    show('.pr-qr', form.show_qr && form.show_qr.checked);
-    // `size` is the mm card (default 85x54) — only relevant when a
-    // user has dragged an element to a non-default position; otherwise
-    // placeElement leaves the CSS defaults in place (parity with the
-    // renderer's _DEFAULT_POSITIONS).
-    const size = cardSize();
-    placeElement('.pr-user', 'username', size.w, size.h);
-    placeElement('.pr-pass', 'password', size.w, size.h);
-    placeElement('.pr-qr', 'qr', size.w, size.h);
+  async function fetchSvg(){
+    if(!svgMount || !form) return;
+    const seq = ++fetchSeq;
+    svgMount.classList.add('is-loading');
+    try {
+      const res = await fetch(
+        '{{ url_for("radius.print_templates_designer_svg") }}',
+        {method: 'POST', body: buildFormData(), credentials: 'same-origin'},
+      );
+      if(seq !== fetchSeq) return;
+      const svg = await res.text();
+      if(seq !== fetchSeq) return;
+      svgMount.innerHTML = svg;
+      attachSvgDrag();
+    } catch (_) {
+      // leave the previous SVG in place — quietly skip on transient errors
+    } finally {
+      if(seq === fetchSeq) svgMount.classList.remove('is-loading');
+    }
+  }
+  function scheduleFetch(){
+    if(fetchTimer) clearTimeout(fetchTimer);
+    fetchTimer = setTimeout(fetchSvg, 120);
+  }
+
+  // ── Drag inside the rendered SVG ────────────────────────────────
+  // The SVG renderer emits .card-pill / .card-qr groups in CANVAS
+  // coordinates (1000x600 landscape / 600x1000 portrait). On
+  // pointermove we map pointer position back to the canvas, then
+  // back to mm, then write into the form's username_x/y etc. The
+  // resulting form change triggers the regular SVG re-fetch.
+  function attachSvgDrag(){
+    if(!svgMount) return;
+    const svg = svgMount.querySelector('svg');
+    if(!svg) return;
+    function bind(selector, prefix){
+      const el = svg.querySelector(selector);
+      if(!el) return;
+      let dragging = false;
+      function ptToCanvas(event){
+        const rect = svg.getBoundingClientRect();
+        const viewBox = (svg.getAttribute('viewBox') || '0 0 1000 600')
+          .split(/\s+/).map(parseFloat);
+        const vbW = viewBox[2] || 1000;
+        const vbH = viewBox[3] || 600;
+        // Scale = min(rect.w/vbW, rect.h/vbH) — preserveAspectRatio=meet
+        const scale = Math.min(rect.width / vbW, rect.height / vbH);
+        const drawW = vbW * scale;
+        const drawH = vbH * scale;
+        const dx = rect.left + (rect.width - drawW) / 2;
+        const dy = rect.top + (rect.height - drawH) / 2;
+        const cx = (event.clientX - dx) / scale;
+        const cy = (event.clientY - dy) / scale;
+        return {x: Math.max(0, Math.min(vbW, cx)), y: Math.max(0, Math.min(vbH, cy)), vbW, vbH};
+      }
+      function move(event){
+        if(!dragging) return;
+        const c = ptToCanvas(event);
+        const mm = cardSizeMm();
+        const xMm = (c.x / c.vbW) * mm.w;
+        const yMm = (c.y / c.vbH) * mm.h;
+        const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
+        const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
+        if(xInput) xInput.value = xMm.toFixed(1);
+        if(yInput) yInput.value = yMm.toFixed(1);
+        scheduleFetch();
+      }
+      el.addEventListener('pointerdown', (event) => {
+        dragging = true;
+        el.setPointerCapture && el.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        move(event);
+      });
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', () => { dragging = false; });
+      el.addEventListener('pointercancel', () => { dragging = false; });
+    }
+    // Element ids match the renderer (`id="user"` lives on the pill's
+    // <g class="card-pill">; we use class+order since the renderer
+    // doesn't put an id on the group itself).
+    const pills = svg.querySelectorAll('.card-pill');
+    if(pills.length >= 1) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'user') + 1})`, 'username');
+    if(pills.length >= 2) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'pass') + 1})`, 'password');
+    bind('.card-qr', 'qr');
+  }
+  function pillIndex(svg, _id){
+    // The renderer emits USER pill before PASS pill in source order,
+    // so index 0 is USER and 1 is PASS.
+    return _id === 'user' ? 0 : 1;
   }
   $$('[data-pr-tab]').forEach(btn => btn.addEventListener('click', () => {
     $$('[data-pr-tab]').forEach(x => x.classList.remove('is-active'));
@@ -845,7 +905,7 @@
     form.brand_name.value = btn.dataset.brand;
     form.card_title.value = btn.dataset.title;
     form.footer_text.value = btn.dataset.footer;
-    update();
+    scheduleFetch();
   }));
   if(form) form.addEventListener('input', update);
   if(form) form.addEventListener('change', update);
@@ -878,9 +938,9 @@
       if(b < 1048576) return (Math.round(b/102.4)/10).toFixed(1) + ' KB';
       return (Math.round(b/10485.76)/100).toFixed(2) + ' MB';
     }
-    function resetCardBg(){
-      card.style.setProperty('--card-image', 'none');
-      card.classList.remove('has-image');
+    const dataUrlField = picker.querySelector('[data-background-image-data-url]');
+    function setDataUrl(url){
+      if(dataUrlField) dataUrlField.value = url || '';
     }
     function clearAll(){
       input.value = '';
@@ -889,8 +949,8 @@
       if(nameEl) nameEl.textContent = '';
       if(sizeEl) sizeEl.textContent = '';
       setError('');
-      resetCardBg();
-      update();
+      setDataUrl('');
+      scheduleFetch();
     }
     function accept(file){
       const mime = (file.type || '').toLowerCase();
@@ -912,9 +972,8 @@
       reader.onload = () => {
         const url = reader.result;
         if(thumb) thumb.src = url;
-        card.style.setProperty('--card-image', `url("${url}")`);
-        card.classList.add('has-image');
-        update();
+        setDataUrl(url);
+        scheduleFetch();
       };
       reader.onerror = () => setError('تعذّر قراءة الملف. حاول مرة أخرى.');
       reader.readAsDataURL(file);
@@ -961,7 +1020,7 @@
       const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
       xInput.value = ((x / rect.width) * size.w).toFixed(1);
       yInput.value = ((y / rect.height) * size.h).toFixed(1);
-      update();
+      scheduleFetch();
     }
     el.addEventListener('pointerdown', (event) => {
       dragging = true;
@@ -1193,7 +1252,7 @@
       renderPage();
     });
   }
-  update();
+  scheduleFetch();
   updateBatchLinks();
   initPaginators();
 })();

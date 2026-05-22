@@ -272,6 +272,10 @@ def _install_stubs(app: Flask) -> None:
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا
         "/admin/radius/logout",
+        # designer-svg: same-origin live SVG preview endpoint posted to
+        # on every form keystroke. Read-only render — never mutates DB.
+        # Without the exemption every keystroke would 302 to login.
+        "/admin/radius/print-templates/designer-svg",
     }
 
     # CSRF عام مبسَّط — تحقّق الـ token على غير-GET

@@ -34,6 +34,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/print-templates/designer-svg",
+        "print_templates_designer_svg",
+        print_templates_designer_svg,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/print-templates/<int:template_id>/delete",
         "print_templates_delete",
         print_templates_delete,
@@ -227,6 +233,57 @@ _PREVIEW_FRAGMENT_OVERRIDE_KEYS = (
     "price_text",
     "validity_text",
 )
+
+
+def print_templates_designer_svg():
+    """Live designer preview as inline SVG.
+
+    Posted to from the form editor's `input` listener: takes the
+    full current form state, builds the same render model the PDF
+    export uses, and returns a single `<svg>` element. The browser
+    drops it into the designer canvas via `innerHTML`.
+
+    This replaces the legacy hand-written `.pr-card-preview` HTML
+    that drifted from the PDF — same SVG renderer, no second layout.
+
+    The bg-image picker fills a hidden `background_image_data_url`
+    field directly so the SVG preview can show the bitmap without
+    re-uploading the file on every keystroke.
+    """
+    layout = _payload()["layout"]
+    bg_data_url = (request.form.get("background_image_data_url") or "").strip()
+    if bg_data_url.startswith("data:image/"):
+        layout = {**layout, "background_image_data_url": bg_data_url}
+    # The renderer's `_resolve_positions` reads top-level
+    # `username_x` / `username_y` / `password_x` / `password_y` /
+    # `qr_x` / `qr_y` from the template row, not the layout dict —
+    # mirror them at top level so a freshly-dragged pill survives the
+    # round-trip without saving the template first.
+    template_for_render = {
+        "id": 0,
+        "username_x": _float("username_x", 0),
+        "username_y": _float("username_y", 0),
+        "password_x": _float("password_x", 0),
+        "password_y": _float("password_y", 0),
+        "qr_x": _float("qr_x", 0),
+        "qr_y": _float("qr_y", 0),
+        "layout_json": layout,
+    }
+    sample = {
+        "id": "",
+        "username": request.form.get("sample_username") or "SAMPLE",
+        # The SVG adapter masks the password automatically — we still
+        # pass a non-empty placeholder so the PASS pill renders.
+        "password": "********",
+    }
+    from ..services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    model = build_card_render_model(template_for_render, sample)
+    svg = render_card_svg(model, mask_password=True)
+    return svg, 200, {"Content-Type": "image/svg+xml; charset=utf-8"}
 
 
 def print_templates_preview_fragment(template_id: int):
