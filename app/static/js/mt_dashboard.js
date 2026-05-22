@@ -878,6 +878,63 @@
     },
   });
 
+  // ─── P6 — Sessions (hotspot + ppp, read-only) ─────────────────
+  //
+  // Both sub-cards live inside the `sessions` panel — they share
+  // the tab-change start/stop hook (same slug) but hit different
+  // endpoints so they can render side-by-side as the operator scrolls.
+  initTableTab({
+    slug: "sessions",
+    path: "/hotspot/active",
+    pollMs: 10_000,
+    cardSel: "[data-mt-hotspot-card]",
+    msgSel: "[data-mt-hotspot-sessions-msg]",
+    wrapSel: "[data-mt-hotspot-sessions-wrap]",
+    rowsSel: "[data-mt-hotspot-sessions-rows]",
+    countSel: "[data-mt-hotspot-sessions-count]",
+    refreshSel: "[data-mt-hotspot-sessions-refresh]",
+    emptyMsg: "لا توجد جلسات Hotspot نشطة الآن.",
+    errorFallback: "الراوتر لم يرد على /ip/hotspot/active.",
+    row: function (r) {
+      return [
+        '<tr>',
+        '<td class="mt-iface-name">', escapeText(r.user || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r.address || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
+        '<td>', escapeText(r.uptime || "—"), '</td>',
+        '<td>', escapeText(r["bytes-in"] || "—"), '</td>',
+        '<td>', escapeText(r["bytes-out"] || "—"), '</td>',
+        '<td>', escapeText(r.comment || ""), '</td>',
+        '</tr>',
+      ].join("");
+    },
+  });
+
+  initTableTab({
+    slug: "sessions",
+    path: "/ppp/active",
+    pollMs: 10_000,
+    cardSel: "[data-mt-ppp-card]",
+    msgSel: "[data-mt-ppp-sessions-msg]",
+    wrapSel: "[data-mt-ppp-sessions-wrap]",
+    rowsSel: "[data-mt-ppp-sessions-rows]",
+    countSel: "[data-mt-ppp-sessions-count]",
+    refreshSel: "[data-mt-ppp-sessions-refresh]",
+    emptyMsg: "لا توجد جلسات PPP نشطة الآن.",
+    errorFallback: "الراوتر لم يرد على /ppp/active.",
+    row: function (r) {
+      return [
+        '<tr>',
+        '<td class="mt-iface-name">', escapeText(r.name || "—"), '</td>',
+        '<td>', escapeText(r.service || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r.address || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r["caller-id"] || "—"), '</td>',
+        '<td>', escapeText(r.uptime || "—"), '</td>',
+        '</tr>',
+      ].join("");
+    },
+  });
+
   // ─── P5 — Logs viewer ─────────────────────────────────────────
   //
   // Tails /api/v1/.../log with a topic filter. RouterOS stores
