@@ -77,6 +77,8 @@
 {%- set m_alerts      = ('/alerts' in path) -%}
 {%- set m_audit_log   = ('/audit' in path) -%}
 {%- set m_jobs        = ('/jobs/' in path) -%}
+{# Phase O — operations surfaces #}
+{%- set m_problems    = ('/problems' in path) -%}
 
 {# Accounting #}
 {%- set m_invoices    = '/invoices' in path -%}
@@ -110,7 +112,8 @@
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
-                                or m_audit_log or m_jobs -%}
+                                or m_audit_log or m_jobs
+                                or m_problems -%}
 {%- set sec_billing_active  = m_invoices or m_vouchers or m_ledger or m_finance_rep -%}
 {%- set sec_support_active  = m_tickets or m_services -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups or m_lifecycle -%}
@@ -221,6 +224,7 @@
         {{ sub_item('radius.mt_operations',   'غرفة عمليات MikroTik', m_mt) }}
         {{ sub_item('radius.mt_setup_form',   'معالج إضافة راوتر',     m_mt) }}
         {{ sub_item('radius.mt_topology',     'خريطة الشبكة',         m_topology) }}
+        {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',        m_problems) }}
         {{ sub_item('radius.diagnostics',     'تشخيص الراوترات',      m_diag) }}
         {{ sub_item('radius.mt_alerts_index', 'التنبيهات الذكيّة',     m_alerts) }}
         {{ sub_item('radius.audit_log_index', 'سجل العمليات',         m_audit_log) }}

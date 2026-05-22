@@ -1,0 +1,183 @@
+{# O3 — Operations Problems Center #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مركز المشاكل التشغيلية{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
+{% block page_title %}مركز المشاكل التشغيلية{% endblock %}
+{% block page_sub %}<span class="sub">قائمة موحَّدة لما يحتاج إجراء — على مستوى الفليت</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{% endblock %}
+
+{% macro problem_row(p) -%}
+<li class="mt-health-row mt-health-row--{{ p.severity }}"
+    data-mt-problem-row
+    data-mt-problem-type="{{ p.type }}"
+    data-mt-problem-router="{{ p.router_id }}"
+    data-mt-problem-severity="{{ p.severity }}">
+  <div class="mt-health-row-head">
+    {% if p.severity == 'critical' %}
+    <span class="mt-iface-state mt-iface-state--off">حرجة</span>
+    {% elif p.severity == 'warning' %}
+    <span class="mt-iface-state mt-iface-state--down">تحذير</span>
+    {% else %}
+    <span class="mt-iface-state mt-iface-state--up">معلومة</span>
+    {% endif %}
+    <span class="mt-health-row-msg">{{ p.title_ar }}</span>
+  </div>
+  <p style="margin:6px 0 0;font-size:13px;color:#475569">
+    {{ p.explanation_ar }}
+  </p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px">
+    <span style="color:#475569">النوع: <code>{{ p.type }}</code></span>
+    {% if p.last_seen %}
+    <span style="color:#475569">آخر رصد: <code>{{ p.last_seen }}</code></span>
+    {% endif %}
+    <a class="mt-mini-btn"
+       href="{{ p.suggested_href }}"
+       data-mt-problem-action="{{ p.type }}">
+      <i class="fa-solid fa-arrow-right"></i> {{ p.suggested_action_ar }}
+    </a>
+  </div>
+</li>
+{%- endmacro %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-problems-page
+         data-mt-problems-total="{{ total }}">
+
+  {{ hub.hero(
+    "مركز المشاكل التشغيلية",
+    subtitle="ما يحتاج تدخّلًا الآن، وما يحتاج انتباهًا قريبًا، وما هو معلومة.",
+    icon="triangle-exclamation",
+  ) }}
+
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
+      <span class="mt-card-meta">
+        <span data-mt-problems-count>{{ total }}</span> مشكلة مطابقة
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <form method="get" class="mt-program-form"
+            data-mt-problems-filters>
+        <div class="mt-program-grid">
+          <label class="mt-program-field">
+            <span>الشدة</span>
+            <select name="severity" data-mt-problems-filter-severity>
+              <option value="">— الكل —</option>
+              <option value="critical"
+                {% if filters.severity == 'critical' %}selected{% endif %}>
+                حرجة</option>
+              <option value="warning"
+                {% if filters.severity == 'warning' %}selected{% endif %}>
+                تحذير</option>
+              <option value="info"
+                {% if filters.severity == 'info' %}selected{% endif %}>
+                معلومة</option>
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>النوع</span>
+            <select name="type" data-mt-problems-filter-type>
+              <option value="">— الكل —</option>
+              {% for t in all_problem_types %}
+              <option value="{{ t }}"
+                {% if filters.type == t %}selected{% endif %}>
+                {{ t }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="mt-program-field">
+            <span>الراوتر</span>
+            <input type="text" name="router_id"
+                   value="{{ filters.router_id or '' }}"
+                   placeholder="مثلاً 42"
+                   data-mt-problems-filter-router>
+          </label>
+        </div>
+        <div class="mt-program-actions">
+          <button type="submit" class="mt-action-btn">
+            <i class="fa-solid fa-magnifying-glass"></i> طبّق
+          </button>
+          <a class="mt-mini-btn"
+             href="{{ url_for('radius.mt_problems_index') }}">
+            <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {% if total == 0 %}
+  <section class="mt-card">
+    <div class="mt-card-body">
+      <p class="mt-empty" data-mt-problems-empty>
+        لا توجد مشاكل تطابق هذه الفلاتر — كل شيء على ما يرام.
+      </p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if now_problems %}
+  <section class="mt-card" data-mt-problems-bucket="now">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-exclamation"></i> يحتاج إجراء الآن</h3>
+      <span class="mt-card-meta">
+        <span class="mt-iface-state mt-iface-state--off">
+          {{ now_problems|length }} حرجة
+        </span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-health-list">
+        {% for p in now_problems %}{{ problem_row(p) }}{% endfor %}
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if soon_problems %}
+  <section class="mt-card" data-mt-problems-bucket="soon">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-triangle-exclamation"></i> يحتاج انتباهًا قريبًا</h3>
+      <span class="mt-card-meta">
+        <span class="mt-iface-state mt-iface-state--down">
+          {{ soon_problems|length }} تحذير
+        </span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-health-list">
+        {% for p in soon_problems %}{{ problem_row(p) }}{% endfor %}
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if info_problems %}
+  <section class="mt-card" data-mt-problems-bucket="info">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-info"></i> معلومات</h3>
+      <span class="mt-card-meta">
+        <span class="mt-iface-state mt-iface-state--up">
+          {{ info_problems|length }} معلومة
+        </span>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <ul class="mt-health-list">
+        {% for p in info_problems %}{{ problem_row(p) }}{% endfor %}
+      </ul>
+    </div>
+  </section>
+  {% endif %}
+
+</section>
+
+{% endblock %}
