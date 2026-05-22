@@ -36,20 +36,15 @@ sql {
     read_profiles   = yes
     delete_stale_sessions = yes
 
-    # ─ clients من جدول nas — معطّل مؤقتًا ─
-    # السبب: migration 010_freeradius_schema.sql لم يُطبَّق على هذه الـ DB
-    # فجدول `nas` غير موجود. إن أبقينا read_clients = yes فإنّ الـ sql
-    # module يفشل instantiation و freeradius لا يقلع.
-    #
-    # الحلّ المؤقّت: الاعتماد على clients.conf الثابت (يحوي localhost +
-    # docker network، وتضاف أجهزة MikroTik يدويًا إلى الـ file حتى يكتمل
-    # الـ NAS DB sync layer).
-    #
-    # للتفعيل لاحقًا بعد تطبيق migration 010 + nas_devices→nas sync:
-    #   client_table    = "nas"
-    #   read_clients    = yes
-    #   client_query    = "SELECT nasname, shortname, type, secret FROM nas"
-    read_clients    = no
+    # ─ clients من جدول nas — مُفعَّل (Phase M4) ─
+    # migration 010_freeradius_schema.sql مطبَّق ويُنشئ جدول `nas`
+    # بالأعمدة nasname/shortname/type/secret. الـ M4 wizard sync
+    # يكتب صفًا في `nas` لكل راوتر تُنشئه (راجع mt_setup.py).
+    # FreeRADIUS يقرأها dynamically عند الإقلاع + يدعم HUP لإعادة
+    # القراءة (مع تأخير ~3s لاستلام أول request).
+    client_table    = "nas"
+    read_clients    = yes
+    client_query    = "SELECT nasname, shortname, type, secret FROM nas"
 
     # ـ lazy pool: لا تفتح أي connection عند startup ـ
     # نفس النمط المُستخدم في mods-enabled/rest. لو SQLite غير متاح وقت

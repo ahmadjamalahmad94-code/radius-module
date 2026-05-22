@@ -368,6 +368,21 @@ def test_v7_wizard_provisions_wg_peer_and_marks_nas_vpn(app, client, monkeypatch
     assert len(row["vpn_public_key"]) == 44   # base64-encoded x25519 pubkey
     assert row["ros_version"] == "7"
 
+    # M4 — the wizard also writes into the FreeRADIUS `nas` table
+    # so the router can actually RADIUS-authenticate via the
+    # tunnel IP.
+    with app.app_context():
+        from app.radius.db.connection import db
+        nas_row = db().execute(
+            "SELECT nasname, shortname, type, secret FROM nas "
+            "WHERE nasname = ?", ("10.10.0.2",),
+        ).fetchone()
+    assert nas_row is not None, "nas-table row not synced"
+    assert nas_row["type"] == "mikrotik"
+    # secret matches the nas_devices row (= the RADIUS shared key
+    # baked into the RouterOS script the operator pasted).
+    assert len(nas_row["secret"]) == 32
+
 
 def test_v7_script_page_includes_wg_block_with_private_key(app, client):
     """The first GET of the script page (right after POST) must

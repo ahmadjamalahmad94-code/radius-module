@@ -211,8 +211,13 @@ def mt_setup_create():
         flash(f"فشل إنشاء صف الراوتر: {exc}", "error")
         return redirect(url_for("radius.mt_setup_form"))
 
-    # Backfill L2 columns + (M2) the K1 VPN columns.
+    # Backfill L2 columns + (M2) the K1 VPN columns +
+    # (M4) sync into the FreeRADIUS `nas` table so the router can
+    # actually RADIUS-authenticate. FreeRADIUS reads this table on
+    # boot with `read_clients = yes`; new rows are picked up by
+    # restarting freeradius (or sending HUP).
     now = datetime.now(timezone.utc).isoformat() + "Z"
+    short_name = (saved.name or "rt")[:32]
     with transaction() as c:
         c.execute(
             "UPDATE nas_devices SET ros_version=?, provisioned_at=? "
@@ -231,6 +236,20 @@ def mt_setup_create():
                     saved.id, _tid(),
                 ),
             )
+        # M4 — make the router visible to FreeRADIUS. The `nas`
+        # table has no unique constraint on (tenant_id, nasname),
+        # so we delete-then-insert to stay idempotent on re-runs
+        # (e.g. operator deletes a NAS and re-creates with the
+        # same address — fresh secret, fresh row).
+        c.execute(
+            "DELETE FROM nas WHERE tenant_id=? AND nasname=?",
+            (_tid(), saved.address),
+        )
+        c.execute(
+            "INSERT INTO nas (tenant_id, nasname, shortname, type, secret) "
+            "VALUES (?,?,?,?,?)",
+            (_tid(), saved.address, short_name, "mikrotik", saved.secret),
+        )
 
     # The router's PRIVATE key only exists in this request. It
     # belongs on the router, never in our DB. Stash it on the
