@@ -87,17 +87,32 @@ _IMPLIED_BY_ADMIN: frozenset[str] = frozenset({
 def _current_admin():
     """Resolve the admin attached to the current Flask session.
 
-    Returns the Admin DTO or None. Pulled here (not at module
-    import) so tests can swap g.admin_id without dragging in the
-    rest of the admins service.
+    Looks in two places in order: `g.admin_id` (API auth path
+    sets it explicitly) then `session["admin_id"]` (web login
+    flow). Returns the Admin DTO or None.
     """
     admin_id = getattr(g, "admin_id", None)
+    if admin_id is None:
+        try:
+            from flask import session
+            admin_id = session.get("admin_id")
+        except Exception:  # noqa: BLE001
+            admin_id = None
     if admin_id is None:
         return None
     try:
         from .admins import get_admins_service
         svc = get_admins_service()
-        return svc._store.by_id(int(admin_id))  # noqa: SLF001
+        # admins_store exposes `get_admin(id)`. The S3.1 test
+        # stubs use a custom `_store` shape; tolerate both.
+        store = getattr(svc, "_store", None)
+        if store is None:
+            return None
+        fn = (getattr(store, "get_admin", None)
+              or getattr(store, "by_id", None))
+        if fn is None:
+            return None
+        return fn(int(admin_id))
     except Exception:  # noqa: BLE001
         return None
 
@@ -159,6 +174,66 @@ def require_perms(*perms: str) -> tuple[bool, str]:
     return True, ""
 
 
+# ─── Route decorator ──────────────────────────────────────────
+
+
+def requires_perm(*perms: str):
+    """Decorator for route handlers.
+
+        bp.add_url_rule("/program/apply", "x",
+                        requires_perm(PERM_PROGRAM)(my_handler),
+                        methods=["POST"])
+
+    Returns the wrapped handler unchanged when the current admin
+    holds every listed permission. Otherwise:
+      - JSON requests → 403 JSON {ok, error}
+      - HTML requests → render the standard admin/forbidden.html
+        with the Arabic reason. If that template is missing,
+        fall back to a tiny plain-text 403 so the surface still
+        works.
+
+    Anonymous requests (no admin_id in session) get the same
+    forbidden response, NOT a login redirect — the login redirect
+    is handled by the blueprint's global before_request hook.
+    Once you're past that, an authenticated-but-unauthorized
+    request should see a 403, not a loop back to login.
+    """
+    import functools
+
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Lazy import to avoid circulars at module load.
+            from flask import jsonify, render_template, request
+            ok, reason = require_perms(*perms)
+            if ok:
+                return fn(*args, **kwargs)
+            accept = (request.headers.get("Accept") or "").lower()
+            if "application/json" in accept:
+                return jsonify(
+                    {"ok": False, "error": reason or "forbidden"}
+                ), 403
+            try:
+                return render_template(
+                    "admin/forbidden.html",
+                    reason=reason or "ليست لديك صلاحية كافية.",
+                ), 403
+            except Exception:  # noqa: BLE001
+                # Template missing → don't 500 the operator;
+                # surface a tiny readable page.
+                return (
+                    "<h1 dir=\"rtl\" lang=\"ar\" "
+                    "style=\"font-family: sans-serif\">"
+                    "403 — ممنوع</h1><p dir=\"rtl\">"
+                    f"{reason or 'ليست لديك صلاحية كافية.'}"
+                    "</p>",
+                    403,
+                    {"Content-Type": "text/html; charset=utf-8"},
+                )
+        return wrapper
+    return deco
+
+
 __all__ = [
     "PERM_VIEW", "PERM_DIAGNOSTICS", "PERM_MANAGE",
     "PERM_PROGRAM", "PERM_DEPLOY_LOGIN", "PERM_ROLLBACK",
@@ -169,4 +244,5 @@ __all__ = [
     "has",
     "current_admin_has",
     "require_perms",
+    "requires_perm",
 ]

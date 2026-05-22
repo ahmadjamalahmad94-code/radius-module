@@ -21,6 +21,9 @@ from ..db.repos import hotspot_designs_repo
 from ..integration.mikrotik.client import MikrotikClient
 from ..services import hotspot_templates as ht
 from ..services.audit import get_audit_service
+from ..services.mt_permissions import (
+    PERM_DEPLOY_LOGIN, PERM_MANAGE, PERM_VIEW, requires_perm,
+)
 
 
 def _tid() -> int:
@@ -38,24 +41,31 @@ def _load_nas(nas_id: int) -> dict | None:
 
 
 def register_mt_login_designer_routes(bp: Blueprint) -> None:
+    # S3.2 — VIEW for the designer (read-only preview), MANAGE
+    # for save (changes persisted state but doesn't touch the
+    # router), DEPLOY_LOGIN for the actual upload.
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer",
-        "mt_login_designer", mt_login_designer,
+        "mt_login_designer",
+        requires_perm(PERM_VIEW)(mt_login_designer),
         methods=["GET"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer/save",
-        "mt_login_designer_save", mt_login_designer_save,
+        "mt_login_designer_save",
+        requires_perm(PERM_MANAGE)(mt_login_designer_save),
         methods=["POST"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer/preview",
-        "mt_login_designer_preview", mt_login_designer_preview,
+        "mt_login_designer_preview",
+        requires_perm(PERM_VIEW)(mt_login_designer_preview),
         methods=["GET"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer/deploy",
-        "mt_login_designer_deploy", mt_login_designer_deploy,
+        "mt_login_designer_deploy",
+        requires_perm(PERM_DEPLOY_LOGIN)(mt_login_designer_deploy),
         methods=["POST"],
     )
 

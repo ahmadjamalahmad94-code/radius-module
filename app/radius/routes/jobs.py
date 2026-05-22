@@ -28,6 +28,9 @@ from ..db.repos import jobs_repo
 # the runner has no handler bound to "mt.diag.scan".
 from ..services import jobs_handlers  # noqa: F401
 from ..services import jobs_runner
+from ..services.mt_permissions import (
+    PERM_DIAGNOSTICS, PERM_VIEW, requires_perm,
+)
 
 
 def _tid() -> int:
@@ -40,14 +43,19 @@ def _wants_json() -> bool:
 
 
 def register_jobs_routes(bp: Blueprint) -> None:
+    # S3.2 — diagnostics scan needs PERM_DIAGNOSTICS, status
+    # view needs PERM_VIEW (the row may carry data from any
+    # job kind, so we don't gate at the most-permissive level).
     bp.add_url_rule(
         "/jobs/diagnostics/<int:nas_id>",
-        "jobs_run_diagnostics", jobs_run_diagnostics,
+        "jobs_run_diagnostics",
+        requires_perm(PERM_DIAGNOSTICS)(jobs_run_diagnostics),
         methods=["POST"],
     )
     bp.add_url_rule(
         "/jobs/<int:job_id>",
-        "jobs_show", jobs_show,
+        "jobs_show",
+        requires_perm(PERM_VIEW)(jobs_show),
         methods=["GET"],
     )
 

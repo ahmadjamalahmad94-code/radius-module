@@ -20,6 +20,9 @@ from ..db.connection import db
 from ..services import mt_programming
 from ..services import mikrotik_admin_client as mac
 from ..services.audit import get_audit_service
+from ..services.mt_permissions import (
+    PERM_PROGRAM, PERM_ROLLBACK, requires_perm,
+)
 from ..integration.mikrotik.client import MikrotikClient
 
 
@@ -57,28 +60,31 @@ def _nas_for_mac(nas: dict) -> dict:
 
 
 def register_mt_programming_routes(bp: Blueprint) -> None:
+    # S3.2 — every programming surface needs PERM_PROGRAM;
+    # rollback is gated by the stricter PERM_ROLLBACK because
+    # it deletes existing router state.
     bp.add_url_rule(
         "/mt/<int:nas_id>/program",
         "mt_program_form",
-        mt_program_form,
+        requires_perm(PERM_PROGRAM)(mt_program_form),
         methods=["GET"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/program/plan",
         "mt_program_plan",
-        mt_program_plan,
+        requires_perm(PERM_PROGRAM)(mt_program_plan),
         methods=["POST"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/program/apply",
         "mt_program_apply",
-        mt_program_apply,
+        requires_perm(PERM_PROGRAM)(mt_program_apply),
         methods=["POST"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/program/unprogram",
         "mt_program_unprogram",
-        mt_program_unprogram,
+        requires_perm(PERM_ROLLBACK)(mt_program_unprogram),
         methods=["POST"],
     )
 

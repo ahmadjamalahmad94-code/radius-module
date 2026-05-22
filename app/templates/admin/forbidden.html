@@ -1,0 +1,40 @@
+{# S3.2 — Standard "permission denied" page.
+
+   Rendered by `requires_perm` decorator when the current admin
+   lacks the named permission. The `reason` string comes from
+   the permission helper as Arabic operator-facing text.
+#}
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}403 — صلاحية مطلوبة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
+{% block page_title %}صلاحية مطلوبة{% endblock %}
+{% block page_sub %}<span class="sub">لا تملك إذنًا لهذه الصفحة</span>{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-forbidden-page>
+
+  <div class="mt-program-error" role="alert" data-mt-forbidden-reason
+       style="margin-bottom:16px">
+    <i class="fa-solid fa-shield-halved"></i>
+    {{ reason }}
+  </div>
+
+  <section class="mt-card">
+    <div class="mt-card-body">
+      <p>
+        إذا كنت تظنّ أن هذه الصلاحية يجب أن تكون متاحة لحسابك،
+        تواصَل مع مدير النظام لإضافتها إلى دورك.
+      </p>
+      <div class="mt-program-actions">
+        <a class="mt-mini-btn" href="{{ url_for('radius.dashboard') if request.endpoint else '/admin/radius/' }}">
+          <i class="fa-solid fa-house"></i> العودة للرئيسية
+        </a>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}

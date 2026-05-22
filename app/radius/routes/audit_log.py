@@ -17,6 +17,9 @@ from flask import Blueprint, abort, g, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import audit_repo
+from ..services.mt_permissions import (
+    PERM_AUDIT_VIEW, requires_perm,
+)
 
 
 def _tid() -> int:
@@ -25,12 +28,14 @@ def _tid() -> int:
 
 def register_audit_log_routes(bp: Blueprint) -> None:
     bp.add_url_rule(
-        "/audit", "audit_log_index", audit_log_index,
+        "/audit", "audit_log_index",
+        requires_perm(PERM_AUDIT_VIEW)(audit_log_index),
         methods=["GET"],
     )
     bp.add_url_rule(
         "/audit/<int:audit_id>", "audit_log_detail",
-        audit_log_detail, methods=["GET"],
+        requires_perm(PERM_AUDIT_VIEW)(audit_log_detail),
+        methods=["GET"],
     )
 
 
