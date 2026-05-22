@@ -80,6 +80,7 @@ def test_k8_routes_registered(client):
     rules = {item["rule"] for item in res.get_json()["data"]["routes"]}
     assert "/api/v1/mikrotik/<int:nas_id>/files" in rules
     assert "/api/v1/mikrotik/<int:nas_id>/system/backup/save" in rules
+    assert "/api/v1/mikrotik/<int:nas_id>/files/<string:filename>/download" in rules
 
 
 # ─── K8.1: files + backup ────────────────────────────────────────
@@ -169,5 +170,44 @@ def test_backup_save_rejects_non_object_body(client):
     assert res.status_code == 400
     body = res.get_json()
     assert body["error"]["code"] == "bad_request"
+
+
+# ─── K8.1b: file download (honest unsupported) ───────────────────
+
+
+def test_file_download_returns_501_not_supported(client):
+    res = client.get(
+        "/api/v1/mikrotik/1/files/b1.backup/download",
+        headers=AUTH,
+    )
+    assert res.status_code == 501
+    body = res.get_json()
+    assert body["ok"] is False
+    assert body["error"]["code"] == "not_supported"
+    assert "غير مدعوم" in body["error"]["message"]
+    assert body["error"]["details"]["filename"] == "b1.backup"
+    assert body["error"]["details"]["router_id"] == 1
+
+
+def test_file_download_rejects_traversal_segment(client):
+    """`..back` passes the Flask `<string:>` converter (no slash)
+    so the handler's own sanitizer must reject it. The contract:
+    never return 200 with fabricated bytes."""
+    res = client.get(
+        "/api/v1/mikrotik/1/files/..%2eback/download",
+        headers=AUTH,
+    )
+    assert res.status_code == 400
+    body = res.get_json()
+    assert body["error"]["code"] == "invalid_filename"
+
+
+def test_file_download_404_for_unknown_router(client):
+    res = client.get(
+        "/api/v1/mikrotik/999/files/x.backup/download",
+        headers=AUTH,
+    )
+    assert res.status_code == 404
+    assert res.get_json()["error"]["code"] == "not_found"
 
 

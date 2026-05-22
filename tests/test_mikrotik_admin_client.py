@@ -902,6 +902,17 @@ def test_backup_save_accepts_normal_names(fake_nas_direct):
             assert res.ok is True, f"{good!r} should be allowed"
 
 
+# ─── K8.1b: file download (honest unsupported) ───────────────────
+
+
+def test_file_download_stream_raises_not_supported(fake_nas_direct):
+    """Pin the current behaviour — once a real helper lands the
+    test expectation flips, but until then we must NOT silently
+    return empty bytes."""
+    with pytest.raises(mac.FileDownloadNotSupported):
+        mac.file_download_stream(fake_nas_direct, "any.backup")
+
+
 # ─── K7.2: diagnostic tools ──────────────────────────────────────
 
 

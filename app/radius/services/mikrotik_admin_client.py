@@ -832,6 +832,36 @@ def _sanitize_backup_name(raw: str) -> str:
     return name
 
 
+class FileDownloadNotSupported(NotImplementedError):
+    """Raised by `file_download_stream` until a real binary helper
+    lands. Distinct exception type so route + tests can target it
+    without catching unrelated NotImplementedError."""
+
+
+# K8.1b — binary file download from the router.
+#
+# The current `MikrotikClient` only speaks the text-based RouterOS
+# API; it has no binary stream / SCP / FTP code path. A .backup
+# file read via `/file/print contents=` comes back as base64 inside
+# the reply, but the wire client doesn't expose a way to request
+# large `contents=` payloads safely (size limits, chunking, memory
+# pressure). Rather than fake a streaming response, the public
+# helper raises a distinct `FileDownloadNotSupported` exception
+# that the route layer translates into a 501 envelope. When a real
+# implementation lands (SCP side-channel or a wire-client binary
+# helper), this function returns an iterator of bytes chunks plus
+# a Content-Length hint instead.
+def file_download_stream(
+    nas: Mapping[str, Any], filename: str,
+):
+    """Always raises `FileDownloadNotSupported` for now. Tests pin
+    the current behaviour so a regression surfaces immediately."""
+    raise FileDownloadNotSupported(
+        "تنزيل الملفات الثنائية من الراوتر غير مدعوم بعد — "
+        "الـ RouterOS API لا يوفّر تدفّق ثنائي عبر العميل الحالي."
+    )
+
+
 def file_list(nas: Mapping[str, Any]) -> MtResult:
     """`/file/print` — every file the router can see (backups,
     scripts, certs, etc.). Cached briefly so the dashboard listing
@@ -960,4 +990,6 @@ __all__ = [
     "SSE_DEFAULT_PERIOD_SEC",
     "file_list",
     "backup_save",
+    "file_download_stream",
+    "FileDownloadNotSupported",
 ]

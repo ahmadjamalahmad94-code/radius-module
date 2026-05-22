@@ -46,9 +46,10 @@ K7 endpoints — logs + diagnostics:
   POST /api/v1/mikrotik/<id>/tools/traceroute
   POST /api/v1/mikrotik/<id>/tools/dns-resolve
 
-K8 endpoints — files + backup save (K8.1 subset):
+K8 endpoints — files + backup + downloads:
   GET  /api/v1/mikrotik/<id>/files
   POST /api/v1/mikrotik/<id>/system/backup/save
+  GET  /api/v1/mikrotik/<id>/files/<name>/download   (501 — see K8.1b)
 """
 from __future__ import annotations
 
@@ -233,6 +234,12 @@ def register(bp: Blueprint) -> None:
         "mt_system_backup_save",
         require_api_token(mt_system_backup_save),
         methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/files/<string:filename>/download",
+        "mt_file_download",
+        require_api_token(mt_file_download),
+        methods=["GET"],
     )
 
 
@@ -663,6 +670,48 @@ def mt_system_backup_save(nas_id: int):
     payload = _envelope(result, router_id=nas_id)
     payload["backup_name"] = name
     return ok(payload)
+
+
+def mt_file_download(nas_id: int, filename: str):
+    """K8.1b — honest unsupported response.
+
+    The MikroTik wire client doesn't stream binary file contents
+    yet. Until a real helper lands we return a 501 envelope so
+    callers can detect the gap programmatically and the UI can
+    show a clear "not supported" notice rather than a broken
+    progress bar. The filename is still sanitized here so a future
+    real implementation inherits the security check unchanged.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    safe_name = (filename or "").strip()
+    if (
+        not safe_name
+        or "/" in safe_name
+        or "\\" in safe_name
+        or ".." in safe_name
+    ):
+        return fail(
+            "invalid_filename",
+            "اسم الملف غير صالح",
+            status=400,
+        )
+    try:
+        # Once the helper streams real bytes this branch is replaced
+        # with a Flask `Response(generator, mimetype="application/
+        # octet-stream", headers={...})`.
+        mac.file_download_stream(nas, safe_name)
+    except mac.FileDownloadNotSupported as exc:
+        return fail(
+            "not_supported",
+            str(exc),
+            status=501,
+            details={"filename": safe_name, "router_id": nas_id},
+        )
+    return fail(  # pragma: no cover
+        "not_supported", "تنزيل الملفات غير مدعوم", status=501,
+    )
 
 
 
