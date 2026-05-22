@@ -69,6 +69,9 @@ def _default_server_ip() -> str:
 
 def register_mt_setup_routes(bp: Blueprint) -> None:
     bp.add_url_rule(
+        "/mt/operations", "mt_operations", mt_operations, methods=["GET"],
+    )
+    bp.add_url_rule(
         "/mt/setup", "mt_setup_form", mt_setup_form, methods=["GET"],
     )
     bp.add_url_rule(
@@ -78,6 +81,42 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/script",
         "mt_setup_script", mt_setup_script, methods=["GET"],
     )
+
+
+def mt_operations():
+    """L5 — Operations Center.
+
+    Single source of truth for 'which routers does this HobeRadius
+    talk to?'. Reads nas_devices (excluding soft-deleted), shows a
+    sequential display number (#1, #2, ...) for the operator while
+    keeping the real DB id stable in the row's dashboard link.
+    """
+    rows = db().execute(
+        "SELECT id, name, address, enabled, ros_version, "
+        "       provisioned_at, last_check_status, last_check_at, "
+        "       connection_mode, api_user, api_port "
+        "FROM nas_devices "
+        "WHERE tenant_id=? AND (deleted_at IS NULL OR deleted_at='') "
+        "ORDER BY id ASC",
+        (_tid(),),
+    ).fetchall()
+    items = []
+    for n, row in enumerate(rows, start=1):
+        items.append({
+            "display_num": n,
+            "id": row["id"],
+            "name": row["name"],
+            "address": row["address"],
+            "enabled": bool(row["enabled"]),
+            "ros_version": row["ros_version"] or "",
+            "provisioned_at": row["provisioned_at"] or "",
+            "last_check_status": row["last_check_status"] or "",
+            "last_check_at": row["last_check_at"] or "",
+            "connection_mode": row["connection_mode"] or "direct",
+            "api_user": row["api_user"] or "",
+            "api_port": row["api_port"] or 8728,
+        })
+    return render_template("radius/mt_operations.html", items=items)
 
 
 def mt_setup_form():

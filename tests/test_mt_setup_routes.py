@@ -235,6 +235,96 @@ def test_script_page_404_for_unknown_nas(app, client):
     assert res.status_code == 404
 
 
+# ─── L5: Operations Center ───────────────────────────────────────
+
+
+def test_operations_route_registered(app):
+    rules = {r.endpoint for r in app.url_map.iter_rules()}
+    assert "radius.mt_operations" in rules
+
+
+def test_operations_login_guarded(client):
+    res = client.get("/admin/radius/mt/operations", follow_redirects=False)
+    assert res.status_code in {302, 303}
+    assert "/admin/radius/login" in res.headers.get("Location", "")
+
+
+def test_operations_empty_state(app, client):
+    _login(client)
+    res = client.get("/admin/radius/mt/operations")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # Header + CTA is always there.
+    assert "غرفة عمليات MikroTik" in html
+    assert url_safe(url_for_setup := "/admin/radius/mt/setup") in html
+    # Empty-state copy when no NAS rows.
+    assert "لا توجد راوترات" in html
+
+
+def test_operations_lists_wizard_provisioned_router(app, client):
+    _login(client)
+    # Create a row via the wizard (so it has provisioned_at).
+    _, _ = _create_via_wizard(client, name="MT-Ops-Wiz")
+    res = client.get("/admin/radius/mt/operations")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "MT-Ops-Wiz" in html
+    assert "10.20.30.40" in html               # address from wizard
+    assert "معالَج آليًّا" in html              # provisioned_at pill
+    assert "RouterOS 7.x" in html               # ros_version cell
+
+
+def test_operations_sequential_numbering(app, client):
+    """Add three routers — display numbers must be 1, 2, 3 even if
+    the DB ids are 1, 2, 3 (or non-contiguous later after deletes)."""
+    _login(client)
+    for nm in ("R-a", "R-b", "R-c"):
+        _create_via_wizard(client, name=nm)
+    res = client.get("/admin/radius/mt/operations")
+    html = res.get_data(as_text=True)
+    # All three names show up.
+    for nm in ("R-a", "R-b", "R-c"):
+        assert nm in html
+    # The first <td class="num"> values are 1, 2, 3 in order.
+    import re
+    nums = re.findall(r'<td class="num">(\d+)</td>', html)
+    assert nums[:3] == ["1", "2", "3"]
+
+
+def test_operations_excludes_soft_deleted(app, client):
+    """A NAS row with deleted_at set must NOT show up in the list."""
+    _login(client)
+    # Seed a non-deleted + a deleted row.
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from datetime import datetime
+        now = datetime.utcnow().isoformat() + "Z"
+        with transaction() as c:
+            c.execute(
+                """INSERT INTO nas_devices (id, tenant_id, name, address,
+                    secret, vendor, nas_type, enabled, created_at)
+                   VALUES (501, 1, 'live-rtr', '1.1.1.1', 's', 'mikrotik',
+                           'hotspot', 1, ?)""",
+                (now,),
+            )
+            c.execute(
+                """INSERT INTO nas_devices (id, tenant_id, name, address,
+                    secret, vendor, nas_type, enabled, created_at, deleted_at)
+                   VALUES (502, 1, 'dead-rtr', '2.2.2.2', 's', 'mikrotik',
+                           'hotspot', 1, ?, ?)""",
+                (now, now),
+            )
+    res = client.get("/admin/radius/mt/operations")
+    html = res.get_data(as_text=True)
+    assert "live-rtr" in html
+    assert "dead-rtr" not in html
+
+
+# Tiny helper used above so the assertion read better.
+def url_safe(s: str) -> str:
+    return s
+
+
 def test_script_page_handles_legacy_row_without_ros_version(app, client):
     """A pre-L2 nas_devices row has ros_version = '' (the default).
     The page must fall back to v7 instead of 500-ing."""

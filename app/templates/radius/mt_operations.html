@@ -1,0 +1,127 @@
+{# L5 — Operations Center: unified list of MikroTik routers
+   (sources nas_devices, excludes soft-deleted). Each row deep-links
+   into the K9 dashboard. The hero CTA opens the L3 setup wizard. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}غرفة عمليات MikroTik{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}غرفة عمليات MikroTik{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} راوتر</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "غرفة عمليات MikroTik",
+  subtitle="كل الراوترات المُدارة عبر HobeRadius في مكان واحد. اضغط على راوتر لفتح لوحته الحيّة، أو اضغط 'إضافة بالمعالج' لإضافة جديد.",
+  icon="network-wired",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_setup_form') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة بالمعالج
+    </a>
+  '
+) }}
+
+{% if items %}
+{% set _enabled  = items|selectattr('enabled')|list|length %}
+{% set _provisioned = items|selectattr('provisioned_at')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي",  items|length,            icon="server",        variant="brand") }}
+  {{ hub.kpi("مفعَّل",     _enabled,                 icon="circle-check",  variant="green") }}
+  {{ hub.kpi("معالَج",     _provisioned,             icon="wand-magic-sparkles", variant="purple") }}
+  {{ hub.kpi("يدوي",       items|length - _provisioned, icon="hand",       variant="amber") }}
+</div>
+
+{% call hub.section("الراوترات", icon="server",
+                    meta=items|length|string + " راوتر", flush=True) %}
+<div class="hub-table-wrap" style="border:none;border-radius:0">
+  <table class="hub-table">
+    <thead>
+      <tr>
+        <th class="num" style="width:60px">#</th>
+        <th>الاسم</th>
+        <th>العنوان</th>
+        <th>RouterOS</th>
+        <th>المنفذ</th>
+        <th>API user</th>
+        <th>الحالة</th>
+        <th>آخر فحص</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+      <tr>
+        <td class="num">{{ item.display_num }}</td>
+        <td>
+          <a href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
+            <strong>{{ item.name }}</strong>
+          </a>
+          {% if item.provisioned_at %}
+            <br><span class="hub-pill hub-pill--purple" style="font-size:10px">
+              <span class="dot"></span> معالَج آليًّا
+            </span>
+          {% endif %}
+        </td>
+        <td><code>{{ item.address }}</code></td>
+        <td>
+          {% if item.ros_version %}
+            RouterOS {{ item.ros_version }}.x
+          {% else %}
+            <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
+          {% endif %}
+        </td>
+        <td>{{ item.api_port }}</td>
+        <td><code>{{ item.api_user or '—' }}</code></td>
+        <td>
+          {% if item.enabled %}
+            {{ hub.pill("مفعَّل", "green") }}
+          {% else %}
+            {{ hub.pill("معطَّل", "amber") }}
+          {% endif %}
+        </td>
+        <td>
+          {% if item.last_check_status == 'reachable' %}
+            {{ hub.pill("متاح", "green") }}
+          {% elif item.last_check_status == 'timeout' %}
+            {{ hub.pill("بطيء", "amber") }}
+          {% elif item.last_check_status == 'unreachable' %}
+            {{ hub.pill("غير متاح", "red") }}
+          {% else %}
+            <span class="hub-pill hub-pill--grey"><span class="dot"></span> —</span>
+          {% endif %}
+          {% if item.last_check_at %}
+            <br><small style="color:#6B7280">{{ item.last_check_at|truncate(19, true, '') }}</small>
+          {% endif %}
+        </td>
+        <td>
+          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
+            <i class="fa-solid fa-chart-line"></i> لوحة
+          </a>
+          {% if item.ros_version %}
+          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_setup_script', nas_id=item.id) }}">
+            <i class="fa-solid fa-code"></i> سكربت
+          </a>
+          {% endif %}
+          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
+            <i class="fa-solid fa-pen-to-square"></i> تعديل
+          </a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endcall %}
+
+{% else %}
+  {{ hub.empty("لا توجد راوترات بعد.",
+               sub="ابدأ بالمعالج لإضافة أول راوتر — يتولّد كل شيء تلقائيًّا.",
+               icon="server") }}
+{% endif %}
+
+{% endblock %}
