@@ -24,6 +24,12 @@ K4 endpoints — interfaces + network:
   GET /api/v1/mikrotik/<id>/interfaces/<name>/sse  ← live SSE stream
   GET /api/v1/mikrotik/<id>/ip/addresses
   GET /api/v1/mikrotik/<id>/routes
+
+K5 endpoints — hotspot + PPP active users:
+  GET  /api/v1/mikrotik/<id>/hotspot/active
+  GET  /api/v1/mikrotik/<id>/ppp/active
+  POST /api/v1/mikrotik/<id>/hotspot/active/<sid>/disconnect
+  POST /api/v1/mikrotik/<id>/ppp/active/<sid>/disconnect
 """
 from __future__ import annotations
 
@@ -104,6 +110,19 @@ def register(bp: Blueprint) -> None:
         "/mikrotik/<int:nas_id>/routes",
         "mt_ip_routes",
         require_api_token(mt_ip_routes),
+        methods=["GET"],
+    )
+    # K5 — hotspot + PPP active users
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/hotspot/active",
+        "mt_hotspot_active",
+        require_api_token(mt_hotspot_active),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/ppp/active",
+        "mt_ppp_active",
+        require_api_token(mt_ppp_active),
         methods=["GET"],
     )
 
@@ -244,6 +263,25 @@ def mt_ip_routes(nas_id: int):
     if not nas:
         return fail("not_found", "الراوتر غير موجود", status=404)
     result = mac.ip_routes(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+# ─── K5: hotspot + PPP active users endpoints ────────────────────
+
+
+def mt_hotspot_active(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.hotspot_active(nas)
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_ppp_active(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.ppp_active(nas)
     return ok(_envelope(result, router_id=nas_id))
 
 

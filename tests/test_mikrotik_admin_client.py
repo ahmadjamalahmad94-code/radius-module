@@ -438,6 +438,40 @@ def test_stream_interface_samples_stops_on_error(fake_nas_direct):
     assert len(calls) == 1  # didn't retry
 
 
+# ─── K5: hotspot + PPP active reads ─────────────────────────────
+
+
+def test_hotspot_active_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "user": "u-1", "address": "10.5.0.10", "bytes-in": "100"},
+        {".id": "*2", "user": "u-2", "address": "10.5.0.11", "bytes-in": "200"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.hotspot_active(fake_nas_direct)
+
+    assert res.ok is True
+    assert len(res.data) == 2
+    mock_client.print_.assert_called_once_with("/ip/hotspot/active/print")
+
+
+def test_ppp_active_calls_right_path(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "name": "home-001", "address": "10.6.0.10"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.ppp_active(fake_nas_direct)
+
+    assert res.ok is True
+    assert res.data[0]["name"] == "home-001"
+    mock_client.print_.assert_called_once_with("/ppp/active/print")
+
+
 def test_stream_interface_samples_rejects_empty_name(fake_nas_direct):
     samples = list(mac.stream_interface_samples(
         fake_nas_direct, "",

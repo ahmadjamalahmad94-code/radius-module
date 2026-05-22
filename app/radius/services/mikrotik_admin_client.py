@@ -408,6 +408,33 @@ def ip_routes(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+# ─── K5: hotspot + PPP active users ──────────────────────────────
+
+
+def hotspot_active(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/hotspot/active/print` — every live hotspot session.
+
+    Rows carry `.id` (used by the K5.2 disconnect mutation), `user`,
+    `address`, `mac-address`, `uptime`, `bytes-in`, `bytes-out`.
+    """
+    return fetch_cached(
+        nas=nas,
+        operation="hotspot/active",
+        ttl_sec=TTL_ACTIVE_USERS,
+        work=lambda c: list(c.print_("/ip/hotspot/active/print")),
+    )
+
+
+def ppp_active(nas: Mapping[str, Any]) -> MtResult:
+    """`/ppp/active/print` — every live PPPoE / PPTP / L2TP session."""
+    return fetch_cached(
+        nas=nas,
+        operation="ppp/active",
+        ttl_sec=TTL_ACTIVE_USERS,
+        work=lambda c: list(c.print_("/ppp/active/print")),
+    )
+
+
 # Default upper bound on SSE samples — 150 × 2 s ≈ 5 min, after
 # which the browser's EventSource auto-reconnects.
 SSE_DEFAULT_MAX_SAMPLES = 150
@@ -479,6 +506,8 @@ __all__ = [
     "interface_traffic",
     "ip_addresses",
     "ip_routes",
+    "hotspot_active",
+    "ppp_active",
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",
