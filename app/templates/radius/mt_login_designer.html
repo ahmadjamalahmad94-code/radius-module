@@ -1,0 +1,164 @@
+{# R2 — Hotspot login-page designer.
+
+   Two-column layout:
+     - Left: template picker (4 cards) + variables form.
+     - Right: live preview <iframe> that points at the
+       /login-designer/preview endpoint.
+
+   The iframe is reloaded by a tiny inline script every time a
+   form input changes — keeps the JS surface minimal.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مصمّم صفحة الدخول — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-palette"></i>{% endblock %}
+{% block page_title %}مصمّم صفحة الدخول {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }} · المرحلة R2</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_login_designer.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="mt-designer"
+         data-mt-designer
+         data-mt-nas-id="{{ nas.id }}"
+         data-mt-preview-url="{{ url_for('radius.mt_login_designer_preview', nas_id=nas.id) }}">
+
+  {{ hub.hero(
+    "مصمّم صفحة الدخول — " ~ nas.name,
+    subtitle="اختر قالبًا، خصّص الحقول، ثم احفظ. النشر إلى الراوتر يتمّ من R3.",
+    icon="palette",
+  ) }}
+
+  {% if saved %}
+  <div class="mt-program-banner mt-program-banner--warn" role="status"
+       style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
+    <li><i class="fa-solid fa-circle-check"></i> تم حفظ التصميم.</li>
+  </div>
+  {% endif %}
+  {% if error %}
+  <div class="mt-program-error" role="alert">
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
+  </div>
+  {% endif %}
+
+  <div class="mt-designer-grid">
+
+    {# ─── Left column: picker + form ─── #}
+    <form method="post"
+          action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
+          class="mt-designer-form"
+          data-mt-designer-form>
+
+      <section class="mt-card">
+        <header class="mt-card-head">
+          <h3><i class="fa-solid fa-table-cells-large"></i> اختر القالب</h3>
+        </header>
+        <div class="mt-card-body">
+          <div class="mt-designer-picker" data-mt-designer-picker>
+            {% for tmpl in library %}
+            <label class="mt-designer-card
+                   {% if tmpl.slug == design.template_slug %}is-active{% endif %}">
+              <input type="radio" name="template_slug"
+                     value="{{ tmpl.slug }}"
+                     data-mt-designer-template
+                     {% if tmpl.slug == design.template_slug %}checked{% endif %}>
+              <div class="mt-designer-card-body">
+                <span class="mt-designer-card-title">{{ tmpl.name_ar }}</span>
+                <span class="mt-designer-card-desc">{{ tmpl.description_ar }}</span>
+                <code class="mt-designer-card-slug">{{ tmpl.slug }}</code>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-card">
+        <header class="mt-card-head">
+          <h3><i class="fa-solid fa-sliders"></i> الحقول</h3>
+        </header>
+        <div class="mt-card-body">
+          <div class="mt-program-grid">
+            {% for v in variables %}
+            <label class="mt-program-field">
+              <span>{{ v.label_ar }}</span>
+              <input type="text" name="{{ v.slug }}"
+                     value="{{ design.variables.get(v.slug, v.default) }}"
+                     data-mt-designer-var="{{ v.slug }}">
+            </label>
+            {% endfor %}
+          </div>
+
+          <div class="mt-program-actions">
+            <button type="submit" class="mt-action-btn">
+              <i class="fa-solid fa-floppy-disk"></i> حفظ التصميم
+            </button>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    {# ─── Right column: live preview iframe ─── #}
+    <section class="mt-card mt-designer-preview-card">
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-eye"></i> معاينة حيّة</h3>
+        <span class="mt-card-meta">
+          <code data-mt-designer-active-slug>{{ design.template_slug }}</code>
+        </span>
+      </header>
+      <div class="mt-card-body mt-designer-preview-body">
+        <iframe class="mt-designer-frame"
+                data-mt-designer-frame
+                title="معاينة صفحة الدخول"
+                sandbox="allow-same-origin"
+                src="{{ url_for('radius.mt_login_designer_preview',
+                                 nas_id=nas.id,
+                                 template_slug=design.template_slug,
+                                 **design.variables) }}">
+        </iframe>
+      </div>
+    </section>
+
+  </div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  const root = document.querySelector("[data-mt-designer]");
+  if (!root) return;
+  const previewUrl = root.dataset.mtPreviewUrl;
+  const frame = root.querySelector("[data-mt-designer-frame]");
+  const slugCode = root.querySelector("[data-mt-designer-active-slug]");
+  if (!frame) return;
+
+  function refresh() {
+    const params = new URLSearchParams();
+    const slug = root.querySelector(
+      "[data-mt-designer-template]:checked");
+    if (slug) {
+      params.set("template_slug", slug.value);
+      if (slugCode) slugCode.textContent = slug.value;
+    }
+    root.querySelectorAll("[data-mt-designer-var]").forEach(el => {
+      params.set(el.dataset.mtDesignerVar, el.value);
+    });
+    frame.src = previewUrl + "?" + params.toString();
+    // Toggle the .is-active highlight on the picker card.
+    root.querySelectorAll(".mt-designer-card").forEach(card => {
+      const radio = card.querySelector("input[type=radio]");
+      card.classList.toggle("is-active", radio && radio.checked);
+    });
+  }
+
+  root.addEventListener("input", refresh);
+  root.addEventListener("change", refresh);
+})();
+</script>
+
+{% endblock %}
