@@ -45,10 +45,15 @@ K7 endpoints — logs + diagnostics:
   POST /api/v1/mikrotik/<id>/tools/ping
   POST /api/v1/mikrotik/<id>/tools/traceroute
   POST /api/v1/mikrotik/<id>/tools/dns-resolve
+
+K8 endpoints — files + backup save (K8.1 subset):
+  GET  /api/v1/mikrotik/<id>/files
+  POST /api/v1/mikrotik/<id>/system/backup/save
 """
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from flask import Blueprint, Response, g, request
 
@@ -214,6 +219,19 @@ def register(bp: Blueprint) -> None:
         "/mikrotik/<int:nas_id>/tools/dns-resolve",
         "mt_tool_dns_resolve",
         require_api_token(mt_tool_dns_resolve),
+        methods=["POST"],
+    )
+    # K8 — backup + files + destructive system actions
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/files",
+        "mt_files_list",
+        require_api_token(mt_files_list),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/system/backup/save",
+        "mt_system_backup_save",
+        require_api_token(mt_system_backup_save),
         methods=["POST"],
     )
 
@@ -609,6 +627,44 @@ def mt_tool_dns_resolve(nas_id: int):
     if server:
         payload["server"] = server
     return ok(payload)
+
+
+# ─── K8: files + backup + destructive actions ────────────────────
+
+
+def _default_backup_name() -> str:
+    """`backup-YYYYMMDD-HHMMSS` in UTC. Matches the
+    `_BACKUP_NAME_RE` pattern so it never gets rejected by the
+    sanitizer."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return f"backup-{stamp}"
+
+
+def mt_files_list(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    return ok(_envelope(mac.file_list(nas), router_id=nas_id))
+
+
+def mt_system_backup_save(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+    name = str(body.get("name") or "").strip() or _default_backup_name()
+    result = mac.backup_save(nas, name=name)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.backup.save",
+        target_id=name, result=result,
+    )
+    payload = _envelope(result, router_id=nas_id)
+    payload["backup_name"] = name
+    return ok(payload)
+
+
 
 
 def _format_sse(payload: dict) -> str:

@@ -27,6 +27,7 @@ adapter, not a rewrite.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -117,6 +118,8 @@ class _TTLCache:
             if entry and now - entry.fetched_at <= ttl_sec:
                 return entry.value, True
         value = fetcher()
+        if isinstance(value, MtResult) and not value.ok:
+            return value, False
         with self._lock:
             self._entries[key] = _CacheEntry(now, value)
         return value, False
@@ -224,6 +227,40 @@ def _safe_dial(
             mode=descriptor["mode"],
         )
     except (MikrotikError, OSError) as exc:
+        return MtResult(
+            ok=False,
+            error=f"خطأ في الاتصال: {exc}",
+            took_ms=int((time.perf_counter() - started) * 1000),
+            dialed_address=descriptor["address"],
+            mode=descriptor["mode"],
+        )
+
+    except Exception as exc:  # pragma: no cover - last-resort router boundary
+        exc_name = exc.__class__.__name__
+        if exc_name == "AuthError":
+            return MtResult(
+                ok=False,
+                error=f"فشل تسجيل الدخول: {exc}",
+                took_ms=int((time.perf_counter() - started) * 1000),
+                dialed_address=descriptor["address"],
+                mode=descriptor["mode"],
+            )
+        if exc_name == "ConnectError":
+            return MtResult(
+                ok=False,
+                error=f"تعذر الاتصال: {exc}",
+                took_ms=int((time.perf_counter() - started) * 1000),
+                dialed_address=descriptor["address"],
+                mode=descriptor["mode"],
+            )
+        if exc_name == "MikrotikTrap":
+            return MtResult(
+                ok=False,
+                error=f"رفض الراوتر العملية: {exc}",
+                took_ms=int((time.perf_counter() - started) * 1000),
+                dialed_address=descriptor["address"],
+                mode=descriptor["mode"],
+            )
         return MtResult(
             ok=False,
             error=f"خطأ في الاتصال: {exc}",
@@ -766,6 +803,68 @@ def disconnect_ppp_session(
     )
 
 
+# ─── K8: backup + reboot + identity ──────────────────────────────
+
+
+# Names that are obviously bad. RouterOS itself will reject things
+# we don't catch here — this layer just rejects the dangerous
+# patterns (path traversal, control chars, empty) before they ever
+# hit the wire.
+_BACKUP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def _sanitize_backup_name(raw: str) -> str:
+    """Return the cleaned backup name, or raise ValueError with an
+    Arabic message. Strips whitespace; rejects empty, path
+    traversal, control chars, leading dot, anything outside the
+    `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` allowlist."""
+    name = (raw or "").strip()
+    if not name:
+        raise ValueError("اسم النسخة مطلوب")
+    if "/" in name or "\\" in name or ".." in name:
+        raise ValueError("اسم النسخة يحتوي على رموز ممنوعة")
+    if any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise ValueError("اسم النسخة يحتوي على رموز تحكم")
+    if not _BACKUP_NAME_RE.match(name):
+        raise ValueError(
+            "اسم النسخة يجب أن يبدأ بحرف/رقم ويحوي [A-Za-z0-9._-] فقط"
+        )
+    return name
+
+
+def file_list(nas: Mapping[str, Any]) -> MtResult:
+    """`/file/print` — every file the router can see (backups,
+    scripts, certs, etc.). Cached briefly so the dashboard listing
+    doesn't hammer the router."""
+    return fetch_cached(
+        nas=nas,
+        operation="file/list",
+        ttl_sec=TTL_SYSTEM,
+        work=lambda c: list(c.print_("/file/print")),
+    )
+
+
+def backup_save(
+    nas: Mapping[str, Any], *, name: str,
+) -> MtResult:
+    """`/system/backup/save name=<n>` — creates `<n>.backup` on the
+    router. We sanitize the name client-side; the router still
+    rejects truly malformed inputs and that surfaces as a trap
+    error in the envelope."""
+    try:
+        clean = _sanitize_backup_name(name)
+    except ValueError as exc:
+        return MtResult(ok=False, error=str(exc))
+    return _run_mutation(
+        nas,
+        operation="system/backup/save",
+        work=lambda c: c.run(
+            "/system/backup/save", attrs={"name": clean},
+        ),
+        invalidate=("file/list",),
+    )
+
+
 # Default upper bound on SSE samples — 150 × 2 s ≈ 5 min, after
 # which the browser's EventSource auto-reconnects.
 SSE_DEFAULT_MAX_SAMPLES = 150
@@ -859,4 +958,6 @@ __all__ = [
     "stream_interface_samples",
     "SSE_DEFAULT_MAX_SAMPLES",
     "SSE_DEFAULT_PERIOD_SEC",
+    "file_list",
+    "backup_save",
 ]

@@ -826,6 +826,82 @@ def test_log_tail_cache_key_per_filter(fake_nas_direct):
     assert mock_client.print_.call_count == 3
 
 
+# ─── K8.1: file list + backup save ───────────────────────────────
+
+
+def test_file_list_calls_file_print(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*1", "name": "backup-20260101.backup",
+         "type": "backup", "size": "12345"},
+    ]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.file_list(fake_nas_direct)
+
+    assert res.ok is True
+    mock_client.print_.assert_called_once_with("/file/print")
+    assert res.data[0]["type"] == "backup"
+
+
+def test_backup_save_sends_name(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.backup_save(fake_nas_direct, name="backup-x1")
+
+    assert res.ok is True
+    args, kwargs = mock_client.run.call_args
+    assert args[0] == "/system/backup/save"
+    assert kwargs["attrs"]["name"] == "backup-x1"
+
+
+def test_backup_save_invalidates_file_list_cache(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [{".id": "*1"}]
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        mac.file_list(fake_nas_direct)
+        mac.backup_save(fake_nas_direct, name="b1")
+        mac.file_list(fake_nas_direct)
+
+    assert mock_client.print_.call_count == 2
+
+
+@pytest.mark.parametrize("bad", [
+    "", "   ",                  # empty
+    "../etc/passwd",            # traversal
+    "back/sub",                 # slash
+    "back\\sub",                # backslash
+    "..hidden",                 # leading dots
+    ".hidden",                  # leading dot
+    "name\x00null",             # control char
+    "x" * 200,                  # too long
+    "@badname",                 # punctuation outside allowlist
+])
+def test_backup_save_rejects_unsafe_names(fake_nas_direct, bad):
+    res = mac.backup_save(fake_nas_direct, name=bad)
+    assert res.ok is False
+    assert res.error  # message present
+
+
+def test_backup_save_accepts_normal_names(fake_nas_direct):
+    mock_client = MagicMock()
+    mock_client.run.return_value = [{"reply": "!done", "attrs": {}}]
+    fake = _patched_pool(mock_client)
+
+    with patch.object(mac, "_pool_acquire", fake):
+        for good in ("backup1", "B-2026", "weekly_07",
+                     "snap.20260101", "abc-DEF_g.h"):
+            res = mac.backup_save(fake_nas_direct, name=good)
+            assert res.ok is True, f"{good!r} should be allowed"
+
+
 # ─── K7.2: diagnostic tools ──────────────────────────────────────
 
 
