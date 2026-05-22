@@ -364,14 +364,21 @@ Each day is a chunk of 4-6 commits.
 | K2   | `3667a3b` | `app/radius/services/mikrotik_admin_client.py` + 10 tests |
 | K3   | `1a266ef` | `app/api/v1/mikrotik_control.py` + `__init__.py` registration |
 
-### Session 2 — Day 3 (network surface)
+### Session 2 — Day 3 + Day 4 (network surface → diagnostics)
 
-**Status: K4 done. +2 commits. +10 tests. Zero failures.**
+**Status: K4 → K7 done. +8 commits. +35 tests (55 total). Zero failures.**
 
 | Step | Commit | Files touched |
 |------|--------|---------------|
 | K4.1 | `e70a211` | `mikrotik_admin_client.py` (+4 fetchers) · `mikrotik_control.py` (+4 endpoints) · `__init__.py` comment · `test_mikrotik_admin_client.py` (+6 tests) |
 | K4.2 | `afd1e5b` | `mikrotik_admin_client.py` (+`stream_interface_samples`) · `mikrotik_control.py` (+SSE endpoint) · `test_mikrotik_admin_client.py` (+4 tests) |
+| fix  | `32700ba` | `mikrotik_control.py` — fix `fail()` positional-arg bug on the 404 branch (latent in K3+K4.1) |
+| K5.1 | `20b41c7` | hotspot + PPP active reads (2 fetchers + 2 endpoints + 2 tests) |
+| K5.2 | `635fbcf` | disconnect mutations + `_run_mutation` helper + `_audit_mutation` in routes (2 fetchers + 2 endpoints + 5 tests) |
+| K6.1 | `a2a9c19` | simple queues read + safe `set` (allowlist of editable fields) (2 fetchers + 2 endpoints + 7 tests) |
+| K6.2 | `80e3c0d` | firewall filter/nat (read-only) + address-list CRUD (5 fetchers + 4 endpoints + 8 tests) |
+| K7.1 | `b9433fa` | log tail with topic + limit filters (1 fetcher + 1 endpoint + 4 tests) |
+| K7.2 | `6144ff9` | ping + traceroute + dns-resolve (3 fetchers + 3 endpoints + 9 tests, all cache-bypass) |
 
 ### What ships today
 
@@ -396,24 +403,23 @@ Note: there is no admin-side UI for steps 1, 3 or 4 yet. The
 
 ### Resume here — Session 3 starting point
 
-Begin with **K5 (hotspot + PPP active users)**. Pattern carries
-over from K4: add the fetchers to `mikrotik_admin_client.py`, the
-endpoints to `mikrotik_control.py`, extend
-`test_mikrotik_admin_client.py`. K5 also introduces the first
-mutation endpoints (`disconnect`) — these MUST call
-`invalidate_cache(router_id, "hotspot/active")` (or the relevant
-op tag) after success and require a confirmation step on the UI
-side (which lands in K9/K10, not here).
+Begin with **K8 (backup + reboot)**. This is the last endpoint
+batch before the UI work (K9/K10). It pulls in two new shapes
+the previous phases didn't:
+
+1. **File download.** `GET /files/<name>/download` streams a
+   .backup file from the router through the admin to the operator's
+   browser. The wire client doesn't have a binary-fetch helper yet;
+   K8.1 may need a small `/file/print` + `/tool/fetch` round-trip
+   or an SSH/SCP side-channel (decide at the start of the session).
+2. **Destructive mutations.** `reboot` and `identity/set` must
+   refuse to fire without an explicit confirm token — pattern to
+   reuse: include `confirm=true` in the JSON body, otherwise the
+   endpoint returns 409 + an Arabic "confirmation required"
+   message. UI confirmation modal lands in K9/K10.
 
 Outstanding endpoint phases:
 
-- **K5** Hotspot + PPP active (≈2 commits)
-    * `GET /api/v1/mikrotik/<id>/hotspot/active`
-    * `GET /api/v1/mikrotik/<id>/ppp/active`
-    * `POST /api/v1/mikrotik/<id>/hotspot/active/<id>/disconnect`
-    * `POST /api/v1/mikrotik/<id>/ppp/active/<id>/disconnect`
-- **K6** Queues + firewall (≈2 commits)
-- **K7** Logs + diagnostics (≈2 commits)
 - **K8** Backup + reboot (≈2 commits)
 
 Outstanding UI phases:
@@ -464,13 +470,15 @@ python -m pytest \
   tests/test_mikrotik_admin_client.py \
   -q
 
-# Confirm the K3 + K4 routes are registered
+# Confirm all K3 → K7 routes are registered (25 rules expected)
 python -c "
 from app import create_app
-print([str(r) for r in create_app().url_map.iter_rules()
-       if 'mikrotik' in str(r) and
-          ('system' in str(r) or 'interfaces' in str(r) or
-           'routes' in str(r) or 'ip/' in str(r))])
+app = create_app()
+rules = [r for r in app.url_map.iter_rules()
+         if 'mikrotik' in str(r) and '/<int:nas_id>/' in str(r)]
+print(len(rules), 'routes')
+for r in sorted(rules, key=str):
+    print(' ', '|'.join(sorted(r.methods - {'HEAD','OPTIONS'})), str(r))
 "
 
 # Quick check that the migration applied on a fresh DB
