@@ -753,4 +753,172 @@
       start();
     }
   })();
+
+  // ── P3 — Table-backed tabs (IPs + routes) ──────────────────────
+  //
+  // Both panels are read-only RouterOS lists rendered as tables.
+  // The lifecycle (lazy-load on tab activation + interval refresh
+  // while open + cleanup on tab change) is identical to P2, so
+  // factor it into a small spec-driven helper instead of two
+  // near-duplicate modules.
+  function escapeText(v) {
+    return String(v == null ? "" : v).replace(/[<>&"]/g, ch => ({
+      "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;",
+    }[ch]));
+  }
+
+  function initTableTab(spec) {
+    const card = root.querySelector(spec.cardSel);
+    if (!card) return;
+    const msg   = card.querySelector(spec.msgSel);
+    const wrap  = card.querySelector(spec.wrapSel);
+    const rows  = card.querySelector(spec.rowsSel);
+    const count = card.querySelector(spec.countSel);
+    const refreshBtn = card.querySelector(spec.refreshSel);
+
+    let timer = null;
+    let inflight = false;
+
+    function setMsg(text) {
+      if (!msg) return;
+      msg.textContent = text || "";
+      msg.hidden = !text;
+    }
+
+    async function load() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const { res, body } = await api(
+          "/mikrotik/" + CFG.routerId + spec.path);
+        if (!res.ok || !body || body.ok === false) {
+          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          wrap.hidden = true;
+          if (count) count.textContent = "—";
+          return;
+        }
+        const env = body.data || {};
+        if (env.ok === false) {
+          setMsg(env.error || spec.errorFallback);
+          wrap.hidden = true;
+          if (count) count.textContent = "—";
+          return;
+        }
+        const list = Array.isArray(env.data) ? env.data : [];
+        if (!list.length) {
+          setMsg(spec.emptyMsg);
+          wrap.hidden = true;
+          if (count) count.textContent = "0";
+          return;
+        }
+        rows.innerHTML = list.map(spec.row).join("");
+        if (count) count.textContent = String(list.length);
+        setMsg("");
+        wrap.hidden = false;
+      } catch (e) {
+        setMsg("خطأ في الشبكة: " + String(e));
+        wrap.hidden = true;
+      } finally {
+        inflight = false;
+      }
+    }
+
+    function start() {
+      load();
+      if (timer == null) {
+        timer = setInterval(load, spec.pollMs);
+      }
+    }
+    function stop() {
+      if (timer != null) { clearInterval(timer); timer = null; }
+    }
+
+    root.addEventListener("mt:tab-change", (e) => {
+      if (e.detail && e.detail.slug === spec.slug) start();
+      else stop();
+    });
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => load());
+    }
+    if ((location.hash || "").replace(/^#/, "") === "tab-" + spec.slug) {
+      start();
+    }
+  }
+
+  // ─── P3.A — IP addresses ──────────────────────────────────────
+  initTableTab({
+    slug: "ips",
+    path: "/ip/addresses",
+    pollMs: 30_000,
+    cardSel: "[data-mt-ips-card]",
+    msgSel: "[data-mt-ips-msg]",
+    wrapSel: "[data-mt-ips-wrap]",
+    rowsSel: "[data-mt-ips-rows]",
+    countSel: "[data-mt-ips-count]",
+    refreshSel: "[data-mt-ips-refresh]",
+    emptyMsg: "لا توجد عناوين IP على هذا الراوتر.",
+    errorFallback: "الراوتر لم يرد على /ip/address/print.",
+    row: function (r) {
+      const disabled = String(r["disabled"]) === "true";
+      const dyn      = String(r["dynamic"])  === "true";
+      const stateHtml = disabled
+        ? '<span class="mt-iface-state mt-iface-state--off">معطّل</span>'
+        : (dyn
+            ? '<span class="mt-iface-state mt-iface-state--down">ديناميكي</span>'
+            : '<span class="mt-iface-state mt-iface-state--up">ثابت</span>');
+      return [
+        '<tr>',
+        '<td class="mt-iface-name">', escapeText(r.address || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r.network || "—"), '</td>',
+        '<td>', escapeText(r.interface || "—"), '</td>',
+        '<td>', stateHtml, '</td>',
+        '<td>', escapeText(r.comment || ""), '</td>',
+        '</tr>',
+      ].join("");
+    },
+  });
+
+  // ─── P3.B — Routes ────────────────────────────────────────────
+  initTableTab({
+    slug: "routes",
+    path: "/routes",
+    pollMs: 30_000,
+    cardSel: "[data-mt-routes-card]",
+    msgSel: "[data-mt-routes-msg]",
+    wrapSel: "[data-mt-routes-wrap]",
+    rowsSel: "[data-mt-routes-rows]",
+    countSel: "[data-mt-routes-count]",
+    refreshSel: "[data-mt-routes-refresh]",
+    emptyMsg: "لا توجد مسارات على هذا الراوتر.",
+    errorFallback: "الراوتر لم يرد على /ip/route/print.",
+    row: function (r) {
+      const active   = String(r["active"])   === "true";
+      const disabled = String(r["disabled"]) === "true";
+      const stateHtml = disabled
+        ? '<span class="mt-iface-state mt-iface-state--off">معطّل</span>'
+        : (active
+            ? '<span class="mt-iface-state mt-iface-state--up">نشط</span>'
+            : '<span class="mt-iface-state mt-iface-state--down">خامل</span>');
+      // RouterOS exposes a "static / dynamic / connect / dhcp / bgp"
+      // family on every route — surface it so the operator can tell
+      // a hand-built static route from one a DHCP lease installed.
+      let kind = "—";
+      if (String(r["static"])  === "true") kind = "static";
+      else if (String(r["dynamic"]) === "true") kind = "dynamic";
+      else if (String(r["connect"]) === "true") kind = "connected";
+      else if (String(r["dhcp"])    === "true") kind = "dhcp";
+      else if (String(r["bgp"])     === "true") kind = "bgp";
+      else if (String(r["ospf"])    === "true") kind = "ospf";
+      return [
+        '<tr>',
+        '<td class="mt-iface-name">', escapeText(r["dst-address"] || "—"), '</td>',
+        '<td class="mt-iface-mac">', escapeText(r.gateway || "—"), '</td>',
+        '<td>', escapeText(r.distance || "—"), '</td>',
+        '<td>', stateHtml, '</td>',
+        '<td>', escapeText(kind), '</td>',
+        '<td>', escapeText(r.comment || ""), '</td>',
+        '</tr>',
+      ].join("");
+    },
+  });
 })();

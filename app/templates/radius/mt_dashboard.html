@@ -270,13 +270,76 @@
     </section>
   </section>
 
-  {# ─── Placeholder panels (P3..P7 will fill them). Honest
+  {# ─── P3 — IP Addresses tab (real data) ──────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="ips"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-ips-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-network-wired"></i> العناوين</h3>
+        <span class="mt-card-meta">
+          <span data-mt-ips-count>—</span> عنوان ·
+          <button type="button" class="mt-mini-btn" data-mt-ips-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-empty" data-mt-ips-msg>جارٍ التحميل…</p>
+        <div class="mt-table-wrap" data-mt-ips-wrap hidden>
+          <table class="mt-iface-table" data-mt-ips-table>
+            <thead>
+              <tr>
+                <th>العنوان</th>
+                <th>الشبكة</th>
+                <th>الواجهة</th>
+                <th>الحالة</th>
+                <th>تعليق</th>
+              </tr>
+            </thead>
+            <tbody data-mt-ips-rows></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  {# ─── P3 — Routes tab (real data) ────────────────────── #}
+  <section class="mt-tab-panel" data-mt-tab-panel="routes"
+           role="tabpanel" hidden>
+    <section class="mt-card" data-mt-routes-card>
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-route"></i> المسارات</h3>
+        <span class="mt-card-meta">
+          <span data-mt-routes-count>—</span> مسار ·
+          <button type="button" class="mt-mini-btn" data-mt-routes-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-empty" data-mt-routes-msg>جارٍ التحميل…</p>
+        <div class="mt-table-wrap" data-mt-routes-wrap hidden>
+          <table class="mt-iface-table" data-mt-routes-table>
+            <thead>
+              <tr>
+                <th>الوجهة</th>
+                <th>Gateway</th>
+                <th>المسافة</th>
+                <th>الحالة</th>
+                <th>المصدر</th>
+                <th>تعليق</th>
+              </tr>
+            </thead>
+            <tbody data-mt-routes-rows></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  {# ─── Placeholder panels (P4..P7 will fill them). Honest
        empty states — no fake buttons, no fake data. ─── #}
   {% set _placeholders = [
-    ('ips',         'العناوين',  'network-wired',
-     'جدول /ip/address على هذا الراوتر — ينزل في P3.'),
-    ('routes',      'المسارات',  'route',
-     'جدول /ip/route مع gateway/distance/active — ينزل في P3.'),
     ('neighbors',   'الجيران',   'people-arrows',
      'الأجهزة المكتشَفة عبر MNDP/CDP/LLDP — ينزل في P4.'),
     ('sessions',    'الجلسات',   'users',
