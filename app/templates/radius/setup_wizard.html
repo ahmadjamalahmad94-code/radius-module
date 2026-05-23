@@ -1,0 +1,168 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}معالج الإعداد الذكي{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
+{% block page_title %}معالج الإعداد الذكي{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="sw-page" data-setup-wizard-page data-current-run-id="{{ summary.run.id if summary else '' }}">
+  <header class="sw-header">
+    <div>
+      <h1>معالج إعداد HobeRadius</h1>
+      <p>إعداد الإنترنت ثم VPN/RADIUS ثم الخدمات الاختيارية بخطوات واضحة وآمنة.</p>
+    </div>
+    <div class="sw-header-actions">
+      <button type="button" class="hub-btn hub-btn--primary" data-sw-action="create-run">بدء تشغيل جديد</button>
+      <button type="button" class="hub-btn" data-sw-action="refresh-summary" {% if not summary %}disabled{% endif %}>تحديث الحالة</button>
+    </div>
+  </header>
+
+  <section class="sw-stepper" aria-label="مراحل المعالج">
+    <div class="sw-step">1. اختيار مصدر الإنترنت</div>
+    <div class="sw-step">2. معاينة سكربت الإنترنت</div>
+    <div class="sw-step">3. تحقق الإنترنت</div>
+    <div class="sw-step">4. معاينة VPN/RADIUS</div>
+    <div class="sw-step">5. تحقق VPN/RADIUS</div>
+    <div class="sw-step">6. Hotspot/Broadband</div>
+    <div class="sw-step">7. الملخص النهائي</div>
+  </section>
+
+  <section class="sw-cards" data-sw-verification-cards>
+    {% set cards = summary.verification.cards if summary else [] %}
+    {% if cards %}
+      {% for card in cards %}
+      <article class="sw-status-card status-{{ card.status }}">
+        <h3>{{ card.title_ar }}</h3>
+        <div class="status-pill">{{ card.status }}</div>
+        <p>{{ card.details_ar }}</p>
+      </article>
+      {% endfor %}
+    {% else %}
+      <article class="sw-status-card status-blocked"><h3>جاهزية التحقق</h3><div class="status-pill">pending</div><p>ابدأ تشغيل جديد لعرض بطاقات الحالة.</p></article>
+    {% endif %}
+  </section>
+
+  <div class="sw-grid">
+    <section class="sw-panel">
+      <h2>1) إعداد الإنترنت</h2>
+      <form data-sw-form="internet-source">
+        {{ csrf_token_input()|safe }}
+        <div class="sw-field">
+          <label>نوع المصدر</label>
+          <select name="source_type" required>
+            <option value="dhcp">DHCP مباشر</option>
+            <option value="static">Static IP</option>
+            <option value="vlan">VLAN</option>
+            <option value="pppoe">PPPoE</option>
+          </select>
+        </div>
+        <div class="sw-field">
+          <label>واجهة WAN المختارة</label>
+          <input name="selected_wan_interface" placeholder="ether1" required>
+        </div>
+        <div class="sw-field">
+          <label>بيانات JSON (حسب النوع)</label>
+          <textarea name="payload_json" rows="7" spellcheck="false">{"interface":"ether1","add_default_route":true,"use_peer_dns":true,"nat_enabled":true}</textarea>
+        </div>
+        <div class="sw-inline-actions">
+          <button class="hub-btn" type="button" data-sw-action="set-internet-source">حفظ بيانات المصدر</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-internet-script">توليد سكربت الإنترنت</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-internet">تحديد تحقق الإنترنت</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="sw-panel">
+      <h2>2) VPN / RADIUS</h2>
+      <form data-sw-form="vpn-radius">
+        {{ csrf_token_input()|safe }}
+        <div class="sw-field">
+          <label>بيانات JSON</label>
+          <textarea name="payload_json" rows="7" spellcheck="false">{"wg_interface_name":"hr-wg","peer_name":"vps-peer","router_vpn_ip":"10.10.0.3","vps_vpn_ip":"10.10.0.1","allowed_address":"10.10.0.1/32","vps_public_endpoint":"187.77.70.18","endpoint_port":51820,"radius_server_ip":"10.10.0.1","radius_secret":"CHANGE_ME","api_username":"hr_api_setup"}</textarea>
+        </div>
+        <div class="sw-inline-actions">
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">توليد سكربت VPN/RADIUS</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-vpn">تحديد تحقق VPN/RADIUS</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="sw-grid">
+    <section class="sw-panel">
+      <h2>3) Hotspot</h2>
+      <form data-sw-form="hotspot">
+        {{ csrf_token_input()|safe }}
+        <div class="sw-field">
+          <label>النمط</label>
+          <select name="mode">
+            <option value="smart">Smart</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+        <div class="sw-field">
+          <label>Payload JSON</label>
+          <textarea name="payload_json" rows="6" spellcheck="false">{"selected_interfaces":["ether3"]}</textarea>
+        </div>
+        <div class="sw-field">
+          <label>Blocked Networks JSON</label>
+          <textarea name="blocked_json" rows="3" spellcheck="false">["10.10.0.0/24","10.20.30.0/24"]</textarea>
+        </div>
+        <div class="sw-inline-actions">
+          <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">جلب واجهات مرشحة (Contract)</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">توليد سكربت Hotspot</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-hotspot">تحديد تحقق Hotspot</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="sw-panel">
+      <h2>4) Broadband / PPPoE</h2>
+      <form data-sw-form="broadband">
+        {{ csrf_token_input()|safe }}
+        <div class="sw-field">
+          <label>النمط</label>
+          <select name="mode">
+            <option value="smart">Smart</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+        <div class="sw-field">
+          <label>Payload JSON</label>
+          <textarea name="payload_json" rows="6" spellcheck="false">{"selected_interfaces":["ether4"],"local_address":"10.88.44.1","remote_pool_cidr":"10.88.44.0/24"}</textarea>
+        </div>
+        <div class="sw-field">
+          <label>Blocked Networks JSON</label>
+          <textarea name="blocked_json" rows="3" spellcheck="false">["10.10.0.0/24","10.20.30.0/24","10.77.50.0/24"]</textarea>
+        </div>
+        <div class="sw-inline-actions">
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت Broadband</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-broadband">تحديد تحقق Broadband</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <section class="sw-panel">
+    <h2>مخرجات السكربت / التشخيص</h2>
+    <div class="sw-inline-actions">
+      <button class="hub-btn" type="button" data-sw-action="copy-script">نسخ آخر سكربت</button>
+      <a class="hub-btn" href="{{ url_for('radius.setup_wizard_page') }}">فتح صفحة نظيفة</a>
+    </div>
+    <pre class="sw-script" data-sw-script-preview>-- لا يوجد سكربت بعد --</pre>
+    <pre class="sw-output" data-sw-output-preview>-- لا توجد نتائج بعد --</pre>
+  </section>
+</div>
+
+<script>
+  window.__SETUP_WIZARD_BOOTSTRAP__ = {{ {
+    "summary": summary or {},
+    "diagnostics_catalog": diagnostics_catalog or {}
+  } | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/setup_wizard.js') }}"></script>
+{% endblock %}

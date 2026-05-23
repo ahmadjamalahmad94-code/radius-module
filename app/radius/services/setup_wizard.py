@@ -277,6 +277,17 @@ class SetupWizardService:
             raise SetupWizardValidationError("wizard run not found")
         return _row_to_run(row)
 
+    def list_run_steps(self, *, tenant_id: int, run_id: int) -> list[dict[str, Any]]:
+        rows = db().execute(
+            """
+            SELECT * FROM setup_wizard_steps
+            WHERE tenant_id=? AND wizard_run_id=?
+            ORDER BY id ASC
+            """,
+            (int(tenant_id), int(run_id)),
+        ).fetchall()
+        return [_row_to_step(row) for row in rows]
+
     def get_step(self, *, tenant_id: int, run_id: int, step_key: str) -> dict[str, Any] | None:
         row = db().execute(
             """
@@ -498,6 +509,20 @@ class SetupWizardService:
             vpn_verified=vpn_verified,
             statuses=statuses,
         )
+
+    def get_run_summary(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        steps = self.list_run_steps(tenant_id=tenant_id, run_id=run_id)
+        step_index = {step["step_key"]: step for step in steps}
+        verification_contract = self.get_verification_contract(
+            tenant_id=tenant_id, run_id=run_id
+        )
+        return {
+            "run": run,
+            "steps": steps,
+            "step_index": step_index,
+            "verification": verification_contract,
+        }
 
     def get_interface_candidates(
         self, *, tenant_id: int, run_id: int, interfaces: list[InterfaceInfo] | None = None
