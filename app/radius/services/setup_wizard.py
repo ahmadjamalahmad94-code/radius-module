@@ -15,6 +15,8 @@ from typing import Any
 from ..db.connection import db, transaction
 from .setup_wizard_common import SetupWizardValidationError
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
+from .setup_wizard_verification import SetupVerificationService
+from .setup_wizard_vpn_radius_planner import VpnRadiusBootstrapPlanner
 
 
 RUN_STATUS_ACTIVE = "active"
@@ -228,6 +230,8 @@ class SetupWizardService:
     def __init__(self, state_machine: SetupWizardStateMachine | None = None) -> None:
         self._sm = state_machine or SetupWizardStateMachine()
         self._internet_planner = InternetUplinkScriptPlanner()
+        self._vpn_radius_planner = VpnRadiusBootstrapPlanner()
+        self._verification_service = SetupVerificationService()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -449,6 +453,41 @@ class SetupWizardService:
             validation_commands=plan.validation_commands,
         )
         return plan.to_dict()
+
+    def generate_vpn_radius_script(
+        self, *, tenant_id: int, run_id: int, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        self.advance_to_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            input_json=payload,
+        )
+        plan = self._vpn_radius_planner.plan(wizard_run_id=int(run_id), payload=payload)
+        self.mark_script_generated(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            generated_script=plan.script_text,
+            rollback_script=plan.rollback_script_text,
+            validation_commands=plan.validation_commands,
+        )
+        return plan.to_dict()
+
+    def get_verification_contract(
+        self, *, tenant_id: int, run_id: int, statuses: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        internet_verified = self._is_step_verified(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_INTERNET_VERIFICATION
+        )
+        vpn_verified = self._is_step_verified(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_VPN_RADIUS_VERIFICATION
+        )
+        return self._verification_service.build_contract(
+            internet_verified=internet_verified,
+            vpn_verified=vpn_verified,
+            statuses=statuses,
+        )
 
     def mark_script_generated(
         self,

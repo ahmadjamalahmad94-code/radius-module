@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .setup_wizard_common import SetupWizardValidationError
+from .setup_wizard_common import SetupWizardValidationError, assert_safe_script
 
 
 def _boolish(value: Any, default: bool = False) -> bool:
@@ -74,18 +74,6 @@ def _validate_dns_list(value: Any) -> list[str]:
     else:
         raise SetupWizardValidationError("dns_servers must be a list or comma-separated string")
     return [_validate_ipv4(item, "dns_server") for item in items]
-
-
-def _contains_forbidden(text: str) -> bool:
-    low = text.lower()
-    forbidden = (
-        "/remove",
-        " remove ",
-        "\nremove ",
-        "/interface disable",
-        "reset-configuration",
-    )
-    return any(token in low for token in forbidden)
 
 
 @dataclass(frozen=True)
@@ -161,8 +149,7 @@ class InternetUplinkScriptPlanner:
         masked_sensitive_values: dict[str, str],
     ) -> InternetScriptPlan:
         script_text = "\n".join(lines).strip() + "\n"
-        if _contains_forbidden(script_text):
-            raise SetupWizardValidationError("generated script failed safety filter")
+        assert_safe_script(script_text)
         rollback_script_text = (
             "# Rollback notes (safe manual mode):\n"
             "# 1) Disable only objects created with this run tag after manual review.\n"
