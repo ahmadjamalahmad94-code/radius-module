@@ -61,6 +61,80 @@
     max-height: 200px; overflow-y: auto;
     margin-top: 4px;
   }
+  /* VX2.6g — 2-column layout with sticky sidebar guide. */
+  .vx2-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .vx2-layout { grid-template-columns: 1fr; }
+    .vx2-side-guide { position: static !important; }
+  }
+  .vx2-side-guide {
+    position: sticky;
+    top: 16px;
+    background: #fff;
+    border: 1px solid var(--hub-border, #d8dee5);
+    border-radius: 8px;
+    padding: 14px 14px 6px;
+    font-size: 13px;
+    line-height: 1.55;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+  }
+  .vx2-side-guide h4 {
+    margin: 0 0 8px; font-size: 14px;
+    color: var(--hub-text, #1a2230);
+    border-bottom: 1px solid var(--hub-border, #e6e9ee);
+    padding-bottom: 6px;
+  }
+  .vx2-side-guide ol {
+    padding-inline-start: 22px; margin: 0 0 10px;
+  }
+  .vx2-side-guide ol > li { margin-bottom: 8px; }
+  .vx2-side-guide ol > li code {
+    background: var(--hub-surface-2, #f7f8fa);
+    padding: 1px 4px; border-radius: 3px;
+    font-size: 11.5px;
+  }
+  .vx2-side-guide .vx2-step-num {
+    display: inline-block;
+    width: 18px; height: 18px;
+    background: #208ba6; color: #fff;
+    border-radius: 50%; text-align: center;
+    line-height: 18px; font-size: 11px;
+    margin-inline-end: 6px;
+  }
+  .vx2-side-guide .vx2-tip {
+    background: rgba(43,170,204,0.08);
+    border-inline-start: 3px solid #208ba6;
+    padding: 6px 8px; margin: 8px 0 0;
+    font-size: 12px;
+  }
+  /* Copy button on script pre blocks. */
+  .vx2-pre-wrap { position: relative; }
+  .vx2-pre-wrap > .vx2-copy-btn {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 6px;
+    background: rgba(255,255,255,0.92);
+    color: #1a2230;
+    border: 1px solid var(--hub-border, #d8dee5);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.15s, color 0.15s;
+  }
+  .vx2-pre-wrap > .vx2-copy-btn:hover {
+    background: #208ba6; color: #fff;
+  }
+  .vx2-pre-wrap > .vx2-copy-btn.is-copied {
+    background: #2c9a52; color: #fff; border-color: #2c9a52;
+  }
   .vx2-warning { background: rgba(255,180,0,0.10);
                   border-left: 3px solid #b87f00;
                   padding: 8px 12px; margin: 6px 0; }
@@ -96,6 +170,10 @@
       <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
     </div>
   {% endif %}
+
+  <div class="vx2-layout">
+    <div data-vx2-main>
+
 
   {# ── 1) Header / router identity ───────────────────────── #}
   <section class="mt-card">
@@ -444,11 +522,25 @@
             <strong>firewall-filter:</strong> {{ preview_summary.section_counts.firewall_filter }}
           </p>
           <h4>سكربت التطبيق (forward)</h4>
-          <pre class="vx2-script-pre"
-               data-mt-site-exit-forward-script>{{ forward_script }}</pre>
+          <div class="vx2-pre-wrap">
+            <button type="button" class="vx2-copy-btn"
+                    data-vx2-copy-target="forward"
+                    title="نسخ إلى الحافظة">
+              <i class="fa-regular fa-clipboard"></i> نسخ
+            </button>
+            <pre class="vx2-script-pre"
+                 data-mt-site-exit-forward-script>{{ forward_script }}</pre>
+          </div>
           <h4>سكربت التراجع (rollback)</h4>
-          <pre class="vx2-script-pre"
-               data-mt-site-exit-rollback-script>{{ rollback_script }}</pre>
+          <div class="vx2-pre-wrap">
+            <button type="button" class="vx2-copy-btn"
+                    data-vx2-copy-target="rollback"
+                    title="نسخ إلى الحافظة">
+              <i class="fa-regular fa-clipboard"></i> نسخ
+            </button>
+            <pre class="vx2-script-pre"
+                 data-mt-site-exit-rollback-script>{{ rollback_script }}</pre>
+          </div>
         </div>
         {% endif %}
       {% endif %}
@@ -574,6 +666,119 @@
 
   {% endif %}{# policy block #}
 
+    </div>{# /vx2-main #}
+
+    {# ─── Side guide (sticky) ─────────────────────────── #}
+    <aside class="vx2-side-guide" data-vx2-side-guide>
+      <h4><i class="fa-solid fa-list-check"></i> الخطوات بالترتيب</h4>
+      <ol>
+        <li>
+          <span class="vx2-step-num">1</span>
+          <strong>تحقّق من عقدة VPS</strong>
+          — لازم تكون مفعّلة + IP عام + اسم WireGuard
+          interface مطابق للراوتر.
+        </li>
+        <li>
+          <span class="vx2-step-num">2</span>
+          <strong>أنشئ سياسة</strong>
+          — اختر عقدة VPS + وضع الفشل
+          <code>block_when_vps_down</code> الموصى به.
+        </li>
+        <li>
+          <span class="vx2-step-num">3</span>
+          <strong>حمّل قائمة جاهزة</strong> (مثل karamspeed)
+          أو الصق قائمتك في textarea الاستيراد، اضغط
+          <code>تحليل</code>.
+        </li>
+        <li>
+          <span class="vx2-step-num">4</span>
+          <strong>اختر المجموعات</strong> — اترك الافتراضي
+          الآمن (speedtest + public-ip-checkers + raw-ips)،
+          ثم اضغط <code>حفظ الأهداف المختارة</code>.
+        </li>
+        <li>
+          <span class="vx2-step-num">5</span>
+          <strong>اكتب اسم WAN interface-list</strong>
+          (افتراضياً <code>WAN</code>؛ تحقّق على الراوتر بـ
+          <code>/interface list print</code>).
+        </li>
+        <li>
+          <span class="vx2-step-num">6</span>
+          <strong>ولّد المعاينة</strong>
+          — اقرأ السكربت + تحذير FastTrack بعناية.
+        </li>
+        <li>
+          <span class="vx2-step-num">7</span>
+          <strong>علّم 5 خانات التأكيد</strong>
+          (إلزامية — تمنع تطبيق غير مقصود).
+        </li>
+        <li>
+          <span class="vx2-step-num">8</span>
+          <strong>اضغط الزر الأحمر</strong>
+          — التطبيق ينفّذ السكربت عبر API الراوتر
+          (لا تحتاج SSH).
+        </li>
+      </ol>
+
+      <div class="vx2-tip">
+        <strong>💡 نصيحة:</strong> أزرار <em>نسخ</em> على
+        السكربتات تنسخ الكل بنقرة. الصق في
+        <code>/file/edit</code> أو في terminal الراوتر.
+      </div>
+
+      <div class="vx2-tip" style="background:rgba(204,31,31,0.08);border-color:#cc1f1f">
+        <strong>⚠️ هام:</strong> خذ نسخة احتياطية من الراوتر
+        قبل التطبيق. ولو فشل التطبيق، افتح <code>سجل
+        العمليات</code> لمعرفة السبب.
+      </div>
+    </aside>
+
+  </div>{# /vx2-layout #}
+
 </section>
+
+<script>
+/* VX2.6g — copy-to-clipboard for script pre blocks. */
+(function () {
+  const buttons = document.querySelectorAll('[data-vx2-copy-target]');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      const wrap = btn.parentElement;
+      const pre  = wrap.querySelector('pre');
+      if (!pre) return;
+      const text = pre.innerText;
+      const ok = await copyText(text);
+      if (ok) {
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        btn.classList.add('is-copied');
+        setTimeout(function () {
+          btn.innerHTML = original;
+          btn.classList.remove('is-copied');
+        }, 1800);
+      }
+    });
+  });
+
+  async function copyText(text) {
+    /* Prefer the modern API; fall back to textarea trick for
+       older browsers / non-HTTPS contexts. */
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(text); return true; }
+      catch (e) { /* fall through */ }
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+})();
+</script>
 
 {% endblock %}
