@@ -54,6 +54,7 @@ from ..services import (
     npc_recommendations as rec_svc,
     npc_remote_access as ra_svc,
     npc_remote_access_planner as ra_planner,
+    npc_rollback_service as rollback_svc,
     npc_script_renderer as renderer,
     npc_snapshot_capture_service as snapshot_capture_svc,
     npc_walled_garden_planner as wg_planner,
@@ -419,6 +420,20 @@ def register_network_policy_routes(bp: Blueprint) -> None:
                 or (svc.perms["preview"].rsplit(".", 1)[0]
                     + ".apply")
             )(_make_apply_view(svc)),
+            methods=["POST"],
+        )
+        # Rollback route — POST only, reuses the apply
+        # permission (operators that can apply can roll back).
+        # Managed-prefix safety check fires inside the service.
+        bp.add_url_rule(
+            f"/network-policy/{url_slug}/<int:policy_id>"
+            "/changes/<int:change_set_id>/rollback",
+            f"npc_{svc.key}_rollback",
+            requires_perm(
+                svc.perms.get("apply")
+                or (svc.perms["preview"].rsplit(".", 1)[0]
+                    + ".apply")
+            )(_make_rollback_view(svc)),
             methods=["POST"],
         )
         bp.add_url_rule(
@@ -1256,6 +1271,48 @@ def _make_apply_view(svc: _ServiceDef):
             flash(
                 "نتيجة التنفيذ: " + result.reason_ar,
                 "warning",
+            )
+        return redirect(url_for(
+            f"radius.npc_{svc.key}_preview",
+            policy_id=policy_id,
+        ))
+    return _view
+
+
+def _make_rollback_view(svc: _ServiceDef):
+    """POST endpoint for rolling back a previously-applied
+    change_set. Delegates to `rollback_svc.request_rollback`
+    which:
+      * verifies tenant + policy match
+      * verifies the original change_set is rollback-eligible
+      * re-validates the stored rollback script against the
+        managed-prefix safety rule
+      * drives `executor.execute_rollback` per router
+      * marks the original change_set as `rolled_back` (or
+        `partially_rolled_back`) on success.
+    """
+    def _view(policy_id: int, change_set_id: int):
+        ad = _adapter(svc)
+        policy = ad.get(_tid(), policy_id)
+        if not policy:
+            abort(404)
+        result = rollback_svc.request_rollback(
+            tenant_id=_tid(),
+            service=svc.key,
+            policy_id=int(policy_id),
+            change_set_id=int(change_set_id),
+            actor=_actor(),
+            actor_has_apply_perm=True,
+        )
+        if result.ok:
+            flash(
+                f"تم التراجع بنجاح — change_set "
+                f"#{result.change_set_id}.", "success",
+            )
+        else:
+            flash(
+                f"تعذّر التراجع: {result.reason_ar}",
+                "danger",
             )
         return redirect(url_for(
             f"radius.npc_{svc.key}_preview",
