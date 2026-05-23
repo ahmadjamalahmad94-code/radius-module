@@ -36,6 +36,7 @@ from ...radius.db.repos import (
 )
 from ...radius.services import (
     npc_audit_events as ev,
+    npc_beginner_explainer as beginner_svc,
     npc_blast_radius as blast_svc,
     npc_conflict_detector as conflict_svc,
     npc_dependency_detector as dependency_svc,
@@ -813,6 +814,13 @@ def _finalize_preview(
         affected_router_count=1,
     )
 
+    # Beginner explanation — pure glossary + plain-Arabic
+    # prose. Surfaced as `beginner_explanation` so the UI can
+    # render it next to the technical script viewer.
+    beginner = beginner_svc.explain(
+        policy_type=service, plan=plan, policy=policy,
+    )
+
     if render_error is not None:
         impact = impact_svc.analyze(
             policy_type=service, policy=policy,
@@ -833,6 +841,7 @@ def _finalize_preview(
                 "conflict_analysis":     conflict_analysis.as_dict(),
                 "dependency_analysis":   dependency_analysis.as_dict(),
                 "blast_radius_analysis": blast_radius.as_dict(),
+                "beginner_explanation":  beginner.as_dict(),
             },
         )
 
@@ -857,6 +866,7 @@ def _finalize_preview(
         "conflict_analysis":     conflict_analysis.as_dict(),
         "dependency_analysis":   dependency_analysis.as_dict(),
         "blast_radius_analysis": blast_radius.as_dict(),
+        "beginner_explanation":  beginner.as_dict(),
     }
 
     if plan.can_apply and forward:
