@@ -72,6 +72,26 @@ PERM_SITE_EXIT_APPLY                   = "site_exit.apply"
 PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING = "site_exit.override_backup_warning"
 PERM_SITE_EXIT_ENABLE_RISKY_GROUPS     = "site_exit.enable_risky_groups"
 
+# NPC — Network Policy Center. Three sub-services × four
+# verbs (view / manage / preview / apply). Same split rationale
+# as VX2: a holder of `PERM_PROGRAM` should NOT automatically
+# gain network-policy authority. Apply is opt-in even for
+# admins (see _IMPLIED_BY_ADMIN below) — destructive surface.
+PERM_NPC_REMOTE_ACCESS_VIEW    = "npc.remote_access.view"
+PERM_NPC_REMOTE_ACCESS_MANAGE  = "npc.remote_access.manage"
+PERM_NPC_REMOTE_ACCESS_PREVIEW = "npc.remote_access.preview"
+PERM_NPC_REMOTE_ACCESS_APPLY   = "npc.remote_access.apply"
+
+PERM_NPC_WEB_BLOCK_VIEW    = "npc.web_block.view"
+PERM_NPC_WEB_BLOCK_MANAGE  = "npc.web_block.manage"
+PERM_NPC_WEB_BLOCK_PREVIEW = "npc.web_block.preview"
+PERM_NPC_WEB_BLOCK_APPLY   = "npc.web_block.apply"
+
+PERM_NPC_WALLED_GARDEN_VIEW    = "npc.walled_garden.view"
+PERM_NPC_WALLED_GARDEN_MANAGE  = "npc.walled_garden.manage"
+PERM_NPC_WALLED_GARDEN_PREVIEW = "npc.walled_garden.preview"
+PERM_NPC_WALLED_GARDEN_APPLY   = "npc.walled_garden.apply"
+
 
 ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_VIEW, PERM_DIAGNOSTICS, PERM_MANAGE,
@@ -84,6 +104,13 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_SITE_EXIT_PREVIEW, PERM_SITE_EXIT_APPLY,
     PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING,
     PERM_SITE_EXIT_ENABLE_RISKY_GROUPS,
+    # NPC — Network Policy Center surface.
+    PERM_NPC_REMOTE_ACCESS_VIEW, PERM_NPC_REMOTE_ACCESS_MANAGE,
+    PERM_NPC_REMOTE_ACCESS_PREVIEW, PERM_NPC_REMOTE_ACCESS_APPLY,
+    PERM_NPC_WEB_BLOCK_VIEW, PERM_NPC_WEB_BLOCK_MANAGE,
+    PERM_NPC_WEB_BLOCK_PREVIEW, PERM_NPC_WEB_BLOCK_APPLY,
+    PERM_NPC_WALLED_GARDEN_VIEW, PERM_NPC_WALLED_GARDEN_MANAGE,
+    PERM_NPC_WALLED_GARDEN_PREVIEW, PERM_NPC_WALLED_GARDEN_APPLY,
 )
 
 
@@ -102,6 +129,17 @@ _IMPLIED_BY_ADMIN: frozenset[str] = frozenset({
     # destructive surface.
     PERM_SITE_EXIT_VIEW, PERM_SITE_EXIT_MANAGE,
     PERM_SITE_EXIT_PREVIEW,
+    # NPC — same posture: view / manage / preview implied;
+    # `.apply` is opt-in even for admins.
+    PERM_NPC_REMOTE_ACCESS_VIEW,
+    PERM_NPC_REMOTE_ACCESS_MANAGE,
+    PERM_NPC_REMOTE_ACCESS_PREVIEW,
+    PERM_NPC_WEB_BLOCK_VIEW,
+    PERM_NPC_WEB_BLOCK_MANAGE,
+    PERM_NPC_WEB_BLOCK_PREVIEW,
+    PERM_NPC_WALLED_GARDEN_VIEW,
+    PERM_NPC_WALLED_GARDEN_MANAGE,
+    PERM_NPC_WALLED_GARDEN_PREVIEW,
 })
 
 
@@ -266,6 +304,18 @@ __all__ = [
     "PERM_SITE_EXIT_PREVIEW", "PERM_SITE_EXIT_APPLY",
     "PERM_SITE_EXIT_OVERRIDE_BACKUP_WARNING",
     "PERM_SITE_EXIT_ENABLE_RISKY_GROUPS",
+    "PERM_NPC_REMOTE_ACCESS_VIEW",
+    "PERM_NPC_REMOTE_ACCESS_MANAGE",
+    "PERM_NPC_REMOTE_ACCESS_PREVIEW",
+    "PERM_NPC_REMOTE_ACCESS_APPLY",
+    "PERM_NPC_WEB_BLOCK_VIEW",
+    "PERM_NPC_WEB_BLOCK_MANAGE",
+    "PERM_NPC_WEB_BLOCK_PREVIEW",
+    "PERM_NPC_WEB_BLOCK_APPLY",
+    "PERM_NPC_WALLED_GARDEN_VIEW",
+    "PERM_NPC_WALLED_GARDEN_MANAGE",
+    "PERM_NPC_WALLED_GARDEN_PREVIEW",
+    "PERM_NPC_WALLED_GARDEN_APPLY",
     "PERM_AUDIT_VIEW", "PERM_ADMIN",
     "ALL_PERMISSIONS",
     "admin_permissions",

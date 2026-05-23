@@ -36,6 +36,19 @@ def test_allowlist_contains_every_documented_permission():
         "site_exit.apply",
         "site_exit.override_backup_warning",
         "site_exit.enable_risky_groups",
+        # NPC — Network Policy Center (3 sub-services × 4 verbs).
+        "npc.remote_access.view",
+        "npc.remote_access.manage",
+        "npc.remote_access.preview",
+        "npc.remote_access.apply",
+        "npc.web_block.view",
+        "npc.web_block.manage",
+        "npc.web_block.preview",
+        "npc.web_block.apply",
+        "npc.walled_garden.view",
+        "npc.walled_garden.manage",
+        "npc.walled_garden.preview",
+        "npc.walled_garden.apply",
     }
 
 
