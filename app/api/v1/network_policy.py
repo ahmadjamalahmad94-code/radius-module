@@ -38,6 +38,7 @@ from ...radius.services import (
     npc_audit_events as ev,
     npc_beginner_explainer as beginner_svc,
     npc_blast_radius as blast_svc,
+    npc_canary_planner as canary_svc,
     npc_conflict_detector as conflict_svc,
     npc_dependency_detector as dependency_svc,
     npc_impact_analyzer as impact_svc,
@@ -822,6 +823,9 @@ def _finalize_preview(
         policy_type=service, plan=plan, policy=policy,
     )
 
+    # Canary planner — staged rollout recommendation.
+    canary = canary_svc.plan(blast=blast_radius)
+
     # Health score helper — closes over all the analyses above.
     def _build_health(_impact):
         return health_svc.compute(
@@ -830,6 +834,11 @@ def _finalize_preview(
             dependencies=dependency_analysis,
             blast=blast_radius,
             rollback_available=_impact.rollback_available,
+            canary_recommended=(
+                canary.recommended_strategy
+                in (canary_svc.STRATEGY_CANARY,
+                    canary_svc.STRATEGY_STAGED)
+            ),
         )
 
     if render_error is not None:
@@ -853,6 +862,7 @@ def _finalize_preview(
                 "dependency_analysis":   dependency_analysis.as_dict(),
                 "blast_radius_analysis": blast_radius.as_dict(),
                 "beginner_explanation":  beginner.as_dict(),
+                "canary_plan":           canary.as_dict(),
                 "health_score":          _build_health(impact).as_dict(),
             },
         )
@@ -879,6 +889,7 @@ def _finalize_preview(
         "dependency_analysis":   dependency_analysis.as_dict(),
         "blast_radius_analysis": blast_radius.as_dict(),
         "beginner_explanation":  beginner.as_dict(),
+        "canary_plan":           canary.as_dict(),
         "health_score":          _build_health(impact).as_dict(),
     }
 
