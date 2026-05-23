@@ -301,9 +301,12 @@ def test_remote_access_full_lifecycle_via_ui(
     )
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    assert "الخطّة سليمة وقابلة للتوليد" in html
+    # Intelligent-preview UI rephrased the "plan ok" pill —
+    # match the noun-only form so the assertion survives copy
+    # tweaks in either direction.
+    assert "الخطّة سليمة" in html
     assert "HOBE_NPC_REMOTE:" in html
-    assert "سكربت rollback" in html
+    assert "rollback" in html
     assert "لم يتم التطبيق على الراوتر" in html
 
     # Preview POST persists + audits

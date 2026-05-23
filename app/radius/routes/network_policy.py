@@ -40,7 +40,15 @@ from ..db.repos import (
 )
 from ..services import (
     npc_audit_events as ev,
+    npc_beginner_explainer as beginner_svc,
+    npc_blast_radius as blast_svc,
+    npc_canary_planner as canary_svc,
+    npc_conflict_detector as conflict_svc,
+    npc_dependency_detector as dependency_svc,
     npc_domain_analyzer as analyzer,
+    npc_impact_analyzer as impact_svc,
+    npc_policy_health as health_svc,
+    npc_recommendations as rec_svc,
     npc_remote_access as ra_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
@@ -670,6 +678,18 @@ def _make_preview_view(svc: _ServiceDef):
         # presentation-only.
         explanation = _explain_plan(svc, policy, children, plan)
 
+        # ── Surface the Phase A→I intelligence ─────────────
+        # The route builds every analysis once and hands the
+        # `intelligence` mapping to the template. The template
+        # stays presentation-only — all classification + scoring
+        # lives in the (already production-ready) services.
+        intelligence = _build_intelligence(
+            svc=svc, policy=policy, plan=plan,
+            children=children,
+            forward=forward, rollback=rollback,
+            render_error=render_error,
+        )
+
         return render_template(
             "radius/network_policy_preview.html",
             service=svc,
@@ -683,9 +703,131 @@ def _make_preview_view(svc: _ServiceDef):
             render_error=render_error,
             summary=summary,
             explanation=explanation,
+            intelligence=intelligence,
             page_title=f"معاينة: {policy['name']}",
         )
     return _view
+
+
+# ─── Intelligence assembler ──────────────────────────────────
+
+
+def _peer_policies_for_route(svc: _ServiceDef) -> list[
+    "conflict_svc.PeerPolicy"
+]:
+    """Mirror of the JSON API's peer-loader, scoped to the
+    current tenant. Read-only — no MikroTik contact."""
+    out: list[conflict_svc.PeerPolicy] = []
+    tid = _tid()
+    for row in ra_repo.list_for_tenant(tid):
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_REMOTE_ACCESS,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            children=(),
+        ))
+    for row in wb_repo.list_policies_for_tenant(tid):
+        targets = wb_repo.list_targets(int(row["id"]))
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_WEB_BLOCK,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            children=tuple(targets),
+        ))
+    for row in wg_repo.list_policies_for_tenant(tid):
+        entries = wg_repo.list_entries(int(row["id"]))
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_WALLED_GARDEN,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            hotspot_profile=str(row.get("hotspot_profile") or ""),
+            children=tuple(entries),
+        ))
+    return out
+
+
+def _build_intelligence(
+    *, svc: _ServiceDef, policy: dict,
+    plan: "renderer.ScriptPlan",
+    children: tuple,
+    forward: str, rollback: str,
+    render_error: str,
+) -> dict:
+    """Assemble every Phase A–I analysis once. Returns a dict
+    the template can iterate over. Each value is a dataclass
+    instance — templates can call `.as_dict()` themselves or
+    just access attributes."""
+    policy_id = int(policy.get("id") or 0)
+    router_id = int(policy.get("router_id") or 0)
+
+    # Conflicts compare against the rest of the tenant's
+    # policies; exclude this one to avoid self-conflict noise.
+    peers = [
+        p for p in _peer_policies_for_route(svc)
+        if not (p.id == policy_id and p.service == svc.key)
+    ]
+
+    conflicts = conflict_svc.analyze(
+        current_service=svc.key,
+        current_policy=policy,
+        current_children=children or (),
+        peers=peers,
+    )
+    dependencies = dependency_svc.analyze(
+        targets=children or (), policy_type=svc.key,
+    )
+    blast = blast_svc.analyze(
+        policy_type=svc.key, plan=plan,
+        affected_router_count=1,
+    )
+    beginner = beginner_svc.explain(
+        policy_type=svc.key, plan=plan, policy=policy,
+    )
+    canary = canary_svc.plan(blast=blast)
+    impact = impact_svc.analyze(
+        policy_type=svc.key, policy=policy,
+        plan=plan, targets=children or (),
+        rendered_forward=forward, rendered_rollback=rollback,
+        render_error=(render_error or None),
+    )
+    health = health_svc.compute(
+        impact=impact,
+        conflicts=conflicts,
+        dependencies=dependencies,
+        blast=blast,
+        rollback_available=impact.rollback_available,
+        canary_recommended=(
+            canary.recommended_strategy
+            in (canary_svc.STRATEGY_CANARY,
+                canary_svc.STRATEGY_STAGED)
+        ),
+    )
+    recommendations = rec_svc.build(
+        impact=impact,
+        conflicts=conflicts,
+        dependencies=dependencies,
+        blast=blast,
+        canary=canary,
+        policy_type=svc.key,
+        policy=policy,
+    )
+
+    return {
+        "impact":          impact,
+        "conflicts":       conflicts,
+        "dependencies":    dependencies,
+        "blast":           blast,
+        "beginner":        beginner,
+        "canary":          canary,
+        "health":          health,
+        "recommendations": recommendations,
+    }
 
 
 def _make_download_view(svc: _ServiceDef):

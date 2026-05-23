@@ -1,36 +1,448 @@
-{# NPC preview page — the core operator UX.
+{# NPC preview — intelligent operator guidance center.
 
-   Sections:
-     1. Dry-run banner + tabs (shared shell)
-     2. Two-column header card: policy meta + risk + status
-     3. Plain-language Arabic explanation: will-do / will-skip /
-        blocks / allows / warnings
-     4. Forward script viewer (monospace) — copy + download
-     5. Rollback script viewer
-     6. Risk card
-     7. Summary tiles (counts per section)
+   Surfaces the eight Phase A→I analyses (impact, conflicts,
+   dependencies, blast radius, beginner, canary, health, smart
+   recommendations) in a calm, Arabic RTL, ten-section layout.
+
+   The raw RouterOS script is intentionally pushed to the
+   bottom — it's a reference for advanced operators, not the
+   primary surface anymore.
 #}
 
 {% extends "admin/_admin_layout.html" %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
-{% block title %}{{ page_title }} — معاينة سياسة{% endblock %}
+{% block title %}{{ page_title }} — مركز قرار السياسة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-eye"></i>{% endblock %}
-{% block page_title %}معاينة: {{ policy.name }}{% endblock %}
+{% block page_title %}{{ policy.name }}{% endblock %}
 {% block page_sub %}
-  <span class="sub">{{ service.label_ar }} — {{ router_name }}</span>
+  <span class="sub">{{ service.label_ar }} · {{ router_name }}</span>
 {% endblock %}
 
 {% block head_extra %}
   {{ super() }}
   {% include "radius/_network_policy_shell.html" %}
+  <style>
+    /* ───── Intelligent preview — visual language ─────
+       Soft cards, calm spacing, generous breathing room.
+       All colour tokens align with the existing hub_v2
+       palette so this page reads as "of the product",
+       not bolted-on.
+    */
+
+    .npc-int-grid {
+      display: grid; gap: 16px;
+    }
+
+    /* SECTION 1 — Decision Hero */
+    .npc-hero {
+      background: linear-gradient(135deg,
+        rgba(107,90,237,0.06), rgba(107,90,237,0.01));
+      border: 1px solid rgba(107,90,237,0.18);
+      border-radius: 14px;
+      padding: 22px 26px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: center;
+    }
+    @media (max-width: 980px) {
+      .npc-hero { grid-template-columns: 1fr; }
+    }
+    .npc-hero-title {
+      font-size: 20px; font-weight: 800;
+      color: #1F2937;
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 6px;
+    }
+    .npc-hero-sub {
+      color: #4b5563; font-size: 13.5px; margin-bottom: 12px;
+    }
+    .npc-hero-explain {
+      color: #374151; font-size: 14px; line-height: 1.75;
+      margin: 8px 0 0;
+    }
+    .npc-score-card {
+      background: #fff;
+      border: 1px solid #E3E1EC;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    .npc-score-n {
+      font-size: 44px; font-weight: 900;
+      line-height: 1; color: #1F2937;
+      letter-spacing: -1px;
+    }
+    .npc-score-n small {
+      font-size: 18px; color: #9ca3af; font-weight: 700;
+    }
+    .npc-score-grade {
+      margin-top: 6px;
+      font-size: 13px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .npc-grade-excellent { color: #047857; }
+    .npc-grade-good      { color: #166534; }
+    .npc-grade-caution   { color: #b45309; }
+    .npc-grade-risky     { color: #b91c1c; }
+    .npc-grade-dangerous { color: #7f1d1d; }
+    .npc-score-bar {
+      margin-top: 12px; height: 8px;
+      background: #E3E1EC; border-radius: 999px;
+      overflow: hidden;
+    }
+    .npc-score-bar > span {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, #ef4444, #f59e0b,
+                                          #84cc16, #10b981);
+      transition: width .3s ease;
+    }
+    .npc-score-note {
+      margin-top: 10px;
+      font-size: 11.5px; color: #6b7280;
+    }
+
+    /* Section common */
+    .npc-section {
+      background: #fff;
+      border: 1px solid #EEEDF3;
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    .npc-section-head {
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 14px;
+    }
+    .npc-section-head h2 {
+      margin: 0; font-size: 15.5px; font-weight: 800;
+      color: #1F2937;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .npc-section-head .npc-sec-num {
+      width: 28px; height: 28px;
+      background: #F4F1FE; color: #6B5AED;
+      border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .npc-section-sub {
+      color: #6b7280; font-size: 12.5px;
+      margin: 0 0 14px;
+    }
+
+    /* Empty-state inline (smaller than list-page empty) */
+    .npc-empty-inline {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px;
+      background: #ecfdf5;
+      border: 1px dashed #a7f3d0;
+      border-radius: 10px;
+      color: #047857; font-size: 13px;
+    }
+    .npc-empty-inline i { font-size: 18px; }
+    .npc-empty-warn {
+      background: #fffbeb; border-color: #fde68a;
+      color: #b45309;
+    }
+
+    /* Impact callouts */
+    .npc-impact-quote {
+      background: #fafbfd;
+      border-inline-start: 4px solid #6B5AED;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px; color: #1F2937;
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+    .npc-impact-tech {
+      font-family: ui-monospace, monospace;
+      font-size: 12px; color: #6b7280;
+      background: #f3f4f6;
+      padding: 8px 12px; border-radius: 8px;
+      direction: ltr; text-align: left;
+    }
+
+    /* Blast radius tiles */
+    .npc-blast-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .npc-blast-tile {
+      background: #fafbfd;
+      border: 1px solid #EEEDF3;
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .npc-blast-tile .n {
+      font-size: 24px; font-weight: 800; color: #1F2937;
+    }
+    .npc-blast-tile .l {
+      font-size: 12px; color: #6b7280; margin-top: 4px;
+    }
+    .npc-blast-sev {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+    }
+    .npc-blast-sev-small {
+      background: #ecfdf5; color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+    .npc-blast-sev-medium {
+      background: #fffbeb; color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .npc-blast-sev-large,
+    .npc-blast-sev-critical {
+      background: #fef2f2; color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    /* Conflicts */
+    .npc-conflict {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .npc-conflict.is-high {
+      background: #fef2f2; border-color: #fecaca;
+    }
+    .npc-conflict-head {
+      display: flex; align-items: center;
+      gap: 10px; flex-wrap: wrap;
+    }
+    .npc-conflict-title {
+      font-weight: 700; color: #1F2937; font-size: 14px;
+    }
+    .npc-conflict-body {
+      margin-top: 8px; font-size: 13px;
+      line-height: 1.7; color: #374151;
+    }
+    .npc-conflict-rec {
+      margin-top: 6px;
+      font-size: 12.5px; color: #6b7280;
+    }
+
+    /* Dependencies */
+    .npc-dep-grid {
+      display: grid; gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .npc-dep-card {
+      background: #fafbfd;
+      border: 1px solid #EEEDF3;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .npc-dep-title {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; color: #1F2937; font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .npc-dep-impact {
+      font-size: 13px; color: #374151; line-height: 1.65;
+    }
+    .npc-dep-conf {
+      display: inline-block;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 700;
+      margin-inline-start: auto;
+    }
+    .npc-dep-conf-certain {
+      background: #ecfdf5; color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+    .npc-dep-conf-likely {
+      background: #eff6ff; color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+    .npc-dep-conf-possible {
+      background: #f3f4f6; color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+    .npc-dep-related {
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;
+    }
+    .npc-dep-related code {
+      background: #F4F1FE; color: #4036A6;
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11.5px;
+    }
+
+    /* Recommendations */
+    .npc-rec {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      gap: 12px; align-items: start;
+      padding: 14px 16px;
+      background: #fafbfd;
+      border: 1px solid #EEEDF3;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .npc-rec.is-priority-1 {
+      background: #fef2f2; border-color: #fecaca;
+    }
+    .npc-rec.is-priority-2 {
+      background: #fffbeb; border-color: #fde68a;
+    }
+    .npc-rec-num {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #6B5AED; color: #fff;
+      font-weight: 800; font-size: 12.5px;
+    }
+    .npc-rec.is-priority-1 .npc-rec-num { background: #b91c1c; }
+    .npc-rec.is-priority-2 .npc-rec-num { background: #b45309; }
+    .npc-rec-title {
+      font-weight: 700; color: #1F2937; font-size: 14px;
+    }
+    .npc-rec-body {
+      color: #374151; font-size: 13px;
+      line-height: 1.7; margin-top: 4px;
+    }
+    .npc-rec-meta {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11.5px; color: #6b7280;
+      white-space: nowrap;
+    }
+
+    /* Canary plan */
+    .npc-canary-banner {
+      display: flex; align-items: center; gap: 10px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #4338ca;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .npc-canary-steps {
+      counter-reset: step;
+      list-style: none; padding: 0; margin: 0;
+    }
+    .npc-canary-steps li {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px; align-items: start;
+      padding: 12px 0;
+      border-bottom: 1px dashed #EEEDF3;
+    }
+    .npc-canary-steps li:last-child { border-bottom: 0; }
+    .npc-canary-steps li::before {
+      content: counter(step);
+      width: 28px; height: 28px;
+      background: #F4F1FE; color: #6B5AED;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px;
+    }
+    .npc-canary-step-text {
+      color: #374151; font-size: 13.5px; line-height: 1.65;
+    }
+    .npc-canary-note {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      color: #4b5563; font-size: 12.5px;
+    }
+
+    /* Rollback confidence */
+    .npc-rollback-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+    }
+    .npc-rollback-card.is-warn {
+      background: #fffbeb; border-color: #fde68a;
+    }
+    .npc-rollback-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #10b981; color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex: 0 0 auto;
+    }
+    .npc-rollback-card.is-warn .npc-rollback-icon {
+      background: #f59e0b;
+    }
+    .npc-rollback-text {
+      color: #1F2937; font-size: 13.5px; line-height: 1.65;
+    }
+
+    /* Glossary */
+    .npc-glossary {
+      display: grid; gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .npc-gloss-card {
+      background: #fafbfd;
+      border: 1px solid #EEEDF3;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .npc-gloss-term {
+      font-weight: 700; color: #4036A6; font-size: 13px;
+    }
+    .npc-gloss-explain {
+      color: #4b5563; font-size: 12.5px;
+      line-height: 1.65; margin-top: 4px;
+    }
+
+    /* Script viewer — now secondary */
+    .npc-script-section {
+      background: #fff;
+      border: 1px solid #EEEDF3;
+      border-radius: 14px;
+      padding: 18px 22px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    .npc-script-section summary {
+      cursor: pointer; user-select: none;
+      list-style: none;
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: #374151;
+    }
+    .npc-script-section summary::-webkit-details-marker {
+      display: none;
+    }
+    .npc-script-section summary::after {
+      content: "▾"; margin-inline-start: auto;
+      color: #9ca3af; font-size: 12px;
+      transition: transform .15s ease;
+    }
+    .npc-script-section[open] summary::after {
+      transform: rotate(180deg);
+    }
+    .npc-script-section .npc-script-body {
+      margin-top: 14px;
+    }
+  </style>
 {% endblock %}
 
 {% block content %}
 {{ npc.npc_dry_run_banner() }}
 {{ npc.npc_tabs(service.url_slug, services) }}
 
-<div style="display:flex; gap:8px; margin-bottom:14px;">
+{# ── Toolbar ───────────────────────────────────────────────── #}
+<div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
   <a class="npc-btn"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
     <i class="fa-solid fa-arrow-right"></i>
@@ -41,7 +453,6 @@
     <i class="fa-regular fa-pen-to-square"></i>
     تحرير السياسة
   </a>
-
   <form class="npc-inline-form"
         method="POST"
         action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
@@ -52,243 +463,544 @@
       توليد المعاينة وحفظها
     </button>
   </form>
-
-  {% if forward_script %}
-    <a class="npc-btn"
-       href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
-       download>
-      <i class="fa-solid fa-download"></i>
-      تنزيل .rsc
-    </a>
-  {% endif %}
 </div>
 
-{# ─── Top card: policy + risk + status ─── #}
-<div class="npc-card" style="padding:16px 18px;">
-  <div class="npc-card-head">
+<div class="npc-int-grid">
+
+  {# ════════════════ SECTION 1 — Decision Hero ════════════════ #}
+  <div class="npc-hero" data-test="npc-hero">
     <div>
-      <div class="npc-card-title">
+      <h1 class="npc-hero-title">
         <i class="fa-solid fa-{{ service.icon }}"
-           style="color:#6B5AED;"></i>
+           style="color:#6B5AED; font-size:18px;"></i>
         {{ policy.name }}
+      </h1>
+      <div class="npc-hero-sub">
+        {{ service.label_ar }} · slug
+        <code>{{ policy.slug }}</code>
       </div>
-      <div class="npc-card-sub">
-        slug: <code>{{ policy.slug }}</code>
-        · الراوتر: <strong>{{ router_name }}</strong>
-        {% if policy.expires_at %}
-          · ينتهي: <code>{{ policy.expires_at }}</code>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;
+                  margin-bottom:10px;">
+        {% if plan.can_apply %}
+          <span class="npc-pill npc-pill-status-prev"
+                data-test="npc-status-prev">
+            <i class="fa-regular fa-circle-check"></i>
+            الخطّة سليمة
+          </span>
+        {% else %}
+          <span class="npc-pill npc-pill-status-fail">
+            <i class="fa-solid fa-ban"></i>
+            الخطّة محظورة — راجع الأخطاء
+          </span>
         {% endif %}
-        {% if policy.hotspot_profile %}
-          · profile: <code>{{ policy.hotspot_profile }}</code>
+
+        {# Risk pill from impact_analysis #}
+        {% set risk = intelligence.impact.risk_level %}
+        {% if risk == 'critical' %}
+          <span class="npc-pill npc-pill-risk-high"
+                data-test="npc-risk-pill">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            مستوى الخطر: حرج
+          </span>
+        {% elif risk == 'high' %}
+          <span class="npc-pill npc-pill-risk-high"
+                data-test="npc-risk-pill">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            مستوى الخطر: مرتفع
+          </span>
+        {% elif risk == 'medium' %}
+          <span class="npc-pill npc-pill-risk-mid"
+                data-test="npc-risk-pill">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            مستوى الخطر: متوسط
+          </span>
+        {% else %}
+          <span class="npc-pill npc-pill-risk-low"
+                data-test="npc-risk-pill">
+            <i class="fa-solid fa-shield"></i>
+            مستوى الخطر: منخفض
+          </span>
         {% endif %}
+
+        <span class="npc-pill npc-pill-status-draft">
+          <i class="fa-solid fa-vial-virus"></i>
+          معاينة فقط — لم يتم التطبيق على الراوتر
+        </span>
       </div>
+
+      <p class="npc-hero-explain">
+        {{ intelligence.impact.summary_ar }}
+      </p>
     </div>
-    <div class="npc-card-actions" style="align-items:center;">
-      {% if plan.can_apply %}
-        <span class="npc-pill npc-pill-status-prev">
-          <i class="fa-regular fa-circle-check"></i>
-          الخطّة سليمة وقابلة للتوليد
-        </span>
-      {% else %}
-        <span class="npc-pill npc-pill-status-fail">
-          <i class="fa-solid fa-ban"></i>
-          الخطّة محظورة — راجع الأخطاء
-        </span>
-      {% endif %}
+
+    {# Score card #}
+    {% set h = intelligence.health %}
+    <div class="npc-score-card" data-test="npc-health-score">
+      <div class="npc-score-n">
+        {{ h.score }}<small>/100</small>
+      </div>
+      <div class="npc-score-grade npc-grade-{{ h.grade }}">
+        {% if h.grade == 'excellent' %}ممتازة
+        {% elif h.grade == 'good' %}جيدة
+        {% elif h.grade == 'caution' %}تحتاج حذراً
+        {% elif h.grade == 'risky' %}محفوفة بالمخاطر
+        {% else %}تحتاج إعادة تخطيط{% endif %}
+      </div>
+      <div class="npc-score-bar">
+        <span style="width: {{ h.score }}%;"></span>
+      </div>
+      <div class="npc-score-note">
+        تقييم استشاري فقط — راجع التفاصيل أدناه قبل التطبيق.
+      </div>
     </div>
   </div>
 
-  {# Summary tiles #}
-  <div class="npc-summary-grid" style="margin-top:14px;">
-    <div class="npc-summary-tile">
-      <div class="npc-summary-n">
-        {{ summary.command_count }}
-      </div>
-      <div class="npc-summary-l">إجمالي الأوامر</div>
+  {# ════════════════ SECTION 2 — What Will Happen ════════════ #}
+  <div class="npc-section" data-test="npc-section-impact">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">2</span>
+      <h2><i class="fa-regular fa-comment-dots"
+             style="color:#6B5AED;"></i>
+        ماذا سيحدث؟</h2>
     </div>
-    {% for k, label in [
-      ('cleanup',       'تنظيف'),
-      ('address_list',  'قوائم العناوين'),
-      ('filter',        'قواعد firewall'),
-      ('walled_garden', 'walled-garden'),
-      ('scheduler',     'مهام مجدولة'),
-    ] %}
-      {% if summary.section_counts.get(k, 0) %}
-        <div class="npc-summary-tile">
-          <div class="npc-summary-n">
-            {{ summary.section_counts[k] }}
-          </div>
-          <div class="npc-summary-l">{{ label }}</div>
+
+    <div class="npc-impact-quote">
+      {{ intelligence.impact.beginner_explanation_ar }}
+    </div>
+
+    {% if intelligence.impact.risk_reasons_ar %}
+      <ul style="margin: 8px 0 12px;
+                  padding-inline-start: 22px;
+                  font-size: 13px; color: #4b5563;
+                  line-height: 1.7;">
+        {% for reason in intelligence.impact.risk_reasons_ar %}
+          <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="npc-impact-tech">
+      <i class="fa-solid fa-microchip"
+         style="color:#9ca3af;"></i>
+      {{ intelligence.impact.technical_summary_ar }}
+    </div>
+  </div>
+
+  {# ════════════════ SECTION 3 — Blast Radius ════════════════ #}
+  <div class="npc-section" data-test="npc-section-blast">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">3</span>
+      <h2><i class="fa-solid fa-users-viewfinder"
+             style="color:#6B5AED;"></i>
+        حجم التأثير المتوقَّع</h2>
+    </div>
+
+    {% set b = intelligence.blast %}
+    <div class="npc-blast-grid" style="margin-bottom: 12px;">
+      <div class="npc-blast-tile">
+        <div class="n">{{ b.affected_router_count }}</div>
+        <div class="l">راوتر متأثّر</div>
+      </div>
+      {% if b.estimated_user_count is not none %}
+        <div class="npc-blast-tile">
+          <div class="n">{{ b.estimated_user_count }}</div>
+          <div class="l">مستخدمون (تقدير)</div>
         </div>
       {% endif %}
-    {% endfor %}
+      {% if b.estimated_profile_count is not none %}
+        <div class="npc-blast-tile">
+          <div class="n">{{ b.estimated_profile_count }}</div>
+          <div class="l">profiles</div>
+        </div>
+      {% endif %}
+      <div class="npc-blast-tile">
+        <span class="npc-blast-sev npc-blast-sev-{{ b.blast_radius }}">
+          {% if b.blast_radius == 'small' %}نطاق ضيّق
+          {% elif b.blast_radius == 'medium' %}متوسّط
+          {% elif b.blast_radius == 'large' %}واسع
+          {% else %}حرج{% endif %}
+        </span>
+        <div class="l" style="margin-top:6px;">نطاق التأثير</div>
+      </div>
+    </div>
+
+    <p style="color:#374151; font-size:13.5px; margin: 8px 0 6px;">
+      {{ b.recommendation_ar }}
+    </p>
+    <p style="color:#6b7280; font-size:12px; margin: 0;">
+      <i class="fa-solid fa-circle-info"
+         style="color:#9ca3af;"></i>
+      {{ b.heuristic_note_ar }}
+    </p>
   </div>
-</div>
 
-{# ─── Plain-language explanation ─── #}
-<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
-  <div class="npc-explain" style="border:none; padding:0;">
-    <h4>
-      <i class="fa-regular fa-comment-dots"
-         style="color:#6B5AED;"></i>
-      ماذا سيحدث؟ (بلغة مبسَّطة)
-    </h4>
+  {# ════════════════ SECTION 4 — Conflicts ═════════════════════ #}
+  <div class="npc-section" data-test="npc-section-conflicts">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">4</span>
+      <h2><i class="fa-solid fa-bolt"
+             style="color:#6B5AED;"></i>
+        التعارضات مع السياسات الأخرى</h2>
+    </div>
 
-    {% if explanation.will_do %}
-      <ul class="npc-explain-do">
-        {% for line in explanation.will_do %}
-          <li>{{ line }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
-    {% if explanation.will_block %}
-      <h4>
-        <i class="fa-solid fa-ban"
-           style="color:#b91c1c;"></i>
-        سيتم حظر:
-      </h4>
-      <ul class="npc-explain-block">
-        {% for v in explanation.will_block %}
-          <li><code>{{ v }}</code></li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
-    {% if explanation.will_allow %}
-      <h4>
-        <i class="fa-solid fa-circle-check"
-           style="color:#047857;"></i>
-        سيُسمح قبل تسجيل الدخول:
-      </h4>
-      <ul class="npc-explain-do">
-        {% for v in explanation.will_allow %}
-          <li><code>{{ v }}</code></li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
-    {% if explanation.will_skip %}
-      <h4>
-        <i class="fa-regular fa-circle-pause"
-           style="color:#6b7280;"></i>
-        ما لن يُعدَّل
-      </h4>
-      <ul class="npc-explain-skip">
-        {% for line in explanation.will_skip %}
-          <li>{{ line }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
-    {% if explanation.warnings_ar or explanation.blocking %}
-      <h4>
-        <i class="fa-solid fa-triangle-exclamation"
-           style="color:#b45309;"></i>
-        تحذيرات
-      </h4>
-      <ul class="npc-explain-warn">
-        {% for w in explanation.blocking %}
-          <li><strong>محظور:</strong> {{ w }}</li>
-        {% endfor %}
-        {% for w in explanation.warnings_ar %}
-          <li>{{ w }}</li>
-        {% endfor %}
-      </ul>
+    {% set c = intelligence.conflicts %}
+    {% if not c.has_conflicts %}
+      <div class="npc-empty-inline" data-test="npc-conflicts-empty">
+        <i class="fa-regular fa-circle-check"></i>
+        لم يتم اكتشاف تعارضات.
+      </div>
+    {% else %}
+      {% for conflict in c.conflicts %}
+        <div class="npc-conflict
+                    {% if conflict.severity == 'high' %}is-high{% endif %}"
+             data-test="npc-conflict-card">
+          <div class="npc-conflict-head">
+            <span class="npc-conflict-title">
+              {{ conflict.policy_name }}
+            </span>
+            {% if conflict.severity == 'high' %}
+              <span class="npc-pill npc-pill-risk-high">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                خطر مرتفع
+              </span>
+            {% elif conflict.severity == 'medium' %}
+              <span class="npc-pill npc-pill-risk-mid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                خطر متوسط
+              </span>
+            {% else %}
+              <span class="npc-pill npc-pill-risk-low">
+                <i class="fa-solid fa-circle-info"></i>
+                ملاحظة
+              </span>
+            {% endif %}
+            <span style="color:#6b7280; font-size:12px;
+                         margin-inline-start:auto;">
+              {{ conflict.kind }}
+            </span>
+          </div>
+          <div class="npc-conflict-body">
+            {{ conflict.reason_ar }}
+          </div>
+          <div class="npc-conflict-rec">
+            <i class="fa-solid fa-lightbulb"
+               style="color:#b45309;"></i>
+            {{ conflict.recommendation_ar }}
+          </div>
+        </div>
+      {% endfor %}
     {% endif %}
   </div>
-</div>
 
-{# ─── Forward script viewer ─── #}
-<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
-  <div style="display:flex; align-items:center; gap:10px;
-              flex-wrap:wrap; margin-bottom:8px;">
-    <h3 style="margin:0; font-size:14.5px;">
+  {# ════════════════ SECTION 5 — Dependencies ═════════════════ #}
+  <div class="npc-section" data-test="npc-section-deps">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">5</span>
+      <h2><i class="fa-solid fa-diagram-project"
+             style="color:#6B5AED;"></i>
+        الخدمات التي قد تتأثَّر</h2>
+    </div>
+
+    {% set d = intelligence.dependencies %}
+    {% if not d.dependencies %}
+      <div class="npc-empty-inline" data-test="npc-deps-empty">
+        <i class="fa-regular fa-circle-check"></i>
+        لا توجد خدمات معروفة متوقَّع تأثرها بهذه السياسة.
+      </div>
+    {% else %}
+      <div class="npc-dep-grid">
+        {% for dep in d.dependencies %}
+          <div class="npc-dep-card" data-test="npc-dep-card">
+            <div class="npc-dep-title">
+              <i class="fa-solid fa-share-nodes"
+                 style="color:#6B5AED;"></i>
+              {{ dep.service_name }}
+              <span class="npc-dep-conf npc-dep-conf-{{ dep.confidence }}"
+                    data-test="npc-dep-confidence">
+                {% if dep.confidence == 'certain' %}مؤكَّد
+                {% elif dep.confidence == 'likely' %}مرجَّح
+                {% else %}محتمل{% endif %}
+              </span>
+            </div>
+            <div class="npc-dep-impact">
+              {{ dep.impact_ar }}
+            </div>
+            {% if dep.related_domains %}
+              <div class="npc-dep-related">
+                {% for rd in dep.related_domains[:8] %}
+                  <code>{{ rd }}</code>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% if d.warnings_ar %}
+        <p style="color:#6b7280; font-size:12px;
+                  margin-top:10px;">
+          <i class="fa-solid fa-circle-info"
+             style="color:#9ca3af;"></i>
+          {{ d.warnings_ar[0] }}
+        </p>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {# ════════════════ SECTION 6 — Smart Recommendations ══════ #}
+  <div class="npc-section" data-test="npc-section-recs">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">6</span>
+      <h2><i class="fa-solid fa-wand-magic-sparkles"
+             style="color:#6B5AED;"></i>
+        اقتراحات ذكيّة</h2>
+    </div>
+
+    {% set r = intelligence.recommendations %}
+    {% if not r.recommendations %}
+      <div class="npc-empty-inline" data-test="npc-recs-empty">
+        <i class="fa-regular fa-circle-check"></i>
+        لا توجد توصيات إضافيّة حالياً — السياسة تبدو سليمة.
+      </div>
+    {% else %}
+      {% for rec in r.recommendations %}
+        <div class="npc-rec is-priority-{{ rec.priority }}"
+             data-test="npc-rec-card">
+          <span class="npc-rec-num">{{ loop.index }}</span>
+          <div>
+            <div class="npc-rec-title">{{ rec.title_ar }}</div>
+            <div class="npc-rec-body">{{ rec.explanation_ar }}</div>
+          </div>
+          <div class="npc-rec-meta">
+            <span class="npc-pill npc-pill-status-draft">
+              {% if rec.confidence == 'high' %}عالية
+              {% elif rec.confidence == 'medium' %}متوسطة
+              {% else %}محدودة{% endif %}
+            </span>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  {# ════════════════ SECTION 7 — Canary Plan ═════════════════ #}
+  <div class="npc-section" data-test="npc-section-canary">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">7</span>
+      <h2><i class="fa-solid fa-route"
+             style="color:#6B5AED;"></i>
+        خطّة تطبيق آمنة مقترحة</h2>
+    </div>
+
+    {% set cn = intelligence.canary %}
+    <div class="npc-canary-banner">
+      <i class="fa-solid fa-circle-info"></i>
+      اقتراح فقط — لا يتم تنفيذ أي شيء تلقائياً.
+      <span style="margin-inline-start:auto; font-weight:700;">
+        {% if cn.recommended_strategy == 'full' %}تطبيق مباشر
+        {% elif cn.recommended_strategy == 'staged' %}تطبيق على مرحلتين
+        {% elif cn.recommended_strategy == 'canary' %}Canary تدريجي
+        {% else %}إيقاف وإعادة تخطيط{% endif %}
+      </span>
+    </div>
+
+    <p style="color:#374151; font-size:13.5px;
+              margin: 0 0 12px;">
+      {{ cn.recommendation_ar }}
+    </p>
+
+    <ol class="npc-canary-steps">
+      {% for step in cn.steps %}
+        <li>
+          <span class="npc-canary-step-text">{{ step }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+
+    <div class="npc-canary-note">
+      <i class="fa-regular fa-clock"
+         style="color:#6b7280;"></i>
+      الوقت المقترح بين كل مرحلة:
+      {{ cn.wait_time_recommendation_ar }}
+    </div>
+  </div>
+
+  {# ════════════════ SECTION 8 — Rollback Confidence ════════ #}
+  <div class="npc-section" data-test="npc-section-rollback">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">8</span>
+      <h2><i class="fa-solid fa-rotate-left"
+             style="color:#6B5AED;"></i>
+        إمكانية التراجع</h2>
+    </div>
+
+    {% if intelligence.impact.rollback_available %}
+      <div class="npc-rollback-card" data-test="npc-rollback-ok">
+        <span class="npc-rollback-icon">
+          <i class="fa-solid fa-check"></i>
+        </span>
+        <div class="npc-rollback-text">
+          {{ intelligence.impact.rollback_explanation_ar }}
+        </div>
+      </div>
+    {% else %}
+      <div class="npc-rollback-card is-warn"
+           data-test="npc-rollback-warn">
+        <span class="npc-rollback-icon">
+          <i class="fa-solid fa-exclamation"></i>
+        </span>
+        <div class="npc-rollback-text">
+          {{ intelligence.impact.rollback_explanation_ar }}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════ SECTION 9 — Beginner Glossary ══════════ #}
+  <div class="npc-section" data-test="npc-section-glossary">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">9</span>
+      <h2><i class="fa-regular fa-circle-question"
+             style="color:#6B5AED;"></i>
+        شرح مبسَّط للمصطلحات</h2>
+    </div>
+    <p class="npc-section-sub">
+      {{ intelligence.beginner.simple_ar }}
+    </p>
+
+    {% set g = intelligence.beginner.glossary %}
+    {% if not g %}
+      <div class="npc-empty-inline">
+        <i class="fa-regular fa-circle-check"></i>
+        لا توجد مصطلحات إضافية تحتاج شرحاً لهذه السياسة.
+      </div>
+    {% else %}
+      <details>
+        <summary style="cursor:pointer; user-select:none;
+                        color:#6B5AED; font-weight:700;
+                        font-size:13px; margin-bottom:10px;">
+          <i class="fa-regular fa-rectangle-list"></i>
+          إظهار/إخفاء قائمة المصطلحات ({{ g|length }})
+        </summary>
+        <div class="npc-glossary" style="margin-top:10px;">
+          {% for item in g %}
+            <div class="npc-gloss-card"
+                 data-test="npc-glossary-item">
+              <div class="npc-gloss-term">
+                {{ item.label_ar }}
+              </div>
+              <div class="npc-gloss-explain">
+                {{ item.explanation_ar }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </details>
+    {% endif %}
+
+    {% if intelligence.beginner.operator_notes_ar %}
+      <div style="margin-top:14px;
+                  padding:10px 12px;
+                  background:#fafbfd;
+                  border:1px solid #EEEDF3;
+                  border-radius:8px;">
+        <strong style="font-size:12.5px; color:#374151;">
+          <i class="fa-solid fa-lightbulb"
+             style="color:#b45309;"></i>
+          ملاحظات للمشغّل
+        </strong>
+        <ul style="margin:6px 0 0; padding-inline-start:20px;
+                    font-size:12.5px; color:#4b5563;
+                    line-height:1.75;">
+          {% for note in intelligence.beginner.operator_notes_ar %}
+            <li>{{ note }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════ SECTION 10 — Script Viewer (secondary) ═ #}
+  <details class="npc-script-section"
+           data-test="npc-section-script">
+    <summary>
+      <span class="npc-sec-num">10</span>
       <i class="fa-solid fa-file-code"
          style="color:#6B5AED;"></i>
-      سكربت forward (RouterOS v7)
-    </h3>
-    <span class="npc-script-tag">
-      hash: {{ script_hash[:16] }}…
-    </span>
-    <span class="npc-script-tag" style="background:#eef2ff;
-                                        color:#4338ca;">
-      {{ summary.command_count }} سطر فعّال
-    </span>
-    <div style="margin-inline-start:auto; display:flex; gap:6px;">
-      <button class="npc-btn" type="button"
-              onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';"
-              {% if not forward_script %}disabled{% endif %}>
-        <i class="fa-regular fa-clipboard"></i>
-        نسخ
-      </button>
-      {% if forward_script %}
-        <a class="npc-btn"
-           href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
-           download>
-          <i class="fa-solid fa-download"></i>
-          .rsc
-        </a>
+      سكربت MikroTik (للمتقدّمين)
+      <span style="margin-inline-start:10px; color:#6b7280;
+                   font-size:12px; font-weight:500;">
+        {{ summary.command_count }} سطر فعّال ·
+        hash: {{ script_hash[:12] }}…
+      </span>
+    </summary>
+
+    <div class="npc-script-body">
+      {% if render_error %}
+        <div class="npc-card" style="border-color:#fecaca;
+                                      background:#fef2f2;
+                                      color:#b91c1c;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ render_error }}
+        </div>
+      {% elif not forward_script %}
+        <div style="color:#6b7280; font-size:13px;
+                    padding:8px 0;">
+          لا يمكن توليد السكربت في حالته الحاليّة. عالج
+          المشاكل الموضَّحة أعلاه ثم اضغط
+          «توليد المعاينة».
+        </div>
+      {% else %}
+        <div style="display:flex; gap:6px; align-items:center;
+                    flex-wrap:wrap; margin-bottom:10px;">
+          <strong style="font-size:13px;">
+            سكربت forward
+          </strong>
+          <span style="margin-inline-start:auto;
+                       display:flex; gap:6px;">
+            <button class="npc-btn" type="button"
+              onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';">
+              <i class="fa-regular fa-clipboard"></i>
+              نسخ
+            </button>
+            <a class="npc-btn"
+               href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
+               download>
+              <i class="fa-solid fa-download"></i>
+              .rsc
+            </a>
+          </span>
+        </div>
+        <pre class="npc-script-pre" id="npc-forward"
+        >{{ forward_script }}</pre>
+
+        {% if rollback_script %}
+          <div style="display:flex; gap:6px; align-items:center;
+                      flex-wrap:wrap; margin: 14px 0 10px;">
+            <strong style="font-size:13px;">
+              سكربت rollback (التراجع)
+            </strong>
+            <span style="margin-inline-start:auto;">
+              <button class="npc-btn" type="button"
+                onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
+                <i class="fa-regular fa-clipboard"></i>
+                نسخ
+              </button>
+            </span>
+          </div>
+          <pre class="npc-script-pre" id="npc-rollback"
+          >{{ rollback_script }}</pre>
+        {% endif %}
       {% endif %}
     </div>
-  </div>
-
-  {% if render_error %}
-    <div class="npc-card" style="border-color:#fecaca;
-                                  background:#fef2f2;
-                                  color:#b91c1c;">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      {{ render_error }}
-    </div>
-  {% elif not forward_script %}
-    <div style="color:#6b7280; font-size:13px;
-                padding:8px 0;">
-      لا يمكن توليد السكربت في حالته الحاليّة. أضف عناصر أو
-      عالج الأخطاء الموضّحة أعلاه ثم اضغط «توليد المعاينة».
-    </div>
-  {% else %}
-    <pre class="npc-script-pre" id="npc-forward"
-    >{{ forward_script }}</pre>
-  {% endif %}
+  </details>
 </div>
-
-{# ─── Rollback script viewer ─── #}
-{% if rollback_script %}
-<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
-  <div style="display:flex; align-items:center; gap:10px;
-              flex-wrap:wrap; margin-bottom:8px;">
-    <h3 style="margin:0; font-size:14.5px;">
-      <i class="fa-solid fa-rotate-left"
-         style="color:#6B5AED;"></i>
-      سكربت rollback (التراجع)
-    </h3>
-    <span class="npc-script-tag">
-      يُزيل المعرَّفات بـ
-      <code>{{ plan.comment_prefix }}</code> فقط
-    </span>
-    <div style="margin-inline-start:auto;">
-      <button class="npc-btn" type="button"
-              onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
-        <i class="fa-regular fa-clipboard"></i>
-        نسخ
-      </button>
-    </div>
-  </div>
-  <pre class="npc-script-pre" id="npc-rollback"
-  >{{ rollback_script }}</pre>
-  <p style="font-size:12.5px; color:#4b5563; margin-top:10px;">
-    <i class="fa-solid fa-shield-halved"
-       style="color:#047857;"></i>
-    {{ explanation.rollback_ar }}
-  </p>
-</div>
-{% endif %}
 
 <div style="margin-top:18px; color:#6b7280; font-size:12.5px;">
-  <i class="fa-solid fa-circle-info"
+  <i class="fa-solid fa-shield-halved"
      style="color:#6B5AED;"></i>
-  تذكير: هذه الصفحة لا تتّصل بالـ MikroTik. لتطبيق هذا السكربت
-  انسخه وأدخله يدويّاً عبر terminal الراوتر، أو انتظر مرحلة
-  «التطبيق المحمي» القادمة في خارطة الطريق.
+  تذكير: هذه الصفحة لا تتّصل بالـ MikroTik. كل ما تراه
+  هو تحليل + معاينة فقط. التطبيق المباشر مرحلة لاحقة
+  محمية بصلاحية منفصلة.
 </div>
 {% endblock %}
