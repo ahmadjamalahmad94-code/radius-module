@@ -148,4 +148,99 @@ def compute_access_urls(
     return out
 
 
-__all__ = ["compute_access_urls"]
+def compute_remote_access_urls(
+    policy: Mapping,
+    public_host: str,
+    mappings: list[dict],
+) -> list[dict]:
+    """Build the "from outside the network (via VPS)" URL list.
+
+    Each enabled service in `policy` is matched with its
+    `npc_remote_port_mappings` row to produce a URL the
+    operator can use from anywhere on the internet —
+    `<public_host>:<public_port>` — that the VPS forwards to
+    the router's local port over the WG tunnel.
+
+    Empty list if no mappings or no public host configured.
+    """
+    if not public_host:
+        return []
+    by_service: dict[str, dict] = {
+        str(m["service"]): m for m in (mappings or [])
+        if bool(m.get("enabled"))
+    }
+    if not by_service:
+        return []
+
+    out: list[dict] = []
+
+    def _emit(svc_key: str, label_ar: str, hint_ar: str,
+              url_factory):
+        m = by_service.get(svc_key)
+        if m is None:
+            return
+        port = int(m["public_port"])
+        url, clip = url_factory(public_host, port)
+        out.append({
+            "service":     svc_key,
+            "service_ar":  label_ar,
+            "host":        public_host,
+            "port":        port,
+            "url":         url,
+            "clipboard":   clip,
+            "hint_ar":     hint_ar,
+        })
+
+    if policy.get("allow_winbox"):
+        _emit(
+            "winbox", "وينبوكس (Winbox) — من خارج الشبكة",
+            "افتح Winbox وأدخل عنوان VPS مع الـ port المعطى.",
+            lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
+        )
+    if policy.get("allow_webfig_https"):
+        _emit(
+            "webfig_https",
+            "ويب-فيغ آمن (HTTPS) — من خارج الشبكة",
+            "افتح الرابط في المتصفّح من أي مكان.",
+            lambda h, p: (
+                f"https://{h}:{p}/",
+                f"https://{h}:{p}/",
+            ),
+        )
+    if policy.get("allow_webfig_http"):
+        _emit(
+            "webfig_http",
+            "ويب-فيغ (HTTP) — من خارج الشبكة",
+            "اتصال غير مشفّر — يُفضَّل HTTPS.",
+            lambda h, p: (
+                f"http://{h}:{p}/",
+                f"http://{h}:{p}/",
+            ),
+        )
+    if policy.get("allow_ssh"):
+        _emit(
+            "ssh", "SSH — من خارج الشبكة",
+            "استخدم اسم المستخدم على الراوتر.",
+            lambda h, p: (
+                f"{h}:{p}",
+                f"ssh -p {p} admin@{h}",
+            ),
+        )
+    if policy.get("allow_api_ssl"):
+        _emit(
+            "api_ssl",
+            "MikroTik API — TLS — من خارج الشبكة",
+            "للتطبيقات التي تتصل عبر MikroTik API (TLS).",
+            lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
+        )
+    if policy.get("allow_api"):
+        _emit(
+            "api", "MikroTik API — من خارج الشبكة",
+            "API غير مشفّر — يُفضَّل API-SSL.",
+            lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
+        )
+
+    return out
+
+
+__all__ = ["compute_access_urls", "compute_remote_access_urls"]

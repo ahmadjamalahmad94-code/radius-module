@@ -1010,18 +1010,22 @@ def _build_intelligence(
     # the operator will use once the policy is applied. Pure
     # function — no router contact.
     access_urls: list[dict] = []
+    remote_access_urls: list[dict] = []
     if svc.key == nc.SERVICE_REMOTE_ACCESS:
         try:
             from ..services.npc_remote_access_urls import (
                 compute_access_urls,
+                compute_remote_access_urls,
             )
-            from ..db.repos import nas_repo
+            from ..services import npc_remote_tunnel
+            from ..db.repos import (
+                nas_repo,
+                npc_remote_port_mappings_repo as ports_repo,
+            )
             nas_obj = nas_repo.get_nas(
                 _tid(), int(policy["router_id"]),
             )
             if nas_obj is not None:
-                # nas_repo returns a dataclass — turn into a
-                # mapping for the helper.
                 nas_dict = {
                     "address":  nas_obj.address,
                     "ssh_port": nas_obj.ssh_port,
@@ -1029,20 +1033,34 @@ def _build_intelligence(
                 access_urls = compute_access_urls(
                     policy, nas_dict,
                 )
+            # VPS-public URLs come from the saved port mappings.
+            # If the operator hasn't applied yet, the list is
+            # empty and the section quietly hides itself.
+            host = (npc_remote_tunnel.public_host()
+                    or (request.host.split(":", 1)[0]
+                        if request else ""))
+            mappings = ports_repo.list_for_router(
+                int(policy["router_id"]),
+            )
+            remote_access_urls = compute_remote_access_urls(
+                policy, host, mappings,
+            )
         except Exception:  # noqa: BLE001
             access_urls = []
+            remote_access_urls = []
 
     return {
-        "impact":          impact,
-        "conflicts":       conflicts,
-        "dependencies":    dependencies,
-        "blast":           blast,
-        "beginner":        beginner,
-        "canary":          canary,
-        "health":          health,
-        "recommendations": recommendations,
-        "readiness":       readiness,
-        "access_urls":     access_urls,
+        "impact":              impact,
+        "conflicts":           conflicts,
+        "dependencies":        dependencies,
+        "blast":               blast,
+        "beginner":            beginner,
+        "canary":              canary,
+        "health":              health,
+        "recommendations":     recommendations,
+        "readiness":           readiness,
+        "access_urls":         access_urls,
+        "remote_access_urls":  remote_access_urls,
     }
 
 
@@ -1295,6 +1313,29 @@ def _make_apply_view(svc: _ServiceDef):
             health=intelligence["health"],
             canary=intelligence["canary"],
         )
+
+        # For successful remote-access applies, allocate VPS
+        # public ports for the enabled services + regenerate
+        # nginx stream config. This is what makes Winbox / SSH
+        # / WebFig reachable from outside the network via the
+        # VPS tunnel.
+        if (result.ok
+                and svc.key == nc.SERVICE_REMOTE_ACCESS):
+            try:
+                from ..services import npc_remote_tunnel as _tun
+                _tun.ensure_tunnels_for_policy(
+                    tenant_id=_tid(), policy=policy,
+                )
+                _tun.regenerate_and_reload()
+            except Exception:  # noqa: BLE001
+                # Don't break the apply success path because of
+                # an nginx wiring issue — operator can retry.
+                current_app.logger.exception(
+                    "npc remote-tunnel wiring failed for "
+                    "router=%d policy=%d",
+                    int(policy["router_id"]),
+                    int(policy["id"]),
+                )
 
         # Surface the result via flash + redirect back to the
         # preview page. Phase 6 will render a dedicated result

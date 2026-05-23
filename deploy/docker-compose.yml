@@ -18,6 +18,10 @@ services:
       #   and reloads `wg syncconf`. Created with gid=999 by
       #   `deploy.sh init-wg-reloader`.
       - /etc/hoberadius/wg-peers.d:/etc/hoberadius/wg-peers.d:rw
+      # NPC remote-tunnel (Phase 5R): hoberadius writes per-router
+      # nginx stream config files here; the nginx container reads
+      # the same directory + auto-reloads via its sidecar loop.
+      - /etc/hoberadius/nginx-streams.d:/etc/hoberadius/nginx-streams.d:rw
     networks: [hrnet]
     expose: ["8000"]
 
@@ -62,11 +66,25 @@ services:
     image: nginx:alpine
     container_name: hoberadius-nginx
     restart: unless-stopped
-    ports: ["80:80", "443:443"]
+    ports:
+      - "80:80"
+      - "443:443"
+      # Phase 5R NPC remote-tunnel — 200 TCP ports for Winbox /
+      # SSH / WebFig / API forwarding to internal routers via
+      # the VPS public IP. See app/radius/services/npc_remote_tunnel.py
+      # for the allocator + nginx-stream config generator.
+      - "51000-51199:51000-51199/tcp"
     volumes:
+      # The main nginx.conf is now our own — it includes the
+      # http {} block (existing reverse proxy) plus a stream {}
+      # block at top level for the per-router TCP forwarders.
+      - ./nginx-main.conf:/etc/nginx/nginx.conf:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/hoberadius/nginx-streams.d:/etc/nginx/streams.d:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      - ./nginx-entrypoint.sh:/usr/local/bin/nginx-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/nginx-entrypoint.sh"]
     networks: [hrnet]
     depends_on:
       - hoberadius

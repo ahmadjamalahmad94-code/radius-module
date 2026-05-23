@@ -874,6 +874,97 @@
   </div>
   {% endif %}
 
+  {# ════════ SECTION 1d — Remote (via-VPS) Access URLs ════════ #}
+  {% if intelligence.remote_access_urls %}
+  <div class="npc-section"
+       data-test="npc-section-remote-access-urls">
+    <div class="npc-section-head">
+      <span class="npc-sec-num" style="background:#EEF2FF;
+                                       color:#4F46E5;">🌍</span>
+      <h2><i class="fa-solid fa-globe"
+             style="color:#6366F1;"></i>
+        روابط الوصول من خارج الشبكة (عبر VPS)</h2>
+    </div>
+
+    <p style="margin:6px 0 14px; color:#6b7280;
+              font-size:13px;">
+      هذه روابط <strong>عامّة</strong> تمرّ عبر VPS الذي يحوّل
+      الاتصال إلى الراوتر عبر النفق الآمن. تعمل من أيّ مكان في
+      العالم — مفيدة حين تكون خارج الشبكة المحلّية للراوتر.
+    </p>
+
+    <div style="display:grid; gap:10px;"
+         data-test="npc-remote-access-url-list">
+    {% for ep in intelligence.remote_access_urls %}
+      <div data-test="npc-remote-access-url-item"
+           data-service="{{ ep.service }}"
+           style="display:flex; align-items:center;
+                  gap:12px; padding:12px 14px;
+                  background:#EEF2FF;
+                  border:1px solid #C7D2FE;
+                  border-radius:10px;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; font-size:13.5px;
+                      color:#312E81;">
+            {{ ep.service_ar }}
+          </div>
+          <div style="margin-top:4px;
+                      font-family:monospace;
+                      font-size:14px;
+                      color:#1E3A8A;
+                      word-break:break-all;">
+            {% if ep.url.startswith('http') %}
+              <a href="{{ ep.url }}" target="_blank"
+                 rel="noopener noreferrer"
+                 style="color:#3730A3;
+                        text-decoration:none;">
+                {{ ep.url }}
+                <i class="fa-solid fa-arrow-up-right-from-square"
+                   style="font-size:11px;
+                          color:#9ca3af;"></i>
+              </a>
+            {% else %}
+              {{ ep.url }}
+            {% endif %}
+          </div>
+          <div style="margin-top:4px; font-size:11.5px;
+                      color:#4338CA;">
+            {{ ep.hint_ar }}
+          </div>
+        </div>
+        <button type="button"
+                onclick="navigator.clipboard
+                         .writeText('{{ ep.clipboard }}');
+                         this.textContent='تم النسخ';"
+                style="background:#EEF2FF; color:#3730A3;
+                       border:1px solid #A5B4FC;
+                       padding:6px 12px; border-radius:8px;
+                       font-size:12px; cursor:pointer;
+                       white-space:nowrap;">
+          <i class="fa-regular fa-copy"></i> نسخ
+        </button>
+      </div>
+    {% endfor %}
+    </div>
+
+    <div style="margin-top:12px; padding:10px 12px;
+                background:#FEF3C7; border:1px solid #FDE68A;
+                border-radius:8px; font-size:12px;
+                color:#78350F;">
+      <i class="fa-solid fa-shield-halved"></i>
+      ⚠️ هذه الروابط <strong>متاحة على الإنترنت العامّ</strong>.
+      تأكّد من أنّ:
+      <ul style="margin:6px 0 0 18px; padding:0;">
+        <li>كلمة مرور الراوتر قوية ولم تتسرّب.</li>
+        <li>قائمة العناوين المسموحة على الراوتر
+          ({{ policy.source_address_list or 'غير محدّدة' }})
+          تشمل عنوان VPS الـ WG حتى يعمل التحويل.</li>
+        <li>صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً.</li>
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
   {# ════════════════ SECTION 2 — What Will Happen ════════════ #}
   <div class="npc-section" data-test="npc-section-impact">
     <div class="npc-section-head">
