@@ -80,11 +80,17 @@
             <select name="router_id" id="router_id" required>
               <option value="">— اختر —</option>
               {% for r in routers %}
-                <option value="{{ r.id }}">
+                <option value="{{ r.id }}"
+                  {% if preset_router_id and r.id == preset_router_id %}selected{% endif %}>
                   {{ r.name }} ({{ r.address }})
                 </option>
               {% endfor %}
             </select>
+            {% if preset_router_id %}
+              <span class="npc-field-hint">
+                الراوتر مُحدَّد مسبقاً لأنك دخلت من لوحة هذا الراوتر.
+              </span>
+            {% endif %}
           {% endif %}
         </div>
 

@@ -6,9 +6,19 @@
 
 {% block title %}{{ page_title }} — مركز سياسات الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
-{% block page_title %}{{ service.label_ar }}{% endblock %}
+{% block page_title %}
+  {% if scoped_to_nas %}سياسات الراوتر — {{ scoped_to_nas.name }}
+  {% else %}{{ service.label_ar }}{% endif %}
+{% endblock %}
 {% block page_sub %}
-  <span class="sub">معاينة فقط — مركز سياسات الشبكة</span>
+  <span class="sub">
+    {% if scoped_to_nas %}
+      {{ service.label_ar }} · NAS #{{ scoped_to_nas.id }}
+      · {{ scoped_to_nas.address }}
+    {% else %}
+      معاينة فقط — مركز سياسات الشبكة
+    {% endif %}
+  </span>
 {% endblock %}
 
 {% block head_extra %}
@@ -19,18 +29,69 @@
 {% block content %}
 {{ npc.npc_dry_run_banner() }}
 
-{{ npc.npc_tabs(service.url_slug, services) }}
+{% if scoped_to_nas %}
+  {# Router-context strip — same visual language as the
+     dashboard's quicknav so the operator knows they're
+     still "inside" the router. #}
+  <div style="display:flex; gap:8px; align-items:center;
+              flex-wrap:wrap; margin-bottom:12px;
+              padding:10px 14px;
+              background:#fafbfd;
+              border:1px solid #EEEDF3;
+              border-radius:10px;">
+    <a class="npc-btn"
+       href="{{ url_for('radius.mt_dashboard',
+                        nas_id=scoped_to_nas.id) }}">
+      <i class="fa-solid fa-arrow-right"></i>
+      العودة إلى لوحة الراوتر
+    </a>
+    <span style="color:#374151; font-size:13.5px;
+                 font-weight:700;">
+      <i class="fa-solid fa-router"
+         style="color:#6B5AED;"></i>
+      {{ scoped_to_nas.name }}
+    </span>
+    <span style="color:#6b7280; font-size:12.5px;">
+      ({{ scoped_to_nas.address }})
+    </span>
+  </div>
+
+  {# Per-router NPC tabs — three sub-services scoped to this
+     router. Same visual language as `npc_tabs` but the URLs
+     carry the nas_id. #}
+  <nav class="npc-tabs"
+       aria-label="سياسات الراوتر">
+    {% for s in services %}
+      <a class="npc-tab{% if s.url_slug == service.url_slug %} is-active{% endif %}"
+         href="{{ url_for('radius.npc_' ~ s.key ~ '_list_scoped',
+                          nas_id=scoped_to_nas.id) }}">
+        <span class="npc-tab-icon">
+          <i class="fa-solid fa-{{ s.icon }}"></i>
+        </span>
+        <span class="npc-tab-label">{{ s.label_ar }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+{% else %}
+  {{ npc.npc_tabs(service.url_slug, services) }}
+{% endif %}
 
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
   <h2 style="margin:0; font-size:18px;">
-    قائمة سياسات {{ service.label_ar }}
+    {% if scoped_to_nas %}
+      سياسات {{ service.label_ar }} لهذا الراوتر
+    {% else %}
+      قائمة سياسات {{ service.label_ar }}
+    {% endif %}
   </h2>
   <span style="color:#6b7280; font-size:13px;">
     ({{ cards|length }} عنصر)
   </span>
   <a class="npc-btn is-primary"
      style="margin-inline-start:auto;"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_new') }}">
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_new')
+              ~ ('?router_id=' ~ scoped_to_nas.id
+                 if scoped_to_nas else '') }}">
     <i class="fa-solid fa-plus"></i>
     سياسة جديدة
   </a>

@@ -1,0 +1,126 @@
+{# NPC global landing — pick a router.
+
+   The sidebar entry "سياسات الشبكة" lands here. The page is a
+   simple cards grid of routers, each with per-service policy
+   counts. Clicking a card takes the operator to the per-
+   router NPC tabs inside the router's dashboard. #}
+
+{% extends "admin/_admin_layout.html" %}
+{% import "radius/_network_policy_shell.html" as npc %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
+{% block page_title %}سياسات الشبكة{% endblock %}
+{% block page_sub %}
+  <span class="sub">اختر راوتراً لإدارة سياساته</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  {% include "radius/_network_policy_shell.html" %}
+  <style>
+    .npc-rp-grid {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .npc-rp-card {
+      display: block;
+      text-decoration: none; color: inherit;
+      background: #fff;
+      border: 1px solid #EEEDF3;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .npc-rp-card:hover {
+      border-color: #6B5AED;
+      transform: translateY(-1px);
+    }
+    .npc-rp-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .npc-rp-name {
+      font-weight: 800; color: #1F2937; font-size: 15px;
+    }
+    .npc-rp-addr {
+      color: #6b7280; font-size: 12px;
+      font-family: ui-monospace, monospace;
+      margin-inline-start: auto;
+    }
+    .npc-rp-counts {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      font-size: 12px;
+    }
+    .npc-rp-count {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px;
+      background: #F4F1FE; color: #4036A6;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .npc-rp-count[data-zero="1"] {
+      background: #f3f4f6; color: #6b7280;
+      font-weight: 500;
+    }
+    .npc-rp-empty {
+      text-align: center; padding: 48px 24px;
+      color: #6b7280;
+      border: 2px dashed #E3E1EC;
+      border-radius: 12px;
+      background: #fafbfd;
+    }
+    .npc-rp-empty i {
+      font-size: 28px; color: #c7c4d8;
+      margin-bottom: 10px; display: block;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+{{ npc.npc_dry_run_banner() }}
+
+<div style="margin-bottom:12px; color:#4b5563;
+            font-size:13.5px; line-height:1.7;">
+  السياسات تعمل على الراوتر مباشرة — لذلك اختر الراوتر أوّلاً
+  ثم ادخل لتبويبات السياسات داخل لوحته. كل تبويب يعرض السياسات
+  الخاصّة بذلك الراوتر فقط.
+</div>
+
+{% if not routers %}
+  <div class="npc-rp-empty">
+    <i class="fa-regular fa-folder-open"></i>
+    <div style="font-weight:700; margin-bottom:6px;">
+      لا توجد راوترات في هذا المستأجر بعد.
+    </div>
+    <div style="font-size:13px;">
+      أضف راوتراً من «أجهزة الشبكة» ثم ارجع إلى هذه الصفحة.
+    </div>
+  </div>
+{% else %}
+  <div class="npc-rp-grid">
+    {% for r in routers %}
+      <a class="npc-rp-card"
+         href="{{ url_for('radius.npc_router_landing',
+                          nas_id=r.id) }}">
+        <div class="npc-rp-head">
+          <i class="fa-solid fa-router"
+             style="color:#6B5AED;"></i>
+          <span class="npc-rp-name">{{ r.name }}</span>
+          <span class="npc-rp-addr">{{ r.address }}</span>
+        </div>
+        <div class="npc-rp-counts">
+          {% for s in services %}
+            <span class="npc-rp-count"
+                  data-zero="{{ '1' if not r.counts[s.key] else '0' }}">
+              <i class="fa-solid fa-{{ s.icon }}"></i>
+              {{ s.label_ar }} · {{ r.counts[s.key] }}
+            </span>
+          {% endfor %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

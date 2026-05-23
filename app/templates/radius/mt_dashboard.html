@@ -73,6 +73,14 @@
       <span class="mt-router-quicknav-label">توجيه مواقع عبر VPS</span>
       <span class="mt-router-quicknav-sub">VX2 — وجهات مختارة فقط</span>
     </a>
+    <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}"
+       data-mt-router-link="network-policies"
+       data-test="mt-dashboard-npc-link">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span class="mt-router-quicknav-label">سياسات الشبكة</span>
+      <span class="mt-router-quicknav-sub">وصول · حظر · إستثناءات</span>
+    </a>
   </nav>
 
   {# P1 — Tabs strip. The current K9 dashboard goes under

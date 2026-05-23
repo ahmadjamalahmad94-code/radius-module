@@ -149,19 +149,27 @@ def _seed_router(app, name="rt1"):
 # ─── Sidebar entries ─────────────────────────────────────────
 
 
-def test_sidebar_renders_three_npc_entries(app, client, monkeypatch):
+def test_sidebar_renders_single_npc_entry(app, client, monkeypatch):
+    """NPC was three sidebar items; it now collapses to one
+    entry pointing at the router-picker. Per-service tabs live
+    inside each router's dashboard (see test_dashboard_links_to_npc)."""
     _login_super(client, app, monkeypatch)
     r = client.get("/admin/radius/")
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    # The three sub-service URLs appear in the sidebar.
-    assert "/admin/radius/network-policy/remote-access/" in html
-    assert "/admin/radius/network-policy/web-block/" in html
-    assert "/admin/radius/network-policy/walled-garden/" in html
-    # Arabic labels render.
-    assert "الوصول البعيد" in html
-    assert "حظر المواقع" in html
-    assert "المواقع المسموحة" in html
+    # The single landing URL appears.
+    assert "/admin/radius/network-policy/" in html
+    # The single Arabic label appears.
+    assert "اختر راوتراً" in html
+    # The three old direct sub-service links are gone from
+    # the sidebar (they still exist as routes, just not
+    # surfaced there).
+    assert "/admin/radius/network-policy/remote-access/" \
+        not in html.split('</aside>')[0]
+    assert "/admin/radius/network-policy/web-block/" \
+        not in html.split('</aside>')[0]
+    assert "/admin/radius/network-policy/walled-garden/" \
+        not in html.split('</aside>')[0]
 
 
 # ─── List page ───────────────────────────────────────────────
@@ -188,16 +196,22 @@ def test_list_pages_render_with_dry_run_banner(
     assert label in html
 
 
-def test_landing_redirects_to_remote_access(
+def test_landing_renders_router_picker(
     app, client, monkeypatch,
 ):
+    """The global landing used to redirect straight to the
+    remote-access list. It now renders a router-picker grid
+    — the operator picks a router before seeing policies."""
     _login_super(client, app, monkeypatch)
     r = client.get(
         "/admin/radius/network-policy/",
         follow_redirects=False,
     )
-    assert r.status_code in (301, 302, 303, 307, 308)
-    assert "remote-access" in r.headers["Location"]
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "اختر راوتراً" in html
+    # The dry-run banner still rides every NPC page.
+    assert "معاينة فقط (Dry-Run)" in html
 
 
 # ─── Permission gates ────────────────────────────────────────

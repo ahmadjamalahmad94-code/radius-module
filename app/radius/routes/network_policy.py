@@ -329,11 +329,22 @@ def _risk_for(svc: _ServiceDef, policy: dict) -> str:
 
 
 def register_network_policy_routes(bp: Blueprint) -> None:
-    # Landing — redirect to the remote-access list.
+    # Landing — now a router-picker (was: redirect to
+    # remote-access list). The intent: the operator picks a
+    # router first, then sees that router's policies — which
+    # matches how MikroTik state actually scopes anyway.
     bp.add_url_rule(
         "/network-policy/",
         "network_policy_index",
         npc_index,
+        methods=["GET"],
+    )
+    # Per-router landing — redirects to the remote-access
+    # tab of the picked router. Linked as a dashboard tab.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/network-policies/",
+        "npc_router_landing",
+        _npc_router_landing,
         methods=["GET"],
     )
 
@@ -348,6 +359,17 @@ def register_network_policy_routes(bp: Blueprint) -> None:
             f"/network-policy/{url_slug}/",
             f"npc_{svc.key}_list",
             requires_perm(view)(_make_list_view(svc)),
+            methods=["GET"],
+        )
+        # Per-router scoped list — shares the same template,
+        # filtered to one router. Surfaced as a dashboard tab
+        # so the operator's daily entry point is the router
+        # itself, not a global services menu.
+        bp.add_url_rule(
+            f"/mt/<int:nas_id>/network-policies/{url_slug}/",
+            f"npc_{svc.key}_list_scoped",
+            requires_perm(view)(
+                _make_list_view(svc, scoped=True)),
             methods=["GET"],
         )
         bp.add_url_rule(
@@ -405,18 +427,98 @@ def register_network_policy_routes(bp: Blueprint) -> None:
 
 
 def npc_index():
+    """Global landing — now a router-picker.
+
+    Operators reach NPC by picking the router first. Each row
+    on this page is a small card linking to the per-router
+    NPC page under `/admin/radius/mt/<nas_id>/network-policies/`.
+    The old per-service global lists stay alive (the JSON API
+    still uses them) but they're no longer surfaced in the UI.
+    """
+    routers = _nas_list()
+    summary: list[dict] = []
+    for r in routers:
+        rid = int(r["id"])
+        counts = {
+            "remote_access": len(
+                ra_repo.list_for_router(_tid(), rid)
+            ),
+            "web_block": len(
+                wb_repo.list_policies_for_router(_tid(), rid)
+            ),
+            "walled_garden": len(
+                wg_repo.list_policies_for_router(_tid(), rid)
+            ),
+        }
+        summary.append({
+            "id":      rid,
+            "name":    r.get("name") or f"router #{rid}",
+            "address": r.get("address") or "",
+            "counts":  counts,
+            "total":   sum(counts.values()),
+        })
+    return render_template(
+        "radius/network_policy_router_picker.html",
+        services=list(_REGISTRY.values()),
+        routers=summary,
+        page_title="سياسات الشبكة — اختر راوتراً",
+    )
+
+
+def _npc_router_landing(nas_id: int):
+    """Per-router NPC landing — redirects to the
+    remote-access tab of the picked router."""
     return redirect(url_for(
-        f"radius.npc_{nc.SERVICE_REMOTE_ACCESS}_list"
+        f"radius.npc_{nc.SERVICE_REMOTE_ACCESS}_list_scoped",
+        nas_id=int(nas_id),
     ))
 
 
 # ─── List view ───────────────────────────────────────────────
 
 
-def _make_list_view(svc: _ServiceDef):
-    def _view():
+def _make_list_view(svc: _ServiceDef, *, scoped: bool = False):
+    """Build the policy-list view.
+
+    `scoped=True` registers the variant that takes a `nas_id`
+    URL parameter and filters policies to that single router.
+    The two variants share a body so the cards layout stays
+    identical between the global list (admin-only diagnostic
+    surface) and the per-router list (the operator's daily
+    entry point)."""
+
+    def _view_global():
+        return _render_list(scoped_to_nas=None)
+
+    def _view_scoped(nas_id: int):
+        # Validate the router belongs to this tenant; 404 if
+        # not — same posture as every other /mt/<id>/* route.
+        nas_row = db().execute(
+            "SELECT id, name, address FROM nas_devices "
+            "WHERE id=? AND tenant_id=? "
+            "  AND (deleted_at IS NULL OR deleted_at='')",
+            (int(nas_id), _tid()),
+        ).fetchone()
+        if not nas_row:
+            abort(404)
+        return _render_list(scoped_to_nas=dict(nas_row))
+
+    def _render_list(*, scoped_to_nas):
         ad = _adapter(svc)
-        rows = ad.list_for_tenant(_tid())
+        if scoped_to_nas is not None:
+            rid = int(scoped_to_nas["id"])
+            if svc.key == nc.SERVICE_REMOTE_ACCESS:
+                rows = ra_repo.list_for_router(_tid(), rid)
+            elif svc.key == nc.SERVICE_WEB_BLOCK:
+                rows = wb_repo.list_policies_for_router(
+                    _tid(), rid,
+                )
+            else:
+                rows = wg_repo.list_policies_for_router(
+                    _tid(), rid,
+                )
+        else:
+            rows = ad.list_for_tenant(_tid())
         cards: list[dict] = []
         for r in rows:
             dep = dep_repo.get_for_policy(
@@ -443,9 +545,11 @@ def _make_list_view(svc: _ServiceDef):
             service=svc,
             services=list(_REGISTRY.values()),
             cards=cards,
+            scoped_to_nas=scoped_to_nas,
             page_title=svc.label_ar,
         )
-    return _view
+
+    return _view_scoped if scoped else _view_global
 
 
 # ─── Create / edit view ──────────────────────────────────────
@@ -517,6 +621,16 @@ def _make_new_view(svc: _ServiceDef):
     def _view():
         ad = _adapter(svc)
         if request.method == "GET":
+            # `?router_id=<id>` honoured so the per-router
+            # dashboard tab can pre-lock the target router on
+            # the new-policy form.
+            preset_router_id = None
+            try:
+                preset_router_id = int(
+                    request.args.get("router_id") or 0
+                ) or None
+            except (TypeError, ValueError):
+                preset_router_id = None
             return render_template(
                 "radius/network_policy_form.html",
                 service=svc,
@@ -525,6 +639,7 @@ def _make_new_view(svc: _ServiceDef):
                 children=(),
                 child_counts={},
                 routers=_nas_list(),
+                preset_router_id=preset_router_id,
                 page_title=f"إضافة سياسة — {svc.label_ar}",
             )
 
