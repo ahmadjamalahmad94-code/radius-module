@@ -14,6 +14,8 @@ from typing import Any
 
 from ..db.connection import db, transaction
 from .setup_wizard_common import SetupWizardValidationError
+from .setup_wizard_hotspot_planner import HotspotBootstrapPlanner
+from .setup_wizard_interface_contract import InterfaceDiscoveryContract, InterfaceInfo
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationService
 from .setup_wizard_vpn_radius_planner import VpnRadiusBootstrapPlanner
@@ -227,10 +229,16 @@ class SetupWizardStateMachine:
 
 
 class SetupWizardService:
-    def __init__(self, state_machine: SetupWizardStateMachine | None = None) -> None:
+    def __init__(
+        self,
+        state_machine: SetupWizardStateMachine | None = None,
+        interface_discovery: InterfaceDiscoveryContract | None = None,
+    ) -> None:
         self._sm = state_machine or SetupWizardStateMachine()
+        self._interface_discovery = interface_discovery
         self._internet_planner = InternetUplinkScriptPlanner()
         self._vpn_radius_planner = VpnRadiusBootstrapPlanner()
+        self._hotspot_planner = HotspotBootstrapPlanner()
         self._verification_service = SetupVerificationService()
 
     def create_run(
@@ -488,6 +496,69 @@ class SetupWizardService:
             vpn_verified=vpn_verified,
             statuses=statuses,
         )
+
+    def get_interface_candidates(
+        self, *, tenant_id: int, run_id: int, interfaces: list[InterfaceInfo] | None = None
+    ) -> list[dict[str, Any]]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        internet_verified = self._is_step_verified(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_INTERNET_VERIFICATION
+        )
+        vpn_verified = self._is_step_verified(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_VPN_RADIUS_VERIFICATION
+        )
+        self._sm.guard_step_access(
+            run=run,
+            step_key=STEP_INTERFACES_REFRESH,
+            internet_verified=internet_verified,
+            vpn_verified=vpn_verified,
+        )
+        source = interfaces
+        if source is None and self._interface_discovery is not None:
+            source = self._interface_discovery.list_interfaces(tenant_id=tenant_id, run_id=run_id)
+        source = source or []
+        blocked = {str(run.get("selected_wan_interface") or "").strip(), "hr-wg"}
+        blocked = {x for x in blocked if x}
+        candidates: list[dict[str, Any]] = []
+        for item in source:
+            if item.name in blocked:
+                continue
+            candidates.append({"name": item.name, "kind": item.kind, "running": bool(item.running)})
+        return candidates
+
+    def generate_hotspot_script(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        mode: str,
+        payload: dict[str, Any],
+        blocked_network_cidrs: list[str],
+    ) -> dict[str, Any]:
+        self.advance_to_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_HOTSPOT_SCRIPT_PREVIEW,
+            input_json={"mode": mode, **payload},
+        )
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        blocked_ifaces = [str(run.get("selected_wan_interface") or "").strip(), "hr-wg"]
+        plan = self._hotspot_planner.plan(
+            wizard_run_id=int(run_id),
+            mode=mode,
+            payload=payload,
+            blocked_interfaces=[x for x in blocked_ifaces if x],
+            blocked_network_cidrs=blocked_network_cidrs,
+        )
+        self.mark_script_generated(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_HOTSPOT_SCRIPT_PREVIEW,
+            generated_script=plan.script_text,
+            rollback_script=plan.rollback_script_text,
+            validation_commands=plan.validation_commands,
+        )
+        return plan.to_dict()
 
     def mark_script_generated(
         self,
