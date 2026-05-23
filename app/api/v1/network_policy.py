@@ -41,6 +41,7 @@ from ...radius.services import (
     npc_conflict_detector as conflict_svc,
     npc_dependency_detector as dependency_svc,
     npc_impact_analyzer as impact_svc,
+    npc_policy_health as health_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
     npc_walled_garden_planner as wg_planner,
@@ -821,6 +822,16 @@ def _finalize_preview(
         policy_type=service, plan=plan, policy=policy,
     )
 
+    # Health score helper — closes over all the analyses above.
+    def _build_health(_impact):
+        return health_svc.compute(
+            impact=_impact,
+            conflicts=conflict_analysis,
+            dependencies=dependency_analysis,
+            blast=blast_radius,
+            rollback_available=_impact.rollback_available,
+        )
+
     if render_error is not None:
         impact = impact_svc.analyze(
             policy_type=service, policy=policy,
@@ -842,6 +853,7 @@ def _finalize_preview(
                 "dependency_analysis":   dependency_analysis.as_dict(),
                 "blast_radius_analysis": blast_radius.as_dict(),
                 "beginner_explanation":  beginner.as_dict(),
+                "health_score":          _build_health(impact).as_dict(),
             },
         )
 
@@ -867,6 +879,7 @@ def _finalize_preview(
         "dependency_analysis":   dependency_analysis.as_dict(),
         "blast_radius_analysis": blast_radius.as_dict(),
         "beginner_explanation":  beginner.as_dict(),
+        "health_score":          _build_health(impact).as_dict(),
     }
 
     if plan.can_apply and forward:
