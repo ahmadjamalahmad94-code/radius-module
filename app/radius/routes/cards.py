@@ -14,6 +14,7 @@ from ..core.errors import RadiusError, RadiusValidationError
 from ..db.repos import operations_repo
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
+from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
 from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
@@ -254,11 +255,16 @@ def cards_batches():
     totals = svc.batch_operations_totals(**filters)
     plans_list = list(get_plans_service().list(limit=500))
     distributors = operations_repo.list_distributors(_tid(), limit=500)
+    operations_service = get_operations_service()
+    print_templates = operations_service.list_print_templates(tenant_id=_tid(), limit=500)
+    default_print_template_id = operations_service.get_default_print_template_id(tenant_id=_tid())
     return render_template(
         "radius/cards_batches.html",
         batches=batches,
         plans=plans_list,
         distributors=distributors,
+        print_templates=print_templates,
+        default_print_template_id=default_print_template_id,
         totals=totals,
         filters=filters,
         page=page,
