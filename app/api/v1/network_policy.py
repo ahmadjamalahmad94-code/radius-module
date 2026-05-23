@@ -36,6 +36,7 @@ from ...radius.db.repos import (
 )
 from ...radius.services import (
     npc_audit_events as ev,
+    npc_conflict_detector as conflict_svc,
     npc_impact_analyzer as impact_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
@@ -713,6 +714,52 @@ def wg_preview(policy_id: int):
 # ─── Preview core ────────────────────────────────────────────
 
 
+def _peer_policies_for(
+    *, current_service: str, current_router_id: int,
+) -> list[conflict_svc.PeerPolicy]:
+    """Load every other tenant policy + its children once per
+    preview, projected to the conflict-detector's PeerPolicy
+    shape. Reads only — no MikroTik contact."""
+    out: list[conflict_svc.PeerPolicy] = []
+
+    # Remote access — no children.
+    for row in ra_repo.list_for_tenant(_tid()):
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_REMOTE_ACCESS,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            children=(),
+        ))
+
+    # Web-block — pull targets.
+    for row in wb_repo.list_policies_for_tenant(_tid()):
+        targets = wb_repo.list_targets(int(row["id"]))
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_WEB_BLOCK,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            children=tuple(targets),
+        ))
+
+    # Walled-garden — pull entries + hotspot_profile.
+    for row in wg_repo.list_policies_for_tenant(_tid()):
+        entries = wg_repo.list_entries(int(row["id"]))
+        out.append(conflict_svc.PeerPolicy(
+            service=nc.SERVICE_WALLED_GARDEN,
+            id=int(row["id"]), name=str(row["name"]),
+            slug=str(row["slug"]),
+            router_id=int(row["router_id"]),
+            enabled=bool(row["enabled"]),
+            hotspot_profile=str(row.get("hotspot_profile") or ""),
+            children=tuple(entries),
+        ))
+    return out
+
+
 def _finalize_preview(
     *, service: str, policy_id: int, router_id: int,
     plan: "renderer.ScriptPlan",
@@ -737,6 +784,20 @@ def _finalize_preview(
         forward = ""
         rollback = ""
 
+    # Conflict detection runs against the current peer set
+    # regardless of render outcome — operator should see
+    # peer conflicts even when the render aborted.
+    peers = [p for p in _peer_policies_for(
+        current_service=service,
+        current_router_id=router_id,
+    ) if p.id != policy_id or p.service != service]
+    conflict_analysis = conflict_svc.analyze(
+        current_service=service,
+        current_policy=policy,
+        current_children=targets or (),
+        peers=peers,
+    )
+
     if render_error is not None:
         impact = impact_svc.analyze(
             policy_type=service, policy=policy,
@@ -752,7 +813,10 @@ def _finalize_preview(
         return fail(
             "render_unsafe", render_error,
             status=422,
-            details={"impact_analysis": impact.as_dict()},
+            details={
+                "impact_analysis":   impact.as_dict(),
+                "conflict_analysis": conflict_analysis.as_dict(),
+            },
         )
 
     summary = renderer.script_summary(plan)
@@ -773,6 +837,7 @@ def _finalize_preview(
         "rollback_script": rollback,
         "script_hash":     renderer.script_hash(forward),
         "impact_analysis": impact.as_dict(),
+        "conflict_analysis": conflict_analysis.as_dict(),
     }
 
     if plan.can_apply and forward:
