@@ -36,6 +36,7 @@ from ...radius.db.repos import (
 )
 from ...radius.services import (
     npc_audit_events as ev,
+    npc_impact_analyzer as impact_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
     npc_walled_garden_planner as wg_planner,
@@ -355,6 +356,8 @@ def ra_preview(policy_id: int):
         policy_id=policy_id,
         router_id=row["router_id"],
         plan=plan,
+        policy=row,
+        targets=(),
         audit_action=ev.EVT_RA_PREVIEW_GENERATED,
     )
 
@@ -528,6 +531,8 @@ def wb_preview(policy_id: int):
         policy_id=policy_id,
         router_id=policy["router_id"],
         plan=plan,
+        policy=policy,
+        targets=targets,
         audit_action=ev.EVT_WB_PREVIEW_GENERATED,
     )
 
@@ -699,6 +704,8 @@ def wg_preview(policy_id: int):
         policy_id=policy_id,
         router_id=policy["router_id"],
         plan=plan,
+        policy=policy,
+        targets=entries,
         audit_action=ev.EVT_WG_PREVIEW_GENERATED,
     )
 
@@ -709,23 +716,53 @@ def wg_preview(policy_id: int):
 def _finalize_preview(
     *, service: str, policy_id: int, router_id: int,
     plan: "renderer.ScriptPlan",
+    policy: dict,
+    targets,
     audit_action: str,
 ):
     """Common preview path: render forward + rollback, persist
     a script-version row, mark the deployment as `previewed`,
-    audit, return the operator-facing payload."""
+    audit, return the operator-facing payload.
+
+    Phase A: the response now includes `impact_analysis`, a
+    JSON projection of `ImpactAnalysis`. Even on render-unsafe
+    paths we still build the analysis so the UI can show the
+    operator *why* the plan was refused."""
     try:
         forward = renderer.render_forward_script(plan)
         rollback = renderer.render_rollback_script(plan)
+        render_error = None
     except renderer.RenderSafetyError as e:
+        render_error = str(e)
+        forward = ""
+        rollback = ""
+
+    if render_error is not None:
+        impact = impact_svc.analyze(
+            policy_type=service, policy=policy,
+            plan=plan, targets=targets or (),
+            rendered_forward="", rendered_rollback="",
+            render_error=render_error,
+        )
         _emit_audit(
             service=service, action=audit_action,
             policy_id=policy_id, router_id=router_id,
-            error=str(e),
+            error=render_error,
         )
-        return fail("render_unsafe", str(e), status=422)
+        return fail(
+            "render_unsafe", render_error,
+            status=422,
+            details={"impact_analysis": impact.as_dict()},
+        )
 
     summary = renderer.script_summary(plan)
+    impact = impact_svc.analyze(
+        policy_type=service, policy=policy,
+        plan=plan, targets=targets or (),
+        rendered_forward=forward,
+        rendered_rollback=rollback,
+        render_error=None,
+    )
     response_body: dict[str, Any] = {
         "service":   service,
         "policy_id": policy_id,
@@ -735,6 +772,7 @@ def _finalize_preview(
         "forward_script":  forward,
         "rollback_script": rollback,
         "script_hash":     renderer.script_hash(forward),
+        "impact_analysis": impact.as_dict(),
     }
 
     if plan.can_apply and forward:
