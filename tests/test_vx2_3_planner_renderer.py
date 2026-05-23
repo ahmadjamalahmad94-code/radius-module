@@ -106,6 +106,90 @@ def test_route_goes_only_into_custom_routing_table_never_main():
     # Critical safety invariant.
     assert route.attrs["routing-table"] == "HOBE_VX2_42"
     assert route.attrs["routing-table"] != "main"
+    # VX2.6c — gateway is the WireGuard interface name, NOT an
+    # IP. The interface bypass avoids a recursive-gateway lookup
+    # failure inside the sparse custom routing table.
+    assert route.attrs["gateway"] == "wg-vps"
+    # Make sure no IP gateway sneaks in.
+    assert "." not in route.attrs["gateway"], (
+        f"gateway should be an interface name, not an IP: "
+        f"{route.attrs['gateway']!r}"
+    )
+
+
+def test_mangle_emits_both_prerouting_and_output_chains_always():
+    """VX2.6c — output chain mangle MUST be emitted even when
+    include_router_output is False, so that router-originated
+    `/tool fetch` works out of the box."""
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(include_router_output=0),
+        exit_node=_node(),
+        targets=[_target()],
+    )
+    chains = sorted(c.attrs["chain"] for c in plan.mangle_ops)
+    assert chains == ["output", "prerouting"]
+
+
+def test_planner_emits_srcnat_on_wg_interface():
+    """VX2.6c — without src-nat on the wg interface, packets
+    leave the router with source = LAN IP, get dropped by
+    WireGuard's allowed-ips check on the VPS, and never reach
+    MASQUERADE."""
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    assert plan.nat_ops, "expected at least one nat op (srcnat)"
+    srcnat = plan.nat_ops[0]
+    assert srcnat.attrs["chain"] == "srcnat"
+    assert srcnat.attrs["action"] == "masquerade"
+    # MUST target the wg interface specifically — NOT a generic
+    # WAN interface or wildcard, which would mask all outbound.
+    assert srcnat.attrs["out-interface"] == "wg-vps"
+    assert "src-address" not in srcnat.attrs
+    # Comment carries the managed prefix.
+    assert srcnat.attrs["comment"].startswith(plan.comment_prefix)
+
+
+def test_cleanup_paths_include_firewall_nat():
+    """VX2.6c — cleanup must purge stale srcnat rules too,
+    otherwise re-runs accumulate duplicate NAT entries."""
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    cleanup_paths = {c.path for c in plan.cleanup_ops}
+    assert "/ip/firewall/nat" in cleanup_paths
+
+
+def test_rendered_script_contains_srcnat_line():
+    from app.radius.services import site_exit_script_planner as p
+    from app.radius.services import site_exit_script_renderer as r
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    body = r.render_forward_script(plan)
+    assert "/ip firewall nat add" in body
+    assert "out-interface=wg-vps" in body
+    assert "action=masquerade" in body
+
+
+def test_rendered_route_uses_interface_not_ip():
+    from app.radius.services import site_exit_script_planner as p
+    from app.radius.services import site_exit_script_renderer as r
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    body = r.render_forward_script(plan)
+    # gateway=wg-vps must appear in the rendered route.
+    assert "gateway=wg-vps" in body
+    # The old IP-gateway form must NOT.
+    assert "gateway=10.10.0.1" not in body
 
 
 def test_mangle_uses_dst_address_list_not_dst_address():
@@ -357,15 +441,27 @@ def test_include_www_adds_companion_for_root_domain_only():
     assert "www.sub.example.com" not in addrs  # NOT added
 
 
-def test_include_router_output_adds_output_chain_mangle():
+def test_include_router_output_flag_kept_for_backwards_compat():
+    """VX2.6c — output chain is now ALWAYS emitted, so the
+    `include_router_output` flag becomes a no-op as far as
+    chain emission goes. The attribute is still accepted and
+    persisted so we don't break existing policy rows in the
+    DB."""
     from app.radius.services import site_exit_script_planner as p
-    plan = p.build_plan(
+    plan_on = p.build_plan(
         policy=_policy(include_router_output=1),
         exit_node=_node(),
         targets=[_target()],
     )
-    chains = sorted(c.attrs["chain"] for c in plan.mangle_ops)
-    assert chains == ["output", "prerouting"]
+    plan_off = p.build_plan(
+        policy=_policy(include_router_output=0),
+        exit_node=_node(),
+        targets=[_target()],
+    )
+    on_chains = sorted(c.attrs["chain"] for c in plan_on.mangle_ops)
+    off_chains = sorted(c.attrs["chain"] for c in plan_off.mangle_ops)
+    # Both produce the same shape — output chain is unconditional.
+    assert on_chains == off_chains == ["output", "prerouting"]
 
 
 def test_disabled_targets_are_skipped_not_silently_dropped():
@@ -658,7 +754,10 @@ def test_script_summary_matches_plan_counts():
     assert s["routing_table"] == "HOBE_VX2_42"
     assert s["section_counts"]["routing_table"] == 1
     assert s["section_counts"]["route"] == 1
-    assert s["section_counts"]["mangle"] == 1
+    # VX2.6c — mangle now always emits BOTH prerouting + output.
+    assert s["section_counts"]["mangle"] == 2
+    # VX2.6c — src-NAT on wg interface emitted unconditionally.
+    assert s["section_counts"]["nat"] == 1
     assert s["section_counts"]["firewall_filter"] == 1
     # 2 root domains × (1 base + 1 www companion) = 4 entries.
     assert s["section_counts"]["address_list"] == 4

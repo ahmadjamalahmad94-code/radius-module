@@ -89,6 +89,8 @@ def render_forward_script(plan: ScriptPlan) -> str:
             plan.dns_ops),
         ("mangle — mark client traffic to the address list",
             plan.mangle_ops),
+        ("nat — src-nat on the wg interface so VPS accepts packets",
+            plan.nat_ops),
         ("firewall filter — fail-mode protection",
             plan.firewall_filter_ops),
     ]
@@ -154,6 +156,7 @@ def script_summary(plan: ScriptPlan) -> dict:
             "address_list":    len(plan.address_list_ops),
             "dns":             len(plan.dns_ops),
             "mangle":          len(plan.mangle_ops),
+            "nat":             len(plan.nat_ops),
             "firewall_filter": len(plan.firewall_filter_ops),
         },
         "warnings":         list(plan.warnings),

@@ -112,6 +112,7 @@ class ScriptPlan:
     dns_ops:             tuple[PlanCommand, ...] = ()
     route_ops:           tuple[PlanCommand, ...] = ()
     mangle_ops:          tuple[PlanCommand, ...] = ()
+    nat_ops:             tuple[PlanCommand, ...] = ()
     firewall_filter_ops: tuple[PlanCommand, ...] = ()
 
     rollback_ops:        tuple[PlanCommand, ...] = ()
@@ -135,6 +136,7 @@ class ScriptPlan:
             + self.address_list_ops
             + self.dns_ops
             + self.mangle_ops
+            + self.nat_ops
             + self.firewall_filter_ops
         )
 
@@ -282,11 +284,18 @@ def build_plan(
 
     # ── Route into the custom table (NEVER in main) ──
     wg_iface = exit_node["wireguard_interface_name"].strip()
-    wg_gw    = (exit_node.get("wireguard_gateway_ip") or "").strip()
-    # Prefer gateway IP when known; fall back to interface name
-    # (RouterOS resolves it). Interface name is the safer default
-    # when WireGuard runs PtP without a fixed peer IP.
-    gateway_value = wg_gw if wg_gw else wg_iface
+    # VX2.6c — ALWAYS use the WireGuard interface name as the
+    # gateway, never the peer IP. Reason: with a sparse custom
+    # routing table that contains only `0.0.0.0/0`, a recursive
+    # gateway-IP lookup needs the connected route for the wg
+    # subnet — which lives in `main`, not in the custom table.
+    # The kernel therefore can't resolve `gateway=10.10.0.1`
+    # from inside `HOBE_VX2_<id>` and silently drops the packet
+    # with "Destination host unreachable" — even when the route
+    # shows as Active. Using the interface name bypasses the
+    # recursive lookup entirely; WireGuard knows how to send to
+    # its peer without an L2 next-hop.
+    gateway_value = wg_iface
     route_attrs = {
         "dst-address": "0.0.0.0/0",
         "gateway": gateway_value,
@@ -358,6 +367,13 @@ def build_plan(
         )
 
     # ── Mangle ──
+    # VX2.6c — emit BOTH prerouting (for clients behind the
+    # router) AND output (for traffic the router itself
+    # originates, e.g. `/tool fetch ...` from CLI). The
+    # include_router_output flag is now only kept for
+    # backward compat — both chains are always installed
+    # because operators expect a router-side smoke test to
+    # work, and the cost is one extra rule.
     mangle_ops: list[PlanCommand] = [
         PlanCommand(
             section="mangle",
@@ -374,9 +390,7 @@ def build_plan(
             note="mark client traffic destined to the address"
                  " list so it picks the custom routing table",
         ),
-    ]
-    if include_outp:
-        mangle_ops.append(PlanCommand(
+        PlanCommand(
             section="mangle",
             path="/ip/firewall/mangle",
             kind="add",
@@ -388,9 +402,40 @@ def build_plan(
                 "passthrough": "no",
                 "comment": f"{cprefix}mangle-output",
             },
-            note="also route router-originated test traffic"
+            note="also route router-originated traffic (e.g."
+                 " /tool fetch from the router itself)"
                  " through the VPS",
-        ))
+        ),
+    ]
+
+    # ── NAT — src-nat on the WireGuard interface ──
+    # VX2.6c — REQUIRED for the VPS peer to accept packets.
+    # WireGuard cryptokey-routes on the VPS side configure the
+    # router peer with `allowed-ips = <router_wg_ip>/32`. That
+    # means the VPS only accepts inner packets whose SRC is the
+    # router's wg IP — packets with src=<LAN client> get
+    # silently dropped by WireGuard before they reach the VPS's
+    # MASQUERADE. Adding `chain=srcnat out-interface=<wg>
+    # action=masquerade` on the router rewrites the source to
+    # the router's wg IP before encryption, so the VPS accepts
+    # the packet and the round-trip works.
+    nat_ops: list[PlanCommand] = [
+        PlanCommand(
+            section="nat",
+            path="/ip/firewall/nat",
+            kind="add",
+            attrs={
+                "chain": "srcnat",
+                "out-interface": wg_iface,
+                "action": "masquerade",
+                "comment": f"{cprefix}vps-srcnat",
+            },
+            note="masquerade outbound on the wg interface so VPS"
+                 " sees source = router's wg IP (matches the"
+                 " VPS peer's allowed-ips and reaches the VPS"
+                 " MASQUERADE rule)",
+        ),
+    ]
 
     # ── Fail-mode protection ──
     firewall_filter_ops: list[PlanCommand] = []
@@ -461,6 +506,7 @@ def build_plan(
         dns_ops=dns_ops,
         route_ops=route_ops,
         mangle_ops=tuple(mangle_ops),
+        nat_ops=tuple(nat_ops),
         firewall_filter_ops=tuple(firewall_filter_ops),
         rollback_ops=rollback_ops,
         warnings=tuple(warnings),
@@ -505,6 +551,7 @@ def _cleanup_ops(cprefix: str) -> list[PlanCommand]:
     paths = [
         ("firewall-filter", "/ip/firewall/filter"),
         ("mangle",          "/ip/firewall/mangle"),
+        ("nat",             "/ip/firewall/nat"),
         ("dns",             "/ip/dns/static"),
         ("address-list",    "/ip/firewall/address-list"),
         ("route",           "/ip/route"),
