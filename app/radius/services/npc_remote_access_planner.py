@@ -30,6 +30,8 @@ Safety contract:
 """
 from __future__ import annotations
 
+import os
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -42,6 +44,29 @@ from .npc_script_renderer import PlanCommand, ScriptPlan
 
 # Anchored prefix used in comments + find regexes.
 SERVICE = "remote_access"
+
+
+# IPv4 sanity — anything else we silently skip rather than push
+# garbage to /ip/firewall/address-list/add.
+_IPV4_RE = re.compile(
+    r"^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}"
+    r"(?:25[0-5]|2[0-4]\d|1?\d?\d)$"
+)
+
+
+def _vps_wg_ip() -> str:
+    """The VPS-side WireGuard IP — the address the router will
+    see as the source when traffic comes in through the
+    nginx-stream tunnel. Read from `HOBERADIUS_WG_SERVER_IP`
+    (set by the WG provisioner). Defaults to `10.10.0.1` which
+    is the standard server side of the project's WG subnet.
+
+    Returns empty string if the env var is set but malformed —
+    the planner then skips the auto-inject silently rather than
+    write a bad address-list entry."""
+    raw = (os.environ.get("HOBERADIUS_WG_SERVER_IP")
+           or "10.10.0.1").strip()
+    return raw if _IPV4_RE.match(raw) else ""
 
 
 def plan(
@@ -94,7 +119,14 @@ def plan(
             blocking_errors=assessment.blockers_ar,
         )
 
+    # Smart default: when the operator leaves source_address_list
+    # empty, auto-generate `npc-vps-<pid>`. Keeps the form
+    # one-click for the common case (just toggle services and
+    # apply) while still letting power users name their own list.
     src_list = (policy.get("source_address_list") or "").strip()
+    if not src_list:
+        src_list = f"npc-vps-{pid}"
+
     enabled_toggles = selected_ports(
         allow_winbox=bool(policy.get("allow_winbox")),
         allow_ssh=bool(policy.get("allow_ssh")),
@@ -126,6 +158,30 @@ def plan(
             note=f"open {key} ({proto}/{port})",
         ))
 
+    # Auto-inject the VPS WireGuard IP into the source list so
+    # the operator's remote-access policy is reachable through
+    # the VPS tunnel without any manual address-list step. The
+    # entry uses the policy's anchored comment prefix so rollback
+    # cleans it up automatically — same as every other managed
+    # row.
+    vps_wg_ip = _vps_wg_ip()
+    address_list_ops: list[PlanCommand] = []
+    if vps_wg_ip:
+        address_list_ops.append(PlanCommand(
+            section="address-list",
+            path="/ip/firewall/address-list",
+            kind="add",
+            attrs={
+                "list":    src_list,
+                "address": vps_wg_ip,
+                "comment": f"{cprefix}vps-relay-anchor",
+            },
+            note=(
+                f"allow VPS tunnel ({vps_wg_ip}) → "
+                f"{src_list}"
+            ),
+        ))
+
     # Optional scheduler — fires the rollback at expires_at.
     scheduler_ops: list[PlanCommand] = []
     if assessment.is_applicable and policy.get("expires_at"):
@@ -146,6 +202,7 @@ def plan(
         service=SERVICE, policy_id=pid,
         comment_prefix=cprefix,
         cleanup_ops=cleanup_ops,
+        address_list_ops=tuple(address_list_ops),
         filter_ops=tuple(filter_ops),
         scheduler_ops=tuple(scheduler_ops),
         rollback_ops=rollback_ops,
@@ -155,6 +212,9 @@ def plan(
             f"risk: {assessment.risk}",
             f"enabled services: "
             f"{', '.join(assessment.enabled_services) or 'none'}",
+            (f"source list: {src_list}"
+             + (f" (auto-includes VPS {vps_wg_ip})"
+                if vps_wg_ip else "")),
         ),
     )
 

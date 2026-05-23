@@ -83,7 +83,11 @@ def test_plan_emits_one_filter_rule_per_enabled_service():
         )
 
 
-def test_plan_without_source_list_omits_src_attr():
+def test_plan_with_empty_source_list_auto_generates_name():
+    """An operator who leaves source_address_list empty gets an
+    auto-generated `npc-vps-<pid>` list. The script still emits
+    `src-address-list=...` on every filter rule — and auto-
+    injects the VPS WG IP into that list (see the next test)."""
     from app.radius.services import (
         npc_remote_access_planner as p,
     )
@@ -92,8 +96,51 @@ def test_plan_without_source_list_omits_src_attr():
         expires_at=_expiry_iso(2),
     ), now=_NOW)
     assert out.can_apply
+    expected_list = "npc-vps-42"  # _policy uses id=42
     for c in out.filter_ops:
-        assert "src-address-list" not in c.attrs
+        assert c.attrs.get("src-address-list") == expected_list
+
+
+def test_plan_auto_injects_vps_wg_ip_into_source_list(
+    monkeypatch,
+):
+    """The planner emits an address-list/add command that adds
+    the VPS WG IP to the source list. Operator picks toggles,
+    presses apply — VPS tunnel access works without any manual
+    address-list management on the router."""
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "10.10.0.7")
+    from app.radius.services import (
+        npc_remote_access_planner as p,
+    )
+    out = p.plan(_policy(
+        source_address_list="custom-list",
+        expires_at=_expiry_iso(2),
+    ), now=_NOW)
+    assert out.can_apply
+    addr_ops = list(out.address_list_ops)
+    assert len(addr_ops) == 1
+    op = addr_ops[0]
+    assert op.path == "/ip/firewall/address-list"
+    assert op.kind == "add"
+    assert op.attrs["list"] == "custom-list"
+    assert op.attrs["address"] == "10.10.0.7"
+    assert op.attrs["comment"].startswith("HOBE_NPC_REMOTE:42:")
+
+
+def test_plan_skips_auto_inject_on_malformed_env_ip(
+    monkeypatch,
+):
+    """A garbage env value disables auto-inject silently rather
+    than push bad data to the router."""
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "not-an-ip")
+    from app.radius.services import (
+        npc_remote_access_planner as p,
+    )
+    out = p.plan(_policy(
+        source_address_list="custom-list",
+        expires_at=_expiry_iso(2),
+    ), now=_NOW)
+    assert out.address_list_ops == ()
 
 
 def test_plan_with_expires_at_emits_scheduler():

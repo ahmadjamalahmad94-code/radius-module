@@ -16,6 +16,18 @@ LAST_CHECKSUM=""
 
 mkdir -p "$STREAM_DIR"
 
+# First-boot helper: the host-side /etc/hoberadius/nginx-streams.d
+# is bind-mounted into both the nginx container (here) and the
+# hoberadius container. nginx runs as root by default in the
+# image; hoberadius runs as a non-root user. So we chmod the
+# directory once at boot to make sure hoberadius can write into
+# it. World-writable is OK here — the dir lives inside /etc/
+# hoberadius/ on the host, only the two containers reach it.
+# Skips silently if perms are already permissive.
+if [ -w "$STREAM_DIR" ]; then
+    chmod 1777 "$STREAM_DIR" 2>/dev/null || true
+fi
+
 # Test config once before we start — if it's broken, fail loud
 # so the container restarts and shows a clear error.
 nginx -t

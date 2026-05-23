@@ -42,6 +42,21 @@ cmd_init() {
     mkdir -p instance backups logs
     chmod 0700 instance
 
+    # NPC remote-tunnel — nginx streams shared volume. Must
+    # exist before docker compose up, or docker bind-mounts it
+    # as an empty directory at the wrong perms (postmortem #1
+    # / #5 / #7).
+    mkdir -p /etc/hoberadius/nginx-streams.d
+    chmod 1777 /etc/hoberadius/nginx-streams.d
+
+    log "3b) فحص ملفّات nginx المطلوبة ..."
+    for f in deploy/nginx-main.conf deploy/nginx-entrypoint.sh \
+             deploy/docker-compose.yml; do
+        if [ ! -f "$f" ]; then
+            die "ملفّ مفقود: $f — اسحب آخر تحديث بـ git pull أولاً."
+        fi
+    done
+
     log "4) بناء الصورة وتشغيلها ..."
     $COMPOSE up -d --build
 
@@ -68,9 +83,18 @@ cmd_init() {
 cmd_upgrade() {
     log "1) git pull ..."
     cd "$PROJECT_ROOT" && git pull --rebase
-    log "2) build + restart ..."
+    log "2) فحص ملفّات nginx + تجهيز streams.d ..."
+    for f in deploy/nginx-main.conf deploy/nginx-entrypoint.sh \
+             deploy/docker-compose.yml; do
+        if [ ! -f "$f" ]; then
+            die "ملفّ مفقود بعد git pull: $f"
+        fi
+    done
+    mkdir -p /etc/hoberadius/nginx-streams.d
+    chmod 1777 /etc/hoberadius/nginx-streams.d
+    log "3) build + restart ..."
     $COMPOSE up -d --build
-    log "3) status:"
+    log "4) status:"
     $COMPOSE ps
 }
 
