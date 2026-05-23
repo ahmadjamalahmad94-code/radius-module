@@ -216,7 +216,7 @@ def add_target(
         raise ValueError("normalized_value cannot be empty")
     now = now_iso()
     with transaction() as c:
-        cur = c.execute(
+        c.execute(
             """
             INSERT INTO npc_web_block_targets
                 (policy_id, category, target_type, value,
@@ -240,15 +240,17 @@ def add_target(
                 now, now,
             ),
         )
-        rid = cur.lastrowid
-        if rid:
-            return int(rid)
-        row = db().execute(
-            "SELECT id FROM npc_web_block_targets "
-            "WHERE policy_id=? AND normalized_value=?",
-            (int(policy_id), nv),
-        ).fetchone()
-        return int(row["id"]) if row else 0
+    # `cur.lastrowid` after INSERT…ON CONFLICT DO UPDATE is
+    # unreliable in stdlib sqlite3 across CPython versions —
+    # it can return a not-yet-assigned rowid on the conflict
+    # path. Source-of-truth lookup by the dedup key is cheap
+    # and always correct.
+    row = db().execute(
+        "SELECT id FROM npc_web_block_targets "
+        "WHERE policy_id=? AND normalized_value=?",
+        (int(policy_id), nv),
+    ).fetchone()
+    return int(row["id"]) if row else 0
 
 
 def add_targets_many(

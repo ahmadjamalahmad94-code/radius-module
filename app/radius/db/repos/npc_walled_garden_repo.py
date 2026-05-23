@@ -216,7 +216,7 @@ def add_entry(
         raise ValueError("normalized_value cannot be empty")
     now = now_iso()
     with transaction() as c:
-        cur = c.execute(
+        c.execute(
             """
             INSERT INTO npc_walled_garden_entries
                 (policy_id, entry_type, value, normalized_value,
@@ -240,16 +240,15 @@ def add_entry(
                 now, now,
             ),
         )
-        rid = cur.lastrowid
-        if rid:
-            return int(rid)
-        row = db().execute(
-            "SELECT id FROM npc_walled_garden_entries "
-            "WHERE policy_id=? AND entry_type=? "
-            "AND normalized_value=?",
-            (int(policy_id), entry_type, nv),
-        ).fetchone()
-        return int(row["id"]) if row else 0
+    # See npc_web_block_repo for why we don't trust
+    # cur.lastrowid after INSERT…ON CONFLICT DO UPDATE.
+    row = db().execute(
+        "SELECT id FROM npc_walled_garden_entries "
+        "WHERE policy_id=? AND entry_type=? "
+        "AND normalized_value=?",
+        (int(policy_id), entry_type, nv),
+    ).fetchone()
+    return int(row["id"]) if row else 0
 
 
 def add_entries_many(

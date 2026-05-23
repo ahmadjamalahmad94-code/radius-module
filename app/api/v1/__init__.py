@@ -14,7 +14,8 @@ def register_v1(parent: Blueprint) -> None:
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules,
         card_checker, cards, dashboard, devices, distributors, health, internal_auth,
-        invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, operational_reports,
+        invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_policy,
+        operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, services, sessions,
         settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
     )
@@ -57,6 +58,7 @@ def register_v1(parent: Blueprint) -> None:
     tokens.register(v1)
     tenants.register(v1)
     tools.register(v1)
+    network_policy.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token
