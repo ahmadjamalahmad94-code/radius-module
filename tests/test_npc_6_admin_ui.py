@@ -500,25 +500,33 @@ def test_preview_download_returns_rsc(app, client, monkeypatch):
 # ─── Apply absence pin ───────────────────────────────────────
 
 
-def test_no_apply_route_exists_anywhere_on_npc_surface(app):
-    """Hard invariant of Phase 6: there is no `/apply` URL
-    anywhere under `/network-policy/`."""
+def test_apply_route_only_on_preview_surface(app):
+    """Post-Phase-6 invariant: the apply route exists for each
+    NPC service, and only on the per-policy preview surface —
+    it must never appear on the list page or the edit form."""
     with app.app_context():
         urls = [str(rule)
                 for rule in app.url_map.iter_rules()
-                if "/network-policy/" in str(rule)]
+                if "/network-policy/" in str(rule)
+                and "/apply" in str(rule)]
+    # One apply route per service.
+    assert any("remote-access" in u for u in urls)
+    assert any("web-block" in u for u in urls)
+    assert any("walled-garden" in u for u in urls)
+    # And every apply URL is per-policy (carries a policy_id),
+    # never on the list page.
     for u in urls:
-        assert "/apply" not in u, (
-            f"Phase 6 forbids any /apply route on NPC; found "
-            f"{u}"
+        assert "<int:policy_id>" in u or "<policy_id>" in u, (
+            f"apply route is not policy-scoped: {u}"
         )
 
 
-def test_no_apply_button_in_form_or_preview_html(
+def test_apply_button_does_not_leak_onto_list_or_edit_pages(
     app, client, monkeypatch,
 ):
-    """Defence-in-depth: an apply button must not leak into
-    any NPC page."""
+    """The list page and the edit form must NOT carry an
+    apply button — apply only belongs on the preview surface
+    where the readiness contracts run."""
     rid = _seed_router(app)
     _login_super(client, app, monkeypatch)
     csrf = _csrf(client)
@@ -537,16 +545,10 @@ def test_no_apply_button_in_form_or_preview_html(
     for url in (
         "/admin/radius/network-policy/web-block/",
         f"/admin/radius/network-policy/web-block/{pid}/edit",
-        f"/admin/radius/network-policy/web-block/{pid}/preview",
     ):
         r = client.get(url)
         assert r.status_code == 200
         html = r.data.decode("utf-8")
-        # No apply button text "تطبيق" inside a submit element.
-        assert not re.search(
-            r"type=['\"]submit['\"][^>]*>[^<]*تطبيق",
-            html,
-        ), f"apply button leaked into {url}"
         assert "/apply" not in html, (
             f"/apply URL leaked into {url}"
         )

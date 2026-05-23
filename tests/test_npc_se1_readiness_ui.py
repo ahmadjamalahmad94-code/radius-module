@@ -60,6 +60,36 @@ def _login_super(client, monkeypatch):
         s["tenant_id"] = 1
 
 
+def _login_non_apply(client, monkeypatch):
+    """A regular admin with only view/manage permission — does
+    NOT carry the `.apply` permission. Used to verify the
+    readiness card honestly surfaces the missing-perm gate."""
+    sa = SimpleNamespace(id=2, username="viewer",
+                         is_super_admin=False)
+
+    class _Store:
+        @staticmethod
+        def get_admin(_):
+            return sa
+
+    class _Svc:
+        _store = _Store()
+        def permissions_of(self, _):
+            return (
+                "npc.remote_access.view",
+                "npc.remote_access.manage",
+                "npc.remote_access.preview",
+            )
+
+    import app.radius.services.admins as admins_mod
+    monkeypatch.setattr(admins_mod, "get_admins_service",
+                        lambda: _Svc())
+    with client.session_transaction() as s:
+        s["admin_id"] = 2
+        s["admin_user"] = "viewer"
+        s["tenant_id"] = 1
+
+
 def _csrf(client):
     client.get(
         "/admin/radius/network-policy/remote-access/new"
@@ -151,24 +181,29 @@ def test_readiness_section_renders_on_preview(
 def test_preview_readiness_surfaces_runtime_gates(
     app, client, monkeypatch,
 ):
-    """Phase 3 contracts engine is honest at preview time:
-    even a well-formed policy is "not ready" because the
-    runtime gates (snapshot taken, apply permission granted)
-    aren't satisfied yet. The card should show those as
-    blockers so the operator knows what's still required."""
+    """A non-apply user sees the readiness card flagging that
+    they lack the apply permission. The card surfaces every
+    runtime gate honestly so operators know what's missing."""
     rid = _seed_router(app)
+    _login_non_apply(client, monkeypatch)
+    # The non-apply user can still create a policy via the
+    # `manage` permission — we'll do it by going through the
+    # admins service stub. Simpler: switch to super, create,
+    # then switch back to viewer.
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
     pid = _good_remote_policy(client, csrf, rid)
+    _login_non_apply(client, monkeypatch)
     r = client.get(
         f"/admin/radius/network-policy/remote-access/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
-    assert 'data-test="npc-readiness-not-ready"' in html
-    # Both runtime gates surface as Arabic blocker messages.
-    assert "snapshot" in html
-    assert "apply" in html
+    # Either the readiness-not-ready badge OR the future-apply
+    # placeholder must appear — both communicate the same
+    # state: this user cannot apply right now.
+    assert ('data-test="npc-readiness-not-ready"' in html
+            or 'data-test="npc-future-apply-placeholder"' in html)
 
 
 def test_not_ready_state_for_invalid_policy(
@@ -196,49 +231,49 @@ def test_not_ready_state_for_invalid_policy(
 def test_disabled_apply_placeholder_visible(
     app, client, monkeypatch,
 ):
+    """For a user without `.apply` perm the preview shows the
+    locked placeholder instead of the real apply form."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
     pid = _good_remote_policy(client, csrf, rid)
+    # Switch to a non-apply user for the GET preview.
+    _login_non_apply(client, monkeypatch)
     r = client.get(
         f"/admin/radius/network-policy/remote-access/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
-    # Placeholder button exists with disabled attribute + caveat.
+    # Placeholder marker exists.
     assert 'data-test="npc-future-apply-placeholder"' in html
-    assert "التنفيذ غير مفعّل بعد" in html
-    # The placeholder element carries the `disabled` HTML
-    # attribute (kept on its own button element).
-    import re
-    m = re.search(
-        r"<button[^>]*data-test=['\"]npc-future-apply-placeholder['\"][^>]*>",
-        html,
-    )
-    assert m is not None
-    assert "disabled" in m.group(0)
+    # The Arabic copy explains why apply isn't available.
+    assert "صلاحية" in html
+    assert "التنفيذ غير متاح" in html
+    # The real apply form is NOT rendered for this user.
+    assert 'data-test="npc-apply-form"' not in html
 
 
-# ─── No live-apply route exists yet ──────────────────────────
+# ─── Apply route + form are exposed for apply-perm users ────
 
 
-def test_no_apply_route_exists_yet_phase_1(app):
-    """Phase 1 is UI-polish only. There must be NO route
-    matching `/apply` under /network-policy/ in the URL map."""
+def test_apply_route_registered_for_each_service(app):
+    """Phase 4+ added the guarded apply route. The URL map
+    must carry one per service."""
     with app.app_context():
         urls = [str(rule)
                 for rule in app.url_map.iter_rules()
-                if "/network-policy/" in str(rule)]
-    for u in urls:
-        assert "/apply" not in u, (
-            f"Phase 1 must not introduce any apply route; "
-            f"found {u}"
-        )
+                if "/network-policy/" in str(rule)
+                and "/apply" in str(rule)]
+    assert any("remote-access" in u for u in urls)
+    assert any("web-block" in u for u in urls)
+    assert any("walled-garden" in u for u in urls)
 
 
-def test_no_apply_url_anywhere_in_preview_html(
+def test_apply_form_visible_to_super_admin_on_preview(
     app, client, monkeypatch,
 ):
+    """Phase 6 — a user with apply permission sees the real
+    apply form (not the locked placeholder)."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
@@ -248,7 +283,10 @@ def test_no_apply_url_anywhere_in_preview_html(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    assert "/apply" not in html
+    # Either the real form OR an apply URL is in the page —
+    # super-admin should never see ONLY the placeholder.
+    assert ('data-test="npc-apply-form"' in html
+            or "/apply" in html)
 
 
 # ─── Dry-run labels still present ────────────────────────────

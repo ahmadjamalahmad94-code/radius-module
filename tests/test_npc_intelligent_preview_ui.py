@@ -481,12 +481,15 @@ def test_dry_run_banner_and_label_remain_on_preview(
     assert "لم يتم التطبيق على الراوتر" in html
 
 
-# ─── No apply button introduced ──────────────────────────────
+# ─── Safe-apply label on the new preview UI ──────────────────
 
 
-def test_no_apply_button_in_new_preview_ui(
+def test_apply_form_uses_safe_label_in_new_preview_ui(
     app, client, monkeypatch,
 ):
+    """Post-Phase-6 — the preview page exposes the apply form
+    to an apply-perm user. The submit must NOT use the
+    panic-tone copy «تطبيق على الراوتر»."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
@@ -497,10 +500,9 @@ def test_no_apply_button_in_new_preview_ui(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    # No "/apply" URL anywhere.
-    assert "/apply" not in html
-    # No submit button with apply-like Arabic ("تطبيق" word
-    # bound directly to submit).
+    # Apply route is exposed.
+    assert "/apply" in html
+    # Panic-tone copy is NOT used.
     assert not re.search(
         r"type=['\"]submit['\"][^>]*>[^<]*تطبيق على الراوتر",
         html,
