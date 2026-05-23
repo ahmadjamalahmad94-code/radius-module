@@ -556,6 +556,127 @@
     </div>
   </div>
 
+  {# ════════════════ SECTION 1b — Execution Readiness ════════ #}
+  {% set rdy = intelligence.readiness %}
+  <div class="npc-section" data-test="npc-section-readiness">
+    <div class="npc-section-head">
+      <span class="npc-sec-num">★</span>
+      <h2><i class="fa-solid fa-list-check"
+             style="color:#6B5AED;"></i>
+        جاهزيّة التنفيذ</h2>
+      {% if rdy.ready_for_future_apply %}
+        <span class="npc-pill npc-pill-status-app"
+              style="margin-inline-start:auto;"
+              data-test="npc-readiness-ready">
+          <i class="fa-solid fa-shield-check"></i>
+          جاهزة (وفق المعايير الحاليّة)
+        </span>
+      {% else %}
+        <span class="npc-pill npc-pill-status-fail"
+              style="margin-inline-start:auto;"
+              data-test="npc-readiness-not-ready">
+          <i class="fa-solid fa-shield-halved"></i>
+          غير جاهزة — راجع الموانع
+        </span>
+      {% endif %}
+    </div>
+
+    {% if rdy.blockers_ar %}
+      <div style="background:#fef2f2;
+                  border:1px solid #fecaca;
+                  border-radius:10px;
+                  padding:12px 14px; margin-bottom:10px;"
+           data-test="npc-readiness-blockers">
+        <strong style="color:#b91c1c; font-size:13.5px;">
+          <i class="fa-solid fa-ban"></i>
+          موانع التنفيذ
+        </strong>
+        <ul style="margin:6px 0 0;
+                   padding-inline-start:22px;
+                   color:#7f1d1d; font-size:13px;
+                   line-height:1.75;">
+          {% for b in rdy.blockers_ar %}
+            <li>{{ b }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if rdy.warnings_ar %}
+      <div style="background:#fffbeb;
+                  border:1px solid #fde68a;
+                  border-radius:10px;
+                  padding:12px 14px; margin-bottom:10px;"
+           data-test="npc-readiness-warnings">
+        <strong style="color:#b45309; font-size:13.5px;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          تنبيهات
+        </strong>
+        <ul style="margin:6px 0 0;
+                   padding-inline-start:22px;
+                   color:#78350f; font-size:13px;
+                   line-height:1.75;">
+          {% for w in rdy.warnings_ar %}
+            <li>{{ w }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# Checklist — at-a-glance per-condition status #}
+    <ul style="list-style:none; padding:0; margin:0 0 12px;
+               display:grid; gap:6px;"
+        data-test="npc-readiness-checklist">
+      {% for item in rdy.checklist_ar %}
+        <li style="display:flex; align-items:center; gap:10px;
+                   padding:8px 12px;
+                   background:#fafbfd;
+                   border:1px solid #EEEDF3;
+                   border-radius:8px;
+                   font-size:13px; color:#374151;">
+          {% if item.status_ok %}
+            <i class="fa-solid fa-circle-check"
+               style="color:#047857;"></i>
+          {% else %}
+            <i class="fa-solid fa-circle-xmark"
+               style="color:#b91c1c;"></i>
+          {% endif %}
+          {{ item.label }}
+        </li>
+      {% endfor %}
+    </ul>
+
+    {# Required permission + future-apply placeholder #}
+    <div style="display:flex; flex-wrap:wrap; gap:10px;
+                align-items:center;
+                padding-top:10px;
+                border-top:1px dashed #EEEDF3;">
+      <span style="font-size:12.5px; color:#4b5563;">
+        صلاحية التنفيذ المطلوبة:
+        <code style="background:#F4F1FE;
+                     color:#4036A6;
+                     padding:1px 6px; border-radius:4px;">
+          {{ rdy.apply_perm_label_ar }}
+        </code>
+      </span>
+
+      <button type="button" class="npc-btn" disabled
+              data-test="npc-future-apply-placeholder"
+              style="margin-inline-start:auto;
+                     cursor:not-allowed; opacity:0.6;">
+        <i class="fa-solid fa-shield-halved"></i>
+        التنفيذ غير مفعّل بعد
+      </button>
+    </div>
+
+    <p style="margin-top:10px;
+              color:#6b7280; font-size:12px;">
+      <i class="fa-solid fa-circle-info"
+         style="color:#9ca3af;"></i>
+      {{ rdy.caveat_ar }}
+    </p>
+  </div>
+
   {# ════════════════ SECTION 2 — What Will Happen ════════════ #}
   <div class="npc-section" data-test="npc-section-impact">
     <div class="npc-section-head">

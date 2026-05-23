@@ -933,6 +933,17 @@ def _build_intelligence(
         policy=policy,
     )
 
+    readiness = _compute_readiness_v1(
+        svc=svc,
+        impact=impact,
+        conflicts=conflicts,
+        blast=blast,
+        canary=canary,
+        health=health,
+        forward=forward,
+        render_error=render_error,
+    )
+
     return {
         "impact":          impact,
         "conflicts":       conflicts,
@@ -942,6 +953,123 @@ def _build_intelligence(
         "canary":          canary,
         "health":          health,
         "recommendations": recommendations,
+        "readiness":       readiness,
+    }
+
+
+# ─── Phase 1 readiness helper ────────────────────────────────
+
+
+def _compute_readiness_v1(
+    *, svc: _ServiceDef,
+    impact, conflicts, blast, canary, health,
+    forward: str, render_error: str,
+) -> dict:
+    """Lightweight execution-readiness summary for the preview
+    UI. Phase 3 will refactor this into a dedicated contracts
+    service; for now it lives next to the intelligence
+    builder so we can ship the UI card before the apply engine
+    exists.
+
+    Returns a plain dict the template renders. Keys:
+      ready_for_future_apply : bool — would the next-phase
+                               apply engine accept this plan?
+      blockers_ar            : list[str] — hard reasons we'd
+                               refuse apply.
+      warnings_ar            : list[str] — soft reasons the
+                               operator should know about.
+      checklist_ar           : list[dict{label,status_ok}] —
+                               friendly per-condition status
+                               for the readiness card.
+      apply_perm             : str — the perm string a future
+                               apply button would require.
+      apply_perm_label_ar    : str — human label for the perm.
+      caveat_ar              : str — the "apply not active yet"
+                               disclaimer.
+    """
+    apply_perm = svc.perms.get("apply") or (
+        svc.perms["preview"].rsplit(".", 1)[0] + ".apply"
+    )
+
+    blockers: list[str] = []
+    warnings: list[str] = []
+
+    if render_error:
+        blockers.append(
+            "السكربت مرفوض تلقائياً بسبب محتوى حسّاس — لا يمكن "
+            "المتابعة."
+        )
+    if not forward.strip():
+        blockers.append(
+            "لا يوجد سكربت forward لتنفيذه — حدّث السياسة "
+            "ثم أعد المعاينة."
+        )
+    if impact.risk_level == "critical":
+        blockers.append(
+            "تحليل الأثر يصنّف الخطّة critical — يجب إعادة "
+            "التخطيط قبل أي تنفيذ."
+        )
+    if health.grade in ("dangerous",):
+        blockers.append(
+            "درجة السلامة منخفضة جداً — راجع التحذيرات أعلاه."
+        )
+    if not impact.rollback_available:
+        blockers.append(
+            "لا يوجد سكربت rollback — التنفيذ بدون إمكانية "
+            "تراجع غير مسموح."
+        )
+    high_conflicts = [c for c in conflicts.conflicts
+                      if c.severity == "high"]
+    if high_conflicts:
+        blockers.append(
+            f"يوجد {len(high_conflicts)} تعارض(ات) عالي الخطورة "
+            "مع سياسات أخرى — حلّها أوّلاً."
+        )
+
+    # Warnings (soft)
+    if impact.risk_level == "high":
+        warnings.append("مستوى الخطر مرتفع — راجع الأسباب أعلاه.")
+    if blast.blast_radius in ("large", "critical"):
+        warnings.append(
+            "نطاق التأثير واسع — مفضّل البدء بـ canary."
+        )
+    if canary.recommended_strategy in (
+        canary_svc.STRATEGY_CANARY, canary_svc.STRATEGY_HOLD,
+    ):
+        warnings.append(
+            "هناك توصية بالتطبيق التدريجي قبل أي تطبيق كامل."
+        )
+    if health.grade == "risky":
+        warnings.append(
+            "درجة السلامة في خانة «محفوفة بالمخاطر» — "
+            "تحقّق من الخطّة قبل المتابعة."
+        )
+
+    checklist = [
+        {"label": "السكربت forward موجود ومُولَّد بنجاح.",
+         "status_ok": bool(forward.strip()) and not render_error},
+        {"label": "سكربت rollback متاح.",
+         "status_ok": bool(impact.rollback_available)},
+        {"label": "تحليل الأثر ليس في خانة critical.",
+         "status_ok": impact.risk_level != "critical"},
+        {"label": "درجة السلامة فوق خط الخطر.",
+         "status_ok": health.grade not in ("dangerous",)},
+        {"label": "لا تعارضات عالية الخطورة مع سياسات أخرى.",
+         "status_ok": not high_conflicts},
+    ]
+
+    ready_for_future_apply = not blockers
+    return {
+        "ready_for_future_apply": ready_for_future_apply,
+        "blockers_ar":            blockers,
+        "warnings_ar":            warnings,
+        "checklist_ar":           checklist,
+        "apply_perm":             apply_perm,
+        "apply_perm_label_ar":    f"npc.{svc.key}.apply",
+        "caveat_ar":              (
+            "التنفيذ غير مفعّل بعد — هذه نسخة معاينة فقط. "
+            "زرّ التنفيذ سيظهر في مرحلة قادمة."
+        ),
     }
 
 
