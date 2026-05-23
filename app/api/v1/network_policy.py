@@ -37,6 +37,7 @@ from ...radius.db.repos import (
 from ...radius.services import (
     npc_audit_events as ev,
     npc_conflict_detector as conflict_svc,
+    npc_dependency_detector as dependency_svc,
     npc_impact_analyzer as impact_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
@@ -798,6 +799,11 @@ def _finalize_preview(
         peers=peers,
     )
 
+    # Dependency hints — curated rule map, no DNS calls.
+    dependency_analysis = dependency_svc.analyze(
+        targets=targets or (), policy_type=service,
+    )
+
     if render_error is not None:
         impact = impact_svc.analyze(
             policy_type=service, policy=policy,
@@ -814,8 +820,9 @@ def _finalize_preview(
             "render_unsafe", render_error,
             status=422,
             details={
-                "impact_analysis":   impact.as_dict(),
-                "conflict_analysis": conflict_analysis.as_dict(),
+                "impact_analysis":     impact.as_dict(),
+                "conflict_analysis":   conflict_analysis.as_dict(),
+                "dependency_analysis": dependency_analysis.as_dict(),
             },
         )
 
@@ -836,8 +843,9 @@ def _finalize_preview(
         "forward_script":  forward,
         "rollback_script": rollback,
         "script_hash":     renderer.script_hash(forward),
-        "impact_analysis": impact.as_dict(),
-        "conflict_analysis": conflict_analysis.as_dict(),
+        "impact_analysis":     impact.as_dict(),
+        "conflict_analysis":   conflict_analysis.as_dict(),
+        "dependency_analysis": dependency_analysis.as_dict(),
     }
 
     if plan.can_apply and forward:
