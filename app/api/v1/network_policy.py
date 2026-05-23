@@ -36,6 +36,7 @@ from ...radius.db.repos import (
 )
 from ...radius.services import (
     npc_audit_events as ev,
+    npc_blast_radius as blast_svc,
     npc_conflict_detector as conflict_svc,
     npc_dependency_detector as dependency_svc,
     npc_impact_analyzer as impact_svc,
@@ -804,6 +805,14 @@ def _finalize_preview(
         targets=targets or (), policy_type=service,
     )
 
+    # Blast radius — NPC is one-policy-per-router today, so
+    # affected_router_count defaults to 1. Future "policy
+    # group" features will plug in here.
+    blast_radius = blast_svc.analyze(
+        policy_type=service, plan=plan,
+        affected_router_count=1,
+    )
+
     if render_error is not None:
         impact = impact_svc.analyze(
             policy_type=service, policy=policy,
@@ -820,9 +829,10 @@ def _finalize_preview(
             "render_unsafe", render_error,
             status=422,
             details={
-                "impact_analysis":     impact.as_dict(),
-                "conflict_analysis":   conflict_analysis.as_dict(),
-                "dependency_analysis": dependency_analysis.as_dict(),
+                "impact_analysis":       impact.as_dict(),
+                "conflict_analysis":     conflict_analysis.as_dict(),
+                "dependency_analysis":   dependency_analysis.as_dict(),
+                "blast_radius_analysis": blast_radius.as_dict(),
             },
         )
 
@@ -843,9 +853,10 @@ def _finalize_preview(
         "forward_script":  forward,
         "rollback_script": rollback,
         "script_hash":     renderer.script_hash(forward),
-        "impact_analysis":     impact.as_dict(),
-        "conflict_analysis":   conflict_analysis.as_dict(),
-        "dependency_analysis": dependency_analysis.as_dict(),
+        "impact_analysis":       impact.as_dict(),
+        "conflict_analysis":     conflict_analysis.as_dict(),
+        "dependency_analysis":   dependency_analysis.as_dict(),
+        "blast_radius_analysis": blast_radius.as_dict(),
     }
 
     if plan.can_apply and forward:
