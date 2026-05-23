@@ -34,6 +34,7 @@ def create_app() -> Flask:
     _install_api_cors(app)
     _init_db(app)
     _install_tenant(app)
+    _install_npc_live_adapters(app)
     _register_radius(app)
     _register_api(app)
     _register_root(app)
@@ -191,6 +192,33 @@ def _init_db(app: Flask) -> None:
 def _install_tenant(app: Flask) -> None:
     from app.radius.middleware import install_tenant_resolver
     install_tenant_resolver(app)
+
+
+def _install_npc_live_adapters(app: Flask) -> None:
+    """Opt-in install of the real MikroTik adapters for the
+    Network Policy Center. Reads env vars and either wires the
+    live executor + state reader, or leaves the Null adapters
+    in place (the default — keeps live traffic off until an
+    operator explicitly opts in)."""
+    try:
+        from app.radius.services.npc_live_bootstrap import (
+            install_live_adapters_from_env,
+        )
+        result = install_live_adapters_from_env(
+            logger=app.logger,
+        )
+        if result.get("installed"):
+            app.logger.info(
+                "NPC live adapters enabled: %s",
+                result.get("reason"),
+            )
+    except Exception:  # noqa: BLE001
+        # Never let a bootstrap failure prevent the app from
+        # starting — the Null adapters keep the safe default.
+        app.logger.exception(
+            "NPC live adapter bootstrap failed — "
+            "Null adapters retained (safe default)."
+        )
 
 
 def _seed_demo(app: Flask) -> None:

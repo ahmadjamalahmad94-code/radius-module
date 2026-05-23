@@ -154,3 +154,78 @@ When a future commit opts in to a live `RouterExecutor`:
 4. The snapshot reader must also be wired to a live `RouterStateReader` so the apply path can capture a real pre-state.
 
 Until then, the apply route returns "no_snapshot" or "executor not configured" for any operator who tries — by design.
+
+## Enabling the live MikroTik adapters
+
+The real `LiveRouterExecutor` + `LiveRouterStateReader` are now part of
+the codebase (`npc_live_router_executor.py`, `npc_live_state_reader.py`).
+They are NOT installed by default — three env vars opt them in.
+
+| Env var | Required | Purpose |
+|---|---|---|
+| `HOBERADIUS_NPC_LIVE_EXECUTOR` | yes — must be `1`/`true`/`yes`/`on` | Master switch. Without it the Null adapters stay installed. |
+| `HOBERADIUS_NPC_LIVE_ROUTER_IDS` | yes — comma-separated integers | Allowlist of `nas_devices.id` values the live adapters may touch. Empty / missing → bootstrap refuses with a warning, Null adapters stay. |
+| `HOBERADIUS_NPC_LIVE_DRY_RUN` | optional | When truthy, every forward/rollback call connects to the router and reads `/system/identity` (proving auth) but **does not execute the script**. Use this for the first runs against a real router. |
+
+How the live adapters behave:
+
+* **Transport**: MikroTik API (port 8728 plain, 8729 TLS) via the
+  same connection pool the dashboards/programming pages use. No new
+  socket logic invented for NPC.
+* **Script delivery**: the rendered RouterOS script is pushed
+  atomically through `/system/script/add → /system/script/run →
+  /system/script/remove`. The script bytes are sent verbatim — what the
+  operator previewed is what the router runs.
+* **Allowlist enforcement**: routers not on the list raise
+  `ExecutorNotConfigured` / `StateReaderNotConfigured` per call. The
+  contracts engine surfaces this as a calm "live executor not
+  configured for this router" rather than partially executing.
+* **State read**: the reader maps RouterOS rows to `RouterItem`s with
+  a stable `.id` (e.g. `*5`) so later diffs match. Rows without `.id`
+  are skipped.
+* **Errors**: `MikrotikTrap`, `ConnectError`, `AuthError` are caught
+  and mapped to `ExecutionResult(ok=False)` with the message surfaced
+  verbatim. Per-router target rows in `npc_change_set_targets` carry
+  the trap so the network team can read it after the fact.
+
+### Recommended rollout
+
+1. **Pick one test router** (e.g. `nas_devices.id=12`) and set:
+   ```
+   HOBERADIUS_NPC_LIVE_EXECUTOR=1
+   HOBERADIUS_NPC_LIVE_ROUTER_IDS=12
+   HOBERADIUS_NPC_LIVE_DRY_RUN=1
+   ```
+   Restart the container. Apply a tiny remote-access policy — the
+   change_set should show `succeeded` with stdout
+   `"dry-run: connection verified; forward script NOT executed."`.
+2. **Verify on the router**: SSH/Winbox in and confirm no
+   `HOBE_NPC_*` rules appeared. Confirms the dry-run was honoured.
+3. **Drop the dry-run flag** but keep the same single-router
+   allowlist. Apply the same policy. Now real rules should appear
+   with the anchored comment prefix.
+4. **Rollback test**: click تراجع. The temp `/system/script` runs
+   the `remove [find comment~"^HOBE_NPC_..."]` line. Verify on the
+   router the rules disappeared.
+5. **Expand the allowlist** to more routers only after the
+   single-router cycle works end-to-end.
+
+### Kill switch
+
+If anything goes wrong: unset `HOBERADIUS_NPC_LIVE_EXECUTOR` and
+restart. The Null adapters are restored and every apply attempt is
+refused with `no_snapshot` / `executor not configured`. No DB
+migration needed; takes 10 seconds.
+
+### What is still NOT guaranteed
+
+Even with the live adapters enabled:
+
+* No claim about specific RouterOS version compatibility — `/system/script`
+  exists in every modern ROS, but field behaviour varies.
+* No real-time monitoring — the change_set captures what the
+  executor reported on its single invocation, not the router's
+  ongoing state.
+* Race conditions across concurrent operators on the same router are
+  not coordinated by this codebase. The change_set log makes the race
+  visible after the fact.
