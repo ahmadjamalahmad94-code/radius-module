@@ -148,9 +148,14 @@ def test_readiness_section_renders_on_preview(
     assert "rollback" in html
 
 
-def test_ready_state_for_well_formed_policy(
+def test_preview_readiness_surfaces_runtime_gates(
     app, client, monkeypatch,
 ):
+    """Phase 3 contracts engine is honest at preview time:
+    even a well-formed policy is "not ready" because the
+    runtime gates (snapshot taken, apply permission granted)
+    aren't satisfied yet. The card should show those as
+    blockers so the operator knows what's still required."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
@@ -160,10 +165,10 @@ def test_ready_state_for_well_formed_policy(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    assert 'data-test="npc-readiness-ready"' in html
-    assert "جاهزة" in html
-    # No blocker block.
-    assert 'data-test="npc-readiness-blockers"' not in html
+    assert 'data-test="npc-readiness-not-ready"' in html
+    # Both runtime gates surface as Arabic blocker messages.
+    assert "snapshot" in html
+    assert "apply" in html
 
 
 def test_not_ready_state_for_invalid_policy(

@@ -46,6 +46,7 @@ from ..services import (
     npc_conflict_detector as conflict_svc,
     npc_dependency_detector as dependency_svc,
     npc_domain_analyzer as analyzer,
+    npc_execution_readiness as readiness_svc,
     npc_impact_analyzer as impact_svc,
     npc_policy_health as health_svc,
     npc_recommendations as rec_svc,
@@ -933,16 +934,25 @@ def _build_intelligence(
         policy=policy,
     )
 
-    readiness = _compute_readiness_v1(
-        svc=svc,
-        impact=impact,
-        conflicts=conflicts,
-        blast=blast,
-        canary=canary,
-        health=health,
-        forward=forward,
-        render_error=render_error,
+    # Phase 3 — the contracts engine is the single source of
+    # truth. The route passes the policy + every analysis +
+    # script text + render_error; readiness_svc composes the
+    # ContractInputs and returns a UI view-model.
+    apply_perm = svc.perms.get("apply") or (
+        svc.perms["preview"].rsplit(".", 1)[0] + ".apply"
     )
+    readiness_obj = readiness_svc.evaluate_for_preview(
+        policy=policy, policy_type=svc.key,
+        impact=impact, conflicts=conflicts,
+        dependencies=dependencies, blast=blast,
+        health=health, canary=canary,
+        forward_script=forward,
+        rollback_script=rollback,
+        render_error=render_error,
+        apply_perm=apply_perm,
+        actor_has_apply_perm=False,
+    )
+    readiness = readiness_obj.as_dict()
 
     return {
         "impact":          impact,
@@ -957,10 +967,31 @@ def _build_intelligence(
     }
 
 
-# ─── Phase 1 readiness helper ────────────────────────────────
+# ─── Phase 1 readiness helper (deprecated in Phase 3) ────────
+#
+# `_compute_readiness_v1` was the placeholder inline helper that
+# shipped with the Phase-1 readiness UI. Phase 3 replaced it
+# with the proper contracts engine
+# (`npc_execution_contracts.evaluate`) wrapped by
+# `npc_execution_readiness.evaluate_for_preview`. The route now
+# calls the orchestrator directly. The function is retained
+# below behind an unreachable guard so any internal caller that
+# still imports it gets a clear deprecation message instead of
+# a silent regression.
 
 
 def _compute_readiness_v1(
+    *, svc: _ServiceDef,
+    impact, conflicts, blast, canary, health,
+    forward: str, render_error: str,
+) -> dict:
+    raise RuntimeError(
+        "_compute_readiness_v1 is deprecated; call "
+        "npc_execution_readiness.evaluate_for_preview instead."
+    )
+
+
+def _compute_readiness_v1_deprecated_body(
     *, svc: _ServiceDef,
     impact, conflicts, blast, canary, health,
     forward: str, render_error: str,
