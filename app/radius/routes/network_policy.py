@@ -31,6 +31,7 @@ from flask import (
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..db.repos import (
+    npc_change_sets_repo as cs_repo,
     npc_common as nc,
     npc_deployments_repo as dep_repo,
     npc_remote_access_repo as ra_repo,
@@ -39,6 +40,7 @@ from ..db.repos import (
     npc_web_block_repo as wb_repo,
 )
 from ..services import (
+    npc_apply_service as apply_svc,
     npc_audit_events as ev,
     npc_beginner_explainer as beginner_svc,
     npc_blast_radius as blast_svc,
@@ -53,6 +55,7 @@ from ..services import (
     npc_remote_access as ra_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
+    npc_snapshot_capture_service as snapshot_capture_svc,
     npc_walled_garden_planner as wg_planner,
     npc_web_block_planner as wb_planner,
 )
@@ -401,6 +404,21 @@ def register_network_policy_routes(bp: Blueprint) -> None:
             f"/network-policy/{url_slug}/<int:policy_id>/delete",
             f"npc_{svc.key}_delete",
             requires_perm(manage)(_make_delete_view(svc)),
+            methods=["POST"],
+        )
+        # Guarded apply route — POST only, gated by the apply
+        # permission AND the contracts engine. The route
+        # NEVER calls MikroTik directly — it goes through
+        # `apply_svc.request_apply` which uses the executor
+        # adapter (defaulting to the null executor).
+        bp.add_url_rule(
+            f"/network-policy/{url_slug}/<int:policy_id>/apply",
+            f"npc_{svc.key}_apply",
+            requires_perm(
+                svc.perms.get("apply")
+                or (svc.perms["preview"].rsplit(".", 1)[0]
+                    + ".apply")
+            )(_make_apply_view(svc)),
             methods=["POST"],
         )
         bp.add_url_rule(
@@ -1102,6 +1120,148 @@ def _compute_readiness_v1_deprecated_body(
             "زرّ التنفيذ سيظهر في مرحلة قادمة."
         ),
     }
+
+
+def _make_apply_view(svc: _ServiceDef):
+    """Guarded POST endpoint for live apply.
+
+    The route NEVER calls MikroTik. Everything goes through
+    `apply_svc.request_apply` which:
+      1. Re-runs the contracts engine over the current state.
+      2. Refuses if any blocker is present.
+      3. Creates the change_set + per-router targets.
+      4. Calls `RouterExecutor.execute_forward` per router
+         (default: NullRouterExecutor → refuses → marks per-
+         router as failed; the test fake replaces this).
+      5. Aggregates the status and records the result.
+
+    A pre-flight snapshot is required. If the route can take
+    one via `npc_snapshot_capture_service` without any reader
+    error, it does — otherwise the apply is refused with the
+    `no_snapshot` blocker.
+    """
+    def _view(policy_id: int):
+        ad = _adapter(svc)
+        policy = ad.get(_tid(), policy_id)
+        if not policy:
+            abort(404)
+
+        # Pull the same intelligence the preview did.
+        children: tuple = ()
+        if ad.list_children is not None:
+            children = tuple(ad.list_children(policy_id))
+        plan = (ad.plan(policy, children=children)
+                if ad.list_children is not None
+                else ad.plan(policy))
+        try:
+            forward = renderer.render_forward_script(plan)
+            rollback = renderer.render_rollback_script(plan)
+            render_error = ""
+        except renderer.RenderSafetyError as e:
+            forward = ""
+            rollback = ""
+            render_error = str(e)
+        script_hash = (
+            renderer.script_hash(forward) if forward else ""
+        )
+        intelligence = _build_intelligence(
+            svc=svc, policy=policy, plan=plan,
+            children=children, forward=forward,
+            rollback=rollback, render_error=render_error,
+        )
+
+        # Snapshot — best effort. If the reader is the default
+        # null one (which it is until a live adapter ships)
+        # the capture raises StateReaderNotConfigured; we
+        # interpret that as "no snapshot" and let the contracts
+        # engine refuse with NO_SNAPSHOT.
+        snapshot_id: Optional[int] = None
+        try:
+            cap = snapshot_capture_svc.capture_pre_apply_snapshot(
+                tenant_id=_tid(),
+                router_id=int(policy["router_id"]),
+                policy_id=policy_id,
+                policy_type=svc.key,
+                created_by=_actor(),
+            )
+            snapshot_id = int(cap.snapshot_id)
+        except Exception:  # noqa: BLE001
+            snapshot_id = None
+
+        # Confirmations supplied via form fields named
+        # `confirm__<code>=on`.
+        confirmations = tuple(
+            k.split("__", 1)[1]
+            for k in request.form.keys()
+            if k.startswith("confirm__")
+            and (request.form.get(k) or "")
+                .strip().lower() in {"on", "1", "true", "yes"}
+        )
+        canary_opt_in = (
+            (request.form.get("canary_opt_in") or "")
+            .strip().lower() in {"on", "1", "true", "yes"}
+        )
+        # Execution mode from the form; default to "full".
+        execution_mode = (
+            request.form.get("execution_mode")
+            or cs_repo.MODE_FULL
+        )
+        if execution_mode not in cs_repo.ALLOWED_MODES:
+            execution_mode = cs_repo.MODE_FULL
+
+        result = apply_svc.request_apply(
+            tenant_id=_tid(),
+            service=svc.key,
+            policy=policy,
+            policy_children=children,
+            forward_script=forward,
+            rollback_script=rollback,
+            render_error=render_error,
+            preview_hash=script_hash,
+            snapshot_id=snapshot_id,
+            target_router_ids=(int(policy["router_id"]),),
+            actor=_actor(),
+            actor_has_apply_perm=True,  # perm-decorated route
+            confirmations=confirmations,
+            execution_mode=execution_mode,
+            canary_opt_in=canary_opt_in,
+            all_routers_targeted=False,
+            offline_router_ids=(),
+            impact=intelligence["impact"],
+            conflicts=intelligence["conflicts"],
+            dependencies=intelligence["dependencies"],
+            blast=intelligence["blast"],
+            health=intelligence["health"],
+            canary=intelligence["canary"],
+        )
+
+        # Surface the result via flash + redirect back to the
+        # preview page. Phase 6 will render a dedicated result
+        # template; for Phase 4 we keep the UI minimal so the
+        # tests can validate the wiring rather than the polish.
+        if result.ok:
+            flash(
+                "تم التنفيذ بنجاح على الراوتر — "
+                f"change_set #{result.change_set_id}.",
+                "success",
+            )
+        elif result.status == cs_repo.STATUS_FAILED \
+                and result.blockers:
+            flash(
+                "التنفيذ ممنوع — موانع: "
+                + ", ".join(b.code for b in result.blockers),
+                "danger",
+            )
+        else:
+            flash(
+                "نتيجة التنفيذ: " + result.reason_ar,
+                "warning",
+            )
+        return redirect(url_for(
+            f"radius.npc_{svc.key}_preview",
+            policy_id=policy_id,
+        ))
+    return _view
 
 
 def _make_download_view(svc: _ServiceDef):
