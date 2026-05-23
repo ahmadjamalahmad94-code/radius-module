@@ -71,6 +71,7 @@ from ..services.mt_permissions import (
     PERM_NPC_WEB_BLOCK_MANAGE,
     PERM_NPC_WEB_BLOCK_PREVIEW,
     PERM_NPC_WEB_BLOCK_VIEW,
+    current_admin_has,
     requires_perm,
 )
 
@@ -435,6 +436,13 @@ def register_network_policy_routes(bp: Blueprint) -> None:
                     + ".apply")
             )(_make_rollback_view(svc)),
             methods=["POST"],
+        )
+        # Change history page — read-only, view permission.
+        bp.add_url_rule(
+            f"/network-policy/{url_slug}/<int:policy_id>/changes",
+            f"npc_{svc.key}_changes",
+            requires_perm(view)(_make_changes_view(svc)),
+            methods=["GET"],
         )
         bp.add_url_rule(
             f"/network-policy/{url_slug}/<int:policy_id>/duplicate",
@@ -967,13 +975,13 @@ def _build_intelligence(
         policy=policy,
     )
 
-    # Phase 3 — the contracts engine is the single source of
-    # truth. The route passes the policy + every analysis +
-    # script text + render_error; readiness_svc composes the
-    # ContractInputs and returns a UI view-model.
+    # Phase 3+6 — the contracts engine drives readiness; the
+    # template uses the result to decide whether to render
+    # the apply form.
     apply_perm = svc.perms.get("apply") or (
         svc.perms["preview"].rsplit(".", 1)[0] + ".apply"
     )
+    actor_has_apply = current_admin_has(apply_perm)
     readiness_obj = readiness_svc.evaluate_for_preview(
         policy=policy, policy_type=svc.key,
         impact=impact, conflicts=conflicts,
@@ -983,9 +991,20 @@ def _build_intelligence(
         rollback_script=rollback,
         render_error=render_error,
         apply_perm=apply_perm,
-        actor_has_apply_perm=False,
+        actor_has_apply_perm=actor_has_apply,
+        # Preview-time: we haven't taken a snapshot yet. The
+        # apply route does that as part of the POST. We pass
+        # a sentinel positive id (1) so the readiness card
+        # doesn't show "no snapshot" for a policy that's
+        # otherwise fine — the apply route will re-evaluate
+        # with the real snapshot id.
+        snapshot_id=1,
     )
     readiness = readiness_obj.as_dict()
+    readiness["actor_has_apply_perm"] = bool(actor_has_apply)
+    readiness["required_confirmations"] = list(
+        readiness_obj.decision.required_confirmations
+    )
 
     return {
         "impact":          impact,
@@ -1276,6 +1295,50 @@ def _make_apply_view(svc: _ServiceDef):
             f"radius.npc_{svc.key}_preview",
             policy_id=policy_id,
         ))
+    return _view
+
+
+def _make_changes_view(svc: _ServiceDef):
+    """Server-rendered سجل التغييرات page. Lists every
+    change_set for this policy with per-router breakdown +
+    a rollback button on eligible rows."""
+    def _view(policy_id: int):
+        ad = _adapter(svc)
+        policy = ad.get(_tid(), policy_id)
+        if not policy:
+            abort(404)
+        rows = cs_repo.list_for_policy(
+            _tid(), service=svc.key, policy_id=int(policy_id),
+        )
+        # Decorate each row with its targets + eligibility
+        # flags for the template.
+        decorated: list[dict] = []
+        for r in rows:
+            r = dict(r)
+            r["targets"] = cs_repo.list_targets(int(r["id"]))
+            r["rollback_eligible"] = (
+                r["action_type"] == cs_repo.ACTION_APPLY
+                and r["status"] in (
+                    cs_repo.STATUS_SUCCEEDED,
+                    cs_repo.STATUS_PARTIALLY_SUCCEEDED,
+                )
+            )
+            decorated.append(r)
+        apply_perm = svc.perms.get("apply") or (
+            svc.perms["preview"].rsplit(".", 1)[0] + ".apply"
+        )
+        return render_template(
+            "radius/network_policy_changes.html",
+            service=svc,
+            services=list(_REGISTRY.values()),
+            policy=policy,
+            router_name=_nas_name(policy["router_id"]),
+            change_sets=decorated,
+            can_rollback=current_admin_has(apply_perm),
+            page_title=(
+                f"سجل التغييرات: {policy['name']}"
+            ),
+        )
     return _view
 
 

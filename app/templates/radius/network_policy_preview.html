@@ -646,7 +646,7 @@
       {% endfor %}
     </ul>
 
-    {# Required permission + future-apply placeholder #}
+    {# Required permission + apply form (Phase 6) #}
     <div style="display:flex; flex-wrap:wrap; gap:10px;
                 align-items:center;
                 padding-top:10px;
@@ -660,14 +660,125 @@
         </code>
       </span>
 
-      <button type="button" class="npc-btn" disabled
-              data-test="npc-future-apply-placeholder"
-              style="margin-inline-start:auto;
-                     cursor:not-allowed; opacity:0.6;">
-        <i class="fa-solid fa-shield-halved"></i>
-        التنفيذ غير مفعّل بعد
-      </button>
+      <a class="npc-btn"
+         href="{{ url_for('radius.npc_' ~ service.key ~ '_changes', policy_id=policy.id) }}"
+         style="margin-inline-start:auto;"
+         data-test="npc-changes-link">
+        <i class="fa-regular fa-rectangle-list"></i>
+        سجل التغييرات
+      </a>
     </div>
+
+    {% if rdy.actor_has_apply_perm %}
+      {# Render the apply form. The contract engine returns
+         the actual required_confirmations list. We render a
+         checkbox per code so the operator opts in
+         explicitly. #}
+      <form method="POST"
+            action="{{ url_for('radius.npc_' ~ service.key ~ '_apply', policy_id=policy.id) }}"
+            data-test="npc-apply-form"
+            style="margin-top:14px;
+                   padding:14px 16px;
+                   background:#fafbfd;
+                   border:1px solid #EEEDF3;
+                   border-radius:10px;">
+        {{ csrf_token_input() | safe }}
+
+        <strong style="font-size:13.5px; color:#1F2937;">
+          <i class="fa-solid fa-shield-check"
+             style="color:#6B5AED;"></i>
+          تنفيذ آمن — مع موافقات صريحة
+        </strong>
+
+        {% set CONFIRM_LABELS = {
+          'confirm_large_blast_radius':
+            'أؤكّد أن النطاق واسع وأنّني قرأت تأثيراته.',
+          'confirm_firewall_drop':
+            'أؤكّد أن السياسة تحذف حركة forward (drop).',
+          'confirm_all_router_scope':
+            'أؤكّد أن السياسة تستهدف كل الراوترات.',
+          'confirm_dependency_impact':
+            'أؤكّد أنّني راجعت قائمة الخدمات التي قد تتأثّر.',
+          'confirm_canary_bypass':
+            'أؤكّد تخطّي المرحلة التدريجية (canary).'
+        } %}
+
+        {% if rdy.required_confirmations %}
+          <p style="font-size:12.5px; color:#4b5563;
+                    margin: 8px 0 10px;">
+            عَلِّم كل موافقة مطلوبة قبل التنفيذ:
+          </p>
+          <div style="display:grid; gap:8px;"
+               data-test="npc-confirm-grid">
+            {% for code in rdy.required_confirmations %}
+              <label style="display:flex; align-items:center;
+                            gap:10px; font-size:13px;">
+                <input type="checkbox"
+                       name="confirm__{{ code }}"
+                       data-test="npc-confirm-{{ code }}"
+                       value="on">
+                <span>
+                  {{ CONFIRM_LABELS.get(code, code) }}
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div style="margin-top:14px; display:flex;
+                    gap:8px; flex-wrap:wrap;
+                    align-items:center;">
+          <label style="font-size:12.5px; color:#4b5563;
+                        display:flex; align-items:center;
+                        gap:6px;">
+            وضع التنفيذ:
+            <select name="execution_mode"
+                    style="padding:4px 8px;
+                           border:1px solid #E3E1EC;
+                           border-radius:6px; font-size:12px;">
+              <option value="full">كامل (full)</option>
+              <option value="canary">تدريجي (canary)</option>
+              <option value="staged">مرحلتين (staged)</option>
+            </select>
+          </label>
+
+          <button type="submit"
+                  class="npc-btn is-primary"
+                  data-test="npc-apply-submit"
+                  {% if rdy.blockers_ar %}disabled{% endif %}
+                  style="margin-inline-start:auto;
+                         {% if rdy.blockers_ar %}
+                         opacity:0.55; cursor:not-allowed;
+                         {% endif %}">
+            <i class="fa-solid fa-shield-halved"></i>
+            تطبيق آمن
+          </button>
+        </div>
+
+        {% if rdy.blockers_ar %}
+          <p style="margin-top:10px;
+                    color:#b91c1c; font-size:12px;">
+            <i class="fa-solid fa-ban"></i>
+            عالج الموانع أعلاه قبل التنفيذ.
+          </p>
+        {% endif %}
+      </form>
+    {% else %}
+      {# No apply perm — show disabled placeholder so the UX
+         stays consistent. #}
+      <div style="margin-top:14px;
+                  padding:12px 14px;
+                  background:#f3f4f6;
+                  border:1px dashed #E3E1EC;
+                  border-radius:10px;
+                  color:#6b7280; font-size:12.5px;
+                  text-align:center;"
+           data-test="npc-future-apply-placeholder">
+        <i class="fa-solid fa-lock"></i>
+        لا تملك صلاحية {{ rdy.apply_perm_label_ar }} —
+        التنفيذ غير متاح.
+      </div>
+    {% endif %}
 
     <p style="margin-top:10px;
               color:#6b7280; font-size:12px;">
