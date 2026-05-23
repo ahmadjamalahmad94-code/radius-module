@@ -165,6 +165,9 @@ def _register_all(bp: Blueprint) -> None:
     from .site_exit import register_site_exit_routes
     register_site_exit_routes(bp)
 
+    from .network_policy import register_network_policy_routes
+    register_network_policy_routes(bp)
+
     from .tokens import register_tokens_routes
     register_tokens_routes(bp)
 

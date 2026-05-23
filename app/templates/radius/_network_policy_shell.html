@@ -1,0 +1,379 @@
+{# Shared shell for the three Network Policy Center pages.
+
+   Provides:
+     - top tab strip (3 sub-services)
+     - large dry-run banner at the top of every page
+     - shared CSS (soft cards, RTL, premium admin feel)
+
+   Pages include this partial via Jinja inheritance:
+     {% extends "admin/_admin_layout.html" %}
+     {% include "radius/_network_policy_shell.html" %}
+#}
+
+{% macro npc_dry_run_banner() %}
+<div class="npc-dry-banner" role="status" aria-live="polite">
+  <span class="npc-dry-icon"><i class="fa-solid fa-vial-virus"></i></span>
+  <div class="npc-dry-text">
+    <strong>معاينة فقط (Dry-Run)</strong>
+    <span>لم يتم التطبيق على الراوتر — لا قواعد حقيقية تُكتب في
+      MikroTik من هذه الصفحات. التطبيق المباشر مرحلة لاحقة
+      محميّة بصلاحية منفصلة.</span>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro npc_tabs(active_slug, services) %}
+<nav class="npc-tabs" aria-label="فرعيّات سياسات الشبكة">
+  {% for s in services %}
+    <a class="npc-tab{% if s.url_slug == active_slug %} is-active{% endif %}"
+       href="{{ url_for('radius.npc_' ~ s.key ~ '_list') }}">
+      <span class="npc-tab-icon">
+        <i class="fa-solid fa-{{ s.icon }}"></i>
+      </span>
+      <span class="npc-tab-label">{{ s.label_ar }}</span>
+    </a>
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{% macro npc_risk_pill(risk) %}
+  {%- if risk == 'high' -%}
+    <span class="npc-pill npc-pill-risk-high">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      مرتفع
+    </span>
+  {%- elif risk == 'medium' -%}
+    <span class="npc-pill npc-pill-risk-mid">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      متوسط
+    </span>
+  {%- else -%}
+    <span class="npc-pill npc-pill-risk-low">
+      <i class="fa-solid fa-shield"></i>
+      منخفض
+    </span>
+  {%- endif -%}
+{% endmacro %}
+
+{% macro npc_status_pill(status) %}
+  {%- if status == 'previewed' -%}
+    <span class="npc-pill npc-pill-status-prev">
+      <i class="fa-regular fa-circle-check"></i>
+      تمت المعاينة
+    </span>
+  {%- elif status == 'applied' -%}
+    <span class="npc-pill npc-pill-status-app">
+      <i class="fa-solid fa-circle-check"></i>
+      مُطبَّق
+    </span>
+  {%- elif status == 'failed' -%}
+    <span class="npc-pill npc-pill-status-fail">
+      <i class="fa-solid fa-circle-xmark"></i>
+      فشل
+    </span>
+  {%- elif status == 'disabled' -%}
+    <span class="npc-pill npc-pill-status-off">
+      <i class="fa-regular fa-circle-pause"></i>
+      مُعطَّلة
+    </span>
+  {%- else -%}
+    <span class="npc-pill npc-pill-status-draft">
+      <i class="fa-regular fa-pen-to-square"></i>
+      مسودّة
+    </span>
+  {%- endif -%}
+{% endmacro %}
+
+<style>
+  /* Shared NPC visual language — soft cards, RTL, premium feel.
+     All tokens align with the existing hub_v2 / admin_layout
+     palette so the page looks native, not bolted-on. */
+
+  .npc-dry-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg,
+        rgba(107,90,237,0.06), rgba(107,90,237,0.02));
+    border: 1px solid rgba(107,90,237,0.18);
+    border-inline-start: 4px solid #6B5AED;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+  }
+  .npc-dry-banner .npc-dry-icon {
+    width: 36px; height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #6B5AED; color: #fff;
+    border-radius: 8px; font-size: 16px;
+    flex: 0 0 auto;
+  }
+  .npc-dry-banner .npc-dry-text {
+    display: flex; flex-direction: column; gap: 2px;
+    line-height: 1.5;
+  }
+  .npc-dry-banner strong {
+    color: #4036A6; font-weight: 800; font-size: 14px;
+  }
+  .npc-dry-banner span {
+    color: #4a4f59;
+  }
+
+  .npc-tabs {
+    display: flex; gap: 8px;
+    border-bottom: 1px solid #EEEDF3;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .npc-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 2px solid transparent;
+    color: #475569;
+    font-size: 13.5px; font-weight: 600;
+    text-decoration: none;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .npc-tab:hover { color: #6B5AED; }
+  .npc-tab.is-active {
+    color: #6B5AED;
+    border-bottom-color: #6B5AED;
+  }
+  .npc-tab-icon { font-size: 14px; }
+
+  .npc-card {
+    background: #fff;
+    border: 1px solid #EEEDF3;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    transition: box-shadow .15s ease, transform .15s ease;
+  }
+  .npc-card + .npc-card { margin-top: 12px; }
+  .npc-card-head {
+    display: flex; align-items: flex-start; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .npc-card-title {
+    font-size: 15px; font-weight: 700;
+    color: #1F2937;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .npc-card-sub {
+    color: #6b7280; font-size: 12.5px;
+    margin-top: 2px;
+  }
+  .npc-card-actions {
+    margin-inline-start: auto;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+
+  .npc-grid { display: grid; gap: 12px; }
+
+  .npc-meta-row {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-top: 10px; font-size: 12.5px;
+    color: #4b5563;
+  }
+  .npc-meta-row span i {
+    color: #9ca3af; margin-inline-end: 4px;
+  }
+
+  .npc-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px; font-size: 11.5px; font-weight: 700;
+    line-height: 1.4;
+  }
+  .npc-pill-risk-low {
+    background: #ecfdf5; color: #047857;
+    border: 1px solid #a7f3d0;
+  }
+  .npc-pill-risk-mid {
+    background: #fffbeb; color: #b45309;
+    border: 1px solid #fde68a;
+  }
+  .npc-pill-risk-high {
+    background: #fef2f2; color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .npc-pill-status-prev {
+    background: #eef2ff; color: #4338ca;
+    border: 1px solid #c7d2fe;
+  }
+  .npc-pill-status-draft {
+    background: #f3f4f6; color: #374151;
+    border: 1px solid #e5e7eb;
+  }
+  .npc-pill-status-app {
+    background: #ecfdf5; color: #047857;
+    border: 1px solid #a7f3d0;
+  }
+  .npc-pill-status-fail {
+    background: #fef2f2; color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .npc-pill-status-off {
+    background: #f5f3ff; color: #6d28d9;
+    border: 1px solid #ddd6fe;
+  }
+
+  .npc-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px; font-weight: 600;
+    border: 1px solid #E3E1EC;
+    background: #fff; color: #1F2937;
+    cursor: pointer; text-decoration: none;
+    transition: background .15s ease, color .15s ease;
+  }
+  .npc-btn:hover {
+    background: #F4F1FE; color: #6B5AED;
+  }
+  .npc-btn.is-primary {
+    background: #6B5AED; color: #fff;
+    border-color: #6B5AED;
+  }
+  .npc-btn.is-primary:hover {
+    background: #5B4BD8; color: #fff;
+  }
+  .npc-btn.is-danger {
+    color: #b91c1c; border-color: #fecaca;
+  }
+  .npc-btn.is-danger:hover {
+    background: #fef2f2; color: #b91c1c;
+  }
+  .npc-btn[disabled] {
+    opacity: 0.55; cursor: not-allowed;
+  }
+
+  .npc-empty {
+    text-align: center; padding: 48px 24px;
+    color: #6b7280;
+    border: 2px dashed #E3E1EC;
+    border-radius: 12px;
+    background: #fafbfd;
+  }
+  .npc-empty i {
+    font-size: 28px; color: #c7c4d8;
+    margin-bottom: 10px; display: block;
+  }
+  .npc-empty .npc-empty-title {
+    font-size: 15px; font-weight: 700; color: #374151;
+    margin-bottom: 6px;
+  }
+
+  /* Form layout — two-column on wide, stacked on mobile. */
+  .npc-form-grid {
+    display: grid; gap: 20px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+  @media (max-width: 1024px) {
+    .npc-form-grid { grid-template-columns: 1fr; }
+  }
+  .npc-field {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .npc-field label {
+    font-size: 12.5px; font-weight: 600; color: #374151;
+  }
+  .npc-field input[type="text"],
+  .npc-field input[type="datetime-local"],
+  .npc-field select,
+  .npc-field textarea {
+    padding: 8px 10px;
+    border: 1px solid #E3E1EC;
+    border-radius: 8px;
+    font: inherit; font-size: 13px;
+    background: #fff; color: #1F2937;
+    width: 100%; box-sizing: border-box;
+  }
+  .npc-field input:focus,
+  .npc-field select:focus,
+  .npc-field textarea:focus {
+    outline: 2px solid rgba(107,90,237,0.25);
+    outline-offset: -2px;
+    border-color: #6B5AED;
+  }
+  .npc-field-hint {
+    color: #6b7280; font-size: 11.5px;
+  }
+  .npc-check-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; padding: 6px 0;
+    border-bottom: 1px dashed #EEEDF3;
+  }
+  .npc-check-row:last-child { border-bottom: 0; }
+  .npc-check-row input[type="checkbox"] {
+    width: 16px; height: 16px; margin: 0; cursor: pointer;
+  }
+  .npc-check-row .npc-check-meta {
+    margin-inline-start: auto;
+    color: #6b7280; font-size: 11.5px;
+  }
+
+  .npc-script-pre {
+    background: #0f172a; color: #e8eef7;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    padding: 14px; border-radius: 10px;
+    overflow: auto;
+    max-height: 420px;
+    font-size: 12.5px; line-height: 1.6;
+    white-space: pre;
+    direction: ltr; text-align: left;
+  }
+  .npc-script-bar {
+    display: flex; gap: 6px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .npc-script-bar .npc-script-tag {
+    font-size: 11.5px; color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 8px; border-radius: 999px;
+  }
+
+  .npc-summary-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  .npc-summary-tile {
+    background: #fafbfd;
+    border: 1px solid #EEEDF3;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .npc-summary-tile .npc-summary-n {
+    font-size: 20px; font-weight: 800; color: #1F2937;
+  }
+  .npc-summary-tile .npc-summary-l {
+    font-size: 11.5px; color: #6b7280;
+    margin-top: 2px;
+  }
+
+  .npc-explain {
+    background: #fff;
+    border: 1px solid #EEEDF3;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .npc-explain h4 {
+    margin: 0 0 6px; font-size: 13.5px; color: #1F2937;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .npc-explain ul {
+    margin: 0 0 8px; padding-inline-start: 20px;
+    font-size: 13px; line-height: 1.7;
+    color: #4b5563;
+  }
+  .npc-explain ul li { margin-bottom: 2px; }
+  .npc-explain .npc-explain-do  { color: #047857; }
+  .npc-explain .npc-explain-skip { color: #6b7280; }
+  .npc-explain .npc-explain-warn { color: #b45309; }
+  .npc-explain .npc-explain-block { color: #b91c1c; }
+
+  /* Inline forms ride next to the action buttons without
+     pushing the layout around. */
+  .npc-inline-form { display: inline-flex; gap: 6px; }
+</style>

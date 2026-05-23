@@ -79,6 +79,11 @@
 {%- set m_jobs        = ('/jobs/' in path) -%}
 {# Phase O — operations surfaces #}
 {%- set m_problems    = ('/problems' in path) -%}
+{# NPC — Network Policy Center #}
+{%- set m_npc            = ('/network-policy/' in path) -%}
+{%- set m_npc_remote     = ('/network-policy/remote-access' in path) -%}
+{%- set m_npc_block      = ('/network-policy/web-block' in path) -%}
+{%- set m_npc_walled     = ('/network-policy/walled-garden' in path) -%}
 
 {# Accounting #}
 {%- set m_invoices    = '/invoices' in path -%}
@@ -113,7 +118,7 @@
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
                                 or m_audit_log or m_jobs
-                                or m_problems -%}
+                                or m_problems or m_npc -%}
 {%- set sec_billing_active  = m_invoices or m_vouchers or m_ledger or m_finance_rep -%}
 {%- set sec_support_active  = m_tickets or m_services -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups or m_lifecycle -%}
@@ -226,6 +231,16 @@
         {{ sub_item('radius.mt_topology',     'خريطة الشبكة',         m_topology) }}
         {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',        m_problems) }}
         {{ sub_item('radius.diagnostics',     'تشخيص الراوترات',      m_diag) }}
+        {# ──────────── سياسات الشبكة (NPC) ──────────── #}
+        {{ sub_item('radius.npc_remote_access_list',
+                    '◆ سياسات الشبكة — الوصول البعيد',
+                    m_npc_remote) }}
+        {{ sub_item('radius.npc_web_block_list',
+                    '◆ سياسات الشبكة — حظر المواقع',
+                    m_npc_block) }}
+        {{ sub_item('radius.npc_walled_garden_list',
+                    '◆ سياسات الشبكة — المواقع المسموحة',
+                    m_npc_walled) }}
         {{ sub_item('radius.mt_alerts_index', 'التنبيهات الذكيّة',     m_alerts) }}
         {{ sub_item('radius.mt_permission_matrix', 'مصفوفة الصلاحيات', m_perms) }}
         {{ sub_item('radius.audit_log_index', 'سجل العمليات',         m_audit_log) }}

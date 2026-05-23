@@ -1,0 +1,146 @@
+{# NPC list page — one card per policy. Same template covers
+   all three sub-services; the route hands in `service`. #}
+
+{% extends "admin/_admin_layout.html" %}
+{% import "radius/_network_policy_shell.html" as npc %}
+
+{% block title %}{{ page_title }} — مركز سياسات الشبكة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
+{% block page_title %}{{ service.label_ar }}{% endblock %}
+{% block page_sub %}
+  <span class="sub">معاينة فقط — مركز سياسات الشبكة</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  {% include "radius/_network_policy_shell.html" %}
+{% endblock %}
+
+{% block content %}
+{{ npc.npc_dry_run_banner() }}
+
+{{ npc.npc_tabs(service.url_slug, services) }}
+
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+  <h2 style="margin:0; font-size:18px;">
+    قائمة سياسات {{ service.label_ar }}
+  </h2>
+  <span style="color:#6b7280; font-size:13px;">
+    ({{ cards|length }} عنصر)
+  </span>
+  <a class="npc-btn is-primary"
+     style="margin-inline-start:auto;"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_new') }}">
+    <i class="fa-solid fa-plus"></i>
+    سياسة جديدة
+  </a>
+</div>
+
+{% if not cards %}
+  <div class="npc-empty">
+    <i class="fa-regular fa-folder-open"></i>
+    <div class="npc-empty-title">
+      لا توجد سياسات بعد لـ {{ service.label_ar }}.
+    </div>
+    <div>ابدأ بإنشاء سياسة جديدة لمعاينة السكربت قبل أي تطبيق.</div>
+  </div>
+{% else %}
+  <div class="npc-grid">
+    {% for c in cards %}
+      {% set p = c.row %}
+      <div class="npc-card">
+        <div class="npc-card-head">
+          <div>
+            <div class="npc-card-title">
+              <i class="fa-solid fa-{{ service.icon }}"
+                 style="color:#6B5AED;"></i>
+              {{ p.name }}
+            </div>
+            <div class="npc-card-sub">
+              <span style="color:#6b7280;">slug:</span>
+              <code>{{ p.slug }}</code>
+              · الراوتر:
+              <strong>{{ c.router_name or '—' }}</strong>
+            </div>
+          </div>
+          <div class="npc-card-actions">
+            <a class="npc-btn is-primary"
+               href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=p.id) }}">
+              <i class="fa-solid fa-eye"></i> معاينة
+            </a>
+            <a class="npc-btn"
+               href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=p.id) }}">
+              <i class="fa-regular fa-pen-to-square"></i> تحرير
+            </a>
+            <form class="npc-inline-form"
+                  method="POST"
+                  action="{{ url_for('radius.npc_' ~ service.key ~ '_duplicate', policy_id=p.id) }}">
+              {{ csrf_token_input() | safe }}
+              <button class="npc-btn" type="submit"
+                      title="إنشاء نسخة">
+                <i class="fa-regular fa-copy"></i> نسخ
+              </button>
+            </form>
+            <form class="npc-inline-form"
+                  method="POST"
+                  action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
+                  onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
+              {{ csrf_token_input() | safe }}
+              <button class="npc-btn is-danger" type="submit">
+                <i class="fa-regular fa-trash-can"></i> حذف
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="npc-meta-row">
+          {{ npc.npc_status_pill(c.deployment_status) }}
+          {{ npc.npc_risk_pill(c.risk) }}
+
+          {% if p.enabled %}
+            <span class="npc-pill npc-pill-status-app">
+              <i class="fa-solid fa-toggle-on"></i> مُفعَّلة
+            </span>
+          {% else %}
+            <span class="npc-pill npc-pill-status-off">
+              <i class="fa-solid fa-toggle-off"></i> موقوفة
+            </span>
+          {% endif %}
+
+          {% if c.child_count %}
+            <span>
+              <i class="fa-regular fa-rectangle-list"></i>
+              {{ c.child_count }} عنصراً
+            </span>
+          {% endif %}
+
+          {% if c.last_preview_at %}
+            <span>
+              <i class="fa-regular fa-clock"></i>
+              آخر معاينة: {{ c.last_preview_at }}
+            </span>
+          {% else %}
+            <span style="color:#9ca3af;">
+              <i class="fa-regular fa-clock"></i>
+              لم تُعاين بعد
+            </span>
+          {% endif %}
+
+          {% if p.created_at %}
+            <span>
+              <i class="fa-regular fa-calendar-plus"></i>
+              أنشئت: {{ p.created_at }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div style="margin-top:24px; color:#6b7280; font-size:12.5px;">
+  <i class="fa-solid fa-circle-info" style="color:#6B5AED;"></i>
+  هذه الصفحة لا تصدر أي أوامر إلى الراوتر — فقط تنشئ سكربتات
+  للمعاينة. التطبيق المباشر مرحلة لاحقة محميّة بصلاحية منفصلة.
+</div>
+{% endblock %}

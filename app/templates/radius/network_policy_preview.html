@@ -1,0 +1,294 @@
+{# NPC preview page — the core operator UX.
+
+   Sections:
+     1. Dry-run banner + tabs (shared shell)
+     2. Two-column header card: policy meta + risk + status
+     3. Plain-language Arabic explanation: will-do / will-skip /
+        blocks / allows / warnings
+     4. Forward script viewer (monospace) — copy + download
+     5. Rollback script viewer
+     6. Risk card
+     7. Summary tiles (counts per section)
+#}
+
+{% extends "admin/_admin_layout.html" %}
+{% import "radius/_network_policy_shell.html" as npc %}
+
+{% block title %}{{ page_title }} — معاينة سياسة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-eye"></i>{% endblock %}
+{% block page_title %}معاينة: {{ policy.name }}{% endblock %}
+{% block page_sub %}
+  <span class="sub">{{ service.label_ar }} — {{ router_name }}</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  {% include "radius/_network_policy_shell.html" %}
+{% endblock %}
+
+{% block content %}
+{{ npc.npc_dry_run_banner() }}
+{{ npc.npc_tabs(service.url_slug, services) }}
+
+<div style="display:flex; gap:8px; margin-bottom:14px;">
+  <a class="npc-btn"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
+    <i class="fa-solid fa-arrow-right"></i>
+    رجوع للقائمة
+  </a>
+  <a class="npc-btn"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=policy.id) }}">
+    <i class="fa-regular fa-pen-to-square"></i>
+    تحرير السياسة
+  </a>
+
+  <form class="npc-inline-form"
+        method="POST"
+        action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
+    {{ csrf_token_input() | safe }}
+    <button class="npc-btn is-primary" type="submit"
+      {% if not plan.can_apply %}disabled{% endif %}>
+      <i class="fa-solid fa-arrows-rotate"></i>
+      توليد المعاينة وحفظها
+    </button>
+  </form>
+
+  {% if forward_script %}
+    <a class="npc-btn"
+       href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
+       download>
+      <i class="fa-solid fa-download"></i>
+      تنزيل .rsc
+    </a>
+  {% endif %}
+</div>
+
+{# ─── Top card: policy + risk + status ─── #}
+<div class="npc-card" style="padding:16px 18px;">
+  <div class="npc-card-head">
+    <div>
+      <div class="npc-card-title">
+        <i class="fa-solid fa-{{ service.icon }}"
+           style="color:#6B5AED;"></i>
+        {{ policy.name }}
+      </div>
+      <div class="npc-card-sub">
+        slug: <code>{{ policy.slug }}</code>
+        · الراوتر: <strong>{{ router_name }}</strong>
+        {% if policy.expires_at %}
+          · ينتهي: <code>{{ policy.expires_at }}</code>
+        {% endif %}
+        {% if policy.hotspot_profile %}
+          · profile: <code>{{ policy.hotspot_profile }}</code>
+        {% endif %}
+      </div>
+    </div>
+    <div class="npc-card-actions" style="align-items:center;">
+      {% if plan.can_apply %}
+        <span class="npc-pill npc-pill-status-prev">
+          <i class="fa-regular fa-circle-check"></i>
+          الخطّة سليمة وقابلة للتوليد
+        </span>
+      {% else %}
+        <span class="npc-pill npc-pill-status-fail">
+          <i class="fa-solid fa-ban"></i>
+          الخطّة محظورة — راجع الأخطاء
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Summary tiles #}
+  <div class="npc-summary-grid" style="margin-top:14px;">
+    <div class="npc-summary-tile">
+      <div class="npc-summary-n">
+        {{ summary.command_count }}
+      </div>
+      <div class="npc-summary-l">إجمالي الأوامر</div>
+    </div>
+    {% for k, label in [
+      ('cleanup',       'تنظيف'),
+      ('address_list',  'قوائم العناوين'),
+      ('filter',        'قواعد firewall'),
+      ('walled_garden', 'walled-garden'),
+      ('scheduler',     'مهام مجدولة'),
+    ] %}
+      {% if summary.section_counts.get(k, 0) %}
+        <div class="npc-summary-tile">
+          <div class="npc-summary-n">
+            {{ summary.section_counts[k] }}
+          </div>
+          <div class="npc-summary-l">{{ label }}</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── Plain-language explanation ─── #}
+<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
+  <div class="npc-explain" style="border:none; padding:0;">
+    <h4>
+      <i class="fa-regular fa-comment-dots"
+         style="color:#6B5AED;"></i>
+      ماذا سيحدث؟ (بلغة مبسَّطة)
+    </h4>
+
+    {% if explanation.will_do %}
+      <ul class="npc-explain-do">
+        {% for line in explanation.will_do %}
+          <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if explanation.will_block %}
+      <h4>
+        <i class="fa-solid fa-ban"
+           style="color:#b91c1c;"></i>
+        سيتم حظر:
+      </h4>
+      <ul class="npc-explain-block">
+        {% for v in explanation.will_block %}
+          <li><code>{{ v }}</code></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if explanation.will_allow %}
+      <h4>
+        <i class="fa-solid fa-circle-check"
+           style="color:#047857;"></i>
+        سيُسمح قبل تسجيل الدخول:
+      </h4>
+      <ul class="npc-explain-do">
+        {% for v in explanation.will_allow %}
+          <li><code>{{ v }}</code></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if explanation.will_skip %}
+      <h4>
+        <i class="fa-regular fa-circle-pause"
+           style="color:#6b7280;"></i>
+        ما لن يُعدَّل
+      </h4>
+      <ul class="npc-explain-skip">
+        {% for line in explanation.will_skip %}
+          <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if explanation.warnings_ar or explanation.blocking %}
+      <h4>
+        <i class="fa-solid fa-triangle-exclamation"
+           style="color:#b45309;"></i>
+        تحذيرات
+      </h4>
+      <ul class="npc-explain-warn">
+        {% for w in explanation.blocking %}
+          <li><strong>محظور:</strong> {{ w }}</li>
+        {% endfor %}
+        {% for w in explanation.warnings_ar %}
+          <li>{{ w }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+
+{# ─── Forward script viewer ─── #}
+<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
+  <div style="display:flex; align-items:center; gap:10px;
+              flex-wrap:wrap; margin-bottom:8px;">
+    <h3 style="margin:0; font-size:14.5px;">
+      <i class="fa-solid fa-file-code"
+         style="color:#6B5AED;"></i>
+      سكربت forward (RouterOS v7)
+    </h3>
+    <span class="npc-script-tag">
+      hash: {{ script_hash[:16] }}…
+    </span>
+    <span class="npc-script-tag" style="background:#eef2ff;
+                                        color:#4338ca;">
+      {{ summary.command_count }} سطر فعّال
+    </span>
+    <div style="margin-inline-start:auto; display:flex; gap:6px;">
+      <button class="npc-btn" type="button"
+              onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';"
+              {% if not forward_script %}disabled{% endif %}>
+        <i class="fa-regular fa-clipboard"></i>
+        نسخ
+      </button>
+      {% if forward_script %}
+        <a class="npc-btn"
+           href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
+           download>
+          <i class="fa-solid fa-download"></i>
+          .rsc
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if render_error %}
+    <div class="npc-card" style="border-color:#fecaca;
+                                  background:#fef2f2;
+                                  color:#b91c1c;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      {{ render_error }}
+    </div>
+  {% elif not forward_script %}
+    <div style="color:#6b7280; font-size:13px;
+                padding:8px 0;">
+      لا يمكن توليد السكربت في حالته الحاليّة. أضف عناصر أو
+      عالج الأخطاء الموضّحة أعلاه ثم اضغط «توليد المعاينة».
+    </div>
+  {% else %}
+    <pre class="npc-script-pre" id="npc-forward"
+    >{{ forward_script }}</pre>
+  {% endif %}
+</div>
+
+{# ─── Rollback script viewer ─── #}
+{% if rollback_script %}
+<div class="npc-card" style="padding:16px 18px; margin-top:12px;">
+  <div style="display:flex; align-items:center; gap:10px;
+              flex-wrap:wrap; margin-bottom:8px;">
+    <h3 style="margin:0; font-size:14.5px;">
+      <i class="fa-solid fa-rotate-left"
+         style="color:#6B5AED;"></i>
+      سكربت rollback (التراجع)
+    </h3>
+    <span class="npc-script-tag">
+      يُزيل المعرَّفات بـ
+      <code>{{ plan.comment_prefix }}</code> فقط
+    </span>
+    <div style="margin-inline-start:auto;">
+      <button class="npc-btn" type="button"
+              onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
+        <i class="fa-regular fa-clipboard"></i>
+        نسخ
+      </button>
+    </div>
+  </div>
+  <pre class="npc-script-pre" id="npc-rollback"
+  >{{ rollback_script }}</pre>
+  <p style="font-size:12.5px; color:#4b5563; margin-top:10px;">
+    <i class="fa-solid fa-shield-halved"
+       style="color:#047857;"></i>
+    {{ explanation.rollback_ar }}
+  </p>
+</div>
+{% endif %}
+
+<div style="margin-top:18px; color:#6b7280; font-size:12.5px;">
+  <i class="fa-solid fa-circle-info"
+     style="color:#6B5AED;"></i>
+  تذكير: هذه الصفحة لا تتّصل بالـ MikroTik. لتطبيق هذا السكربت
+  انسخه وأدخله يدويّاً عبر terminal الراوتر، أو انتظر مرحلة
+  «التطبيق المحمي» القادمة في خارطة الطريق.
+</div>
+{% endblock %}
