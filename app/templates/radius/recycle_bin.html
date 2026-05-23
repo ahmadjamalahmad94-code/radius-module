@@ -20,6 +20,7 @@
 {% block page_sub %}<span class="sub">الأرشفة بديل آمن عن الحذف النهائي</span>{% endblock %}
 
 {% block content %}
+<div class="hr-page-shell hr-page-shell--recycle" data-admin-rhythm data-recycle-bin-page>
 
 {{ hub.hero(
   "سلة المحذوفات",
@@ -33,7 +34,7 @@
 ) }}
 
 {# ───── Filter chips (entity_type) ────────────────────── #}
-<form method="get" class="hub-filterbar" onsubmit="return false">
+<form method="get" class="hub-filterbar hr-toolbar" onsubmit="return false">
   <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'ghost' }} hub-btn--sm"
      href="{{ url_for('radius.recycle_bin') }}">
     <i class="fa-solid fa-layer-group"></i>
@@ -57,7 +58,7 @@
 </form>
 
 {# ───── Per-entity tiles ──────────────────────────────── #}
-<div class="hub-tile-grid">
+<div class="hub-tile-grid hr-stat-grid">
   {% for entity, label in entity_labels.items() %}
     {{ hub.tile(label + " مؤرشفة", counts.get(entity, 0),
                 icon="box-archive",
@@ -144,4 +145,5 @@
 ) }}
 {% endif %}
 
+</div>
 {% endblock %}

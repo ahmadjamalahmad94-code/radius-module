@@ -21,6 +21,7 @@
 {% block page_sub %}<span class="sub">{{ items|length }} مشترك في النتائج</span>{% endblock %}
 
 {% block content %}
+<div class="hr-page-shell" data-admin-rhythm data-users-page>
 
 {# ───── Hero ───────────────────────────────────────────────── #}
 {{ hub.hero(
@@ -38,7 +39,7 @@
 ) }}
 
 {# ───── Filter Bar ─────────────────────────────────────────── #}
-<form method="get" class="hub-filterbar">
+<form method="get" class="hub-filterbar hr-toolbar">
   <input class="hub-input grow" type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
   <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
@@ -63,7 +64,7 @@
 {% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
 {% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
 {% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
-<div class="hub-kpi-grid">
+<div class="hub-kpi-grid hr-stat-grid">
   {{ hub.kpi("في النتائج", _total,  icon="list",        variant="brand") }}
   {{ hub.kpi("نشطون",      _active, icon="circle-check", variant="green") }}
   {{ hub.kpi("منتهون",     _expird, icon="hourglass-end", variant="amber") }}
@@ -73,8 +74,8 @@
 {# ───── Subscribers Table ──────────────────────────────────── #}
 {% if items %}
 {% call hub.section("قائمة المشتركين", icon="table-list", meta=_total|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
+  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
+    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
       <thead>
         <tr>
           <th style="width:36px"><input type="checkbox" aria-label="تحديد الكل"></th>
@@ -173,4 +174,5 @@
 ) }}
 {% endif %}
 
+</div>
 {% endblock %}

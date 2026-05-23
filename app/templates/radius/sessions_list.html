@@ -24,6 +24,7 @@
 {% block page_sub %}<span class="sub">{{ items|length }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
 
 {% block content %}
+<div class="hr-page-shell" data-admin-rhythm data-online-sessions-page>
 
 {{ hub.hero(
   "المتصلون الآن",
@@ -60,7 +61,7 @@
 {% if items %}
 {% set _total_in  = items|sum(attribute='bytes_in') or 0 %}
 {% set _total_out = items|sum(attribute='bytes_out') or 0 %}
-<div class="hub-kpi-grid">
+<div class="hub-kpi-grid hr-stat-grid">
   {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
   {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
   {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
@@ -68,8 +69,8 @@
 
 {% call hub.section("الجلسات", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
+  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
+    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
@@ -120,4 +121,5 @@
 ) }}
 {% endif %}
 
+</div>
 {% endblock %}

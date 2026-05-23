@@ -93,6 +93,8 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll("table.d-table[data-paginated]").forEach(init);
+    document
+      .querySelectorAll("table.d-table[data-paginated], table.hub-table[data-paginated], table.hr-data-table[data-paginated]")
+      .forEach(init);
   });
 })();

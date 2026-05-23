@@ -8,6 +8,7 @@
 {% block page_sub %}<span class="sub">{{ items|length }} جهاز</span>{% endblock %}
 
 {% block content %}
+<div class="hr-page-shell" data-admin-rhythm data-devices-page>
 
 {{ hub.hero(
   "أجهزة الشبكة (NAS)",
@@ -24,7 +25,7 @@
 {% set _enabled   = items|selectattr('enabled')|list|length %}
 {% set _reachable = items|selectattr('last_check_status','equalto','reachable')|list|length %}
 {% set _down      = items|selectattr('last_check_status','equalto','unreachable')|list|length %}
-<div class="hub-kpi-grid">
+<div class="hub-kpi-grid hr-stat-grid">
   {{ hub.kpi("الإجمالي",    items|length, icon="server",        variant="brand") }}
   {{ hub.kpi("مفعَّل",       _enabled,     icon="toggle-on",     variant="green") }}
   {{ hub.kpi("متاح حاليًا",  _reachable,   icon="circle-check",  variant="blue") }}
@@ -32,8 +33,8 @@
 </div>
 
 {% call hub.section("قائمة الأجهزة", icon="table-list", meta=items|length|string + " جهاز", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
+  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
+    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
@@ -122,4 +123,5 @@
 ) }}
 {% endif %}
 
+</div>
 {% endblock %}

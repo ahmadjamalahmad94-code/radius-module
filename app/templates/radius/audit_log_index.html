@@ -19,7 +19,7 @@
 
 {% block content %}
 
-<section class="mt-dashboard" data-audit-log-page>
+<section class="mt-dashboard hr-page-shell" data-admin-rhythm data-audit-log-page>
 
   {{ hub.hero(
     "سجل العمليات",
@@ -109,8 +109,8 @@
         لا توجد عمليات تطابق هذه الفلاتر.
       </p>
       {% else %}
-      <div class="mt-table-wrap">
-        <table class="mt-iface-table" data-audit-log-table>
+      <div class="mt-table-wrap hr-table-scroll">
+        <table class="mt-iface-table hr-data-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="audit-log" data-audit-log-table>
           <thead>
             <tr>
               <th>الوقت</th>

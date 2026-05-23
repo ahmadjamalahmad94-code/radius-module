@@ -8,6 +8,7 @@
 {% block page_sub %}<span class="sub">{{ total }} بطاقة — صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
 
 {% block content %}
+<div class="hr-page-shell" data-admin-rhythm data-cards-list-page>
 
 {{ hub.hero(
   "كل الكروت",
@@ -26,7 +27,7 @@
   '
 ) }}
 
-<form method="get" class="hub-filterbar">
+<form method="get" class="hub-filterbar hr-toolbar">
   <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}" placeholder="بحث في اليوزر..." autocomplete="off">
   <select class="hub-select" name="batch_id">
     <option value="">كل الدفعات</option>
@@ -58,8 +59,8 @@
 
 {% if items %}
 {% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
+    <table class="hub-table hr-data-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
@@ -146,4 +147,5 @@
 ) }}
 {% endif %}
 
+</div>
 {% endblock %}

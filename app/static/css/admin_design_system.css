@@ -1,0 +1,375 @@
+/* HobeRadius admin spacing and table foundation.
+   This layer normalizes rhythm and table containment without redesigning pages. */
+
+:root {
+  --hr-page-padding-x: 24px;
+  --hr-page-padding-y: 22px;
+  --hr-section-gap: 22px;
+  --hr-card-gap: 14px;
+  --hr-toolbar-gap: 12px;
+  --hr-card-padding: 18px;
+  --hr-card-radius: 18px;
+  --hr-panel-radius: 22px;
+
+  --hr-bg-soft: var(--hub-bg-soft, #f7f7fb);
+  --hr-surface: var(--hub-surface, #ffffff);
+  --hr-border: var(--hub-border, #e6e8f2);
+  --hr-text: var(--hub-text, #1f2937);
+  --hr-muted: var(--hub-muted, #7b86a3);
+  --hr-primary: var(--hub-brand, #6d4dfc);
+  --hr-primary-soft: rgba(109, 77, 252, 0.10);
+  --hr-success: #16a34a;
+  --hr-success-soft: #dcfce7;
+  --hr-danger: #dc2626;
+  --hr-danger-soft: #fee2e2;
+  --hr-warning: #f59e0b;
+  --hr-warning-soft: #fef3c7;
+  --hr-shadow-soft: 0 12px 30px rgba(20, 20, 60, 0.06);
+}
+
+.main {
+  overflow-x: clip;
+}
+
+.hr-page,
+.hr-page-shell {
+  width: min(100%, 100%);
+  padding: 0;
+}
+
+.hr-page-shell,
+.hr-section-stack,
+[data-admin-rhythm] {
+  display: grid;
+  gap: var(--hr-section-gap);
+}
+
+.hr-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hr-toolbar-gap);
+  margin: 0;
+}
+
+.hr-section,
+.hr-panel,
+.hr-card,
+.hr-kpi-card {
+  background: var(--hr-surface);
+  border: 1px solid var(--hr-border);
+  border-radius: var(--hr-panel-radius);
+  box-shadow: var(--hr-shadow-soft);
+}
+
+.hr-section,
+.hr-panel {
+  padding: var(--hr-card-padding);
+}
+
+.hr-card,
+.hr-kpi-card {
+  padding: var(--hr-card-padding);
+}
+
+.hr-toolbar,
+.hr-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hr-toolbar-gap);
+  flex-wrap: wrap;
+}
+
+.hr-toolbar-row {
+  justify-content: space-between;
+}
+
+.hr-card-grid,
+.hr-stat-grid {
+  display: grid;
+  gap: var(--hr-card-gap);
+}
+
+.hr-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.hr-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.hr-muted {
+  color: var(--hr-muted);
+}
+
+.hr-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.hr-badge-success {
+  color: var(--hr-success);
+  background: var(--hr-success-soft);
+}
+
+.hr-badge-danger {
+  color: var(--hr-danger);
+  background: var(--hr-danger-soft);
+}
+
+.hr-badge-warning {
+  color: #b45309;
+  background: var(--hr-warning-soft);
+}
+
+.hr-badge-neutral {
+  color: var(--hr-muted);
+  background: var(--hr-bg-soft);
+  border-color: var(--hr-border);
+}
+
+/* Harmonize existing hub-v2 pages without forcing a redesign. */
+.hub-hero,
+.hub-filterbar,
+.hub-kpi-grid,
+.hub-tile-grid,
+.hub-section,
+.hub-empty,
+.mt-card {
+  margin-block: 0;
+}
+
+.hub-hero + .hub-filterbar,
+.hub-filterbar + .hub-kpi-grid,
+.hub-filterbar + .hub-tile-grid,
+.hub-kpi-grid + .hub-section,
+.hub-tile-grid + .hub-section,
+.hub-section + .hub-section,
+.mt-card + .mt-card {
+  margin-top: var(--hr-section-gap);
+}
+
+.hr-page-shell > .hub-hero,
+.hr-page-shell > .hub-filterbar,
+.hr-page-shell > .hub-kpi-grid,
+.hr-page-shell > .hub-tile-grid,
+.hr-page-shell > .hub-section,
+.hr-page-shell > .hub-empty {
+  margin-top: 0;
+}
+
+.hub-filterbar {
+  gap: var(--hr-toolbar-gap);
+  align-items: center;
+  border-radius: var(--hr-panel-radius);
+}
+
+.hub-kpi-grid,
+.hub-tile-grid {
+  gap: var(--hr-card-gap);
+}
+
+.hub-kpi-grid > *,
+.hub-tile-grid > * {
+  height: 100%;
+}
+
+.hub-section,
+.mt-card {
+  border-radius: var(--hr-panel-radius);
+  box-shadow: var(--hr-shadow-soft);
+}
+
+.hub-section-body {
+  padding: var(--hr-card-padding);
+}
+
+/* Reusable table shell. */
+.hr-table-shell,
+.hub-section:has(.hub-table),
+.mt-card:has(.mt-iface-table) {
+  overflow: hidden;
+}
+
+.hr-table-toolbar,
+.hr-table-toolbar-main,
+.hr-table-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hr-toolbar-gap);
+  flex-wrap: wrap;
+}
+
+.hr-table-toolbar {
+  justify-content: space-between;
+  padding: 14px var(--hr-card-padding);
+  border-bottom: 1px solid var(--hr-border);
+  background: linear-gradient(180deg, #fff, rgba(247, 247, 251, 0.72));
+}
+
+.hr-table-scroll,
+.hub-table-wrap,
+.mt-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.hr-data-table,
+.hub-table,
+.mt-iface-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.hub-table thead th,
+.mt-iface-table thead th,
+.hr-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8f9fd;
+  color: var(--hr-text);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.hub-table th,
+.hub-table td,
+.mt-iface-table th,
+.mt-iface-table td,
+.hr-data-table th,
+.hr-data-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.hub-table tbody tr,
+.mt-iface-table tbody tr,
+.hr-data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.hub-table tbody tr:hover,
+.mt-iface-table tbody tr:hover,
+.hr-data-table tbody tr:hover {
+  background: rgba(109, 77, 252, 0.045);
+}
+
+.hr-table-footer,
+.dt-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hr-toolbar-gap);
+  flex-wrap: wrap;
+  padding: 12px var(--hr-card-padding) 14px;
+  border-top: 1px solid var(--hr-border);
+  background: #fff;
+}
+
+.hr-table-pagination,
+.dt-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hr-table-page-size,
+.dt-size {
+  min-height: 34px;
+  border: 1px solid var(--hr-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--hr-text);
+  padding-inline: 10px;
+}
+
+.dt-info {
+  color: var(--hr-muted);
+  font-weight: 800;
+  font-size: 12.5px;
+}
+
+.dt-controls button,
+.dt-pages button {
+  min-width: 34px;
+  min-height: 34px;
+  border: 1px solid var(--hr-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--hr-text);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.dt-controls button:hover:not(:disabled),
+.dt-pages button:hover:not(:disabled) {
+  color: var(--hr-primary);
+  border-color: rgba(109, 77, 252, 0.35);
+  background: var(--hr-primary-soft);
+}
+
+.dt-controls button.active,
+.dt-pages button.active {
+  color: #fff;
+  border-color: var(--hr-primary);
+  background: var(--hr-primary);
+}
+
+.dt-controls button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.hr-table-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--hr-muted);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --hr-page-padding-x: 16px;
+    --hr-page-padding-y: 16px;
+    --hr-section-gap: 16px;
+    --hr-card-padding: 14px;
+  }
+
+  .hr-page-header,
+  .hr-table-footer,
+  .dt-pager {
+    align-items: stretch;
+  }
+
+  .hr-page-header,
+  .hr-table-toolbar,
+  .dt-pager {
+    flex-direction: column;
+  }
+
+  .hr-table-toolbar-main,
+  .hr-table-toolbar-actions,
+  .dt-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .hub-filterbar .grow,
+  .hub-filterbar input,
+  .hub-filterbar select {
+    min-width: min(100%, 220px);
+  }
+}
