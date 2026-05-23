@@ -788,6 +788,92 @@
     </p>
   </div>
 
+  {# ═══════════ SECTION 1c — Access URLs (remote-access) ═══════ #}
+  {% if intelligence.access_urls %}
+  <div class="npc-section" data-test="npc-section-access-urls">
+    <div class="npc-section-head">
+      <span class="npc-sec-num" style="background:#ECFDF5;
+                                       color:#047857;">🌐</span>
+      <h2><i class="fa-solid fa-link"
+             style="color:#10b981;"></i>
+        روابط الوصول إلى الراوتر بعد التطبيق</h2>
+    </div>
+
+    <p style="margin:6px 0 14px; color:#6b7280;
+              font-size:13px;">
+      هذه هي العناوين التي ستستخدمها للاتصال بالراوتر بعد
+      الضغط على «تطبيق آمن».
+      {% if policy.source_address_list %}
+        الوصول مسموح فقط من العناوين الموجودة في قائمة
+        <code style="background:#F3F4F6; padding:1px 6px;
+                     border-radius:4px; font-size:12px;">
+          {{ policy.source_address_list }}
+        </code>
+        على الراوتر.
+      {% endif %}
+      {% if policy.expires_at %}
+        صالح حتى
+        <strong>{{ policy.expires_at }}</strong>
+        ثم يُغلَق تلقائياً.
+      {% endif %}
+    </p>
+
+    <div style="display:grid; gap:10px;"
+         data-test="npc-access-url-list">
+    {% for ep in intelligence.access_urls %}
+      <div data-test="npc-access-url-item"
+           data-service="{{ ep.service }}"
+           style="display:flex; align-items:center;
+                  gap:12px; padding:12px 14px;
+                  background:#F9FAFB;
+                  border:1px solid #E3E1EC;
+                  border-radius:10px;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; font-size:13.5px;
+                      color:#111827;">
+            {{ ep.service_ar }}
+          </div>
+          <div style="margin-top:4px;
+                      font-family:monospace;
+                      font-size:14px;
+                      color:#0F172A;
+                      word-break:break-all;">
+            {% if ep.url.startswith('http') %}
+              <a href="{{ ep.url }}" target="_blank"
+                 rel="noopener noreferrer"
+                 style="color:#1D4ED8;
+                        text-decoration:none;">
+                {{ ep.url }}
+                <i class="fa-solid fa-arrow-up-right-from-square"
+                   style="font-size:11px;
+                          color:#9ca3af;"></i>
+              </a>
+            {% else %}
+              {{ ep.url }}
+            {% endif %}
+          </div>
+          <div style="margin-top:4px; font-size:11.5px;
+                      color:#6b7280;">
+            {{ ep.hint_ar }}
+          </div>
+        </div>
+        <button type="button"
+                onclick="navigator.clipboard
+                         .writeText('{{ ep.clipboard }}');
+                         this.textContent='تم النسخ';"
+                style="background:#F0FDF4; color:#047857;
+                       border:1px solid #BBF7D0;
+                       padding:6px 12px; border-radius:8px;
+                       font-size:12px; cursor:pointer;
+                       white-space:nowrap;">
+          <i class="fa-regular fa-copy"></i> نسخ
+        </button>
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {# ════════════════ SECTION 2 — What Will Happen ════════════ #}
   <div class="npc-section" data-test="npc-section-impact">
     <div class="npc-section-head">

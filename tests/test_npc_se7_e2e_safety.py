@@ -554,29 +554,52 @@ def test_e2e_permission_matrix_rollback_denied_without_perm(app):
 # ─── 7. Adapter boundary invariant ──────────────────────────
 
 
-def test_e2e_default_executor_is_null_and_refuses(app):
-    """The default executor in a fresh process is the
-    NullRouterExecutor and it refuses every call. Without an
-    opt-in to a live adapter, no apply can reach the network."""
-    from app.radius.services import npc_router_executor as exec_mod
-    default = exec_mod.get_router_executor()
-    assert isinstance(default, exec_mod.NullRouterExecutor)
-    with pytest.raises(exec_mod.ExecutorNotConfigured):
-        default.execute_forward(1, "/log info \"hi\"\n")
-    with pytest.raises(exec_mod.ExecutorNotConfigured):
-        default.execute_rollback(1, "/log info \"hi\"\n")
+def test_e2e_default_executor_is_live_router_executor(app):
+    """The bootstrap installs the Live executor by default so
+    NPC works out of the box. Set HOBERADIUS_NPC_DISABLE_LIVE=1
+    to revert to Null when a kill-switch is needed."""
+    from app.radius.services import (
+        npc_router_executor as exec_mod,
+    )
+    from app.radius.services.npc_live_router_executor import (
+        LiveRouterExecutor,
+    )
+    assert isinstance(
+        exec_mod.get_router_executor(), LiveRouterExecutor,
+    )
 
 
-def test_e2e_default_state_reader_is_null_and_refuses(app):
-    """Same default-deny invariant for the snapshot reader.
-    Snapshot capture fails closed, which makes contracts refuse
-    on no_snapshot."""
+def test_e2e_default_state_reader_is_live_state_reader(app):
+    """Same default-on invariant for the snapshot reader."""
     from app.radius.services import (
         npc_router_state_reader as reader_mod,
     )
-    default = reader_mod.get_state_reader()
-    assert isinstance(default, reader_mod.NullStateReader)
-    with pytest.raises(reader_mod.StateReaderNotConfigured):
-        default.read_firewall_filters(1)
-    with pytest.raises(reader_mod.StateReaderNotConfigured):
-        default.read_address_lists(1)
+    from app.radius.services.npc_live_state_reader import (
+        LiveRouterStateReader,
+    )
+    assert isinstance(
+        reader_mod.get_state_reader(), LiveRouterStateReader,
+    )
+
+
+def test_e2e_kill_switch_restores_null_adapters(
+    app, monkeypatch,
+):
+    """When HOBERADIUS_NPC_DISABLE_LIVE=1 is set, the bootstrap
+    refuses to install live and the Null adapters stay."""
+    from app.radius.services import (
+        npc_router_executor as exec_mod,
+        npc_router_state_reader as reader_mod,
+    )
+    from app.radius.services.npc_live_bootstrap import (
+        install_live_adapters_from_env,
+    )
+    monkeypatch.setenv("HOBERADIUS_NPC_DISABLE_LIVE", "1")
+    exec_mod.set_router_executor(None)
+    reader_mod.set_state_reader(None)
+    out = install_live_adapters_from_env()
+    assert out["installed"] is False
+    assert isinstance(
+        exec_mod.get_router_executor(),
+        exec_mod.NullRouterExecutor,
+    )

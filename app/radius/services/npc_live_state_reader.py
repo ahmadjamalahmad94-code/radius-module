@@ -1,11 +1,9 @@
 """npc_live_state_reader — REAL MikroTik state reader.
 
 Wraps the existing `MikrotikClient` + connection pool to fetch
-the five state sections NPC snapshots care about.
-
-Same opt-in gates as the live executor — `HOBERADIUS_NPC_LIVE_*`
-env vars install + scope this adapter. Off by default, allowlist
-required, fails closed for unlisted routers.
+the five state sections NPC snapshots care about. Installed by
+default at boot — same as the live executor — and works for any
+router present in `nas_devices`.
 
 Read paths (RouterOS):
 
@@ -31,10 +29,9 @@ says.
 from __future__ import annotations
 
 import logging
-from typing import Iterable, Optional
 
 from .npc_router_state_reader import (
-    RouterItem, StateReadError, StateReaderNotConfigured,
+    RouterItem, StateReadError,
 )
 
 
@@ -42,16 +39,15 @@ _LOG = logging.getLogger(__name__)
 
 
 class LiveRouterStateReader:
-    """Real state reader. Construct with an allowlist."""
+    """Real state reader. Works for any router in nas_devices.
 
-    def __init__(
-        self,
-        *,
-        allowed_router_ids: Iterable[int],
-    ):
-        self._allowed: frozenset[int] = frozenset(
-            int(r) for r in allowed_router_ids
-        )
+    The capture service still fails closed on read errors, so an
+    unreachable / unconfigured router still blocks apply with
+    `no_snapshot` — but adding a router via the standard UI is
+    enough to make it work."""
+
+    def __init__(self):
+        pass
 
     # ─── Public API ────────────────────────────────────────
 
@@ -129,11 +125,6 @@ class LiveRouterStateReader:
         display,
     ) -> list[RouterItem]:
         rid = int(router_id)
-        if rid not in self._allowed:
-            raise StateReaderNotConfigured(
-                f"router {rid} is not on the NPC live "
-                f"reader allowlist — refusing to read state."
-            )
         cfg = self._cfg_for(rid)
         try:
             from app.radius.integration.mikrotik import pool

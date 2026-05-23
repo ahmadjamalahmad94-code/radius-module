@@ -1006,6 +1006,32 @@ def _build_intelligence(
         readiness_obj.decision.required_confirmations
     )
 
+    # For remote-access policies, compute the IP+port endpoints
+    # the operator will use once the policy is applied. Pure
+    # function — no router contact.
+    access_urls: list[dict] = []
+    if svc.key == nc.SERVICE_REMOTE_ACCESS:
+        try:
+            from ..services.npc_remote_access_urls import (
+                compute_access_urls,
+            )
+            from ..db.repos import nas_repo
+            nas_obj = nas_repo.get_nas(
+                _tid(), int(policy["router_id"]),
+            )
+            if nas_obj is not None:
+                # nas_repo returns a dataclass — turn into a
+                # mapping for the helper.
+                nas_dict = {
+                    "address":  nas_obj.address,
+                    "ssh_port": nas_obj.ssh_port,
+                }
+                access_urls = compute_access_urls(
+                    policy, nas_dict,
+                )
+        except Exception:  # noqa: BLE001
+            access_urls = []
+
     return {
         "impact":          impact,
         "conflicts":       conflicts,
@@ -1016,6 +1042,7 @@ def _build_intelligence(
         "health":          health,
         "recommendations": recommendations,
         "readiness":       readiness,
+        "access_urls":     access_urls,
     }
 
 

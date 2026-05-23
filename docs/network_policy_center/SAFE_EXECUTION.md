@@ -155,77 +155,81 @@ When a future commit opts in to a live `RouterExecutor`:
 
 Until then, the apply route returns "no_snapshot" or "executor not configured" for any operator who tries — by design.
 
-## Enabling the live MikroTik adapters
+## The live MikroTik adapters (default-on)
 
-The real `LiveRouterExecutor` + `LiveRouterStateReader` are now part of
-the codebase (`npc_live_router_executor.py`, `npc_live_state_reader.py`).
-They are NOT installed by default — three env vars opt them in.
+The real `LiveRouterExecutor` + `LiveRouterStateReader` are installed
+**by default at boot**. Operators add a MikroTik via Operations
+Center, and NPC works against that router immediately — no env vars,
+no allowlist, no manual wiring step.
 
-| Env var | Required | Purpose |
-|---|---|---|
-| `HOBERADIUS_NPC_LIVE_EXECUTOR` | yes — must be `1`/`true`/`yes`/`on` | Master switch. Without it the Null adapters stay installed. |
-| `HOBERADIUS_NPC_LIVE_ROUTER_IDS` | yes — comma-separated integers | Allowlist of `nas_devices.id` values the live adapters may touch. Empty / missing → bootstrap refuses with a warning, Null adapters stay. |
-| `HOBERADIUS_NPC_LIVE_DRY_RUN` | optional | When truthy, every forward/rollback call connects to the router and reads `/system/identity` (proving auth) but **does not execute the script**. Use this for the first runs against a real router. |
+The gating that matters is already upstream of the executor:
 
-How the live adapters behave:
+* `npc.<svc>.apply` permission — controls who clicks the button.
+* contracts engine — refuses critical risk, unsafe scripts, missing
+  rollback, stale preview, unmanaged-prefix deletion, secret-shaped
+  content.
+* renderer — emits only `^HOBE_NPC_<svc>:<id>:` anchored comments.
+* rollback — deletes only managed-prefix rules.
+* audit log — every apply / rollback attempt is recorded.
+
+### How the live adapters behave
 
 * **Transport**: MikroTik API (port 8728 plain, 8729 TLS) via the
   same connection pool the dashboards/programming pages use. No new
   socket logic invented for NPC.
 * **Script delivery**: the rendered RouterOS script is pushed
   atomically through `/system/script/add → /system/script/run →
-  /system/script/remove`. The script bytes are sent verbatim — what the
-  operator previewed is what the router runs.
-* **Allowlist enforcement**: routers not on the list raise
-  `ExecutorNotConfigured` / `StateReaderNotConfigured` per call. The
-  contracts engine surfaces this as a calm "live executor not
-  configured for this router" rather than partially executing.
-* **State read**: the reader maps RouterOS rows to `RouterItem`s with
-  a stable `.id` (e.g. `*5`) so later diffs match. Rows without `.id`
-  are skipped.
+  /system/script/remove`. The script bytes are sent verbatim — what
+  the operator previewed is what the router runs.
+* **State read**: the reader maps RouterOS rows to `RouterItem`s
+  with a stable `.id` (e.g. `*5`) so later diffs match. Rows without
+  `.id` are skipped.
 * **Errors**: `MikrotikTrap`, `ConnectError`, `AuthError` are caught
-  and mapped to `ExecutionResult(ok=False)` with the message surfaced
-  verbatim. Per-router target rows in `npc_change_set_targets` carry
-  the trap so the network team can read it after the fact.
+  and mapped to `ExecutionResult(ok=False)` with the message
+  surfaced verbatim. Per-router target rows in
+  `npc_change_set_targets` carry the trap so the network team can
+  read it after the fact.
+* **Unreachable router**: snapshot capture fails closed → contracts
+  refuses with `no_snapshot` → operator sees a calm blocker, no
+  partial apply.
 
-### Recommended rollout
+### Access URLs after apply
 
-1. **Pick one test router** (e.g. `nas_devices.id=12`) and set:
-   ```
-   HOBERADIUS_NPC_LIVE_EXECUTOR=1
-   HOBERADIUS_NPC_LIVE_ROUTER_IDS=12
-   HOBERADIUS_NPC_LIVE_DRY_RUN=1
-   ```
-   Restart the container. Apply a tiny remote-access policy — the
-   change_set should show `succeeded` with stdout
-   `"dry-run: connection verified; forward script NOT executed."`.
-2. **Verify on the router**: SSH/Winbox in and confirm no
-   `HOBE_NPC_*` rules appeared. Confirms the dry-run was honoured.
-3. **Drop the dry-run flag** but keep the same single-router
-   allowlist. Apply the same policy. Now real rules should appear
-   with the anchored comment prefix.
-4. **Rollback test**: click تراجع. The temp `/system/script` runs
-   the `remove [find comment~"^HOBE_NPC_..."]` line. Verify on the
-   router the rules disappeared.
-5. **Expand the allowlist** to more routers only after the
-   single-router cycle works end-to-end.
+For **remote-access** policies the preview page renders an «روابط
+الوصول إلى الراوتر» section showing the IP + port the operator
+needs to connect once the policy is applied:
+
+| Toggle | Shown |
+|---|---|
+| `allow_winbox` | `<host>:8291` for Winbox |
+| `allow_webfig_https` | `https://<host>/` |
+| `allow_webfig_http` | `http://<host>/` |
+| `allow_ssh` | `<host>:<ssh_port>` + copy-ready `ssh` command |
+| `allow_api_ssl` | `<host>:8729` |
+| `allow_api` | `<host>:8728` |
+
+Each line has a copy-to-clipboard button. The list is computed
+deterministically from the policy's toggles + the router's
+`nas_devices.address` / `ssh_port` — no router contact at preview
+time.
 
 ### Kill switch
 
-If anything goes wrong: unset `HOBERADIUS_NPC_LIVE_EXECUTOR` and
-restart. The Null adapters are restored and every apply attempt is
-refused with `no_snapshot` / `executor not configured`. No DB
-migration needed; takes 10 seconds.
+Set `HOBERADIUS_NPC_DISABLE_LIVE=1` on the container and restart.
+The bootstrap will refuse to install live and the Null adapters
+take over — every apply / rollback attempt is then refused at the
+executor boundary. Takes 10 seconds; no DB migration.
 
 ### What is still NOT guaranteed
 
-Even with the live adapters enabled:
+Even with the live adapters running:
 
-* No claim about specific RouterOS version compatibility — `/system/script`
-  exists in every modern ROS, but field behaviour varies.
+* No claim about specific RouterOS version compatibility —
+  `/system/script` exists in every modern ROS, but field
+  behaviour varies.
 * No real-time monitoring — the change_set captures what the
   executor reported on its single invocation, not the router's
   ongoing state.
-* Race conditions across concurrent operators on the same router are
-  not coordinated by this codebase. The change_set log makes the race
-  visible after the fact.
+* Race conditions across concurrent operators on the same router
+  are not coordinated by this codebase. The change_set log makes
+  the race visible after the fact.

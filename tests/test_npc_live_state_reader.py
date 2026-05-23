@@ -1,4 +1,7 @@
-"""NPC Live State Reader — adapter that reads a real MikroTik."""
+"""NPC Live State Reader — reads a real MikroTik via the pool.
+
+Works for any nas_devices row. Upstream safety stops misuse.
+"""
 from __future__ import annotations
 
 import os
@@ -63,31 +66,6 @@ def _stub_pool(monkeypatch, client):
     monkeypatch.setattr(pool, "acquire", _acquire)
 
 
-# ─── Allowlist refusal ─────────────────────────────────────
-
-
-def test_allowlist_refuses_unlisted_router(app):
-    rid = _seed_router(app)
-    from app.radius.services.npc_live_state_reader import (
-        LiveRouterStateReader,
-    )
-    from app.radius.services.npc_router_state_reader import (
-        StateReaderNotConfigured,
-    )
-    rd = LiveRouterStateReader(allowed_router_ids=())
-    with app.app_context():
-        with pytest.raises(StateReaderNotConfigured):
-            rd.read_firewall_filters(rid)
-        with pytest.raises(StateReaderNotConfigured):
-            rd.read_address_lists(rid)
-        with pytest.raises(StateReaderNotConfigured):
-            rd.read_walled_garden(rid)
-        with pytest.raises(StateReaderNotConfigured):
-            rd.read_walled_garden_ip(rid)
-        with pytest.raises(StateReaderNotConfigured):
-            rd.read_managed_scheduler(rid)
-
-
 # ─── Firewall filter parse ─────────────────────────────────
 
 
@@ -107,7 +85,7 @@ def test_read_firewall_filters_maps_rows_to_router_items(
     from app.radius.services.npc_live_state_reader import (
         LiveRouterStateReader,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(rid,))
+    rd = LiveRouterStateReader()
     with app.app_context():
         items = rd.read_firewall_filters(rid)
     assert len(items) == 2
@@ -121,20 +99,18 @@ def test_read_firewall_filters_maps_rows_to_router_items(
 
 
 def test_rows_without_source_id_are_skipped(app, monkeypatch):
-    """A row with no `.id` cannot be diffed later — skip it
-    rather than fabricate an id."""
     rid = _seed_router(app)
     client = MagicMock()
     client.print_.return_value = iter([
         {".id": "*1", "chain": "input", "action": "accept"},
-        {"chain": "forward", "action": "drop"},  # no .id
+        {"chain": "forward", "action": "drop"},
     ])
     _stub_pool(monkeypatch, client)
 
     from app.radius.services.npc_live_state_reader import (
         LiveRouterStateReader,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(rid,))
+    rd = LiveRouterStateReader()
     with app.app_context():
         items = rd.read_firewall_filters(rid)
     assert len(items) == 1
@@ -156,7 +132,7 @@ def test_read_address_lists_maps_rows(app, monkeypatch):
     from app.radius.services.npc_live_state_reader import (
         LiveRouterStateReader,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(rid,))
+    rd = LiveRouterStateReader()
     with app.app_context():
         items = rd.read_address_lists(rid)
     assert items[0].item_kind == "address_list_entry"
@@ -164,12 +140,10 @@ def test_read_address_lists_maps_rows(app, monkeypatch):
     assert "203.0.113.5" in items[0].display_text
 
 
-# ─── Walled garden + scheduler use distinct API paths ──────
+# ─── All 5 sections use the right API path ─────────────────
 
 
-def test_walled_garden_and_scheduler_use_correct_paths(
-    app, monkeypatch,
-):
+def test_all_sections_use_correct_paths(app, monkeypatch):
     rid = _seed_router(app)
     client = MagicMock()
     client.print_.return_value = iter([])
@@ -178,12 +152,16 @@ def test_walled_garden_and_scheduler_use_correct_paths(
     from app.radius.services.npc_live_state_reader import (
         LiveRouterStateReader,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(rid,))
+    rd = LiveRouterStateReader()
     with app.app_context():
+        rd.read_firewall_filters(rid)
+        rd.read_address_lists(rid)
         rd.read_walled_garden(rid)
         rd.read_walled_garden_ip(rid)
         rd.read_managed_scheduler(rid)
     paths = [c.args[0] for c in client.print_.call_args_list]
+    assert "/ip/firewall/filter/print" in paths
+    assert "/ip/firewall/address-list/print" in paths
     assert "/ip/hotspot/walled-garden/print" in paths
     assert "/ip/hotspot/walled-garden/ip/print" in paths
     assert "/system/scheduler/print" in paths
@@ -214,7 +192,7 @@ def test_connect_error_raises_state_read_error(
     from app.radius.services.npc_router_state_reader import (
         StateReadError,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(rid,))
+    rd = LiveRouterStateReader()
     with app.app_context():
         with pytest.raises(StateReadError) as excinfo:
             rd.read_firewall_filters(rid)
@@ -228,7 +206,7 @@ def test_unknown_router_raises_state_read_error(app):
     from app.radius.services.npc_router_state_reader import (
         StateReadError,
     )
-    rd = LiveRouterStateReader(allowed_router_ids=(9999,))
+    rd = LiveRouterStateReader()
     with app.app_context():
         with pytest.raises(StateReadError):
             rd.read_firewall_filters(9999)

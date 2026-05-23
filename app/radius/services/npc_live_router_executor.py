@@ -6,37 +6,32 @@ trusting the renderer as the single source of truth for command
 shape (so we never re-parse CLI → API and never risk drifting
 from what the operator previewed).
 
-Three opt-ins gate this adapter so live traffic stays off by
-default:
-
-* `HOBERADIUS_NPC_LIVE_EXECUTOR=1`       — required to install
-* `HOBERADIUS_NPC_LIVE_ROUTER_IDS=12,45` — allowlist (required;
-                                           empty means none)
-* `HOBERADIUS_NPC_LIVE_DRY_RUN=1`        — optional safety net
-                                           that forces every
-                                           call into dry-run mode
-                                           even after install
+Installed by default at boot — operators add a MikroTik in
+`/admin/radius/operations`, the NPC apply route works against
+that router immediately. No env-var allowlist; the gating that
+matters (permission, contracts engine, managed-prefix rollback,
+audit) is already in place upstream.
 
 Per-call behaviour:
-1. Validate router_id is in the allowlist. If not, raise
-   `ExecutorNotConfigured` — apply route surfaces this as
-   `executor not configured` blocker.
-2. Look up nas_devices row for the router.
-3. Acquire the MikroTik client from the pool (same one the
+1. Look up nas_devices row for the router.
+2. Acquire the MikroTik client from the pool (same one the
    dashboards/programming pages use — no new socket logic).
-4. Dry-run path: just ping `/system/identity` to confirm the
-   credentials work, return ok=True with an explicit
-   `stdout = "dry-run: connection verified; script NOT executed"`.
-5. Real path: create a temp script via `/system/script/add`,
+3. Real path: create a temp script via `/system/script/add`,
    run it via `/system/script/run`, then remove it. The
    `/system/script` mechanism is what RouterOS operators paste
    into when applying a script manually — so what the renderer
    produced is exactly what runs.
+4. Optional dry_run argument: opens the connection, reads
+   `/system/identity` to prove auth works, but does NOT send
+   the script. Useful for first-time verification on a router.
 
 Errors are mapped to ExecutionResult(ok=False) — never raised
-upward except for ExecutorNotConfigured (which is part of the
-contract). The apply service catches everything else and
-records the per-router target as `failed`.
+upward. The apply service catches them and records the
+per-router target as `failed` with the trap surfaced verbatim.
+
+A kill-switch env var `HOBERADIUS_NPC_DISABLE_LIVE=1` is honoured
+at boot — if set, the Null adapters are installed instead and
+every apply attempt is refused at the executor boundary.
 """
 from __future__ import annotations
 
@@ -44,7 +39,7 @@ import logging
 import os
 import secrets
 import time
-from typing import Iterable, Optional
+from typing import Optional
 
 from . import npc_router_executor as base
 from .npc_router_executor import (
@@ -71,25 +66,19 @@ _MAX_SCRIPT_BYTES = 64 * 1024  # 64 KiB
 class LiveRouterExecutor:
     """Real MikroTik executor.
 
-    Construct via `LiveRouterExecutor(allowed_router_ids={...})`.
-    Routers not in the set raise `ExecutorNotConfigured` on
-    every call (which makes the apply service refuse with
-    a calm 'live executor not configured for this router'
-    message rather than partially executing).
+    Works for any router present in `nas_devices` (enabled, with
+    API credentials). The existing safety stack — permission
+    gate, contracts engine, snapshot capture, managed-prefix
+    rollback, audit log — provides the gating; we don't add an
+    extra allowlist here. Operators add a router → it works.
     """
 
     def __init__(
         self,
         *,
-        allowed_router_ids: Iterable[int],
-        force_dry_run: bool = False,
         script_policy: str = _SCRIPT_POLICY,
         max_script_bytes: int = _MAX_SCRIPT_BYTES,
     ):
-        self._allowed: frozenset[int] = frozenset(
-            int(r) for r in allowed_router_ids
-        )
-        self._force_dry_run = bool(force_dry_run)
         self._script_policy = script_policy
         self._max_script_bytes = int(max_script_bytes)
 
@@ -113,15 +102,9 @@ class LiveRouterExecutor:
 
     def _execute(
         self, router_id: int, script: str, *, kind: str,
+        dry_run: bool = False,
     ) -> ExecutionResult:
         rid = int(router_id)
-        if rid not in self._allowed:
-            raise ExecutorNotConfigured(
-                f"router {rid} is not on the NPC live "
-                f"executor allowlist — refusing to execute "
-                f"{kind} script."
-            )
-
         # Defence: the renderer + repo + contracts already
         # check, but a 64-byte cap close to the wire keeps a
         # bug from sending megabytes.
@@ -164,7 +147,7 @@ class LiveRouterExecutor:
 
         started = time.perf_counter()
         try:
-            if self._force_dry_run:
+            if dry_run:
                 return self._dry_run(cfg, kind, started)
             return self._send_script(cfg, script, kind, started)
         except ExecutorError:

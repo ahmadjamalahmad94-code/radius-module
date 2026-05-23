@@ -1,9 +1,10 @@
 """NPC Live Executor — adapter that talks to a real MikroTik.
 
-These tests stub the MikroTik client + pool so we can exercise
-the allow-list, dry-run, and `/system/script` flow without
-opening a real socket. A real-router smoke test is the
-operator's job — never claimed here.
+The executor is installed by default and works against any
+router present in `nas_devices`. The upstream safety stack
+(permission + contracts + audit) does the gating. Tests stub
+the MikroTik client + pool to exercise the wire-level flow
+without opening a real socket.
 """
 from __future__ import annotations
 
@@ -34,8 +35,7 @@ def app(monkeypatch):
 
 
 def _seed_router(
-    app, *, router_id=None, api_user="admin", api_password="pw",
-    enabled=1,
+    app, *, api_user="admin", api_password="pw", enabled=1,
 ):
     import secrets as _sec
     suffix = _sec.token_hex(3)
@@ -62,38 +62,6 @@ def _seed_router(
             return int(cur.lastrowid)
 
 
-@contextmanager
-def _fake_pool_acquire(client_factory):
-    """Helper: build a context manager that yields `client_factory()`.
-    Lets each test pre-program the client."""
-    @contextmanager
-    def _acquire(_cfg):
-        yield client_factory()
-    yield _acquire
-
-
-# ─── Allowlist refusal ─────────────────────────────────────
-
-
-def test_allowlist_refuses_router_not_in_set(app):
-    """A router not on the allowlist raises ExecutorNotConfigured
-    so the apply service emits 'live executor not configured'."""
-    rid = _seed_router(app)
-    from app.radius.services.npc_live_router_executor import (
-        LiveRouterExecutor,
-    )
-    from app.radius.services.npc_router_executor import (
-        ExecutorNotConfigured,
-    )
-    # Note: allowlist is empty.
-    ex = LiveRouterExecutor(allowed_router_ids=())
-    with app.app_context():
-        with pytest.raises(ExecutorNotConfigured):
-            ex.execute_forward(rid, "/log info \"hi\"\n")
-        with pytest.raises(ExecutorNotConfigured):
-            ex.execute_rollback(rid, "/log info \"hi\"\n")
-
-
 # ─── Empty / oversized scripts ─────────────────────────────
 
 
@@ -102,7 +70,7 @@ def test_refuses_empty_script(app):
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(rid, "")
     assert not out.ok
@@ -114,10 +82,7 @@ def test_refuses_oversized_script(app):
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(
-        allowed_router_ids=(rid,),
-        max_script_bytes=100,
-    )
+    ex = LiveRouterExecutor(max_script_bytes=100)
     with app.app_context():
         out = ex.execute_forward(rid, "x" * 200)
     assert not out.ok
@@ -131,8 +96,7 @@ def test_returns_failed_for_unknown_router(app):
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    # Allowlist contains the id but the row doesn't exist.
-    ex = LiveRouterExecutor(allowed_router_ids=(9999,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(9999, "/log info \"hi\"\n")
     assert not out.ok
@@ -140,59 +104,15 @@ def test_returns_failed_for_unknown_router(app):
 
 
 def test_returns_failed_when_credentials_missing(app):
-    rid = _seed_router(
-        app, api_user="", api_password="",
-    )
+    rid = _seed_router(app, api_user="", api_password="")
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(rid, "/log info \"hi\"\n")
     assert not out.ok
     assert "credentials" in out.error_message
-
-
-# ─── Dry-run path ──────────────────────────────────────────
-
-
-def test_dry_run_pings_identity_and_does_not_send_script(
-    app, monkeypatch,
-):
-    """force_dry_run=True must connect + read /system/identity
-    but NEVER call /system/script/add."""
-    rid = _seed_router(app)
-    fake_client = MagicMock()
-    fake_client.print_.return_value = iter([
-        {".id": "*1", "name": "test-router"},
-    ])
-    from app.radius.integration.mikrotik import pool
-
-    @contextmanager
-    def _fake_acquire(_cfg):
-        yield fake_client
-
-    monkeypatch.setattr(pool, "acquire", _fake_acquire)
-
-    from app.radius.services.npc_live_router_executor import (
-        LiveRouterExecutor,
-    )
-    ex = LiveRouterExecutor(
-        allowed_router_ids=(rid,),
-        force_dry_run=True,
-    )
-    with app.app_context():
-        out = ex.execute_forward(rid, "/log info \"hi\"\n")
-    assert out.ok
-    assert "dry-run" in out.stdout
-    # We must have read identity.
-    fake_client.print_.assert_called_once_with(
-        "/system/identity/print",
-    )
-    # We must NOT have created a script.
-    for c in fake_client.run.call_args_list:
-        path = c.args[0] if c.args else c.kwargs.get("command", "")
-        assert "/system/script" not in str(path)
 
 
 # ─── Live forward path ─────────────────────────────────────
@@ -203,7 +123,6 @@ def test_forward_creates_runs_and_removes_temp_script(
 ):
     rid = _seed_router(app)
     fake_client = MagicMock()
-    # No exceptions from .run → success path.
     fake_client.run.return_value = []
     from app.radius.integration.mikrotik import pool
 
@@ -216,7 +135,7 @@ def test_forward_creates_runs_and_removes_temp_script(
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(
             rid, "/log info \"forward\"\n",
@@ -225,12 +144,9 @@ def test_forward_creates_runs_and_removes_temp_script(
     assert out.status == "succeeded"
 
     paths = [c.args[0] for c in fake_client.run.call_args_list]
-    # Add → Run → Remove
     assert paths[0] == "/system/script/add"
     assert paths[1] == "/system/script/run"
     assert paths[2] == "/system/script/remove"
-
-    # Script source matches what we passed.
     add_attrs = fake_client.run.call_args_list[0].args[1]
     assert add_attrs["source"] == "/log info \"forward\"\n"
     assert add_attrs["name"].startswith("hobe_npc_forward_")
@@ -253,14 +169,55 @@ def test_rollback_uses_rollback_prefix_in_script_name(
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         ex.execute_rollback(rid, "/log info \"rb\"\n")
     add_attrs = fake_client.run.call_args_list[0].args[1]
     assert add_attrs["name"].startswith("hobe_npc_rollback_")
 
 
-# ─── Failure mapping: MikrotikTrap → ExecutionResult ───────
+# ─── Dry-run via internal arg ──────────────────────────────
+
+
+def test_dry_run_arg_skips_script_creation(
+    app, monkeypatch,
+):
+    rid = _seed_router(app)
+    fake_client = MagicMock()
+    fake_client.print_.return_value = iter([
+        {".id": "*1", "name": "test-router"},
+    ])
+    from app.radius.integration.mikrotik import pool
+
+    @contextmanager
+    def _fake_acquire(_cfg):
+        yield fake_client
+
+    monkeypatch.setattr(pool, "acquire", _fake_acquire)
+
+    from app.radius.services.npc_live_router_executor import (
+        LiveRouterExecutor,
+    )
+    ex = LiveRouterExecutor()
+    with app.app_context():
+        # Use the private kwarg — exposed to the apply service
+        # for explicit dry-run checks.
+        out = ex._execute(
+            rid, "/log info \"hi\"\n",
+            kind="forward", dry_run=True,
+        )
+    assert out.ok
+    assert "dry-run" in out.stdout
+    fake_client.print_.assert_called_once_with(
+        "/system/identity/print",
+    )
+    # No /system/script/* call.
+    for c in fake_client.run.call_args_list:
+        path = c.args[0] if c.args else ""
+        assert "/system/script" not in str(path)
+
+
+# ─── Failure mapping ───────────────────────────────────────
 
 
 def test_script_run_trap_returns_failed_result(
@@ -292,7 +249,7 @@ def test_script_run_trap_returns_failed_result(
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(
             rid, "/ip/firewall/filter add chain=BAD\n",
@@ -300,7 +257,6 @@ def test_script_run_trap_returns_failed_result(
     assert not out.ok
     assert out.status == "failed"
     assert "chain" in out.stderr
-    # Add + Run + Remove (cleanup attempted even after trap).
     paths = [c.args[0] for c in fake_client.run.call_args_list]
     assert "/system/script/remove" in paths
 
@@ -308,8 +264,6 @@ def test_script_run_trap_returns_failed_result(
 def test_script_add_trap_skips_run_and_remove(
     app, monkeypatch,
 ):
-    """If /system/script/add itself is rejected, we should NOT
-    attempt to run or remove a script that was never created."""
     rid = _seed_router(app)
     fake_client = MagicMock()
 
@@ -334,16 +288,12 @@ def test_script_add_trap_skips_run_and_remove(
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(rid, "/log info \"x\"\n")
     assert not out.ok
     paths = [c.args[0] for c in fake_client.run.call_args_list]
-    # Only the add attempt — no run, no remove.
     assert paths == ["/system/script/add"]
-
-
-# ─── Connect / auth failures don't leak ────────────────────
 
 
 def test_connect_error_returns_structured_failure(
@@ -357,7 +307,7 @@ def test_connect_error_returns_structured_failure(
     @contextmanager
     def _fake_acquire(_cfg):
         raise ConnectError("connection refused")
-        yield  # unreachable
+        yield
 
     from app.radius.integration.mikrotik import pool
     monkeypatch.setattr(pool, "acquire", _fake_acquire)
@@ -365,7 +315,7 @@ def test_connect_error_returns_structured_failure(
     from app.radius.services.npc_live_router_executor import (
         LiveRouterExecutor,
     )
-    ex = LiveRouterExecutor(allowed_router_ids=(rid,))
+    ex = LiveRouterExecutor()
     with app.app_context():
         out = ex.execute_forward(rid, "/log info \"x\"\n")
     assert not out.ok
