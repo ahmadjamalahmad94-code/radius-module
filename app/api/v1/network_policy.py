@@ -43,6 +43,7 @@ from ...radius.services import (
     npc_dependency_detector as dependency_svc,
     npc_impact_analyzer as impact_svc,
     npc_policy_health as health_svc,
+    npc_recommendations as rec_svc,
     npc_remote_access_planner as ra_planner,
     npc_script_renderer as renderer,
     npc_walled_garden_planner as wg_planner,
@@ -826,6 +827,17 @@ def _finalize_preview(
     # Canary planner — staged rollout recommendation.
     canary = canary_svc.plan(blast=blast_radius)
 
+    def _build_recommendations(_impact):
+        return rec_svc.build(
+            impact=_impact,
+            conflicts=conflict_analysis,
+            dependencies=dependency_analysis,
+            blast=blast_radius,
+            canary=canary,
+            policy_type=service,
+            policy=policy,
+        )
+
     # Health score helper — closes over all the analyses above.
     def _build_health(_impact):
         return health_svc.compute(
@@ -864,6 +876,7 @@ def _finalize_preview(
                 "beginner_explanation":  beginner.as_dict(),
                 "canary_plan":           canary.as_dict(),
                 "health_score":          _build_health(impact).as_dict(),
+                "smart_recommendations": _build_recommendations(impact).as_dict(),
             },
         )
 
@@ -891,6 +904,7 @@ def _finalize_preview(
         "beginner_explanation":  beginner.as_dict(),
         "canary_plan":           canary.as_dict(),
         "health_score":          _build_health(impact).as_dict(),
+        "smart_recommendations": _build_recommendations(impact).as_dict(),
     }
 
     if plan.can_apply and forward:
