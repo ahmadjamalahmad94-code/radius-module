@@ -22,6 +22,8 @@ docs/*
 !docs/api/*.md
 !docs/radius/
 !docs/radius/*.md
+!docs/network_policy_center/
+!docs/network_policy_center/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
 
