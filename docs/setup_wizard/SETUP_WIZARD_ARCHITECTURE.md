@@ -310,6 +310,26 @@ Guardrails:
 - SW5: Broadband planner
 - SW6: Added services integration
 
+## SW2 Implementation Notes (Current State)
+
+SW2 introduces a pure planning service (`InternetUplinkScriptPlanner`) that:
+
+- validates source-specific payloads for VLAN/Static/DHCP/PPPoE
+- generates only preview scripts (no live apply path)
+- emits safety-tagged objects using:
+  `HOBERADIUS_SETUP:<wizard_run_id>:internet`
+- appends validation commands at script end
+- returns warnings + masked sensitive metadata
+
+`SetupWizardService.generate_internet_script(...)` now:
+
+- stores internet source details in run state
+- generates script via planner
+- marks `internet_script_preview` as `generated`
+- does not mark `applied` or `verified`
+
+No router execution adapter is introduced in SW2.
+
 
 ## Implementation Notes
 
@@ -317,4 +337,3 @@ Guardrails:
 - Keep state transitions explicit; reject invalid transitions.
 - Keep route handlers thin, delegate to services.
 - Keep behavior backward compatible with current provisioning flows until wizard is feature-complete.
-

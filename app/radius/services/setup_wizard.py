@@ -13,10 +13,8 @@ from datetime import datetime
 from typing import Any
 
 from ..db.connection import db, transaction
-
-
-class SetupWizardValidationError(ValueError):
-    """Raised when wizard state transition or input is invalid."""
+from .setup_wizard_common import SetupWizardValidationError
+from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 
 
 RUN_STATUS_ACTIVE = "active"
@@ -229,6 +227,7 @@ class SetupWizardStateMachine:
 class SetupWizardService:
     def __init__(self, state_machine: SetupWizardStateMachine | None = None) -> None:
         self._sm = state_machine or SetupWizardStateMachine()
+        self._internet_planner = InternetUplinkScriptPlanner()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -419,6 +418,37 @@ class SetupWizardService:
             selected_wan_interface=(selected_wan_interface or "")[:120],
         )
         return self.get_run(tenant_id=tenant_id, run_id=run_id)
+
+    def generate_internet_script(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        source_type: str,
+        payload: dict[str, Any],
+        selected_wan_interface: str = "",
+    ) -> dict[str, Any]:
+        run = self.set_internet_source(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            source_type=source_type,
+            selected_wan_interface=selected_wan_interface,
+            input_json=payload,
+        )
+        plan = self._internet_planner.plan(
+            wizard_run_id=int(run_id),
+            source_type=source_type,
+            payload=payload,
+        )
+        self.mark_script_generated(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_INTERNET_SCRIPT_PREVIEW,
+            generated_script=plan.script_text,
+            rollback_script=plan.rollback_script_text,
+            validation_commands=plan.validation_commands,
+        )
+        return plan.to_dict()
 
     def mark_script_generated(
         self,
