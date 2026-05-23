@@ -1330,11 +1330,26 @@ def _make_apply_view(svc: _ServiceDef):
             except Exception:  # noqa: BLE001
                 # Don't break the apply success path because of
                 # an nginx wiring issue — operator can retry.
-                current_app.logger.exception(
+                # We use a module-local logger here, not Flask's
+                # current_app, so the exception handler itself
+                # cannot raise.
+                import logging as _lg
+                _lg.getLogger(__name__).exception(
                     "npc remote-tunnel wiring failed for "
-                    "router=%d policy=%d",
+                    "router=%d policy=%d — apply itself was "
+                    "successful; the VPS-public URLs will "
+                    "appear once the operator retries (or "
+                    "after fixing /etc/hoberadius/"
+                    "nginx-streams.d permissions).",
                     int(policy["router_id"]),
                     int(policy["id"]),
+                )
+                flash(
+                    "تم التطبيق على الراوتر بنجاح، لكن تعذّر "
+                    "كتابة إعدادات nginx — تحقّق من صلاحيات "
+                    "/etc/hoberadius/nginx-streams.d. روابط "
+                    "VPS لن تظهر حتى يُحلّ هذا.",
+                    "warning",
                 )
 
         # Surface the result via flash + redirect back to the
