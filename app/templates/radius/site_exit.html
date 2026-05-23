@@ -38,8 +38,28 @@
   .vx2-group-row .vx2-risk-high     { color:#cc1f1f; }
   .vx2-script-pre {
     background:#0f172a; color:#e8eef7; font-family: ui-monospace, monospace;
-    padding: 12px; border-radius: 8px; overflow-x:auto;
+    padding: 12px; border-radius: 8px;
+    overflow-x: auto;
+    /* VX2.6e — large preset (karamspeed = ~300 lines) would
+       extend the page forever. Cap height + add vertical
+       scroll so the operator can still see the apply card
+       without endless scrolling. */
+    max-height: 360px;
+    overflow-y: auto;
     font-size: 12.5px; line-height: 1.55;
+  }
+  /* Targets table — same treatment when the policy has lots
+     of stored targets. */
+  .vx2-targets-list {
+    max-height: 320px; overflow-y: auto;
+    border: 1px solid var(--hub-border, #e6e9ee);
+    border-radius: 6px; padding: 8px;
+    background: var(--hub-surface, #fff);
+    font-size: 12.5px;
+  }
+  .vx2-import-invalid-list {
+    max-height: 200px; overflow-y: auto;
+    margin-top: 4px;
   }
   .vx2-warning { background: rgba(255,180,0,0.10);
                   border-left: 3px solid #b87f00;
@@ -236,12 +256,36 @@
       <h3><i class="fa-solid fa-file-import"></i> استيراد قائمة عناوين MikroTik</h3>
     </header>
     <div class="mt-card-body">
+      {# VX2.6f — preset quick-load row above the manual paste box. #}
+      {% if presets %}
+      <div data-mt-site-exit-presets
+           style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+                  padding:8px;background:rgba(43,170,204,0.06);
+                  border-radius:6px;margin-bottom:10px;font-size:13px">
+        <strong style="margin-inline-end:6px">قوائم جاهزة:</strong>
+        {% for preset in presets %}
+        <form method="post" style="display:inline"
+              action="{{ url_for('radius.site_exit_load_preset',
+                                 nas_id=nas.id, policy_id=policy.id) }}">
+          <input type="hidden" name="preset_key" value="{{ preset.key }}">
+          <button type="submit" class="mt-mini-btn"
+                  data-mt-site-exit-preset="{{ preset.key }}"
+                  title="{{ preset.description_ar }}">
+            <i class="fa-solid fa-list"></i>
+            {{ preset.label_ar }}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       <form method="post" data-mt-site-exit-import-form
             action="{{ url_for('radius.site_exit_import',
                                nas_id=nas.id, policy_id=policy.id) }}">
         <p class="vx2-empty" style="font-size:12.5px">
           الصق محتوى ملف بصيغة <code>/ip firewall address-list</code> —
           سنقوم بالتحقق والتصنيف بدون أي كتابة على الراوتر.
+          أو اختر قائمة جاهزة من الأزرار أعلاه.
         </p>
         <textarea name="seed_text" rows="8"
                   style="width:100%;font-family:ui-monospace,monospace;font-size:12.5px"
@@ -283,8 +327,8 @@
 
         {% if import_result.invalid %}
         <details style="margin-top:10px">
-          <summary><strong>الأسطر المرفوضة — اضغط للعرض</strong></summary>
-          <ul>
+          <summary><strong>الأسطر المرفوضة ({{ import_result.invalid | length }}) — اضغط للعرض</strong></summary>
+          <ul class="vx2-import-invalid-list">
             {% for inv in import_result.invalid %}
             <li><code>{{ inv.value }}</code> — {{ inv.reason }}</li>
             {% endfor %}

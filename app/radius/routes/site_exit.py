@@ -45,6 +45,7 @@ from ..services import (
     mt_programming,
     site_exit_classifier      as classifier,
     site_exit_importer        as importer,
+    site_exit_presets         as presets_svc,
     site_exit_safety          as safety_svc,
     site_exit_script_planner  as planner,
     site_exit_script_renderer as renderer,
@@ -68,14 +69,43 @@ def _tid() -> int:
 
 
 def _load_nas(nas_id: int) -> Optional[dict]:
+    # VX2.6d — also select the api_* columns so the apply route
+    # can pre-flight check credentials and surface a clear
+    # message instead of MikroTik's cryptic "invalid user name
+    # or password (6)".
     row = db().execute(
-        "SELECT id, name, address, enabled, connection_mode "
+        "SELECT id, name, address, enabled, connection_mode, "
+        "       api_user, api_password, api_port, api_use_tls "
         "FROM nas_devices "
         "WHERE id=? AND tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='')",
         (int(nas_id), _tid()),
     ).fetchone()
     return dict(row) if row else None
+
+
+def _check_router_credentials(nas: dict) -> str:
+    """Return a non-empty Arabic error string when the router
+    can't be used for live apply (API credentials missing or
+    placeholder). Empty string = ready to connect."""
+    user = (nas.get("api_user") or "").strip()
+    pwd  = (nas.get("api_password") or "")
+    if not user or not pwd:
+        return (
+            "بيانات اعتماد API للراوتر مفقودة. افتح صفحة الراوتر "
+            "في «غرفة عمليات MikroTik» وأضف api_user و"
+            " api_password قبل التطبيق."
+        )
+    # Common placeholders we've seen people leave by mistake.
+    if user.lower() in {"admin", "test", "user"} and pwd in {
+        "", "admin", "test", "password", "1234",
+    }:
+        return (
+            f"بيانات API تبدو placeholder (user={user!r}). "
+            "حدّث api_user/api_password بالقيم الحقيقية للراوتر "
+            "قبل التطبيق."
+        )
+    return ""
 
 
 # ─── Group metadata for the UI ───────────────────────────────
@@ -144,6 +174,12 @@ def register_site_exit_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/site-exit/policies/<int:policy_id>/import",
         "site_exit_import",
         requires_perm(PERM_SITE_EXIT_PREVIEW)(site_exit_import),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/site-exit/policies/<int:policy_id>/load-preset",
+        "site_exit_load_preset",
+        requires_perm(PERM_SITE_EXIT_PREVIEW)(site_exit_load_preset),
         methods=["POST"],
     )
     bp.add_url_rule(
@@ -218,6 +254,7 @@ def _render_page(
         group_counts=group_counts,
         vps_nodes=_vps_nodes(),
         group_meta=GROUP_META,
+        presets=presets_svc.list_presets(),
         import_result=import_result,
         preview_plan=preview_plan,
         forward_script=forward_script,
@@ -332,6 +369,46 @@ def site_exit_import(nas_id: int, policy_id: int):
             f"مقبولة: {len(result.accepted)}، "
             f"مكرّرة: {len(result.duplicates)}، "
             f"غير صالحة: {len(result.invalid)}."
+        ),
+    )
+
+
+def site_exit_load_preset(nas_id: int, policy_id: int):
+    """VX2.6f — load a built-in preset (karamspeed etc.) into
+    the seed textarea AND immediately run it through the
+    importer so the operator sees the classified groups
+    without a second click.
+
+    The preset body is shipped in `site_exit_presets.PRESETS`
+    — operators don't paste anything, just pick a preset and
+    review the result.
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    policy = _load_policy(nas["id"], policy_id)
+    if not policy:
+        abort(404)
+
+    preset_key = (request.form.get("preset_key") or "").strip()
+    preset = presets_svc.get_preset(preset_key)
+    if not preset:
+        flash(f"preset غير معروف: {preset_key!r}", "danger")
+        return redirect(url_for(
+            "radius.site_exit_page", nas_id=nas_id,
+            policy_id=policy_id))
+
+    advanced = bool(request.form.get("advanced_mode"))
+    result = importer.parse_address_list(
+        preset.body, advanced_mode=advanced)
+    return _render_page(
+        nas=nas, policy=policy,
+        import_result=result,
+        notice=(
+            f"تم تحميل preset «{preset.label_ar}» — "
+            f"حُلِّل {result.total_parsed} سطرًا، "
+            f"قُبل {len(result.accepted)}، "
+            f"رُفض {len(result.invalid)}."
         ),
     )
 
@@ -469,6 +546,7 @@ def _plan_to_commands(
         plan.address_list_ops,
         plan.dns_ops,
         plan.mangle_ops,
+        plan.nat_ops,
         plan.firewall_filter_ops,
     ]
     for cmd_tuple in sections:
@@ -549,6 +627,29 @@ def site_exit_apply(nas_id: int, policy_id: int):
         wan_interface_list=wan_interface_list,
         backup_override_acknowledged=backup_ack,
     )
+
+    # VX2.6d — pre-flight check on router API credentials so
+    # operators see a clear Arabic message instead of
+    # "invalid user name or password (6)" from MikroTik's
+    # API after a 10-second timeout.
+    creds_err = _check_router_credentials(nas)
+    if creds_err:
+        safety = safety_svc.SiteExitSafetyResult(
+            allowed=False,
+            severity=safety_svc.SEV_BLOCKED,
+            blocking_reasons=tuple(safety.blocking_reasons)
+                + (creds_err,),
+            warnings=safety.warnings,
+            required_confirmations=safety.required_confirmations,
+            recommended_actions=tuple(safety.recommended_actions)
+                + (f"افتح /admin/radius/mt/{nas_id}/dashboard "
+                   "لتحديث بيانات اعتماد الراوتر",),
+            backup_status=safety.backup_status,
+            router_health=safety.router_health,
+            vps_health=safety.vps_health,
+            fasttrack_warning=safety.fasttrack_warning,
+            script_hash=safety.script_hash,
+        )
 
     deployments_repo.ensure_for_policy(
         tenant_id=_tid(), policy_id=int(policy_id),
