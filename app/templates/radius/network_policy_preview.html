@@ -434,6 +434,128 @@
     .npc-script-section .npc-script-body {
       margin-top: 14px;
     }
+
+    /* ───── Side strip + slide-in drawer ─────
+       The page foregrounds: hero, readiness pill, access
+       URLs, apply form. Everything else (analysis, plan,
+       glossary, raw script) lives in the drawer that slides
+       in from the right when the operator wants context. */
+    .npc-side-strip {
+      position: fixed;
+      top: 120px;
+      left: 12px;
+      z-index: 25;
+      display: flex; flex-direction: column;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #E3E1EC;
+      border-radius: 12px;
+      padding: 10px 6px;
+      box-shadow: 0 4px 16px rgba(15,23,42,0.06);
+    }
+    .npc-side-strip__btn {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      color: #6B5AED;
+      font-size: 15px;
+      transition: background 0.15s, color 0.15s;
+      position: relative;
+    }
+    .npc-side-strip__btn:hover {
+      background: rgba(107,90,237,0.08);
+    }
+    .npc-side-strip__btn[data-active="true"] {
+      background: rgba(107,90,237,0.12);
+      border-color: rgba(107,90,237,0.3);
+    }
+    .npc-side-strip__btn .npc-tip {
+      position: absolute;
+      left: 100%;
+      margin-inline-start: 8px;
+      background: #1F2937;
+      color: #fff;
+      font-size: 11.5px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    .npc-side-strip__btn:hover .npc-tip {
+      opacity: 1;
+    }
+
+    .npc-drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 420px;
+      max-width: 90vw;
+      background: #fff;
+      border-inline-end: 1px solid #E3E1EC;
+      box-shadow: 0 0 24px rgba(15,23,42,0.10);
+      z-index: 30;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      display: flex; flex-direction: column;
+    }
+    [dir="rtl"] .npc-drawer {
+      left: auto; right: 0;
+      transform: translateX(100%);
+      border-inline-end: none;
+      border-inline-start: 1px solid #E3E1EC;
+    }
+    .npc-drawer.open {
+      transform: translateX(0);
+    }
+    .npc-drawer__head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #E3E1EC;
+      background: linear-gradient(135deg,
+        rgba(107,90,237,0.06), rgba(107,90,237,0.01));
+    }
+    .npc-drawer__title {
+      font-size: 15px; font-weight: 700;
+      color: #1F2937; margin: 0;
+    }
+    .npc-drawer__close {
+      margin-inline-start: auto;
+      border: none; background: transparent;
+      color: #6b7280; cursor: pointer;
+      font-size: 16px;
+      width: 32px; height: 32px;
+      border-radius: 6px;
+    }
+    .npc-drawer__close:hover {
+      background: rgba(15,23,42,0.05);
+    }
+    .npc-drawer__body {
+      flex: 1; overflow-y: auto;
+      padding: 14px 18px 80px;
+      scrollbar-width: thin;
+    }
+    .npc-drawer__body .npc-section {
+      margin-bottom: 18px;
+      box-shadow: none;
+      border-radius: 10px;
+    }
+    .npc-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,0.20);
+      z-index: 28;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .npc-drawer-overlay.show {
+      opacity: 1; pointer-events: auto;
+    }
   </style>
 {% endblock %}
 
@@ -965,6 +1087,84 @@
   </div>
   {% endif %}
 
+  {# ═══════════════════ Side strip + Drawer ════════════════════
+     The detail/analysis sections that follow live inside a
+     slide-in drawer. Operators see a clean main body by default
+     and open the drawer for context when needed. #}
+  <div class="npc-drawer-overlay" id="npc-drawer-overlay"
+       onclick="npcCloseDrawer()"></div>
+
+  <nav class="npc-side-strip" aria-label="تفاصيل وشروحات">
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-impact')"
+            title="ماذا سيحدث؟">
+      <i class="fa-regular fa-comment-dots"></i>
+      <span class="npc-tip">ماذا سيحدث؟</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-blast')"
+            title="حجم التأثير">
+      <i class="fa-solid fa-radiation"></i>
+      <span class="npc-tip">حجم التأثير</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-conflicts')"
+            title="التعارضات">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span class="npc-tip">التعارضات</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-deps')"
+            title="الخدمات المتأثّرة">
+      <i class="fa-solid fa-diagram-project"></i>
+      <span class="npc-tip">الخدمات المتأثّرة</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-recs')"
+            title="اقتراحات ذكيّة">
+      <i class="fa-solid fa-lightbulb"></i>
+      <span class="npc-tip">اقتراحات ذكيّة</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-canary')"
+            title="خطة التطبيق الآمنة">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span class="npc-tip">خطة التطبيق الآمنة</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-rollback')"
+            title="إمكانية التراجع">
+      <i class="fa-solid fa-rotate-left"></i>
+      <span class="npc-tip">إمكانية التراجع</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-glossary')"
+            title="شرح المصطلحات">
+      <i class="fa-solid fa-book-open"></i>
+      <span class="npc-tip">شرح المصطلحات</span>
+    </button>
+    <button type="button" class="npc-side-strip__btn"
+            onclick="npcOpenDrawer('npc-section-script')"
+            title="السكربت الخام">
+      <i class="fa-solid fa-file-code"></i>
+      <span class="npc-tip">السكربت الخام</span>
+    </button>
+  </nav>
+
+  <aside class="npc-drawer" id="npc-drawer"
+         aria-hidden="true">
+    <div class="npc-drawer__head">
+      <i class="fa-solid fa-circle-info"
+         style="color:#6B5AED; font-size:18px;"></i>
+      <h2 class="npc-drawer__title">تفاصيل وشروحات</h2>
+      <button type="button" class="npc-drawer__close"
+              onclick="npcCloseDrawer()"
+              aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="npc-drawer__body">
+
   {# ════════════════ SECTION 2 — What Will Happen ════════════ #}
   <div class="npc-section" data-test="npc-section-impact">
     <div class="npc-section-head">
@@ -1403,7 +1603,61 @@
       {% endif %}
     </div>
   </details>
+
+    </div>{# /.npc-drawer__body #}
+  </aside>{# /.npc-drawer #}
 </div>
+
+<script>
+  (function () {
+    var drawer  = document.getElementById('npc-drawer');
+    var overlay = document.getElementById('npc-drawer-overlay');
+    if (!drawer || !overlay) return;
+
+    window.npcOpenDrawer = function (anchorId) {
+      drawer.classList.add('open');
+      overlay.classList.add('show');
+      drawer.setAttribute('aria-hidden', 'false');
+      document.querySelectorAll('.npc-side-strip__btn')
+        .forEach(function (b) {
+          b.removeAttribute('data-active');
+        });
+      var btn = document.querySelector(
+        '.npc-side-strip__btn[onclick*="' + anchorId + '"]'
+      );
+      if (btn) btn.setAttribute('data-active', 'true');
+      if (anchorId) {
+        // Defer scroll to after the open transition starts.
+        setTimeout(function () {
+          var el = document.querySelector(
+            '[data-test="' + anchorId + '"]'
+          );
+          if (el) el.scrollIntoView({
+            behavior: 'smooth', block: 'start',
+          });
+        }, 80);
+      }
+    };
+
+    window.npcCloseDrawer = function () {
+      drawer.classList.remove('open');
+      overlay.classList.remove('show');
+      drawer.setAttribute('aria-hidden', 'true');
+      document.querySelectorAll('.npc-side-strip__btn')
+        .forEach(function (b) {
+          b.removeAttribute('data-active');
+        });
+    };
+
+    // Esc closes the drawer.
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' &&
+          drawer.classList.contains('open')) {
+        window.npcCloseDrawer();
+      }
+    });
+  })();
+</script>
 
 <div style="margin-top:18px; color:#6b7280; font-size:12.5px;">
   <i class="fa-solid fa-shield-halved"
