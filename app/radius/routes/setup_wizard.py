@@ -6,10 +6,6 @@ from flask import Blueprint, abort, g, jsonify, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..services.setup_wizard import (
-    STEP_BROADBAND_VERIFICATION,
-    STEP_HOTSPOT_VERIFICATION,
-    STEP_INTERNET_VERIFICATION,
-    STEP_VPN_RADIUS_VERIFICATION,
     SetupWizardValidationError,
     get_setup_wizard_service,
 )
@@ -31,16 +27,19 @@ def _body() -> dict[str, Any]:
     return request.form.to_dict(flat=True)
 
 
-def _coerce_bool(value: Any, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _json_error(message: str, status: int = 400, code: str = "validation_error"):
     return jsonify({"ok": False, "error": message, "code": code}), status
+
+
+def _verification_payload(body: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    mode = str(body.get("mode") or "pasted_output").strip().lower()
+    payload = {
+        "output": str(body.get("output") or ""),
+    }
+    checks = body.get("checks")
+    if isinstance(checks, dict):
+        payload["checks"] = checks
+    return mode, payload
 
 
 def register_setup_wizard_routes(bp: Blueprint) -> None:
@@ -132,38 +131,19 @@ def setup_wizard_generate_internet_script(run_id: int):
     return jsonify({"ok": True, "plan": plan})
 
 
-def _verify_step(*, run_id: int, step_key: str):
+def setup_wizard_verify_internet(run_id: int):
     body = _body()
-    ok = _coerce_bool(body.get("ok"), True)
-    result = body.get("verification_result")
-    if not isinstance(result, dict):
-        result = {}
-    diagnostics = body.get("diagnostics")
-    if isinstance(diagnostics, list):
-        result["diagnostics"] = diagnostics
+    mode, payload = _verification_payload(body)
     try:
-        if ok:
-            step = _svc().mark_verified(
-                tenant_id=_tid(),
-                run_id=run_id,
-                step_key=step_key,
-                verification_result=result or {"ok": True},
-            )
-        else:
-            step = _svc().mark_failed(
-                tenant_id=_tid(),
-                run_id=run_id,
-                step_key=step_key,
-                error_message=str(body.get("error_message") or "verification failed"),
-                verification_result=result or {"ok": False},
-            )
+        result = _svc().verify_internet(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+        )
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
-    return jsonify({"ok": True, "step": step})
-
-
-def setup_wizard_verify_internet(run_id: int):
-    return _verify_step(run_id=run_id, step_key=STEP_INTERNET_VERIFICATION)
+    return jsonify({"ok": True, **result})
 
 
 def setup_wizard_generate_vpn_script(run_id: int):
@@ -183,7 +163,18 @@ def setup_wizard_generate_vpn_script(run_id: int):
 
 
 def setup_wizard_verify_vpn(run_id: int):
-    return _verify_step(run_id=run_id, step_key=STEP_VPN_RADIUS_VERIFICATION)
+    body = _body()
+    mode, payload = _verification_payload(body)
+    try:
+        result = _svc().verify_vpn_radius(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
 
 
 def setup_wizard_interfaces_candidates(run_id: int):
@@ -237,7 +228,18 @@ def setup_wizard_generate_hotspot_script(run_id: int):
 
 
 def setup_wizard_verify_hotspot(run_id: int):
-    return _verify_step(run_id=run_id, step_key=STEP_HOTSPOT_VERIFICATION)
+    body = _body()
+    mode, payload = _verification_payload(body)
+    try:
+        result = _svc().verify_hotspot(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
 
 
 def setup_wizard_generate_broadband_script(run_id: int):
@@ -262,7 +264,18 @@ def setup_wizard_generate_broadband_script(run_id: int):
 
 
 def setup_wizard_verify_broadband(run_id: int):
-    return _verify_step(run_id=run_id, step_key=STEP_BROADBAND_VERIFICATION)
+    body = _body()
+    mode, payload = _verification_payload(body)
+    try:
+        result = _svc().verify_broadband(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
 
 
 def setup_wizard_run_summary(run_id: int):

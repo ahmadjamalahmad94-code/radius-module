@@ -18,7 +18,7 @@ from .setup_wizard_common import SetupWizardValidationError
 from .setup_wizard_hotspot_planner import HotspotBootstrapPlanner
 from .setup_wizard_interface_contract import InterfaceDiscoveryContract, InterfaceInfo
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
-from .setup_wizard_verification import SetupVerificationService
+from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
 from .setup_wizard_vpn_radius_planner import VpnRadiusBootstrapPlanner
 
 
@@ -242,6 +242,7 @@ class SetupWizardService:
         self._hotspot_planner = HotspotBootstrapPlanner()
         self._broadband_planner = BroadbandBootstrapPlanner()
         self._verification_service = SetupVerificationService()
+        self._verification_engine = SetupVerificationEngine(self._verification_service)
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -509,6 +510,101 @@ class SetupWizardService:
             vpn_verified=vpn_verified,
             statuses=statuses,
         )
+
+    def verify_internet(
+        self, *, tenant_id: int, run_id: int, mode: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        step = self.get_step(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_INTERNET_SOURCE_DETAILS
+        ) or {}
+        internet_input = dict(step.get("input_json") or {})
+        result = self._verification_engine.verify_internet(
+            run=run,
+            internet_input=internet_input,
+            mode=mode,
+            payload=payload or {},
+        )
+        return self._finalize_verification(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_INTERNET_VERIFICATION,
+            result=result,
+            error_hint="internet verification failed",
+        )
+
+    def verify_vpn_radius(
+        self, *, tenant_id: int, run_id: int, mode: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        vpn_step = self.get_step(
+            tenant_id=tenant_id, run_id=run_id, step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW
+        ) or {}
+        vpn_payload = dict(vpn_step.get("input_json") or {})
+        result = self._verification_engine.verify_vpn_radius(
+            run=run,
+            vpn_payload=vpn_payload,
+            mode=mode,
+            payload=payload or {},
+        )
+        return self._finalize_verification(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_VPN_RADIUS_VERIFICATION,
+            result=result,
+            error_hint="vpn/radius verification failed",
+        )
+
+    def verify_hotspot(
+        self, *, tenant_id: int, run_id: int, mode: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        result = self._verification_engine.verify_hotspot(mode=mode, payload=payload or {})
+        return self._finalize_verification(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_HOTSPOT_VERIFICATION,
+            result=result,
+            error_hint="hotspot verification failed",
+        )
+
+    def verify_broadband(
+        self, *, tenant_id: int, run_id: int, mode: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        result = self._verification_engine.verify_broadband(mode=mode, payload=payload or {})
+        return self._finalize_verification(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_BROADBAND_VERIFICATION,
+            result=result,
+            error_hint="broadband verification failed",
+        )
+
+    def _finalize_verification(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        step_key: str,
+        result: dict[str, Any],
+        error_hint: str,
+    ) -> dict[str, Any]:
+        if bool(result.get("gate_unlocked")):
+            step = self.mark_verified(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_key=step_key,
+                verification_result=result,
+            )
+            return {"status": "success", "step": step, **result}
+        step = self.mark_failed(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=step_key,
+            error_message=str(error_hint),
+            verification_result=result,
+        )
+        status = result.get("overall_status") or "failed"
+        return {"status": status, "step": step, **result}
 
     def get_run_summary(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
         run = self.get_run(tenant_id=tenant_id, run_id=run_id)

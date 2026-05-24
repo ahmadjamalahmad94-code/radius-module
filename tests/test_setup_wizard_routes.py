@@ -37,6 +37,22 @@ def _post(client, url: str, payload: dict):
     )
 
 
+def _ok_ping_output() -> str:
+    return "sent=5 received=5 packet-loss=0%"
+
+
+def _ok_vpn_output() -> str:
+    return "\n".join(
+        [
+            "latest handshake: 3s ago",
+            "/tool ping 10.10.0.1 count=5 sent=5 received=5 packet-loss=0%",
+            "vps_ping_router=ok",
+            "/radius print detail address=10.10.0.1 service=hotspot,ppp",
+            "/user print detail name=hr_api_setup group=api",
+        ]
+    )
+
+
 def test_setup_wizard_page_loads(app):
     with app.test_client() as client:
         _auth_session(client)
@@ -82,7 +98,11 @@ def test_hotspot_and_broadband_blocked_until_vpn_verified(app):
             f"/admin/radius/setup-wizard/runs/{run_id}/internet-source",
             {"source_type": "dhcp", "selected_wan_interface": "ether1", "input_json": {"interface": "ether1"}},
         )
-        _post(client, f"/admin/radius/setup-wizard/runs/{run_id}/verify-internet", {"ok": True})
+        _post(
+            client,
+            f"/admin/radius/setup-wizard/runs/{run_id}/verify-internet",
+            {"mode": "pasted_output", "output": _ok_ping_output()},
+        )
 
         hs = _post(
             client,
@@ -112,7 +132,11 @@ def test_generation_flow_persists_step_states(app):
                 "payload": {"interface": "ether1", "add_default_route": True, "use_peer_dns": True, "nat_enabled": True},
             },
         )
-        _post(client, f"/admin/radius/setup-wizard/runs/{run_id}/verify-internet", {"ok": True})
+        _post(
+            client,
+            f"/admin/radius/setup-wizard/runs/{run_id}/verify-internet",
+            {"mode": "pasted_output", "output": _ok_ping_output()},
+        )
 
         _post(
             client,
@@ -131,7 +155,11 @@ def test_generation_flow_persists_step_states(app):
                 }
             },
         )
-        _post(client, f"/admin/radius/setup-wizard/runs/{run_id}/verify-vpn-radius", {"ok": True})
+        _post(
+            client,
+            f"/admin/radius/setup-wizard/runs/{run_id}/verify-vpn-radius",
+            {"mode": "pasted_output", "output": _ok_vpn_output()},
+        )
         _post(
             client,
             f"/admin/radius/setup-wizard/runs/{run_id}/generate-hotspot-script",
