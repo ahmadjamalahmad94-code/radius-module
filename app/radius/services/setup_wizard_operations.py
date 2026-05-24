@@ -131,7 +131,7 @@ class OperationSafetyValidator:
             raise SetupWizardValidationError("set commands must target an exact generated name/comment")
         if _WRITE_LINE_RE.match(text) and "print" not in low and "ping" not in low:
             expected_tag = f"HOBERADIUS_SETUP:{int(run_id)}:{step_key}"
-            if expected_tag not in text and "comment=" not in low:
+            if expected_tag not in text and not _is_allowed_global_set(text):
                 raise SetupWizardValidationError("write operation lacks setup wizard tag/comment")
         warnings: list[str] = []
         if "/ip route add" in low or " add-default-route=yes" in low:
@@ -154,6 +154,11 @@ class OperationSafetyValidator:
             raise SetupWizardValidationError("rollback remove must target exact setup wizard tag")
         if "[find]" in low and "[find where" not in low:
             raise SetupWizardValidationError("rollback remove cannot use broad [find]")
+
+
+def _is_allowed_global_set(command: str) -> bool:
+    low = command.strip().lower()
+    return low.startswith("/ip dns set ")
 
 
 class SetupWizardOperationPlanner:

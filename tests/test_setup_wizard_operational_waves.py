@@ -108,6 +108,12 @@ def test_dangerous_command_rejected():
             run_id=1,
             step_key="internet",
         )
+    with pytest.raises(SetupWizardValidationError):
+        validator.validate_preview_command(
+            command='/ip firewall nat add chain=srcnat action=masquerade comment="OTHER_TAG"',
+            run_id=1,
+            step_key="internet",
+        )
 
 
 def test_mock_apply_stops_on_failure(monkeypatch, tmp_path):
@@ -198,6 +204,18 @@ def test_inventory_parser_sanitizes_and_detects_risks(app):
         assert "10.20.30.0/24" in snapshot["risk_report"]["existing_subnets"]
 
 
+def test_partial_inventory_and_overlap_risk_do_not_crash():
+    from app.radius.services.setup_wizard_inventory import RouterInventoryParser, RouterRiskAnalyzer
+
+    parsed = RouterInventoryParser().parse("/ip address print detail\n0 address=10.77.50.1/24 interface=bridge1")
+    risk = RouterRiskAnalyzer().analyze(
+        snapshot=parsed,
+        candidate_cidrs=["10.77.50.0/24", "10.88.90.0/24"],
+    )
+    assert risk["subnet_overlaps"] == [{"candidate": "10.77.50.0/24", "existing": "10.77.50.0/24"}]
+    assert any(w["code"] == "subnet_overlap" for w in risk["warnings"])
+
+
 def test_orchestrator_blocks_before_vpn_verified(app):
     with app.test_client() as client:
         _auth_session(client)
@@ -250,3 +268,15 @@ def test_support_bundle_masks_secrets_and_health_renders(app):
         health = client.get(f"/admin/radius/setup-wizard/runs/{run_id}/health")
         assert health.status_code == 200
         assert health.get_json()["health"]["run_id"] == run_id
+
+
+def test_setup_wizard_page_renders_operational_controls(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        res = client.get("/admin/radius/setup-wizard")
+        html = res.get_data(as_text=True)
+        assert res.status_code == 200
+        assert "data-sw-action=\"dry-run\"" in html
+        assert "data-sw-action=\"apply-step\"" in html
+        assert "data-sw-action=\"save-inventory\"" in html
+        assert "HOBERADIUS_SETUP_WIZARD_LIVE_APPLY" in html

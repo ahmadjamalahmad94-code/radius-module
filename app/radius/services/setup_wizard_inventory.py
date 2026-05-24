@@ -186,6 +186,7 @@ class RouterRiskAnalyzer:
         snapshot: dict[str, Any],
         selected_wan_interface: str = "",
         vpn_interface: str = "hr-wg",
+        candidate_cidrs: list[str] | None = None,
     ) -> dict[str, Any]:
         interfaces = list(snapshot.get("interfaces") or [])
         addresses = list(snapshot.get("addresses") or [])
@@ -210,6 +211,14 @@ class RouterRiskAnalyzer:
             warnings.append({"code": "existing_pppoe_detected", "message_ar": "Existing PPP/PPPoE configuration was detected"})
         if any(str(item.get("dst-address") or item.get("dst_address") or "") in {"0.0.0.0/0", "0.0.0.0"} for item in routes):
             warnings.append({"code": "existing_default_route", "message_ar": "Existing default route detected"})
+        overlaps = _candidate_overlaps(subnets, candidate_cidrs or [])
+        for item in overlaps:
+            warnings.append({
+                "code": "subnet_overlap",
+                "candidate": item["candidate"],
+                "existing": item["existing"],
+                "message_ar": "Candidate subnet overlaps an existing router subnet",
+            })
         return {
             "wan_interface": wan,
             "vpn_interface": vpn,
@@ -219,6 +228,7 @@ class RouterRiskAnalyzer:
             "existing_nat_count": len(nat),
             "existing_hotspot": bool(hotspot),
             "existing_pppoe": bool(ppp),
+            "subnet_overlaps": overlaps,
             "warnings": warnings,
         }
 
@@ -260,6 +270,25 @@ def _extract_subnets(*groups: list[dict[str, Any]]) -> list[str]:
                     if net.version == 4 and str(net) not in found:
                         found.append(str(net))
     return found
+
+
+def _candidate_overlaps(existing_subnets: list[str], candidate_cidrs: list[str]) -> list[dict[str, str]]:
+    overlaps: list[dict[str, str]] = []
+    existing = []
+    for raw in existing_subnets:
+        try:
+            existing.append(ipaddress.ip_network(raw, strict=False))
+        except ValueError:
+            continue
+    for raw_candidate in candidate_cidrs:
+        try:
+            candidate = ipaddress.ip_network(str(raw_candidate), strict=False)
+        except ValueError:
+            continue
+        for existing_net in existing:
+            if candidate.overlaps(existing_net):
+                overlaps.append({"candidate": str(candidate), "existing": str(existing_net)})
+    return overlaps
 
 
 class RouterInventoryService:
