@@ -1,0 +1,9 @@
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=bridge-hotspot type=bridge running=yes
+/ip address print detail
+0 address=10.50.0.1/24 interface=bridge-hotspot
+/ip hotspot print detail
+0 name=hotspot1 interface=bridge-hotspot profile=hsprof1
+/ip pool print detail
+0 name=hs-pool ranges=10.50.0.20-10.50.0.220

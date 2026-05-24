@@ -206,6 +206,33 @@
       <button class="hub-btn" type="button" data-sw-action="added-catalog">Added services catalog</button>
     </div>
   </section>
+
+  <section class="sw-panel sw-pilot-panel" data-sw-pilot-panel>
+    <div class="sw-panel-head">
+      <div>
+        <h2>لوحة تدريب التشغيل الداخلي</h2>
+        <p class="sw-muted">هذه اللوحة لا تنفذ أي أمر على MikroTik. هدفها تجهيز قائمة فحص قبل تجربة CHR مضبوطة.</p>
+      </div>
+      <span class="status-pill status-blocked">Pilot only</span>
+    </div>
+    <div class="sw-inline-actions">
+      <select data-sw-pilot-step aria-label="Pilot drill step">
+        <option value="internet">internet</option>
+        <option value="vpn">vpn/radius</option>
+        <option value="hotspot">hotspot</option>
+        <option value="broadband">broadband</option>
+      </select>
+      <button class="hub-btn hub-btn--primary" type="button" data-sw-action="pilot-drill">Generate Pilot Drill Checklist</button>
+    </div>
+    <div class="sw-pilot-grid">
+      <label class="sw-check"><input type="checkbox" disabled> Router backup/export taken</label>
+      <label class="sw-check"><input type="checkbox" disabled> Out-of-band access confirmed</label>
+      <label class="sw-check"><input type="checkbox" disabled> WAN/interface verified</label>
+      <label class="sw-check"><input type="checkbox" disabled> Rollback plan reviewed</label>
+      <label class="sw-check"><input type="checkbox" disabled> Feature flag still OFF unless controlled test</label>
+    </div>
+    <pre class="sw-output sw-pilot-output" data-sw-pilot-output>-- pilot drill checklist will appear here --</pre>
+  </section>
 </div>
 
 <script>

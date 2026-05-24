@@ -1,0 +1,8 @@
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=ether3 type=ether running=yes
+/ip address print detail
+0 address=10.88.44.1/24 interface=bridge1
+/ip firewall nat print detail
+0 chain=srcnat src-address=10.88.44.0/24 action=masquerade comment="existing scoped nat"
+1 chain=srcnat out-interface=ether1 action=masquerade comment="wan nat"

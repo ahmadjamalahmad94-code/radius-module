@@ -72,6 +72,7 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/added-services/verify", "setup_wizard_added_services_verify", setup_wizard_added_services_verify, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/support-bundle", "setup_wizard_support_bundle", setup_wizard_support_bundle, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/health", "setup_wizard_health", setup_wizard_health, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/pilot-drill", "setup_wizard_pilot_drill", setup_wizard_pilot_drill, methods=["GET"])
 
 
 def setup_wizard_page():
@@ -469,3 +470,12 @@ def setup_wizard_health(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc), status=404, code="not_found")
     return jsonify({"ok": True, "health": health})
+
+
+def setup_wizard_pilot_drill(run_id: int):
+    step_key = str(request.args.get("step") or "internet")
+    try:
+        drill = _svc().pilot_drill(tenant_id=_tid(), run_id=run_id, step_key=step_key)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    return jsonify({"ok": True, "pilot_drill": drill})

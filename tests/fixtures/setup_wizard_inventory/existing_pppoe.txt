@@ -1,0 +1,9 @@
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=ether5 type=ether running=yes
+/ppp profile print detail
+0 name=pppoe-profile local-address=10.120.0.1 remote-address=pppoe-pool
+/interface pppoe-server server print detail
+0 interface=ether5 service-name=pppoe-main default-profile=pppoe-profile
+/ip pool print detail
+0 name=pppoe-pool ranges=10.120.0.10-10.120.0.200

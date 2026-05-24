@@ -1,0 +1,9 @@
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=ether2 type=ether running=yes
+/ip address print detail
+0 address=192.168.88.2/24 interface=ether1
+/ip route print detail
+0 dst-address=0.0.0.0/0 gateway=ether1
+/ip firewall nat print detail
+0 chain=srcnat out-interface=ether1 action=masquerade comment="existing-wan-nat"

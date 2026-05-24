@@ -9,6 +9,7 @@
   const scriptPreview = root.querySelector("[data-sw-script-preview]");
   const outputPreview = root.querySelector("[data-sw-output-preview]");
   const cardsHost = root.querySelector("[data-sw-verification-cards]");
+  const pilotOutput = root.querySelector("[data-sw-pilot-output]");
 
   function token() {
     const input = root.querySelector('input[name="_csrf_token"]');
@@ -103,6 +104,10 @@
 
   function operationStep() {
     return root.querySelector("[data-sw-operation-step]")?.value || "internet";
+  }
+
+  function pilotStep() {
+    return root.querySelector("[data-sw-pilot-step]")?.value || "internet";
   }
 
   function confirmationText() {
@@ -292,6 +297,15 @@
     setOutput(data);
   }
 
+  async function actionPilotDrill() {
+    requireRun();
+    const data = await getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/pilot-drill?step=${encodeURIComponent(pilotStep())}`);
+    if (pilotOutput) {
+      pilotOutput.textContent = JSON.stringify(data.pilot_drill || data, null, 2);
+    }
+    setOutput(data);
+  }
+
   const actions = {
     "create-run": createRun,
     "refresh-summary": refreshSummary,
@@ -314,6 +328,7 @@
     "health": actionHealth,
     "support-bundle": actionSupportBundle,
     "added-catalog": actionAddedCatalog,
+    "pilot-drill": actionPilotDrill,
   };
 
   root.querySelectorAll("[data-sw-action]").forEach((btn) => {

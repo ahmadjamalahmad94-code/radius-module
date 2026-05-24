@@ -1,0 +1,7 @@
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=hr-wg type=wireguard running=yes private-key="DO_NOT_LEAK"
+/interface wireguard print detail
+0 name=hr-wg listen-port=51820 private-key="DO_NOT_LEAK"
+/ip address print detail
+0 address=10.10.0.3/24 interface=hr-wg

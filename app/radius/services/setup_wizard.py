@@ -29,6 +29,7 @@ from .setup_wizard_orchestration import (
     SetupWizardBroadbandOrchestrator,
     SetupWizardHotspotOrchestrator,
 )
+from .setup_wizard_pilot import SetupWizardPilotDrillService
 from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
@@ -814,6 +815,15 @@ class SetupWizardService:
         return SetupWizardSupportService(wizard_service=self).health(
             tenant_id=tenant_id,
             run_id=run_id,
+        )
+
+    def pilot_drill(
+        self, *, tenant_id: int, run_id: int, step_key: str = "internet"
+    ) -> dict[str, Any]:
+        return SetupWizardPilotDrillService(wizard_service=self).build_drill(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=step_key,
         )
 
     def get_interface_candidates(

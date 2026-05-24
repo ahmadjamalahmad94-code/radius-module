@@ -1,0 +1,10 @@
+/system resource print
+version=7.15.3
+/interface print detail
+0 name=ether1 type=ether running=yes
+1 name=ether2 type=ether running=yes
+2 name=ether3 type=ether running=yes
+/ip address print detail
+/ip route print detail
+/ip pool print detail
+/ip firewall nat print detail
