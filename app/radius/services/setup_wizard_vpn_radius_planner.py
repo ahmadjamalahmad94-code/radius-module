@@ -50,6 +50,7 @@ class VpnRadiusBootstrapPlan:
     generated_objects: list[dict[str, str]]
     masked_sensitive_values: dict[str, str]
     diagnostics_hints: list[str]
+    router_provisioning: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -60,6 +61,7 @@ class VpnRadiusBootstrapPlan:
             "generated_objects": self.generated_objects,
             "masked_sensitive_values": self.masked_sensitive_values,
             "diagnostics_hints": self.diagnostics_hints,
+            "router_provisioning": self.router_provisioning,
         }
 
 
@@ -70,6 +72,12 @@ class VpnRadiusBootstrapPlanner:
         vpn_tag = f"HOBERADIUS_SETUP:{int(wizard_run_id)}:vpn"
         radius_tag = f"HOBERADIUS_SETUP:{int(wizard_run_id)}:radius"
         api_tag = f"HOBERADIUS_SETUP:{int(wizard_run_id)}:api"
+        router_registry_id = str(payload.get("router_registry_id") or "").strip()
+        router_tag = f"HOBERADIUS_ROUTER:{router_registry_id}" if router_registry_id else ""
+        tag_suffix = f" {router_tag}" if router_tag else ""
+        vpn_comment = f"{vpn_tag}{tag_suffix}"
+        radius_comment = f"{radius_tag}{tag_suffix}"
+        api_comment = f"{api_tag}{tag_suffix}"
 
         wg_interface = _safe_name(payload.get("wg_interface_name"), fallback="hr-wg")
         peer_name = _safe_name(payload.get("peer_name"), fallback=f"hr-vps-{wizard_run_id}")
@@ -80,7 +88,7 @@ class VpnRadiusBootstrapPlanner:
         endpoint = _v4(payload.get("vps_public_endpoint"), "vps_public_endpoint")
         endpoint_port = int(payload.get("endpoint_port") or 51820)
         radius_server = _v4(payload.get("radius_server_ip") or vps_vpn_ip, "radius_server_ip")
-        radius_secret = str(payload.get("radius_secret") or "").strip()
+        radius_secret = str(payload.get("radius_secret") or payload.get("radius_secret_ref") or "").strip()
         if not radius_secret:
             raise SetupWizardValidationError("radius_secret is required")
         auth_port = int(payload.get("radius_auth_port") or 1812)
@@ -92,35 +100,36 @@ class VpnRadiusBootstrapPlanner:
             "# HobeRadius VPN/RADIUS bootstrap preview",
             "# Preview only - no destructive commands",
             f"# Tags: {vpn_tag}, {radius_tag}, {api_tag}",
+            f"# Router registry: {router_tag or 'not-reserved'}",
             "# ================================================",
             "",
             "# --- WireGuard interface ---",
             f':if ([:len [/interface wireguard find where name="{wg_interface}"]] = 0) do={{',
-            f'  /interface wireguard add name="{wg_interface}" listen-port={listen_port} comment="{vpn_tag}"',
+            f'  /interface wireguard add name="{wg_interface}" listen-port={listen_port} comment="{vpn_comment}"',
             "}",
             f':if ([:len [/ip address find where interface="{wg_interface}" and address="{router_vpn_ip}/24"]] = 0) do={{',
-            f'  /ip address add interface="{wg_interface}" address="{router_vpn_ip}/24" comment="{vpn_tag}"',
+            f'  /ip address add interface="{wg_interface}" address="{router_vpn_ip}/24" comment="{vpn_comment}"',
             "}",
             "",
             "# --- WireGuard peer to VPS ---",
             f'# Peer "{peer_name}" must be completed with the real VPS public key.',
-            f':if ([:len [/interface wireguard peers find where interface="{wg_interface}" and comment="{vpn_tag}:{peer_name}"]] = 0) do={{',
-            f'  /interface wireguard peers add interface="{wg_interface}" endpoint-address="{endpoint}" endpoint-port={endpoint_port} allowed-address="{allowed_address}" comment="{vpn_tag}:{peer_name}"',
+            f':if ([:len [/interface wireguard peers find where interface="{wg_interface}" and comment="{vpn_tag}:{peer_name}{tag_suffix}"]] = 0) do={{',
+            f'  /interface wireguard peers add interface="{wg_interface}" endpoint-address="{endpoint}" endpoint-port={endpoint_port} allowed-address="{allowed_address}" comment="{vpn_tag}:{peer_name}{tag_suffix}"',
             "}",
             "",
             "# --- Reachability route hints ---",
-            f':if ([:len [/ip route find where dst-address="{allowed_address}" and gateway="{wg_interface}" and comment="{vpn_tag}"]] = 0) do={{',
-            f'  /ip route add dst-address="{allowed_address}" gateway="{wg_interface}" distance=1 comment="{vpn_tag}"',
+            f':if ([:len [/ip route find where dst-address="{allowed_address}" and gateway="{wg_interface}" and comment="{vpn_comment}"]] = 0) do={{',
+            f'  /ip route add dst-address="{allowed_address}" gateway="{wg_interface}" distance=1 comment="{vpn_comment}"',
             "}",
             "",
             "# --- RADIUS server entry (add-only; no overwrite) ---",
-            f':if ([:len [/radius find where address="{radius_server}" and authentication-port={auth_port} and accounting-port={acct_port} and comment="{radius_tag}"]] = 0) do={{',
-            f'  /radius add service=hotspot,ppp address="{radius_server}" secret="{radius_secret}" authentication-port={auth_port} accounting-port={acct_port} timeout=300ms comment="{radius_tag}"',
+            f':if ([:len [/radius find where address="{radius_server}" and authentication-port={auth_port} and accounting-port={acct_port} and comment="{radius_comment}"]] = 0) do={{',
+            f'  /radius add service=hotspot,ppp address="{radius_server}" secret="{radius_secret}" authentication-port={auth_port} accounting-port={acct_port} timeout=300ms comment="{radius_comment}"',
             "}",
             "",
             "# --- API bootstrap contract (plan only, not executed here) ---",
             f'# Intended API username: "{api_username}"',
-            f'# Intended API tag: "{api_tag}"',
+            f'# Intended API tag: "{api_comment}"',
             "# Manual apply step (outside this planner): create API user with least privileges.",
             "",
             "# ===== Validation checks =====",
@@ -136,7 +145,7 @@ class VpnRadiusBootstrapPlanner:
         rollback_script = (
             "# Rollback guidance (manual-safe):\n"
             "# - Review objects by comments first, then disable/remove manually if needed.\n"
-            f"# - Search tags: {vpn_tag}, {radius_tag}, {api_tag}\n"
+            f"# - Search tags: {vpn_tag}, {radius_tag}, {api_tag}, {router_tag or 'no-router-registry'}\n"
             "# - Keep a full router backup before any rollback."
         )
         warnings = [
@@ -174,4 +183,5 @@ class VpnRadiusBootstrapPlanner:
                 "api_login_failed",
                 "management_interface_conflict",
             ],
+            router_provisioning=dict(payload.get("router_provisioning") or {}),
         )

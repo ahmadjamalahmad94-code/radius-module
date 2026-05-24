@@ -12,13 +12,17 @@
   const sourceCards = Array.from(page.querySelectorAll("[data-source-type]"));
   const sourceForms = Array.from(page.querySelectorAll("[data-source-form]"));
   const scriptStatus = page.querySelector("[data-swv2-script-status]");
+  const vpnScriptStatus = page.querySelector("[data-swv2-vpn-script-status]");
   const internetPlanJson = page.querySelector('[data-swv2-plan-json="internet"]');
+  const vpnPlanJson = page.querySelector('[data-swv2-plan-json="vpn"]');
   const internetScript = document.getElementById("internet-script-code");
+  const vpnScript = document.getElementById("vpn-script-code");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
   let currentRunId = 0;
   let internetPlanSignature = "";
+  let vpnPlanGenerated = false;
 
   function token() {
     const input = page.querySelector('input[name="_csrf_token"]');
@@ -142,6 +146,10 @@
     if (scriptStatus) scriptStatus.textContent = message;
   }
 
+  function setVpnScriptLoading(message) {
+    if (vpnScriptStatus) vpnScriptStatus.textContent = message;
+  }
+
   function renderInternetPlan(plan, request) {
     if (internetScript) {
       internetScript.textContent = plan.script_text || "-- لم يرجع الخادم سكربت --";
@@ -180,6 +188,62 @@
     }
   }
 
+  function buildVpnPayload() {
+    return {
+      router_label: value("vpn_router_label", "router"),
+      router_identity: value("vpn_router_identity", ""),
+      vps_public_endpoint: value("vpn_vps_endpoint", "187.77.70.18"),
+      endpoint_port: Number(value("vpn_endpoint_port", "51820")) || 51820,
+    };
+  }
+
+  function writeProvisioningValue(name, valueText) {
+    const node = page.querySelector(`[data-swv2-provisioning="${name}"]`);
+    if (node) node.textContent = valueText || "--";
+  }
+
+  function renderVpnPlan(plan) {
+    const provisioning = plan.router_provisioning || {};
+    if (vpnScript) {
+      vpnScript.textContent = plan.script_text || "-- no VPN/RADIUS script returned --";
+    }
+    if (vpnPlanJson) {
+      vpnPlanJson.textContent = JSON.stringify(
+        {
+          router_provisioning: provisioning,
+          warnings: plan.warnings || [],
+          generated_objects: plan.generated_objects || [],
+          masked_sensitive_values: plan.masked_sensitive_values || {},
+        },
+        null,
+        2
+      );
+    }
+    writeProvisioningValue("router_vpn_ip", provisioning.router_vpn_ip);
+    writeProvisioningValue("server_vpn_ip", provisioning.server_vpn_ip);
+    writeProvisioningValue("peer_name", provisioning.wireguard_peer_name);
+    writeProvisioningValue("api_username", provisioning.api_username);
+    writeProvisioningValue("radius_secret", provisioning.masked_sensitive_values?.radius_secret || "***");
+    writeProvisioningValue("registry_id", provisioning.id ? `#${provisioning.id}` : "--");
+    setVpnScriptLoading("تم توليد بيانات ربط فريدة لهذا الراوتر من سجل provisioning.");
+  }
+
+  async function generateVpnRadiusScript(force) {
+    if (vpnPlanGenerated && !force && vpnScript?.textContent.trim()) return;
+    setVpnScriptLoading("جاري حجز IP وبيانات ربط فريدة للراوتر...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-vpn-radius-script`, {
+        payload: buildVpnPayload(),
+      });
+      vpnPlanGenerated = true;
+      renderVpnPlan(data.plan || {});
+    } catch (error) {
+      setVpnScriptLoading(`فشل توليد سكربت VPN/RADIUS: ${error.message}`);
+      if (vpnScript) vpnScript.textContent = `-- ${error.message} --`;
+    }
+  }
+
   function showStep(index) {
     current = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, idx) => {
@@ -198,6 +262,8 @@
 
     if (stepNames[current] === "internet-script") {
       generateInternetScript(false);
+    } else if (stepNames[current] === "vpn-script") {
+      generateVpnRadiusScript(false);
     }
   }
 
@@ -246,7 +312,21 @@
     }, 1200);
   }
 
-  function analyzeOutput(kind) {
+  async function verifyWithBackend(kind, outputText, localOk) {
+    if (!localOk || !currentRunId) return localOk;
+    const endpoint = kind === "internet" ? "verify-internet" : "verify-vpn-radius";
+    try {
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/${endpoint}`, {
+        mode: "pasted_output",
+        output: outputText,
+      });
+      return Boolean(data.gate_unlocked || data.status === "success");
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function analyzeOutput(kind) {
     const output = page.querySelector(`[data-swv2-verify-output="${kind}"]`);
     const diagnostics = page.querySelector(`[data-swv2-diagnostics="${kind}"]`);
     const success = page.querySelector(`[data-swv2-success="${kind}"]`);
@@ -258,7 +338,8 @@
       valueText.includes("packet-loss=0") ||
       valueText.includes("0% packet loss");
     const hasVpnSignal = kind !== "vpn" || valueText.includes("handshake") || valueText.includes("radius");
-    const ok = hasPingSuccess && hasVpnSignal;
+    let ok = hasPingSuccess && hasVpnSignal;
+    ok = await verifyWithBackend(kind, output.value, ok);
 
     diagnostics.innerHTML = "";
     const card = document.createElement("div");
@@ -305,6 +386,8 @@
       copyCode(target.dataset.copyTarget, target);
     } else if (target.matches("[data-swv2-generate-internet]")) {
       generateInternetScript(true);
+    } else if (target.matches("[data-swv2-generate-vpn]")) {
+      generateVpnRadiusScript(true);
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {
@@ -316,6 +399,9 @@
   page.addEventListener("input", (event) => {
     if (event.target.closest("[data-swv2-internet-form]")) {
       internetPlanSignature = "";
+    }
+    if (event.target.closest("[data-swv2-vpn-form]")) {
+      vpnPlanGenerated = false;
     }
   });
 

@@ -31,6 +31,7 @@ from .setup_wizard_orchestration import (
     SetupWizardHotspotOrchestrator,
 )
 from .setup_wizard_pilot import SetupWizardPilotDrillService
+from .setup_wizard_router_provisioning import RouterProvisioningService
 from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
@@ -274,6 +275,7 @@ class SetupWizardService:
         self._inventory_service = RouterInventoryService()
         self._added_services_planner = AddedServicesPlanner()
         self._lab_policy = SetupWizardLabPolicyEngine()
+        self._router_provisioning = RouterProvisioningService()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -510,13 +512,66 @@ class SetupWizardService:
     def generate_vpn_radius_script(
         self, *, tenant_id: int, run_id: int, payload: dict[str, Any]
     ) -> dict[str, Any]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        self._sm.guard_step_access(
+            run=run,
+            step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            internet_verified=self._is_step_verified(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_key=STEP_INTERNET_VERIFICATION,
+            ),
+            vpn_verified=self._is_step_verified(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_key=STEP_VPN_RADIUS_VERIFICATION,
+            ),
+        )
+        reservation = self._router_provisioning.reserve_for_run(
+            tenant_id=tenant_id,
+            wizard_run_id=run_id,
+            router_label=str(payload.get("router_label") or ""),
+            router_identity=str(payload.get("router_identity") or ""),
+            force_new=bool(payload.get("force_new_reservation", False)),
+        )
+        endpoint_defaults = self._router_provisioning.endpoint_defaults()
+        effective_payload = dict(payload)
+        effective_payload.update(
+            {
+                "wg_interface_name": reservation["wireguard_interface_name"],
+                "peer_name": reservation["wireguard_peer_name"],
+                "router_vpn_ip": reservation["router_vpn_ip"],
+                "vps_vpn_ip": reservation["server_vpn_ip"],
+                "allowed_address": f'{reservation["server_vpn_ip"]}/32',
+                "radius_server_ip": reservation["server_vpn_ip"],
+                "radius_secret": reservation["radius_secret_ref"],
+                "radius_secret_ref": reservation["radius_secret_ref"],
+                "api_username": reservation["api_username"],
+                "router_registry_id": reservation["id"],
+                "router_provisioning": reservation,
+            }
+        )
+        effective_payload["vps_public_endpoint"] = str(
+            payload.get("vps_public_endpoint")
+            or endpoint_defaults.get("vps_public_endpoint")
+            or ""
+        )
+        effective_payload["endpoint_port"] = int(
+            payload.get("endpoint_port")
+            or endpoint_defaults.get("endpoint_port")
+            or 51820
+        )
         self.advance_to_step(
             tenant_id=tenant_id,
             run_id=run_id,
             step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW,
-            input_json=payload,
+            input_json=effective_payload,
         )
-        plan = self._vpn_radius_planner.plan(wizard_run_id=int(run_id), payload=payload)
+        plan = self._vpn_radius_planner.plan(wizard_run_id=int(run_id), payload=effective_payload)
+        reservation = self._router_provisioning.mark_generated(
+            tenant_id=tenant_id,
+            registry_id=int(reservation["id"]),
+        )
         self.mark_script_generated(
             tenant_id=tenant_id,
             run_id=run_id,
@@ -525,7 +580,9 @@ class SetupWizardService:
             rollback_script=plan.rollback_script_text,
             validation_commands=plan.validation_commands,
         )
-        return plan.to_dict()
+        result = plan.to_dict()
+        result["router_provisioning"] = reservation
+        return result
 
     def get_verification_contract(
         self, *, tenant_id: int, run_id: int, statuses: dict[str, str] | None = None
@@ -653,6 +710,10 @@ class SetupWizardService:
             "latest_router_snapshot": self._inventory_service.latest_snapshot(
                 tenant_id=tenant_id,
                 run_id=run_id,
+            ),
+            "router_provisioning": self._router_provisioning.latest_for_run(
+                tenant_id=tenant_id,
+                wizard_run_id=run_id,
             ),
         }
 

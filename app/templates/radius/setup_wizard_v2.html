@@ -267,29 +267,51 @@
     <article class="swv2-step" data-swv2-step="vpn-script">
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">VPN/RADIUS</span>
+        <form class="swv2-form swv2-provisioning-form" data-swv2-vpn-form>
+          <label>Router label
+            <input type="text" name="vpn_router_label" value="Branch Router" placeholder="Branch Router">
+            <span>Used only to reserve a stable router provisioning record.</span>
+          </label>
+          <label>Router identity
+            <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
+          </label>
+          <label>VPS endpoint
+            <input type="text" name="vpn_vps_endpoint" value="187.77.70.18" placeholder="187.77.70.18">
+          </label>
+          <label>WireGuard port
+            <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
+          </label>
+        </form>
+        <div class="swv2-provisioning-grid" aria-label="Router provisioning allocation">
+          <div><span>Router VPN IP</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
+          <div><span>Server VPN IP</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
+          <div><span>Peer</span><strong data-swv2-provisioning="peer_name">--</strong></div>
+          <div><span>API user</span><strong data-swv2-provisioning="api_username">--</strong></div>
+          <div><span>RADIUS secret</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
+          <div><span>Registry</span><strong data-swv2-provisioning="registry_id">--</strong></div>
+        </div>
         <h2>سيتم الآن ربط MikroTik مع HobeRadius</h2>
         <p>هذه الخطوة تجهز سكربت الربط الآمن بين الراوتر والخادم، ثم إعدادات RADIUS المطلوبة لاحقًا للخدمات.</p>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">نسخ سكربت الربط</button>
           <details class="swv2-advanced">
             <summary>تفاصيل هندسية</summary>
-            <pre>{
+            <pre data-swv2-plan-json="vpn">{
   "mode": "preview_only",
   "step": "vpn_radius",
   "requires": "internet_verified"
 }</pre>
           </details>
         </div>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>Generate unique router data</button>
+        </div>
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
             <strong>معاينة سكربت VPN/RADIUS</strong>
             <span>لا يتم إنشاء مستخدم أو تعديل إعدادات الراوتر تلقائيًا.</span>
           </div>
-          <pre id="vpn-script-code"># HOBERADIUS_SETUP:&lt;run_id&gt;:vpn
-# Safety: preview only
-/interface wireguard add name=hr-wg comment="HOBERADIUS_SETUP:&lt;run_id&gt;:vpn"
-/radius add address=10.10.0.1 service=hotspot,ppp comment="HOBERADIUS_SETUP:&lt;run_id&gt;:vpn"
-/tool ping 10.10.0.1 count=5</pre>
+          <pre id="vpn-script-code">-- VPN/RADIUS script has not been generated yet --</pre>
         </div>
       </div>
     </article>

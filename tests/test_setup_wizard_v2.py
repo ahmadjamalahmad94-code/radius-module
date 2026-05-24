@@ -94,6 +94,9 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-swv2-verify-output="vpn"' in html
     assert 'data-swv2-script-preview="internet"' in html
     assert 'data-swv2-script-preview="vpn"' in html
+    assert 'data-swv2-provisioning="router_vpn_ip"' in html
+    assert "data-swv2-generate-vpn" in html
+    assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
 
 
@@ -112,8 +115,10 @@ def test_setup_wizard_v2_js_uses_real_preview_api(app):
         source = fh.read()
 
     assert "/generate-internet-script" in source
+    assert "/generate-vpn-radius-script" in source
     assert "/ip dhcp-client add interface=ether1" not in source
     assert "buildInternetPayload" in source
+    assert "buildVpnPayload" in source
 
 
 def test_v2_generate_internet_script_vlan_payload_returns_vlan_script(app):
