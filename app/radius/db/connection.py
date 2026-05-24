@@ -34,6 +34,13 @@ def _resolve_db_path() -> str:
 
 def db_path() -> str:
     global _db_path
+    env_path = os.environ.get("HOBERADIUS_DB_PATH")
+    if env_path and _db_path != env_path:
+        with _init_lock:
+            if _db_path != env_path:
+                close_thread_conn()
+                _db_path = env_path
+                Path(_db_path).parent.mkdir(parents=True, exist_ok=True)
     if _db_path is None:
         with _init_lock:
             if _db_path is None:

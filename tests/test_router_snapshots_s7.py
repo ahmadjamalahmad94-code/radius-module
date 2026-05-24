@@ -2,29 +2,27 @@
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 from datetime import datetime
 
 import pytest
 
+from app.radius.db.connection import reset_for_tests
+
 
 @pytest.fixture
 def app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_s7_")
-    monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
+    db_file = os.path.join(tmp, "test.db")
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
-    for k in list(sys.modules):
-        if k.startswith("app."):
-            del sys.modules[k]
+    reset_for_tests(db_file)
     from app import create_app
     yield create_app()
-    for k in list(sys.modules):
-        if k.startswith("app."):
-            del sys.modules[k]
+    reset_for_tests(None)
 
 
 def _seed_nas(app, *, nas_id, enabled=True):

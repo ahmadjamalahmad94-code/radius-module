@@ -240,21 +240,19 @@ All paths are mounted under `/admin/radius`.
 
 ## Test Summary
 
-Last audit run results for Prompt 8:
+Last audit run results for Prompt 8, with DB isolation blocker follow-up:
 
 - `python -m compileall app`: passed.
 - `node --check app/static/js/setup_wizard_v2.js`: passed.
 - `node --check app/static/js/setup_wizard_fleet.js`: passed.
 - Broad setup-wizard-related explicit suite:
   - Command selected files matching `test_setup_wizard`, `test_router_`, `test_server_wireguard`, and `test_wireguard_peer_health`.
-  - 202 passed.
-  - 22 failed.
-  - 13,504 warnings.
-  - Runtime: 108.53s.
-  - Failure pattern: `sqlite3.OperationalError: no such table: setup_wizard_runs` after later router provisioning/lifecycle files run in the same process.
-  - Interpretation: core focused files pass individually; the broad same-process suite has a test isolation/order issue that must be fixed before claiming full regression health.
+  - Original audit result: 202 passed, 22 failed, 13,504 warnings in 108.53s.
+  - Original failure pattern: `sqlite3.OperationalError: no such table: setup_wizard_runs` after later router provisioning/lifecycle files run in the same process.
+  - Follow-up fix result: 224 passed, 18,675 warnings in 258.28s for the repo-matching broad same-process suite.
+  - The DB isolation/order blocker is fixed by honoring test DB path changes and removing module-cache resets from the router snapshot test fixture.
 - Full `python -m pytest -q`:
-  - Pending/recorded in execution log for this prompt.
+  - Follow-up attempt timed out after 304.0s with no visible failure output before timeout.
 
 This report does not claim full project regression readiness.
 
@@ -262,7 +260,7 @@ This report does not claim full project regression readiness.
 
 | Category | Score | Explanation |
 | --- | ---: | --- |
-| Architecture readiness | 86 | Strong layered architecture now exists: planners, registry, lifecycle, verification, recovery, fleet, support bundle, V2 UI. Remaining issue is test isolation and production adapter maturity. |
+| Architecture readiness | 88 | Strong layered architecture now exists: planners, registry, lifecycle, verification, recovery, fleet, support bundle, V2 UI. The broad same-process Setup Wizard DB isolation blocker is fixed; remaining architecture risk is production adapter maturity. |
 | Safety readiness | 88 | Defaults are blocked, validators are centralized, rollback is scoped, secrets are masked. Remaining risk is that high-risk endpoints exist and must stay behind operational controls. |
 | Lab readiness | 82 | CHR/VPS lab flow is viable with flags, dry-run, backup, verify, rollback. Needs real lab evidence and operator checklist execution. |
 | UX readiness | 78 | V2 is guided and beginner-first with hidden advanced details. Needs browser visual QA, live Arabic copy pass, and confidence journey state binding. |
@@ -305,7 +303,7 @@ This report does not claim full project regression readiness.
 - Complete operator training.
 - Complete customer support playbook.
 - Complete legal/support disclaimer for generated MikroTik scripts.
-- Fix broad setup-wizard test isolation/order failure.
+- Keep the broad setup-wizard DB isolation regression test in CI.
 - Run browser visual QA for V2 and fleet dashboard.
 - Run a real CHR lab pilot end-to-end at least twice.
 - Run a guarded rollback test in lab.
@@ -313,15 +311,15 @@ This report does not claim full project regression readiness.
 
 ## Next 10 Blockers
 
-1. Fix broad same-process setup-wizard test isolation that causes `setup_wizard_runs` missing table failures.
-2. Run real CHR lab pilot with internet preview, inventory, dry-run, server peer apply, verify, and rollback.
-3. Produce lab evidence logs/screenshots for success and failure cases.
-4. Add production permission/role checks specific to Setup Wizard apply and recovery endpoints.
-5. Add rate limiting or operator throttling for apply/rollback/verification endpoints.
-6. Perform browser visual QA for V2 mobile and desktop.
-7. Add operational monitoring around apply/rollback attempts.
-8. Add disaster recovery SOP and operator training checklist.
-9. Validate migration behavior on a copy of production-like SQLite/DB state.
+1. Run real CHR lab pilot with internet preview, inventory, dry-run, server peer apply, verify, and rollback.
+2. Produce lab evidence logs/screenshots for success and failure cases.
+3. Add production permission/role checks specific to Setup Wizard apply and recovery endpoints.
+4. Add rate limiting or operator throttling for apply/rollback/verification endpoints.
+5. Perform browser visual QA for V2 mobile and desktop.
+6. Add operational monitoring around apply/rollback attempts.
+7. Add disaster recovery SOP and operator training checklist.
+8. Validate migration behavior on a copy of production-like SQLite/DB state.
+9. Keep broad Setup Wizard same-process tests in CI to prevent DB-path regressions.
 10. Decide whether customer-facing mode remains script-preview only or gets a separate production automation certification path.
 
 ## Final Verdict

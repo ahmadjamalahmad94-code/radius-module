@@ -100,6 +100,82 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Blocker Fix — Setup Wizard DB Isolation / Migration Order
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this blocker fix. Git commit hashes cannot be embedded inside the same commit without changing the hash again.
+
+### What implemented
+
+- Reproduced the broad same-process failure with the repo-matching Setup Wizard/router/WireGuard test list:
+  - `tests/test_router_snapshots_s7.py` ran before `tests/test_server_wireguard_peer_apply.py`.
+  - Failure: `sqlite3.OperationalError: no such table: setup_wizard_runs`.
+  - First failing test: `test_server_peer_apply_blocked_by_default_flags`.
+- Root cause:
+  - `tests/test_router_snapshots_s7.py` deleted `app.*` modules from `sys.modules` to force DB isolation.
+  - Other already-collected Setup Wizard tests held imported service functions and DB helpers from earlier module instances.
+  - That split migration/app initialization and service calls across different cached DB connection modules in the same pytest process.
+  - The SQLite connection cache also did not honor a changed `HOBERADIUS_DB_PATH` after `_db_path` had already been resolved unless a test explicitly called `reset_for_tests`.
+- Fix:
+  - `app.radius.db.connection.db_path()` now honors a changed `HOBERADIUS_DB_PATH`, closes the current thread connection, and creates the new parent directory before opening the next connection.
+  - `tests/test_router_snapshots_s7.py` now uses `reset_for_tests(db_file)` instead of deleting `app.*` modules.
+  - Added `tests/test_setup_wizard_db_isolation.py` to prove the standard app/migration path creates the full Setup Wizard schema and that DB path switches remain deterministic.
+- Updated the production readiness report to mark the broad DB isolation/order blocker as fixed.
+
+### Files changed
+
+- `app/radius/db/connection.py`
+- `tests/test_router_snapshots_s7.py`
+- `tests/test_setup_wizard_db_isolation.py`
+- `docs/setup_wizard/PRODUCTION_READINESS_REPORT.md`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- Before fix, repo-matching broad same-process suite with `-x` failed:
+  - Command included `test_setup_wizard*.py`, `test_router_*.py`, `test_server_wireguard*.py`, and `test_wireguard_peer_health.py`.
+  - Result: 38 passed, 1 failed, 6,250 warnings in 102.45s.
+  - Failure: `sqlite3.OperationalError: no such table: setup_wizard_runs` in `SetupWizardService.create_run`.
+- `python -m compileall app` passed.
+- `python -m pytest tests/test_setup_wizard_db_isolation.py -q` passed: 3 passed, 570 warnings in 5.43s.
+- `python -m pytest tests/test_router_lifecycle.py -q` passed: 5 passed, 963 warnings in 18.88s.
+- `python -m pytest tests/test_router_provisioning_orchestrator.py -q` passed: 12 passed, 2,592 warnings in 44.61s.
+- `python -m pytest tests/test_router_fleet_dashboard.py -q` passed: 9 passed, 1,841 warnings in 35.37s.
+- `python -m pytest tests/test_setup_wizard_recovery.py -q` passed: 11 passed, 2,174 warnings in 41.11s.
+- `python -m pytest tests/test_setup_wizard_foundation.py -q` passed: 8 passed, 236 warnings in 4.77s.
+- Repo-matching broad same-process suite passed:
+  - Command included every matching file from `test_setup_wizard*.py`, `test_router_*.py`, `test_server_wireguard*.py`, and `test_wireguard_peer_health.py`.
+  - Result: 224 passed, 18,675 warnings in 258.28s.
+- Prompt-listed broad same-process suite passed:
+  - Result: 195 passed, 16,261 warnings in 139.36s.
+- `git diff --check` passed with line-ending warnings only.
+- `python -m pytest -q` was attempted and timed out after 304.0s with no visible failure output before timeout.
+
+### Safety confirmations
+
+- No live apply was enabled.
+- No production automation behavior was changed.
+- No MikroTik behavior was changed.
+- No server WireGuard behavior was changed.
+- No RADIUS auth/accounting behavior was changed.
+- No radius-module-admin files were touched.
+- No Flutter files were touched.
+- No failing tests were skipped, xfailed, reordered, or weakened.
+- No production tables are silently created from request handlers.
+
+### Remaining risks
+
+- Full `python -m pytest -q` still does not complete inside the 304 second execution window.
+- The suite still emits many existing deprecation warnings around `datetime.utcnow()`.
+- Several unrelated dirty files remain in the worktree and must remain excluded from staging.
+
+### Full honest notes
+
+- The exact older prompt-listed broad suite passed even before the fix in this checkout because it did not include `tests/test_router_snapshots_s7.py`.
+- The actual repo-matching broad suite did reproduce the missing table failure before the fix and passed after the fix.
+- This fix is order-independent because tests no longer delete `app.*` modules to force isolation, and the DB connection layer now follows the current `HOBERADIUS_DB_PATH` when tests switch temporary databases in the same process.
+
 ## Prompt 8 — Production Readiness Audit + Final Verdict
 
 ### Commit
