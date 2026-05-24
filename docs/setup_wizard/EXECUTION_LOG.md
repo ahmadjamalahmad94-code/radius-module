@@ -176,6 +176,88 @@ Final commit hash is reported in the assistant final response for this blocker f
 - The actual repo-matching broad suite did reproduce the missing table failure before the fix and passed after the fix.
 - This fix is order-independent because tests no longer delete `app.*` modules to force isolation, and the DB connection layer now follows the current `HOBERADIUS_DB_PATH` when tests switch temporary databases in the same process.
 
+## CHR/VPS Lab Pilot Preparation
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. Git commit hashes cannot be embedded inside the same commit without changing the hash again.
+
+### What implemented
+
+- Prepared the first controlled CHR/VPS Setup Wizard lab pilot evidence package.
+- Created a lab pilot runbook for the internal engineering flow:
+  - preview,
+  - inventory,
+  - dry-run,
+  - lab-only server WireGuard peer apply if all flags/readiness checks pass,
+  - verify,
+  - rollback drill,
+  - Hotspot/Broadband preview and dry-run,
+  - support bundle masking review.
+- Created a blank evidence template with explicit placeholders for:
+  - environment,
+  - flags,
+  - wizard run metadata,
+  - allocated VPN IP,
+  - script checksums,
+  - inventory,
+  - readiness,
+  - dry-run,
+  - backup,
+  - apply,
+  - masked `wg show`,
+  - health,
+  - rollback,
+  - support bundle masking,
+  - screenshots,
+  - final verdict.
+- No actual lab execution was performed because this environment does not expose a controlled CHR/VPS, lab credentials, server WireGuard interface, or operator confirmation path.
+- No fake evidence file was created.
+
+### Files changed
+
+- `docs/setup_wizard/CHR_VPS_LAB_PILOT_RUNBOOK.md`
+- `docs/setup_wizard/CHR_VPS_LAB_EVIDENCE_TEMPLATE.md`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `python -m pytest tests/test_setup_wizard_db_isolation.py -q` passed: 3 passed, 570 warnings in 4.85s.
+- Broad prompt-listed Setup Wizard suite with the DB isolation test included passed:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_v2.py tests/test_setup_wizard_v2_hotspot_broadband.py tests/test_setup_wizard_added_services.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_setup_wizard_recovery.py tests/test_router_fleet_dashboard.py tests/test_setup_wizard_db_isolation.py -q`
+  - Result: 198 passed, 16,831 warnings in 116.34s.
+- `git diff --check` passed with line-ending warnings only.
+- `git status --short` showed only pre-existing unrelated dirty files; the new docs are ignored by `.gitignore` and were intentionally staged explicitly with force.
+- `python -m pytest -q` was attempted and timed out after 304.0s with no visible failure output before timeout.
+
+### Safety confirmations
+
+- Actual CHR/VPS lab execution was not faked.
+- No secrets, private keys, real API passwords, real RADIUS secrets, or full WireGuard private configs were committed.
+- No live apply was enabled.
+- No production automation behavior was changed.
+- No MikroTik behavior was changed.
+- No server WireGuard behavior was changed.
+- No RADIUS auth/accounting behavior was changed.
+- No radius-module-admin files were touched.
+- No Flutter files were touched.
+
+### Remaining risks
+
+- First real CHR/VPS evidence is still pending manual lab execution.
+- Real server peer apply evidence is pending a dedicated lab VPS with all four lab-only flags enabled by an operator.
+- Rollback evidence is pending a real applied peer in the lab.
+- Hotspot/Broadband real-router evidence is pending inventory from an isolated CHR.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- This prompt produced preparation artifacts only.
+- The evidence template is intentionally blank and marked pending so nobody mistakes a runbook for executed lab proof.
+- MikroTik live apply remains explicitly out of scope for this pilot package unless a separate guarded lab operation drill is approved.
+
 ## Prompt 8 — Production Readiness Audit + Final Verdict
 
 ### Commit
