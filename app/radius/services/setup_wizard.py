@@ -19,6 +19,7 @@ from .setup_wizard_common import SetupWizardValidationError
 from .setup_wizard_hotspot_planner import HotspotBootstrapPlanner
 from .setup_wizard_inventory import RouterInventoryService
 from .setup_wizard_interface_contract import InterfaceDiscoveryContract, InterfaceInfo
+from .setup_wizard_lab import SetupWizardLabPolicyEngine
 from .setup_wizard_operations import (
     SetupWizardApplyService,
     SetupWizardDryRunService,
@@ -136,6 +137,13 @@ def _json_loads(value: str, default: Any) -> Any:
         return json.loads(value or "")
     except (TypeError, ValueError):
         return default
+
+
+def _first_policy_code(policy: dict[str, Any]) -> str:
+    reasons = policy.get("blocking_reasons") or []
+    if reasons and isinstance(reasons[0], dict):
+        return str(reasons[0].get("code") or "lab_policy_blocked")
+    return "lab_policy_blocked"
 
 
 def _row_to_run(row: Any) -> dict[str, Any]:
@@ -265,6 +273,7 @@ class SetupWizardService:
         self._rollback_service = SetupWizardRollbackService(repo=self._operation_repo)
         self._inventory_service = RouterInventoryService()
         self._added_services_planner = AddedServicesPlanner()
+        self._lab_policy = SetupWizardLabPolicyEngine()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -694,13 +703,47 @@ class SetupWizardService:
     def apply_step(
         self, *, tenant_id: int, run_id: int, step_key: str, confirmation: str
     ) -> dict[str, Any]:
-        self._script_step_for_operation_step(step_key)
-        return self._apply_service.apply(
+        script_step = self._script_step_for_operation_step(step_key)
+        op_step = self._operation_tag_step(step_key)
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        snapshot = self._inventory_service.latest_snapshot(tenant_id=tenant_id, run_id=run_id)
+        operations = self._operation_repo.list_for_run(
+            tenant_id=tenant_id, run_id=run_id, step_key=op_step
+        )
+        policy = self._lab_policy.validate(
+            run=run,
+            step_key=op_step,
+            snapshot=snapshot,
+            operations=operations,
+            script_step=self.get_step(tenant_id=tenant_id, run_id=run_id, step_key=script_step),
+        )
+        if not policy["allowed"]:
+            return {
+                "status": "blocked",
+                "blocked_reason": _first_policy_code(policy),
+                "policy": policy,
+            }
+        preview = self._rollback_service.preview(
             tenant_id=tenant_id,
             run_id=run_id,
-            step_key=self._operation_tag_step(step_key),
+            step_key=op_step,
+        )
+        if not preview.get("operations"):
+            return {
+                "status": "blocked",
+                "blocked_reason": "rollback_missing",
+                "policy": policy,
+            }
+        result = self._apply_service.apply(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=op_step,
             confirmation=confirmation,
         )
+        result["policy"] = policy
+        result["verification_required"] = result.get("status") == "applied"
+        result["rollback_suggested"] = result.get("status") == "failed"
+        return result
 
     def rollback_step(
         self, *, tenant_id: int, run_id: int, step_key: str, confirmation: str = "", preview: bool = False
@@ -713,6 +756,25 @@ class SetupWizardService:
                 run_id=run_id,
                 step_key=op_step,
             )
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        snapshot = self._inventory_service.latest_snapshot(tenant_id=tenant_id, run_id=run_id)
+        operations = self._operation_repo.list_for_run(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=op_step,
+        )
+        policy = self._lab_policy.validate_rollback(
+            run=run,
+            step_key=op_step,
+            snapshot=snapshot,
+            operations=operations,
+        )
+        if not policy["allowed"]:
+            return {
+                "status": "blocked",
+                "blocked_reason": _first_policy_code(policy),
+                "policy": policy,
+            }
         return self._rollback_service.rollback(
             tenant_id=tenant_id,
             run_id=run_id,

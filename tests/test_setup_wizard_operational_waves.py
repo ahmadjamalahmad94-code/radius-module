@@ -118,6 +118,7 @@ def test_dangerous_command_rejected():
 
 def test_mock_apply_stops_on_failure(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LIVE_APPLY", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     from app import create_app

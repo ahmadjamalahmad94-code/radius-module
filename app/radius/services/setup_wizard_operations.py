@@ -47,6 +47,14 @@ def live_apply_enabled() -> bool:
     return (os.environ.get("HOBERADIUS_SETUP_WIZARD_LIVE_APPLY") or "").strip().lower() in _TRUTHY
 
 
+def lab_mode_enabled() -> bool:
+    return (os.environ.get("HOBERADIUS_SETUP_WIZARD_LAB_MODE") or "").strip().lower() in _TRUTHY
+
+
+def live_lab_apply_enabled() -> bool:
+    return live_apply_enabled() and lab_mode_enabled()
+
+
 def confirmation_phrase(run_id: int, step_key: str) -> str:
     return f"APPLY SETUP WIZARD {int(run_id)} {step_key}"
 
@@ -359,6 +367,7 @@ class SetupWizardDryRunService:
         return {
             "status": "dry_run_ready",
             "feature_flag_enabled": live_apply_enabled(),
+            "lab_mode_enabled": lab_mode_enabled(),
             "operations": rows,
             "safety_warnings": warnings,
             "confirmation_phrase": confirmation_phrase(run_id, step_key),
@@ -400,6 +409,12 @@ class SetupWizardApplyService:
                 "status": "blocked",
                 "blocked_reason": "feature_flag_disabled",
                 "message": "HOBERADIUS_SETUP_WIZARD_LIVE_APPLY is not enabled",
+            }
+        if not lab_mode_enabled():
+            return {
+                "status": "blocked",
+                "blocked_reason": "lab_mode_disabled",
+                "message": "HOBERADIUS_SETUP_WIZARD_LAB_MODE is not enabled",
             }
         expected = confirmation_phrase(run_id, step_key)
         if confirmation != expected:
@@ -471,10 +486,18 @@ class SetupWizardRollbackService:
     ) -> dict[str, Any]:
         if not live_apply_enabled():
             return {"status": "blocked", "blocked_reason": "feature_flag_disabled"}
+        if not lab_mode_enabled():
+            return {"status": "blocked", "blocked_reason": "lab_mode_disabled"}
         expected = f"ROLLBACK SETUP WIZARD {int(run_id)} {step_key}"
         if confirmation != expected:
             return {"status": "blocked", "blocked_reason": "confirmation_required", "expected": expected}
         preview = self.preview(tenant_id=tenant_id, run_id=run_id, step_key=step_key)
+        preview["operations"] = [
+            op for op in preview["operations"]
+            if op.get("status") == OP_STATUS_APPLIED and str(op.get("rollback_command") or "").strip()
+        ]
+        if not preview["operations"]:
+            return {"status": "blocked", "blocked_reason": "rollback_missing"}
         rolled: list[dict[str, Any]] = []
         for op in reversed(preview["operations"]):
             cmd = str(op.get("rollback_command") or "")

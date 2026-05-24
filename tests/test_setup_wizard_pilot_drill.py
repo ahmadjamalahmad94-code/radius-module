@@ -255,6 +255,7 @@ def test_ui_route_renders_pilot_panel(app):
 
 def test_apply_failure_keeps_rollback_scoped_to_applied_tagged_ops(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LIVE_APPLY", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     from app import create_app

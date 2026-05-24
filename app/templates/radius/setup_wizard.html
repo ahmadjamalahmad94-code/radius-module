@@ -174,7 +174,7 @@
   </section>
   <section class="sw-panel">
     <h2>Guarded operations</h2>
-    <p class="sw-muted">Dry-run is safe. Apply and rollback stay blocked unless HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true and a confirmation phrase is supplied.</p>
+    <p class="sw-muted">Dry-run is safe. Apply and rollback stay blocked unless HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true and HOBERADIUS_SETUP_WIZARD_LAB_MODE=true, with fresh inventory, dry-run, rollback preview, and confirmation.</p>
     <div class="sw-inline-actions">
       <select data-sw-operation-step>
         <option value="internet">internet</option>
@@ -191,6 +191,23 @@
       <label>Confirmation</label>
       <input data-sw-confirmation placeholder="APPLY SETUP WIZARD 1 internet">
     </div>
+  </section>
+
+  <section class="sw-panel" data-sw-lab-timeline-panel>
+    <div class="sw-panel-head">
+      <div>
+        <h2>Lab Execution Timeline</h2>
+        <p class="sw-muted">يعرض حالة dry-run وinventory وapply وrollback بشكل واضح للتجارب المخبرية فقط.</p>
+      </div>
+      <button class="hub-btn" type="button" data-sw-action="lab-timeline">Refresh timeline</button>
+    </div>
+    <ol class="sw-lab-timeline" data-sw-lab-timeline>
+      <li>Dry-run completed: pending</li>
+      <li>Inventory collected: pending</li>
+      <li>Apply attempted: blocked by default</li>
+      <li>Verification: pending</li>
+      <li>Rollback available: pending</li>
+    </ol>
   </section>
 
   <section class="sw-panel">

@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from .setup_wizard_inventory import RouterInventoryService, sanitize_inventory
-from .setup_wizard_operations import SetupWizardOperationRepo, live_apply_enabled
+from .setup_wizard_operations import SetupWizardOperationRepo, lab_mode_enabled, live_apply_enabled
 
 
 def mask_secrets(value: Any) -> Any:
@@ -46,6 +46,7 @@ class SetupWizardSupportService:
             "operations": operations,
             "router_snapshot_summary": _snapshot_summary(snapshot),
             "live_apply_enabled": live_apply_enabled(),
+            "lab_mode_enabled": lab_mode_enabled(),
         })
 
     def health(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
@@ -67,6 +68,7 @@ class SetupWizardSupportService:
             "rollback_available": any(op.get("rollback_command") for op in operations),
             "router_snapshot_age": (snapshot or {}).get("created_at", ""),
             "live_apply_enabled": live_apply_enabled(),
+            "lab_mode_enabled": lab_mode_enabled(),
             "next_action": "review_diagnostics" if failed_steps else "continue_wizard",
         }
 

@@ -10,6 +10,7 @@
   const outputPreview = root.querySelector("[data-sw-output-preview]");
   const cardsHost = root.querySelector("[data-sw-verification-cards]");
   const pilotOutput = root.querySelector("[data-sw-pilot-output]");
+  const labTimeline = root.querySelector("[data-sw-lab-timeline]");
 
   function token() {
     const input = root.querySelector('input[name="_csrf_token"]');
@@ -306,6 +307,33 @@
     setOutput(data);
   }
 
+  async function actionLabTimeline() {
+    requireRun();
+    const [summary, ops, health] = await Promise.all([
+      getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/summary`),
+      getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/operations`),
+      getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/health`),
+    ]);
+    const operations = ops.operations || [];
+    const hasDry = operations.some((op) => op.status === "dry_run_ready");
+    const hasApplied = operations.some((op) => op.applied_at || op.status === "applied");
+    const hasRollback = operations.some((op) => op.rollback_command);
+    const hasFailed = operations.some((op) => op.status === "failed");
+    const snapshot = summary.latest_router_snapshot || null;
+    const rows = [
+      `Dry-run completed: ${hasDry ? "yes" : "pending"}`,
+      `Inventory collected: ${snapshot ? "yes - " + (snapshot.created_at || "") : "pending"}`,
+      `Apply attempted: ${hasApplied ? "yes" : "blocked/not attempted"}`,
+      `Verification: ${(health.health && health.health.failed_verifications) ? "attention required" : "pending or clean"}`,
+      `Rollback available: ${hasRollback ? "yes" : "no"}`,
+      `Warnings/failed operations: ${hasFailed ? "review required" : "none in queue"}`,
+    ];
+    if (labTimeline) {
+      labTimeline.innerHTML = rows.map((row) => `<li>${row}</li>`).join("");
+    }
+    setOutput({ ok: true, timeline: rows, summary, operations, health });
+  }
+
   const actions = {
     "create-run": createRun,
     "refresh-summary": refreshSummary,
@@ -329,6 +357,7 @@
     "support-bundle": actionSupportBundle,
     "added-catalog": actionAddedCatalog,
     "pilot-drill": actionPilotDrill,
+    "lab-timeline": actionLabTimeline,
   };
 
   root.querySelectorAll("[data-sw-action]").forEach((btn) => {
