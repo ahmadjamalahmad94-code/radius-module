@@ -31,6 +31,7 @@ from .setup_wizard_orchestration import (
     SetupWizardHotspotOrchestrator,
 )
 from .setup_wizard_pilot import SetupWizardPilotDrillService
+from .setup_wizard_provisioning_orchestrator import RouterProvisioningOrchestrator
 from .setup_wizard_router_provisioning import RouterProvisioningService
 from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
@@ -276,6 +277,9 @@ class SetupWizardService:
         self._added_services_planner = AddedServicesPlanner()
         self._lab_policy = SetupWizardLabPolicyEngine()
         self._router_provisioning = RouterProvisioningService()
+        self._provisioning_orchestrator = RouterProvisioningOrchestrator(
+            registry=self._router_provisioning
+        )
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -572,6 +576,11 @@ class SetupWizardService:
             tenant_id=tenant_id,
             registry_id=int(reservation["id"]),
         )
+        provisioning_status = self._provisioning_orchestrator.record_script_generated(
+            tenant_id=tenant_id,
+            reservation=reservation,
+            listen_port=int(effective_payload["endpoint_port"]),
+        )
         self.mark_script_generated(
             tenant_id=tenant_id,
             run_id=run_id,
@@ -582,6 +591,8 @@ class SetupWizardService:
         )
         result = plan.to_dict()
         result["router_provisioning"] = reservation
+        result["provisioning_lifecycle"] = provisioning_status
+        result["prepared_wireguard_peer"] = provisioning_status.get("prepared_wireguard_peer")
         return result
 
     def get_verification_contract(
@@ -635,13 +646,40 @@ class SetupWizardService:
             mode=mode,
             payload=payload or {},
         )
-        return self._finalize_verification(
+        finalized = self._finalize_verification(
             tenant_id=tenant_id,
             run_id=run_id,
             step_key=STEP_VPN_RADIUS_VERIFICATION,
             result=result,
             error_hint="vpn/radius verification failed",
         )
+        if bool(finalized.get("gate_unlocked")):
+            reservation = self._router_provisioning.latest_for_run(
+                tenant_id=tenant_id,
+                wizard_run_id=run_id,
+            )
+            if reservation:
+                try:
+                    status = self._provisioning_orchestrator.status(
+                        tenant_id=tenant_id,
+                        registry_id=int(reservation["id"]),
+                    )
+                    if status["current_state"] == "peer_ready":
+                        self._provisioning_orchestrator.mark_vpn_verified(
+                            tenant_id=tenant_id,
+                            registry_id=int(reservation["id"]),
+                        )
+                        self._provisioning_orchestrator.mark_radius_verified(
+                            tenant_id=tenant_id,
+                            registry_id=int(reservation["id"]),
+                        )
+                        self._provisioning_orchestrator.mark_api_verified(
+                            tenant_id=tenant_id,
+                            registry_id=int(reservation["id"]),
+                        )
+                except SetupWizardValidationError:
+                    pass
+        return finalized
 
     def verify_hotspot(
         self, *, tenant_id: int, run_id: int, mode: str, payload: dict[str, Any] | None = None
@@ -701,6 +739,10 @@ class SetupWizardService:
         verification_contract = self.get_verification_contract(
             tenant_id=tenant_id, run_id=run_id
         )
+        provisioning_status = self._provisioning_orchestrator.status_for_run(
+            tenant_id=tenant_id,
+            wizard_run_id=run_id,
+        )
         return {
             "run": run,
             "steps": steps,
@@ -715,7 +757,34 @@ class SetupWizardService:
                 tenant_id=tenant_id,
                 wizard_run_id=run_id,
             ),
+            "router_lifecycle": provisioning_status,
+            "prepared_wireguard_peer": (
+                provisioning_status.get("prepared_wireguard_peer")
+                if provisioning_status
+                else None
+            ),
         }
+
+    def submit_router_public_key(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        public_key: str,
+        actor: str = "wizard",
+    ) -> dict[str, Any]:
+        reservation = self._router_provisioning.latest_for_run(
+            tenant_id=tenant_id,
+            wizard_run_id=run_id,
+        )
+        if not reservation:
+            raise SetupWizardValidationError("router provisioning reservation not found")
+        return self._provisioning_orchestrator.submit_router_public_key(
+            tenant_id=tenant_id,
+            registry_id=int(reservation["id"]),
+            public_key=public_key,
+            actor=actor,
+        )
 
     def _script_step_for_operation_step(self, step_key: str) -> str:
         normalized = str(step_key or "").strip().lower()

@@ -444,6 +444,43 @@
   text-align: right;
 }
 
+.swv2-key-exchange {
+  background: linear-gradient(135deg, rgba(109, 77, 252, .08), rgba(20, 184, 166, .08));
+  border: 1px solid rgba(109, 77, 252, .18);
+  border-radius: 22px;
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 18px;
+  padding: 16px;
+}
+
+.swv2-key-exchange strong {
+  color: var(--swv2-text);
+  display: block;
+  font-size: 16px;
+  font-weight: 950;
+  margin-bottom: 4px;
+}
+
+.swv2-key-exchange span {
+  color: var(--swv2-muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.swv2-key-exchange textarea {
+  background: #fff;
+  border: 1px solid var(--swv2-border);
+  border-radius: 16px;
+  color: var(--swv2-text);
+  direction: ltr;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  min-height: 74px;
+  padding: 12px 14px;
+  resize: vertical;
+  text-align: left;
+}
+
 .swv2-script-card {
   background: #0f172a;
   border-radius: 24px;

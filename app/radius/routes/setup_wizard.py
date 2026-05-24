@@ -51,6 +51,7 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-internet-script", "setup_wizard_generate_internet_script", setup_wizard_generate_internet_script, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-internet", "setup_wizard_verify_internet", setup_wizard_verify_internet, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-vpn-radius-script", "setup_wizard_generate_vpn_script", setup_wizard_generate_vpn_script, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/router-public-key", "setup_wizard_router_public_key", setup_wizard_router_public_key, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-vpn-radius", "setup_wizard_verify_vpn", setup_wizard_verify_vpn, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/interfaces/candidates", "setup_wizard_interfaces_candidates", setup_wizard_interfaces_candidates, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-hotspot-script", "setup_wizard_generate_hotspot_script", setup_wizard_generate_hotspot_script, methods=["POST"])
@@ -181,6 +182,20 @@ def setup_wizard_generate_vpn_script(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
     return jsonify({"ok": True, "plan": plan})
+
+
+def setup_wizard_router_public_key(run_id: int):
+    body = _body()
+    try:
+        result = _svc().submit_router_public_key(
+            tenant_id=_tid(),
+            run_id=run_id,
+            public_key=str(body.get("public_key") or ""),
+            actor=str(body.get("actor") or getattr(g, "admin_username", "") or "wizard"),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "provisioning": result})
 
 
 def setup_wizard_verify_vpn(run_id: int):

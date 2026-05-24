@@ -289,6 +289,19 @@
           <div><span>API user</span><strong data-swv2-provisioning="api_username">--</strong></div>
           <div><span>RADIUS secret</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
           <div><span>Registry</span><strong data-swv2-provisioning="registry_id">--</strong></div>
+          <div><span>Lifecycle</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
+          <div><span>Peer status</span><strong data-swv2-provisioning="peer_status">--</strong></div>
+        </div>
+        <div class="swv2-key-exchange">
+          <div>
+            <strong>إرسال مفتاح الراوتر</strong>
+            <span>بعد تنفيذ سكربت الراوتر، الصق public key فقط. لن يتم تعديل الخادم تلقائيًا.</span>
+          </div>
+          <textarea data-swv2-router-public-key placeholder="مثال: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcde="></textarea>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-submit-router-key>حفظ المفتاح وتجهيز peer</button>
+            <span data-swv2-router-key-status>بانتظار توليد بيانات الراوتر.</span>
+          </div>
         </div>
         <h2>سيتم الآن ربط MikroTik مع HobeRadius</h2>
         <p>هذه الخطوة تجهز سكربت الربط الآمن بين الراوتر والخادم، ثم إعدادات RADIUS المطلوبة لاحقًا للخدمات.</p>

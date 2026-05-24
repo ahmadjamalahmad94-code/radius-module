@@ -17,6 +17,7 @@
   const vpnPlanJson = page.querySelector('[data-swv2-plan-json="vpn"]');
   const internetScript = document.getElementById("internet-script-code");
   const vpnScript = document.getElementById("vpn-script-code");
+  const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
@@ -204,6 +205,8 @@
 
   function renderVpnPlan(plan) {
     const provisioning = plan.router_provisioning || {};
+    const lifecycle = plan.provisioning_lifecycle || {};
+    const peer = plan.prepared_wireguard_peer || lifecycle.prepared_wireguard_peer || {};
     if (vpnScript) {
       vpnScript.textContent = plan.script_text || "-- no VPN/RADIUS script returned --";
     }
@@ -225,6 +228,13 @@
     writeProvisioningValue("api_username", provisioning.api_username);
     writeProvisioningValue("radius_secret", provisioning.masked_sensitive_values?.radius_secret || "***");
     writeProvisioningValue("registry_id", provisioning.id ? `#${provisioning.id}` : "--");
+    writeProvisioningValue("lifecycle_state", lifecycle.current_state || provisioning.lifecycle_state || "script_generated");
+    writeProvisioningValue("peer_status", peer.status || "waiting_router_key");
+    if (routerKeyStatus) {
+      routerKeyStatus.textContent = peer.status === "ready_to_apply"
+        ? "تم استلام مفتاح الراوتر وتجهيز peer للخطوة الخادمة القادمة."
+        : "بانتظار public key من الراوتر.";
+    }
     setVpnScriptLoading("تم توليد بيانات ربط فريدة لهذا الراوتر من سجل provisioning.");
   }
 
@@ -241,6 +251,31 @@
     } catch (error) {
       setVpnScriptLoading(`فشل توليد سكربت VPN/RADIUS: ${error.message}`);
       if (vpnScript) vpnScript.textContent = `-- ${error.message} --`;
+    }
+  }
+
+  async function submitRouterPublicKey() {
+    const input = page.querySelector("[data-swv2-router-public-key]");
+    const publicKey = input ? String(input.value || "").trim() : "";
+    if (!publicKey) {
+      if (routerKeyStatus) routerKeyStatus.textContent = "الصق public key أولاً.";
+      return;
+    }
+    if (routerKeyStatus) routerKeyStatus.textContent = "جاري فحص المفتاح وتجهيز peer...";
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/router-public-key`, {
+        public_key: publicKey,
+      });
+      const provisioning = data.provisioning || {};
+      const peer = provisioning.prepared_wireguard_peer || {};
+      writeProvisioningValue("lifecycle_state", provisioning.current_state || "peer_ready");
+      writeProvisioningValue("peer_status", peer.status || "ready_to_apply");
+      if (routerKeyStatus) {
+        routerKeyStatus.textContent = `تم حفظ المفتاح: ${peer.router_public_key_masked || "***"}`;
+      }
+    } catch (error) {
+      if (routerKeyStatus) routerKeyStatus.textContent = `تعذر حفظ المفتاح: ${error.message}`;
     }
   }
 
@@ -388,6 +423,8 @@
       generateInternetScript(true);
     } else if (target.matches("[data-swv2-generate-vpn]")) {
       generateVpnRadiusScript(true);
+    } else if (target.matches("[data-swv2-submit-router-key]")) {
+      submitRouterPublicKey();
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

@@ -107,6 +107,9 @@ class RouterProvisioningReservation:
     created_at: str
     updated_at: str
     retired_at: str
+    lifecycle_state: str = "reserved"
+    failure_reason: str = ""
+    lifecycle_updated_at: str = ""
 
     @classmethod
     def from_row(cls, row: Any) -> "RouterProvisioningReservation":
@@ -132,6 +135,9 @@ class RouterProvisioningReservation:
             created_at=str(data.get("created_at") or ""),
             updated_at=str(data.get("updated_at") or ""),
             retired_at=str(data.get("retired_at") or ""),
+            lifecycle_state=str(data.get("lifecycle_state") or data.get("status") or "reserved"),
+            failure_reason=str(data.get("failure_reason") or ""),
+            lifecycle_updated_at=str(data.get("lifecycle_updated_at") or ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -156,6 +162,9 @@ class RouterProvisioningReservation:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "retired_at": self.retired_at,
+            "lifecycle_state": self.lifecycle_state,
+            "failure_reason": self.failure_reason,
+            "lifecycle_updated_at": self.lifecycle_updated_at,
             "masked_sensitive_values": {
                 "wireguard_private_key": "***",
                 "radius_secret": "***",
@@ -373,10 +382,11 @@ class RouterProvisioningService:
             conn.execute(
                 """
                 UPDATE router_provisioning_registry
-                SET status='retired', retired_at=?, updated_at=?
+                SET status='retired', lifecycle_state='retired',
+                    retired_at=?, updated_at=?, lifecycle_updated_at=?
                 WHERE tenant_id=? AND id=?
                 """,
-                (now, now, int(tenant_id), int(registry_id)),
+                (now, now, now, int(tenant_id), int(registry_id)),
             )
             conn.execute(
                 """
