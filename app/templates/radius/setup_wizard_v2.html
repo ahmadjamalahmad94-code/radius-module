@@ -1,0 +1,313 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}معالج إعداد HobeRadius{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard_v2.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="swv2-page" dir="rtl" data-setup-wizard-v2>
+  <section class="swv2-hero" aria-labelledby="swv2-title">
+    <div class="swv2-hero-copy">
+      <span class="swv2-kicker"><i class="fa-solid fa-wand-magic-sparkles"></i> إعداد موجه وآمن</span>
+      <h1 id="swv2-title">معالج إعداد HobeRadius</h1>
+      <p>سنمشي خطوة بخطوة: تشغيل الإنترنت، ربط الراوتر مع HobeRadius، ثم تجهيز الخدمات. التفاصيل الهندسية موجودة عند الحاجة فقط.</p>
+      <div class="swv2-hero-actions">
+        <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-go="source">ابدأ الإعداد</button>
+        <a class="swv2-btn swv2-btn-ghost" href="{{ url_for('radius.setup_wizard_page') }}">فتح الوضع الهندسي</a>
+      </div>
+    </div>
+    <div class="swv2-hero-status" aria-label="حالة المعالج">
+      <div class="swv2-status-pill is-ready">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>التطبيق الحي مغلق افتراضيًا</span>
+      </div>
+      <div class="swv2-status-pill">
+        <i class="fa-solid fa-clock"></i>
+        <span>الوقت المتوقع 10 إلى 20 دقيقة</span>
+      </div>
+      <div class="swv2-status-pill">
+        <i class="fa-solid fa-terminal"></i>
+        <span>ستحتاج Terminal داخل MikroTik</span>
+      </div>
+    </div>
+  </section>
+
+  <nav class="swv2-stepper" aria-label="مراحل الإعداد" data-swv2-stepper>
+    <button type="button" class="swv2-stepper-item is-current" data-swv2-step-target="welcome">
+      <span class="swv2-step-index">1</span>
+      <span>الترحيب</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="source">
+      <span class="swv2-step-index">2</span>
+      <span>مصدر الإنترنت</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="details">
+      <span class="swv2-step-index">3</span>
+      <span>بيانات الإنترنت</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="internet-script">
+      <span class="swv2-step-index">4</span>
+      <span>سكربت الإنترنت</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="internet-verify">
+      <span class="swv2-step-index">5</span>
+      <span>تحقق الإنترنت</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-script">
+      <span class="swv2-step-index">6</span>
+      <span>ربط VPN/RADIUS</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-verify">
+      <span class="swv2-step-index">7</span>
+      <span>تحقق الربط</span>
+    </button>
+  </nav>
+
+  <section class="swv2-shell" aria-live="polite">
+    <article class="swv2-step is-active" data-swv2-step="welcome">
+      <div class="swv2-step-card swv2-welcome-card">
+        <div class="swv2-card-icon"><i class="fa-solid fa-route"></i></div>
+        <span class="swv2-eyebrow">البداية الهادئة</span>
+        <h2>خلينا نجهز الراوتر بدون تعقيد.</h2>
+        <p>المعالج الجديد يعرض خطوة واحدة فقط، ويخفي التفاصيل المتقدمة حتى تحتاجها. لا يوجد تطبيق مباشر على MikroTik في هذه الصفحة.</p>
+        <div class="swv2-check-grid">
+          <div><i class="fa-solid fa-check"></i><span>صلاحية دخول MikroTik</span></div>
+          <div><i class="fa-solid fa-check"></i><span>معلومات مصدر الإنترنت</span></div>
+          <div><i class="fa-solid fa-check"></i><span>نسخة احتياطية قبل أي تجربة مخبرية</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="source">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">اختيار المصدر</span>
+        <h2>كيف يصل الإنترنت إلى الراوتر؟</h2>
+        <p>اختر الطريقة الأقرب لتركيب العميل. سنعرض الحقول المناسبة فقط في الخطوة التالية.</p>
+        <div class="swv2-source-grid" data-swv2-source-grid>
+          <button type="button" class="swv2-source-card is-selected" data-source-type="dhcp">
+            <i class="fa-solid fa-network-wired"></i>
+            <strong>DHCP Client</strong>
+            <span>الراوتر يأخذ IP تلقائيًا من المودم أو مزود الخدمة.</span>
+            <small>مثال: ether1 يحصل على الإنترنت مباشرة</small>
+          </button>
+          <button type="button" class="swv2-source-card" data-source-type="pppoe">
+            <i class="fa-solid fa-key"></i>
+            <strong>PPPoE</strong>
+            <span>اسم مستخدم وكلمة مرور من مزود الإنترنت.</span>
+            <small>مثال: اشتراك DSL أو Fiber PPPoE</small>
+          </button>
+          <button type="button" class="swv2-source-card" data-source-type="static">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <strong>Static IP</strong>
+            <span>عنوان ثابت، بوابة، و DNS معروف مسبقًا.</span>
+            <small>مثال: 192.0.2.10/30 مع gateway</small>
+          </button>
+          <button type="button" class="swv2-source-card" data-source-type="vlan">
+            <i class="fa-solid fa-layer-group"></i>
+            <strong>VLAN</strong>
+            <span>الإنترنت يأتي عبر VLAN فوق منفذ محدد.</span>
+            <small>مثال: VLAN 35 على ether1</small>
+          </button>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="details">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">بيانات المصدر</span>
+        <h2>أدخل معلومات الإنترنت</h2>
+        <p>هذه البيانات تستخدم لتجهيز سكربت معاينة فقط. لا يتم إرسال أي أمر إلى الراوتر من هذه الصفحة.</p>
+
+        <form class="swv2-form" data-swv2-internet-form>
+          <section class="swv2-form-panel is-active" data-source-form="dhcp">
+            <label>واجهة الإنترنت
+              <input type="text" name="dhcp_interface" value="ether1" placeholder="ether1">
+              <span>اختر الواجهة المتصلة بالمودم أو مزود الخدمة.</span>
+            </label>
+            <div class="swv2-toggle-line">
+              <label><input type="checkbox" checked> إضافة default route</label>
+              <label><input type="checkbox" checked> استخدام DNS من المزود</label>
+              <label><input type="checkbox" checked> تفعيل NAT لهذه الواجهة</label>
+            </div>
+          </section>
+
+          <section class="swv2-form-panel" data-source-form="pppoe">
+            <label>واجهة PPPoE
+              <input type="text" name="pppoe_interface" value="ether1" placeholder="ether1">
+              <span>الواجهة التي عليها خط المزود.</span>
+            </label>
+            <label>اسم المستخدم
+              <input type="text" name="pppoe_username" placeholder="customer@example">
+            </label>
+            <label>كلمة المرور
+              <input type="password" name="pppoe_password" placeholder="••••••••">
+              <span>تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.</span>
+            </label>
+            <div class="swv2-toggle-line">
+              <label><input type="checkbox"> عنوان ثابت اختياري</label>
+              <label><input type="checkbox" checked> NAT على اتصال PPPoE</label>
+            </div>
+          </section>
+
+          <section class="swv2-form-panel" data-source-form="static">
+            <label>الواجهة
+              <input type="text" name="static_interface" value="ether1" placeholder="ether1">
+            </label>
+            <label>IP/CIDR
+              <input type="text" name="static_cidr" placeholder="203.0.113.10/30">
+            </label>
+            <label>Gateway
+              <input type="text" name="static_gateway" placeholder="203.0.113.9">
+            </label>
+            <label>DNS
+              <input type="text" name="static_dns" placeholder="1.1.1.1, 8.8.8.8">
+            </label>
+          </section>
+
+          <section class="swv2-form-panel" data-source-form="vlan">
+            <label>الواجهة الأب
+              <input type="text" name="vlan_parent" value="ether1" placeholder="ether1">
+            </label>
+            <label>VLAN ID
+              <input type="number" name="vlan_id" min="1" max="4094" placeholder="35">
+            </label>
+            <label>اسم VLAN
+              <input type="text" name="vlan_name" placeholder="hobe-wan-vlan35">
+            </label>
+            <label>وضع العنوان
+              <select name="vlan_mode">
+                <option value="dhcp">DHCP</option>
+                <option value="static">Static IP</option>
+              </select>
+            </label>
+          </section>
+        </form>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="internet-script">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">سكربت الإنترنت</span>
+        <h2>تم تجهيز سكربت الإنترنت</h2>
+        <p>انسخ السكربت والصقه داخل Terminal في MikroTik. بعد التنفيذ ارجع واضغط تحقق.</p>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="internet-script-code">نسخ السكربت</button>
+          <details class="swv2-advanced">
+            <summary>عرض التفاصيل المتقدمة</summary>
+            <pre>{
+  "mode": "preview_only",
+  "step": "internet",
+  "live_apply": false
+}</pre>
+          </details>
+        </div>
+        <div class="swv2-script-card" data-swv2-script-preview="internet">
+          <div>
+            <strong>معاينة السكربت</strong>
+            <span>آمن للنسخ اليدوي، بدون تنفيذ تلقائي.</span>
+          </div>
+          <pre id="internet-script-code"># HOBERADIUS_SETUP:&lt;run_id&gt;:internet
+# Safety: preview only
+/ip dhcp-client add interface=ether1 add-default-route=yes use-peer-dns=yes comment="HOBERADIUS_SETUP:&lt;run_id&gt;:internet"
+/tool ping 8.8.8.8 count=5</pre>
+        </div>
+        <div class="swv2-instructions">
+          <div><b>1</b><span>افتح MikroTik Terminal.</span></div>
+          <div><b>2</b><span>الصق السكربت كما هو.</span></div>
+          <div><b>3</b><span>انسخ مخرجات التحقق للخطوة التالية.</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="internet-verify">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">تحقق الإنترنت</span>
+        <h2>هل أصبح الإنترنت جاهزًا؟</h2>
+        <p>الصق مخرجات Terminal هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.</p>
+        <div class="swv2-verification-panel" data-swv2-verification-panel="internet">
+          <textarea data-swv2-verify-output="internet" placeholder="مثال: sent=5 received=5 packet-loss=0%"></textarea>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="internet">تحليل المخرجات</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost">تحقق</button>
+          </div>
+          <div class="swv2-diagnostics" data-swv2-diagnostics="internet">
+            <div class="swv2-diagnostic-card is-waiting">
+              <strong>بانتظار المخرجات</strong>
+              <span>بعد لصق نتيجة ping سنعرض النجاح أو سبب التعطل.</span>
+            </div>
+          </div>
+        </div>
+        <div class="swv2-success-state" hidden data-swv2-success="internet">
+          <i class="fa-solid fa-circle-check"></i>
+          <strong>تم الاتصال بالإنترنت بنجاح</strong>
+          <span>يمكنك الآن تجهيز ربط VPN/RADIUS.</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="vpn-script">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">VPN/RADIUS</span>
+        <h2>سيتم الآن ربط MikroTik مع HobeRadius</h2>
+        <p>هذه الخطوة تجهز سكربت الربط الآمن بين الراوتر والخادم، ثم إعدادات RADIUS المطلوبة لاحقًا للخدمات.</p>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">نسخ سكربت الربط</button>
+          <details class="swv2-advanced">
+            <summary>تفاصيل هندسية</summary>
+            <pre>{
+  "mode": "preview_only",
+  "step": "vpn_radius",
+  "requires": "internet_verified"
+}</pre>
+          </details>
+        </div>
+        <div class="swv2-script-card" data-swv2-script-preview="vpn">
+          <div>
+            <strong>معاينة سكربت VPN/RADIUS</strong>
+            <span>لا يتم إنشاء مستخدم أو تعديل إعدادات الراوتر تلقائيًا.</span>
+          </div>
+          <pre id="vpn-script-code"># HOBERADIUS_SETUP:&lt;run_id&gt;:vpn
+# Safety: preview only
+/interface wireguard add name=hr-wg comment="HOBERADIUS_SETUP:&lt;run_id&gt;:vpn"
+/radius add address=10.10.0.1 service=hotspot,ppp comment="HOBERADIUS_SETUP:&lt;run_id&gt;:vpn"
+/tool ping 10.10.0.1 count=5</pre>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="vpn-verify">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">تحقق الربط</span>
+        <h2>تأكد من اتصال الراوتر بالخادم</h2>
+        <p>الصق مخرجات handshake و ping و RADIUS. عند النجاح تصبح خطوات الخدمات جاهزة للموجة القادمة.</p>
+        <div class="swv2-verification-panel" data-swv2-verification-panel="vpn">
+          <textarea data-swv2-verify-output="vpn" placeholder="latest handshake: 3s ago&#10;sent=5 received=5 packet-loss=0%"></textarea>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="vpn">تحليل المخرجات</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost">إعادة التحقق</button>
+          </div>
+          <div class="swv2-diagnostics" data-swv2-diagnostics="vpn">
+            <div class="swv2-diagnostic-card is-waiting">
+              <strong>بانتظار فحص الربط</strong>
+              <span>سنبحث عن handshake ناجح، ping ناجح، وإشارات RADIUS/API.</span>
+            </div>
+          </div>
+        </div>
+        <div class="swv2-success-state" hidden data-swv2-success="vpn">
+          <i class="fa-solid fa-party-horn"></i>
+          <strong>تم ربط الراوتر بنجاح</strong>
+          <span>يمكنك متابعة إعداد Hotspot أو Broadband في الموجة التالية.</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <footer class="swv2-footer">
+    <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-prev>السابق</button>
+    <span data-swv2-step-count>1 / 7</span>
+    <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-next>التالي</button>
+  </footer>
+</main>
+
+<script src="{{ url_for('static', filename='js/setup_wizard_v2.js') }}"></script>
+{% endblock %}
