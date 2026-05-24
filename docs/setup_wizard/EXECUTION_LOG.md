@@ -100,6 +100,107 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Prompt 8 — Production Readiness Audit + Final Verdict
+
+### Commit
+
+Created by this commit. Exact hash is reported in the final prompt result because a commit cannot contain its own final hash without changing that hash.
+
+### Audit result
+
+- Audited Setup Wizard flags, routes, migrations, support masking, operation safety, rollback scope, server WireGuard readiness/apply guardrails, V2 UI safety, fleet dashboard, recovery endpoints, added services, and operation tables.
+- Confirmed live apply defaults are off:
+  - `HOBERADIUS_SETUP_WIZARD_LIVE_APPLY`
+  - `HOBERADIUS_SETUP_WIZARD_LAB_MODE`
+  - `HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY`
+  - `HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS`
+  - `HOBERADIUS_SETUP_WIZARD_SERVER_WG_REAL_ADAPTER`
+- Confirmed server WireGuard real apply requires all lab/server flags, readiness, dry-run, confirmation, backup capture, duplicate checks, and exact narrow `wg set` commands.
+- Confirmed MikroTik apply remains behind live + lab flags and guarded operation validation.
+- Confirmed rollback is scoped to generated tags/comments.
+- Confirmed support/fleet/recovery paths use masking helpers for secrets.
+- Confirmed V2 keeps engineering details in collapsed Advanced areas and preserves Engineering View.
+- Created `docs/setup_wizard/PRODUCTION_READINESS_REPORT.md`.
+
+### Readiness scores
+
+- Architecture readiness: 86/100
+- Safety readiness: 88/100
+- Lab readiness: 82/100
+- UX readiness: 78/100
+- Multi-router readiness: 80/100
+- Customer production readiness: 42/100
+
+### Test exact results
+
+- `python -m compileall app`
+  - Passed.
+- `node --check app/static/js/setup_wizard_v2.js`
+  - Passed.
+- `node --check app/static/js/setup_wizard_fleet.js`
+  - Passed.
+- `python -m pytest <setup wizard related tests> -q`
+  - Command selected files matching `test_setup_wizard`, `test_router_`, `test_server_wireguard`, and `test_wireguard_peer_health`.
+  - Result: 202 passed, 22 failed, 13,504 warnings in 108.53s.
+  - Failure pattern: `sqlite3.OperationalError: no such table: setup_wizard_runs` in router provisioning/lifecycle/fleet tests after other setup wizard tests run in the same process.
+  - Honest interpretation: not production-regression-clean; likely suite isolation/order issue, but it remains a blocker.
+- `python -m pytest -q`
+  - Timed out after 304 seconds.
+- `git diff --check`
+  - Passed with line-ending warnings only.
+- `git status --short`
+  - Shows only the pre-existing unrelated dirty files plus this ignored readiness doc before explicit staging.
+
+### Final verdict
+
+- Lab-ready: yes, for controlled internal CHR/VPS pilot only.
+- Customer-ready: partially, for supervised script-preview onboarding only.
+- Production-ready: no, not for unsupervised customer automation or one-click router provisioning.
+
+### Remaining blockers
+
+1. Fix setup-wizard broad-suite isolation/order failures.
+2. Run real CHR lab pilot twice with inventory, dry-run, server peer apply, verify, rollback, and support bundle review.
+3. Complete browser visual QA for V2 and fleet.
+4. Complete production permission review for apply/recovery endpoints.
+5. Add rate limiting/throttling for apply, rollback, and verification endpoints.
+6. Complete backup/restore and disaster recovery SOPs.
+7. Validate migrations on production-like DB copies.
+8. Add operator training and support playbook.
+9. Prove support bundles contain no plaintext secrets during real lab use.
+10. Decide production policy: script-preview-only customer mode vs certified automation track.
+
+### Safety confirmations
+
+- No production automation was enabled.
+- No live apply was enabled by default.
+- No MikroTik live mutation was introduced.
+- No server mutation was introduced in this prompt.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Full honest notes
+
+- This prompt intentionally added documentation only.
+- No optional tests were added because existing tests already cover the critical flag/default/masking/dangerous-command areas; the actual blocker is broad-suite isolation, not missing narrow coverage.
+- The production readiness report is intentionally conservative. The Setup Wizard is a strong internal/lab onboarding system, not a sellable zero-touch production automation system yet.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
 ## Prompt 7 — UX Productization + Confidence Journey
 
 ### Commit
