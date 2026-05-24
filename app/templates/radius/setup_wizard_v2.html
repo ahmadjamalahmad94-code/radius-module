@@ -33,6 +33,33 @@
     </div>
   </section>
 
+  <section class="swv2-recovery-panel" data-swv2-recovery-panel hidden>
+    <div class="swv2-step-card">
+      <span class="swv2-eyebrow">استكمال أو إصلاح الإعداد</span>
+      <h2 data-swv2-recovery-title>يوجد مسار تعافٍ آمن عند الحاجة</h2>
+      <p data-swv2-recovery-summary>لن يتم تنفيذ أي إصلاح حي. هذه اللوحة تقترح الخطوة الآمنة التالية وتخفي التفاصيل الهندسية حتى تطلبها.</p>
+      <div class="swv2-diagnostics" data-swv2-recovery-problems></div>
+      <div class="swv2-action-row">
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-check>فحص الاستكمال</button>
+        <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-recovery-resume>استكمال آمن</button>
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retry>إعادة التحقق</button>
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-regenerate>إعادة توليد السكربت</button>
+        <a class="swv2-btn swv2-btn-ghost" data-swv2-recovery-support href="#">حزمة الدعم</a>
+      </div>
+      <details class="swv2-advanced" data-swv2-recovery-danger-zone>
+        <summary>منطقة متقدمة وخطرة</summary>
+        <label>سبب إيقاف الخطوة
+          <input type="text" data-swv2-recovery-abandon-reason placeholder="اكتب السبب قبل التسجيل">
+        </label>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-abandon>تسجيل التخلي عن الخطوة</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>Retire router</button>
+        </div>
+        <pre data-swv2-recovery-json>{}</pre>
+      </details>
+    </div>
+  </section>
+
   <nav class="swv2-stepper" aria-label="مراحل الإعداد" data-swv2-stepper>
     <button type="button" class="swv2-stepper-item is-current" data-swv2-step-target="welcome">
       <span class="swv2-step-index">1</span>

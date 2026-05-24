@@ -83,6 +83,12 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/support-bundle", "setup_wizard_support_bundle", setup_wizard_support_bundle, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/health", "setup_wizard_health", setup_wizard_health, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/pilot-drill", "setup_wizard_pilot_drill", setup_wizard_pilot_drill, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery", "setup_wizard_recovery", setup_wizard_recovery, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery/resume", "setup_wizard_recovery_resume", setup_wizard_recovery_resume, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery/retry-verification", "setup_wizard_recovery_retry_verification", setup_wizard_recovery_retry_verification, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery/regenerate-script", "setup_wizard_recovery_regenerate_script", setup_wizard_recovery_regenerate_script, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery/abandon-step", "setup_wizard_recovery_abandon_step", setup_wizard_recovery_abandon_step, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/recovery/retire-router", "setup_wizard_recovery_retire_router", setup_wizard_recovery_retire_router, methods=["POST"])
 
 
 def setup_wizard_page():
@@ -601,3 +607,78 @@ def setup_wizard_pilot_drill(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc), status=404, code="not_found")
     return jsonify({"ok": True, "pilot_drill": drill})
+
+
+def setup_wizard_recovery(run_id: int):
+    try:
+        recovery = _svc().recovery(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    return jsonify({"ok": True, "recovery": recovery})
+
+
+def setup_wizard_recovery_resume(run_id: int):
+    try:
+        result = _svc().recovery_resume(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_recovery_retry_verification(run_id: int):
+    body = _body()
+    mode, payload = _verification_payload(body)
+    try:
+        result = _svc().recovery_retry_verification(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=str(body.get("step_key") or ""),
+            mode=mode,
+            payload=payload,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="retry_verification_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_recovery_regenerate_script(run_id: int):
+    body = _body()
+    try:
+        result = _svc().recovery_regenerate_script(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=str(body.get("step_key") or "vpn_radius"),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="regenerate_script_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_recovery_abandon_step(run_id: int):
+    body = _body()
+    try:
+        result = _svc().recovery_abandon_step(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=str(body.get("step_key") or "current_step"),
+            reason=str(body.get("reason") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=400, code="abandon_step_blocked")
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_recovery_retire_router(run_id: int):
+    body = _body()
+    try:
+        result = _svc().recovery_retire_router(
+            tenant_id=_tid(),
+            run_id=run_id,
+            reason=str(body.get("reason") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="retire_router_blocked")
+    return jsonify({"ok": True, **result})

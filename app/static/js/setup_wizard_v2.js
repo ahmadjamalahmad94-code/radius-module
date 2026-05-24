@@ -21,6 +21,10 @@
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
   const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
   const serverPeerHealthResult = page.querySelector("[data-swv2-peer-health-result]");
+  const recoveryPanel = page.querySelector("[data-swv2-recovery-panel]");
+  const recoveryProblems = page.querySelector("[data-swv2-recovery-problems]");
+  const recoveryJson = page.querySelector("[data-swv2-recovery-json]");
+  const recoverySupport = page.querySelector("[data-swv2-recovery-support]");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
@@ -67,6 +71,84 @@
       throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
     }
     return data;
+  }
+
+  function renderRecovery(recovery) {
+    if (!recoveryPanel) return;
+    const state = recovery?.recovery_state || "clean_resume";
+    recoveryPanel.hidden = state === "clean_resume";
+    if (recoverySupport && currentRunId) {
+      recoverySupport.href = `/admin/radius/setup-wizard/runs/${currentRunId}/support-bundle`;
+    }
+    if (recoveryProblems) {
+      recoveryProblems.innerHTML = "";
+      (recovery?.problems || []).forEach((problem) => {
+        const card = document.createElement("div");
+        card.className = "swv2-diagnostic-card";
+        const title = document.createElement("strong");
+        title.textContent = problem.title_ar || problem.code || "ملاحظة";
+        const body = document.createElement("span");
+        body.textContent = problem.explanation_ar || "";
+        card.append(title, body);
+        recoveryProblems.appendChild(card);
+      });
+    }
+    if (recoveryJson) recoveryJson.textContent = JSON.stringify(recovery || {}, null, 2);
+  }
+
+  async function checkRecovery() {
+    const runId = await ensureRun();
+    const data = await getJson(`/admin/radius/setup-wizard/runs/${runId}/recovery`);
+    renderRecovery(data.recovery || {});
+    return data.recovery || {};
+  }
+
+  async function resumeRecovery() {
+    const runId = await ensureRun();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/resume`, {});
+    renderRecovery(data.analysis || data.recovery || {});
+    const nextStep = data.next_safe_step || data.analysis?.next_safe_step || "";
+    const idx = stepNames.indexOf(nextStep);
+    if (idx >= 0) showStep(idx);
+  }
+
+  async function retryRecoveryVerification() {
+    const runId = await ensureRun();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/retry-verification`, {
+      mode: "manual_contract",
+      checks: {},
+    });
+    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    await checkRecovery();
+  }
+
+  async function regenerateRecoveryScript() {
+    const runId = await ensureRun();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/regenerate-script`, {
+      step_key: "vpn_radius",
+    });
+    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    await checkRecovery();
+  }
+
+  async function abandonRecoveryStep() {
+    const runId = await ensureRun();
+    const reason = page.querySelector("[data-swv2-recovery-abandon-reason]")?.value || "";
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/abandon-step`, {
+      step_key: stepNames[current] || "current_step",
+      reason,
+    });
+    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+  }
+
+  async function retireRecoveryRouter() {
+    const runId = await ensureRun();
+    const reason = page.querySelector("[data-swv2-recovery-abandon-reason]")?.value || "";
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/retire-router`, {
+      reason,
+    });
+    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    await checkRecovery();
   }
 
   async function ensureRun() {
@@ -1007,6 +1089,20 @@
       dryRunAddedService();
     } else if (target.matches("[data-swv2-added-verify]")) {
       verifyAddedService();
+    } else if (target.matches("[data-swv2-recovery-check]")) {
+      checkRecovery();
+    } else if (target.matches("[data-swv2-recovery-resume]")) {
+      resumeRecovery();
+    } else if (target.matches("[data-swv2-recovery-retry]")) {
+      retryRecoveryVerification();
+    } else if (target.matches("[data-swv2-recovery-regenerate]")) {
+      regenerateRecoveryScript();
+    } else if (target.matches("[data-swv2-recovery-abandon]")) {
+      abandonRecoveryStep();
+    } else if (target.matches("[data-swv2-recovery-retire]")) {
+      retireRecoveryRouter();
+    } else if (target.matches("[data-swv2-recovery-support]")) {
+      if (!currentRunId) event.preventDefault();
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

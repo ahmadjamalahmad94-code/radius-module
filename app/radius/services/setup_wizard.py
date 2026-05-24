@@ -32,6 +32,7 @@ from .setup_wizard_orchestration import (
 )
 from .setup_wizard_pilot import SetupWizardPilotDrillService
 from .setup_wizard_provisioning_orchestrator import RouterProvisioningOrchestrator
+from .setup_wizard_recovery import SetupWizardRecoveryService
 from .setup_wizard_router_provisioning import RouterProvisioningService
 from .setup_wizard_server_wg import ServerWireGuardPeerApplyService
 from .setup_wizard_support import SetupWizardSupportService
@@ -241,8 +242,12 @@ class SetupWizardStateMachine:
             raise SetupWizardValidationError("applied_by_customer requires pending/generated step")
         if new == STEP_STATUS_GENERATED and step_key not in SCRIPT_STEPS:
             raise SetupWizardValidationError("generated status is allowed only for script-preview steps")
-        if new == STEP_STATUS_GENERATED and old not in {STEP_STATUS_PENDING, STEP_STATUS_FAILED}:
-            raise SetupWizardValidationError("generated status requires pending/failed step")
+        if new == STEP_STATUS_GENERATED and old not in {
+            STEP_STATUS_PENDING,
+            STEP_STATUS_FAILED,
+            STEP_STATUS_GENERATED,
+        }:
+            raise SetupWizardValidationError("generated status requires pending/failed/generated step")
         if new == STEP_STATUS_VERIFIED and old not in {
             STEP_STATUS_PENDING,
             STEP_STATUS_GENERATED,
@@ -1114,6 +1119,67 @@ class SetupWizardService:
             tenant_id=tenant_id,
             run_id=run_id,
             step_key=step_key,
+        )
+
+    def recovery(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).analyze(
+            tenant_id=tenant_id,
+            run_id=run_id,
+        )
+
+    def recovery_resume(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).resume(
+            tenant_id=tenant_id,
+            run_id=run_id,
+        )
+
+    def recovery_retry_verification(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        step_key: str = "",
+        mode: str = "pasted_output",
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).retry_verification(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=step_key,
+            mode=mode,
+            payload=payload or {},
+        )
+
+    def recovery_regenerate_script(
+        self, *, tenant_id: int, run_id: int, step_key: str = "vpn_radius"
+    ) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).regenerate_script(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=step_key,
+        )
+
+    def recovery_abandon_step(
+        self, *, tenant_id: int, run_id: int, step_key: str, reason: str
+    ) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).abandon_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=step_key,
+            reason=reason,
+        )
+
+    def recovery_retire_router(self, *, tenant_id: int, run_id: int, reason: str) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).retire_router(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            reason=reason,
+        )
+
+    def recovery_repair_plan(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        return SetupWizardRecoveryService(wizard_service=self).repair_plan(
+            tenant_id=tenant_id,
+            run_id=run_id,
         )
 
     def get_interface_candidates(

@@ -100,6 +100,119 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Prompt 5 — Resume / Recovery / Repair Engine
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. Git commit hashes cannot be embedded inside the same commit without changing the hash.
+
+### What implemented
+
+- Added `setup_wizard_recovery_events` as a non-secret recovery event/audit table.
+- Added `SetupWizardRecoveryAnalyzer` with states:
+  - `clean_resume`
+  - `waiting_user_action`
+  - `failed_verification`
+  - `partial_apply`
+  - `stale_inventory`
+  - `peer_key_missing`
+  - `duplicate_peer_conflict`
+  - `subnet_conflict`
+  - `unsupported_recovery`
+  - `terminal_retired`
+- Added `SetupWizardRecoveryService` for safe recovery actions:
+  - resume
+  - retry verification via the existing verification engine
+  - regenerate VPN/RADIUS script while preserving the existing router allocation
+  - plan-only credential reissue guard
+  - abandon step with required reason
+  - retire router without releasing IP allocation for reuse
+  - dry-run-only repair plan
+- Added recovery endpoints:
+  - `GET /admin/radius/setup-wizard/runs/<id>/recovery`
+  - `POST /admin/radius/setup-wizard/runs/<id>/recovery/resume`
+  - `POST /admin/radius/setup-wizard/runs/<id>/recovery/retry-verification`
+  - `POST /admin/radius/setup-wizard/runs/<id>/recovery/regenerate-script`
+  - `POST /admin/radius/setup-wizard/runs/<id>/recovery/abandon-step`
+  - `POST /admin/radius/setup-wizard/runs/<id>/recovery/retire-router`
+- Added a Setup Wizard V2 recovery panel placeholder and client hooks.
+- Allowed safe regeneration of an already-generated script-preview step without changing required verification gates.
+- Added recovery documentation.
+
+### Files changed
+
+- `app/radius/db/migrations/055_setup_wizard_recovery_events.sql`
+- `app/radius/services/setup_wizard_recovery.py`
+- `app/radius/services/setup_wizard.py`
+- `app/radius/routes/setup_wizard.py`
+- `app/templates/radius/setup_wizard_v2.html`
+- `app/static/js/setup_wizard_v2.js`
+- `docs/setup_wizard/RECOVERY_ENGINE.md`
+- `tests/test_setup_wizard_recovery.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_v2.js` passed.
+- Initial targeted recovery run:
+  - `python -m pytest tests/test_setup_wizard_recovery.py -q`
+  - Result: 1 failed, 10 passed.
+  - Failure: safe script regeneration was blocked by the existing generated-step transition rule.
+- Fix applied:
+  - Allowed `generated -> generated` only for script-preview steps, so recovery regeneration can preserve the same allocation and rewrite the preview.
+- Final targeted recovery run:
+  - `python -m pytest tests/test_setup_wizard_recovery.py -q`
+  - Result: 11 passed, 2174 warnings in 10.53s.
+- Setup wizard related suite:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_v2.py tests/test_setup_wizard_v2_hotspot_broadband.py tests/test_setup_wizard_added_services.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_setup_wizard_recovery.py -q`
+  - Result: 186 passed, 14420 warnings in 88.53s.
+- `git diff --check` passed with line-ending warnings only.
+- `python -m pytest -q` was attempted and timed out after about 304 seconds. No failing test output was returned before timeout.
+
+### Safety confirmations
+
+- No live MikroTik apply was added.
+- No live VPS/WireGuard mutation was added.
+- No destructive automatic repair was added.
+- Recovery actions are read-only, event recording, safe regeneration, or terminal marking only.
+- Retry verification reuses the existing verification engine.
+- Regeneration reuses the existing router provisioning allocation for the same run.
+- Credential reissue remains plan-only unless a future guarded flow explicitly implements it.
+- Retiring a router does not release IP allocations for automatic reuse.
+- Support/recovery outputs are masked through the existing secret masking helper.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Remaining risks
+
+- Recovery event logging is intentionally minimal and not yet tied into a broader audit service.
+- Credential reissue is only a blocked/plan-only response; a future slice must define a collision-safe reissue workflow.
+- Repair plans are operator guidance only and do not yet produce structured operation queues.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- The only behavior adjustment outside the new recovery service is allowing script-preview steps to regenerate from `generated` to `generated`. Verified steps remain protected.
+- The V2 recovery panel is intentionally hidden unless recovery detects an issue.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
 ## Prompt 3 — Complete Setup Wizard V2 Hotspot Broadband Flow
 
 ### Commit
