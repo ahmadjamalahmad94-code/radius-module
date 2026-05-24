@@ -329,6 +329,27 @@
               <pre data-swv2-server-wg-readiness-result>لم يتم فحص الجاهزية بعد.</pre>
             </details>
           </div>
+          <div class="swv2-peer-health-panel" data-swv2-peer-health-panel>
+            <div class="swv2-peer-health-head">
+              <div>
+                <strong>صحة اتصال WireGuard Peer</strong>
+                <span>قراءة فقط لحالة handshake وحركة RX/TX بعد تطبيق peer في المختبر.</span>
+              </div>
+              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-health>فحص صحة peer</button>
+            </div>
+            <div class="swv2-peer-health-grid">
+              <div><span>الحالة</span><strong data-swv2-peer-health="status">غير مفحوص</strong></div>
+              <div><span>النقاط</span><strong data-swv2-peer-health="score">--</strong></div>
+              <div><span>آخر handshake</span><strong data-swv2-peer-health="handshake">--</strong></div>
+              <div><span>RX</span><strong data-swv2-peer-health="rx">--</strong></div>
+              <div><span>TX</span><strong data-swv2-peer-health="tx">--</strong></div>
+              <div><span>التوصية</span><strong data-swv2-peer-health="recommendation">ألصق wg show ثم افحص.</strong></div>
+            </div>
+            <details class="swv2-advanced">
+              <summary>تفاصيل صحة peer</summary>
+              <pre data-swv2-peer-health-result>لم يتم فحص صحة peer بعد.</pre>
+            </details>
+          </div>
           <div class="swv2-action-row">
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>Dry-run server peer</button>
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>Verify wg show</button>

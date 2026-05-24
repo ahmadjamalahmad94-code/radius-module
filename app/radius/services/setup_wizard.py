@@ -38,6 +38,7 @@ from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
 from .setup_wizard_vpn_radius_planner import VpnRadiusBootstrapPlanner
+from .wireguard_peer_health import WireGuardPeerHealthService
 
 
 RUN_STATUS_ACTIVE = "active"
@@ -282,6 +283,7 @@ class SetupWizardService:
             registry=self._router_provisioning
         )
         self._server_wg_apply = ServerWireGuardPeerApplyService()
+        self._wireguard_health = WireGuardPeerHealthService()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -828,6 +830,25 @@ class SetupWizardService:
             tenant_id=tenant_id,
             prepared_peer_id=peer_id,
             wg_show_output=output,
+        )
+
+    def server_peer_health(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        output: str = "",
+        previous_observation: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        peer = self._server_wg_apply._planner.load_peer(
+            tenant_id=tenant_id,
+            prepared_peer_id=peer_id,
+        )
+        return self._wireguard_health.inspect_peer(
+            prepared_peer=peer,
+            wg_show_output=output if output else None,
+            previous_observation=previous_observation,
         )
 
     def server_peer_operations(self, *, tenant_id: int, run_id: int) -> list[dict[str, Any]]:

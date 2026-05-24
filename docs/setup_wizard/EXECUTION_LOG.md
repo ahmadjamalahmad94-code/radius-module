@@ -99,3 +99,102 @@
   - `tests/test_operations_foundation.py`
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
+
+## Prompt 2 — WireGuard peer health engine
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. A commit cannot safely self-reference its own final hash inside a tracked file without changing that hash again.
+
+### What implemented
+
+- Added `WireGuardPeerHealthService` as a read-only health intelligence layer for prepared WireGuard peers.
+- Reused the existing `wg show` parser and safe read-only command runner infrastructure.
+- Added peer health classification for:
+  - `healthy`
+  - `applied_no_handshake`
+  - `stale_peer`
+  - `missing_peer`
+  - `allowed_ip_mismatch`
+  - `duplicate_peer`
+  - `offline`
+  - `unknown`
+- Added health scoring from 0 to 100.
+- Added Arabic diagnostics and recovery suggestions.
+- Added parsing for:
+  - latest handshake age
+  - RX/TX transfer values
+  - endpoint
+  - persistent keepalive
+- Added a read-only health endpoint:
+  - `POST /admin/radius/setup-wizard/runs/<id>/server-peer/health`
+- Extended Setup Wizard V2 Server Peer Preparation with a peer health panel showing:
+  - peer state
+  - health score
+  - handshake age
+  - RX/TX
+  - recommendation
+- Kept raw health JSON collapsed under advanced details.
+
+### Files changed
+
+- `app/radius/services/wireguard_peer_health.py`
+- `app/radius/services/setup_wizard.py`
+- `app/radius/routes/setup_wizard.py`
+- `app/templates/radius/setup_wizard_v2.html`
+- `app/static/css/setup_wizard_v2.css`
+- `app/static/js/setup_wizard_v2.js`
+- `tests/test_wireguard_peer_health.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_v2.js` passed.
+- `python -m pytest tests/test_wireguard_peer_health.py -q` passed: 10 passed, 2051 warnings in 8.23s.
+- Setup wizard related suite passed:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_router_provisioning.py tests/test_setup_wizard_v2.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py -q`
+  - Result: 169 passed, 14006 warnings in 67.17s.
+- `python -m pytest -q` was attempted and timed out after about 304 seconds. No specific failing test output was returned before timeout.
+- `git diff --check` passed with line-ending warnings only.
+
+### Safety confirmations
+
+- Read-only inspection only.
+- No MikroTik mutation was introduced.
+- No server mutation was introduced.
+- No production automation was enabled.
+- No `shell=True` path was introduced.
+- Existing readiness/runner infrastructure is reused.
+- Existing real server apply/rollback guardrails were not rebuilt or widened.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Remaining risks
+
+- Health quality depends on accurate `wg show` output or a configured read-only runner.
+- `offline` detection requires a previous observation to compare RX/TX movement.
+- The first apply can still correctly report `applied_no_handshake` until the router side initiates traffic.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- This prompt intentionally did not rebuild provisioning, lifecycle, readiness, adapter, dry-run, apply, rollback, or peer planning.
+- The health service does not persist historical samples yet; it accepts an optional previous observation for frozen RX/TX detection.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`

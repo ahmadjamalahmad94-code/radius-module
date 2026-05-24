@@ -572,6 +572,56 @@
   color: #be123c;
 }
 
+.swv2-peer-health-panel {
+  background: linear-gradient(135deg, rgba(14, 165, 233, .08), rgba(109, 77, 252, .06));
+  border: 1px solid rgba(14, 165, 233, .2);
+  border-radius: 18px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.swv2-peer-health-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.swv2-peer-health-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.swv2-peer-health-grid div {
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid rgba(226, 232, 240, .92);
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.swv2-peer-health-grid strong {
+  color: var(--swv2-text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.swv2-peer-health-grid strong.is-healthy {
+  color: #15803d;
+}
+
+.swv2-peer-health-grid strong.is-warning {
+  color: #b45309;
+}
+
+.swv2-peer-health-grid strong.is-danger {
+  color: #be123c;
+}
+
 .swv2-lab-confirmation {
   background: #fff7ed;
   border: 1px solid #fed7aa;
@@ -791,6 +841,10 @@
   .swv2-provisioning-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .swv2-peer-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -805,6 +859,10 @@
   }
 
   .swv2-provisioning-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .swv2-peer-health-grid {
     grid-template-columns: 1fr;
   }
 

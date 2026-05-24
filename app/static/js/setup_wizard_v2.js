@@ -20,6 +20,7 @@
   const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
   const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
+  const serverPeerHealthResult = page.querySelector("[data-swv2-peer-health-result]");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
@@ -364,6 +365,61 @@
     }
   }
 
+  function formatBytes(value) {
+    const number = Number(value || 0);
+    if (!Number.isFinite(number) || number <= 0) return "--";
+    if (number < 1024) return `${number} B`;
+    if (number < 1024 * 1024) return `${(number / 1024).toFixed(1)} KiB`;
+    return `${(number / 1024 / 1024).toFixed(1)} MiB`;
+  }
+
+  function peerHealthClass(status) {
+    if (status === "healthy" || status === "verified_handshake") return "is-healthy";
+    if (status === "missing_peer" || status === "allowed_ip_mismatch" || status === "duplicate_peer" || status === "misconfigured") return "is-danger";
+    return "is-warning";
+  }
+
+  function writePeerHealthValue(name, valueText, status) {
+    const node = page.querySelector(`[data-swv2-peer-health="${name}"]`);
+    if (!node) return;
+    node.textContent = valueText || "--";
+    node.classList.remove("is-healthy", "is-warning", "is-danger");
+    if (status) node.classList.add(peerHealthClass(status));
+  }
+
+  function renderPeerHealth(health) {
+    const peer = health?.peer || {};
+    const status = health?.status || "unknown";
+    writePeerHealthValue("status", status, status);
+    writePeerHealthValue("score", String(health?.health_score ?? "--"), status);
+    writePeerHealthValue("handshake", peer.latest_handshake || "--", status);
+    writePeerHealthValue("rx", formatBytes(peer.rx_bytes), status);
+    writePeerHealthValue("tx", formatBytes(peer.tx_bytes), status);
+    writePeerHealthValue("recommendation", health?.recommendation_ar || "--", status);
+    if (serverPeerHealthResult) {
+      serverPeerHealthResult.textContent = JSON.stringify(health || {}, null, 2);
+    }
+  }
+
+  async function checkServerPeerHealth() {
+    const output = page.querySelector("[data-swv2-server-peer-output]");
+    if (serverPeerHealthResult) serverPeerHealthResult.textContent = "Checking peer health...";
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/health`, {
+        output: output ? output.value : "",
+      });
+      renderPeerHealth(data.health || {});
+    } catch (error) {
+      renderPeerHealth({
+        status: "unknown",
+        health_score: 0,
+        recommendation_ar: `تعذر فحص صحة peer: ${error.message}`,
+        diagnostics: [{ code: "health_request_failed", explanation_ar: error.message }],
+      });
+    }
+  }
+
   function serverPeerConfirmation() {
     const input = page.querySelector("[data-swv2-server-peer-confirmation]");
     return input ? String(input.value || "").trim() : "";
@@ -549,6 +605,8 @@
       dryRunServerPeer();
     } else if (target.matches("[data-swv2-server-peer-verify]")) {
       verifyServerPeer();
+    } else if (target.matches("[data-swv2-server-peer-health]")) {
+      checkServerPeerHealth();
     } else if (target.matches("[data-swv2-server-peer-apply]")) {
       applyServerPeer();
     } else if (target.matches("[data-swv2-server-peer-rollback]")) {

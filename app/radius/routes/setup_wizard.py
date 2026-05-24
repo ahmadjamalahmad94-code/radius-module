@@ -58,6 +58,7 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/apply", "setup_wizard_server_peer_apply", setup_wizard_server_peer_apply, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/rollback", "setup_wizard_server_peer_rollback", setup_wizard_server_peer_rollback, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/verify", "setup_wizard_server_peer_verify", setup_wizard_server_peer_verify, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/health", "setup_wizard_server_peer_health", setup_wizard_server_peer_health, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/operations", "setup_wizard_server_peer_operations", setup_wizard_server_peer_operations, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-vpn-radius", "setup_wizard_verify_vpn", setup_wizard_verify_vpn, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/interfaces/candidates", "setup_wizard_interfaces_candidates", setup_wizard_interfaces_candidates, methods=["POST"])
@@ -256,6 +257,23 @@ def setup_wizard_server_peer_verify(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
     return jsonify({"ok": True, **result})
+
+
+def setup_wizard_server_peer_health(run_id: int):
+    body = _body()
+    previous = body.get("previous_observation")
+    if not isinstance(previous, dict):
+        previous = None
+    try:
+        result = _svc().server_peer_health(
+            tenant_id=_tid(),
+            run_id=run_id,
+            output=str(body.get("output") or ""),
+            previous_observation=previous,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "health": result})
 
 
 def setup_wizard_server_peer_operations(run_id: int):
