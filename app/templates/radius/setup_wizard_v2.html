@@ -78,8 +78,12 @@
       <span class="swv2-step-index">11</span>
       <span>Broadband</span>
     </button>
-    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="final-summary">
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="added-services">
       <span class="swv2-step-index">12</span>
+      <span>خدمات إضافية</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="final-summary">
+      <span class="swv2-step-index">13</span>
       <span>الملخص</span>
     </button>
   </nav>
@@ -601,6 +605,91 @@
         <details class="swv2-advanced">
           <summary>تفاصيل Broadband الهندسية</summary>
           <pre data-swv2-service-json="broadband">{}</pre>
+        </details>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="added-services">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">خدمات إضافية</span>
+        <h2>اختر خدمات الشبكة الإضافية</h2>
+        <p>هذه المرحلة تعرض خططًا آمنة فقط وتعيد استخدام Network Policy وSite Exit الموجودين. لا يوجد تطبيق مباشر من هنا.</p>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-added-services>تحميل كتالوج الخدمات</button>
+        </div>
+        <div class="swv2-service-grid" data-swv2-added-presets>
+          <button type="button" class="swv2-service-card" data-added-preset="isp_basic">
+            <i class="fa-solid fa-network-wired"></i>
+            <strong>ISP Basic</strong>
+            <span>حجب بسيط + مواقع مفتوحة قليلة.</span>
+            <small>Preset فقط ولا يطبق شيئًا.</small>
+          </button>
+          <button type="button" class="swv2-service-card" data-added-preset="hotel_cafe">
+            <i class="fa-solid fa-mug-hot"></i>
+            <strong>Hotel / Cafe</strong>
+            <span>Walled garden للدفع والدعم + حجب محدود.</span>
+            <small>مناسب للـ Hotspot.</small>
+          </button>
+          <button type="button" class="swv2-service-card" data-added-preset="school">
+            <i class="fa-solid fa-school"></i>
+            <strong>School</strong>
+            <span>حجب أقوى مع مواقع تعليمية مفتوحة.</span>
+            <small>راجع القوائم قبل التنفيذ.</small>
+          </button>
+          <button type="button" class="swv2-service-card" data-added-preset="gaming_center">
+            <i class="fa-solid fa-gamepad"></i>
+            <strong>Gaming Center</strong>
+            <span>Site Exit عند توفر VX2 + حجب محدود.</span>
+            <small>يحتاج إعداد VPS مسبقًا.</small>
+          </button>
+        </div>
+        <div class="swv2-service-grid" data-swv2-added-services>
+          <button type="button" class="swv2-service-card" data-added-service="walled_garden">
+            <i class="fa-solid fa-door-open"></i>
+            <strong>مواقع مفتوحة بدون تسجيل</strong>
+            <span>Walled Garden عبر NPC.</span>
+            <small data-added-status="walled_garden">Partial</small>
+          </button>
+          <button type="button" class="swv2-service-card" data-added-service="block_sites">
+            <i class="fa-solid fa-ban"></i>
+            <strong>حجب مواقع</strong>
+            <span>Web Block عبر NPC.</span>
+            <small data-added-status="block_sites">Partial</small>
+          </button>
+          <button type="button" class="swv2-service-card" data-added-service="site_exit_public_ip">
+            <i class="fa-solid fa-route"></i>
+            <strong>تغيير Public IP</strong>
+            <span>Site Exit / VX2.</span>
+            <small data-added-status="site_exit_public_ip">Partial</small>
+          </button>
+          <button type="button" class="swv2-service-card is-locked" data-added-service="anti_sharing">
+            <i class="fa-solid fa-user-shield"></i>
+            <strong>منع مشاركة الاتصال</strong>
+            <span>تحتاج تفعيلًا لاحقًا.</span>
+            <small data-added-status="anti_sharing">Coming soon</small>
+          </button>
+        </div>
+        <form class="swv2-form" data-swv2-added-form>
+          <label>Domains / destinations
+            <textarea name="added_domains" placeholder="example.com&#10;payment.local"></textarea>
+          </label>
+          <label>WireGuard interface لميزة Site Exit
+            <input type="text" name="added_wg_interface" value="hr-wg">
+          </label>
+        </form>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-plan-added-service>توليد خطة الخدمة</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-dry-run>Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>إرشادات التحقق</button>
+        </div>
+        <div class="swv2-script-card">
+          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو preset.</span></div>
+          <pre data-swv2-added-preview>-- no added service plan yet --</pre>
+        </div>
+        <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>
+        <details class="swv2-advanced">
+          <summary>تفاصيل الخدمات الإضافية الهندسية</summary>
+          <pre data-swv2-added-json>{}</pre>
         </details>
       </div>
     </article>

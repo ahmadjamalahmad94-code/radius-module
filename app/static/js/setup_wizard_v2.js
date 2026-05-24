@@ -30,6 +30,9 @@
   let vpnVerified = false;
   let selectedServicePath = "";
   let selectedInterfaces = [];
+  let addedServicesCatalog = null;
+  let selectedAddedService = "walled_garden";
+  let selectedAddedInputs = {};
   const serviceModes = { hotspot: "smart", broadband: "smart" };
   const servicePlans = { hotspot: null, broadband: null };
 
@@ -46,6 +49,18 @@
         "X-CSRFToken": token(),
       },
       body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
+    if (!res.ok || data.ok === false) {
+      throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  async function getJson(url) {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "X-CSRFToken": token() },
     });
     const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
     if (!res.ok || data.ok === false) {
@@ -668,6 +683,137 @@
     }
   }
 
+  function renderAddedDiagnostics(result, fallbackTitle) {
+    const target = page.querySelector("[data-swv2-added-diagnostics]");
+    if (!target) return;
+    target.innerHTML = "";
+    const ok = ["preview", "partial", "dry_run_ready"].includes(result?.plan_status || result?.status);
+    const card = document.createElement("div");
+    card.className = `swv2-diagnostic-card ${ok ? "is-success" : "is-failed"}`;
+    const title = document.createElement("strong");
+    const body = document.createElement("span");
+    title.textContent = ok ? "تم تجهيز خطة الخدمة" : fallbackTitle;
+    body.textContent = ok
+      ? "الخطة معاينة آمنة فقط وتستخدم المحركات الموجودة."
+      : "الخدمة غير مدعومة أو تحتاج مدخلات إضافية.";
+    card.append(title, body);
+    target.appendChild(card);
+  }
+
+  function addedListValue() {
+    const fieldEl = page.querySelector('[name="added_domains"]');
+    return splitList(fieldEl ? fieldEl.value : "");
+  }
+
+  function buildAddedInputs(serviceKey) {
+    const items = addedListValue();
+    const wg = value("added_wg_interface", "hr-wg");
+    if (serviceKey === "site_exit_public_ip") {
+      return { destinations: items.length ? items : ["speedtest.net"], wireguard_interface_name: wg };
+    }
+    if (serviceKey === "block_sites") {
+      return { domains: items.length ? items : ["example-bad-site.test"] };
+    }
+    if (serviceKey === "walled_garden") {
+      return { domains: items.length ? items : ["hoberadius.local"] };
+    }
+    return {};
+  }
+
+  function updateAddedCards() {
+    page.querySelectorAll("[data-added-service]").forEach((card) => {
+      card.classList.toggle("is-selected", card.dataset.addedService === selectedAddedService);
+    });
+  }
+
+  function renderAddedPlan(data) {
+    const plan = data.plan || data;
+    const preview = page.querySelector("[data-swv2-added-preview]");
+    const status = page.querySelector("[data-swv2-added-status]");
+    const details = page.querySelector("[data-swv2-added-json]");
+    if (preview) preview.textContent = plan.script_preview || plan.rollback_notes || "-- no script generated --";
+    if (status) {
+      status.textContent = `${plan.service_key || selectedAddedService} · ${plan.plan_status || plan.status || "preview"}`;
+    }
+    if (details) details.textContent = JSON.stringify(data, null, 2);
+    renderAddedDiagnostics(plan, "لم تكتمل خطة الخدمة");
+  }
+
+  async function loadAddedServicesCatalog() {
+    try {
+      const data = await getJson("/admin/radius/setup-wizard/added-services/catalog");
+      addedServicesCatalog = data;
+      const details = page.querySelector("[data-swv2-added-json]");
+      if (details) details.textContent = JSON.stringify(data, null, 2);
+      Object.values(data.services || {}).forEach(() => {});
+      (data.services || []).forEach((service) => {
+        const badge = page.querySelector(`[data-added-status="${service.key}"]`);
+        if (badge) badge.textContent = service.status || (service.supported ? "supported" : "not supported");
+      });
+    } catch (error) {
+      renderAddedDiagnostics(null, `تعذر تحميل الكتالوج: ${error.message}`);
+    }
+  }
+
+  async function planAddedService() {
+    try {
+      const runId = await ensureRun();
+      selectedAddedInputs = buildAddedInputs(selectedAddedService);
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/added-services/plan`, {
+        service_key: selectedAddedService,
+        inputs: selectedAddedInputs,
+      });
+      renderAddedPlan(data);
+    } catch (error) {
+      renderAddedDiagnostics(null, `تعذر توليد الخطة: ${error.message}`);
+    }
+  }
+
+  async function dryRunAddedService() {
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/added-services/dry-run`, {
+        service_key: selectedAddedService,
+        inputs: selectedAddedInputs && Object.keys(selectedAddedInputs).length
+          ? selectedAddedInputs
+          : buildAddedInputs(selectedAddedService),
+      });
+      renderAddedPlan(data);
+    } catch (error) {
+      renderAddedDiagnostics(null, `Dry-run محظور: ${error.message}`);
+    }
+  }
+
+  async function verifyAddedService() {
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/added-services/verify`, {
+        service_key: selectedAddedService,
+      });
+      renderAddedPlan(data);
+    } catch (error) {
+      renderAddedDiagnostics(null, `تعذر جلب إرشادات التحقق: ${error.message}`);
+    }
+  }
+
+  function applyAddedPreset(presetKey) {
+    const preset = addedServicesCatalog?.presets?.[presetKey];
+    if (!preset) {
+      selectedAddedService = presetKey === "gaming_center" ? "site_exit_public_ip" : "walled_garden";
+      updateAddedCards();
+      return;
+    }
+    selectedAddedService = (preset.services || ["walled_garden"])[0] || "walled_garden";
+    const presetInputs = preset.inputs?.[selectedAddedService] || {};
+    selectedAddedInputs = presetInputs;
+    const domainField = page.querySelector('[name="added_domains"]');
+    if (domainField) {
+      const values = presetInputs.domains || presetInputs.destinations || [];
+      domainField.value = Array.isArray(values) ? values.join("\n") : String(values || "");
+    }
+    updateAddedCards();
+  }
+
   function showStep(index) {
     current = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, idx) => {
@@ -690,6 +836,8 @@
       generateVpnRadiusScript(false);
     } else if (stepNames[current] === "service-path") {
       updateServiceCards();
+    } else if (stepNames[current] === "added-services") {
+      updateAddedCards();
     }
   }
 
@@ -846,6 +994,19 @@
       dryRunService(target.dataset.swv2ServiceDryRun);
     } else if (target.matches("[data-swv2-service-verify]")) {
       verifyService(target.dataset.swv2ServiceVerify);
+    } else if (target.matches("[data-swv2-load-added-services]")) {
+      loadAddedServicesCatalog();
+    } else if (target.matches("[data-added-service]")) {
+      selectedAddedService = target.dataset.addedService;
+      updateAddedCards();
+    } else if (target.matches("[data-added-preset]")) {
+      applyAddedPreset(target.dataset.addedPreset);
+    } else if (target.matches("[data-swv2-plan-added-service]")) {
+      planAddedService();
+    } else if (target.matches("[data-swv2-added-dry-run]")) {
+      dryRunAddedService();
+    } else if (target.matches("[data-swv2-added-verify]")) {
+      verifyAddedService();
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

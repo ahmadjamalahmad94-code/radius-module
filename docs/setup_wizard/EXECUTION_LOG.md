@@ -1,4 +1,4 @@
-## Prompt 1 — Lab-only WireGuard server apply adapter
+﻿## Prompt 1 — Lab-only WireGuard server apply adapter
 
 ### Commit
 
@@ -283,6 +283,141 @@ Final commit hash is reported in the assistant final response for this prompt. A
 
 - This prompt intentionally did not rebuild provisioning, lifecycle, readiness, adapter, dry-run, apply, rollback, or peer planning.
 - The health service does not persist historical samples yet; it accepts an optional previous observation for frozen RX/TX detection.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
+## Prompt 4 — Added Services Engine + V2 Flow
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. Git commit hashes cannot be embedded inside the same commit without changing the hash.
+
+### Existing services found
+
+- Network Policy Center foundations exist:
+  - `npc_walled_garden_planner`
+  - `npc_web_block_planner`
+  - `npc_script_renderer`
+- Site Exit / VX2 foundations exist:
+  - `site_exit_script_planner`
+  - `site_exit_script_renderer`
+  - site-exit repositories, safety, presets, UI, and apply tests
+- No stable Setup Wizard anti-sharing / tethering planner was found.
+
+### Supported/partial/unsupported matrix
+
+- `anti_sharing`: `not_supported_yet`
+  - No fake script generated.
+  - UI/catalog explains that it needs later activation.
+- `walled_garden`: `partial`
+  - Delegates to `npc_walled_garden_planner`.
+  - Adds Setup Wizard tags to managed add commands while preserving NPC ownership tags.
+- `block_sites`: `partial`
+  - Delegates to `npc_web_block_planner`.
+  - Legacy alias `web_block` remains available for compatibility.
+- `site_exit_public_ip`: `partial`
+  - Delegates to `site_exit_script_planner`.
+  - Legacy alias `site_exit` remains available for compatibility.
+
+### What implemented
+
+- Rebuilt the existing Added Services placeholder into a real catalog/planner layer.
+- Added service catalog metadata:
+  - key
+  - Arabic title/description
+  - risk level
+  - status
+  - required inputs
+  - planner delegate
+  - verification delegate
+  - rollback capability
+- Added presets:
+  - ISP Basic
+  - Hotel / Cafe
+  - School
+  - Gaming Center
+- Added plan generation for:
+  - walled garden via existing NPC planner
+  - block sites via existing NPC planner
+  - site exit via existing VX2 planner
+- Added safe `not_supported_yet` response for anti-sharing.
+- Added structured dry-run and verification-guidance endpoints for added services.
+- Added Setup Wizard V2 "خدمات إضافية" step:
+  - service cards
+  - preset cards
+  - required input form
+  - plan preview
+  - dry-run button
+  - verification guidance button
+  - diagnostics
+  - advanced details collapsed
+- Kept live apply out of the V2 added-services flow.
+
+### Files changed
+
+- `app/radius/services/setup_wizard_added_services.py`
+- `app/radius/services/setup_wizard.py`
+- `app/radius/routes/setup_wizard.py`
+- `app/templates/radius/setup_wizard_v2.html`
+- `app/static/js/setup_wizard_v2.js`
+- `docs/setup_wizard/ADDED_SERVICES_ENGINE.md`
+- `tests/test_setup_wizard_added_services.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_v2.js` passed.
+- `python -m pytest tests/test_setup_wizard_added_services.py -q` passed: 8 passed, 286 warnings in 4.19s.
+- Compatibility check passed:
+  - `python -m pytest tests/test_setup_wizard_operational_waves.py::test_added_services_catalog_and_unsupported_response tests/test_setup_wizard_added_services.py -q`
+  - Result: 9 passed, 299 warnings in 4.53s.
+- Setup wizard related suite passed:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_v2.py tests/test_setup_wizard_v2_hotspot_broadband.py tests/test_setup_wizard_added_services.py tests/test_setup_wizard_router_provisioning.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py -q`
+  - Result: 185 passed, 14140 warnings in 84.16s.
+- `python -m pytest -q` was attempted and timed out after about 304 seconds. No specific failing test output was returned before timeout.
+- `git diff --check` passed with line-ending warnings only.
+
+### Safety confirmations
+
+- No duplicate network policy logic was introduced.
+- Existing NPC and VX2 planners are reused.
+- No live apply was introduced.
+- No live apply was enabled by default.
+- Added-service apply is not wired into V2.
+- Unsupported anti-sharing does not generate fake scripts.
+- Unknown service keys are rejected.
+- Generated add commands include `HOBERADIUS_SETUP:<run_id>:added-service:<service_key>` while preserving delegated ownership tags.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Remaining risks
+
+- Walled Garden and Block Sites remain `partial` because Setup Wizard does not create persistent NPC policy rows in this phase.
+- Site Exit remains `partial` because production use depends on VX2 policy/node lifecycle and safety checks.
+- Verification is guidance-only for added services until read-only verification adapters are added per delegated service.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- The catalog includes legacy alias keys `web_block` and `site_exit` to preserve older Wave F tests and route consumers.
+- This prompt intentionally did not implement anti-sharing because no stable existing planner was found.
+- This prompt intentionally did not add customer-facing one-click added-service automation.
 - Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
   - `app/radius/routes/print_templates.py`
   - `app/radius/seed.py`

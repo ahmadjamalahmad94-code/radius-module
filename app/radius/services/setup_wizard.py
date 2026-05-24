@@ -1069,6 +1069,32 @@ class SetupWizardService:
             inputs=inputs or {},
         )
 
+    def dry_run_added_service(
+        self, *, tenant_id: int, run_id: int, service_key: str, inputs: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        self.advance_to_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_ADDED_SERVICE_CONFIG,
+            input_json={"service_key": service_key, "inputs": inputs or {}, "mode": "dry_run"},
+        )
+        return self._added_services_planner.dry_run(
+            wizard_run_id=run_id,
+            service_key=service_key,
+            inputs=inputs or {},
+        )
+
+    def verify_added_service(
+        self, *, tenant_id: int, run_id: int, service_key: str
+    ) -> dict[str, Any]:
+        self.advance_to_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_ADDED_SERVICE_CONFIG,
+            input_json={"service_key": service_key, "mode": "verify_guidance"},
+        )
+        return self._added_services_planner.verify_guidance(service_key=service_key)
+
     def support_bundle(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
         return SetupWizardSupportService(wizard_service=self).support_bundle(
             tenant_id=tenant_id,

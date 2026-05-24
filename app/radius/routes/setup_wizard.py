@@ -527,15 +527,26 @@ def setup_wizard_added_services_plan(run_id: int):
         )
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
+    if plan.get("plan_status") == "rejected":
+        return jsonify({"ok": False, "code": "unknown_added_service", "plan": plan}), 400
     return jsonify({"ok": True, "plan": plan})
 
 
 def setup_wizard_added_services_dry_run(run_id: int):
-    return jsonify({
-        "ok": False,
-        "status": "blocked",
-        "blocked_reason": "added_services_dry_run_requires_delegate_script",
-    }), 409
+    body = _body()
+    service_key = str(body.get("service_key") or "").strip()
+    inputs = body.get("inputs") if isinstance(body.get("inputs"), dict) else {}
+    try:
+        result = _svc().dry_run_added_service(
+            tenant_id=_tid(),
+            run_id=run_id,
+            service_key=service_key,
+            inputs=inputs,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="dry_run_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
 
 
 def setup_wizard_added_services_apply(run_id: int):
@@ -554,12 +565,17 @@ def setup_wizard_added_services_apply(run_id: int):
 
 
 def setup_wizard_added_services_verify(run_id: int):
-    return jsonify({
-        "ok": True,
-        "status": "blocked",
-        "diagnostics": ["added services verification delegates to the selected service"],
-        "gate_unlocked": False,
-    })
+    body = _body()
+    service_key = str(body.get("service_key") or "").strip()
+    try:
+        result = _svc().verify_added_service(
+            tenant_id=_tid(),
+            run_id=run_id,
+            service_key=service_key,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="verification_blocked")
+    return jsonify({"ok": True, **result})
 
 
 def setup_wizard_support_bundle(run_id: int):
