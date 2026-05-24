@@ -10,6 +10,7 @@ from ..services.setup_wizard import (
     get_setup_wizard_service,
 )
 from ..services.setup_wizard_interface_contract import InterfaceInfo
+from ..services.setup_wizard_server_wg_readiness import ServerWireGuardReadinessService
 from ..services.setup_wizard_verification import SetupDiagnosticsService
 
 
@@ -45,6 +46,7 @@ def _verification_payload(body: dict[str, Any]) -> tuple[str, dict[str, Any]]:
 def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard", "setup_wizard_page", setup_wizard_page, methods=["GET"])
     bp.add_url_rule("/setup-wizard-v2", "setup_wizard_v2_page", setup_wizard_v2_page, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/server-wg/readiness", "setup_wizard_server_wg_readiness", setup_wizard_server_wg_readiness, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs", "setup_wizard_create_run", setup_wizard_create_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>", "setup_wizard_get_run", setup_wizard_get_run, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/internet-source", "setup_wizard_set_internet_source", setup_wizard_set_internet_source, methods=["POST"])
@@ -99,6 +101,10 @@ def setup_wizard_page():
 
 def setup_wizard_v2_page():
     return render_template("radius/setup_wizard_v2.html")
+
+
+def setup_wizard_server_wg_readiness():
+    return jsonify({"ok": True, "readiness": ServerWireGuardReadinessService().evaluate()})
 
 
 def setup_wizard_create_run():

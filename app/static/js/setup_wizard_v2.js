@@ -19,6 +19,7 @@
   const vpnScript = document.getElementById("vpn-script-code");
   const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
+  const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
@@ -287,6 +288,43 @@
       : JSON.stringify(value || {}, null, 2);
   }
 
+  function readinessLabel(status) {
+    if (status === "success" || status === "ready") return "جاهز";
+    if (status === "warning" || status === "partial") return "ناقص";
+    if (status === "disabled") return "معطل";
+    return "محظور للأمان";
+  }
+
+  function updateReadinessCards(readiness) {
+    const checks = readiness?.checks || {};
+    page.querySelectorAll("[data-swv2-readiness-item]").forEach((node) => {
+      const key = node.dataset.swv2ReadinessItem;
+      const check = checks[key] || {};
+      const status = check.status || readiness?.status || "disabled";
+      const classStatus = status === "warning" ? "partial" : status;
+      node.textContent = readinessLabel(status);
+      node.classList.remove("is-ready", "is-partial", "is-blocked", "is-disabled");
+      node.classList.add(classStatus === "success" ? "is-ready" : `is-${classStatus}`);
+    });
+  }
+
+  async function checkServerWgReadiness() {
+    if (serverWgReadinessResult) serverWgReadinessResult.textContent = "جاري فحص الجاهزية القراءة فقط...";
+    try {
+      const res = await fetch("/admin/radius/setup-wizard/server-wg/readiness", {
+        headers: { "X-CSRFToken": token() },
+      });
+      const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
+      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      updateReadinessCards(data.readiness || {});
+      if (serverWgReadinessResult) {
+        serverWgReadinessResult.textContent = JSON.stringify(data.readiness || {}, null, 2);
+      }
+    } catch (error) {
+      if (serverWgReadinessResult) serverWgReadinessResult.textContent = `تعذر فحص الجاهزية: ${error.message}`;
+    }
+  }
+
   async function dryRunServerPeer() {
     writeServerPeerResult("جاري إنشاء dry-run لخطة server peer...");
     try {
@@ -466,6 +504,8 @@
       generateVpnRadiusScript(true);
     } else if (target.matches("[data-swv2-submit-router-key]")) {
       submitRouterPublicKey();
+    } else if (target.matches("[data-swv2-server-wg-readiness-check]")) {
+      checkServerWgReadiness();
     } else if (target.matches("[data-swv2-server-peer-dry-run]")) {
       dryRunServerPeer();
     } else if (target.matches("[data-swv2-server-peer-verify]")) {

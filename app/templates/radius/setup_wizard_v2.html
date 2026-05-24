@@ -308,6 +308,27 @@
             <strong>Server Peer Preparation</strong>
             <span>وضع مختبر داخلي فقط. Dry-run متاح، أما apply/rollback فمغلقان حتى تفعيل flags المختبر.</span>
           </div>
+          <div class="swv2-readiness-panel" data-swv2-server-wg-readiness>
+            <div class="swv2-readiness-head">
+              <div>
+                <strong>جاهزية سيرفر WireGuard</strong>
+                <span>فحص قراءة فقط يوضح هل VPS جاهز لتجربة peer مخبرية لاحقًا.</span>
+              </div>
+              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-wg-readiness-check>فحص الجاهزية</button>
+            </div>
+            <div class="swv2-readiness-grid">
+              <div><span>WireGuard command</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
+              <div><span>Interface</span><strong data-swv2-readiness-item="wg_interface_exists">غير مفحوص</strong></div>
+              <div><span>Server IP</span><strong data-swv2-readiness-item="server_ip_assigned">غير مفحوص</strong></div>
+              <div><span>Backup</span><strong data-swv2-readiness-item="backup_dir_configured">غير مضبوط</strong></div>
+              <div><span>Read-only access</span><strong data-swv2-readiness-item="runner_mode">معطل</strong></div>
+              <div><span>Apply adapter</span><strong>محظور للأمان</strong></div>
+            </div>
+            <details class="swv2-advanced">
+              <summary>تفاصيل الجاهزية</summary>
+              <pre data-swv2-server-wg-readiness-result>لم يتم فحص الجاهزية بعد.</pre>
+            </details>
+          </div>
           <div class="swv2-action-row">
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>Dry-run server peer</button>
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>Verify wg show</button>
