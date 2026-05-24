@@ -6,6 +6,7 @@
 
 {% block content %}
 <main class="swv2-page" dir="rtl" data-setup-wizard-v2>
+  {{ csrf_token_input()|safe }}
   <section class="swv2-hero" aria-labelledby="swv2-title">
     <div class="swv2-hero-copy">
       <span class="swv2-kicker"><i class="fa-solid fa-wand-magic-sparkles"></i> إعداد موجه وآمن</span>
@@ -125,9 +126,9 @@
               <span>اختر الواجهة المتصلة بالمودم أو مزود الخدمة.</span>
             </label>
             <div class="swv2-toggle-line">
-              <label><input type="checkbox" checked> إضافة default route</label>
-              <label><input type="checkbox" checked> استخدام DNS من المزود</label>
-              <label><input type="checkbox" checked> تفعيل NAT لهذه الواجهة</label>
+              <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة default route</label>
+              <label><input type="checkbox" name="dhcp_use_peer_dns" checked> استخدام DNS من المزود</label>
+              <label><input type="checkbox" name="dhcp_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
             </div>
           </section>
 
@@ -143,9 +144,16 @@
               <input type="password" name="pppoe_password" placeholder="••••••••">
               <span>تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.</span>
             </label>
+            <label>Service name اختياري
+              <input type="text" name="pppoe_service_name" placeholder="ISP-PPPOE">
+            </label>
+            <label>Fixed IP اختياري
+              <input type="text" name="pppoe_fixed_ip" placeholder="203.0.113.20">
+            </label>
             <div class="swv2-toggle-line">
-              <label><input type="checkbox"> عنوان ثابت اختياري</label>
-              <label><input type="checkbox" checked> NAT على اتصال PPPoE</label>
+              <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة default route</label>
+              <label><input type="checkbox" name="pppoe_use_peer_dns" checked> استخدام DNS من المزود</label>
+              <label><input type="checkbox" name="pppoe_nat_enabled" checked> NAT على اتصال PPPoE</label>
             </div>
           </section>
 
@@ -162,6 +170,9 @@
             <label>DNS
               <input type="text" name="static_dns" placeholder="1.1.1.1, 8.8.8.8">
             </label>
+            <div class="swv2-toggle-line">
+              <label><input type="checkbox" name="static_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
+            </div>
           </section>
 
           <section class="swv2-form-panel" data-source-form="vlan">
@@ -180,6 +191,20 @@
                 <option value="static">Static IP</option>
               </select>
             </label>
+            <label>IP/CIDR عند اختيار Static
+              <input type="text" name="vlan_static_cidr" placeholder="10.77.3.2/24">
+            </label>
+            <label>Gateway عند اختيار Static
+              <input type="text" name="vlan_gateway" placeholder="10.77.3.1">
+            </label>
+            <label>DNS اختياري
+              <input type="text" name="vlan_dns" placeholder="1.1.1.1, 8.8.8.8">
+            </label>
+            <div class="swv2-toggle-line">
+              <label><input type="checkbox" name="vlan_add_default_route" checked> إضافة default route</label>
+              <label><input type="checkbox" name="vlan_use_peer_dns" checked> استخدام DNS من المزود</label>
+              <label><input type="checkbox" name="vlan_nat_enabled" checked> تفعيل NAT للـVLAN</label>
+            </div>
           </section>
         </form>
       </div>
@@ -191,25 +216,19 @@
         <h2>تم تجهيز سكربت الإنترنت</h2>
         <p>انسخ السكربت والصقه داخل Terminal في MikroTik. بعد التنفيذ ارجع واضغط تحقق.</p>
         <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-internet>تجهيز السكربت من البيانات</button>
           <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="internet-script-code">نسخ السكربت</button>
           <details class="swv2-advanced">
             <summary>عرض التفاصيل المتقدمة</summary>
-            <pre>{
-  "mode": "preview_only",
-  "step": "internet",
-  "live_apply": false
-}</pre>
+            <pre data-swv2-plan-json="internet">لم يتم توليد مخطط بعد.</pre>
           </details>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="internet">
           <div>
             <strong>معاينة السكربت</strong>
-            <span>آمن للنسخ اليدوي، بدون تنفيذ تلقائي.</span>
+            <span data-swv2-script-status>اضغط تجهيز السكربت أو انتقل لهذه الخطوة بعد إدخال البيانات.</span>
           </div>
-          <pre id="internet-script-code"># HOBERADIUS_SETUP:&lt;run_id&gt;:internet
-# Safety: preview only
-/ip dhcp-client add interface=ether1 add-default-route=yes use-peer-dns=yes comment="HOBERADIUS_SETUP:&lt;run_id&gt;:internet"
-/tool ping 8.8.8.8 count=5</pre>
+          <pre id="internet-script-code">-- لم يتم توليد السكربت بعد --</pre>
         </div>
         <div class="swv2-instructions">
           <div><b>1</b><span>افتح MikroTik Terminal.</span></div>

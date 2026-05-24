@@ -11,9 +11,174 @@
   const next = page.querySelector("[data-swv2-next]");
   const sourceCards = Array.from(page.querySelectorAll("[data-source-type]"));
   const sourceForms = Array.from(page.querySelectorAll("[data-source-form]"));
+  const scriptStatus = page.querySelector("[data-swv2-script-status]");
+  const internetPlanJson = page.querySelector('[data-swv2-plan-json="internet"]');
+  const internetScript = document.getElementById("internet-script-code");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
+  let currentRunId = 0;
+  let internetPlanSignature = "";
+
+  function token() {
+    const input = page.querySelector('input[name="_csrf_token"]');
+    return input ? input.value : "";
+  }
+
+  async function postJson(url, body) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": token(),
+      },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
+    if (!res.ok || data.ok === false) {
+      throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  async function ensureRun() {
+    if (currentRunId) return currentRunId;
+    const data = await postJson("/admin/radius/setup-wizard/runs", {});
+    currentRunId = Number(data.run && data.run.id) || 0;
+    if (!currentRunId) throw new Error("تعذر إنشاء جلسة إعداد جديدة.");
+    return currentRunId;
+  }
+
+  function field(name) {
+    return page.querySelector(`[name="${name}"]`);
+  }
+
+  function value(name, fallback) {
+    const input = field(name);
+    const raw = input ? String(input.value || "").trim() : "";
+    return raw || fallback || "";
+  }
+
+  function checked(name, fallback) {
+    const input = field(name);
+    return input ? Boolean(input.checked) : Boolean(fallback);
+  }
+
+  function buildInternetPayload() {
+    if (selectedSource === "pppoe") {
+      const payload = {
+        interface: value("pppoe_interface", "ether1"),
+        username: value("pppoe_username", ""),
+        password: value("pppoe_password", ""),
+        service_name: value("pppoe_service_name", ""),
+        fixed_ip: value("pppoe_fixed_ip", ""),
+        add_default_route: checked("pppoe_add_default_route", true),
+        use_peer_dns: checked("pppoe_use_peer_dns", true),
+        nat_enabled: checked("pppoe_nat_enabled", true),
+      };
+      return {
+        source_type: "pppoe",
+        selected_wan_interface: payload.interface,
+        payload,
+      };
+    }
+
+    if (selectedSource === "static") {
+      const payload = {
+        interface: value("static_interface", "ether1"),
+        address_cidr: value("static_cidr", ""),
+        gateway: value("static_gateway", ""),
+        dns_servers: value("static_dns", ""),
+        nat_enabled: checked("static_nat_enabled", true),
+      };
+      return {
+        source_type: "static",
+        selected_wan_interface: payload.interface,
+        payload,
+      };
+    }
+
+    if (selectedSource === "vlan") {
+      const addressMode = value("vlan_mode", "dhcp");
+      const payload = {
+        parent_interface: value("vlan_parent", "ether1"),
+        vlan_id: value("vlan_id", ""),
+        vlan_name: value("vlan_name", ""),
+        address_mode: addressMode,
+        dns_servers: value("vlan_dns", ""),
+        nat_enabled: checked("vlan_nat_enabled", true),
+        add_default_route: checked("vlan_add_default_route", true),
+        use_peer_dns: checked("vlan_use_peer_dns", true),
+      };
+      if (addressMode === "static") {
+        payload.address_cidr = value("vlan_static_cidr", "");
+        payload.gateway = value("vlan_gateway", "");
+      }
+      return {
+        source_type: "vlan",
+        selected_wan_interface: payload.parent_interface,
+        payload,
+      };
+    }
+
+    const payload = {
+      interface: value("dhcp_interface", "ether1"),
+      add_default_route: checked("dhcp_add_default_route", true),
+      use_peer_dns: checked("dhcp_use_peer_dns", true),
+      nat_enabled: checked("dhcp_nat_enabled", true),
+    };
+    return {
+      source_type: "dhcp",
+      selected_wan_interface: payload.interface,
+      payload,
+    };
+  }
+
+  function signatureFor(request) {
+    return JSON.stringify(request);
+  }
+
+  function setScriptLoading(message) {
+    if (scriptStatus) scriptStatus.textContent = message;
+  }
+
+  function renderInternetPlan(plan, request) {
+    if (internetScript) {
+      internetScript.textContent = plan.script_text || "-- لم يرجع الخادم سكربت --";
+    }
+    if (internetPlanJson) {
+      internetPlanJson.textContent = JSON.stringify(
+        {
+          source_type: request.source_type,
+          selected_wan_interface: request.selected_wan_interface,
+          warnings: plan.warnings || [],
+          generated_objects: plan.generated_objects || [],
+          masked_sensitive_values: plan.masked_sensitive_values || {},
+        },
+        null,
+        2
+      );
+    }
+    setScriptLoading(`تم توليد سكربت ${request.source_type} من المحرك الحقيقي.`);
+  }
+
+  async function generateInternetScript(force) {
+    const request = buildInternetPayload();
+    const nextSignature = signatureFor(request);
+    if (!force && internetPlanSignature === nextSignature && internetScript?.textContent.trim()) {
+      return;
+    }
+    setScriptLoading("جاري تجهيز السكربت من محرك HobeRadius...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-internet-script`, request);
+      internetPlanSignature = nextSignature;
+      renderInternetPlan(data.plan || {}, request);
+    } catch (error) {
+      setScriptLoading(`فشل توليد السكربت: ${error.message}`);
+      if (internetScript) internetScript.textContent = `-- ${error.message} --`;
+    }
+  }
 
   function showStep(index) {
     current = Math.max(0, Math.min(index, steps.length - 1));
@@ -30,10 +195,15 @@
     if (count) count.textContent = `${current + 1} / ${steps.length}`;
     if (prev) prev.disabled = current === 0;
     if (next) next.textContent = current === steps.length - 1 ? "إنهاء" : "التالي";
+
+    if (stepNames[current] === "internet-script") {
+      generateInternetScript(false);
+    }
   }
 
   function setSource(type) {
     selectedSource = type || "dhcp";
+    internetPlanSignature = "";
     sourceCards.forEach((card) => {
       card.classList.toggle("is-selected", card.dataset.sourceType === selectedSource);
     });
@@ -82,12 +252,12 @@
     const success = page.querySelector(`[data-swv2-success="${kind}"]`);
     if (!output || !diagnostics) return;
 
-    const value = output.value.toLowerCase();
+    const valueText = output.value.toLowerCase();
     const hasPingSuccess =
-      value.includes("received=5") ||
-      value.includes("packet-loss=0") ||
-      value.includes("0% packet loss");
-    const hasVpnSignal = kind !== "vpn" || value.includes("handshake") || value.includes("radius");
+      valueText.includes("received=5") ||
+      valueText.includes("packet-loss=0") ||
+      valueText.includes("0% packet loss");
+    const hasVpnSignal = kind !== "vpn" || valueText.includes("handshake") || valueText.includes("radius");
     const ok = hasPingSuccess && hasVpnSignal;
 
     diagnostics.innerHTML = "";
@@ -133,11 +303,19 @@
       setSource(target.dataset.sourceType);
     } else if (target.matches("[data-copy-target]")) {
       copyCode(target.dataset.copyTarget, target);
+    } else if (target.matches("[data-swv2-generate-internet]")) {
+      generateInternetScript(true);
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {
       const idx = stepNames.indexOf(target.dataset.swv2StepTarget);
       if (idx >= 0 && idx <= current) showStep(idx);
+    }
+  });
+
+  page.addEventListener("input", (event) => {
+    if (event.target.closest("[data-swv2-internet-form]")) {
+      internetPlanSignature = "";
     }
   });
 
