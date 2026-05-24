@@ -9,7 +9,9 @@ from ..services.setup_wizard import (
     SetupWizardValidationError,
     get_setup_wizard_service,
 )
+from ..services.setup_wizard_fleet import RouterFleetProvisioningService
 from ..services.setup_wizard_interface_contract import InterfaceInfo
+from ..services.setup_wizard_recovery import SetupWizardRecoveryService
 from ..services.setup_wizard_server_wg_readiness import ServerWireGuardReadinessService
 from ..services.setup_wizard_verification import SetupDiagnosticsService
 
@@ -20,6 +22,12 @@ def _tid() -> int:
 
 def _svc():
     return get_setup_wizard_service()
+
+
+def _fleet_svc():
+    return RouterFleetProvisioningService(
+        recovery_service=SetupWizardRecoveryService(wizard_service=_svc())
+    )
 
 
 def _body() -> dict[str, Any]:
@@ -46,6 +54,11 @@ def _verification_payload(body: dict[str, Any]) -> tuple[str, dict[str, Any]]:
 def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard", "setup_wizard_page", setup_wizard_page, methods=["GET"])
     bp.add_url_rule("/setup-wizard-v2", "setup_wizard_v2_page", setup_wizard_v2_page, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/fleet", "setup_wizard_fleet_page", setup_wizard_fleet_page, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/fleet/data", "setup_wizard_fleet_data", setup_wizard_fleet_data, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>", "setup_wizard_fleet_router", setup_wizard_fleet_router, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/resume", "setup_wizard_fleet_router_resume", setup_wizard_fleet_router_resume, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/retire", "setup_wizard_fleet_router_retire", setup_wizard_fleet_router_retire, methods=["POST"])
     bp.add_url_rule("/setup-wizard/server-wg/readiness", "setup_wizard_server_wg_readiness", setup_wizard_server_wg_readiness, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs", "setup_wizard_create_run", setup_wizard_create_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>", "setup_wizard_get_run", setup_wizard_get_run, methods=["GET"])
@@ -108,6 +121,57 @@ def setup_wizard_page():
 
 def setup_wizard_v2_page():
     return render_template("radius/setup_wizard_v2.html")
+
+
+def setup_wizard_fleet_page():
+    return render_template("radius/setup_wizard_fleet.html")
+
+
+def setup_wizard_fleet_data():
+    include_retired = str(request.args.get("include_retired", "1")).lower() not in {"0", "false", "no"}
+    try:
+        data = _fleet_svc().summary(
+            tenant_id=_tid(),
+            status=str(request.args.get("status") or ""),
+            lifecycle_state=str(request.args.get("lifecycle_state") or ""),
+            failed_only=str(request.args.get("failed_only", "")).lower() in {"1", "true", "yes"},
+            include_retired=include_retired,
+            search=str(request.args.get("q") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=400, code="fleet_query_failed")
+    return jsonify({"ok": True, "fleet": data})
+
+
+def setup_wizard_fleet_router(registry_id: int):
+    try:
+        detail = _fleet_svc().router_detail(tenant_id=_tid(), registry_id=registry_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="router_not_found")
+    return jsonify({"ok": True, "detail": detail})
+
+
+def setup_wizard_fleet_router_resume(registry_id: int):
+    try:
+        result = _fleet_svc().resume_router(tenant_id=_tid(), registry_id=registry_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="resume_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_fleet_router_retire(registry_id: int):
+    body = _body()
+    try:
+        result = _fleet_svc().retire_router(
+            tenant_id=_tid(),
+            registry_id=registry_id,
+            reason=str(body.get("reason") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="retire_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
 
 
 def setup_wizard_server_wg_readiness():

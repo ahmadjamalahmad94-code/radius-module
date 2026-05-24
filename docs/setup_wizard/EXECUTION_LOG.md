@@ -100,6 +100,131 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Prompt 6 — Fleet Provisioning Dashboard
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. Git commit hashes cannot be embedded inside the same commit without changing the hash.
+
+### Dashboard features
+
+- Added fleet-level provisioning service for router registry rows.
+- Added aggregate fleet metrics:
+  - total routers
+  - reserved
+  - waiting key
+  - peer ready
+  - VPN verified
+  - fully onboarded
+  - failed
+  - retired
+- Added VPN allocation usage calculation:
+  - pool CIDR
+  - server VPN IP
+  - used router IPs
+  - remaining router IPs
+  - capacity
+  - next available router IP
+- Added health summary model:
+  - healthy
+  - stale
+  - missing handshake
+  - not verified
+- Added action-needed list for failed/waiting/peer-ready routers.
+- Added fleet dashboard UI:
+  - KPI cards
+  - allocation usage bar
+  - filters/search
+  - action-needed panel
+  - router table
+  - router details drawer
+- Added fleet routes:
+  - `GET /admin/radius/setup-wizard/fleet`
+  - `GET /admin/radius/setup-wizard/fleet/data`
+  - `GET /admin/radius/setup-wizard/fleet/router/<registry_id>`
+  - `POST /admin/radius/setup-wizard/fleet/router/<registry_id>/resume`
+  - `POST /admin/radius/setup-wizard/fleet/router/<registry_id>/retire`
+- Resume/retire actions delegate to RecoveryService only.
+
+### Fleet metrics
+
+- 0-router dashboard shows empty metrics and next IP `10.10.0.2`.
+- 50-router simulation shows:
+  - `total_routers=50`
+  - `reserved=50`
+  - `used=50`
+  - `remaining=203`
+  - `next_available=10.10.0.52`
+
+### Files changed
+
+- `app/radius/services/setup_wizard_fleet.py`
+- `app/radius/routes/setup_wizard.py`
+- `app/templates/radius/setup_wizard_fleet.html`
+- `app/static/css/setup_wizard_fleet.css`
+- `app/static/js/setup_wizard_fleet.js`
+- `docs/setup_wizard/FLEET_PROVISIONING_DASHBOARD.md`
+- `tests/test_router_fleet_dashboard.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_fleet.js` passed.
+- Initial `python -m pytest tests/test_router_fleet_dashboard.py -q`:
+  - Result: 1 failed, 8 passed.
+  - Failure was a test expectation: router labels are safely slugged by the provisioning service.
+- Final `python -m pytest tests/test_router_fleet_dashboard.py -q`:
+  - Result: 9 passed, 1841 warnings in 8.98s.
+- `python -m pytest tests/test_router_provisioning_orchestrator.py -q`:
+  - Result: 12 passed, 2592 warnings in 13.09s.
+- Setup wizard related suite:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_v2.py tests/test_setup_wizard_v2_hotspot_broadband.py tests/test_setup_wizard_added_services.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_setup_wizard_recovery.py tests/test_router_fleet_dashboard.py -q`
+  - Result: 195 passed, 16261 warnings in 97.67s.
+- `git diff --check` passed with line-ending warnings only.
+- `python -m pytest -q` was attempted and timed out after about 304 seconds. No failing test output was returned before timeout.
+
+### Safety confirmations
+
+- No live MikroTik apply was added.
+- No VPS/WireGuard mutation was added.
+- No live apply was enabled.
+- Fleet resume delegates to RecoveryService.
+- Fleet retire delegates to RecoveryService.
+- No action button applies router/VPS configuration.
+- Data and router detail endpoints do not expose plaintext private keys, full public keys, Radius secrets, or API passwords.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Remaining gaps
+
+- Health status is derived conservatively from lifecycle/peer state; it does not yet aggregate live WireGuard handshake history across the fleet.
+- Router details drawer is intentionally compact and may later link into richer per-router recovery drill views.
+- Retire action is available through the endpoint, but the UI currently focuses on details rather than destructive lifecycle actions.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- The fleet dashboard is an internal operational view, not customer-facing one-click onboarding.
+- The dashboard uses the existing provisioning registry as source of truth and does not duplicate allocation logic.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
 ## Prompt 5 — Resume / Recovery / Repair Engine
 
 ### Commit

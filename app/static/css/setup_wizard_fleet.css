@@ -1,0 +1,277 @@
+.swfleet-page {
+  color: #0f172a;
+  padding: 24px;
+}
+
+.swfleet-hero,
+.swfleet-panel,
+.swfleet-kpis article,
+.swfleet-drawer-card {
+  background: #fff;
+  border: 1px solid #e5edf6;
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.swfleet-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 30px;
+  margin-bottom: 18px;
+}
+
+.swfleet-hero h1,
+.swfleet-panel h2 {
+  margin: 0 0 8px;
+}
+
+.swfleet-hero p,
+.swfleet-panel p {
+  color: #64748b;
+  margin: 0;
+  max-width: 760px;
+}
+
+.swfleet-kicker {
+  color: #2563eb;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+
+.swfleet-hero-actions,
+.swfleet-toolbar,
+.swfleet-section-head,
+.swfleet-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.swfleet-btn {
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  padding: 11px 16px;
+  text-decoration: none;
+}
+
+.swfleet-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.swfleet-btn-ghost {
+  background: #eef4ff;
+  color: #1e3a8a;
+}
+
+.swfleet-kpis {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.swfleet-kpis article {
+  padding: 18px;
+}
+
+.swfleet-kpis span,
+.swfleet-detail-grid span {
+  color: #64748b;
+  display: block;
+  font-size: 13px;
+}
+
+.swfleet-kpis strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 6px;
+}
+
+.swfleet-panel {
+  margin-bottom: 18px;
+  padding: 20px;
+}
+
+.swfleet-allocation {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.swfleet-usage-bar {
+  align-self: center;
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.swfleet-usage-bar span {
+  background: linear-gradient(90deg, #22c55e, #2563eb);
+  display: block;
+  height: 100%;
+}
+
+.swfleet-toolbar {
+  flex-wrap: wrap;
+}
+
+.swfleet-toolbar label {
+  color: #475569;
+  display: grid;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.swfleet-toolbar input,
+.swfleet-toolbar select {
+  border: 1px solid #dbe6f3;
+  border-radius: 12px;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.swfleet-check {
+  align-items: center;
+  display: flex !important;
+  flex-direction: row;
+  margin-top: 22px;
+}
+
+.swfleet-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+
+.swfleet-action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.swfleet-action-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.swfleet-action-card strong,
+.swfleet-action-card span {
+  display: block;
+}
+
+.swfleet-action-card span {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.swfleet-table-wrap {
+  overflow: auto;
+}
+
+.swfleet-table {
+  border-collapse: collapse;
+  min-width: 900px;
+  width: 100%;
+}
+
+.swfleet-table th,
+.swfleet-table td {
+  border-bottom: 1px solid #edf2f7;
+  padding: 12px 10px;
+  text-align: right;
+}
+
+.swfleet-table th {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.swfleet-chip {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+
+.swfleet-chip.is-healthy {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.swfleet-chip.is-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.swfleet-chip.is-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.swfleet-drawer {
+  background: rgba(15, 23, 42, 0.32);
+  inset: 0;
+  position: fixed;
+  z-index: 50;
+}
+
+.swfleet-drawer-card {
+  height: 100%;
+  margin-right: auto;
+  max-width: 520px;
+  overflow: auto;
+  padding: 24px;
+}
+
+.swfleet-close {
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  float: left;
+  font-size: 20px;
+  height: 36px;
+  width: 36px;
+}
+
+.swfleet-detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px 0;
+}
+
+.swfleet-detail-grid div,
+.swfleet-drawer pre {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.swfleet-drawer pre {
+  direction: ltr;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1100px) {
+  .swfleet-kpis,
+  .swfleet-layout,
+  .swfleet-allocation {
+    grid-template-columns: 1fr;
+  }
+}
