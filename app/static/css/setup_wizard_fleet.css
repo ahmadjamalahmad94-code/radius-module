@@ -275,3 +275,48 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 720px) {
+  .swfleet-page {
+    padding: 14px;
+  }
+
+  .swfleet-hero,
+  .swfleet-section-head,
+  .swfleet-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .swfleet-hero {
+    padding: 22px;
+  }
+
+  .swfleet-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .swfleet-toolbar label,
+  .swfleet-btn {
+    width: 100%;
+  }
+
+  .swfleet-table-wrap {
+    border: 1px solid #e5edf6;
+    border-radius: 14px;
+  }
+
+  .swfleet-table {
+    min-width: 760px;
+  }
+
+  .swfleet-drawer-card {
+    max-width: none;
+    width: 100%;
+  }
+
+  .swfleet-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

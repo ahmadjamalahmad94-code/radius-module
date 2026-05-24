@@ -100,6 +100,115 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Prompt 7 — UX Productization + Confidence Journey
+
+### Commit
+
+Created by this commit. Exact hash is reported in the final prompt result because a commit cannot contain its own final hash without changing that hash.
+
+### UX improvements
+
+- Added a calm confidence journey above the stepper:
+  - `بدأنا`
+  - `تم تجهيز الإنترنت`
+  - `تم ربط الراوتر`
+  - `الشبكة جاهزة`
+  - `الخدمات الإضافية`
+  - `اكتمل الإعداد`
+- Added beginner-first empty state copy for a fresh wizard session.
+- Added success explanation cards for:
+  - internet verification success
+  - VPN/RADIUS verification success
+  - final summary
+- Polished primary Arabic copy in V2 so it reads less like a developer console:
+  - router provisioning labels
+  - server peer preparation labels
+  - lab confirmation wording
+  - dry-run wording
+  - Hotspot/Broadband form labels
+  - added-services unsupported state
+- Kept engineering details in collapsed advanced sections.
+- Preserved the Engineering View link and the existing engineering route.
+- Improved mobile responsiveness for:
+  - V2 action rows and buttons
+  - script/advanced panels
+  - readiness/health panels
+  - fleet dashboard toolbar/table/drawer.
+
+### Files changed
+
+- `app/templates/radius/setup_wizard_v2.html`
+- `app/static/css/setup_wizard_v2.css`
+- `app/static/css/setup_wizard_fleet.css`
+- `tests/test_setup_wizard_v2_productization.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_v2.js` passed.
+- `node --check app/static/js/setup_wizard_fleet.js` passed.
+- `python -m pytest tests/test_setup_wizard_v2_productization.py -q`
+  - Result: 8 passed, 189 warnings in 48.89s.
+- Individual regression checks passed:
+  - `python -m pytest tests/test_setup_wizard_foundation.py -q`
+    - Result: 8 passed, 236 warnings in 12.84s.
+  - `python -m pytest tests/test_setup_wizard_v2.py -q`
+    - Result: 11 passed, 217 warnings in 16.18s.
+  - `python -m pytest tests/test_setup_wizard_v2_hotspot_broadband.py -q`
+    - Result: 8 passed, 225 warnings in 14.10s.
+  - `python -m pytest tests/test_setup_wizard_added_services.py -q`
+    - Result: 8 passed, 287 warnings in 13.26s.
+- Broad setup-wizard-related suite was attempted with explicit files:
+  - Result: 158 passed, 66 failed, 7398 warnings in 114.26s.
+  - Failure pattern: `sqlite3.OperationalError: no such table: setup_wizard_runs` once later provisioning/lifecycle files ran in the same process. Core files pass individually, so this appears to be a pre-existing suite isolation/order issue rather than a UX productization regression.
+- `git diff --check` passed with line-ending warnings only.
+- `python -m pytest -q` was attempted and timed out after 304 seconds.
+
+### Safety confirmations
+
+- Backend behavior was not changed.
+- No live MikroTik apply was introduced.
+- No live server apply was introduced.
+- Live apply remains disabled by default.
+- Engineering View remains available at `/admin/radius/setup-wizard`.
+- Advanced/engineering JSON blocks remain collapsed by default.
+- No RADIUS auth/accounting behavior was touched.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+
+### Remaining visual gaps
+
+- The confidence journey is currently static; a later UI-only slice can bind it to the live JS step state.
+- Some technical product terms remain intentionally in English where they are protocol/product names: `VPN/RADIUS`, `WireGuard`, `Peer`, `Hotspot`, `Broadband`, `PPPoE`, `DNS`, `NAT`, `CIDR`, `VPS`, and `API`.
+- Fleet dashboard polish was limited to responsive CSS; deeper visual redesign can remain a separate frontend-only pass.
+
+### Remaining risks
+
+- The broad one-process setup wizard suite still has an isolation/order problem that causes missing setup wizard tables after some test files run. This was not introduced by the frontend-only changes and should be handled separately.
+- Full project pytest still does not complete within the 304 second execution window.
+- Browser visual QA was not run in this prompt because no local server was requested or started; route/render tests and JS checks were used instead.
+
+### Full honest notes
+
+- This prompt intentionally avoided backend service edits.
+- This prompt intentionally avoided any live execution path.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
 ## Prompt 6 — Fleet Provisioning Dashboard
 
 ### Commit

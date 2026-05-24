@@ -156,6 +156,45 @@
   color: var(--swv2-success);
 }
 
+.swv2-confidence-journey {
+  background: rgba(255, 255, 255, .9);
+  border: 1px solid var(--swv2-border);
+  border-radius: 22px;
+  box-shadow: var(--swv2-shadow-soft);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: 10px;
+}
+
+.swv2-confidence-journey div {
+  background: #f8fafc;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.swv2-confidence-journey div.is-current {
+  background: var(--swv2-primary-soft);
+  border-color: rgba(109, 77, 252, .22);
+}
+
+.swv2-confidence-journey strong {
+  color: var(--swv2-text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.swv2-confidence-journey span {
+  color: var(--swv2-muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
 .swv2-stepper {
   background: rgba(255, 255, 255, .88);
   border: 1px solid var(--swv2-border);
@@ -281,6 +320,28 @@
 .swv2-check-grid span {
   font-size: 13px;
   font-weight: 900;
+}
+
+.swv2-empty-state {
+  background: #f8fafc;
+  border: 1px dashed var(--swv2-border);
+  border-radius: 18px;
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.swv2-empty-state strong {
+  color: var(--swv2-text);
+  font-weight: 950;
+}
+
+.swv2-empty-state span {
+  color: var(--swv2-muted);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.7;
 }
 
 .swv2-source-grid {
@@ -907,6 +968,23 @@
   padding: 18px;
 }
 
+.swv2-success-card {
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(20, 150, 83, .18);
+  border-radius: 16px;
+  display: grid;
+  gap: 4px;
+  margin-inline-start: auto;
+  max-width: 420px;
+  padding: 12px 14px;
+}
+
+.swv2-success-card b {
+  color: var(--swv2-success);
+  font-size: 13px;
+  font-weight: 950;
+}
+
 .swv2-success-state i {
   font-size: 26px;
 }
@@ -945,7 +1023,8 @@
   .swv2-hero,
   .swv2-source-grid,
   .swv2-check-grid,
-  .swv2-instructions {
+  .swv2-instructions,
+  .swv2-confidence-journey {
     grid-template-columns: 1fr;
   }
 
@@ -963,6 +1042,14 @@
 
   .swv2-peer-health-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .swv2-readiness-head,
+  .swv2-peer-health-head,
+  .swv2-script-card > div,
+  .swv2-success-state {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .swv2-service-grid,
@@ -1005,5 +1092,25 @@
   .swv2-footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .swv2-action-row,
+  .swv2-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .swv2-btn {
+    width: 100%;
+  }
+
+  .swv2-script-card pre,
+  .swv2-advanced pre {
+    max-height: 320px;
+  }
+
+  .swv2-verification-panel textarea,
+  .swv2-server-peer-panel textarea {
+    font-size: 14px;
   }
 }

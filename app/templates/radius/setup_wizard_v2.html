@@ -33,6 +33,33 @@
     </div>
   </section>
 
+  <section class="swv2-confidence-journey" data-swv2-confidence-journey aria-label="رحلة الثقة في معالج الإعداد">
+    <div class="is-current" data-confidence-state="started">
+      <strong>بدأنا</strong>
+      <span>كل خطوة تظهر وحدها وبوضوح.</span>
+    </div>
+    <div data-confidence-state="internet_ready">
+      <strong>تم تجهيز الإنترنت</strong>
+      <span>سكربت الإعداد وفحص الربط يثبتان أول اتصال.</span>
+    </div>
+    <div data-confidence-state="router_linked">
+      <strong>تم ربط الراوتر</strong>
+      <span>VPN/RADIUS يصبحان جاهزين للتحقق.</span>
+    </div>
+    <div data-confidence-state="network_ready">
+      <strong>الشبكة جاهزة</strong>
+      <span>Hotspot أو PPPoE يجهزان بمعاينة آمنة.</span>
+    </div>
+    <div data-confidence-state="added_services">
+      <strong>الخدمات الإضافية</strong>
+      <span>اختيارات إضافية بدون وعود غير مؤكدة.</span>
+    </div>
+    <div data-confidence-state="completed">
+      <strong>اكتمل الإعداد</strong>
+      <span>ملخص نظيف، وتفاصيل هندسية عند الحاجة فقط.</span>
+    </div>
+  </section>
+
   <section class="swv2-recovery-panel" data-swv2-recovery-panel hidden>
     <div class="swv2-step-card">
       <span class="swv2-eyebrow">استكمال أو إصلاح الإعداد</span>
@@ -53,7 +80,7 @@
         </label>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-abandon>تسجيل التخلي عن الخطوة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>Retire router</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>إيقاف الراوتر من مسار الإعداد</button>
         </div>
         <pre data-swv2-recovery-json>{}</pre>
       </details>
@@ -126,6 +153,10 @@
           <div><i class="fa-solid fa-check"></i><span>صلاحية دخول MikroTik</span></div>
           <div><i class="fa-solid fa-check"></i><span>معلومات مصدر الإنترنت</span></div>
           <div><i class="fa-solid fa-check"></i><span>نسخة احتياطية قبل أي تجربة مخبرية</span></div>
+        </div>
+        <div class="swv2-empty-state" data-swv2-empty-state="no-run">
+          <strong>لا توجد جلسة إعداد نشطة بعد</strong>
+          <span>ابدأ من الخطوة الأولى، وسيحفظ المعالج التقدم والسكربتات حتى يمكن الرجوع إليها لاحقًا.</span>
         </div>
       </div>
     </article>
@@ -311,6 +342,10 @@
           <i class="fa-solid fa-circle-check"></i>
           <strong>تم الاتصال بالإنترنت بنجاح</strong>
           <span>يمكنك الآن تجهيز ربط VPN/RADIUS.</span>
+          <div class="swv2-success-card" data-swv2-success-card="internet">
+            <b>ما الذي تحقق؟</b>
+            <span>أثبت فحص الربط أن الراوتر وصل إلى الإنترنت. الخطوة التالية تربط الراوتر مع HobeRadius بأسماء وعناوين محجوزة.</span>
+          </div>
         </div>
       </div>
     </article>
@@ -319,11 +354,11 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">VPN/RADIUS</span>
         <form class="swv2-form swv2-provisioning-form" data-swv2-vpn-form>
-          <label>Router label
+          <label>اسم الراوتر
             <input type="text" name="vpn_router_label" value="Branch Router" placeholder="Branch Router">
-            <span>Used only to reserve a stable router provisioning record.</span>
+            <span>يستخدم فقط لحجز سجل ثابت لهذا الراوتر داخل معالج الإعداد.</span>
           </label>
-          <label>Router identity
+          <label>هوية الراوتر
             <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
           </label>
           <label>VPS endpoint
@@ -333,15 +368,15 @@
             <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
           </label>
         </form>
-        <div class="swv2-provisioning-grid" aria-label="Router provisioning allocation">
-          <div><span>Router VPN IP</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
-          <div><span>Server VPN IP</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
-          <div><span>Peer</span><strong data-swv2-provisioning="peer_name">--</strong></div>
-          <div><span>API user</span><strong data-swv2-provisioning="api_username">--</strong></div>
-          <div><span>RADIUS secret</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
-          <div><span>Registry</span><strong data-swv2-provisioning="registry_id">--</strong></div>
-          <div><span>Lifecycle</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
-          <div><span>Peer status</span><strong data-swv2-provisioning="peer_status">--</strong></div>
+        <div class="swv2-provisioning-grid" aria-label="بيانات حجز الراوتر">
+          <div><span>عنوان VPN للراوتر</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
+          <div><span>عنوان VPN للسيرفر</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
+          <div><span>اسم Peer</span><strong data-swv2-provisioning="peer_name">--</strong></div>
+          <div><span>مستخدم API</span><strong data-swv2-provisioning="api_username">--</strong></div>
+          <div><span>سر RADIUS</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
+          <div><span>رقم الحجز</span><strong data-swv2-provisioning="registry_id">--</strong></div>
+          <div><span>مرحلة الراوتر</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
+          <div><span>حالة Peer</span><strong data-swv2-provisioning="peer_status">--</strong></div>
         </div>
         <div class="swv2-key-exchange">
           <div>
@@ -356,8 +391,8 @@
         </div>
         <div class="swv2-server-peer-panel">
           <div>
-            <strong>Server Peer Preparation</strong>
-            <span>وضع مختبر داخلي فقط. Dry-run متاح، أما apply/rollback فمغلقان حتى تفعيل flags المختبر.</span>
+            <strong>تحضير Peer على السيرفر</strong>
+            <span>وضع المختبر الداخلي فقط. المراجعة الجافة متاحة، أما التطبيق والرجوع فمغلقان حتى تفعيل أعلام المختبر.</span>
           </div>
           <div class="swv2-readiness-panel" data-swv2-server-wg-readiness>
             <div class="swv2-readiness-head">
@@ -368,12 +403,12 @@
               <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-wg-readiness-check>فحص الجاهزية</button>
             </div>
             <div class="swv2-readiness-grid">
-              <div><span>WireGuard command</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
-              <div><span>Interface</span><strong data-swv2-readiness-item="wg_interface_exists">غير مفحوص</strong></div>
-              <div><span>Server IP</span><strong data-swv2-readiness-item="server_ip_assigned">غير مفحوص</strong></div>
-              <div><span>Backup</span><strong data-swv2-readiness-item="backup_dir_configured">غير مضبوط</strong></div>
-              <div><span>Read-only access</span><strong data-swv2-readiness-item="runner_mode">معطل</strong></div>
-              <div><span>Apply adapter</span><strong data-swv2-readiness-item="real_adapter_flag">محظور للأمان</strong></div>
+              <div><span>أمر WireGuard</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
+              <div><span>الواجهة</span><strong data-swv2-readiness-item="wg_interface_exists">غير مفحوص</strong></div>
+              <div><span>عنوان السيرفر</span><strong data-swv2-readiness-item="server_ip_assigned">غير مفحوص</strong></div>
+              <div><span>النسخة الاحتياطية</span><strong data-swv2-readiness-item="backup_dir_configured">غير مضبوط</strong></div>
+              <div><span>وصول قراءة فقط</span><strong data-swv2-readiness-item="runner_mode">معطل</strong></div>
+              <div><span>محول التطبيق</span><strong data-swv2-readiness-item="real_adapter_flag">محظور للأمان</strong></div>
             </div>
             <details class="swv2-advanced">
               <summary>تفاصيل الجاهزية</summary>
@@ -402,12 +437,12 @@
             </details>
           </div>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>Dry-run server peer</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>Verify wg show</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled title="يتطلب كل flags المختبر وجاهزية VPS">Apply مختبري مغلق</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب عملية applied سابقة وconfirmation">Rollback Drill مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>مراجعة خطة Peer</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>فحص wg show</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled title="يتطلب كل flags المختبر وجاهزية VPS">تطبيق مختبري مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب عملية applied سابقة وconfirmation">تمرين رجوع مغلق</button>
           </div>
-          <label class="swv2-lab-confirmation">Lab confirmation
+          <label class="swv2-lab-confirmation">تأكيد وضع المختبر الداخلي
             <input type="text" data-swv2-server-peer-confirmation placeholder="APPLY SERVER PEER IN LAB أو ROLLBACK SERVER PEER IN LAB">
             <span>مختبر داخلي فقط. لا تستخدمه على VPS إنتاجي أو راوتر عميل.</span>
           </label>
@@ -428,14 +463,14 @@
           </details>
         </div>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>Generate unique router data</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>توليد بيانات راوتر فريدة</button>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
             <strong>معاينة سكربت VPN/RADIUS</strong>
             <span>لا يتم إنشاء مستخدم أو تعديل إعدادات الراوتر تلقائيًا.</span>
           </div>
-          <pre id="vpn-script-code">-- VPN/RADIUS script has not been generated yet --</pre>
+          <pre id="vpn-script-code">-- لم يتم توليد سكربت VPN/RADIUS بعد --</pre>
         </div>
       </div>
     </article>
@@ -462,6 +497,10 @@
           <i class="fa-solid fa-party-horn"></i>
           <strong>تم ربط الراوتر بنجاح</strong>
           <span>يمكنك متابعة إعداد Hotspot أو Broadband في الموجة التالية.</span>
+          <div class="swv2-success-card" data-swv2-success-card="vpn">
+            <b>الشبكة جاهزة للتوسع</b>
+            <span>تم اجتياز فحص الربط الأساسي. اختر الآن خدمة الشبكة المناسبة أو انتقل إلى ملخص الإعداد.</span>
+          </div>
         </div>
       </div>
     </article>
@@ -541,40 +580,40 @@
         <h2>تجهيز Hotspot بمعاينة آمنة</h2>
         <p>اختر الوضع الذكي أو اليدوي، ثم ولّد السكربت من المحرك الحقيقي. التفاصيل الهندسية مخفية حتى تحتاجها.</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="hotspot">
-          <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">Smart</button>
-          <button type="button" data-mode-target="hotspot" data-mode-value="manual">Manual</button>
+          <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">الوضع الذكي</button>
+          <button type="button" data-mode-target="hotspot" data-mode-value="manual">إعداد يدوي</button>
         </div>
         <div class="swv2-safe-proposal" data-swv2-hotspot-proposal>
           <strong>مقترح آمن</strong>
           <span>سيتم اقتراح bridge و subnet و pool بعيدًا عن WAN/VPN قدر الإمكان.</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="hotspot">
-          <label>Interfaces
+          <label>واجهات الخدمة
             <input type="text" name="hotspot_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>Network CIDR
+          <label>شبكة الخدمة CIDR
             <input type="text" name="hotspot_network_cidr" value="10.77.50.0/24">
           </label>
-          <label>Pool range
+          <label>مدى العناوين
             <input type="text" name="hotspot_pool_range" value="10.77.50.20-10.77.50.220">
           </label>
-          <label>DNS name
+          <label>اسم صفحة الدخول
             <input type="text" name="hotspot_dns_name" value="login.hoberadius.local">
           </label>
-          <label>Bridge / profile / server
+          <label>أسماء bridge/profile/server
             <input type="text" name="hotspot_names" value="hs-bridge,hs-profile,hs-server">
           </label>
-          <label><input type="checkbox" name="hotspot_nat_enabled" checked> NAT scoped to hotspot subnet</label>
+          <label><input type="checkbox" name="hotspot_nat_enabled" checked> NAT محدود على شبكة Hotspot فقط</label>
         </form>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت Hotspot</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="hotspot">تحقق</button>
         </div>
         <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات Hotspot print أو تحقق RADIUS هنا"></textarea>
         <div class="swv2-script-card">
           <div><strong>معاينة سكربت Hotspot</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span></div>
-          <pre id="hotspot-script-code">-- hotspot script not generated --</pre>
+          <pre id="hotspot-script-code">-- لم يتم توليد سكربت Hotspot بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
         <details class="swv2-advanced">
@@ -590,43 +629,43 @@
         <h2>تجهيز PPPoE بمعاينة آمنة</h2>
         <p>سيتم توليد profile و pool و PPPoE server مع NAT scoped على pool فقط. لا يوجد تطبيق مباشر.</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="broadband">
-          <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">Smart</button>
-          <button type="button" data-mode-target="broadband" data-mode-value="manual">Manual</button>
+          <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">الوضع الذكي</button>
+          <button type="button" data-mode-target="broadband" data-mode-value="manual">إعداد يدوي</button>
         </div>
         <div class="swv2-safe-proposal" data-swv2-broadband-proposal>
           <strong>مقترح آمن</strong>
           <span>سيتم اختيار PPPoE profile و pool بعيد عن WAN/VPN/Hotspot.</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="broadband">
-          <label>Interfaces
+          <label>واجهات الخدمة
             <input type="text" name="broadband_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>Service name
+          <label>اسم خدمة PPPoE
             <input type="text" name="broadband_service_name" value="hoberadius-pppoe">
           </label>
-          <label>Local address
+          <label>عنوان الراوتر المحلي
             <input type="text" name="broadband_local_address" value="10.88.44.1">
           </label>
-          <label>Remote pool CIDR
+          <label>شبكة عناوين العملاء CIDR
             <input type="text" name="broadband_remote_pool_cidr" value="10.88.44.0/24">
           </label>
-          <label>Profile name
+          <label>اسم Profile
             <input type="text" name="broadband_profile_name" value="hr-pppoe-profile">
           </label>
           <label>DNS
             <input type="text" name="broadband_dns" value="1.1.1.1,8.8.8.8">
           </label>
-          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT scoped to broadband pool</label>
+          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT محدود على عناوين Broadband فقط</label>
         </form>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">توليد سكربت Broadband</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">تحقق</button>
         </div>
         <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات PPPoE أو تحقق RADIUS هنا"></textarea>
         <div class="swv2-script-card">
           <div><strong>معاينة سكربت Broadband</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span></div>
-          <pre id="broadband-script-code">-- broadband script not generated --</pre>
+          <pre id="broadband-script-code">-- لم يتم توليد سكربت Broadband بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
         <details class="swv2-advanced">
@@ -693,11 +732,11 @@
             <i class="fa-solid fa-user-shield"></i>
             <strong>منع مشاركة الاتصال</strong>
             <span>تحتاج تفعيلًا لاحقًا.</span>
-            <small data-added-status="anti_sharing">Coming soon</small>
+            <small data-added-status="anti_sharing">غير مدعومة في هذا المسار حاليًا</small>
           </button>
         </div>
         <form class="swv2-form" data-swv2-added-form>
-          <label>Domains / destinations
+          <label>النطاقات أو الوجهات
             <textarea name="added_domains" placeholder="example.com&#10;payment.local"></textarea>
           </label>
           <label>WireGuard interface لميزة Site Exit
@@ -706,12 +745,12 @@
         </form>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-plan-added-service>توليد خطة الخدمة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-dry-run>Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-dry-run>مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>إرشادات التحقق</button>
         </div>
         <div class="swv2-script-card">
           <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو preset.</span></div>
-          <pre data-swv2-added-preview>-- no added service plan yet --</pre>
+          <pre data-swv2-added-preview>-- لم يتم توليد خطة خدمة إضافية بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>
         <details class="swv2-advanced">
@@ -730,6 +769,10 @@
           <i class="fa-solid fa-circle-check"></i>
           <strong data-swv2-final-title>تم تجهيز مسار الإعداد</strong>
           <span data-swv2-final-text>راجع السكربتات والـ dry-run قبل أي تنفيذ يدوي.</span>
+          <div class="swv2-success-card" data-swv2-success-card="final">
+            <b>اكتمل الإعداد</b>
+            <span>الملخص يجمع ما تم توليده وما يحتاج مراجعة. التفاصيل الهندسية بقيت محفوظة في الوضع المتقدم فقط.</span>
+          </div>
         </div>
       </div>
     </article>
