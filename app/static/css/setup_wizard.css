@@ -90,6 +90,21 @@
 .sw-field textarea{resize:vertical;min-height:88px}
 
 .sw-inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sw-muted{color:#64748b;font-size:13px;font-weight:700;margin:0 0 12px}
+.hub-btn--danger{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.sw-inline-actions > select{
+  min-width:150px;
+  border:1px solid #dbe2f0;
+  border-radius:10px;
+  padding:9px 12px;
+  font-family:inherit;
+  font-weight:800;
+}
+.sw-field input[data-sw-confirmation]{
+  direction:ltr;
+  text-align:left;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
 .sw-script,.sw-output{
   background:#0f172a;
   color:#e2e8f0;

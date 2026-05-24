@@ -172,6 +172,40 @@
     <pre class="sw-script" data-sw-script-preview>-- لا يوجد سكربت بعد --</pre>
     <pre class="sw-output" data-sw-output-preview>-- لا توجد نتائج بعد --</pre>
   </section>
+  <section class="sw-panel">
+    <h2>Guarded operations</h2>
+    <p class="sw-muted">Dry-run is safe. Apply and rollback stay blocked unless HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true and a confirmation phrase is supplied.</p>
+    <div class="sw-inline-actions">
+      <select data-sw-operation-step>
+        <option value="internet">internet</option>
+        <option value="vpn">vpn</option>
+        <option value="hotspot">hotspot</option>
+        <option value="broadband">broadband</option>
+      </select>
+      <button class="hub-btn" type="button" data-sw-action="dry-run">Dry run</button>
+      <button class="hub-btn" type="button" data-sw-action="list-operations">Operations</button>
+      <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">Apply guarded</button>
+      <button class="hub-btn" type="button" data-sw-action="rollback-preview">Rollback preview</button>
+    </div>
+    <div class="sw-field">
+      <label>Confirmation</label>
+      <input data-sw-confirmation placeholder="APPLY SETUP WIZARD 1 internet">
+    </div>
+  </section>
+
+  <section class="sw-panel">
+    <h2>Router inventory</h2>
+    <div class="sw-field">
+      <label>Paste RouterOS print outputs</label>
+      <textarea data-sw-inventory-output rows="6" spellcheck="false" placeholder="/interface print detail&#10;/ip address print detail&#10;/ip route print detail"></textarea>
+    </div>
+    <div class="sw-inline-actions">
+      <button class="hub-btn" type="button" data-sw-action="save-inventory">Save inventory snapshot</button>
+      <button class="hub-btn" type="button" data-sw-action="health">Health</button>
+      <button class="hub-btn" type="button" data-sw-action="support-bundle">Support bundle</button>
+      <button class="hub-btn" type="button" data-sw-action="added-catalog">Added services catalog</button>
+    </div>
+  </section>
 </div>
 
 <script>

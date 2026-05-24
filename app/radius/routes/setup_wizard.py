@@ -57,6 +57,21 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-broadband-script", "setup_wizard_generate_broadband_script", setup_wizard_generate_broadband_script, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-broadband", "setup_wizard_verify_broadband", setup_wizard_verify_broadband, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/summary", "setup_wizard_run_summary", setup_wizard_run_summary, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/dry-run/<step_key>", "setup_wizard_dry_run", setup_wizard_dry_run, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/apply/<step_key>", "setup_wizard_apply", setup_wizard_apply, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/rollback/<step_key>", "setup_wizard_rollback", setup_wizard_rollback, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/operations", "setup_wizard_operations", setup_wizard_operations, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/inventory", "setup_wizard_inventory", setup_wizard_inventory, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/inventory/latest", "setup_wizard_inventory_latest", setup_wizard_inventory_latest, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/orchestrate/hotspot", "setup_wizard_orchestrate_hotspot", setup_wizard_orchestrate_hotspot, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/orchestrate/broadband", "setup_wizard_orchestrate_broadband", setup_wizard_orchestrate_broadband, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/added-services/catalog", "setup_wizard_added_services_catalog", setup_wizard_added_services_catalog, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/added-services/plan", "setup_wizard_added_services_plan", setup_wizard_added_services_plan, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/added-services/dry-run", "setup_wizard_added_services_dry_run", setup_wizard_added_services_dry_run, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/added-services/apply", "setup_wizard_added_services_apply", setup_wizard_added_services_apply, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/added-services/verify", "setup_wizard_added_services_verify", setup_wizard_added_services_verify, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/support-bundle", "setup_wizard_support_bundle", setup_wizard_support_bundle, methods=["GET"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/health", "setup_wizard_health", setup_wizard_health, methods=["GET"])
 
 
 def setup_wizard_page():
@@ -284,3 +299,173 @@ def setup_wizard_run_summary(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc), status=404, code="not_found")
     return jsonify({"ok": True, **summary})
+
+
+def setup_wizard_dry_run(run_id: int, step_key: str):
+    try:
+        result = _svc().dry_run_step(tenant_id=_tid(), run_id=run_id, step_key=step_key)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_apply(run_id: int, step_key: str):
+    body = _body()
+    try:
+        result = _svc().apply_step(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=step_key,
+            confirmation=str(body.get("confirmation") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="apply_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") not in {"blocked", "failed"}, **result}), status
+
+
+def setup_wizard_rollback(run_id: int, step_key: str):
+    body = _body()
+    try:
+        result = _svc().rollback_step(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=step_key,
+            confirmation=str(body.get("confirmation") or ""),
+            preview=bool(body.get("preview", False)),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="rollback_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") not in {"blocked", "failed"}, **result}), status
+
+
+def setup_wizard_operations(run_id: int):
+    step_key = request.args.get("step_key") or None
+    try:
+        operations = _svc().list_operations(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key=step_key,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "operations": operations})
+
+
+def setup_wizard_inventory(run_id: int):
+    body = _body()
+    try:
+        snapshot = _svc().collect_router_inventory(
+            tenant_id=_tid(),
+            run_id=run_id,
+            output=str(body.get("output") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "snapshot": snapshot})
+
+
+def setup_wizard_inventory_latest(run_id: int):
+    snapshot = _svc().latest_router_snapshot(tenant_id=_tid(), run_id=run_id)
+    return jsonify({"ok": True, "snapshot": snapshot})
+
+
+def setup_wizard_orchestrate_hotspot(run_id: int):
+    body = _body()
+    payload = body.get("payload") if isinstance(body.get("payload"), dict) else dict(body)
+    try:
+        result = _svc().plan_hotspot_orchestration(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=str(body.get("mode") or "smart"),
+            payload=payload,
+            manual_override=bool(body.get("manual_override", False)),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_orchestrate_broadband(run_id: int):
+    body = _body()
+    payload = body.get("payload") if isinstance(body.get("payload"), dict) else dict(body)
+    try:
+        result = _svc().plan_broadband_orchestration(
+            tenant_id=_tid(),
+            run_id=run_id,
+            mode=str(body.get("mode") or "smart"),
+            payload=payload,
+            manual_override=bool(body.get("manual_override", False)),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_added_services_catalog():
+    return jsonify({"ok": True, **_svc().added_services_catalog()})
+
+
+def setup_wizard_added_services_plan(run_id: int):
+    body = _body()
+    service_key = str(body.get("service_key") or "").strip()
+    inputs = body.get("inputs") if isinstance(body.get("inputs"), dict) else {}
+    try:
+        plan = _svc().plan_added_service(
+            tenant_id=_tid(),
+            run_id=run_id,
+            service_key=service_key,
+            inputs=inputs,
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "plan": plan})
+
+
+def setup_wizard_added_services_dry_run(run_id: int):
+    return jsonify({
+        "ok": False,
+        "status": "blocked",
+        "blocked_reason": "added_services_dry_run_requires_delegate_script",
+    }), 409
+
+
+def setup_wizard_added_services_apply(run_id: int):
+    body = _body()
+    try:
+        result = _svc().apply_step(
+            tenant_id=_tid(),
+            run_id=run_id,
+            step_key="added-services",
+            confirmation=str(body.get("confirmation") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="apply_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") not in {"blocked", "failed"}, **result}), status
+
+
+def setup_wizard_added_services_verify(run_id: int):
+    return jsonify({
+        "ok": True,
+        "status": "blocked",
+        "diagnostics": ["added services verification delegates to the selected service"],
+        "gate_unlocked": False,
+    })
+
+
+def setup_wizard_support_bundle(run_id: int):
+    try:
+        bundle = _svc().support_bundle(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    return jsonify({"ok": True, "bundle": bundle})
+
+
+def setup_wizard_health(run_id: int):
+    try:
+        health = _svc().health(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    return jsonify({"ok": True, "health": health})

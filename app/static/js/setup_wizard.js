@@ -101,6 +101,14 @@
     };
   }
 
+  function operationStep() {
+    return root.querySelector("[data-sw-operation-step]")?.value || "internet";
+  }
+
+  function confirmationText() {
+    return root.querySelector("[data-sw-confirmation]")?.value || "";
+  }
+
   async function actionSetInternet() {
     requireRun();
     const form = root.querySelector('[data-sw-form="internet-source"]');
@@ -227,6 +235,63 @@
     setOutput({ ok: true, message: "تم نسخ السكربت" });
   }
 
+  async function actionDryRun() {
+    requireRun();
+    const step = operationStep();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/dry-run/${step}`, {});
+    setOutput(data);
+  }
+
+  async function actionListOperations() {
+    requireRun();
+    const data = await getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/operations`);
+    setOutput(data);
+  }
+
+  async function actionApplyStep() {
+    requireRun();
+    const step = operationStep();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/apply/${step}`, {
+      confirmation: confirmationText(),
+    });
+    setOutput(data);
+    await refreshSummary();
+  }
+
+  async function actionRollbackPreview() {
+    requireRun();
+    const step = operationStep();
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/rollback/${step}`, {
+      preview: true,
+    });
+    setOutput(data);
+  }
+
+  async function actionSaveInventory() {
+    requireRun();
+    const output = root.querySelector("[data-sw-inventory-output]")?.value || "";
+    const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/inventory`, { output });
+    setOutput(data);
+    await refreshSummary();
+  }
+
+  async function actionHealth() {
+    requireRun();
+    const data = await getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/health`);
+    setOutput(data);
+  }
+
+  async function actionSupportBundle() {
+    requireRun();
+    const data = await getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/support-bundle`);
+    setOutput(data);
+  }
+
+  async function actionAddedCatalog() {
+    const data = await getJson("/admin/radius/setup-wizard/added-services/catalog");
+    setOutput(data);
+  }
+
   const actions = {
     "create-run": createRun,
     "refresh-summary": refreshSummary,
@@ -241,6 +306,14 @@
     "generate-broadband-script": actionGenerateBroadband,
     "verify-broadband": actionVerifyBroadband,
     "copy-script": actionCopyScript,
+    "dry-run": actionDryRun,
+    "list-operations": actionListOperations,
+    "apply-step": actionApplyStep,
+    "rollback-preview": actionRollbackPreview,
+    "save-inventory": actionSaveInventory,
+    "health": actionHealth,
+    "support-bundle": actionSupportBundle,
+    "added-catalog": actionAddedCatalog,
   };
 
   root.querySelectorAll("[data-sw-action]").forEach((btn) => {

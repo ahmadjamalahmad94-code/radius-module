@@ -14,9 +14,22 @@ from typing import Any
 
 from ..db.connection import db, transaction
 from .setup_wizard_broadband_planner import BroadbandBootstrapPlanner
+from .setup_wizard_added_services import AddedServicesPlanner
 from .setup_wizard_common import SetupWizardValidationError
 from .setup_wizard_hotspot_planner import HotspotBootstrapPlanner
+from .setup_wizard_inventory import RouterInventoryService
 from .setup_wizard_interface_contract import InterfaceDiscoveryContract, InterfaceInfo
+from .setup_wizard_operations import (
+    SetupWizardApplyService,
+    SetupWizardDryRunService,
+    SetupWizardOperationRepo,
+    SetupWizardRollbackService,
+)
+from .setup_wizard_orchestration import (
+    SetupWizardBroadbandOrchestrator,
+    SetupWizardHotspotOrchestrator,
+)
+from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
 from .setup_wizard_vpn_radius_planner import VpnRadiusBootstrapPlanner
@@ -33,6 +46,7 @@ STEP_STATUS_APPLIED_BY_CUSTOMER = "applied_by_customer"
 STEP_STATUS_VERIFIED = "verified"
 STEP_STATUS_FAILED = "failed"
 STEP_STATUS_SKIPPED = "skipped"
+STEP_STATUS_ABANDONED = "abandoned"
 STEP_STATUSES = {
     STEP_STATUS_PENDING,
     STEP_STATUS_GENERATED,
@@ -40,6 +54,7 @@ STEP_STATUSES = {
     STEP_STATUS_VERIFIED,
     STEP_STATUS_FAILED,
     STEP_STATUS_SKIPPED,
+    STEP_STATUS_ABANDONED,
 }
 
 INTERNET_SOURCE_TYPES = {"vlan", "static", "dhcp", "pppoe"}
@@ -243,6 +258,12 @@ class SetupWizardService:
         self._broadband_planner = BroadbandBootstrapPlanner()
         self._verification_service = SetupVerificationService()
         self._verification_engine = SetupVerificationEngine(self._verification_service)
+        self._operation_repo = SetupWizardOperationRepo()
+        self._dry_run_service = SetupWizardDryRunService(repo=self._operation_repo)
+        self._apply_service = SetupWizardApplyService(repo=self._operation_repo)
+        self._rollback_service = SetupWizardRollbackService(repo=self._operation_repo)
+        self._inventory_service = RouterInventoryService()
+        self._added_services_planner = AddedServicesPlanner()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -618,7 +639,182 @@ class SetupWizardService:
             "steps": steps,
             "step_index": step_index,
             "verification": verification_contract,
+            "operations": self._operation_repo.list_for_run(tenant_id=tenant_id, run_id=run_id),
+            "latest_router_snapshot": self._inventory_service.latest_snapshot(
+                tenant_id=tenant_id,
+                run_id=run_id,
+            ),
         }
+
+    def _script_step_for_operation_step(self, step_key: str) -> str:
+        normalized = str(step_key or "").strip().lower()
+        mapping = {
+            "internet": STEP_INTERNET_SCRIPT_PREVIEW,
+            "vpn": STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            "vpn-radius": STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            "vpn_radius": STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            "hotspot": STEP_HOTSPOT_SCRIPT_PREVIEW,
+            "broadband": STEP_BROADBAND_SCRIPT_PREVIEW,
+            STEP_INTERNET_SCRIPT_PREVIEW: STEP_INTERNET_SCRIPT_PREVIEW,
+            STEP_VPN_RADIUS_SCRIPT_PREVIEW: STEP_VPN_RADIUS_SCRIPT_PREVIEW,
+            STEP_HOTSPOT_SCRIPT_PREVIEW: STEP_HOTSPOT_SCRIPT_PREVIEW,
+            STEP_BROADBAND_SCRIPT_PREVIEW: STEP_BROADBAND_SCRIPT_PREVIEW,
+        }
+        if normalized not in mapping:
+            raise SetupWizardValidationError("unknown operation step")
+        return mapping[normalized]
+
+    def _operation_tag_step(self, step_key: str) -> str:
+        script_step = self._script_step_for_operation_step(step_key)
+        if script_step == STEP_INTERNET_SCRIPT_PREVIEW:
+            return "internet"
+        if script_step == STEP_VPN_RADIUS_SCRIPT_PREVIEW:
+            return "vpn"
+        if script_step == STEP_HOTSPOT_SCRIPT_PREVIEW:
+            return "hotspot"
+        if script_step == STEP_BROADBAND_SCRIPT_PREVIEW:
+            return "broadband"
+        return step_key
+
+    def dry_run_step(self, *, tenant_id: int, run_id: int, step_key: str) -> dict[str, Any]:
+        script_step = self._script_step_for_operation_step(step_key)
+        step = self.get_step(tenant_id=tenant_id, run_id=run_id, step_key=script_step)
+        if not step or not str(step.get("generated_script") or "").strip():
+            raise SetupWizardValidationError("generated script is required before dry-run")
+        snapshot = self._inventory_service.latest_snapshot(tenant_id=tenant_id, run_id=run_id)
+        return self._dry_run_service.dry_run(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=self._operation_tag_step(step_key),
+            script_text=str(step.get("generated_script") or ""),
+            router_snapshot=snapshot or {},
+        )
+
+    def apply_step(
+        self, *, tenant_id: int, run_id: int, step_key: str, confirmation: str
+    ) -> dict[str, Any]:
+        self._script_step_for_operation_step(step_key)
+        return self._apply_service.apply(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=self._operation_tag_step(step_key),
+            confirmation=confirmation,
+        )
+
+    def rollback_step(
+        self, *, tenant_id: int, run_id: int, step_key: str, confirmation: str = "", preview: bool = False
+    ) -> dict[str, Any]:
+        self._script_step_for_operation_step(step_key)
+        op_step = self._operation_tag_step(step_key)
+        if preview:
+            return self._rollback_service.preview(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_key=op_step,
+            )
+        return self._rollback_service.rollback(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=op_step,
+            confirmation=confirmation,
+        )
+
+    def list_operations(
+        self, *, tenant_id: int, run_id: int, step_key: str | None = None
+    ) -> list[dict[str, Any]]:
+        return self._operation_repo.list_for_run(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=self._operation_tag_step(step_key) if step_key else None,
+        )
+
+    def collect_router_inventory(
+        self, *, tenant_id: int, run_id: int, output: str
+    ) -> dict[str, Any]:
+        run = self.get_run(tenant_id=tenant_id, run_id=run_id)
+        return self._inventory_service.create_from_pasted_output(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            output=output,
+            selected_wan_interface=str(run.get("selected_wan_interface") or ""),
+        )
+
+    def latest_router_snapshot(self, *, tenant_id: int, run_id: int) -> dict[str, Any] | None:
+        return self._inventory_service.latest_snapshot(tenant_id=tenant_id, run_id=run_id)
+
+    def plan_hotspot_orchestration(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        mode: str,
+        payload: dict[str, Any],
+        manual_override: bool = False,
+    ) -> dict[str, Any]:
+        orchestrator = SetupWizardHotspotOrchestrator(
+            wizard_service=self,
+            inventory_service=self._inventory_service,
+            dry_run_service=self._dry_run_service,
+        )
+        return orchestrator.plan_from_snapshot(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+            manual_override=manual_override,
+        )
+
+    def plan_broadband_orchestration(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        mode: str,
+        payload: dict[str, Any],
+        manual_override: bool = False,
+    ) -> dict[str, Any]:
+        orchestrator = SetupWizardBroadbandOrchestrator(
+            wizard_service=self,
+            inventory_service=self._inventory_service,
+            dry_run_service=self._dry_run_service,
+        )
+        return orchestrator.plan_from_snapshot(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            mode=mode,
+            payload=payload,
+            manual_override=manual_override,
+        )
+
+    def added_services_catalog(self) -> dict[str, Any]:
+        return self._added_services_planner.catalog_payload()
+
+    def plan_added_service(
+        self, *, tenant_id: int, run_id: int, service_key: str, inputs: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        self.advance_to_step(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_key=STEP_ADDED_SERVICE_CONFIG,
+            input_json={"service_key": service_key, "inputs": inputs or {}},
+        )
+        return self._added_services_planner.plan(
+            wizard_run_id=run_id,
+            service_key=service_key,
+            inputs=inputs or {},
+        )
+
+    def support_bundle(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        return SetupWizardSupportService(wizard_service=self).support_bundle(
+            tenant_id=tenant_id,
+            run_id=run_id,
+        )
+
+    def health(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        return SetupWizardSupportService(wizard_service=self).health(
+            tenant_id=tenant_id,
+            run_id=run_id,
+        )
 
     def get_interface_candidates(
         self, *, tenant_id: int, run_id: int, interfaces: list[InterfaceInfo] | None = None
