@@ -52,6 +52,11 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-internet", "setup_wizard_verify_internet", setup_wizard_verify_internet, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-vpn-radius-script", "setup_wizard_generate_vpn_script", setup_wizard_generate_vpn_script, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/router-public-key", "setup_wizard_router_public_key", setup_wizard_router_public_key, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/dry-run", "setup_wizard_server_peer_dry_run", setup_wizard_server_peer_dry_run, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/apply", "setup_wizard_server_peer_apply", setup_wizard_server_peer_apply, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/rollback", "setup_wizard_server_peer_rollback", setup_wizard_server_peer_rollback, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/verify", "setup_wizard_server_peer_verify", setup_wizard_server_peer_verify, methods=["POST"])
+    bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/operations", "setup_wizard_server_peer_operations", setup_wizard_server_peer_operations, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-vpn-radius", "setup_wizard_verify_vpn", setup_wizard_verify_vpn, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/interfaces/candidates", "setup_wizard_interfaces_candidates", setup_wizard_interfaces_candidates, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-hotspot-script", "setup_wizard_generate_hotspot_script", setup_wizard_generate_hotspot_script, methods=["POST"])
@@ -196,6 +201,63 @@ def setup_wizard_router_public_key(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
     return jsonify({"ok": True, "provisioning": result})
+
+
+def setup_wizard_server_peer_dry_run(run_id: int):
+    try:
+        result = _svc().server_peer_dry_run(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_server_peer_apply(run_id: int):
+    body = _body()
+    try:
+        result = _svc().server_peer_apply(
+            tenant_id=_tid(),
+            run_id=run_id,
+            confirmation=str(body.get("confirmation") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="server_peer_apply_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_server_peer_rollback(run_id: int):
+    body = _body()
+    try:
+        result = _svc().server_peer_rollback(
+            tenant_id=_tid(),
+            run_id=run_id,
+            confirmation=str(body.get("confirmation") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=409, code="server_peer_rollback_blocked")
+    status = 409 if result.get("status") == "blocked" else 200
+    return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_server_peer_verify(run_id: int):
+    body = _body()
+    try:
+        result = _svc().server_peer_verify(
+            tenant_id=_tid(),
+            run_id=run_id,
+            output=str(body.get("output") or ""),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, **result})
+
+
+def setup_wizard_server_peer_operations(run_id: int):
+    try:
+        operations = _svc().server_peer_operations(tenant_id=_tid(), run_id=run_id)
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc), status=404, code="not_found")
+    return jsonify({"ok": True, "operations": operations})
 
 
 def setup_wizard_verify_vpn(run_id: int):

@@ -18,6 +18,7 @@
   const internetScript = document.getElementById("internet-script-code");
   const vpnScript = document.getElementById("vpn-script-code");
   const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
+  const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
   const stepNames = steps.map((step) => step.dataset.swv2Step);
   let current = 0;
   let selectedSource = "dhcp";
@@ -279,6 +280,46 @@
     }
   }
 
+  function writeServerPeerResult(value) {
+    if (!serverPeerResult) return;
+    serverPeerResult.textContent = typeof value === "string"
+      ? value
+      : JSON.stringify(value || {}, null, 2);
+  }
+
+  async function dryRunServerPeer() {
+    writeServerPeerResult("جاري إنشاء dry-run لخطة server peer...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
+      writeServerPeerResult({
+        status: data.status,
+        command_preview: data.plan?.command_preview,
+        rollback_preview: data.plan?.rollback_preview,
+        warnings: data.plan?.warnings || [],
+      });
+    } catch (error) {
+      writeServerPeerResult(`تعذر إنشاء dry-run: ${error.message}`);
+    }
+  }
+
+  async function verifyServerPeer() {
+    const output = page.querySelector("[data-swv2-server-peer-output]");
+    writeServerPeerResult("جاري تحليل wg show...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/verify`, {
+        output: output ? output.value : "",
+      });
+      writeServerPeerResult(data);
+      if (data.status === "success") {
+        writeProvisioningValue("lifecycle_state", "vpn_verified");
+      }
+    } catch (error) {
+      writeServerPeerResult(`تعذر التحقق: ${error.message}`);
+    }
+  }
+
   function showStep(index) {
     current = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, idx) => {
@@ -425,6 +466,10 @@
       generateVpnRadiusScript(true);
     } else if (target.matches("[data-swv2-submit-router-key]")) {
       submitRouterPublicKey();
+    } else if (target.matches("[data-swv2-server-peer-dry-run]")) {
+      dryRunServerPeer();
+    } else if (target.matches("[data-swv2-server-peer-verify]")) {
+      verifyServerPeer();
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

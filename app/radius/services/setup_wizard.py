@@ -33,6 +33,7 @@ from .setup_wizard_orchestration import (
 from .setup_wizard_pilot import SetupWizardPilotDrillService
 from .setup_wizard_provisioning_orchestrator import RouterProvisioningOrchestrator
 from .setup_wizard_router_provisioning import RouterProvisioningService
+from .setup_wizard_server_wg import ServerWireGuardPeerApplyService
 from .setup_wizard_support import SetupWizardSupportService
 from .setup_wizard_internet_planner import InternetUplinkScriptPlanner
 from .setup_wizard_verification import SetupVerificationEngine, SetupVerificationService
@@ -280,6 +281,7 @@ class SetupWizardService:
         self._provisioning_orchestrator = RouterProvisioningOrchestrator(
             registry=self._router_provisioning
         )
+        self._server_wg_apply = ServerWireGuardPeerApplyService()
 
     def create_run(
         self, *, tenant_id: int, actor: str = "system", router_id: int | None = None
@@ -784,6 +786,55 @@ class SetupWizardService:
             registry_id=int(reservation["id"]),
             public_key=public_key,
             actor=actor,
+        )
+
+    def _prepared_peer_id_for_run(self, *, tenant_id: int, run_id: int) -> int:
+        summary = self.get_run_summary(tenant_id=tenant_id, run_id=run_id)
+        peer = summary.get("prepared_wireguard_peer") or {}
+        peer_id = int(peer.get("id") or 0)
+        if not peer_id:
+            raise SetupWizardValidationError("prepared WireGuard peer not found")
+        return peer_id
+
+    def server_peer_dry_run(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        return self._server_wg_apply.dry_run(tenant_id=tenant_id, prepared_peer_id=peer_id)
+
+    def server_peer_apply(
+        self, *, tenant_id: int, run_id: int, confirmation: str
+    ) -> dict[str, Any]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        return self._server_wg_apply.apply(
+            tenant_id=tenant_id,
+            prepared_peer_id=peer_id,
+            confirmation=confirmation,
+        )
+
+    def server_peer_rollback(
+        self, *, tenant_id: int, run_id: int, confirmation: str
+    ) -> dict[str, Any]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        return self._server_wg_apply.rollback(
+            tenant_id=tenant_id,
+            prepared_peer_id=peer_id,
+            confirmation=confirmation,
+        )
+
+    def server_peer_verify(
+        self, *, tenant_id: int, run_id: int, output: str = ""
+    ) -> dict[str, Any]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        return self._server_wg_apply.verify(
+            tenant_id=tenant_id,
+            prepared_peer_id=peer_id,
+            wg_show_output=output,
+        )
+
+    def server_peer_operations(self, *, tenant_id: int, run_id: int) -> list[dict[str, Any]]:
+        peer_id = self._prepared_peer_id_for_run(tenant_id=tenant_id, run_id=run_id)
+        return self._server_wg_apply.list_operations(
+            tenant_id=tenant_id,
+            prepared_peer_id=peer_id,
         )
 
     def _script_step_for_operation_step(self, step_key: str) -> str:

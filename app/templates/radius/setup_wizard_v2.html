@@ -303,6 +303,19 @@
             <span data-swv2-router-key-status>بانتظار توليد بيانات الراوتر.</span>
           </div>
         </div>
+        <div class="swv2-server-peer-panel">
+          <div>
+            <strong>Server Peer Preparation</strong>
+            <span>وضع مختبر داخلي فقط. Dry-run متاح، أما apply/rollback فمغلقان حتى تفعيل flags المختبر.</span>
+          </div>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>Dry-run server peer</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>Verify wg show</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" disabled title="يتطلب HOBERADIUS_SETUP_WIZARD_LAB_MODE و HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY">Apply مغلق</button>
+          </div>
+          <textarea data-swv2-server-peer-output placeholder="اختياري: الصق wg show للتحقق من وجود peer و handshake"></textarea>
+          <pre data-swv2-server-peer-result>لم يتم تنفيذ dry-run بعد.</pre>
+        </div>
         <h2>سيتم الآن ربط MikroTik مع HobeRadius</h2>
         <p>هذه الخطوة تجهز سكربت الربط الآمن بين الراوتر والخادم، ثم إعدادات RADIUS المطلوبة لاحقًا للخدمات.</p>
         <div class="swv2-action-row">
