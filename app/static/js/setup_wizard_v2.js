@@ -306,6 +306,12 @@
       node.classList.remove("is-ready", "is-partial", "is-blocked", "is-disabled");
       node.classList.add(classStatus === "success" ? "is-ready" : `is-${classStatus}`);
     });
+    const applyButton = page.querySelector("[data-swv2-server-peer-apply]");
+    if (applyButton) {
+      const enabled = readiness?.status === "ready" && readiness?.flags?.all_required_for_apply === true;
+      applyButton.disabled = !enabled;
+      applyButton.textContent = enabled ? "Apply مختبري" : "Apply مختبري مغلق";
+    }
   }
 
   async function checkServerWgReadiness() {
@@ -355,6 +361,39 @@
       }
     } catch (error) {
       writeServerPeerResult(`تعذر التحقق: ${error.message}`);
+    }
+  }
+
+  function serverPeerConfirmation() {
+    const input = page.querySelector("[data-swv2-server-peer-confirmation]");
+    return input ? String(input.value || "").trim() : "";
+  }
+
+  async function applyServerPeer() {
+    writeServerPeerResult("جاري طلب apply مخبري مضبوط...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/apply`, {
+        confirmation: serverPeerConfirmation(),
+      });
+      writeServerPeerResult(data);
+      const rollbackButton = page.querySelector("[data-swv2-server-peer-rollback]");
+      if (rollbackButton && data.status !== "failed_verification") rollbackButton.disabled = false;
+    } catch (error) {
+      writeServerPeerResult(`تم حظر apply: ${error.message}`);
+    }
+  }
+
+  async function rollbackServerPeer() {
+    writeServerPeerResult("جاري طلب rollback drill...");
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/rollback`, {
+        confirmation: serverPeerConfirmation(),
+      });
+      writeServerPeerResult(data);
+    } catch (error) {
+      writeServerPeerResult(`تم حظر rollback: ${error.message}`);
     }
   }
 
@@ -510,6 +549,10 @@
       dryRunServerPeer();
     } else if (target.matches("[data-swv2-server-peer-verify]")) {
       verifyServerPeer();
+    } else if (target.matches("[data-swv2-server-peer-apply]")) {
+      applyServerPeer();
+    } else if (target.matches("[data-swv2-server-peer-rollback]")) {
+      rollbackServerPeer();
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

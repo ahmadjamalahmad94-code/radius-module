@@ -34,6 +34,7 @@ def app(monkeypatch, tmp_path):
 def _env(**extra: str) -> dict[str, str]:
     base = {
         "HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS": "true",
+        "HOBERADIUS_SETUP_WIZARD_SERVER_WG_REAL_ADAPTER": "true",
         "HOBERADIUS_WG_INTERFACE": "wg0",
         "HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP": "10.10.0.1",
         "HOBERADIUS_WG_LISTEN_PORT": "51820",

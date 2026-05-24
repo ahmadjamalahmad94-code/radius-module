@@ -23,6 +23,10 @@ from app.radius.services.setup_wizard_server_wg import (
     server_peer_confirmation_phrase,
     server_peer_rollback_phrase,
 )
+from app.radius.services.setup_wizard_server_wg_readiness import (
+    MockCommandRunner,
+    ServerWireGuardReadinessService,
+)
 
 
 VALID_KEY_1 = "C" * 43 + "="
@@ -85,6 +89,38 @@ def _wg_show(public_key: str = VALID_KEY_1, allowed_ip: str = "10.10.0.2/32") ->
     )
 
 
+def _enable_all_flags(monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_REAL_ADAPTER", "true")
+
+
+def _readiness() -> ServerWireGuardReadinessService:
+    runner = MockCommandRunner(
+        {
+            "wg show wg0": "interface: wg0\n  listening port: 51820\n",
+            "ip addr show wg0": "inet 10.10.0.1/24 scope global wg0\n",
+            "systemctl is-active wg-quick@wg0": "active\n",
+        }
+    )
+    return ServerWireGuardReadinessService(
+        env={
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS": "true",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_REAL_ADAPTER": "true",
+            "HOBERADIUS_WG_INTERFACE": "wg0",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP": "10.10.0.1",
+            "HOBERADIUS_WG_LISTEN_PORT": "51820",
+            "HOBERADIUS_WG_CONFIG_PATH": "/etc/wireguard/wg0.conf",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_BACKUP_DIR": "/backup/wg",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_ROLLBACK_STRATEGY": "tagged-peer-remove",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_COMMAND_TIMEOUT": "2",
+            "HOBERADIUS_SETUP_WIZARD_SERVER_WG_INTERFACE_ALLOWLIST": "wg0",
+        },
+        runner=runner,
+    )
+
+
 def test_server_peer_dry_run_creates_preview(app):
     peer = _prepared_peer(app)
     with app.app_context():
@@ -110,7 +146,7 @@ def test_server_peer_apply_blocked_by_default_flags(app):
         )
 
     assert result["status"] == "blocked"
-    assert result["code"] == "server_wg_apply_feature_flags_disabled"
+    assert result["code"] == "server_wg_real_apply_flags_disabled"
 
 
 def test_server_peer_apply_blocked_without_public_key(app):
@@ -167,19 +203,10 @@ def test_rollback_requires_exact_generated_tag(app):
 
 
 def test_verify_parses_wg_show_output_and_marks_vpn_verified(app, monkeypatch):
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
     peer = _prepared_peer(app)
-    adapter = MockServerWireGuardWriteAdapter()
     with app.app_context():
-        service = ServerWireGuardPeerApplyService(write_adapter=adapter)
+        service = ServerWireGuardPeerApplyService()
         service.dry_run(tenant_id=1, prepared_peer_id=peer["prepared_peer_id"])
-        applied = service.apply(
-            tenant_id=1,
-            prepared_peer_id=peer["prepared_peer_id"],
-            confirmation=server_peer_confirmation_phrase(peer["prepared_peer_id"]),
-        )
-        assert applied["status"] == "applied"
         verified = service.verify(
             tenant_id=1,
             prepared_peer_id=peer["prepared_peer_id"],
@@ -190,16 +217,18 @@ def test_verify_parses_wg_show_output_and_marks_vpn_verified(app, monkeypatch):
             run_id=peer["run_id"],
         )["router_lifecycle"]
 
-    assert verified["status"] == "success"
+    assert verified["status"] == "verified_handshake"
     assert lifecycle["current_state"] == "vpn_verified"
 
 
 def test_lifecycle_does_not_skip_to_vpn_verified_on_apply(app, monkeypatch):
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
+    _enable_all_flags(monkeypatch)
     peer = _prepared_peer(app)
     with app.app_context():
-        service = ServerWireGuardPeerApplyService(write_adapter=MockServerWireGuardWriteAdapter())
+        service = ServerWireGuardPeerApplyService(
+            write_adapter=MockServerWireGuardWriteAdapter(after_apply_output=_wg_show(VALID_KEY_1, peer["router_vpn_ip"] + "/32",).replace("12 seconds ago", "never")),
+            readiness_service=_readiness(),
+        )
         service.dry_run(tenant_id=1, prepared_peer_id=peer["prepared_peer_id"])
         service.apply(
             tenant_id=1,
@@ -227,9 +256,10 @@ def test_no_plaintext_private_key_leak_in_dry_run(app):
     assert "PRIVATEKEY" not in serialized
 
 
-def test_unsupported_default_adapter_returns_blocked_not_exception(app, monkeypatch):
+def test_default_adapter_remains_blocked_without_real_flag(app, monkeypatch):
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
+    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS", "true")
     peer = _prepared_peer(app)
     with app.app_context():
         service = ServerWireGuardPeerApplyService()
@@ -241,15 +271,20 @@ def test_unsupported_default_adapter_returns_blocked_not_exception(app, monkeypa
         )
 
     assert result["status"] == "blocked"
-    assert result["code"] == "server_apply_adapter_not_configured"
+    assert result["code"] == "server_wg_real_apply_flags_disabled"
 
 
 def test_rollback_with_mock_adapter_returns_peer_to_ready(app, monkeypatch):
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
-    monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
+    _enable_all_flags(monkeypatch)
     peer = _prepared_peer(app)
     with app.app_context():
-        service = ServerWireGuardPeerApplyService(write_adapter=MockServerWireGuardWriteAdapter())
+        service = ServerWireGuardPeerApplyService(
+            write_adapter=MockServerWireGuardWriteAdapter(
+                after_apply_output=_wg_show(VALID_KEY_1, peer["router_vpn_ip"] + "/32",).replace("12 seconds ago", "never"),
+                after_rollback_output="",
+            ),
+            readiness_service=_readiness(),
+        )
         service.dry_run(tenant_id=1, prepared_peer_id=peer["prepared_peer_id"])
         service.apply(
             tenant_id=1,

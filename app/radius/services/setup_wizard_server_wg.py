@@ -16,12 +16,22 @@ from ..db.connection import db, transaction
 from ..db.helpers import row_to_dict
 from .setup_wizard_common import SetupWizardValidationError
 from .setup_wizard_router_lifecycle import RouterLifecycleService
+from .setup_wizard_server_wg_readiness import (
+    SERVER_WG_READINESS_ENV,
+    SERVER_WG_REAL_ADAPTER_ENV,
+    ServerWireGuardReadinessService,
+    SubprocessSafeCommandRunner,
+    build_server_wg_command_runner,
+    mask_wireguard_private_keys,
+)
 
 
 SERVER_WG_APPLY_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY"
 LAB_MODE_ENV = "HOBERADIUS_SETUP_WIZARD_LAB_MODE"
 WG_INTERFACE_ENV = "HOBERADIUS_WG_INTERFACE"
 DEFAULT_WG_INTERFACE = "wg0"
+SERVER_PEER_APPLY_CONFIRMATION = "APPLY SERVER PEER IN LAB"
+SERVER_PEER_ROLLBACK_CONFIRMATION = "ROLLBACK SERVER PEER IN LAB"
 _TRUTHY = {"1", "true", "yes", "on"}
 _PUBLIC_KEY_RE = re.compile(r"^[A-Za-z0-9+/]{43}=$")
 
@@ -59,12 +69,29 @@ def server_wg_lab_apply_enabled() -> bool:
     return lab_mode_enabled() and server_wg_apply_enabled()
 
 
+def server_wg_readiness_enabled() -> bool:
+    return _flag_enabled(SERVER_WG_READINESS_ENV)
+
+
+def server_wg_real_adapter_enabled() -> bool:
+    return _flag_enabled(SERVER_WG_REAL_ADAPTER_ENV)
+
+
+def server_wg_real_apply_enabled() -> bool:
+    return (
+        lab_mode_enabled()
+        and server_wg_apply_enabled()
+        and server_wg_readiness_enabled()
+        and server_wg_real_adapter_enabled()
+    )
+
+
 def server_peer_confirmation_phrase(prepared_peer_id: int) -> str:
-    return f"APPLY SERVER WG PEER {int(prepared_peer_id)}"
+    return SERVER_PEER_APPLY_CONFIRMATION
 
 
 def server_peer_rollback_phrase(prepared_peer_id: int) -> str:
-    return f"ROLLBACK SERVER WG PEER {int(prepared_peer_id)}"
+    return SERVER_PEER_ROLLBACK_CONFIRMATION
 
 
 def _mask_key(value: str) -> str:
@@ -311,23 +338,156 @@ class ServerWireGuardPeerPlanner:
 
 class ServerWireGuardWriteAdapter(Protocol):
     def execute(self, command: str, *, timeout_seconds: float = 3.0) -> dict[str, Any]: ...
+    def capture_backup(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]: ...
+    def inspect(self, *, interface: str) -> dict[str, Any]: ...
+    def execute_apply(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]: ...
+    def execute_rollback(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]: ...
 
 
 class BlockedServerWireGuardWriteAdapter:
     def execute(self, command: str, *, timeout_seconds: float = 3.0) -> dict[str, Any]:
         raise SetupWizardValidationError("server_apply_adapter_not_configured")
 
+    def capture_backup(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        raise SetupWizardValidationError("server_apply_adapter_not_configured")
+
+    def inspect(self, *, interface: str) -> dict[str, Any]:
+        return {"status": "unsupported", "peers": [], "warnings": ["server_apply_adapter_not_configured"]}
+
+    def execute_apply(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        raise SetupWizardValidationError("server_apply_adapter_not_configured")
+
+    def execute_rollback(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        raise SetupWizardValidationError("server_apply_adapter_not_configured")
+
 
 class MockServerWireGuardWriteAdapter:
-    def __init__(self, *, fail_on: str = "") -> None:
-        self.commands: list[str] = []
+    def __init__(
+        self,
+        *,
+        fail_on: str = "",
+        before_output: str = "",
+        after_apply_output: str = "",
+        after_rollback_output: str = "",
+        backup_ok: bool = True,
+    ) -> None:
+        self.commands: list[Any] = []
         self.fail_on = fail_on
+        self.before_output = before_output
+        self.after_apply_output = after_apply_output
+        self.after_rollback_output = after_rollback_output
+        self.backup_ok = backup_ok
+        self._state = "before"
 
     def execute(self, command: str, *, timeout_seconds: float = 3.0) -> dict[str, Any]:
         self.commands.append(command)
         if self.fail_on and self.fail_on in command:
             raise RuntimeError("mock server WG adapter failure")
         return {"ok": True, "command": command}
+
+    def capture_backup(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        if not self.backup_ok:
+            raise SetupWizardValidationError("server_wg_backup_failed")
+        return {
+            "wg_show": mask_wireguard_private_keys(self.before_output),
+            "wg_showconf": "[Interface]\nPrivateKey = ***\n",
+            "captured_at": _now(),
+        }
+
+    def inspect(self, *, interface: str) -> dict[str, Any]:
+        if self._state == "applied":
+            output = self.after_apply_output
+        elif self._state == "rolled_back":
+            output = self.after_rollback_output
+        else:
+            output = self.before_output
+        return {"status": "success", "peers": ServerWireGuardInspector.parse_wg_show(output), "warnings": []}
+
+    def execute_apply(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        args = [
+            "wg",
+            "set",
+            interface,
+            "peer",
+            str(peer.get("router_public_key") or ""),
+            "allowed-ips",
+            str(peer.get("allowed_ips") or ""),
+        ]
+        self.commands.append(args)
+        self._state = "applied"
+        if self.fail_on and self.fail_on in " ".join(args):
+            raise RuntimeError("mock server WG adapter failure")
+        return {"ok": True, "command_args": args}
+
+    def execute_rollback(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        args = [
+            "wg",
+            "set",
+            interface,
+            "peer",
+            str(peer.get("router_public_key") or ""),
+            "remove",
+        ]
+        self.commands.append(args)
+        self._state = "rolled_back"
+        if self.fail_on and self.fail_on in " ".join(args):
+            raise RuntimeError("mock server WG adapter failure")
+        return {"ok": True, "command_args": args}
+
+
+class RealServerWireGuardWriteAdapter:
+    def __init__(self, *, runner: SubprocessSafeCommandRunner | None = None) -> None:
+        built = build_server_wg_command_runner()
+        if runner is None and not isinstance(built, SubprocessSafeCommandRunner):
+            raise SetupWizardValidationError("server_real_adapter_not_enabled")
+        self.runner = runner or built
+
+    def execute(self, command: str, *, timeout_seconds: float = 3.0) -> dict[str, Any]:
+        raise SetupWizardValidationError("server_real_adapter_refuses_shell_string")
+
+    def capture_backup(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        wg_show = self.runner.execute_read_only(f"wg show {interface}")
+        wg_showconf = self.runner.execute_read_only(f"wg showconf {interface}")
+        if not wg_show.get("ok") or not wg_showconf.get("ok"):
+            raise SetupWizardValidationError("server_wg_backup_failed")
+        return {
+            "captured_at": _now(),
+            "wg_show": mask_wireguard_private_keys(str(wg_show.get("stdout") or "")),
+            "wg_showconf": mask_wireguard_private_keys(str(wg_showconf.get("stdout") or "")),
+            "commands": [
+                wg_show.get("command_args") or ["wg", "show", interface],
+                wg_showconf.get("command_args") or ["wg", "showconf", interface],
+            ],
+        }
+
+    def inspect(self, *, interface: str) -> dict[str, Any]:
+        result = self.runner.execute_read_only(f"wg show {interface}")
+        if not result.get("ok"):
+            return {"status": "blocked", "peers": [], "warnings": [result.get("code") or "wg_show_failed"]}
+        return {
+            "status": "success",
+            "peers": ServerWireGuardInspector.parse_wg_show(str(result.get("stdout") or "")),
+            "warnings": [],
+        }
+
+    def execute_apply(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        return self.runner.execute_wireguard_apply(
+            interface=interface,
+            public_key=str(peer.get("router_public_key") or ""),
+            allowed_ips=str(peer.get("allowed_ips") or ""),
+        )
+
+    def execute_rollback(self, *, peer: dict[str, Any], interface: str) -> dict[str, Any]:
+        return self.runner.execute_wireguard_rollback(
+            interface=interface,
+            public_key=str(peer.get("router_public_key") or ""),
+        )
+
+
+def build_server_wg_write_adapter() -> ServerWireGuardWriteAdapter:
+    if not server_wg_real_adapter_enabled():
+        return BlockedServerWireGuardWriteAdapter()
+    return RealServerWireGuardWriteAdapter()
 
 
 class PreparedWireGuardPeerOperationRepo:
@@ -427,12 +587,14 @@ class ServerWireGuardPeerApplyService:
         write_adapter: ServerWireGuardWriteAdapter | None = None,
         lifecycle: RouterLifecycleService | None = None,
         validator: ServerWireGuardSafetyValidator | None = None,
+        readiness_service: ServerWireGuardReadinessService | None = None,
     ) -> None:
         self._planner = planner or ServerWireGuardPeerPlanner()
         self._repo = repo or PreparedWireGuardPeerOperationRepo()
-        self._write_adapter = write_adapter or BlockedServerWireGuardWriteAdapter()
+        self._write_adapter = write_adapter or build_server_wg_write_adapter()
         self._lifecycle = lifecycle or RouterLifecycleService()
         self._validator = validator or ServerWireGuardSafetyValidator()
+        self._readiness = readiness_service or ServerWireGuardReadinessService()
 
     def dry_run(self, *, tenant_id: int, prepared_peer_id: int) -> dict[str, Any]:
         try:
@@ -462,8 +624,8 @@ class ServerWireGuardPeerApplyService:
 
     def apply(self, *, tenant_id: int, prepared_peer_id: int, confirmation: str) -> dict[str, Any]:
         peer = self._planner.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
-        if not server_wg_lab_apply_enabled():
-            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="server_wg_apply_feature_flags_disabled")
+        if not server_wg_real_apply_enabled():
+            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="server_wg_real_apply_flags_disabled")
         if confirmation != server_peer_confirmation_phrase(prepared_peer_id):
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="confirmation_required")
         dry_run = self._repo.latest(
@@ -474,12 +636,50 @@ class ServerWireGuardPeerApplyService:
         )
         if not dry_run:
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="dry_run_required")
+        readiness = self._readiness.evaluate()
+        if readiness.get("status") != "ready":
+            return self._blocked(
+                peer=peer,
+                tenant_id=tenant_id,
+                operation_type="apply",
+                code="server_wg_readiness_not_ready",
+                detail=str(readiness.get("status") or ""),
+            )
+        interface = os.environ.get(WG_INTERFACE_ENV) or DEFAULT_WG_INTERFACE
+        observations = self._write_adapter.inspect(interface=interface)
         try:
-            result = self._write_adapter.execute(str(dry_run["command_preview"]))
+            self._validator.validate_plan(
+                peer=peer,
+                command_preview=str(dry_run["command_preview"]),
+                rollback_preview=str(dry_run["rollback_preview"]),
+                observations=observations,
+            )
+        except SetupWizardValidationError as exc:
+            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code=str(exc))
+        try:
+            backup = self._write_adapter.capture_backup(peer=peer, interface=interface)
+        except SetupWizardValidationError as exc:
+            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code=str(exc))
+        try:
+            result = self._write_adapter.execute_apply(peer=peer, interface=interface)
         except SetupWizardValidationError as exc:
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code=str(exc))
         except Exception as exc:  # pragma: no cover - defensive
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="server_apply_failed", detail=str(exc))
+        after = self._write_adapter.inspect(interface=interface)
+        verify_status, matched_peer = _server_peer_verify_status(peer, after)
+        if verify_status in {"missing_peer", "allowed_ip_mismatch"}:
+            op = self._repo.create(
+                tenant_id=tenant_id,
+                peer=peer,
+                operation_type="apply",
+                status="failed_verification",
+                command_preview=str(dry_run["command_preview"]),
+                rollback_preview=str(dry_run["rollback_preview"]),
+                result_json={"apply_result": result, "backup": backup, "verify_status": verify_status},
+                error_json={"code": verify_status},
+            )
+            return {"status": "failed_verification", "operation": op, "result": result, "verify_status": verify_status}
         now = _now()
         with transaction() as conn:
             conn.execute(
@@ -497,15 +697,30 @@ class ServerWireGuardPeerApplyService:
             status="applied",
             command_preview=str(dry_run["command_preview"]),
             rollback_preview=str(dry_run["rollback_preview"]),
-            result_json=result,
+            result_json={
+                "apply_result": result,
+                "backup": backup,
+                "verify_status": verify_status,
+                "matched_peer": _sanitize_peer_observation(matched_peer),
+            },
             applied_at=now,
         )
-        return {"status": "applied", "operation": op, "result": result}
+        if verify_status == "verified_handshake":
+            try:
+                self._lifecycle.transition(
+                    tenant_id=tenant_id,
+                    registry_id=int(peer["registry_id"]),
+                    to_state="vpn_verified",
+                    reason="server WireGuard peer handshake observed after apply",
+                )
+            except SetupWizardValidationError:
+                pass
+        return {"status": verify_status, "operation": op, "result": result}
 
     def rollback(self, *, tenant_id: int, prepared_peer_id: int, confirmation: str) -> dict[str, Any]:
         peer = self._planner.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
-        if not server_wg_lab_apply_enabled():
-            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="server_wg_apply_feature_flags_disabled")
+        if not server_wg_real_apply_enabled():
+            return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="server_wg_real_apply_flags_disabled")
         if confirmation != server_peer_rollback_phrase(prepared_peer_id):
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="rollback_confirmation_required")
         applied = self._repo.latest(
@@ -521,12 +736,27 @@ class ServerWireGuardPeerApplyService:
             rollback_preview=str(applied["rollback_preview"]),
             tag=tag,
         )
+        interface = os.environ.get(WG_INTERFACE_ENV) or DEFAULT_WG_INTERFACE
         try:
-            result = self._write_adapter.execute(str(applied["rollback_preview"]))
+            result = self._write_adapter.execute_rollback(peer=peer, interface=interface)
         except SetupWizardValidationError as exc:
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code=str(exc))
         except Exception as exc:  # pragma: no cover
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="server_rollback_failed", detail=str(exc))
+        after = self._write_adapter.inspect(interface=interface)
+        verify_status, _matched_peer = _server_peer_verify_status(peer, after)
+        if verify_status != "missing_peer":
+            op = self._repo.create(
+                tenant_id=tenant_id,
+                peer=peer,
+                operation_type="rollback",
+                status="failed_verification",
+                command_preview=str(applied["rollback_preview"]),
+                rollback_preview="",
+                result_json={"rollback_result": result, "verify_status": verify_status},
+                error_json={"code": "server_peer_still_present_after_rollback"},
+            )
+            return {"status": "failed_verification", "operation": op, "result": result, "verify_status": verify_status}
         now = _now()
         with transaction() as conn:
             conn.execute(
@@ -551,23 +781,19 @@ class ServerWireGuardPeerApplyService:
 
     def verify(self, *, tenant_id: int, prepared_peer_id: int, wg_show_output: str = "") -> dict[str, Any]:
         peer = self._planner.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
-        output = wg_show_output or ""
-        observations = ServerWireGuardInspector(wg_show_output=output).inspect()
-        public_key = str(peer.get("router_public_key") or "").strip()
-        allowed_ip = str(peer.get("allowed_ips") or "").strip()
-        matched = None
-        for item in observations.get("peers") or []:
-            if item.get("public_key") == public_key or allowed_ip in str(item.get("allowed_ips") or ""):
-                matched = item
-                break
-        ok = bool(matched and (str(matched.get("latest_handshake") or "").strip() not in {"", "0", "never"}))
+        if wg_show_output:
+            observations = ServerWireGuardInspector(wg_show_output=wg_show_output).inspect()
+        else:
+            observations = self._write_adapter.inspect(interface=os.environ.get(WG_INTERFACE_ENV) or DEFAULT_WG_INTERFACE)
+        verify_status, matched = _server_peer_verify_status(peer, observations)
+        ok = verify_status == "verified_handshake"
         op = self._repo.create(
             tenant_id=tenant_id,
             peer=peer,
             operation_type="verify",
             status="ready" if ok else "blocked",
-            result_json={"matched_peer": _sanitize_peer_observation(matched), "observed": bool(matched)},
-            error_json={} if ok else {"code": "server_peer_handshake_not_observed"},
+            result_json={"matched_peer": _sanitize_peer_observation(matched), "observed": bool(matched), "verify_status": verify_status},
+            error_json={} if ok else {"code": verify_status},
         )
         if ok:
             try:
@@ -580,10 +806,10 @@ class ServerWireGuardPeerApplyService:
             except SetupWizardValidationError:
                 pass
         return {
-            "status": "success" if ok else "blocked",
+            "status": verify_status,
             "operation": op,
             "matched_peer": _sanitize_peer_observation(matched),
-            "diagnostics": [] if ok else ["server_peer_handshake_not_observed"],
+            "diagnostics": [] if ok else [verify_status],
         }
 
     def list_operations(self, *, tenant_id: int, prepared_peer_id: int) -> list[dict[str, Any]]:
@@ -628,3 +854,29 @@ def _sanitize_peer_observation(peer: dict[str, Any] | None) -> dict[str, Any] | 
     if "public_key" in safe:
         safe["public_key"] = _mask_key(str(safe["public_key"]))
     return safe
+
+
+def _server_peer_verify_status(
+    peer: dict[str, Any],
+    observations: dict[str, Any] | None,
+) -> tuple[str, dict[str, Any] | None]:
+    public_key = str(peer.get("router_public_key") or "").strip()
+    allowed_ip = str(peer.get("allowed_ips") or "").strip()
+    public_match: dict[str, Any] | None = None
+    allowed_match: dict[str, Any] | None = None
+    for item in (observations or {}).get("peers") or []:
+        if str(item.get("public_key") or "").strip() == public_key:
+            public_match = item
+        if allowed_ip and allowed_ip in str(item.get("allowed_ips") or ""):
+            allowed_match = item
+    if not public_match:
+        if allowed_match:
+            return "allowed_ip_mismatch", allowed_match
+        return "missing_peer", None
+    matched = public_match
+    if not allowed_match:
+        return "allowed_ip_mismatch", public_match
+    handshake = str(matched.get("latest_handshake") or "").strip().lower()
+    if handshake and handshake not in {"0", "never", "(none)"}:
+        return "verified_handshake", matched
+    return "applied_no_handshake", matched

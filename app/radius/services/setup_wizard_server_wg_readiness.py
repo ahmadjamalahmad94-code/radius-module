@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol, Sequence
 
 
 SERVER_WG_READINESS_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS"
 SERVER_WG_APPLY_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY"
+SERVER_WG_REAL_ADAPTER_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_WG_REAL_ADAPTER"
 LAB_MODE_ENV = "HOBERADIUS_SETUP_WIZARD_LAB_MODE"
 WG_INTERFACE_ENV = "HOBERADIUS_WG_INTERFACE"
 WG_SERVER_IP_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP"
@@ -69,6 +71,7 @@ class CommandSafetyClassifier:
     )
     READ_ONLY_PATTERNS = (
         r"^wg\s+show(?:\s+\S+)?$",
+        r"^wg\s+showconf\s+\S+$",
         r"^ip\s+addr\s+show(?:\s+\S+)?$",
         r"^ip\s+route\s+show(?:\s+.*)?$",
         r"^systemctl\s+is-active\s+\S+$",
@@ -134,9 +137,145 @@ class MockCommandRunner:
             "ok": True,
             "blocked": False,
             "classification": classification.__dict__,
+            "command_args": classification.command.split(" "),
             "stdout": self.outputs.get(classification.command, ""),
             "stderr": "",
         }
+
+
+class SubprocessSafeCommandRunner:
+    """Narrow, list-args-only runner for lab WireGuard server work.
+
+    It is not instantiated by default. Callers must keep it behind the real
+    adapter flag and readiness policy.
+    """
+
+    mode = "subprocess"
+
+    def __init__(
+        self,
+        *,
+        classifier: CommandSafetyClassifier | None = None,
+        timeout_seconds: float = 2.0,
+        max_output_chars: int = 16000,
+        interface_allowlist: Sequence[str] | None = None,
+        run_func: Callable[..., Any] | None = None,
+    ) -> None:
+        self.classifier = classifier or CommandSafetyClassifier()
+        self.timeout_seconds = float(timeout_seconds or 2.0)
+        self.max_output_chars = int(max_output_chars or 16000)
+        self.interface_allowlist = {str(item) for item in (interface_allowlist or []) if str(item)}
+        self._run_func = run_func or subprocess.run
+
+    def execute_read_only(self, command: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
+        classification = self.classifier.classify(command)
+        if not classification.allowed_read_only:
+            return self._blocked(classification, classification.reason)
+        args = classification.command.split(" ")
+        if len(args) >= 3 and args[0] in {"wg", "ip", "systemctl"}:
+            candidate = args[-1].split("@")[-1] if args[0] == "systemctl" else args[-1]
+            if self.interface_allowlist and candidate.startswith("wg") and candidate not in self.interface_allowlist:
+                return self._blocked(classification, "interface_not_allowlisted")
+        return self._run(args, classification=classification, timeout_seconds=timeout_seconds)
+
+    def execute_wireguard_apply(self, *, interface: str, public_key: str, allowed_ips: str) -> dict[str, Any]:
+        args = ["wg", "set", interface, "peer", public_key, "allowed-ips", allowed_ips]
+        self._validate_wireguard_write(args, operation="apply")
+        return self._run(args, classification=CommandClassification(" ".join(args), "write", False, "explicit_apply"))
+
+    def execute_wireguard_rollback(self, *, interface: str, public_key: str) -> dict[str, Any]:
+        args = ["wg", "set", interface, "peer", public_key, "remove"]
+        self._validate_wireguard_write(args, operation="rollback")
+        return self._run(args, classification=CommandClassification(" ".join(args), "write", False, "explicit_rollback"))
+
+    def _validate_wireguard_write(self, args: Sequence[str], *, operation: str) -> None:
+        if operation == "apply":
+            expected = len(args) == 7 and args[0] == "wg" and args[1] == "set" and args[3] == "peer" and args[5] == "allowed-ips"
+        elif operation == "rollback":
+            expected = len(args) == 6 and args[0] == "wg" and args[1] == "set" and args[3] == "peer" and args[5] == "remove"
+        else:
+            expected = False
+        if not expected:
+            raise ValueError("unsupported WireGuard write command")
+        interface = str(args[2])
+        if self.interface_allowlist and interface not in self.interface_allowlist:
+            raise ValueError("WireGuard interface is not allowlisted")
+
+    def _run(
+        self,
+        args: Sequence[str],
+        *,
+        classification: CommandClassification,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any]:
+        timeout = float(timeout_seconds or self.timeout_seconds)
+        try:
+            proc = self._run_func(
+                list(args),
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "ok": False,
+                "blocked": False,
+                "code": "command_timeout",
+                "classification": classification.__dict__,
+                "command_args": list(args),
+                "stdout": "",
+                "stderr": "timeout",
+            }
+        stdout = mask_wireguard_private_keys(str(getattr(proc, "stdout", "") or ""))[: self.max_output_chars]
+        stderr = mask_wireguard_private_keys(str(getattr(proc, "stderr", "") or ""))[: self.max_output_chars]
+        return {
+            "ok": int(getattr(proc, "returncode", 1)) == 0,
+            "blocked": False,
+            "code": "" if int(getattr(proc, "returncode", 1)) == 0 else "command_failed",
+            "classification": classification.__dict__,
+            "command_args": list(args),
+            "stdout": stdout,
+            "stderr": stderr,
+            "returncode": int(getattr(proc, "returncode", 1)),
+        }
+
+    @staticmethod
+    def _blocked(classification: CommandClassification, code: str) -> dict[str, Any]:
+        return {
+            "ok": False,
+            "blocked": True,
+            "code": code,
+            "classification": classification.__dict__,
+            "stdout": "",
+            "stderr": "",
+        }
+
+
+def mask_wireguard_private_keys(text: str) -> str:
+    masked_lines: list[str] = []
+    for line in str(text or "").splitlines():
+        if line.strip().lower().startswith("privatekey"):
+            key, sep, _ = line.partition("=")
+            masked_lines.append(f"{key}{sep} ***")
+        else:
+            masked_lines.append(line)
+    return "\n".join(masked_lines)
+
+
+def real_adapter_flag_enabled(env: Mapping[str, str] | None = None) -> bool:
+    return _flag_enabled(env or os.environ, SERVER_WG_REAL_ADAPTER_ENV)
+
+
+def build_server_wg_command_runner(env: Mapping[str, str] | None = None) -> SafeCommandRunner:
+    source = env or os.environ
+    if not real_adapter_flag_enabled(source):
+        return DisabledCommandRunner()
+    timeout = float(source.get(WG_TIMEOUT_ENV) or 2.0)
+    return SubprocessSafeCommandRunner(
+        timeout_seconds=timeout,
+        interface_allowlist=_csv(str(source.get(WG_ALLOWLIST_ENV) or "")),
+    )
 
 
 class ServerWireGuardReadinessService:
@@ -149,7 +288,7 @@ class ServerWireGuardReadinessService:
     ) -> None:
         self.env = env or os.environ
         self.classifier = classifier or CommandSafetyClassifier()
-        self.runner = runner or DisabledCommandRunner(classifier=self.classifier)
+        self.runner = runner or build_server_wg_command_runner(self.env)
 
     def evaluate(self) -> dict[str, Any]:
         checks: dict[str, dict[str, Any]] = {}
@@ -166,6 +305,13 @@ class ServerWireGuardReadinessService:
             }
 
         interface = str(self.env.get(WG_INTERFACE_ENV) or "").strip()
+        flags = {
+            "lab_mode": _flag_enabled(self.env, LAB_MODE_ENV),
+            "server_wg_apply": _flag_enabled(self.env, SERVER_WG_APPLY_ENV),
+            "server_wg_readiness": _flag_enabled(self.env, SERVER_WG_READINESS_ENV),
+            "server_wg_real_adapter": _flag_enabled(self.env, SERVER_WG_REAL_ADAPTER_ENV),
+        }
+        flags["all_required_for_apply"] = all(flags.values())
         server_ip = str(self.env.get(WG_SERVER_IP_ENV) or "").strip()
         listen_port = str(self.env.get(WG_LISTEN_PORT_ENV) or "").strip()
         config_path = str(self.env.get(WG_CONFIG_PATH_ENV) or "").strip()
@@ -174,12 +320,14 @@ class ServerWireGuardReadinessService:
         timeout = str(self.env.get(WG_TIMEOUT_ENV) or "").strip()
         allowlist = _csv(str(self.env.get(WG_ALLOWLIST_ENV) or ""))
         runner_mode = str(self.env.get(WG_RUNNER_MODE_ENV) or getattr(self.runner, "mode", "disabled"))
+        real_adapter = _flag_enabled(self.env, SERVER_WG_REAL_ADAPTER_ENV)
 
         self._require(checks, diagnostics, "interface_configured", bool(interface), "missing_wg_interface")
         self._require(checks, diagnostics, "server_ip_configured", bool(server_ip), "missing_server_vpn_ip")
         self._require(checks, diagnostics, "listen_port_configured", bool(listen_port), "missing_wg_listen_port")
         checks["config_path"] = self._check("success" if config_path else "warning", config_path or "not_configured")
         checks["runner_mode"] = self._check("success" if runner_mode != "disabled" else "blocked", runner_mode)
+        checks["real_adapter_flag"] = self._check("success" if real_adapter else "blocked", "enabled" if real_adapter else "disabled")
         self._require(checks, diagnostics, "backup_dir_configured", bool(backup_dir), "missing_backup_dir", partial=True)
         self._require(checks, diagnostics, "rollback_strategy_configured", bool(rollback_strategy), "missing_rollback_strategy", partial=True)
         self._require(checks, diagnostics, "timeout_configured", bool(timeout), "missing_command_timeout", partial=True)
@@ -205,6 +353,7 @@ class ServerWireGuardReadinessService:
         return {
             "status": status,
             "configured": status in {"ready", "partial"},
+            "flags": flags,
             "checks": checks,
             "diagnostics": diagnostics,
             "next_action_ar": self._next_action(status),

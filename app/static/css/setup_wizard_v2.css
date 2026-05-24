@@ -572,6 +572,30 @@
   color: #be123c;
 }
 
+.swv2-lab-confirmation {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 16px;
+  color: var(--swv2-text);
+  display: grid;
+  font-weight: 950;
+  gap: 8px;
+  padding: 12px;
+}
+
+.swv2-lab-confirmation input {
+  border: 1px solid var(--swv2-border);
+  border-radius: 12px;
+  direction: ltr;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.swv2-lab-confirmation span {
+  color: #9a3412;
+}
+
 .swv2-script-card {
   background: #0f172a;
   border-radius: 24px;
