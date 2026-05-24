@@ -27,6 +27,11 @@
   let currentRunId = 0;
   let internetPlanSignature = "";
   let vpnPlanGenerated = false;
+  let vpnVerified = false;
+  let selectedServicePath = "";
+  let selectedInterfaces = [];
+  const serviceModes = { hotspot: "smart", broadband: "smart" };
+  const servicePlans = { hotspot: null, broadband: null };
 
   function token() {
     const input = page.querySelector('input[name="_csrf_token"]');
@@ -453,6 +458,216 @@
     }
   }
 
+  function splitList(valueText) {
+    return String(valueText || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function updateServiceCards() {
+    const locked = !vpnVerified;
+    const lockNote = page.querySelector("[data-swv2-service-lock]");
+    if (lockNote) {
+      lockNote.textContent = locked
+        ? "مقفلة حتى ينجح تحقق VPN/RADIUS."
+        : "تم فتح اختيار الخدمات. اختر المسار المناسب.";
+      lockNote.classList.toggle("is-unlocked", !locked);
+    }
+    page.querySelectorAll("[data-service-path]").forEach((card) => {
+      card.classList.toggle("is-locked", locked);
+      card.disabled = locked;
+      card.classList.toggle("is-selected", card.dataset.servicePath === selectedServicePath);
+    });
+  }
+
+  function setServicePath(path) {
+    if (!vpnVerified) {
+      updateServiceCards();
+      return;
+    }
+    selectedServicePath = path || "";
+    const label = page.querySelector("[data-swv2-selected-service]");
+    if (label) {
+      const names = {
+        hotspot: "تم اختيار Hotspot.",
+        broadband: "تم اختيار Broadband / PPPoE.",
+        both: "تم اختيار Hotspot ثم Broadband بالتتابع.",
+        skip: "تم تخطي الخدمات الآن.",
+      };
+      label.textContent = names[selectedServicePath] || "لم يتم اختيار مسار بعد.";
+    }
+    updateServiceCards();
+    if (selectedServicePath === "skip") {
+      const finalIdx = stepNames.indexOf("final-summary");
+      if (finalIdx >= 0) showStep(finalIdx);
+    } else {
+      const pickerIdx = stepNames.indexOf("interface-picker");
+      if (pickerIdx >= 0) showStep(pickerIdx);
+    }
+  }
+
+  function renderInterfaces(candidates) {
+    const container = page.querySelector("[data-swv2-interface-picker]");
+    if (!container) return;
+    const rows = Array.isArray(candidates) && candidates.length
+      ? candidates
+      : [
+          { name: "ether2", kind: "ether", running: true },
+          { name: "ether3", kind: "ether", running: true },
+        ];
+    container.innerHTML = "";
+    rows.forEach((item) => {
+      const button = document.createElement("button");
+      const name = String(item.name || "");
+      const unsafe = item.safe === false || item.excluded === true || ["ether1", "hr-wg"].includes(name);
+      button.type = "button";
+      button.className = `swv2-interface-card ${unsafe ? "is-disabled" : "is-recommended"}`;
+      button.dataset.interfaceName = name;
+      button.disabled = unsafe;
+      button.innerHTML = `<strong>${name}</strong><span>${item.kind || "ether"} · ${item.running === false ? "disabled" : "running"}</span><small>${unsafe ? (item.reason || "مستبعد لحماية WAN/VPN") : "واجهة LAN مرشحة"}</small>`;
+      container.appendChild(button);
+    });
+  }
+
+  async function loadInterfaceCandidates() {
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/interfaces/candidates`, {
+        interfaces: [
+          { name: "ether1", kind: "ether", running: true },
+          { name: "ether2", kind: "ether", running: true },
+          { name: "ether3", kind: "ether", running: true },
+          { name: "hr-wg", kind: "wireguard", running: true },
+        ],
+      });
+      renderInterfaces(data.candidates || []);
+    } catch (_) {
+      renderInterfaces([]);
+    }
+  }
+
+  function selectInterface(name) {
+    if (!name) return;
+    const set = new Set(selectedInterfaces);
+    if (set.has(name)) set.delete(name);
+    else set.add(name);
+    selectedInterfaces = Array.from(set);
+    page.querySelectorAll("[data-interface-name]").forEach((card) => {
+      card.classList.toggle("is-selected", selectedInterfaces.includes(card.dataset.interfaceName));
+    });
+    const text = selectedInterfaces.join(",");
+    ["hotspot_interfaces", "broadband_interfaces"].forEach((fieldName) => {
+      const input = field(fieldName);
+      if (input && text) input.value = text;
+    });
+  }
+
+  function setServiceMode(service, mode) {
+    serviceModes[service] = mode || "smart";
+    page.querySelectorAll(`[data-mode-target="${service}"]`).forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.modeValue === serviceModes[service]);
+    });
+  }
+
+  function buildServicePayload(service) {
+    if (service === "hotspot") {
+      const names = splitList(value("hotspot_names", "hs-bridge,hs-profile,hs-server"));
+      return {
+        selected_interfaces: splitList(value("hotspot_interfaces", selectedInterfaces.join(",") || "ether2")),
+        network_cidr: value("hotspot_network_cidr", "10.77.50.0/24"),
+        pool_range: value("hotspot_pool_range", "10.77.50.20-10.77.50.220"),
+        dns_name: value("hotspot_dns_name", "login.hoberadius.local"),
+        bridge_name: names[0] || "hs-bridge",
+        profile_name: names[1] || "hs-profile",
+        server_name: names[2] || "hs-server",
+        nat_enabled: checked("hotspot_nat_enabled", true),
+      };
+    }
+    return {
+      selected_interfaces: splitList(value("broadband_interfaces", selectedInterfaces.join(",") || "ether2")),
+      service_name: value("broadband_service_name", "hoberadius-pppoe"),
+      local_address: value("broadband_local_address", "10.88.44.1"),
+      remote_pool_cidr: value("broadband_remote_pool_cidr", "10.88.44.0/24"),
+      profile_name: value("broadband_profile_name", "hr-pppoe-profile"),
+      dns_servers: value("broadband_dns", "1.1.1.1,8.8.8.8"),
+      nat_enabled: checked("broadband_nat_enabled", true),
+    };
+  }
+
+  function renderServicePlan(service, plan) {
+    const script = document.getElementById(`${service}-script-code`);
+    const status = page.querySelector(`[data-swv2-service-status="${service}"]`);
+    const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
+    if (script) script.textContent = plan.script_text || "-- no script returned --";
+    if (status) status.textContent = `تم توليد سكربت ${service} من المحرك الحقيقي.`;
+    if (details) {
+      details.textContent = JSON.stringify({
+        computed: plan.computed || {},
+        warnings: plan.warnings || [],
+        generated_objects: plan.generated_objects || [],
+      }, null, 2);
+    }
+  }
+
+  async function generateServiceScript(service) {
+    const status = page.querySelector(`[data-swv2-service-status="${service}"]`);
+    if (status) status.textContent = "جاري توليد السكربت...";
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-${service}-script`, {
+        mode: serviceModes[service] || "smart",
+        payload: buildServicePayload(service),
+        blocked_network_cidrs: ["10.10.0.0/24", "10.20.30.0/24"],
+      });
+      servicePlans[service] = data.plan || {};
+      renderServicePlan(service, servicePlans[service]);
+    } catch (error) {
+      if (status) status.textContent = `فشل توليد السكربت: ${error.message}`;
+    }
+  }
+
+  function renderServiceDiagnostics(service, result, failedMessage) {
+    const target = page.querySelector(`[data-swv2-service-diagnostics="${service}"]`);
+    if (!target) return;
+    const ok = result?.status === "success" || result?.gate_unlocked === true || result?.status === "dry_run_ready";
+    target.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = `swv2-diagnostic-card ${ok ? "is-success" : "is-failed"}`;
+    const title = document.createElement("strong");
+    const body = document.createElement("span");
+    title.textContent = ok ? `تم تجهيز ${service} بنجاح` : failedMessage;
+    body.textContent = ok ? "راجع الملخص والتفاصيل المتقدمة قبل التنفيذ اليدوي." : "راجع التحذيرات أو ألصق مخرجات أوضح للتحقق.";
+    card.append(title, body);
+    target.appendChild(card);
+  }
+
+  async function dryRunService(service) {
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/dry-run/${service}`, {});
+      renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء dry-run");
+      const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
+      if (details) details.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      renderServiceDiagnostics(service, null, `Dry-run محظور: ${error.message}`);
+    }
+  }
+
+  async function verifyService(service) {
+    const output = page.querySelector(`[data-swv2-service-output="${service}"]`);
+    try {
+      const runId = await ensureRun();
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/verify-${service}`, {
+        mode: "pasted_output",
+        output: output ? output.value : "",
+      });
+      renderServiceDiagnostics(service, data, `لم يكتمل تحقق ${service}`);
+    } catch (error) {
+      renderServiceDiagnostics(service, null, `تعذر التحقق: ${error.message}`);
+    }
+  }
+
   function showStep(index) {
     current = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, idx) => {
@@ -473,6 +688,8 @@
       generateInternetScript(false);
     } else if (stepNames[current] === "vpn-script") {
       generateVpnRadiusScript(false);
+    } else if (stepNames[current] === "service-path") {
+      updateServiceCards();
     }
   }
 
@@ -571,6 +788,10 @@
 
   function unlockNextStep(kind) {
     const currentName = kind === "internet" ? "internet-verify" : "vpn-verify";
+    if (kind === "vpn") {
+      vpnVerified = true;
+      updateServiceCards();
+    }
     const idx = stepNames.indexOf(currentName);
     if (idx >= 0 && idx + 1 < stepperItems.length) {
       stepperItems[idx + 1].classList.remove("is-locked");
@@ -611,6 +832,20 @@
       applyServerPeer();
     } else if (target.matches("[data-swv2-server-peer-rollback]")) {
       rollbackServerPeer();
+    } else if (target.matches("[data-service-path]")) {
+      setServicePath(target.dataset.servicePath);
+    } else if (target.matches("[data-swv2-load-interfaces]")) {
+      loadInterfaceCandidates();
+    } else if (target.matches("[data-interface-name]")) {
+      selectInterface(target.dataset.interfaceName);
+    } else if (target.matches("[data-mode-target]")) {
+      setServiceMode(target.dataset.modeTarget, target.dataset.modeValue);
+    } else if (target.matches("[data-swv2-generate-service]")) {
+      generateServiceScript(target.dataset.swv2GenerateService);
+    } else if (target.matches("[data-swv2-service-dry-run]")) {
+      dryRunService(target.dataset.swv2ServiceDryRun);
+    } else if (target.matches("[data-swv2-service-verify]")) {
+      verifyService(target.dataset.swv2ServiceVerify);
     } else if (target.matches("[data-swv2-verify]")) {
       analyzeOutput(target.dataset.swv2Verify);
     } else if (target.matches("[data-swv2-step-target]")) {

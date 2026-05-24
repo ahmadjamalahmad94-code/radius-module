@@ -100,6 +100,106 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Prompt 3 — Complete Setup Wizard V2 Hotspot Broadband Flow
+
+### Commit
+
+Final commit hash is reported in the assistant final response for this prompt. Git commit hashes cannot be embedded inside the same commit without changing the hash.
+
+### What implemented
+
+- Extended Setup Wizard V2 beyond Internet and VPN/RADIUS into a guided services flow.
+- Added a beginner-first service path step:
+  - Hotspot
+  - Broadband / PPPoE
+  - Hotspot + Broadband
+  - Skip for now
+- Added a visual interface picker with safe/unsafe states, WAN/VPN exclusions, and recommended LAN interfaces.
+- Added Hotspot smart/manual flow using the real backend generation endpoint.
+- Added Broadband / PPPoE smart/manual flow using the real backend generation endpoint.
+- Added real script preview cards for Hotspot and Broadband.
+- Added dry-run review buttons that call existing guarded dry-run endpoints.
+- Added pasted-output verification controls that call existing verification endpoints.
+- Kept engineering payloads, plan summaries, and raw details collapsed under advanced details.
+- Added V2 frontend state for selected service path, selected interfaces, service modes, generated plans, dry-run, and verification status.
+- Added route/service integration tests proving scripts come from backend planners, not frontend mocks.
+
+### UX flow added
+
+- After VPN/RADIUS verification, V2 now leads the user to:
+  1. choose the service path,
+  2. choose safe interfaces,
+  3. configure Hotspot or Broadband in Smart/Manual mode,
+  4. generate a real script preview,
+  5. run dry-run review,
+  6. paste verification output,
+  7. reach a calm final summary.
+- The UI remains Arabic RTL, one-step-at-a-time, and avoids showing raw JSON by default.
+- Apply controls were not added for Hotspot/Broadband; dry-run remains visible, and live apply remains outside this customer-facing V2 path.
+
+### Files changed
+
+- `app/templates/radius/setup_wizard_v2.html`
+- `app/static/css/setup_wizard_v2.css`
+- `app/static/js/setup_wizard_v2.js`
+- `tests/test_setup_wizard_v2_hotspot_broadband.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Tests exact results
+
+- `python -m compileall app` passed.
+- `node --check app/static/js/setup_wizard_v2.js` passed.
+- `python -m pytest tests/test_setup_wizard_v2_hotspot_broadband.py -q` passed: 8 passed, 224 warnings in 4.51s.
+- `python -m pytest tests/test_setup_wizard_v2.py -q` passed: 11 passed, 216 warnings in 7.13s.
+- `python -m pytest tests/test_setup_wizard_hotspot_planner.py -q` passed: 6 passed, 220 warnings in 3.12s.
+- `python -m pytest tests/test_setup_wizard_broadband_planner.py -q` passed: 6 passed, 215 warnings in 3.19s.
+- Setup wizard related suite passed:
+  - Command:
+    `python -m pytest tests/test_setup_wizard_foundation.py tests/test_setup_wizard_internet_planner.py tests/test_setup_wizard_vpn_radius_planner.py tests/test_setup_wizard_hotspot_planner.py tests/test_setup_wizard_broadband_planner.py tests/test_setup_wizard_routes.py tests/test_setup_wizard_verification_engine.py tests/test_setup_wizard_operational_waves.py tests/test_setup_wizard_pilot_drill.py tests/test_setup_wizard_lab_mode.py tests/test_setup_wizard_v2.py tests/test_setup_wizard_v2_hotspot_broadband.py tests/test_setup_wizard_router_provisioning.py tests/test_router_lifecycle.py tests/test_router_provisioning_orchestrator.py tests/test_server_wireguard_peer_apply.py tests/test_server_wireguard_readiness.py tests/test_server_wireguard_real_adapter.py tests/test_wireguard_peer_health.py -q`
+  - Result: 177 passed, 14042 warnings in 81.25s.
+- `python -m pytest -q` was attempted and timed out after about 304 seconds. No specific failing test output was returned before timeout.
+- `git diff --check` passed with line-ending warnings only.
+
+### Safety confirmations
+
+- No live MikroTik apply was introduced.
+- No apply route was enabled by default.
+- Backend safety behavior was not changed.
+- Existing planner, verification, dry-run, and guarded operation foundations were reused.
+- No frontend mock script source of truth was introduced.
+- Engineering View remains separate at `/admin/radius/setup-wizard`.
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- Existing RADIUS auth/accounting behavior was not changed.
+
+### Remaining risks
+
+- The interface picker currently depends on existing interface candidates and a safe fallback; richer real-router inventory display can still be polished later.
+- The "Both" service path selects the combined path but does not yet enforce a full automated Hotspot-then-Broadband guided queue beyond exposing both product flows.
+- Verification still depends on pasted output or existing verification probes.
+- Full project pytest still does not complete within the 304 second execution window.
+
+### Full honest notes
+
+- This prompt intentionally stayed in frontend/product-flow integration and did not rebuild Hotspot/Broadband planners.
+- This prompt did not add any MikroTik execution path.
+- This prompt did not remove or weaken the existing Engineering View.
+- Pre-existing unrelated dirty files remain intentionally excluded from staging and commits:
+  - `app/radius/routes/print_templates.py`
+  - `app/radius/seed.py`
+  - `app/radius/services/operations.py`
+  - `app/static/css/cards_batches_view.css`
+  - `app/static/js/cards_batches_view.js`
+  - `app/templates/radius/cards_batches.html`
+  - `app/templates/radius/devices_list.html`
+  - `app/templates/radius/mt_alerts_index.html`
+  - `app/templates/radius/network_policy_list.html`
+  - `app/templates/radius/print_templates.html`
+  - `tests/test_card_renderer.py`
+  - `tests/test_operations_foundation.py`
+  - `tests/test_web_print_templates_ui.py`
+  - `app/templates/radius/_npc_components.html`
+
 ## Prompt 2 — WireGuard peer health engine
 
 ### Commit

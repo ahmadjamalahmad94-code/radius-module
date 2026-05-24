@@ -62,6 +62,26 @@
       <span class="swv2-step-index">7</span>
       <span>تحقق الربط</span>
     </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="service-path">
+      <span class="swv2-step-index">8</span>
+      <span>الخدمات</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="interface-picker">
+      <span class="swv2-step-index">9</span>
+      <span>الواجهات</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="hotspot-flow">
+      <span class="swv2-step-index">10</span>
+      <span>Hotspot</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="broadband-flow">
+      <span class="swv2-step-index">11</span>
+      <span>Broadband</span>
+    </button>
+    <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="final-summary">
+      <span class="swv2-step-index">12</span>
+      <span>الملخص</span>
+    </button>
   </nav>
 
   <section class="swv2-shell" aria-live="polite">
@@ -411,6 +431,189 @@
           <i class="fa-solid fa-party-horn"></i>
           <strong>تم ربط الراوتر بنجاح</strong>
           <span>يمكنك متابعة إعداد Hotspot أو Broadband في الموجة التالية.</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="service-path" data-swv2-requires="vpn-verified">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">اختيار الخدمات</span>
+        <h2>اختر ما تريد برمجته</h2>
+        <p>بعد نجاح ربط VPN/RADIUS اختر خدمة واحدة أو جهز الاثنين بالتتابع. هذه المرحلة تولد سكربتات ومعاينات فقط ولا تطبق أي شيء على MikroTik.</p>
+        <div class="swv2-lock-note" data-swv2-service-lock>مقفلة حتى ينجح تحقق VPN/RADIUS.</div>
+        <div class="swv2-service-grid" data-swv2-service-path>
+          <button type="button" class="swv2-service-card is-locked" data-service-path="hotspot" data-locked-until="vpn-radius">
+            <i class="fa-solid fa-wifi"></i>
+            <strong>Hotspot</strong>
+            <span>بوابة تسجيل دخول لكروت الإنترنت المؤقتة.</span>
+            <small>موصى به للكافيهات والفنادق ومناطق الواي فاي.</small>
+          </button>
+          <button type="button" class="swv2-service-card is-locked" data-service-path="broadband" data-locked-until="vpn-radius">
+            <i class="fa-solid fa-ethernet"></i>
+            <strong>Broadband / PPPoE</strong>
+            <span>خدمة مستخدمين عبر PPPoE مع RADIUS.</span>
+            <small>موصى به لشبكات ISP والسلكية.</small>
+          </button>
+          <button type="button" class="swv2-service-card is-locked" data-service-path="both" data-locked-until="vpn-radius">
+            <i class="fa-solid fa-layer-group"></i>
+            <strong>Hotspot + Broadband</strong>
+            <span>تجهيز Hotspot ثم Broadband خطوة بخطوة.</span>
+            <small>كل خدمة تبقى منفصلة ولها dry-run خاص.</small>
+          </button>
+          <button type="button" class="swv2-service-card is-locked" data-service-path="skip" data-locked-until="vpn-radius">
+            <i class="fa-solid fa-forward"></i>
+            <strong>تخطي الآن</strong>
+            <span>انتقل للملخص بدون تجهيز خدمات إضافية.</span>
+            <small>يمكن الرجوع لاحقًا من الوضع الهندسي.</small>
+          </button>
+        </div>
+        <div class="swv2-selected-path" data-swv2-selected-service>لم يتم اختيار مسار بعد.</div>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="interface-picker">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">اختيار الواجهات</span>
+        <h2>اختر منافذ الشبكة الآمنة للخدمة</h2>
+        <p>سنحاول استبعاد WAN وواجهة VPN بصريًا. إذا لم تتوفر snapshot من الراوتر يمكنك استخدام القائمة اليدوية المؤقتة.</p>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-interfaces>عرض الواجهات المقترحة</button>
+        </div>
+        <div class="swv2-interface-grid" data-swv2-interface-picker>
+          <button type="button" class="swv2-interface-card is-disabled" data-interface-name="ether1" disabled>
+            <strong>ether1</strong>
+            <span>WAN</span>
+            <small>مستبعد: واجهة الإنترنت</small>
+          </button>
+          <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether2">
+            <strong>ether2</strong>
+            <span>LAN</span>
+            <small>موصى به</small>
+          </button>
+          <button type="button" class="swv2-interface-card is-disabled" data-interface-name="hr-wg" disabled>
+            <strong>hr-wg</strong>
+            <span>VPN</span>
+            <small>مستبعد: نفق الإدارة</small>
+          </button>
+        </div>
+        <details class="swv2-advanced">
+          <summary>تجاوز يدوي متقدم</summary>
+          <p>استخدم هذا فقط إذا كنت متأكدًا أن الواجهة ليست WAN ولا VPN. الاختيار الخاطئ قد يقطع إدارة الراوتر.</p>
+          <input type="text" data-swv2-manual-interfaces placeholder="ether2,ether3">
+        </details>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="hotspot-flow">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">Hotspot</span>
+        <h2>تجهيز Hotspot بمعاينة آمنة</h2>
+        <p>اختر الوضع الذكي أو اليدوي، ثم ولّد السكربت من المحرك الحقيقي. التفاصيل الهندسية مخفية حتى تحتاجها.</p>
+        <div class="swv2-mode-toggle" data-swv2-mode-toggle="hotspot">
+          <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">Smart</button>
+          <button type="button" data-mode-target="hotspot" data-mode-value="manual">Manual</button>
+        </div>
+        <div class="swv2-safe-proposal" data-swv2-hotspot-proposal>
+          <strong>مقترح آمن</strong>
+          <span>سيتم اقتراح bridge و subnet و pool بعيدًا عن WAN/VPN قدر الإمكان.</span>
+        </div>
+        <form class="swv2-form" data-swv2-service-form="hotspot">
+          <label>Interfaces
+            <input type="text" name="hotspot_interfaces" value="ether2" placeholder="ether2,ether3">
+          </label>
+          <label>Network CIDR
+            <input type="text" name="hotspot_network_cidr" value="10.77.50.0/24">
+          </label>
+          <label>Pool range
+            <input type="text" name="hotspot_pool_range" value="10.77.50.20-10.77.50.220">
+          </label>
+          <label>DNS name
+            <input type="text" name="hotspot_dns_name" value="login.hoberadius.local">
+          </label>
+          <label>Bridge / profile / server
+            <input type="text" name="hotspot_names" value="hs-bridge,hs-profile,hs-server">
+          </label>
+          <label><input type="checkbox" name="hotspot_nat_enabled" checked> NAT scoped to hotspot subnet</label>
+        </form>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت Hotspot</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="hotspot">تحقق</button>
+        </div>
+        <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات Hotspot print أو تحقق RADIUS هنا"></textarea>
+        <div class="swv2-script-card">
+          <div><strong>معاينة سكربت Hotspot</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span></div>
+          <pre id="hotspot-script-code">-- hotspot script not generated --</pre>
+        </div>
+        <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
+        <details class="swv2-advanced">
+          <summary>تفاصيل Hotspot الهندسية</summary>
+          <pre data-swv2-service-json="hotspot">{}</pre>
+        </details>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="broadband-flow">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">Broadband / PPPoE</span>
+        <h2>تجهيز PPPoE بمعاينة آمنة</h2>
+        <p>سيتم توليد profile و pool و PPPoE server مع NAT scoped على pool فقط. لا يوجد تطبيق مباشر.</p>
+        <div class="swv2-mode-toggle" data-swv2-mode-toggle="broadband">
+          <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">Smart</button>
+          <button type="button" data-mode-target="broadband" data-mode-value="manual">Manual</button>
+        </div>
+        <div class="swv2-safe-proposal" data-swv2-broadband-proposal>
+          <strong>مقترح آمن</strong>
+          <span>سيتم اختيار PPPoE profile و pool بعيد عن WAN/VPN/Hotspot.</span>
+        </div>
+        <form class="swv2-form" data-swv2-service-form="broadband">
+          <label>Interfaces
+            <input type="text" name="broadband_interfaces" value="ether2" placeholder="ether2,ether3">
+          </label>
+          <label>Service name
+            <input type="text" name="broadband_service_name" value="hoberadius-pppoe">
+          </label>
+          <label>Local address
+            <input type="text" name="broadband_local_address" value="10.88.44.1">
+          </label>
+          <label>Remote pool CIDR
+            <input type="text" name="broadband_remote_pool_cidr" value="10.88.44.0/24">
+          </label>
+          <label>Profile name
+            <input type="text" name="broadband_profile_name" value="hr-pppoe-profile">
+          </label>
+          <label>DNS
+            <input type="text" name="broadband_dns" value="1.1.1.1,8.8.8.8">
+          </label>
+          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT scoped to broadband pool</label>
+        </form>
+        <div class="swv2-action-row">
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">توليد سكربت Broadband</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">Dry-run</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">تحقق</button>
+        </div>
+        <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات PPPoE أو تحقق RADIUS هنا"></textarea>
+        <div class="swv2-script-card">
+          <div><strong>معاينة سكربت Broadband</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span></div>
+          <pre id="broadband-script-code">-- broadband script not generated --</pre>
+        </div>
+        <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
+        <details class="swv2-advanced">
+          <summary>تفاصيل Broadband الهندسية</summary>
+          <pre data-swv2-service-json="broadband">{}</pre>
+        </details>
+      </div>
+    </article>
+
+    <article class="swv2-step" data-swv2-step="final-summary">
+      <div class="swv2-step-card">
+        <span class="swv2-eyebrow">الملخص</span>
+        <h2>جاهز للمراجعة النهائية</h2>
+        <p>تم تجهيز الخطوات المختارة كمعاينات وسكربتات آمنة. أي تطبيق مباشر يبقى محظورًا إلا من مسارات المختبر المحروسة.</p>
+        <div class="swv2-success-state">
+          <i class="fa-solid fa-circle-check"></i>
+          <strong data-swv2-final-title>تم تجهيز مسار الإعداد</strong>
+          <span data-swv2-final-text>راجع السكربتات والـ dry-run قبل أي تنفيذ يدوي.</span>
         </div>
       </div>
     </article>

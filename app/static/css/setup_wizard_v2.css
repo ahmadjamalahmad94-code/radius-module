@@ -622,6 +622,125 @@
   color: #be123c;
 }
 
+.swv2-service-grid,
+.swv2-interface-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.swv2-service-card,
+.swv2-interface-card {
+  background: #fff;
+  border: 1px solid var(--swv2-border);
+  border-radius: 20px;
+  color: var(--swv2-text);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  padding: 18px;
+  text-align: start;
+  transition: .18s ease;
+}
+
+.swv2-service-card:hover,
+.swv2-interface-card:hover,
+.swv2-service-card.is-selected,
+.swv2-interface-card.is-selected {
+  border-color: rgba(109, 77, 252, .55);
+  box-shadow: 0 18px 40px rgba(20, 20, 60, .08);
+  transform: translateY(-1px);
+}
+
+.swv2-service-card i {
+  align-items: center;
+  background: var(--swv2-primary-soft);
+  border-radius: 14px;
+  color: var(--swv2-primary);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.swv2-service-card span,
+.swv2-interface-card span,
+.swv2-service-card small,
+.swv2-interface-card small {
+  color: var(--swv2-muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.6;
+}
+
+.swv2-service-card.is-locked {
+  opacity: .62;
+}
+
+.swv2-interface-card.is-disabled {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  cursor: not-allowed;
+  opacity: .72;
+}
+
+.swv2-interface-card.is-recommended small::after {
+  background: #dcfce7;
+  border-radius: 999px;
+  color: #15803d;
+  content: "موصى به";
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 2px 8px;
+}
+
+.swv2-lock-note,
+.swv2-selected-path,
+.swv2-safe-proposal {
+  background: #f8fafc;
+  border: 1px solid var(--swv2-border);
+  border-radius: 16px;
+  color: var(--swv2-muted);
+  font-size: 13px;
+  font-weight: 850;
+  margin-top: 14px;
+  padding: 12px 14px;
+}
+
+.swv2-lock-note.is-unlocked {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.swv2-mode-toggle {
+  background: #f8fafc;
+  border: 1px solid var(--swv2-border);
+  border-radius: 16px;
+  display: inline-flex;
+  gap: 6px;
+  margin: 16px 0;
+  padding: 5px;
+}
+
+.swv2-mode-toggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: var(--swv2-muted);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 9px 16px;
+}
+
+.swv2-mode-toggle button.is-selected {
+  background: #fff;
+  color: var(--swv2-primary);
+  box-shadow: 0 8px 22px rgba(20, 20, 60, .08);
+}
+
 .swv2-lab-confirmation {
   background: #fff7ed;
   border: 1px solid #fed7aa;
@@ -845,6 +964,11 @@
   .swv2-peer-health-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .swv2-service-grid,
+  .swv2-interface-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -863,6 +987,11 @@
   }
 
   .swv2-peer-health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .swv2-service-grid,
+  .swv2-interface-grid {
     grid-template-columns: 1fr;
   }
 
