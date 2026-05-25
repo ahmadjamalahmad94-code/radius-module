@@ -1,0 +1,27 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Security Events — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
+{% block page_title %}Security Events{% endblock %}
+{% block page_sub %}<span class="sub">Security-focused business events and open fraud flags.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Security Events", subtitle="Failed logins, permission events, and open flags are grouped here for review.", icon="lock") }}
+{% include "radius/events_nav.html" %}
+
+{% call hub.section("Security events", icon="lock", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="security-events-table">
+      <thead><tr><th>ID</th><th>Severity</th><th>Key</th><th>Target</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for event in events %}
+          <tr><td>#{{ event.id }}</td><td>{{ event.severity }}</td><td>{{ event.event_key }}</td><td>{{ event.target_type }} #{{ event.target_id or '' }}</td><td>{{ event.message }}</td></tr>
+        {% else %}
+          <tr><td colspan="5">No security events yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

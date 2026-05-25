@@ -1,0 +1,37 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Risk Center — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
+{% block page_title %}Risk Center{% endblock %}
+{% block page_sub %}<span class="sub">Fraud flags and risk-rule detection without deleting source events.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Risk Center", subtitle="Run deterministic checks for wallet, discount, loan, login, and ledger mismatch risk.", icon="shield-halved") }}
+{% include "radius/events_nav.html" %}
+
+{% call hub.section("Risk scan", icon="magnifying-glass-chart") %}
+  <form method="post" data-testid="risk-scan-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <button class="hub-btn hub-btn--primary" type="submit">Run risk rules</button>
+  </form>
+  {% if result %}
+    <p data-testid="risk-scan-result">Created {{ result.flags_created }} flag(s).</p>
+  {% endif %}
+{% endcall %}
+
+{% call hub.section("Fraud flags", icon="flag", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="fraud-flags-table">
+      <thead><tr><th>ID</th><th>Key</th><th>Severity</th><th>Score</th><th>Entity</th><th>Summary</th></tr></thead>
+      <tbody>
+        {% for flag in flags %}
+          <tr><td>#{{ flag.id }}</td><td>{{ flag.flag_key }}</td><td>{{ flag.severity }}</td><td>{{ flag.risk_score }}</td><td>{{ flag.entity_type }} #{{ flag.entity_id or '' }}</td><td>{{ flag.summary }}</td></tr>
+        {% else %}
+          <tr><td colspan="6">No fraud flags yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

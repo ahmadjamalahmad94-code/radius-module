@@ -1,0 +1,53 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Events Center — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
+{% block page_title %}Events Center{% endblock %}
+{% block page_sub %}<span class="sub">Append-only business events with filters, correlation IDs, and entity timelines.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Events Center", subtitle="Operational events are listed here for investigation. This page has no delete action.", icon="timeline") }}
+<div class="hub-kpi-grid" data-testid="events-summary">
+  {{ hub.kpi("Events", summary.events, icon="list") }}
+  {{ hub.kpi("Open flags", summary.open_flags, icon="flag", variant="amber") }}
+  {{ hub.kpi("Critical", summary.critical_events, icon="triangle-exclamation", variant="red") }}
+</div>
+{% include "radius/events_nav.html" %}
+
+{% call hub.section("Filters", icon="filter") %}
+  <form method="get" class="hub-form-grid" data-testid="events-filters">
+    <label>Category <input name="category" value="{{ request.args.get('category', '') }}"></label>
+    <label>Severity <input name="severity" value="{{ request.args.get('severity', '') }}"></label>
+    <label>Actor type <input name="actor_type" value="{{ request.args.get('actor_type', '') }}"></label>
+    <label>Actor ID <input name="actor_id" type="number" value="{{ request.args.get('actor_id', '') }}"></label>
+    <label>Target type <input name="target_type" value="{{ request.args.get('target_type', '') }}"></label>
+    <label>Target ID <input name="target_id" type="number" value="{{ request.args.get('target_id', '') }}"></label>
+    <label>Correlation ID <input name="correlation_id" value="{{ request.args.get('correlation_id', '') }}"></label>
+    <button class="hub-btn hub-btn--primary" type="submit">Filter</button>
+  </form>
+{% endcall %}
+
+{% call hub.section("Event list", icon="list", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="events-table">
+      <thead><tr><th>ID</th><th>Category</th><th>Severity</th><th>Key</th><th>Actor</th><th>Target</th><th>Correlation</th></tr></thead>
+      <tbody>
+        {% for event in events %}
+          <tr>
+            <td><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
+            <td>{{ event.category }}</td>
+            <td>{{ event.severity }}</td>
+            <td>{{ event.event_key }}</td>
+            <td>{{ event.actor_type }} #{{ event.actor_id or '' }}</td>
+            <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
+            <td>{{ event.correlation_id }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7">No events match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}
