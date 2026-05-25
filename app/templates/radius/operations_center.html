@@ -1,0 +1,61 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Operations Center — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
+{% block page_title %}Operations Center{% endblock %}
+{% block page_sub %}<span class="sub">Online users, NAS/RADIUS health, accounting signals, and safe emergency placeholders.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Operations Center",
+  subtitle="This view reads operational state and exposes dry-run actions only. Unsafe emergency actions remain blocked placeholders.",
+  icon="gauge-high",
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> Speed Control</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="operations-summary">
+  {{ hub.kpi("Online users", snapshot.online_users, icon="wifi", variant="green") }}
+  {{ hub.kpi("NAS devices", snapshot.nas_health.total, icon="server", variant="blue") }}
+  {{ hub.kpi("Enabled NAS", snapshot.nas_health.enabled, icon="circle-check") }}
+  {{ hub.kpi("Radius failures", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("Active sessions", icon="wifi", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="active-sessions-table">
+        <thead><tr><th>User</th><th>NAS</th><th>IP</th><th>MAC</th></tr></thead>
+        <tbody>
+          {% for session in snapshot.active_sessions %}
+            <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>
+          {% else %}
+            <tr><td colspan="4">No active sessions in radacct.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("Health signals", icon="heart-pulse") %}
+    <ul class="hub-list" data-testid="operations-health">
+      <li>RADIUS DB path: {{ snapshot.radius_health.status }}</li>
+      <li>API-configured devices: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
+      <li>Live probe: {{ snapshot.vpn_api_health.live_probe }}</li>
+    </ul>
+  {% endcall %}
+</div>
+
+{% call hub.section("Emergency action placeholders", icon="shield-halved", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="emergency-placeholders">
+      <thead><tr><th>Action</th><th>Status</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for action in snapshot.emergency_actions %}
+          <tr><td>{{ action.key }}</td><td>{{ action.status }}</td><td>{{ action.reason }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}
