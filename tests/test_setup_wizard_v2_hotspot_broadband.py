@@ -85,6 +85,8 @@ def test_interface_picker_markup_and_manual_override_exist(app):
     assert 'data-swv2-interface-picker' in html
     assert 'data-swv2-load-interfaces' in html
     assert 'data-swv2-manual-interfaces' in html
+    assert 'data-swv2-interface-summary' in html
+    assert 'data-interface-name="ether8"' in html
     assert '<details class="swv2-advanced">' in html
 
 

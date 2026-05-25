@@ -1206,14 +1206,30 @@ class SetupWizardService:
         source = interfaces
         if source is None and self._interface_discovery is not None:
             source = self._interface_discovery.list_interfaces(tenant_id=tenant_id, run_id=run_id)
+        if not source:
+            snapshot = self._inventory_service.latest_snapshot(tenant_id=tenant_id, run_id=run_id)
+            if snapshot:
+                source = _interfaces_from_snapshot(snapshot)
+        if not source:
+            source = _default_router_interfaces()
         source = source or []
         blocked = {str(run.get("selected_wan_interface") or "").strip(), "hr-wg"}
         blocked = {x for x in blocked if x}
         candidates: list[dict[str, Any]] = []
         for item in source:
-            if item.name in blocked:
-                continue
-            candidates.append({"name": item.name, "kind": item.kind, "running": bool(item.running)})
+            is_blocked = item.name in blocked
+            reason = "واجهة WAN/VPN مستبعدة للحماية" if is_blocked else "واجهة LAN مرشحة للخدمة"
+            candidates.append(
+                {
+                    "name": item.name,
+                    "kind": item.kind,
+                    "running": bool(item.running),
+                    "safe": not is_blocked,
+                    "excluded": is_blocked,
+                    "reason": reason,
+                    "reason_ar": reason,
+                }
+            )
         return candidates
 
     def generate_hotspot_script(
@@ -1430,3 +1446,26 @@ class SetupWizardService:
 
 def get_setup_wizard_service() -> SetupWizardService:
     return SetupWizardService()
+
+
+def _default_router_interfaces() -> list[InterfaceInfo]:
+    return [InterfaceInfo(name=f"ether{i}", kind="ether", running=True) for i in range(1, 9)] + [
+        InterfaceInfo(name="hr-wg", kind="wireguard", running=True)
+    ]
+
+
+def _interfaces_from_snapshot(snapshot: dict[str, Any]) -> list[InterfaceInfo]:
+    rows: list[InterfaceInfo] = []
+    seen: set[str] = set()
+    for item in list(snapshot.get("interfaces") or []) + list(snapshot.get("wireguard") or []):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or item.get("interface") or item.get("default-name") or "").strip()
+        if not name or name in seen:
+            continue
+        kind = str(item.get("kind") or item.get("type") or item.get("actual-interface") or "ether").strip() or "ether"
+        running_value = item.get("running", item.get("disabled") is not True)
+        running = str(running_value).lower() not in {"false", "no", "0", "disabled", "true-disabled"}
+        rows.append(InterfaceInfo(name=name, kind=kind, running=running))
+        seen.add(name)
+    return rows

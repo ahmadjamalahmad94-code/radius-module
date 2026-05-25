@@ -118,10 +118,36 @@ def test_interface_discovery_contract_and_service_gate(app):
         svc.mark_verified(tenant_id=1, run_id=run_id, step_key=STEP_INTERNET_VERIFICATION)
         svc.mark_verified(tenant_id=1, run_id=run_id, step_key=STEP_VPN_RADIUS_VERIFICATION)
         candidates = svc.get_interface_candidates(tenant_id=1, run_id=run_id)
-        names = {x["name"] for x in candidates}
-        assert "ether1" not in names
-        assert "hr-wg" not in names
-        assert "ether2" in names
+        by_name = {x["name"]: x for x in candidates}
+        assert by_name["ether1"]["safe"] is False
+        assert by_name["ether1"]["excluded"] is True
+        assert by_name["hr-wg"]["safe"] is False
+        assert by_name["hr-wg"]["excluded"] is True
+        assert by_name["ether2"]["safe"] is True
+
+
+def test_interface_candidates_fallback_lists_common_eight_port_router(app):
+    with app.app_context():
+        svc = SetupWizardService()
+        run = svc.create_run(tenant_id=1, actor="qa")
+        run_id = run["id"]
+        svc.set_internet_source(
+            tenant_id=1,
+            run_id=run_id,
+            source_type="dhcp",
+            selected_wan_interface="ether1",
+            input_json={"interface": "ether1"},
+        )
+        svc.mark_verified(tenant_id=1, run_id=run_id, step_key=STEP_INTERNET_VERIFICATION)
+        svc.mark_verified(tenant_id=1, run_id=run_id, step_key=STEP_VPN_RADIUS_VERIFICATION)
+
+        candidates = svc.get_interface_candidates(tenant_id=1, run_id=run_id)
+        by_name = {x["name"]: x for x in candidates}
+
+        for idx in range(1, 9):
+            assert f"ether{idx}" in by_name
+        assert by_name["ether1"]["safe"] is False
+        assert by_name["ether8"]["safe"] is True
 
 
 def test_generate_hotspot_script_updates_step_generated(app):

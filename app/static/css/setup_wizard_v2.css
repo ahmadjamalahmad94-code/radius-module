@@ -821,6 +821,18 @@
   margin-top: 18px;
 }
 
+.swv2-selection-summary {
+  background: rgba(109, 77, 252, .08);
+  border: 1px solid rgba(109, 77, 252, .16);
+  border-radius: 16px;
+  color: #4c3bb8;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.7;
+  margin-top: 14px;
+  padding: 12px 14px;
+}
+
 .swv2-service-card,
 .swv2-interface-card {
   background: #fff;
@@ -843,6 +855,24 @@
   border-color: rgba(109, 77, 252, .55);
   box-shadow: 0 18px 40px rgba(20, 20, 60, .08);
   transform: translateY(-1px);
+}
+
+.swv2-interface-card.is-selected {
+  background: linear-gradient(135deg, #f7f4ff, #ffffff);
+  border-color: rgba(109, 77, 252, .8);
+  box-shadow: 0 18px 40px rgba(109, 77, 252, .14);
+  outline: 3px solid rgba(109, 77, 252, .12);
+}
+
+.swv2-interface-card.is-selected strong::after {
+  background: #6d4dfc;
+  border-radius: 999px;
+  color: #fff;
+  content: "مختار";
+  display: inline-block;
+  font-size: 11px;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
 }
 
 .swv2-service-card i {

@@ -657,37 +657,51 @@
   function renderInterfaces(candidates) {
     const container = page.querySelector("[data-swv2-interface-picker]");
     if (!container) return;
-    const rows = Array.isArray(candidates) && candidates.length
-      ? candidates
-      : [
-          { name: "ether2", kind: "ether", running: true },
-          { name: "ether3", kind: "ether", running: true },
-        ];
+    const rows = normalizeInterfaceRows(Array.isArray(candidates) && candidates.length ? candidates : defaultInterfaceRows());
     container.innerHTML = "";
     rows.forEach((item) => {
       const button = document.createElement("button");
       const name = String(item.name || "");
       const unsafe = item.safe === false || item.excluded === true || ["ether1", "hr-wg"].includes(name);
       button.type = "button";
-      button.className = `swv2-interface-card ${unsafe ? "is-disabled" : "is-recommended"}`;
+      button.className = `swv2-interface-card ${unsafe ? "is-disabled" : "is-recommended"} ${selectedInterfaces.includes(name) ? "is-selected" : ""}`;
       button.dataset.interfaceName = name;
       button.disabled = unsafe;
-      button.innerHTML = `<strong>${name}</strong><span>${item.kind || "ether"} · ${item.running === false ? "disabled" : "running"}</span><small>${unsafe ? (item.reason || "مستبعد لحماية WAN/VPN") : "واجهة LAN مرشحة"}</small>`;
+      const state = item.running === false ? "غير نشط" : "متصل";
+      const reason = unsafe ? (item.reason_ar || item.reason || "مستبعد لحماية WAN/VPN") : (item.reason_ar || item.reason || "واجهة LAN مرشحة للخدمة");
+      button.innerHTML = `<strong>${name}</strong><span>${item.kind || "ether"} · ${state}</span><small>${reason}</small>`;
       container.appendChild(button);
+    });
+    updateInterfaceSummary();
+  }
+
+  function defaultInterfaceRows() {
+    const rows = Array.from({ length: 8 }, (_, idx) => ({
+      name: `ether${idx + 1}`,
+      kind: "ether",
+      running: true,
+      safe: idx !== 0,
+      excluded: idx === 0,
+      reason_ar: idx === 0 ? "مستبعد عادة لأنه منفذ الإنترنت WAN" : "واجهة LAN مرشحة للخدمة",
+    }));
+    rows.push({ name: "hr-wg", kind: "wireguard", running: true, safe: false, excluded: true, reason_ar: "مستبعد لأنه نفق الإدارة VPN" });
+    return rows;
+  }
+
+  function normalizeInterfaceRows(rows) {
+    const seen = new Set();
+    return rows.filter((item) => {
+      const name = String(item && item.name || "").trim();
+      if (!name || seen.has(name)) return false;
+      seen.add(name);
+      return true;
     });
   }
 
   async function loadInterfaceCandidates() {
     try {
       const runId = await ensureRun();
-      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/interfaces/candidates`, {
-        interfaces: [
-          { name: "ether1", kind: "ether", running: true },
-          { name: "ether2", kind: "ether", running: true },
-          { name: "ether3", kind: "ether", running: true },
-          { name: "hr-wg", kind: "wireguard", running: true },
-        ],
-      });
+      const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/interfaces/candidates`, {});
       renderInterfaces(data.candidates || []);
     } catch (_) {
       renderInterfaces([]);
@@ -708,6 +722,17 @@
       const input = field(fieldName);
       if (input && text) input.value = text;
     });
+    updateInterfaceSummary();
+  }
+
+  function updateInterfaceSummary() {
+    const summary = page.querySelector("[data-swv2-interface-summary]");
+    if (!summary) return;
+    if (!selectedInterfaces.length) {
+      summary.textContent = "اختر منفذًا واحدًا أو أكثر. يمكنك تحديد عدة منافذ LAN للخدمة نفسها.";
+      return;
+    }
+    summary.textContent = `تم اختيار ${selectedInterfaces.length} منفذ: ${selectedInterfaces.join(", ")}`;
   }
 
   function setServiceMode(service, mode) {
