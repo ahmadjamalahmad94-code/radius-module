@@ -186,12 +186,13 @@ def test_backup_failure_blocks_apply(app, monkeypatch):
     assert result["code"] == "server_wg_backup_failed"
 
 
-def test_duplicate_public_key_blocks_apply(app, monkeypatch):
+def test_existing_public_key_updates_allowed_ip(app, monkeypatch):
     _enable_all(monkeypatch)
     peer = _prepared_peer(app)
     duplicate = _wg_show(VALID_KEY_1, "10.10.0.99/32")
+    after = _wg_show(VALID_KEY_1, peer["allowed_ips"])
     with app.app_context():
-        adapter = MockServerWireGuardWriteAdapter(before_output=duplicate)
+        adapter = MockServerWireGuardWriteAdapter(before_output=duplicate, after_apply_output=after)
         service = ServerWireGuardPeerApplyService(write_adapter=adapter, readiness_service=_readiness())
         service.dry_run(tenant_id=1, prepared_peer_id=peer["prepared_peer_id"])
         result = service.apply(
@@ -200,8 +201,8 @@ def test_duplicate_public_key_blocks_apply(app, monkeypatch):
             confirmation=server_peer_confirmation_phrase(peer["prepared_peer_id"]),
         )
 
-    assert result["status"] == "blocked"
-    assert "duplicate WireGuard public key" in result["code"]
+    assert result["status"] == "verified_handshake"
+    assert adapter.commands[-1] == ["wg", "set", "wg0", "peer", VALID_KEY_1, "allowed-ips", peer["allowed_ips"]]
 
 
 def test_duplicate_allowed_ip_blocks_apply(app, monkeypatch):

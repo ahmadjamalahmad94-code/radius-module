@@ -252,9 +252,13 @@ class ServerWireGuardSafetyValidator:
         if "remove" in rollback_preview.lower() and tag not in rollback_preview:
             raise SetupWizardValidationError("rollback must target the generated tag only")
         for existing in (observations or {}).get("peers") or []:
-            if str(existing.get("public_key") or "").strip() == public_key:
-                raise SetupWizardValidationError("duplicate WireGuard public key already exists on server")
             existing_ips = str(existing.get("allowed_ips") or existing.get("allowed_ips:") or "")
+            if str(existing.get("public_key") or "").strip() == public_key:
+                if allowed_ip in existing_ips:
+                    warnings.append("server_peer_already_present")
+                else:
+                    warnings.append("existing_server_peer_allowed_ip_will_be_updated")
+                continue
             if allowed_ip and allowed_ip in existing_ips:
                 raise SetupWizardValidationError("duplicate WireGuard allowed IP already exists on server")
         if (observations or {}).get("status") != "success":

@@ -168,17 +168,19 @@ def test_server_peer_apply_blocked_without_public_key(app):
             ServerWireGuardPeerApplyService().dry_run(tenant_id=1, prepared_peer_id=peer_id)
 
 
-def test_duplicate_public_key_blocked_by_inspector(app):
+def test_existing_public_key_can_be_reconciled_by_inspector(app):
     peer = _prepared_peer(app)
     planner = ServerWireGuardPeerPlanner(
         inspector=ServerWireGuardInspector(wg_show_output=_wg_show(VALID_KEY_1, "10.10.0.99/32"))
     )
     with app.app_context():
-        with pytest.raises(SetupWizardValidationError):
-            ServerWireGuardPeerApplyService(planner=planner).dry_run(
-                tenant_id=1,
-                prepared_peer_id=peer["prepared_peer_id"],
-            )
+        result = ServerWireGuardPeerApplyService(planner=planner).dry_run(
+            tenant_id=1,
+            prepared_peer_id=peer["prepared_peer_id"],
+        )
+
+    assert result["status"] == "ready"
+    assert "existing_server_peer_allowed_ip_will_be_updated" in result["plan"]["warnings"]
 
 
 def test_duplicate_allowed_ip_blocked_by_inspector(app):
