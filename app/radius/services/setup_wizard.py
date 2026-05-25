@@ -1286,10 +1286,30 @@ class SetupWizardService:
         )
         run = self.get_run(tenant_id=tenant_id, run_id=run_id)
         blocked_ifaces = [str(run.get("selected_wan_interface") or "").strip(), "hr-wg"]
+        reservation = self._router_provisioning.latest_for_run(
+            tenant_id=tenant_id,
+            wizard_run_id=run_id,
+        )
+        if not reservation:
+            reservation = self._router_provisioning.reserve_for_run(
+                tenant_id=tenant_id,
+                wizard_run_id=run_id,
+                router_label=str(run.get("router_label") or ""),
+                router_identity=str(run.get("router_identity") or ""),
+            )
+        effective_payload = dict(payload)
+        effective_payload.update(
+            {
+                "router_vpn_ip": reservation["router_vpn_ip"],
+                "radius_server_ip": reservation["server_vpn_ip"],
+                "radius_secret": reservation["radius_secret_ref"],
+                "radius_secret_ref": reservation["radius_secret_ref"],
+            }
+        )
         plan = self._hotspot_planner.plan(
             wizard_run_id=int(run_id),
             mode=mode,
-            payload=payload,
+            payload=effective_payload,
             blocked_interfaces=[x for x in blocked_ifaces if x],
             blocked_network_cidrs=blocked_network_cidrs,
         )

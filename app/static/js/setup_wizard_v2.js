@@ -859,16 +859,10 @@
 
   function buildServicePayload(service) {
     if (service === "hotspot") {
-      const names = splitList(value("hotspot_names", "hs-bridge,hs-profile,hs-server"));
       return {
         selected_interfaces: splitList(value("hotspot_interfaces", selectedInterfaces.join(",") || "ether2")),
-        network_cidr: value("hotspot_network_cidr", "10.77.50.0/24"),
-        pool_range: value("hotspot_pool_range", "10.77.50.20-10.77.50.220"),
+        subnet_base: value("hotspot_subnet_base", "10.20.0.0/16"),
         dns_name: value("hotspot_dns_name", "login.hoberadius.local"),
-        bridge_name: names[0] || "hs-bridge",
-        profile_name: names[1] || "hs-profile",
-        server_name: names[2] || "hs-server",
-        nat_enabled: checked("hotspot_nat_enabled", true),
       };
     }
     return {

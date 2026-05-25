@@ -101,12 +101,8 @@ def test_backend_route_with_hotspot_payload_returns_script(app):
                 "mode": "manual",
                 "payload": {
                     "selected_interfaces": ["ether3"],
-                    "network_cidr": "10.77.50.0/24",
-                    "pool_range": "10.77.50.20-10.77.50.220",
-                    "gateway_ip": "10.77.50.1",
-                    "bridge_name": "hs-bridge",
-                    "profile_name": "hs-profile",
-                    "server_name": "hs-server",
+                    "subnet_base": "10.20.0.0/16",
+                    "dns_name": "login.hoberadius.local",
                 },
                 "blocked_network_cidrs": ["10.10.0.0/24"],
             },
@@ -115,6 +111,7 @@ def test_backend_route_with_hotspot_payload_returns_script(app):
 
     assert res.status_code == 200
     assert "/ip hotspot add" in data["plan"]["script_text"]
+    assert "/interface bridge" not in data["plan"]["script_text"]
 
 
 def test_backend_route_with_broadband_payload_returns_script(app):

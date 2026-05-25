@@ -40,35 +40,32 @@ def test_hotspot_manual_script_sections_and_validation():
         mode="manual",
         payload={
             "selected_interfaces": ["ether3"],
-            "network_cidr": "10.77.50.0/24",
-            "pool_range": "10.77.50.20-10.77.50.220",
-            "gateway_ip": "10.77.50.1",
-            "bridge_name": "hs-bridge",
-            "profile_name": "hs-prof",
-            "server_name": "hs-srv",
+            "subnet_base": "10.20.0.0/16",
+            "dns_name": "login.hoberadius.local",
+            "router_vpn_ip": "10.10.0.3",
+            "radius_server_ip": "10.10.0.1",
+            "radius_secret": "radius-secret-ref-0001",
         },
         blocked_interfaces=["ether1", "hr-wg"],
         blocked_network_cidrs=["10.10.0.0/24", "10.20.30.0/24"],
     )
-    assert "HOBERADIUS_SETUP:88:hotspot" in plan.script_text
-    assert "/ip hotspot add name=\"hs-srv\"" in plan.script_text
-    assert "/ip dhcp-server add name=\"hs-bridge-dhcp\"" in plan.script_text
-    assert '/ip dhcp-server network add address="10.77.50.0/24" gateway="10.77.50.1" dns-server="10.77.50.1"' in plan.script_text
-    assert "/tool ping 8.8.8.8 count=5" in plan.script_text
+    assert '/ip address add address=10.20.3.1/24 interface=ether3 comment="HOBE_HOTSPOT_ether3"' in plan.script_text
+    assert "/ip pool add name=pool-hotspot-ether3 ranges=10.20.3.10-10.20.3.254" in plan.script_text
+    assert '/ip dhcp-server network add address=10.20.3.0/24 gateway=10.20.3.1 dns-server=10.20.3.1 comment="HOBE_HOTSPOT_ether3"' in plan.script_text
+    assert '/radius add service=hotspot address=10.10.0.1 secret="radius-secret-ref-0001" authentication-port=1812 accounting-port=1813 src-address=10.10.0.3 timeout=3000ms comment="HOBERADIUS"' in plan.script_text
+    assert "/interface bridge" not in plan.script_text
+    assert "/tool ping 8.8.8.8 count=5" in plan.validation_commands
 
 
-def test_hotspot_routeros7_profile_and_server_commands_avoid_invalid_comment_property():
+def test_hotspot_routeros7_profile_and_server_commands_match_direct_port_pattern():
     plan = HotspotBootstrapPlanner().plan(
         wizard_run_id=92,
         mode="manual",
         payload={
             "selected_interfaces": ["ether3", "ether4"],
-            "network_cidr": "10.77.52.0/24",
-            "pool_range": "10.77.52.20-10.77.52.220",
-            "gateway_ip": "10.77.52.1",
-            "bridge_name": "hs-bridge",
-            "profile_name": "hs-profile",
-            "server_name": "hs-server",
+            "subnet_base": "10.20.0.0/16",
+            "router_vpn_ip": "10.10.0.3",
+            "radius_secret": "radius-secret-ref-0001",
         },
         blocked_interfaces=["ether1", "hr-wg"],
         blocked_network_cidrs=["10.10.0.0/24"],
@@ -83,26 +80,26 @@ def test_hotspot_routeros7_profile_and_server_commands_avoid_invalid_comment_pro
 
     assert hotspot_add_lines
     assert all(" comment=" not in line for line in hotspot_add_lines)
-    assert '/ip hotspot profile add name="hs-profile" hotspot-address="10.77.52.1" dns-name="hotspot.local" radius-interim-update=1m' in plan.script_text
-    assert '/ip hotspot add name="hs-server" interface="hs-bridge" address-pool="hs-bridge-pool" profile="hs-profile"' in plan.script_text
+    assert "/ip hotspot profile add name=hsprof-ether3 hotspot-address=10.20.3.1 dns-name=login.hoberadius.local use-radius=yes radius-accounting=yes radius-interim-update=00:00:30 login-by=http-pap,cookie,mac-cookie" in plan.script_text
+    assert "/ip hotspot add name=hotspot-ether4 interface=ether4 address-pool=pool-hotspot-ether4 profile=hsprof-ether4 disabled=no" in plan.script_text
 
 
-def test_hotspot_nat_detection_avoids_duplicate_rules_from_previous_runs():
+def test_hotspot_nat_uses_wan_interface_list_per_port():
     plan = HotspotBootstrapPlanner().plan(
         wizard_run_id=93,
         mode="manual",
         payload={
             "selected_interfaces": ["ether3"],
-            "network_cidr": "10.77.53.0/24",
-            "pool_range": "10.77.53.20-10.77.53.220",
-            "gateway_ip": "10.77.53.1",
+            "subnet_base": "10.20.0.0/16",
+            "router_vpn_ip": "10.10.0.3",
+            "radius_secret": "radius-secret-ref-0001",
         },
         blocked_interfaces=["ether1", "hr-wg"],
         blocked_network_cidrs=["10.10.0.0/24"],
     )
 
-    assert 'find where chain="srcnat" and src-address="10.77.53.0/24" and action="masquerade"]' in plan.script_text
-    assert 'src-address="10.77.53.0/24" and action="masquerade" and comment=' not in plan.script_text
+    assert '/ip firewall nat add chain=srcnat src-address=10.20.3.0/24 out-interface-list=WAN action=masquerade comment="HOBE_HOTSPOT_ether3 NAT"' in plan.script_text
+    assert "bridge" not in plan.script_text.lower()
 
 
 def test_hotspot_wan_and_vpn_exclusion_enforced():
@@ -112,31 +109,40 @@ def test_hotspot_wan_and_vpn_exclusion_enforced():
             mode="manual",
             payload={
                 "selected_interfaces": ["ether1"],
-                "network_cidr": "10.77.51.0/24",
-                "pool_range": "10.77.51.20-10.77.51.220",
+                "router_vpn_ip": "10.10.0.3",
+                "radius_secret": "radius-secret-ref-0001",
             },
             blocked_interfaces=["ether1", "hr-wg"],
             blocked_network_cidrs=["10.10.0.0/24"],
         )
 
 
-def test_hotspot_smart_network_avoids_collisions():
+def test_hotspot_smart_network_avoids_collisions_per_interface():
     plan = HotspotBootstrapPlanner().plan(
         wizard_run_id=90,
         mode="smart",
-        payload={"selected_interfaces": ["ether4"]},
+        payload={
+            "selected_interfaces": ["ether4"],
+            "subnet_base": "10.20.0.0/16",
+            "router_vpn_ip": "10.10.0.3",
+            "radius_secret": "radius-secret-ref-0001",
+        },
         blocked_interfaces=["ether1", "hr-wg"],
-        blocked_network_cidrs=["10.10.0.0/24", "10.20.30.0/24", "10.50.0.0/24"],
+        blocked_network_cidrs=["10.10.0.0/24", "10.20.4.0/24"],
     )
-    network = plan.computed["network_cidr"]
-    assert network not in {"10.10.0.0/24", "10.20.30.0/24", "10.50.0.0/24"}
+    network = plan.computed["port_plans"][0]["network_cidr"]
+    assert network == "10.20.5.0/24"
 
 
 def test_hotspot_script_has_no_destructive_commands():
     plan = HotspotBootstrapPlanner().plan(
         wizard_run_id=91,
         mode="smart",
-        payload={"selected_interfaces": ["ether5"]},
+        payload={
+            "selected_interfaces": ["ether5"],
+            "router_vpn_ip": "10.10.0.3",
+            "radius_secret": "radius-secret-ref-0001",
+        },
         blocked_interfaces=["ether1", "hr-wg"],
         blocked_network_cidrs=["10.10.0.0/24"],
     )

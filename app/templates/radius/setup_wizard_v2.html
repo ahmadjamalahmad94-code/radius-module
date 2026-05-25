@@ -655,25 +655,18 @@
         </div>
         <div class="swv2-safe-proposal" data-swv2-hotspot-proposal>
           <strong>مقترح آمن</strong>
-          <span>سيتم اقتراح bridge و subnet و pool بعيدًا عن WAN/VPN قدر الإمكان.</span>
+          <span>سيتم تجهيز كل منفذ مختار كشبكة Hotspot مستقلة بعناوين تلقائية، بدون bridge.</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="hotspot">
           <label>واجهات الخدمة
             <input type="text" name="hotspot_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>شبكة الخدمة CIDR
-            <input type="text" name="hotspot_network_cidr" value="10.77.50.0/24">
-          </label>
-          <label>مدى العناوين
-            <input type="text" name="hotspot_pool_range" value="10.77.50.20-10.77.50.220">
+          <label>أساس العناوين التلقائي
+            <input type="text" name="hotspot_subnet_base" value="10.20.0.0/16">
           </label>
           <label>اسم صفحة الدخول
             <input type="text" name="hotspot_dns_name" value="login.hoberadius.local">
           </label>
-          <label>أسماء bridge/profile/server
-            <input type="text" name="hotspot_names" value="hs-bridge,hs-profile,hs-server">
-          </label>
-          <label><input type="checkbox" name="hotspot_nat_enabled" checked> NAT محدود على شبكة Hotspot فقط</label>
         </form>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت Hotspot</button>
