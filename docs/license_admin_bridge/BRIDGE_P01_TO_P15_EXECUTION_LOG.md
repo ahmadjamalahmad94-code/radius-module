@@ -64,3 +64,71 @@
   - P02 must add the bridge client/snapshot foundation in a separate commit.
 - GO/NO-GO for next prompt:
   - GO for P02.
+
+## P02 — AdminPanelClient + License/Capacity Snapshot Foundation
+
+- Start time: 2026-05-25 11:19:30 +03:00
+- End time: 2026-05-25 11:27:27 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/radius/db/migrations/065_license_admin_bridge_snapshots.sql`
+  - `app/radius/services/admin_panel_client.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `tests/test_license_admin_bridge_client.py`
+- What was implemented:
+  - Added env/config support for:
+    - `HOBERADIUS_ADMIN_BRIDGE_ENABLED`
+    - `HOBERADIUS_ADMIN_BASE_URL`
+    - `HOBERADIUS_LICENSE_KEY`
+    - `INSTANCE_LICENSE_KEY`
+    - `HOBERADIUS_ADMIN_SHARED_SECRET`
+    - `HOBERADIUS_ADMIN_TIMEOUT_SECONDS`
+    - `HOBERADIUS_ADMIN_RETRY_COUNT`
+  - Added `AdminPanelClient` with mockable transport.
+  - Added license snapshot fetch/store.
+  - Added capacity contract fetch/store.
+  - Added local sanitized snapshot persistence.
+  - Added `get_current_license_state()`.
+  - Added `get_current_capacity_contract()`.
+  - Added safe stale/degraded/unknown behavior when the admin panel is down or disabled.
+  - Added invalid-payload rejection.
+- What was intentionally not implemented:
+  - No entitlement enforcement.
+  - No subscriber/card/NAS blocking.
+  - No backup upload.
+  - No restore polling.
+  - No service activation polling.
+  - No heartbeat.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_bridge_client.py -q` passed: 7 passed, 415 warnings in 9.72s.
+  - `python -m pytest tests/test_api_auth_security.py -q` passed: 10 passed, 279 warnings in 3.44s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - `python -m pytest -q` attempted.
+  - Result: timed out after 304043 ms.
+  - No visible failure output was returned before timeout.
+- Timeout notes if any:
+  - Full pytest did not complete inside the 300 second execution window.
+- Admin endpoint gaps:
+  - Existing P01 admin endpoint gaps still apply.
+  - Runtime client uses the P02 prompt paths:
+    - `/api/license/check`
+    - `/api/integration/hoberadius/capacity-contract`
+- Codex follow-ups added:
+  - No new admin follow-ups beyond P01.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Bridge client is disabled by default.
+  - No admin calls occur at app startup.
+  - Snapshot payloads are sanitized before storage.
+  - Admin outage returns stale/unknown state and does not break local runtime.
+- GO/NO-GO for next prompt:
+  - GO for P03.
