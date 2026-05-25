@@ -12,7 +12,7 @@ def register_v1(parent: Blueprint) -> None:
     v1 = Blueprint("v1", __name__, url_prefix="/v1")
 
     from . import (
-        accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules,
+        accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules, business_os,
         card_checker, cards, dashboard, devices, distributors, health, internal_auth,
         invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_policy,
         operational_reports,
@@ -59,6 +59,7 @@ def register_v1(parent: Blueprint) -> None:
     tenants.register(v1)
     tools.register(v1)
     network_policy.register(v1)
+    business_os.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token

@@ -281,6 +281,26 @@ class LedgerService:
         ).fetchone()
         return _row(row)
 
+    def list_entries(
+        self,
+        *,
+        tenant_id: int = 1,
+        entry_type: str = "",
+        reference_type: str = "",
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM ledger_entries WHERE tenant_id=?"
+        params: list[Any] = [int(tenant_id)]
+        if entry_type:
+            sql += " AND entry_type=?"
+            params.append(entry_type)
+        if reference_type:
+            sql += " AND reference_type=?"
+            params.append(reference_type)
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(int(limit))
+        return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
+
 
 class WalletService:
     """Wallet creation and balance-changing operations."""
@@ -338,6 +358,43 @@ class WalletService:
             (int(tenant_id), int(wallet_id)),
         ).fetchone()
         return _row(row)
+
+    def list_wallets(
+        self,
+        *,
+        tenant_id: int = 1,
+        owner_type: str = "",
+        status: str = "",
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM wallets WHERE tenant_id=?"
+        params: list[Any] = [int(tenant_id)]
+        if owner_type:
+            sql += " AND owner_type=?"
+            params.append(owner_type)
+        if status:
+            sql += " AND status=?"
+            params.append(status)
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(int(limit))
+        return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
+
+    def list_transactions(
+        self,
+        *,
+        tenant_id: int = 1,
+        wallet_id: int,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        rows = db().execute(
+            """
+            SELECT * FROM wallet_transactions
+            WHERE tenant_id=? AND wallet_id=?
+            ORDER BY id DESC LIMIT ?
+            """,
+            (int(tenant_id), int(wallet_id), int(limit)),
+        ).fetchall()
+        return [_row(row) for row in rows]
 
     def credit(self, *, tenant_id: int = 1, wallet_id: int, amount: Any, **kwargs) -> dict[str, Any]:
         return self._change_balance(
@@ -532,3 +589,23 @@ class PricingSnapshotService:
                 (int(cur.lastrowid),),
             ).fetchone()
             return _row(row)
+
+    def list_snapshots(
+        self,
+        *,
+        tenant_id: int = 1,
+        reference_type: str = "",
+        package_id: int | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM price_snapshots WHERE tenant_id=?"
+        params: list[Any] = [int(tenant_id)]
+        if reference_type:
+            sql += " AND reference_type=?"
+            params.append(reference_type)
+        if package_id is not None:
+            sql += " AND package_id=?"
+            params.append(int(package_id))
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(int(limit))
+        return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
