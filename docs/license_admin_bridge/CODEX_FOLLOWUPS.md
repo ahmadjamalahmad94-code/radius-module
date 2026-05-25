@@ -48,3 +48,18 @@ modified.
 16. Confirm required usage payload fields, accepted metric names, and whether
     the admin panel expects usage reports to be standalone or folded into the
     heartbeat endpoint.
+
+## P04 Capacity Enforcement Follow-Ups
+
+17. Confirm the canonical capacity contract shape for feature states. P04
+    supports both `features.<key> = "locked"` and
+    `features.<key>.state = "locked"`, but the admin contract should choose one.
+18. Confirm final limit field names for:
+    - `subscribers.max_total`
+    - `cards.generate_per_batch`
+    - `cards.monthly_generated`
+    - `nas.max_total`
+    - `profiles.max_total`
+    - `print_templates.max_active`
+19. Confirm whether NAS and routers are separate limits in V40 or whether
+    router count maps to the local `nas_devices` table.

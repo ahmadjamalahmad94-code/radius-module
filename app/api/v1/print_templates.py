@@ -4,6 +4,10 @@ from __future__ import annotations
 from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.services.license_admin_capacity import (
+    CapacityEnforcementService,
+    capacity_error_response,
+)
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -69,6 +73,14 @@ def print_templates_list():
 
 def print_templates_create():
     body = request.get_json(silent=True) or {}
+    capacity = CapacityEnforcementService().check_create(
+        tenant_id=_tid(),
+        feature_key="print_templates",
+        limit_path="print_templates.max_active",
+        usage_metric="print_templates_count",
+    )
+    if not capacity.allowed:
+        return capacity_error_response(capacity)
     try:
         template = _svc().create_print_template(
             tenant_id=_tid(), actor=_actor(), data=body

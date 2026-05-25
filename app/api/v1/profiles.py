@@ -19,6 +19,10 @@ from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
 from ...radius.core.types import AccessPlan
+from ...radius.services.license_admin_capacity import (
+    CapacityEnforcementService,
+    capacity_error_response,
+)
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -255,6 +259,14 @@ def profiles_create():
     body = request.get_json(silent=True) or {}
     if not (body.get("name") or "").strip():
         return fail("validation_error", "name مطلوب", status=422)
+    capacity = CapacityEnforcementService().check_create(
+        tenant_id=_tid(),
+        feature_key="profiles",
+        limit_path="profiles.max_total",
+        usage_metric="profiles_plans_count",
+    )
+    if not capacity.allowed:
+        return capacity_error_response(capacity)
 
     # Seed a minimal plan, then apply body fields.
     seed = AccessPlan(

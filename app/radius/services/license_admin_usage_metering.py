@@ -150,7 +150,7 @@ class UsageMeteringService:
             "routers_count": _count_table("nas_devices", tenant_id=tenant_id),
             "admins_count": _count_table("admins", tenant_id=tenant_id),
             "profiles_plans_count": _count_table("access_plans", tenant_id=tenant_id),
-            "print_templates_count": _count_table("print_templates", tenant_id=tenant_id),
+            "print_templates_count": _count_table("card_print_templates", tenant_id=tenant_id),
             "current_online_sessions": online_sessions,
             "db_storage_bytes": _db_size_bytes(),
             "last_backup_timestamp": _last_backup_timestamp(tenant_id),

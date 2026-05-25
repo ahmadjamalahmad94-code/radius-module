@@ -12,6 +12,10 @@ import io
 from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusError, RadiusValidationError
+from ...radius.services.license_admin_capacity import (
+    CapacityEnforcementService,
+    capacity_error_response,
+)
 from ..access_control import batch_in_scope, current_distributor, deny_out_of_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -356,6 +360,12 @@ def cards_generate():
         return fail("validation_error", "plan_id مطلوب", status=422)
     if not isinstance(count, int) or count <= 0 or count > 2000:
         return fail("validation_error", "count must be 1..2000", status=422)
+    capacity = CapacityEnforcementService().check_cards_generate(
+        tenant_id=_tid(),
+        requested_count=count,
+    )
+    if not capacity.allowed:
+        return capacity_error_response(capacity)
     from ...radius.services.cards import get_cards_service
     try:
         batch, cards = get_cards_service().generate_batch(

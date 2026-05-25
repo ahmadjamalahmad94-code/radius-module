@@ -195,3 +195,71 @@
   - Usage metrics are counts only and should not expose secrets.
 - GO/NO-GO for next prompt:
   - GO for P04.
+
+## P04 — Backend Capacity Enforcement for Easy Limits
+
+- Start time: 2026-05-25 11:45:00 +03:00
+- End time: 2026-05-25 11:59:55 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/accounts.py`
+  - `app/api/v1/cards.py`
+  - `app/api/v1/nas.py`
+  - `app/api/v1/print_templates.py`
+  - `app/api/v1/profiles.py`
+  - `app/radius/services/license_admin_capacity.py`
+  - `app/radius/services/license_admin_usage_metering.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/CODEX_FOLLOWUPS.md`
+  - `tests/test_license_admin_capacity_enforcement.py`
+- What was implemented:
+  - Added `CapacityEnforcementService`.
+  - Added backend create guards for subscribers, card generation, NAS,
+    profiles, and print templates.
+  - Added JSON error details with `feature_key`, `current_usage`, `limit`,
+    warnings, and contract status.
+  - Added stale-contract enforcement warnings.
+  - Added non-blocking no-contract behavior.
+  - Corrected usage metering print template count to use
+    `card_print_templates`.
+- What was intentionally not implemented:
+  - No Flutter capacity UX.
+  - No radius-module-admin changes.
+  - No remote admin call during enforcement.
+  - No live RADIUS, MikroTik, FreeRADIUS, CoA, or disconnect behavior.
+  - No enforcement for surfaces without a local create route in this slice.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_capacity_enforcement.py -q`
+    passed: 7 passed, 500 warnings in 13.79s.
+  - `python -m pytest tests/test_api_customer_contracts.py::test_contract_routes_are_registered tests/test_api_auth_security.py -q`
+    passed: 11 passed, 280 warnings in 6.47s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - `python -m pytest -q` attempted.
+  - Result: timed out after 308040 ms.
+  - No visible failure output was returned before timeout.
+- Timeout notes if any:
+  - Full pytest did not complete inside the roughly 300 second execution
+    window.
+- Admin endpoint gaps:
+  - Capacity contract field names and feature-state shape still need V40 admin
+    confirmation.
+- Codex follow-ups added:
+  - Added P04 follow-ups for capacity field names, feature-state shape, and
+    NAS/router mapping.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Stale last-successful capacity contracts are enforced with a warning.
+  - Missing capacity contracts are degraded/non-blocking by design.
+  - Enforcement uses local counts only; remote refresh is not performed inside
+    create requests.
+- GO/NO-GO for next prompt:
+  - GO for P05 if the prompt boundary allows Flutter work; otherwise stop for
+    boundary clarification.

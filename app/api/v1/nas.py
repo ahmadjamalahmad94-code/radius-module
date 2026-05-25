@@ -20,6 +20,10 @@ from flask import Blueprint, g, request
 from ...radius.core.constants import NAS_VENDORS
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
 from ...radius.core.types import NasDevice
+from ...radius.services.license_admin_capacity import (
+    CapacityEnforcementService,
+    capacity_error_response,
+)
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -137,6 +141,14 @@ def nas_create():
         return fail("validation_error", "name مطلوب", status=422)
     if not address:
         return fail("validation_error", "address مطلوب", status=422)
+    capacity = CapacityEnforcementService().check_create(
+        tenant_id=_tid(),
+        feature_key="nas",
+        limit_path="nas.max_total",
+        usage_metric="nas_count",
+    )
+    if not capacity.allowed:
+        return capacity_error_response(capacity)
 
     seed = NasDevice(
         id=None,
