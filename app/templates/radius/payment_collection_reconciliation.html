@@ -1,30 +1,30 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}Payment Reconciliation{% endblock %}
+{% block title %}مطابقة تحصيل الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
-{% block page_title %}Payment Reconciliation{% endblock %}
-{% block page_sub %}<span class="sub">collection health</span>{% endblock %}
+{% block page_title %}مطابقة تحصيل الدفعات{% endblock %}
+{% block page_sub %}<span class="sub">صحة التحصيل</span>{% endblock %}
 
 {% block content %}
 <div class="hub-grid hub-grid--4" style="margin-bottom:16px">
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_without_ledger }}</strong><br><span class="small">Paid without ledger</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_not_applied }}</strong><br><span class="small">Paid not applied</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.expired_pending }}</strong><br><span class="small">Expired pending</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.duplicate_provider_transactions }}</strong><br><span class="small">Duplicate provider risks</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_without_ledger }}</strong><br><span class="small">مدفوع بلا قيد مالي</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_not_applied }}</strong><br><span class="small">مدفوع غير مطبق</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.expired_pending }}</strong><br><span class="small">منتهي ومعلق</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.duplicate_provider_transactions }}</strong><br><span class="small">مخاطر تكرار لدى المزوّد</span></div>
 </div>
 
 {% for key, title in [
-  ('paid_without_ledger', 'Paid without ledger'),
-  ('paid_not_applied', 'Paid not applied'),
-  ('expired_pending', 'Expired pending'),
-  ('duplicate_provider_transactions', 'Duplicate provider risks')
+  ('paid_without_ledger', 'مدفوع بلا قيد مالي'),
+  ('paid_not_applied', 'مدفوع غير مطبق'),
+  ('expired_pending', 'منتهي ومعلق'),
+  ('duplicate_provider_transactions', 'مخاطر تكرار لدى المزوّد')
 ] %}
 <div class="hub-card" style="padding:18px;margin-bottom:16px">
   <h3>{{ title }}</h3>
   {% set rows = report[key] %}
   {% if rows %}
   <table class="hub-table">
-    <thead><tr><th>#</th><th>Reference</th><th>Status</th><th>Amount</th><th>Info</th></tr></thead>
+    <thead><tr><th>#</th><th>المرجع</th><th>الحالة</th><th>المبلغ</th><th>معلومات</th></tr></thead>
     <tbody>
       {% for row in rows %}
       <tr>
@@ -38,7 +38,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="small">No findings.</p>
+  <p class="small">لا توجد ملاحظات.</p>
   {% endif %}
 </div>
 {% endfor %}

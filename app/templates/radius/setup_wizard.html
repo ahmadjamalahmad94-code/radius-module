@@ -174,7 +174,7 @@
   </section>
   <section class="sw-panel">
     <h2>Guarded operations</h2>
-    <p class="sw-muted">Dry-run is safe. Apply and rollback stay blocked unless HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true and HOBERADIUS_SETUP_WIZARD_LAB_MODE=true, with fresh inventory, dry-run, rollback preview, and confirmation.</p>
+    <p class="sw-muted">التجربة الجافة آمنة. التطبيق والتراجع يبقيان محظورين ما لم تكن HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true و HOBERADIUS_SETUP_WIZARD_LAB_MODE=true مع جرد حديث وتجربة جافة ومعاينة تراجع وتأكيد.</p>
     <div class="sw-inline-actions">
       <select data-sw-operation-step>
         <option value="internet">internet</option>
@@ -182,8 +182,8 @@
         <option value="hotspot">hotspot</option>
         <option value="broadband">broadband</option>
       </select>
-      <button class="hub-btn" type="button" data-sw-action="dry-run">Dry run</button>
-      <button class="hub-btn" type="button" data-sw-action="list-operations">Operations</button>
+      <button class="hub-btn" type="button" data-sw-action="dry-run">تجربة جافة</button>
+      <button class="hub-btn" type="button" data-sw-action="list-operations">العمليات</button>
       <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">Apply guarded</button>
       <button class="hub-btn" type="button" data-sw-action="rollback-preview">Rollback preview</button>
     </div>
@@ -197,12 +197,12 @@
     <div class="sw-panel-head">
       <div>
         <h2>Lab Execution Timeline</h2>
-        <p class="sw-muted">يعرض حالة dry-run وinventory وapply وrollback بشكل واضح للتجارب المخبرية فقط.</p>
+        <p class="sw-muted">يعرض حالة التجربة الجافة والجرد والتطبيق والتراجع بشكل واضح للتجارب المخبرية فقط.</p>
       </div>
       <button class="hub-btn" type="button" data-sw-action="lab-timeline">Refresh timeline</button>
     </div>
     <ol class="sw-lab-timeline" data-sw-lab-timeline>
-      <li>Dry-run completed: pending</li>
+      <li>التجربة الجافة: معلقة</li>
       <li>Inventory collected: pending</li>
       <li>Apply attempted: blocked by default</li>
       <li>Verification: pending</li>
@@ -217,7 +217,7 @@
       <textarea data-sw-inventory-output rows="6" spellcheck="false" placeholder="/interface print detail&#10;/ip address print detail&#10;/ip route print detail"></textarea>
     </div>
     <div class="sw-inline-actions">
-      <button class="hub-btn" type="button" data-sw-action="save-inventory">Save inventory snapshot</button>
+      <button class="hub-btn" type="button" data-sw-action="save-inventory">حفظ لقطة الجرد</button>
       <button class="hub-btn" type="button" data-sw-action="health">Health</button>
       <button class="hub-btn" type="button" data-sw-action="support-bundle">Support bundle</button>
       <button class="hub-btn" type="button" data-sw-action="added-catalog">Added services catalog</button>

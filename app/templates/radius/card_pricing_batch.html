@@ -26,7 +26,7 @@
 
 {% call hub.section("سجل التكلفة", icon="book") %}
   <div class="hub-tile-grid">
-    {{ hub.tile("Wallet TX", cost.wallet_transaction_id or "—", icon="wallet") }}
+    {{ hub.tile("حركة المحفظة", cost.wallet_transaction_id or "—", icon="wallet") }}
     {{ hub.tile("Ledger", cost.ledger_entry_id or "—", icon="book") }}
     {{ hub.tile("Revenue", cost.revenue_record_id or "—", icon="sack-dollar") }}
     {{ hub.tile("Price Snapshot", cost.price_snapshot_id or "—", icon="camera") }}

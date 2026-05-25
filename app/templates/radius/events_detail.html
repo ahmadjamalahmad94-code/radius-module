@@ -1,35 +1,35 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Event #{{ event.id }} — Hobe Hub{% endblock %}
+{% block title %}حدث #{{ event.id }} — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
-{% block page_title %}Event #{{ event.id }}{% endblock %}
+{% block page_title %}حدث #{{ event.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("Event #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info") }}
+{{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info") }}
 {% include "radius/events_nav.html" %}
 
 <div class="hub-kpi-grid" data-testid="event-detail-summary">
-  {{ hub.kpi("Category", event.category, icon="folder") }}
-  {{ hub.kpi("Severity", event.severity, icon="signal") }}
-  {{ hub.kpi("Actor", event.actor_type ~ " #" ~ (event.actor_id or ""), icon="user") }}
-  {{ hub.kpi("Target", event.target_type ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
+  {{ hub.kpi("الفئة", event.category, icon="folder") }}
+  {{ hub.kpi("الخطورة", event.severity, icon="signal") }}
+  {{ hub.kpi("الفاعل", event.actor_type ~ " #" ~ (event.actor_id or ""), icon="user") }}
+  {{ hub.kpi("الهدف", event.target_type ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
 </div>
 
-{% call hub.section("Metadata", icon="brackets-curly") %}
+{% call hub.section("البيانات الوصفية", icon="brackets-curly") %}
   <pre class="hub-code" data-testid="event-metadata">{{ event.metadata }}</pre>
 {% endcall %}
 
-{% call hub.section("Entity timeline", icon="timeline", flush=True) %}
+{% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="entity-timeline-table">
-      <thead><tr><th>ID</th><th>Severity</th><th>Key</th><th>Message</th></tr></thead>
+      <thead><tr><th>ID</th><th>الخطورة</th><th>المفتاح</th><th>الرسالة</th></tr></thead>
       <tbody>
         {% for item in timeline %}
           <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td>{{ item.event_key }}</td><td>{{ item.message }}</td></tr>
         {% else %}
-          <tr><td colspan="4">No linked timeline for this entity.</td></tr>
+          <tr><td colspan="4">لا يوجد خط زمني مرتبط بهذا الكيان.</td></tr>
         {% endfor %}
       </tbody>
     </table>

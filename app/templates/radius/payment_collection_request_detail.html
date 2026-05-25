@@ -1,36 +1,36 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}Payment {{ item.reference_code }}{% endblock %}
+{% block title %}دفعة {{ item.reference_code }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
-{% block page_title %}Payment {{ item.reference_code }}{% endblock %}
+{% block page_title %}دفعة {{ item.reference_code }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ item.status }}</span>{% endblock %}
 
 {% block content %}
 <div class="hub-card" style="padding:18px;margin-bottom:16px">
   <strong>رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا.</strong>
-  <p class="small" style="margin:8px 0 0">Proof review and service activation are not available on this foundation page yet.</p>
+  <p class="small" style="margin:8px 0 0">مراجعة الإثبات وتفعيل الخدمة غير متاحين من هذه الصفحة التأسيسية بعد.</p>
 </div>
 
 <div class="hub-card" style="padding:18px">
   <dl class="hub-defs">
     <dt>ID</dt><dd class="mono">{{ item.id }}</dd>
-    <dt>Reference</dt><dd class="mono">{{ item.reference_code }}</dd>
-    <dt>Purpose</dt><dd>{{ item.purpose }}</dd>
-    <dt>Payer</dt><dd>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</dd>
-    <dt>Amount</dt><dd class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</dd>
-    <dt>Wallet</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
-    <dt>Status</dt><dd>{{ item.status }}</dd>
-    <dt>Ledger</dt><dd class="mono">{{ item.ledger_entry_id or 'not posted yet' }}</dd>
-    <dt>Service apply</dt><dd>{{ item.service_apply_status or 'not_applied' }}</dd>
-    <dt>Expires</dt><dd class="mono">{{ item.expires_at or '-' }}</dd>
+    <dt>المرجع</dt><dd class="mono">{{ item.reference_code }}</dd>
+    <dt>الغرض</dt><dd>{{ item.purpose }}</dd>
+    <dt>الدافع</dt><dd>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</dd>
+    <dt>المبلغ</dt><dd class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</dd>
+    <dt>المحفظة</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
+    <dt>الحالة</dt><dd>{{ item.status }}</dd>
+    <dt>دفتر القيود</dt><dd class="mono">{{ item.ledger_entry_id or 'not posted yet' }}</dd>
+    <dt>تطبيق الخدمة</dt><dd>{{ item.service_apply_status or 'not_applied' }}</dd>
+    <dt>ينتهي في</dt><dd class="mono">{{ item.expires_at or '-' }}</dd>
   </dl>
 </div>
 
 <div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>Proofs</h3>
+  <h3>إثباتات الدفع</h3>
   {% if proofs %}
   <table class="hub-table">
-    <thead><tr><th>#</th><th>Reference</th><th>Note</th><th>Submitted</th><th>Review</th></tr></thead>
+    <thead><tr><th>#</th><th>المرجع</th><th>الملاحظة</th><th>تاريخ الإرسال</th><th>المراجعة</th></tr></thead>
     <tbody>
       {% for proof in proofs %}
       <tr>
@@ -44,38 +44,38 @@
     </tbody>
   </table>
   {% else %}
-  <p class="small">No proof submitted yet.</p>
+  <p class="small">لم يتم إرسال إثبات دفع بعد.</p>
   {% endif %}
 </div>
 
 {% if item.status in ['proof_submitted','under_review'] %}
 <div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>Manual Review</h3>
+  <h3>مراجعة يدوية</h3>
   <form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" style="display:inline-block;margin-inline-end:8px">
     {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <input class="hub-input" name="review_note" placeholder="Review note" style="width:260px;display:inline-block">
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> Approve manual payment</button>
+    <input class="hub-input" name="review_note" placeholder="ملاحظة المراجعة" style="width:260px;display:inline-block">
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> قبول الدفع اليدوي</button>
   </form>
   <form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" style="display:inline-block">
     {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <input class="hub-input" name="review_note" placeholder="Reject note" style="width:220px;display:inline-block">
-    <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> Reject proof</button>
+    <input class="hub-input" name="review_note" placeholder="ملاحظة الرفض" style="width:220px;display:inline-block">
+    <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> رفض الإثبات</button>
   </form>
-  <p class="small">Approval marks payment paid and posts one idempotent ledger entry. Service activation is not executed in this slice.</p>
+  <p class="small">القبول يعلّم الدفع كمدفوع ويرحّل قيدًا واحدًا قابلًا للتكرار الآمن. تفعيل الخدمة لا ينفذ في هذه المرحلة.</p>
 </div>
 {% endif %}
 
 {% if item.status == 'paid' %}
 <div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>Service Apply</h3>
+  <h3>تطبيق الخدمة</h3>
   <form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="display:inline-block;margin-inline-end:8px">
     {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> Record service apply</button>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> تسجيل تطبيق الخدمة</button>
   </form>
-  <p class="small">This records entitlement application only. It does not call RADIUS, CoA, or MikroTik.</p>
+  <p class="small">هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي RADIUS أو CoA أو MikroTik.</p>
   {% if apply_attempts %}
   <table class="hub-table">
-    <thead><tr><th>#</th><th>Status</th><th>Error</th><th>Created</th></tr></thead>
+    <thead><tr><th>#</th><th>الحالة</th><th>الخطأ</th><th>تاريخ الإنشاء</th></tr></thead>
     <tbody>
       {% for attempt in apply_attempts %}
       <tr>

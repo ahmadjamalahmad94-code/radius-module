@@ -13,20 +13,20 @@
 {% call hub.section("Audience and message", icon="paper-plane") %}
   <form method="post" class="hub-form-grid" data-testid="manual-message-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>Target
+    <label>الهدف
       <select name="target">
-        <option value="subscriber">Subscribers</option>
+        <option value="subscriber">المشتركون</option>
         <option value="selected_subscribers">Selected subscribers</option>
         <option value="card_user">Card users</option>
-        <option value="manager">Managers</option>
-        <option value="distributor">Distributors</option>
+        <option value="manager">المدراء</option>
+        <option value="distributor">الموزعون</option>
         <option value="company">Company</option>
       </select>
     </label>
     <label>IDs <input name="ids" placeholder="1,2,3"></label>
     <label>Manager ID <input name="manager_id" type="number" min="1"></label>
     <label>Limit <input name="limit" type="number" min="1" max="500" value="100"></label>
-    <label>Channel
+    <label>القناة
       <select name="channel">
         <option value="internal">Internal</option>
         <option value="sms">SMS</option>
@@ -38,7 +38,7 @@
     </label>
     <label>Subject <input name="subject"></label>
     <label class="hub-form-span">Message <textarea name="message" rows="5" required></textarea></label>
-    <button class="hub-btn hub-btn--secondary" type="submit" name="preview" value="1">Preview audience</button>
+    <button class="hub-btn hub-btn--secondary" type="submit" name="preview" value="1">معاينة الجمهور</button>
     <button class="hub-btn hub-btn--primary" type="submit" name="send_now" value="1">Queue message</button>
   </form>
 {% endcall %}

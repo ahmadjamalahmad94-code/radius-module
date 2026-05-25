@@ -106,7 +106,7 @@ def communications_campaigns():
                 actions=actions,
                 actor=_actor(),
             )
-            flash("Campaign dry-run prepared. No external delivery was sent.", "success")
+            flash("تم تجهيز تجربة جافة للحملة. لم يتم إرسال أي رسالة خارجية.", "success")
         except (NotificationCampaignError, ValueError) as exc:
             flash(str(exc), "error")
     return render_template(

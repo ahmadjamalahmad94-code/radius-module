@@ -44,8 +44,10 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         sidebar = _sidebar(client.get("/admin/radius/dashboard").get_data(as_text=True))
 
     expected = {
-        "نظام الأعمال": "/admin/radius/dashboard",
-        "لوحة الأعمال": "/admin/radius/dashboard",
+        "المشتركون": "/admin/radius/subscribers",
+        "البطاقات": "/admin/radius/cards/overview",
+        "فحص البطاقات V2": "/admin/radius/cards/checker/v2",
+        "المال والتحصيل": "/admin/radius/finance",
         "المركز المالي": "/admin/radius/finance",
         "المحافظ": "/admin/radius/finance/wallets",
         "الإيرادات": "/admin/radius/finance/revenue",
@@ -58,15 +60,37 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "تسعير البطاقات": "/admin/radius/card-pricing",
         "المدراء والموزعون": "/admin/radius/business-operators",
         "التواصل والحملات": "/admin/radius/communications",
+        "قوالب الرسائل": "/admin/radius/communications/templates",
+        "إرسال رسالة": "/admin/radius/communications/send",
+        "الحملات": "/admin/radius/communications/campaigns",
+        "سجل الإرسال": "/admin/radius/communications/deliveries",
+        "الجمهور": "/admin/radius/communications/audience",
         "الأحداث والمخاطر": "/admin/radius/events",
+        "تقييم المخاطر": "/admin/radius/events/risk",
+        "الأمان": "/admin/radius/events/security",
+        "التحقيقات": "/admin/radius/events/investigations",
         "مركز العمليات": "/admin/radius/operations",
         "التحكم بالسرعة": "/admin/radius/operations/speed-control",
         "التقارير": "/admin/radius/reports",
         "التقرير المالي": "/admin/radius/reports/financial",
+        "تقارير الجلسات": "/admin/radius/reports/sessions",
+        "فشل الدخول": "/admin/radius/reports/failed_logins",
+        "فشل CoA": "/admin/radius/reports/coa_failures",
+        "رسائل API": "/admin/radius/reports/api_messages",
         "تقارير البطاقات": "/admin/radius/reports/cards",
         "تقارير الموزعين": "/admin/radius/reports/distributors",
         "الأرشيف": "/admin/radius/reports/archive",
         "بوابات العملاء": "/admin/radius/customer-portals",
+        "إعدادات التحصيل": "/admin/radius/payments/settings",
+        "طلبات الدفع": "/admin/radius/payments/requests",
+        "مراجعة الدفعات": "/admin/radius/payments/review-queue",
+        "مطابقة التحصيل": "/admin/radius/payments/reconciliation",
+        "الوصول البعيد": "/admin/radius/network-policy/remote-access/",
+        "المواقع المفتوحة": "/admin/radius/network-policy/walled-garden/",
+        "حجب المواقع": "/admin/radius/network-policy/web-block/",
+        "إعدادات النظام": "/admin/radius/settings",
+        "المزامنة": "/admin/radius/sync",
+        "المستأجرون": "/admin/radius/tenants",
     }
     for label, href in expected.items():
         assert label in sidebar
@@ -74,6 +98,17 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
 
     for forbidden in ("/api/v1/", "/reports/archive/create", "/apply/", "/rollback/"):
         assert forbidden not in sidebar
+
+    for href in (
+        "/admin/radius/finance/ledger",
+        "/admin/radius/subscribers",
+        "/admin/radius/card-users",
+        "/admin/radius/admin-bridge",
+    ):
+        assert sidebar.count(f'href="{href}"') == 1
+
+    for tone in ("violet", "sky", "indigo", "amber", "emerald", "green", "rose", "slate", "cyan", "orange", "blue"):
+        assert f'data-hb-tone="{tone}"' in sidebar
 
 
 def test_business_os_sidebar_referenced_routes_render_html(app):
@@ -96,20 +131,43 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/finance/loans",
         "/admin/radius/finance/ledger",
         "/admin/radius/subscribers",
+        "/admin/radius/cards/checker/v2",
         "/admin/radius/card-users",
         "/admin/radius/card-marketplace",
         "/admin/radius/card-pricing",
         "/admin/radius/business-operators",
         "/admin/radius/communications",
+        "/admin/radius/communications/templates",
+        "/admin/radius/communications/send",
+        "/admin/radius/communications/campaigns",
+        "/admin/radius/communications/deliveries",
+        "/admin/radius/communications/audience",
         "/admin/radius/events",
+        "/admin/radius/events/risk",
+        "/admin/radius/events/security",
+        "/admin/radius/events/investigations",
         "/admin/radius/operations",
         "/admin/radius/operations/speed-control",
         "/admin/radius/reports",
         "/admin/radius/reports/financial",
+        "/admin/radius/reports/sessions",
+        "/admin/radius/reports/failed_logins",
+        "/admin/radius/reports/coa_failures",
+        "/admin/radius/reports/api_messages",
         "/admin/radius/reports/cards",
         "/admin/radius/reports/distributors",
         "/admin/radius/reports/archive",
         "/admin/radius/customer-portals",
+        "/admin/radius/payments/settings",
+        "/admin/radius/payments/requests",
+        "/admin/radius/payments/review-queue",
+        "/admin/radius/payments/reconciliation",
+        "/admin/radius/network-policy/remote-access/",
+        "/admin/radius/network-policy/walled-garden/",
+        "/admin/radius/network-policy/web-block/",
+        "/admin/radius/settings",
+        "/admin/radius/sync",
+        "/admin/radius/tenants",
     ]
     with app.test_client() as client:
         _auth_session(client)

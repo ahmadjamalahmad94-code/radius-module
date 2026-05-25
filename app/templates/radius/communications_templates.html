@@ -10,12 +10,12 @@
 {{ hub.hero("Message Templates", subtitle="Variables use {{ name }} style placeholders and render locally before queuing.", icon="file-lines") }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("Create or update template", icon="pen-to-square") %}
+{% call hub.section("إنشاء أو تحديث قالب", icon="pen-to-square") %}
   <form method="post" class="hub-form-grid" data-testid="notification-template-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <label>Key <input name="template_key" required placeholder="renewal-reminder"></label>
-    <label>Title <input name="title" required></label>
-    <label>Channel
+    <label>العنوان <input name="title" required></label>
+    <label>القناة
       <select name="channel">
         <option value="internal">Internal</option>
         <option value="sms">SMS</option>
@@ -28,14 +28,14 @@
     <label>Subject <input name="subject"></label>
     <label>Variables <input name="variables" placeholder="name, expire_at, balance"></label>
     <label class="hub-form-span">Body <textarea name="body" rows="5" required></textarea></label>
-    <button class="hub-btn hub-btn--primary" type="submit">Save template</button>
+    <button class="hub-btn hub-btn--primary" type="submit">حفظ القالب</button>
   </form>
 {% endcall %}
 
 {% call hub.section("Templates", icon="file-lines", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="notification-templates-table">
-      <thead><tr><th>Key</th><th>Channel</th><th>Title</th><th>Status</th></tr></thead>
+      <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th>الحالة</th></tr></thead>
       <tbody>
         {% for item in templates %}
           <tr><td>{{ item.template_key }}</td><td>{{ item.channel }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td></tr>

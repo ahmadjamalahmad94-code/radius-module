@@ -1,24 +1,24 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Speed Control — Hobe Hub{% endblock %}
+{% block title %}التحكم بالسرعة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
-{% block page_title %}Speed Control Center{% endblock %}
-{% block page_sub %}<span class="sub">Preview global/profile speed changes and save dry-run policies without live CoA.</span>{% endblock %}
+{% block page_title %}مركز التحكم بالسرعة{% endblock %}
+{% block page_sub %}<span class="sub">راجع تغييرات السرعة العامة أو حسب الباقة واحفظ سياسات تجربة جافة بدون CoA مباشر.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
-  "Speed Control Center",
-  subtitle="Calculate speed impact before action. Saved policies remain pending and applied_to_radius=false.",
+  "مركز التحكم بالسرعة",
+  subtitle="احسب أثر تغيير السرعة قبل أي إجراء. السياسات المحفوظة تبقى معلقة و applied_to_radius=false.",
   icon="sliders",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.operations_center') ~ '"><i class="fa-solid fa-gauge-high"></i> Operations</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.operations_center') ~ '"><i class="fa-solid fa-gauge-high"></i> العمليات</a>'
 ) }}
 
-{% call hub.section("Preview speed policy", icon="sliders") %}
+{% call hub.section("معاينة سياسة السرعة", icon="sliders") %}
   <form method="post" class="hub-form-grid" data-testid="speed-control-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>Policy key <input name="policy_key" placeholder="pressure-mode-may"></label>
-    <label>Title <input name="title" placeholder="Pressure mode May"></label>
+    <label>مفتاح السياسة <input name="policy_key" placeholder="pressure-mode-may"></label>
+    <label>العنوان <input name="title" placeholder="وضع الضغط لشهر مايو"></label>
     <label>Preset
       <select name="preset">
         {% for key, preset in presets.items() %}
@@ -27,9 +27,9 @@
       </select>
     </label>
     <label>Multiplier <input name="multiplier" type="number" min="0.1" max="5" step="0.05" value="1.0"></label>
-    <label>Profile IDs <input name="profile_ids" placeholder="1,2,3"></label>
-    <button class="hub-btn hub-btn--secondary" type="submit">Preview impact</button>
-    <button class="hub-btn hub-btn--primary" type="submit" name="save_policy" value="1">Save dry-run policy</button>
+    <label>أرقام الباقات <input name="profile_ids" placeholder="1,2,3"></label>
+    <button class="hub-btn hub-btn--secondary" type="submit">معاينة الأثر</button>
+    <button class="hub-btn hub-btn--primary" type="submit" name="save_policy" value="1">حفظ سياسة تجربة جافة</button>
   </form>
 {% endcall %}
 
@@ -38,12 +38,12 @@
     <div class="hub-kpi-grid" data-testid="speed-preview-summary">
       {{ hub.kpi("Preset", preview.preset_label, icon="bookmark") }}
       {{ hub.kpi("Multiplier", preview.multiplier, icon="percent") }}
-      {{ hub.kpi("Subscribers", preview.total_subscribers, icon="users") }}
+      {{ hub.kpi("المشتركون", preview.total_subscribers, icon="users") }}
       {{ hub.kpi("CoA required", "yes" if preview.coa_required else "no", icon="bolt", variant="amber") }}
     </div>
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="speed-impact-table">
-        <thead><tr><th>Profile</th><th>Subscribers</th><th>Base down/up</th><th>Effective down/up</th><th>Online</th><th>CoA</th></tr></thead>
+        <thead><tr><th>الباقة</th><th>المشتركون</th><th>السرعة الأساسية نزول/رفع</th><th>السرعة الفعلية نزول/رفع</th><th>المتصلون</th><th>CoA</th></tr></thead>
         <tbody>
           {% for item in preview.impact %}
             <tr>
@@ -63,10 +63,10 @@
   {% endcall %}
 {% endif %}
 
-{% call hub.section("Saved dry-run policies", icon="clipboard-list", flush=True) %}
+{% call hub.section("سياسات التجربة الجافة المحفوظة", icon="clipboard-list", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="speed-policies-table">
-      <thead><tr><th>ID</th><th>Key</th><th>Preset</th><th>Status</th><th>Applied to RADIUS</th></tr></thead>
+      <thead><tr><th>ID</th><th>المفتاح</th><th>القالب</th><th>الحالة</th><th>مطبق على RADIUS</th></tr></thead>
       <tbody>
         {% for policy in policies %}
           <tr><td>#{{ policy.id }}</td><td>{{ policy.policy_key }}</td><td>{{ policy.preset }}</td><td>{{ policy.status }}</td><td>{{ policy.applied_to_radius }}</td></tr>

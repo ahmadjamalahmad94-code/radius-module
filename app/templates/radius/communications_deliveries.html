@@ -7,13 +7,13 @@
 {% block page_sub %}<span class="sub">Queued, sent, delivered, failed, retried, and read states where providers support them.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("Delivery Log", subtitle="Provider abstraction results are tracked here. Default mode queues only.", icon="truck-fast") }}
+{{ hub.hero("سجل الإرسال", subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط.", icon="truck-fast") }}
 {% include "radius/communications_nav.html" %}
 
 {% call hub.section("Deliveries", icon="truck-fast", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="delivery-log-table">
-      <thead><tr><th>ID</th><th>Channel</th><th>Status</th><th>Provider</th><th>Recipient</th><th>Error</th></tr></thead>
+      <thead><tr><th>ID</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
       <tbody>
         {% for item in deliveries %}
           <tr>

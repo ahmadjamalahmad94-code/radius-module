@@ -95,9 +95,9 @@ def payment_collection_settings():
                 if form.get("payment_request_ttl_minutes") else None,
             )
         except ValueError as exc:
-            flash(f"Invalid payment setting: {exc}", "danger")
+            flash(f"إعداد دفع غير صالح: {exc}", "danger")
         else:
-            flash("Payment collection settings saved.", "success")
+            flash("تم حفظ إعدادات تحصيل الدفعات.", "success")
         return redirect(url_for("radius.payment_collection_settings"))
 
     return render_template(
@@ -128,7 +128,7 @@ def payment_collection_requests():
 def payment_collection_request_detail(request_id: int):
     item = PaymentRequestRepository().get(_tid(), request_id)
     if not item:
-        flash("Payment request not found.", "warning")
+        flash("طلب الدفع غير موجود.", "warning")
         return redirect(url_for("radius.payment_collection_requests"))
     proofs = PaymentProofRepository().list_for_request(request_id)
     apply_attempts = PaymentServiceApplyRepository().list_for_request(
@@ -157,14 +157,14 @@ def _reviewable(request_id: int):
     repo = PaymentRequestRepository()
     item = repo.get(_tid(), request_id)
     if not item:
-        flash("Payment request not found.", "warning")
+        flash("طلب الدفع غير موجود.", "warning")
         return None, None
     if item["status"] not in {"proof_submitted", "under_review"}:
-        flash("Payment request is not reviewable.", "warning")
+        flash("طلب الدفع غير قابل للمراجعة.", "warning")
         return None, item
     proof = PaymentProofRepository().latest_for_request(request_id)
     if not proof:
-        flash("No proof submitted.", "warning")
+        flash("لم يتم إرسال إثبات دفع.", "warning")
         return None, item
     return proof, item
 
@@ -191,7 +191,7 @@ def payment_collection_approve_web(request_id: int):
             request_id=request_id,
             actor="admin-web",
         )
-        flash("Payment approved manually and posted to ledger. Service activation is still pending later slices.", "success")
+        flash("تم قبول الدفع يدويًا وترحيله إلى دفتر القيود. تفعيل الخدمة ما زال مؤجلًا لمرحلة لاحقة.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
 
 
@@ -205,7 +205,7 @@ def payment_collection_reject_web(request_id: int):
             review_note=(request.form.get("review_note") or "").strip(),
         )
         PaymentRequestRepository().update_status(_tid(), request_id, "rejected")
-        flash("Payment proof rejected.", "info")
+        flash("تم رفض إثبات الدفع.", "info")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
 
 
@@ -223,5 +223,5 @@ def payment_collection_apply_service_web(request_id: int):
         else:
             flash(f"Service apply failed: {exc}", "danger")
     else:
-        flash("Service apply recorded without live RADIUS/CoA/MikroTik actions.", "success")
+        flash("تم تسجيل تطبيق الخدمة بدون أي إجراء مباشر على RADIUS أو CoA أو MikroTik.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))

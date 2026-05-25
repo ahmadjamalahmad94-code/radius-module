@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Subscriber Portal - HobeRadius</title>
+  <title>بوابة المشترك - HobeRadius</title>
   <style>
     body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}
     .portal{max-width:460px;margin:8vh auto;padding:32px;background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.08)}
@@ -14,13 +14,13 @@
 </head>
 <body>
   <main class="portal" data-testid="subscriber-portal-login">
-    <h1>Subscriber Portal</h1>
+    <h1>بوابة المشترك</h1>
     <p class="note">View subscription status, usage, loans, payments, and support requests. If your network allows this portal URL, expired subscribers can still sign in.</p>
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>Username <input name="username" autocomplete="username" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
-      <button type="submit">Open portal</button>
+      <button type="submit">فتح البوابة</button>
     </form>
   </main>
 </body>

@@ -3,46 +3,46 @@
 
 {% set label = profile.entity_type ~ " #" ~ profile.entity_id %}
 
-{% block title %}{{ label }} — Business Operator{% endblock %}
+{% block title %}{{ label }} — مشغل أعمال{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}{{ label }}{% endblock %}
-{% block page_sub %}<span class="sub">Wallet, permissions, limits, scope, and profit tracking.</span>{% endblock %}
+{% block page_sub %}<span class="sub">المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
   label,
-  subtitle="Operational financial profile. This page records Business OS events only and does not mutate RADIUS authentication or accounting.",
+  subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة RADIUS.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-left"></i> Operators</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-left"></i> المشغلون</a>'
 ) }}
 
 <div class="hub-kpi-grid" data-testid="operator-profile-kpis">
-  {{ hub.kpi("Wallet balance", profile.wallet.balance, icon="wallet", variant="green") }}
-  {{ hub.kpi("Credit limit", profile.debt_credit.credit_limit, icon="scale-balanced", variant="blue") }}
-  {{ hub.kpi("Net margin", profile.profit.net_margin, icon="chart-line", variant="amber") }}
-  {{ hub.kpi("Trust score", profile.score.trust_score, icon="shield-heart") }}
+  {{ hub.kpi("رصيد المحفظة", profile.wallet.balance, icon="wallet", variant="green") }}
+  {{ hub.kpi("حد الائتمان", profile.debt_credit.credit_limit, icon="scale-balanced", variant="blue") }}
+  {{ hub.kpi("صافي الهامش", profile.profit.net_margin, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("نقاط الثقة", profile.score.trust_score, icon="shield-heart") }}
 </div>
 
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("Recharge wallet", icon="wallet") %}
+  {% call hub.section("شحن المحفظة", icon="wallet") %}
     <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="hub-form-grid" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>Amount
+      <label>المبلغ
         <input name="amount" type="number" step="0.01" min="0.01" required>
       </label>
-      <label>Method
+      <label>الطريقة
         <select name="method">
-          <option value="cash">Cash</option>
-          <option value="bank">Bank</option>
-          <option value="wallet">Wallet</option>
-          <option value="manual">Manual</option>
+          <option value="cash">نقدًا</option>
+          <option value="bank">بنك</option>
+        <option value="wallet">المحفظة</option>
+          <option value="manual">يدوي</option>
         </select>
       </label>
-      <button class="hub-btn hub-btn--primary" type="submit">Recharge</button>
+      <button class="hub-btn hub-btn--primary" type="submit">شحن</button>
     </form>
   {% endcall %}
 
-  {% call hub.section("Permissions and limits", icon="sliders") %}
+  {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="hub-form-grid" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       {% for key, value in profile.permissions.items() %}
@@ -51,49 +51,49 @@
           {{ key }}
         </label>
       {% endfor %}
-      <label>Max free days
+      <label>أقصى أيام مجانية
         <input name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>
-      <label>Max trial days
+      <label>أقصى أيام تجربة
         <input name="max_trial_days" type="number" min="0" value="{{ profile.limits.max_trial_days }}">
       </label>
-      <label>Credit limit
+      <label>حد الائتمان
         <input name="credit_limit" type="number" step="0.01" value="{{ profile.debt_credit.credit_limit }}">
       </label>
-      <label>Approval above
+      <label>موافقة فوق
         <input name="require_approval_above" type="number" step="0.01" value="{{ profile.policy.require_approval_above }}">
       </label>
-      <label>Profit share %
+      <label>نسبة مشاركة الربح %
         <input name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
       </label>
       <label class="hub-check">
         <input type="checkbox" name="loan_wallet_deducted" {% if profile.limits.loan_wallet_deducted %}checked{% endif %}>
-        Loan is deducted from wallet
+        السلفة تخصم من المحفظة
       </label>
-      <button class="hub-btn hub-btn--secondary" type="submit">Save policy</button>
+      <button class="hub-btn hub-btn--secondary" type="submit">حفظ السياسة</button>
     </form>
   {% endcall %}
 </div>
 
-{% call hub.section("Profit tracking", icon="chart-simple") %}
+{% call hub.section("تتبع الأرباح", icon="chart-simple") %}
   <div class="hub-kpi-grid" data-testid="operator-profit-summary">
-    {{ hub.kpi("Original price", profile.profit.original_price, icon="tag") }}
-    {{ hub.kpi("Wholesale cost", profile.profit.wholesale_cost, icon="receipt") }}
-    {{ hub.kpi("Manager share", profile.profit.manager_share, icon="hand-holding-dollar", variant="green") }}
-    {{ hub.kpi("Company share", profile.profit.company_share, icon="building", variant="blue") }}
+    {{ hub.kpi("السعر الأصلي", profile.profit.original_price, icon="tag") }}
+    {{ hub.kpi("تكلفة الجملة", profile.profit.wholesale_cost, icon="receipt") }}
+    {{ hub.kpi("حصة المدير", profile.profit.manager_share, icon="hand-holding-dollar", variant="green") }}
+    {{ hub.kpi("حصة الشركة", profile.profit.company_share, icon="building", variant="blue") }}
   </div>
 {% endcall %}
 
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("Subscribers under scope", icon="users", flush=True) %}
+  {% call hub.section("المشتركون ضمن النطاق", icon="users", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="operator-subscribers">
-        <thead><tr><th>ID</th><th>Username</th><th>Status</th><th>Plan</th></tr></thead>
+        <thead><tr><th>ID</th><th>اسم المستخدم</th><th>الحالة</th><th>الباقة</th></tr></thead>
         <tbody>
           {% for subscriber in profile.subscribers %}
             <tr><td>#{{ subscriber.id }}</td><td>{{ subscriber.username }}</td><td>{{ subscriber.status }}</td><td>{{ subscriber.plan_id or "-" }}</td></tr>
           {% else %}
-            <tr><td colspan="4">No subscribers in this scope.</td></tr>
+            <tr><td colspan="4">لا يوجد مشتركون ضمن هذا النطاق.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -103,7 +103,7 @@
   {% call hub.section("Card batches under scope", icon="layer-group", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="operator-batches">
-        <thead><tr><th>ID</th><th>Batch</th><th>Count</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID</th><th>الحزمة</th><th>العدد</th><th>الحالة</th></tr></thead>
         <tbody>
           {% for batch in profile.batches %}
             <tr><td>#{{ batch.id }}</td><td>{{ batch.batch_code }}</td><td>{{ batch.count }}</td><td>{{ batch.status }}</td></tr>
@@ -119,7 +119,7 @@
 {% call hub.section("Events and operations", icon="timeline", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="operator-events">
-      <thead><tr><th>Type</th><th>Key</th><th>Status</th><th>Created</th></tr></thead>
+      <thead><tr><th>النوع</th><th>المفتاح</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
           <tr><td>operation</td><td>{{ op.operation_key }}</td><td>{{ op.status }}</td><td>{{ op.created_at }}</td></tr>
@@ -128,7 +128,7 @@
           <tr><td>event</td><td>{{ event.event_key }}</td><td>{{ event.severity }}</td><td>{{ event.created_at }}</td></tr>
         {% endfor %}
         {% if not profile.operations and not profile.events %}
-          <tr><td colspan="4">No events yet.</td></tr>
+          <tr><td colspan="4">لا توجد أحداث بعد.</td></tr>
         {% endif %}
       </tbody>
     </table>

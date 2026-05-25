@@ -75,9 +75,9 @@ def test_settings_page_renders_and_saves(client):
     page = client.get("/admin/radius/payments/settings")
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert "Payment Collection Center" in html
+    assert "مركز تحصيل الدفعات" in html
     assert "رقم المحفظة لتوجيه الدفع فقط" in html
-    assert "dry-run" in html
+    assert "تجربة جافة" in html
 
     saved = client.post(
         "/admin/radius/payments/settings",
@@ -119,13 +119,13 @@ def test_requests_list_and_detail_render_without_paid_apply_buttons(client):
     assert page.status_code == 200
     html = page.get_data(as_text=True)
     assert request["reference_code"] in html
-    assert "Payment Requests" in html
+    assert "طلبات الدفع" in html
 
     detail = client.get(f"/admin/radius/payments/requests/{request['id']}")
     assert detail.status_code == 200
     detail_html = detail.get_data(as_text=True)
     assert request["reference_code"] in detail_html
-    assert "Proofs" in detail_html
+    assert "إثباتات الدفع" in detail_html
     assert "Record service apply" not in detail_html
     assert "Mark paid" not in detail_html
 
@@ -135,5 +135,5 @@ def test_payment_collection_reconciliation_page_renders(client):
     response = client.get("/admin/radius/payments/reconciliation")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert "Payment Reconciliation" in html
-    assert "Paid without ledger" in html
+    assert "مطابقة تحصيل الدفعات" in html
+    assert "مدفوع بلا قيد مالي" in html

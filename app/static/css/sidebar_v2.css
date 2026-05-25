@@ -202,13 +202,13 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
 }
 .hb-side-item.is-active .hb-side-icon,
 .hb-side-section.has-active > .hb-side-section-head .hb-side-icon{
-  background:var(--hb-purple);
+  background:var(--hb-section-accent, var(--hb-purple));
   color:#fff;
   box-shadow:0 3px 8px rgba(107,90,237,.32);
 }
 .hb-side-section.is-open:not(.has-active) > .hb-side-section-head .hb-side-icon{
-  background:var(--hb-purple-soft);
-  color:var(--hb-purple);
+  background:var(--hb-section-soft, var(--hb-purple-soft));
+  color:var(--hb-section-accent, var(--hb-purple));
 }
 
 /* ═════════════════════════ TEXT LABEL ═════════════════════════ */
@@ -220,7 +220,22 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
 /* ═════════════════════════ SECTION (collapsible) ═════════════════════════ */
 .hb-side-section{
   margin-bottom:6px;            /* more space between groups */
+  --hb-section-accent: var(--hb-purple);
+  --hb-section-soft: var(--hb-purple-soft);
+  --hb-section-softer: var(--hb-purple-softer);
 }
+
+.hb-side-section[data-hb-tone="violet"]{--hb-section-accent:#6B5AED;--hb-section-soft:#EDE9FE;--hb-section-softer:#F7F4FF}
+.hb-side-section[data-hb-tone="sky"]{--hb-section-accent:#0284C7;--hb-section-soft:#E0F2FE;--hb-section-softer:#F0F9FF}
+.hb-side-section[data-hb-tone="indigo"]{--hb-section-accent:#4F46E5;--hb-section-soft:#E0E7FF;--hb-section-softer:#EEF2FF}
+.hb-side-section[data-hb-tone="amber"]{--hb-section-accent:#B45309;--hb-section-soft:#FEF3C7;--hb-section-softer:#FFFBEB}
+.hb-side-section[data-hb-tone="emerald"]{--hb-section-accent:#059669;--hb-section-soft:#D1FAE5;--hb-section-softer:#ECFDF5}
+.hb-side-section[data-hb-tone="green"]{--hb-section-accent:#16A34A;--hb-section-soft:#DCFCE7;--hb-section-softer:#F0FDF4}
+.hb-side-section[data-hb-tone="rose"]{--hb-section-accent:#E11D48;--hb-section-soft:#FFE4E6;--hb-section-softer:#FFF1F2}
+.hb-side-section[data-hb-tone="slate"]{--hb-section-accent:#475569;--hb-section-soft:#E2E8F0;--hb-section-softer:#F8FAFC}
+.hb-side-section[data-hb-tone="cyan"]{--hb-section-accent:#0891B2;--hb-section-soft:#CFFAFE;--hb-section-softer:#ECFEFF}
+.hb-side-section[data-hb-tone="orange"]{--hb-section-accent:#EA580C;--hb-section-soft:#FFEDD5;--hb-section-softer:#FFF7ED}
+.hb-side-section[data-hb-tone="blue"]{--hb-section-accent:#2563EB;--hb-section-soft:#DBEAFE;--hb-section-softer:#EFF6FF}
 
 .hb-side-section-head{
   display:flex;align-items:center;gap:12px;width:100%;
@@ -235,17 +250,22 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
   text-align:start;
   white-space:nowrap;
 }
+.hb-side-section[data-hb-tone] > .hb-side-section-head{
+  background:var(--hb-section-softer, transparent);
+  border-inline-start:3px solid var(--hb-section-soft, transparent);
+}
 .hb-side-section-head:hover{
-  background:var(--hb-bg-hover);
+  background:var(--hb-section-soft, var(--hb-bg-hover));
   color:var(--hb-text);
 }
 .hb-side-section.is-open > .hb-side-section-head{
   color:var(--hb-text);
-  background:var(--hb-bg-hover);
+  background:var(--hb-section-soft, var(--hb-bg-hover));
 }
 .hb-side-section.has-active > .hb-side-section-head{
-  color:var(--hb-purple);
-  background:transparent;
+  color:var(--hb-section-accent, var(--hb-purple));
+  background:var(--hb-section-soft, transparent);
+  border-inline-start-color:var(--hb-section-accent, var(--hb-purple));
 }
 
 .hb-side-chevron{
@@ -258,8 +278,8 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
 }
 .hb-side-section.is-open > .hb-side-section-head .hb-side-chevron{
   transform:rotate(-180deg);
-  color:var(--hb-purple);
-  background:var(--hb-purple-soft);
+  color:var(--hb-section-accent, var(--hb-purple));
+  background:var(--hb-section-soft, var(--hb-purple-soft));
 }
 
 /* ═════════════════════════ SECTION BODY (animated, tinted lane) ═════════════════════════ */
@@ -291,7 +311,7 @@ body[data-hb-side="collapsed"] .hb-side-collapse-btn i{
   border-radius:1px;
 }
 .hb-side-section.has-active > .hb-side-section-body > .hb-side-section-body-inner::before{
-  background:var(--hb-purple-soft);
+  background:var(--hb-section-soft, var(--hb-purple-soft));
 }
 
 /* ═════════════════════════ SUB-ITEMS ═════════════════════════ */
@@ -329,14 +349,14 @@ html[dir="rtl"] .hb-side-subitem{padding:8px 42px 8px 12px}
   border-color:var(--hb-text-soft);
 }
 .hb-side-subitem.is-active{
-  background:var(--hb-purple-soft);
-  color:var(--hb-purple);
+  background:var(--hb-section-soft, var(--hb-purple-soft));
+  color:var(--hb-section-accent, var(--hb-purple));
   font-weight:800;
 }
 .hb-side-subitem.is-active::before{
-  background:var(--hb-purple);
-  border-color:var(--hb-purple);
-  box-shadow:0 0 0 3px var(--hb-purple-softer);
+  background:var(--hb-section-accent, var(--hb-purple));
+  border-color:var(--hb-section-accent, var(--hb-purple));
+  box-shadow:0 0 0 3px var(--hb-section-softer, var(--hb-purple-softer));
 }
 
 /* ═════════════════════════ FOOT (user pill) ═════════════════════════ */

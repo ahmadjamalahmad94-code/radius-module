@@ -321,7 +321,7 @@
     const hasFailed = operations.some((op) => op.status === "failed");
     const snapshot = summary.latest_router_snapshot || null;
     const rows = [
-      `Dry-run completed: ${hasDry ? "yes" : "pending"}`,
+      `التجربة الجافة: ${hasDry ? "مكتملة" : "معلقة"}`,
       `Inventory collected: ${snapshot ? "yes - " + (snapshot.created_at || "") : "pending"}`,
       `Apply attempted: ${hasApplied ? "yes" : "blocked/not attempted"}`,
       `Verification: ${(health.health && health.health.failed_verifications) ? "attention required" : "pending or clean"}`,

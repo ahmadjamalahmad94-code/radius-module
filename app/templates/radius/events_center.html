@@ -1,37 +1,37 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Events Center — Hobe Hub{% endblock %}
+{% block title %}مركز الأحداث — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
-{% block page_title %}Events Center{% endblock %}
-{% block page_sub %}<span class="sub">Append-only business events with filters, correlation IDs, and entity timelines.</span>{% endblock %}
+{% block page_title %}مركز الأحداث{% endblock %}
+{% block page_sub %}<span class="sub">أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("Events Center", subtitle="Operational events are listed here for investigation. This page has no delete action.", icon="timeline") }}
+{{ hub.hero("مركز الأحداث", subtitle="تعرض هنا أحداث التشغيل للمراجعة والتحقيق. لا توجد إجراءات حذف من هذه الصفحة.", icon="timeline") }}
 <div class="hub-kpi-grid" data-testid="events-summary">
-  {{ hub.kpi("Events", summary.events, icon="list") }}
-  {{ hub.kpi("Open flags", summary.open_flags, icon="flag", variant="amber") }}
-  {{ hub.kpi("Critical", summary.critical_events, icon="triangle-exclamation", variant="red") }}
+  {{ hub.kpi("الأحداث", summary.events, icon="list") }}
+  {{ hub.kpi("التنبيهات المفتوحة", summary.open_flags, icon="flag", variant="amber") }}
+  {{ hub.kpi("حرجة", summary.critical_events, icon="triangle-exclamation", variant="red") }}
 </div>
 {% include "radius/events_nav.html" %}
 
-{% call hub.section("Filters", icon="filter") %}
+{% call hub.section("الفلاتر", icon="filter") %}
   <form method="get" class="hub-form-grid" data-testid="events-filters">
-    <label>Category <input name="category" value="{{ request.args.get('category', '') }}"></label>
-    <label>Severity <input name="severity" value="{{ request.args.get('severity', '') }}"></label>
-    <label>Actor type <input name="actor_type" value="{{ request.args.get('actor_type', '') }}"></label>
-    <label>Actor ID <input name="actor_id" type="number" value="{{ request.args.get('actor_id', '') }}"></label>
-    <label>Target type <input name="target_type" value="{{ request.args.get('target_type', '') }}"></label>
-    <label>Target ID <input name="target_id" type="number" value="{{ request.args.get('target_id', '') }}"></label>
+    <label>الفئة <input name="category" value="{{ request.args.get('category', '') }}"></label>
+    <label>الخطورة <input name="severity" value="{{ request.args.get('severity', '') }}"></label>
+    <label>نوع الفاعل <input name="actor_type" value="{{ request.args.get('actor_type', '') }}"></label>
+    <label>رقم الفاعل <input name="actor_id" type="number" value="{{ request.args.get('actor_id', '') }}"></label>
+    <label>نوع الهدف <input name="target_type" value="{{ request.args.get('target_type', '') }}"></label>
+    <label>رقم الهدف <input name="target_id" type="number" value="{{ request.args.get('target_id', '') }}"></label>
     <label>Correlation ID <input name="correlation_id" value="{{ request.args.get('correlation_id', '') }}"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">Filter</button>
+    <button class="hub-btn hub-btn--primary" type="submit">فلترة</button>
   </form>
 {% endcall %}
 
-{% call hub.section("Event list", icon="list", flush=True) %}
+{% call hub.section("قائمة الأحداث", icon="list", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="events-table">
-      <thead><tr><th>ID</th><th>Category</th><th>Severity</th><th>Key</th><th>Actor</th><th>Target</th><th>Correlation</th></tr></thead>
+      <thead><tr><th>ID</th><th>الفئة</th><th>الخطورة</th><th>المفتاح</th><th>الفاعل</th><th>الهدف</th><th>الترابط</th></tr></thead>
       <tbody>
         {% for event in events %}
           <tr>
@@ -44,7 +44,7 @@
             <td>{{ event.correlation_id }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="7">No events match this filter.</td></tr>
+          <tr><td colspan="7">لا توجد أحداث مطابقة لهذا الفلتر.</td></tr>
         {% endfor %}
       </tbody>
     </table>

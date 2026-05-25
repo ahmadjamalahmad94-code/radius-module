@@ -1,28 +1,28 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}Payment Collection Settings{% endblock %}
+{% block title %}إعدادات تحصيل الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
-{% block page_title %}Payment Collection Center{% endblock %}
-{% block page_sub %}<span class="sub">Manual Wallet settings</span>{% endblock %}
+{% block page_title %}مركز تحصيل الدفعات{% endblock %}
+{% block page_sub %}<span class="sub">إعدادات المحفظة اليدوية</span>{% endblock %}
 
 {% block content %}
-<h2 style="margin:0 0 12px">Payment Collection Center</h2>
+<h2 style="margin:0 0 12px">مركز تحصيل الدفعات</h2>
 <div class="hub-card" style="padding:18px;margin-bottom:16px">
   <strong>رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا.</strong>
-  <p class="small" style="margin:8px 0 0">Manual review is required before any request becomes paid. Auto apply is dry-run only until service apply is implemented.</p>
+  <p class="small" style="margin:8px 0 0">المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا. التطبيق التلقائي يبقى تجربة جافة حتى يكتمل مسار تفعيل الخدمة.</p>
 </div>
 
 <form method="post" class="hub-card" style="padding:18px;display:grid;gap:14px;max-width:980px">
-  <label class="hub-check"><input type="checkbox" name="enabled" value="1" {% if settings and settings.enabled %}checked{% endif %}> Enable payment collection</label>
+  <label class="hub-check"><input type="checkbox" name="enabled" value="1" {% if settings and settings.enabled %}checked{% endif %}> تفعيل تحصيل الدفعات</label>
 
   <div class="hub-grid-2">
-    <label>Provider
+    <label>المزوّد
       <select class="hub-select" name="provider">
-        <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>Manual Wallet</option>
-        <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (future)</option>
+        <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
+        <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (لاحقًا)</option>
       </select>
     </label>
-    <label>Currency
+    <label>العملة
       <select class="hub-select" name="currency">
         {% for c in ['ILS','USD','JOD'] %}
         <option value="{{ c }}" {% if settings and settings.currency == c %}selected{% endif %}>{{ c }}</option>
@@ -32,39 +32,39 @@
   </div>
 
   <div class="hub-grid-2">
-    <label>Wallet number <input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
-    <label>Wallet owner <input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
+    <label>رقم المحفظة <input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
+    <label>مالك المحفظة <input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
   </div>
 
   <div class="hub-grid-3">
-    <label>Confirmation mode
+    <label>طريقة التأكيد
       <select class="hub-select" name="confirmation_mode">
-        <option value="manual" selected>Manual review</option>
-        <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>API (future)</option>
+        <option value="manual" selected>مراجعة يدوية</option>
+        <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>API (لاحقًا)</option>
       </select>
     </label>
-    <label>TTL minutes <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
-    <label>Auto apply <span class="small">(dry-run)</span>
+    <label>مدة الصلاحية بالدقائق <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
+    <label>تطبيق تلقائي <span class="small">(تجربة جافة)</span>
       <select class="hub-select" name="auto_apply" disabled>
-        <option>Disabled until service apply engine exists</option>
+        <option>معطل حتى يكتمل محرك تطبيق الخدمة</option>
       </select>
     </label>
   </div>
 
   <div class="hub-grid-2">
-    <label>Min amount <input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
-    <label>Max amount <input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
+    <label>أقل مبلغ <input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
+    <label>أعلى مبلغ <input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
   </div>
 
   <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-    <label class="hub-check"><input type="checkbox" name="allow_cards" value="1" {% if not settings or settings.allow_cards %}checked{% endif %}> Cards</label>
-    <label class="hub-check"><input type="checkbox" name="allow_monthly_subscriptions" value="1" {% if not settings or settings.allow_monthly_subscriptions %}checked{% endif %}> Monthly subscriptions</label>
-    <label class="hub-check"><input type="checkbox" name="allow_distributor_payments" value="1" {% if not settings or settings.allow_distributor_payments %}checked{% endif %}> Distributor payments</label>
+    <label class="hub-check"><input type="checkbox" name="allow_cards" value="1" {% if not settings or settings.allow_cards %}checked{% endif %}> البطاقات</label>
+    <label class="hub-check"><input type="checkbox" name="allow_monthly_subscriptions" value="1" {% if not settings or settings.allow_monthly_subscriptions %}checked{% endif %}> الاشتراكات الشهرية</label>
+    <label class="hub-check"><input type="checkbox" name="allow_distributor_payments" value="1" {% if not settings or settings.allow_distributor_payments %}checked{% endif %}> دفعات الموزعين</label>
   </div>
 
   <div>
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save</button>
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_requests') }}"><i class="fa-solid fa-list"></i> Requests</a>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_requests') }}"><i class="fa-solid fa-list"></i> الطلبات</a>
   </div>
 </form>
 {% endblock %}

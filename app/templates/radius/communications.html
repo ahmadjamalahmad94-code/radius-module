@@ -4,7 +4,7 @@
 {% block title %}Communications — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bullhorn"></i>{% endblock %}
 {% block page_title %}Communications Center{% endblock %}
-{% block page_sub %}<span class="sub">Notifications, templates, campaigns, audiences, and queued delivery tracking.</span>{% endblock %}
+{% block page_sub %}<span class="sub">التنبيهات والقوالب والحملات وشرائح الجمهور وتتبع الإرسال المجدول.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
@@ -27,7 +27,7 @@
   {% call hub.section("Recent templates", icon="file-lines", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table">
-        <thead><tr><th>Key</th><th>Channel</th><th>Title</th></tr></thead>
+        <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th></tr></thead>
         <tbody>
           {% for item in templates[:8] %}
             <tr><td>{{ item.template_key }}</td><td>{{ item.channel }}</td><td>{{ item.title }}</td></tr>
@@ -42,7 +42,7 @@
   {% call hub.section("Recent deliveries", icon="truck-fast", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table">
-        <thead><tr><th>ID</th><th>Channel</th><th>Status</th><th>Recipient</th></tr></thead>
+        <thead><tr><th>ID</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
         <tbody>
           {% for item in deliveries %}
             <tr><td>#{{ item.id }}</td><td>{{ item.channel }}</td><td>{{ item.status }}</td><td>{{ item.recipient_type }} #{{ item.recipient_id }}</td></tr>

@@ -11,10 +11,10 @@
   "Report Archives",
   subtitle="Snapshots preserve the calculated report state at creation time. Existing snapshots are never overwritten.",
   icon="box-archive",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> Reports</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> التقارير</a>'
 ) }}
 
-{% call hub.section("Create archive snapshot", icon="box-archive") %}
+{% call hub.section("إنشاء لقطة أرشيف", icon="box-archive") %}
   <form method="post" action="{{ url_for('radius.reports_archive_create') }}" class="hub-form-grid" data-testid="archive-create-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <label>Archive type
@@ -26,14 +26,14 @@
     </label>
     <label>Period <input name="period" placeholder="2026 or 2026-05 or 2026-05-25"></label>
     <label>Report type <input name="report_type" value="financial"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">Create immutable snapshot</button>
+    <button class="hub-btn hub-btn--primary" type="submit">إنشاء لقطة ثابتة</button>
   </form>
 {% endcall %}
 
 {% call hub.section("Existing archives", icon="lock", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="archive-snapshots-table">
-      <thead><tr><th>ID</th><th>Type</th><th>Period</th><th>Report</th><th>Revenue</th><th>Created</th></tr></thead>
+      <thead><tr><th>ID</th><th>النوع</th><th>الفترة</th><th>التقرير</th><th>الإيرادات</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for archive in archives %}
           <tr>

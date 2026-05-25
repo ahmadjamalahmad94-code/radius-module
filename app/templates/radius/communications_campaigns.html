@@ -1,54 +1,54 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Campaigns — Hobe Hub{% endblock %}
+{% block title %}الحملات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bullseye"></i>{% endblock %}
-{% block page_title %}Campaigns{% endblock %}
-{% block page_sub %}<span class="sub">Dry-run campaigns with optional action plans. No action is applied from this page.</span>{% endblock %}
+{% block page_title %}الحملات{% endblock %}
+{% block page_sub %}<span class="sub">حضّر حملات بتجربة جافة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("Campaigns", subtitle="Prepare holiday greetings, outage notices, debt reminders, renewal reminders, and offers with dry-run action coupling.", icon="bullseye") }}
+{{ hub.hero("الحملات", subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات تجربة جافة.", icon="bullseye") }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("Prepare campaign dry-run", icon="clipboard-check") %}
+{% call hub.section("تجهيز تجربة جافة للحملة", icon="clipboard-check") %}
   <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>Campaign key <input name="campaign_key" required placeholder="renewal-may"></label>
-    <label>Title <input name="title" required></label>
-    <label>Template
+    <label>مفتاح الحملة <input name="campaign_key" required placeholder="renewal-may"></label>
+    <label>العنوان <input name="title" required></label>
+    <label>القالب
       <select name="template_id" required>
         {% for template in templates %}
           <option value="{{ template.id }}">{{ template.title }} — {{ template.channel }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>Target
+    <label>الهدف
       <select name="target">
-        <option value="subscriber">Subscribers</option>
-        <option value="card_user">Card users</option>
-        <option value="manager">Managers</option>
-        <option value="company">Company</option>
+        <option value="subscriber">المشتركون</option>
+        <option value="card_user">مستخدمو البطاقات</option>
+        <option value="manager">المدراء</option>
+        <option value="company">الشركة</option>
       </select>
     </label>
-    <label>Manager ID <input name="manager_id" type="number" min="1"></label>
-    <label>Limit <input name="limit" type="number" min="1" max="500" value="100"></label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="record_event"> Send + record event</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> Send + add free days dry-run</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> Send + wallet credit dry-run</label>
-    <button class="hub-btn hub-btn--primary" type="submit">Prepare dry-run</button>
+    <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
+    <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
+    <label class="hub-check"><input type="checkbox" name="actions" value="record_event"> إرسال + تسجيل حدث</label>
+    <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> إرسال + تجربة جافة لإضافة أيام مجانية</label>
+    <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> إرسال + تجربة جافة لإضافة رصيد للمحفظة</label>
+    <button class="hub-btn hub-btn--primary" type="submit">تجهيز التجربة الجافة</button>
   </form>
 {% endcall %}
 
 {% if campaign %}
-  {% call hub.section("Dry-run result", icon="circle-info") %}
+  {% call hub.section("نتيجة التجربة الجافة", icon="circle-info") %}
     <div data-testid="campaign-dry-run-result">
-      <p>Recipients: {{ campaign.dry_run.recipient_count }}</p>
-      <p>External send: {{ campaign.dry_run.external_send }}</p>
+      <p>المستلمون: {{ campaign.dry_run.recipient_count }}</p>
+      <p>إرسال خارجي: {{ campaign.dry_run.external_send }}</p>
       <ul>
         {% for action in campaign.dry_run.actions %}
           <li>{{ action.type }} — {{ action.status }}</li>
         {% else %}
-          <li>No coupled actions requested.</li>
+          <li>لم تطلب أي إجراءات مرتبطة.</li>
         {% endfor %}
       </ul>
     </div>

@@ -435,7 +435,7 @@
   }
 
   async function dryRunServerPeer() {
-    writeServerPeerResult("جاري إنشاء dry-run لخطة server peer...");
+    writeServerPeerResult("جاري إنشاء تجربة جافة لخطة server peer...");
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
@@ -446,7 +446,7 @@
         warnings: data.plan?.warnings || [],
       });
     } catch (error) {
-      writeServerPeerResult(`تعذر إنشاء dry-run: ${error.message}`);
+      writeServerPeerResult(`تعذر إنشاء التجربة الجافة: ${error.message}`);
     }
   }
 
@@ -743,11 +743,11 @@
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/dry-run/${service}`, {});
-      renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء dry-run");
+      renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء التجربة الجافة");
       const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
       if (details) details.textContent = JSON.stringify(data, null, 2);
     } catch (error) {
-      renderServiceDiagnostics(service, null, `Dry-run محظور: ${error.message}`);
+      renderServiceDiagnostics(service, null, `التجربة الجافة محظورة: ${error.message}`);
     }
   }
 
@@ -862,7 +862,7 @@
       });
       renderAddedPlan(data);
     } catch (error) {
-      renderAddedDiagnostics(null, `Dry-run محظور: ${error.message}`);
+      renderAddedDiagnostics(null, `التجربة الجافة محظورة: ${error.message}`);
     }
   }
 

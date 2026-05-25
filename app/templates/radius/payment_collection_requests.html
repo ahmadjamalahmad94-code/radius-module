@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}Payment Requests{% endblock %}
+{% block title %}طلبات الدفع{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
-{% block page_title %}Payment Requests{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} requests</span>{% endblock %}
+{% block page_title %}طلبات الدفع{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} طلب</span>{% endblock %}
 
 {% block content %}
 <div class="hub-card" style="padding:18px;margin-bottom:16px">
@@ -12,23 +12,23 @@
 
 <form method="get" class="hub-filterbar">
   <select class="hub-select" name="status">
-    <option value="">All statuses</option>
+    <option value="">كل الحالات</option>
     {% for s in ['pending','proof_submitted','under_review','paid','rejected','expired','cancelled','failed'] %}
     <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="purpose">
-    <option value="">All purposes</option>
+    <option value="">كل الأغراض</option>
     {% for p in ['card_purchase','monthly_subscription','subscriber_renewal','quota_topup','time_extension','distributor_payment','loan_settlement'] %}
     <option value="{{ p }}" {% if purpose == p %}selected{% endif %}>{{ p }}</option>
     {% endfor %}
   </select>
   <input class="hub-input" name="payer_type" placeholder="payer_type" value="{{ payer_type }}">
-  <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
+  <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> فلترة</button>
   <span class="hub-spacer"></span>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_review_queue_web') }}"><i class="fa-solid fa-clipboard-check"></i> Review Queue</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_reconciliation_web') }}"><i class="fa-solid fa-scale-balanced"></i> Reconciliation</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_settings') }}"><i class="fa-solid fa-gear"></i> Settings</a>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_review_queue_web') }}"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_reconciliation_web') }}"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_settings') }}"><i class="fa-solid fa-gear"></i> الإعدادات</a>
 </form>
 
 <div class="hub-table-wrap">
@@ -36,12 +36,12 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Reference</th>
-        <th>Purpose</th>
-        <th>Payer</th>
-        <th>Amount</th>
-        <th>Status</th>
-        <th>Created</th>
+        <th>المرجع</th>
+        <th>الغرض</th>
+        <th>الدافع</th>
+        <th>المبلغ</th>
+        <th>الحالة</th>
+        <th>تاريخ الإنشاء</th>
         <th></th>
       </tr>
     </thead>
@@ -55,10 +55,10 @@
         <td class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</td>
         <td><span class="hub-pill">{{ item.status }}</span></td>
         <td class="mono small">{{ item.created_at }}</td>
-        <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">Open</a></td>
+        <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">فتح</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="8" class="small">No payment requests yet.</td></tr>
+      <tr><td colspan="8" class="small">لا توجد طلبات دفع بعد.</td></tr>
       {% endfor %}
     </tbody>
   </table>

@@ -1,60 +1,60 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Business Operators — Hobe Hub{% endblock %}
+{% block title %}مشغلو الأعمال — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-tie"></i>{% endblock %}
-{% block page_title %}Managers & Distributors{% endblock %}
-{% block page_sub %}<span class="sub">Wallets, limits, permissions, and financial accountability for operational operators.</span>{% endblock %}
+{% block page_title %}المدراء والموزعون{% endblock %}
+{% block page_sub %}<span class="sub">المحافظ والحدود والصلاحيات والمساءلة المالية لمشغلي النظام.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
-  "Managers & Distributors",
-  subtitle="A controlled Business OS view for manager/distributor wallets, permissions, subscriber/card scope, and profit tracking.",
+  "المدراء والموزعون",
+  subtitle="عرض منظم لنظام الأعمال يغطي محافظ المدراء والموزعين والصلاحيات ونطاق المشتركين والبطاقات وتتبع الأرباح.",
   icon="user-tie",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> Finance wallets</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> المحافظ المالية</a>'
 ) }}
 
 <div class="hub-kpi-grid" data-testid="business-operators-summary">
-  {{ hub.kpi("Managers", managers|length, icon="users-gear", variant="blue") }}
-  {{ hub.kpi("Distributors", distributors|length, icon="people-carry-box", variant="green") }}
-  {{ hub.kpi("Live apply", "OFF", icon="shield-halved", variant="amber") }}
+  {{ hub.kpi("المدراء", managers|length, icon="users-gear", variant="blue") }}
+  {{ hub.kpi("الموزعون", distributors|length, icon="people-carry-box", variant="green") }}
+  {{ hub.kpi("التطبيق المباشر", "متوقف", icon="shield-halved", variant="amber") }}
 </div>
 
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("Managers", icon="users-gear", flush=True) %}
+  {% call hub.section("المدراء", icon="users-gear", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="manager-operators-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Profile</th></tr></thead>
+        <thead><tr><th>ID</th><th>الاسم</th><th>الحالة</th><th>الملف</th></tr></thead>
         <tbody>
           {% for manager in managers %}
             <tr>
               <td>#{{ manager.id }}</td>
               <td>{{ manager.full_name or manager.username }}</td>
               <td>{{ manager.status if manager.status is defined else ("enabled" if manager.enabled else "disabled") }}</td>
-              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">Open</a></td>
+              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">فتح</a></td>
             </tr>
           {% else %}
-            <tr><td colspan="4">No managers found.</td></tr>
+            <tr><td colspan="4">لا يوجد مدراء.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% endcall %}
 
-  {% call hub.section("Distributors", icon="people-carry-box", flush=True) %}
+  {% call hub.section("الموزعون", icon="people-carry-box", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="distributor-operators-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Profile</th></tr></thead>
+        <thead><tr><th>ID</th><th>الاسم</th><th>الحالة</th><th>الملف</th></tr></thead>
         <tbody>
           {% for distributor in distributors %}
             <tr>
               <td>#{{ distributor.id }}</td>
               <td>{{ distributor.full_name or distributor.username }}</td>
               <td>{{ distributor.status }}</td>
-              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">Open</a></td>
+              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">فتح</a></td>
             </tr>
           {% else %}
-            <tr><td colspan="4">No distributors found.</td></tr>
+            <tr><td colspan="4">لا يوجد موزعون.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -186,4 +186,4 @@ def test_portal_pages_do_not_render_admin_navigation_or_routes(app):
     body = res.get_data(as_text=True)
     assert "admin-sidebar" not in body
     assert "/admin/radius/users" not in body
-    assert "Subscriber Portal" in body
+    assert "بوابة المشترك" in body

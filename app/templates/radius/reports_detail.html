@@ -4,20 +4,20 @@
 {% block title %}{{ title }} - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_sub %}<span class="sub">Filtered report detail view.</span>{% endblock %}
+{% block page_sub %}<span class="sub">عرض تفصيلي للتقرير بعد الفلترة.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
   title,
-  subtitle="Use the date filters for a focused range. Archive snapshots are created from the Archive tab.",
+  subtitle="استخدم فلاتر التاريخ لاختيار نطاق محدد. يتم إنشاء لقطات الأرشيف من تبويب الأرشيف.",
   icon="file-lines",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> Reports</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> التقارير</a>'
 ) }}
 
-{% call hub.section("Date range", icon="filter") %}
+{% call hub.section("نطاق التاريخ", icon="filter") %}
   <form method="get" class="hub-form-grid" data-testid="report-date-filter">
-    <label>From <input name="date_from" type="date" value="{{ request.args.get('date_from','') }}"></label>
-    <label>To <input name="date_to" type="date" value="{{ request.args.get('date_to','') }}"></label>
+    <label>من <input name="date_from" type="date" value="{{ request.args.get('date_from','') }}"></label>
+    <label>إلى <input name="date_to" type="date" value="{{ request.args.get('date_to','') }}"></label>
     <button class="hub-btn hub-btn--primary" type="submit">Apply filter</button>
   </form>
 {% endcall %}

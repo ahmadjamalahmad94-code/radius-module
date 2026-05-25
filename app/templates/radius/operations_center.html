@@ -1,55 +1,55 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Operations Center — Hobe Hub{% endblock %}
+{% block title %}مركز العمليات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
-{% block page_title %}Operations Center{% endblock %}
-{% block page_sub %}<span class="sub">Online users, NAS/RADIUS health, accounting signals, and safe emergency placeholders.</span>{% endblock %}
+{% block page_title %}مركز العمليات{% endblock %}
+{% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة NAS/RADIUS، إشارات المحاسبة، وإجراءات طوارئ آمنة كمؤشرات فقط.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
-  "Operations Center",
-  subtitle="This view reads operational state and exposes dry-run actions only. Unsafe emergency actions remain blocked placeholders.",
+  "مركز العمليات",
+  subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات تجربة جافة فقط. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
   icon="gauge-high",
-  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> Speed Control</a>'
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> التحكم بالسرعة</a>'
 ) }}
 
 <div class="hub-kpi-grid" data-testid="operations-summary">
-  {{ hub.kpi("Online users", snapshot.online_users, icon="wifi", variant="green") }}
-  {{ hub.kpi("NAS devices", snapshot.nas_health.total, icon="server", variant="blue") }}
-  {{ hub.kpi("Enabled NAS", snapshot.nas_health.enabled, icon="circle-check") }}
-  {{ hub.kpi("Radius failures", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
+  {{ hub.kpi("المستخدمون المتصلون", snapshot.online_users, icon="wifi", variant="green") }}
+  {{ hub.kpi("أجهزة NAS", snapshot.nas_health.total, icon="server", variant="blue") }}
+  {{ hub.kpi("NAS المفعلة", snapshot.nas_health.enabled, icon="circle-check") }}
+  {{ hub.kpi("فشل RADIUS", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
 </div>
 
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("Active sessions", icon="wifi", flush=True) %}
+  {% call hub.section("الجلسات النشطة", icon="wifi", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="active-sessions-table">
-        <thead><tr><th>User</th><th>NAS</th><th>IP</th><th>MAC</th></tr></thead>
+        <thead><tr><th>المستخدم</th><th>NAS</th><th>IP</th><th>MAC</th></tr></thead>
         <tbody>
           {% for session in snapshot.active_sessions %}
             <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>
           {% else %}
-            <tr><td colspan="4">No active sessions in radacct.</td></tr>
+            <tr><td colspan="4">لا توجد جلسات نشطة في radacct.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% endcall %}
 
-  {% call hub.section("Health signals", icon="heart-pulse") %}
+  {% call hub.section("إشارات الصحة", icon="heart-pulse") %}
     <ul class="hub-list" data-testid="operations-health">
-      <li>RADIUS DB path: {{ snapshot.radius_health.status }}</li>
-      <li>API-configured devices: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
-      <li>Live probe: {{ snapshot.vpn_api_health.live_probe }}</li>
+      <li>مسار قاعدة RADIUS: {{ snapshot.radius_health.status }}</li>
+      <li>أجهزة مضبوطة عبر API: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
+      <li>فحص مباشر: {{ snapshot.vpn_api_health.live_probe }}</li>
     </ul>
   {% endcall %}
 </div>
 
-{% call hub.section("Emergency action placeholders", icon="shield-halved", flush=True) %}
+{% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="emergency-placeholders">
-      <thead><tr><th>Action</th><th>Status</th><th>Reason</th></tr></thead>
+      <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
       <tbody>
         {% for action in snapshot.emergency_actions %}
           <tr><td>{{ action.key }}</td><td>{{ action.status }}</td><td>{{ action.reason }}</td></tr>
