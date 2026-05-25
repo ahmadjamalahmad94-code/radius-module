@@ -190,7 +190,7 @@ class HotspotBootstrapPlanner:
             "}",
             "",
             "# --- NAT for hotspot client network only ---",
-            f':if ([:len [/ip firewall nat find where chain="srcnat" and src-address="{network}" and action="masquerade" and comment="{tag}"]] = 0) do={{',
+            f':if ([:len [/ip firewall nat find where chain="srcnat" and src-address="{network}" and action="masquerade"]] = 0) do={{',
             f'  /ip firewall nat add chain=srcnat src-address="{network}" action=masquerade comment="{tag}"',
             "}",
             "",

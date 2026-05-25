@@ -87,6 +87,24 @@ def test_hotspot_routeros7_profile_and_server_commands_avoid_invalid_comment_pro
     assert '/ip hotspot add name="hs-server" interface="hs-bridge" address-pool="hs-bridge-pool" profile="hs-profile"' in plan.script_text
 
 
+def test_hotspot_nat_detection_avoids_duplicate_rules_from_previous_runs():
+    plan = HotspotBootstrapPlanner().plan(
+        wizard_run_id=93,
+        mode="manual",
+        payload={
+            "selected_interfaces": ["ether3"],
+            "network_cidr": "10.77.53.0/24",
+            "pool_range": "10.77.53.20-10.77.53.220",
+            "gateway_ip": "10.77.53.1",
+        },
+        blocked_interfaces=["ether1", "hr-wg"],
+        blocked_network_cidrs=["10.10.0.0/24"],
+    )
+
+    assert 'find where chain="srcnat" and src-address="10.77.53.0/24" and action="masquerade"]' in plan.script_text
+    assert 'src-address="10.77.53.0/24" and action="masquerade" and comment=' not in plan.script_text
+
+
 def test_hotspot_wan_and_vpn_exclusion_enforced():
     with pytest.raises(SetupWizardValidationError):
         HotspotBootstrapPlanner().plan(
