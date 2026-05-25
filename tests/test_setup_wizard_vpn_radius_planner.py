@@ -62,7 +62,11 @@ def test_vpn_radius_planner_generation_and_tagging():
     assert 'public-key="' in plan.script_text
     assert "/interface wireguard print detail" in plan.script_text
     assert ":delay 30s" in plan.script_text
-    assert plan.script_text.index(":delay 30s") < plan.script_text.index('/tool ping "10.10.0.1" count=5')
+    assert plan.script_text.index(":delay 30s") < plan.script_text.index('/tool ping "10.10.0.1" src-address="10.10.0.3" count=5')
+    assert '/interface wireguard peers set [find where interface="hr-wg" and public-key="' in plan.script_text
+    assert 'endpoint-address="187.77.70.18" endpoint-port=51820 allowed-address="10.10.0.1/32" persistent-keepalive=25s' in plan.script_text
+    assert '/ip route add dst-address="10.10.0.1/32" gateway="hr-wg" pref-src="10.10.0.3"' in plan.script_text
+    assert '/ip route set [find where dst-address="10.10.0.1/32" and gateway="hr-wg"] pref-src="10.10.0.3"' in plan.script_text
     assert plan.masked_sensitive_values["radius_secret"] == "***"
 
 
