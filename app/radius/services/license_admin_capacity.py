@@ -7,6 +7,7 @@ touch MikroTik, or enforce anything when no contract snapshot exists.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from app.api.responses import fail
@@ -23,6 +24,44 @@ FEATURE_BLOCK_CODES = {
     "read_only": "feature_readonly",
     "hidden": "feature_hidden",
 }
+
+CAPACITY_FEATURES = {
+    "subscribers": {
+        "usage_metric": "subscribers_total",
+        "limits": {"max_total": "subscribers.max_total"},
+    },
+    "cards": {
+        "usage_metric": "cards_generated_month",
+        "limits": {
+            "generate_per_batch": "cards.generate_per_batch",
+            "monthly_generated": "cards.monthly_generated",
+        },
+    },
+    "nas": {
+        "usage_metric": "nas_count",
+        "limits": {"max_total": "nas.max_total"},
+    },
+    "routers": {
+        "usage_metric": "routers_count",
+        "limits": {"max_total": "routers.max_total"},
+    },
+    "profiles": {
+        "usage_metric": "profiles_plans_count",
+        "limits": {"max_total": "profiles.max_total"},
+    },
+    "print_templates": {
+        "usage_metric": "print_templates_count",
+        "limits": {"max_active": "print_templates.max_active"},
+    },
+    "admins": {
+        "usage_metric": "admins_count",
+        "limits": {"max_total": "admins.max_total"},
+    },
+}
+
+
+def _utcnow() -> str:
+    return datetime.utcnow().isoformat() + "Z"
 
 
 @dataclass(frozen=True)
@@ -189,6 +228,76 @@ class CapacityEnforcementService:
             contract_status=str(state.get("status") or "unknown"),
         )
 
+    def capacity_status(self, *, tenant_id: int) -> dict[str, Any]:
+        state, payload, warnings = self._capacity_payload(tenant_id=tenant_id)
+        metrics = self.usage_service.collect_metrics(tenant_id=tenant_id)
+        contract_status = str(state.get("status") or "unknown")
+        status = contract_status
+        if "no_capacity_contract" in warnings:
+            status = "degraded"
+        elif state.get("stale"):
+            status = "stale"
+
+        features: dict[str, Any] = {}
+        for feature_key, spec in CAPACITY_FEATURES.items():
+            usage_metric = str(spec["usage_metric"])
+            current = int(metrics.get(usage_metric) or 0)
+            limits = {
+                alias: self._limit(payload, str(path))
+                for alias, path in dict(spec["limits"]).items()
+            }
+            limits = {key: value for key, value in limits.items() if value is not None}
+            primary_limit = (
+                limits.get("max_total")
+                if "max_total" in limits
+                else limits.get("monthly_generated")
+                if "monthly_generated" in limits
+                else limits.get("max_active")
+            )
+            state_value = self._feature_state(payload, feature_key) if payload else "unknown"
+            remaining = None
+            if primary_limit is not None:
+                remaining = max(0, int(primary_limit) - current)
+            blocked_code = FEATURE_BLOCK_CODES.get(state_value)
+            features[feature_key] = {
+                "state": state_value,
+                "usage_metric": usage_metric,
+                "current_usage": current,
+                "limits": limits,
+                "remaining": remaining,
+                "blocked": blocked_code is not None,
+                "block_code": blocked_code,
+                "message_ar": self._feature_status_message(
+                    feature_state=state_value,
+                    current_usage=current,
+                    limit=primary_limit,
+                ),
+                "upgrade_hint_ar": self._upgrade_hint(feature_key, state_value, current, primary_limit),
+            }
+
+        snapshot = state.get("last_success") or {}
+        return {
+            "status": status,
+            "mode": "local_snapshot",
+            "generated_at": _utcnow(),
+            "contract": {
+                "status": contract_status,
+                "stale": bool(state.get("stale")),
+                "snapshot_id": snapshot.get("id") if isinstance(snapshot, dict) else None,
+                "fetched_at": snapshot.get("fetched_at") if isinstance(snapshot, dict) else None,
+                "warnings": warnings,
+            },
+            "usage": metrics,
+            "features": features,
+            "warnings": warnings,
+            "upgrade_intent": {
+                "available": True,
+                "mode": "local_intent_only",
+                "dry_run_only": True,
+                "message_ar": "يمكن استخدام هذه البيانات لاحقاً لعرض طلب ترقية، بدون إرسال أي طلب مدفوع من هذا المسار.",
+            },
+        }
+
     def _capacity_payload(self, *, tenant_id: int) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
         state = self.store.state(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY)
         warnings: list[str] = []
@@ -238,3 +347,33 @@ class CapacityEnforcementService:
         if feature_state == "hidden":
             return "هذه الميزة غير متاحة في عقد الترخيص الحالي."
         return "هذه الميزة مقفلة حسب عقد الترخيص الحالي."
+
+    def _feature_status_message(
+        self,
+        *,
+        feature_state: str,
+        current_usage: int,
+        limit: int | None,
+    ) -> str:
+        if feature_state in FEATURE_BLOCK_CODES:
+            return self._feature_block_message(feature_state)
+        if limit is None:
+            return "لا يوجد حد مخزن لهذه الميزة حالياً."
+        if current_usage >= limit:
+            return "وصلت هذه الميزة إلى الحد المخزن في عقد الترخيص."
+        return "هذه الميزة ضمن الحدود المخزنة حالياً."
+
+    def _upgrade_hint(
+        self,
+        feature_key: str,
+        feature_state: str,
+        current_usage: int,
+        limit: int | None,
+    ) -> str:
+        if feature_state in FEATURE_BLOCK_CODES:
+            return "قد تحتاج إلى ترقية الباقة أو تفعيل الميزة من لوحة الإدارة."
+        if limit is not None and current_usage >= limit:
+            return "قد تحتاج إلى رفع الحد قبل إضافة عناصر جديدة."
+        if feature_key == "cards" and limit is None:
+            return "يمكن للواجهة عرض حالة الكروت بدون حظر عند عدم وجود حد شهري مخزن."
+        return ""

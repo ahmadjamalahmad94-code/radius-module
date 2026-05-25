@@ -82,6 +82,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_usage_report),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/capacity-status",
+        "system_admin_bridge_capacity_status",
+        require_api_token(system_admin_bridge_capacity_status),
+        methods=["GET"],
+    )
 
 
 def system_status():
@@ -171,3 +177,14 @@ def system_admin_bridge_usage_report():
         dry_run=dry_run,
     )
     return ok(result)
+
+
+def system_admin_bridge_capacity_status():
+    """Read-only local capacity state for future UI clients.
+
+    This endpoint does not fetch from radius-module-admin and does not create
+    upgrade/payment/service requests.
+    """
+    from ...radius.services.license_admin_capacity import CapacityEnforcementService
+
+    return ok(CapacityEnforcementService().capacity_status(tenant_id=_tid()))

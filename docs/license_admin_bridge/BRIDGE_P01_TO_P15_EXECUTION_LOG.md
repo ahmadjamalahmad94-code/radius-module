@@ -302,3 +302,62 @@
     a revised backend-only P05 prompt.
 - GO/NO-GO for next prompt:
   - NO-GO. Stop for user clarification before P06.
+
+## P05B — Backend Capacity Status and Upgrade Intent Surfaces
+
+- Start time: 2026-05-25 12:29:00 +03:00
+- End time: 2026-05-25 12:49:58 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/services/license_admin_capacity.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/CAPACITY_STATUS_API.md`
+  - `tests/test_license_admin_capacity_status.py`
+- What was implemented:
+  - Added read-only backend capacity status endpoint:
+    `GET /api/v1/system/admin-bridge/capacity-status`.
+  - Exposed local usage, stored limits, feature states, contract status,
+    stale/degraded warnings, and UI-safe Arabic hints.
+  - Added local-only upgrade intent metadata marked as dry-run/local intent.
+  - Added API documentation for future Flutter/web consumers.
+- What was intentionally not implemented:
+  - No Flutter UI.
+  - No radius-module-admin changes.
+  - No remote admin call from the capacity status request path.
+  - No actual upgrade/payment/service request creation.
+  - No new capacity enforcement beyond P04.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_capacity_status.py -q`
+    passed: 6 passed, 428 warnings in 14.49s.
+  - `python -m pytest tests/test_license_admin_capacity_enforcement.py -q`
+    passed: 7 passed, 500 warnings in 16.32s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_usage_metering.py -q`
+    passed: 13 passed, 845 warnings in 20.40s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - Not run for P05B; targeted bridge/capacity tests passed.
+- Timeout notes if any:
+  - None for P05B targeted tests.
+- Admin endpoint gaps:
+  - No new admin endpoint gaps. Upgrade intent remains local-only.
+- Codex follow-ups added:
+  - None.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No. Original Flutter P05 remains deferred to a dedicated
+    `radius-module-app` wave.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Capacity status is based on the last local snapshot and local counts only.
+  - UI clients must continue treating backend enforcement errors as the source
+    of truth.
+  - Upgrade intent is local metadata only and must not be represented as a paid
+    or admin-submitted request.
+- GO/NO-GO for next prompt:
+  - GO for P06.
