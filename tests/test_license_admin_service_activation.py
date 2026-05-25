@@ -114,7 +114,13 @@ def test_poll_receives_no_jobs(app_db):
 
 
 def test_unsupported_job_reports_unsupported_service(app_db):
-    service, _transport = _service({"ok": True, "status": "ok", "items": [_job()]})
+    unsupported = {
+        "reference": "unsupported-1",
+        "service_key": "unknown_service",
+        "action_key": "unknown.action",
+        "payload": {},
+    }
+    service, _transport = _service({"ok": True, "status": "ok", "items": [unsupported]})
 
     result = service.poll_once(tenant_id=1)
 

@@ -620,3 +620,60 @@
   - P09 does not implement live action adapters.
 - GO/NO-GO for next prompt:
   - GO for P10 after P09 commit.
+
+## P10 — Public IP Change Service Adapter, Dry-Run First
+
+- Start time: 2026-05-25 13:39:00 +03:00
+- End time: 2026-05-25 13:45:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/radius/services/license_admin_public_ip_change.py`
+  - `app/radius/services/license_admin_service_activation.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/PUBLIC_IP_CHANGE_ADAPTER.md`
+  - `tests/test_license_admin_public_ip_change.py`
+  - `tests/test_license_admin_service_activation.py`
+- What was implemented:
+  - Added dry-run-only `network.public_ip_change` adapter.
+  - Registered service-key aliases `network` and `public_ip_change`.
+  - Added payload validation for target router, router type, public IP, method,
+    and WAN-interface warning.
+  - Added scoped RouterOS command preview with generated bridge tag.
+  - Added duplicate-reference idempotency coverage through the P09 persistence
+    layer.
+- What was intentionally not implemented:
+  - No live MikroTik apply.
+  - No site-exit policy mutation.
+  - No route/NAT/firewall write execution.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_public_ip_change.py tests/test_license_admin_service_activation.py -q`
+    passed: 12 passed, 899 warnings in 9.08s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_restore_workflow.py -q`
+    passed: 15 passed, 1039 warnings in 10.71s.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Not rerun for P10. P09 full pytest timed out after 304021 ms with no
+    visible failure output; P10 used targeted adapter and bridge regression
+    tests.
+- Timeout notes if any:
+  - No P10 targeted timeout.
+- Admin endpoint gaps:
+  - No new admin endpoint beyond P09 service activation poll/status.
+- Codex follow-ups added:
+  - None in P10.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Adapter produces command previews only.
+  - Future live apply still needs a separate guarded adapter, backup gate, and
+    rollback proof.
+- GO/NO-GO for next prompt:
+  - GO for P11 after P10 commit.

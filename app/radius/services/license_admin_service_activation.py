@@ -21,8 +21,11 @@ from app.radius.services.admin_panel_client import (
 SERVICE_ACTIVATION_STATES = {
     "received",
     "planned",
+    "dry_run_completed",
     "unsupported_service",
+    "unsupported",
     "completed",
+    "applied",
     "failed",
 }
 
@@ -59,7 +62,20 @@ class ServiceActivationAdapterRegistry:
 
 
 def default_service_activation_registry() -> ServiceActivationAdapterRegistry:
-    return ServiceActivationAdapterRegistry()
+    registry = ServiceActivationAdapterRegistry()
+    try:
+        from app.radius.services.license_admin_public_ip_change import (
+            PublicIpChangeDryRunAdapter,
+        )
+
+        registry.register(PublicIpChangeDryRunAdapter(service_key="network"))
+        registry.register(PublicIpChangeDryRunAdapter(service_key="public_ip_change"))
+    except Exception:
+        # Adapter discovery must never break polling. A direct import failure is
+        # surfaced by targeted adapter tests, while production polling degrades
+        # to unsupported-service recording.
+        pass
+    return registry
 
 
 class ServiceActivationService:
