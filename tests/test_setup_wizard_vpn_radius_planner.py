@@ -67,6 +67,7 @@ def test_vpn_radius_planner_generation_and_tagging():
     assert 'endpoint-address="187.77.70.18" endpoint-port=51820 allowed-address="10.10.0.1/32" persistent-keepalive=25s' in plan.script_text
     assert '/ip route add dst-address="10.10.0.1/32" gateway="hr-wg" pref-src="10.10.0.3"' in plan.script_text
     assert '/ip route set [find where dst-address="10.10.0.1/32" and gateway="hr-wg"] pref-src="10.10.0.3"' in plan.script_text
+    assert '/ip address print detail where interface="hr-wg"' in plan.script_text
     assert plan.masked_sensitive_values["radius_secret"] == "***"
 
 
@@ -107,6 +108,8 @@ def test_diagnostics_mapping_covers_required_codes():
         "wrong_public_endpoint",
         "firewall_blocking_udp",
         "wrong_allowed_address",
+        "server_allowed_ip_mismatch",
+        "router_vpn_ip_mismatch",
         "route_missing",
         "radius_secret_mismatch",
         "radius_server_unreachable",

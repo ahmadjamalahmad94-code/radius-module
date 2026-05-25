@@ -260,7 +260,7 @@ class ServerWireGuardSafetyValidator:
                     warnings.append("existing_server_peer_allowed_ip_will_be_updated")
                 continue
             if allowed_ip and allowed_ip in existing_ips:
-                raise SetupWizardValidationError("duplicate WireGuard allowed IP already exists on server")
+                raise SetupWizardValidationError("VPN IP is already assigned to another router.")
         if (observations or {}).get("status") != "success":
             warnings.append("server_wg_inspector_not_confirmed")
         return warnings
@@ -294,7 +294,55 @@ class ServerWireGuardPeerPlanner:
         ).fetchone()
         if not row:
             raise SetupWizardValidationError("prepared WireGuard peer not found")
-        return _row_to_peer(row)
+        return self._canonicalize_peer_from_registry(
+            tenant_id=tenant_id,
+            peer=_row_to_peer(row),
+        )
+
+    def _canonicalize_peer_from_registry(self, *, tenant_id: int, peer: dict[str, Any]) -> dict[str, Any]:
+        registry = db().execute(
+            """
+            SELECT router_vpn_ip, server_vpn_ip
+            FROM router_provisioning_registry
+            WHERE tenant_id=? AND id=?
+            """,
+            (int(tenant_id), int(peer["registry_id"])),
+        ).fetchone()
+        if not registry:
+            return peer
+        expected_router_ip = str(registry["router_vpn_ip"] or "")
+        expected_server_ip = str(registry["server_vpn_ip"] or "")
+        expected_allowed_ips = f"{expected_router_ip}/32" if expected_router_ip else ""
+        if (
+            str(peer.get("router_vpn_ip") or "") == expected_router_ip
+            and str(peer.get("server_vpn_ip") or "") == expected_server_ip
+            and str(peer.get("allowed_ips") or "") == expected_allowed_ips
+        ):
+            return peer
+        now = _now()
+        with transaction() as conn:
+            conn.execute(
+                """
+                UPDATE prepared_wireguard_peers
+                SET router_vpn_ip=?, server_vpn_ip=?, allowed_ips=?, updated_at=?
+                WHERE tenant_id=? AND id=?
+                """,
+                (
+                    expected_router_ip,
+                    expected_server_ip,
+                    expected_allowed_ips,
+                    now,
+                    int(tenant_id),
+                    int(peer["id"]),
+                ),
+            )
+        return {
+            **peer,
+            "router_vpn_ip": expected_router_ip,
+            "server_vpn_ip": expected_server_ip,
+            "allowed_ips": expected_allowed_ips,
+            "updated_at": now,
+        }
 
     def plan(self, *, tenant_id: int, prepared_peer_id: int) -> ServerWireGuardPeerPlan:
         peer = self.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
@@ -303,7 +351,8 @@ class ServerWireGuardPeerPlanner:
         interface = os.environ.get(WG_INTERFACE_ENV) or DEFAULT_WG_INTERFACE
         tag = _server_peer_tag(peer)
         public_key = str(peer.get("router_public_key") or "").strip()
-        allowed_ips = str(peer.get("allowed_ips") or f'{peer["router_vpn_ip"]}/32')
+        allowed_ips = f'{peer["router_vpn_ip"]}/32'
+        peer = {**peer, "allowed_ips": allowed_ips}
         config_preview = (
             "[Peer]\n"
             f"# {tag}\n"

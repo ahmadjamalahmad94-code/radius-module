@@ -94,6 +94,26 @@ class _OkVpsProbeAdapter:
         return {"ok": False}
 
 
+class _PeerVpsProbeAdapter:
+    def __init__(self, *, allowed_ips: str, latest_handshake: str = "12 seconds ago") -> None:
+        self.allowed_ips = allowed_ips
+        self.latest_handshake = latest_handshake
+
+    def ping_router_vpn_ip(self, ip: str, *, timeout_seconds: float = 2.0) -> dict:
+        return {"ok": True, "target": ip, "stdout": "3 packets transmitted, 3 received, 0% packet loss"}
+
+    def inspect_wireguard_peer(self, peer_identifier: str, *, timeout_seconds: float = 2.0) -> dict:
+        return {
+            "ok": True,
+            "public_key": peer_identifier,
+            "allowed_ips": self.allowed_ips,
+            "latest_handshake": self.latest_handshake,
+        }
+
+    def check_udp_port_hint(self, host: str, port: int, *, timeout_seconds: float = 2.0) -> dict:
+        return {"ok": False}
+
+
 def _build_run(client) -> int:
     run = _post(client, "/admin/radius/setup-wizard/runs", {}).get_json()["run"]
     run_id = int(run["id"])
@@ -211,6 +231,56 @@ def test_vpn_radius_router_ping_from_mikrotik_unlocks_without_server_back_ping()
     assert result["overall_status"] == "success"
     assert by_key["router_ping_vps"] == "success"
     assert result["raw_observations"]["vpn_evidence"] == "router_ping_vps"
+
+
+def test_vpn_radius_fails_when_server_allowed_ips_do_not_match_router_reservation():
+    public_key = "E" * 43 + "="
+    svc = SetupVerificationService(
+        vps_probe=VpsNetworkProbe(_PeerVpsProbeAdapter(allowed_ips="10.10.0.13/32"))
+    )
+    result = svc.verify_vpn_radius(
+        run={},
+        vpn_payload={
+            "router_vpn_ip": "10.10.0.14",
+            "vps_vpn_ip": "10.10.0.1",
+            "radius_server_ip": "10.10.0.1",
+            "router_public_key": public_key,
+            "expected_allowed_ips": "10.10.0.14/32",
+        },
+        mode="pasted_output",
+        payload={"output": _vpn_router_ping_success_output()},
+    ).to_dict()
+
+    by_key = {item["key"]: item["status"] for item in result["checks"]}
+    assert result["gate_unlocked"] is False
+    assert result["overall_status"] == "failed"
+    assert by_key["server_allowed_ips_consistency"] == "failed"
+    assert any(item.get("code") == "server_allowed_ip_mismatch" for item in result["diagnostics"])
+    assert "عنوان الراوتر على الخادم غير مطابق" in result["next_action_ar"]
+
+
+def test_vpn_radius_passes_after_server_allowed_ips_match_router_reservation():
+    public_key = "E" * 43 + "="
+    svc = SetupVerificationService(
+        vps_probe=VpsNetworkProbe(_PeerVpsProbeAdapter(allowed_ips="10.10.0.14/32"))
+    )
+    result = svc.verify_vpn_radius(
+        run={},
+        vpn_payload={
+            "router_vpn_ip": "10.10.0.14",
+            "vps_vpn_ip": "10.10.0.1",
+            "radius_server_ip": "10.10.0.1",
+            "router_public_key": public_key,
+            "expected_allowed_ips": "10.10.0.14/32",
+        },
+        mode="pasted_output",
+        payload={"output": _vpn_router_ping_success_output()},
+    ).to_dict()
+
+    by_key = {item["key"]: item["status"] for item in result["checks"]}
+    assert result["gate_unlocked"] is True
+    assert result["overall_status"] == "success"
+    assert by_key["server_allowed_ips_consistency"] == "success"
 
 
 def test_server_ping_command_is_read_only_but_writes_remain_blocked():

@@ -140,6 +140,33 @@ class PreparedWireGuardPeerService:
             registry_id=int(reservation["id"]),
         )
         if existing:
+            expected_allowed_ips = f'{reservation["router_vpn_ip"]}/32'
+            if (
+                str(existing.get("router_vpn_ip") or "") != str(reservation["router_vpn_ip"])
+                or str(existing.get("allowed_ips") or "") != expected_allowed_ips
+            ):
+                now = _now()
+                with transaction() as conn:
+                    conn.execute(
+                        """
+                        UPDATE prepared_wireguard_peers
+                        SET router_vpn_ip=?, server_vpn_ip=?, allowed_ips=?, updated_at=?
+                        WHERE tenant_id=? AND id=?
+                        """,
+                        (
+                            str(reservation["router_vpn_ip"]),
+                            str(reservation["server_vpn_ip"]),
+                            expected_allowed_ips,
+                            now,
+                            int(tenant_id),
+                            int(existing["id"]),
+                        ),
+                    )
+                    row = conn.execute(
+                        "SELECT * FROM prepared_wireguard_peers WHERE tenant_id=? AND id=?",
+                        (int(tenant_id), int(existing["id"])),
+                    ).fetchone()
+                return PreparedWireGuardPeer.from_row(row).to_dict()
             return existing
         now = _now()
         allowed_ips = f'{reservation["router_vpn_ip"]}/32'
@@ -197,7 +224,7 @@ class PreparedWireGuardPeerService:
                 (int(tenant_id), key, int(registry_id)),
             ).fetchone()
             if duplicate:
-                raise SetupWizardValidationError("router public key is already attached to another prepared peer")
+                raise SetupWizardValidationError("Public key is already assigned to another router.")
             row = conn.execute(
                 """
                 SELECT * FROM prepared_wireguard_peers

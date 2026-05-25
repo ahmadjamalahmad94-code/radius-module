@@ -160,6 +160,7 @@ class VpnRadiusBootstrapPlanner:
             "# ===== Validation checks =====",
             "/interface wireguard print detail",
             "/interface wireguard peers print detail",
+            f'/ip address print detail where interface="{wg_interface}"',
             "# Give WireGuard up to 30 seconds to exchange the first handshake before testing the tunnel.",
             ":delay 30s",
             f'/tool ping "{vps_vpn_ip}" src-address="{router_vpn_ip}" count=5',
@@ -190,6 +191,7 @@ class VpnRadiusBootstrapPlanner:
             validation_commands=[
                 "/interface wireguard print detail",
                 "/interface wireguard peers print detail",
+                f'/ip address print detail where interface="{wg_interface}"',
                 ":delay 30s",
                 f'/tool ping "{vps_vpn_ip}" src-address="{router_vpn_ip}" count=5',
                 "/radius print detail",

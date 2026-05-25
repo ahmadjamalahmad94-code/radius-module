@@ -311,3 +311,5 @@ def test_v2_js_treats_successful_vpn_output_as_no_extra_vps_step_needed():
     assert "تم تأكيد الربط عبر ping/handshake" in source
     assert "server-peer/dry-run" in source
     assert "APPLY SERVER PEER IN LAB" in source
+    assert "تم تجهيز خطة الربط على الخادم داخل HobeRadius" in source
+    assert "JSON.stringify(value || {}, null, 2)" not in source

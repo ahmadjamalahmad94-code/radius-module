@@ -220,7 +220,7 @@ def test_duplicate_allowed_ip_blocks_apply(app, monkeypatch):
         )
 
     assert result["status"] == "blocked"
-    assert "duplicate WireGuard allowed IP" in result["code"]
+    assert result["code"] == "VPN IP is already assigned to another router."
 
 
 def test_command_constructed_as_list_and_shell_false():

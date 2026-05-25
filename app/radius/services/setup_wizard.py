@@ -654,6 +654,43 @@ class SetupWizardService:
             tenant_id=tenant_id, run_id=run_id, step_key=STEP_VPN_RADIUS_SCRIPT_PREVIEW
         ) or {}
         vpn_payload = dict(vpn_step.get("input_json") or {})
+        reservation = self._router_provisioning.latest_for_run(
+            tenant_id=tenant_id,
+            wizard_run_id=run_id,
+        )
+        if reservation:
+            vpn_payload.update(
+                {
+                    "router_registry_id": reservation["id"],
+                    "router_vpn_ip": reservation["router_vpn_ip"],
+                    "vps_vpn_ip": reservation["server_vpn_ip"],
+                    "expected_allowed_ips": f'{reservation["router_vpn_ip"]}/32',
+                }
+            )
+            try:
+                status = self._provisioning_orchestrator.status(
+                    tenant_id=tenant_id,
+                    registry_id=int(reservation["id"]),
+                )
+                peer = dict(status.get("prepared_wireguard_peer") or {})
+                if peer:
+                    raw_peer = db().execute(
+                        """
+                        SELECT router_public_key
+                        FROM prepared_wireguard_peers
+                        WHERE tenant_id=? AND id=?
+                        """,
+                        (int(tenant_id), int(peer["id"])),
+                    ).fetchone()
+                    vpn_payload.update(
+                        {
+                            "router_public_key": str(raw_peer["router_public_key"] or "") if raw_peer else "",
+                            "expected_allowed_ips": f'{reservation["router_vpn_ip"]}/32',
+                            "peer_name": peer.get("peer_name") or vpn_payload.get("peer_name"),
+                        }
+                    )
+            except SetupWizardValidationError:
+                pass
         result = self._verification_engine.verify_vpn_radius(
             run=run,
             vpn_payload=vpn_payload,

@@ -1,6 +1,7 @@
 """Wave B: setup wizard read-only verification engine."""
 from __future__ import annotations
 
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -227,8 +228,31 @@ class ServerPingVpsProbeAdapter:
         }
 
     def inspect_wireguard_peer(self, peer_identifier: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
-        _ = peer_identifier, timeout_seconds
-        return {"ok": False, "blocked": True, "code": "wg_peer_lookup_not_configured"}
+        public_key = str(peer_identifier or "").strip()
+        interface = os.environ.get("HOBERADIUS_WG_INTERFACE") or "wg0"
+        result = self.runner.execute_read_only(f"wg show {interface}", timeout_seconds=timeout_seconds)
+        stdout = str(result.get("stdout") or "")
+        peers = _parse_wg_show_peers(stdout)
+        matched = _find_peer_by_public_key(peers, public_key)
+        if matched:
+            return {
+                "ok": True,
+                "blocked": False,
+                "interface": interface,
+                "public_key": public_key,
+                "allowed_ips": matched.get("allowed_ips") or "",
+                "latest_handshake": matched.get("latest_handshake") or "",
+                "peers_count": len(peers),
+            }
+        return {
+            "ok": False,
+            "blocked": bool(result.get("blocked")),
+            "code": result.get("code") or "wg_peer_not_found",
+            "interface": interface,
+            "public_key": public_key,
+            "peers_count": len(peers),
+            "stdout": stdout if not result.get("blocked") else "",
+        }
 
     def check_udp_port_hint(self, host: str, port: int, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
         _ = host, port, timeout_seconds
@@ -326,6 +350,20 @@ class SetupDiagnosticsService:
             "likely_causes": ["قيمة too narrow", "CIDR غير صحيح"],
             "suggested_fixes": ["طابق allowed-address مع خطة النفق"],
             "commands_to_inspect": ["/interface wireguard peers print detail"],
+        },
+        "server_allowed_ip_mismatch": {
+            "arabic_title": "عنوان الراوتر على الخادم غير مطابق",
+            "explanation_ar": "تم رصد WireGuard peer على الخادم، لكن allowed-ips لا يساوي عنوان الراوتر المحجوز في HobeRadius.",
+            "likely_causes": ["إعادة محاولة قديمة استخدمت IP سابق", "Peer موجود على الخادم بقيمة allowed-ips قديمة"],
+            "suggested_fixes": ["اضغط إصلاح الربط على الخادم", "تأكد أن allowed-ips يساوي عنوان الراوتر المحجوز /32"],
+            "commands_to_inspect": ["wg show"],
+        },
+        "router_vpn_ip_mismatch": {
+            "arabic_title": "عنوان الراوتر في MikroTik غير مطابق للحجز",
+            "explanation_ar": "مخرجات MikroTik تعرض عنوان VPN مختلفًا عن العنوان المحجوز لهذا الراوتر في HobeRadius.",
+            "likely_causes": ["سكربت قديم تم نسخه", "إعداد WireGuard سابق لم يتم تحديثه"],
+            "suggested_fixes": ["أعد توليد سكربت الربط من نفس الجولة", "راجع address على واجهة WireGuard"],
+            "commands_to_inspect": ["/ip address print detail where interface=hr-wg"],
         },
         "route_missing": {
             "arabic_title": "مسار مطلوب غير موجود",
@@ -515,6 +553,96 @@ def _has_ping_success(output: str, target_hint: str | None = None) -> bool:
     return False
 
 
+def _parse_wg_show_peers(output: str) -> list[dict[str, Any]]:
+    text = str(output or "")
+    peers: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("peer:"):
+            if current:
+                peers.append(current)
+            current = {"public_key": line.split(":", 1)[1].strip()}
+            continue
+        if current is None and "\t" in line:
+            cols = line.split("\t")
+            if len(cols) >= 5 and re.fullmatch(r"[A-Za-z0-9+/]{43}=", cols[0].strip()):
+                peers.append(
+                    {
+                        "public_key": cols[0].strip(),
+                        "allowed_ips": cols[3].strip(),
+                        "latest_handshake": cols[4].strip(),
+                    }
+                )
+            continue
+        if current is None:
+            continue
+        key, sep, value = line.partition(":")
+        if not sep:
+            continue
+        normalized = key.strip().lower().replace(" ", "_")
+        current[normalized] = value.strip()
+    if current:
+        peers.append(current)
+    return peers
+
+
+def _find_peer_by_public_key(peers: list[dict[str, Any]], public_key: str) -> dict[str, Any] | None:
+    key = str(public_key or "").strip()
+    if not key:
+        return None
+    for peer in peers:
+        if str(peer.get("public_key") or "").strip() == key:
+            return peer
+    return None
+
+
+def _split_allowed_ips(value: Any) -> set[str]:
+    raw = str(value or "").replace(",", " ")
+    return {part.strip() for part in raw.split() if part.strip()}
+
+
+def _allowed_ips_match(observed: Any, expected: str) -> bool:
+    return str(expected or "").strip() in _split_allowed_ips(observed)
+
+
+def _extract_allowed_ips(peer: dict[str, Any] | None) -> str:
+    if not peer:
+        return ""
+    for key in ("allowed_ips", "allowed ips", "allowed-ips", "allowed_address"):
+        value = peer.get(key)
+        if value:
+            return str(value)
+    peers = peer.get("peers")
+    if isinstance(peers, list):
+        for item in peers:
+            value = _extract_allowed_ips(item)
+            if value:
+                return value
+    return ""
+
+
+def _extract_router_interface_ips(output: str, interface: str) -> list[str]:
+    iface = str(interface or "").strip()
+    found: list[str] = []
+    for raw in str(output or "").splitlines():
+        line = raw.strip()
+        if iface and f"interface={iface}" not in line and f'interface="{iface}"' not in line:
+            continue
+        for match in re.finditer(r'address="?((?:\d{1,3}\.){3}\d{1,3})/\d+"?', line):
+            found.append(match.group(1))
+    return list(dict.fromkeys(found))
+
+
+def _mask_public_value(value: Any) -> str:
+    text = str(value or "").strip()
+    if len(text) < 12:
+        return "***"
+    return f"{text[:6]}...{text[-6:]}"
+
+
 def _mask_secrets(value: Any) -> Any:
     if isinstance(value, dict):
         masked: dict[str, Any] = {}
@@ -522,6 +650,8 @@ def _mask_secrets(value: Any) -> Any:
             key_l = str(key).lower()
             if any(token in key_l for token in ("password", "secret", "token")):
                 masked[key] = "***"
+            elif "public_key" in key_l:
+                masked[key] = _mask_public_value(item)
             else:
                 masked[key] = _mask_secrets(item)
         return masked
@@ -738,6 +868,12 @@ class SetupVerificationService:
         router_vpn_ip = str(vpn_payload.get("router_vpn_ip") or "")
         vps_vpn_ip = str(vpn_payload.get("vps_vpn_ip") or "")
         peer_name = str(vpn_payload.get("peer_name") or "vps-peer")
+        wg_interface = str(vpn_payload.get("wg_interface_name") or "hr-wg")
+        router_public_key = str(vpn_payload.get("router_public_key") or "").strip()
+        expected_allowed_ips = str(
+            vpn_payload.get("expected_allowed_ips")
+            or (f"{router_vpn_ip}/32" if router_vpn_ip else "")
+        ).strip()
 
         if mode == "pasted_output":
             output_lower = output.lower()
@@ -829,6 +965,69 @@ class SetupVerificationService:
                 checks.append(_check("probe", "فحص مباشر", CHECK_FAILED, str(exc)))
                 diagnostic_codes.append("probe_unavailable")
 
+        consistency_required: set[str] = set()
+        if router_vpn_ip:
+            observed_router_ips = _extract_router_interface_ips(output, wg_interface)
+            observations["expected_router_vpn_ip"] = router_vpn_ip
+            if observed_router_ips:
+                observations["mikrotik_router_vpn_ips"] = observed_router_ips
+                router_ip_ok = router_vpn_ip in observed_router_ips
+                checks.append(
+                    _check(
+                        "router_vpn_ip_consistency",
+                        "تطابق عنوان الراوتر المحجوز",
+                        CHECK_SUCCESS if router_ip_ok else CHECK_FAILED,
+                    )
+                )
+                consistency_required.add("router_vpn_ip_consistency")
+                if not router_ip_ok:
+                    diagnostic_codes.append("router_vpn_ip_mismatch")
+
+        server_allowed_mismatch = False
+        if expected_allowed_ips and router_public_key:
+            pasted_peer = _find_peer_by_public_key(_parse_wg_show_peers(output), router_public_key)
+            peer_probe: dict[str, Any] | None = pasted_peer
+            if pasted_peer:
+                observations["server_peer_allowed_ips_output"] = {
+                    "allowed_ips": pasted_peer.get("allowed_ips") or "",
+                    "latest_handshake": pasted_peer.get("latest_handshake") or "",
+                }
+            else:
+                try:
+                    peer_probe = self.vps_probe.inspect_wireguard_peer(router_public_key)
+                    observations["server_peer_allowed_ips_probe"] = peer_probe
+                except Exception as exc:
+                    peer_probe = {
+                        "ok": False,
+                        "blocked": True,
+                        "code": "server_peer_probe_unavailable",
+                        "error": str(exc),
+                    }
+                    observations["server_peer_allowed_ips_probe"] = peer_probe
+            observed_allowed_ips = _extract_allowed_ips(peer_probe)
+            if observed_allowed_ips:
+                server_allowed_ok = _allowed_ips_match(observed_allowed_ips, expected_allowed_ips)
+                checks.append(
+                    _check(
+                        "server_allowed_ips_consistency",
+                        "تطابق عنوان الراوتر على الخادم",
+                        CHECK_SUCCESS if server_allowed_ok else CHECK_FAILED,
+                    )
+                )
+                consistency_required.add("server_allowed_ips_consistency")
+                if not server_allowed_ok:
+                    server_allowed_mismatch = True
+                    diagnostic_codes.append("server_allowed_ip_mismatch")
+            elif peer_probe and peer_probe.get("blocked"):
+                checks.append(
+                    _check(
+                        "server_allowed_ips_consistency",
+                        "تطابق عنوان الراوتر على الخادم",
+                        CHECK_SKIPPED,
+                        str(peer_probe.get("code") or "server peer probe unavailable"),
+                    )
+                )
+
         by_key = {item["key"]: item["status"] for item in checks}
         if by_key.get("vpn_tunnel") != CHECK_SUCCESS:
             diagnostic_codes.append("vpn_not_handshaking")
@@ -842,6 +1041,7 @@ class SetupVerificationService:
             diagnostic_codes.append("api_user_missing")
 
         required = {"vpn_tunnel", "router_ping_vps"} if mode == "pasted_output" else {"vpn_tunnel", "router_ping_vps", "vps_ping_router", "radius_reachable", "api_login"}
+        required |= consistency_required
         gate_unlocked = _all_success(checks, required)
         overall_status = VERIFY_STATUS_SUCCESS if gate_unlocked else VERIFY_STATUS_FAILED
         if any(item["status"] == CHECK_BLOCKED for item in checks):
@@ -850,7 +1050,10 @@ class SetupVerificationService:
             overall_status = VERIFY_STATUS_PARTIAL if not gate_unlocked else VERIFY_STATUS_SUCCESS
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
-        next_action = "تم تحقق VPN/RADIUS بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وHotspot/Broadband." if gate_unlocked else "راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق."
+        if server_allowed_mismatch:
+            next_action = "تم اكتشاف اتصال WireGuard، لكن عنوان الراوتر على الخادم غير مطابق. اضغط إصلاح الربط على الخادم."
+        else:
+            next_action = "تم تحقق VPN/RADIUS بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وHotspot/Broadband." if gate_unlocked else "راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق."
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,

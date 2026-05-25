@@ -495,12 +495,21 @@
   }
 
   function writeServerPeerResult(value) {
-    if (serverPeerResult) {
-      serverPeerResult.textContent = typeof value === "string"
-        ? value
-        : JSON.stringify(value || {}, null, 2);
-    }
     const command = typeof value === "object" && value ? String(value.command_preview || "") : "";
+    if (serverPeerResult) {
+      if (typeof value === "string") {
+        serverPeerResult.textContent = value;
+      } else if (command) {
+        const warnings = Array.isArray(value.warnings) && value.warnings.length
+          ? ` · ${value.warnings.join(" · ")}`
+          : "";
+        serverPeerResult.textContent = `تم تجهيز خطة الربط على الخادم داخل HobeRadius${warnings}`;
+      } else {
+        serverPeerResult.textContent = value?.status
+          ? `حالة تجهيز الربط على الخادم: ${value.status}`
+          : "لم يتم تجهيز خطة الربط على الخادم بعد.";
+      }
+    }
     if (serverPeerSimple && command) {
       serverPeerSimple.hidden = false;
       if (serverPeerStatus) {

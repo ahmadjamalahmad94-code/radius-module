@@ -5,7 +5,7 @@ import secrets
 
 import pytest
 
-from app.radius.db.connection import reset_for_tests
+from app.radius.db.connection import db, reset_for_tests
 from app.radius.services.setup_wizard import (
     STEP_INTERNET_VERIFICATION,
     get_setup_wizard_service,
@@ -183,13 +183,35 @@ def test_existing_public_key_can_be_reconciled_by_inspector(app):
     assert "existing_server_peer_allowed_ip_will_be_updated" in result["plan"]["warnings"]
 
 
+def test_server_peer_plan_uses_registry_ip_when_prepared_peer_is_stale(app):
+    peer = _prepared_peer(app)
+    with app.app_context():
+        db().execute(
+            """
+            UPDATE prepared_wireguard_peers
+            SET router_vpn_ip='10.10.0.99', allowed_ips='10.10.0.99/32'
+            WHERE id=?
+            """,
+            (peer["prepared_peer_id"],),
+        )
+        db().commit()
+        result = ServerWireGuardPeerApplyService().dry_run(
+            tenant_id=1,
+            prepared_peer_id=peer["prepared_peer_id"],
+        )
+
+    assert result["plan"]["prepared_peer"]["router_vpn_ip"] == peer["router_vpn_ip"]
+    assert result["plan"]["prepared_peer"]["allowed_ips"] == f'{peer["router_vpn_ip"]}/32'
+    assert f"allowed-ips {peer['router_vpn_ip']}/32" in result["plan"]["command_preview"]
+
+
 def test_duplicate_allowed_ip_blocked_by_inspector(app):
     peer = _prepared_peer(app)
     planner = ServerWireGuardPeerPlanner(
         inspector=ServerWireGuardInspector(wg_show_output=_wg_show(VALID_KEY_2, peer["router_vpn_ip"] + "/32"))
     )
     with app.app_context():
-        with pytest.raises(SetupWizardValidationError):
+        with pytest.raises(SetupWizardValidationError, match="VPN IP is already assigned to another router"):
             ServerWireGuardPeerApplyService(planner=planner).dry_run(
                 tenant_id=1,
                 prepared_peer_id=peer["prepared_peer_id"],

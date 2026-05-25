@@ -67,7 +67,10 @@ def test_vpn_generation_prepares_lifecycle_and_peer(app):
 
     assert lifecycle["current_state"] == "waiting_router_key"
     assert peer["status"] == "waiting_router_key"
+    assert plan["router_provisioning"]["router_vpn_ip"] == "10.10.0.2"
+    assert 'address="10.10.0.2/24"' in plan["script_text"]
     assert peer["allowed_ips"] == "10.10.0.2/32"
+    assert peer["allowed_ips"] == f'{plan["router_provisioning"]["router_vpn_ip"]}/32'
     assert "router_public_key" not in peer
 
 
@@ -99,7 +102,7 @@ def test_duplicate_router_public_key_is_rejected(app):
             registry_id=plan1["router_provisioning"]["id"],
             public_key=VALID_KEY_1,
         )
-        with pytest.raises(SetupWizardValidationError):
+        with pytest.raises(SetupWizardValidationError, match="Public key is already assigned to another router"):
             orch.submit_router_public_key(
                 tenant_id=1,
                 registry_id=plan2["router_provisioning"]["id"],
@@ -163,7 +166,30 @@ def test_same_run_reuses_reservation_and_prepared_peer(app):
         )
 
     assert second_reservation["id"] == first["router_provisioning"]["id"]
+    assert second_reservation["router_vpn_ip"] == first["router_provisioning"]["router_vpn_ip"]
     assert peer["id"] == first["prepared_wireguard_peer"]["id"]
+    assert peer["allowed_ips"] == f'{second_reservation["router_vpn_ip"]}/32'
+
+
+def test_prepared_peer_reconciles_to_reservation_router_vpn_ip_on_retry(app):
+    with app.app_context():
+        run = _run_with_internet_verified()
+        first = _vpn_plan_for_run(run["id"])
+        db().execute(
+            """
+            UPDATE prepared_wireguard_peers
+            SET router_vpn_ip='10.10.0.99', allowed_ips='10.10.0.99/32'
+            WHERE id=?
+            """,
+            (int(first["prepared_wireguard_peer"]["id"]),),
+        )
+        db().commit()
+        retry = _vpn_plan_for_run(run["id"])
+
+    reservation_ip = retry["router_provisioning"]["router_vpn_ip"]
+    assert reservation_ip == first["router_provisioning"]["router_vpn_ip"]
+    assert retry["prepared_wireguard_peer"]["router_vpn_ip"] == reservation_ip
+    assert retry["prepared_wireguard_peer"]["allowed_ips"] == f"{reservation_ip}/32"
 
 
 def test_reissue_status_is_safe_and_does_not_duplicate_peer(app):
