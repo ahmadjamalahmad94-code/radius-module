@@ -29,6 +29,8 @@ Until real provider requirements are known:
 - `parse_webhook_event` must not infer paid status from unknown fields.
 - Webhook events may be stored for diagnostics, but unsigned events must not
   mark requests paid.
+- The current shell endpoint stores events as `processed=false` and
+  `signature_valid=false`; it does not parse provider-specific fields.
 - No provider secrets may appear in logs, UI, or client responses.
 
 ## Future Confirmation Flow
@@ -40,4 +42,3 @@ Until real provider requirements are known:
 4. Backend maps event to one local request.
 5. Backend marks payment paid only for confirmed success events.
 6. Ledger and service application run through existing backend workflows.
-

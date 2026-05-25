@@ -52,6 +52,9 @@ purpose enablement. The created request starts as `pending`, receives a
 collision-safe `reference_code`, and copies the receiver wallet for audit
 stability.
 
+The `jawwal_pay` provider remains a disabled shell. Request creation fails with
+`provider_disabled` until official signed API behavior is implemented.
+
 Purpose enablement is settings-driven:
 
 - `card_purchase` requires `allow_cards`.
@@ -86,8 +89,9 @@ transaction records before ledger/service-apply slices run.
 
 - `POST /api/v1/payments/webhooks/jawwal-pay`
 
-The endpoint stores raw events and idempotency keys. It must not mark paid
-unless signature verification and event mapping are implemented and pass.
+The endpoint stores raw events as unprocessed and signature-invalid. It must not
+mark paid unless signature verification and event mapping are implemented and
+pass.
 
 ## Validation Rules
 

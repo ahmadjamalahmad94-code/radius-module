@@ -14,6 +14,7 @@ from ...radius.db.repos.payments_repo import (
     PaymentSettings,
     PaymentSettingsRepository,
     PaymentTransactionRepository,
+    PaymentWebhookEventRepository,
 )
 from ...radius.services.accounting import service_from_context
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
@@ -55,6 +56,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/admin/payments/requests/<int:request_id>/apply-service",
                     "payment_collection_apply_service", methods=["POST"],
                     view_func=require_api_token(payment_collection_apply_service))
+    bp.add_url_rule("/payments/webhooks/jawwal-pay",
+                    "payment_collection_jawwal_webhook", methods=["POST"],
+                    view_func=require_api_token(payment_collection_jawwal_webhook))
     bp.add_url_rule("/payments", "payments_list",
                     require_api_token(payments_list), methods=["GET"])
     bp.add_url_rule("/payments", "payments_create",
@@ -236,6 +240,8 @@ def payment_collection_requests_create():
     settings = PaymentSettingsRepository().get(_tid())
     if not settings or not settings.enabled:
         return fail("payments_disabled", "payment collection is disabled", status=422)
+    if settings.provider == "jawwal_pay":
+        return fail("provider_disabled", "Jawwal Pay provider shell is disabled", status=422)
     purpose = str(body.get("purpose") or "").strip()
     if purpose not in PAYMENT_PURPOSES:
         return fail("validation_error", "purpose", status=422)
@@ -446,3 +452,27 @@ def payment_collection_apply_service(request_id: int):
         return fail("validation_error", message, status=422)
     updated = PaymentRequestRepository().get(_tid(), request_id)
     return ok({"request": _request_payload(updated), "apply_attempt": _apply_attempt_payload(attempt)})
+
+
+def payment_collection_jawwal_webhook():
+    payload = request.get_json(silent=True) or {}
+    event = PaymentWebhookEventRepository().create(
+        provider="jawwal_pay",
+        payload=payload,
+        event_id=None,
+        payment_request_id=None,
+        signature_valid=False,
+        processed=False,
+    )
+    return ok({
+        "event": {
+            "id": event["id"],
+            "provider": event["provider"],
+            "signature_valid": bool(event["signature_valid"]),
+            "processed": bool(event["processed"]),
+            "payment_request_id": event["payment_request_id"],
+            "created_at": event["created_at"],
+        },
+        "status": "stored_unprocessed",
+        "paid": False,
+    }, status=202)
