@@ -26,7 +26,40 @@
 
 <div class="hub-card" style="padding:18px;margin-top:16px">
   <h3>Proofs</h3>
-  <p class="small">Placeholder until proof submission and review queue are implemented in RM-P4.</p>
+  {% if proofs %}
+  <table class="hub-table">
+    <thead><tr><th>#</th><th>Reference</th><th>Note</th><th>Submitted</th><th>Review</th></tr></thead>
+    <tbody>
+      {% for proof in proofs %}
+      <tr>
+        <td class="mono">{{ proof.id }}</td>
+        <td class="mono">{{ proof.reference_number or '-' }}</td>
+        <td>{{ proof.note or '-' }}</td>
+        <td class="mono small">{{ proof.submitted_at }}</td>
+        <td>{{ proof.review_status or 'pending' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="small">No proof submitted yet.</p>
+  {% endif %}
 </div>
-{% endblock %}
 
+{% if item.status in ['proof_submitted','under_review'] %}
+<div class="hub-card" style="padding:18px;margin-top:16px">
+  <h3>Manual Review</h3>
+  <form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" style="display:inline-block;margin-inline-end:8px">
+    {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+    <input class="hub-input" name="review_note" placeholder="Review note" style="width:260px;display:inline-block">
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> Approve manual payment</button>
+  </form>
+  <form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" style="display:inline-block">
+    {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+    <input class="hub-input" name="review_note" placeholder="Reject note" style="width:220px;display:inline-block">
+    <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> Reject proof</button>
+  </form>
+  <p class="small">Approval marks payment paid only. Ledger and service activation are not executed in this slice.</p>
+</div>
+{% endif %}
+{% endblock %}

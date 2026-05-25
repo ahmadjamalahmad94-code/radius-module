@@ -311,6 +311,17 @@ class PaymentRequestRepository:
                 (status, now_iso(), tenant_id, request_id),
             )
 
+    def list_for_review(self, tenant_id: int) -> list[dict[str, Any]]:
+        rows = db().execute(
+            """
+            SELECT * FROM payment_requests
+            WHERE tenant_id = ? AND status IN ('proof_submitted', 'under_review')
+            ORDER BY id DESC
+            """,
+            (tenant_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
 
 class PaymentProofRepository:
     def create(
@@ -336,6 +347,41 @@ class PaymentProofRepository:
             )
             new_id = cur.lastrowid
         row = db().execute("SELECT * FROM payment_proofs WHERE id = ?", (new_id,)).fetchone()
+        return dict(row)
+
+    def list_for_request(self, payment_request_id: int) -> list[dict[str, Any]]:
+        rows = db().execute(
+            "SELECT * FROM payment_proofs WHERE payment_request_id = ? ORDER BY id DESC",
+            (payment_request_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def latest_for_request(self, payment_request_id: int) -> Optional[dict[str, Any]]:
+        row = db().execute(
+            "SELECT * FROM payment_proofs WHERE payment_request_id = ? ORDER BY id DESC LIMIT 1",
+            (payment_request_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def mark_reviewed(
+        self,
+        *,
+        proof_id: int,
+        reviewed_by: Optional[int],
+        review_status: str,
+        review_note: str = "",
+    ) -> dict[str, Any]:
+        review_status = _require_choice(review_status, REVIEW_STATUSES, "review_status")
+        with transaction() as conn:
+            conn.execute(
+                """
+                UPDATE payment_proofs
+                SET reviewed_by=?, reviewed_at=?, review_status=?, review_note=?
+                WHERE id=?
+                """,
+                (reviewed_by, now_iso(), review_status, review_note or None, proof_id),
+            )
+        row = db().execute("SELECT * FROM payment_proofs WHERE id = ?", (proof_id,)).fetchone()
         return dict(row)
 
 

@@ -7,9 +7,11 @@ from ...radius.core.errors import RadiusValidationError
 from ...radius.db.repos.payments_repo import (
     CURRENCIES,
     PAYMENT_PURPOSES,
+    PaymentProofRepository,
     PaymentRequestRepository,
     PaymentSettings,
     PaymentSettingsRepository,
+    PaymentTransactionRepository,
 )
 from ...radius.services.accounting import service_from_context
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
@@ -36,6 +38,18 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/payments/requests/<int:request_id>/instructions",
                     "payment_collection_request_instructions", methods=["GET"],
                     view_func=require_api_token(payment_collection_request_instructions))
+    bp.add_url_rule("/payments/requests/<int:request_id>/proofs",
+                    "payment_collection_submit_proof", methods=["POST"],
+                    view_func=require_api_token(payment_collection_submit_proof))
+    bp.add_url_rule("/admin/payments/review-queue",
+                    "payment_collection_review_queue", methods=["GET"],
+                    view_func=require_api_token(payment_collection_review_queue))
+    bp.add_url_rule("/admin/payments/requests/<int:request_id>/approve",
+                    "payment_collection_approve", methods=["POST"],
+                    view_func=require_api_token(payment_collection_approve))
+    bp.add_url_rule("/admin/payments/requests/<int:request_id>/reject",
+                    "payment_collection_reject", methods=["POST"],
+                    view_func=require_api_token(payment_collection_reject))
     bp.add_url_rule("/payments", "payments_list",
                     require_api_token(payments_list), methods=["GET"])
     bp.add_url_rule("/payments", "payments_create",
@@ -285,3 +299,98 @@ def payment_collection_request_instructions(request_id: int):
             "status": row["status"],
         }
     })
+
+
+def _proof_payload(row: dict) -> dict:
+    return {
+        "id": row["id"],
+        "payment_request_id": row["payment_request_id"],
+        "proof_type": row["proof_type"],
+        "reference_number": row["reference_number"],
+        "image_path": row["image_path"],
+        "note": row["note"],
+        "submitted_at": row["submitted_at"],
+        "reviewed_by": row["reviewed_by"],
+        "reviewed_at": row["reviewed_at"],
+        "review_status": row["review_status"],
+        "review_note": row["review_note"],
+    }
+
+
+def payment_collection_submit_proof(request_id: int):
+    request_row = PaymentRequestRepository().get(_tid(), request_id)
+    if not request_row:
+        return fail("not_found", "payment request not found", status=404)
+    if request_row["status"] in {"paid", "rejected", "expired", "cancelled", "failed"}:
+        return fail("invalid_state", "proof cannot be submitted for this request", status=422)
+    body = request.get_json(silent=True) or {}
+    try:
+        proof = PaymentProofRepository().create(
+            payment_request_id=request_id,
+            proof_type=str(body.get("proof_type") or "manual_reference"),
+            reference_number=str(body.get("reference_number") or "").strip(),
+            note=str(body.get("note") or "").strip(),
+        )
+        PaymentRequestRepository().update_status(_tid(), request_id, "proof_submitted")
+    except ValueError as exc:
+        return fail("validation_error", str(exc), status=422)
+    return ok({"proof": _proof_payload(proof)}, status=201)
+
+
+def payment_collection_review_queue():
+    rows = PaymentRequestRepository().list_for_review(_tid())
+    return ok({"items": [_request_payload(row) for row in rows], "count": len(rows)})
+
+
+def _reviewable_request(request_id: int):
+    row = PaymentRequestRepository().get(_tid(), request_id)
+    if not row:
+        return None, fail("not_found", "payment request not found", status=404)
+    if row["status"] not in {"proof_submitted", "under_review"}:
+        return None, fail("invalid_state", "request is not reviewable", status=422)
+    proof = PaymentProofRepository().latest_for_request(request_id)
+    if not proof:
+        return None, fail("invalid_state", "no proof submitted", status=422)
+    return (row, proof), None
+
+
+def payment_collection_approve(request_id: int):
+    pair, error = _reviewable_request(request_id)
+    if error:
+        return error
+    request_row, proof = pair
+    body = request.get_json(silent=True) or {}
+    PaymentProofRepository().mark_reviewed(
+        proof_id=proof["id"],
+        reviewed_by=int(getattr(g, "admin_id", 0) or 0) or None,
+        review_status="approved",
+        review_note=str(body.get("review_note") or "").strip(),
+    )
+    PaymentRequestRepository().update_status(_tid(), request_id, "paid")
+    transaction = PaymentTransactionRepository().create(
+        payment_request_id=request_id,
+        amount=request_row["amount"],
+        currency=request_row["currency"],
+        status="paid_manual",
+        provider_transaction_id=None,
+        raw_payload={"proof_id": proof["id"], "review": "approved_manual"},
+    )
+    updated = PaymentRequestRepository().get(_tid(), request_id)
+    return ok({"request": _request_payload(updated), "transaction": transaction})
+
+
+def payment_collection_reject(request_id: int):
+    pair, error = _reviewable_request(request_id)
+    if error:
+        return error
+    _request_row, proof = pair
+    body = request.get_json(silent=True) or {}
+    PaymentProofRepository().mark_reviewed(
+        proof_id=proof["id"],
+        reviewed_by=int(getattr(g, "admin_id", 0) or 0) or None,
+        review_status="rejected",
+        review_note=str(body.get("review_note") or "").strip(),
+    )
+    PaymentRequestRepository().update_status(_tid(), request_id, "rejected")
+    updated = PaymentRequestRepository().get(_tid(), request_id)
+    return ok({"request": _request_payload(updated)})

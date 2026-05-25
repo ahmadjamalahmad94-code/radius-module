@@ -4,7 +4,12 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
-from ..db.repos.payments_repo import PaymentRequestRepository, PaymentSettingsRepository
+from ..db.repos.payments_repo import (
+    PaymentProofRepository,
+    PaymentRequestRepository,
+    PaymentSettingsRepository,
+    PaymentTransactionRepository,
+)
 
 
 def _tid() -> int:
@@ -29,6 +34,24 @@ def register_payment_collection_routes(bp: Blueprint) -> None:
         "payment_collection_request_detail",
         payment_collection_request_detail,
         methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/payments/review-queue",
+        "payment_collection_review_queue_web",
+        payment_collection_review_queue_web,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/payments/requests/<int:request_id>/approve",
+        "payment_collection_approve_web",
+        payment_collection_approve_web,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/payments/requests/<int:request_id>/reject",
+        "payment_collection_reject_web",
+        payment_collection_reject_web,
+        methods=["POST"],
     )
 
 
@@ -92,5 +115,65 @@ def payment_collection_request_detail(request_id: int):
     if not item:
         flash("Payment request not found.", "warning")
         return redirect(url_for("radius.payment_collection_requests"))
-    return render_template("radius/payment_collection_request_detail.html", item=item)
+    proofs = PaymentProofRepository().list_for_request(request_id)
+    return render_template(
+        "radius/payment_collection_request_detail.html",
+        item=item,
+        proofs=proofs,
+    )
 
+
+def payment_collection_review_queue_web():
+    items = PaymentRequestRepository().list_for_review(_tid())
+    return render_template("radius/payment_collection_review_queue.html", items=items)
+
+
+def _reviewable(request_id: int):
+    repo = PaymentRequestRepository()
+    item = repo.get(_tid(), request_id)
+    if not item:
+        flash("Payment request not found.", "warning")
+        return None, None
+    if item["status"] not in {"proof_submitted", "under_review"}:
+        flash("Payment request is not reviewable.", "warning")
+        return None, item
+    proof = PaymentProofRepository().latest_for_request(request_id)
+    if not proof:
+        flash("No proof submitted.", "warning")
+        return None, item
+    return proof, item
+
+
+def payment_collection_approve_web(request_id: int):
+    proof, item = _reviewable(request_id)
+    if proof and item:
+        PaymentProofRepository().mark_reviewed(
+            proof_id=proof["id"],
+            reviewed_by=None,
+            review_status="approved",
+            review_note=(request.form.get("review_note") or "").strip(),
+        )
+        PaymentRequestRepository().update_status(_tid(), request_id, "paid")
+        PaymentTransactionRepository().create(
+            payment_request_id=request_id,
+            amount=item["amount"],
+            currency=item["currency"],
+            status="paid_manual",
+            raw_payload={"proof_id": proof["id"], "review": "approved_manual_web"},
+        )
+        flash("Payment approved manually. Service activation is still pending later slices.", "success")
+    return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
+
+
+def payment_collection_reject_web(request_id: int):
+    proof, _item = _reviewable(request_id)
+    if proof:
+        PaymentProofRepository().mark_reviewed(
+            proof_id=proof["id"],
+            reviewed_by=None,
+            review_status="rejected",
+            review_note=(request.form.get("review_note") or "").strip(),
+        )
+        PaymentRequestRepository().update_status(_tid(), request_id, "rejected")
+        flash("Payment proof rejected.", "info")
+    return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))

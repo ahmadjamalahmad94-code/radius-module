@@ -1,0 +1,43 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}Payment Review Queue{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
+{% block page_title %}Payment Review Queue{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} pending review</span>{% endblock %}
+
+{% block content %}
+<div class="hub-card" style="padding:18px;margin-bottom:16px">
+  <strong>Manual review only.</strong>
+  <p class="small" style="margin:8px 0 0">Approving a proof marks the request paid and records a manual transaction. Ledger and service activation remain pending later slices.</p>
+</div>
+
+<div class="hub-table-wrap">
+  <table class="hub-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Reference</th>
+        <th>Purpose</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="mono">{{ item.id }}</td>
+        <td class="mono">{{ item.reference_code }}</td>
+        <td>{{ item.purpose }}</td>
+        <td class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</td>
+        <td>{{ item.status }}</td>
+        <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">Review</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="small">No proofs waiting for review.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

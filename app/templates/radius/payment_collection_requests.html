@@ -26,6 +26,7 @@
   <input class="hub-input" name="payer_type" placeholder="payer_type" value="{{ payer_type }}">
   <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
   <span class="hub-spacer"></span>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_review_queue_web') }}"><i class="fa-solid fa-clipboard-check"></i> Review Queue</a>
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_settings') }}"><i class="fa-solid fa-gear"></i> Settings</a>
 </form>
 
@@ -62,4 +63,3 @@
   </table>
 </div>
 {% endblock %}
-
