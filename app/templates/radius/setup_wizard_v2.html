@@ -413,17 +413,6 @@
             <span data-swv2-router-key-status>بانتظار توليد سكربت الربط.</span>
           </div>
         </div>
-        <div class="swv2-server-action-card" data-swv2-server-peer-simple hidden>
-          <div>
-            <strong>جهّز الربط على الخادم من HobeRadius</strong>
-            <span>لا يحتاج العميل إلى دخول VPS أو Terminal. اضغط الزر وسيحاول HobeRadius إضافة Peer الراوتر على الخادم عبر المسار المحروس. إذا كان وضع المختبر غير مفعّل سيظهر سبب الحظر بوضوح.</span>
-          </div>
-          <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-server-peer-simple-apply>تجهيز الربط على الخادم</button>
-          </div>
-          <span class="swv2-server-action-note" data-swv2-server-peer-status>جاهز للمراجعة. التنفيذ الحقيقي يبقى محروسًا بأعلام المختبر على الخادم.</span>
-          <small>بعد نجاح التجهيز: ارجع إلى MikroTik وشغّل ping على 10.10.0.1، ثم الصق النتيجة في خطوة التحقق.</small>
-        </div>
         <details class="swv2-advanced swv2-engineering-only">
           <summary>وضع المختبر الداخلي للسيرفر</summary>
         <div class="swv2-server-peer-panel">
@@ -510,6 +499,17 @@
             <button type="button" class="swv2-copy-chip" data-copy-target="vpn-script-code">نسخ</button>
           </div>
           <pre id="vpn-script-code">-- لم يتم توليد سكربت VPN/RADIUS بعد --</pre>
+        </div>
+        <div class="swv2-server-action-card" data-swv2-server-peer-simple hidden>
+          <div>
+            <strong>جهّز الربط على الخادم من HobeRadius</strong>
+            <span>بعد لصق سكربت MikroTik والتقاط مفتاح الراوتر، اضغط الزر وسيحاول HobeRadius إضافة Peer الراوتر على الخادم عبر المسار المحروس. لا يحتاج العميل إلى دخول VPS أو Terminal.</span>
+          </div>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-server-peer-simple-apply>تجهيز الربط على الخادم</button>
+          </div>
+          <span class="swv2-server-action-note" data-swv2-server-peer-status>جاهز للمراجعة. التنفيذ الحقيقي يبقى محروسًا بأعلام المختبر على الخادم.</span>
+          <small>بعد نجاح التجهيز: ارجع إلى MikroTik وشغّل ping على 10.10.0.1، ثم الصق النتيجة في خطوة التحقق.</small>
         </div>
       </div>
     </article>
