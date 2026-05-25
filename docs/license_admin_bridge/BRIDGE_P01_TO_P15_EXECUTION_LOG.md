@@ -788,3 +788,58 @@
   - Docker compose config verification requires a local `.env` file.
 - GO/NO-GO for next prompt:
   - GO for P13 after P12 commit.
+
+## P13 — Accounting Events Normalization + Online Sessions
+
+- Start time: 2026-05-25 14:15:00 +03:00
+- End time: 2026-05-25 14:23:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/accounting.py`
+  - `app/radius/services/accounting_events.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/radius/ACCOUNTING_EVENTS_ENGINE.md`
+  - `tests/test_accounting_events_engine.py`
+- What was implemented:
+  - Added normalized accounting event service over `radacct`.
+  - Added Start, Interim-Update, Stop, Accounting-On, and Accounting-Off
+    handling.
+  - Added idempotent duplicate Start handling.
+  - Added stale cleanup that marks rows, not deletes them.
+  - Added read APIs for online sessions, session detail, and history.
+  - Added accounting events engine documentation.
+- What was intentionally not implemented:
+  - No billing/financial ledger.
+  - No reseller accounting.
+  - No CoA/disconnect.
+  - No FreeRADIUS config change.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_accounting_events_engine.py tests/test_radius_accounting_response_path.py tests/test_acct_puller_gate.py -q`
+    passed: 22 passed, 448 warnings in 5.49s.
+  - `python -m pytest tests/test_api_operational_reports.py tests/test_online_sessions_radacct_path.py tests/test_online_list_separation.py -q`
+    passed: 10 passed, 379 warnings in 16.69s.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Not planned for P13 unless targeted tests indicate a broader issue. P09
+    full pytest timed out after 304021 ms with no visible failure output.
+- Timeout notes if any:
+  - No P13 targeted timeout.
+- Admin endpoint gaps:
+  - None; P13 is local accounting API/service work.
+- Codex follow-ups added:
+  - None.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No packet-processing or live device behavior changed.
+- Risk notes:
+  - FreeRADIUS remains canonical accounting writer in deployment; P13 adds a
+    stable backend ingestion/read layer.
+- GO/NO-GO for next prompt:
+  - GO for P14 after P13 commit.
