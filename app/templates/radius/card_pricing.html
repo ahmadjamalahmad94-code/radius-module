@@ -1,0 +1,75 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Card Pricing — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}تسعير الكروت والدفعات{% endblock %}
+{% block page_sub %}<span class="sub">لقطات أسعار، تكلفة مدير/موزع، وملخص مالي بدون حذف أو تطبيق مباشر على RADIUS</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "تسعير الكروت والدفعات",
+  subtitle="هذه الصفحة تضيف طبقة مالية فوق الكروت والدفعات الموجودة، مع لقطات أسعار غير قابلة للتغيير.",
+  icon="tags",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.cards_batches') ~ '"><i class="fa-solid fa-layer-group"></i> دفعات الكروت</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="card-pricing-summary">
+  {{ hub.kpi("إجمالي الكروت", summary.total_cards, icon="ticket") }}
+  {{ hub.kpi("غير مستخدمة", summary.unused_cards, icon="box-open", variant="blue") }}
+  {{ hub.kpi("مباعة/مستخدمة", summary.sold_cards, icon="cash-register", variant="green") }}
+  {{ hub.kpi("الإيراد", summary.revenue_total, icon="sack-dollar", variant="amber") }}
+</div>
+
+{% call hub.section("الباقات والأسعار", icon="boxes-stacked", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="card-pricing-packages">
+      <thead><tr><th>الباقة</th><th>Retail</th><th>Wholesale</th><th>الحد الأدنى</th><th>تحديث</th></tr></thead>
+      <tbody>
+        {% for package in packages %}
+          <tr>
+            <td>{{ package.name }}</td>
+            <td>{{ package.retail_price }} {{ package.currency }}</td>
+            <td>{{ package.wholesale_price }} {{ package.currency }}</td>
+            <td>{{ package.min_price }} {{ package.currency }}</td>
+            <td>
+              <form method="post" action="{{ url_for('radius.card_pricing_update_package', package_id=package.id) }}" class="hub-inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                <input name="retail_price" type="number" step="0.01" value="{{ package.retail_price }}">
+                <input name="wholesale_price" type="number" step="0.01" value="{{ package.wholesale_price }}">
+                <input name="min_price" type="number" step="0.01" value="{{ package.min_price }}">
+                <input name="max_discount" type="number" step="0.01" value="{{ package.max_discount }}">
+                <input name="allowed_manager_ids" placeholder="مدراء مسموحون">
+                <button class="hub-btn hub-btn--secondary" type="submit">حفظ</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5">أنشئ باقة من Card Marketplace أولًا.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+
+{% call hub.section("إنشاء دفعة بتكلفة مدير", icon="calculator") %}
+  <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="hub-form-grid" data-testid="costed-batch-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>الباقة
+      <select name="package_id" required>
+        {% for package in packages %}
+          <option value="{{ package.id }}">{{ package.name }} — wholesale {{ package.wholesale_price }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>العدد
+      <input name="count" type="number" min="1" value="10" required>
+    </label>
+    <label>مدير مسؤول
+      <input name="responsible_manager_id" type="number" min="1" required>
+    </label>
+    <button class="hub-btn hub-btn--primary" type="submit">إنشاء سجل التكلفة</button>
+    <p class="hub-muted">يتم خصم تكلفة الجملة من محفظة المدير وكتابة قيد وحدث مالي. توليد الكروت الفعلي يبقى في مسار الكروت الحالي.</p>
+  </form>
+{% endcall %}
+{% endblock %}

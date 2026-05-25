@@ -1,0 +1,50 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set batch = result.batch %}
+{% set cost = result.cost %}
+
+{% block title %}Batch Financial Detail — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
+{% block page_title %}تفاصيل تكلفة الدفعة{% endblock %}
+{% block page_sub %}<span class="sub">لقطة مالية للدفعة والكروت المرتبطة بها</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  batch.batch_code,
+  subtitle="تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر.",
+  icon="file-invoice-dollar",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> التسعير</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="batch-financial-summary">
+  {{ hub.kpi("العدد", cost.count or batch.count, icon="ticket") }}
+  {{ hub.kpi("Retail Total", (cost.total_retail_minor or 0) / 100, icon="tag", variant="green") }}
+  {{ hub.kpi("Wholesale Total", (cost.total_wholesale_minor or 0) / 100, icon="calculator", variant="amber") }}
+  {{ hub.kpi("الحالة", cost.status or batch.status, icon="signal", variant="blue") }}
+</div>
+
+{% call hub.section("سجل التكلفة", icon="book") %}
+  <div class="hub-tile-grid">
+    {{ hub.tile("Wallet TX", cost.wallet_transaction_id or "—", icon="wallet") }}
+    {{ hub.tile("Ledger", cost.ledger_entry_id or "—", icon="book") }}
+    {{ hub.tile("Revenue", cost.revenue_record_id or "—", icon="sack-dollar") }}
+    {{ hub.tile("Price Snapshot", cost.price_snapshot_id or "—", icon="camera") }}
+  </div>
+{% endcall %}
+
+{% call hub.section("الكروت", icon="ticket", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="batch-cards-table">
+      <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
+      <tbody>
+        {% for card in result.cards %}
+          <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at }}</td></tr>
+        {% else %}
+          <tr><td colspan="3">لم يتم توليد الكروت في هذا المسار المالي.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}
