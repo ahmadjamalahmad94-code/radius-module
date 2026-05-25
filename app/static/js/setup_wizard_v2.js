@@ -31,6 +31,7 @@
   let currentRunId = 0;
   let internetPlanSignature = "";
   let vpnPlanGenerated = false;
+  let routerPublicKeySubmitted = false;
   let vpnVerified = false;
   let selectedServicePath = "";
   let selectedInterfaces = [];
@@ -296,7 +297,7 @@
 
   function buildVpnPayload() {
     return {
-      router_label: value("vpn_router_label", "router"),
+      router_label: value("vpn_router_label", "راوتر جديد"),
       router_identity: value("vpn_router_identity", ""),
       vps_public_endpoint: value("vpn_vps_endpoint", "187.77.70.18"),
       endpoint_port: Number(value("vpn_endpoint_port", "51820")) || 51820,
@@ -337,10 +338,10 @@
     writeProvisioningValue("peer_status", peer.status || "waiting_router_key");
     if (routerKeyStatus) {
       routerKeyStatus.textContent = peer.status === "ready_to_apply"
-        ? "تم استلام مفتاح الراوتر وتجهيز peer للخطوة الخادمة القادمة."
-        : "بانتظار public key من الراوتر.";
+        ? "تم التقاط مفتاح الربط وتجهيز خطة السيرفر."
+        : "بعد تنفيذ السكربت، الصق المخرجات في خطوة التحقق وسنلتقط مفتاح الربط تلقائيًا.";
     }
-    setVpnScriptLoading("تم توليد بيانات ربط فريدة لهذا الراوتر من سجل provisioning.");
+    setVpnScriptLoading("تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.");
   }
 
   async function generateVpnRadiusScript(force) {
@@ -359,14 +360,28 @@
     }
   }
 
-  async function submitRouterPublicKey() {
+  function extractWireGuardPublicKey(outputText) {
+    const text = String(outputText || "");
+    const matches = text.match(/[A-Za-z0-9+/]{43}=/g) || [];
+    return matches.find((item) => !/^A{20,}=?$/.test(item)) || "";
+  }
+
+  function isReservationMissing(error) {
+    return String(error?.message || error || "").toLowerCase().includes("reservation not found");
+  }
+
+  async function submitRouterPublicKey(publicKeyOverride, retrying) {
     const input = page.querySelector("[data-swv2-router-public-key]");
-    const publicKey = input ? String(input.value || "").trim() : "";
+    const publicKey = String(publicKeyOverride || (input ? input.value : "") || "").trim();
     if (!publicKey) {
-      if (routerKeyStatus) routerKeyStatus.textContent = "الصق public key أولاً.";
+      if (routerKeyStatus) routerKeyStatus.textContent = "لا تحتاج لإدخال مفتاح الآن. الصق مخرجات سكربت الربط في خطوة التحقق.";
       return;
     }
-    if (routerKeyStatus) routerKeyStatus.textContent = "جاري فحص المفتاح وتجهيز peer...";
+    if (routerPublicKeySubmitted && !retrying) return;
+    if (!vpnPlanGenerated) {
+      await generateVpnRadiusScript(true);
+    }
+    if (routerKeyStatus) routerKeyStatus.textContent = "جاري التقاط مفتاح الربط وتجهيز الخطة...";
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/router-public-key`, {
@@ -376,11 +391,19 @@
       const peer = provisioning.prepared_wireguard_peer || {};
       writeProvisioningValue("lifecycle_state", provisioning.current_state || "peer_ready");
       writeProvisioningValue("peer_status", peer.status || "ready_to_apply");
+      routerPublicKeySubmitted = true;
       if (routerKeyStatus) {
-        routerKeyStatus.textContent = `تم حفظ المفتاح: ${peer.router_public_key_masked || "***"}`;
+        routerKeyStatus.textContent = `تم التقاط مفتاح الربط: ${peer.router_public_key_masked || "***"}`;
       }
     } catch (error) {
-      if (routerKeyStatus) routerKeyStatus.textContent = `تعذر حفظ المفتاح: ${error.message}`;
+      if (isReservationMissing(error) && !retrying) {
+        vpnPlanGenerated = false;
+        await generateVpnRadiusScript(true);
+        return submitRouterPublicKey(publicKey, true);
+      }
+      if (routerKeyStatus) {
+        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. يمكنك المتابعة بالتحقق، أو فتح التفاصيل الهندسية.";
+      }
     }
   }
 
@@ -982,6 +1005,16 @@
     }
   }
 
+  function hasUsefulPing(outputText) {
+    const text = String(outputText || "").toLowerCase();
+    const receivedMatch = text.match(/received=(\d+)/);
+    if (receivedMatch) return Number(receivedMatch[1]) > 0;
+    if (text.includes("packet-loss=0") || text.includes("0% packet loss")) return true;
+    const unixMatch = text.match(/\b\d+\s+packets transmitted,\s*(\d+)\s+(?:packets\s+)?received\b/);
+    if (unixMatch) return Number(unixMatch[1]) > 0;
+    return false;
+  }
+
   async function analyzeOutput(kind) {
     const output = page.querySelector(`[data-swv2-verify-output="${kind}"]`);
     const diagnostics = page.querySelector(`[data-swv2-diagnostics="${kind}"]`);
@@ -989,15 +1022,17 @@
     if (!output || !diagnostics) return;
 
     const valueText = output.value.toLowerCase();
-    const hasPingSuccess =
-      valueText.includes("received=5") ||
-      valueText.includes("packet-loss=0") ||
-      valueText.includes("0% packet loss");
-    const hasVpnSignal = kind !== "vpn" || valueText.includes("handshake") || valueText.includes("radius");
+    const hasPingSuccess = hasUsefulPing(output.value);
+    const capturedPublicKey = kind === "vpn" ? extractWireGuardPublicKey(output.value) : "";
+    if (capturedPublicKey) {
+      await submitRouterPublicKey(capturedPublicKey);
+    }
+    const hasVpnSignal = kind !== "vpn" || valueText.includes("handshake") || valueText.includes("radius") || Boolean(capturedPublicKey);
     let ok = hasPingSuccess && hasVpnSignal;
     ok = await verifyWithBackend(kind, output.value, ok);
 
     diagnostics.innerHTML = "";
+    if (success) success.hidden = !ok;
     const card = document.createElement("div");
     card.className = `swv2-diagnostic-card ${ok ? "is-success" : "is-failed"}`;
     const title = document.createElement("strong");
@@ -1009,8 +1044,9 @@
       unlockNextStep(kind);
     } else {
       title.textContent = kind === "vpn" ? "لم تكتمل إشارات الربط" : "تعذر تأكيد الإنترنت";
-      body.textContent = "راجع المخرجات. نحتاج ping ناجح، وفي خطوة الربط نحتاج أيضًا handshake أو إشارات RADIUS.";
-      if (success) success.hidden = true;
+      body.textContent = kind === "vpn"
+        ? "الصق مخرجات سكربت الربط أو نتيجة handshake/ping. سنلتقط مفتاح الربط تلقائيًا إن كان موجودًا."
+        : "راجع مخرجات ping. يكفي وصول رد واحد من الإنترنت للمتابعة، لكن انقطاع كامل أو no route يحتاج فحص الواجهة.";
     }
     card.append(title, body);
     diagnostics.appendChild(card);

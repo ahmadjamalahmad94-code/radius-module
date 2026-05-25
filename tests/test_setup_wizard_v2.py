@@ -100,6 +100,19 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert "تم تجهيز سكربت الإنترنت" in html
 
 
+def test_setup_wizard_v2_beginner_flow_hides_key_work_from_primary_ui(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
+
+    assert "اسم الراوتر أو الموقع" in html
+    assert "الباقي يجهزه المعالج تلقائيًا" in html
+    assert "لا تحتاج لإدخال مفاتيح يدويًا" in html
+    assert 'data-swv2-auto-public-key' in html
+    assert "إدخال هندسي يدوي" in html
+    assert "router provisioning reservation not found" not in html
+
+
 def test_setup_wizard_v2_js_uses_real_preview_api(app):
     js = (
         os.path.join(
@@ -119,6 +132,27 @@ def test_setup_wizard_v2_js_uses_real_preview_api(app):
     assert "/ip dhcp-client add interface=ether1" not in source
     assert "buildInternetPayload" in source
     assert "buildVpnPayload" in source
+
+
+def test_setup_wizard_v2_js_extracts_public_key_and_accepts_partial_ping(app):
+    js = (
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "app",
+            "static",
+            "js",
+            "setup_wizard_v2.js",
+        )
+    )
+    with open(js, "r", encoding="utf-8") as fh:
+        source = fh.read()
+
+    assert "extractWireGuardPublicKey" in source
+    assert "hasUsefulPing" in source
+    assert "receivedMatch" in source
+    assert "Number(receivedMatch[1]) > 0" in source
+    assert "تعذر حفظ المفتاح" not in source
 
 
 def test_v2_generate_internet_script_vlan_payload_returns_vlan_script(app):

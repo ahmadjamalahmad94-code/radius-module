@@ -11,7 +11,7 @@
     <div class="swv2-hero-copy">
       <span class="swv2-kicker"><i class="fa-solid fa-wand-magic-sparkles"></i> إعداد موجه وآمن</span>
       <h1 id="swv2-title">معالج إعداد HobeRadius</h1>
-      <p>سنمشي خطوة بخطوة: تشغيل الإنترنت، ربط الراوتر مع HobeRadius، ثم تجهيز الخدمات. التفاصيل الهندسية موجودة عند الحاجة فقط.</p>
+      <p>اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.</p>
       <div class="swv2-hero-actions">
         <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-go="source">ابدأ الإعداد</button>
         <a class="swv2-btn swv2-btn-ghost" href="{{ url_for('radius.setup_wizard_page') }}">فتح الوضع الهندسي</a>
@@ -28,7 +28,7 @@
       </div>
       <div class="swv2-status-pill">
         <i class="fa-solid fa-terminal"></i>
-        <span>ستحتاج Terminal داخل MikroTik</span>
+        <span>كل سكربت جاهز للنسخ إلى MikroTik</span>
       </div>
     </div>
   </section>
@@ -148,11 +148,11 @@
         <div class="swv2-card-icon"><i class="fa-solid fa-route"></i></div>
         <span class="swv2-eyebrow">البداية الهادئة</span>
         <h2>خلينا نجهز الراوتر بدون تعقيد.</h2>
-        <p>المعالج الجديد يعرض خطوة واحدة فقط، ويخفي التفاصيل المتقدمة حتى تحتاجها. لا يوجد تطبيق مباشر على MikroTik في هذه الصفحة.</p>
+        <p>المعالج يسأل عن الضروري فقط، ثم يحجز العناوين والأسماء والربط تلقائيًا. لا يوجد تطبيق مباشر على MikroTik من هذه الصفحة.</p>
         <div class="swv2-check-grid">
-          <div><i class="fa-solid fa-check"></i><span>صلاحية دخول MikroTik</span></div>
-          <div><i class="fa-solid fa-check"></i><span>معلومات مصدر الإنترنت</span></div>
-          <div><i class="fa-solid fa-check"></i><span>نسخة احتياطية قبل أي تجربة مخبرية</span></div>
+          <div><i class="fa-solid fa-check"></i><span>اسم واضح للراوتر أو الموقع</span></div>
+          <div><i class="fa-solid fa-check"></i><span>بيانات الإنترنت فقط عند الحاجة</span></div>
+          <div><i class="fa-solid fa-check"></i><span>كل مفاتيح الربط تعالج تلقائيًا</span></div>
         </div>
         <div class="swv2-empty-state" data-swv2-empty-state="no-run">
           <strong>لا توجد جلسة إعداد نشطة بعد</strong>
@@ -198,20 +198,29 @@
     <article class="swv2-step" data-swv2-step="details">
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">بيانات المصدر</span>
-        <h2>أدخل معلومات الإنترنت</h2>
-        <p>هذه البيانات تستخدم لتجهيز سكربت معاينة فقط. لا يتم إرسال أي أمر إلى الراوتر من هذه الصفحة.</p>
+        <h2>أدخل الضروري فقط</h2>
+        <p>اكتب اسمًا واضحًا للراوتر، ثم البيانات التي يطلبها نوع الإنترنت المختار. الإعدادات المتقدمة تبقى مخفية.</p>
 
         <form class="swv2-form" data-swv2-internet-form>
+          <section class="swv2-identity-panel">
+            <label>اسم الراوتر أو الموقع
+              <input type="text" name="vpn_router_label" value="راوتر جديد" placeholder="مثال: فرع رام الله">
+              <span>هذا الاسم يظهر في التقارير والحجوزات. سننشئ باقي الأسماء والعناوين تلقائيًا.</span>
+            </label>
+          </section>
           <section class="swv2-form-panel is-active" data-source-form="dhcp">
             <label>واجهة الإنترنت
               <input type="text" name="dhcp_interface" value="ether1" placeholder="ether1">
               <span>اختر الواجهة المتصلة بالمودم أو مزود الخدمة.</span>
             </label>
-            <div class="swv2-toggle-line">
-              <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة default route</label>
-              <label><input type="checkbox" name="dhcp_use_peer_dns" checked> استخدام DNS من المزود</label>
-              <label><input type="checkbox" name="dhcp_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
-            </div>
+            <details class="swv2-advanced swv2-form-advanced">
+              <summary>إعدادات تلقائية</summary>
+              <div class="swv2-toggle-line">
+                <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة default route</label>
+                <label><input type="checkbox" name="dhcp_use_peer_dns" checked> استخدام DNS من المزود</label>
+                <label><input type="checkbox" name="dhcp_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
+              </div>
+            </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="pppoe">
@@ -226,17 +235,20 @@
               <input type="password" name="pppoe_password" placeholder="••••••••">
               <span>تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.</span>
             </label>
-            <label>Service name اختياري
+            <label>اسم الخدمة اختياري
               <input type="text" name="pppoe_service_name" placeholder="ISP-PPPOE">
             </label>
-            <label>Fixed IP اختياري
+            <details class="swv2-advanced swv2-form-advanced">
+              <summary>إعدادات متقدمة اختيارية</summary>
+              <label>Fixed IP اختياري
               <input type="text" name="pppoe_fixed_ip" placeholder="203.0.113.20">
-            </label>
-            <div class="swv2-toggle-line">
-              <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة default route</label>
-              <label><input type="checkbox" name="pppoe_use_peer_dns" checked> استخدام DNS من المزود</label>
-              <label><input type="checkbox" name="pppoe_nat_enabled" checked> NAT على اتصال PPPoE</label>
-            </div>
+              </label>
+              <div class="swv2-toggle-line">
+                <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة default route</label>
+                <label><input type="checkbox" name="pppoe_use_peer_dns" checked> استخدام DNS من المزود</label>
+                <label><input type="checkbox" name="pppoe_nat_enabled" checked> NAT على اتصال PPPoE</label>
+              </div>
+            </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="static">
@@ -252,9 +264,12 @@
             <label>DNS
               <input type="text" name="static_dns" placeholder="1.1.1.1, 8.8.8.8">
             </label>
-            <div class="swv2-toggle-line">
-              <label><input type="checkbox" name="static_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
-            </div>
+            <details class="swv2-advanced swv2-form-advanced">
+              <summary>إعدادات تلقائية</summary>
+              <div class="swv2-toggle-line">
+                <label><input type="checkbox" name="static_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
+              </div>
+            </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="vlan">
@@ -282,11 +297,14 @@
             <label>DNS اختياري
               <input type="text" name="vlan_dns" placeholder="1.1.1.1, 8.8.8.8">
             </label>
-            <div class="swv2-toggle-line">
-              <label><input type="checkbox" name="vlan_add_default_route" checked> إضافة default route</label>
-              <label><input type="checkbox" name="vlan_use_peer_dns" checked> استخدام DNS من المزود</label>
-              <label><input type="checkbox" name="vlan_nat_enabled" checked> تفعيل NAT للـVLAN</label>
-            </div>
+            <details class="swv2-advanced swv2-form-advanced">
+              <summary>إعدادات تلقائية</summary>
+              <div class="swv2-toggle-line">
+                <label><input type="checkbox" name="vlan_add_default_route" checked> إضافة default route</label>
+                <label><input type="checkbox" name="vlan_use_peer_dns" checked> استخدام DNS من المزود</label>
+                <label><input type="checkbox" name="vlan_nat_enabled" checked> تفعيل NAT للـVLAN</label>
+              </div>
+            </details>
           </section>
         </form>
       </div>
@@ -353,42 +371,55 @@
     <article class="swv2-step" data-swv2-step="vpn-script">
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">VPN/RADIUS</span>
-        <form class="swv2-form swv2-provisioning-form" data-swv2-vpn-form>
-          <label>اسم الراوتر
-            <input type="text" name="vpn_router_label" value="Branch Router" placeholder="Branch Router">
-            <span>يستخدم فقط لحجز سجل ثابت لهذا الراوتر داخل معالج الإعداد.</span>
-          </label>
-          <label>هوية الراوتر
-            <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
-          </label>
-          <label>VPS endpoint
-            <input type="text" name="vpn_vps_endpoint" value="187.77.70.18" placeholder="187.77.70.18">
-          </label>
-          <label>WireGuard port
-            <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
-          </label>
-        </form>
-        <div class="swv2-provisioning-grid" aria-label="بيانات حجز الراوتر">
-          <div><span>عنوان VPN للراوتر</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
-          <div><span>عنوان VPN للسيرفر</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
-          <div><span>اسم Peer</span><strong data-swv2-provisioning="peer_name">--</strong></div>
-          <div><span>مستخدم API</span><strong data-swv2-provisioning="api_username">--</strong></div>
-          <div><span>سر RADIUS</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
-          <div><span>رقم الحجز</span><strong data-swv2-provisioning="registry_id">--</strong></div>
-          <div><span>مرحلة الراوتر</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
-          <div><span>حالة Peer</span><strong data-swv2-provisioning="peer_status">--</strong></div>
-        </div>
-        <div class="swv2-key-exchange">
+        <div class="swv2-auto-summary">
+          <i class="fa-solid fa-robot"></i>
           <div>
-            <strong>إرسال مفتاح الراوتر</strong>
-            <span>بعد تنفيذ سكربت الراوتر، الصق public key فقط. لن يتم تعديل الخادم تلقائيًا.</span>
-          </div>
-          <textarea data-swv2-router-public-key placeholder="مثال: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcde="></textarea>
-          <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-submit-router-key>حفظ المفتاح وتجهيز peer</button>
-            <span data-swv2-router-key-status>بانتظار توليد بيانات الراوتر.</span>
+            <strong>سنجهز الربط تلقائيًا</strong>
+            <span>سيحجز المعالج عنوان VPN، واسم ربط، ومستخدم API، وسر RADIUS بدون أن تطلب من العميل مفاتيح أو أكواد.</span>
           </div>
         </div>
+        <div class="swv2-provisioning-grid swv2-provisioning-grid-primary" aria-label="ملخص بيانات الربط">
+          <div><span>عنوان الراوتر</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
+          <div><span>عنوان السيرفر</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
+          <div><span>اسم الربط</span><strong data-swv2-provisioning="peer_name">--</strong></div>
+          <div><span>مستخدم الإدارة</span><strong data-swv2-provisioning="api_username">--</strong></div>
+        </div>
+        <details class="swv2-advanced swv2-engineering-only">
+          <summary>تفاصيل الحجز الهندسية</summary>
+          <form class="swv2-form swv2-provisioning-form" data-swv2-vpn-form>
+            <label>هوية الراوتر
+              <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
+            </label>
+            <label>VPS endpoint
+              <input type="text" name="vpn_vps_endpoint" value="187.77.70.18" placeholder="187.77.70.18">
+            </label>
+            <label>WireGuard port
+              <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
+            </label>
+          </form>
+          <div class="swv2-provisioning-grid" aria-label="بيانات حجز الراوتر">
+            <div><span>سر RADIUS</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
+            <div><span>رقم الحجز</span><strong data-swv2-provisioning="registry_id">--</strong></div>
+            <div><span>مرحلة الراوتر</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
+            <div><span>حالة الربط</span><strong data-swv2-provisioning="peer_status">--</strong></div>
+          </div>
+        </details>
+        <div class="swv2-key-exchange swv2-auto-key-card" data-swv2-auto-public-key>
+          <div>
+            <strong>لا تحتاج لإدخال مفاتيح يدويًا</strong>
+            <span>بعد لصق مخرجات سكربت الربط في خطوة التحقق، سيحاول المعالج التقاط مفتاح الربط العام تلقائيًا وتجهيز الخطة بدون عرض الأكواد للمستخدم.</span>
+          </div>
+          <div class="swv2-action-row">
+            <span data-swv2-router-key-status>بانتظار توليد سكربت الربط.</span>
+            <details class="swv2-advanced swv2-inline-advanced">
+              <summary>إدخال هندسي يدوي</summary>
+              <textarea data-swv2-router-public-key placeholder="مثال: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcde="></textarea>
+              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-submit-router-key>حفظ مفتاح الربط يدويًا</button>
+            </details>
+          </div>
+        </div>
+        <details class="swv2-advanced swv2-engineering-only">
+          <summary>وضع المختبر الداخلي للسيرفر</summary>
         <div class="swv2-server-peer-panel">
           <div>
             <strong>تحضير Peer على السيرفر</strong>
@@ -449,8 +480,9 @@
           <textarea data-swv2-server-peer-output placeholder="اختياري: الصق wg show للتحقق من وجود peer و handshake"></textarea>
           <pre data-swv2-server-peer-result>لم يتم تنفيذ تجربة جافة بعد.</pre>
         </div>
-        <h2>سيتم الآن ربط MikroTik مع HobeRadius</h2>
-        <p>هذه الخطوة تجهز سكربت الربط الآمن بين الراوتر والخادم، ثم إعدادات RADIUS المطلوبة لاحقًا للخدمات.</p>
+        </details>
+        <h2>جهز سكربت ربط الراوتر</h2>
+        <p>انسخ السكربت إلى MikroTik. بعد التنفيذ الصق المخرجات في الخطوة التالية، وسيكمل المعالج قراءة الإشارات تلقائيًا.</p>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">نسخ سكربت الربط</button>
           <details class="swv2-advanced">
@@ -463,12 +495,12 @@
           </details>
         </div>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>توليد بيانات راوتر فريدة</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>تجهيز الربط تلقائيًا</button>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
             <strong>معاينة سكربت VPN/RADIUS</strong>
-            <span>لا يتم إنشاء مستخدم أو تعديل إعدادات الراوتر تلقائيًا.</span>
+            <span>السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.</span>
           </div>
           <pre id="vpn-script-code">-- لم يتم توليد سكربت VPN/RADIUS بعد --</pre>
         </div>
@@ -479,7 +511,7 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">تحقق الربط</span>
         <h2>تأكد من اتصال الراوتر بالخادم</h2>
-        <p>الصق مخرجات handshake و ping و RADIUS. عند النجاح تصبح خطوات الخدمات جاهزة للموجة القادمة.</p>
+        <p>الصق مخرجات السكربت أو فحص الربط كما هي. سيبحث المعالج تلقائيًا عن ping و handshake ومفتاح الربط العام إن وجد.</p>
         <div class="swv2-verification-panel" data-swv2-verification-panel="vpn">
           <textarea data-swv2-verify-output="vpn" placeholder="latest handshake: 3s ago&#10;sent=5 received=5 packet-loss=0%"></textarea>
           <div class="swv2-action-row">
