@@ -1,0 +1,41 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ title }} - Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}<span class="sub">Filtered report detail view.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  title,
+  subtitle="Use the date filters for a focused range. Archive snapshots are created from the Archive tab.",
+  icon="file-lines",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> Reports</a>'
+) }}
+
+{% call hub.section("Date range", icon="filter") %}
+  <form method="get" class="hub-form-grid" data-testid="report-date-filter">
+    <label>From <input name="date_from" type="date" value="{{ request.args.get('date_from','') }}"></label>
+    <label>To <input name="date_to" type="date" value="{{ request.args.get('date_to','') }}"></label>
+    <button class="hub-btn hub-btn--primary" type="submit">Apply filter</button>
+  </form>
+{% endcall %}
+
+{% call hub.section("Report rows", icon="table", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="report-detail-table">
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for item in data["items"] %}
+          {% for key, value in item.items() %}
+            <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="2">No report rows for this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

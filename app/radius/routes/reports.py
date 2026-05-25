@@ -4,17 +4,33 @@ sync_queue, webhook_deliveries). كلها read-only، tenant-scoped.
 """
 from __future__ import annotations
 
-from flask import Blueprint, g, render_template, request
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
+from ..services.dashboard_reports import DashboardReportsService
 
 
 def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+def _svc() -> DashboardReportsService:
+    return DashboardReportsService(tenant_id=_tid())
+
+
+def _actor() -> str:
+    return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
 def register_reports_routes(bp: Blueprint) -> None:
+    bp.add_url_rule("/reports", "reports_home", reports_home, methods=["GET"])
+    bp.add_url_rule("/reports/summary.json", "reports_summary_json", reports_summary_json, methods=["GET"])
+    bp.add_url_rule("/reports/financial", "reports_financial", reports_financial, methods=["GET"])
+    bp.add_url_rule("/reports/cards", "reports_cards", reports_cards, methods=["GET"])
+    bp.add_url_rule("/reports/distributors", "reports_distributors", reports_distributors, methods=["GET"])
+    bp.add_url_rule("/reports/archive", "reports_archive", reports_archive, methods=["GET"])
+    bp.add_url_rule("/reports/archive/create", "reports_archive_create", reports_archive_create, methods=["POST"])
     bp.add_url_rule("/reports/sessions", "rep_sessions", rep_sessions, methods=["GET"])
     bp.add_url_rule("/reports/failed_logins", "rep_failed_logins", rep_failed_logins, methods=["GET"])
     bp.add_url_rule("/reports/login_status", "rep_login_status", rep_login_status, methods=["GET"])
@@ -25,6 +41,79 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/manager_events", "rep_manager_events", rep_manager_events, methods=["GET"])
     bp.add_url_rule("/reports/manager_login_status", "rep_manager_login_status", rep_manager_login_status, methods=["GET"])
     bp.add_url_rule("/reports/user_events", "rep_user_events", rep_user_events, methods=["GET"])
+
+
+def reports_home():
+    svc = _svc()
+    summary = svc.executive_summary(
+        date_from=(request.args.get("date_from") or "").strip(),
+        date_to=(request.args.get("date_to") or "").strip(),
+    )
+    return render_template(
+        "radius/reports_center.html",
+        summary=summary,
+        catalog=svc.report_catalog(),
+        active="home",
+    )
+
+
+def reports_summary_json():
+    summary = _svc().executive_summary(
+        date_from=(request.args.get("date_from") or "").strip(),
+        date_to=(request.args.get("date_to") or "").strip(),
+    )
+    return jsonify({"status": "ok", "summary": summary})
+
+
+def reports_financial():
+    return _report_page("financial", "Financial reports")
+
+
+def reports_cards():
+    return _report_page("cards", "Cards reports")
+
+
+def reports_distributors():
+    return _report_page("distributors", "Distributor reports")
+
+
+def _report_page(report_type: str, title: str):
+    data = _svc().report_data(
+        report_type,
+        date_from=(request.args.get("date_from") or "").strip(),
+        date_to=(request.args.get("date_to") or "").strip(),
+    )
+    return render_template(
+        "radius/reports_detail.html",
+        title=title,
+        report_type=report_type,
+        data=data,
+        active=report_type,
+    )
+
+
+def reports_archive():
+    svc = _svc()
+    return render_template(
+        "radius/reports_archive.html",
+        archives=svc.list_archives(),
+        summary=svc.executive_summary(),
+        active="archive",
+    )
+
+
+def reports_archive_create():
+    archive = _svc().create_archive_snapshot(
+        archive_type=request.form.get("archive_type") or "yearly",
+        period=request.form.get("period") or "",
+        report_type=request.form.get("report_type") or "financial",
+        actor=_actor(),
+    )
+    flash(
+        "Archive snapshot created." if archive.get("created") else "Archive snapshot already existed; immutable copy was preserved.",
+        "success",
+    )
+    return redirect(url_for("radius.reports_archive"))
 
 
 def _limit() -> tuple[int, int]:

@@ -1,0 +1,54 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Report Archives - Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
+{% block page_title %}Report Archives{% endblock %}
+{% block page_sub %}<span class="sub">Immutable daily, monthly, and yearly snapshots.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Report Archives",
+  subtitle="Snapshots preserve the calculated report state at creation time. Existing snapshots are never overwritten.",
+  icon="box-archive",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> Reports</a>'
+) }}
+
+{% call hub.section("Create archive snapshot", icon="box-archive") %}
+  <form method="post" action="{{ url_for('radius.reports_archive_create') }}" class="hub-form-grid" data-testid="archive-create-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>Archive type
+      <select name="archive_type">
+        <option value="yearly">Yearly</option>
+        <option value="monthly">Monthly</option>
+        <option value="daily">Daily</option>
+      </select>
+    </label>
+    <label>Period <input name="period" placeholder="2026 or 2026-05 or 2026-05-25"></label>
+    <label>Report type <input name="report_type" value="financial"></label>
+    <button class="hub-btn hub-btn--primary" type="submit">Create immutable snapshot</button>
+  </form>
+{% endcall %}
+
+{% call hub.section("Existing archives", icon="lock", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="archive-snapshots-table">
+      <thead><tr><th>ID</th><th>Type</th><th>Period</th><th>Report</th><th>Revenue</th><th>Created</th></tr></thead>
+      <tbody>
+        {% for archive in archives %}
+          <tr>
+            <td>#{{ archive.id }}</td>
+            <td>{{ archive.archive_type }}</td>
+            <td>{{ archive.period }}</td>
+            <td>{{ archive.report_type }}</td>
+            <td>{{ archive.summary.finance.revenue if archive.summary.finance is defined else '' }}</td>
+            <td>{{ archive.created_at }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6">No archive snapshots yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

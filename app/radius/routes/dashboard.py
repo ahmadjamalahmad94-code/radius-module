@@ -9,10 +9,12 @@ from flask import Blueprint, render_template
 
 from ..services.dashboard import get_dashboard_service
 from ..services.dashboard_metrics import build_dashboard_metrics
+from ..services.dashboard_reports import DashboardReportsService
 
 
 def register_dashboard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/", "dashboard", dashboard_view, methods=["GET"])
+    bp.add_url_rule("/dashboard", "dashboard_alias", dashboard_view, methods=["GET"])
 
 
 def dashboard_view():
@@ -22,4 +24,7 @@ def dashboard_view():
     except Exception:
         metrics = {"alerts": [], "subscribers": {}, "cards": {},
                     "recent_batches": [], "plans": {}, "nas": {}, "system": {}}
-    return render_template("radius/dashboard.html", snap=snap, metrics=metrics)
+    try: executive = DashboardReportsService().executive_summary()
+    except Exception:
+        executive = {}
+    return render_template("radius/dashboard.html", snap=snap, metrics=metrics, executive=executive)

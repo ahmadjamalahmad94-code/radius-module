@@ -1,0 +1,55 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Reports Center - Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
+{% block page_title %}Reports Center{% endblock %}
+{% block page_sub %}<span class="sub">Executive analytics, drill-down reports, and immutable archive snapshots.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Reports Center",
+  subtitle="Daily, monthly, and yearly business views without deleting or rewriting financial history.",
+  icon="chart-line",
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> Archives</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="executive-dashboard-summary">
+  {{ hub.kpi("Subscribers", summary.subscribers.total, icon="users", variant="blue") }}
+  {{ hub.kpi("Online", summary.subscribers.online, icon="wifi", variant="green") }}
+  {{ hub.kpi("Revenue", summary.finance.revenue, icon="coins", variant="amber") }}
+  {{ hub.kpi("Cards", summary.cards.total, icon="id-card") }}
+</div>
+
+{% call hub.section("Drill-down metrics", icon="arrow-up-right-from-square", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="drilldown-links">
+      <thead><tr><th>Metric</th><th>Value</th><th>Open detail</th></tr></thead>
+      <tbody>
+        <tr><td>Active subscribers</td><td>{{ summary.subscribers.active }}</td><td><a href="{{ summary.drilldowns.subscribers_active }}">Open</a></td></tr>
+        <tr><td>Disabled subscribers</td><td>{{ summary.subscribers.disabled }}</td><td><a href="{{ summary.drilldowns.subscribers_disabled }}">Open</a></td></tr>
+        <tr><td>Online users</td><td>{{ summary.subscribers.online }}</td><td><a href="{{ summary.drilldowns.online_users }}">Open</a></td></tr>
+        <tr><td>Unused cards</td><td>{{ summary.cards.unused }}</td><td><a href="{{ summary.drilldowns.cards_unused }}">Open</a></td></tr>
+        <tr><td>Financial reports</td><td>{{ summary.finance.revenue_year }}</td><td><a href="{{ summary.drilldowns.financial_reports }}">Open</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+
+{% call hub.section("Report library", icon="folder-open") %}
+  <div class="hub-actions" data-testid="report-catalog">
+    {% for report in catalog %}
+      {{ hub.action_card(report.title, sub=report.key, icon="file-lines", href=report.url, variant="grey") }}
+    {% endfor %}
+  </div>
+{% endcall %}
+
+{% call hub.section("Revenue and margin", icon="chart-simple") %}
+  <div class="hub-kpi-grid" data-testid="revenue-periods">
+    {{ hub.kpi("Today revenue", summary.finance.revenue_today, icon="calendar-day") }}
+    {{ hub.kpi("Month revenue", summary.finance.revenue_month, icon="calendar") }}
+    {{ hub.kpi("Year revenue", summary.finance.revenue_year, icon="calendar-days") }}
+    {{ hub.kpi("Year margin", summary.finance.margin_year, icon="scale-balanced", variant="green") }}
+  </div>
+{% endcall %}
+{% endblock %}
