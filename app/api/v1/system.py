@@ -112,6 +112,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_restore_snapshot),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/service-activations/poll",
+        "system_admin_bridge_service_activations_poll",
+        require_api_token(system_admin_bridge_service_activations_poll),
+        methods=["POST"],
+    )
 
 
 def system_status():
@@ -265,3 +271,17 @@ def system_admin_bridge_restore_snapshot(reference: str):
     except ValueError as exc:
         return fail("not_found", str(exc), status=404)
     return ok({"request": result})
+
+
+def system_admin_bridge_service_activations_poll():
+    """Manual one-shot V40 service activation poll.
+
+    Defaults to dry-run. Unsupported jobs are recorded locally and reported;
+    no live service execution is registered by default.
+    """
+    from ...radius.services.license_admin_service_activation import ServiceActivationService
+
+    payload = request.get_json(silent=True) or {}
+    dry_run = payload.get("dry_run", True) is not False
+    result = ServiceActivationService().poll_once(tenant_id=_tid(), dry_run=dry_run)
+    return ok(result)

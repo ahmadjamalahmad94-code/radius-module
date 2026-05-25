@@ -31,6 +31,8 @@ INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
+SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
+SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/service-activations/{reference}/status"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -403,6 +405,14 @@ class AdminPanelClient:
     def post_restore_status(self, *, reference: str, payload: dict[str, Any]) -> dict[str, Any]:
         safe_reference = urllib.parse.quote(str(reference), safe="")
         path = RESTORE_STATUS_PATH_TEMPLATE.format(reference=safe_reference)
+        return self._post_bridge_payload(path=path, payload=payload)
+
+    def poll_service_activations(self, *, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._post_bridge_payload(path=SERVICE_ACTIVATION_POLL_PATH, payload=payload)
+
+    def post_service_activation_status(self, *, reference: str, payload: dict[str, Any]) -> dict[str, Any]:
+        safe_reference = urllib.parse.quote(str(reference), safe="")
+        path = SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE.format(reference=safe_reference)
         return self._post_bridge_payload(path=path, payload=payload)
 
     def _post_bridge_payload(self, *, path: str, payload: dict[str, Any]) -> dict[str, Any]:

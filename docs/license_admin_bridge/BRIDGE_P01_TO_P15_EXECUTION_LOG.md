@@ -559,3 +559,64 @@
   - Candidate backup download is not implemented in P08.
 - GO/NO-GO for next prompt:
   - GO for P09.
+
+## P09 — Service Activation Polling Framework
+
+- Start time: 2026-05-25 13:25:00 +03:00
+- End time: 2026-05-25 13:31:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/db/migrations/070_license_admin_service_activations.sql`
+  - `app/radius/services/admin_panel_client.py`
+  - `app/radius/services/license_admin_service_activation.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/SERVICE_ACTIVATION_AGENT.md`
+  - `tests/test_license_admin_service_activation.py`
+- What was implemented:
+  - Added V40 service activation poll/status client methods.
+  - Added local service activation execution persistence.
+  - Added adapter registry contract.
+  - Added safe unsupported-service recording.
+  - Added idempotency by `(tenant_id, reference)`.
+  - Added manual dry-run-first poll API route.
+  - Added service activation agent documentation.
+- What was intentionally not implemented:
+  - No Public IP change adapter yet.
+  - No live service execution.
+  - No MikroTik, RADIUS, FreeRADIUS, VPS, or CoA mutation.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_service_activation.py -q`
+    passed: 6 passed, 448 warnings in 4.59s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_restore_workflow.py tests/test_license_admin_backup_upload.py tests/test_license_admin_instance_health.py -q`
+    passed: 28 passed, 2001 warnings in 17.53s.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Attempted `python -m pytest -q`.
+  - Timed out after 304021 ms with no visible failure output.
+- Timeout notes if any:
+  - Full pytest timeout matches prior bridge-run behavior. Targeted P09 and
+    bridge regression suites passed.
+- Admin endpoint gaps:
+  - Service activation poll/status endpoints are assumed as:
+    `/api/integration/hoberadius/service-activations/poll`
+    and
+    `/api/integration/hoberadius/service-activations/<reference>/status`.
+- Codex follow-ups added:
+  - None yet in P09.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Adapter registry defaults empty, so unknown jobs are stored as
+    `unsupported_service`.
+  - P09 does not implement live action adapters.
+- GO/NO-GO for next prompt:
+  - GO for P10 after P09 commit.
