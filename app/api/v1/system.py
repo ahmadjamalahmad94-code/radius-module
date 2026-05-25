@@ -76,6 +76,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_reconcile),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/usage-report",
+        "system_admin_bridge_usage_report",
+        require_api_token(system_admin_bridge_usage_report),
+        methods=["POST"],
+    )
 
 
 def system_status():
@@ -146,3 +152,22 @@ def system_reconcile():
     except Exception as exc:  # noqa: BLE001
         return fail("reconcile_failed", str(exc), status=500)
     return ok({"stats": stats})
+
+
+def system_admin_bridge_usage_report():
+    """Manual one-shot V40 usage report.
+
+    Defaults to dry-run. Sending to admin requires explicit JSON
+    `{"dry_run": false}` and valid bridge env config.
+    """
+    from ...radius.services.license_admin_usage_metering import UsageMeteringService
+
+    payload = request.get_json(silent=True) or {}
+    dry_run = payload.get("dry_run", True) is not False
+    report_window = payload.get("report_window") or None
+    result = UsageMeteringService().send_usage_report(
+        tenant_id=_tid(),
+        report_window=report_window,
+        dry_run=dry_run,
+    )
+    return ok(result)

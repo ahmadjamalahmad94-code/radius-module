@@ -39,3 +39,12 @@ modified.
     `POST /api/integration/hoberadius/service-activations/<reference>/status`.
 14. Define service activation state machine, allowed service keys, retry rules,
     and idempotency expectations.
+
+## P03 Usage Metering Follow-Ups
+
+15. Confirm whether V40 admin exposes a usage report endpoint. P03 currently
+    assumes:
+    `POST /api/integration/hoberadius/usage-report`.
+16. Confirm required usage payload fields, accepted metric names, and whether
+    the admin panel expects usage reports to be standalone or folded into the
+    heartbeat endpoint.
