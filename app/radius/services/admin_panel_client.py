@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 
 LICENSE_CHECK_PATH = "/api/license/check"
 CAPACITY_CONTRACT_PATH = "/api/integration/hoberadius/capacity-contract"
+INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -301,6 +302,51 @@ class AdminPanelClient:
             validator=_validate_capacity_payload,
             fallback_state=lambda: get_current_capacity_contract(tenant_id=tenant_id, store=self.store),
         )
+
+    def post_instance_heartbeat(self, *, payload: dict[str, Any]) -> dict[str, Any]:
+        source_url = (
+            f"{self.config.base_url}{INSTANCE_HEARTBEAT_PATH}"
+            if self.config.base_url
+            else INSTANCE_HEARTBEAT_PATH
+        )
+        if not self.config.enabled:
+            return {
+                "ok": False,
+                "status": "disabled",
+                "error": {"code": "bridge_disabled"},
+            }
+        missing = self.config.missing_fields()
+        if missing:
+            return {
+                "ok": False,
+                "status": "config_missing",
+                "error": {"code": "config_missing", "missing": missing},
+            }
+        try:
+            response = self.transport.request_json(
+                method="POST",
+                url=source_url,
+                headers=self._headers(),
+                json_body=payload,
+                timeout_seconds=self.config.timeout_seconds,
+            )
+        except (TimeoutError, socket.timeout) as exc:
+            return {
+                "ok": False,
+                "status": "timeout",
+                "error": {"code": "admin_panel_timeout", "message": str(exc)},
+            }
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            return {
+                "ok": False,
+                "status": "unavailable",
+                "error": {"code": "admin_panel_unavailable", "message": str(exc)},
+            }
+        return {
+            "ok": True,
+            "status": _normalize_status(response),
+            "response": sanitize_bridge_payload(response),
+        }
 
     def _fetch_snapshot(
         self,

@@ -88,6 +88,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_capacity_status),
         methods=["GET"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/heartbeat",
+        "system_admin_bridge_heartbeat",
+        require_api_token(system_admin_bridge_heartbeat),
+        methods=["POST"],
+    )
 
 
 def system_status():
@@ -188,3 +194,17 @@ def system_admin_bridge_capacity_status():
     from ...radius.services.license_admin_capacity import CapacityEnforcementService
 
     return ok(CapacityEnforcementService().capacity_status(tenant_id=_tid()))
+
+
+def system_admin_bridge_heartbeat():
+    """Manual one-shot V40 instance heartbeat.
+
+    Defaults to dry-run. Sending to admin requires explicit JSON
+    `{"dry_run": false}` and valid bridge env config.
+    """
+    from ...radius.services.license_admin_instance_health import InstanceHealthService
+
+    payload = request.get_json(silent=True) or {}
+    dry_run = payload.get("dry_run", True) is not False
+    result = InstanceHealthService().send_heartbeat(tenant_id=_tid(), dry_run=dry_run)
+    return ok(result)

@@ -361,3 +361,68 @@
     or admin-submitted request.
 - GO/NO-GO for next prompt:
   - GO for P06.
+
+## P06 — Instance Health Heartbeat to V40
+
+- Start time: 2026-05-25 12:50:30 +03:00
+- End time: 2026-05-25 13:05:14 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/db/migrations/067_license_admin_heartbeat_attempts.sql`
+  - `app/radius/services/admin_panel_client.py`
+  - `app/radius/services/license_admin_instance_health.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/INSTANCE_HEALTH_HEARTBEAT.md`
+  - `tests/test_license_admin_instance_health.py`
+- What was implemented:
+  - Added `InstanceHealthService`.
+  - Added heartbeat attempt persistence.
+  - Added `AdminPanelClient.post_instance_heartbeat()`.
+  - Added manual dry-run-first API route:
+    `POST /api/v1/system/admin-bridge/heartbeat`.
+  - Added read-only health payload fields for DB, accounting, backup,
+    scheduler workers, storage, bridge sync state, warnings, and generated time.
+  - Added heartbeat documentation.
+- What was intentionally not implemented:
+  - No scheduler hook was added in P06.
+  - No service restarts.
+  - No shell probes.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_instance_health.py -q`
+    passed: 6 passed, 425 warnings in 4.59s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_usage_metering.py tests/test_license_admin_capacity_status.py tests/test_license_admin_capacity_enforcement.py -q`
+    passed: 26 passed, 1798 warnings in 16.30s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - `python -m pytest -q` attempted.
+  - Result: timed out after 308028 ms.
+  - No visible failure output was returned before timeout.
+- Timeout notes if any:
+  - Full pytest did not complete inside the roughly 300 second execution
+    window.
+- Admin endpoint gaps:
+  - Heartbeat endpoint path is assumed as
+    `/api/integration/hoberadius/instance-ops/heartbeat`.
+  - P01 follow-up already tracks confirmation for this endpoint.
+- Codex follow-ups added:
+  - None in P06.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Heartbeat is dry-run by default.
+  - Remote sending requires enabled bridge config.
+  - FreeRADIUS status remains unknown unless a future safe read-only probe is
+    defined.
+  - Scheduler wiring remains deferred to a later safe scheduler prompt.
+- GO/NO-GO for next prompt:
+  - GO for P07.
