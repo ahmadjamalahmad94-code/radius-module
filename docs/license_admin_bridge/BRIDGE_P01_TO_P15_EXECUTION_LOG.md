@@ -949,3 +949,25 @@
 - GO/NO-GO for next prompt:
   - P15 complete. GO for controlled backend integration testing; NO-GO for
     production customer automation.
+
+## Sidebar / Admin Navigation Exposure
+
+- Route/page added:
+  - `/admin/radius/admin-bridge` renders a safe admin-only V40 Bridge navigation/status page.
+- Safety constraints:
+  - GET HTML only.
+  - No remote admin call is triggered automatically.
+  - No backup upload, restore apply, service activation, public IP change, or POST action is exposed.
+  - No secrets, raw license key, or admin shared secret are rendered.
+- Dry-run/contract-only labels:
+  - Page includes `وضع جاف`, `غير مفعل إنتاجيًا`, and `يحتاج تأكيد عقود الإدارة`.
+- Tests run:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_admin_bridge_sidebar_navigation.py -q` passed:
+    `3 passed, 816 warnings in 12.65s`.
+  - Sidebar companion tests passed for Setup Wizard and Business OS navigation.
+  - Relevant Business OS web suite passed: `55 passed, 14527 warnings in 46.67s`.
+  - `git diff --check` passed.
+- Production automation confirmation:
+  - No production automation changed.
+  - No RADIUS/MikroTik/FreeRADIUS/CoA behavior changed.

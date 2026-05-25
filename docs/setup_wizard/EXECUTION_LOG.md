@@ -100,6 +100,45 @@
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
 
+## Sidebar Navigation Links
+
+### Setup wizard routes added
+
+- `/admin/radius/setup-wizard-v2` as `معالج الإعداد`
+- `/admin/radius/setup-wizard/fleet` as `أسطول الراوترات`
+- `/admin/radius/setup-wizard` as `عرض الإعداد الهندسي`
+
+### Operations / fleet routes added
+
+- Setup Wizard fleet is exposed through the `الإعداد والتشغيل` sidebar group.
+- Business operations pages are exposed through the `نظام الأعمال` sidebar group, including `/operations` and `/operations/speed-control`.
+
+### Files changed
+
+- `app/templates/admin/_sidebar.html`
+- `tests/test_setup_wizard_sidebar_links.py`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+
+### Active-state behavior
+
+- Setup Wizard links use exact path matching so `/setup-wizard` does not activate `/setup-wizard/fleet`.
+- The sidebar opens the containing section only for the active page.
+
+### Tests run
+
+- `python -m compileall app` passed.
+- `python -m pytest tests/test_setup_wizard_sidebar_links.py -q` passed: `3 passed, 807 warnings in 12.31s`.
+- `python -m pytest tests/test_business_os_sidebar_navigation.py -q` passed: `3 passed, 808 warnings in 14.16s`.
+- `python -m pytest tests/test_admin_bridge_sidebar_navigation.py -q` passed: `3 passed, 816 warnings in 12.65s`.
+- Relevant Business OS web suite passed: `55 passed, 14527 warnings in 46.67s`.
+- `git diff --check` passed.
+
+### Safety confirmations
+
+- No action/API routes were exposed in the sidebar.
+- No live apply or production automation changed.
+- No RADIUS, MikroTik, FreeRADIUS, or CoA behavior changed.
+
 ## Blocker Fix — Setup Wizard DB Isolation / Migration Order
 
 ### Commit

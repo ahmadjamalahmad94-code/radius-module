@@ -8,6 +8,7 @@ from ..services.customer_portals import CustomerPortalService, PortalAuthError
 
 
 def register_customer_portal_routes(bp: Blueprint) -> None:
+    bp.add_url_rule("/customer-portals", "customer_portals_admin", customer_portals_admin, methods=["GET"])
     bp.add_url_rule("/portal/subscriber/login", "portal_subscriber_login", subscriber_login, methods=["GET", "POST"])
     bp.add_url_rule("/portal/subscriber/logout", "portal_subscriber_logout", subscriber_logout, methods=["GET", "POST"])
     bp.add_url_rule("/portal/subscriber", "portal_subscriber_home", subscriber_home, methods=["GET"])
@@ -25,6 +26,10 @@ def _tenant_id() -> int:
 
 def _svc() -> CustomerPortalService:
     return CustomerPortalService(tenant_id=_tenant_id())
+
+
+def customer_portals_admin():
+    return render_template("radius/customer_portals_admin.html")
 
 
 def subscriber_login():

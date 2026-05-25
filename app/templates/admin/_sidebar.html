@@ -111,6 +111,38 @@
 {%- set m_webhooks    = '/webhooks' in path -%}
 {%- set m_tokens      = '/tokens' in path -%}
 
+{# Setup Wizard / Operations #}
+{%- set m_setup_wizard_v2 = (path == url_for('radius.setup_wizard_v2_page')) -%}
+{%- set m_setup_wizard_fleet = (path == url_for('radius.setup_wizard_fleet_page')) -%}
+{%- set m_setup_wizard_engineering = (path == url_for('radius.setup_wizard_page')) -%}
+
+{# Business OS #}
+{%- set m_business_dashboard = (path == url_for('radius.dashboard_alias')) -%}
+{%- set m_business_finance = (path == url_for('radius.business_finance')) -%}
+{%- set m_business_wallets = (path == url_for('radius.business_finance_wallets')) -%}
+{%- set m_business_revenue = (path == url_for('radius.business_finance_revenue')) -%}
+{%- set m_business_debts = (path == url_for('radius.business_finance_debts')) -%}
+{%- set m_business_loans = (path == url_for('radius.business_finance_loans')) -%}
+{%- set m_business_ledger = (path == url_for('radius.finance_ledger')) -%}
+{%- set m_subscribers_360 = (path == url_for('radius.subscribers_list')) -%}
+{%- set m_card_users = (path == url_for('radius.card_users_list')) -%}
+{%- set m_card_marketplace = (path == url_for('radius.card_marketplace')) -%}
+{%- set m_card_pricing = (path == url_for('radius.card_pricing')) -%}
+{%- set m_business_operators = (path == url_for('radius.business_operators')) -%}
+{%- set m_communications = ('/communications' in path) -%}
+{%- set m_events_center = ('/events' in path) -%}
+{%- set m_operations_center = (path == url_for('radius.operations_center')) -%}
+{%- set m_operations_speed = (path == url_for('radius.operations_speed_control')) -%}
+{%- set m_reports_home = (path == url_for('radius.reports_home')) -%}
+{%- set m_reports_financial = (path == url_for('radius.reports_financial')) -%}
+{%- set m_reports_cards = (path == url_for('radius.reports_cards')) -%}
+{%- set m_reports_distributors = (path == url_for('radius.reports_distributors')) -%}
+{%- set m_reports_archive = (path == url_for('radius.reports_archive')) -%}
+{%- set m_customer_portals = (path == url_for('radius.customer_portals_admin')) -%}
+
+{# V40 Admin Bridge #}
+{%- set m_admin_bridge = (path == url_for('radius.admin_bridge')) -%}
+
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates -%}
@@ -123,6 +155,16 @@
 {%- set sec_support_active  = m_tickets or m_services -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups or m_lifecycle -%}
 {%- set sec_integration_active = m_webhooks or m_tokens -%}
+{%- set sec_setup_ops_active = m_setup_wizard_v2 or m_setup_wizard_fleet or m_setup_wizard_engineering -%}
+{%- set sec_business_os_active = m_business_dashboard or m_business_finance or m_business_wallets
+                                  or m_business_revenue or m_business_debts or m_business_loans
+                                  or m_business_ledger or m_subscribers_360 or m_card_users
+                                  or m_card_marketplace or m_card_pricing or m_business_operators
+                                  or m_communications or m_events_center or m_operations_center
+                                  or m_operations_speed or m_reports_home or m_reports_financial
+                                  or m_reports_cards or m_reports_distributors or m_reports_archive
+                                  or m_customer_portals -%}
+{%- set sec_admin_bridge_active = m_admin_bridge -%}
 
 {# Standalone Dashboard #}
 {%- set m_dashboard = (path == url_for('radius.dashboard')) -%}
@@ -160,6 +202,68 @@
       <span class="hb-side-icon"><i class="fa-solid fa-gauge-high"></i></span>
       <span class="hb-side-text">لوحة التحكم</span>
     </a>
+
+    <div class="hb-side-section{% if sec_setup_ops_active %} is-open has-active{% endif %}"
+         data-hb-section="setup-operations">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="الإعداد والتشغيل">
+        <span class="hb-side-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+        <span class="hb-side-text">الإعداد والتشغيل</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.setup_wizard_v2_page', 'معالج الإعداد', m_setup_wizard_v2) }}
+        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات', m_setup_wizard_fleet) }}
+        {{ sub_item('radius.setup_wizard_page', 'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
+      </div></div>
+    </div>
+
+    <div class="hb-side-section{% if sec_business_os_active %} is-open has-active{% endif %}"
+         data-hb-section="business-os">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="نظام الأعمال">
+        <span class="hb-side-icon"><i class="fa-solid fa-building-columns"></i></span>
+        <span class="hb-side-text">نظام الأعمال</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.dashboard_alias', 'لوحة الأعمال', m_business_dashboard) }}
+        {{ sub_item('radius.business_finance', 'المركز المالي', m_business_finance) }}
+        {{ sub_item('radius.business_finance_wallets', 'المحافظ', m_business_wallets) }}
+        {{ sub_item('radius.business_finance_revenue', 'الإيرادات', m_business_revenue) }}
+        {{ sub_item('radius.business_finance_debts', 'الديون', m_business_debts) }}
+        {{ sub_item('radius.business_finance_loans', 'القروض', m_business_loans) }}
+        {{ sub_item('radius.finance_ledger', 'دفتر القيود', m_business_ledger) }}
+        {{ sub_item('radius.subscribers_list', 'المشتركين 360', m_subscribers_360) }}
+        {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
+        {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
+        {{ sub_item('radius.card_pricing', 'تسعير البطاقات', m_card_pricing) }}
+        {{ sub_item('radius.business_operators', 'المدراء والموزعون', m_business_operators) }}
+        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications) }}
+        {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}
+        {{ sub_item('radius.operations_center', 'مركز العمليات', m_operations_center) }}
+        {{ sub_item('radius.operations_speed_control', 'التحكم بالسرعة', m_operations_speed) }}
+        {{ sub_item('radius.reports_home', 'التقارير', m_reports_home) }}
+        {{ sub_item('radius.reports_financial', 'التقرير المالي', m_reports_financial) }}
+        {{ sub_item('radius.reports_cards', 'تقارير البطاقات', m_reports_cards) }}
+        {{ sub_item('radius.reports_distributors', 'تقارير الموزعين', m_reports_distributors) }}
+        {{ sub_item('radius.reports_archive', 'الأرشيف', m_reports_archive) }}
+        {{ sub_item('radius.customer_portals_admin', 'بوابات العملاء', m_customer_portals) }}
+      </div></div>
+    </div>
+
+    <div class="hb-side-section{% if sec_admin_bridge_active %} is-open has-active{% endif %}"
+         data-hb-section="admin-bridge">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="جسر الإدارة V40">
+        <span class="hb-side-icon"><i class="fa-solid fa-bridge"></i></span>
+        <span class="hb-side-text">جسر الإدارة V40</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.admin_bridge', 'لوحة جسر الإدارة', m_admin_bridge) }}
+      </div></div>
+    </div>
 
     {# ───────── المشتركون ───────── #}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"

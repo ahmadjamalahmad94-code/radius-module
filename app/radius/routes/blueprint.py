@@ -104,6 +104,7 @@ def _register_all(bp: Blueprint) -> None:
     from .events_risk import register_events_risk_routes
     from .operations_center import register_operations_center_routes
     from .customer_portals import register_customer_portal_routes
+    from .admin_bridge import register_admin_bridge_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .lifecycle import register_lifecycle_routes
@@ -129,6 +130,7 @@ def _register_all(bp: Blueprint) -> None:
     register_events_risk_routes(bp)
     register_operations_center_routes(bp)
     register_customer_portal_routes(bp)
+    register_admin_bridge_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_lifecycle_routes(bp)

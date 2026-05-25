@@ -1,0 +1,81 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}جسر الإدارة V40 — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bridge"></i>{% endblock %}
+{% block page_title %}جسر الإدارة V40{% endblock %}
+{% block page_sub %}<span class="sub">مساعد تنقل وحالة إداري فقط، بدون تنفيذ أو اتصال إنتاجي تلقائي.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "جسر الإدارة V40",
+  subtitle="صفحة قراءة آمنة لعرض حالة الربط المحلي ومسارات الجسر. لا تنفذ هذه الصفحة أي POST أو رفع نسخ أو استعادة أو تفعيل خدمات.",
+  icon="bridge",
+  actions_html='<span class="hub-badge hub-badge--amber">وضع جاف</span> <span class="hub-badge hub-badge--rose">غير مفعل إنتاجيًا</span> <span class="hub-badge">يحتاج تأكيد عقود الإدارة</span>'
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("حالة عقد السعة", capacity.status or "unknown", icon="gauge-high", variant="brand") }}
+  {{ hub.kpi("أحداث الجسر", events.total or 0, icon="list-check", variant="blue") }}
+  {{ hub.kpi("حالة الصحة المحلية", heartbeat.status or "unknown", icon="heart-pulse", variant="green") }}
+  {{ hub.kpi("وضع التنفيذ", "محظور إنتاجيًا", icon="shield-halved", variant="amber") }}
+</div>
+
+{% call hub.section("مسارات الجسر المتاحة للمتابعة", icon="diagram-project") %}
+  <div class="hub-tile-grid">
+    {% for card in bridge_cards %}
+      <div class="hub-tile" data-admin-bridge-card="{{ card.title }}">
+        <div class="hub-tile-icon"><i class="fa-solid fa-{{ card.icon }}"></i></div>
+        <div class="hub-tile-body">
+          <div class="hub-tile-title">{{ card.title }}</div>
+          <div class="hub-tile-value">{{ card.status }}</div>
+          <div class="hub-muted">{{ card.note }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endcall %}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("حالة السعة المحلية", icon="gauge-high") %}
+    <div class="hub-empty" style="text-align:initial">
+      <div class="hub-empty-msg">{{ capacity.contract.status if capacity.contract is defined else capacity.status }}</div>
+      <div class="hub-empty-sub">تعرض هذه البطاقة آخر لقطة محلية فقط. لا يظهر مفتاح الترخيص أو سر الإدارة هنا.</div>
+      {% if capacity.warnings %}
+        <ul>
+          {% for warning in capacity.warnings %}
+            <li>{{ warning }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("آخر أحداث الجسر", icon="list-check") %}
+    {% if events.latest %}
+      <div class="hub-list">
+        {% for event in events.latest[:5] %}
+          <div class="hub-list-row">
+            <strong>{{ event.label_ar or event.event_type }}</strong>
+            <span class="hub-muted">{{ event.status }} · {{ event.severity }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="hub-empty">
+        <div class="hub-empty-msg">لا توجد أحداث جسر محلية بعد.</div>
+        <div class="hub-empty-sub">سيظهر السجل هنا بعد تشغيل مسارات الجسر الموثقة فقط.</div>
+      </div>
+    {% endif %}
+  {% endcall %}
+</div>
+
+{% call hub.section("قيود الأمان", icon="shield-halved") %}
+  <div class="hub-empty" style="text-align:initial">
+    <div class="hub-empty-msg">هذه صفحة قراءة وتنقل فقط.</div>
+    <div class="hub-empty-sub">
+      لا تعرض هذه الصفحة روابط تنفيذ أو تراجع أو استعادة مباشرة، ولا تنفذ رفع نسخ أو استعادة أو تفعيل خدمات أو أي تغيير في RADIUS/MikroTik/FreeRADIUS/CoA.
+    </div>
+  </div>
+{% endcall %}
+{% endblock %}

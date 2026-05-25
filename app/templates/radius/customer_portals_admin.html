@@ -1,0 +1,41 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}بوابات العملاء — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-door-open"></i>{% endblock %}
+{% block page_title %}بوابات العملاء{% endblock %}
+{% block page_sub %}<span class="sub">مساعد تنقل إداري فقط إلى بوابات المشتركين ومستخدمي البطاقات.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "بوابات العملاء",
+  subtitle="هذه الصفحة لا تغير مصادقة البوابات ولا تضيف منطقًا تجاريًا جديدًا. هي فقط تساعد المدير على فتح مداخل العملاء الموجودة.",
+  icon="door-open"
+) }}
+
+<div class="hub-grid hub-grid--2">
+  {{ hub.action_card(
+    "بوابة المشترك",
+    sub="تسجيل دخول المشترك لعرض الاشتراك، الاستخدام، الطلبات، والمدفوعات.",
+    icon="user",
+    href=url_for('radius.portal_subscriber_login'),
+    variant="brand",
+    attrs='target="_blank" rel="noopener"'
+  ) }}
+  {{ hub.action_card(
+    "بوابة مستخدم البطاقة",
+    sub="تسجيل دخول مستخدم البطاقة وواجهة الشراء الذاتية الموجودة.",
+    icon="id-card",
+    href=url_for('radius.portal_card_login'),
+    variant="blue",
+    attrs='target="_blank" rel="noopener"'
+  ) }}
+</div>
+
+{% call hub.section("قيود الأمان", icon="shield-halved") %}
+  <div class="hub-empty" style="text-align:initial">
+    <div class="hub-empty-msg">مساعد تنقل إداري فقط</div>
+    <div class="hub-empty-sub">لا تنفذ هذه الصفحة شراء بطاقات، طلب قرض، تجديد، أو أي تغيير في RADIUS. المسارات التفاعلية تبقى داخل صفحات البوابة الأصلية.</div>
+  </div>
+{% endcall %}
+{% endblock %}

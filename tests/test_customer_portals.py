@@ -152,12 +152,24 @@ def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
             data={"_csrf_token": token, "package_id": package["id"]},
             follow_redirects=True,
         )
+    purchased_card = db().execute(
+        """
+        SELECT c.username
+        FROM card_user_purchases p
+        JOIN cards c ON c.id = p.card_id
+        WHERE p.tenant_id = 1 AND p.card_user_id = ?
+        ORDER BY p.id DESC
+        LIMIT 1
+        """,
+        (card_user_id,),
+    ).fetchone()
 
     assert login.status_code == 200
     assert "card-portal-home" in login.get_data(as_text=True)
     assert card["password"] not in login.get_data(as_text=True)
     assert purchase.status_code == 200
-    assert "mp000002" in purchase.get_data(as_text=True)
+    assert purchased_card is not None
+    assert purchased_card["username"] in purchase.get_data(as_text=True)
 
 
 def test_portal_pages_do_not_render_admin_navigation_or_routes(app):
