@@ -286,3 +286,21 @@ def test_existing_engineering_wizard_route_is_untouched(app):
     assert res.status_code == 200
     assert "setup_wizard.js" in html
     assert "setup_wizard_v2.js" not in html
+
+
+def test_v2_js_treats_successful_vpn_output_as_no_extra_vps_step_needed():
+    js_path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "app",
+        "static",
+        "js",
+        "setup_wizard_v2.js",
+    )
+    with open(js_path, "r", encoding="utf-8") as fh:
+        source = fh.read()
+
+    assert "markServerPeerAlreadyConnected" in source
+    assert "تم تأكيد الربط عبر ping/handshake" in source
+    assert "server-peer/dry-run" in source
+    assert "APPLY SERVER PEER IN LAB" in source

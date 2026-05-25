@@ -80,6 +80,21 @@
     if (lower.includes("router public key is required")) {
       return "لم نلتقط مفتاح الراوتر بعد. الصق مخرجات WireGuard من MikroTik في خطوة تحقق الربط.";
     }
+    if (lower.includes("duplicate wireguard public key")) {
+      return "هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح WireGuard. إذا كان ping و handshake ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.";
+    }
+    if (lower.includes("duplicate wireguard allowed ip")) {
+      return "عنوان VPN هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.";
+    }
+    if (lower.includes("dry_run_required")) {
+      return "يجب تجهيز خطة آمنة أولًا قبل محاولة الربط على الخادم.";
+    }
+    if (lower.includes("server_wg_real_apply_flags_disabled")) {
+      return "التجهيز الحقيقي على الخادم غير مفعّل إلا في وضع المختبر الداخلي. إذا كان ping ناجحًا يمكنك المتابعة بدون هذه الخطوة.";
+    }
+    if (lower.includes("server_wg_readiness_not_ready")) {
+      return "الخادم غير جاهز لتنفيذ الربط من داخل HobeRadius الآن. تحقق من جاهزية WireGuard أو تابع إذا كان الربط يعمل فعلًا.";
+    }
     if (lower.includes("at least one") && lower.includes("interface")) {
       return "اختر منفذ شبكة واحدًا على الأقل قبل توليد السكربت.";
     }
@@ -456,6 +471,16 @@
     }
   }
 
+  function markServerPeerAlreadyConnected() {
+    if (serverPeerSimple) serverPeerSimple.hidden = true;
+    if (serverPeerStatus) {
+      serverPeerStatus.textContent = "تم تأكيد الربط من مخرجات MikroTik. لا تحتاج دخول VPS أو خطوة خادم إضافية الآن.";
+    }
+    if (serverPeerResult) {
+      serverPeerResult.textContent = "تم تأكيد الربط عبر ping/handshake. أكمل للخطوة التالية.";
+    }
+  }
+
   function readinessLabel(status) {
     if (status === "success" || status === "ready") return "جاهز";
     if (status === "warning" || status === "partial") return "ناقص";
@@ -593,23 +618,39 @@
   }
 
   async function applyServerPeer(confirmationOverride) {
-    writeServerPeerResult("جاري طلب apply مخبري مضبوط...");
+    writeServerPeerResult("جاري تجهيز الربط على الخادم عبر المسار المحروس...");
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/apply`, {
         confirmation: confirmationOverride || serverPeerConfirmation(),
       });
       writeServerPeerResult(data);
+      if (serverPeerStatus) {
+        serverPeerStatus.textContent = data.status === "applied_no_handshake"
+          ? "تمت إضافة Peer على الخادم. انتظر handshake ثم أعد التحقق."
+          : "تم تجهيز الربط على الخادم بنجاح.";
+      }
       const rollbackButton = page.querySelector("[data-swv2-server-peer-rollback]");
       if (rollbackButton && data.status !== "failed_verification") rollbackButton.disabled = false;
     } catch (error) {
-      writeServerPeerResult(`تم حظر apply: ${error.message}`);
+      const message = friendlyWizardError(error.message);
+      writeServerPeerResult(`تعذر تجهيز الربط على الخادم: ${message}`);
+      if (serverPeerStatus) serverPeerStatus.textContent = message;
     }
   }
 
   async function simpleApplyServerPeer() {
     if (serverPeerStatus) {
-      serverPeerStatus.textContent = "جاري تجهيز الربط على الخادم من داخل HobeRadius...";
+      serverPeerStatus.textContent = "جاري تجهيز خطة آمنة ثم تنفيذ الربط على الخادم...";
+    }
+    try {
+      const runId = await ensureRun();
+      await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
+    } catch (error) {
+      const message = friendlyWizardError(error.message);
+      writeServerPeerResult(`تعذر تجهيز خطة الخادم: ${message}`);
+      if (serverPeerStatus) serverPeerStatus.textContent = message;
+      return;
     }
     await applyServerPeer("APPLY SERVER PEER IN LAB");
   }
@@ -1136,6 +1177,7 @@
       title.textContent = kind === "vpn" ? "تم رصد إشارات الربط بنجاح" : "نتيجة الإنترنت ناجحة";
       body.textContent = "المخرجات تحتوي على مؤشرات نجاح واضحة. أكمل للخطوة التالية.";
       if (success) success.hidden = false;
+      if (kind === "vpn") markServerPeerAlreadyConnected();
       unlockNextStep(kind);
     } else {
       title.textContent = kind === "vpn" ? "لم تكتمل إشارات الربط" : "تعذر تأكيد الإنترنت";
