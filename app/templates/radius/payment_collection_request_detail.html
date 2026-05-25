@@ -1,0 +1,32 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}Payment {{ item.reference_code }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
+{% block page_title %}Payment {{ item.reference_code }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ item.status }}</span>{% endblock %}
+
+{% block content %}
+<div class="hub-card" style="padding:18px;margin-bottom:16px">
+  <strong>رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا.</strong>
+  <p class="small" style="margin:8px 0 0">Proof review and service activation are not available on this foundation page yet.</p>
+</div>
+
+<div class="hub-card" style="padding:18px">
+  <dl class="hub-defs">
+    <dt>ID</dt><dd class="mono">{{ item.id }}</dd>
+    <dt>Reference</dt><dd class="mono">{{ item.reference_code }}</dd>
+    <dt>Purpose</dt><dd>{{ item.purpose }}</dd>
+    <dt>Payer</dt><dd>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</dd>
+    <dt>Amount</dt><dd class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</dd>
+    <dt>Wallet</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
+    <dt>Status</dt><dd>{{ item.status }}</dd>
+    <dt>Expires</dt><dd class="mono">{{ item.expires_at or '-' }}</dd>
+  </dl>
+</div>
+
+<div class="hub-card" style="padding:18px;margin-top:16px">
+  <h3>Proofs</h3>
+  <p class="small">Placeholder until proof submission and review queue are implemented in RM-P4.</p>
+</div>
+{% endblock %}
+

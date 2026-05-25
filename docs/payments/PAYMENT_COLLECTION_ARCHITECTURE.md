@@ -105,3 +105,10 @@ Flutter may display settings, instructions, requests, proof forms, review
 queues, and statuses. It must call backend APIs only and must never duplicate
 payment, ledger, entitlement, or service-apply logic.
 
+## Admin Web Entry Points
+
+- `/admin/radius/payments/settings`: Manual Wallet settings and dry-run auto
+  apply notice.
+- `/admin/radius/payments/requests`: request list and filters.
+- `/admin/radius/payments/requests/<id>`: request detail and proof placeholder
+  until the review flow is implemented.

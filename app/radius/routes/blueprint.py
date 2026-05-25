@@ -110,6 +110,7 @@ def _register_all(bp: Blueprint) -> None:
     from .lifecycle import register_lifecycle_routes
     from .bandwidth_schedules import register_bandwidth_schedule_routes
     from .print_templates import register_print_template_routes
+    from .payment_collection import register_payment_collection_routes
     from .setup_wizard import register_setup_wizard_routes
 
     register_dashboard_routes(bp)
@@ -136,6 +137,7 @@ def _register_all(bp: Blueprint) -> None:
     register_lifecycle_routes(bp)
     register_bandwidth_schedule_routes(bp)
     register_print_template_routes(bp)
+    register_payment_collection_routes(bp)
     register_setup_wizard_routes(bp)
 
     from .saas_modules import register_saas_routes
