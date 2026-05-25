@@ -75,6 +75,7 @@ class CommandSafetyClassifier:
         r"^ip\s+addr\s+show(?:\s+\S+)?$",
         r"^ip\s+route\s+show(?:\s+.*)?$",
         r"^systemctl\s+is-active\s+\S+$",
+        r"^ping\s+-c\s+[1-5]\s+(?:\d{1,3}\.){3}\d{1,3}$",
     )
 
     def classify(self, command: str) -> CommandClassification:

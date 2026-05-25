@@ -37,6 +37,7 @@
   let vpnVerified = false;
   let selectedServicePath = "";
   let selectedInterfaces = [];
+  let lastVerificationNotice = "";
   let addedServicesCatalog = null;
   let selectedAddedService = "walled_garden";
   let selectedAddedInputs = {};
@@ -1126,6 +1127,7 @@
   }
 
   async function verifyWithBackend(kind, outputText, localOk) {
+    lastVerificationNotice = "";
     if (!localOk || !currentRunId) return localOk;
     const endpoint = kind === "internet" ? "verify-internet" : "verify-vpn-radius";
     try {
@@ -1134,9 +1136,15 @@
         output: outputText,
       });
       const backendOk = Boolean(data.gate_unlocked || data.status === "success");
-      return backendOk || (kind === "vpn" && localOk);
-    } catch (_) {
-      return kind === "vpn" ? localOk : false;
+      if (!backendOk && kind === "vpn") {
+        lastVerificationNotice = data.next_action_ar || "وصل ping من الراوتر إلى الخادم، لكن HobeRadius لم يؤكد بعد ping العكسي من الخادم إلى الراوتر.";
+      }
+      return backendOk;
+    } catch (error) {
+      if (kind === "vpn") {
+        lastVerificationNotice = friendlyWizardError(error.message) || "تعذر فحص الربط من جهة HobeRadius.";
+      }
+      return false;
     }
   }
 
@@ -1182,7 +1190,7 @@
     } else {
       title.textContent = kind === "vpn" ? "لم تكتمل إشارات الربط" : "تعذر تأكيد الإنترنت";
       body.textContent = kind === "vpn"
-        ? "الصق مخرجات سكربت الربط أو نتيجة handshake/ping. سنلتقط مفتاح الربط تلقائيًا إن كان موجودًا."
+        ? (lastVerificationNotice || "الصق مخرجات سكربت الربط أو نتيجة handshake/ping. سنلتقط مفتاح الربط تلقائيًا إن كان موجودًا.")
         : "راجع مخرجات ping. يكفي وصول رد واحد من الإنترنت للمتابعة، لكن انقطاع كامل أو no route يحتاج فحص الواجهة.";
     }
     card.append(title, body);

@@ -11,7 +11,9 @@ from app.radius.services.setup_wizard_verification import (
     RouterReadOnlyProbe,
     SetupDiagnosticsService,
     SetupVerificationService,
+    VpsNetworkProbe,
 )
+from app.radius.services.setup_wizard_server_wg_readiness import CommandSafetyClassifier
 
 
 @pytest.fixture
@@ -58,6 +60,28 @@ def _vpn_ok_output() -> str:
             "/user print detail name=hr_api_setup",
         ]
     )
+
+
+def _vpn_router_only_output() -> str:
+    return "\n".join(
+        [
+            "latest handshake: 7s ago",
+            "/tool ping 10.10.0.1 count=5 sent=5 received=5 packet-loss=0%",
+            "/radius print detail address=10.10.0.1 service=hotspot,ppp",
+            "/user print detail name=hr_api_setup",
+        ]
+    )
+
+
+class _OkVpsProbeAdapter:
+    def ping_router_vpn_ip(self, ip: str, *, timeout_seconds: float = 2.0) -> dict:
+        return {"ok": True, "target": ip, "stdout": "3 packets transmitted, 3 received, 0% packet loss"}
+
+    def inspect_wireguard_peer(self, peer_identifier: str, *, timeout_seconds: float = 2.0) -> dict:
+        return {"ok": False}
+
+    def check_udp_port_hint(self, host: str, port: int, *, timeout_seconds: float = 2.0) -> dict:
+        return {"ok": False}
 
 
 def _build_run(client) -> int:
@@ -149,6 +173,27 @@ def test_vpn_radius_required_checks_unlock_gate(app):
         assert body["gate_unlocked"] is True
 
 
+def test_vpn_radius_pasted_output_can_confirm_vps_ping_from_server_probe():
+    svc = SetupVerificationService(vps_probe=VpsNetworkProbe(_OkVpsProbeAdapter()))
+    result = svc.verify_vpn_radius(
+        run={},
+        vpn_payload={"router_vpn_ip": "10.10.0.7", "vps_vpn_ip": "10.10.0.1", "radius_server_ip": "10.10.0.1"},
+        mode="pasted_output",
+        payload={"output": _vpn_router_only_output()},
+    ).to_dict()
+
+    assert result["gate_unlocked"] is True
+    assert result["overall_status"] == "success"
+    assert result["raw_observations"]["vps_ping_router_probe"]["target"] == "10.10.0.7"
+
+
+def test_server_ping_command_is_read_only_but_writes_remain_blocked():
+    classifier = CommandSafetyClassifier()
+
+    assert classifier.classify("ping -c 3 10.10.0.7").allowed_read_only is True
+    assert classifier.classify("wg set wg0 peer abc allowed-ips 10.10.0.7/32").allowed_read_only is False
+
+
 def test_hotspot_verification_success_marks_verified(app):
     with app.test_client() as client:
         _auth_session(client)
@@ -236,4 +281,3 @@ def test_route_verification_returns_structured_json_and_ui_has_output_areas(app)
         assert "checks" in body
         assert "diagnostics" in body
         assert "gate_unlocked" in body
-

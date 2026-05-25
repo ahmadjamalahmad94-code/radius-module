@@ -4,7 +4,10 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
+from ipaddress import ip_address
 from typing import Any, Protocol
+
+from .setup_wizard_server_wg_readiness import SafeCommandRunner, build_server_wg_command_runner
 
 
 VERIFICATION_KEYS = (
@@ -200,6 +203,36 @@ class VpsNetworkProbe:
             port,
             timeout_seconds=timeout_seconds,
         )
+
+
+class ServerPingVpsProbeAdapter:
+    """Read-only VPS-side probe used by the setup wizard lab flow."""
+
+    def __init__(self, runner: SafeCommandRunner | None = None) -> None:
+        self.runner = runner or build_server_wg_command_runner()
+
+    def ping_router_vpn_ip(self, ip: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
+        target = str(ip_address(str(ip).strip()))
+        result = self.runner.execute_read_only(f"ping -c 3 {target}", timeout_seconds=timeout_seconds)
+        stdout = str(result.get("stdout") or "")
+        ok = bool(result.get("ok")) or _has_ping_success(stdout, target)
+        return {
+            "ok": ok,
+            "target": target,
+            "stdout": stdout,
+            "stderr": str(result.get("stderr") or ""),
+            "blocked": bool(result.get("blocked")),
+            "code": result.get("code") or "",
+            "command_args": result.get("command_args") or [],
+        }
+
+    def inspect_wireguard_peer(self, peer_identifier: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
+        _ = peer_identifier, timeout_seconds
+        return {"ok": False, "blocked": True, "code": "wg_peer_lookup_not_configured"}
+
+    def check_udp_port_hint(self, host: str, port: int, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
+        _ = host, port, timeout_seconds
+        return {"ok": False, "blocked": True, "code": "udp_hint_not_configured"}
 
 
 class RadiusReadOnlyProbe:
@@ -528,7 +561,7 @@ class SetupVerificationService:
         diagnostics: SetupDiagnosticsService | None = None,
     ) -> None:
         self.router_probe = router_probe or RouterReadOnlyProbe()
-        self.vps_probe = vps_probe or VpsNetworkProbe()
+        self.vps_probe = vps_probe or VpsNetworkProbe(ServerPingVpsProbeAdapter())
         self.radius_probe = radius_probe or RadiusReadOnlyProbe()
         self.diagnostics = diagnostics or SetupDiagnosticsService()
 
@@ -710,6 +743,18 @@ class SetupVerificationService:
             vpn_ok = ("latest handshake" in output.lower()) or ("wireguard" in output.lower() and "running=yes" in output.lower())
             router_ping_ok = _has_ping_success(output, vps_vpn_ip or "10.10.0.1")
             vps_ping_ok = ("vps_ping_router=ok" in output.lower()) or ("vps->router ok" in output.lower())
+            if not vps_ping_ok and router_vpn_ip and router_ping_ok:
+                try:
+                    back_ping = self.vps_probe.ping_router_vpn_ip(router_vpn_ip)
+                    observations["vps_ping_router_probe"] = back_ping
+                    vps_ping_ok = _as_bool(back_ping.get("ok"), False) or _has_ping_success(str(back_ping))
+                except Exception as exc:
+                    observations["vps_ping_router_probe"] = {
+                        "ok": False,
+                        "blocked": True,
+                        "code": "vps_ping_probe_unavailable",
+                        "error": str(exc),
+                    }
             radius_ok = "/radius" in output.lower() and ("address=" in output.lower() or "service=" in output.lower())
             api_ok = "/user" in output.lower() and ("api" in output.lower() or "name=" in output.lower())
 
