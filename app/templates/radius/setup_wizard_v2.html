@@ -419,6 +419,17 @@
             </details>
           </div>
         </div>
+        <div class="swv2-server-action-card" data-swv2-server-peer-simple hidden>
+          <div>
+            <strong>بقيت خطوة على VPS</strong>
+            <span>الراوتر أرسل المفتاح، لكن السيرفر يجب أن يضيف Peer الراوتر حتى يبدأ الـhandshake. انسخ الأمر وشغله على VPS فقط إذا كنت داخل تجربة مختبرية مسيطر عليها.</span>
+          </div>
+          <div class="swv2-action-row">
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>تجهيز أمر VPS</button>
+            <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="server-peer-command-code">نسخ أمر VPS</button>
+          </div>
+          <pre id="server-peer-command-code" data-swv2-server-peer-command>-- سيظهر أمر VPS بعد التقاط مفتاح الراوتر --</pre>
+        </div>
         <details class="swv2-advanced swv2-engineering-only">
           <summary>وضع المختبر الداخلي للسيرفر</summary>
         <div class="swv2-server-peer-panel">

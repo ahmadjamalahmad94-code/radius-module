@@ -101,6 +101,8 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-copy-target="hotspot-script-code"' in html
     assert 'data-copy-target="broadband-script-code"' in html
     assert 'data-copy-target="added-service-plan-code"' in html
+    assert 'data-copy-target="server-peer-command-code"' in html
+    assert 'data-swv2-server-peer-simple' in html
     assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
 

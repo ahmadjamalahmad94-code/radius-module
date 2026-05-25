@@ -19,6 +19,8 @@
   const vpnScript = document.getElementById("vpn-script-code");
   const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
+  const serverPeerSimple = page.querySelector("[data-swv2-server-peer-simple]");
+  const serverPeerCommand = page.querySelector("[data-swv2-server-peer-command]");
   const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
   const serverPeerHealthResult = page.querySelector("[data-swv2-peer-health-result]");
   const recoveryPanel = page.querySelector("[data-swv2-recovery-panel]");
@@ -399,6 +401,7 @@
       if (routerKeyStatus) {
         routerKeyStatus.textContent = `تم التقاط مفتاح الربط: ${peer.router_public_key_masked || "***"}`;
       }
+      dryRunServerPeer();
     } catch (error) {
       if (isReservationMissing(error) && !retrying) {
         vpnPlanGenerated = false;
@@ -416,6 +419,11 @@
     serverPeerResult.textContent = typeof value === "string"
       ? value
       : JSON.stringify(value || {}, null, 2);
+    const command = typeof value === "object" && value ? String(value.command_preview || "") : "";
+    if (serverPeerSimple && serverPeerCommand && command) {
+      serverPeerSimple.hidden = false;
+      serverPeerCommand.textContent = command;
+    }
   }
 
   function readinessLabel(status) {
