@@ -1052,7 +1052,7 @@
     if (capturedPublicKey) {
       await submitRouterPublicKey(capturedPublicKey);
     }
-    const hasVpnSignal = kind !== "vpn" || valueText.includes("handshake") || valueText.includes("radius") || Boolean(capturedPublicKey);
+    const hasVpnSignal = kind !== "vpn" || hasPingSuccess || valueText.includes("handshake") || valueText.includes("radius") || Boolean(capturedPublicKey);
     let ok = hasPingSuccess && hasVpnSignal;
     ok = await verifyWithBackend(kind, output.value, ok);
 

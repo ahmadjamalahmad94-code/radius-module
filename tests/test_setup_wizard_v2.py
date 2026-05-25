@@ -159,6 +159,7 @@ def test_setup_wizard_v2_js_extracts_public_key_and_accepts_partial_ping(app):
     assert "hasUsefulPing" in source
     assert "receivedMatch" in source
     assert "Number(receivedMatch[1]) > 0" in source
+    assert 'kind !== "vpn" || hasPingSuccess' in source
     assert "تعذر حفظ المفتاح" not in source
 
 

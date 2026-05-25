@@ -156,6 +156,8 @@ class VpnRadiusBootstrapPlanner:
             "# ===== Validation checks =====",
             "/interface wireguard print detail",
             "/interface wireguard peers print detail",
+            "# Give WireGuard up to 30 seconds to exchange the first handshake before testing the tunnel.",
+            ":delay 30s",
             f'/tool ping "{vps_vpn_ip}" count=5',
             f"/radius print detail where comment~\"{radius_tag}\"",
             "/ip service print",
@@ -184,6 +186,7 @@ class VpnRadiusBootstrapPlanner:
             validation_commands=[
                 "/interface wireguard print detail",
                 "/interface wireguard peers print detail",
+                ":delay 30s",
                 f'/tool ping "{vps_vpn_ip}" count=5',
                 "/radius print detail",
                 "/ip service print",

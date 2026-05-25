@@ -61,6 +61,8 @@ def test_vpn_radius_planner_generation_and_tagging():
     assert "HOBERADIUS_SETUP:77:api" in plan.script_text
     assert 'public-key="' in plan.script_text
     assert "/interface wireguard print detail" in plan.script_text
+    assert ":delay 30s" in plan.script_text
+    assert plan.script_text.index(":delay 30s") < plan.script_text.index('/tool ping "10.10.0.1" count=5')
     assert plan.masked_sensitive_values["radius_secret"] == "***"
 
 
