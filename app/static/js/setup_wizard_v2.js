@@ -964,23 +964,36 @@
   function copyCode(id, button) {
     const target = document.getElementById(id);
     if (!target) return;
-    const text = target.textContent || "";
-    navigator.clipboard?.writeText(text).then(
-      () => flashButton(button, "تم النسخ"),
-      () => fallbackCopy(text, button)
-    );
+    const text = (target.innerText || target.textContent || "").trimEnd();
+    if (!text) {
+      flashButton(button, "لا يوجد نص");
+      return;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(
+        () => flashButton(button, "تم النسخ"),
+        () => fallbackCopy(text, button)
+      );
+      return;
+    }
+    fallbackCopy(text, button);
   }
 
   function fallbackCopy(text, button) {
     const area = document.createElement("textarea");
     area.value = text;
+    area.setAttribute("readonly", "readonly");
     area.style.position = "fixed";
+    area.style.top = "-9999px";
     area.style.opacity = "0";
     document.body.appendChild(area);
+    area.focus();
     area.select();
     try {
-      document.execCommand("copy");
-      flashButton(button, "تم النسخ");
+      const copied = document.execCommand("copy");
+      flashButton(button, copied ? "تم النسخ" : "تعذر النسخ");
+    } catch (_) {
+      flashButton(button, "تعذر النسخ");
     } finally {
       area.remove();
     }
