@@ -100,6 +100,18 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_backup_upload_latest),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/restore/poll",
+        "system_admin_bridge_restore_poll",
+        require_api_token(system_admin_bridge_restore_poll),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/system/admin-bridge/restore/<reference>/snapshot",
+        "system_admin_bridge_restore_snapshot",
+        require_api_token(system_admin_bridge_restore_snapshot),
+        methods=["POST"],
+    )
 
 
 def system_status():
@@ -233,3 +245,23 @@ def system_admin_bridge_backup_upload_latest():
         include_content=include_content,
     )
     return ok(result)
+
+
+def system_admin_bridge_restore_poll():
+    from ...radius.services.license_admin_restore import RestoreWorkflowService
+
+    result = RestoreWorkflowService().poll_once(tenant_id=_tid())
+    return ok(result)
+
+
+def system_admin_bridge_restore_snapshot(reference: str):
+    from ...radius.services.license_admin_restore import RestoreWorkflowService
+
+    try:
+        result = RestoreWorkflowService().create_local_snapshot(
+            tenant_id=_tid(),
+            reference=reference,
+        )
+    except ValueError as exc:
+        return fail("not_found", str(exc), status=404)
+    return ok({"request": result})

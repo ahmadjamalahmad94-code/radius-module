@@ -492,3 +492,70 @@
   - Retention and deletion are not managed by this bridge layer.
 - GO/NO-GO for next prompt:
   - GO for P08.
+
+## P08 — Restore Poll and Safe Restore Workflow
+
+- Start time: 2026-05-25 13:16:00 +03:00
+- End time: 2026-05-25 13:20:45 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/db/migrations/069_license_admin_restore_requests.sql`
+  - `app/radius/services/admin_panel_client.py`
+  - `app/radius/services/license_admin_restore.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/RESTORE_WORKFLOW.md`
+  - `tests/test_license_admin_restore_workflow.py`
+- What was implemented:
+  - Added restore request persistence.
+  - Added `AdminPanelClient.poll_restore_requests()`.
+  - Added `AdminPanelClient.post_restore_status()`.
+  - Added `RestoreWorkflowService`.
+  - Added safe local restore states.
+  - Added idempotent restore request recording.
+  - Added local pre-restore SQLite snapshot creation.
+  - Added checksum verification gate.
+  - Added destructive restore apply blocker.
+  - Added manual restore poll and snapshot routes.
+  - Added restore workflow documentation.
+- What was intentionally not implemented:
+  - No automatic restore execution.
+  - No DB overwrite.
+  - No file restore.
+  - No one-click restore.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_restore_workflow.py -q`
+    passed: 8 passed, 586 warnings in 5.65s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_backup_upload.py tests/test_license_admin_instance_health.py -q`
+    passed: 20 passed, 1388 warnings in 12.22s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - Not run for P08. Full pytest was attempted for P06 and P07 and timed out
+    after roughly 308 seconds with no visible failure output. P08 used targeted
+    restore and bridge regression tests instead.
+- Timeout notes if any:
+  - No P08 targeted timeout.
+- Admin endpoint gaps:
+  - Restore poll/status paths are assumed as:
+    `/api/integration/hoberadius/backup-restore/poll`
+    and `/api/integration/hoberadius/backup-restore/<reference>/status`.
+  - P01 follow-up already tracks confirmation for these endpoints.
+- Codex follow-ups added:
+  - None in P08.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Destructive restore remains blocked by default.
+  - Even with the env flag, P08 returns not implemented for apply.
+  - Candidate backup download is not implemented in P08.
+- GO/NO-GO for next prompt:
+  - GO for P09.

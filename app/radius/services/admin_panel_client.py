@@ -15,6 +15,7 @@ import os
 import socket
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
@@ -28,6 +29,8 @@ LICENSE_CHECK_PATH = "/api/license/check"
 CAPACITY_CONTRACT_PATH = "/api/integration/hoberadius/capacity-contract"
 INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
+RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
+RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -355,6 +358,55 @@ class AdminPanelClient:
             if self.config.base_url
             else BACKUP_UPLOAD_PATH
         )
+        if not self.config.enabled:
+            return {
+                "ok": False,
+                "status": "disabled",
+                "error": {"code": "bridge_disabled"},
+            }
+        missing = self.config.missing_fields()
+        if missing:
+            return {
+                "ok": False,
+                "status": "config_missing",
+                "error": {"code": "config_missing", "missing": missing},
+            }
+        try:
+            response = self.transport.request_json(
+                method="POST",
+                url=source_url,
+                headers=self._headers(),
+                json_body=payload,
+                timeout_seconds=self.config.timeout_seconds,
+            )
+        except (TimeoutError, socket.timeout) as exc:
+            return {
+                "ok": False,
+                "status": "timeout",
+                "error": {"code": "admin_panel_timeout", "message": str(exc)},
+            }
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            return {
+                "ok": False,
+                "status": "unavailable",
+                "error": {"code": "admin_panel_unavailable", "message": str(exc)},
+            }
+        return {
+            "ok": True,
+            "status": _normalize_status(response),
+            "response": sanitize_bridge_payload(response),
+        }
+
+    def poll_restore_requests(self, *, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._post_bridge_payload(path=RESTORE_POLL_PATH, payload=payload)
+
+    def post_restore_status(self, *, reference: str, payload: dict[str, Any]) -> dict[str, Any]:
+        safe_reference = urllib.parse.quote(str(reference), safe="")
+        path = RESTORE_STATUS_PATH_TEMPLATE.format(reference=safe_reference)
+        return self._post_bridge_payload(path=path, payload=payload)
+
+    def _post_bridge_payload(self, *, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        source_url = f"{self.config.base_url}{path}" if self.config.base_url else path
         if not self.config.enabled:
             return {
                 "ok": False,
