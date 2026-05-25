@@ -90,6 +90,7 @@ def _register_all(bp: Blueprint) -> None:
     from .finance_center import register_finance_center_routes
     from .card_users_marketplace import register_card_users_marketplace_routes
     from .card_pricing import register_card_pricing_routes
+    from .manager_distributor_ops import register_manager_distributor_ops_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .lifecycle import register_lifecycle_routes
@@ -110,6 +111,7 @@ def _register_all(bp: Blueprint) -> None:
     register_finance_center_routes(bp)
     register_card_users_marketplace_routes(bp)
     register_card_pricing_routes(bp)
+    register_manager_distributor_ops_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_lifecycle_routes(bp)
