@@ -896,3 +896,56 @@
   - Auth enforcement remains a future, separately reviewed decision.
 - GO/NO-GO for next prompt:
   - GO for P15 after P14 commit.
+
+## P15 — Production Bridge Hardening + Final QA Closeout
+
+- Start time: 2026-05-25 14:49:00 +03:00
+- End time: 2026-05-25 15:02:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `docs/license_admin_bridge/BRIDGE_PHASE_1_CLOSEOUT.md`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+- What was implemented:
+  - Added final Phase 1 bridge closeout report.
+  - Summarized completed backend capabilities, dry-run-only capabilities,
+    real live behavior, route map, safety guarantees, admin follow-ups,
+    next slices, deployment checklist, and readiness scores.
+  - Reconfirmed that bridge automation remains guarded/manual and that
+    production customer automation is not enabled.
+- What was intentionally not implemented:
+  - No new backend features.
+  - No scheduler/worker activation.
+  - No admin-panel callback delivery.
+  - No restore apply.
+  - No live MikroTik/RADIUS/CoA changes.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_capacity_status.py tests/test_license_admin_capacity_enforcement.py tests/test_license_admin_usage_metering.py tests/test_license_admin_instance_health.py tests/test_license_admin_backup_upload.py tests/test_license_admin_restore_workflow.py tests/test_license_admin_service_activation.py tests/test_license_admin_public_ip_change.py tests/test_license_admin_bridge_events.py tests/test_accounting_events_engine.py tests/test_usage_counters_quota_hooks.py tests/test_radius_accounting_response_path.py tests/test_acct_puller_gate.py -q`
+    passed: 93 passed, 5737 warnings in 51.32s.
+- Full pytest status:
+  - Attempted `python -m pytest -q`; timed out after 309025 ms with no visible
+    failure output.
+- Timeout notes if any:
+  - Full pytest timeout is not counted as a pass. Use the targeted bridge suite
+    plus chunked regression commands before deployment.
+- Admin endpoint gaps:
+  - Existing gaps remain tracked in `CODEX_FOLLOWUPS.md`.
+- Codex follow-ups added:
+  - None in P15; P15 consolidated existing follow-ups in the closeout report.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No. P15 is documentation and QA closeout only.
+- Risk notes:
+  - Admin endpoint contracts still require V40 confirmation before production
+    automation.
+  - Restore apply and service activation live adapters remain intentionally
+    blocked/deferred.
+- GO/NO-GO for next prompt:
+  - P15 complete. GO for controlled backend integration testing; NO-GO for
+    production customer automation.
