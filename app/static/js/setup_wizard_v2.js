@@ -21,6 +21,7 @@
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
   const serverPeerSimple = page.querySelector("[data-swv2-server-peer-simple]");
   const serverPeerCommand = page.querySelector("[data-swv2-server-peer-command]");
+  const serverPeerStatus = page.querySelector("[data-swv2-server-peer-status]");
   const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
   const serverPeerHealthResult = page.querySelector("[data-swv2-peer-health-result]");
   const recoveryPanel = page.querySelector("[data-swv2-recovery-panel]");
@@ -409,20 +410,30 @@
         return submitRouterPublicKey(publicKey, true);
       }
       if (routerKeyStatus) {
-        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. يمكنك المتابعة بالتحقق، أو فتح التفاصيل الهندسية.";
+        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. أعد لصق مخرجات MikroTik التي تحتوي على public-key.";
       }
     }
   }
 
   function writeServerPeerResult(value) {
-    if (!serverPeerResult) return;
-    serverPeerResult.textContent = typeof value === "string"
-      ? value
-      : JSON.stringify(value || {}, null, 2);
+    if (serverPeerResult) {
+      serverPeerResult.textContent = typeof value === "string"
+        ? value
+        : JSON.stringify(value || {}, null, 2);
+    }
     const command = typeof value === "object" && value ? String(value.command_preview || "") : "";
     if (serverPeerSimple && serverPeerCommand && command) {
       serverPeerSimple.hidden = false;
       serverPeerCommand.textContent = command;
+      if (serverPeerStatus) {
+        serverPeerStatus.textContent = "الأمر جاهز للنسخ. نفذه داخل VPS فقط، ثم ارجع للتحقق من ping.";
+      }
+    } else if (serverPeerSimple && serverPeerCommand && typeof value === "string" && value.includes("تعذر")) {
+      serverPeerSimple.hidden = false;
+      serverPeerCommand.textContent = "-- لم يتم تجهيز أمر VPS بعد --";
+      if (serverPeerStatus) {
+        serverPeerStatus.textContent = value;
+      }
     }
   }
 

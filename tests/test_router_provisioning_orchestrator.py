@@ -205,7 +205,8 @@ def test_v2_provisioning_card_and_key_exchange_route_render(app):
 
     assert 'data-swv2-provisioning="lifecycle_state"' in html
     assert 'data-swv2-provisioning="peer_status"' in html
-    assert "data-swv2-router-public-key" in html
+    assert "data-swv2-auto-public-key" in html
+    assert "data-swv2-router-public-key" not in html
 
 
 def test_public_key_endpoint_returns_masked_peer(app):

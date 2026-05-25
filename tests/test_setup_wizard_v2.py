@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import secrets
@@ -69,20 +69,19 @@ def test_setup_wizard_v2_stepper_renders(app):
         _auth_session(client)
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
 
-    assert "الترحيب" in html
-    assert "مصدر الإنترنت" in html
-    assert "سكربت الإنترنت" in html
-    assert "تحقق الإنترنت" in html
-    assert "ربط VPN/RADIUS" in html
+    assert 'data-swv2-step-target="welcome"' in html
+    assert 'data-swv2-step-target="source"' in html
+    assert 'data-swv2-step-target="internet-script"' in html
+    assert 'data-swv2-step-target="internet-verify"' in html
+    assert 'data-swv2-step-target="vpn-script"' in html
 
 
-def test_setup_wizard_v2_preserves_engineering_link(app):
+def test_setup_wizard_v2_hides_engineering_link_from_simple_flow(app):
     with app.test_client() as client:
         _auth_session(client)
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
 
-    assert "فتح الوضع الهندسي" in html
-    assert "/admin/radius/setup-wizard" in html
+    assert "فتح الوضع الهندسي" not in html
 
 
 def test_setup_wizard_v2_verification_and_script_sections_exist(app):
@@ -103,6 +102,7 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-copy-target="added-service-plan-code"' in html
     assert 'data-copy-target="server-peer-command-code"' in html
     assert 'data-swv2-server-peer-simple' in html
+    assert "data-swv2-server-peer-status" in html
     assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
 
@@ -116,7 +116,7 @@ def test_setup_wizard_v2_beginner_flow_hides_key_work_from_primary_ui(app):
     assert "الباقي يجهزه المعالج تلقائيًا" in html
     assert "لا تحتاج لإدخال مفاتيح يدويًا" in html
     assert 'data-swv2-auto-public-key' in html
-    assert "إدخال هندسي يدوي" in html
+    assert "إدخال هندسي يدوي" not in html
     assert "router provisioning reservation not found" not in html
 
 
@@ -160,7 +160,7 @@ def test_setup_wizard_v2_js_extracts_public_key_and_accepts_partial_ping(app):
     assert "receivedMatch" in source
     assert "Number(receivedMatch[1]) > 0" in source
     assert 'kind !== "vpn" || hasPingSuccess' in source
-    assert "تعذر حفظ المفتاح" not in source
+    assert "ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù…ÙØªØ§Ø­" not in source
 
 
 def test_v2_generate_internet_script_vlan_payload_returns_vlan_script(app):

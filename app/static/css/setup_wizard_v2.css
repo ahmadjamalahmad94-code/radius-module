@@ -614,8 +614,12 @@
   width: 100%;
 }
 
+.swv2-page .swv2-advanced {
+  display: none !important;
+}
+
 .swv2-engineering-only {
-  margin: 14px 0 18px;
+  display: none !important;
 }
 
 .swv2-server-action-card {
@@ -653,6 +657,19 @@
   padding: 14px;
   text-align: left;
   white-space: pre-wrap;
+}
+
+.swv2-server-action-card small,
+.swv2-server-action-note {
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(245, 158, 11, .22);
+  border-radius: 14px;
+  color: #7c5a12;
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.7;
+  padding: 10px 12px;
 }
 
 .swv2-server-peer-panel {

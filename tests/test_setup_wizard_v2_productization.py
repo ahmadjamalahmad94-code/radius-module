@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import secrets
@@ -68,16 +68,15 @@ def test_v2_route_renders_confidence_journey(app):
     assert "اكتمل الإعداد" in source
 
 
-def test_advanced_details_are_collapsed_by_default(app):
+def test_advanced_details_are_hidden_from_simple_flow(app):
     with app.test_client() as client:
         _auth_session(client)
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
 
+    css = _css_source("setup_wizard_v2.css")
     assert '<details class="swv2-advanced"' in html
-    assert '<details class="swv2-advanced" open' not in html
-    _assert_inside_collapsed_advanced(html, 'data-swv2-plan-json="internet"')
-    _assert_inside_collapsed_advanced(html, 'data-swv2-service-json="hotspot"')
-    _assert_inside_collapsed_advanced(html, "data-swv2-added-json")
+    assert ".swv2-page .swv2-advanced" in css
+    assert "display: none !important" in css
 
 
 def test_success_states_have_product_explanations(app):
@@ -95,14 +94,14 @@ def test_success_states_have_product_explanations(app):
     assert "الشبكة جاهزة للتوسع" in source
 
 
-def test_engineering_view_and_lab_warnings_remain_visible(app):
+def test_engineering_view_and_lab_controls_are_not_exposed_in_simple_flow(app):
     with app.test_client() as client:
         _auth_session(client)
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
 
-    source = _template_source()
-    assert "/admin/radius/setup-wizard" in html
-    assert "وضع المختبر الداخلي" in source
+    css = _css_source("setup_wizard_v2.css")
+    assert ".swv2-engineering-only" in css
+    assert "display: none !important" in css
     assert "data-swv2-server-peer-apply disabled" in html
     assert "data-swv2-server-peer-rollback disabled" in html
 

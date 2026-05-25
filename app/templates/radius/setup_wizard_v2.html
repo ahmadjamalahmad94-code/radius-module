@@ -14,7 +14,6 @@
       <p>اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.</p>
       <div class="swv2-hero-actions">
         <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-go="source">ابدأ الإعداد</button>
-        <a class="swv2-btn swv2-btn-ghost" href="{{ url_for('radius.setup_wizard_page') }}">فتح الوضع الهندسي</a>
       </div>
     </div>
     <div class="swv2-hero-status" aria-label="حالة المعالج">
@@ -56,7 +55,7 @@
     </div>
     <div data-confidence-state="completed">
       <strong>اكتمل الإعداد</strong>
-      <span>ملخص نظيف، وتفاصيل هندسية عند الحاجة فقط.</span>
+      <span>ملخص نظيف يوضح ما تم وما بقي بدون تفاصيل مربكة.</span>
     </div>
   </section>
 
@@ -412,23 +411,19 @@
           </div>
           <div class="swv2-action-row">
             <span data-swv2-router-key-status>بانتظار توليد سكربت الربط.</span>
-            <details class="swv2-advanced swv2-inline-advanced">
-              <summary>إدخال هندسي يدوي</summary>
-              <textarea data-swv2-router-public-key placeholder="مثال: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcde="></textarea>
-              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-submit-router-key>حفظ مفتاح الربط يدويًا</button>
-            </details>
           </div>
         </div>
         <div class="swv2-server-action-card" data-swv2-server-peer-simple hidden>
           <div>
-            <strong>بقيت خطوة على VPS</strong>
-            <span>الراوتر أرسل المفتاح، لكن السيرفر يجب أن يضيف Peer الراوتر حتى يبدأ الـhandshake. انسخ الأمر وشغله على VPS فقط إذا كنت داخل تجربة مختبرية مسيطر عليها.</span>
+            <strong>نفّذ أمر VPS لإكمال الربط</strong>
+            <span>انسخ الأمر التالي والصقه داخل Terminal السيرفر VPS فقط. هذا الأمر يعرّف السيرفر على الراوتر، وبعده ارجع إلى MikroTik وأعد فحص ping.</span>
           </div>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>تجهيز أمر VPS</button>
             <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="server-peer-command-code">نسخ أمر VPS</button>
           </div>
+          <span class="swv2-server-action-note" data-swv2-server-peer-status>الأمر جاهز للنسخ. لا تنفذه داخل MikroTik.</span>
           <pre id="server-peer-command-code" data-swv2-server-peer-command>-- سيظهر أمر VPS بعد التقاط مفتاح الراوتر --</pre>
+          <small>بعد تنفيذ الأمر على VPS: ارجع إلى MikroTik وشغّل ping على 10.10.0.1، ثم الصق النتيجة في خطوة التحقق.</small>
         </div>
         <details class="swv2-advanced swv2-engineering-only">
           <summary>وضع المختبر الداخلي للسيرفر</summary>
