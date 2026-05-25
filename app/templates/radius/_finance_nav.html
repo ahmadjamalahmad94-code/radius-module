@@ -1,0 +1,26 @@
+<style>
+.finance-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.finance-tabs a{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--hub-border-soft);border-radius:8px;background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none}
+.finance-tabs a:hover,.finance-tabs a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+@media(max-width:640px){.finance-tabs a{width:100%;justify-content:center}}
+</style>
+<nav class="finance-tabs">
+  <a class="hub-tab{% if active == 'dashboard' %} is-active{% endif %}" href="{{ url_for('radius.business_finance') }}">
+    <i class="fa-solid fa-chart-pie"></i> المركز المالي
+  </a>
+  <a class="hub-tab{% if active == 'wallets' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_wallets') }}">
+    <i class="fa-solid fa-wallet"></i> الخزائن والمحافظ
+  </a>
+  <a class="hub-tab" href="{{ url_for('radius.finance_ledger') }}">
+    <i class="fa-solid fa-book"></i> القيود
+  </a>
+  <a class="hub-tab{% if active == 'revenue' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_revenue') }}">
+    <i class="fa-solid fa-coins"></i> الإيرادات
+  </a>
+  <a class="hub-tab{% if active == 'debts' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_debts') }}">
+    <i class="fa-solid fa-file-invoice-dollar"></i> الديون
+  </a>
+  <a class="hub-tab{% if active == 'loans' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_loans') }}">
+    <i class="fa-solid fa-hand-holding-dollar"></i> السلف
+  </a>
+</nav>

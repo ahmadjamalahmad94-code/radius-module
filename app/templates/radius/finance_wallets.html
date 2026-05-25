@@ -1,0 +1,72 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}المحافظ المالية — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
+{% block page_title %}الخزائن والمحافظ{% endblock %}
+{% block page_sub %}<span class="sub">أرصدة قابلة للتتبع مع سجل حركات حديث</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("الخزائن والمحافظ", subtitle="إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.", icon="wallet") }}
+{% include "radius/_finance_nav.html" %}
+
+{% call hub.section("إنشاء محفظة", icon="circle-plus") %}
+  <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    {{ hub.field("نوع المالك", "owner_type", "company", hint="company / manager / distributor / subscriber / card_user") }}
+    {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغا لمحفظة الشركة") }}
+    {{ hub.field("العملة", "currency", "JOD") }}
+    {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
+  </form>
+{% endcall %}
+
+{% call hub.section("قائمة المحافظ", icon="wallet", flush=True) %}
+  {% if wallets %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المالك</th>
+          <th>الرصيد</th>
+          <th>الحالة</th>
+          <th>آخر الحركات</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for wallet in wallets %}
+        <tr>
+          <td>{{ wallet.id }}</td>
+          <td>{{ wallet.owner_type }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
+          <td><strong>{{ wallet.balance }}</strong> {{ wallet.currency }}</td>
+          <td>{{ hub.pill(wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
+          <td>
+            {% for tx in tx_by_wallet.get(wallet.id, []) %}
+              <div style="font-size:12px">{{ tx.transaction_type }} — {{ tx.amount }} — {{ tx.created_at }}</div>
+            {% else %}
+              <span class="muted">لا توجد حركات بعد.</span>
+            {% endfor %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}" style="display:flex;gap:6px;margin-bottom:6px">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input class="hub-input" name="amount" placeholder="مبلغ الشحن" {% if not can_wallet_credit %}disabled{% endif %}>
+              <button class="hub-btn hub-btn--secondary" type="submit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</button>
+            </form>
+            <form method="post" action="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}" style="display:flex;gap:6px">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input class="hub-input" name="amount" placeholder="مبلغ الخصم" {% if not can_wallet_debit %}disabled{% endif %}>
+              <button class="hub-btn hub-btn--ghost" type="submit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير/موزع.", icon="wallet") }}
+  {% endif %}
+{% endcall %}
+{% endblock %}

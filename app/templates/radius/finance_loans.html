@@ -1,0 +1,69 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}السلف — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-hand-holding-dollar"></i>{% endblock %}
+{% block page_title %}السلف{% endblock %}
+{% block page_sub %}<span class="sub">سلف المشتركين الحالية من سجل المحاسبة</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("السلف", subtitle="عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على RADIUS.", icon="hand-holding-dollar") }}
+{% include "radius/_finance_nav.html" %}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("عدد السلف", summary.loan_count, icon="list", variant="blue") }}
+  {{ hub.kpi("سلف مفتوحة", summary.open_loan_count, icon="hourglass-half", variant="amber") }}
+  {{ hub.kpi("قيمة السلف المفتوحة", summary.total_loans, icon="hand-holding-dollar", variant="brand") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections, icon="cash-register", variant="green") }}
+</div>
+
+{% call hub.section("فلترة السلف", icon="filter") %}
+  <form method="get" class="hub-form-grid">
+    <label class="hub-field">
+      <span class="hub-field-label">الحالة</span>
+      <select class="hub-input" name="status">
+        <option value="" {% if not status %}selected{% endif %}>كل الحالات</option>
+        <option value="open" {% if status == "open" %}selected{% endif %}>مفتوحة</option>
+        <option value="settled" {% if status == "settled" %}selected{% endif %}>مسددة</option>
+        <option value="voided" {% if status == "voided" %}selected{% endif %}>ملغاة</option>
+      </select>
+    </label>
+    {{ hub.btn("تطبيق الفلتر", variant="secondary", icon="filter", type="submit") }}
+  </form>
+{% endcall %}
+
+{% call hub.section("قائمة السلف", icon="list", flush=True) %}
+  {% if loans %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المشترك</th>
+          <th>المدة</th>
+          <th>المبلغ</th>
+          <th>الحالة</th>
+          <th>البداية</th>
+          <th>النهاية</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>{{ loan.id }}</td>
+          <td>{{ loan.username or loan.subscriber_id }}</td>
+          <td>{{ loan.duration_minutes }} دقيقة</td>
+          <td>{{ "%.2f"|format(loan.amount or 0) }} {{ loan.currency }}</td>
+          <td>{{ hub.pill(loan.status, "amber" if loan.status == "open" else "green") }}</td>
+          <td>{{ loan.starts_at }}</td>
+          <td>{{ loan.ends_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="ستظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
+  {% endif %}
+{% endcall %}
+{% endblock %}

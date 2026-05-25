@@ -1,0 +1,23 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الديون — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
+{% block page_title %}الديون{% endblock %}
+{% block page_sub %}<span class="sub">نظرة تمهيدية للديون وربطها القادم بالمركز المالي</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("الديون", subtitle="هذا المسار محفوظ كجزء من المركز المالي، دون إنشاء منطق وهمي قبل اكتمال دورة الديون.", icon="file-invoice-dollar") }}
+{% include "radius/_finance_nav.html" %}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الديون", summary.total_debts, icon="file-invoice-dollar", variant="amber") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections, icon="cash-register", variant="brand") }}
+  {{ hub.kpi("إجمالي السلف المفتوحة", summary.total_loans, icon="hand-holding-dollar", variant="blue") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="green") }}
+</div>
+
+{% call hub.section("حالة الديون", icon="circle-info") %}
+  {{ hub.empty(debts.message_ar, sub="لن يتم عرض أرقام مصطنعة هنا. عند تفعيل دورة الديون التفصيلية ستظهر الحالات والفلاتر والسداد.", icon="file-invoice-dollar") }}
+{% endcall %}
+{% endblock %}

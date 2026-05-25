@@ -1,0 +1,54 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الإيرادات — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
+{% block page_title %}الإيرادات{% endblock %}
+{% block page_sub %}<span class="sub">سجلات السعر والتحصيل والتكلفة والربح</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("الإيرادات", subtitle="عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.", icon="coins") }}
+{% include "radius/_finance_nav.html" %}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="blue") }}
+  {{ hub.kpi("حصص الموزعين", summary.distributor_shares, icon="people-arrows", variant="brand") }}
+</div>
+
+{% call hub.section("سجلات الإيرادات", icon="receipt", flush=True) %}
+  {% if revenue %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المصدر</th>
+          <th>السعر الأصلي</th>
+          <th>المحصّل</th>
+          <th>تكلفة الجملة</th>
+          <th>الربح الصافي</th>
+          <th>التاريخ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in revenue %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td>{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
+          <td>{{ item.original_price }}</td>
+          <td>{{ item.collected }}</td>
+          <td>{{ item.wholesale_cost }}</td>
+          <td><strong>{{ item.net_profit }}</strong></td>
+          <td>{{ item.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية.", icon="receipt") }}
+  {% endif %}
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}المركز المالي — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
+{% block page_title %}المركز المالي{% endblock %}
+{% block page_sub %}<span class="sub">خزائن، قيود، إيرادات، ديون، وسلف من Business OS</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "المركز المالي",
+  subtitle="نظرة تشغيلية على المال بدون حذف أو تعديل مباشر على سجلات RADIUS.",
+  icon="coins",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> إدارة المحافظ</a>'
+) }}
+
+{% include "radius/_finance_nav.html" %}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections, icon="cash-register", variant="brand") }}
+  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance, icon="wallet", variant="blue") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="amber") }}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
+      {{ hub.tile("قيود دفتر الأستاذ", summary.ledger_entries, icon="book") }}
+      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt") }}
+      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("حالة المشاركة والتسويات", icon="scale-balanced") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("حصص الموزعين", summary.distributor_shares, icon="people-arrows") }}
+      {{ hub.tile("إجمالي السلف المفتوحة", summary.total_loans, icon="hand-holding-dollar") }}
+      {{ hub.tile("إجمالي الديون", summary.total_debts, icon="file-invoice-dollar") }}
+      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total, icon="book-open") }}
+    </div>
+  {% endcall %}
+</div>
+
+{% call hub.section("قواعد الأمان", icon="shield-halved") %}
+  <div class="hub-empty" style="text-align:initial">
+    <div class="hub-empty-msg">السجل المالي لا يدعم الحذف المباشر.</div>
+    <div class="hub-empty-sub">أي خصم أو شحن يمر عبر الخدمة المالية، وينتج عنه قيد وحدث قابلان للتتبع.</div>
+  </div>
+{% endcall %}
+{% endblock %}
