@@ -733,3 +733,58 @@
   - Event callback remains local-only until admin contract is confirmed.
 - GO/NO-GO for next prompt:
   - GO for P12 after P11 commit.
+
+## P12 — RADIUS Accounting ACK Path Stabilization
+
+- Start time: 2026-05-25 14:03:00 +03:00
+- End time: 2026-05-25 14:09:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/radius/ACCOUNTING_RESPONSE_PATH.md`
+  - `tests/test_radius_accounting_response_path.py`
+- What was implemented:
+  - Audited FreeRADIUS accounting listener and Docker UDP/1813 exposure.
+  - Audited accounting section behavior.
+  - Added regression tests proving SQL accounting failure is non-blocking for
+    ACK shape because `sql` rcodes are softened and final `ok` is present.
+  - Added regression tests proving SQL auth remains disabled in authorize and
+    post-auth.
+  - Documented the accounting ACK path and lab evidence still required.
+- What was intentionally not implemented:
+  - No auth path changes.
+  - No SQL auth re-enable.
+  - No quota, ledger, reseller, or policy changes.
+  - No FreeRADIUS live restart or live lab claim.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_radius_accounting_response_path.py tests/test_acct_puller_gate.py -q`
+    passed: 16 passed in 0.57s.
+  - `docker compose -f deploy/docker-compose.yml config` attempted and failed
+    before config rendering because local `.env` is missing:
+    `env file ... radius-module\.env not found`.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Not planned for P12 because this slice uses targeted config tests. P09 full
+    pytest timed out after 304021 ms with no visible failure output.
+- Timeout notes if any:
+  - No P12 targeted timeout.
+- Admin endpoint gaps:
+  - None; P12 is local FreeRADIUS/app deployment config.
+- Codex follow-ups added:
+  - None.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No runtime behavior changed; P12 adds tests/docs around existing config.
+- Risk notes:
+  - Live packet evidence still requires a running CHR/VPS lab.
+  - `radacct` persistence depends on SQLite availability and schema health.
+  - Docker compose config verification requires a local `.env` file.
+- GO/NO-GO for next prompt:
+  - GO for P13 after P12 commit.
