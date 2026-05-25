@@ -677,3 +677,59 @@
     rollback proof.
 - GO/NO-GO for next prompt:
   - GO for P11 after P10 commit.
+
+## P11 — Operations Event Feedback Loop
+
+- Start time: 2026-05-25 13:51:00 +03:00
+- End time: 2026-05-25 13:57:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/db/migrations/071_license_admin_bridge_events.sql`
+  - `app/radius/services/license_admin_bridge_events.py`
+  - `app/radius/services/license_admin_service_activation.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/license_admin_bridge/CODEX_FOLLOWUPS.md`
+  - `docs/license_admin_bridge/OPERATIONS_EVENTS.md`
+  - `tests/test_license_admin_bridge_events.py`
+- What was implemented:
+  - Added local unified bridge event table.
+  - Added `BridgeEventService` with sanitized payloads, Arabic labels,
+    optional idempotency keys, list, and summary.
+  - Added read-only events API.
+  - Added advisory service-activation event recording.
+  - Added Codex follow-up for missing V40 event callback contract.
+- What was intentionally not implemented:
+  - No remote event callback because no canonical V40 endpoint is confirmed.
+  - No business-flow blocking if local event recording fails.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_bridge_events.py tests/test_license_admin_service_activation.py tests/test_license_admin_public_ip_change.py -q`
+    passed: 18 passed, 1367 warnings in 13.18s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_restore_workflow.py -q`
+    passed: 15 passed, 1053 warnings in 10.10s.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Not planned for P11 unless targeted tests reveal a broader issue. P09 full
+    pytest timed out after 304021 ms with no visible failure output.
+- Timeout notes if any:
+  - None yet for P11 targeted tests.
+- Admin endpoint gaps:
+  - V40 operations event callback endpoint is not confirmed.
+- Codex follow-ups added:
+  - Added P11 items to `CODEX_FOLLOWUPS.md` for event endpoint and payload
+    contract confirmation.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Event callback remains local-only until admin contract is confirmed.
+- GO/NO-GO for next prompt:
+  - GO for P12 after P11 commit.

@@ -63,3 +63,11 @@ modified.
     - `print_templates.max_active`
 19. Confirm whether NAS and routers are separate limits in V40 or whether
     router count maps to the local `nas_devices` table.
+
+## P11 Operations Event Follow-Ups
+
+20. Confirm whether V40 admin exposes a canonical operations event callback
+    endpoint for radius-module events. P11 kept events local because the prompt
+    did not provide a confirmed path.
+21. Define accepted event payload fields, severity values, idempotency key
+    behavior, and retry policy for future event callback delivery.

@@ -118,6 +118,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_service_activations_poll),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/events",
+        "system_admin_bridge_events",
+        require_api_token(system_admin_bridge_events),
+        methods=["GET"],
+    )
 
 
 def system_status():
@@ -285,3 +291,22 @@ def system_admin_bridge_service_activations_poll():
     dry_run = payload.get("dry_run", True) is not False
     result = ServiceActivationService().poll_once(tenant_id=_tid(), dry_run=dry_run)
     return ok(result)
+
+
+def system_admin_bridge_events():
+    """Read-only local V40 bridge event viewer."""
+    from ...radius.services.license_admin_bridge_events import BridgeEventService
+
+    service = BridgeEventService()
+    event_type = request.args.get("event_type") or None
+    return ok(
+        {
+            "items": service.list_events(
+                tenant_id=_tid(),
+                event_type=event_type,
+                limit=_limit(default=100, maximum=500),
+            ),
+            "summary": service.summary(tenant_id=_tid()),
+            "admin_callback": service.admin_callback_status(),
+        }
+    )

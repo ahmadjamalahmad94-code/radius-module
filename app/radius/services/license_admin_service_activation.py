@@ -283,7 +283,9 @@ class ServiceActivationService:
                 now,
             ),
         )
-        return self.get(int(cur.lastrowid)) or {}
+        execution = self.get(int(cur.lastrowid)) or {}
+        self._record_bridge_event(tenant_id=tenant_id, execution=execution)
+        return execution
 
     def get(self, execution_id: int) -> dict[str, Any] | None:
         row = db().execute(
@@ -310,3 +312,36 @@ class ServiceActivationService:
 
     def _adapter_key(self, adapter: ServiceActivationAdapter) -> str:
         return f"{adapter.service_key}:{adapter.action_key}"
+
+    def _record_bridge_event(self, *, tenant_id: int, execution: dict[str, Any]) -> None:
+        try:
+            from app.radius.services.license_admin_bridge_events import BridgeEventService
+
+            status = str(execution.get("status") or "")
+            if status == "failed":
+                event_type = "service_activation.failed"
+                severity = "warning"
+            elif status in {"planned", "dry_run_completed", "completed", "applied"}:
+                event_type = "service_activation.executed"
+                severity = "info"
+            else:
+                event_type = "service_activation.received"
+                severity = "info"
+            BridgeEventService().record(
+                tenant_id=tenant_id,
+                event_type=event_type,
+                severity=severity,
+                reference=str(execution.get("reference") or ""),
+                event_key=f"service_activation:{execution.get('reference')}",
+                payload={
+                    "reference": execution.get("reference"),
+                    "service_key": execution.get("service_key"),
+                    "action_key": execution.get("action_key"),
+                    "status": status,
+                    "dry_run": execution.get("dry_run"),
+                },
+            )
+        except Exception:
+            # Event recording is advisory; service activation flow must never be
+            # blocked by the local event log.
+            return
