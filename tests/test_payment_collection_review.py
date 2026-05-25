@@ -185,6 +185,94 @@ def test_reject_success_and_no_transaction(client):
     assert count == 0
 
 
+def test_unpaid_request_cannot_apply_service(client):
+    request = _create_request(client)
+    response = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/apply-service",
+        json={},
+        headers=_auth(),
+    )
+    assert response.status_code == 422
+    assert response.get_json()["error"]["code"] == "invalid_state"
+
+
+def test_paid_request_service_apply_is_record_only_and_idempotent(client):
+    request = _create_request(client)
+    client.post(
+        f"/api/v1/payments/requests/{request['id']}/proofs",
+        json={"reference_number": "REF123"},
+        headers=_auth(),
+    )
+    client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/approve",
+        json={"review_note": "matched wallet"},
+        headers=_auth(),
+    )
+    applied = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/apply-service",
+        json={},
+        headers=_auth(),
+    )
+    assert applied.status_code == 200
+    data = applied.get_json()["data"]
+    assert data["request"]["service_apply_status"] == "applied"
+    assert data["apply_attempt"]["status"] == "applied"
+    assert '"live_radius_apply": false' in data["apply_attempt"]["result_json"]
+
+    duplicate = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/apply-service",
+        json={},
+        headers=_auth(),
+    )
+    assert duplicate.status_code == 200
+    assert duplicate.get_json()["data"]["apply_attempt"]["id"] == data["apply_attempt"]["id"]
+
+    from app.radius.db.connection import db
+
+    count = db().execute(
+        """
+        SELECT COUNT(*) AS c FROM payment_service_apply_attempts
+        WHERE tenant_id=1 AND payment_request_id=? AND status='applied'
+        """,
+        (request["id"],),
+    ).fetchone()["c"]
+    assert count == 1
+
+
+def test_service_apply_failure_is_recorded_without_ledger_rollback(client):
+    request = _create_request(client)
+    client.post(
+        f"/api/v1/payments/requests/{request['id']}/proofs",
+        json={"reference_number": "REF123"},
+        headers=_auth(),
+    )
+    approved = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/approve",
+        json={"review_note": "matched wallet"},
+        headers=_auth(),
+    ).get_json()["data"]["request"]
+    ledger_entry_id = approved["ledger_entry_id"]
+
+    failed = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/apply-service",
+        json={"simulate_failure": True},
+        headers=_auth(),
+    )
+    assert failed.status_code == 200
+    data = failed.get_json()["data"]
+    assert data["request"]["service_apply_status"] == "failed"
+    assert data["request"]["ledger_entry_id"] == ledger_entry_id
+    assert data["apply_attempt"]["status"] == "failed"
+
+    from app.radius.db.connection import db
+
+    ledger_count = db().execute(
+        "SELECT COUNT(*) AS c FROM accounting_ledger_entries WHERE id=?",
+        (ledger_entry_id,),
+    ).fetchone()["c"]
+    assert ledger_count == 1
+
+
 def test_client_cannot_mark_paid_by_create_payload(client):
     request = _create_request(client)
     assert request["status"] == "pending"

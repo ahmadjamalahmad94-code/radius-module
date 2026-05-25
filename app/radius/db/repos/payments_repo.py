@@ -521,6 +521,102 @@ class PaymentCollectionLedgerRepository:
         return dict(row)
 
 
+class PaymentServiceApplyRepository:
+    def apply_paid_request(
+        self,
+        *,
+        tenant_id: int,
+        request_id: int,
+        actor: str = "",
+        simulate_failure: bool = False,
+    ) -> dict[str, Any]:
+        with transaction() as conn:
+            request_row = conn.execute(
+                "SELECT * FROM payment_requests WHERE tenant_id = ? AND id = ?",
+                (tenant_id, request_id),
+            ).fetchone()
+            if not request_row:
+                raise ValueError("payment_request")
+            request_data = dict(request_row)
+            if request_data["status"] != "paid":
+                raise ValueError("status")
+
+            existing = conn.execute(
+                """
+                SELECT * FROM payment_service_apply_attempts
+                WHERE tenant_id = ? AND payment_request_id = ? AND status = 'applied'
+                ORDER BY id DESC LIMIT 1
+                """,
+                (tenant_id, request_id),
+            ).fetchone()
+            if existing:
+                return dict(existing)
+
+            result = {
+                "payment_request_id": request_id,
+                "purpose": request_data["purpose"],
+                "payer_type": request_data["payer_type"],
+                "payer_id": request_data["payer_id"],
+                "ledger_entry_id": request_data.get("ledger_entry_id"),
+                "live_radius_apply": False,
+                "live_coa_apply": False,
+                "live_mikrotik_apply": False,
+                "mode": "record_only",
+            }
+            status = "applied"
+            error_message = ""
+            if simulate_failure:
+                status = "failed"
+                error_message = "simulated apply failure"
+                result["failure"] = error_message
+
+            cur = conn.execute(
+                """
+                INSERT INTO payment_service_apply_attempts(
+                  tenant_id, payment_request_id, status, actor, result_json,
+                  error_message, created_at
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    tenant_id,
+                    request_id,
+                    status,
+                    actor,
+                    json_dump(result),
+                    error_message,
+                    now_iso(),
+                ),
+            )
+            attempt_id = cur.lastrowid
+            applied_at = now_iso() if status == "applied" else None
+            conn.execute(
+                """
+                UPDATE payment_requests
+                SET service_apply_status = ?, service_apply_attempt_id = ?,
+                    service_applied_at = COALESCE(?, service_applied_at),
+                    updated_at = ?
+                WHERE tenant_id = ? AND id = ?
+                """,
+                (status, attempt_id, applied_at, now_iso(), tenant_id, request_id),
+            )
+        row = db().execute(
+            "SELECT * FROM payment_service_apply_attempts WHERE tenant_id = ? AND id = ?",
+            (tenant_id, attempt_id),
+        ).fetchone()
+        return dict(row)
+
+    def list_for_request(self, *, tenant_id: int, request_id: int) -> list[dict[str, Any]]:
+        rows = db().execute(
+            """
+            SELECT * FROM payment_service_apply_attempts
+            WHERE tenant_id = ? AND payment_request_id = ?
+            ORDER BY id DESC
+            """,
+            (tenant_id, request_id),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 class PaymentWebhookEventRepository:
     def create(
         self,

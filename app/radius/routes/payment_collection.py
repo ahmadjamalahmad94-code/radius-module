@@ -8,6 +8,7 @@ from ..db.repos.payments_repo import (
     PaymentCollectionLedgerRepository,
     PaymentProofRepository,
     PaymentRequestRepository,
+    PaymentServiceApplyRepository,
     PaymentSettingsRepository,
     PaymentTransactionRepository,
 )
@@ -52,6 +53,12 @@ def register_payment_collection_routes(bp: Blueprint) -> None:
         "/payments/requests/<int:request_id>/reject",
         "payment_collection_reject_web",
         payment_collection_reject_web,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/payments/requests/<int:request_id>/apply-service",
+        "payment_collection_apply_service_web",
+        payment_collection_apply_service_web,
         methods=["POST"],
     )
 
@@ -117,10 +124,15 @@ def payment_collection_request_detail(request_id: int):
         flash("Payment request not found.", "warning")
         return redirect(url_for("radius.payment_collection_requests"))
     proofs = PaymentProofRepository().list_for_request(request_id)
+    apply_attempts = PaymentServiceApplyRepository().list_for_request(
+        tenant_id=_tid(),
+        request_id=request_id,
+    )
     return render_template(
         "radius/payment_collection_request_detail.html",
         item=item,
         proofs=proofs,
+        apply_attempts=apply_attempts,
     )
 
 
@@ -182,4 +194,22 @@ def payment_collection_reject_web(request_id: int):
         )
         PaymentRequestRepository().update_status(_tid(), request_id, "rejected")
         flash("Payment proof rejected.", "info")
+    return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
+
+
+def payment_collection_apply_service_web(request_id: int):
+    try:
+        PaymentServiceApplyRepository().apply_paid_request(
+            tenant_id=_tid(),
+            request_id=request_id,
+            actor="admin-web",
+            simulate_failure=bool(request.form.get("simulate_failure")),
+        )
+    except ValueError as exc:
+        if str(exc) == "status":
+            flash("Only paid requests can be applied.", "warning")
+        else:
+            flash(f"Service apply failed: {exc}", "danger")
+    else:
+        flash("Service apply recorded without live RADIUS/CoA/MikroTik actions.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))

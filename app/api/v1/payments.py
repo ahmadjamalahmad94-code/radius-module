@@ -10,6 +10,7 @@ from ...radius.db.repos.payments_repo import (
     PaymentCollectionLedgerRepository,
     PaymentProofRepository,
     PaymentRequestRepository,
+    PaymentServiceApplyRepository,
     PaymentSettings,
     PaymentSettingsRepository,
     PaymentTransactionRepository,
@@ -51,6 +52,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/admin/payments/requests/<int:request_id>/reject",
                     "payment_collection_reject", methods=["POST"],
                     view_func=require_api_token(payment_collection_reject))
+    bp.add_url_rule("/admin/payments/requests/<int:request_id>/apply-service",
+                    "payment_collection_apply_service", methods=["POST"],
+                    view_func=require_api_token(payment_collection_apply_service))
     bp.add_url_rule("/payments", "payments_list",
                     require_api_token(payments_list), methods=["GET"])
     bp.add_url_rule("/payments", "payments_create",
@@ -162,6 +166,9 @@ def _request_payload(row: dict) -> dict:
         "created_by": row["created_by"],
         "ledger_entry_id": row.get("ledger_entry_id"),
         "ledger_applied_at": row.get("ledger_applied_at"),
+        "service_apply_status": row.get("service_apply_status", "not_applied"),
+        "service_apply_attempt_id": row.get("service_apply_attempt_id"),
+        "service_applied_at": row.get("service_applied_at"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -406,3 +413,36 @@ def payment_collection_reject(request_id: int):
     PaymentRequestRepository().update_status(_tid(), request_id, "rejected")
     updated = PaymentRequestRepository().get(_tid(), request_id)
     return ok({"request": _request_payload(updated)})
+
+
+def _apply_attempt_payload(row: dict) -> dict:
+    return {
+        "id": row["id"],
+        "tenant_id": row["tenant_id"],
+        "payment_request_id": row["payment_request_id"],
+        "status": row["status"],
+        "actor": row["actor"],
+        "result_json": row["result_json"],
+        "error_message": row["error_message"],
+        "created_at": row["created_at"],
+    }
+
+
+def payment_collection_apply_service(request_id: int):
+    body = request.get_json(silent=True) or {}
+    try:
+        attempt = PaymentServiceApplyRepository().apply_paid_request(
+            tenant_id=_tid(),
+            request_id=request_id,
+            actor=_actor(),
+            simulate_failure=bool(body.get("simulate_failure")),
+        )
+    except ValueError as exc:
+        message = str(exc)
+        if message == "payment_request":
+            return fail("not_found", "payment request not found", status=404)
+        if message == "status":
+            return fail("invalid_state", "only paid requests can be applied", status=422)
+        return fail("validation_error", message, status=422)
+    updated = PaymentRequestRepository().get(_tid(), request_id)
+    return ok({"request": _request_payload(updated), "apply_attempt": _apply_attempt_payload(attempt)})
