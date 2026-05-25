@@ -64,6 +64,28 @@
     return data;
   }
 
+  function friendlyWizardError(message) {
+    const raw = String(message || "").trim();
+    const lower = raw.toLowerCase();
+    if (!raw) return "حدث خطأ غير واضح. أعد المحاولة أو ارجع خطوة واحدة.";
+    if (lower.includes("vpn/radius verification is required first")) {
+      return "لم يكتمل فحص ربط الراوتر بالخادم بعد. ارجع إلى خطوة تحقق الربط، الصق مخرجات MikroTik، ثم اضغط تحليل المخرجات.";
+    }
+    if (lower.includes("generated script is required before dry-run")) {
+      return "ولّد السكربت أولًا قبل تشغيل المراجعة الجافة.";
+    }
+    if (lower.includes("internet verification is required first")) {
+      return "أكمل فحص الإنترنت أولًا قبل المتابعة.";
+    }
+    if (lower.includes("router public key is required")) {
+      return "لم نلتقط مفتاح الراوتر بعد. الصق مخرجات WireGuard من MikroTik في خطوة تحقق الربط.";
+    }
+    if (lower.includes("at least one") && lower.includes("interface")) {
+      return "اختر منفذ شبكة واحدًا على الأقل قبل توليد السكربت.";
+    }
+    return raw;
+  }
+
   async function getJson(url) {
     const res = await fetch(url, {
       method: "GET",
@@ -795,11 +817,13 @@
       servicePlans[service] = data.plan || {};
       renderServicePlan(service, servicePlans[service]);
     } catch (error) {
-      if (status) status.textContent = `فشل توليد السكربت: ${error.message}`;
+      const message = friendlyWizardError(error.message);
+      if (status) status.textContent = `تعذر توليد السكربت: ${message}`;
+      renderServiceDiagnostics(service, null, "لا يمكن توليد السكربت الآن", message);
     }
   }
 
-  function renderServiceDiagnostics(service, result, failedMessage) {
+  function renderServiceDiagnostics(service, result, failedMessage, failedBody) {
     const target = page.querySelector(`[data-swv2-service-diagnostics="${service}"]`);
     if (!target) return;
     const ok = result?.status === "success" || result?.gate_unlocked === true || result?.status === "dry_run_ready";
@@ -809,20 +833,24 @@
     const title = document.createElement("strong");
     const body = document.createElement("span");
     title.textContent = ok ? `تم تجهيز ${service} بنجاح` : failedMessage;
-    body.textContent = ok ? "راجع الملخص والتفاصيل المتقدمة قبل التنفيذ اليدوي." : "راجع التحذيرات أو ألصق مخرجات أوضح للتحقق.";
+    body.textContent = ok ? "راجع الملخص والتفاصيل المتقدمة قبل التنفيذ اليدوي." : (failedBody || "راجع التحذيرات أو ألصق مخرجات أوضح للتحقق.");
     card.append(title, body);
     target.appendChild(card);
   }
 
   async function dryRunService(service) {
     try {
+      if (!servicePlans[service]) {
+        renderServiceDiagnostics(service, null, "المراجعة الجافة غير جاهزة", "ولّد السكربت أولًا، ثم شغّل المراجعة الجافة.");
+        return;
+      }
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/dry-run/${service}`, {});
       renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء التجربة الجافة");
       const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
       if (details) details.textContent = JSON.stringify(data, null, 2);
     } catch (error) {
-      renderServiceDiagnostics(service, null, `التجربة الجافة محظورة: ${error.message}`);
+      renderServiceDiagnostics(service, null, "المراجعة الجافة غير جاهزة", friendlyWizardError(error.message));
     }
   }
 

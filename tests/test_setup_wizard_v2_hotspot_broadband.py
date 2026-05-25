@@ -160,6 +160,9 @@ def test_v2_js_uses_real_service_apis_without_mock_scripts(app):
     assert "verify-${service}" in source
     assert "/ip hotspot add" not in source
     assert "/interface pppoe-server server" not in source
+    assert "friendlyWizardError" in source
+    assert "لم يكتمل فحص ربط الراوتر بالخادم بعد" in source
+    assert "ولّد السكربت أولًا" in source
 
 
 def test_dry_run_buttons_present_and_no_service_apply_button(app):
