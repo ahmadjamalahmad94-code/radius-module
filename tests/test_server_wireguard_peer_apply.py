@@ -310,6 +310,7 @@ def test_v2_renders_server_peer_lab_panel(app):
         html = res.get_data(as_text=True)
 
     assert res.status_code == 200
+    assert "data-swv2-server-peer-simple-apply" in html
     assert "data-swv2-server-peer-dry-run" in html
     assert "data-swv2-server-peer-verify" in html
     assert "data-swv2-server-peer-result" in html

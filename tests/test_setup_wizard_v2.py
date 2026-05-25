@@ -100,9 +100,10 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-copy-target="hotspot-script-code"' in html
     assert 'data-copy-target="broadband-script-code"' in html
     assert 'data-copy-target="added-service-plan-code"' in html
-    assert 'data-copy-target="server-peer-command-code"' in html
+    assert "data-swv2-server-peer-simple-apply" in html
     assert 'data-swv2-server-peer-simple' in html
     assert "data-swv2-server-peer-status" in html
+    assert "Terminal السيرفر VPS" not in html
     assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
 
@@ -157,9 +158,11 @@ def test_setup_wizard_v2_js_extracts_public_key_and_accepts_partial_ping(app):
 
     assert "extractWireGuardPublicKey" in source
     assert "hasUsefulPing" in source
+    assert "hasHandshakeSuccess" in source
+    assert 'confirmationOverride || serverPeerConfirmation()' in source
     assert "receivedMatch" in source
     assert "Number(receivedMatch[1]) > 0" in source
-    assert 'kind !== "vpn" || hasPingSuccess' in source
+    assert 'kind !== "vpn" || hasPingSuccess || hasHandshakeSuccess' in source
     assert "ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù…ÙØªØ§Ø­" not in source
 
 

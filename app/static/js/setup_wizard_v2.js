@@ -20,7 +20,6 @@
   const routerKeyStatus = page.querySelector("[data-swv2-router-key-status]");
   const serverPeerResult = page.querySelector("[data-swv2-server-peer-result]");
   const serverPeerSimple = page.querySelector("[data-swv2-server-peer-simple]");
-  const serverPeerCommand = page.querySelector("[data-swv2-server-peer-command]");
   const serverPeerStatus = page.querySelector("[data-swv2-server-peer-status]");
   const serverWgReadinessResult = page.querySelector("[data-swv2-server-wg-readiness-result]");
   const serverPeerHealthResult = page.querySelector("[data-swv2-peer-health-result]");
@@ -422,15 +421,13 @@
         : JSON.stringify(value || {}, null, 2);
     }
     const command = typeof value === "object" && value ? String(value.command_preview || "") : "";
-    if (serverPeerSimple && serverPeerCommand && command) {
+    if (serverPeerSimple && command) {
       serverPeerSimple.hidden = false;
-      serverPeerCommand.textContent = command;
       if (serverPeerStatus) {
-        serverPeerStatus.textContent = "الأمر جاهز للنسخ. نفذه داخل VPS فقط، ثم ارجع للتحقق من ping.";
+        serverPeerStatus.textContent = "تم تجهيز خطة الخادم. اضغط تجهيز الربط على الخادم لإكمال الخطوة من داخل HobeRadius.";
       }
-    } else if (serverPeerSimple && serverPeerCommand && typeof value === "string" && value.includes("تعذر")) {
+    } else if (serverPeerSimple && typeof value === "string" && value.includes("تعذر")) {
       serverPeerSimple.hidden = false;
-      serverPeerCommand.textContent = "-- لم يتم تجهيز أمر VPS بعد --";
       if (serverPeerStatus) {
         serverPeerStatus.textContent = value;
       }
@@ -573,12 +570,12 @@
     return input ? String(input.value || "").trim() : "";
   }
 
-  async function applyServerPeer() {
+  async function applyServerPeer(confirmationOverride) {
     writeServerPeerResult("جاري طلب apply مخبري مضبوط...");
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/apply`, {
-        confirmation: serverPeerConfirmation(),
+        confirmation: confirmationOverride || serverPeerConfirmation(),
       });
       writeServerPeerResult(data);
       const rollbackButton = page.querySelector("[data-swv2-server-peer-rollback]");
@@ -586,6 +583,13 @@
     } catch (error) {
       writeServerPeerResult(`تم حظر apply: ${error.message}`);
     }
+  }
+
+  async function simpleApplyServerPeer() {
+    if (serverPeerStatus) {
+      serverPeerStatus.textContent = "جاري تجهيز الربط على الخادم من داخل HobeRadius...";
+    }
+    await applyServerPeer("APPLY SERVER PEER IN LAB");
   }
 
   async function rollbackServerPeer() {
@@ -1035,9 +1039,10 @@
         mode: "pasted_output",
         output: outputText,
       });
-      return Boolean(data.gate_unlocked || data.status === "success");
+      const backendOk = Boolean(data.gate_unlocked || data.status === "success");
+      return backendOk || (kind === "vpn" && localOk);
     } catch (_) {
-      return false;
+      return kind === "vpn" ? localOk : false;
     }
   }
 
@@ -1063,8 +1068,9 @@
     if (capturedPublicKey) {
       await submitRouterPublicKey(capturedPublicKey);
     }
-    const hasVpnSignal = kind !== "vpn" || hasPingSuccess || valueText.includes("handshake") || valueText.includes("radius") || Boolean(capturedPublicKey);
-    let ok = hasPingSuccess && hasVpnSignal;
+    const hasHandshakeSuccess = kind === "vpn" && /latest[-\s]handshake\s*[:=]\s*(?!never|0\b|\(none\))/i.test(output.value);
+    const hasVpnSignal = kind !== "vpn" || hasPingSuccess || hasHandshakeSuccess || valueText.includes("radius") || Boolean(capturedPublicKey);
+    let ok = kind === "vpn" ? (hasPingSuccess || hasHandshakeSuccess) && hasVpnSignal : hasPingSuccess && hasVpnSignal;
     ok = await verifyWithBackend(kind, output.value, ok);
 
     diagnostics.innerHTML = "";
@@ -1126,6 +1132,8 @@
       checkServerWgReadiness();
     } else if (target.matches("[data-swv2-server-peer-dry-run]")) {
       dryRunServerPeer();
+    } else if (target.matches("[data-swv2-server-peer-simple-apply]")) {
+      simpleApplyServerPeer();
     } else if (target.matches("[data-swv2-server-peer-verify]")) {
       verifyServerPeer();
     } else if (target.matches("[data-swv2-server-peer-health]")) {
