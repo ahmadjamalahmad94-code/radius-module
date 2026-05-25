@@ -82,9 +82,18 @@ def _parse_metadata(raw: str | dict | None) -> dict:
 
 def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
+    bp.add_url_rule("/subscribers", "subscribers_list", users_list, methods=["GET"])
     bp.add_url_rule("/users/new", "users_new", users_new, methods=["GET"])
     bp.add_url_rule("/users", "users_create", users_create, methods=["POST"])
     bp.add_url_rule("/users/<username>/profile", "users_profile", users_profile, methods=["GET"])
+    bp.add_url_rule("/users/<username>/360", "users_360", users_360_by_username, methods=["GET"])
+    bp.add_url_rule("/subscribers/<int:subscriber_id>", "subscriber_360", subscriber_360, methods=["GET"])
+    bp.add_url_rule(
+        "/subscribers/<int:subscriber_id>/renewal-preview",
+        "subscriber_renewal_preview",
+        subscriber_renewal_preview,
+        methods=["POST"],
+    )
     bp.add_url_rule("/users/<username>/edit", "users_edit", users_edit, methods=["GET"])
     bp.add_url_rule("/users/<username>", "users_update", users_update, methods=["POST"])
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
@@ -525,6 +534,58 @@ def users_profile(username: str):
         payments=payments,
         loans=loans,
     )
+
+
+def _subscriber_360_payload(*, subscriber_id: int | None = None, username: str = ""):
+    from ..services.subscriber_360 import Subscriber360Service
+
+    service = Subscriber360Service(tenant_id=_tid())
+    try:
+        if subscriber_id is not None:
+            return service.get_by_id(subscriber_id)
+        return service.get_by_username(username)
+    except KeyError:
+        abort(404)
+
+
+def subscriber_360(subscriber_id: int):
+    return render_template(
+        "radius/subscriber_360.html",
+        s360=_subscriber_360_payload(subscriber_id=subscriber_id),
+        source_route="subscribers",
+    )
+
+
+def users_360_by_username(username: str):
+    return render_template(
+        "radius/subscriber_360.html",
+        s360=_subscriber_360_payload(username=username),
+        source_route="users",
+    )
+
+
+def subscriber_renewal_preview(subscriber_id: int):
+    from ..core.errors import RadiusValidationError
+    from ..services.subscriber_360 import Subscriber360Service
+
+    try:
+        preview = Subscriber360Service(tenant_id=_tid()).preview_renewal(
+            subscriber_id=subscriber_id,
+            amount_paid=float(request.form.get("amount_paid") or 0),
+            discount_amount=float(request.form.get("discount_amount") or 0),
+            debt_amount=float(request.form.get("debt_amount") or 0),
+            loan_days_to_settle=int(request.form.get("loan_days_to_settle") or 0),
+            actor=_actor(),
+            record_event=True,
+        )
+    except (KeyError, ValueError, RadiusValidationError) as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("radius.subscriber_360", subscriber_id=subscriber_id))
+    flash(
+        f"معاينة التجديد: {preview['earned_days']} يوم، بدون تطبيق مباشر على RADIUS.",
+        "success",
+    )
+    return redirect(url_for("radius.subscriber_360", subscriber_id=subscriber_id))
 
 
 def users_edit(username: str):

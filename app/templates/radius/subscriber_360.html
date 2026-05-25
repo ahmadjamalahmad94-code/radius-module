@@ -1,0 +1,158 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set sub = s360.subscriber %}
+{% set financial = s360.financial %}
+
+{% block title %}Subscriber 360 — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
+{% block page_title %}Subscriber 360{% endblock %}
+{% block page_sub %}<span class="sub">ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على RADIUS</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Subscriber 360",
+  subtitle="نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.",
+  icon="user-shield",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> الرجوع للمشتركين</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="subscriber-360-kpis">
+  {{ hub.kpi("المشترك", sub.username, icon="user") }}
+  {{ hub.kpi("رصيد المحفظة", financial.wallet_balance, icon="wallet", variant="blue") }}
+  {{ hub.kpi("إجمالي المدفوع", financial.total_paid, icon="cash-register", variant="green") }}
+  {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount, icon="hand-holding-dollar", variant="amber") }}
+</div>
+
+<div class="hub-tabs" data-testid="subscriber-360-tabs">
+  <a href="#overview">Overview</a>
+  <a href="#financial">Financial</a>
+  <a href="#usage">Usage & Sessions</a>
+  <a href="#services">Services</a>
+  <a href="#devices">Devices/MACs</a>
+  <a href="#timeline">Timeline</a>
+  <a href="#messages">Messages</a>
+  <a href="#notes">Notes</a>
+  <a href="#login-events">Login Events</a>
+</div>
+
+<div class="hub-grid hub-grid--2">
+  <div id="overview"></div>
+  {% call hub.section("Overview", icon="circle-info") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("الحالة", s360.overview.status or "—", icon="signal") }}
+      {{ hub.tile("نوع الخدمة", s360.overview.service_type or "—", icon="network-wired") }}
+      {{ hub.tile("عدد الجلسات", s360.overview.session_count, icon="clock") }}
+      {{ hub.tile("الخطة", s360.plan.name if s360.plan else "بدون خطة", icon="layer-group") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("معاينة التجديد الآمن", icon="calendar-check") %}
+    <form method="post" action="{{ url_for('radius.subscriber_renewal_preview', subscriber_id=sub.id) }}" class="hub-form-grid" data-testid="renewal-preview-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>المبلغ المدفوع
+        <input name="amount_paid" type="number" step="0.01" min="0" value="0">
+      </label>
+      <label>خصم
+        <input name="discount_amount" type="number" step="0.01" min="0" value="0">
+      </label>
+      <label>دين جديد
+        <input name="debt_amount" type="number" step="0.01" min="0" value="0">
+      </label>
+      <label>أيام سلفة تخصم
+        <input name="loan_days_to_settle" type="number" step="1" min="0" value="0">
+      </label>
+      <button class="hub-btn hub-btn--primary" type="submit">احسب التجديد</button>
+      <p class="hub-muted">هذه معاينة فقط. لا يتم تطبيق أي وقت على RADIUS من هذه الصفحة.</p>
+    </form>
+  {% endcall %}
+</div>
+
+<div id="financial"></div>
+{% call hub.section("Financial", icon="coins") %}
+  <div class="hub-tile-grid">
+    {{ hub.tile("مدفوعات", financial.payments|length, icon="receipt") }}
+    {{ hub.tile("سلف", financial.loans|length, icon="hand-holding-dollar") }}
+    {{ hub.tile("خصومات", financial.discounts|length, icon="percent") }}
+    {{ hub.tile("قيود", financial.ledger|length, icon="book") }}
+  </div>
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="payments-table">
+      <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th><th>الموظف</th></tr></thead>
+      <tbody>
+        {% for p in financial.payments %}
+          <tr><td>{{ p.created_at }}</td><td>{{ p.amount }} {{ p.currency }}</td><td>{{ p.method }}</td><td>{{ p.created_by }}</td></tr>
+        {% else %}
+          <tr><td colspan="4">لا توجد مدفوعات بعد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+
+<div class="hub-grid hub-grid--2">
+  <div id="usage"></div>
+  {% call hub.section("Usage & Sessions", icon="chart-simple") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("إجمالي الثواني", s360.usage.total_seconds, icon="stopwatch") }}
+      {{ hub.tile("تحميل", s360.usage.download_bytes, icon="download") }}
+      {{ hub.tile("رفع", s360.usage.upload_bytes, icon="upload") }}
+    </div>
+  {% endcall %}
+
+  <div id="services"></div>
+  {% call hub.section("Services", icon="diagram-project") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("Pool", s360.services.pool or "—", icon="water") }}
+      {{ hub.tile("Static IP", s360.services.static_ip or "—", icon="location-dot") }}
+    </div>
+  {% endcall %}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  <div id="devices"></div>
+  {% call hub.section("Devices/MACs", icon="laptop-code") %}
+    <div class="hub-list">
+      {% for device in s360.devices %}
+        <div class="hub-list-row"><strong>{{ device.mac }}</strong><span>{{ device.source }}</span></div>
+      {% else %}
+        <div class="hub-empty">لا توجد أجهزة معروفة بعد.</div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+
+  <div id="login-events"></div>
+  {% call hub.section("Login Events", icon="right-to-bracket") %}
+    <div class="hub-list">
+      {% for event in s360.login_events %}
+        <div class="hub-list-row"><strong>{{ event.reply }}</strong><span>{{ event.authdate }} · {{ event.nas }}</span></div>
+      {% else %}
+        <div class="hub-empty">لا توجد محاولات دخول مسجلة.</div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+</div>
+
+<div id="timeline"></div>
+{% call hub.section("Timeline", icon="timeline") %}
+  <div class="hub-list" data-testid="subscriber-timeline">
+    {% for item in s360.timeline %}
+      <div class="hub-list-row"><strong>{{ item.created_at or "—" }}</strong><span>{{ item.item.entry_type or item.item.event_key or item.item.reply or item.item.status }}</span></div>
+    {% else %}
+      <div class="hub-empty">لا توجد أحداث كافية لبناء خط زمني بعد.</div>
+    {% endfor %}
+  </div>
+{% endcall %}
+
+<div class="hub-grid hub-grid--2">
+  <div id="messages"></div>
+  {% call hub.section("Messages", icon="message") %}
+    <div class="hub-empty">لا توجد رسائل مرتبطة بهذا المشترك بعد.</div>
+  {% endcall %}
+
+  <div id="notes"></div>
+  {% call hub.section("Notes", icon="note-sticky") %}
+    <div class="hub-empty">{{ s360.notes or "لا توجد ملاحظات." }}</div>
+  {% endcall %}
+</div>
+{% endblock %}
