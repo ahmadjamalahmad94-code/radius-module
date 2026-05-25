@@ -24,6 +24,14 @@ def register(bp: Blueprint) -> None:
                     require_api_token(accounting_sessions_history), methods=["GET"])
     bp.add_url_rule("/accounting/sessions/<session_id>", "accounting_session_detail",
                     require_api_token(accounting_session_detail), methods=["GET"])
+    bp.add_url_rule("/accounting/usage/tenant", "accounting_usage_tenant",
+                    require_api_token(accounting_usage_tenant), methods=["GET"])
+    bp.add_url_rule("/accounting/usage/subscribers/<username>", "accounting_usage_subscriber",
+                    require_api_token(accounting_usage_subscriber), methods=["GET"])
+    bp.add_url_rule("/accounting/usage/plans/<int:plan_id>", "accounting_usage_plan",
+                    require_api_token(accounting_usage_plan), methods=["GET"])
+    bp.add_url_rule("/accounting/quota/check", "accounting_quota_check",
+                    require_api_token(accounting_quota_check), methods=["POST"])
 
 
 def accounting_list():
@@ -81,3 +89,58 @@ def accounting_session_detail(session_id: str):
     if not item:
         return fail("not_found", "Accounting session not found", status=404)
     return ok({"item": item})
+
+
+def _usage_window() -> str:
+    return "monthly" if request.args.get("window") == "monthly" else "daily"
+
+
+def accounting_usage_tenant():
+    from ...radius.services.usage_counters import UsageCountersService
+
+    return ok(UsageCountersService().tenant_summary(tenant_id=_tid(), window=_usage_window()))
+
+
+def accounting_usage_subscriber(username: str):
+    from ...radius.services.usage_counters import UsageCountersService
+
+    return ok(
+        UsageCountersService().subscriber_summary(
+            tenant_id=_tid(),
+            username=username,
+            window=_usage_window(),
+        )
+    )
+
+
+def accounting_usage_plan(plan_id: int):
+    from ...radius.services.usage_counters import UsageCountersService
+
+    return ok(
+        UsageCountersService().plan_summary(
+            tenant_id=_tid(),
+            plan_id=plan_id,
+            window=_usage_window(),
+        )
+    )
+
+
+def accounting_quota_check():
+    from ...radius.services.usage_counters import UsageCountersService
+
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username") or "").strip()
+    if not username:
+        return fail("validation_error", "username is required", status=422)
+    try:
+        limit_bytes = int(body.get("limit_bytes") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "limit_bytes must be an integer", status=422)
+    window = "monthly" if body.get("window") == "monthly" else "daily"
+    result = UsageCountersService().quota_decision(
+        tenant_id=_tid(),
+        username=username,
+        limit_bytes=limit_bytes,
+        window=window,
+    )
+    return ok(result)

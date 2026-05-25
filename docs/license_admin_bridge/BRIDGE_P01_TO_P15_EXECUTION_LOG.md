@@ -843,3 +843,56 @@
     stable backend ingestion/read layer.
 - GO/NO-GO for next prompt:
   - GO for P14 after P13 commit.
+
+## P14 — Usage Counters + Quota Hooks
+
+- Start time: 2026-05-25 14:29:00 +03:00
+- End time: 2026-05-25 14:47:00 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/accounting.py`
+  - `app/radius/services/usage_counters.py`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `docs/radius/USAGE_COUNTERS_QUOTA_HOOKS.md`
+  - `tests/test_usage_counters_quota_hooks.py`
+- What was implemented:
+  - Added usage counter service reading `radacct`.
+  - Added tenant, subscriber, plan/profile, and per-NAS aggregation.
+  - Added daily/monthly window support.
+  - Added advisory quota decision service returning allow/warn/block.
+  - Added read APIs for usage summaries and quota check.
+  - Added usage/quota documentation.
+- What was intentionally not implemented:
+  - No paid ledger.
+  - No reseller settlement.
+  - No CoA/disconnect.
+  - No auth policy enforcement because this slice remains advisory.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_usage_counters_quota_hooks.py tests/test_accounting_events_engine.py -q`
+    passed: 12 passed, 895 warnings in 11.03s.
+  - `python -m pytest tests/test_api_operational_reports.py tests/test_online_sessions_radacct_path.py tests/test_online_list_separation.py -q`
+    passed: 10 passed, 379 warnings in 15.77s.
+  - `git diff --check` passed with line-ending warnings only.
+- Full pytest status:
+  - Not planned for P14 unless targeted tests indicate a broader issue. P09
+    full pytest timed out after 304021 ms with no visible failure output.
+- Timeout notes if any:
+  - No P14 targeted timeout.
+- Admin endpoint gaps:
+  - None.
+- Codex follow-ups added:
+  - None.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No. Quota decisions are advisory and not wired into auth.
+- Risk notes:
+  - Auth enforcement remains a future, separately reviewed decision.
+- GO/NO-GO for next prompt:
+  - GO for P15 after P14 commit.
