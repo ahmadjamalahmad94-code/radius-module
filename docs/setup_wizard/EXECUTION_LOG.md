@@ -1039,3 +1039,78 @@ Final commit hash is reported in the assistant final response for this prompt. G
   - `tests/test_operations_foundation.py`
   - `tests/test_web_print_templates_ui.py`
   - `app/templates/radius/_npc_components.html`
+
+## Prompt 01 — V40 Contract Audit and Bridge Foundation
+
+### Commit
+
+Pending at log-write time.
+
+### What implemented
+
+- Read `docs/license_admin_bridge/P00_PREFLIGHT.md` and kept the pre-P00 stash untouched.
+- Added a detailed V40 contract audit document defining the first license/admin bridge contracts for:
+  - license checks
+  - capacity contract snapshots
+  - required environment variables
+  - safe outage behavior
+  - admin-side endpoint gaps.
+- Added `CODEX_FOLLOWUPS.md` for missing or ambiguous admin-panel endpoint contracts.
+- Added an opt-in `AdminPanelClient` skeleton:
+  - disabled by default through `HOBERADIUS_ADMIN_BRIDGE_ENABLED=false`
+  - no calls during Flask startup
+  - bounded timeout and retry configuration
+  - injectable transport for tests
+  - safe timeout/unavailable/invalid-payload handling
+  - sanitized snapshot persistence.
+- Added migration `065_license_admin_bridge_snapshots.sql` for sanitized local snapshots.
+- Added focused tests for mocked success, invalid payloads, timeout handling, disabled bridge behavior, stale snapshots, and env parsing.
+
+### Files changed
+
+- `app/radius/db/migrations/065_license_admin_bridge_snapshots.sql`
+- `app/radius/services/admin_panel_client.py`
+- `docs/license_admin_bridge/P01_V40_CONTRACT_AUDIT.md`
+- `docs/license_admin_bridge/CODEX_FOLLOWUPS.md`
+- `docs/setup_wizard/EXECUTION_LOG.md`
+- `tests/test_license_admin_bridge_client.py`
+
+### Tests exact results
+
+- `git status --short --untracked-files=all` before P01 changes: clean.
+- `python -m compileall app` passed.
+- `python -m pytest tests/test_license_admin_bridge_client.py -q` passed: 6 passed, 340 warnings in 4.14s.
+- `python -m pytest tests/test_setup_wizard_db_isolation.py -q` passed: 3 passed, 792 warnings in 3.55s.
+- `python -m pytest tests/test_api_auth_security.py -q` passed: 10 passed, 279 warnings in 1.83s.
+- `git diff --check` passed.
+- `python -m pytest -q` attempted and timed out after 304042 ms. No visible failure output was returned before timeout.
+
+### Safety confirmations
+
+- `radius-module-admin` was not touched.
+- Flutter was not touched.
+- The pre-P00 stash was not inspected, applied, or modified.
+- No entitlement enforcement was added.
+- No subscribers/cards/NAS limits are blocked.
+- No backup upload was added.
+- No restore polling was added.
+- No service activation polling was added.
+- No health heartbeat was added.
+- No SMS behavior was added.
+- No RADIUS auth/accounting behavior was changed.
+- No MikroTik/FreeRADIUS live path was changed.
+- Admin outage cannot break app startup because the client is not called during startup.
+
+### Remaining risks
+
+- Admin-panel endpoint paths and authentication scheme still need confirmation on the `radius-module-admin` side.
+- Capacity-contract field names are provisional until the admin contract is locked.
+- Heartbeat, backup upload, restore polling, and service activation contracts remain undefined.
+- The bridge stores sanitized snapshots only; it does not yet provide UX, enforcement, polling, or background refresh.
+- Full project pytest still exceeds the 304 second execution window.
+
+### Full honest notes
+
+- P01 intentionally used an injectable transport and direct service tests instead of adding routes.
+- P01 intentionally did not read or edit `radius-module-admin`; gaps are documented for follow-up.
+- New docs under `docs/license_admin_bridge` are force-staged because the repository ignores `docs/*` by default.
