@@ -273,6 +273,45 @@ def test_service_apply_failure_is_recorded_without_ledger_rollback(client):
     assert ledger_count == 1
 
 
+def test_reconciliation_reports_paid_ledger_apply_and_expiry_findings(client):
+    request = _create_request(client)
+    client.post(
+        f"/api/v1/payments/requests/{request['id']}/proofs",
+        json={"reference_number": "REF123"},
+        headers=_auth(),
+    )
+    client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/approve",
+        json={"review_note": "matched wallet"},
+        headers=_auth(),
+    )
+
+    expired = _create_request(client)
+    from app.radius.db.connection import transaction
+
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE payment_requests
+            SET ledger_entry_id=NULL, ledger_applied_at=NULL
+            WHERE id=?
+            """,
+            (request["id"],),
+        )
+        conn.execute(
+            "UPDATE payment_requests SET expires_at='2000-01-01T00:00:00Z' WHERE id=?",
+            (expired["id"],),
+        )
+
+    response = client.get("/api/v1/admin/payments/reconciliation", headers=_auth())
+    assert response.status_code == 200
+    report = response.get_json()["data"]["reconciliation"]
+    assert report["counts"]["paid_without_ledger"] == 1
+    assert report["counts"]["paid_not_applied"] == 1
+    assert report["counts"]["expired_pending"] == 1
+    assert report["counts"]["duplicate_provider_transactions"] == 0
+
+
 def test_client_cannot_mark_paid_by_create_payload(client):
     request = _create_request(client)
     assert request["status"] == "pending"

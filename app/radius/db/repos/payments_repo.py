@@ -617,6 +617,75 @@ class PaymentServiceApplyRepository:
         return [dict(row) for row in rows]
 
 
+class PaymentReconciliationRepository:
+    def summary(self, *, tenant_id: int) -> dict[str, Any]:
+        paid_without_ledger = [
+            dict(row) for row in db().execute(
+                """
+                SELECT id, reference_code, amount, currency, status, created_at
+                FROM payment_requests
+                WHERE tenant_id = ? AND status = 'paid' AND ledger_entry_id IS NULL
+                ORDER BY id DESC
+                """,
+                (tenant_id,),
+            ).fetchall()
+        ]
+        paid_not_applied = [
+            dict(row) for row in db().execute(
+                """
+                SELECT id, reference_code, amount, currency, status,
+                       service_apply_status, ledger_entry_id, created_at
+                FROM payment_requests
+                WHERE tenant_id = ? AND status = 'paid'
+                  AND COALESCE(service_apply_status, 'not_applied') != 'applied'
+                ORDER BY id DESC
+                """,
+                (tenant_id,),
+            ).fetchall()
+        ]
+        expired_pending = [
+            dict(row) for row in db().execute(
+                """
+                SELECT id, reference_code, amount, currency, status, expires_at, created_at
+                FROM payment_requests
+                WHERE tenant_id = ?
+                  AND status IN ('pending', 'proof_submitted', 'under_review')
+                  AND expires_at IS NOT NULL
+                  AND expires_at < ?
+                ORDER BY expires_at ASC
+                """,
+                (tenant_id, now_iso()),
+            ).fetchall()
+        ]
+        duplicate_provider_transactions = [
+            dict(row) for row in db().execute(
+                """
+                SELECT provider_transaction_id, COUNT(*) AS count,
+                       GROUP_CONCAT(t.payment_request_id) AS payment_request_ids
+                FROM payment_collection_transactions t
+                JOIN payment_requests r ON r.id = t.payment_request_id
+                WHERE r.tenant_id = ? AND t.provider_transaction_id IS NOT NULL
+                GROUP BY t.provider_transaction_id
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC
+                """,
+                (tenant_id,),
+            ).fetchall()
+        ]
+        return {
+            "paid_without_ledger": paid_without_ledger,
+            "paid_not_applied": paid_not_applied,
+            "expired_pending": expired_pending,
+            "duplicate_provider_transactions": duplicate_provider_transactions,
+            "counts": {
+                "paid_without_ledger": len(paid_without_ledger),
+                "paid_not_applied": len(paid_not_applied),
+                "expired_pending": len(expired_pending),
+                "duplicate_provider_transactions": len(duplicate_provider_transactions),
+            },
+        }
+
+
 class PaymentWebhookEventRepository:
     def create(
         self,

@@ -7,6 +7,7 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos.payments_repo import (
     PaymentCollectionLedgerRepository,
     PaymentProofRepository,
+    PaymentReconciliationRepository,
     PaymentRequestRepository,
     PaymentServiceApplyRepository,
     PaymentSettingsRepository,
@@ -41,6 +42,12 @@ def register_payment_collection_routes(bp: Blueprint) -> None:
         "/payments/review-queue",
         "payment_collection_review_queue_web",
         payment_collection_review_queue_web,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/payments/reconciliation",
+        "payment_collection_reconciliation_web",
+        payment_collection_reconciliation_web,
         methods=["GET"],
     )
     bp.add_url_rule(
@@ -139,6 +146,11 @@ def payment_collection_request_detail(request_id: int):
 def payment_collection_review_queue_web():
     items = PaymentRequestRepository().list_for_review(_tid())
     return render_template("radius/payment_collection_review_queue.html", items=items)
+
+
+def payment_collection_reconciliation_web():
+    report = PaymentReconciliationRepository().summary(tenant_id=_tid())
+    return render_template("radius/payment_collection_reconciliation.html", report=report)
 
 
 def _reviewable(request_id: int):

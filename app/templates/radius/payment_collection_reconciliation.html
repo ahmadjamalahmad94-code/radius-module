@@ -1,0 +1,45 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}Payment Reconciliation{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
+{% block page_title %}Payment Reconciliation{% endblock %}
+{% block page_sub %}<span class="sub">collection health</span>{% endblock %}
+
+{% block content %}
+<div class="hub-grid hub-grid--4" style="margin-bottom:16px">
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_without_ledger }}</strong><br><span class="small">Paid without ledger</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_not_applied }}</strong><br><span class="small">Paid not applied</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.expired_pending }}</strong><br><span class="small">Expired pending</span></div>
+  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.duplicate_provider_transactions }}</strong><br><span class="small">Duplicate provider risks</span></div>
+</div>
+
+{% for key, title in [
+  ('paid_without_ledger', 'Paid without ledger'),
+  ('paid_not_applied', 'Paid not applied'),
+  ('expired_pending', 'Expired pending'),
+  ('duplicate_provider_transactions', 'Duplicate provider risks')
+] %}
+<div class="hub-card" style="padding:18px;margin-bottom:16px">
+  <h3>{{ title }}</h3>
+  {% set rows = report[key] %}
+  {% if rows %}
+  <table class="hub-table">
+    <thead><tr><th>#</th><th>Reference</th><th>Status</th><th>Amount</th><th>Info</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="mono">{{ row.id or row.provider_transaction_id }}</td>
+        <td class="mono">{{ row.reference_code or '-' }}</td>
+        <td>{{ row.status or '-' }}</td>
+        <td class="mono">{% if row.amount %}{{ "%.2f"|format(row.amount) }} {{ row.currency }}{% else %}-{% endif %}</td>
+        <td class="small">{{ row.expires_at or row.service_apply_status or row.payment_request_ids or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="small">No findings.</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

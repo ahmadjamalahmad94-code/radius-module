@@ -9,6 +9,7 @@ from ...radius.db.repos.payments_repo import (
     PAYMENT_PURPOSES,
     PaymentCollectionLedgerRepository,
     PaymentProofRepository,
+    PaymentReconciliationRepository,
     PaymentRequestRepository,
     PaymentServiceApplyRepository,
     PaymentSettings,
@@ -47,6 +48,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/admin/payments/review-queue",
                     "payment_collection_review_queue", methods=["GET"],
                     view_func=require_api_token(payment_collection_review_queue))
+    bp.add_url_rule("/admin/payments/reconciliation",
+                    "payment_collection_reconciliation", methods=["GET"],
+                    view_func=require_api_token(payment_collection_reconciliation))
     bp.add_url_rule("/admin/payments/requests/<int:request_id>/approve",
                     "payment_collection_approve", methods=["POST"],
                     view_func=require_api_token(payment_collection_approve))
@@ -356,6 +360,10 @@ def payment_collection_submit_proof(request_id: int):
 def payment_collection_review_queue():
     rows = PaymentRequestRepository().list_for_review(_tid())
     return ok({"items": [_request_payload(row) for row in rows], "count": len(rows)})
+
+
+def payment_collection_reconciliation():
+    return ok({"reconciliation": PaymentReconciliationRepository().summary(tenant_id=_tid())})
 
 
 def _reviewable_request(request_id: int):

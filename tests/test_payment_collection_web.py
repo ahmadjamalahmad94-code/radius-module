@@ -126,5 +126,14 @@ def test_requests_list_and_detail_render_without_paid_apply_buttons(client):
     detail_html = detail.get_data(as_text=True)
     assert request["reference_code"] in detail_html
     assert "Proofs" in detail_html
-    assert "Apply service" not in detail_html
+    assert "Record service apply" not in detail_html
     assert "Mark paid" not in detail_html
+
+
+def test_payment_collection_reconciliation_page_renders(client):
+    _web_login(client)
+    response = client.get("/admin/radius/payments/reconciliation")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Payment Reconciliation" in html
+    assert "Paid without ledger" in html
