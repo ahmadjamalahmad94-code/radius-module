@@ -52,7 +52,39 @@ def test_hotspot_manual_script_sections_and_validation():
     )
     assert "HOBERADIUS_SETUP:88:hotspot" in plan.script_text
     assert "/ip hotspot add name=\"hs-srv\"" in plan.script_text
+    assert "/ip dhcp-server add name=\"hs-bridge-dhcp\"" in plan.script_text
+    assert '/ip dhcp-server network add address="10.77.50.0/24" gateway="10.77.50.1" dns-server="10.77.50.1"' in plan.script_text
     assert "/tool ping 8.8.8.8 count=5" in plan.script_text
+
+
+def test_hotspot_routeros7_profile_and_server_commands_avoid_invalid_comment_property():
+    plan = HotspotBootstrapPlanner().plan(
+        wizard_run_id=92,
+        mode="manual",
+        payload={
+            "selected_interfaces": ["ether3", "ether4"],
+            "network_cidr": "10.77.52.0/24",
+            "pool_range": "10.77.52.20-10.77.52.220",
+            "gateway_ip": "10.77.52.1",
+            "bridge_name": "hs-bridge",
+            "profile_name": "hs-profile",
+            "server_name": "hs-server",
+        },
+        blocked_interfaces=["ether1", "hr-wg"],
+        blocked_network_cidrs=["10.10.0.0/24"],
+    )
+
+    hotspot_add_lines = [
+        line.strip()
+        for line in plan.script_text.splitlines()
+        if line.strip().startswith("/ip hotspot profile add")
+        or line.strip().startswith("/ip hotspot add")
+    ]
+
+    assert hotspot_add_lines
+    assert all(" comment=" not in line for line in hotspot_add_lines)
+    assert '/ip hotspot profile add name="hs-profile" hotspot-address="10.77.52.1" dns-name="hotspot.local" radius-interim-update=1m' in plan.script_text
+    assert '/ip hotspot add name="hs-server" interface="hs-bridge" address-pool="hs-bridge-pool" profile="hs-profile"' in plan.script_text
 
 
 def test_hotspot_wan_and_vpn_exclusion_enforced():

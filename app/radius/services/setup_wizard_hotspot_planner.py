@@ -126,6 +126,8 @@ class HotspotBootstrapPlanner:
         bridge_name = _name(payload.get("bridge_name"), fallback=f"hr-hs-br-{wizard_run_id}")
         profile_name = _name(payload.get("profile_name"), fallback=f"hr-hs-profile-{wizard_run_id}")
         server_name = _name(payload.get("server_name"), fallback=f"hr-hs-{wizard_run_id}")
+        pool_name = _name(payload.get("pool_name"), fallback=f"{bridge_name}-pool")
+        dhcp_server_name = _name(payload.get("dhcp_server_name"), fallback=f"{bridge_name}-dhcp")
         dns_name = str(payload.get("dns_name") or "hotspot.local").strip()
 
         if normalized == "manual":
@@ -166,16 +168,25 @@ class HotspotBootstrapPlanner:
             f':if ([:len [/ip address find where interface="{bridge_name}" and address="{gateway_ip}/{network.prefixlen}"]] = 0) do={{',
             f'  /ip address add interface="{bridge_name}" address="{gateway_ip}/{network.prefixlen}" comment="{tag}"',
             "}",
-            f':if ([:len [/ip pool find where name="{bridge_name}-pool"]] = 0) do={{',
-            f'  /ip pool add name="{bridge_name}-pool" ranges="{pool_range}" comment="{tag}"',
+            f':if ([:len [/ip pool find where name="{pool_name}"]] = 0) do={{',
+            f'  /ip pool add name="{pool_name}" ranges="{pool_range}" comment="{tag}"',
+            "}",
+            "",
+            "# --- DHCP for hotspot clients ---",
+            f':if ([:len [/ip dhcp-server find where name="{dhcp_server_name}"]] = 0) do={{',
+            f'  /ip dhcp-server add name="{dhcp_server_name}" interface="{bridge_name}" address-pool="{pool_name}" disabled=no comment="{tag}"',
+            "}",
+            f':if ([:len [/ip dhcp-server network find where address="{network}"]] = 0) do={{',
+            f'  /ip dhcp-server network add address="{network}" gateway="{gateway_ip}" dns-server="{gateway_ip}" comment="{tag}"',
             "}",
             "",
             "# --- Hotspot profile + server ---",
+            "# RouterOS 7 does not accept comment= on these Hotspot add commands; names are the stable identifiers.",
             f':if ([:len [/ip hotspot profile find where name="{profile_name}"]] = 0) do={{',
-            f'  /ip hotspot profile add name="{profile_name}" hotspot-address="{gateway_ip}" dns-name="{dns_name}" radius-interim-update=1m comment="{tag}"',
+            f'  /ip hotspot profile add name="{profile_name}" hotspot-address="{gateway_ip}" dns-name="{dns_name}" radius-interim-update=1m',
             "}",
             f':if ([:len [/ip hotspot find where name="{server_name}"]] = 0) do={{',
-            f'  /ip hotspot add name="{server_name}" interface="{bridge_name}" address-pool="{bridge_name}-pool" profile="{profile_name}" comment="{tag}"',
+            f'  /ip hotspot add name="{server_name}" interface="{bridge_name}" address-pool="{pool_name}" profile="{profile_name}"',
             "}",
             "",
             "# --- NAT for hotspot client network only ---",
@@ -189,7 +200,9 @@ class HotspotBootstrapPlanner:
             "# ===== Validation checks =====",
             "/interface bridge print detail where name=\"" + bridge_name + "\"",
             "/ip hotspot print detail where name=\"" + server_name + "\"",
-            "/ip pool print detail where name=\"" + bridge_name + "-pool\"",
+            "/ip pool print detail where name=\"" + pool_name + "\"",
+            "/ip dhcp-server print detail where name=\"" + dhcp_server_name + "\"",
+            "/ip dhcp-server network print detail where address=\"" + str(network) + "\"",
             "/ip firewall nat print detail where comment~\"" + tag + "\"",
             "/tool ping 8.8.8.8 count=5",
         ]
@@ -201,13 +214,15 @@ class HotspotBootstrapPlanner:
             rollback_script_text=(
                 "# Rollback guidance:\n"
                 f"# - Review objects by tag '{tag}' before manual rollback.\n"
-                "# - Remove bridge ports first, then hotspot server/profile/pool, then bridge.\n"
+                "# - Remove bridge ports first, then hotspot server/profile/DHCP/pool, then bridge.\n"
                 "# - Keep backup before rollback."
             ),
             validation_commands=[
                 "/interface bridge print detail",
                 "/ip hotspot print detail",
                 "/ip pool print detail",
+                "/ip dhcp-server print detail",
+                "/ip dhcp-server network print detail",
                 "/ip firewall nat print detail",
                 "/tool ping 8.8.8.8 count=5",
             ],
@@ -218,9 +233,10 @@ class HotspotBootstrapPlanner:
             ],
             generated_objects=[
                 {"type": "interface.bridge", "name": bridge_name, "tag": tag},
-                {"type": "ip.pool", "name": f"{bridge_name}-pool", "tag": tag},
-                {"type": "ip.hotspot.profile", "name": profile_name, "tag": tag},
-                {"type": "ip.hotspot.server", "name": server_name, "tag": tag},
+                {"type": "ip.pool", "name": pool_name, "tag": tag},
+                {"type": "ip.dhcp-server", "name": dhcp_server_name, "tag": tag},
+                {"type": "ip.hotspot.profile", "name": profile_name, "tag": "name-only"},
+                {"type": "ip.hotspot.server", "name": server_name, "tag": "name-only"},
             ],
             masked_sensitive_values={},
             computed={
@@ -228,6 +244,8 @@ class HotspotBootstrapPlanner:
                 "pool_range": pool_range,
                 "gateway_ip": gateway_ip,
                 "bridge_name": bridge_name,
+                "pool_name": pool_name,
+                "dhcp_server_name": dhcp_server_name,
                 "profile_name": profile_name,
                 "server_name": server_name,
                 "selected_interfaces": selected_interfaces,
