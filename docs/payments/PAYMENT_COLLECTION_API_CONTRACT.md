@@ -52,6 +52,15 @@ purpose enablement. The created request starts as `pending`, receives a
 collision-safe `reference_code`, and copies the receiver wallet for audit
 stability.
 
+Purpose enablement is settings-driven:
+
+- `card_purchase` requires `allow_cards`.
+- `monthly_subscription`, `subscriber_renewal`, `quota_topup`, and
+  `time_extension` require `allow_monthly_subscriptions`.
+- `distributor_payment` requires `allow_distributor_payments`.
+- `loan_settlement` is accepted for manual review and later ledger/service
+  settlement slices.
+
 The instructions endpoint returns safe payer fields only:
 
 - amount
@@ -97,4 +106,3 @@ Service application is a later backend-only step. It requires:
 2. verified transaction
 3. linked ledger entry
 4. idempotency guard to prevent double issuance, extension, or credit
-

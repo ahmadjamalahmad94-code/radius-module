@@ -276,6 +276,33 @@ class PaymentRequestRepository:
         ).fetchone()
         return dict(row) if row else None
 
+    def list(
+        self,
+        tenant_id: int,
+        *,
+        status: str = "",
+        purpose: str = "",
+        payer_type: str = "",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM payment_requests WHERE tenant_id = ?"
+        vals: list[Any] = [tenant_id]
+        if status:
+            status = _require_choice(status, PAYMENT_STATUSES, "status")
+            sql += " AND status = ?"
+            vals.append(status)
+        if purpose:
+            purpose = _require_choice(purpose, PAYMENT_PURPOSES, "purpose")
+            sql += " AND purpose = ?"
+            vals.append(purpose)
+        if payer_type:
+            sql += " AND payer_type = ?"
+            vals.append(payer_type)
+        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+        vals.extend([max(1, min(int(limit), 500)), max(0, int(offset))])
+        return [dict(row) for row in db().execute(sql, vals).fetchall()]
+
     def update_status(self, tenant_id: int, request_id: int, status: str) -> None:
         status = _require_choice(status, PAYMENT_STATUSES, "status")
         with transaction() as conn:
