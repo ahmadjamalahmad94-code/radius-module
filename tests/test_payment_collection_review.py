@@ -114,6 +114,10 @@ def test_approve_creates_manual_transaction_and_cannot_approve_twice(client):
     data = approved.get_json()["data"]
     assert data["request"]["status"] == "paid"
     assert data["transaction"]["status"] == "paid_manual"
+    assert data["request"]["ledger_entry_id"]
+    assert data["ledger_entry"]["entry_type"] == "payment"
+    assert data["ledger_entry"]["source_type"] == "payment_collection_request"
+    assert data["ledger_entry"]["source_id"] == request["id"]
 
     duplicate = client.post(
         f"/api/v1/admin/payments/requests/{request['id']}/approve",
@@ -121,6 +125,40 @@ def test_approve_creates_manual_transaction_and_cannot_approve_twice(client):
         headers=_auth(),
     )
     assert duplicate.status_code == 422
+
+
+def test_approved_request_posts_one_idempotent_ledger_entry(client):
+    request = _create_request(client)
+    client.post(
+        f"/api/v1/payments/requests/{request['id']}/proofs",
+        json={"reference_number": "REF123"},
+        headers=_auth(),
+    )
+    approved = client.post(
+        f"/api/v1/admin/payments/requests/{request['id']}/approve",
+        json={"review_note": "matched wallet"},
+        headers=_auth(),
+    )
+    assert approved.status_code == 200
+
+    from app.radius.db.connection import db
+    from app.radius.db.repos.payments_repo import PaymentCollectionLedgerRepository
+
+    again = PaymentCollectionLedgerRepository().apply_paid_request(
+        tenant_id=1,
+        request_id=request["id"],
+        actor="test",
+    )
+    assert again["id"] == approved.get_json()["data"]["request"]["ledger_entry_id"]
+
+    count = db().execute(
+        """
+        SELECT COUNT(*) AS c FROM accounting_ledger_entries
+        WHERE tenant_id=1 AND source_type='payment_collection_request' AND source_id=?
+        """,
+        (request["id"],),
+    ).fetchone()["c"]
+    assert count == 1
 
 
 def test_reject_success_and_no_transaction(client):
@@ -150,4 +188,3 @@ def test_reject_success_and_no_transaction(client):
 def test_client_cannot_mark_paid_by_create_payload(client):
     request = _create_request(client)
     assert request["status"] == "pending"
-

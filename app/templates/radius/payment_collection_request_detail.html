@@ -20,6 +20,7 @@
     <dt>Amount</dt><dd class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</dd>
     <dt>Wallet</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
     <dt>Status</dt><dd>{{ item.status }}</dd>
+    <dt>Ledger</dt><dd class="mono">{{ item.ledger_entry_id or 'not posted yet' }}</dd>
     <dt>Expires</dt><dd class="mono">{{ item.expires_at or '-' }}</dd>
   </dl>
 </div>
@@ -59,7 +60,7 @@
     <input class="hub-input" name="review_note" placeholder="Reject note" style="width:220px;display:inline-block">
     <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> Reject proof</button>
   </form>
-  <p class="small">Approval marks payment paid only. Ledger and service activation are not executed in this slice.</p>
+  <p class="small">Approval marks payment paid and posts one idempotent ledger entry. Service activation is not executed in this slice.</p>
 </div>
 {% endif %}
 {% endblock %}

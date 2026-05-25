@@ -7,6 +7,7 @@ from ...radius.core.errors import RadiusValidationError
 from ...radius.db.repos.payments_repo import (
     CURRENCIES,
     PAYMENT_PURPOSES,
+    PaymentCollectionLedgerRepository,
     PaymentProofRepository,
     PaymentRequestRepository,
     PaymentSettings,
@@ -159,6 +160,8 @@ def _request_payload(row: dict) -> dict:
         "status": row["status"],
         "expires_at": row["expires_at"],
         "created_by": row["created_by"],
+        "ledger_entry_id": row.get("ledger_entry_id"),
+        "ledger_applied_at": row.get("ledger_applied_at"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -375,8 +378,17 @@ def payment_collection_approve(request_id: int):
         provider_transaction_id=None,
         raw_payload={"proof_id": proof["id"], "review": "approved_manual"},
     )
+    ledger_entry = PaymentCollectionLedgerRepository().apply_paid_request(
+        tenant_id=_tid(),
+        request_id=request_id,
+        actor=_actor(),
+    )
     updated = PaymentRequestRepository().get(_tid(), request_id)
-    return ok({"request": _request_payload(updated), "transaction": transaction})
+    return ok({
+        "request": _request_payload(updated),
+        "transaction": transaction,
+        "ledger_entry": ledger_entry,
+    })
 
 
 def payment_collection_reject(request_id: int):

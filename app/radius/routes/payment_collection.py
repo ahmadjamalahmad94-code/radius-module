@@ -5,6 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos.payments_repo import (
+    PaymentCollectionLedgerRepository,
     PaymentProofRepository,
     PaymentRequestRepository,
     PaymentSettingsRepository,
@@ -161,7 +162,12 @@ def payment_collection_approve_web(request_id: int):
             status="paid_manual",
             raw_payload={"proof_id": proof["id"], "review": "approved_manual_web"},
         )
-        flash("Payment approved manually. Service activation is still pending later slices.", "success")
+        PaymentCollectionLedgerRepository().apply_paid_request(
+            tenant_id=_tid(),
+            request_id=request_id,
+            actor="admin-web",
+        )
+        flash("Payment approved manually and posted to ledger. Service activation is still pending later slices.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
 
 

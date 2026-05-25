@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso
+from . import accounting_repo
 
 PAYMENT_PROVIDERS = {"manual_wallet", "jawwal_pay"}
 CONFIRMATION_MODES = {"manual", "api"}
@@ -422,6 +423,101 @@ class PaymentTransactionRepository:
             )
             new_id = cur.lastrowid
         row = db().execute("SELECT * FROM payment_collection_transactions WHERE id = ?", (new_id,)).fetchone()
+        return dict(row)
+
+
+class PaymentCollectionLedgerRepository:
+    def apply_paid_request(self, *, tenant_id: int, request_id: int, actor: str = "") -> dict[str, Any]:
+        with transaction() as conn:
+            request_row = conn.execute(
+                "SELECT * FROM payment_requests WHERE tenant_id = ? AND id = ?",
+                (tenant_id, request_id),
+            ).fetchone()
+            if not request_row:
+                raise ValueError("payment_request")
+            request_data = dict(request_row)
+            if request_data["status"] != "paid":
+                raise ValueError("status")
+            existing_ledger_id = request_data.get("ledger_entry_id")
+            if existing_ledger_id:
+                existing_entry = conn.execute(
+                    "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ? AND id = ?",
+                    (tenant_id, existing_ledger_id),
+                ).fetchone()
+                if existing_entry:
+                    return dict(existing_entry)
+
+            existing = conn.execute(
+                """
+                SELECT * FROM accounting_ledger_entries
+                WHERE tenant_id = ? AND source_type = 'payment_collection_request' AND source_id = ?
+                """,
+                (tenant_id, request_id),
+            ).fetchone()
+            if existing:
+                ledger_id = existing["id"]
+                conn.execute(
+                    """
+                    UPDATE payment_requests
+                    SET ledger_entry_id = ?, ledger_applied_at = COALESCE(ledger_applied_at, ?), updated_at = ?
+                    WHERE tenant_id = ? AND id = ?
+                    """,
+                    (ledger_id, now_iso(), now_iso(), tenant_id, request_id),
+                )
+                return dict(existing)
+
+            subscriber_id = None
+            username = ""
+            if request_data["payer_type"] == "subscriber" and request_data.get("payer_id"):
+                subscriber = conn.execute(
+                    """
+                    SELECT id, username FROM subscribers
+                    WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
+                    """,
+                    (tenant_id, request_data["payer_id"]),
+                ).fetchone()
+                if subscriber:
+                    subscriber_id = subscriber["id"]
+                    username = subscriber["username"] or ""
+
+            ledger_id = accounting_repo.create_ledger_entry(
+                conn,
+                tenant_id=tenant_id,
+                entry_type="payment",
+                amount=float(request_data["amount"]),
+                direction="credit",
+                currency=request_data["currency"],
+                subscriber_id=subscriber_id,
+                username=username,
+                operator=actor,
+                source_type="payment_collection_request",
+                source_id=request_id,
+                related_type="payment_request",
+                related_id=request_id,
+                status="posted",
+                notes=f"Manual wallet payment request {request_data['reference_code']}",
+                metadata={
+                    "payment_request_id": request_id,
+                    "reference_code": request_data["reference_code"],
+                    "purpose": request_data["purpose"],
+                    "provider": request_data["provider"],
+                    "receiver_wallet": request_data["receiver_wallet"],
+                    "service_apply": "not_applied_in_rm_p5",
+                },
+            )
+            applied_at = now_iso()
+            conn.execute(
+                """
+                UPDATE payment_requests
+                SET ledger_entry_id = ?, ledger_applied_at = ?, updated_at = ?
+                WHERE tenant_id = ? AND id = ?
+                """,
+                (ledger_id, applied_at, applied_at, tenant_id, request_id),
+            )
+        row = db().execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ? AND id = ?",
+            (tenant_id, ledger_id),
+        ).fetchone()
         return dict(row)
 
 
