@@ -740,9 +740,22 @@ class SetupVerificationService:
         peer_name = str(vpn_payload.get("peer_name") or "vps-peer")
 
         if mode == "pasted_output":
-            vpn_ok = ("latest handshake" in output.lower()) or ("wireguard" in output.lower() and "running=yes" in output.lower())
+            output_lower = output.lower()
             router_ping_ok = _has_ping_success(output, vps_vpn_ip or "10.10.0.1")
-            vps_ping_ok = ("vps_ping_router=ok" in output.lower()) or ("vps->router ok" in output.lower())
+            vpn_text_ok = any(
+                marker in output_lower
+                for marker in (
+                    "latest handshake",
+                    "latest-handshake",
+                    "last-handshake",
+                    "wireguard",
+                    "interface=hr-wg",
+                    "public-key=",
+                )
+            )
+            vpn_ok = router_ping_ok or vpn_text_ok
+            observations["vpn_evidence"] = "router_ping_vps" if router_ping_ok else "pasted_wireguard_output"
+            vps_ping_ok = ("vps_ping_router=ok" in output_lower) or ("vps->router ok" in output_lower)
             if not vps_ping_ok and router_vpn_ip and router_ping_ok:
                 try:
                     back_ping = self.vps_probe.ping_router_vpn_ip(router_vpn_ip)
@@ -819,16 +832,16 @@ class SetupVerificationService:
         by_key = {item["key"]: item["status"] for item in checks}
         if by_key.get("vpn_tunnel") != CHECK_SUCCESS:
             diagnostic_codes.append("vpn_not_handshaking")
-        if by_key.get("router_ping_vps") != CHECK_SUCCESS or by_key.get("vps_ping_router") != CHECK_SUCCESS:
+        if by_key.get("router_ping_vps") != CHECK_SUCCESS or (mode != "pasted_output" and by_key.get("vps_ping_router") != CHECK_SUCCESS):
             diagnostic_codes.append("route_missing")
-        if by_key.get("radius_reachable") != CHECK_SUCCESS:
+        if by_key.get("radius_reachable") != CHECK_SUCCESS and mode != "pasted_output":
             diagnostic_codes.append("radius_server_unreachable")
-        if by_key.get("api_login") != CHECK_SUCCESS:
+        if by_key.get("api_login") != CHECK_SUCCESS and mode != "pasted_output":
             diagnostic_codes.append("api_login_failed")
         if by_key.get("generated_api_user_present") == CHECK_FAILED:
             diagnostic_codes.append("api_user_missing")
 
-        required = {"vpn_tunnel", "router_ping_vps", "vps_ping_router", "radius_reachable", "api_login"}
+        required = {"vpn_tunnel", "router_ping_vps"} if mode == "pasted_output" else {"vpn_tunnel", "router_ping_vps", "vps_ping_router", "radius_reachable", "api_login"}
         gate_unlocked = _all_success(checks, required)
         overall_status = VERIFY_STATUS_SUCCESS if gate_unlocked else VERIFY_STATUS_FAILED
         if any(item["status"] == CHECK_BLOCKED for item in checks):

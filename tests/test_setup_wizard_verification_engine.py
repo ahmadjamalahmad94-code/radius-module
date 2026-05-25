@@ -73,6 +73,16 @@ def _vpn_router_only_output() -> str:
     )
 
 
+def _vpn_router_ping_success_output() -> str:
+    return "\n".join(
+        [
+            '/tool ping "10.10.0.1" count=5',
+            "sent=5 received=5 packet-loss=0% min-rtt=61ms310us avg-rtt=61ms917us max-rtt=62ms653us",
+            '/radius print detail where comment~"HOBERADIUS_SETUP:10:radius"',
+        ]
+    )
+
+
 class _OkVpsProbeAdapter:
     def ping_router_vpn_ip(self, ip: str, *, timeout_seconds: float = 2.0) -> dict:
         return {"ok": True, "target": ip, "stdout": "3 packets transmitted, 3 received, 0% packet loss"}
@@ -185,6 +195,22 @@ def test_vpn_radius_pasted_output_can_confirm_vps_ping_from_server_probe():
     assert result["gate_unlocked"] is True
     assert result["overall_status"] == "success"
     assert result["raw_observations"]["vps_ping_router_probe"]["target"] == "10.10.0.7"
+
+
+def test_vpn_radius_router_ping_from_mikrotik_unlocks_without_server_back_ping():
+    svc = SetupVerificationService()
+    result = svc.verify_vpn_radius(
+        run={},
+        vpn_payload={"router_vpn_ip": "10.10.0.7", "vps_vpn_ip": "10.10.0.1", "radius_server_ip": "10.10.0.1"},
+        mode="pasted_output",
+        payload={"output": _vpn_router_ping_success_output()},
+    ).to_dict()
+
+    by_key = {item["key"]: item["status"] for item in result["checks"]}
+    assert result["gate_unlocked"] is True
+    assert result["overall_status"] == "success"
+    assert by_key["router_ping_vps"] == "success"
+    assert result["raw_observations"]["vpn_evidence"] == "router_ping_vps"
 
 
 def test_server_ping_command_is_read_only_but_writes_remain_blocked():
