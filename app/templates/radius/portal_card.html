@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card User Portal - HobeRadius</title>
+  <style>
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}.wrap{max-width:1100px;margin:0 auto;padding:28px}.hero,.card{background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 18px 55px rgba(15,23,42,.06);padding:22px;margin-bottom:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.tile{border:1px solid #e2e8f0;border-radius:14px;padding:16px;background:#f8fafc}button{padding:10px 14px;border:0;border-radius:10px;background:#4f46e5;color:white;font-weight:800}.muted{color:#64748b}
+  </style>
+</head>
+<body>
+<main class="wrap" data-testid="card-portal-home">
+  <section class="hero">
+    <h1>{{ dashboard.card_user.display_name }}</h1>
+    <p class="muted">{{ dashboard.walled_garden_note }}</p>
+    <a href="{{ url_for('radius.portal_card_logout') }}">Sign out</a>
+  </section>
+  <section class="grid">
+    <div class="tile">Wallet <b>{{ dashboard.wallet.balance }}</b></div>
+    <div class="tile">Owned cards <b>{{ dashboard.cards|length }}</b></div>
+    <div class="tile">Purchases <b>{{ dashboard.purchases|length }}</b></div>
+    <div class="tile">Notifications <b>{{ dashboard.notifications|length }}</b></div>
+  </section>
+  <section class="card">
+    <h2>Marketplace</h2>
+    <div class="grid" data-testid="card-marketplace-packages">
+      {% for package in dashboard.marketplace %}
+        <form method="post" action="{{ url_for('radius.portal_card_purchase') }}" class="tile">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <input type="hidden" name="package_id" value="{{ package.id }}">
+          <h3>{{ package.name }}</h3>
+          <p>{{ package.price }} {{ package.currency }}</p>
+          <button type="submit">Purchase</button>
+        </form>
+      {% else %}
+        <div class="tile">No marketplace packages yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <h2>Owned cards</h2>
+    {% for card in dashboard.cards %}
+      <p>{{ card.username }} - {{ 'used' if card.used else 'unused' }}</p>
+    {% else %}
+      <p>No owned cards yet.</p>
+    {% endfor %}
+  </section>
+</main>
+</body>
+</html>

@@ -10,6 +10,15 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 _PUBLIC_ENDPOINTS = {
     "radius.auth_login",
     "radius.auth_logout",
+    "radius.portal_subscriber_login",
+    "radius.portal_subscriber_logout",
+    "radius.portal_subscriber_home",
+    "radius.portal_subscriber_loan_request",
+    "radius.portal_subscriber_renewal_request",
+    "radius.portal_card_login",
+    "radius.portal_card_logout",
+    "radius.portal_card_home",
+    "radius.portal_card_purchase",
     "radius._radius_health",
     "radius._radius_healthz",
 }
@@ -94,6 +103,7 @@ def _register_all(bp: Blueprint) -> None:
     from .communications import register_communications_routes
     from .events_risk import register_events_risk_routes
     from .operations_center import register_operations_center_routes
+    from .customer_portals import register_customer_portal_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .lifecycle import register_lifecycle_routes
@@ -118,6 +128,7 @@ def _register_all(bp: Blueprint) -> None:
     register_communications_routes(bp)
     register_events_risk_routes(bp)
     register_operations_center_routes(bp)
+    register_customer_portal_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_lifecycle_routes(bp)

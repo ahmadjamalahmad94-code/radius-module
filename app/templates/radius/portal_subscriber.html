@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subscriber Portal - HobeRadius</title>
+  <style>
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px}
+    .hero,.card{background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 18px 55px rgba(15,23,42,.06);padding:22px;margin-bottom:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+    .kpi{padding:16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0}
+    .kpi b{display:block;font-size:24px;margin-top:5px}
+    table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}
+    input,textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px}button{padding:11px 14px;border:0;border-radius:10px;background:#4f46e5;color:white;font-weight:800}
+    .muted{color:#64748b}.danger{color:#be123c}.ok{color:#047857}
+  </style>
+</head>
+<body>
+<main class="wrap" data-testid="subscriber-portal-home">
+  <section class="hero">
+    <h1>Hello {{ dashboard.subscriber.username }}</h1>
+    <p class="muted">{{ dashboard.walled_garden_note }}</p>
+    <a href="{{ url_for('radius.portal_subscriber_logout') }}">Sign out</a>
+  </section>
+  <section class="grid">
+    <div class="kpi">Status <b>{{ dashboard.subscription.status }}</b></div>
+    <div class="kpi">Remaining days <b>{{ dashboard.subscription.remaining_days if dashboard.subscription.remaining_days is not none else '-' }}</b></div>
+    <div class="kpi">Debt <b>{{ dashboard.debt }}</b></div>
+    <div class="kpi">Download bytes <b>{{ dashboard.usage.download_bytes }}</b></div>
+  </section>
+  <section class="card">
+    <h2>Loan request</h2>
+    <p class="{{ 'ok' if dashboard.loan_policy.enabled else 'danger' }}">{{ dashboard.loan_policy.reason or 'Auto approval is available within your plan policy.' }}</p>
+    <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}" data-testid="subscriber-loan-request-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>Requested minutes <input name="requested_minutes" type="number" min="1" value="{{ dashboard.loan_policy.allowed_minutes or 1440 }}"></label>
+      <label>Reason <textarea name="reason"></textarea></label>
+      <button type="submit">Submit loan request</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Renewal request</h2>
+    <p class="muted">{{ dashboard.payments_placeholder.message }}</p>
+    <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}" data-testid="subscriber-renewal-request-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>Note <textarea name="reason"></textarea></label>
+      <button type="submit">Request renewal</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Sessions</h2>
+    <table data-testid="subscriber-sessions-table"><thead><tr><th>Session</th><th>IP</th><th>Started</th><th>Stopped</th></tr></thead><tbody>
+      {% for item in dashboard.sessions %}<tr><td>{{ item.acctsessionid }}</td><td>{{ item.framedipaddress }}</td><td>{{ item.acctstarttime }}</td><td>{{ item.acctstoptime or 'online' }}</td></tr>{% else %}<tr><td colspan="4">No sessions yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="card">
+    <h2>Loans and payments</h2>
+    <p>Loans: {{ dashboard.loans|length }} / Payments: {{ dashboard.payments|length }} / Cards: {{ dashboard.cards|length }} / Notifications: {{ dashboard.notifications|length }}</p>
+  </section>
+</main>
+</body>
+</html>
