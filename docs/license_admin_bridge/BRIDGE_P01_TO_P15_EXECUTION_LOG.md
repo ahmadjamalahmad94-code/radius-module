@@ -263,3 +263,42 @@
 - GO/NO-GO for next prompt:
   - GO for P05 if the prompt boundary allows Flutter work; otherwise stop for
     boundary clarification.
+
+## P05 — Flutter Capacity UX and Locked/Upgrade Surfaces
+
+- Start time: 2026-05-25 12:08:00 +03:00
+- End time: 2026-05-25 12:09:02 +03:00
+- Commit: Not completed. No implementation commit was created for P05.
+- Files changed:
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+- What was implemented:
+  - Nothing. P05 was stopped before implementation.
+- What was intentionally not implemented:
+  - No Flutter UI changes.
+  - No backend API additions.
+  - No radius-module-admin changes.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - Not run for P05 because implementation was stopped at the boundary check.
+- Full pytest status:
+  - Not run for P05.
+- Timeout notes if any:
+  - None for P05.
+- Admin endpoint gaps:
+  - None added for P05.
+- Codex follow-ups added:
+  - None. This is a local scope conflict, not a radius-module-admin endpoint gap.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No. P05 requires `radius-module-app` Flutter UI, but the active master
+    boundary for this run says to work only inside `radius-module`.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - P05 cannot be completed under the current "radius-module only" boundary
+    because its prompt scope explicitly includes `radius-module-app` Flutter UI.
+  - Proceeding would require explicit permission to work in the Flutter app, or
+    a revised backend-only P05 prompt.
+- GO/NO-GO for next prompt:
+  - NO-GO. Stop for user clarification before P06.
