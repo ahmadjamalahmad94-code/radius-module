@@ -1,0 +1,57 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Communications — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bullhorn"></i>{% endblock %}
+{% block page_title %}Communications Center{% endblock %}
+{% block page_sub %}<span class="sub">Notifications, templates, campaigns, audiences, and queued delivery tracking.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Communications Center",
+  subtitle="Queued-only provider foundation for SMS, WhatsApp, Telegram, internal messages, and future channels. No external provider secrets are stored here.",
+  icon="bullhorn",
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> Send message</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="communications-summary">
+  {{ hub.kpi("Templates", summary.templates, icon="file-lines", variant="blue") }}
+  {{ hub.kpi("Audience segments", summary.segments, icon="users-viewfinder", variant="green") }}
+  {{ hub.kpi("Queued", summary.queued, icon="clock", variant="amber") }}
+  {{ hub.kpi("Failed", summary.failed, icon="triangle-exclamation", variant="red") }}
+</div>
+
+{% include "radius/communications_nav.html" %}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("Recent templates", icon="file-lines", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table">
+        <thead><tr><th>Key</th><th>Channel</th><th>Title</th></tr></thead>
+        <tbody>
+          {% for item in templates[:8] %}
+            <tr><td>{{ item.template_key }}</td><td>{{ item.channel }}</td><td>{{ item.title }}</td></tr>
+          {% else %}
+            <tr><td colspan="3">No templates yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("Recent deliveries", icon="truck-fast", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table">
+        <thead><tr><th>ID</th><th>Channel</th><th>Status</th><th>Recipient</th></tr></thead>
+        <tbody>
+          {% for item in deliveries %}
+            <tr><td>#{{ item.id }}</td><td>{{ item.channel }}</td><td>{{ item.status }}</td><td>{{ item.recipient_type }} #{{ item.recipient_id }}</td></tr>
+          {% else %}
+            <tr><td colspan="4">No delivery records yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+</div>
+{% endblock %}

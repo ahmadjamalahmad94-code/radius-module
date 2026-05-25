@@ -1,0 +1,34 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Delivery Log — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
+{% block page_title %}Delivery Log{% endblock %}
+{% block page_sub %}<span class="sub">Queued, sent, delivered, failed, retried, and read states where providers support them.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Delivery Log", subtitle="Provider abstraction results are tracked here. Default mode queues only.", icon="truck-fast") }}
+{% include "radius/communications_nav.html" %}
+
+{% call hub.section("Deliveries", icon="truck-fast", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="delivery-log-table">
+      <thead><tr><th>ID</th><th>Channel</th><th>Status</th><th>Provider</th><th>Recipient</th><th>Error</th></tr></thead>
+      <tbody>
+        {% for item in deliveries %}
+          <tr>
+            <td>#{{ item.id }}</td>
+            <td>{{ item.channel }}</td>
+            <td>{{ item.status }}</td>
+            <td>{{ item.provider_key }}</td>
+            <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
+            <td>{{ item.error_message }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6">No deliveries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

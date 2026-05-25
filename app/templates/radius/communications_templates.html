@@ -1,0 +1,49 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Message Templates — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
+{% block page_title %}Message Templates{% endblock %}
+{% block page_sub %}<span class="sub">Safe reusable copy for internal, SMS, WhatsApp, Telegram, email, and push channels.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Message Templates", subtitle="Variables use {{ name }} style placeholders and render locally before queuing.", icon="file-lines") }}
+{% include "radius/communications_nav.html" %}
+
+{% call hub.section("Create or update template", icon="pen-to-square") %}
+  <form method="post" class="hub-form-grid" data-testid="notification-template-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>Key <input name="template_key" required placeholder="renewal-reminder"></label>
+    <label>Title <input name="title" required></label>
+    <label>Channel
+      <select name="channel">
+        <option value="internal">Internal</option>
+        <option value="sms">SMS</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="telegram">Telegram</option>
+        <option value="email">Email</option>
+        <option value="push">Push</option>
+      </select>
+    </label>
+    <label>Subject <input name="subject"></label>
+    <label>Variables <input name="variables" placeholder="name, expire_at, balance"></label>
+    <label class="hub-form-span">Body <textarea name="body" rows="5" required></textarea></label>
+    <button class="hub-btn hub-btn--primary" type="submit">Save template</button>
+  </form>
+{% endcall %}
+
+{% call hub.section("Templates", icon="file-lines", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="notification-templates-table">
+      <thead><tr><th>Key</th><th>Channel</th><th>Title</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for item in templates %}
+          <tr><td>{{ item.template_key }}</td><td>{{ item.channel }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td></tr>
+        {% else %}
+          <tr><td colspan="4">No templates yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}

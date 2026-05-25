@@ -1,0 +1,65 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Audience Builder — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-users-viewfinder"></i>{% endblock %}
+{% block page_title %}Audience Builder{% endblock %}
+{% block page_sub %}<span class="sub">Create reusable audience filters without exposing raw SQL or provider data.</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("Audience Builder", subtitle="Build safe scoped audiences for subscribers, card users, managers, distributors, or company-level notices.", icon="users-viewfinder") }}
+{% include "radius/communications_nav.html" %}
+
+{% call hub.section("Create segment", icon="users-viewfinder") %}
+  <form method="post" class="hub-form-grid" data-testid="audience-segment-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>Segment key <input name="segment_key" required placeholder="manager-1-subscribers"></label>
+    <label>Title <input name="title" required></label>
+    <label>Target
+      <select name="target">
+        <option value="subscriber">Subscribers</option>
+        <option value="card_user">Card users</option>
+        <option value="manager">Managers</option>
+        <option value="distributor">Distributors</option>
+        <option value="company">Company</option>
+      </select>
+    </label>
+    <label>Manager ID <input name="manager_id" type="number" min="1"></label>
+    <label>IDs <input name="ids" placeholder="1,2,3"></label>
+    <label>Limit <input name="limit" type="number" min="1" max="500" value="100"></label>
+    <button class="hub-btn hub-btn--primary" type="submit">Save and preview</button>
+  </form>
+{% endcall %}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("Segments", icon="list", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="audience-segments-table">
+        <thead><tr><th>Key</th><th>Title</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for item in segments %}
+            <tr><td>{{ item.segment_key }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td></tr>
+          {% else %}
+            <tr><td colspan="3">No segments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("Preview", icon="eye", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table">
+        <thead><tr><th>Type</th><th>ID</th><th>Name</th></tr></thead>
+        <tbody>
+          {% for item in preview %}
+            <tr><td>{{ item.recipient_type }}</td><td>#{{ item.recipient_id }}</td><td>{{ item.display_name }}</td></tr>
+          {% else %}
+            <tr><td colspan="3">Save a segment to preview its audience.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+</div>
+{% endblock %}
