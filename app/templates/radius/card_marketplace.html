@@ -1,0 +1,78 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Card Marketplace — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
+{% block page_title %}Card Marketplace{% endblock %}
+{% block page_sub %}<span class="sub">باقات كروت قابلة للشراء من محفظة مستخدم الكروت</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "Card Marketplace",
+  subtitle="الباقات هنا لا تطبق أي تغيير مباشر على RADIUS. الشراء يولد كرتًا محليًا ويكتب قيدًا وحدثًا ماليًا.",
+  icon="store",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_users_list') ~ '"><i class="fa-solid fa-id-card"></i> مستخدمو الكروت</a>'
+) }}
+
+{% call hub.section("إضافة باقة", icon="plus") %}
+  <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" class="hub-form-grid" data-testid="marketplace-package-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>اسم الباقة
+      <input name="name" placeholder="8 hours / 2 Mbps" required>
+    </label>
+    <label>Plan ID
+      <input name="plan_id" type="number" min="1" required>
+    </label>
+    <label>السعر
+      <input name="price" type="number" step="0.01" min="0.01" required>
+    </label>
+    <label>الدقائق
+      <input name="duration_minutes" type="number" min="0">
+    </label>
+    <label>Download Kbps
+      <input name="speed_down_kbps" type="number" min="0">
+    </label>
+    <label>Upload Kbps
+      <input name="speed_up_kbps" type="number" min="0">
+    </label>
+    <button class="hub-btn hub-btn--primary" type="submit">حفظ الباقة</button>
+  </form>
+{% endcall %}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("الباقات", icon="boxes-stacked", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="marketplace-packages-table">
+        <thead><tr><th>الباقة</th><th>المدة</th><th>السرعة</th><th>السعر</th></tr></thead>
+        <tbody>
+          {% for package in packages %}
+            <tr>
+              <td>{{ package.name }}</td>
+              <td>{{ package.duration_minutes }} دقيقة</td>
+              <td>{{ package.speed_down_kbps }}/{{ package.speed_up_kbps }} Kbps</td>
+              <td>{{ package.price }} {{ package.currency }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">لا توجد باقات بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("آخر المشتريات", icon="receipt", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="marketplace-purchases-table">
+        <thead><tr><th>المستخدم</th><th>الكرت</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+        <tbody>
+          {% for purchase in purchases %}
+            <tr><td>#{{ purchase.card_user_id }}</td><td>#{{ purchase.card_id }}</td><td>{{ purchase.amount }} {{ purchase.currency }}</td><td>{{ purchase.status }}</td></tr>
+          {% else %}
+            <tr><td colspan="4">لا توجد مشتريات بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+</div>
+{% endblock %}

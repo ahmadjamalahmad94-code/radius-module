@@ -1,0 +1,113 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set user = card360.card_user %}
+{% set wallet = card360.wallet %}
+
+{% block title %}Card User 360 — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
+{% block page_title %}Card User 360{% endblock %}
+{% block page_sub %}<span class="sub">محفظة، كروت مملوكة، مشتريات، استخدام، وسجل مالي</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  user.display_name,
+  subtitle="ملف مستخدم كروت مستقل عن المشتركين الثابتين.",
+  icon="id-card-clip",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> مستخدمو الكروت</a>'
+) }}
+
+<div class="hub-kpi-grid" data-testid="card-user-360-kpis">
+  {{ hub.kpi("الرصيد", wallet.balance, icon="wallet", variant="blue") }}
+  {{ hub.kpi("الكروت", card360.cards|length, icon="ticket", variant="brand") }}
+  {{ hub.kpi("المشتريات", card360.purchases|length, icon="cart-shopping", variant="green") }}
+  {{ hub.kpi("الاستخدام", card360.usage.total_seconds, icon="clock", variant="amber") }}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("شحن المحفظة", icon="wallet") %}
+    <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}" class="hub-form-grid">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>المبلغ
+        <input name="amount" type="number" step="0.01" min="0.01" required>
+      </label>
+      <button class="hub-btn hub-btn--primary" type="submit">شحن</button>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("شراء كرت", icon="store") %}
+    <form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}" class="hub-form-grid" data-testid="card-user-purchase-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>الباقة
+        <select name="package_id" required>
+          {% for package in packages %}
+            <option value="{{ package.id }}">{{ package.name }} — {{ package.price }} {{ package.currency }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="hub-btn hub-btn--primary" type="submit">شراء وخصم المحفظة</button>
+      <p class="hub-muted">الشراء يولد كرتًا محليًا ويسجل قيدًا وحدثًا. لا يوجد تطبيق مباشر على MikroTik.</p>
+    </form>
+  {% endcall %}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("الكروت المملوكة", icon="ticket", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="owned-cards-table">
+        <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
+        <tbody>
+          {% for card in card360.cards %}
+            <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at }}</td></tr>
+          {% else %}
+            <tr><td colspan="3">لا توجد كروت مملوكة بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("المشتريات", icon="cart-shopping", flush=True) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="card-user-purchases-table">
+        <thead><tr><th>المبلغ</th><th>الحالة</th><th>التوصيل</th><th>التاريخ</th></tr></thead>
+        <tbody>
+          {% for purchase in card360.purchases %}
+            <tr><td>{{ purchase.amount }} {{ purchase.currency }}</td><td>{{ purchase.status }}</td><td>{{ purchase.delivery_status }}</td><td>{{ purchase.created_at }}</td></tr>
+          {% else %}
+            <tr><td colspan="4">لا توجد مشتريات بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("الاستخدام", icon="chart-simple") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("ثواني", card360.usage.total_seconds, icon="stopwatch") }}
+      {{ hub.tile("Download", card360.usage.bytes_in, icon="download") }}
+      {{ hub.tile("Upload", card360.usage.bytes_out, icon="upload") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("الرسائل", icon="message") %}
+    <div class="hub-list">
+      {% for msg in card360.messages %}
+        <div class="hub-list-row"><strong>{{ msg.status }}</strong><span>{{ msg.message }}</span></div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+</div>
+
+{% call hub.section("Timeline", icon="timeline") %}
+  <div class="hub-list" data-testid="card-user-timeline">
+    {% for item in card360.timeline %}
+      <div class="hub-list-row"><strong>{{ item.created_at or "—" }}</strong><span>{{ item.item.event_key or item.item.entry_type or item.item.status }}</span></div>
+    {% else %}
+      <div class="hub-empty">لا توجد أحداث بعد.</div>
+    {% endfor %}
+  </div>
+{% endcall %}
+{% endblock %}

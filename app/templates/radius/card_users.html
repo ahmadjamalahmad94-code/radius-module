@@ -1,0 +1,67 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}Card Users — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
+{% block page_title %}مستخدمو الكروت{% endblock %}
+{% block page_sub %}<span class="sub">ملفات شخصية ومحافظ وكروت مملوكة بدون تحويلهم إلى مشتركين ثابتين</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "مستخدمو الكروت",
+  subtitle="قسم خفيف للأشخاص الذين يشترون كروت من المحفظة ويحتاجون سجلًا ماليًا وتشغيليًا.",
+  icon="id-card",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-store"></i> Marketplace</a>'
+) }}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("إضافة مستخدم كروت", icon="user-plus") %}
+    <form method="post" action="{{ url_for('radius.card_users_create') }}" class="hub-form-grid" data-testid="card-user-create-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>الاسم
+        <input name="display_name" required>
+      </label>
+      <label>الموبايل
+        <input name="mobile">
+      </label>
+      <label>البريد
+        <input name="email" type="email">
+      </label>
+      <button class="hub-btn hub-btn--primary" type="submit">إنشاء محفظة وملف</button>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("Marketplace مختصر", icon="store") %}
+    <div class="hub-list">
+      {% for package in packages %}
+        <div class="hub-list-row">
+          <strong>{{ package.name }}</strong>
+          <span>{{ package.price }} {{ package.currency }} · {{ package.duration_minutes }} دقيقة</span>
+        </div>
+      {% else %}
+        <div class="hub-empty">لا توجد باقات Marketplace بعد.</div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+</div>
+
+{% call hub.section("القائمة", icon="table-list", flush=True) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="card-users-table">
+      <thead><tr><th>الاسم</th><th>الموبايل</th><th>الحالة</th><th>الملف</th></tr></thead>
+      <tbody>
+        {% for user in card_users %}
+          <tr>
+            <td>{{ user.display_name }}</td>
+            <td>{{ user.mobile or "—" }}</td>
+            <td>{{ user.status }}</td>
+            <td><a href="{{ url_for('radius.card_user_360', card_user_id=user.id) }}">360</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">لا يوجد مستخدمو كروت بعد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endblock %}
