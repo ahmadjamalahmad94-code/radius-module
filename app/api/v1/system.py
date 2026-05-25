@@ -94,6 +94,12 @@ def register(bp: Blueprint) -> None:
         require_api_token(system_admin_bridge_heartbeat),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/system/admin-bridge/backups/upload-latest",
+        "system_admin_bridge_backup_upload_latest",
+        require_api_token(system_admin_bridge_backup_upload_latest),
+        methods=["POST"],
+    )
 
 
 def system_status():
@@ -207,4 +213,23 @@ def system_admin_bridge_heartbeat():
     payload = request.get_json(silent=True) or {}
     dry_run = payload.get("dry_run", True) is not False
     result = InstanceHealthService().send_heartbeat(tenant_id=_tid(), dry_run=dry_run)
+    return ok(result)
+
+
+def system_admin_bridge_backup_upload_latest():
+    """Manual V40 backup upload foundation.
+
+    Defaults to dry-run and metadata-only. Content upload requires explicit
+    request payload and explicit server-side env enablement.
+    """
+    from ...radius.services.license_admin_backup_upload import BackupUploadService
+
+    payload = request.get_json(silent=True) or {}
+    dry_run = payload.get("dry_run", True) is not False
+    include_content = payload.get("include_content") is True
+    result = BackupUploadService().upload_latest_backup(
+        tenant_id=_tid(),
+        dry_run=dry_run,
+        include_content=include_content,
+    )
     return ok(result)

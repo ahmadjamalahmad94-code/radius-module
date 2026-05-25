@@ -426,3 +426,69 @@
   - Scheduler wiring remains deferred to a later safe scheduler prompt.
 - GO/NO-GO for next prompt:
   - GO for P07.
+
+## P07 — Backup Upload Agent Foundation
+
+- Start time: 2026-05-25 13:05:45 +03:00
+- End time: 2026-05-25 13:15:33 +03:00
+- Commit: Final hash reported in assistant response; embedding the hash inside
+  the same commit would change the hash again.
+- Files changed:
+  - `app/api/v1/system.py`
+  - `app/radius/db/migrations/068_license_admin_backup_uploads.sql`
+  - `app/radius/services/admin_panel_client.py`
+  - `app/radius/services/license_admin_backup_upload.py`
+  - `docs/license_admin_bridge/BACKUP_UPLOAD_AGENT.md`
+  - `docs/license_admin_bridge/BRIDGE_P01_TO_P15_EXECUTION_LOG.md`
+  - `tests/test_license_admin_backup_upload.py`
+- What was implemented:
+  - Added bridge backup artifact metadata table.
+  - Added bridge backup upload attempts table.
+  - Added SHA-256 checksum calculation.
+  - Added `BackupUploadService`.
+  - Added `AdminPanelClient.post_backup_upload()`.
+  - Added manual dry-run-first route:
+    `POST /api/v1/system/admin-bridge/backups/upload-latest`.
+  - Added metadata-only upload default.
+  - Added content upload opt-in gate and size cap.
+  - Added backup upload documentation.
+- What was intentionally not implemented:
+  - No restore execution.
+  - No backup deletion.
+  - No changes to existing local/Google Drive backup flows.
+  - No radius-module-admin changes.
+  - No Flutter changes.
+  - No live RADIUS, MikroTik, FreeRADIUS, or CoA changes.
+- Tests/verification:
+  - `python -m compileall app` passed.
+  - `python -m pytest tests/test_license_admin_backup_upload.py -q`
+    passed: 7 passed, 505 warnings in 5.52s.
+  - `python -m pytest tests/test_license_admin_bridge_client.py tests/test_license_admin_instance_health.py tests/test_license_admin_usage_metering.py tests/test_api_customer_contracts.py::test_contract_routes_are_registered -q`
+    passed: 20 passed, 1496 warnings in 13.24s.
+  - `git diff --check` passed.
+- Full pytest status:
+  - `python -m pytest -q` attempted.
+  - Result: timed out after 308052 ms.
+  - No visible failure output was returned before timeout.
+- Timeout notes if any:
+  - Full pytest did not complete inside the roughly 300 second execution
+    window.
+- Admin endpoint gaps:
+  - Backup upload endpoint path is assumed as
+    `/api/integration/hoberadius/backups/upload`.
+  - P01 follow-up already tracks confirmation for this endpoint.
+- Codex follow-ups added:
+  - None in P07.
+- Radius-module-admin touched? must be NO:
+  - NO.
+- Flutter touched? yes/no + reason:
+  - No.
+- Live RADIUS/MikroTik behavior changed? yes/no + reason:
+  - No.
+- Risk notes:
+  - Backup upload route defaults to dry-run.
+  - Upload defaults to metadata-only.
+  - Content upload requires explicit request and explicit env enablement.
+  - Retention and deletion are not managed by this bridge layer.
+- GO/NO-GO for next prompt:
+  - GO for P08.
