@@ -406,8 +406,50 @@
 
   function extractWireGuardPublicKey(outputText) {
     const text = String(outputText || "");
-    const matches = text.match(/[A-Za-z0-9+/]{43}=/g) || [];
-    return matches.find((item) => !/^A{20,}=?$/.test(item)) || "";
+    const lines = text.split(/\r?\n/);
+    const publicKeyFromLine = (line) => {
+      const match = String(line || "").match(/public-key="?([A-Za-z0-9+/]{43}=)"?/i);
+      return match ? match[1] : "";
+    };
+    const isPeerLine = (line) => {
+      const lower = String(line || "").toLowerCase();
+      return (
+        lower.includes("endpoint-address=")
+        || lower.includes("allowed-address=")
+        || /\binterface=/.test(lower)
+        || /name="?peer/i.test(line)
+      );
+    };
+
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.includes("name=\"hr-wg\"") || lower.includes("name=hr-wg")) {
+        const key = publicKeyFromLine(line);
+        if (key && !isPeerLine(line)) return key;
+      }
+    }
+
+    let inInterfaceSection = false;
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.includes("/interface wireguard print")) inInterfaceSection = true;
+      if (lower.includes("/interface wireguard peers")) inInterfaceSection = false;
+      if (inInterfaceSection) {
+        const key = publicKeyFromLine(line);
+        if (key && !isPeerLine(line)) return key;
+      }
+    }
+
+    for (const line of lines) {
+      const key = publicKeyFromLine(line);
+      if (key && !isPeerLine(line)) return key;
+    }
+
+    if (!/private-key=/i.test(text)) {
+      const matches = text.match(/[A-Za-z0-9+/]{43}=/g) || [];
+      return matches.find((item) => !/^A{20,}=?$/.test(item)) || "";
+    }
+    return "";
   }
 
   function isReservationMissing(error) {

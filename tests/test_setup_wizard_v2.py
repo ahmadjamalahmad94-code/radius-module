@@ -157,6 +157,13 @@ def test_setup_wizard_v2_js_extracts_public_key_and_accepts_partial_ping(app):
         source = fh.read()
 
     assert "extractWireGuardPublicKey" in source
+    assert "public-key" in source
+    assert "private-key=" in source
+    assert "endpoint-address=" in source
+    assert "name=hr-wg" in source
+    assert "publicKeyFromLine" in source
+    assert "isPeerLine" in source
+    assert "matches.find" in source
     assert "hasUsefulPing" in source
     assert "hasHandshakeSuccess" in source
     assert 'confirmationOverride || serverPeerConfirmation()' in source
