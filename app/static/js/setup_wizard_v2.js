@@ -341,7 +341,11 @@
         ? "تم التقاط مفتاح الربط وتجهيز خطة السيرفر."
         : "بعد تنفيذ السكربت، الصق المخرجات في خطوة التحقق وسنلتقط مفتاح الربط تلقائيًا.";
     }
-    setVpnScriptLoading("تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.");
+    const warnings = plan.warnings || [];
+    const missingServerKey = warnings.some((item) => String(item || "").includes("HOBERADIUS_WG_SERVER_PUBKEY"));
+    setVpnScriptLoading(missingServerKey
+      ? "مفتاح السيرفر غير مضبوط؛ لن يتم إنشاء peer حتى تضبط إعدادات WireGuard على الخادم."
+      : "تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.");
   }
 
   async function generateVpnRadiusScript(force) {

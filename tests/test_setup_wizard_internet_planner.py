@@ -56,6 +56,7 @@ def test_vlan_dhcp_script_generation():
         },
     )
     assert "HOBERADIUS_SETUP:41:internet" in plan.script_text
+    assert ":delay 10s" in plan.script_text
     assert "/tool ping 8.8.8.8 count=5" in plan.script_text
     assert "out-interface=\"wan-vlan35\"" in plan.script_text
     _forbidden_absent(plan.script_text)

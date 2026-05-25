@@ -327,6 +327,7 @@
           <div>
             <strong>معاينة السكربت</strong>
             <span data-swv2-script-status>اضغط تجهيز السكربت أو انتقل لهذه الخطوة بعد إدخال البيانات.</span>
+            <button type="button" class="swv2-copy-chip" data-copy-target="internet-script-code">نسخ</button>
           </div>
           <pre id="internet-script-code">-- لم يتم توليد السكربت بعد --</pre>
         </div>
@@ -500,7 +501,8 @@
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
             <strong>معاينة سكربت VPN/RADIUS</strong>
-            <span>السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.</span>
+            <span data-swv2-vpn-script-status>السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.</span>
+            <button type="button" class="swv2-copy-chip" data-copy-target="vpn-script-code">نسخ</button>
           </div>
           <pre id="vpn-script-code">-- لم يتم توليد سكربت VPN/RADIUS بعد --</pre>
         </div>
@@ -644,7 +646,7 @@
         </div>
         <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات Hotspot print أو تحقق RADIUS هنا"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت Hotspot</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span></div>
+          <div><strong>معاينة سكربت Hotspot</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="hotspot-script-code">نسخ</button></div>
           <pre id="hotspot-script-code">-- لم يتم توليد سكربت Hotspot بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
@@ -696,7 +698,7 @@
         </div>
         <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات PPPoE أو تحقق RADIUS هنا"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت Broadband</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span></div>
+          <div><strong>معاينة سكربت Broadband</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">نسخ</button></div>
           <pre id="broadband-script-code">-- لم يتم توليد سكربت Broadband بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
@@ -781,8 +783,8 @@
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>إرشادات التحقق</button>
         </div>
         <div class="swv2-script-card">
-          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو preset.</span></div>
-          <pre data-swv2-added-preview>-- لم يتم توليد خطة خدمة إضافية بعد --</pre>
+          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو preset.</span><button type="button" class="swv2-copy-chip" data-copy-target="added-service-plan-code">نسخ</button></div>
+          <pre id="added-service-plan-code" data-swv2-added-preview>-- لم يتم توليد خطة خدمة إضافية بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>
         <details class="swv2-advanced">

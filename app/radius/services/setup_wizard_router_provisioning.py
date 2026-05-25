@@ -14,7 +14,13 @@ from typing import Any
 from ..db.connection import db, transaction
 from ..db.helpers import row_to_dict
 from .setup_wizard_common import SetupWizardValidationError
-from .wg_peer_manager import SERVER_IP_DEFAULT, SERVER_IP_ENV, SUBNET_DEFAULT, SUBNET_ENV
+from .wg_peer_manager import (
+    SERVER_IP_DEFAULT,
+    SERVER_IP_ENV,
+    SERVER_PUBKEY_ENV,
+    SUBNET_DEFAULT,
+    SUBNET_ENV,
+)
 
 
 SETUP_VPN_POOL_ENV = "HOBERADIUS_SETUP_WIZARD_VPN_POOL"
@@ -404,4 +410,8 @@ class RouterProvisioningService:
 
     def endpoint_defaults(self) -> dict[str, Any]:
         host, port = _endpoint_defaults()
-        return {"vps_public_endpoint": host, "endpoint_port": port}
+        return {
+            "vps_public_endpoint": host,
+            "endpoint_port": port,
+            "server_public_key": str(os.environ.get(SERVER_PUBKEY_ENV) or "").strip(),
+        }

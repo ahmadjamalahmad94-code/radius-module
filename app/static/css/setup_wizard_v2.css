@@ -926,6 +926,25 @@
   font-weight: 800;
 }
 
+.swv2-copy-chip {
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  padding: 8px 14px;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.swv2-copy-chip:hover {
+  background: rgba(255, 255, 255, .20);
+  transform: translateY(-1px);
+}
+
 .swv2-script-card pre,
 .swv2-advanced pre {
   direction: ltr;

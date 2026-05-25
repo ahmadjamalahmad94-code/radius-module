@@ -50,6 +50,7 @@ def _payload() -> dict[str, str]:
         "radius_server_ip": "10.10.0.1",
         "radius_secret": "Secret!123",
         "api_username": "hr_api_test",
+        "server_public_key": "A" * 43 + "=",
     }
 
 
@@ -58,8 +59,20 @@ def test_vpn_radius_planner_generation_and_tagging():
     assert "HOBERADIUS_SETUP:77:vpn" in plan.script_text
     assert "HOBERADIUS_SETUP:77:radius" in plan.script_text
     assert "HOBERADIUS_SETUP:77:api" in plan.script_text
+    assert 'public-key="' in plan.script_text
     assert "/interface wireguard print detail" in plan.script_text
     assert plan.masked_sensitive_values["radius_secret"] == "***"
+
+
+def test_vpn_radius_planner_does_not_emit_broken_peer_without_server_key():
+    payload = dict(_payload())
+    payload["server_public_key"] = ""
+    plan = VpnRadiusBootstrapPlanner().plan(wizard_run_id=79, payload=payload)
+
+    assert "/interface wireguard peers add" not in plan.script_text
+    assert "HOBERADIUS_WG_SERVER_PUBKEY" in plan.script_text
+    assert "no key set" in plan.script_text
+    assert all(item["type"] != "interface.wireguard.peer" for item in plan.generated_objects)
 
 
 def test_vpn_radius_script_has_no_forbidden_destructive_commands():

@@ -132,6 +132,10 @@ class InternetUplinkScriptPlanner:
         ]
         if route_target:
             lines.append(f"/ip route print where gateway={route_target}")
+        lines += [
+            "# Wait briefly so DHCP/PPPoE/default routes can settle before ping.",
+            ":delay 10s",
+        ]
         lines.append("/tool ping 8.8.8.8 count=5")
         if include_dns_ping:
             lines.append("/tool ping cloudflare.com count=5")

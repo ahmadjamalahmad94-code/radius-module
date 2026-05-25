@@ -574,6 +574,11 @@ class SetupWizardService:
             or endpoint_defaults.get("endpoint_port")
             or 51820
         )
+        effective_payload["server_public_key"] = str(
+            payload.get("server_public_key")
+            or endpoint_defaults.get("server_public_key")
+            or ""
+        ).strip()
         self.advance_to_step(
             tenant_id=tenant_id,
             run_id=run_id,

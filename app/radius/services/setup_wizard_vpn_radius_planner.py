@@ -41,6 +41,15 @@ def _cidr(value: Any, field: str) -> str:
     return str(network)
 
 
+def _wireguard_public_key(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9+/]{43}=", raw):
+        raise SetupWizardValidationError("server_public_key must be a valid WireGuard public key")
+    return raw
+
+
 @dataclass(frozen=True)
 class VpnRadiusBootstrapPlan:
     script_text: str
@@ -87,6 +96,7 @@ class VpnRadiusBootstrapPlanner:
         listen_port = int(payload.get("wg_listen_port") or 13231)
         endpoint = _v4(payload.get("vps_public_endpoint"), "vps_public_endpoint")
         endpoint_port = int(payload.get("endpoint_port") or 51820)
+        server_public_key = _wireguard_public_key(payload.get("server_public_key"))
         radius_server = _v4(payload.get("radius_server_ip") or vps_vpn_ip, "radius_server_ip")
         radius_secret = str(payload.get("radius_secret") or payload.get("radius_secret_ref") or "").strip()
         if not radius_secret:
@@ -112,16 +122,27 @@ class VpnRadiusBootstrapPlanner:
             "}",
             "",
             "# --- WireGuard peer to VPS ---",
-            f'# Peer "{peer_name}" must be completed with the real VPS public key.',
-            f':if ([:len [/interface wireguard peers find where interface="{wg_interface}" and comment="{vpn_tag}:{peer_name}{tag_suffix}"]] = 0) do={{',
-            f'  /interface wireguard peers add interface="{wg_interface}" endpoint-address="{endpoint}" endpoint-port={endpoint_port} allowed-address="{allowed_address}" comment="{vpn_tag}:{peer_name}{tag_suffix}"',
-            "}",
-            "",
-            "# --- Reachability route hints ---",
-            f':if ([:len [/ip route find where dst-address="{allowed_address}" and gateway="{wg_interface}" and comment="{vpn_comment}"]] = 0) do={{',
-            f'  /ip route add dst-address="{allowed_address}" gateway="{wg_interface}" distance=1 comment="{vpn_comment}"',
-            "}",
-            "",
+        ]
+        if server_public_key:
+            lines += [
+                f':if ([:len [/interface wireguard peers find where interface="{wg_interface}" and public-key="{server_public_key}"]] = 0) do={{',
+                f'  /interface wireguard peers add interface="{wg_interface}" public-key="{server_public_key}" endpoint-address="{endpoint}" endpoint-port={endpoint_port} allowed-address="{allowed_address}" persistent-keepalive=25s comment="{vpn_tag}:{peer_name}{tag_suffix}"',
+                "}",
+                "",
+                "# --- Reachability route hints ---",
+                f':if ([:len [/ip route find where dst-address="{allowed_address}" and gateway="{wg_interface}" and comment="{vpn_comment}"]] = 0) do={{',
+                f'  /ip route add dst-address="{allowed_address}" gateway="{wg_interface}" distance=1 comment="{vpn_comment}"',
+                "}",
+                "",
+            ]
+        else:
+            lines += [
+                "# لا يمكن إنشاء peer الآن لأن مفتاح WireGuard العام للسيرفر غير مضبوط في HobeRadius.",
+                "# اضبط HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم ثم أعد توليد السكربت.",
+                "# لم يتم توليد أمر إنشاء peer حتى لا يفشل MikroTik برسالة no key set.",
+                "",
+            ]
+        lines += [
             "# --- RADIUS server entry (add-only; no overwrite) ---",
             f':if ([:len [/radius find where address="{radius_server}" and authentication-port={auth_port} and accounting-port={acct_port} and comment="{radius_comment}"]] = 0) do={{',
             f'  /radius add service=hotspot,ppp address="{radius_server}" secret="{radius_secret}" authentication-port={auth_port} accounting-port={acct_port} timeout=300ms comment="{radius_comment}"',
@@ -150,10 +171,13 @@ class VpnRadiusBootstrapPlanner:
         )
         warnings = [
             "هذا المخطط للمعاينة فقط ولا ينفذ تلقائياً على أي راوتر.",
-            "يجب إدخال public key الحقيقي للـ VPS قبل التطبيق اليدوي.",
             "سر RADIUS يظهر داخل نص السكربت لنسخه إلى الطرف المطلوب فقط.",
             "إذا كانت الواجهة المختارة هي واجهة الإدارة الحالية، نفّذ من جلسة محلية لتجنب فقد الوصول.",
         ]
+        if server_public_key:
+            warnings.insert(1, "تم تضمين مفتاح WireGuard العام للسيرفر لإنشاء peer صالح على MikroTik.")
+        else:
+            warnings.insert(1, "مفتاح WireGuard العام للسيرفر غير مضبوط؛ لن يتم إنشاء peer حتى تضبط HOBERADIUS_WG_SERVER_PUBKEY.")
         return VpnRadiusBootstrapPlan(
             script_text=script_text,
             rollback_script_text=rollback_script,
@@ -167,7 +191,11 @@ class VpnRadiusBootstrapPlanner:
             warnings=warnings,
             generated_objects=[
                 {"type": "interface.wireguard", "name": wg_interface, "tag": vpn_tag},
-                {"type": "interface.wireguard.peer", "name": peer_name, "tag": vpn_tag},
+                *(
+                    [{"type": "interface.wireguard.peer", "name": peer_name, "tag": vpn_tag}]
+                    if server_public_key
+                    else []
+                ),
                 {"type": "radius.server", "name": radius_server, "tag": radius_tag},
                 {"type": "api.contract", "name": api_username, "tag": api_tag},
             ],

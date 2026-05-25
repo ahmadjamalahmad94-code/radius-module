@@ -96,6 +96,11 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-swv2-script-preview="vpn"' in html
     assert 'data-swv2-provisioning="router_vpn_ip"' in html
     assert "data-swv2-generate-vpn" in html
+    assert 'data-copy-target="internet-script-code"' in html
+    assert 'data-copy-target="vpn-script-code"' in html
+    assert 'data-copy-target="hotspot-script-code"' in html
+    assert 'data-copy-target="broadband-script-code"' in html
+    assert 'data-copy-target="added-service-plan-code"' in html
     assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
 
