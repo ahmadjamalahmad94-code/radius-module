@@ -1,0 +1,243 @@
+{# Setup Wizard v3 — single-page onboarding.
+   The page is one scrollable column. Sections light up as the
+   state machine advances. JavaScript polls /state every 2s and
+   re-renders. No "next/previous" navigation. #}
+
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ page_title or "معالج إضافة راوتر v3" }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
+{% block page_title %}إضافة راوتر جديد{% endblock %}
+{% block page_sub %}
+  <span class="sub">معالج موحَّد — صفحة واحدة، خطوة واحدة في كل مرة</span>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<input type="hidden" name="_csrf_token"
+       value="{{ csrf_token() if csrf_token else '' }}">
+
+<div class="wv3-page" data-wv3-page dir="rtl">
+
+  {# ─── Hero ──────────────────────────────────────────── #}
+  <header class="wv3-hero">
+    <div class="wv3-hero-icon">🚀</div>
+    <div class="wv3-hero-text">
+      <h1>إضافة راوتر جديد إلى الشبكة</h1>
+      <p>
+        خمس خطوات — كل واحدة بضغطة. صفحة واحدة لا تتغيّر.
+        نتابع كل خطوة بدلك ونُخبرك ماذا تفعل الآن.
+      </p>
+    </div>
+    <div class="wv3-hero-status">
+      <span class="wv3-state-badge" data-wv3-state-badge>
+        ⏳ جاهز للبدء
+      </span>
+    </div>
+  </header>
+
+  {# ─── Step 1: router info ───────────────────────────── #}
+  <section class="wv3-step" data-wv3-step="collecting">
+    <div class="wv3-step-num">١</div>
+    <div class="wv3-step-body">
+      <h2>عرّفنا على الراوتر</h2>
+      <p class="wv3-hint">
+        اختر اسماً وصفياً للراوتر (سيظهر في القوائم) ونوع
+        الخدمة الأساسيّة عليه.
+      </p>
+      <div class="wv3-grid">
+        <label class="wv3-field">
+          <span>اسم الراوتر</span>
+          <input type="text"
+                 data-wv3-router-name
+                 placeholder="مثلاً: مقهى الزهراء"
+                 autocomplete="off">
+        </label>
+        <label class="wv3-field">
+          <span>نوع الخدمة الأساسيّة</span>
+          <select data-wv3-router-type>
+            <option value="hotspot">Hotspot (الوصول العامّ)</option>
+            <option value="pppoe">PPPoE (اتّصال المشتركين)</option>
+            <option value="mixed">مختلط (الخدمتان)</option>
+          </select>
+        </label>
+      </div>
+      <div class="wv3-actions">
+        <button type="button"
+                class="wv3-btn wv3-btn-primary"
+                data-wv3-action="submit-router-info">
+          متابعة ←
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Step 2: the script ────────────────────────────── #}
+  <section class="wv3-step is-locked"
+           data-wv3-step="planning">
+    <div class="wv3-step-num">٢</div>
+    <div class="wv3-step-body">
+      <h2>السكربت — نسخه ولصقه على الراوتر</h2>
+      <p class="wv3-hint">
+        افتح Terminal على الراوتر MikroTik والصق السكربت
+        التالي. سيقوم بإنشاء اتّصال WireGuard آمن إلى الخادم
+        ويُولّد مفاتيح جديدة.
+      </p>
+      <div class="wv3-script-frame" data-wv3-script-frame hidden>
+        <div class="wv3-script-toolbar">
+          <span class="wv3-script-meta" data-wv3-script-meta>
+            رمز الـ run / hash السكربت
+          </span>
+          <button type="button"
+                  class="wv3-btn wv3-btn-ghost wv3-btn-small"
+                  data-wv3-action="copy-script">
+            <i class="fa-regular fa-copy"></i> نسخ السكربت
+          </button>
+        </div>
+        <pre class="wv3-script-body"
+             data-wv3-script-body></pre>
+      </div>
+      <div class="wv3-actions"
+           data-wv3-generate-actions>
+        <button type="button"
+                class="wv3-btn wv3-btn-primary"
+                data-wv3-action="generate-script">
+          توليد السكربت
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Step 3: paste WG output back ───────────────────── #}
+  <section class="wv3-step is-locked"
+           data-wv3-step="awaiting_handshake">
+    <div class="wv3-step-num">٣</div>
+    <div class="wv3-step-body">
+      <h2>ألصق مخرجات السكربت من الراوتر</h2>
+      <p class="wv3-hint">
+        بعد ما يشتغل السكربت على MikroTik، سيطبع سطراً يبدأ بـ
+        <code>HOBERADIUS_PUBLIC_KEY=</code>. الصق هذا السطر
+        (أو كل المخرجات إن أحببت) في الصندوق التالي.
+      </p>
+      <label class="wv3-field wv3-field-full">
+        <span>مخرجات السكربت (أو مفتاح WireGuard العام للراوتر)</span>
+        <textarea data-wv3-pasted-output
+                  rows="6"
+                  spellcheck="false"
+                  placeholder="HOBERADIUS_PUBLIC_KEY=..."></textarea>
+      </label>
+      <div class="wv3-actions">
+        <button type="button"
+                class="wv3-btn wv3-btn-primary"
+                data-wv3-action="submit-key">
+          استخراج المفتاح وتطبيقه
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Step 4: server peer + handshake ────────────────── #}
+  <section class="wv3-step is-locked"
+           data-wv3-step="applying_server_peer">
+    <div class="wv3-step-num">٤</div>
+    <div class="wv3-step-body">
+      <h2>تسجيل الراوتر على الخادم</h2>
+      <p class="wv3-hint">
+        كتابة ملفّ peer في
+        <code>/etc/hoberadius/wg-peers.d/wizard-v3-N.conf</code>،
+        ثمّ <code>wg syncconf</code> تلقائياً، ثمّ التحقّق من
+        أوّل handshake.
+      </p>
+      <div class="wv3-substeps"
+           data-wv3-substeps-applying>
+        <div class="wv3-substep" data-wv3-substep="write-peer">
+          <span class="wv3-substep-icon">⏳</span>
+          <span>كتابة إعدادات الـ peer على الخادم</span>
+        </div>
+        <div class="wv3-substep" data-wv3-substep="wg-reload">
+          <span class="wv3-substep-icon">⏳</span>
+          <span>إشعار wg-reload لتطبيق التغيير</span>
+        </div>
+        <div class="wv3-substep" data-wv3-substep="handshake">
+          <span class="wv3-substep-icon">⏳</span>
+          <span>التحقّق من أوّل handshake</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Step 5: register router ─────────────────────────── #}
+  <section class="wv3-step is-locked"
+           data-wv3-step="registering">
+    <div class="wv3-step-num">٥</div>
+    <div class="wv3-step-body">
+      <h2>تسجيل الراوتر في النظام</h2>
+      <p class="wv3-hint">
+        تسجيل الراوتر في قائمة NAS وغرفة العمليات بحيث يظهر
+        مع باقي الراوترات للإدارة اليومية.
+      </p>
+      <label class="wv3-field">
+        <span>كلمة مرور admin على الراوتر (اختياري — لتفعيل API)</span>
+        <input type="password"
+               data-wv3-api-password
+               placeholder="••••••••"
+               autocomplete="off">
+      </label>
+      <div class="wv3-actions">
+        <button type="button"
+                class="wv3-btn wv3-btn-primary"
+                data-wv3-action="register">
+          تسجيل وإنهاء ✓
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Final: complete card ────────────────────────────── #}
+  <section class="wv3-step is-locked wv3-step-complete"
+           data-wv3-step="complete">
+    <div class="wv3-step-num">✓</div>
+    <div class="wv3-step-body">
+      <h2>🎉 اكتمل التجهيز</h2>
+      <p class="wv3-hint">
+        الراوتر متّصل، الـ handshake مؤكَّد، وعنوانه مسجَّل في
+        النظام. يمكنك الآن إدارته من غرفة العمليات.
+      </p>
+      <div class="wv3-final-grid"
+           data-wv3-final-grid>
+        {# Filled by JS. #}
+      </div>
+      <div class="wv3-actions">
+        <a class="wv3-btn wv3-btn-primary"
+           data-wv3-action="open-router"
+           href="#">
+          فتح الراوتر في لوحة التحكّم ←
+        </a>
+        <a class="wv3-btn wv3-btn-ghost"
+           href="{{ url_for('radius.setup_wizard_v3_page') }}">
+          إضافة راوتر آخر
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {# ─── Diagnostics rail (always visible if any) ───────── #}
+  <aside class="wv3-diagnostics"
+         data-wv3-diagnostics hidden>
+    <h3>⚠️ تنبيهات تشخيصيّة</h3>
+    <div class="wv3-diagnostics-list"
+         data-wv3-diagnostics-list>
+      {# Filled by JS. #}
+    </div>
+  </aside>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}"></script>
+{% endblock %}
