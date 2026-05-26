@@ -272,6 +272,38 @@
   width: 18px;
 }
 
+.swz-iface-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  margin-bottom: 6px;
+}
+
+.swz-iface-check {
+  align-items: center;
+  background: var(--c-card);
+  border: 2px solid var(--c-border);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 8px 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.swz-iface-check input[type="checkbox"] {
+  accent-color: var(--c-primary);
+}
+
+.swz-iface-check:has(input:checked) {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--c-primary);
+  color: var(--c-primary-d);
+}
+
 /* ─── Buttons ────────────────────────────────────────── */
 
 .swz-actions {

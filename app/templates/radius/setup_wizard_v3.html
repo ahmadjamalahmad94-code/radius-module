@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526d">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526e">
 {% endblock %}
 
 {% block content %}
@@ -392,16 +392,55 @@ Steps:
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>المنفذ على الراوتر</label>
-            <input type="text" data-swz-hotspot-iface
-                   placeholder="ether2" value="ether2" autocomplete="off">
-            <small>المنفذ الذي سيتّصل به مستخدمو الـ Hotspot.</small>
+            <label>منفذ WAN (الإنترنت)</label>
+            <input type="text" data-swz-hotspot-wan dir="ltr"
+                   placeholder="ether1" value="ether1"
+                   autocomplete="off">
+            <small>المنفذ الذي يخرج منه الراوتر للإنترنت
+              (نفس المنفذ من الخطوة 2). نحتاجه لإضافة قاعدة
+              NAT تربط Hotspot بالإنترنت.</small>
+          </div>
+          <div class="swz-field">
+            <label>منافذ Hotspot (اختر واحداً أو أكثر)</label>
+            <div class="swz-iface-grid" data-swz-hotspot-ifaces>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether2" checked>
+                <span>ether2</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether3">
+                <span>ether3</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether4">
+                <span>ether4</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether5">
+                <span>ether5</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="wlan1">
+                <span>wlan1</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="sfp1">
+                <span>sfp1</span>
+              </label>
+            </div>
+            <small>
+              كل منفذ يحصل على شبكة /24 مستقلّة + خادم DHCP
+              + قاعدة NAT خاصّة. لو منفذك غير مدرج، أضفه:
+            </small>
+            <input type="text" data-swz-hotspot-iface-custom dir="ltr"
+                   placeholder="منافذ إضافيّة مفصولة بفاصلة، مثلاً: bridge1, vlan10"
+                   autocomplete="off">
           </div>
           <div class="swz-field">
             <label>نطاق الشبكة الداخليّة</label>
             <input type="text" data-swz-hotspot-subnet dir="ltr"
                    placeholder="10.99.0.0/16" value="10.99.0.0/16">
-            <small>عنوان شبكة كبير يُقسَّم تلقائياً بين الواجهات.</small>
+            <small>نطاق /16 يُقسَّم تلقائياً إلى /24 لكل منفذ.</small>
           </div>
           <div class="swz-field">
             <label>سرّ RADIUS</label>
@@ -588,5 +627,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526d"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526e"></script>
 {% endblock %}

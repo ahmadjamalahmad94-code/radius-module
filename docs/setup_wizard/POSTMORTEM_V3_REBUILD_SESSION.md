@@ -421,6 +421,141 @@ script, with no way of knowing they were placeholders.
 
 ---
 
+## 12) Hotspot NAT didn't masquerade — empty `WAN` interface-list
+
+**Symptom.** Hotspot users on the router got an IP, opened
+the captive portal, authenticated — and then had no
+internet. The Hotspot RADIUS auth worked, but outbound
+packets weren't being NAT'd to the router's WAN IP.
+
+**Root cause.** The hotspot planner generated this NAT rule:
+
+```
+/ip firewall nat add chain=srcnat src-address=10.99.X.0/24 \
+  out-interface-list=WAN action=masquerade ...
+```
+
+`out-interface-list=WAN` means "match only if the packet
+exits through an interface in the list named WAN." A fresh
+MikroTik has no interface list named WAN by default — so
+the rule never matched, no packet got NAT'd, no internet.
+
+**Fix.** The planner now accepts an optional `wan_interface`
+input. When provided (the v3 wizard's Hotspot card always
+provides it), the script prepends an idempotent
+bootstrap that creates the list and adds the WAN interface
+as a member:
+
+```
+:if ([:len [/interface list find where name="WAN"]] = 0) do={
+  /interface list add name=WAN
+}
+:if ([:len [/interface list member find where
+            list=WAN interface="ether1"]] = 0) do={
+  /interface list member add list=WAN interface="ether1"
+}
+```
+
+Now the existing NAT rule actually matches.
+
+**Prevention.**
+- **Never reference a named resource (interface-list, profile,
+  pool) without ensuring it exists.** Every reference must
+  either pin a previously-emitted definition or include a
+  bootstrap.
+- A script linter that flags `out-interface-list=X` without
+  a matching `/interface list add name=X` in the same
+  script would catch this. Future slice candidate.
+
+---
+
+## 13) Hotspot UI only sent one interface — multi-port lost
+
+**Symptom.** Operator wanted Hotspot on ether2 + ether3 +
+wlan1 but the wizard form only accepted a single interface
+name in a text field. Even though the legacy planner
+supports an array of `selected_interfaces`, the JS
+hard-coded a single-element array.
+
+**Root cause.** New wizard's Hotspot card UI was built
+quickly to validate the flow end-to-end with one port. It
+worked, but the "multi-port hotspot" use case (every
+ether is a customer port with its own /24 + DHCP) was the
+ACTUAL operator need — and the UI didn't expose it.
+
+**Fix.** Replaced the single text input with a checkbox
+grid of the 6 most-common interfaces (ether2-5, wlan1,
+sfp1) plus a free-text input for custom interfaces
+(bridge1, vlan10, etc.). The JS de-duplicates and passes
+the full array to the planner.
+
+```js
+function collectHotspotInterfaces() {
+  const checked = Array.from(
+    root.querySelectorAll(
+      "[data-swz-hotspot-ifaces] input[type=checkbox]:checked"
+    )
+  ).map((cb) => cb.value);
+  const custom = (getValue(custom_field) || "")
+    .split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+  return Array.from(new Set([...checked, ...custom]));
+}
+```
+
+The planner already supported the multi-interface path —
+this slice just connected the UI to it.
+
+**Prevention.**
+- When wrapping a multi-value backend in UI, **always start
+  with multi-value UI** even if only one is in the demo. A
+  single-value UI is harder to upgrade later (operators
+  build muscle memory around the wrong shape).
+- Follow-up: an "🔍 اكتشاف المنافذ" button that pastes the
+  output of `/interface print` from MikroTik, parses it,
+  and renders checkboxes for the actual interfaces on the
+  router. Removes guesswork for non-standard layouts.
+
+---
+
+## 14) Repeated `/radius add` on re-paste — duplicate rows
+
+**Symptom.** Operator pasted the hotspot script twice
+(manually, while debugging). The RADIUS table on MikroTik
+ended up with two identical-ish HOBERADIUS rows. Both
+showed `binding:Address not available` because the secret
++ src-address were stale placeholders from issue #11.
+
+**Root cause.** The legacy hotspot planner emitted a bare
+`/radius add ...` without idempotency. Every script paste
+appends another row.
+
+**Fix.** Wrapped the `/radius add` in a tagged guard:
+
+```
+:if ([:len [/radius find where
+            comment="HOBERADIUS_SETUP:<run>:hotspot"]] = 0) do={
+  /radius add ... comment="<tag>"
+} else={
+  /radius set [find where comment="<tag>"] address=... \
+    secret=... src-address=...
+}
+```
+
+Repeat pastes now update the same row rather than
+duplicating. The legacy test (`test_hotspot_manual_script_sections_and_validation`)
+was loosened to assert the key fields without pinning the
+exact prefix (no more single-line literal match).
+
+**Prevention.**
+- **All RouterOS `add` commands in generated scripts MUST
+  be wrapped in an idempotency guard.** Pattern:
+  `:if ([:len [<find query>]] = 0) do={ <add> } else={ <set> }`.
+- Tests should assert structural properties (entry exists
+  with these key fields) rather than literal-line matches —
+  brittle to formatting tweaks.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

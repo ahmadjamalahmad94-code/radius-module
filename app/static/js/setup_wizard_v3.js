@@ -418,6 +418,22 @@
 
   // ─── Optional services (step 5) ──────────────────────
 
+  function collectHotspotInterfaces() {
+    const checked = Array.from(
+      root.querySelectorAll(
+        "[data-swz-hotspot-ifaces] input[type=checkbox]:checked",
+      ),
+    ).map((cb) => cb.value);
+    const custom = (
+      getValue("[data-swz-hotspot-iface-custom]") || ""
+    )
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    // De-duplicate while preserving order.
+    return Array.from(new Set([...checked, ...custom]));
+  }
+
   async function generateHotspotScript(btn) {
     setBusy(btn, true);
     try {
@@ -433,6 +449,15 @@
         );
         return;
       }
+      const interfaces = collectHotspotInterfaces();
+      if (!interfaces.length) {
+        toast(
+          "اختر على الأقل منفذاً واحداً للـ Hotspot.",
+          "error",
+        );
+        return;
+      }
+      const wanIface = getValue("[data-swz-hotspot-wan]") || "ether1";
       let secret = getValue("[data-swz-hotspot-secret]");
       if (!secret) {
         secret = generateSecret();
@@ -444,13 +469,12 @@
         `/runs/${state.runId}/phase-plan/hotspot`,
         {
           mode: "manual",
-          selected_interfaces: [
-            getValue("[data-swz-hotspot-iface]") || "ether2",
-          ],
+          selected_interfaces: interfaces,
           subnet_base:
             getValue("[data-swz-hotspot-subnet]") || "10.99.0.0/16",
           radius_secret: secret,
           router_vpn_ip: routerVpnIp,
+          wan_interface: wanIface,
         },
       );
       const plan = data.plan || {};
@@ -459,9 +483,10 @@
         return;
       }
       showScript("hotspot", plan.script);
+      const ifaceList = interfaces.join(", ");
       toast(
-        "✅ سكربت Hotspot جاهز. لا تنسَ حفظ سرّ RADIUS — "
-        + "ستحتاجه على الخادم.",
+        `✅ سكربت Hotspot جاهز لـ ${interfaces.length} منفذ `
+        + `(${ifaceList}). لا تنسَ حفظ سرّ RADIUS.`,
         "ok",
       );
     } catch (err) {

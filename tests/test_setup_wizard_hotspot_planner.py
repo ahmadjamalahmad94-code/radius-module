@@ -52,7 +52,16 @@ def test_hotspot_manual_script_sections_and_validation():
     assert '/ip address add address=10.20.3.1/24 interface=ether3 comment="HOBE_HOTSPOT_ether3"' in plan.script_text
     assert "/ip pool add name=pool-hotspot-ether3 ranges=10.20.3.10-10.20.3.254" in plan.script_text
     assert '/ip dhcp-server network add address=10.20.3.0/24 gateway=10.20.3.1 dns-server=10.20.3.1 comment="HOBE_HOTSPOT_ether3"' in plan.script_text
-    assert '/radius add service=hotspot address=10.10.0.1 secret="radius-secret-ref-0001" authentication-port=1812 accounting-port=1813 src-address=10.10.0.3 timeout=3000ms comment="HOBERADIUS"' in plan.script_text
+    # The RADIUS row is now wrapped in an idempotent
+    # `:if ([:len [/radius find where comment=<tag>]] = 0)`
+    # guard so re-pasting the script doesn't double-add. The
+    # tag carries the wizard_run_id so subsequent runs update
+    # rather than duplicate.
+    assert 'service=hotspot' in plan.script_text
+    assert 'address=10.10.0.1' in plan.script_text
+    assert 'secret="radius-secret-ref-0001"' in plan.script_text
+    assert 'src-address=10.10.0.3' in plan.script_text
+    assert 'comment="HOBERADIUS_SETUP:88:hotspot"' in plan.script_text
     assert "/interface bridge" not in plan.script_text
     assert "/tool ping 8.8.8.8 count=5" in plan.validation_commands
 

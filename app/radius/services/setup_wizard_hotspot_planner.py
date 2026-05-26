@@ -163,6 +163,13 @@ class HotspotBootstrapPlanner:
         radius_secret = str(payload.get("radius_secret") or payload.get("radius_secret_ref") or "").strip()
         if not radius_secret:
             raise SetupWizardValidationError("radius_secret is required")
+        # The WAN interface name lets the script bootstrap a
+        # `WAN` interface-list with that member so the NAT
+        # masquerade rule actually matches. Fresh routers don't
+        # have an empty WAN list by default — without this
+        # bootstrap the rule never matches and hotspot users
+        # get no internet.
+        wan_interface = str(payload.get("wan_interface") or "").strip()
 
         used_octets: set[int] = set()
         port_plans: list[dict[str, Any]] = []
@@ -192,6 +199,25 @@ class HotspotBootstrapPlanner:
             )
 
         lines: list[str] = []
+        # Bootstrap the interface-list named "WAN" so the NAT
+        # rule below has a valid match. Idempotent: skips if
+        # the list or the member already exists. This block is
+        # only emitted when the operator told us the WAN
+        # interface name (Hotspot card in v3 wizard or its
+        # equivalent in v2).
+        if wan_interface:
+            lines.extend(
+                [
+                    "# Bootstrap interface-list WAN (idempotent)",
+                    ':if ([:len [/interface list find where name="WAN"]] = 0) do={'
+                    ' /interface list add name=WAN }',
+                    f':if ([:len [/interface list member find where '
+                    f'list=WAN interface="{wan_interface}"]] = 0) do={{'
+                    f' /interface list member add list=WAN '
+                    f'interface="{wan_interface}" }}',
+                    "",
+                ]
+            )
         for plan in port_plans:
             iface = plan["interface"]
             comment = plan["comment"]
@@ -210,11 +236,19 @@ class HotspotBootstrapPlanner:
                 ]
             )
 
+        # Tag every RADIUS row so subsequent runs can locate
+        # and update (rather than duplicate) the same entry.
+        radius_tag = f"HOBERADIUS_SETUP:{wizard_run_id}:hotspot"
         lines.extend(
             [
                 "/ip dns set allow-remote-requests=yes",
                 "",
-                f'/radius add service=hotspot address={radius_server_ip} secret="{radius_secret}" authentication-port=1812 accounting-port=1813 src-address={router_vpn_ip} timeout=3000ms comment="HOBERADIUS"',
+                "# RADIUS entry — idempotent: skip if same-tag row exists",
+                f':if ([:len [/radius find where comment="{radius_tag}"]] = 0) do={{',
+                f'  /radius add service=hotspot address={radius_server_ip} secret="{radius_secret}" authentication-port=1812 accounting-port=1813 src-address={router_vpn_ip} timeout=3000ms comment="{radius_tag}"',
+                "} else={",
+                f'  /radius set [find where comment="{radius_tag}"] address={radius_server_ip} secret="{radius_secret}" src-address={router_vpn_ip}',
+                "}",
                 "",
                 "/radius incoming set accept=yes port=3799",
                 "",
