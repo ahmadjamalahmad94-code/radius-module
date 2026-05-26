@@ -837,6 +837,130 @@ class SetupWizardService:
             actor=actor,
         )
 
+    def auto_detect_router_public_key(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        router_address: str,
+        api_user: str,
+        api_password: str,
+        api_port: int = 8728,
+        api_use_tls: bool = False,
+        wg_interface_name: str = "hr-wg",
+        actor: str = "wizard",
+    ) -> dict[str, Any]:
+        """Connect to the operator's MikroTik via API, read the
+        WireGuard interface public key directly, and submit it.
+
+        Removes the copy-paste loop the operator complained about:
+        the wizard runs a script on the router (which generates
+        fresh keys), then asks the operator to paste the WG show
+        output. Operators that skipped the paste hit
+        `server peer plan requires a peer that is ready_to_apply`.
+
+        With this method the wizard reaches out to RouterOS API
+        itself, queries `/interface/wireguard` filtered by name,
+        extracts `public-key`, and submits it — all in one click.
+
+        This is read-only on the router (the WG interface and
+        keys were already created by the bootstrap script). The
+        only mutation is on our DB side: marking the prepared
+        peer as `ready_to_apply`.
+        """
+        from ..integration.mikrotik.client import MikrotikClient
+        from ..integration.mikrotik.errors import (
+            AuthError, ConnectError, MikrotikError,
+        )
+
+        host = (router_address or "").strip()
+        if not host:
+            raise SetupWizardValidationError(
+                "router_address is required for auto-detect"
+            )
+        user = (api_user or "").strip()
+        if not user:
+            raise SetupWizardValidationError(
+                "api_user is required for auto-detect"
+            )
+        pwd = api_password or ""
+        if not pwd:
+            raise SetupWizardValidationError(
+                "api_password is required for auto-detect"
+            )
+        iface = (wg_interface_name or "hr-wg").strip()
+
+        # Pull the WG interface row from the router via API.
+        try:
+            with MikrotikClient(
+                host=host, port=int(api_port or 8728),
+                username=user, password=pwd,
+                use_tls=bool(api_use_tls),
+                verify_tls=False,
+                timeout=10,
+            ) as client:
+                rows = list(client.print_(
+                    "/interface/wireguard/print",
+                ))
+        except AuthError as exc:
+            raise SetupWizardValidationError(
+                f"router_api_auth_failed: {exc}"
+            ) from exc
+        except ConnectError as exc:
+            raise SetupWizardValidationError(
+                f"router_api_connect_failed: {exc}"
+            ) from exc
+        except MikrotikError as exc:
+            raise SetupWizardValidationError(
+                f"router_api_error: {exc}"
+            ) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise SetupWizardValidationError(
+                f"router_api_unexpected_error: "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
+
+        # Find the row matching the interface we created.
+        matched = None
+        for row in rows:
+            if str(row.get("name") or "").strip() == iface:
+                matched = row
+                break
+        if not matched:
+            raise SetupWizardValidationError(
+                f"wireguard_interface_not_found_on_router: "
+                f"no interface named {iface!r} present. Re-run "
+                f"the bootstrap script first."
+            )
+        public_key = str(matched.get("public-key") or "").strip()
+        if not public_key:
+            raise SetupWizardValidationError(
+                "wireguard_interface_has_no_public_key"
+            )
+
+        # Submit through the regular path so all the validation
+        # (key format, no duplicate across registry ids) runs.
+        result = self.submit_router_public_key(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            public_key=public_key,
+            actor=actor,
+        )
+        # Augment the response so the UI can show what was
+        # detected without exposing the full key.
+        masked = (
+            f"{public_key[:6]}...{public_key[-6:]}"
+            if len(public_key) >= 16 else "***"
+        )
+        return {
+            **result,
+            "auto_detected_from": {
+                "router_address":      host,
+                "wg_interface":        iface,
+                "public_key_masked":   masked,
+            },
+        }
+
     def _prepared_peer_id_for_run(self, *, tenant_id: int, run_id: int) -> int:
         summary = self.get_run_summary(tenant_id=tenant_id, run_id=run_id)
         peer = summary.get("prepared_wireguard_peer") or {}

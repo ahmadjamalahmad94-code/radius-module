@@ -67,6 +67,12 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/verify-internet", "setup_wizard_verify_internet", setup_wizard_verify_internet, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/generate-vpn-radius-script", "setup_wizard_generate_vpn_script", setup_wizard_generate_vpn_script, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/router-public-key", "setup_wizard_router_public_key", setup_wizard_router_public_key, methods=["POST"])
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/router-public-key/auto-detect",
+        "setup_wizard_router_public_key_auto_detect",
+        setup_wizard_router_public_key_auto_detect,
+        methods=["POST"],
+    )
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/dry-run", "setup_wizard_server_peer_dry_run", setup_wizard_server_peer_dry_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/apply", "setup_wizard_server_peer_apply", setup_wizard_server_peer_apply, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/rollback", "setup_wizard_server_peer_rollback", setup_wizard_server_peer_rollback, methods=["POST"])
@@ -274,6 +280,33 @@ def setup_wizard_router_public_key(run_id: int):
             run_id=run_id,
             public_key=str(body.get("public_key") or ""),
             actor=str(body.get("actor") or getattr(g, "admin_username", "") or "wizard"),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify({"ok": True, "provisioning": result})
+
+
+def setup_wizard_router_public_key_auto_detect(run_id: int):
+    """Auto-fetch the router's WireGuard public key via MikroTik
+    API. Removes the copy-paste step that confused operators."""
+    body = _body()
+    try:
+        result = _svc().auto_detect_router_public_key(
+            tenant_id=_tid(),
+            run_id=run_id,
+            router_address=str(body.get("router_address") or ""),
+            api_user=str(body.get("api_user") or ""),
+            api_password=str(body.get("api_password") or ""),
+            api_port=int(body.get("api_port") or 8728),
+            api_use_tls=bool(body.get("api_use_tls") or False),
+            wg_interface_name=str(
+                body.get("wg_interface_name") or "hr-wg"
+            ),
+            actor=str(
+                body.get("actor")
+                or getattr(g, "admin_username", "")
+                or "wizard"
+            ),
         )
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
