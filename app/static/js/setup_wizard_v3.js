@@ -555,13 +555,17 @@
       "[data-swz-discover-api-pass]",
     );
     // Pre-fill from the credentials the unified script baked
-    // into the router during Step 3. Operator only edits if
-    // they want to use a different account.
-    if (userField && !userField.value && state.apiUser) {
-      userField.value = state.apiUser;
+    // into the router during Step 3. Always overwrite an empty
+    // field, AND overwrite a stale placeholder/admin value if
+    // we now have a real run-specific user. Operator can still
+    // edit the values after seeing them.
+    if (userField && state.apiUser) {
+      const current = (userField.value || "").trim();
+      const stale = current === "" || current === "admin";
+      if (stale) userField.value = state.apiUser;
     }
-    if (passField && !passField.value && state.apiPassword) {
-      passField.value = state.apiPassword;
+    if (passField && state.apiPassword) {
+      if (!passField.value) passField.value = state.apiPassword;
     }
     if (form && form.hidden) {
       // First click reveals the credentials form.

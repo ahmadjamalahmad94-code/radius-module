@@ -38,8 +38,28 @@ _LOG = logging.getLogger(__name__)
 
 # Interfaces the operator should NEVER select for hotspot —
 # excluded from the result. These are management / loopback /
-# tunnel interfaces.
-_BLOCKED_TYPES = {"loopback", "wg", "wireguard", "vrrp"}
+# tunnel / WAN-client interfaces. Picking any of them for
+# hotspot would either take the router offline or expose the
+# tunnel to subscribers.
+_BLOCKED_TYPES = {
+    # Loopback / dummy
+    "loopback",
+    # WireGuard
+    "wg", "wireguard",
+    # Redundancy control
+    "vrrp",
+    # PPPoE WAN client (e.g. hr-pppoe-ether1 — the uplink
+    # configured in Step 2 PPPoE mode). Picking this for
+    # hotspot would replace the operator's WAN uplink.
+    "pppoe-out", "pppoe-in",
+    # Other tunnel WANs
+    "eoip", "eoip-tunnel", "gre", "gre-tunnel",
+    "ipip", "ipip-tunnel",
+    # VPN clients
+    "pptp-out", "l2tp-out", "sstp-out", "ovpn-out",
+    # Mobile / cellular WAN
+    "lte", "ppp-out",
+}
 _BLOCKED_NAMES = {"hr-wg", "lo"}
 
 

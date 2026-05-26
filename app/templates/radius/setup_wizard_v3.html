@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526l">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526m">
 {% endblock %}
 
 {% block content %}
@@ -469,18 +469,25 @@ Steps:
                 </button>
               </div>
 
-              {# API credentials — collapsed by default #}
+              {# API credentials — collapsed by default. The
+                 fields are LEFT BLANK so the JS can pre-fill
+                 them with the run's actual hr-api-<run_id> /
+                 generated password. If we hard-code value=admin
+                 here, the `!field.value` pre-fill check fails. #}
               <div class="swz-discover-api-form" data-swz-discover-api-form hidden>
                 <div class="swz-field">
                   <label>اسم مستخدم API</label>
                   <input type="text" data-swz-discover-api-user
-                         dir="ltr" value="admin" autocomplete="off">
+                         dir="ltr" autocomplete="off"
+                         placeholder="سيُملأ تلقائياً من سكربت الخطوة 3">
                 </div>
                 <div class="swz-field">
                   <label>كلمة مرور API</label>
                   <input type="password" data-swz-discover-api-pass
-                         dir="ltr" autocomplete="new-password">
-                  <small>اضغط Enter للاكتشاف. لو كانت فارغة على الراوتر، اتركها فارغة.</small>
+                         dir="ltr" autocomplete="new-password"
+                         placeholder="سيُملأ تلقائياً">
+                  <small>اضغط Enter للاكتشاف. سيتم تعبئة الحقول
+                    من بيانات الخطوة 3 تلقائياً.</small>
                 </div>
               </div>
 
@@ -756,5 +763,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526l"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526m"></script>
 {% endblock %}
