@@ -197,6 +197,9 @@
     const data = await postJson("/admin/radius/setup-wizard/runs", {});
     currentRunId = Number(data.run && data.run.id) || 0;
     if (!currentRunId) throw new Error("تعذر إنشاء جلسة إعداد جديدة.");
+    // Expose to sibling IIFEs (the one-button auto-finalize
+    // handler at the bottom of this file reads it).
+    try { window.__swv2CurrentRunId = currentRunId; } catch (_) {}
     return currentRunId;
   }
 
@@ -1350,4 +1353,153 @@
 
   setSource(selectedSource);
   showStep(0);
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   One-button auto-finalize handler. Posts to
+   /setup-wizard/runs/<id>/server-peer/complete and renders the
+   structured step list + final result. Replaces three-step
+   manual dance: paste WG output → dry-run → apply.
+   ───────────────────────────────────────────────────────────── */
+(function attachAutoFinalize() {
+  const card = document.querySelector("[data-swv2-auto-finalize]");
+  if (!card) return;
+
+  const btn      = card.querySelector("[data-swv2-auto-finalize-go]");
+  const spinner  = card.querySelector("[data-swv2-auto-finalize-spinner]");
+  const stepsBox = card.querySelector("[data-swv2-auto-finalize-steps]");
+  const resultBox = card.querySelector("[data-swv2-auto-finalize-result]");
+
+  const fAddress  = card.querySelector("[data-swv2-auto-router-address]");
+  const fUser     = card.querySelector("[data-swv2-auto-api-user]");
+  const fPassword = card.querySelector("[data-swv2-auto-api-password]");
+  const fPort     = card.querySelector("[data-swv2-auto-api-port]");
+
+  function pickRunId() {
+    // Primary: the sibling IIFE sets this when ensureRun()
+    // succeeds.
+    if (window.__swv2CurrentRunId) {
+      return parseInt(window.__swv2CurrentRunId, 10);
+    }
+    // Secondary: template-rendered data attribute.
+    const main = document.querySelector("[data-swv2-run-id]");
+    if (main && main.dataset.swv2RunId) {
+      return parseInt(main.dataset.swv2RunId, 10);
+    }
+    // Fallback: scan localStorage if a previous flow saved it.
+    try {
+      const v = window.localStorage.getItem("swv2.runId");
+      return v ? parseInt(v, 10) : 0;
+    } catch (_) { return 0; }
+  }
+
+  function renderStep(step) {
+    const row = document.createElement("div");
+    const ok = step.status === "ok";
+    const failed = step.status === "failed";
+    const cls = ok ? "ok" : failed ? "failed" : "pending";
+    row.className = "swv2-finalize-step swv2-finalize-step--" + cls;
+    const icon = ok ? "✓" : failed ? "✗" : "⋯";
+    const name = {
+      "auto_detect": "اكتشاف مفتاح الراوتر",
+      "locate_peer": "تحديد سجل peer",
+      "dry_run":     "توليد الخطّة",
+      "apply":       "كتابة الـ peer على الخادم",
+      "verify":      "التحقّق من handshake",
+    }[step.step] || step.step;
+    row.innerHTML =
+      `<span class="swv2-finalize-step__icon">${icon}</span>` +
+      `<div class="swv2-finalize-step__body">` +
+      `<div class="swv2-finalize-step__name">${name}</div>` +
+      `<div class="swv2-finalize-step__ar">${step.ar || ""}</div>` +
+      `</div>`;
+    return row;
+  }
+
+  function renderResult(data) {
+    resultBox.hidden = false;
+    let cls;
+    let html;
+    if (data.ok && data.final_status === "verified_handshake") {
+      cls = "ok";
+      html = `🎉 ${data.reason_ar || "تمّ التجهيز بنجاح."}`;
+    } else if (data.ok) {
+      cls = "pending";
+      html = `⏳ ${data.reason_ar || "تمّ التطبيق. بانتظار التأكيد."}`;
+    } else {
+      cls = "failed";
+      html = `❌ ${data.reason_ar || "تعذّر التجهيز."}`;
+    }
+    resultBox.className =
+      "swv2-auto-finalize-result swv2-auto-finalize-result--" + cls;
+    resultBox.innerHTML = html;
+  }
+
+  btn.addEventListener("click", async () => {
+    const address = (fAddress.value || "").trim();
+    const user    = (fUser.value || "").trim();
+    const pwd     = fPassword.value || "";
+    const port    = parseInt(fPort.value || "8728", 10);
+
+    if (!address || !user || !pwd) {
+      resultBox.hidden = false;
+      resultBox.className =
+        "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
+      resultBox.innerHTML = "❌ املأ عنوان الراوتر واسم المستخدم وكلمة المرور أوّلاً.";
+      return;
+    }
+
+    let runId = pickRunId();
+    if (!runId && typeof ensureRun === "function") {
+      try { runId = await ensureRun(); } catch (_) {}
+    }
+    if (!runId) {
+      resultBox.hidden = false;
+      resultBox.className =
+        "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
+      resultBox.innerHTML =
+        "❌ لا يوجد wizard run نشط. ابدأ المعالج من البداية.";
+      return;
+    }
+
+    btn.disabled = true;
+    spinner.hidden = false;
+    stepsBox.hidden = false;
+    stepsBox.innerHTML = "";
+    resultBox.hidden = true;
+
+    try {
+      const resp = await fetch(
+        `/admin/radius/setup-wizard/runs/${runId}/server-peer/complete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            router_address: address,
+            api_user:       user,
+            api_password:   pwd,
+            api_port:       port,
+            api_use_tls:    false,
+          }),
+          credentials: "same-origin",
+        }
+      );
+      const data = await resp.json();
+      stepsBox.innerHTML = "";
+      (data.steps || []).forEach(s => {
+        stepsBox.appendChild(renderStep(s));
+      });
+      renderResult(data);
+    } catch (err) {
+      resultBox.hidden = false;
+      resultBox.className =
+        "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
+      resultBox.innerHTML =
+        `❌ خطأ في الاتصال: ${err && err.message ? err.message : err}`;
+    } finally {
+      btn.disabled = false;
+      spinner.hidden = true;
+    }
+  });
 })();

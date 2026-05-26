@@ -983,6 +983,266 @@ class SetupWizardService:
             confirmation=confirmation,
         )
 
+    def server_peer_complete_setup(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        router_address: str,
+        api_user: str,
+        api_password: str,
+        api_port: int = 8728,
+        api_use_tls: bool = False,
+        wg_interface_name: str = "hr-wg",
+        actor: str = "wizard",
+    ) -> dict[str, Any]:
+        """End-to-end server-peer setup in one shot.
+
+        Replaces a three-step manual dance — paste WG print
+        output → dry-run → apply — with a single transaction:
+
+          1) Connect to the router via API.
+          2) Read its newly-generated WireGuard public key.
+          3) Submit that key into the prepared_wireguard_peer row
+             (status → `ready_to_apply`).
+          4) Run a dry-run against the planner.
+          5) Apply: write
+             /etc/hoberadius/wg-peers.d/router-<rid>.conf.
+          6) Wait briefly (~3s) for wg-reload + first handshake.
+          7) Return a structured status block the UI can render
+             in Arabic.
+
+        On any step's failure, we stop and return the failing
+        step's code + a friendly Arabic explanation. The UI
+        renders a single «تجهيز كامل» button — no copy-paste,
+        no separate dry-run/apply buttons to forget.
+
+        Idempotent: re-running for the same router will refresh
+        the peer file (same port, same key) and the result is
+        the same handshake.
+        """
+        import time as _time
+        from .setup_wizard_server_wg import (
+            server_peer_confirmation_phrase,
+        )
+
+        steps: list[dict[str, Any]] = []
+
+        def _step(name: str, status: str,
+                  ar: str, detail: Any = None) -> dict:
+            entry = {
+                "step":    name,
+                "status":  status,
+                "ar":      ar,
+            }
+            if detail is not None:
+                entry["detail"] = detail
+            steps.append(entry)
+            return entry
+
+        # ─── Step 1: auto-detect router public key ──────────
+        try:
+            detected = self.auto_detect_router_public_key(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                router_address=router_address,
+                api_user=api_user,
+                api_password=api_password,
+                api_port=api_port,
+                api_use_tls=api_use_tls,
+                wg_interface_name=wg_interface_name,
+                actor=actor,
+            )
+        except SetupWizardValidationError as exc:
+            code = str(exc)
+            _step("auto_detect", "failed",
+                  self._ar_explain(code), code)
+            return {
+                "ok":     False,
+                "stage":  "auto_detect",
+                "steps":  steps,
+                "reason_ar": self._ar_explain(code),
+            }
+        _step(
+            "auto_detect", "ok",
+            f"تمّ التقاط مفتاح الراوتر العام: "
+            f"{detected.get('auto_detected_from', {}).get('public_key_masked', '***')}",
+            detected,
+        )
+
+        # ─── Step 2: get the prepared_peer id ──────────────
+        try:
+            peer_id = self._prepared_peer_id_for_run(
+                tenant_id=tenant_id, run_id=run_id,
+            )
+        except SetupWizardValidationError as exc:
+            _step("locate_peer", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok":     False,
+                "stage":  "locate_peer",
+                "steps":  steps,
+                "reason_ar":
+                    "تعذّر العثور على سجل peer الجاهز لهذا المعالج.",
+            }
+        _step("locate_peer", "ok",
+              "تمّ العثور على سجل peer الجاهز.",
+              {"prepared_peer_id": peer_id})
+
+        # ─── Step 3: dry-run (validates plan + records intent)
+        try:
+            dr = self._server_wg_apply.dry_run(
+                tenant_id=tenant_id,
+                prepared_peer_id=peer_id,
+            )
+        except SetupWizardValidationError as exc:
+            _step("dry_run", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok":     False,
+                "stage":  "dry_run",
+                "steps":  steps,
+                "reason_ar":
+                    "فشل توليد الخطّة قبل التطبيق.",
+            }
+        if dr.get("status") != "ready":
+            _step("dry_run", "failed",
+                  "خطّة التطبيق غير جاهزة.", dr)
+            return {
+                "ok":     False,
+                "stage":  "dry_run",
+                "steps":  steps,
+                "reason_ar":
+                    "تعذّر تجهيز الخطّة — راجع تفاصيل التشخيص.",
+            }
+        _step("dry_run", "ok", "خطّة التطبيق جاهزة.")
+
+        # ─── Step 4: apply (write peer file → wg-reload) ───
+        try:
+            applied = self._server_wg_apply.apply(
+                tenant_id=tenant_id,
+                prepared_peer_id=peer_id,
+                confirmation=server_peer_confirmation_phrase(
+                    peer_id,
+                ),
+            )
+        except SetupWizardValidationError as exc:
+            _step("apply", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok":     False,
+                "stage":  "apply",
+                "steps":  steps,
+                "reason_ar":
+                    "فشل تطبيق إعداد peer على الخادم.",
+            }
+        applied_status = str(applied.get("status") or "")
+        if applied_status not in {
+            "applied_no_handshake", "verified_handshake",
+        }:
+            _step("apply", "failed",
+                  self._ar_explain(
+                      str(applied.get("status") or "")
+                  ),
+                  applied)
+            return {
+                "ok":     False,
+                "stage":  "apply",
+                "steps":  steps,
+                "applied": applied,
+                "reason_ar":
+                    "تمّت محاولة التطبيق لكن لم تكتمل بنجاح.",
+            }
+        _step("apply", "ok",
+              "تمّ كتابة إعداد peer على الخادم — wg-reload "
+              "سيُفعّله خلال ثانية واحدة.",
+              {"status": applied_status})
+
+        # ─── Step 5: short wait + handshake re-verify ──────
+        _time.sleep(3)
+        try:
+            verified = self._server_wg_apply.verify(
+                tenant_id=tenant_id,
+                prepared_peer_id=peer_id,
+            )
+            verified_status = str(verified.get("status") or "")
+        except Exception:  # noqa: BLE001
+            verified_status = applied_status
+            verified = applied
+        if verified_status == "verified_handshake":
+            _step("verify", "ok",
+                  "تمّ تأكيد الـ handshake بين الراوتر و VPS.")
+        else:
+            _step(
+                "verify",
+                "pending",
+                "تمّ التطبيق — بانتظار أوّل handshake من "
+                "الراوتر (قد يستغرق 5-30 ثانية).",
+            )
+
+        return {
+            "ok":            True,
+            "stage":         "complete",
+            "final_status":  verified_status or applied_status,
+            "steps":         steps,
+            "applied":       applied,
+            "verified":      verified,
+            "reason_ar":     (
+                "تمّ التجهيز بنجاح. الـ handshake مؤكَّد."
+                if verified_status == "verified_handshake"
+                else (
+                    "تمّ تجهيز peer على الخادم. بانتظار "
+                    "تأكيد الـ handshake — قد يستغرق ثوانٍ."
+                )
+            ),
+        }
+
+    @staticmethod
+    def _ar_explain(code: str) -> str:
+        """Map machine codes to operator-friendly Arabic copy."""
+        mapping = {
+            "router_api_auth_failed":
+                "بيانات الدخول للراوتر غير صحيحة. تحقّق من "
+                "اسم المستخدم وكلمة المرور.",
+            "router_api_connect_failed":
+                "تعذّر الاتصال بالراوتر. تحقّق من العنوان "
+                "وأنّ منفذ API مفتوح.",
+            "router_api_error":
+                "حدث خطأ من واجهة الراوتر.",
+            "wireguard_interface_not_found_on_router":
+                "واجهة WireGuard `hr-wg` غير موجودة على "
+                "الراوتر. شغّل سكربت المعالج عليه أوّلاً.",
+            "wireguard_interface_has_no_public_key":
+                "الواجهة WireGuard موجودة لكن بلا مفتاح. "
+                "أعد إنشاءها.",
+            "router_address is required for auto-detect":
+                "عنوان الراوتر مطلوب.",
+            "api_user is required for auto-detect":
+                "اسم مستخدم API مطلوب.",
+            "api_password is required for auto-detect":
+                "كلمة مرور API مطلوبة.",
+            "Public key is already assigned to another router.":
+                "هذا المفتاح مسجَّل لراوتر آخر بالفعل. "
+                "ربّما تعمل على نفس الجهاز بمعرّف جديد.",
+            "server peer plan requires a peer that is "
+            "ready_to_apply":
+                "سجل peer غير جاهز للتطبيق بعد — التقاط "
+                "المفتاح فشل.",
+            "server_wg_peers_dir_unwritable":
+                "مجلّد nginx-streams على الخادم غير قابل "
+                "للكتابة. راجع صلاحيات /etc/hoberadius/"
+                "wg-peers.d.",
+            "missing_peer":
+                "لم يُسجَّل peer على الخادم بعد. أعد المحاولة.",
+            "allowed_ip_mismatch":
+                "تمّت إضافة المفتاح لكن نطاق IPs المسموح "
+                "لا يطابق المتوقَّع.",
+        }
+        for needle, ar in mapping.items():
+            if needle in code:
+                return ar
+        return f"خطأ غير متوقَّع: {code}"
+
     def server_peer_rollback(
         self, *, tenant_id: int, run_id: int, confirmation: str
     ) -> dict[str, Any]:

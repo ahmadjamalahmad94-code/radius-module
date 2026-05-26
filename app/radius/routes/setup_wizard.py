@@ -73,6 +73,12 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
         setup_wizard_router_public_key_auto_detect,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/server-peer/complete",
+        "setup_wizard_server_peer_complete",
+        setup_wizard_server_peer_complete,
+        methods=["POST"],
+    )
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/dry-run", "setup_wizard_server_peer_dry_run", setup_wizard_server_peer_dry_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/apply", "setup_wizard_server_peer_apply", setup_wizard_server_peer_apply, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>/server-peer/rollback", "setup_wizard_server_peer_rollback", setup_wizard_server_peer_rollback, methods=["POST"])
@@ -311,6 +317,34 @@ def setup_wizard_router_public_key_auto_detect(run_id: int):
     except SetupWizardValidationError as exc:
         return _json_error(str(exc))
     return jsonify({"ok": True, "provisioning": result})
+
+
+def setup_wizard_server_peer_complete(run_id: int):
+    """One-button server-peer setup: auto-detect router key,
+    dry-run, apply, verify — all in one call. Replaces the
+    three-step manual dance operators kept skipping."""
+    body = _body()
+    try:
+        result = _svc().server_peer_complete_setup(
+            tenant_id=_tid(),
+            run_id=run_id,
+            router_address=str(body.get("router_address") or ""),
+            api_user=str(body.get("api_user") or ""),
+            api_password=str(body.get("api_password") or ""),
+            api_port=int(body.get("api_port") or 8728),
+            api_use_tls=bool(body.get("api_use_tls") or False),
+            wg_interface_name=str(
+                body.get("wg_interface_name") or "hr-wg"
+            ),
+            actor=str(
+                body.get("actor")
+                or getattr(g, "admin_username", "")
+                or "wizard"
+            ),
+        )
+    except SetupWizardValidationError as exc:
+        return _json_error(str(exc))
+    return jsonify(result)
 
 
 def setup_wizard_server_peer_dry_run(run_id: int):

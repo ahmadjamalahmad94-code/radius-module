@@ -521,16 +521,78 @@
             </div>
           </div>
         </div>
-        <div class="swv2-server-action-card" data-swv2-server-peer-simple hidden>
-          <div>
-            <strong>جهّز الربط على الخادم من HobeRadius</strong>
-            <span>بعد لصق مخرجات MikroTik والتقاط مفتاح الراوتر، اضغط الزر ليحاول HobeRadius إضافة Peer الراوتر على الخادم عبر المسار المحروس. لا يحتاج العميل إلى دخول VPS أو Terminal.</span>
+        {# ─── One-button auto-finalize ──────────────────────
+           Replaces the «paste WG output → dry-run → apply»
+           three-button dance that operators kept skipping.
+           The new flow takes router IP + admin creds once and
+           runs the entire pipeline in one POST. #}
+        <div class="swv2-auto-finalize-card"
+             data-swv2-auto-finalize>
+          <div class="swv2-auto-finalize-head">
+            <span class="swv2-auto-finalize-badge">🚀 إنهاء تلقائي</span>
+            <h3>تجهيز الربط الكامل بضغطة واحدة</h3>
+            <p>
+              أدخل بيانات الدخول للراوتر مرّة واحدة. سيقوم HobeRadius
+              بـ: اكتشاف مفتاح WireGuard من الراوتر تلقائياً، ثمّ
+              تسجيله على الخادم، ثمّ التحقّق من الـ handshake. لا
+              حاجة لنسخ ولصق أيّ شيء يدوياً.
+            </p>
           </div>
+
+          <div class="swv2-auto-finalize-grid">
+            <label class="swv2-field">
+              <span>عنوان الراوتر (WAN IP أو الدومين)</span>
+              <input type="text"
+                     data-swv2-auto-router-address
+                     placeholder="مثال: 213.6.169.138"
+                     autocomplete="off">
+            </label>
+            <label class="swv2-field">
+              <span>اسم مستخدم API على الراوتر</span>
+              <input type="text"
+                     data-swv2-auto-api-user
+                     placeholder="admin"
+                     value="admin"
+                     autocomplete="off">
+            </label>
+            <label class="swv2-field">
+              <span>كلمة مرور API</span>
+              <input type="password"
+                     data-swv2-auto-api-password
+                     placeholder="••••••••"
+                     autocomplete="off">
+            </label>
+            <label class="swv2-field swv2-field-narrow">
+              <span>منفذ API</span>
+              <input type="number"
+                     data-swv2-auto-api-port
+                     value="8728"
+                     min="1" max="65535">
+            </label>
+          </div>
+
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-server-peer-simple-apply>تجهيز الربط على الخادم</button>
+            <button type="button"
+                    class="swv2-btn swv2-btn-primary swv2-btn-large"
+                    data-swv2-auto-finalize-go>
+              <span class="swv2-btn-icon">⚡</span>
+              تجهيز كامل تلقائياً
+            </button>
+            <span class="swv2-auto-finalize-spinner"
+                  data-swv2-auto-finalize-spinner hidden>
+              جارٍ التنفيذ...
+            </span>
           </div>
-          <span class="swv2-server-action-note" data-swv2-server-peer-status>جاهز بعد التقاط مفتاح الراوتر. إذا كان وضع المختبر غير مفعّل سيظهر سبب الحظر هنا.</span>
-          <small>بعد نجاح التجهيز، أعد فحص ping أو handshake والصق النتيجة هنا للتحقق.</small>
+
+          <div class="swv2-auto-finalize-steps"
+               data-swv2-auto-finalize-steps hidden>
+            {# Filled by JS — one line per step. #}
+          </div>
+
+          <div class="swv2-auto-finalize-result"
+               data-swv2-auto-finalize-result hidden>
+            {# Filled by JS — final summary. #}
+          </div>
         </div>
         <div class="swv2-success-state" hidden data-swv2-success="vpn">
           <i class="fa-solid fa-party-horn"></i>

@@ -100,9 +100,17 @@ def test_setup_wizard_v2_verification_and_script_sections_exist(app):
     assert 'data-copy-target="hotspot-script-code"' in html
     assert 'data-copy-target="broadband-script-code"' in html
     assert 'data-copy-target="added-service-plan-code"' in html
-    assert "data-swv2-server-peer-simple-apply" in html
-    assert 'data-swv2-server-peer-simple' in html
-    assert "data-swv2-server-peer-status" in html
+    # The legacy «paste WG output → dry-run → apply» card was
+    # replaced by the one-button auto-finalize card. The new
+    # contract: a single button + four input fields + a result
+    # block. See the «server_peer_complete_setup» service
+    # method.
+    assert "data-swv2-auto-finalize" in html
+    assert "data-swv2-auto-finalize-go" in html
+    assert "data-swv2-auto-router-address" in html
+    assert "data-swv2-auto-api-user" in html
+    assert "data-swv2-auto-api-password" in html
+    assert "تجهيز كامل تلقائياً" in html
     assert "Terminal السيرفر VPS" not in html
     assert "HOBERADIUS_SETUP:&lt;run_id&gt;:vpn" not in html
     assert "تم تجهيز سكربت الإنترنت" in html
