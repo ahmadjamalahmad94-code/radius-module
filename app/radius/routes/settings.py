@@ -17,6 +17,7 @@ def _tid() -> int:
 _SETTINGS_KEYS = [
     ("branding.logo_url",       "رابط الشعار",         ""),
     ("branding.primary_color",  "اللون الأساسي",        "#2BAACC"),
+    ("radius.default_country",   "الدولة الافتراضية",    ""),
     ("billing.currency",        "العملة",               "JOD"),
     ("billing.tax_pct",         "ضريبة %",              "0"),
     ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),

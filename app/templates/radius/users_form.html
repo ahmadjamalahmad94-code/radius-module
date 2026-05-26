@@ -333,6 +333,139 @@
   .uf-row3 .ui-wrap .ui-value{ padding-block: 0; height: 100%; }
   .uf-row3 .ui-wrap .ui-unit { padding-block: 0; height: 100%; }
 
+  .uf-row4{
+    display: grid;
+    grid-template-columns: .85fr 1.1fr 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 1080px){ .uf-row4{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px){ .uf-row4{ grid-template-columns: 1fr; } }
+  .uf-row4 .tsw,
+  .uf-row4 .ui-wrap{
+    height: 42px; min-height: 42px;
+    box-sizing: border-box;
+    align-items: center;
+  }
+  .uf-row4 .ui-wrap{ display: inline-flex; }
+  .uf-row4 .ui-wrap .ui-value{ padding-block: 0; height: 100%; }
+  .uf-row4 .ui-wrap .ui-unit { padding-block: 0; height: 100%; }
+  .uf-inline-control{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .uf-chip-btn{
+    height: 42px;
+    border: 1px solid var(--hub-border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--hub-brand-ink);
+    padding: 0 12px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color var(--hub-anim-fast) var(--hub-ease),
+                background var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-chip-btn:hover{
+    border-color: var(--hub-brand-line);
+    background: var(--hub-brand-soft);
+  }
+  @media (max-width: 560px){ .uf-inline-control{ grid-template-columns: 1fr; } }
+
+  .uf-net-input{
+    position: relative;
+  }
+  .uf-net-input .hub-input{
+    padding-inline-start: 40px;
+  }
+  .uf-net-input i{
+    position: absolute;
+    inset-inline-start: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--hub-text-mute);
+    pointer-events: none;
+    font-size: 13px;
+  }
+  .uf-mac-manager{
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 10px;
+  }
+  .uf-mac-add{
+    display: grid;
+    grid-template-columns: minmax(180px, 360px) 42px;
+    gap: 8px;
+    align-items: center;
+  }
+  .uf-icon-btn{
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--hub-border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--hub-brand-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color var(--hub-anim-fast) var(--hub-ease),
+                background var(--hub-anim-fast) var(--hub-ease);
+  }
+  .uf-icon-btn:hover{
+    border-color: var(--hub-brand-line);
+    background: var(--hub-brand-soft);
+  }
+  .uf-icon-btn--danger{ color: #b91c1c; }
+  .uf-mac-list,
+  .uf-mac-history{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .uf-mac-pill{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 5px 8px 5px 12px;
+    border: 1px solid var(--hub-border);
+    border-radius: 9px;
+    background: var(--hub-bg-card);
+    color: var(--hub-text);
+    font-size: 12.5px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .uf-mac-pill button{
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 7px;
+    background: #fee2e2;
+    color: #b91c1c;
+    cursor: pointer;
+  }
+  .uf-mac-history-btn{
+    border: 1px dashed var(--hub-brand-line);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--hub-brand-ink);
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .uf-mac-history-btn:hover{ background: var(--hub-brand-soft); }
+  @media (max-width: 560px){ .uf-mac-add{ grid-template-columns: 1fr 42px; } }
+
   /* Pending-rule badge + visual variant on the inline rule card,
      and the floating toast popup for inline validation feedback. */
   .sr2-rule--pending{ border-inline-start: 4px solid #f59e0b !important; }
@@ -608,13 +741,11 @@
     <div class="uf-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
     <nav class="uf-side-list">
       <a href="#uf-account"><i class="fa-solid fa-wifi"></i> حساب الإنترنت</a>
-      <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
-      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
       <a href="#uf-personal"><i class="fa-solid fa-id-card"></i> البيانات الشخصية</a>
-      <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
+      <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
       <a href="#uf-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
-      <a href="#uf-advanced"><i class="fa-solid fa-microchip"></i> إعدادات متقدمة</a>
-      <a href="#uf-notes"><i class="fa-solid fa-comment"></i> الملاحظات</a>
+      <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
+      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
     </nav>
     <div class="uf-side-note">
       ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.
@@ -768,7 +899,49 @@
       </div>
     </section>
 
-    {# ── 2. Speed (merged): base custom speed + scheduled rules. ─
+    {# ── 2. Personal ────────────────────────────────────── #}
+    <section class="uf-section uf-section--pers" id="uf-personal">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-id-card"></i></span>
+        <span class="uf-section-title">المعلومات الشخصية</span>
+      </header>
+      <div class="uf-section-body">
+        {% set _name_parts = (sub.full_name or '').split() %}
+        {% set _first_name = _name_parts[0] if _name_parts|length > 0 else '' %}
+        {% set _second_name = _name_parts[1] if _name_parts|length > 1 else (sub.father_name or '') %}
+        {% set _third_name = _name_parts[2] if _name_parts|length > 2 else '' %}
+        {% set _fourth_name = (_name_parts[3:]|join(' ')) if _name_parts|length > 3 else '' %}
+        <div class="uf-grid">
+          <input type="hidden" name="full_name" value="{{ sub.full_name or '' }}" data-full-name-field>
+          <input type="hidden" name="father_name" value="{{ sub.father_name or _second_name }}" data-father-name-field>
+          <input type="hidden" name="country" value="{{ sub.country or default_country or '' }}">
+          <div class="uf-field"><label>الاسم الأول</label>
+            <input class="hub-input" type="text" value="{{ _first_name }}" data-name-part="first"></div>
+          <div class="uf-field"><label>الاسم الثاني</label>
+            <input class="hub-input" type="text" value="{{ _second_name }}" data-name-part="second"></div>
+          <div class="uf-field"><label>الاسم الثالث</label>
+            <input class="hub-input" type="text" value="{{ _third_name }}" data-name-part="third"></div>
+          <div class="uf-field"><label>الاسم الرابع</label>
+            <input class="hub-input" type="text" value="{{ _fourth_name }}" data-name-part="fourth"></div>
+          <div class="uf-field"><label>الجوال</label>
+            <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div>
+          <div class="uf-field"><label>البريد الإلكتروني</label>
+            <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}"></div>
+          <div class="uf-field"><label>الرقم الوطني</label>
+            <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}"></div>
+          <div class="uf-field"><label>طريقة الدفع المفضلة</label>
+            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="نقدًا / محفظة / تحويل"></div>
+          <div class="uf-field"><label>المدينة</label>
+            <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}"></div>
+          <div class="uf-field"><label>المنطقة / الحي</label>
+            <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}"></div>
+          <div class="uf-field full"><label>ملاحظات</label>
+            <textarea class="hub-textarea" name="remark" rows="2" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea></div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 3. Speed (merged): base custom speed + scheduled rules. ─
        Merged on 2026-05-21 per user feedback («ادمج قسم السرعة الخاصة
        مع قسم جداول السرعة»). Two sub-blocks:
          - 2A: السرعة الأساسية (base custom speed + temporary window)
@@ -813,21 +986,30 @@
           </div>
         </div>
 
-        {# Row B: «سرعة مؤقتة» toggle + temporary_speed_from + to. #}
-        <div class="uf-row3">
+        {# Row B: «سرعة مؤقتة» toggle + duration + temporary download/upload. #}
+        <div class="uf-row4">
           <div class="uf-field">
             <label>سرعة مؤقتة</label>
             {{ toggle_switch(name="temporary_speed", checked=sub.temporary_speed, id="ts") }}
             <div class="help">رفع مؤقت بدون تغيير الباقة.</div>
           </div>
           <div class="uf-field">
-            <label>من الساعة</label>
-            {{ time_picker_circular(name="temporary_speed_from", value=sub.temporary_speed_from or "") }}
+            <label>مدة السرعة المؤقتة</label>
+            <div class="uf-inline-control">
+              {{ unit_input_picker(name="temporary_speed_duration_minutes", value=sub.temporary_speed_duration_minutes or 30, kind="time", units=["min","hr"]) }}
+              <button type="button" class="uf-chip-btn" data-temp-duration-preset="30">30 دقيقة</button>
+            </div>
           </div>
           <div class="uf-field">
-            <label>إلى الساعة</label>
-            {{ time_picker_circular(name="temporary_speed_to", value=sub.temporary_speed_to or "") }}
+            <label>سرعة تنزيل مؤقتة</label>
+            {{ unit_input_picker(name="temporary_download_speed_kbps", value=sub.temporary_download_speed_kbps or sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
           </div>
+          <div class="uf-field">
+            <label>سرعة رفع مؤقتة</label>
+            {{ unit_input_picker(name="temporary_upload_speed_kbps", value=sub.temporary_upload_speed_kbps or sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+          </div>
+          <input type="hidden" name="temporary_speed_from" value="{{ sub.temporary_speed_from or '' }}">
+          <input type="hidden" name="temporary_speed_to" value="{{ sub.temporary_speed_to or '' }}">
         </div>
 
         {# 2B. Scheduled speed rules (per-subscriber, cookbook §19) ─
@@ -1162,118 +1344,7 @@
       </div>
     </section>
 
-    {# ── 3. PPPoE ───────────────────────────────────────── #}
-    <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
-      <header class="uf-section-head">
-        <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
-        <span class="uf-section-title">PPPoE (اختياري)</span>
-        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
-      </header>
-      <div class="uf-section-body">
-        <div class="uf-grid">
-          <div class="uf-field">
-            <label>اسم دخول PPPoE</label>
-            <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
-            <div class="help">اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.</div>
-          </div>
-          <div class="uf-field">
-            <label>كلمة مرور PPPoE</label>
-            <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
-          </div>
-          <div class="uf-field">
-            <label>عنوان PPPoE</label>
-            <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
-            <div class="help">عنوان ثابت اختياري.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {# ── 4. Personal ────────────────────────────────────── #}
-    <section class="uf-section uf-section--pers" id="uf-personal">
-      <header class="uf-section-head">
-        <span class="uf-section-icon"><i class="fa-solid fa-id-card"></i></span>
-        <span class="uf-section-title">المعلومات الشخصية</span>
-      </header>
-      <div class="uf-section-body">
-        <div class="uf-grid">
-          <div class="uf-field"><label>الاسم الكامل</label>
-            <input class="hub-input" type="text" name="full_name" value="{{ sub.full_name or '' }}"></div>
-          <div class="uf-field"><label>اسم الأب</label>
-            <input class="hub-input" type="text" name="father_name" value="{{ sub.father_name or '' }}"></div>
-          <div class="uf-field"><label>الجوال</label>
-            <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div>
-          <div class="uf-field"><label>البريد الإلكتروني</label>
-            <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}"></div>
-          <div class="uf-field"><label>الرقم الوطني</label>
-            <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}"></div>
-          <div class="uf-field"><label>الجنسية</label>
-            <input class="hub-input" type="text" name="nationality" value="{{ sub.nationality or '' }}"></div>
-          <div class="uf-field"><label>الدولة</label>
-            <input class="hub-input" type="text" name="country" value="{{ sub.country or '' }}"></div>
-          <div class="uf-field"><label>المدينة</label>
-            <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}"></div>
-          <div class="uf-field"><label>المنطقة / الحي</label>
-            <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}"></div>
-          <div class="uf-field"><label>المحافظة</label>
-            <input class="hub-input" type="text" name="state" value="{{ sub.state or '' }}"></div>
-          <div class="uf-field"><label>الرمز البريدي</label>
-            <input class="hub-input" type="text" name="zip" value="{{ sub.zip or '' }}"></div>
-          <div class="uf-field full"><label>العنوان التفصيلي</label>
-            <input class="hub-input" type="text" name="address" value="{{ sub.address or '' }}">
-            <div class="help">يساعد فريق الدعم أو التحصيل عند الحاجة.</div></div>
-          <div class="uf-field"><label>طريقة الدفع (مرجعي)</label>
-            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="—"></div>
-          <div class="uf-field"><label>مرجع الدفع</label>
-            <input class="hub-input" type="text" name="payment_reference" value="{{ sub.payment_reference or '' }}" placeholder="InstaPay/Other"></div>
-        </div>
-      </div>
-    </section>
-
-    {# ── 5. Network ─────────────────────────────────────── #}
-    <section class="uf-section uf-section--netw is-collapsible is-collapsed" data-sec="net" id="uf-network">
-      <header class="uf-section-head">
-        <span class="uf-section-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <span class="uf-section-title">الشبكة وقيود الاتصال</span>
-        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
-      </header>
-      <div class="uf-section-body">
-        <div class="uf-grid">
-          <div class="uf-field"><label>قفل عنوان الجهاز الأساسي</label>
-            <input class="hub-input" type="text" name="mac_lock" value="{{ sub.mac_lock or '' }}" placeholder="AA:BB:CC:DD:EE:FF">
-            <div class="help">لربط الحساب بجهاز واحد حصرًا.</div></div>
-          <div class="uf-field"><label>عنوان IP ثابت</label>
-            <input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5">
-            <div class="help">استخدمه فقط لمن يحتاج عنوانًا ثابتًا.</div></div>
-          <div class="uf-field"><label>VLAN</label>
-            <input class="hub-input" type="number" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
-            <div class="help">0 إذا لم تستخدم VLAN.</div></div>
-          <div class="uf-field"><label>تجاوز الجلسات</label>
-            <input class="hub-input" type="number" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
-            <div class="help">0 = قيمة الباقة.</div></div>
-          <div class="uf-field"><label>معرّف الجهاز</label>
-            <input class="hub-input" type="text" name="caller_id" value="{{ sub.caller_id or '' }}"></div>
-          <div class="uf-field"><label>عدد الأجهزة المسموحة</label>
-            <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
-            <div class="help">الحد الأقصى للجلسات المتزامنة.</div></div>
-          <div class="uf-field"><label>DNS أولي (PPP)</label>
-            <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"></div>
-          <div class="uf-field"><label>DNS ثانوي (PPP)</label>
-            <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"></div>
-          <div class="uf-field"><label>نطاق عناوين الشبكة</label>
-            <input class="hub-input" type="text" name="pool" value="{{ sub.pool or '' }}">
-            <div class="help">اسم نطاق العناوين على جهاز الشبكة.</div></div>
-          <div class="uf-field full"><label>عناوين أجهزة إضافية مسموحة</label>
-            <input class="hub-input" type="text" name="allowed_macs" value="{{ sub.allowed_macs or '' }}"
-                   placeholder="AA:BB:..., CC:DD:..."></div>
-          <div class="uf-field full"><label>ملف اتصال الجهاز</label>
-            <input class="hub-input" type="text" name="device_connection_file" value="{{ sub.device_connection_file or '' }}"
-                   placeholder="مرجع ملف الاتصال"></div>
-        </div>
-      </div>
-    </section>
-
-    {# ── 6. Quota & Time ───────────────────────────────── #}
+    {# ── 4. Quota & Time ───────────────────────────────── #}
     <section class="uf-section uf-section--quota is-collapsible is-collapsed" data-sec="quota" id="uf-quota">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-clock"></i></span>
@@ -1324,17 +1395,110 @@
       </div>
     </section>
 
-    {# ── 7. Advanced MikroTik ─────────────────────────── #}
+    {# ── 5. Network ─────────────────────────────────────── #}
+    <section class="uf-section uf-section--netw is-collapsible is-collapsed" data-sec="net" id="uf-network">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-network-wired"></i></span>
+        <span class="uf-section-title">الشبكة وقيود الاتصال</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-mac-manager" data-mac-manager>
+            <input type="hidden" name="mac_lock" value="{{ sub.mac_lock or '' }}" data-mac-hidden>
+            <input type="hidden" name="allowed_macs" value="{{ sub.allowed_macs or '' }}" data-mac-legacy-hidden>
+            <div class="uf-field">
+              <label>ماك ادرس</label>
+              <div class="uf-mac-add">
+                <span class="uf-net-input"><input class="hub-input" type="text" data-mac-input placeholder="AA:BB:CC:DD:EE:FF"><i class="fa-solid fa-laptop"></i></span>
+                <button type="button" class="uf-icon-btn" data-mac-add title="إضافة MAC"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div class="help">الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب.</div>
+            </div>
+            <div class="uf-mac-list" data-mac-list></div>
+            {% if login_macs %}
+            <div class="uf-field full">
+              <label>اختيار من سجل دخول المستخدم</label>
+              <div class="uf-mac-history">
+                {% for item in login_macs %}
+                <button type="button" class="uf-mac-history-btn" data-mac-pick="{{ item.mac }}"
+                        title="آخر ظهور: {{ item.last_seen_at or 'غير معروف' }}">
+                  {{ item.mac }}{% if item.online_sessions %} · متصل{% endif %}
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <div class="uf-field"><label>إيبي ادرس</label>
+            <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"><i class="fa-solid fa-laptop"></i></span>
+            <div class="help">عنوان ثابت للمشترك عند الحاجة.</div></div>
+          <div class="uf-field"><label>إيبي الجهاز المرسل</label>
+            <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
+            <div class="help">NAS-IP-Address للجهاز الذي يرسل طلبات RADIUS.</div></div>
+          <div class="uf-field"><label>Service Name</label>
+            <span class="uf-net-input"><input class="hub-input" type="text" name="service_name" value="{{ sub.service_name or '' }}" placeholder="pppoe / hotspot"><i class="fa-solid fa-laptop"></i></span>
+            <div class="help">اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.</div></div>
+          <div class="uf-field"><label>عدد الأجهزة المسموحة</label>
+            <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
+            <div class="help">الحد الأقصى للجلسات المتزامنة.</div></div>
+
+          <div class="uf-subrow-3">
+            <div class="uf-field"><label>Primary DNS (PPP)</label>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"><i class="fa-solid fa-laptop"></i></span></div>
+            <div class="uf-field"><label>Secondary DNS (PPP)</label>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"><i class="fa-solid fa-laptop"></i></span></div>
+            <div class="uf-field"><label>منفذ الاتصال للجهاز</label>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="nas_port_id" value="{{ sub.nas_port_id or '' }}" placeholder="ether1 / wlan1"><i class="fa-solid fa-laptop"></i></span></div>
+          </div>
+
+          <input type="hidden" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
+          <input type="hidden" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
+          <input type="hidden" name="pool" value="{{ sub.pool or '' }}">
+          <input type="hidden" name="caller_id" value="{{ sub.caller_id or '' }}">
+          <input type="hidden" name="device_connection_file" value="{{ sub.device_connection_file or '' }}">
+        </div>
+      </div>
+    </section>
+
+    {# ── 6. PPPoE ───────────────────────────────────────── #}
+    <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
+      <header class="uf-section-head">
+        <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
+        <span class="uf-section-title">PPPoE (اختياري)</span>
+        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
+      </header>
+      <div class="uf-section-body">
+        <div class="uf-grid">
+          <div class="uf-field">
+            <label>اسم دخول PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
+            <div class="help">اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.</div>
+          </div>
+          <div class="uf-field">
+            <label>كلمة مرور PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
+          </div>
+          <div class="uf-field">
+            <label>عنوان PPPoE</label>
+            <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
+            <div class="help">عنوان ثابت اختياري.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── 7. Very advanced network overrides ───────────── #}
     <section class="uf-section uf-section--mt is-collapsible is-collapsed" data-sec="mt" id="uf-advanced">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-microchip"></i></span>
-        <span class="uf-section-title">خصائص شبكة متقدمة</span>
+        <span class="uf-section-title">إعدادات شبكة متقدمة جدًا</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
         <div style="font-size:12px;color:var(--hub-text-mute);margin-bottom:12px">
           <i class="fa-solid fa-circle-info"></i>
-          حقول اختيارية لإعدادات شبكة متقدمة.
+          للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة MikroTik أو RADIUS محددة لهذا المشترك.
         </div>
         <div class="uf-grid">
           <div class="uf-field"><label>سلسلة فلترة MikroTik</label>
@@ -1356,21 +1520,6 @@
           <div class="uf-field full"><label>خصائص PPP إضافية</label>
             <textarea class="hub-textarea" name="ppp_attributes_extra" placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
             <div class="help">سطر لكل خاصية.</div></div>
-        </div>
-      </div>
-    </section>
-
-    {# ── 8. Notes ──────────────────────────────────────── #}
-    <section class="uf-section uf-section--notes" id="uf-notes">
-      <header class="uf-section-head">
-        <span class="uf-section-icon"><i class="fa-solid fa-comment"></i></span>
-        <span class="uf-section-title">ملاحظات</span>
-      </header>
-      <div class="uf-section-body">
-        <div class="uf-grid">
-          <div class="uf-field full">
-            <textarea class="hub-textarea" name="remark" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea>
-          </div>
         </div>
       </div>
     </section>
@@ -1423,20 +1572,150 @@
       }
     });
   });
-  // Disable temporary-speed times when checkbox is off
+  // Temporary speed: duration + upload/download are enabled only when selected.
   var tempSpeed = document.getElementById('ts');
-  var tempInputs = [
-    document.getElementById('temporary-speed-from'),
-    document.getElementById('temporary-speed-to')
-  ].filter(Boolean);
-  function syncTemporarySpeedTimes(){
+  var tempInputs = Array.prototype.slice.call(document.querySelectorAll(
+    '[name="temporary_speed_duration_minutes"], [name="temporary_download_speed_kbps"], [name="temporary_upload_speed_kbps"]'
+  )).map(function(hidden){
+    var field = hidden.closest('.uf-field');
+    return field ? Array.prototype.slice.call(field.querySelectorAll('input, select, button')).filter(function(el){
+      return el.type !== 'hidden';
+    }) : [];
+  }).reduce(function(all, items){ return all.concat(items); }, []);
+  var tempPreset30 = document.querySelector('[data-temp-duration-preset="30"]');
+  function setUnitPickerValue(hiddenName, baseValue, unitValue, displayValue){
+    var hidden = document.querySelector('[name="' + hiddenName + '"]');
+    if (!hidden) return;
+    var wrap = hidden.closest('[data-ui-card]');
+    var valueInput = wrap ? wrap.querySelector('.ui-value') : null;
+    var unitSelect = wrap ? wrap.querySelector('.ui-unit') : null;
+    hidden.value = String(baseValue);
+    if (valueInput) valueInput.value = String(displayValue);
+    if (unitSelect && unitValue) unitSelect.value = unitValue;
+  }
+  function copyTemporarySpeedsToEffectiveFields(){
+    if (!tempSpeed || !tempSpeed.checked) return;
+    var tempDown = document.querySelector('[name="temporary_download_speed_kbps"]');
+    var tempUp = document.querySelector('[name="temporary_upload_speed_kbps"]');
+    var down = document.querySelector('[name="download_speed_kbps"]');
+    var up = document.querySelector('[name="upload_speed_kbps"]');
+    if (tempDown && down) down.value = tempDown.value || '0';
+    if (tempUp && up) up.value = tempUp.value || '0';
+  }
+  function syncTemporarySpeedControls(){
     var enabled = tempSpeed && tempSpeed.checked;
     tempInputs.forEach(function(input){ input.disabled = !enabled; });
+    copyTemporarySpeedsToEffectiveFields();
   }
   if (tempSpeed) {
-    tempSpeed.addEventListener('change', syncTemporarySpeedTimes);
-    syncTemporarySpeedTimes();
+    tempSpeed.addEventListener('change', syncTemporarySpeedControls);
+    document.querySelectorAll('[name="temporary_download_speed_kbps"], [name="temporary_upload_speed_kbps"]').forEach(function(input){
+      input.addEventListener('input', copyTemporarySpeedsToEffectiveFields);
+      input.addEventListener('change', copyTemporarySpeedsToEffectiveFields);
+    });
+    if (tempPreset30) {
+      tempPreset30.addEventListener('click', function(){
+        setUnitPickerValue('temporary_speed_duration_minutes', 30, 'min', 30);
+      });
+    }
+    syncTemporarySpeedControls();
   }
+
+  // ── Four-part name row: persist to existing full_name/father_name fields.
+  var form = document.getElementById('uf-form');
+  var nameParts = Array.prototype.slice.call(document.querySelectorAll('[data-name-part]'));
+  var fullNameField = document.querySelector('[data-full-name-field]');
+  var fatherNameField = document.querySelector('[data-father-name-field]');
+  function syncNameFields(){
+    if (!nameParts.length || !fullNameField) return;
+    var values = nameParts.map(function(input){ return (input.value || '').trim(); });
+    fullNameField.value = values.filter(Boolean).join(' ');
+    if (fatherNameField) fatherNameField.value = values[1] || '';
+  }
+  nameParts.forEach(function(input){ input.addEventListener('input', syncNameFields); });
+  if (form) form.addEventListener('submit', syncNameFields);
+  if (form) form.addEventListener('submit', copyTemporarySpeedsToEffectiveFields);
+
+  // ── Multi-MAC lock manager: writes the real policy field `mac_lock`.
+  document.querySelectorAll('[data-mac-manager]').forEach(function(root){
+    var hidden = root.querySelector('[data-mac-hidden]');
+    var legacyHidden = root.querySelector('[data-mac-legacy-hidden]');
+    var input = root.querySelector('[data-mac-input]');
+    var addBtn = root.querySelector('[data-mac-add]');
+    var list = root.querySelector('[data-mac-list]');
+    if (!hidden || !input || !addBtn || !list) return;
+    var macs = [];
+    function normalizeMac(raw){
+      var hex = String(raw || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+      if (hex.length !== 12) return '';
+      return hex.match(/.{1,2}/g).join(':');
+    }
+    function ingest(raw){
+      String(raw || '').split(/[,;\s]+/).forEach(function(part){
+        var mac = normalizeMac(part);
+        if (mac && macs.indexOf(mac) === -1) macs.push(mac);
+      });
+    }
+    function sync(){
+      var joined = macs.join(',');
+      hidden.value = joined;
+      if (legacyHidden) legacyHidden.value = joined;
+      list.innerHTML = '';
+      if (!macs.length) {
+        var empty = document.createElement('span');
+        empty.className = 'help';
+        empty.textContent = 'لا توجد ماكات مقفلة حاليًا.';
+        list.appendChild(empty);
+        return;
+      }
+      macs.forEach(function(mac){
+        var pill = document.createElement('span');
+        pill.className = 'uf-mac-pill';
+        var text = document.createElement('span');
+        text.textContent = mac;
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.title = 'حذف MAC';
+        remove.innerHTML = '<i class="fa-solid fa-minus"></i>';
+        remove.addEventListener('click', function(){
+          macs = macs.filter(function(item){ return item !== mac; });
+          sync();
+        });
+        pill.appendChild(text);
+        pill.appendChild(remove);
+        list.appendChild(pill);
+      });
+    }
+    function addCurrent(){
+      var mac = normalizeMac(input.value);
+      if (!mac) {
+        input.focus();
+        return;
+      }
+      if (macs.indexOf(mac) === -1) macs.push(mac);
+      input.value = '';
+      sync();
+    }
+    ingest(hidden.value);
+    if (legacyHidden) ingest(legacyHidden.value);
+    addBtn.addEventListener('click', addCurrent);
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCurrent();
+      }
+    });
+    root.querySelectorAll('[data-mac-pick]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var mac = normalizeMac(btn.dataset.macPick);
+        if (mac && macs.indexOf(mac) === -1) {
+          macs.push(mac);
+          sync();
+        }
+      });
+    });
+    sync();
+  });
 
   // ── Password reveal toggle (eye button) ──────────────────────
   document.querySelectorAll('[data-uf-pw-toggle]').forEach(function(btn){

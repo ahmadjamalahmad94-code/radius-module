@@ -36,10 +36,16 @@ _META_GROUPS = {
         "framed_pool",
         "ppp_attributes_extra",
         "acct_interim_interval_sec",
+        "nas_ip_address",
+        "nas_port_id",
+        "service_name",
     ],
     "advanced": [
         "temporary_speed_from",
         "temporary_speed_to",
+        "temporary_speed_duration_minutes",
+        "temporary_download_speed_kbps",
+        "temporary_upload_speed_kbps",
     ],
     "notifications": [
         # placeholders للمرحلة القادمة
@@ -99,6 +105,16 @@ def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
     bp.add_url_rule("/users/<username>/toggle", "users_toggle", users_toggle, methods=["POST"])
     bp.add_url_rule("/users/<username>/extend", "users_extend", users_extend, methods=["POST"])
+    bp.add_url_rule("/users/<username>/change-plan", "users_change_plan", users_change_plan, methods=["POST"])
+    bp.add_url_rule("/users/<username>/sms", "users_send_sms", users_send_sms, methods=["POST"])
+    bp.add_url_rule(
+        "/users/<username>/quota/reset-daily",
+        "users_quota_reset_daily",
+        users_quota_reset_daily,
+        methods=["POST"],
+    )
+    bp.add_url_rule("/users/<username>/quota/topup", "users_quota_topup", users_quota_topup, methods=["POST"])
+    bp.add_url_rule("/users/<username>/balance/add", "users_balance_add", users_balance_add, methods=["POST"])
 
 
 def _actor() -> str:
@@ -107,6 +123,60 @@ def _actor() -> str:
 
 def _tid() -> int:
     return int(session.get("tenant_id") or 1)
+
+
+def _form_float(name: str, default: float = 0.0) -> float:
+    raw = (request.form.get(name) or "").strip()
+    if not raw:
+        return default
+    return float(raw)
+
+
+def _default_country() -> str:
+    from ..db.repos import tenants_repo
+
+    tenant_id = _tid()
+    for key in ("radius.default_country", "tenant.country", "company.country"):
+        value = tenants_repo.get_setting(tenant_id, key, "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _subscriber_login_macs(username: str, *, limit: int = 20) -> list[dict]:
+    if not username:
+        return []
+    try:
+        from ..db.connection import db
+
+        rows = db().execute(
+            """
+            SELECT UPPER(callingstationid) AS mac,
+                   COUNT(*) AS sessions,
+                   MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime, '')) AS last_seen_at,
+                   SUM(CASE WHEN acctstoptime IS NULL OR acctstoptime = '' THEN 1 ELSE 0 END) AS online_sessions
+              FROM radacct
+             WHERE tenant_id = ?
+               AND username = ?
+               AND COALESCE(TRIM(callingstationid), '') != ''
+             GROUP BY UPPER(callingstationid)
+             ORDER BY last_seen_at DESC, sessions DESC
+             LIMIT ?
+            """,
+            (_tid(), username, int(limit)),
+        ).fetchall()
+        return [
+            {
+                "mac": row["mac"] or "",
+                "sessions": int(row["sessions"] or 0),
+                "last_seen_at": row["last_seen_at"] or "",
+                "online_sessions": int(row["online_sessions"] or 0),
+            }
+            for row in rows
+            if row["mac"]
+        ]
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _normalize_connection_schedule(raw: str) -> str:
@@ -195,7 +265,7 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         email=_s("email"),
         national_id=_s("national_id"),
         nationality=_s("nationality"),
-        country=_s("country"),
+        country=_s("country") or _default_country(),
         city=_s("city"),
         district=_s("district"),
         state=_s("state"),
@@ -338,6 +408,8 @@ def users_new():
         sub=_sub_with_meta_for_template(empty),
         plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES,
         is_new=True, speed_rules_panel=_new_subscriber_speed_panel(),
+        login_macs=[],
+        default_country=_default_country(),
         **_form_select_options())
 
 
@@ -352,6 +424,8 @@ def users_create():
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
             user_types=USER_TYPES, is_new=True,
             speed_rules_panel=_new_subscriber_speed_panel(),
+            login_macs=[],
+            default_country=_default_country(),
             **_form_select_options()), 400
 
     # Inline first speed-rule (optional): if the form has rule fields
@@ -599,6 +673,8 @@ def users_edit(username: str):
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
+        login_macs=_subscriber_login_macs(username),
+        default_country=_default_country(),
         **_form_select_options(),
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
@@ -749,7 +825,9 @@ def users_update(username: str):
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
-            user_types=USER_TYPES, is_new=False, speed_rules_panel=None), 400
+            user_types=USER_TYPES, is_new=False, login_macs=_subscriber_login_macs(username),
+            default_country=_default_country(),
+            speed_rules_panel=None), 400
     # Persist any JS-staged rule edits (bulk فعّل/عطّل, «تم», master
     # toggle, per-row enabled flips) — all in one redirect at the end.
     _sync_subscriber_rules(_tid(), _actor(), request.form, username)
@@ -788,6 +866,97 @@ def users_extend(username: str):
         flash(f"تم تمديد الحساب {m} دقيقة.", "success")
     except (TypeError, ValueError):
         flash("قيمة دقائق غير صحيحة", "error")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_change_plan(username: str):
+    try:
+        plan_id = int(request.form.get("plan_id") or 0)
+        policy = (request.form.get("policy") or "").strip()
+        result = get_users_service().change_plan(
+            actor=_actor(),
+            username=username,
+            plan_id=plan_id,
+            policy=policy,
+        )
+        debt = float(result.get("debt_amount") or 0)
+        delta = int(result.get("minute_delta") or 0)
+        if debt > 0:
+            flash(f"تم تغيير العرض وتسجيل دين فرق السعر بقيمة {debt:.2f}.", "success")
+        elif delta > 0:
+            flash(f"تم تغيير العرض وتعويض {delta // 1440} يوم إضافي.", "success")
+        elif delta < 0:
+            flash(f"تم تغيير العرض وإنقاص {abs(delta) // 1440} يوم.", "warning")
+        else:
+            flash("تم تغيير العرض للمشترك.", "success")
+    except (TypeError, ValueError):
+        flash("اختيار العرض غير صحيح.", "error")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_send_sms(username: str):
+    try:
+        result = get_users_service().send_sms(
+            actor=_actor(),
+            username=username,
+            message=request.form.get("message") or "",
+        )
+        flash(f"تمت إضافة رسالة SMS إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_quota_reset_daily(username: str):
+    try:
+        get_users_service().reset_daily_quota(actor=_actor(), username=username)
+        flash("تمت استعادة الكوتة اليومية للمشترك.", "success")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_quota_topup(username: str):
+    try:
+        quota_mb = int(request.form.get("quota_mb") or 0)
+        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        amount = _form_float("amount", 0.0)
+        saved = get_users_service().add_quota(
+            actor=_actor(),
+            username=username,
+            quota_mb=quota_mb,
+            quota_target=(request.form.get("quota_target") or "combined").strip(),
+            charge_mode=charge_mode,
+            amount=amount,
+            currency=(request.form.get("currency") or "JOD").strip(),
+            notes=(request.form.get("notes") or "").strip(),
+        )
+        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+        flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+    except (TypeError, ValueError):
+        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
+    except RadiusError as e:
+        flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_balance_add(username: str):
+    try:
+        amount = _form_float("amount")
+        saved = get_users_service().add_cash_balance(
+            actor=_actor(),
+            username=username,
+            amount=amount,
+            currency=(request.form.get("currency") or "JOD").strip(),
+            notes=(request.form.get("notes") or "").strip(),
+        )
+        flash(f"تمت إضافة رصيد نقدي بقيمة {amount:.2f}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+    except (TypeError, ValueError):
+        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_list"))
