@@ -411,6 +411,63 @@ def setup_wizard_v3_phase_plan(run_id: int, phase: str):
     })
 
 
+def setup_wizard_v3_discover_interfaces(run_id: int):
+    """Discover the router's actual interfaces — either via the
+    API over the established VPN tunnel, or by parsing pasted
+    `/interface print` output. Returns a normalised list the
+    Hotspot card renders as checkboxes."""
+    from ..services.setup_wizard_v3_interface_discovery import (
+        InterfaceDiscoveryError,
+        discover_via_api,
+        discover_via_paste,
+    )
+
+    body = _body() or {}
+    mode = str(body.get("mode") or "").strip().lower()
+    try:
+        run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound as exc:
+        return _err(str(exc), status=404, code="not_found")
+    except V3Error as exc:
+        return _err(str(exc))
+
+    try:
+        if mode == "paste":
+            ifaces = discover_via_paste(
+                pasted_output=str(body.get("pasted_output") or ""),
+            )
+        else:
+            # API mode (default) — needs credentials + the
+            # already-allocated router VPN IP from the run.
+            if not run.router_vpn_ip:
+                return _err(
+                    "أكمل الخطوة 3 أوّلاً — لم يُخصَّص "
+                    "عنوان VPN للراوتر بعد.",
+                    status=409,
+                    code="no_vpn_ip",
+                )
+            ifaces = discover_via_api(
+                router_vpn_ip=run.router_vpn_ip,
+                api_user=str(body.get("api_user") or "admin"),
+                api_password=str(body.get("api_password") or ""),
+            )
+    except InterfaceDiscoveryError as exc:
+        return _err(str(exc), status=400, code="discovery_failed")
+    except Exception as exc:  # noqa: BLE001
+        return _err(
+            f"فشل اكتشاف المنافذ: {exc}",
+            status=500,
+            code="discovery_error",
+        )
+
+    return jsonify({
+        "ok": True,
+        "mode": mode or "api",
+        "interfaces": ifaces,
+        "router_vpn_ip": run.router_vpn_ip,
+    })
+
+
 def setup_wizard_v3_diagnostics_catalogue():
     """Expose the full diagnostics catalogue for the UI to
     render lookup tables and tooltips."""
@@ -508,6 +565,12 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/runs/<int:run_id>/phase-plan/<phase>",
         "setup_wizard_v3_phase_plan",
         setup_wizard_v3_phase_plan,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/runs/<int:run_id>/discover-interfaces",
+        "setup_wizard_v3_discover_interfaces",
+        setup_wizard_v3_discover_interfaces,
         methods=["POST"],
     )
     bp.add_url_rule(

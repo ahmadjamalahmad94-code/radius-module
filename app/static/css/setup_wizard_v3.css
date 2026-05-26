@@ -304,6 +304,41 @@
   color: var(--c-primary-d);
 }
 
+.swz-iface-check span small {
+  display: block;
+  font-family: ui-monospace, monospace;
+}
+
+.swz-discover-panel {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px dashed var(--c-primary);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+  padding: 14px;
+}
+
+.swz-discover-panel > p {
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 10px;
+}
+
+.swz-discover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.swz-discover-api-form,
+.swz-discover-paste-form {
+  background: var(--c-card);
+  border-radius: var(--r-md);
+  margin-top: 10px;
+  padding: 12px;
+}
+
 /* RADIUS secret card — Step 3 result */
 
 .swz-radius-secret-card {

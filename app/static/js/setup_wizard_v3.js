@@ -445,6 +445,87 @@
 
   // ─── Optional services (step 5) ──────────────────────
 
+  function renderDiscoveredInterfaces(interfaces) {
+    const grid = root.querySelector("[data-swz-hotspot-ifaces]");
+    if (!grid) return;
+    if (!interfaces || !interfaces.length) {
+      toast("لم يُعثر على منافذ صالحة.", "error");
+      return;
+    }
+    // Replace static defaults with what the router actually has.
+    grid.innerHTML = interfaces
+      .map((it) => {
+        const stateLabel = it.disabled
+          ? " · معطّل"
+          : it.running ? " · ✓" : "";
+        const checked = it.recommended ? "checked" : "";
+        return `
+          <label class="swz-iface-check">
+            <input type="checkbox" value="${it.name}" ${checked}>
+            <span>${it.name}<small style="opacity:.6;font-size:11px">
+              ${it.type}${stateLabel}
+            </small></span>
+          </label>
+        `;
+      })
+      .join("");
+    toast(
+      `✅ تم اكتشاف ${interfaces.length} منفذ على الراوتر.`,
+      "ok",
+    );
+  }
+
+  async function discoverViaApi(btn) {
+    const form = root.querySelector(
+      "[data-swz-discover-api-form]",
+    );
+    if (form && form.hidden) {
+      // First click reveals the credentials form.
+      form.hidden = false;
+      toast(
+        "أدخل بيانات API للراوتر ثم اضغط الزر مرّة أخرى.",
+        "info",
+      );
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      const data = await api(
+        "POST",
+        `/runs/${state.runId}/discover-interfaces`,
+        {
+          mode: "api",
+          api_user: getValue("[data-swz-discover-api-user]") || "admin",
+          api_password: getValue("[data-swz-discover-api-pass]"),
+        },
+      );
+      renderDiscoveredInterfaces(data.interfaces);
+    } catch (err) {
+      toast("خطأ: " + err.message, "error");
+    } finally {
+      setBusy(btn, false);
+    }
+  }
+
+  async function discoverViaPaste(btn) {
+    setBusy(btn, true);
+    try {
+      const data = await api(
+        "POST",
+        `/runs/${state.runId}/discover-interfaces`,
+        {
+          mode: "paste",
+          pasted_output: getValue("[data-swz-discover-paste]"),
+        },
+      );
+      renderDiscoveredInterfaces(data.interfaces);
+    } catch (err) {
+      toast("خطأ: " + err.message, "error");
+    } finally {
+      setBusy(btn, false);
+    }
+  }
+
   function collectHotspotInterfaces() {
     const checked = Array.from(
       root.querySelectorAll(
@@ -634,6 +715,11 @@
       copyScript("clients_conf");
       return;
     }
+    if (btn.matches("[data-swz-toggle-paste-discover]")) {
+      const f = root.querySelector("[data-swz-discover-paste-form]");
+      if (f) f.hidden = !f.hidden;
+      return;
+    }
 
     // Step transitions
     if (btn.dataset.swzNext) {
@@ -666,6 +752,10 @@
         await submitRouterKey(btn); break;
       case "mark-handshake":
         await markHandshakeManually(btn); break;
+      case "discover-via-api":
+        await discoverViaApi(btn); break;
+      case "discover-via-paste":
+        await discoverViaPaste(btn); break;
       case "generate-hotspot":
         await generateHotspotScript(btn); break;
       case "generate-broadband":

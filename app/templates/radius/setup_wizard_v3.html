@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526f">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526g">
 {% endblock %}
 
 {% block content %}
@@ -421,6 +421,57 @@ Steps:
           </div>
           <div class="swz-field">
             <label>منافذ Hotspot (اختر واحداً أو أكثر)</label>
+
+            {# Auto-discovery panel — shown before user picks #}
+            <div class="swz-discover-panel" data-swz-discover-panel>
+              <p>
+                💡 بعد نجاح الاتصال في الخطوة 4، يمكنني سؤال
+                الراوتر مباشرة عن منافذه الفعليّة.
+              </p>
+              <div class="swz-discover-actions">
+                <button type="button" class="swz-btn swz-btn-ghost"
+                        data-swz-action="discover-via-api">
+                  🔍 اكتشاف تلقائي (يحتاج بيانات API)
+                </button>
+                <button type="button" class="swz-btn swz-btn-ghost"
+                        data-swz-toggle-paste-discover>
+                  📋 لصق إخراج /interface print
+                </button>
+              </div>
+
+              {# API credentials — collapsed by default #}
+              <div class="swz-discover-api-form" data-swz-discover-api-form hidden>
+                <div class="swz-field">
+                  <label>اسم مستخدم API</label>
+                  <input type="text" data-swz-discover-api-user
+                         dir="ltr" value="admin" autocomplete="off">
+                </div>
+                <div class="swz-field">
+                  <label>كلمة مرور API</label>
+                  <input type="password" data-swz-discover-api-pass
+                         dir="ltr" autocomplete="new-password">
+                  <small>اضغط Enter للاكتشاف. لو كانت فارغة على الراوتر، اتركها فارغة.</small>
+                </div>
+              </div>
+
+              {# Paste-back form — collapsed by default #}
+              <div class="swz-discover-paste-form" data-swz-discover-paste-form hidden>
+                <div class="swz-field">
+                  <label>الصق إخراج <code dir="ltr">/interface print</code></label>
+                  <textarea data-swz-discover-paste dir="ltr" rows="6"
+                            placeholder="Flags: D - dynamic; X - disabled; R - running
+ 0  R  name=ether1 default-name=ether1 type=ether ...
+ 1     name=ether2 default-name=ether2 type=ether ...
+ ..."></textarea>
+                  <button type="button" class="swz-btn swz-btn-primary"
+                          data-swz-action="discover-via-paste"
+                          style="margin-top: 10px">
+                    تحليل واكتشاف
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="swz-iface-grid" data-swz-hotspot-ifaces>
               <label class="swz-iface-check">
                 <input type="checkbox" value="ether2" checked>
@@ -646,5 +697,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526f"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526g"></script>
 {% endblock %}
