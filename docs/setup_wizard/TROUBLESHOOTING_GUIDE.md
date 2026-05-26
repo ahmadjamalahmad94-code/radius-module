@@ -56,6 +56,35 @@ print(f'applied {n} migrations')
 If `n=0` and the column truly missing, the migration runner
 is reading the wrong DB path — check `HOBERADIUS_DB_PATH`.
 
+### Lines silently missing from pasted script (e.g. `/user add` or `/radius add` never executed)
+
+→ **MikroTik Terminal buffer overflow on long lines.** When
+the pasted text contains lines longer than ~200 characters
+(the `/user add ...` and `/radius add ...` lines easily go
+over 200), the terminal silently drops them. The empty prompt
+right where the line should be is the tell — like:
+
+```
+> /user remove [find where name="hr-api-37"]
+>                                            ← MISSING /user add
+> /ip service enable api
+```
+
+**Fix.** Use the green "🚀 fetch &amp; import" command pair
+shown in the wizard's Step 3 result card. It's two short
+lines that download the .rsc file and import it
+atomically — no paste-length limit applies.
+
+If you absolutely must paste raw (no internet on router yet),
+break long commands into multiple shorter ones, e.g.:
+
+```
+/user add name=X password=Y group=full
+/user set [find where name=X] comment="..."
+```
+
+instead of one long line.
+
 ### `HOBERADIUS_PUBLIC_KEY=` is empty in MikroTik output
 
 → **`:local` doesn't survive pasted line boundaries** in

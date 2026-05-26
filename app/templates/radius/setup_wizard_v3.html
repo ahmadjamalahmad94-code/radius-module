@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526j">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526k">
 {% endblock %}
 
 {% block content %}
@@ -309,20 +309,38 @@ Steps:
     <div class="swz-script-card" data-swz-step3-script hidden>
       <header>
         <strong>✅ سكربت الربط جاهز</strong>
-        <p>يحتوي السكربت على WireGuard <strong>+</strong>
-           إعدادات RADIUS الكاملة. الصقه في MikroTik
-           Terminal، ثم انسخ سطر
-           <code dir="ltr">HOBERADIUS_PUBLIC_KEY=...</code>
-           والصقه في الحقل أدناه.</p>
+        <p>يحتوي السكربت على WireGuard + مستخدم API + RADIUS
+           بالكامل. <strong>تنبيه:</strong> الـ MikroTik Terminal
+           يفقد السطور الطويلة عند اللصق المباشر — استخدم
+           طريقة <code dir="ltr">/import</code> أدناه (موصى بها).</p>
       </header>
-      <div class="swz-script-actions">
-        <button type="button" class="swz-btn swz-btn-ghost"
-                data-swz-copy-script="step3">📋 نسخ السكربت</button>
-        <details>
-          <summary>📜 عرض/إخفاء السكربت</summary>
-          <pre data-swz-step3-script-body></pre>
-        </details>
+
+      <div class="swz-fetch-import-card">
+        <strong>🚀 الطريقة الموصى بها — fetch &amp; import</strong>
+        <p>انسخ هذين السطرين فقط والصقهما في MikroTik Terminal:</p>
+        <pre data-swz-fetch-import dir="ltr"></pre>
+        <button type="button" class="swz-btn swz-btn-success"
+                data-swz-copy-script="fetch_import">
+          📋 نسخ السطرين
+        </button>
+        <small>الراوتر يحمّل الملفّ من VPS عبر HTTP ثم ينفّذه
+          بالكامل. لا قصّ، لا فقد للسطور الطويلة.</small>
       </div>
+
+      <details class="swz-script-fallback">
+        <summary>📋 أو الصق السكربت كاملاً يدوياً (طريقة قديمة)</summary>
+        <p class="swz-fallback-warn">
+          ⚠️ تنبيه: السطور الأطول من 200 حرف قد تنبتر أثناء
+          اللصق. لو لاحظت أن
+          <code dir="ltr">/user add</code> أو
+          <code dir="ltr">/radius add</code> لم يتنفّذا، عُد
+          إلى طريقة الـ <code dir="ltr">fetch + import</code>
+          أعلاه.
+        </p>
+        <button type="button" class="swz-btn swz-btn-ghost"
+                data-swz-copy-script="step3">📋 نسخ السكربت الكامل</button>
+        <pre data-swz-step3-script-body></pre>
+      </details>
     </div>
 
     {# RADIUS secret display — only revealed after script generation. #}
@@ -738,5 +756,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526j"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526k"></script>
 {% endblock %}

@@ -358,6 +358,20 @@
         return;
       }
       showScript("step3", scriptText);
+      // Render the short fetch+import command — far more
+      // reliable than pasting the full script (RouterOS
+      // Terminal truncates lines >200 chars, dropping the
+      // critical /user add and /radius add lines).
+      const shortCode = data.short_code || "";
+      if (shortCode) {
+        const host = window.location.host;
+        const fetchImport =
+          `/tool fetch url="http://${host}/wz/${shortCode}.rsc" mode=http dst-path="hr-setup.rsc"\n` +
+          `/import file-name="hr-setup.rsc"`;
+        const pre = root.querySelector("[data-swz-fetch-import]");
+        if (pre) pre.textContent = fetchImport;
+        state.scripts["fetch_import"] = fetchImport;
+      }
       // Surface the RADIUS secret + clients.conf snippet so
       // the operator knows what to paste on the server side.
       const secret = data.radius_secret || "";

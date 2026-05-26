@@ -556,6 +556,77 @@ exact prefix (no more single-line literal match).
 
 ---
 
+## 15) MikroTik Terminal silently drops long pasted lines
+
+**Symptom.** After Step 3 the operator pastes the unified
+script into MikroTik Terminal. The session shows every line
+echoed back EXCEPT two:
+
+```
+> /user remove [find where name="hr-api-37"]
+>                                                ← /user add gone
+> /ip service enable api
+...
+> /radius remove [find where comment~"HOBERADIUS_SETUP:37:radius"]
+>                                                ← /radius add gone
+> /radius incoming set accept=yes port=3799
+```
+
+The dropped lines happened to be the two longest in the
+script — `/user add ... password=<24ch> group=full comment=...`
+(~140 chars) and `/radius add service=hotspot,ppp,login
+address=10.10.0.1 secret=<32ch> ... comment=...` (~220 chars).
+
+Result: the public-key paste-back succeeded (visible from
+the print output), the WireGuard handshake worked — but the
+router had no `hr-api-37` user and no `/radius` row pointing
+at 10.10.0.1. Step 5's hotspot config and Step 6's
+register-router both failed downstream.
+
+**Root cause.** MikroTik RouterOS Terminal (Winbox + SSH
+both) silently truncates pasted input that exceeds the
+internal line buffer (~200 chars in 7.x). The drops happen
+without an error message — the terminal just shows an empty
+prompt where the line should be, and the operator assumes
+"empty line" rather than "line eaten."
+
+This isn't a bug in our script; it's a paste-flow-control
+limitation of RouterOS Terminal. The .rsc text we generate
+is syntactically perfect — it just doesn't reach the parser
+in one piece.
+
+**Fix.** Pivot the Step 3 UX from "copy + paste the whole
+script" to "copy + paste TWO LINES that download and import
+the script":
+
+```
+/tool fetch url="http://187.77.70.18/wz/<short>.rsc" mode=http dst-path="hr-setup.rsc"
+/import file-name="hr-setup.rsc"
+```
+
+The .rsc file is served by the existing
+`setup_wizard_v3_serve_script` route at `/wz/<code>.rsc`.
+`/tool fetch` downloads the entire file atomically, and
+`/import` executes every line including the long ones.
+
+The wizard now renders the fetch+import pair inside a green
+"🚀 الطريقة الموصى بها" card as the primary call-to-action.
+The full-paste textbox still exists, collapsed inside a
+`<details>` "or paste manually (older method)" with an
+amber warning explaining the 200-char limit.
+
+**Prevention.**
+- **Generated scripts should never assume the paste path
+  works for long lines.** Default to `/tool fetch` + `/import`
+  for any script over ~10 lines or any single line over
+  150 chars.
+- For lines that must be pasted (e.g. one-time public-key
+  retrieval), keep them under 100 chars.
+- Lint generated scripts at render time: warn (or split) if
+  any line exceeds 200 chars. Future slice.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:
