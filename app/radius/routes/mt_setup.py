@@ -86,24 +86,75 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
 
 
 def mt_operations():
-    """L5 — Operations Center.
+    """L5 — Operations Center — unified router management.
 
-    Single source of truth for 'which routers does this HobeRadius
-    talk to?'. Reads nas_devices (excluding soft-deleted), shows a
-    sequential display number (#1, #2, ...) for the operator while
-    keeping the real DB id stable in the row's dashboard link.
+    Single source of truth for every router in the tenant. Replaces
+    the older split between '/setup-wizard/fleet' (provisioning view)
+    and this page (production view) — both now flow through here.
+    Each row carries:
+
+      * Inventory state (nas_devices)        — name, address, enabled
+      * Live API state  (counters poll)      — connected users, traffic
+      * Provisioning lifecycle (registry)    — waiting_router_key /
+                                               peer_ready / vpn_verified
+                                               / fully_onboarded / failed
+      * Wizard run id (for resume button)
+
+    Operator actions per row:
+      🛠️ خدمات       → Router Services Dashboard (Hotspot, Broadband,
+                       حجب/فتح مواقع, تغيير IP, اتصال عن بُعد)
+      📊 لوحة         → live K9 dashboard
+      ↪ متابعة المعالج → only when lifecycle is mid-progress
+      ⚙ برمجة / تصميم / نسخ / سكربت / تفعيل/تعطيل / تعديل
     """
     rows = db().execute(
-        "SELECT id, name, address, enabled, ros_version, "
-        "       provisioned_at, last_check_status, last_check_at, "
-        "       connection_mode, api_user, api_port "
-        "FROM nas_devices "
-        "WHERE tenant_id=? AND (deleted_at IS NULL OR deleted_at='') "
-        "ORDER BY id ASC",
+        """
+        SELECT
+          nd.id, nd.name, nd.address, nd.enabled, nd.ros_version,
+          nd.provisioned_at, nd.last_check_status, nd.last_check_at,
+          nd.connection_mode, nd.api_user, nd.api_port,
+          rpr.id              AS registry_id,
+          rpr.wizard_run_id   AS wizard_run_id,
+          rpr.lifecycle_state AS lifecycle_state,
+          rpr.failure_reason  AS failure_reason
+        FROM nas_devices nd
+        -- Pick the latest registry row for this router (matched on the
+        -- VPN IP, since the wizard registers `address = router_vpn_ip`).
+        -- Routers added outside the wizard simply won't match — they
+        -- get a blank lifecycle, treated as already-onboarded by the UI.
+        LEFT JOIN router_provisioning_registry rpr
+          ON rpr.id = (
+            SELECT id FROM router_provisioning_registry
+            WHERE tenant_id = nd.tenant_id
+              AND router_vpn_ip = nd.address
+            ORDER BY id DESC LIMIT 1
+          )
+        WHERE nd.tenant_id = ?
+          AND (nd.deleted_at IS NULL OR nd.deleted_at = '')
+        ORDER BY nd.id ASC
+        """,
         (_tid(),),
     ).fetchall()
+    # Lifecycle states the operator should still SEE as 'in progress'.
+    # 'fully_onboarded' is the steady state — no badge needed there.
+    PROVISIONING_STATES = {
+        "reserved", "waiting_router_key", "peer_ready", "vpn_verified",
+        "radius_pending", "api_pending", "failed",
+    }
+    LIFECYCLE_LABELS_AR = {
+        "reserved":            ("محجوز",            "grey"),
+        "waiting_router_key":  ("بانتظار مفتاح",     "amber"),
+        "peer_ready":          ("VPN جاهز",         "amber"),
+        "vpn_verified":        ("اختبار التجهيز",    "amber"),
+        "radius_pending":      ("RADIUS قيد الإعداد", "amber"),
+        "api_pending":         ("API قيد الإعداد",   "amber"),
+        "failed":              ("فشل التجهيز",       "red"),
+    }
     items = []
     for n, row in enumerate(rows, start=1):
+        lifecycle = str(row["lifecycle_state"] or "")
+        is_provisioning = lifecycle in PROVISIONING_STATES
+        label, color = LIFECYCLE_LABELS_AR.get(lifecycle, ("", "grey"))
         items.append({
             "display_num": n,
             "id": row["id"],
@@ -117,7 +168,16 @@ def mt_operations():
             "connection_mode": row["connection_mode"] or "direct",
             "api_user": row["api_user"] or "",
             "api_port": row["api_port"] or 8728,
+            # Provisioning lifecycle (from router_provisioning_registry)
+            "registry_id": row["registry_id"],
+            "wizard_run_id": row["wizard_run_id"],
+            "lifecycle_state": lifecycle,
+            "lifecycle_label_ar": label,
+            "lifecycle_color": color,
+            "is_provisioning": is_provisioning,
+            "failure_reason": row["failure_reason"] or "",
         })
+    provisioning_count = sum(1 for it in items if it["is_provisioning"])
     # O2 — pass an api_token so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without
     # needing a separate session-bridging step.
@@ -126,6 +186,7 @@ def mt_operations():
         "radius/mt_operations.html",
         items=items,
         api_token=_ui_api_token(),
+        provisioning_count=provisioning_count,
     )
 
 

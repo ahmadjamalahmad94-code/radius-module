@@ -60,6 +60,14 @@
       <div class="hub-kpi-sub">بعض المؤشرات فقط</div>
     </div>
   </div>
+  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="provisioning">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">قيد التجهيز</div>
+      <div class="hub-kpi-value">{{ provisioning_count }}</div>
+      <div class="hub-kpi-sub">لم يكتمل الإعداد بعد</div>
+    </div>
+  </div>
   <div class="hub-kpi hub-kpi--grey" data-mt-fleet="disabled">
     <span class="hub-kpi-icon"><i class="fa-solid fa-power-off"></i></span>
     <div class="hub-kpi-body">
@@ -126,9 +134,12 @@
     </thead>
     <tbody>
     {% for item in items %}
-      <tr data-mt-row-counters
+      {# Provisioning rows have no reachable API yet — skip the counter
+         poll attribute so JS doesn't fire failing requests every 10s. #}
+      <tr {% if not item.is_provisioning %}data-mt-row-counters{% endif %}
           data-mt-router-id="{{ item.id }}"
-          data-mt-enabled="{{ 'true' if item.enabled else 'false' }}">
+          data-mt-enabled="{{ 'true' if item.enabled else 'false' }}"
+          data-mt-provisioning="{{ 'true' if item.is_provisioning else 'false' }}">
         <td>
           {# Checkbox sits OUTSIDE the bulk form (inside the
              table), so `form=` ties it back to mt-bulk-form
@@ -153,7 +164,15 @@
         </td>
         <td><code>{{ item.address }}</code></td>
         <td>
-          {% if item.enabled %}
+          {% if item.is_provisioning %}
+            {# Lifecycle badge takes priority over live status — the
+               router can't be reached until provisioning completes. #}
+            <span class="hub-pill hub-pill--{{ item.lifecycle_color }}"
+                  title="{{ item.failure_reason or 'الراوتر لم يكمل التجهيز بعد' }}">
+              <i class="fa-solid fa-screwdriver-wrench"></i>
+              {{ item.lifecycle_label_ar }}
+            </span>
+          {% elif item.enabled %}
             <span class="hub-pill hub-pill--grey" data-mt-row-status>
               <span class="dot"></span>
               <span data-mt-row-status-label>جارٍ الفحص…</span>
@@ -182,6 +201,25 @@
           {% endif %}
         </td>
         <td>
+          {# Primary action — opens the Router Services Dashboard
+             (Hotspot, Broadband, حجب/فتح مواقع, تغيير IP, اتصال عن
+             بُعد). Placed first because this is the per-router entry
+             point operators reach for in daily ops. #}
+          <a class="hub-btn hub-btn--sm hub-btn--primary"
+             href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=item.id) }}"
+             title="إعداد خدمات هذا الراوتر">
+            <i class="fa-solid fa-screwdriver-wrench"></i> خدمات
+          </a>
+          {% if item.is_provisioning and item.wizard_run_id %}
+          {# Show only while the wizard run is still mid-progress —
+             gives the operator a single click back into the v3
+             wizard to finish what was left undone. #}
+          <a class="hub-btn hub-btn--sm hub-btn--amber"
+             href="{{ url_for('radius.setup_wizard_v3_page') }}?run={{ item.wizard_run_id }}"
+             title="متابعة معالج التجهيز من حيث توقّف">
+            <i class="fa-solid fa-forward"></i> متابعة المعالج
+          </a>
+          {% endif %}
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
             <i class="fa-solid fa-chart-line"></i> لوحة
           </a>

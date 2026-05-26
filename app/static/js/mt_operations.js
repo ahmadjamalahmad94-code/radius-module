@@ -122,7 +122,8 @@
       try { body = await res.json(); } catch (_) { body = null; }
     } catch (e) {
       setStatus(row, "error", "خطأ شبكة");
-      row.querySelector("[data-mt-row-status]").title = String(e);
+      const pill = row.querySelector("[data-mt-row-status]");
+      if (pill) pill.title = String(e);
       return;
     }
 
@@ -131,7 +132,8 @@
         ? body.error.message
         : ("HTTP " + res.status);
       setStatus(row, "error", "تعذّر");
-      row.querySelector("[data-mt-row-status]").title = msg;
+      const pill = row.querySelector("[data-mt-row-status]");
+      if (pill) pill.title = msg;
       return;
     }
 
