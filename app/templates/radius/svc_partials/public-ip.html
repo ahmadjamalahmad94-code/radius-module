@@ -1,0 +1,272 @@
+{# Public-IP change (Site exit) — route specific destinations through
+   a VPS exit node, giving the subscriber traffic a different exit IP.
+   Uses AddedServicesPhasePlanner with service_key="site_exit_public_ip".
+
+   Requires: at least one VPS exit node configured in
+   vps_exit_nodes_repo. We fetch the list once on page load via a
+   helper endpoint and render a dropdown. Falls back to a clear
+   guidance message when none exist (no fake button). #}
+<h2>تغيير IP الخروج (Site Exit)</h2>
+<p class="swsvf-pane-sub">
+  تستطيع توجيه مشتركي هذا الراوتر للخروج عبر IP عام مختلف، بربط الراوتر بـ
+  <strong>VPS exit node</strong> له IP منفصل. مفيد لتغيير الموقع الجغرافي
+  المرئي، أو لفصل بعض المواقع عن باقي الحركة.
+</p>
+
+<style>
+.swip-section{margin:18px 0 10px}
+.swip-section-title{font-weight:700;color:var(--swsvf-ink);font-size:14px;margin:0 0 8px}
+.swip-help{color:var(--swsvf-mute);font-size:12px;margin:0 0 10px;line-height:1.7}
+.swip-select{
+  display:block;width:100%;padding:10px 14px;
+  border:1px solid var(--swsvf-line);border-radius:10px;
+  font-size:14px;background:#fff;
+}
+.swip-select:focus{outline:none;border-color:var(--swsvf-amber);box-shadow:0 0 0 3px rgba(245,158,11,.1)}
+.swip-textarea{
+  display:block;width:100%;min-height:140px;
+  padding:12px 14px;border:1px solid var(--swsvf-line);border-radius:10px;
+  font-family:monospace;font-size:13px;line-height:1.7;resize:vertical;
+}
+.swip-textarea:focus{outline:none;border-color:var(--swsvf-amber);box-shadow:0 0 0 3px rgba(245,158,11,.1)}
+.swip-count{margin-top:6px;color:var(--swsvf-mute);font-size:12px}
+.swip-count strong{color:var(--swsvf-amber)}
+.swip-error{
+  color:#7F1D1D;background:var(--swsvf-red-soft);
+  border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;font-size:13px;margin:10px 0;
+}
+.swip-error[hidden]{display:none}
+.swip-warning{
+  background:var(--swsvf-amber-soft);border:1px solid #FCD34D;
+  border-radius:8px;padding:12px 14px;font-size:13px;color:#92400E;
+  margin-bottom:14px;line-height:1.7;
+}
+.swip-warning a{color:#B45309;text-decoration:underline;font-weight:700}
+.swip-loading{
+  color:var(--swsvf-mute);font-size:13px;font-style:italic;padding:10px;
+}
+.swip-node-meta{
+  font-size:11px;color:var(--swsvf-mute);margin-top:4px;font-family:monospace;
+}
+</style>
+
+<div class="swip-loading" data-swip-loading>
+  <i class="fa-solid fa-spinner fa-spin"></i>
+  جارٍ تحميل قائمة الـ VPS exit nodes…
+</div>
+
+<div data-swip-noNodes hidden>
+  <div class="swip-warning">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <strong>لا توجد VPS exit nodes معرّفة بعد.</strong><br>
+    لاستخدام هذه الخدمة، أضِف عقدة خروج (Exit Node) من إعدادات النظام أولاً —
+    العقدة تحتوي على IP العام الذي ستوجَّه الحركة عبره.
+  </div>
+</div>
+
+<div data-swip-form hidden>
+  <div class="swip-section">
+    <div class="swip-section-title">عقدة الخروج (VPS exit node)</div>
+    <p class="swip-help">
+      اختر الـ VPS الذي ستمرّ منه الحركة. كل عقدة لها IP عام منفصل.
+    </p>
+    <select class="swip-select" data-swip-node>
+      <option value="">— اختر عقدة —</option>
+    </select>
+    <div class="swip-node-meta" data-swip-node-meta></div>
+  </div>
+
+  <div class="swip-section">
+    <div class="swip-section-title">المواقع المراد توجيهها</div>
+    <p class="swip-help">
+      اكتب domain في كل سطر — هذه المواقع ستخرج عبر الـ IP الجديد. باقي
+      الحركة تبقى على المسار الافتراضي.
+    </p>
+    <textarea class="swip-textarea" data-swip-destinations
+              placeholder="example.com
+streaming.service.com"></textarea>
+    <div class="swip-count">
+      عدد المواقع: <strong data-swip-count>0</strong>
+    </div>
+  </div>
+</div>
+
+<div class="swip-error" data-swip-form-error hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const page = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+  const routerId = page.dataset.routerId;
+  const loadingEl = page.querySelector("[data-swip-loading]");
+  const noNodesEl = page.querySelector("[data-swip-noNodes]");
+  const formEl = page.querySelector("[data-swip-form]");
+  const nodeSel = page.querySelector("[data-swip-node]");
+  const nodeMeta = page.querySelector("[data-swip-node-meta]");
+  const textarea = page.querySelector("[data-swip-destinations]");
+  const counter = page.querySelector("[data-swip-count]");
+  const formError = page.querySelector("[data-swip-form-error]");
+
+  let nodesById = {};
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
+  function clearError() { formError.hidden = true; formError.textContent = ""; }
+  function parseDomains() {
+    return textarea.value
+      .split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
+      .map((s) => s.replace(/^https?:\/\//i, "").replace(/^www\./i, ""));
+  }
+  function refreshPayload() {
+    counter.textContent = parseDomains().length;
+    const nodeId = nodeSel.value;
+    const node = nodesById[nodeId];
+    page.dataset.swsvfConfigurePayload = JSON.stringify({
+      service_key: "site_exit_public_ip",
+      destinations: parseDomains(),
+      exit_node_id: nodeId ? Number(nodeId) : null,
+      wireguard_interface_name: node ? (node.wireguard_interface_name || "") : "",
+    });
+    if (node) {
+      nodeMeta.textContent =
+        `IP العام: ${node.public_ip || '—'} · واجهة WireGuard: ${node.wireguard_interface_name || '—'}`;
+    } else {
+      nodeMeta.textContent = "";
+    }
+  }
+  nodeSel.addEventListener("change", refreshPayload);
+  textarea.addEventListener("input", refreshPayload);
+
+  /* Load exit nodes on partial mount */
+  async function loadNodes() {
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/exit-nodes`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      loadingEl.hidden = true;
+      const nodes = data.nodes || [];
+      if (!nodes.length) {
+        noNodesEl.hidden = false;
+        return;
+      }
+      formEl.hidden = false;
+      nodesById = {};
+      nodes.forEach((n) => {
+        nodesById[String(n.id)] = n;
+        const opt = document.createElement("option");
+        opt.value = n.id;
+        opt.textContent = `${n.name} — ${n.public_ip || '—'}`;
+        nodeSel.appendChild(opt);
+      });
+      refreshPayload();
+    } catch (error) {
+      loadingEl.hidden = true;
+      noNodesEl.hidden = false;
+      showError("تعذّر تحميل قائمة العقد: " + error.message);
+    }
+  }
+  loadNodes();
+
+  let lastPayload = null;
+  page.addEventListener("swsvf:phase-change", async (ev) => {
+    const phase = ev.detail.phase;
+    if (phase === "preview") {
+      lastPayload = ev.detail.payload || JSON.parse(page.dataset.swsvfConfigurePayload || "{}");
+      await runPreview(lastPayload);
+    } else if (phase === "apply") {
+      await runApply(lastPayload);
+    } else if (phase === "verify") {
+      await runVerify();
+    }
+  });
+
+  async function runPreview(payload) {
+    if (!payload || !payload.exit_node_id) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اختر عقدة خروج قبل المتابعة.");
+      return;
+    }
+    if (!payload.destinations || !payload.destinations.length) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اكتب موقعاً واحداً على الأقل قبل المتابعة.");
+      return;
+    }
+    clearError();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/public-ip/preview`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        window.SWSVF.setPreview([`⚠ ${msg}`]);
+        return;
+      }
+      window.SWSVF.setPreview(data.bullets || []);
+    } catch (error) {
+      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+    }
+  }
+
+  async function runApply(payload) {
+    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplySubstep("connect", "active");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/public-ip/apply`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        return;
+      }
+      window.SWSVF.setApplySubstep("connect", "done");
+      window.SWSVF.setApplyLabel("إنشاء مسارات التوجيه…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("send", "done");
+      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("commit", "done");
+      window.SWSVF.setApplyLabel("تمّ تحويل المسار", "ننتقل للتحقّق…");
+      await sleep(600);
+      window.SWSVF.setPhase("verify");
+    } catch (error) {
+      window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  async function runVerify() {
+    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/public-ip/verify`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const checks = data.checks || [];
+      if (!checks.length) {
+        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        return;
+      }
+      window.SWSVF.setVerifyChecks(checks);
+    } catch (error) {
+      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+    }
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+})();
+</script>

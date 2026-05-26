@@ -889,6 +889,144 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+def setup_wizard_v3_router_exit_nodes(router_id: int):
+    """List VPS exit nodes available to this tenant. Used by the
+    Public-IP service partial to populate its node dropdown."""
+    from ..db.repos import vps_exit_nodes_repo, nas_repo
+
+    if not nas_repo.get_nas(_tid(), router_id):
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    try:
+        rows = vps_exit_nodes_repo.list_for_tenant(_tid())
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر قراءة عقد الخروج: {exc}", status=500,
+                    code="exit_nodes_load_error")
+    # Normalise — only expose the fields the partial needs.
+    nodes = [{
+        "id": int(r.get("id") or 0),
+        "name": str(r.get("name") or "—"),
+        "public_ip": str(r.get("public_ip") or ""),
+        "wireguard_interface_name": str(r.get("wireguard_interface_name") or ""),
+    } for r in (rows or [])]
+    return jsonify({"ok": True, "nodes": nodes})
+
+
+def setup_wizard_v3_public_ip_preview(router_id: int):
+    body = _body() or {}
+    destinations = list(body.get("destinations") or [])
+    exit_node_id = body.get("exit_node_id")
+    if not exit_node_id:
+        return _err("اختر عقدة خروج قبل المعاينة.",
+                    status=400, code="no_exit_node")
+    if not destinations:
+        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+                    status=400, code="no_destinations")
+    plan_result, status, err = _plan_added_service(
+        router_id, "site_exit_public_ip",
+        {
+            "destinations": destinations,
+            "exit_node_id": int(exit_node_id),
+            "wireguard_interface_name": str(body.get("wireguard_interface_name") or ""),
+        },
+    )
+    if err:
+        return jsonify({"ok": False, **err}), status
+    bullets = []
+    notes = list(getattr(plan_result, "notes", ()) or ())
+    if notes:
+        bullets.extend(notes)
+    else:
+        bullets.append(
+            f"سيتم توجيه {len(destinations)} موقعاً عبر عقدة الخروج المختارة."
+        )
+        bullets.append("يتم إنشاء mangle rules + routing table مخصّصة لهذه المواقع.")
+        bullets.append("باقي حركة الراوتر تبقى على المسار الافتراضي.")
+    warnings = list(getattr(plan_result, "warnings", ()) or ())
+    for w in warnings:
+        bullets.append(f"⚠ تنبيه: {w}")
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+            "bullets": bullets,
+        }), 409
+    return jsonify({"ok": True, "bullets": bullets})
+
+
+def setup_wizard_v3_public_ip_apply(router_id: int):
+    body = _body() or {}
+    return _added_service_apply(
+        router_id, "site_exit_public_ip",
+        {
+            "destinations": list(body.get("destinations") or []),
+            "exit_node_id": int(body.get("exit_node_id") or 0),
+            "wireguard_interface_name": str(
+                body.get("wireguard_interface_name") or ""
+            ),
+        },
+    )
+
+
+def setup_wizard_v3_public_ip_verify(router_id: int):
+    """Phase 4 — confirm routing + mangle rules are in place on the router."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+    checks = []
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+                    code="mt_client_load_error")
+    cfg = {
+        "host": nas.address, "username": nas.api_user or "admin",
+        "password": nas.api_password, "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls), "timeout": 8.0,
+    }
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check 1: mangle rules tagged by this service.
+            mangle = list(mt.print_("/ip/firewall/mangle/print"))
+            managed_mangle = [m for m in mangle
+                              if "HOBERADIUS_SETUP" in str(m.get("comment", ""))
+                              and "site_exit" in str(m.get("comment", ""))]
+            checks.append({
+                "label": f"قواعد التوجيه (mangle) موجودة ({len(managed_mangle)})",
+                "status": "ok" if managed_mangle else "fail",
+            })
+            # Check 2: routing table entry for the exit node.
+            routes = list(mt.print_("/ip/route/print"))
+            managed_routes = [r for r in routes
+                              if "HOBERADIUS_SETUP" in str(r.get("comment", ""))
+                              and "site_exit" in str(r.get("comment", ""))]
+            checks.append({
+                "label": "مسار التوجيه عبر العقدة موجود",
+                "status": "ok" if managed_routes else "fail",
+            })
+            # Check 3: address-list with destinations.
+            entries = list(mt.print_("/ip/firewall/address-list/print"))
+            managed_entries = [e for e in entries
+                               if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
+                               and "site_exit" in str(e.get("comment", ""))]
+            checks.append({
+                "label": f"قائمة المواقع المختارة محمَّلة ({len(managed_entries)})",
+                "status": "ok" if managed_entries else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1557,6 +1695,31 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/verify",
         "setup_wizard_v3_open_sites_verify",
         setup_wizard_v3_open_sites_verify,
+        methods=["GET"],
+    )
+    # Public-IP (site exit) — helper to list exit nodes + 3 flow endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/exit-nodes",
+        "setup_wizard_v3_router_exit_nodes",
+        setup_wizard_v3_router_exit_nodes,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/public-ip/preview",
+        "setup_wizard_v3_public_ip_preview",
+        setup_wizard_v3_public_ip_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/public-ip/apply",
+        "setup_wizard_v3_public_ip_apply",
+        setup_wizard_v3_public_ip_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/public-ip/verify",
+        "setup_wizard_v3_public_ip_verify",
+        setup_wizard_v3_public_ip_verify,
         methods=["GET"],
     )
     bp.add_url_rule(
