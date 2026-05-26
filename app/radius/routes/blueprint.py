@@ -25,6 +25,11 @@ _PUBLIC_ENDPOINTS = {
     # from MikroTik /tool fetch without admin session cookies.
     # The secret short code in the URL path is the auth.
     "radius.setup_wizard_v3_serve_script",
+    # System-health endpoint for external uptime monitoring.
+    # Returns HTTP 200 when healthy, 503 when degraded/critical.
+    # No secrets in the response — only check names + Arabic
+    # titles + boolean-ish statuses.
+    "radius.setup_wizard_system_health",
 }
 
 

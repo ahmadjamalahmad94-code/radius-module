@@ -64,6 +64,12 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/resume", "setup_wizard_fleet_router_resume", setup_wizard_fleet_router_resume, methods=["POST"])
     bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/retire", "setup_wizard_fleet_router_retire", setup_wizard_fleet_router_retire, methods=["POST"])
     bp.add_url_rule(
+        "/setup-wizard/_system_health",
+        "setup_wizard_system_health",
+        setup_wizard_system_health,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/setup-wizard/fleet/emergency-reset/preview",
         "setup_wizard_fleet_emergency_reset_preview",
         setup_wizard_fleet_emergency_reset_preview,
@@ -212,6 +218,25 @@ def setup_wizard_fleet_router_retire(registry_id: int):
         return _json_error(str(exc), status=409, code="retire_blocked")
     status = 409 if result.get("status") == "blocked" else 200
     return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_system_health():
+    """Single-pane production health check. Runs every
+    invariant established in postmortems #1-#21 and reports
+    a verdict. Returns HTTP 503 when overall != 'healthy' so
+    external uptime monitors alarm on degraded/critical.
+    """
+    from ..services.setup_wizard_system_health import check_all
+    try:
+        report = check_all()
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False,
+            "overall": "critical",
+            "error": f"health-check failed: {exc}",
+        }), 503
+    http_status = 200 if report["overall"] == "healthy" else 503
+    return jsonify({"ok": True, **report}), http_status
 
 
 def setup_wizard_fleet_emergency_reset_preview():
