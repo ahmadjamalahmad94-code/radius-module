@@ -10,6 +10,10 @@ from ..services.setup_wizard import (
     get_setup_wizard_service,
 )
 from ..services.setup_wizard_fleet import RouterFleetProvisioningService
+from ..services.setup_wizard_fleet_emergency_reset import (
+    FleetResetConfirmationError,
+    SetupWizardFleetEmergencyReset,
+)
 from ..services.setup_wizard_interface_contract import InterfaceInfo
 from ..services.setup_wizard_recovery import SetupWizardRecoveryService
 from ..services.setup_wizard_server_wg_readiness import ServerWireGuardReadinessService
@@ -59,6 +63,18 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>", "setup_wizard_fleet_router", setup_wizard_fleet_router, methods=["GET"])
     bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/resume", "setup_wizard_fleet_router_resume", setup_wizard_fleet_router_resume, methods=["POST"])
     bp.add_url_rule("/setup-wizard/fleet/router/<int:registry_id>/retire", "setup_wizard_fleet_router_retire", setup_wizard_fleet_router_retire, methods=["POST"])
+    bp.add_url_rule(
+        "/setup-wizard/fleet/emergency-reset/preview",
+        "setup_wizard_fleet_emergency_reset_preview",
+        setup_wizard_fleet_emergency_reset_preview,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/fleet/emergency-reset",
+        "setup_wizard_fleet_emergency_reset",
+        setup_wizard_fleet_emergency_reset,
+        methods=["POST"],
+    )
     bp.add_url_rule("/setup-wizard/server-wg/readiness", "setup_wizard_server_wg_readiness", setup_wizard_server_wg_readiness, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs", "setup_wizard_create_run", setup_wizard_create_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>", "setup_wizard_get_run", setup_wizard_get_run, methods=["GET"])
@@ -184,6 +200,57 @@ def setup_wizard_fleet_router_retire(registry_id: int):
         return _json_error(str(exc), status=409, code="retire_blocked")
     status = 409 if result.get("status") == "blocked" else 200
     return jsonify({"ok": result.get("status") != "blocked", **result}), status
+
+
+def setup_wizard_fleet_emergency_reset_preview():
+    """Preview row counts that would be deleted by the
+    emergency reset. Read-only."""
+    try:
+        preview = SetupWizardFleetEmergencyReset().preview(tenant_id=_tid())
+    except Exception as exc:  # noqa: BLE001
+        return _json_error(
+            f"emergency reset preview failed: {exc}",
+            status=500,
+            code="emergency_reset_preview_failed",
+        )
+    return jsonify({"ok": True, "preview": preview})
+
+
+def setup_wizard_fleet_emergency_reset():
+    """DANGER: wipes wizard fleet provisioning state. Requires
+    the literal confirm phrase in the request body. Audit-logs
+    every invocation at severity=critical."""
+    body = _body()
+    confirm = str(body.get("confirm") or "")
+    clear_peer_files = (
+        str(body.get("clear_peer_files", "1")).lower()
+        not in {"0", "false", "no"}
+    )
+    actor = str(
+        body.get("actor")
+        or getattr(g, "admin_username", "")
+        or "admin",
+    )
+    try:
+        summary = SetupWizardFleetEmergencyReset().reset(
+            tenant_id=_tid(),
+            confirm=confirm,
+            actor=actor,
+            clear_peer_files=clear_peer_files,
+        )
+    except FleetResetConfirmationError as exc:
+        return _json_error(
+            str(exc),
+            status=412,
+            code="emergency_reset_confirmation_required",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _json_error(
+            f"emergency reset failed: {exc}",
+            status=500,
+            code="emergency_reset_failed",
+        )
+    return jsonify({"ok": True, "reset": summary})
 
 
 def setup_wizard_server_wg_readiness():

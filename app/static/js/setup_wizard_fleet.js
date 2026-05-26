@@ -166,4 +166,110 @@
   loadFleet().catch((error) => {
     if (rows) rows.innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
   });
+
+  // ─── Emergency reset ────────────────────────────────────
+  const emergencyBtn = page.querySelector("[data-swfleet-emergency-reset]");
+  const emergencyModal = page.querySelector("[data-swfleet-emergency-modal]");
+  const emergencyClose = page.querySelector("[data-swfleet-emergency-close]");
+  const emergencyCancel = page.querySelector("[data-swfleet-emergency-cancel]");
+  const emergencyExecute = page.querySelector("[data-swfleet-emergency-execute]");
+  const emergencyInput = page.querySelector("[data-swfleet-emergency-input]");
+  const emergencyFiles = page.querySelector("[data-swfleet-emergency-files]");
+  const emergencyCounts = page.querySelector("[data-swfleet-emergency-counts]");
+  const emergencyResult = page.querySelector("[data-swfleet-emergency-result]");
+  const CONFIRM_PHRASE = "RESET-WIZARD-FLEET";
+
+  function openEmergencyModal() {
+    if (!emergencyModal) return;
+    emergencyModal.hidden = false;
+    if (emergencyInput) emergencyInput.value = "";
+    if (emergencyExecute) {
+      emergencyExecute.disabled = true;
+      emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+    }
+    if (emergencyResult) {
+      emergencyResult.hidden = true;
+      emergencyResult.textContent = "";
+    }
+    if (emergencyCounts) {
+      emergencyCounts.innerHTML = "<p>جاري حساب ما سيتم حذفه...</p>";
+    }
+    getJson("/admin/radius/setup-wizard/fleet/emergency-reset/preview")
+      .then((data) => {
+        const p = data.preview || {};
+        const counts = p.row_counts || {};
+        const rowsHtml = Object.entries(counts)
+          .map(([t, c]) => `<tr><td>${t}</td><td>${c}</td></tr>`)
+          .join("");
+        const peerFilesLine = p.peer_files_count
+          ? `<p>سيتم حذف ${p.peer_files_count} ملف من <code dir="ltr">${p.peers_dir}</code> أيضاً.</p>`
+          : `<p>لم يتم العثور على ملفات نظراء في <code dir="ltr">${p.peers_dir}</code>.</p>`;
+        emergencyCounts.innerHTML = `
+          <table><thead><tr><th>الجدول</th><th>عدد الصفوف</th></tr></thead>
+          <tbody>${rowsHtml}</tbody></table>
+          <p style="margin-top:8px"><b>الإجمالي: ${p.total_rows || 0} صف</b></p>
+          ${peerFilesLine}
+        `;
+      })
+      .catch((error) => {
+        emergencyCounts.innerHTML = `<p style="color:#dc2626">فشل التحميل: ${error.message}</p>`;
+      });
+  }
+
+  function closeEmergencyModal() {
+    if (emergencyModal) emergencyModal.hidden = true;
+  }
+
+  if (emergencyBtn) emergencyBtn.addEventListener("click", openEmergencyModal);
+  if (emergencyClose) emergencyClose.addEventListener("click", closeEmergencyModal);
+  if (emergencyCancel) emergencyCancel.addEventListener("click", closeEmergencyModal);
+  if (emergencyInput && emergencyExecute) {
+    emergencyInput.addEventListener("input", () => {
+      emergencyExecute.disabled = emergencyInput.value.trim() !== CONFIRM_PHRASE;
+    });
+  }
+  if (emergencyExecute) {
+    emergencyExecute.addEventListener("click", async () => {
+      emergencyExecute.disabled = true;
+      emergencyExecute.textContent = "جارٍ التنفيذ...";
+      try {
+        const res = await fetch("/admin/radius/setup-wizard/fleet/emergency-reset", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token(),
+          },
+          body: JSON.stringify({
+            confirm: emergencyInput ? emergencyInput.value.trim() : "",
+            clear_peer_files: emergencyFiles ? emergencyFiles.checked : true,
+          }),
+        });
+        const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        if (emergencyResult) {
+          emergencyResult.hidden = false;
+          emergencyResult.textContent = JSON.stringify(data.reset, null, 2);
+        }
+        emergencyExecute.textContent = "تم التفريغ ✓";
+        loadFleet().catch(() => {});
+        window.setTimeout(closeEmergencyModal, 2500);
+      } catch (error) {
+        if (emergencyResult) {
+          emergencyResult.hidden = false;
+          emergencyResult.style.background = "#fef2f2";
+          emergencyResult.style.borderColor = "#fca5a5";
+          emergencyResult.textContent = "فشل: " + error.message;
+        }
+        emergencyExecute.disabled = false;
+        emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+      }
+    });
+  }
+  if (emergencyModal) {
+    emergencyModal.addEventListener("click", (event) => {
+      if (event.target === emergencyModal) closeEmergencyModal();
+    });
+  }
 })();

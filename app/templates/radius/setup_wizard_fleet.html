@@ -16,8 +16,46 @@
     <div class="swfleet-hero-actions">
       <a class="swfleet-btn swfleet-btn-ghost" href="{{ url_for('radius.setup_wizard_v2_page') }}">فتح المعالج V2</a>
       <a class="swfleet-btn swfleet-btn-ghost" href="{{ url_for('radius.setup_wizard_page') }}">العرض الهندسي</a>
+      <button type="button" class="swfleet-btn swfleet-btn-danger" data-swfleet-emergency-reset
+              title="تفريغ كل سجلات تجهيز الراوترات والبدء من الصفر. يستخدم عند اختلاف المفاتيح عن عناوين VPN.">
+        🚨 تفريغ طوارئ
+      </button>
     </div>
   </section>
+
+  <!-- Emergency reset modal -->
+  <div class="swfleet-emergency-modal" data-swfleet-emergency-modal hidden role="dialog" aria-modal="true" aria-labelledby="swfleet-emergency-title">
+    <div class="swfleet-emergency-card">
+      <button type="button" class="swfleet-close" data-swfleet-emergency-close>×</button>
+      <span class="swfleet-kicker swfleet-kicker-danger">إجراء حسّاس</span>
+      <h2 id="swfleet-emergency-title">تفريغ طوارئ لأسطول التجهيز</h2>
+      <p class="swfleet-emergency-warning">
+        هذا الإجراء يحذف <b>كل</b> سجلات تجهيز الراوترات من قاعدة البيانات (السجل، تخصيصات الـ IP، أحداث الدورة الحياتية، نظراء WireGuard، جلسات المعالج، ومخرجات v3). يستخدم فقط عندما يحدث اختلاف بين مفاتيح WireGuard وعناوين الـ VPN ولا يمكن استعادة الحالة.
+      </p>
+      <p class="swfleet-emergency-warning">
+        <b>لن يلمس</b>: المشتركين، البطاقات، سياسات NPC غير المرتبطة بالمعالج، أو إعدادات الراوترات نفسها على MikroTik.
+      </p>
+      <div class="swfleet-emergency-counts" data-swfleet-emergency-counts>
+        <p>جاري حساب ما سيتم حذفه...</p>
+      </div>
+      <label class="swfleet-emergency-confirm">
+        لتفعيل الإجراء، اكتب العبارة <code>RESET-WIZARD-FLEET</code>:
+        <input type="text" autocomplete="off" data-swfleet-emergency-input dir="ltr"
+               placeholder="RESET-WIZARD-FLEET">
+      </label>
+      <label class="swfleet-check">
+        <input type="checkbox" data-swfleet-emergency-files checked>
+        احذف أيضاً ملفات نظراء WireGuard من <code dir="ltr">peers.d</code>
+      </label>
+      <div class="swfleet-emergency-actions">
+        <button type="button" class="swfleet-btn swfleet-btn-ghost" data-swfleet-emergency-cancel>إلغاء</button>
+        <button type="button" class="swfleet-btn swfleet-btn-danger" data-swfleet-emergency-execute disabled>
+          نعم، نفّذ التفريغ
+        </button>
+      </div>
+      <pre class="swfleet-emergency-result" data-swfleet-emergency-result hidden></pre>
+    </div>
+  </div>
 
   <section class="swfleet-kpis" aria-label="مؤشرات الأسطول">
     <article><span>إجمالي الراوترات</span><strong data-swfleet-kpi="total_routers">0</strong></article>
