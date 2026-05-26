@@ -127,17 +127,31 @@ or click "🧹 تنظيف المنتهية" on the fleet page.
 
 ## Deploy gotchas
 
-### Template / static file change didn't take effect after `restart`
+### Code change didn't take effect after `restart`
 
-→ **Use `--build`, not `restart`** for asset changes. The
-running image was built before the change. Either:
+→ **Use `--build`, not `restart`** — ALWAYS — for any change
+to files under `app/` (Python, templates, JS, CSS). The
+running image was built before the change. `restart` reuses
+the same image; only `--build` rebuilds with the new code:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
-or set up a bind-mount on `app/templates/` and `app/static/`
-in docker-compose.yml so files sync from host.
+**Quick test** to confirm the new code is actually in the
+container:
+
+```bash
+# pick a unique string from your latest commit
+docker exec hoberadius grep -c "SOME_NEW_STRING" /app/app/...
+```
+
+If the count is `0`, the container has stale code.
+
+For asset-only changes a bind-mount on `app/templates/` and
+`app/static/` in `docker-compose.yml` would let `restart`
+work, but be aware: production builds typically copy code
+into the image rather than bind-mount.
 
 ### `git pull` says "would clobber local changes"
 
