@@ -71,20 +71,33 @@ repeating every second, run:
 docker exec hoberadius-freeradius freeradius -X 2>&1 | head -40
 ```
 
-Common cause: `Unable to open file ".../freeradius-clients-wizard/*.conf"`
-— the wildcard `$INCLUDE` matches zero files because the
-directory is empty.
+The actual error is usually:
 
-**Recovery:**
+```
+Unable to open file "/data/freeradius-clients-wizard/*.conf":
+No such file or directory
+```
+
+**Root cause:** FreeRADIUS 3.x `$INCLUDE` does NOT support
+wildcards — `*.conf` is interpreted as a literal filename.
+The fix is to use the directory form (trailing slash):
+
+```
+$INCLUDE /data/freeradius-clients-wizard/
+```
+
+**Recovery (without rebuild):**
 ```bash
-docker exec hoberadius bash -c 'echo "# placeholder" > /app/instance/freeradius-clients-wizard/_placeholder.conf'
+docker exec hoberadius-freeradius sed -i \
+  's|\$INCLUDE /data/freeradius-clients-wizard/\*\.conf|$INCLUDE /data/freeradius-clients-wizard/|' \
+  /etc/freeradius/clients.conf
 docker compose -f /opt/hoberadius/deploy/docker-compose.yml restart freeradius
 ```
 
-The entrypoint auto-creates this placeholder on boot (from
-commit after issue #17), but a manually-emptied directory
-between boots will still trigger the trap. Always leave
-`_placeholder.conf` in place.
+**Permanent fix:** commit after issue #17 already updated
+`deploy/freeradius/clients.conf` to use the directory form.
+After `git pull && up -d --build freeradius` you won't hit
+this again.
 
 ### `/import` line vanishes after `/tool fetch` succeeded
 

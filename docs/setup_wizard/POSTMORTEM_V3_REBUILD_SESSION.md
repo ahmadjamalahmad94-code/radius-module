@@ -691,7 +691,7 @@ Issue #15, so we're safe on both fronts.
 
 ---
 
-## 17) FreeRADIUS crash-loop when `$INCLUDE` glob matches no files
+## 17) FreeRADIUS crash-loop because `$INCLUDE` doesn't support wildcards
 
 **Symptom.** Subscriber tries to log in via Hotspot. Router
 shows `radius monitor: pending-replies: 1`. Login screen
@@ -707,7 +707,6 @@ docker logs of `hoberadius-freeradius`:
 ```
 [entrypoint] freeradius exited with code 0, restarting in 1s
 [entrypoint] freeradius exited with code 0, restarting in 1s
-[entrypoint] freeradius exited with code 0, restarting in 1s
 ... (every second forever)
 ```
 
@@ -720,54 +719,69 @@ No such file or directory
 Errors reading or parsing /etc/freeradius/radiusd.conf
 ```
 
-**Root cause.** `clients.conf` had this line (added in
-commit 67afa95):
+The directory has 5 valid `.conf` files. They are readable
+by the `freerad` user (verified with `ls -la` inside the
+container). And FreeRADIUS STILL says "No such file" for
+the wildcard path.
+
+**Root cause.** I added this line to `clients.conf` in
+commit 67afa95:
 
 ```
 $INCLUDE /data/freeradius-clients-wizard/*.conf
 ```
 
-FreeRADIUS 3.x's `$INCLUDE` directive with a wildcard
-**fails the entire config parse** when the glob matches
-ZERO files. It does NOT silently skip an empty match.
+I assumed `$INCLUDE` supported glob expansion the way bash
+does. **It does not.** Quote from `man radiusd.conf`:
 
-On first boot — before the wizard has provisioned its first
-router — the directory exists but contains no `.conf` files.
-Glob matches nothing. FreeRADIUS prints the error above and
-exits with code 0 (clean shutdown). My supervisor loop in
-entrypoint.sh then dutifully restarts it every second.
+> "There are no character globbing or wildcards supported."
 
-Same crash trigger if an operator manually `rm -f`'s the
-wizard-run-*.conf files (e.g. as part of debugging a stale
-peer). The directory becomes empty, glob breaks, FreeRADIUS
-goes into a hidden crash loop.
+FreeRADIUS tries to open the literal string
+`/data/freeradius-clients-wizard/*.conf` as a single file
+path. The literal asterisk in the path → no such file exists
+→ parse fails → daemon exits → supervisor restarts → loop.
 
-The supervisor loop made the symptom worse — it printed only
-the "restarting in 1s" line, hiding the underlying
-"Unable to open file" error from a casual `docker logs` look.
+My earlier diagnosis (commit 323a199, "empty dir") was
+WRONG. The real fix needed was a syntax change.
+
+The supervisor loop in entrypoint.sh masked the real error
+by printing only the "restarting in 1s" line on every
+iteration, drowning the actual "Unable to open file" line
+in noise.
 
 **Fix.** Two layers:
 
-1. **Immediate manual recovery** (run on any deploy that's
-   already in this state):
+1. **Immediate manual recovery** (patch the running
+   container's clients.conf in-place + restart):
    ```bash
-   docker exec hoberadius bash -c 'echo "# placeholder" > /app/instance/freeradius-clients-wizard/_placeholder.conf'
+   docker exec hoberadius-freeradius sed -i \
+     's|\$INCLUDE /data/freeradius-clients-wizard/\*\.conf|$INCLUDE /data/freeradius-clients-wizard/|' \
+     /etc/freeradius/clients.conf
    docker compose -f deploy/docker-compose.yml restart freeradius
    ```
 
-2. **Permanent fix in entrypoint.sh:** the entrypoint now
-   auto-creates `_placeholder.conf` (with header comments
-   explaining what it is) on every boot when the file is
-   missing. The wildcard always matches at least the
-   placeholder, so FreeRADIUS can start even with zero
-   real wizard rows.
+2. **Permanent fix in deploy/freeradius/clients.conf**:
+   replace the wildcard form with the directory form (path
+   ending in a trailing slash):
+   ```
+   $INCLUDE /data/freeradius-clients-wizard/
+   ```
+   FreeRADIUS treats a trailing-slash path as a directory and
+   auto-loads every `.conf` file inside (the same effect we
+   wanted, with documented semantics). Also tolerates an
+   empty directory — the daemon starts even if zero wizard
+   rows exist yet.
+
+The `_placeholder.conf` from commit 323a199 is no longer
+strictly required (the directory form handles empty dirs)
+but it stays as defence-in-depth: a marker file documenting
+the convention to operators.
 
 **Prevention.**
-- **Never use `$INCLUDE <dir>/*.conf` without guaranteeing
-  at least one matching file exists.** Either pre-create a
-  placeholder, or use `$-INCLUDE` (FR's "optional" variant),
-  or include the directory directly: `$INCLUDE <dir>/`
-  (loads all .conf files, doesn't fail on empty).
+- **Read the daemon's docs, don't assume bash semantics.**
+  When a config language LOOKS like shell, that doesn't
+  mean it BEHAVES like shell. Always check the manual for
+  globbing / quoting / escape rules before guessing.
 - **Supervisor loops can hide real errors.** Mine restarted
   freeradius every second on exit code 0, masking the parse
   error. A supervisor should at minimum:
@@ -775,10 +789,10 @@ the "restarting in 1s" line, hiding the underlying
     * back off exponentially (1s → 2s → 4s → ...) so the
       log doesn't drown in restart messages
     * bail out after N consecutive immediate failures
-- **Any directory that holds operator-deletable files but
-  matters for daemon startup needs a placeholder file with
-  a `DO NOT REMOVE` header.** Document the placeholder in the
-  troubleshooting guide.
+- **Add a comment block above any `$INCLUDE`** explaining
+  why the chosen form was picked (literal file vs.
+  directory). Stops the next maintainer from "simplifying"
+  back to a wildcard.
 
 ---
 
