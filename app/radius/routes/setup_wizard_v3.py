@@ -1213,6 +1213,97 @@ def setup_wizard_v3_remote_access_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+_REVOKE_SCRIPTS = {
+    # Each entry returns a RouterOS v7 script that removes ONLY items
+    # tagged with HOBERADIUS_SETUP:<router_id>:... (or HOBERADIUS_TECH:*
+    # for remote-access). The router_id is templated in at runtime so
+    # cross-router removal is impossible.
+    "hotspot": lambda rid: f"""\
+/ip hotspot
+:foreach h in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $h}}
+/ip hotspot profile
+:foreach p in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $p}}
+/ip pool
+:foreach p in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $p}}
+/ip dhcp-server
+:foreach d in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $d}}
+""",
+    "broadband": lambda rid: f"""\
+/interface pppoe-server server
+:foreach s in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $s}}
+/ppp profile
+:foreach p in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $p}}
+/ip pool
+:foreach p in=[find comment~"HOBERADIUS_SETUP:{rid}"] do={{remove $p}}
+""",
+    "block-sites": lambda rid: f"""\
+/ip firewall address-list
+:foreach a in=[find comment~"HOBERADIUS_SETUP:{rid}.*block_sites"] do={{remove $a}}
+/ip firewall filter
+:foreach f in=[find comment~"HOBERADIUS_SETUP:{rid}.*block_sites"] do={{remove $f}}
+""",
+    "open-sites": lambda rid: f"""\
+/ip hotspot walled-garden
+:foreach w in=[find comment~"HOBERADIUS_SETUP:{rid}.*walled_garden"] do={{remove $w}}
+""",
+    "public-ip": lambda rid: f"""\
+/ip firewall mangle
+:foreach m in=[find comment~"HOBERADIUS_SETUP:{rid}.*site_exit"] do={{remove $m}}
+/ip route
+:foreach r in=[find comment~"HOBERADIUS_SETUP:{rid}.*site_exit"] do={{remove $r}}
+/ip firewall address-list
+:foreach a in=[find comment~"HOBERADIUS_SETUP:{rid}.*site_exit"] do={{remove $a}}
+""",
+    "remote-access": lambda _rid: """\
+/ip firewall filter
+:foreach f in=[find comment~"HOBERADIUS_TECH"] do={remove $f}
+/system scheduler
+:foreach s in=[find comment~"HOBERADIUS_TECH"] do={remove $s}
+""",
+}
+
+
+def setup_wizard_v3_service_revoke(router_id: int, service_key: str):
+    """Generic revoke endpoint — builds a service-specific rollback
+    script that ONLY removes RouterOS objects tagged with this
+    router's HOBERADIUS_SETUP:<router_id>:... comment prefix.
+
+    Cross-router safety: the router_id is interpolated into the
+    pattern, so even if two routers share managed comments by
+    accident, this endpoint never touches another router's items.
+    """
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    builder = _REVOKE_SCRIPTS.get(service_key)
+    if not builder:
+        return _err(f"الإيقاف غير مدعوم لهذه الخدمة: {service_key}",
+                    status=400, code="revoke_not_supported")
+    script = builder(router_id)
+    try:
+        exec_result = get_router_executor().execute_forward(
+            router_id=router_id, script=script,
+        )
+    except ExecutorNotConfigured:
+        return _err("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+                    status=503, code="executor_not_configured")
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ غير متوقّع: {exc}",
+                    status=500, code="revoke_error")
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "revoke_failed",
+            "error": exec_result.error_message or "تعذّر تنفيذ سكربت الإيقاف",
+            "stderr": exec_result.stderr or "",
+        }), 502
+    return jsonify({"ok": True, "duration_ms": exec_result.duration_ms})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1926,6 +2017,15 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "setup_wizard_v3_remote_access_verify",
         setup_wizard_v3_remote_access_verify,
         methods=["GET"],
+    )
+    # Generic revoke — dispatches by service_key. Removes ONLY the
+    # RouterOS objects tagged with this router's HOBERADIUS_SETUP
+    # comment prefix.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/<service_key>/revoke",
+        "setup_wizard_v3_service_revoke",
+        setup_wizard_v3_service_revoke,
+        methods=["POST"],
     )
     bp.add_url_rule(
         "/setup-wizard-v3/runs",

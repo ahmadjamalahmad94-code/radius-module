@@ -216,6 +216,29 @@ li[data-status="pending"] .swsvf-verify-icon{
 }
 .swsvf-error-banner i{font-size:16px;flex-shrink:0;margin-top:2px}
 .swsvf-error-banner strong{display:block;margin-bottom:4px}
+
+/* ─── Revoke confirmation modal ─── */
+.swsvf-modal{
+  position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.swsvf-modal[hidden]{display:none !important}
+.swsvf-modal-card{
+  background:#fff;border-radius:14px;padding:24px 28px;max-width:480px;
+  width:100%;box-shadow:0 20px 60px rgba(15,23,42,.25);
+}
+.swsvf-modal-card h3{
+  margin:0 0 10px;color:var(--swsvf-red);font-size:18px;font-weight:800;
+}
+.swsvf-modal-card p{
+  margin:0 0 18px;color:var(--swsvf-ink);font-size:13.5px;line-height:1.7;
+}
+.swsvf-modal-actions{
+  display:flex;justify-content:flex-end;gap:10px;
+}
+.swsvf-modal-result{
+  margin-top:12px;font-size:13px;font-weight:600;
+}
 </style>
 {% endblock %}
 
@@ -367,6 +390,15 @@ li[data-status="pending"] .swsvf-verify-icon{
         <i class="fa-solid fa-rotate-right"></i>
         إعادة الفحص
       </button>
+      {# Revoke button — only enabled once verify proves the service
+         IS running. Sends a rollback script tagged with the same
+         HOBERADIUS_SETUP comment prefix so we only touch this run's
+         RouterOS objects. #}
+      <button type="button" class="swsvf-btn swsvf-btn-danger"
+              data-swsvf-revoke hidden>
+        <i class="fa-solid fa-power-off"></i>
+        إيقاف هذه الخدمة
+      </button>
       <button type="button" class="swsvf-btn swsvf-btn-primary"
               data-swsvf-finish disabled>
         تمّ — العودة للوحة الخدمات
@@ -374,6 +406,28 @@ li[data-status="pending"] .swsvf-verify-icon{
       </button>
     </div>
   </section>
+
+  {# Revoke confirmation modal #}
+  <div class="swsvf-modal" data-swsvf-revoke-modal hidden
+       role="dialog" aria-modal="true">
+    <div class="swsvf-modal-card">
+      <h3>إيقاف هذه الخدمة؟</h3>
+      <p>
+        سيتم حذف كل الإعدادات التي أُضيفت لهذه الخدمة على الراوتر.
+        المستخدمون المرتبطون بها قد يفقدون الاتصال فوراً.
+      </p>
+      <div class="swsvf-modal-actions">
+        <button type="button" class="swsvf-btn" data-swsvf-revoke-cancel>
+          إلغاء
+        </button>
+        <button type="button" class="swsvf-btn swsvf-btn-danger"
+                data-swsvf-revoke-confirm>
+          نعم، أوقف الخدمة
+        </button>
+      </div>
+      <div class="swsvf-modal-result" data-swsvf-revoke-result hidden></div>
+    </div>
+  </div>
 
 </main>
 
@@ -519,15 +573,75 @@ li[data-status="pending"] .swsvf-verify-icon{
         li.querySelector("span:last-child").textContent = String(it.label || "");
         list.appendChild(li);
       });
-      // Enable «تمّ» only when ALL checks are OK.
+      // Enable «تمّ» + show «إيقاف الخدمة» only when ALL checks are OK.
       const finish = page.querySelector("[data-swsvf-finish]");
+      const revoke = page.querySelector("[data-swsvf-revoke]");
       const allOk  = (items || []).length > 0
                   && items.every((it) => it.status === "ok");
       if (finish) finish.disabled = !allOk;
+      if (revoke) revoke.hidden = !allOk;
       // Mark stepper green only when fully verified.
       if (allOk) getStep("verify")?.classList.add("is-done");
     },
   };
+
+  /* ─── Revoke flow (uses modal confirmation) ─── */
+  const revokeBtn    = page.querySelector("[data-swsvf-revoke]");
+  const revokeModal  = page.querySelector("[data-swsvf-revoke-modal]");
+  const revokeCancel = page.querySelector("[data-swsvf-revoke-cancel]");
+  const revokeConfirm= page.querySelector("[data-swsvf-revoke-confirm]");
+  const revokeResult = page.querySelector("[data-swsvf-revoke-result]");
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  if (revokeBtn && revokeModal) {
+    revokeBtn.addEventListener("click", () => {
+      revokeModal.hidden = false;
+      revokeResult.hidden = true;
+      revokeResult.textContent = "";
+      revokeConfirm.disabled = false;
+      revokeConfirm.textContent = "نعم، أوقف الخدمة";
+    });
+  }
+  if (revokeCancel) revokeCancel.addEventListener("click", () => {
+    revokeModal.hidden = true;
+  });
+  if (revokeModal) revokeModal.addEventListener("click", (ev) => {
+    if (ev.target === revokeModal) revokeModal.hidden = true;
+  });
+  if (revokeConfirm) revokeConfirm.addEventListener("click", async () => {
+    revokeConfirm.disabled = true;
+    revokeConfirm.textContent = "جارٍ الإيقاف…";
+    try {
+      const serviceKey = page.dataset.serviceKey;
+      const routerId   = page.dataset.routerId;
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/${serviceKey}/revoke`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify({}) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      revokeResult.hidden = false;
+      revokeResult.textContent = "تم إيقاف الخدمة بنجاح.";
+      revokeResult.style.color = "#065F46";
+      revokeConfirm.textContent = "تم ✓";
+      // Re-verify so the operator sees the change reflected.
+      setTimeout(() => {
+        revokeModal.hidden = true;
+        setPhase("verify");
+      }, 1400);
+    } catch (error) {
+      revokeResult.hidden = false;
+      revokeResult.style.color = "#B91C1C";
+      revokeResult.textContent = "فشل الإيقاف: " + error.message;
+      revokeConfirm.disabled = false;
+      revokeConfirm.textContent = "نعم، أوقف الخدمة";
+    }
+  });
 
   // Default state.
   setPhase("configure");
