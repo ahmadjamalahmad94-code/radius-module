@@ -638,6 +638,166 @@ def setup_wizard_v3_broadband_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+def _plan_added_service(router_id: int, service_key: str, inputs: dict):
+    """Shared planner call for added services (walled_garden, block_sites,
+    etc). Returns (PhasePlanResult, status, err_dict)."""
+    from ..services.setup_wizard_added_services_phase_planner import (
+        AddedServicesPhasePlanner,
+    )
+    merged = dict(inputs)
+    merged["service_key"] = service_key
+    try:
+        result = AddedServicesPhasePlanner().plan(
+            run_id=router_id, inputs=merged,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return None, 500, {"error": f"planner failed: {exc}",
+                           "code": "planner_failed"}
+    return result, 200, None
+
+
+def _added_service_apply(router_id: int, service_key: str, inputs: dict):
+    """Re-plan + push to the router. Returns Flask response."""
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    plan_result, status, err = _plan_added_service(router_id, service_key, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+        }), 409
+    if not plan_result.script or not plan_result.script.strip():
+        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+                    status=400, code="empty_script")
+    try:
+        exec_result = get_router_executor().execute_forward(
+            router_id=router_id, script=plan_result.script,
+        )
+    except ExecutorNotConfigured:
+        return _err(
+            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+            status=503, code="executor_not_configured",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ غير متوقّع: {exc}",
+                    status=500, code="apply_error")
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "apply_failed",
+            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "stderr": exec_result.stderr or "",
+            "duration_ms": exec_result.duration_ms,
+        }), 502
+    return jsonify({
+        "ok": True,
+        "duration_ms": exec_result.duration_ms,
+        "substeps": [
+            {"key": "connect", "status": "done"},
+            {"key": "send",    "status": "done"},
+            {"key": "commit",  "status": "done"},
+        ],
+    })
+
+
+def setup_wizard_v3_block_sites_preview(router_id: int):
+    body = _body() or {}
+    domains = list(body.get("domains") or [])
+    if not domains:
+        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+                    status=400, code="no_domains")
+    plan_result, status, err = _plan_added_service(
+        router_id, "block_sites", {"domains": domains},
+    )
+    if err:
+        return jsonify({"ok": False, **err}), status
+    bullets = []
+    notes = list(getattr(plan_result, "notes", ()) or ())
+    if notes:
+        bullets.extend(notes)
+    else:
+        bullets.append(f"سيتم إنشاء قائمة عناوين تحتوي {len(domains)} موقعاً.")
+        bullets.append("سيُضاف قاعدة في جدار الحماية تمنع الحركة لهذه القائمة.")
+        bullets.append("التغيير قابل للتراجع بإعادة تشغيل الخدمة بقائمة فارغة.")
+    warnings = list(getattr(plan_result, "warnings", ()) or ())
+    for w in warnings:
+        bullets.append(f"⚠ تنبيه: {w}")
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+            "bullets": bullets,
+        }), 409
+    return jsonify({"ok": True, "bullets": bullets})
+
+
+def setup_wizard_v3_block_sites_apply(router_id: int):
+    body = _body() or {}
+    return _added_service_apply(
+        router_id, "block_sites",
+        {"domains": list(body.get("domains") or [])},
+    )
+
+
+def setup_wizard_v3_block_sites_verify(router_id: int):
+    """Phase 4 — confirm the address-list + filter rule are in place."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+    checks = []
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+                    code="mt_client_load_error")
+    cfg = {
+        "host": nas.address, "username": nas.api_user or "admin",
+        "password": nas.api_password, "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls), "timeout": 8.0,
+    }
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check 1: address-list entries created by this run.
+            entries = list(mt.print_("/ip/firewall/address-list/print"))
+            managed = [e for e in entries
+                       if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
+                       and "block_sites" in str(e.get("comment", ""))]
+            checks.append({
+                "label": f"قائمة العناوين المحجوبة موجودة ({len(managed)} إدخالاً)",
+                "status": "ok" if managed else "fail",
+            })
+            # Check 2: filter rule referencing the list.
+            rules = list(mt.print_("/ip/firewall/filter/print"))
+            blocked_rules = [r for r in rules
+                             if str(r.get("action", "")).lower() == "drop"
+                             and "HOBERADIUS_SETUP" in str(r.get("comment", ""))
+                             and "block_sites" in str(r.get("comment", ""))]
+            checks.append({
+                "label": "قاعدة الحجب نشطة في جدار الحماية",
+                "status": "ok" if blocked_rules else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1268,6 +1428,25 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/broadband/verify",
         "setup_wizard_v3_broadband_verify",
         setup_wizard_v3_broadband_verify,
+        methods=["GET"],
+    )
+    # Block-sites flow endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/block-sites/preview",
+        "setup_wizard_v3_block_sites_preview",
+        setup_wizard_v3_block_sites_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/block-sites/apply",
+        "setup_wizard_v3_block_sites_apply",
+        setup_wizard_v3_block_sites_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/block-sites/verify",
+        "setup_wizard_v3_block_sites_verify",
+        setup_wizard_v3_block_sites_verify,
         methods=["GET"],
     )
     bp.add_url_rule(

@@ -1,0 +1,174 @@
+{# Block-sites service — paste/edit a domain list, preview, apply,
+   verify on the router (address-list + filter rule appears).
+
+   Uses AddedServicesPhasePlanner with service_key="block_sites". #}
+<h2>حجب المواقع</h2>
+<p class="swsvf-pane-sub">
+  اكتب قائمة الـ domains المراد منع الوصول إليها من شبكة الراوتر — domain
+  في كل سطر. سيتم إنشاء قائمة عناوين + قاعدة جدار حماية تمنع الحركة لها.
+</p>
+
+<style>
+.swbl-section{margin:18px 0 10px}
+.swbl-section-title{font-weight:700;color:var(--swsvf-ink);font-size:14px;margin:0 0 8px}
+.swbl-help{color:var(--swsvf-mute);font-size:12px;margin:0 0 10px;line-height:1.7}
+.swbl-textarea{
+  display:block;width:100%;min-height:160px;
+  padding:12px 14px;border:1px solid var(--swsvf-line);border-radius:10px;
+  font-family:monospace;font-size:13px;line-height:1.7;resize:vertical;
+}
+.swbl-textarea:focus{outline:none;border-color:var(--swsvf-red);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+.swbl-count{margin-top:6px;color:var(--swsvf-mute);font-size:12px}
+.swbl-count strong{color:var(--swsvf-red)}
+.swbl-error{
+  color:#7F1D1D;background:var(--swsvf-red-soft);
+  border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;font-size:13px;margin:10px 0;
+}
+.swbl-error[hidden]{display:none}
+</style>
+
+<div class="swbl-section">
+  <div class="swbl-section-title">قائمة المواقع المحجوبة</div>
+  <p class="swbl-help">
+    اكتب domain في كل سطر، مثل <code>facebook.com</code> أو <code>twitter.com</code>.
+    لا تكتب <code>https://</code> أو <code>www.</code> — فقط اسم النطاق.
+  </p>
+  <textarea class="swbl-textarea" data-swbl-domains
+            placeholder="example.com
+another-site.com
+ads.network.com"></textarea>
+  <div class="swbl-count">
+    عدد المواقع: <strong data-swbl-count>0</strong>
+    <span style="color:var(--swsvf-mute);margin-inline-start:8px">(الحدّ الأقصى: 200)</span>
+  </div>
+</div>
+
+<div class="swbl-error" data-swbl-form-error hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const page = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+  const routerId = page.dataset.routerId;
+  const textarea = page.querySelector("[data-swbl-domains]");
+  const counter = page.querySelector("[data-swbl-count]");
+  const formError = page.querySelector("[data-swbl-form-error]");
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
+  function clearError() { formError.hidden = true; formError.textContent = ""; }
+  function parseDomains() {
+    return textarea.value
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => s.replace(/^https?:\/\//i, "").replace(/^www\./i, ""));
+  }
+  function refreshPayload() {
+    const domains = parseDomains();
+    counter.textContent = domains.length;
+    page.dataset.swsvfConfigurePayload = JSON.stringify({
+      service_key: "block_sites",
+      domains: domains,
+    });
+  }
+  textarea.addEventListener("input", refreshPayload);
+  refreshPayload();
+
+  let lastPayload = null;
+
+  page.addEventListener("swsvf:phase-change", async (ev) => {
+    const phase = ev.detail.phase;
+    if (phase === "preview") {
+      lastPayload = ev.detail.payload || JSON.parse(page.dataset.swsvfConfigurePayload || "{}");
+      await runPreview(lastPayload);
+    } else if (phase === "apply") {
+      await runApply(lastPayload);
+    } else if (phase === "verify") {
+      await runVerify();
+    }
+  });
+
+  async function runPreview(payload) {
+    const domains = payload && payload.domains;
+    if (!domains || !domains.length) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اكتب موقعاً واحداً على الأقل قبل المتابعة.");
+      return;
+    }
+    clearError();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/block-sites/preview`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        window.SWSVF.setPreview([`⚠ ${msg}`]);
+        return;
+      }
+      window.SWSVF.setPreview(data.bullets || []);
+    } catch (error) {
+      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+    }
+  }
+
+  async function runApply(payload) {
+    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplySubstep("connect", "active");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/block-sites/apply`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        return;
+      }
+      window.SWSVF.setApplySubstep("connect", "done");
+      window.SWSVF.setApplyLabel("إضافة قواعد الحجب…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("send", "done");
+      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("commit", "done");
+      window.SWSVF.setApplyLabel("تمّ الحجب", "ننتقل للتحقّق…");
+      await sleep(600);
+      window.SWSVF.setPhase("verify");
+    } catch (error) {
+      window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  async function runVerify() {
+    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/block-sites/verify`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const checks = data.checks || [];
+      if (!checks.length) {
+        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        return;
+      }
+      window.SWSVF.setVerifyChecks(checks);
+    } catch (error) {
+      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+    }
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+})();
+</script>
