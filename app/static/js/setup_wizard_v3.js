@@ -369,6 +369,17 @@
       // reliable than pasting the full script (RouterOS
       // Terminal truncates lines >200 chars, dropping the
       // critical /user add and /radius add lines).
+      //
+      // CRITICAL: emit ONE LINE with `;` separator, not two
+      // lines. When /tool fetch shows its progress output
+      // (status / downloaded / duration), MikroTik Terminal
+      // consumes any subsequent pasted line as if the user
+      // had pressed Enter on it mid-progress — the second
+      // line (/import ...) gets eaten silently.
+      // Using `;` keeps both commands in a single input that
+      // RouterOS parses + queues atomically: fetch runs
+      // first, import runs immediately after on completion.
+      //
       // NOTE: the path is /admin/radius/wz/<code>.rsc because
       // the Flask blueprint has url_prefix=/admin/radius. The
       // endpoint is whitelisted in _PUBLIC_ENDPOINTS so the
@@ -378,8 +389,7 @@
       if (shortCode) {
         const host = window.location.host;
         const fetchImport =
-          `/tool fetch url="http://${host}/admin/radius/wz/${shortCode}.rsc" mode=http dst-path="hr-setup.rsc"\n` +
-          `/import file-name="hr-setup.rsc"`;
+          `/tool fetch url="http://${host}/admin/radius/wz/${shortCode}.rsc" mode=http dst-path="hr-setup.rsc"; /import file-name="hr-setup.rsc"`;
         const pre = root.querySelector("[data-swz-fetch-import]");
         if (pre) pre.textContent = fetchImport;
         state.scripts["fetch_import"] = fetchImport;

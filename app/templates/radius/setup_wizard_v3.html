@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526p">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526q">
 {% endblock %}
 
 {% block content %}
@@ -317,14 +317,16 @@ Steps:
 
       <div class="swz-fetch-import-card">
         <strong>🚀 الطريقة الموصى بها — fetch &amp; import</strong>
-        <p>انسخ هذين السطرين فقط والصقهما في MikroTik Terminal:</p>
+        <p>انسخ السطر التالي والصقه في MikroTik Terminal:</p>
         <pre data-swz-fetch-import dir="ltr"></pre>
         <button type="button" class="swz-btn swz-btn-success"
                 data-swz-copy-script="fetch_import">
-          📋 نسخ السطرين
+          📋 نسخ السطر
         </button>
-        <small>الراوتر يحمّل الملفّ من VPS عبر HTTP ثم ينفّذه
-          بالكامل. لا قصّ، لا فقد للسطور الطويلة.</small>
+        <small>أمران مفصولان بفاصلة منقوطة <code dir="ltr">;</code>
+          — الراوتر يحمّل الملفّ ثم ينفّذه تتابعياً. سطر واحد
+          يضمن عدم فقد <code dir="ltr">/import</code> أثناء
+          عرض شريط تقدّم التنزيل.</small>
       </div>
 
       <details class="swz-script-fallback">
@@ -780,5 +782,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526p"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526q"></script>
 {% endblock %}

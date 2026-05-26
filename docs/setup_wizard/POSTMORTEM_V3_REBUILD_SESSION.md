@@ -627,6 +627,70 @@ amber warning explaining the 200-char limit.
 
 ---
 
+## 16) `/tool fetch` progress eats the next pasted line
+
+**Symptom.** Operator pasted the two recommended lines:
+
+```
+/tool fetch url="http://.../wz/<code>.rsc" mode=http dst-path="hr-setup.rsc"
+/import file-name="hr-setup.rsc"
+```
+
+The fetch completed successfully (3 KiB, 1s) — but the
+`/import` line never executed. No error, no echo, just an
+empty prompt where `/import` should have been:
+
+```
+> /tool fetch url="..." mode=http dst-path="hr-setup.rsc"
+      status: finished
+  downloaded: 3KiB
+       total: 3KiB
+    duration: 1s
+> ← /import line is gone
+```
+
+**Root cause.** While `/tool fetch` runs, MikroTik Terminal
+prints a multi-line progress block (status / downloaded /
+total / duration). Each rewrite of that block consumes
+input from the paste buffer the same way it consumes a
+keystroke from the user. By the time the fetch finishes,
+the `/import ...` line that was pasted right after has been
+silently absorbed by the progress renderer — never queued
+for execution.
+
+This is the same "paste-loss" failure class as Issue #15,
+but triggered by an in-progress command rather than the
+200-char buffer limit.
+
+**Fix.** Render the two commands as ONE LINE joined by `;`:
+
+```
+/tool fetch url="..." mode=http dst-path="hr-setup.rsc"; /import file-name="hr-setup.rsc"
+```
+
+RouterOS parses + queues both commands atomically as a
+single input line. Fetch runs first (with its progress
+output), import runs immediately on completion. Nothing
+can sneak in between because there's nothing in the buffer
+to be eaten.
+
+Total length: ~130 chars — under the 200-char limit from
+Issue #15, so we're safe on both fronts.
+
+**Prevention.**
+- **Multi-line paste workflows with progress-emitting
+  commands are unreliable.** Default to `;`-joined single
+  lines whenever an interactive command (`fetch`, `import`,
+  `ping`, `traceroute`) precedes anything else.
+- The pattern `cmd_with_progress; cmd_after` is the
+  RouterOS-equivalent of `&&` in bash. Use it for any
+  generated routine that has more than one command.
+- If a command line risks going over 200 chars, split into
+  multiple `;`-joined lines — but each individual line must
+  stay under 200.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

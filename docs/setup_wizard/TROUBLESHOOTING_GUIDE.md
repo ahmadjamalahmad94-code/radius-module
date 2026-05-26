@@ -56,6 +56,24 @@ print(f'applied {n} migrations')
 If `n=0` and the column truly missing, the migration runner
 is reading the wrong DB path — check `HOBERADIUS_DB_PATH`.
 
+### `/import` line vanishes after `/tool fetch` succeeded
+
+→ **`/tool fetch` progress output ate the next pasted
+line.** When fetch shows its multi-line status / downloaded
+/ duration block, MikroTik Terminal consumes input from the
+paste buffer the same way it would a keystroke. The
+`/import` line pasted right after fetch gets silently
+absorbed and never executes.
+
+**Fix:** join both commands with a `;` on ONE line:
+
+```
+/tool fetch url="..." mode=http dst-path="hr-setup.rsc"; /import file-name="hr-setup.rsc"
+```
+
+The wizard renders this format by default. If you see two
+separate lines in an older `?v=...` cache, hard-refresh.
+
 ### Lines silently missing from pasted script (e.g. `/user add` or `/radius add` never executed)
 
 → **MikroTik Terminal buffer overflow on long lines.** When
