@@ -573,6 +573,60 @@ class WizardV3Service:
             },
             unified_script_short_code=short_code,
         )
+
+        # ── ATOMICITY GUARANTEE (postmortem #20) ────────────
+        # Before this point, the unified script body (about to
+        # be served to the router via /tool fetch) embeds a
+        # /radius add line with the freshly-generated secret.
+        # If we let the operator paste the script BEFORE the
+        # matching wizard-run-<id>.conf exists on the server,
+        # there's a race where the router has the new secret
+        # but the server still has an old one (or none) —
+        # every Access-Request from the router gets dropped
+        # with 'invalid Message-Authenticator'.
+        #
+        # Fix: write the server-side clients.conf entry RIGHT
+        # NOW, as part of the same logical operation that
+        # generated the secret. The router + server move in
+        # lockstep:
+        #   1. secret generated → stored in state_json
+        #   2. wizard-run-<id>.conf written + reload trigger
+        #   3. router gets the same secret via /tool fetch
+        # If step 2 fails, this method raises and the operator
+        # never sees the script — preserving the invariant
+        # 'router never holds a secret the server doesn't
+        # know about'.
+        server_provisioning: dict[str, Any] | None = None
+        try:
+            from .setup_wizard_v3_radius_server_provisioning import (
+                write_client_for_run,
+            )
+            server_provisioning = write_client_for_run(
+                run_id=run_id,
+                router_vpn_ip=router_vpn_ip,
+                radius_secret=radius_secret,
+                shortname=(
+                    self._safe_shortname(run, run_id)
+                ),
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Bail out of script generation rather than handing
+            # the operator a script that will never authenticate.
+            # The state stays at AWAITING_HANDSHAKE — the
+            # operator can retry once the server-side issue is
+            # fixed.
+            import logging
+            logging.getLogger(__name__).exception(
+                "v3 atomic radius-server write failed "
+                "for run %s — refusing to serve script",
+                run_id,
+            )
+            raise V3Error(
+                f"تعذّر كتابة إعداد RADIUS على الخادم: {exc}. "
+                f"لا يمكن المتابعة لأن الراوتر سيحصل على سرّ "
+                f"غير معروف على الخادم."
+            ) from exc
+
         return {
             "run":          updated.to_dict(),
             "script":       body,
@@ -582,7 +636,19 @@ class WizardV3Service:
             "radius_secret": radius_secret,
             "api_user":     api_user,
             "api_password": api_password,
+            "server_radius_provisioning": server_provisioning,
         }
+
+    @staticmethod
+    def _safe_shortname(run, run_id: int) -> str:
+        """Build a FreeRADIUS-safe shortname from the operator's
+        router_name. Falls back to a deterministic
+        `wizard-router-<run>` when the name has no usable
+        alphanum characters."""
+        candidate = (run.router_name or "").strip()
+        if candidate:
+            return f"wizard-{candidate}-{run_id}"
+        return f"wizard-router-{run_id}"
 
     def _allocate_router_vpn_ip(
         self, *, tenant_id: int,

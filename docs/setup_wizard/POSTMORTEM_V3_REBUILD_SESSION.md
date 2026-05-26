@@ -974,6 +974,145 @@ property at the cost of a small compose + URL change.
 
 ---
 
+## 20) Router secret and server secret drifted because they were two separate steps
+
+**Symptom (production-class).** After all the network-layer
+fixes (#17 / #18 / #19), live testing surfaced one more
+class of bug: the secret on the MikroTik router and the
+secret in the server's `wizard-run-<id>.conf` could fall out
+of sync. Specifically the user ran the wizard repeatedly
+(runs #41 → #42 → #43 → #44 over the debugging session) and
+ended up with:
+
+* Router (MT): `secret = b5c5...` from run #44
+* Server (`wizard-run-42.conf`): `secret = b092...` from run #42
+* No `wizard-run-44.conf` on the server at all
+
+The auth packet from MT carried run #44's secret, FreeRADIUS
+checked it against the only file it had (run #42), HMAC
+mismatch, dropped.
+
+This isn't catastrophic in a lab, but **in production**:
+- A subscriber would try to log in, get "no response", call
+  support
+- Support would have to manually compare router and server
+  secrets, hand-correct the file
+- Each affected router needs a separate diagnosis
+
+The user explicitly asked: "how do we prevent this
+fundamentally, with strong invariants?"
+
+**Root cause.** The wizard was designed as two separate
+operations:
+
+1. `generate_unified_script` — generates a new secret, bakes
+   it into the router-side script, stores it in
+   `state_json`.
+2. `apply-server-radius` button — writes `wizard-run-<id>.conf`
+   on the server.
+
+The two were independent and depended on the operator
+clicking the button. If they didn't (forgot, distracted,
+network hiccup), the router moved forward with a new secret
+and the server kept its old one.
+
+**Fix.** Three layers of defence, all enforced by code:
+
+### Layer 1: Atomicity at generation time
+
+`generate_unified_script` now writes the server-side
+`wizard-run-<id>.conf` IMMEDIATELY after computing the
+secret, in the same call, BEFORE returning the script body.
+If the write fails, the whole script generation fails — the
+operator never sees a script whose secret the server doesn't
+know about.
+
+```python
+# in setup_wizard_v3.py::generate_unified_script
+try:
+    from .setup_wizard_v3_radius_server_provisioning import (
+        write_client_for_run,
+    )
+    server_provisioning = write_client_for_run(
+        run_id=run_id,
+        router_vpn_ip=router_vpn_ip,
+        radius_secret=radius_secret,
+        shortname=...,
+    )
+except Exception as exc:
+    raise V3Error(
+        "تعذّر كتابة إعداد RADIUS على الخادم: ... "
+        "لا يمكن المتابعة لأن الراوتر سيحصل على سرّ "
+        "غير معروف على الخادم."
+    ) from exc
+```
+
+This eliminates the "operator forgot to click" failure mode.
+The manual button stays as a recovery tool but is no longer
+on the critical path.
+
+### Layer 2: One-IP-one-file invariant
+
+`write_client_for_run` now calls
+`_purge_stale_files_for_ip()` BEFORE writing the new file.
+For each existing `wizard-run-*.conf` whose `ipaddr =` value
+matches the new one (but with a different run_id), the old
+file is deleted. The filesystem can never hold two active
+client entries claiming the same VPN IP — collision
+detection happens at write time, not at FR-startup time.
+
+### Layer 3: Periodic reconciler (defence in depth)
+
+A new worker (`setup_wizard_radius_reconciler_worker.py`)
+runs every 5 minutes and enforces three invariants against
+the wizard's source of truth (`setup_wizard_runs.state_json`):
+
+- **INV-1**: every active run (v3_state ∈ {VERIFYING,
+  REGISTERING, COMPLETE}) MUST have a matching
+  `wizard-run-<id>.conf` whose `secret` field equals
+  `state_json.radius_secret`. Violations → rewrite.
+- **INV-2**: every `wizard-run-<id>.conf` MUST correspond
+  to an active run. Orphans → delete.
+- **INV-3**: at most one file per `ipaddr` value.
+  Duplicates → keep the newest (highest run_id), delete
+  the rest.
+
+After any reconciliation action, the `.reload-trigger` is
+touched so FreeRADIUS picks up the new state within ~5s.
+
+This catches every drift case the primary path can't:
+- Manual operator deletions/renames in the directory
+- DB restores that change state_json without touching
+  files
+- Future wizard slices that forget to call
+  write_client_for_run
+- Anything else we haven't thought of
+
+### Tests (6 new) pinning each invariant
+
+- `test_reconciler_writes_missing_file_for_active_run`
+- `test_reconciler_rewrites_file_with_drifted_secret`
+- `test_reconciler_deletes_orphan_file`
+- `test_reconciler_dedupes_files_sharing_ipaddr`
+- `test_write_client_purges_stale_file_for_same_ip`
+- `test_reconciler_quiet_when_everything_matches`
+
+**Prevention rule for the future.** Any time the wizard
+generates an artifact that lives on BOTH the router AND the
+server (secrets, keys, IP allocations), the two sides MUST
+be provisioned atomically OR a reconciler MUST verify they
+stay in sync. The same pattern applies to:
+
+- WireGuard public keys (already handled by the WG peers.d
+  + wg-reload pipeline)
+- Future: API users, certificates, etc.
+
+Single-step operator interactions are unsafe for split-state
+provisioning — they break the moment the operator gets
+distracted, the wizard times out, or the page is refreshed.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

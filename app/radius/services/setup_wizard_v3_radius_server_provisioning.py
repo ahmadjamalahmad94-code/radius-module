@@ -81,7 +81,16 @@ def write_client_for_run(
     shortname: str | None = None,
 ) -> dict[str, Any]:
     """Atomically write the client block for one wizard run.
-    Returns a small summary suitable for logging and UI."""
+    Returns a small summary suitable for logging and UI.
+
+    Side effect: removes any existing `wizard-run-*.conf`
+    that targets the SAME `router_vpn_ip` but belongs to a
+    different run_id. This enforces the invariant
+    'one ipaddr → one active client file'. Without this,
+    re-running the wizard for the same router (or replacing
+    one router with another using the same VPN slot) would
+    leave stale entries that may carry an obsolete secret.
+    """
     if not router_vpn_ip:
         raise FreeRadiusProvisioningError(
             "router_vpn_ip is required",
@@ -104,6 +113,14 @@ def write_client_for_run(
             f"cannot create {target_dir} — fix host volume "
             f"permissions: {exc}",
         ) from exc
+
+    # Enforce 1-ip → 1-file. Wipe any stale file for this IP
+    # that belongs to a different run BEFORE writing the new
+    # one (so two runs for the same router can't both have
+    # files claiming the same client IP).
+    _purge_stale_files_for_ip(
+        target_dir, router_vpn_ip, except_run_id=run_id,
+    )
 
     short = shortname or f"wizard-router-{int(run_id)}"
     # FreeRADIUS shortnames + client-block names must be safe
@@ -199,8 +216,234 @@ def remove_client_for_run(
     return {"status": "removed", "path": str(target)}
 
 
+_IPADDR_RE = re.compile(r"^\s*ipaddr\s*=\s*(\S+)", re.MULTILINE)
+_RUN_FILE_RE = re.compile(r"^wizard-run-(\d+)\.conf$")
+
+
+def _purge_stale_files_for_ip(
+    target_dir: Path, ipaddr: str, *, except_run_id: int,
+) -> list[str]:
+    """Remove any wizard-run-*.conf in `target_dir` that has
+    the same `ipaddr =` value but a different run_id. Returns
+    paths of removed files for logging."""
+    removed: list[str] = []
+    if not target_dir.is_dir():
+        return removed
+    for path in target_dir.iterdir():
+        if not path.is_file():
+            continue
+        m = _RUN_FILE_RE.match(path.name)
+        if not m:
+            continue
+        if int(m.group(1)) == int(except_run_id):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+        ip_match = _IPADDR_RE.search(text)
+        if not ip_match:
+            continue
+        if ip_match.group(1).strip() != str(ipaddr).strip():
+            continue
+        # Same ipaddr, different run → stale.
+        try:
+            path.unlink()
+            removed.append(str(path))
+            _LOG.info(
+                "purged stale clients.conf for ipaddr %s: %s",
+                ipaddr, path.name,
+            )
+        except Exception:  # noqa: BLE001
+            _LOG.warning(
+                "could not purge stale %s", path, exc_info=True,
+            )
+    return removed
+
+
+def reconcile_with_state(
+    *, tenant_id: int = 1,
+) -> dict[str, Any]:
+    """Periodic sweep that reconciles files in the clients-
+    wizard directory with the wizard's source-of-truth
+    (setup_wizard_runs.state_json).
+
+    Invariants enforced:
+      INV-1: every active run (v3_state in
+             VERIFYING/REGISTERING/COMPLETE) MUST have a
+             matching wizard-run-<id>.conf whose `secret`
+             field equals state_json.radius_secret.
+      INV-2: every wizard-run-<id>.conf MUST correspond to
+             an active run with matching state.
+      INV-3: no two files may share the same ipaddr.
+
+    For each violation:
+      INV-1 mismatch → re-write the file from state_json.
+      INV-2 orphan   → remove the file.
+      INV-3 duplicate → keep the most recent run's file.
+
+    Returns a structured summary suitable for the worker's
+    audit log.
+    """
+    from ..db.connection import db
+    import json as _json
+
+    target_dir = _dir()
+    actions: dict[str, list[str]] = {
+        "rewritten": [], "deleted": [], "deduped": [],
+        "ok": [],
+    }
+    # NOTE: don't early-return when the directory is missing.
+    # write_client_for_run() recreates it, and we still need
+    # to write files for any active runs found in the DB.
+    # The file-scan loop below tolerates a non-existent dir.
+
+    # ── Index files by run_id ────────────────────────────
+    files_by_run: dict[int, Path] = {}
+    files_by_ip: dict[str, list[Path]] = {}
+    iterable = target_dir.iterdir() if target_dir.is_dir() else []
+    for path in iterable:
+        if not path.is_file():
+            continue
+        m = _RUN_FILE_RE.match(path.name)
+        if not m:
+            continue
+        rid = int(m.group(1))
+        files_by_run[rid] = path
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+        ip_match = _IPADDR_RE.search(text)
+        if ip_match:
+            ip = ip_match.group(1).strip()
+            files_by_ip.setdefault(ip, []).append(path)
+
+    # ── Index active runs from DB ────────────────────────
+    rows = db().execute(
+        """SELECT id, v3_state, state_json
+           FROM setup_wizard_runs
+           WHERE tenant_id=?
+             AND v3_state IN
+                 ('VERIFYING', 'REGISTERING', 'COMPLETE')""",
+        (int(tenant_id),),
+    ).fetchall()
+    active_runs: dict[int, dict[str, Any]] = {}
+    for r in rows:
+        try:
+            state = _json.loads(r["state_json"] or "{}") or {}
+        except (TypeError, ValueError):
+            state = {}
+        if state.get("router_vpn_ip") and state.get("radius_secret"):
+            active_runs[int(r["id"])] = state
+
+    # ── INV-1: every active run has a correct file ──────
+    for rid, state in active_runs.items():
+        expected_secret = state["radius_secret"]
+        expected_ip = state["router_vpn_ip"]
+        path = files_by_run.get(rid)
+        needs_write = False
+        if not path or not path.exists():
+            needs_write = True
+        else:
+            try:
+                text = path.read_text(encoding="utf-8")
+                ok_secret = (
+                    f"secret      = {expected_secret}" in text
+                )
+                ok_ip = (
+                    f"ipaddr      = {expected_ip}" in text
+                )
+                if not (ok_secret and ok_ip):
+                    needs_write = True
+            except Exception:  # noqa: BLE001
+                needs_write = True
+        if needs_write:
+            try:
+                write_client_for_run(
+                    run_id=rid,
+                    router_vpn_ip=expected_ip,
+                    radius_secret=expected_secret,
+                )
+                actions["rewritten"].append(
+                    f"wizard-run-{rid}.conf",
+                )
+            except FreeRadiusProvisioningError as exc:
+                _LOG.warning(
+                    "reconciler: could not write for run %s: %s",
+                    rid, exc,
+                )
+        else:
+            actions["ok"].append(f"wizard-run-{rid}.conf")
+
+    # ── INV-2: every file belongs to an active run ──────
+    for rid, path in files_by_run.items():
+        if rid in active_runs:
+            continue
+        try:
+            path.unlink()
+            actions["deleted"].append(path.name)
+            _LOG.info(
+                "reconciler: deleted orphan file %s", path.name,
+            )
+        except Exception:  # noqa: BLE001
+            _LOG.warning(
+                "reconciler: could not delete orphan %s",
+                path, exc_info=True,
+            )
+
+    # ── INV-3: deduplicate by ipaddr ─────────────────────
+    for ip, paths in files_by_ip.items():
+        if len(paths) <= 1:
+            continue
+        # Keep the file owned by the HIGHEST run_id (newest).
+        paths_sorted = sorted(
+            paths,
+            key=lambda p: int(_RUN_FILE_RE.match(p.name).group(1)),
+            reverse=True,
+        )
+        keeper = paths_sorted[0]
+        for p in paths_sorted[1:]:
+            if not p.exists():
+                continue
+            try:
+                p.unlink()
+                actions["deduped"].append(p.name)
+                _LOG.info(
+                    "reconciler: deduped %s (kept %s for %s)",
+                    p.name, keeper.name, ip,
+                )
+            except Exception:  # noqa: BLE001
+                _LOG.warning(
+                    "reconciler: could not dedupe %s",
+                    p, exc_info=True,
+                )
+
+    # Touch the reload trigger if we changed anything so
+    # freeradius picks up the new state within ~5 seconds.
+    if (actions["rewritten"] or actions["deleted"]
+            or actions["deduped"]):
+        trigger = target_dir / ".reload-trigger"
+        try:
+            trigger.touch(exist_ok=True)
+            now = time.time()
+            os.utime(trigger, (now, now))
+        except Exception:  # noqa: BLE001
+            _LOG.warning(
+                "reconciler: could not touch reload trigger",
+                exc_info=True,
+            )
+
+    return {
+        **actions,
+        "scanned_runs": len(active_runs),
+        "scanned_files": len(files_by_run),
+    }
+
+
 __all__ = [
     "write_client_for_run",
     "remove_client_for_run",
+    "reconcile_with_state",
     "FreeRadiusProvisioningError",
 ]

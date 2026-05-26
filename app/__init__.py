@@ -185,6 +185,15 @@ def _start_workers(app: Flask) -> None:
         app.logger.exception(
             "setup_wizard_tentative_reclaimer start failed"
         )
+    try:
+        from app.workers.setup_wizard_radius_reconciler_worker import (
+            start_setup_wizard_radius_reconciler,
+        )
+        start_setup_wizard_radius_reconciler(flask_app=app)
+    except Exception:  # noqa: BLE001
+        app.logger.exception(
+            "setup_wizard_radius_reconciler start failed"
+        )
 
 
 def _init_db(app: Flask) -> None:
