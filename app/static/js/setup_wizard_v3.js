@@ -608,23 +608,29 @@
         `/runs/${state.runId}/configure-server-radius`,
         {},
       );
+      // Hide the action button + reveal the success badge so
+      // the card collapses to a clean "✅ done" state instead
+      // of leaving the operator wondering if they should
+      // click anything else.
+      btn.hidden = true;
       const appliedNote = root.querySelector(
         "[data-swz-radius-applied]",
       );
       if (appliedNote) appliedNote.hidden = false;
       toast(
-        "✅ تم تطبيق clients.conf على الخادم. سيتم تحميله "
-        + "خلال ~5 ثوانٍ.",
+        "✅ تم ربط RADIUS بالخادم. سيُحمَّل خلال ~5 ثوانٍ.",
         "ok",
       );
     } catch (err) {
       toast(
         "تعذّر التطبيق التلقائي: " + err.message + ". "
-        + "يمكنك دائماً النسخ يدوياً.",
+        + "افتح (تفاصيل تقنيّة) لنسخ السطر يدوياً.",
         "error",
       );
     } finally {
-      setBusy(btn, false);
+      // setBusy restores the button text — only call it if the
+      // button is still visible.
+      if (!btn.hidden) setBusy(btn, false);
     }
   }
 

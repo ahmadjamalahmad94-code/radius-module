@@ -428,6 +428,38 @@
   padding: 1px 5px;
 }
 
+.swz-radius-advanced {
+  background: #fffbeb;
+  border-radius: 8px;
+  border: 1px dashed #fbbf24;
+  margin-top: 12px;
+  padding: 10px 12px;
+}
+
+.swz-radius-advanced > summary {
+  color: #78350f;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.swz-radius-advanced > p {
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+
+.swz-radius-advanced pre {
+  background: #1f2937;
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  padding: 10px;
+}
+
 /* ─── Buttons ────────────────────────────────────────── */
 
 .swz-actions {

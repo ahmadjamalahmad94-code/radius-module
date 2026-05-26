@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526s">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526t">
 {% endblock %}
 
 {% block content %}
@@ -345,34 +345,40 @@ Steps:
       </details>
     </div>
 
-    {# RADIUS secret display — only revealed after script generation. #}
+    {# RADIUS secret display — minimal by default. Just a
+       primary action button. The full snippet + manual
+       instructions hide inside a collapsed <details> so the
+       operator sees them only if they explicitly look. #}
     <div class="swz-radius-secret-card" data-swz-radius-secret hidden>
       <header>
-        <strong>🔐 سرّ RADIUS — احفظه على الخادم</strong>
-        <p>هذا السرّ مُضمَّن داخل سكربت الراوتر. للسماح
-           بالمصادقة من جهة الخادم، أضف السطر التالي إلى
-           <code dir="ltr">/etc/freeradius/clients.conf</code>
-           على الـ VPS:</p>
+        <strong>🔐 ربط RADIUS بالخادم</strong>
+        <p>اضغط الزر لإكمال ربط الراوتر بـ FreeRADIUS — سيتم
+           إعداد كل شيء تلقائياً على الـ VPS بدون الحاجة لـ
+           SSH أو نسخ يدوي.</p>
       </header>
-      <pre data-swz-clients-conf dir="ltr"></pre>
       <div class="swz-radius-actions">
         <button type="button" class="swz-btn swz-btn-success"
                 data-swz-action="apply-server-radius">
           🚀 تطبيق على الخادم تلقائياً
         </button>
-        <button type="button" class="swz-btn swz-btn-ghost"
-                data-swz-copy-clients-conf>📋 نسخ يدوياً</button>
       </div>
       <p class="swz-radius-secret-hint" data-swz-radius-applied hidden>
-        ✅ تم الكتابة على الخادم وإعادة تشغيل FreeRADIUS
-        تلقائياً. لا حاجة لـ SSH.
+        ✅ تم الربط على الخادم وإعادة تشغيل FreeRADIUS
+        تلقائياً. لا حاجة لأي خطوة إضافيّة.
       </p>
-      <p class="swz-radius-secret-hint">
-        أو يدويّاً: انسخ السطر أعلاه أضفه إلى
-        <code dir="ltr">/etc/freeradius/clients.conf</code>
-        ثم أعد تشغيل FreeRADIUS عبر
-        <code dir="ltr">docker compose ... restart freeradius</code>.
-      </p>
+
+      <details class="swz-radius-advanced">
+        <summary>⚙️ تفاصيل تقنيّة (لا حاجة لها عادةً)</summary>
+        <p>إذا فشل الزر التلقائي أو احتجت لتطبيق يدوي:
+          انسخ السطر التالي وأضفه إلى
+          <code dir="ltr">/etc/freeradius/clients.conf</code>
+          على الـ VPS، ثم
+          <code dir="ltr">docker compose ... restart freeradius</code>.
+        </p>
+        <pre data-swz-clients-conf dir="ltr"></pre>
+        <button type="button" class="swz-btn swz-btn-ghost"
+                data-swz-copy-clients-conf>📋 نسخ السطر</button>
+      </details>
     </div>
 
     <div class="swz-field" data-swz-step3-paste hidden>
@@ -782,5 +788,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526s"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526t"></script>
 {% endblock %}
