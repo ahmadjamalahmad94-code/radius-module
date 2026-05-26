@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526g">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526h">
 {% endblock %}
 
 {% block content %}
@@ -335,11 +335,23 @@ Steps:
            على الـ VPS:</p>
       </header>
       <pre data-swz-clients-conf dir="ltr"></pre>
-      <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-copy-clients-conf>📋 نسخ سطر clients.conf</button>
+      <div class="swz-radius-actions">
+        <button type="button" class="swz-btn swz-btn-success"
+                data-swz-action="apply-server-radius">
+          🚀 تطبيق على الخادم تلقائياً
+        </button>
+        <button type="button" class="swz-btn swz-btn-ghost"
+                data-swz-copy-clients-conf>📋 نسخ يدوياً</button>
+      </div>
+      <p class="swz-radius-secret-hint" data-swz-radius-applied hidden>
+        ✅ تم الكتابة على الخادم وإعادة تشغيل FreeRADIUS
+        تلقائياً. لا حاجة لـ SSH.
+      </p>
       <p class="swz-radius-secret-hint">
-        بعد إضافة السطر، أعد تشغيل FreeRADIUS:
-        <code dir="ltr">docker compose -f /opt/hoberadius/deploy/docker-compose.yml restart freeradius</code>
+        أو يدويّاً: انسخ السطر أعلاه أضفه إلى
+        <code dir="ltr">/etc/freeradius/clients.conf</code>
+        ثم أعد تشغيل FreeRADIUS عبر
+        <code dir="ltr">docker compose ... restart freeradius</code>.
       </p>
     </div>
 
@@ -697,5 +709,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526g"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526h"></script>
 {% endblock %}

@@ -411,6 +411,63 @@ def setup_wizard_v3_phase_plan(run_id: int, phase: str):
     })
 
 
+def setup_wizard_v3_configure_server_radius(run_id: int):
+    """One-click: write the FreeRADIUS clients.conf snippet for
+    this wizard run + trigger a server-side reload. Replaces
+    the manual SSH + edit + restart flow shown to the operator
+    in the RADIUS-secret card."""
+    from ..services.setup_wizard_v3_radius_server_provisioning import (
+        FreeRadiusProvisioningError,
+        write_client_for_run,
+    )
+
+    try:
+        run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound as exc:
+        return _err(str(exc), status=404, code="not_found")
+    except V3Error as exc:
+        return _err(str(exc))
+
+    if not run.router_vpn_ip:
+        return _err(
+            "أكمل الخطوة 3 (الربط بالخادم) أوّلاً.",
+            status=409,
+            code="no_vpn_ip",
+        )
+
+    # Secret is stashed in state_json by generate_unified_script.
+    raw_state = _svc()._repo._raw_state_json(_tid(), run_id)
+    secret = str(raw_state.get("radius_secret") or "").strip()
+    if not secret:
+        return _err(
+            "لم يتم توليد سرّ RADIUS بعد. ارجع للخطوة 3 "
+            "واضغط (توليد سكربت الربط).",
+            status=409,
+            code="no_secret",
+        )
+
+    try:
+        result = write_client_for_run(
+            run_id=run_id,
+            router_vpn_ip=run.router_vpn_ip,
+            radius_secret=secret,
+            shortname=f"wizard-{run.router_name or run_id}",
+        )
+    except FreeRadiusProvisioningError as exc:
+        return _err(
+            str(exc),
+            status=500,
+            code="freeradius_provisioning_failed",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _err(
+            f"خطأ غير متوقّع: {exc}",
+            status=500,
+            code="freeradius_provisioning_error",
+        )
+    return jsonify({"ok": True, **result})
+
+
 def setup_wizard_v3_discover_interfaces(run_id: int):
     """Discover the router's actual interfaces — either via the
     API over the established VPN tunnel, or by parsing pasted
@@ -565,6 +622,12 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/runs/<int:run_id>/phase-plan/<phase>",
         "setup_wizard_v3_phase_plan",
         setup_wizard_v3_phase_plan,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/runs/<int:run_id>/configure-server-radius",
+        "setup_wizard_v3_configure_server_radius",
+        setup_wizard_v3_configure_server_radius,
         methods=["POST"],
     )
     bp.add_url_rule(

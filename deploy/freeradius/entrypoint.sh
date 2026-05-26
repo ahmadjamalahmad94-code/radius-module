@@ -72,5 +72,52 @@ else
     echo "[entrypoint] WARN: /data غير موجود — لن تعمل accounting SQL writes." >&2
 fi
 
-# سَلِّم التحكّم لـ freeradius
-exec freeradius -f -l stdout $FREERADIUS_DEBUG_LEVEL
+# ─── 3) Setup Wizard v3 — auto-provisioned clients dir ──────────────────────
+# /data/freeradius-clients-wizard/ holds one .conf per wizard router run.
+# Hoberadius (uid 999, gid 999) writes to it via /app/instance/...; freeradius
+# reads via /data/...
+WIZARD_DIR=/data/freeradius-clients-wizard
+if [ ! -d "$WIZARD_DIR" ]; then
+    mkdir -p "$WIZARD_DIR"
+    chgrp "${FREERAD_GID:-101}" "$WIZARD_DIR" 2>/dev/null || true
+    # setgid + g+rwX so files created by hoberadius inherit freerad group
+    chmod g+rwxs "$WIZARD_DIR" 2>/dev/null || true
+    # World-read so the include glob always picks up new files
+    chmod o+rX "$WIZARD_DIR" 2>/dev/null || true
+fi
+
+# ─── 4) Reload watcher + supervisor loop ─────────────────────────────────────
+# Background watcher: polls the .reload-trigger marker every 5 seconds.
+# When it changes, kills freeradius — the supervisor loop below relaunches it
+# with the new clients.conf snippets loaded.
+RELOAD_MARKER="$WIZARD_DIR/.reload-trigger"
+LAST_RELOAD_FILE=/tmp/freeradius-last-reload
+
+(
+    while sleep 5; do
+        [ -f "$RELOAD_MARKER" ] || continue
+        TRIGGER_MTIME=$(stat -c %Y "$RELOAD_MARKER" 2>/dev/null || echo 0)
+        LAST_MTIME=$(cat "$LAST_RELOAD_FILE" 2>/dev/null || echo 0)
+        if [ "$TRIGGER_MTIME" != "$LAST_MTIME" ]; then
+            echo "[entrypoint] reload trigger detected (mtime=$TRIGGER_MTIME), restarting freeradius" >&2
+            echo "$TRIGGER_MTIME" > "$LAST_RELOAD_FILE"
+            # Kill freeradius — supervisor loop below restarts it.
+            pkill -TERM freeradius || pkill -TERM radiusd || true
+        fi
+    done
+) &
+
+# Supervisor loop: relaunch freeradius if it exits. Without this, killing
+# freeradius to apply new clients.conf would also stop the container (since
+# freeradius is the foreground process). The trap forwards SIGTERM from
+# `docker stop` so the container exits cleanly when actually requested.
+trap 'echo "[entrypoint] received SIGTERM, shutting down" >&2; kill "${FR_PID:-0}" 2>/dev/null; exit 0' TERM INT
+
+while true; do
+    freeradius -f -l stdout $FREERADIUS_DEBUG_LEVEL &
+    FR_PID=$!
+    wait "$FR_PID" || true
+    EXIT_CODE=$?
+    echo "[entrypoint] freeradius exited with code $EXIT_CODE, restarting in 1s" >&2
+    sleep 1
+done

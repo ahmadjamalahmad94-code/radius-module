@@ -380,10 +380,25 @@
   padding: 12px;
 }
 
+.swz-radius-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .swz-radius-secret-hint {
   color: #92400e;
   font-size: 12px;
   margin: 10px 0 0;
+}
+
+.swz-radius-secret-hint[data-swz-radius-applied] {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #065f46;
+  padding: 8px 12px;
 }
 
 .swz-radius-secret-hint code {

@@ -475,6 +475,34 @@
     );
   }
 
+  async function applyServerRadius(btn) {
+    setBusy(btn, true, "جارٍ التطبيق على الخادم...");
+    try {
+      const data = await api(
+        "POST",
+        `/runs/${state.runId}/configure-server-radius`,
+        {},
+      );
+      const appliedNote = root.querySelector(
+        "[data-swz-radius-applied]",
+      );
+      if (appliedNote) appliedNote.hidden = false;
+      toast(
+        "✅ تم تطبيق clients.conf على الخادم. سيتم تحميله "
+        + "خلال ~5 ثوانٍ.",
+        "ok",
+      );
+    } catch (err) {
+      toast(
+        "تعذّر التطبيق التلقائي: " + err.message + ". "
+        + "يمكنك دائماً النسخ يدوياً.",
+        "error",
+      );
+    } finally {
+      setBusy(btn, false);
+    }
+  }
+
   async function discoverViaApi(btn) {
     const form = root.querySelector(
       "[data-swz-discover-api-form]",
@@ -756,6 +784,8 @@
         await discoverViaApi(btn); break;
       case "discover-via-paste":
         await discoverViaPaste(btn); break;
+      case "apply-server-radius":
+        await applyServerRadius(btn); break;
       case "generate-hotspot":
         await generateHotspotScript(btn); break;
       case "generate-broadband":
