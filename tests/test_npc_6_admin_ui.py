@@ -149,27 +149,25 @@ def _seed_router(app, name="rt1"):
 # ─── Sidebar entries ─────────────────────────────────────────
 
 
-def test_sidebar_renders_single_npc_entry(app, client, monkeypatch):
-    """NPC was three sidebar items; it now collapses to one
-    entry pointing at the router-picker. Per-service tabs live
-    inside each router's dashboard (see test_dashboard_links_to_npc)."""
+def test_sidebar_drops_all_npc_entries(app, client, monkeypatch):
+    """Pass-2 cleanup: NPC was previously a single «اختر راوتراً»
+    sidebar item, then three direct sub-service entries. Both
+    are now removed — operators reach NPC exclusively from a
+    router's own dashboard via the three quicknav buttons. See
+    `test_dashboard_links_to_npc_per_service`."""
     _login_super(client, app, monkeypatch)
     r = client.get("/admin/radius/")
     assert r.status_code == 200
-    html = r.data.decode("utf-8")
-    # The single landing URL appears.
-    assert "/admin/radius/network-policy/" in html
-    # The single Arabic label appears.
-    assert "اختر راوتراً" in html
-    # The three old direct sub-service links are gone from
-    # the sidebar (they still exist as routes, just not
-    # surfaced there).
+    sidebar_html = r.data.decode("utf-8").split('</aside>')[0]
+    # The chooser entry is gone from the sidebar.
+    assert "اختر راوتراً" not in sidebar_html
+    # The three direct sub-service entries are gone too.
     assert "/admin/radius/network-policy/remote-access/" \
-        not in html.split('</aside>')[0]
+        not in sidebar_html
     assert "/admin/radius/network-policy/web-block/" \
-        not in html.split('</aside>')[0]
+        not in sidebar_html
     assert "/admin/radius/network-policy/walled-garden/" \
-        not in html.split('</aside>')[0]
+        not in sidebar_html
 
 
 # ─── List page ───────────────────────────────────────────────
@@ -196,22 +194,64 @@ def test_list_pages_render_with_dry_run_banner(
     assert label in html
 
 
-def test_landing_renders_router_picker(
+def test_landing_redirects_to_devices_list(
     app, client, monkeypatch,
 ):
-    """The global landing used to redirect straight to the
-    remote-access list. It now renders a router-picker grid
-    — the operator picks a router before seeing policies."""
+    """Pass-2 cleanup: the global NPC landing used to render a
+    router-picker page. It now redirects to the NAS list —
+    operators pick a router there, then use the router's own
+    dashboard quicknav to reach NPC."""
     _login_super(client, app, monkeypatch)
     r = client.get(
         "/admin/radius/network-policy/",
         follow_redirects=False,
     )
-    assert r.status_code == 200
+    assert r.status_code in (301, 302, 303, 307, 308)
+    assert "/admin/radius/devices" in r.headers.get(
+        "Location", ""
+    )
+
+
+def test_dashboard_links_to_npc_per_service(
+    app, client, monkeypatch,
+):
+    """Each router's dashboard exposes three direct NPC
+    quicknav buttons — one per sub-service. This replaces the
+    earlier single «سياسات الشبكة» landing card."""
+    # Seed a router via direct DB insert (the test client
+    # doesn't have a quick way to spawn one).
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            cur = c.execute(
+                "INSERT INTO nas_devices (tenant_id, name, "
+                "shortname, address, secret, vendor, nas_type, "
+                "ports, snmp_community, auth_port, acct_port, "
+                "coa_port, api_port, api_user, api_password, "
+                "api_use_tls, location, coordinates, "
+                "monitoring_enabled, description, enabled, "
+                "require_message_authenticator, ssh_port, "
+                "tags, metadata, created_at, updated_at) "
+                "VALUES (1,'dash-test','dt','10.99.0.1','',"
+                "'mikrotik','router',0,'',1812,1813,3799,"
+                "8728,'admin','pw',0,'','',0,'',1,0,22,'',"
+                "'{}','2026-01-01','2026-01-01')"
+            )
+            rid = int(cur.lastrowid)
+
+    _login_super(client, app, monkeypatch)
+    r = client.get(f"/admin/radius/mt/{rid}/dashboard")
+    assert r.status_code == 200, r.data.decode("utf-8")[:500]
     html = r.data.decode("utf-8")
-    assert "اختر راوتراً" in html
-    # The dry-run banner still rides every NPC page.
-    assert "معاينة فقط (Dry-Run)" in html
+    # Three buttons, one per service, each linked to the
+    # router-scoped list.
+    assert f"/mt/{rid}/network-policies/remote-access/" in html
+    assert f"/mt/{rid}/network-policies/web-block/" in html
+    assert f"/mt/{rid}/network-policies/walled-garden/" in html
+    # And the three Arabic labels.
+    assert "الوصول البعيد" in html
+    assert "حجب المواقع" in html
+    assert "المواقع المسموحة" in html
 
 
 # ─── Permission gates ────────────────────────────────────────

@@ -55,8 +55,8 @@
           <label>نوع المصدر</label>
           <select name="source_type" required>
             <option value="dhcp">DHCP مباشر</option>
-            <option value="static">Static IP</option>
-            <option value="vlan">VLAN</option>
+            <option value="static">عنوان IP ثابت</option>
+            <option value="vlan">VLAN (شبكة افتراضيّة)</option>
             <option value="pppoe">PPPoE</option>
           </select>
         </div>
@@ -65,7 +65,7 @@
           <input name="selected_wan_interface" placeholder="ether1" required>
         </div>
         <div class="sw-field">
-          <label>بيانات JSON (حسب النوع)</label>
+          <label>بيانات الإعداد (صيغة JSON — حسب النوع المختار)</label>
           <textarea name="payload_json" rows="7" spellcheck="false">{"interface":"ether1","add_default_route":true,"use_peer_dns":true,"nat_enabled":true}</textarea>
         </div>
         <div class="sw-inline-actions">
@@ -74,7 +74,7 @@
           <button class="hub-btn" type="button" data-sw-action="verify-internet">تحليل تحقق الإنترنت</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات التحقق (الصق نص Terminal)</label>
+          <label>مخرجات التحقق (الصق نص الـ Terminal كما هو)</label>
           <textarea name="verify_output" rows="5" spellcheck="false" placeholder="/tool ping 8.8.8.8 count=5&#10;/ip route print detail where dst-address=0.0.0.0/0"></textarea>
         </div>
       </form>
@@ -102,58 +102,58 @@
 
   <div class="sw-grid">
     <section class="sw-panel">
-      <h2>3) Hotspot</h2>
+      <h2>3) Hotspot — الوصول العامّ</h2>
       <form data-sw-form="hotspot">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
           <label>النمط</label>
           <select name="mode">
-            <option value="smart">Smart</option>
-            <option value="manual">Manual</option>
+            <option value="smart">ذكي (تلقائي)</option>
+            <option value="manual">يدوي</option>
           </select>
         </div>
         <div class="sw-field">
-          <label>Payload JSON</label>
+          <label>بيانات الإعداد (صيغة JSON)</label>
           <textarea name="payload_json" rows="6" spellcheck="false">{"selected_interfaces":["ether3"]}</textarea>
         </div>
         <div class="sw-field">
-          <label>Blocked Networks JSON</label>
+          <label>الشبكات المحظورة (صيغة JSON)</label>
           <textarea name="blocked_json" rows="3" spellcheck="false">["10.10.0.0/24","10.20.30.0/24"]</textarea>
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">جلب واجهات مرشحة (Contract)</button>
+          <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">جلب الواجهات المرشّحة</button>
           <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">توليد سكربت Hotspot</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-hotspot">تحليل تحقق Hotspot</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-hotspot">تحليل التحقّق</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق Hotspot</label>
+          <label>مخرجات تحقّق Hotspot</label>
           <textarea name="verify_output" rows="4" spellcheck="false" placeholder="/ip hotspot print detail&#10;/ip hotspot profile print detail"></textarea>
         </div>
       </form>
     </section>
 
     <section class="sw-panel">
-      <h2>4) Broadband / PPPoE</h2>
+      <h2>4) PPPoE — اتّصال المشتركين</h2>
       <form data-sw-form="broadband">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
           <label>النمط</label>
           <select name="mode">
-            <option value="smart">Smart</option>
-            <option value="manual">Manual</option>
+            <option value="smart">ذكي (تلقائي)</option>
+            <option value="manual">يدوي</option>
           </select>
         </div>
         <div class="sw-field">
-          <label>Payload JSON</label>
+          <label>بيانات الإعداد (صيغة JSON)</label>
           <textarea name="payload_json" rows="6" spellcheck="false">{"selected_interfaces":["ether4"],"local_address":"10.88.44.1","remote_pool_cidr":"10.88.44.0/24"}</textarea>
         </div>
         <div class="sw-field">
-          <label>Blocked Networks JSON</label>
+          <label>الشبكات المحظورة (صيغة JSON)</label>
           <textarea name="blocked_json" rows="3" spellcheck="false">["10.10.0.0/24","10.20.30.0/24","10.77.50.0/24"]</textarea>
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت Broadband</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-broadband">تحليل تحقق Broadband</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت PPPoE</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-broadband">تحليل التحقّق</button>
         </div>
         <div class="sw-field">
           <label>مخرجات تحقق Broadband</label>

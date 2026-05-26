@@ -469,42 +469,16 @@ def register_network_policy_routes(bp: Blueprint) -> None:
 
 
 def npc_index():
-    """Global landing — now a router-picker.
+    """Legacy landing — operators now reach NPC from inside a
+    router's dashboard (see the three quicknav buttons on
+    /admin/radius/mt/<nas_id>/dashboard).
 
-    Operators reach NPC by picking the router first. Each row
-    on this page is a small card linking to the per-router
-    NPC page under `/admin/radius/mt/<nas_id>/network-policies/`.
-    The old per-service global lists stay alive (the JSON API
-    still uses them) but they're no longer surfaced in the UI.
-    """
-    routers = _nas_list()
-    summary: list[dict] = []
-    for r in routers:
-        rid = int(r["id"])
-        counts = {
-            "remote_access": len(
-                ra_repo.list_for_router(_tid(), rid)
-            ),
-            "web_block": len(
-                wb_repo.list_policies_for_router(_tid(), rid)
-            ),
-            "walled_garden": len(
-                wg_repo.list_policies_for_router(_tid(), rid)
-            ),
-        }
-        summary.append({
-            "id":      rid,
-            "name":    r.get("name") or f"router #{rid}",
-            "address": r.get("address") or "",
-            "counts":  counts,
-            "total":   sum(counts.values()),
-        })
-    return render_template(
-        "radius/network_policy_router_picker.html",
-        services=list(_REGISTRY.values()),
-        routers=summary,
-        page_title="سياسات الشبكة — اختر راوتراً",
-    )
+    We keep the route alive (some bookmarks may still point at
+    it, and `url_for('radius.network_policy_index')` is still
+    referenced in older templates) but redirect to the NAS
+    list — which is the canonical "pick a router" surface
+    after the pass-2 sidebar cleanup."""
+    return redirect(url_for("radius.devices_list"))
 
 
 def _npc_router_landing(nas_id: int):

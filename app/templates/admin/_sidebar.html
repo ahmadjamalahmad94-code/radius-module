@@ -227,21 +227,6 @@
       <span class="hb-side-text">لوحة التحكم</span>
     </a>
 
-    <div class="hb-side-section{% if sec_setup_ops_active %} is-open has-active{% endif %}"
-         data-hb-section="setup-operations" data-hb-tone="violet">
-      <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="الإعداد والتشغيل">
-        <span class="hb-side-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-        <span class="hb-side-text">الإعداد والتشغيل</span>
-        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
-      </button>
-      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.setup_wizard_v2_page', 'معالج الإعداد', m_setup_wizard_v2) }}
-        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات', m_setup_wizard_fleet) }}
-        {{ sub_item('radius.setup_wizard_page', 'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
-      </div></div>
-    </div>
-
     {# ───────── المشتركون ───────── #}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
@@ -300,8 +285,13 @@
       </div></div>
     </div>
 
-    {# ───────── الشبكة ───────── #}
-    <div class="hb-side-section{% if sec_network_active %} is-open has-active{% endif %}"
+    {# ───────── الشبكة (موحَّد) ─────────
+       Merged in pass 2: "الإعداد والتشغيل" + "الشبكة" became a
+       single section. The three NPC sub-service entries were
+       removed — they now live inside each router's dashboard
+       (see /admin/radius/mt/<id>/dashboard quicknav). Renames:
+       «أجهزة الشبكة» → «NAS» per operator request. #}
+    <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
       <button type="button" class="hb-side-section-head"
               data-hb-section-toggle data-hb-label="الشبكة">
@@ -310,28 +300,27 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.devices_list',    'أجهزة الشبكة',         m_devices) }}
-        {{ sub_item('radius.pool_list',       'IP Pool',              m_pools) }}
-        {{ sub_item('radius.mt_operations',   'غرفة عمليات MikroTik', m_mt) }}
-        {{ sub_item('radius.mt_setup_form',   'معالج إضافة راوتر',     m_mt) }}
-        {{ sub_item('radius.mt_topology',     'خريطة الشبكة',         m_topology) }}
-        {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',        m_problems) }}
-        {{ sub_item('radius.diagnostics',     'تشخيص الراوترات',      m_diag) }}
-        {# ──────────── سياسات الشبكة (NPC) ────────────
-           Single landing entry — the per-service tabs now live
-           inside each router's dashboard (see the «سياسات
-           الشبكة» quicknav card on /admin/radius/mt/<id>/dashboard).
-           Clicking here opens a router-picker. #}
-        {{ sub_item('radius.network_policy_index',
-                    '◆ سياسات الشبكة (اختر راوتراً)',
-                    m_npc) }}
-        {{ sub_item('radius.npc_remote_access_list', 'الوصول البعيد', m_npc_remote) }}
-        {{ sub_item('radius.npc_walled_garden_list', 'المواقع المفتوحة', m_npc_walled) }}
-        {{ sub_item('radius.npc_web_block_list', 'حجب المواقع', m_npc_block) }}
-        {{ sub_item('radius.mt_alerts_index', 'التنبيهات الذكيّة',     m_alerts) }}
+        {# Setup / wizard entries — moved here from the former
+           "الإعداد والتشغيل" section. #}
+        {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد',        m_setup_wizard_v2) }}
+        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات',      m_setup_wizard_fleet) }}
+        {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
+        {{ sub_item('radius.mt_setup_form',           'معالج إضافة راوتر',    m_mt) }}
+
+        {# Inventory + operational view #}
+        {{ sub_item('radius.devices_list',     'NAS',                  m_devices) }}
+        {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
+        {{ sub_item('radius.mt_operations',    'غرفة عمليات MikroTik', m_mt) }}
+        {{ sub_item('radius.mt_topology',      'خريطة الشبكة',         m_topology) }}
+        {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',         m_problems) }}
+        {{ sub_item('radius.diagnostics',      'تشخيص الراوترات',     m_diag) }}
+
+        {# Observability / governance — global tools that span
+           every router. #}
+        {{ sub_item('radius.mt_alerts_index',      'التنبيهات الذكيّة',  m_alerts) }}
         {{ sub_item('radius.mt_permission_matrix', 'مصفوفة الصلاحيات', m_perms) }}
-        {{ sub_item('radius.audit_log_index', 'سجل العمليات',         m_audit_log) }}
-        {{ sub_item('radius.mt_push_setup',   'دفع DHCP (MT Push)',   m_push) }}
+        {{ sub_item('radius.audit_log_index',      'سجل العمليات',     m_audit_log) }}
+        {{ sub_item('radius.mt_push_setup',        'دفع DHCP (MT Push)', m_push) }}
       </div></div>
     </div>
 

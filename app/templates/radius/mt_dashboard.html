@@ -73,13 +73,37 @@
       <span class="mt-router-quicknav-label">توجيه مواقع عبر VPS</span>
       <span class="mt-router-quicknav-sub">VX2 — وجهات مختارة فقط</span>
     </a>
+    {# Three direct NPC entries — one per sub-service. The
+       previous single «سياسات الشبكة» landing card was removed
+       per operator feedback: every click on it just landed on
+       a chooser screen. These buttons jump straight to the
+       per-service list scoped to this router. #}
     <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}"
-       data-mt-router-link="network-policies"
-       data-test="mt-dashboard-npc-link">
+       href="{{ url_for('radius.npc_remote_access_list_scoped',
+                         nas_id=nas.id) }}"
+       data-mt-router-link="npc-remote-access"
+       data-test="mt-dashboard-npc-remote-access-link">
       <i class="fa-solid fa-shield-halved"></i>
-      <span class="mt-router-quicknav-label">سياسات الشبكة</span>
-      <span class="mt-router-quicknav-sub">وصول · حظر · إستثناءات</span>
+      <span class="mt-router-quicknav-label">الوصول البعيد</span>
+      <span class="mt-router-quicknav-sub">Winbox · WebFig · SSH</span>
+    </a>
+    <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.npc_web_block_list_scoped',
+                         nas_id=nas.id) }}"
+       data-mt-router-link="npc-web-block"
+       data-test="mt-dashboard-npc-web-block-link">
+      <i class="fa-solid fa-ban"></i>
+      <span class="mt-router-quicknav-label">حجب المواقع</span>
+      <span class="mt-router-quicknav-sub">قوائم سوداء على الراوتر</span>
+    </a>
+    <a class="mt-router-quicknav-link"
+       href="{{ url_for('radius.npc_walled_garden_list_scoped',
+                         nas_id=nas.id) }}"
+       data-mt-router-link="npc-walled-garden"
+       data-test="mt-dashboard-npc-walled-garden-link">
+      <i class="fa-solid fa-door-open"></i>
+      <span class="mt-router-quicknav-label">المواقع المسموحة</span>
+      <span class="mt-router-quicknav-sub">استثناءات قبل الدخول</span>
     </a>
   </nav>
 

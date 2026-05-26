@@ -2,21 +2,26 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}أجهزة الشبكة{% endblock %}
+{% block title %}NAS{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
-{% block page_title %}أجهزة الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} جهاز</span>{% endblock %}
+{% block page_title %}NAS{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    {{ items|length }}
+    {{ 'راوتر' if items|length != 2 else 'راوتران' }}
+  </span>
+{% endblock %}
 
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm data-devices-page>
 
 {{ hub.hero(
-  "أجهزة الشبكة (NAS)",
-  subtitle="إدارة موجِّهات الراديوس — العنوان، المنافذ، الحالة، والصلاحيات",
+  "NAS — أجهزة شبكة RADIUS",
+  subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات.",
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.devices_new') + '">
-      <i class="fa-solid fa-plus"></i> إضافة جهاز
+      <i class="fa-solid fa-plus"></i> إضافة راوتر
     </a>
   '
 ) }}
