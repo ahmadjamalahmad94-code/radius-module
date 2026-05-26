@@ -839,15 +839,21 @@
             <div class="uf-pw">
               <input class="hub-input uf-pw-input" type="password" name="password"
                      id="uf-password" {% if is_new %}required{% endif %}
-                     placeholder="{{ '••••••••' if not is_new else '' }}"
-                     value="{{ sub.password if is_new else '' }}"
-                     autocomplete="new-password">
+                     value="{{ sub.password or '' }}"
+                     autocomplete="off">
               <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
                       aria-label="إظهار/إخفاء كلمة المرور" title="إظهار/إخفاء">
                 <i class="fa-solid fa-eye"></i>
               </button>
+              {% if not is_new %}
+              <button type="button" class="uf-pw-toggle" data-uf-pw-copy
+                      data-pw="{{ sub.password|e }}"
+                      aria-label="نسخ كلمة المرور" title="نسخ">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+              {% endif %}
             </div>
-            <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب.</div>
+            <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.</div>
           </div>
 
           <div class="uf-field">
@@ -1940,6 +1946,32 @@
       } else {
         input.type = 'password';
         if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+      }
+    });
+  });
+
+  // ── Password copy-to-clipboard (so operator can hand it to the
+  //    customer without revealing it on-screen).
+  document.querySelectorAll('[data-uf-pw-copy]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pw = btn.getAttribute('data-pw') || '';
+      var input = btn.parentElement.querySelector('input.uf-pw-input');
+      if (!pw && input) pw = input.value || '';
+      if (!pw) return;
+      var icon = btn.querySelector('i');
+      var done = function(ok){
+        if (!icon) return;
+        var prev = icon.className;
+        icon.className = ok ? 'fa-solid fa-check' : 'fa-solid fa-xmark';
+        setTimeout(function(){ icon.className = prev; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pw).then(function(){ done(true); },
+                                              function(){ done(false); });
+      } else if (input) {
+        var was = input.type; input.type = 'text';
+        input.select(); try { document.execCommand('copy'); done(true); }
+        catch(e){ done(false); } input.type = was;
       }
     });
   });
