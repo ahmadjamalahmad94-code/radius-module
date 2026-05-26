@@ -332,43 +332,79 @@ def check_wizard_invariants(
 
 
 def check_recent_reconciler_drift(
-    *, hours: int = 24,
+    *, hours_warn: int = 1,
+    hours_info: int = 24,
 ) -> dict:
-    """How many drift events did the reconciler fix in the
-    last N hours? In a healthy production, the count is 0
-    (no drift). Any rewrite means something else went wrong
-    upstream — worth a look but not critical."""
+    """Detect *recurring* drift rather than the one-shot
+    correction that follows any deploy.
+
+    Policy: a healthy steady-state has 0 drift events in
+    the last hour. Drift events from a recent deploy clear
+    within minutes, so an event in the last hour is fresh
+    enough to investigate. Older events (1–24h) get reported
+    in evidence but don't change the status — they're
+    informational only.
+    """
     try:
-        cutoff = (
-            datetime.utcnow() - timedelta(hours=hours)
+        cutoff_warn = (
+            datetime.utcnow() - timedelta(hours=hours_warn)
         ).isoformat()
-        rows = (
+        cutoff_info = (
+            datetime.utcnow() - timedelta(hours=hours_info)
+        ).isoformat()
+        rows_warn = (
             db()
             .execute(
                 "SELECT action, COUNT(*) c FROM audit_log "
                 "WHERE actor='setup_wizard_radius_reconciler' "
                 "AND created_at > ? GROUP BY action",
-                (cutoff,),
+                (cutoff_warn,),
             )
             .fetchall()
         )
-        counts = {r["action"]: int(r["c"]) for r in rows}
-        total = sum(counts.values())
-        if total == 0:
+        rows_info = (
+            db()
+            .execute(
+                "SELECT action, COUNT(*) c FROM audit_log "
+                "WHERE actor='setup_wizard_radius_reconciler' "
+                "AND created_at > ? GROUP BY action",
+                (cutoff_info,),
+            )
+            .fetchall()
+        )
+        counts_warn = {
+            r["action"]: int(r["c"]) for r in rows_warn
+        }
+        counts_info = {
+            r["action"]: int(r["c"]) for r in rows_info
+        }
+        recent_total = sum(counts_warn.values())
+        info_total = sum(counts_info.values())
+        if recent_total == 0:
             return _ok(
                 "استقرار مزامنة RADIUS",
-                f"لم يُكتشف أي drift خلال آخر {hours} ساعة",
-                hours=hours,
-                **counts,
+                f"لا drift خلال آخر ساعة"
+                + (
+                    f" — تصحيحات أقدم في آخر "
+                    f"{hours_info}س: {info_total}"
+                    if info_total else ""
+                ),
+                hours_warn=hours_warn,
+                hours_info=hours_info,
+                recent_total=0,
+                info_total=info_total,
+                **counts_info,
             )
-        # Any drift event is a yellow flag — investigate.
         return _warn(
             "استقرار مزامنة RADIUS",
-            f"الـ reconciler صحّح {total} عملية خلال آخر "
-            f"{hours} ساعة. اقرأ audit_log للتفاصيل.",
-            hours=hours,
-            total=total,
-            **counts,
+            f"الـ reconciler صحّح {recent_total} عملية "
+            f"خلال آخر ساعة — يستحقّ التحقّق. "
+            f"إجمالي آخر {hours_info}س: {info_total}.",
+            hours_warn=hours_warn,
+            hours_info=hours_info,
+            recent_total=recent_total,
+            info_total=info_total,
+            **counts_warn,
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(

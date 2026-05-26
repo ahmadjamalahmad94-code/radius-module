@@ -235,7 +235,17 @@ def setup_wizard_system_health():
             "overall": "critical",
             "error": f"health-check failed: {exc}",
         }), 503
-    http_status = 200 if report["overall"] == "healthy" else 503
+    # HTTP semantics:
+    # - 200: healthy OR degraded (system is functional;
+    #   degraded means 'drift detected but self-healed —
+    #   investigate when convenient'). External monitors
+    #   shouldn't page on degraded — it's expected after
+    #   any deploy.
+    # - 503: critical (something fundamental broken).
+    #   External monitors should page IMMEDIATELY.
+    http_status = (
+        503 if report["overall"] == "critical" else 200
+    )
     return jsonify({"ok": True, **report}), http_status
 
 

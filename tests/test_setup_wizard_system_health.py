@@ -105,49 +105,52 @@ def test_overall_status_calculation():
     assert _fail("t", "msg").get("status") == "fail"
 
 
-def test_endpoint_returns_503_when_critical(app, monkeypatch):
+def test_endpoint_returns_503_only_when_critical(app, monkeypatch):
     """External monitors poll the endpoint and rely on HTTP
-    status. 200 = healthy, 503 = something's broken."""
+    status. Policy:
+      200 = healthy OR degraded (system functional)
+      503 = critical (something fundamental broken)
+
+    Degraded must NOT return 503 because it would alarm
+    monitoring on every routine deploy (the reconciler
+    always corrects a transient drift right after).
+    """
     client = app.test_client()
-    # Force a fail via monkeypatch.
     from app.radius.services import setup_wizard_system_health as h
 
-    def force_fail():
+    def force(overall):
         return {
-            "overall": "critical",
-            "checks": {"x": {"status": "fail",
-                             "title_ar": "t",
-                             "details": "d",
-                             "evidence": {}}},
+            "overall": overall,
+            "checks": {"x": {
+                "status":
+                    "fail" if overall == "critical"
+                    else ("warn" if overall == "degraded" else "ok"),
+                "title_ar": "t", "details": "d", "evidence": {},
+            }},
             "checked_at": "2026-05-26T00:00:00Z",
             "duration_ms": 1,
         }
-    monkeypatch.setattr(h, "check_all", force_fail)
+
+    monkeypatch.setattr(h, "check_all",
+                        lambda: force("critical"))
     res = client.get("/admin/radius/setup-wizard/_system_health")
     assert res.status_code == 503
-    body = res.get_json()
-    assert body["overall"] == "critical"
+    assert res.get_json()["overall"] == "critical"
 
+    monkeypatch.setattr(h, "check_all",
+                        lambda: force("degraded"))
+    res = client.get("/admin/radius/setup-wizard/_system_health")
+    assert res.status_code == 200, (
+        "degraded must NOT trigger 503 — that would alarm "
+        "external monitors on every routine deploy"
+    )
+    assert res.get_json()["overall"] == "degraded"
 
-def test_endpoint_returns_200_when_healthy(app, monkeypatch):
-    client = app.test_client()
-    from app.radius.services import setup_wizard_system_health as h
-
-    def force_ok():
-        return {
-            "overall": "healthy",
-            "checks": {"x": {"status": "ok",
-                             "title_ar": "t",
-                             "details": "d",
-                             "evidence": {}}},
-            "checked_at": "2026-05-26T00:00:00Z",
-            "duration_ms": 1,
-        }
-    monkeypatch.setattr(h, "check_all", force_ok)
+    monkeypatch.setattr(h, "check_all",
+                        lambda: force("healthy"))
     res = client.get("/admin/radius/setup-wizard/_system_health")
     assert res.status_code == 200
-    body = res.get_json()
-    assert body["overall"] == "healthy"
+    assert res.get_json()["overall"] == "healthy"
 
 
 def test_endpoint_is_public_no_login_required(app):
