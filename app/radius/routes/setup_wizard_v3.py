@@ -1027,6 +1027,192 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+def _remote_access_build_script(*, services: list, ttl_hours: int,
+                                source_ip: str, grant_token: str) -> str:
+    """Build a small idempotent RouterOS v7 script that:
+      1. Removes any prior rules carrying the same HOBERADIUS_TECH
+         comment tag (idempotent re-apply).
+      2. Adds /ip firewall filter accept rules for each requested
+         service port (Winbox/SSH/WebFig/API), constrained to the
+         source IP if provided.
+      3. Adds /system scheduler entry that auto-removes those
+         rules + itself after ttl_hours.
+    Lightweight on purpose — does not write to nas_devices or any
+    DB table. The grant token in the comments is how the verify
+    + revoke endpoints find the rules later.
+    """
+    tag = f"HOBERADIUS_TECH:{grant_token}"
+    sched_name = f"hr-tech-revoke-{grant_token}"
+    lines = [
+        f"# Remote tech access — auto-expires in {ttl_hours}h",
+        "/ip firewall filter",
+        f':foreach r in=[find comment~"{tag}"] do={{remove $r}}',
+    ]
+    src_clause = f"src-address={source_ip}" if source_ip else ""
+    for svc in services or []:
+        port = int(svc.get("port", 0) or 0)
+        if not port:
+            continue
+        name = str(svc.get("name", "?"))
+        proto = "tcp"
+        parts = [
+            "add", "chain=input", f"protocol={proto}", f"dst-port={port}",
+            "action=accept", f'comment="{tag}:{name}"',
+            "place-before=0",
+        ]
+        if src_clause:
+            parts.insert(4, src_clause)
+        lines.append(" ".join(parts))
+    # Scheduler — fires after ttl_hours, removes rules + itself.
+    on_event = (
+        f'/ip firewall filter remove [find comment~"{tag}"]; '
+        f'/system scheduler remove [find name="{sched_name}"]'
+    )
+    lines += [
+        "/system scheduler",
+        f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
+        (
+            f'add name="{sched_name}" '
+            f'interval=0s start-time=startup '
+            f'on-event=":delay {int(ttl_hours)}h; {on_event}" '
+            f'comment="{tag}:auto-revoke"'
+        ),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def setup_wizard_v3_remote_access_preview(router_id: int):
+    body = _body() or {}
+    services = list(body.get("services") or [])
+    ttl_hours = int(body.get("ttl_hours") or 4)
+    source_ip = str(body.get("source_ip") or "").strip()
+    if not services:
+        return _err("اختر خدمة واحدة على الأقل.",
+                    status=400, code="no_services")
+    if ttl_hours < 1 or ttl_hours > 168:  # cap at one week
+        return _err("المدّة يجب أن تكون بين ساعة و 7 أيام.",
+                    status=400, code="bad_ttl")
+    svc_names_ar = {
+        "winbox": "Winbox (8291)",
+        "ssh": "SSH (22)",
+        "webfig": "WebFig (80)",
+        "api": "API (8728)",
+    }
+    enabled = [svc_names_ar.get(s.get("name", "?"), s.get("name", "?"))
+               for s in services]
+    bullets = [
+        f"سيُسمح بالاتصال على: {' • '.join(enabled)}.",
+        (f"من IP: {source_ip}" if source_ip
+         else "من أي IP (الأفضل تحديد IP الفنّي)."),
+        f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها.",
+        "يمكن إلغاء الوصول يدويّاً في أي وقت من بطاقة «اتصال عن بُعد».",
+    ]
+    return jsonify({"ok": True, "bullets": bullets})
+
+
+def setup_wizard_v3_remote_access_apply(router_id: int):
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    body = _body() or {}
+    services = list(body.get("services") or [])
+    ttl_hours = int(body.get("ttl_hours") or 4)
+    source_ip = str(body.get("source_ip") or "").strip()
+    grant_token = str(body.get("grant_token") or "").strip()
+    if not services:
+        return _err("اختر خدمة واحدة على الأقل.",
+                    status=400, code="no_services")
+    if not grant_token:
+        return _err("معرّف القاعدة غير صالح.",
+                    status=400, code="bad_token")
+    script = _remote_access_build_script(
+        services=services, ttl_hours=ttl_hours,
+        source_ip=source_ip, grant_token=grant_token,
+    )
+    try:
+        exec_result = get_router_executor().execute_forward(
+            router_id=router_id, script=script,
+        )
+    except ExecutorNotConfigured:
+        return _err("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+                    status=503, code="executor_not_configured")
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ غير متوقّع: {exc}",
+                    status=500, code="apply_error")
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "apply_failed",
+            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "stderr": exec_result.stderr or "",
+            "duration_ms": exec_result.duration_ms,
+        }), 502
+    return jsonify({
+        "ok": True,
+        "duration_ms": exec_result.duration_ms,
+        "grant_token": grant_token,
+        "substeps": [
+            {"key": "connect", "status": "done"},
+            {"key": "send",    "status": "done"},
+            {"key": "commit",  "status": "done"},
+        ],
+    })
+
+
+def setup_wizard_v3_remote_access_verify(router_id: int):
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+    token = str(request.args.get("token") or "").strip()
+    if not token:
+        return _err("معرّف القاعدة مفقود.", status=400, code="missing_token")
+    checks = []
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+                    code="mt_client_load_error")
+    cfg = {
+        "host": nas.address, "username": nas.api_user or "admin",
+        "password": nas.api_password, "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls), "timeout": 8.0,
+    }
+    tag = f"HOBERADIUS_TECH:{token}"
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check 1: at least one firewall rule with our token.
+            rules = list(mt.print_("/ip/firewall/filter/print"))
+            mine = [r for r in rules if tag in str(r.get("comment", ""))]
+            checks.append({
+                "label": f"قاعدة الإتاحة نشطة ({len(mine)} قاعدة)",
+                "status": "ok" if mine else "fail",
+            })
+            # Check 2: scheduler entry exists for auto-revoke.
+            scheds = list(mt.print_("/system/scheduler/print"))
+            mine_s = [s for s in scheds if tag in str(s.get("comment", ""))]
+            checks.append({
+                "label": "مؤقّت الإلغاء التلقائي مضبوط",
+                "status": "ok" if mine_s else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1720,6 +1906,25 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/public-ip/verify",
         "setup_wizard_v3_public_ip_verify",
         setup_wizard_v3_public_ip_verify,
+        methods=["GET"],
+    )
+    # Remote-access (temp tech firewall opening) flow endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/remote-access/preview",
+        "setup_wizard_v3_remote_access_preview",
+        setup_wizard_v3_remote_access_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/remote-access/apply",
+        "setup_wizard_v3_remote_access_apply",
+        setup_wizard_v3_remote_access_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/remote-access/verify",
+        "setup_wizard_v3_remote_access_verify",
+        setup_wizard_v3_remote_access_verify,
         methods=["GET"],
     )
     bp.add_url_rule(

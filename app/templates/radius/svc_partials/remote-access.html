@@ -1,0 +1,264 @@
+{# Remote-access — temporary firewall opening for a technician.
+   Adds /ip firewall filter rules that allow Winbox/SSH/WebFig from
+   a specific source IP for a limited time, then auto-removes them
+   via /system scheduler. No DB policy row created — the rules
+   carry a HOBERADIUS_TECH:<token> comment for verify + revoke. #}
+<h2>اتصال عن بُعد للفنّي</h2>
+<p class="swsvf-pane-sub">
+  افتح للفنّي صلاحيّة الدخول للراوتر مؤقّتاً عبر <strong>Winbox</strong> أو
+  <strong>SSH</strong> أو <strong>WebFig</strong> من IP محدّد. القواعد تُحذف
+  تلقائيّاً عند انتهاء المدّة.
+</p>
+
+<style>
+.swra-section{margin:18px 0 10px}
+.swra-section-title{font-weight:700;color:var(--swsvf-ink);font-size:14px;margin:0 0 8px}
+.swra-help{color:var(--swsvf-mute);font-size:12px;margin:0 0 10px;line-height:1.7}
+.swra-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.swra-fields{grid-template-columns:1fr}}
+.swra-input, .swra-select{
+  display:block;width:100%;padding:9px 12px;
+  border:1px solid var(--swsvf-line);border-radius:8px;
+  font-size:14px;
+}
+.swra-input:focus, .swra-select:focus{
+  outline:none;border-color:var(--swsvf-purple);
+  box-shadow:0 0 0 3px rgba(139,92,246,.1);
+}
+.swra-services{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
+}
+.swra-svc-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border:1px solid var(--swsvf-line);
+  border-radius:10px;background:#fff;cursor:pointer;
+  font-size:13px;transition:all .15s;
+}
+.swra-svc-chip input{
+  width:16px;height:16px;cursor:pointer;accent-color:var(--swsvf-purple);margin:0;
+}
+.swra-svc-chip.is-checked{
+  background:var(--swsvf-purple-soft);border-color:var(--swsvf-purple);
+  color:#6D28D9;font-weight:700;
+}
+.swra-error{
+  color:#7F1D1D;background:var(--swsvf-red-soft);
+  border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;font-size:13px;margin:10px 0;
+}
+.swra-error[hidden]{display:none}
+.swra-hint{
+  background:var(--swsvf-purple-soft);border:1px solid #DDD6FE;
+  border-radius:8px;padding:10px 14px;font-size:12px;color:#5B21B6;
+  margin-top:6px;line-height:1.7;
+}
+.swra-token-row{
+  background:#F8FAFC;border:1px dashed var(--swsvf-line);
+  border-radius:8px;padding:10px 14px;margin-top:10px;
+  font-family:monospace;font-size:12px;color:var(--swsvf-mute);
+}
+</style>
+
+<div class="swra-section">
+  <div class="swra-section-title">الخدمات المسموحة للفنّي</div>
+  <div class="swra-services" data-swra-services>
+    <label class="swra-svc-chip is-checked">
+      <input type="checkbox" data-swra-svc value="winbox" data-port="8291" checked>
+      <i class="fa-solid fa-window-restore"></i>
+      <span>Winbox (port 8291)</span>
+    </label>
+    <label class="swra-svc-chip">
+      <input type="checkbox" data-swra-svc value="ssh" data-port="22">
+      <i class="fa-solid fa-terminal"></i>
+      <span>SSH (port 22)</span>
+    </label>
+    <label class="swra-svc-chip">
+      <input type="checkbox" data-swra-svc value="webfig" data-port="80">
+      <i class="fa-solid fa-globe"></i>
+      <span>WebFig (port 80)</span>
+    </label>
+    <label class="swra-svc-chip">
+      <input type="checkbox" data-swra-svc value="api" data-port="8728">
+      <i class="fa-solid fa-plug"></i>
+      <span>API (port 8728)</span>
+    </label>
+  </div>
+</div>
+
+<div class="swra-section">
+  <div class="swra-fields">
+    <label>
+      <div class="swra-section-title">مدّة الإتاحة</div>
+      <select class="swra-select" data-swra-ttl>
+        <option value="1">ساعة واحدة</option>
+        <option value="4" selected>4 ساعات</option>
+        <option value="8">8 ساعات</option>
+        <option value="24">24 ساعة</option>
+        <option value="72">3 أيام</option>
+      </select>
+    </label>
+    <label>
+      <div class="swra-section-title">IP المصدر (اختياري)</div>
+      <input type="text" class="swra-input" data-swra-source
+             placeholder="مثال: 1.2.3.4">
+      <div class="swra-hint">
+        <i class="fa-solid fa-circle-info"></i>
+        اتركه فاضي للسماح من أي IP. الأفضل أمنيّاً تحديد IP الفنّي العام.
+      </div>
+    </label>
+  </div>
+</div>
+
+<div class="swra-token-row" data-swra-token-display hidden>
+  معرّف القاعدة: <span data-swra-token>—</span>
+</div>
+
+<div class="swra-error" data-swra-form-error hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const page = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+  const routerId = page.dataset.routerId;
+  const svcCheckboxes = page.querySelectorAll("[data-swra-svc]");
+  const ttlSel = page.querySelector("[data-swra-ttl]");
+  const sourceInput = page.querySelector("[data-swra-source]");
+  const formError = page.querySelector("[data-swra-form-error]");
+  const tokenDisplay = page.querySelector("[data-swra-token-display]");
+  const tokenEl = page.querySelector("[data-swra-token]");
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
+  function clearError() { formError.hidden = true; formError.textContent = ""; }
+
+  // Generate a short random token for this access grant (used in
+  // RouterOS comments so verify/revoke can target this run only).
+  function makeToken() {
+    const arr = new Uint8Array(6);
+    (window.crypto || window.msCrypto).getRandomValues(arr);
+    return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  const grantToken = makeToken();
+  tokenEl.textContent = grantToken;
+  tokenDisplay.hidden = false;
+
+  function getServices() {
+    const items = [];
+    svcCheckboxes.forEach((cb) => {
+      if (cb.checked) items.push({
+        name: cb.value,
+        port: Number(cb.dataset.port),
+      });
+    });
+    return items;
+  }
+  function refreshPayload() {
+    page.dataset.swsvfConfigurePayload = JSON.stringify({
+      services: getServices(),
+      ttl_hours: Number(ttlSel.value || 4),
+      source_ip: sourceInput.value.trim() || "",
+      grant_token: grantToken,
+    });
+  }
+  svcCheckboxes.forEach((cb) => cb.addEventListener("change", () => {
+    cb.closest(".swra-svc-chip").classList.toggle("is-checked", cb.checked);
+    refreshPayload();
+  }));
+  ttlSel.addEventListener("change", refreshPayload);
+  sourceInput.addEventListener("input", refreshPayload);
+  refreshPayload();
+
+  let lastPayload = null;
+  page.addEventListener("swsvf:phase-change", async (ev) => {
+    const phase = ev.detail.phase;
+    if (phase === "preview") {
+      lastPayload = ev.detail.payload || JSON.parse(page.dataset.swsvfConfigurePayload || "{}");
+      await runPreview(lastPayload);
+    } else if (phase === "apply") {
+      await runApply(lastPayload);
+    } else if (phase === "verify") {
+      await runVerify();
+    }
+  });
+
+  async function runPreview(payload) {
+    if (!payload.services || !payload.services.length) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اختر خدمة واحدة على الأقل.");
+      return;
+    }
+    clearError();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/remote-access/preview`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        window.SWSVF.setPreview([`⚠ ${msg}`]);
+        return;
+      }
+      window.SWSVF.setPreview(data.bullets || []);
+    } catch (error) {
+      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+    }
+  }
+
+  async function runApply(payload) {
+    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplySubstep("connect", "active");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/remote-access/apply`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        return;
+      }
+      window.SWSVF.setApplySubstep("connect", "done");
+      window.SWSVF.setApplyLabel("إضافة قواعد الوصول…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("send", "done");
+      window.SWSVF.setApplyLabel("ضبط مؤقّت الإلغاء التلقائي…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("commit", "done");
+      window.SWSVF.setApplyLabel("تمّ منح الوصول", "ننتقل للتحقّق…");
+      await sleep(600);
+      window.SWSVF.setPhase("verify");
+    } catch (error) {
+      window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  async function runVerify() {
+    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/remote-access/verify?token=${grantToken}`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const checks = data.checks || [];
+      if (!checks.length) {
+        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        return;
+      }
+      window.SWSVF.setVerifyChecks(checks);
+    } catch (error) {
+      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+    }
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+})();
+</script>
