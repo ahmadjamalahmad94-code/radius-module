@@ -15,16 +15,73 @@
 
 {% block content %}
 
+{# Ensure CSRF token is in the DOM even when there are 0 routers (the
+   bulk-action form below renders only when items exist). The fleet
+   maintenance buttons in the hero post JSON and pull the token from
+   input[name=csrf_token]. #}
+{{ csrf_token_input() | safe }}
+
 {{ hub.hero(
-  "غرفة عمليات MikroTik",
-  subtitle="كل الراوترات المُدارة عبر HobeRadius في مكان واحد. اضغط على راوتر لفتح لوحته الحيّة، أو اضغط 'إضافة بالمعالج' لإضافة جديد.",
+  "إدارة الراوترات",
+  subtitle="كل الراوترات المُدارة عبر HobeRadius في مكان واحد — التجهيز، الصحّة الحيّة، وخدمات كل راوتر. اضغط 'إعداد خدمات' للراوتر للوصول لـ Hotspot/Broadband/حجب-فتح مواقع.",
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_setup_form') + '">
       <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة بالمعالج
     </a>
+    <button type="button" class="hub-btn hub-btn--ghost" data-mt-reclaim-expired
+            title="إعادة تخصيص عناوين الـ VPN لمحاولات التجهيز المنتهية الصلاحية">
+      <i class="fa-solid fa-recycle"></i> إعادة تخصيص IPs
+    </button>
+    <button type="button" class="hub-btn hub-btn--danger" data-mt-emergency-reset
+            title="تفريغ كل سجلات تجهيز الراوترات والبدء من الصفر. للحالات الحرجة فقط.">
+      <i class="fa-solid fa-triangle-exclamation"></i> تفريغ طوارئ
+    </button>
   '
 ) }}
+
+{# ─── Emergency reset modal (migrated from setup-wizard/fleet) ───
+   The backend endpoints still live under /admin/radius/setup-wizard/
+   fleet/emergency-reset/* — we don't move them in this commit; only
+   the UI surface changes. Modal opens from the hero button above. #}
+<div class="mt-emergency-modal" data-mt-emergency-modal hidden
+     role="dialog" aria-modal="true" aria-labelledby="mt-emergency-title">
+  <div class="mt-emergency-card">
+    <button type="button" class="mt-emergency-close" data-mt-emergency-close
+            aria-label="إغلاق">×</button>
+    <span class="mt-emergency-kicker">إجراء حسّاس</span>
+    <h2 id="mt-emergency-title">تفريغ طوارئ لأسطول التجهيز</h2>
+    <p class="mt-emergency-warning">
+      هذا الإجراء يحذف <b>كل</b> سجلات تجهيز الراوترات من قاعدة البيانات
+      (السجل، تخصيصات الـ IP، أحداث الدورة الحياتية، نظراء WireGuard،
+      جلسات المعالج، ومخرجات v3). يُستخدم فقط عندما يحدث اختلاف بين
+      مفاتيح WireGuard وعناوين الـ VPN ولا يمكن استعادة الحالة.
+    </p>
+    <p class="mt-emergency-warning">
+      <b>لن يلمس</b>: المشتركين، البطاقات، سياسات NPC غير المرتبطة بالمعالج،
+      أو إعدادات الراوترات نفسها على MikroTik.
+    </p>
+    <div class="mt-emergency-counts" data-mt-emergency-counts>
+      <p>جاري حساب ما سيتم حذفه...</p>
+    </div>
+    <label class="mt-emergency-confirm">
+      لتفعيل الإجراء، اكتب العبارة <code>RESET-WIZARD-FLEET</code>:
+      <input type="text" autocomplete="off" data-mt-emergency-input dir="ltr"
+             placeholder="RESET-WIZARD-FLEET">
+    </label>
+    <label class="mt-emergency-check">
+      <input type="checkbox" data-mt-emergency-files checked>
+      احذف أيضاً ملفات نظراء WireGuard من <code dir="ltr">peers.d</code>
+    </label>
+    <div class="mt-emergency-actions">
+      <button type="button" class="hub-btn hub-btn--ghost" data-mt-emergency-cancel>إلغاء</button>
+      <button type="button" class="hub-btn hub-btn--danger" data-mt-emergency-execute disabled>
+        نعم، نفّذ التفريغ
+      </button>
+    </div>
+    <pre class="mt-emergency-result" data-mt-emergency-result hidden></pre>
+  </div>
+</div>
 
 {% if items %}
 {% set _enabled  = items|selectattr('enabled')|list|length %}
@@ -270,6 +327,18 @@
           <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
             <i class="fa-solid fa-pen-to-square"></i> تعديل
           </a>
+          {% if item.registry_id and item.lifecycle_state == 'failed' %}
+          {# Failed provisioning attempts can be retired so the IP is
+             freed back into the pool. Only shown when the registry
+             row exists AND lifecycle is failed — for active routers
+             use the regular «تعطيل» path above. #}
+          <button type="button" class="hub-btn hub-btn--sm hub-btn--danger"
+                  data-mt-retire="{{ item.registry_id }}"
+                  data-mt-retire-name="{{ item.name|e }}"
+                  title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الـ VPN">
+            <i class="fa-solid fa-box-archive"></i> تقاعد
+          </button>
+          {% endif %}
         </td>
       </tr>
     {% endfor %}
@@ -301,7 +370,244 @@
   tr[data-mt-enabled="false"] td:first-child { opacity: 1; }
   input[type="checkbox"][data-mt-row-select],
   input[type="checkbox"][data-mt-bulk-toggle-all] { width: 16px; height: 16px; cursor: pointer; accent-color: #6B5AED; }
+  /* ─── Emergency reset modal ─── */
+  .mt-emergency-modal{
+    position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .mt-emergency-card{
+    background:#fff;border-radius:14px;padding:28px;max-width:560px;
+    width:100%;max-height:90vh;overflow-y:auto;position:relative;
+    box-shadow:0 20px 60px rgba(15,23,42,.25);
+  }
+  .mt-emergency-close{
+    position:absolute;top:12px;left:12px;background:none;border:none;
+    font-size:24px;color:#64748B;cursor:pointer;padding:4px 10px;
+    border-radius:6px;
+  }
+  .mt-emergency-close:hover{background:#F1F5F9}
+  .mt-emergency-kicker{
+    display:inline-block;font-size:11px;font-weight:800;color:#B91C1C;
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+  }
+  .mt-emergency-card h2{margin:0 0 14px;font-size:20px;color:#0F172A}
+  .mt-emergency-warning{
+    background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;
+    padding:10px 14px;font-size:13px;color:#7F1D1D;line-height:1.7;margin:8px 0;
+  }
+  .mt-emergency-counts{
+    background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;
+    padding:12px 14px;margin:12px 0;font-size:13px;
+  }
+  .mt-emergency-counts table{width:100%;border-collapse:collapse}
+  .mt-emergency-counts th,.mt-emergency-counts td{
+    padding:4px 8px;border-bottom:1px solid #E2E8F0;text-align:start;font-size:12px;
+  }
+  .mt-emergency-counts th{color:#64748B;font-weight:600}
+  .mt-emergency-confirm{display:block;margin:12px 0;font-size:13px;color:#0F172A}
+  .mt-emergency-confirm code{
+    background:#FEF2F2;color:#B91C1C;padding:1px 6px;border-radius:4px;
+    font-size:12px;
+  }
+  .mt-emergency-confirm input{
+    display:block;margin-top:6px;width:100%;padding:8px 12px;
+    border:1px solid #CBD5E1;border-radius:8px;font-family:monospace;font-size:14px;
+  }
+  .mt-emergency-check{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:13px;color:#475569}
+  .mt-emergency-check code{font-size:12px;color:#0F172A}
+  .mt-emergency-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+  .mt-emergency-result{
+    background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;
+    padding:10px 14px;font-size:12px;font-family:monospace;
+    max-height:200px;overflow-y:auto;margin-top:12px;white-space:pre-wrap;
+  }
 </style>
+
+<script>
+/* Fleet maintenance actions, migrated from setup_wizard_fleet.js so
+   the operator gets them on /mt/operations alongside the live router
+   list. Backend endpoints are unchanged — they still live under
+   /admin/radius/setup-wizard/fleet/* (commit 4 may move them, but
+   moving them today breaks any external bookmarks/scripts). */
+(function () {
+  "use strict";
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  async function getJson(url) {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  /* ─── Reclaim expired IPs (header button) ─── */
+  const reclaimBtn = document.querySelector("[data-mt-reclaim-expired]");
+  if (reclaimBtn) {
+    reclaimBtn.addEventListener("click", async () => {
+      if (!window.confirm("إعادة تخصيص عناوين IP للمحاولات المنتهية الصلاحية؟")) return;
+      const originalHtml = reclaimBtn.innerHTML;
+      reclaimBtn.disabled = true;
+      reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنظيف...';
+      try {
+        const res = await fetch(
+          "/admin/radius/setup-wizard/fleet/reclaim-expired",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+            body: JSON.stringify({}),
+          },
+        );
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        const sweep = data.sweep || {};
+        window.alert(
+          `تم تنظيف ${sweep.reclaimed_count || 0} محاولة منتهية ` +
+          `(تم فحص ${sweep.scanned || 0}).`
+        );
+        window.location.reload();
+      } catch (error) {
+        window.alert("فشل التنظيف: " + error.message);
+      } finally {
+        reclaimBtn.disabled = false;
+        reclaimBtn.innerHTML = originalHtml;
+      }
+    });
+  }
+
+  /* ─── Retire a failed provisioning attempt (per-row button) ─── */
+  document.querySelectorAll("[data-mt-retire]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const registryId = btn.dataset.mtRetire;
+      const name = btn.dataset.mtRetireName || "هذا الراوتر";
+      const reason = window.prompt(
+        `تقاعد محاولة تجهيز «${name}»؟\n` +
+        "اكتب سبب التقاعد (اختياري):"
+      );
+      if (reason === null) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(
+          `/admin/radius/setup-wizard/fleet/router/${registryId}/retire`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+            body: JSON.stringify({ reason: reason || "operator_action" }),
+          },
+        );
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        window.location.reload();
+      } catch (error) {
+        window.alert("فشل التقاعد: " + error.message);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  /* ─── Emergency reset modal ─── */
+  const emergencyBtn     = document.querySelector("[data-mt-emergency-reset]");
+  const emergencyModal   = document.querySelector("[data-mt-emergency-modal]");
+  const emergencyClose   = document.querySelector("[data-mt-emergency-close]");
+  const emergencyCancel  = document.querySelector("[data-mt-emergency-cancel]");
+  const emergencyExecute = document.querySelector("[data-mt-emergency-execute]");
+  const emergencyInput   = document.querySelector("[data-mt-emergency-input]");
+  const emergencyFiles   = document.querySelector("[data-mt-emergency-files]");
+  const emergencyCounts  = document.querySelector("[data-mt-emergency-counts]");
+  const emergencyResult  = document.querySelector("[data-mt-emergency-result]");
+  const CONFIRM_PHRASE = "RESET-WIZARD-FLEET";
+
+  function openEmergencyModal() {
+    if (!emergencyModal) return;
+    emergencyModal.hidden = false;
+    if (emergencyInput) emergencyInput.value = "";
+    if (emergencyExecute) {
+      emergencyExecute.disabled = true;
+      emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+    }
+    if (emergencyResult) {
+      emergencyResult.hidden = true;
+      emergencyResult.textContent = "";
+    }
+    if (emergencyCounts) {
+      emergencyCounts.innerHTML = "<p>جاري حساب ما سيتم حذفه...</p>";
+    }
+    getJson("/admin/radius/setup-wizard/fleet/emergency-reset/preview")
+      .then((data) => {
+        const p = data.preview || {};
+        const counts = p.row_counts || {};
+        const rowsHtml = Object.entries(counts)
+          .map(([t, c]) => `<tr><td>${t}</td><td>${c}</td></tr>`)
+          .join("");
+        const peerFilesLine = p.peer_files_count
+          ? `<p>سيتم حذف ${p.peer_files_count} ملف من <code dir="ltr">${p.peers_dir}</code> أيضاً.</p>`
+          : `<p>لم يتم العثور على ملفات نظراء في <code dir="ltr">${p.peers_dir}</code>.</p>`;
+        emergencyCounts.innerHTML = `
+          <table><thead><tr><th>الجدول</th><th>عدد الصفوف</th></tr></thead>
+          <tbody>${rowsHtml}</tbody></table>
+          <p style="margin-top:8px"><b>الإجمالي: ${p.total_rows || 0} صف</b></p>
+          ${peerFilesLine}
+        `;
+      })
+      .catch((error) => {
+        emergencyCounts.innerHTML = `<p style="color:#dc2626">فشل التحميل: ${error.message}</p>`;
+      });
+  }
+
+  function closeEmergencyModal() {
+    if (emergencyModal) emergencyModal.hidden = true;
+  }
+
+  if (emergencyBtn)    emergencyBtn.addEventListener("click", openEmergencyModal);
+  if (emergencyClose)  emergencyClose.addEventListener("click", closeEmergencyModal);
+  if (emergencyCancel) emergencyCancel.addEventListener("click", closeEmergencyModal);
+  if (emergencyInput && emergencyExecute) {
+    emergencyInput.addEventListener("input", () => {
+      emergencyExecute.disabled = emergencyInput.value.trim() !== CONFIRM_PHRASE;
+    });
+  }
+  if (emergencyExecute) {
+    emergencyExecute.addEventListener("click", async () => {
+      emergencyExecute.disabled = true;
+      emergencyExecute.textContent = "جارٍ التنفيذ...";
+      try {
+        const res = await fetch("/admin/radius/setup-wizard/fleet/emergency-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify({
+            confirm: emergencyInput ? emergencyInput.value.trim() : "",
+            clear_peer_files: emergencyFiles ? emergencyFiles.checked : true,
+          }),
+        });
+        const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
+        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        if (emergencyResult) {
+          emergencyResult.hidden = false;
+          emergencyResult.textContent = JSON.stringify(data.reset, null, 2);
+        }
+        emergencyExecute.textContent = "تم التفريغ ✓";
+        window.setTimeout(() => window.location.reload(), 2500);
+      } catch (error) {
+        if (emergencyResult) {
+          emergencyResult.hidden = false;
+          emergencyResult.style.background = "#fef2f2";
+          emergencyResult.style.borderColor = "#fca5a5";
+          emergencyResult.textContent = "فشل: " + error.message;
+        }
+        emergencyExecute.disabled = false;
+        emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+      }
+    });
+  }
+  if (emergencyModal) {
+    emergencyModal.addEventListener("click", (event) => {
+      if (event.target === emergencyModal) closeEmergencyModal();
+    });
+  }
+})();
+</script>
 
 {% else %}
   {{ hub.empty("لا توجد راوترات بعد.",
