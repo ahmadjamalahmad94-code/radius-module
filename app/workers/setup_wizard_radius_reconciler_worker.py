@@ -122,10 +122,24 @@ def _run_loop(*, interval_sec: float, flask_app=None) -> None:
             _LOG.exception(
                 "radius reconciler tick failed",
             )
-        beat(_NAME, info={
-            "interval_sec": interval_sec,
-            "last_actions": actions,
-        })
+        # CRITICAL: keep heartbeat OUTSIDE the try, but never
+        # let a beat() failure (or any other) leak out of the
+        # loop. A NameError or DB issue here used to crash the
+        # entire worker thread → silent stop forever. We catch
+        # all exceptions, log them, and continue.
+        try:
+            beat(_NAME, info={
+                "interval_sec": interval_sec,
+                "last_result": {
+                    "rewritten": len(result.get("rewritten", [])),
+                    "deleted":   len(result.get("deleted", [])),
+                    "deduped":   len(result.get("deduped", [])),
+                    "scanned_runs":  result.get("scanned_runs", 0),
+                    "scanned_files": result.get("scanned_files", 0),
+                },
+            })
+        except Exception:  # noqa: BLE001
+            _LOG.exception("radius reconciler beat() failed")
         time.sleep(interval_sec)
 
 
