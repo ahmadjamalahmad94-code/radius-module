@@ -355,8 +355,176 @@
     handle(btn.dataset.wv3Action, btn);
   });
 
+  // ─── SW7: phase planner panel ─────────────────────────
+  // Surface the SW1-SW6 phase planners as a preview UI under
+  // the main wizard. Only revealed once the run has at least
+  // reached PLANNING — we need a real run_id to tag scripts.
+
+  const phasePanel = page.querySelector("[data-wv3-phase-planner]");
+  const phaseList = page.querySelector("[data-wv3-phase-list]");
+  const phaseResult = page.querySelector("[data-wv3-phase-result]");
+  const phaseResultMeta = page.querySelector("[data-wv3-phase-result-meta]");
+  const phaseResultScript = page.querySelector("[data-wv3-phase-result-script]");
+  const phaseResultValidation = page.querySelector("[data-wv3-phase-result-validation]");
+  const phaseResultDiagnostics = page.querySelector("[data-wv3-phase-result-diagnostics]");
+  const phaseResultDiagnosticsList = page.querySelector("[data-wv3-phase-result-diagnostics-list]");
+
+  // Per-phase static input schemas. Each entry is the minimum
+  // shape the operator sees as JSON in a textarea. Kept simple
+  // for the first cut — a future slice can render proper forms.
+  const PHASE_DEFAULTS = {
+    internet: {
+      source_type: "dhcp",
+      interface: "ether1",
+      nat_enabled: true,
+    },
+    vpn_radius: {
+      router_vpn_ip: "10.10.0.5",
+      vps_vpn_ip: "10.10.0.1",
+      vps_public_endpoint: "187.77.70.18",
+      radius_secret: "REPLACE_ME",
+      server_public_key: "REPLACE_WITH_43_CHAR_KEY=",
+    },
+    hotspot: {
+      mode: "manual",
+      selected_interfaces: ["ether2"],
+      subnet_base: "10.99.0.0/16",
+      radius_secret: "REPLACE_ME",
+      router_vpn_ip: "10.10.0.5",
+    },
+    broadband: {
+      mode: "manual",
+      selected_interfaces: ["ether3"],
+      local_address: "192.168.50.1",
+      remote_pool_cidr: "192.168.50.0/24",
+    },
+    added_services: {
+      service_key: "walled_garden",
+      inputs: { domains: ["allowed.example"] },
+    },
+  };
+
+  async function loadPhaseList() {
+    if (!phaseList) return;
+    try {
+      const res = await fetch(
+        "/admin/radius/setup-wizard-v3/phase-planners",
+        { headers: { "X-CSRFToken": csrf() } },
+      );
+      const data = await res.json();
+      if (!data.ok) return;
+      phaseList.innerHTML = data.phases
+        .map(p => `
+          <article class="wv3-phase-item">
+            <header>
+              <strong>${p.title_ar}</strong>
+              <small dir="ltr">${p.phase}</small>
+            </header>
+            <p>${p.description_ar}</p>
+            <textarea data-wv3-phase-inputs="${p.phase}" dir="ltr" rows="6">${JSON.stringify(PHASE_DEFAULTS[p.phase] || {}, null, 2)}</textarea>
+            <button type="button" class="wv3-btn wv3-btn-secondary"
+                    data-wv3-phase-run="${p.phase}">
+              معاينة السكربت
+            </button>
+          </article>
+        `)
+        .join("");
+    } catch (err) {
+      console.warn("phase planner list load failed:", err);
+    }
+  }
+
+  async function runPhasePlan(phase, btn) {
+    if (!runId) {
+      alert("ابدا جلسة معالج أولاً قبل توليد سكربتات إضافية.");
+      return;
+    }
+    const textarea = page.querySelector(
+      `[data-wv3-phase-inputs="${phase}"]`,
+    );
+    let inputs = {};
+    try {
+      inputs = textarea ? JSON.parse(textarea.value || "{}") : {};
+    } catch (parseErr) {
+      alert("JSON غير صالح في حقل المدخلات: " + parseErr.message);
+      return;
+    }
+    btn.classList.add("is-busy");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/runs/${runId}/phase-plan/${phase}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrf(),
+          },
+          body: JSON.stringify(inputs),
+        },
+      );
+      const data = await res.json();
+      renderPhaseResult(phase, data);
+    } catch (err) {
+      alert("فشل توليد السكربت: " + err.message);
+    } finally {
+      btn.classList.remove("is-busy");
+    }
+  }
+
+  function renderPhaseResult(phase, data) {
+    if (!phaseResult) return;
+    phaseResult.hidden = false;
+    const plan = (data && data.plan) || {};
+    const can = plan.can_apply ? "✅ جاهز للتطبيق" : "⛔ محجوب";
+    if (phaseResultMeta) {
+      phaseResultMeta.innerHTML = `
+        <div><strong>المرحلة:</strong> ${phase}</div>
+        <div><strong>الحالة:</strong> ${can}</div>
+        <div><strong>الوسوم:</strong> ${(plan.tags || []).join(", ") || "—"}</div>
+      `;
+    }
+    if (phaseResultScript) {
+      phaseResultScript.textContent = plan.script || "(لا يوجد سكربت)";
+    }
+    if (phaseResultValidation) {
+      phaseResultValidation.textContent =
+        (plan.validation_commands || []).join("\n") || "(لا توجد)";
+    }
+    const diagnostics = (data && data.diagnostics) || [];
+    if (phaseResultDiagnostics && phaseResultDiagnosticsList) {
+      phaseResultDiagnostics.hidden = diagnostics.length === 0;
+      phaseResultDiagnosticsList.innerHTML = diagnostics
+        .map(d => `
+          <div class="wv3-diag wv3-diag-${d.severity || "error"}">
+            <strong>${d.code}</strong>
+            <p>${d.ar_explanation || ""}</p>
+            ${d.fix ? `<small><b>الإصلاح:</b> ${d.fix}</small>` : ""}
+            ${d.inspect_command ? `<code dir="ltr">${d.inspect_command}</code>` : ""}
+          </div>
+        `)
+        .join("");
+    }
+    phaseResult.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  page.addEventListener("click", e => {
+    const runBtn = e.target.closest("[data-wv3-phase-run]");
+    if (runBtn) {
+      e.preventDefault();
+      runPhasePlan(runBtn.dataset.wv3PhaseRun, runBtn);
+    }
+  });
+
+  // Show the panel once we have a run id; populate it once.
+  function maybeRevealPhasePanel() {
+    if (phasePanel && runId && phasePanel.hidden) {
+      phasePanel.hidden = false;
+      loadPhaseList();
+    }
+  }
+
   // ─── Boot ──────────────────────────────────────────────
-  ensureRun().catch(err => {
+  ensureRun().then(maybeRevealPhasePanel).catch(err => {
     console.error("v3 boot failed:", err);
     alert("تعذّر بدء جلسة المعالج: " + err.message);
   });

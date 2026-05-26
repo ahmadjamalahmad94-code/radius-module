@@ -415,3 +415,181 @@
   color: #9CA3AF;
   direction: ltr;
 }
+
+/* ─── SW7: Phase Planner panel ─────────────────────────── */
+
+.wv3-phase-planner {
+  background: #f8fafc;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  margin-top: 32px;
+  padding: 24px;
+}
+
+.wv3-phase-planner header {
+  margin-bottom: 18px;
+}
+
+.wv3-phase-planner header h2 {
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.wv3-phase-planner header p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.wv3-phase-planner code {
+  background: #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.wv3-phase-list {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.wv3-phase-item {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.wv3-phase-item header {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.wv3-phase-item header strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.wv3-phase-item header small {
+  background: #f1f5f9;
+  border-radius: 4px;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.wv3-phase-item p {
+  color: #475569;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+.wv3-phase-item textarea {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  margin-bottom: 10px;
+  padding: 8px;
+  width: 100%;
+  resize: vertical;
+}
+
+.wv3-phase-item button {
+  width: 100%;
+}
+
+.wv3-phase-result {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.wv3-phase-result h3 {
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+.wv3-phase-result-meta {
+  background: #f1f5f9;
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.wv3-phase-result-meta div {
+  font-size: 13px;
+}
+
+.wv3-phase-result pre {
+  background: #0f172a;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 12px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.wv3-phase-result details {
+  margin-bottom: 10px;
+}
+
+.wv3-phase-result summary {
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.wv3-phase-result-diagnostics {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.wv3-diag {
+  background: #fef2f2;
+  border-radius: 10px;
+  border-right: 4px solid #dc2626;
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+.wv3-diag-warning {
+  background: #fef3c7;
+  border-right-color: #f59e0b;
+}
+
+.wv3-diag strong {
+  color: #7f1d1d;
+  font-family: ui-monospace, monospace;
+}
+
+.wv3-diag p {
+  color: #1e293b;
+  font-size: 13px;
+  margin: 6px 0;
+}
+
+.wv3-diag code {
+  background: #1e293b;
+  color: #f8fafc;
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+  padding: 6px;
+}

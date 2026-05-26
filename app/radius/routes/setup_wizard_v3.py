@@ -51,6 +51,33 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..services.setup_wizard_v3 import (
     V3Error, V3InvalidState, V3NotFound, WizardV3Service,
 )
+from ..services.setup_wizard_added_services_phase_planner import (
+    AddedServicesPhasePlanner,
+)
+from ..services.setup_wizard_broadband_phase_planner import (
+    BroadbandPhasePlanner,
+)
+from ..services.setup_wizard_hotspot_phase_planner import (
+    HotspotPhasePlanner,
+)
+from ..services.setup_wizard_internet_phase_planner import (
+    InternetPhasePlanner,
+)
+from ..services.setup_wizard_vpn_radius_phase_planner import (
+    VpnRadiusPhasePlanner,
+)
+
+
+# Map phase name → planner class. SW7 binds the SW1-SW6
+# phase planners to the v3 route layer so the operator can
+# preview per-phase scripts on top of the unified v3 setup.
+PHASE_PLANNERS = {
+    "internet":       InternetPhasePlanner,
+    "vpn_radius":     VpnRadiusPhasePlanner,
+    "hotspot":        HotspotPhasePlanner,
+    "broadband":      BroadbandPhasePlanner,
+    "added_services": AddedServicesPhasePlanner,
+}
 
 
 def _tid() -> int:
@@ -238,6 +265,171 @@ def setup_wizard_v3_serve_script(short_code: str):
     )
 
 
+# ─── SW7: phase planner endpoints ───────────────────────────
+
+
+def setup_wizard_v3_phase_planners_index():
+    """List the phases the operator can plan, with sample input
+    schemas so the UI can render dynamic forms."""
+    return jsonify({
+        "ok": True,
+        "phases": [
+            {
+                "phase": "internet",
+                "title_ar": "وصلة الإنترنت (uplink)",
+                "description_ar": (
+                    "VLAN / IP ثابت / DHCP / PPPoE"
+                ),
+                "required_inputs": ["source_type"],
+            },
+            {
+                "phase": "vpn_radius",
+                "title_ar": "VPN + RADIUS",
+                "description_ar": (
+                    "إنشاء واجهة WireGuard + ربط RADIUS"
+                ),
+                "required_inputs": [
+                    "router_vpn_ip", "vps_vpn_ip",
+                    "vps_public_endpoint", "radius_secret",
+                    "server_public_key",
+                ],
+            },
+            {
+                "phase": "hotspot",
+                "title_ar": "Hotspot (وصول عام)",
+                "description_ar": (
+                    "خادم Hotspot + DHCP + RADIUS authentication"
+                ),
+                "required_inputs": [
+                    "selected_interfaces", "subnet_base",
+                    "radius_secret", "router_vpn_ip",
+                ],
+            },
+            {
+                "phase": "broadband",
+                "title_ar": "Broadband / PPPoE server",
+                "description_ar": (
+                    "خادم PPPoE + IP pool + NAT مقيّد"
+                ),
+                "required_inputs": [
+                    "selected_interfaces", "local_address",
+                    "remote_pool_cidr",
+                ],
+            },
+            {
+                "phase": "added_services",
+                "title_ar": "خدمات إضافية",
+                "description_ar": (
+                    "walled garden / حجب مواقع / Site exit"
+                ),
+                "required_inputs": ["service_key"],
+            },
+        ],
+    })
+
+
+def setup_wizard_v3_phase_plan(run_id: int, phase: str):
+    """Run the SW1-SW6 phase planner for the given phase.
+    Returns a PhasePlanResult — script + warnings + Arabic
+    notes + diagnostic codes + tags.
+
+    The wizard run must exist (so we have a real run_id to tag
+    the script with), but the planner itself is pure and never
+    touches the DB or the router."""
+    cls = PHASE_PLANNERS.get(str(phase or "").strip().lower())
+    if not cls:
+        return _err(
+            f"unknown phase '{phase}' (allowed: "
+            + ", ".join(PHASE_PLANNERS.keys()) + ")",
+            status=400,
+            code="unknown_phase",
+        )
+    # Validate the run exists so the operator can't generate a
+    # script for a non-existent run.
+    try:
+        run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound as exc:
+        return _err(str(exc), status=404, code="not_found")
+    except V3Error as exc:
+        return _err(str(exc))
+
+    body = _body() or {}
+    # Allow either flat (inputs at the top level) or nested
+    # ({"inputs": {...}, "service_key": "...", ...}). When both
+    # are present, merge so top-level keys like service_key get
+    # passed through to the planner alongside the inputs dict.
+    if isinstance(body.get("inputs"), dict):
+        inputs = dict(body["inputs"])
+        for k, v in body.items():
+            if k != "inputs":
+                inputs.setdefault(k, v)
+    else:
+        inputs = dict(body)
+    try:
+        planner = cls()
+        result = planner.plan(
+            run_id=int(run.id),
+            inputs=inputs,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _err(
+            f"planner failed: {exc}",
+            status=500,
+            code="planner_failed",
+        )
+
+    # Decorate blockers with Arabic explanations from the
+    # diagnostics catalogue so the UI can render them directly.
+    diagnostics = []
+    if result.blocking_errors:
+        from ..services import setup_wizard_diagnostics as _d
+        for code in result.blocking_errors:
+            try:
+                diag = _d.get(code)
+                diagnostics.append({
+                    "code": code,
+                    "ar_explanation": diag.ar_explanation,
+                    "cause": diag.cause,
+                    "fix": diag.fix,
+                    "severity": diag.severity,
+                    "inspect_command": diag.inspect_command,
+                })
+            except KeyError:
+                diagnostics.append({
+                    "code": code,
+                    "ar_explanation": (
+                        "خطأ تشخيصي غير معروف."
+                    ),
+                    "severity": "error",
+                })
+
+    return jsonify({
+        "ok": True,
+        "phase": phase,
+        "plan": result.to_dict(),
+        "diagnostics": diagnostics,
+    })
+
+
+def setup_wizard_v3_diagnostics_catalogue():
+    """Expose the full diagnostics catalogue for the UI to
+    render lookup tables and tooltips."""
+    from ..services import setup_wizard_diagnostics as _d
+    out = []
+    for code in _d.all_codes():
+        diag = _d.get(code)
+        out.append({
+            "code": diag.code,
+            "phase": diag.phase,
+            "ar_explanation": diag.ar_explanation,
+            "cause": diag.cause,
+            "fix": diag.fix,
+            "severity": diag.severity,
+            "inspect_command": diag.inspect_command,
+        })
+    return jsonify({"ok": True, "catalogue": out})
+
+
 # ─── Registration ───────────────────────────────────────────
 
 
@@ -303,5 +495,24 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/wz/<short_code>.rsc",
         "setup_wizard_v3_serve_script",
         setup_wizard_v3_serve_script,
+        methods=["GET"],
+    )
+    # SW7 — phase planner integration endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/phase-planners",
+        "setup_wizard_v3_phase_planners_index",
+        setup_wizard_v3_phase_planners_index,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/runs/<int:run_id>/phase-plan/<phase>",
+        "setup_wizard_v3_phase_plan",
+        setup_wizard_v3_phase_plan,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/diagnostics-catalogue",
+        "setup_wizard_v3_diagnostics_catalogue",
+        setup_wizard_v3_diagnostics_catalogue,
         methods=["GET"],
     )

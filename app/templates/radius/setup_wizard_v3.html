@@ -237,6 +237,43 @@
     </div>
   </aside>
 
+  {# ─── SW7: Phase Planner Preview ────────────────────── #}
+  <section class="wv3-phase-planner" data-wv3-phase-planner hidden>
+    <header>
+      <h2>📦 معاينة سكربتات إضافية</h2>
+      <p>
+        بعد أن يكمل الراوتر الاتصال الأساسي، يمكنك توليد
+        سكربتات منفصلة لمراحل إضافية (Hotspot, Broadband,
+        خدمات إضافية). كل سكربت يحمل وسم
+        <code dir="ltr">HOBERADIUS_SETUP:&lt;run&gt;:&lt;phase&gt;</code>
+        للتمييز.
+      </p>
+    </header>
+
+    <div class="wv3-phase-list" data-wv3-phase-list>
+      {# Filled by JS from /phase-planners. #}
+    </div>
+
+    <div class="wv3-phase-result" data-wv3-phase-result hidden>
+      <h3>السكربت المُولَّد</h3>
+      <div class="wv3-phase-result-meta"
+           data-wv3-phase-result-meta></div>
+      <details open>
+        <summary>محتوى السكربت</summary>
+        <pre data-wv3-phase-result-script>{}</pre>
+      </details>
+      <details>
+        <summary>أوامر التحقّق</summary>
+        <pre data-wv3-phase-result-validation>{}</pre>
+      </details>
+      <div class="wv3-phase-result-diagnostics"
+           data-wv3-phase-result-diagnostics hidden>
+        <h4>التشخيصات</h4>
+        <div data-wv3-phase-result-diagnostics-list></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}"></script>
