@@ -163,6 +163,17 @@
   transition:all .15s;
   position:relative;
 }
+/* Live status dot — top-end corner. JS sets one of three classes:
+   .is-active (green), .is-inactive (grey), .is-unknown (amber). */
+.rh-hub-card-badge{
+  position:absolute;top:8px;inset-inline-end:10px;
+  width:8px;height:8px;border-radius:50%;
+  background:#CBD5E1;
+  box-shadow:0 0 0 2px #fff;
+}
+.rh-hub-card-badge.is-active{background:#10B981;animation:rh-hub-pulse 1.6s ease-in-out infinite}
+.rh-hub-card-badge.is-inactive{background:#CBD5E1}
+.rh-hub-card-badge.is-unknown{background:#F59E0B}
 .rh-hub-card:hover{
   border-color:currentColor;
   transform:translateY(-1px);
@@ -448,6 +459,7 @@
           {'key': 'remote-access', 'title': 'اتصال عن بُعد',      'sub': 'نفق VPN للفنّي لإدارة الراوتر',     'icon': 'key',           'color': 'purple'},
         ] %}
         <a class="rh-hub-card rh-hub-card--{{ svc.color }}"
+           data-rh-svc-card="{{ svc.key }}"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key=svc.key) }}">
           <span class="rh-hub-card-icon">
@@ -460,6 +472,9 @@
           <span class="rh-hub-card-arrow">
             <i class="fa-solid fa-arrow-left"></i>
           </span>
+          {# Live status dot — JS fills based on /services-status. #}
+          <span class="rh-hub-card-badge" data-rh-svc-status
+                title="جارٍ الفحص…"></span>
         </a>
         {% endfor %}
       </div>
@@ -536,6 +551,69 @@
       toggle.addEventListener('click', function(){
         const next = hub.dataset.rhCollapsed !== 'true';
         applyState(next);
+      });
+    })();
+  </script>
+
+  {# Live service-status probe. Fires once on page load (and again
+     each time the hub opens) so the chips show 🟢/⚪ before the
+     operator clicks anything. Soft-fails — if the router is
+     unreachable, badges stay neutral with an explanatory title. #}
+  <script>
+    (function(){
+      const page = document.querySelector('[data-mt-dashboard]');
+      if (!page) return;
+      const routerId = page.dataset.mtRouterId;
+      if (!routerId) return;
+      const cards = page.querySelectorAll('[data-rh-svc-card]');
+      if (!cards.length) return;
+
+      async function probeStatus(){
+        try {
+          const res = await fetch(
+            `/admin/radius/setup-wizard-v3/routers/${routerId}/services-status`,
+            { headers: { Accept: 'application/json' } }
+          );
+          const data = await res.json().catch(() => ({ ok: false }));
+          const svcMap = (data && data.services) || {};
+          cards.forEach((card) => {
+            const key = card.dataset.rhSvcCard;
+            const badge = card.querySelector('[data-rh-svc-status]');
+            if (!badge) return;
+            const state = svcMap[key];
+            badge.classList.remove('is-active','is-inactive','is-unknown');
+            if (state === true) {
+              badge.classList.add('is-active');
+              badge.title = 'الخدمة مفعّلة على الراوتر';
+            } else if (state === false) {
+              badge.classList.add('is-inactive');
+              badge.title = 'الخدمة غير مفعّلة';
+            } else {
+              badge.classList.add('is-unknown');
+              badge.title = data && data.error
+                ? data.error
+                : 'تعذّر فحص حالة الخدمة';
+            }
+          });
+        } catch (_) {
+          cards.forEach((card) => {
+            const badge = card.querySelector('[data-rh-svc-status]');
+            if (badge) {
+              badge.classList.add('is-unknown');
+              badge.title = 'تعذّر الاتصال بالراوتر';
+            }
+          });
+        }
+      }
+      probeStatus();
+      // Re-probe when the hub is expanded so refresh is fresh.
+      const hub = page.querySelector('.rh-hub');
+      const toggle = hub && hub.querySelector('[data-rh-hub-toggle]');
+      if (toggle) toggle.addEventListener('click', () => {
+        if (hub.dataset.rhCollapsed === 'false') {
+          // Was just opened — re-fetch.
+          probeStatus();
+        }
       });
     })();
   </script>

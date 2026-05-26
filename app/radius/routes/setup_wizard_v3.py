@@ -1304,6 +1304,104 @@ def setup_wizard_v3_service_revoke(router_id: int, service_key: str):
     return jsonify({"ok": True, "duration_ms": exec_result.duration_ms})
 
 
+def setup_wizard_v3_router_services_status(router_id: int):
+    """Returns the live state of every service for one router in one
+    MikroTik API call. Used by the Router Hub chips to show 🟢/⚪
+    badges without making 6 separate verify requests.
+
+    Output:
+      { ok: true,
+        services: {
+          hotspot: true|false,
+          broadband: true|false,
+          "block-sites": true|false,
+          "open-sites": true|false,
+          "public-ip": true|false,
+          "remote-access": true|false,
+        }
+      }
+    """
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        # Treat as "unknown" — no creds, all services neutral.
+        return jsonify({
+            "ok": True,
+            "services": {k: None for k in (
+                "hotspot", "broadband", "block-sites",
+                "open-sites", "public-ip", "remote-access",
+            )},
+        })
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+                    code="mt_client_load_error")
+    cfg = {
+        "host": nas.address, "username": nas.api_user or "admin",
+        "password": nas.api_password, "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls), "timeout": 6.0,
+    }
+    status = {
+        "hotspot": False, "broadband": False, "block-sites": False,
+        "open-sites": False, "public-ip": False, "remote-access": False,
+    }
+    rid_tag = f"HOBERADIUS_SETUP:{router_id}"
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Hotspot: any enabled hotspot server.
+            servers = list(mt.print_("/ip/hotspot/server/print"))
+            status["hotspot"] = any(
+                str(s.get("disabled", "")).lower() in ("false", "no", "")
+                for s in servers
+            )
+            # Broadband: any enabled PPPoE server.
+            pppoe = list(mt.print_("/interface/pppoe-server/server/print"))
+            status["broadband"] = any(
+                str(s.get("disabled", "")).lower() in ("false", "no", "")
+                for s in pppoe
+            )
+            # Block-sites: address-list entries tagged for this run.
+            al = list(mt.print_("/ip/firewall/address-list/print"))
+            status["block-sites"] = any(
+                rid_tag in str(e.get("comment", ""))
+                and "block_sites" in str(e.get("comment", ""))
+                for e in al
+            )
+            # Open-sites: walled-garden hosts tagged for this run.
+            wg = list(mt.print_("/ip/hotspot/walled-garden/print"))
+            status["open-sites"] = any(
+                rid_tag in str(e.get("comment", ""))
+                and "walled_garden" in str(e.get("comment", ""))
+                for e in wg
+            )
+            # Public-IP: mangle rules tagged for this run.
+            mangle = list(mt.print_("/ip/firewall/mangle/print"))
+            status["public-ip"] = any(
+                rid_tag in str(m.get("comment", ""))
+                and "site_exit" in str(m.get("comment", ""))
+                for m in mangle
+            )
+            # Remote-access: ANY rule with HOBERADIUS_TECH (no run_id
+            # since techs may have multiple tokens).
+            rules = list(mt.print_("/ip/firewall/filter/print"))
+            status["remote-access"] = any(
+                "HOBERADIUS_TECH" in str(r.get("comment", ""))
+                for r in rules
+            )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر: {exc}",
+            # Return current best-effort partial status.
+            "services": status,
+        }), 502
+    return jsonify({"ok": True, "services": status})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -2026,6 +2124,13 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "setup_wizard_v3_service_revoke",
         setup_wizard_v3_service_revoke,
         methods=["POST"],
+    )
+    # Bulk live-status probe for all 6 services in one MT call.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services-status",
+        "setup_wizard_v3_router_services_status",
+        setup_wizard_v3_router_services_status,
+        methods=["GET"],
     )
     bp.add_url_rule(
         "/setup-wizard-v3/runs",
