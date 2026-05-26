@@ -73,7 +73,7 @@ def _run_loop(*, interval_sec: float, flask_app=None) -> None:
     from app.radius.db.connection import db as _db_factory
 
     while True:
-        actions: dict = {}
+        result: dict = {}
         try:
             ctx = (
                 flask_app.app_context()
@@ -81,25 +81,43 @@ def _run_loop(*, interval_sec: float, flask_app=None) -> None:
                 else _NoopCtx()
             )
             with ctx:
-                tenants = _all_tenant_ids(_db_factory)
-                for tid in tenants:
-                    result = reconcile_with_state(
-                        tenant_id=int(tid),
+                # CRITICAL (postmortem #21): call once with
+                # tenant_id=None so the orphan check sees
+                # active runs across ALL tenants. Per-tenant
+                # sweeps used to delete other tenants' files
+                # because they didn't see those runs as
+                # active.
+                result = reconcile_with_state(tenant_id=None)
+                if (
+                    result.get("rewritten")
+                    or result.get("deleted")
+                    or result.get("deduped")
+                ):
+                    # Drift detected — log at WARNING so
+                    # production monitoring (logwatch /
+                    # journalctl alerts / etc.) picks it up.
+                    _LOG.warning(
+                        "radius reconcile drift detected: "
+                        "rewritten=%s deleted=%s deduped=%s "
+                        "scanned_runs=%s scanned_files=%s "
+                        "rewritten_files=%s deleted_files=%s "
+                        "deduped_files=%s",
+                        len(result["rewritten"]),
+                        len(result["deleted"]),
+                        len(result["deduped"]),
+                        result.get("scanned_runs", 0),
+                        result.get("scanned_files", 0),
+                        result["rewritten"],
+                        result["deleted"],
+                        result["deduped"],
                     )
-                    actions[tid] = result
-                    if (
-                        result["rewritten"]
-                        or result["deleted"]
-                        or result["deduped"]
-                    ):
-                        _LOG.warning(
-                            "tenant=%s radius reconcile: "
-                            "rewritten=%s deleted=%s deduped=%s",
-                            tid,
-                            len(result["rewritten"]),
-                            len(result["deleted"]),
-                            len(result["deduped"]),
-                        )
+                else:
+                    _LOG.debug(
+                        "radius reconcile clean: "
+                        "scanned_runs=%s scanned_files=%s",
+                        result.get("scanned_runs", 0),
+                        result.get("scanned_files", 0),
+                    )
         except Exception:  # noqa: BLE001
             _LOG.exception(
                 "radius reconciler tick failed",

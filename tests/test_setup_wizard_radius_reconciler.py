@@ -210,6 +210,73 @@ def test_write_client_purges_stale_file_for_same_ip(app, tmp_path):
     assert (target / "wizard-run-302.conf").exists()
 
 
+# ─── CRITICAL: cross-tenant safety (postmortem #21) ────────
+
+
+def test_reconciler_does_not_delete_other_tenants_files(app, tmp_path):
+    """Postmortem #21: per-tenant sweeps used to delete files
+    belonging to other tenants' active runs. Now the orphan
+    check considers active runs across ALL tenants. This test
+    pins that guarantee."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state, write_client_for_run,
+    )
+    target = tmp_path / "clients-wizard"
+    with app.app_context():
+        # Seed run #501 as ACTIVE for tenant 2.
+        _seed_run(
+            run_id=501, vpn_ip="10.10.0.50",
+            secret="tenant2-" + "0" * 24, tenant_id=2,
+        )
+        # Tenant 2's file exists on disk.
+        write_client_for_run(
+            run_id=501,
+            router_vpn_ip="10.10.0.50",
+            radius_secret="tenant2-" + "0" * 24,
+        )
+        assert (target / "wizard-run-501.conf").exists()
+
+        # Run the reconciler for TENANT 1 only.
+        # In the buggy version, this would have deleted run
+        # 501's file because it's not in tenant 1's active
+        # runs.
+        result = reconcile_with_state(tenant_id=1)
+
+    # File MUST still exist — it belongs to tenant 2.
+    assert (target / "wizard-run-501.conf").exists(), (
+        "reconciler deleted another tenant's file — "
+        "would take that tenant's routers OFFLINE in "
+        "production"
+    )
+    assert "wizard-run-501.conf" not in result["deleted"]
+
+
+def test_reconciler_global_mode_writes_for_all_tenants(
+    app, tmp_path,
+):
+    """When tenant_id=None, the reconciler writes files for
+    active runs across ALL tenants — the production worker
+    path."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state,
+    )
+    target = tmp_path / "clients-wizard"
+    with app.app_context():
+        _seed_run(
+            run_id=601, vpn_ip="10.10.0.60",
+            secret="t1secret-" + "0" * 23, tenant_id=1,
+        )
+        _seed_run(
+            run_id=602, vpn_ip="10.10.0.61",
+            secret="t2secret-" + "0" * 23, tenant_id=2,
+        )
+        result = reconcile_with_state(tenant_id=None)
+    assert "wizard-run-601.conf" in result["rewritten"]
+    assert "wizard-run-602.conf" in result["rewritten"]
+    assert (target / "wizard-run-601.conf").exists()
+    assert (target / "wizard-run-602.conf").exists()
+
+
 # ─── No double-trigger if everything's clean ──────────────
 
 

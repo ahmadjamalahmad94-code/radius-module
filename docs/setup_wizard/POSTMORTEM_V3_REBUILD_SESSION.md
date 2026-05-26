@@ -1113,6 +1113,117 @@ distracted, the wizard times out, or the page is refreshed.
 
 ---
 
+## 21) Reconciler deleted another tenant's active client files
+
+**Symptom.** First production-class deploy of the
+postmortem-#20 reconciler. Worker started cleanly:
+
+```
+setup_wizard_radius_reconciler started, interval=300.0s
+```
+
+First tick:
+
+```
+tenant=1 radius reconcile: rewritten=0 deleted=3 deduped=0
+ (deleted: wizard-run-36, 39, 40)
+reconciler: deleted orphan file wizard-run-44.conf
+tenant=2 radius reconcile: rewritten=0 deleted=1 deduped=0
+```
+
+But `wizard-run-44.conf` belongs to TENANT 1's currently-
+active run. When the user manually re-ran reconcile for
+tenant 1, the function dutifully re-wrote `wizard-run-44.conf`:
+
+```
+rewritten: ['wizard-run-44.conf']
+```
+
+So the reconciler had **deleted a live router's client
+config**, then re-wrote it on the next tick. Between the
+two, that router's RADIUS auth would have been silently
+broken — exactly the production failure we set out to
+prevent.
+
+**Root cause.** The reconciler was implemented as a
+per-tenant loop:
+
+```python
+for tid in all_tenants:
+    reconcile_with_state(tenant_id=tid)
+```
+
+Each call did its own scan of the shared clients-wizard
+directory + its own DB query (filtered to `tenant_id = ?`).
+For tenant 2, run #44 wasn't in `active_runs` (it belongs
+to tenant 1), so the file looked like an orphan — INV-2
+deleted it.
+
+**The bug pattern:** **a per-tenant view of a globally
+shared resource**. The clients-wizard directory is one
+filesystem path serving one FreeRADIUS instance — there's
+no tenant scoping in the directory layout. Reconciling it
+per-tenant means each tenant's view is partial, and the
+orphan check sees other tenants' files as orphans.
+
+**Fix.** The reconciler now scans active runs across ALL
+tenants in one pass. The function signature stays the same
+(`tenant_id: int | None = None`) for backward compatibility,
+but internally:
+
+- INV-1 (write missing files): still per-tenant when
+  `tenant_id` is set, to avoid two tenants' concurrent
+  reconciles racing on the same file. With `tenant_id=None`,
+  covers all tenants.
+- INV-2 (orphan deletion): **always** uses the global
+  active-runs set. A file is only deleted if it has NO
+  active run in ANY tenant.
+- INV-3 (dedupe): naturally global since it operates on
+  filesystem paths.
+
+The worker now calls `reconcile_with_state(tenant_id=None)`
+exactly once per tick instead of looping per-tenant.
+
+Every reconcile action also writes an audit_log row
+(`severity=warning`, `actor=setup_wizard_radius_reconciler`)
+including:
+- the action type (rewrite / delete_orphan / dedupe)
+- the run_id + tenant_id (when known)
+- the file name + router_vpn_ip
+- SHA-256[:12] of the previous secret (NOT the literal —
+  forensic comparison only)
+- the human reason
+
+In production this gives support a forensic trail: every
+time the reconciler touches a file, there's a record of
+exactly what changed and why.
+
+**Test pinning the safety.** New
+`test_reconciler_does_not_delete_other_tenants_files`:
+seeds an active run for tenant 2, writes its file, then
+calls `reconcile_with_state(tenant_id=1)`. Asserts the
+tenant 2 file is still present after — the previous
+implementation would have deleted it.
+
+**Prevention rules for the future.**
+
+1. **Any reconciler / janitor / GC over a globally-shared
+   resource MUST scope its read query across ALL owners,
+   not just the current one.** The deletion check
+   especially: if you're deleting based on "I don't see an
+   owner", make sure you looked everywhere an owner could
+   be.
+2. **Every drift correction in a production worker MUST
+   write an audit_log row.** A silent "I deleted that file
+   for you" is a production catastrophe waiting to happen.
+3. **Per-tenant code paths around shared resources are
+   suspicious by default.** Treat them as code-review
+   anti-patterns until proven safe with explicit isolation
+   (tenant prefix in resource name, separate directory
+   per tenant, etc.).
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

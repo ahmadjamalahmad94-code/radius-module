@@ -262,28 +262,38 @@ def _purge_stale_files_for_ip(
 
 
 def reconcile_with_state(
-    *, tenant_id: int = 1,
+    *, tenant_id: int | None = None,
 ) -> dict[str, Any]:
-    """Periodic sweep that reconciles files in the clients-
-    wizard directory with the wizard's source-of-truth
+    """Periodic sweep that reconciles files in the
+    clients-wizard directory with the wizard's source-of-truth
     (setup_wizard_runs.state_json).
 
+    CRITICAL: scans active runs across ALL tenants, not just
+    one. The clients-wizard directory is GLOBAL to the
+    FreeRADIUS instance — a per-tenant sweep would
+    incorrectly delete files belonging to other tenants'
+    routers, taking them OFFLINE. See postmortem #21.
+
+    The `tenant_id` argument is preserved for compatibility
+    with older callers but ignored for the orphan check
+    (INV-2). For backward compatibility, when tenant_id is
+    provided, INV-1 still only writes files for THAT tenant's
+    active runs (avoids one tenant's sweep stomping on another's
+    in-flight write). When tenant_id is None, INV-1 covers
+    all tenants.
+
     Invariants enforced:
-      INV-1: every active run (v3_state in
-             VERIFYING/REGISTERING/COMPLETE) MUST have a
-             matching wizard-run-<id>.conf whose `secret`
-             field equals state_json.radius_secret.
-      INV-2: every wizard-run-<id>.conf MUST correspond to
-             an active run with matching state.
+      INV-1: every active run (v3_state ∈ VERIFYING/REGISTERING/
+             COMPLETE) MUST have a matching wizard-run-<id>.conf
+             with the right secret. Violations → rewrite.
+      INV-2: every wizard-run-<id>.conf MUST correspond to an
+             active run *for some tenant*. Orphans → delete.
       INV-3: no two files may share the same ipaddr.
+             Duplicates → keep newest run_id.
 
-    For each violation:
-      INV-1 mismatch → re-write the file from state_json.
-      INV-2 orphan   → remove the file.
-      INV-3 duplicate → keep the most recent run's file.
-
-    Returns a structured summary suitable for the worker's
-    audit log.
+    Every reconcile action is also written to audit_log at
+    severity=warning so production has a forensic trail of
+    every drift correction.
     """
     from ..db.connection import db
     import json as _json
@@ -296,12 +306,13 @@ def reconcile_with_state(
     # NOTE: don't early-return when the directory is missing.
     # write_client_for_run() recreates it, and we still need
     # to write files for any active runs found in the DB.
-    # The file-scan loop below tolerates a non-existent dir.
 
     # ── Index files by run_id ────────────────────────────
     files_by_run: dict[int, Path] = {}
     files_by_ip: dict[str, list[Path]] = {}
-    iterable = target_dir.iterdir() if target_dir.is_dir() else []
+    iterable = (
+        target_dir.iterdir() if target_dir.is_dir() else []
+    )
     for path in iterable:
         if not path.is_file():
             continue
@@ -319,30 +330,52 @@ def reconcile_with_state(
             ip = ip_match.group(1).strip()
             files_by_ip.setdefault(ip, []).append(path)
 
-    # ── Index active runs from DB ────────────────────────
-    rows = db().execute(
-        """SELECT id, v3_state, state_json
-           FROM setup_wizard_runs
-           WHERE tenant_id=?
-             AND v3_state IN
-                 ('VERIFYING', 'REGISTERING', 'COMPLETE')""",
-        (int(tenant_id),),
-    ).fetchall()
-    active_runs: dict[int, dict[str, Any]] = {}
-    for r in rows:
+    # ── Index active runs across ALL tenants ────────────
+    # This is the key fix from postmortem #21: the
+    # clients-wizard dir is a GLOBAL resource, so the orphan
+    # check must consider runs from every tenant. Otherwise
+    # a per-tenant sweep would delete the other tenant's
+    # active client files.
+    global_active_runs: dict[int, dict[str, Any]] = {}
+    per_tenant_active_runs: dict[int, dict[str, Any]] = {}
+    sql = (
+        "SELECT id, tenant_id, v3_state, state_json "
+        "FROM setup_wizard_runs "
+        "WHERE v3_state IN "
+        "  ('VERIFYING', 'REGISTERING', 'COMPLETE')"
+    )
+    params: tuple = ()
+    if tenant_id is not None:
+        sql_tenant = sql + " AND tenant_id=?"
+        params = (int(tenant_id),)
+    else:
+        sql_tenant = sql
+        params = ()
+
+    for r in db().execute(sql).fetchall():
         try:
             state = _json.loads(r["state_json"] or "{}") or {}
         except (TypeError, ValueError):
             state = {}
-        if state.get("router_vpn_ip") and state.get("radius_secret"):
-            active_runs[int(r["id"])] = state
+        if not (state.get("router_vpn_ip")
+                and state.get("radius_secret")):
+            continue
+        rid = int(r["id"])
+        state["_tenant_id"] = int(r["tenant_id"])
+        global_active_runs[rid] = state
+        if (tenant_id is None
+                or int(r["tenant_id"]) == int(tenant_id)):
+            per_tenant_active_runs[rid] = state
 
     # ── INV-1: every active run has a correct file ──────
-    for rid, state in active_runs.items():
+    # Scoped to per-tenant (or all if tenant_id is None) so
+    # concurrent reconciles don't race on the same files.
+    for rid, state in per_tenant_active_runs.items():
         expected_secret = state["radius_secret"]
         expected_ip = state["router_vpn_ip"]
         path = files_by_run.get(rid)
         needs_write = False
+        prev_secret_hash = ""
         if not path or not path.exists():
             needs_write = True
         else:
@@ -354,6 +387,16 @@ def reconcile_with_state(
                 ok_ip = (
                     f"ipaddr      = {expected_ip}" in text
                 )
+                # Capture a hash of the existing secret for
+                # the audit row — never log the literal value.
+                ex_match = re.search(
+                    r"secret\s*=\s*(\S+)", text,
+                )
+                if ex_match:
+                    import hashlib
+                    prev_secret_hash = hashlib.sha256(
+                        ex_match.group(1).encode(),
+                    ).hexdigest()[:12]
                 if not (ok_secret and ok_ip):
                     needs_write = True
             except Exception:  # noqa: BLE001
@@ -368,6 +411,17 @@ def reconcile_with_state(
                 actions["rewritten"].append(
                     f"wizard-run-{rid}.conf",
                 )
+                _audit_reconcile(
+                    action="wizard_radius_reconcile_rewrite",
+                    tenant_id=state.get("_tenant_id"),
+                    run_id=rid,
+                    payload={
+                        "file": f"wizard-run-{rid}.conf",
+                        "router_vpn_ip": expected_ip,
+                        "prev_secret_sha256_12": prev_secret_hash,
+                        "reason": "missing_or_drifted",
+                    },
+                )
             except FreeRadiusProvisioningError as exc:
                 _LOG.warning(
                     "reconciler: could not write for run %s: %s",
@@ -376,15 +430,41 @@ def reconcile_with_state(
         else:
             actions["ok"].append(f"wizard-run-{rid}.conf")
 
-    # ── INV-2: every file belongs to an active run ──────
+    # ── INV-2: every file belongs to SOME tenant's active
+    # run. global_active_runs covers ALL tenants regardless
+    # of the per-tenant scoping above. ─────────────────────
     for rid, path in files_by_run.items():
-        if rid in active_runs:
+        if rid in global_active_runs:
             continue
         try:
+            # Capture file contents for the audit trail
+            # BEFORE deleting — once deleted we can't
+            # reconstruct what was there.
+            try:
+                text_before = path.read_text(encoding="utf-8")
+                ip_match = re.search(
+                    r"ipaddr\s*=\s*(\S+)", text_before,
+                )
+                deleted_ip = (
+                    ip_match.group(1) if ip_match else ""
+                )
+            except Exception:  # noqa: BLE001
+                deleted_ip = ""
             path.unlink()
             actions["deleted"].append(path.name)
             _LOG.info(
                 "reconciler: deleted orphan file %s", path.name,
+            )
+            _audit_reconcile(
+                action="wizard_radius_reconcile_delete_orphan",
+                tenant_id=None,
+                run_id=rid,
+                payload={
+                    "file": path.name,
+                    "router_vpn_ip": deleted_ip,
+                    "reason":
+                        "no_active_run_across_any_tenant",
+                },
             )
         except Exception:  # noqa: BLE001
             _LOG.warning(
@@ -396,10 +476,11 @@ def reconcile_with_state(
     for ip, paths in files_by_ip.items():
         if len(paths) <= 1:
             continue
-        # Keep the file owned by the HIGHEST run_id (newest).
         paths_sorted = sorted(
             paths,
-            key=lambda p: int(_RUN_FILE_RE.match(p.name).group(1)),
+            key=lambda p: int(
+                _RUN_FILE_RE.match(p.name).group(1),
+            ),
             reverse=True,
         )
         keeper = paths_sorted[0]
@@ -412,6 +493,18 @@ def reconcile_with_state(
                 _LOG.info(
                     "reconciler: deduped %s (kept %s for %s)",
                     p.name, keeper.name, ip,
+                )
+                _audit_reconcile(
+                    action="wizard_radius_reconcile_dedupe",
+                    tenant_id=None,
+                    run_id=int(
+                        _RUN_FILE_RE.match(p.name).group(1),
+                    ),
+                    payload={
+                        "file": p.name,
+                        "kept_file": keeper.name,
+                        "shared_ipaddr": ip,
+                    },
                 )
             except Exception:  # noqa: BLE001
                 _LOG.warning(
@@ -436,9 +529,42 @@ def reconcile_with_state(
 
     return {
         **actions,
-        "scanned_runs": len(active_runs),
+        "scanned_runs": len(per_tenant_active_runs),
         "scanned_files": len(files_by_run),
+        "global_active_runs": len(global_active_runs),
     }
+
+
+def _audit_reconcile(
+    *, action: str,
+    tenant_id: int | None,
+    run_id: int,
+    payload: dict[str, Any],
+) -> None:
+    """Production audit trail — every reconciler action
+    appears in audit_log with severity=warning so support can
+    trace exactly what changed when. Never logs literal
+    secrets; only short SHA-256 prefixes for forensic
+    comparison."""
+    try:
+        from .audit import RadiusAuditService
+        # Audit is tenant-scoped via flask.g.tenant_id but
+        # the reconciler runs cross-tenant. Use the run's
+        # tenant when known, else fall back to default.
+        RadiusAuditService().record(
+            actor="setup_wizard_radius_reconciler",
+            action=action,
+            target_type="wizard_clients_conf",
+            target_id=str(run_id),
+            payload={**payload, "tenant_id": tenant_id},
+            severity="warning",
+            result_status="reconciled",
+        )
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "reconciler audit write failed for %s run=%s",
+            action, run_id, exc_info=True,
+        )
 
 
 __all__ = [
