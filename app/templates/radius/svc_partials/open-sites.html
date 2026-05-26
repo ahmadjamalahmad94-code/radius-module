@@ -1,0 +1,185 @@
+{# Open-sites (Walled Garden) — pre-auth allowlist for Hotspot. Lets
+   users reach specific domains BEFORE logging in (payment portals,
+   hotel info pages, etc).
+   Uses AddedServicesPhasePlanner with service_key="walled_garden". #}
+<h2>فتح المواقع (قبل تسجيل الدخول)</h2>
+<p class="swsvf-pane-sub">
+  المواقع التي تكتبها هنا ستكون متاحة للمستخدمين <strong>بدون</strong> الحاجة
+  لتسجيل الدخول في Hotspot. مفيد لصفحات الدفع، صفحات الفنادق، خوادم DNS
+  محدّدة، أو خدمات داخليّة.
+</p>
+
+<style>
+.swop-section{margin:18px 0 10px}
+.swop-section-title{font-weight:700;color:var(--swsvf-ink);font-size:14px;margin:0 0 8px}
+.swop-help{color:var(--swsvf-mute);font-size:12px;margin:0 0 10px;line-height:1.7}
+.swop-textarea{
+  display:block;width:100%;min-height:160px;
+  padding:12px 14px;border:1px solid var(--swsvf-line);border-radius:10px;
+  font-family:monospace;font-size:13px;line-height:1.7;resize:vertical;
+}
+.swop-textarea:focus{outline:none;border-color:var(--swsvf-teal);box-shadow:0 0 0 3px rgba(20,184,166,.1)}
+.swop-count{margin-top:6px;color:var(--swsvf-mute);font-size:12px}
+.swop-count strong{color:var(--swsvf-teal)}
+.swop-error{
+  color:#7F1D1D;background:var(--swsvf-red-soft);
+  border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;font-size:13px;margin:10px 0;
+}
+.swop-error[hidden]{display:none}
+.swop-hint{
+  background:var(--swsvf-teal-soft);border:1px solid #99F6E4;
+  border-radius:8px;padding:10px 14px;font-size:12px;color:#0F766E;
+  margin-bottom:14px;line-height:1.7;
+}
+</style>
+
+<div class="swop-hint">
+  <i class="fa-solid fa-circle-info"></i>
+  يجب أن يكون <strong>Hotspot مفعّلاً</strong> على الراوتر أولاً حتى تظهر
+  هذه القائمة. لو لم تكن قد فعّلت Hotspot بعد، ارجع لبطاقة «برمجة Hotspot».
+</div>
+
+<div class="swop-section">
+  <div class="swop-section-title">قائمة المواقع المسموحة (Walled Garden)</div>
+  <p class="swop-help">
+    اكتب domain في كل سطر، مثل <code>payment.example.com</code>. لا تحتاج
+    <code>https://</code> أو <code>www.</code>.
+  </p>
+  <textarea class="swop-textarea" data-swop-domains
+            placeholder="payment.example.com
+hotel.local
+8.8.8.8"></textarea>
+  <div class="swop-count">
+    عدد المواقع: <strong data-swop-count>0</strong>
+  </div>
+</div>
+
+<div class="swop-error" data-swop-form-error hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const page = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+  const routerId = page.dataset.routerId;
+  const textarea = page.querySelector("[data-swop-domains]");
+  const counter = page.querySelector("[data-swop-count]");
+  const formError = page.querySelector("[data-swop-form-error]");
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
+  function clearError() { formError.hidden = true; formError.textContent = ""; }
+  function parseDomains() {
+    return textarea.value
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => s.replace(/^https?:\/\//i, "").replace(/^www\./i, ""));
+  }
+  function refreshPayload() {
+    const domains = parseDomains();
+    counter.textContent = domains.length;
+    page.dataset.swsvfConfigurePayload = JSON.stringify({
+      service_key: "walled_garden",
+      domains: domains,
+    });
+  }
+  textarea.addEventListener("input", refreshPayload);
+  refreshPayload();
+
+  let lastPayload = null;
+
+  page.addEventListener("swsvf:phase-change", async (ev) => {
+    const phase = ev.detail.phase;
+    if (phase === "preview") {
+      lastPayload = ev.detail.payload || JSON.parse(page.dataset.swsvfConfigurePayload || "{}");
+      await runPreview(lastPayload);
+    } else if (phase === "apply") {
+      await runApply(lastPayload);
+    } else if (phase === "verify") {
+      await runVerify();
+    }
+  });
+
+  async function runPreview(payload) {
+    const domains = payload && payload.domains;
+    if (!domains || !domains.length) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اكتب موقعاً واحداً على الأقل قبل المتابعة.");
+      return;
+    }
+    clearError();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/open-sites/preview`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        window.SWSVF.setPreview([`⚠ ${msg}`]);
+        return;
+      }
+      window.SWSVF.setPreview(data.bullets || []);
+    } catch (error) {
+      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+    }
+  }
+
+  async function runApply(payload) {
+    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplySubstep("connect", "active");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/open-sites/apply`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        return;
+      }
+      window.SWSVF.setApplySubstep("connect", "done");
+      window.SWSVF.setApplyLabel("إضافة المواقع المسموحة…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("send", "done");
+      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("commit", "done");
+      window.SWSVF.setApplyLabel("تمّ فتح المواقع", "ننتقل للتحقّق…");
+      await sleep(600);
+      window.SWSVF.setPhase("verify");
+    } catch (error) {
+      window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  async function runVerify() {
+    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/open-sites/verify`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const checks = data.checks || [];
+      if (!checks.length) {
+        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        return;
+      }
+      window.SWSVF.setVerifyChecks(checks);
+    } catch (error) {
+      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+    }
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+})();
+</script>

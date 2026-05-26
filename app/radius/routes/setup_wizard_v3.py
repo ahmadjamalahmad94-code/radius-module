@@ -798,6 +798,97 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+def setup_wizard_v3_open_sites_preview(router_id: int):
+    body = _body() or {}
+    domains = list(body.get("domains") or [])
+    if not domains:
+        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+                    status=400, code="no_domains")
+    plan_result, status, err = _plan_added_service(
+        router_id, "walled_garden", {"domains": domains},
+    )
+    if err:
+        return jsonify({"ok": False, **err}), status
+    bullets = []
+    notes = list(getattr(plan_result, "notes", ()) or ())
+    if notes:
+        bullets.extend(notes)
+    else:
+        bullets.append(
+            f"سيتم السماح بالوصول لـ {len(domains)} موقعاً قبل تسجيل الدخول."
+        )
+        bullets.append("المستخدمون يصلون لهذه المواقع مباشرة دون شاشة Hotspot.")
+        bullets.append("التغيير قابل للتراجع بإفراغ القائمة وإعادة التطبيق.")
+    warnings = list(getattr(plan_result, "warnings", ()) or ())
+    for w in warnings:
+        bullets.append(f"⚠ تنبيه: {w}")
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+            "bullets": bullets,
+        }), 409
+    return jsonify({"ok": True, "bullets": bullets})
+
+
+def setup_wizard_v3_open_sites_apply(router_id: int):
+    body = _body() or {}
+    return _added_service_apply(
+        router_id, "walled_garden",
+        {"domains": list(body.get("domains") or [])},
+    )
+
+
+def setup_wizard_v3_open_sites_verify(router_id: int):
+    """Phase 4 — confirm walled-garden entries are in place."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+    checks = []
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+                    status=500, code="mt_client_load_error")
+    cfg = {
+        "host": nas.address, "username": nas.api_user or "admin",
+        "password": nas.api_password, "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls), "timeout": 8.0,
+    }
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check: walled-garden host entries created by this run.
+            entries = list(mt.print_("/ip/hotspot/walled-garden/print"))
+            managed = [e for e in entries
+                       if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
+                       and "walled_garden" in str(e.get("comment", ""))]
+            checks.append({
+                "label": f"إدخالات المواقع المسموحة موجودة ({len(managed)} موقعاً)",
+                "status": "ok" if managed else "fail",
+            })
+            # Check: Hotspot must be active for walled-garden to take effect.
+            servers = list(mt.print_("/ip/hotspot/server/print"))
+            running = [s for s in servers
+                       if str(s.get("disabled", "")).lower() in ("false", "no", "")]
+            checks.append({
+                "label": "Hotspot نشط (شرط لعمل القائمة)",
+                "status": "ok" if running else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1447,6 +1538,25 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/block-sites/verify",
         "setup_wizard_v3_block_sites_verify",
         setup_wizard_v3_block_sites_verify,
+        methods=["GET"],
+    )
+    # Open-sites (walled garden) flow endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/preview",
+        "setup_wizard_v3_open_sites_preview",
+        setup_wizard_v3_open_sites_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/apply",
+        "setup_wizard_v3_open_sites_apply",
+        setup_wizard_v3_open_sites_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/verify",
+        "setup_wizard_v3_open_sites_verify",
+        setup_wizard_v3_open_sites_verify,
         methods=["GET"],
     )
     bp.add_url_rule(
