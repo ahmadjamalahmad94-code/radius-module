@@ -13,12 +13,12 @@
 <style>
 /* ─── Router Hub sections (May 2026 consolidation) ───
    Two new layered sections sit between the hero and the live tabs:
-     1. خدمات الراوتر — 6 cards in a responsive grid, each opens
-        the 4-phase service flow (no scripts visible)
-     2. الأدوات — single-shot tools (login designer, backups, …)
+     1. خدمات الراوتر — soft horizontal chips row (single line on
+        wide screens, wraps on narrow ones). Each chip opens a
+        4-phase service flow.
+     2. الأدوات — single-shot tools (login designer, backups, …).
    The legacy `.mt-router-quicknav` style is reused for الأدوات so
-   the two sections stay visually consistent with what operators
-   were used to before. */
+   the two sections stay visually consistent. */
 .mt-hub-section{margin:18px 0}
 .mt-hub-section-head{margin-bottom:12px}
 .mt-hub-section-head h2{
@@ -29,45 +29,8 @@
 .mt-hub-section-head p{
   margin:4px 0 0;color:#64748B;font-size:13px;line-height:1.6;
 }
-.mt-svc-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:14px;
-}
-.mt-svc-card{
-  display:flex;align-items:flex-start;gap:14px;
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:18px 20px;text-decoration:none;color:inherit;
-  transition:box-shadow .15s, transform .15s, border-color .15s;
-}
-.mt-svc-card:hover{
-  box-shadow:0 4px 16px rgba(15,23,42,.06);
-  transform:translateY(-1px);
-  border-color:#CBD5E1;
-}
-.mt-svc-icon{
-  width:44px;height:44px;border-radius:11px;color:#fff;flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;font-size:19px;
-}
-.mt-svc-card--blue  .mt-svc-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.mt-svc-card--green .mt-svc-icon{background:linear-gradient(135deg,#10B981,#047857)}
-.mt-svc-card--red   .mt-svc-icon{background:linear-gradient(135deg,#EF4444,#B91C1C)}
-.mt-svc-card--teal  .mt-svc-icon{background:linear-gradient(135deg,#14B8A6,#0F766E)}
-.mt-svc-card--amber .mt-svc-icon{background:linear-gradient(135deg,#F59E0B,#B45309)}
-.mt-svc-card--purple.mt-svc-icon, .mt-svc-card--purple .mt-svc-icon{
-  background:linear-gradient(135deg,#8B5CF6,#6D28D9);
-}
-.mt-svc-body{flex:1;min-width:0}
-.mt-svc-body h3{
-  margin:0 0 4px;font-size:15px;font-weight:800;color:#0F172A;
-}
-.mt-svc-body p{
-  margin:0 0 8px;color:#475569;font-size:12.5px;line-height:1.6;
-}
-.mt-svc-phases{color:#94A3B8;font-size:11.5px}
-.mt-svc-phases i{margin-inline-end:4px}
 
-/* ─── Option A: horizontal chips row ─── */
+/* ─── خدمات الراوتر — horizontal chips row ─── */
 .mt-svc-chips{
   display:flex;flex-wrap:wrap;gap:8px;
 }
@@ -89,47 +52,6 @@
 .mt-svc-chip--teal   { color:#0F766E } .mt-svc-chip--teal:hover  {background:#F0FDFA}
 .mt-svc-chip--amber  { color:#B45309 } .mt-svc-chip--amber:hover {background:#FFFBEB}
 .mt-svc-chip--purple { color:#6D28D9 } .mt-svc-chip--purple:hover{background:#F5F3FF}
-
-/* ─── Option B: sidebar layout ─── */
-.mt-svc-sidebar-layout{
-  display:grid;grid-template-columns:220px 1fr;gap:14px;
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  overflow:hidden;
-}
-.mt-svc-sidebar{
-  background:#F8FAFC;border-inline-end:1px solid #EAECF0;
-  padding:14px 10px;
-}
-.mt-svc-sidebar h4{
-  margin:0 0 8px;padding:0 8px;font-size:11px;font-weight:800;
-  color:#64748B;text-transform:uppercase;letter-spacing:.05em;
-}
-.mt-svc-sidebar ul{list-style:none;padding:0;margin:0}
-.mt-svc-sidebar-link{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:8px;
-  color:#334155;text-decoration:none;font-size:13px;font-weight:600;
-  transition:all .12s;border-inline-start:3px solid transparent;
-}
-.mt-svc-sidebar-link i{width:18px;text-align:center;font-size:13px}
-.mt-svc-sidebar-link:hover{
-  background:#fff;color:#0F172A;
-}
-.mt-svc-sidebar-link--blue:hover  { border-inline-start-color:#3B82F6;color:#1D4ED8 }
-.mt-svc-sidebar-link--green:hover { border-inline-start-color:#10B981;color:#047857 }
-.mt-svc-sidebar-link--red:hover   { border-inline-start-color:#EF4444;color:#B91C1C }
-.mt-svc-sidebar-link--teal:hover  { border-inline-start-color:#14B8A6;color:#0F766E }
-.mt-svc-sidebar-link--amber:hover { border-inline-start-color:#F59E0B;color:#B45309 }
-.mt-svc-sidebar-link--purple:hover{ border-inline-start-color:#8B5CF6;color:#6D28D9 }
-.mt-svc-sidebar-hint{
-  display:flex;align-items:center;gap:10px;
-  padding:24px;color:#94A3B8;font-size:13px;
-}
-.mt-svc-sidebar-hint i{font-size:14px}
-@media (max-width:720px){
-  .mt-svc-sidebar-layout{grid-template-columns:1fr}
-  .mt-svc-sidebar{border-inline-end:none;border-bottom:1px solid #EAECF0}
-}
 </style>
 {% endblock %}
 
@@ -147,31 +69,26 @@
     icon="router"
   ) }}
 
-  {# ─── 🛠️ خدمات الراوتر — جرّب الخيارين، قرّر، احذف اللي ما أعجبك ───
-     Two layout candidates are rendered together on purpose so the
-     operator can compare side-by-side. Once you pick one, tell me
-     and I'll delete the other in a follow-up commit.
-
-     Both link to the same 4-phase flow (setup_wizard_v3_router_
-     service_flow), so the only thing that differs is HOW the picker
-     looks on this page. #}
-  {% set _services = [
-    {'key': 'hotspot',       'title': 'Hotspot',          'sub': 'بوابة دخول عامّة',           'icon': 'wifi',          'color': 'blue'},
-    {'key': 'broadband',     'title': 'Broadband',        'sub': 'PPPoE — اشتراك ثابت',       'icon': 'ethernet',      'color': 'green'},
-    {'key': 'block-sites',   'title': 'حجب مواقع',         'sub': 'منع الوصول',                'icon': 'ban',           'color': 'red'},
-    {'key': 'open-sites',    'title': 'فتح مواقع',         'sub': 'السماح بدون تسجيل دخول',    'icon': 'circle-check',  'color': 'teal'},
-    {'key': 'public-ip',     'title': 'تغيير IP',         'sub': 'IP عام جديد للخروج',        'icon': 'globe',         'color': 'amber'},
-    {'key': 'remote-access', 'title': 'اتصال عن بُعد',     'sub': 'نفق VPN للفنّي',             'icon': 'key',           'color': 'purple'},
-  ] %}
-
-  {# ───── 🅰️ Option A: horizontal chips row ───── #}
+  {# ─── 🛠️ خدمات الراوتر ─────────────────────────────────────
+     A single horizontal chips row. Each chip opens the same
+     4-phase service flow at setup_wizard_v3_router_service_flow;
+     services that aren't wired yet still resolve — the flow shell
+     renders «نموذج إعداد هذه الخدمة لم يُربط بعد» until each one's
+     partial lands. #}
   <section class="mt-hub-section">
     <div class="mt-hub-section-head">
-      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر — خيار A: شريط chips</h2>
-      <p>صفّ واحد ناعم؛ يلتفّ تلقائياً لو الشاشة ضيّقة.</p>
+      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر</h2>
+      <p>إعداد بنقرات قليلة — بدون أي سكربتات أو أوامر RouterOS ظاهرة.</p>
     </div>
     <div class="mt-svc-chips">
-      {% for svc in _services %}
+      {% for svc in [
+        {'key': 'hotspot',       'title': 'Hotspot',          'sub': 'بوابة دخول عامّة',           'icon': 'wifi',          'color': 'blue'},
+        {'key': 'broadband',     'title': 'Broadband',        'sub': 'PPPoE — اشتراك ثابت',       'icon': 'ethernet',      'color': 'green'},
+        {'key': 'block-sites',   'title': 'حجب مواقع',         'sub': 'منع الوصول',                'icon': 'ban',           'color': 'red'},
+        {'key': 'open-sites',    'title': 'فتح مواقع',         'sub': 'السماح بدون تسجيل دخول',    'icon': 'circle-check',  'color': 'teal'},
+        {'key': 'public-ip',     'title': 'تغيير IP',         'sub': 'IP عام جديد للخروج',        'icon': 'globe',         'color': 'amber'},
+        {'key': 'remote-access', 'title': 'اتصال عن بُعد',     'sub': 'نفق VPN للفنّي',             'icon': 'key',           'color': 'purple'},
+      ] %}
       <a class="mt-svc-chip mt-svc-chip--{{ svc.color }}"
          href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                           router_id=nas.id, service_key=svc.key) }}"
@@ -180,35 +97,6 @@
         <span>{{ svc.title }}</span>
       </a>
       {% endfor %}
-    </div>
-  </section>
-
-  {# ───── 🅱️ Option B: sidebar (vertical list on the side) ───── #}
-  <section class="mt-hub-section">
-    <div class="mt-hub-section-head">
-      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر — خيار B: قائمة جانبية</h2>
-      <p>قائمة عمودية على الجنب؛ المحتوى الرئيسي على اليسار.</p>
-    </div>
-    <div class="mt-svc-sidebar-layout">
-      <aside class="mt-svc-sidebar">
-        <h4>🛠️ الخدمات</h4>
-        <ul>
-          {% for svc in _services %}
-          <li>
-            <a class="mt-svc-sidebar-link mt-svc-sidebar-link--{{ svc.color }}"
-               href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                                router_id=nas.id, service_key=svc.key) }}">
-              <i class="fa-solid fa-{{ svc.icon }}"></i>
-              <span>{{ svc.title }}</span>
-            </a>
-          </li>
-          {% endfor %}
-        </ul>
-      </aside>
-      <div class="mt-svc-sidebar-hint">
-        <i class="fa-solid fa-arrow-left"></i>
-        اختر خدمة من القائمة لفتح إعدادها بأربع مراحل.
-      </div>
     </div>
   </section>
 
