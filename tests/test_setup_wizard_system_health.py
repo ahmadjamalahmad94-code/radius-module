@@ -58,6 +58,7 @@ def test_check_all_returns_expected_shape(app):
         "freeradius_responsive",
         "wizard_clients_directory",
         "wizard_invariants",
+        "wizard_nas_secrets",
         "recent_reconciler_drift",
         "wg_peers_dir",
         "clients_conf_syntax",

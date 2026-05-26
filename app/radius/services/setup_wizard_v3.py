@@ -987,6 +987,24 @@ class WizardV3Service:
         # here is a race or a manual nas_devices edit — in
         # either case we surface the error to the operator
         # rather than silently renaming.
+        # Pull the wizard-generated RADIUS secret from state.
+        # Without this, nas_devices.secret stays empty and the
+        # CoA dispatcher (find_all_nas_for_sessions) skips
+        # this NAS — disconnect + bandwidth-change actions
+        # fail with 'no enabled nas_devices row with a
+        # secret'. See postmortem #22.
+        radius_secret = str(
+            raw.get("radius_secret") or "",
+        ).strip()
+        if not radius_secret:
+            import logging
+            logging.getLogger(__name__).warning(
+                "v3 register: state_json has no radius_secret "
+                "for run %s — CoA disconnect/bandwidth will "
+                "fail until the secret is populated",
+                run_id,
+            )
+
         now = _now()
         try:
             with transaction() as conn:
@@ -1005,7 +1023,7 @@ class WizardV3Service:
                          created_at, updated_at,
                          connection_mode, vpn_peer_address,
                          vpn_interface)
-                    VALUES (?, ?, ?, ?, '', 'mikrotik',
+                    VALUES (?, ?, ?, ?, ?, 'mikrotik',
                             'router', 0, '', 1812, 1813,
                             3799, 8728, ?, ?, 0,
                             '', '', 0, '', 1, 0, 22,
@@ -1014,7 +1032,8 @@ class WizardV3Service:
                     """,
                     (
                         int(tenant_id), name, name[:24],
-                        vpn_ip, api_user, api_password or "",
+                        vpn_ip, radius_secret,
+                        api_user, api_password or "",
                         now, now, vpn_ip,
                     ),
                 )
@@ -1149,6 +1168,118 @@ class WizardV3Service:
             )
 
 
+def recover_nas_secrets_from_state_json(
+    *, tenant_id: int | None = None,
+) -> dict[str, Any]:
+    """One-shot recovery for postmortem #22: existing wizard-
+    created nas_devices rows that have empty secrets (from
+    before the fix) get backfilled from state_json.
+
+    Idempotent: only touches rows with empty secret AND a
+    matching state_json.radius_secret. Writes an audit_log
+    entry per change.
+
+    Returns a structured summary suitable for the operator
+    or a one-off CLI script. Safe to run any time."""
+    import json as _json
+    import logging
+    log = logging.getLogger(__name__)
+
+    sql = (
+        "SELECT n.id, n.tenant_id, n.name, n.address, "
+        "       n.metadata, w.id AS run_id, w.state_json "
+        "FROM nas_devices n "
+        "LEFT JOIN setup_wizard_runs w "
+        "  ON w.tenant_id = n.tenant_id "
+        " AND w.nas_device_id = n.id "
+        "WHERE n.tags = 'wizard-v3' "
+        "  AND COALESCE(n.secret, '') = ''"
+    )
+    params: tuple = ()
+    if tenant_id is not None:
+        sql += " AND n.tenant_id = ?"
+        params = (int(tenant_id),)
+    rows = db().execute(sql, params).fetchall()
+    summary: dict[str, Any] = {
+        "scanned": len(rows),
+        "fixed":   [],
+        "skipped": [],
+    }
+    for r in rows:
+        try:
+            state = _json.loads(r["state_json"] or "{}") or {}
+        except (TypeError, ValueError):
+            state = {}
+        secret = str(state.get("radius_secret") or "").strip()
+        if not secret:
+            # If the link via nas_device_id failed, fall back
+            # to matching by router_vpn_ip = nas_devices.address.
+            fallback = db().execute(
+                "SELECT state_json FROM setup_wizard_runs "
+                "WHERE tenant_id=? AND v3_state IN "
+                "  ('VERIFYING','REGISTERING','COMPLETE')",
+                (int(r["tenant_id"]),),
+            ).fetchall()
+            for f in fallback:
+                try:
+                    fs = _json.loads(f["state_json"] or "{}")
+                except (TypeError, ValueError):
+                    fs = {}
+                if (str(fs.get("router_vpn_ip") or "").strip()
+                        == r["address"]):
+                    secret = str(
+                        fs.get("radius_secret") or "",
+                    ).strip()
+                    break
+        if not secret:
+            summary["skipped"].append({
+                "nas_id": int(r["id"]),
+                "name": r["name"],
+                "address": r["address"],
+                "reason": "no radius_secret in state_json",
+            })
+            continue
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE nas_devices SET secret=?, updated_at=? "
+                "WHERE id=?",
+                (secret, _now(), int(r["id"])),
+            )
+        summary["fixed"].append({
+            "nas_id": int(r["id"]),
+            "name": r["name"],
+            "address": r["address"],
+        })
+        log.warning(
+            "recover_nas_secrets: backfilled secret for "
+            "NAS #%s (%s @ %s)",
+            r["id"], r["name"], r["address"],
+        )
+        try:
+            from .audit import RadiusAuditService
+            RadiusAuditService().record(
+                actor="setup_wizard_v3_recovery",
+                action="wizard_nas_secret_backfilled",
+                target_type="nas_device",
+                target_id=str(r["id"]),
+                payload={
+                    "name": r["name"],
+                    "address": r["address"],
+                    "tenant_id": int(r["tenant_id"]),
+                    "reason":
+                        "empty secret on wizard-v3-tagged NAS",
+                },
+                severity="warning",
+                result_status="recovered",
+            )
+        except Exception:  # noqa: BLE001
+            log.warning(
+                "audit failed for NAS %s recovery",
+                r["id"], exc_info=True,
+            )
+    return summary
+
+
 __all__ = [
     "STATE_COLLECTING", "STATE_PLANNING",
     "STATE_AWAITING_HANDSHAKE", "STATE_APPLYING_SERVER_PEER",
@@ -1156,4 +1287,5 @@ __all__ = [
     "STATE_BLOCKED",
     "V3Error", "V3InvalidState", "V3NotFound",
     "RunState", "V3Repo", "WizardV3Service",
+    "recover_nas_secrets_from_state_json",
 ]

@@ -441,6 +441,58 @@ def check_wg_peers_dir(
         )
 
 
+def check_wizard_nas_secrets() -> dict:
+    """Postmortem #22: every wizard-managed NAS row
+    (tags='wizard-v3') MUST have a non-empty secret column.
+    An empty secret means the CoA dispatcher will skip the
+    NAS and disconnect/bandwidth-change actions silently
+    fail with 'no enabled nas_devices row with a secret'."""
+    try:
+        rows = (
+            db()
+            .execute(
+                "SELECT id, name, address, "
+                "LENGTH(COALESCE(secret, '')) AS sec_len "
+                "FROM nas_devices "
+                "WHERE tags='wizard-v3' AND enabled=1",
+            )
+            .fetchall()
+        )
+        if not rows:
+            return _ok(
+                "أسرار RADIUS في NAS",
+                "لا توجد nas_devices مُدارة بالـ wizard بعد",
+                wizard_nas_count=0,
+            )
+        empty = [
+            {
+                "id": int(r["id"]),
+                "name": r["name"],
+                "address": r["address"],
+            }
+            for r in rows if int(r["sec_len"] or 0) == 0
+        ]
+        if empty:
+            return _fail(
+                "أسرار RADIUS في NAS",
+                f"{len(empty)} راوتر بدون سرّ في nas_devices "
+                "— سيفشل disconnect / تغيير السرعة. "
+                "نفّذ recovery لإصلاح السرّ من state_json.",
+                empty_nas=empty,
+                wizard_nas_count=len(rows),
+            )
+        return _ok(
+            "أسرار RADIUS في NAS",
+            f"كل الراوترات الـ {len(rows)} لديها سرّ صالح",
+            wizard_nas_count=len(rows),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _fail(
+            "أسرار RADIUS في NAS",
+            f"تعذّر فحص NAS: {exc}",
+        )
+
+
 def check_clients_conf_no_wildcards() -> dict:
     """Postmortem #17: clients.conf must not use unsupported
     $INCLUDE wildcards. Detects regression to the broken
@@ -502,6 +554,7 @@ def check_all() -> dict[str, Any]:
         "freeradius_responsive":    check_freeradius_responsive(),
         "wizard_clients_directory": check_wizard_clients_directory(),
         "wizard_invariants":        check_wizard_invariants(),
+        "wizard_nas_secrets":       check_wizard_nas_secrets(),
         "recent_reconciler_drift":  check_recent_reconciler_drift(),
         "wg_peers_dir":             check_wg_peers_dir(),
         "clients_conf_syntax":      check_clients_conf_no_wildcards(),
