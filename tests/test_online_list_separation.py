@@ -78,6 +78,15 @@ def _logged_in(app):
     return client
 
 
+def _csrf(client, path="/admin/radius/online"):
+    resp = client.get(path)
+    assert resp.status_code == 200
+    with client.session_transaction() as s:
+        token = s.get("_csrf_token")
+    assert token
+    return token
+
+
 def test_default_view_excludes_cards(seeded):
     resp = _logged_in(seeded).get("/admin/radius/online")
     assert resp.status_code == 200
@@ -92,3 +101,99 @@ def test_card_view_excludes_subscribers(seeded):
     body = resp.get_data(as_text=True)
     assert "2044" in body, "card view must include cards"
     assert "ahmad" not in body, "card view must EXCLUDE subscribers (R12.2)"
+
+
+def test_online_lock_mac_and_ip_save_selected_subscriber_session(app):
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+
+        with transaction() as c:
+            c.execute(
+                """
+                INSERT INTO subscribers(tenant_id, username, password, created_at)
+                VALUES (?,?,?,?)
+                """,
+                (1, "lock-sub", "pw", datetime.utcnow().isoformat() + "Z"),
+            )
+            _seed_radacct(c, username="lock-sub", session_id="lock-sess")
+
+        client = _logged_in(app)
+        token = _csrf(client)
+        mac_resp = client.post(
+            "/admin/radius/online/lock-mac",
+            data={
+                "_csrf_token": token,
+                "next": "/admin/radius/online",
+                "username": "lock-sub",
+                "session_id": "lock-sess",
+            },
+        )
+        ip_resp = client.post(
+            "/admin/radius/online/lock-ip",
+            data={
+                "_csrf_token": token,
+                "next": "/admin/radius/online",
+                "username": "lock-sub",
+                "session_id": "lock-sess",
+            },
+        )
+
+        assert mac_resp.status_code == 302
+        assert ip_resp.status_code == 302
+        row = db().execute(
+            "SELECT mac_lock, allowed_macs, static_ip FROM subscribers WHERE username = ?",
+            ("lock-sub",),
+        ).fetchone()
+        assert row["mac_lock"] == "AA:BB:CC:DD:EE:FF"
+        assert row["allowed_macs"] == "AA:BB:CC:DD:EE:FF"
+        assert row["static_ip"] == "10.20.30.254"
+
+
+def test_online_lock_mac_saves_selected_card_session(app):
+    now = datetime.utcnow().isoformat() + "Z"
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+
+        with transaction() as c:
+            plan_id = c.execute(
+                """
+                INSERT INTO access_plans(tenant_id, name, service_type, created_at)
+                VALUES (?,?,?,?)
+                """,
+                (1, "Card Lock Plan", "Hotspot", now),
+            ).lastrowid
+            batch_id = c.execute(
+                """
+                INSERT INTO card_batches(tenant_id, batch_code, plan_id, count, created_at)
+                VALUES (?,?,?,?,?)
+                """,
+                (1, "lock-batch", plan_id, 1, now),
+            ).lastrowid
+            c.execute(
+                """
+                INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, created_at)
+                VALUES (?,?,?,?,?,?)
+                """,
+                (1, batch_id, "lock-card", "pw", plan_id, now),
+            )
+            _seed_radacct(c, username="lock-card", session_id="lock-card-sess")
+
+        client = _logged_in(app)
+        token = _csrf(client, "/admin/radius/online?type=card")
+        resp = client.post(
+            "/admin/radius/online/lock-mac",
+            data={
+                "_csrf_token": token,
+                "next": "/admin/radius/online?type=card",
+                "username": "lock-card",
+                "session_id": "lock-card-sess",
+            },
+        )
+
+        assert resp.status_code == 302
+        assert resp.headers["Location"].endswith("/admin/radius/online?type=card")
+        row = db().execute(
+            "SELECT locked_mac FROM cards WHERE username = ?",
+            ("lock-card",),
+        ).fetchone()
+        assert row["locked_mac"] == "AA:BB:CC:DD:EE:FF"

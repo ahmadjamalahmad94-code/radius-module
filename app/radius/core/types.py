@@ -379,6 +379,15 @@ class OnlineSession:
     nas_port_type: str = ""
     rate_down_kbps: int = 0
     rate_up_kbps: int = 0
+    full_name: str = ""
+    service_type: str = ""
+    nas_port_id: str = ""
+    plan_down_kbps: int = 0
+    plan_up_kbps: int = 0
+    has_custom_speed: bool = False
+    has_temporary_speed: bool = False
+    manager_name: str = ""
+    expire_at: Optional[datetime] = None
 
 
 @dataclass(frozen=True)

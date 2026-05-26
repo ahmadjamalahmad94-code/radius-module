@@ -190,13 +190,36 @@ class SqliteAdapter(RadiusAdapter):
         from ..db.helpers import parse_dt
         try:
             rows = db().execute(
-                "SELECT acctsessionid, acctuniqueid, username, nasipaddress, "
-                "       nasporttype, framedipaddress, callingstationid, "
-                "       acctstarttime, acctupdatetime, "
-                "       acctinputoctets, acctoutputoctets, tenant_id "
-                "  FROM radacct "
-                " WHERE tenant_id = ? AND acctstoptime IS NULL "
-                " ORDER BY acctstarttime DESC "
+                "SELECT r.acctsessionid, r.acctuniqueid, r.username, "
+                "       r.nasipaddress, r.nasportid, r.nasporttype, "
+                "       r.framedipaddress, r.callingstationid, "
+                "       r.acctstarttime, r.acctupdatetime, "
+                "       r.acctinputoctets, r.acctoutputoctets, r.tenant_id, "
+                "       COALESCE(s.user_type, CASE WHEN c.id IS NOT NULL THEN 'card' ELSE 'subscriber' END) AS user_type, "
+                "       COALESCE(s.full_name, '') AS full_name, "
+                "       COALESCE(s.service_type, p.service_type, cp.service_type, '') AS service_type, "
+                "       COALESCE(p.name, cp.name, '') AS plan_name, "
+                "       COALESCE(p.speed_down_kbps, cp.speed_down_kbps, 0) AS plan_down_kbps, "
+                "       COALESCE(p.speed_up_kbps, cp.speed_up_kbps, 0) AS plan_up_kbps, "
+                "       COALESCE(s.download_speed_kbps, c.card_speed_down_kbps, 0) AS user_down_kbps, "
+                "       COALESCE(s.upload_speed_kbps, c.card_speed_up_kbps, 0) AS user_up_kbps, "
+                "       COALESCE(s.custom_speed, CASE WHEN c.card_speed_down_kbps > 0 OR c.card_speed_up_kbps > 0 THEN 1 ELSE 0 END, 0) AS custom_speed, "
+                "       COALESCE(s.temporary_speed, 0) AS temporary_speed, "
+                "       s.expire_at AS expire_at, "
+                "       COALESCE(a.full_name, a.username, '') AS manager_name "
+                "  FROM radacct r "
+                "  LEFT JOIN subscribers s "
+                "    ON s.tenant_id = r.tenant_id AND s.username = r.username "
+                "  LEFT JOIN access_plans p "
+                "    ON p.tenant_id = r.tenant_id AND p.id = s.plan_id "
+                "  LEFT JOIN cards c "
+                "    ON c.tenant_id = r.tenant_id AND c.username = r.username "
+                "  LEFT JOIN access_plans cp "
+                "    ON cp.tenant_id = r.tenant_id AND cp.id = c.plan_id "
+                "  LEFT JOIN admins a "
+                "    ON a.id = s.manager_id "
+                " WHERE r.tenant_id = ? AND r.acctstoptime IS NULL "
+                " ORDER BY r.acctstarttime DESC "
                 " LIMIT ?",
                 (_tid(), limit),
             ).fetchall()
@@ -484,7 +507,12 @@ def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
     """
     started = parse_dt(r["acctstarttime"]) or datetime.utcnow()
     updated = parse_dt(r["acctupdatetime"]) or started
+    expires = parse_dt(r["expire_at"]) if "expire_at" in r.keys() else None
     nas_ip = r["nasipaddress"] or ""
+    user_down = _safe_int(r["user_down_kbps"]) if "user_down_kbps" in r.keys() else 0
+    user_up = _safe_int(r["user_up_kbps"]) if "user_up_kbps" in r.keys() else 0
+    plan_down = _safe_int(r["plan_down_kbps"]) if "plan_down_kbps" in r.keys() else 0
+    plan_up = _safe_int(r["plan_up_kbps"]) if "plan_up_kbps" in r.keys() else 0
     return OnlineSession(
         username=r["username"] or "",
         session_id=r["acctsessionid"] or "",
@@ -497,6 +525,19 @@ def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
         bytes_in=_safe_int(r["acctinputoctets"]),
         bytes_out=_safe_int(r["acctoutputoctets"]),
         nas_port_type=r["nasporttype"] or "",
+        nas_port_id=r["nasportid"] or "",
+        plan_name=r["plan_name"] or "",
+        user_type=r["user_type"] or "subscriber",
+        full_name=r["full_name"] or "",
+        service_type=r["service_type"] or "",
+        plan_down_kbps=plan_down,
+        plan_up_kbps=plan_up,
+        rate_down_kbps=user_down or plan_down,
+        rate_up_kbps=user_up or plan_up,
+        has_custom_speed=bool(_safe_int(r["custom_speed"]) or user_down or user_up),
+        has_temporary_speed=bool(_safe_int(r["temporary_speed"])),
+        manager_name=r["manager_name"] or "",
+        expire_at=expires,
     )
 
 

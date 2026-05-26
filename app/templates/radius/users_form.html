@@ -464,6 +464,25 @@
     cursor: pointer;
   }
   .uf-mac-history-btn:hover{ background: var(--hub-brand-soft); }
+  .uf-mac-alert{
+    display: none;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #fecaca;
+    border-radius: 9px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .uf-mac-alert.is-shown{ display: inline-flex; }
+  .uf-net-input.has-error .hub-input{
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, .12);
+  }
   @media (max-width: 560px){ .uf-mac-add{ grid-template-columns: 1fr 42px; } }
 
   /* Pending-rule badge + visual variant on the inline rule card,
@@ -1415,6 +1434,7 @@
               </div>
               <div class="help">الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب.</div>
             </div>
+            <div class="uf-mac-alert" data-mac-alert role="alert" aria-live="polite"></div>
             <div class="uf-mac-list" data-mac-list></div>
             {% if login_macs %}
             <div class="uf-field full">
@@ -1643,8 +1663,23 @@
     var input = root.querySelector('[data-mac-input]');
     var addBtn = root.querySelector('[data-mac-add]');
     var list = root.querySelector('[data-mac-list]');
+    var alertBox = root.querySelector('[data-mac-alert]');
+    var inputWrap = input ? input.closest('.uf-net-input') : null;
     if (!hidden || !input || !addBtn || !list) return;
     var macs = [];
+    function showMacAlert(message){
+      if (!alertBox) return;
+      alertBox.textContent = message;
+      alertBox.classList.add('is-shown');
+      if (inputWrap) inputWrap.classList.add('has-error');
+    }
+    function clearMacAlert(){
+      if (alertBox) {
+        alertBox.textContent = '';
+        alertBox.classList.remove('is-shown');
+      }
+      if (inputWrap) inputWrap.classList.remove('has-error');
+    }
     function normalizeMac(raw){
       var hex = String(raw || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
       if (hex.length !== 12) return '';
@@ -1689,10 +1724,17 @@
     function addCurrent(){
       var mac = normalizeMac(input.value);
       if (!mac) {
+        showMacAlert('صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.');
         input.focus();
         return;
       }
-      if (macs.indexOf(mac) === -1) macs.push(mac);
+      if (macs.indexOf(mac) !== -1) {
+        showMacAlert('هذا الماك موجود مسبقًا في القائمة.');
+        input.focus();
+        return;
+      }
+      clearMacAlert();
+      macs.push(mac);
       input.value = '';
       sync();
     }
@@ -1708,12 +1750,20 @@
     root.querySelectorAll('[data-mac-pick]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var mac = normalizeMac(btn.dataset.macPick);
-        if (mac && macs.indexOf(mac) === -1) {
-          macs.push(mac);
-          sync();
+        if (!mac) {
+          showMacAlert('الماك الموجود في السجل غير صالح.');
+          return;
         }
+        if (macs.indexOf(mac) !== -1) {
+          showMacAlert('هذا الماك موجود مسبقًا في القائمة.');
+          return;
+        }
+        clearMacAlert();
+        macs.push(mac);
+        sync();
       });
     });
+    input.addEventListener('input', clearMacAlert);
     sync();
   });
 

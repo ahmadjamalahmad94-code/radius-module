@@ -23,6 +23,146 @@
 {% block page_title %}المتصلون الآن{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  .online-toolbar,
+  .online-filters{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .online-toolbar{justify-content:flex-start}
+  .online-filters{justify-content:space-between}
+  .online-filter-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .online-filter-fields select,
+  .online-filter-fields input{
+    min-width:190px;
+    height:36px;
+    border:1px solid var(--hub-border);
+    border-radius:6px;
+    padding:0 10px;
+    background:#fff;
+    color:var(--hub-text);
+  }
+  .online-action[aria-disabled="true"]{
+    pointer-events:none;
+    opacity:.48;
+    filter:grayscale(.2);
+  }
+  .online-col-menu{
+    position:relative;
+  }
+  .online-col-panel{
+    position:absolute;
+    z-index:20;
+    top:42px;
+    inset-inline-end:0;
+    width:220px;
+    max-height:420px;
+    overflow:auto;
+    padding:8px;
+    border:1px solid var(--hub-border);
+    border-radius:8px;
+    background:#fff;
+    box-shadow:0 16px 40px rgba(15,23,42,.12);
+    display:none;
+  }
+  .online-col-panel.is-open{display:block}
+  .online-col-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 6px;
+    border-radius:6px;
+    font-size:12.5px;
+    color:var(--hub-text);
+  }
+  .online-col-option:hover{background:var(--hub-surface-muted)}
+  .online-select-cell{width:46px;text-align:center}
+  .online-row.is-selected{background:#eef8ff}
+  .online-speed-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    border-radius:999px;
+    padding:3px 8px;
+    font-size:11px;
+    font-weight:800;
+    border:1px solid transparent;
+    white-space:nowrap;
+  }
+  .online-speed-pill.is-normal{background:#f4f6f8;color:#52606d;border-color:#dce3ea}
+  .online-speed-pill.is-custom{background:#fff6d8;color:#875500;border-color:#f2d071}
+  .online-speed-pill.is-temp{background:#eaf6ff;color:#075985;border-color:#addcff}
+  .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
+  .online-mini-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+  [data-online-sessions-page] .hub-table th,
+  [data-online-sessions-page] .hub-table td{
+    text-align:center;
+    vertical-align:middle;
+  }
+  [data-online-sessions-page] .hub-table .online-mini-actions{
+    justify-content:center;
+  }
+  .online-device-label{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    max-width:260px;
+    padding:5px 8px;
+    border:1px solid #c7d2fe;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#3730a3;
+    font-weight:800;
+    font-size:12px;
+    line-height:1.2;
+  }
+  .online-device-label i{font-size:13px}
+  .online-device-label span{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .online-device-meta{
+    margin-top:4px;
+    color:var(--hub-text-mute);
+    font-size:11px;
+    line-height:1.35;
+    max-width:260px;
+  }
+  @media (max-width: 760px){
+    .online-filter-fields select,
+    .online-filter-fields input{min-width:100%;width:100%}
+    .online-toolbar .hub-btn,
+    .online-filters .hub-btn{flex:1 1 auto;justify-content:center}
+  }
+</style>
+{% endblock %}
+
+{% macro fmt_speed(kbps) -%}
+  {%- set k = kbps|int -%}
+  {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
+  {%- elif k > 0 -%}{{ k }} Kbps
+  {%- else -%}—
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_duration(started_at, now) -%}
+  {%- if started_at -%}
+    {%- set sec = ((now - started_at).total_seconds() if now and started_at else 0)|int -%}
+    {%- if sec >= 86400 -%}{{ sec // 86400 }} يوم {{ (sec % 86400) // 3600 }}س
+    {%- elif sec >= 3600 -%}{{ sec // 3600 }}س {{ (sec % 3600) // 60 }}د
+    {%- else -%}{{ (sec // 60) or 1 }}د
+    {%- endif -%}
+  {%- else -%}—
+  {%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm data-online-sessions-page>
 
@@ -58,6 +198,31 @@
 </div>
 {% endif %}
 
+<form class="online-filters" method="get" action="{{ url_for('radius.online_list') }}">
+  {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
+  <div class="online-filter-fields">
+    <select name="nas" aria-label="السيرفر">
+      <option value="">كل السيرفرات</option>
+      {% for nas in nas_options %}
+        <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
+      {% endfor %}
+    </select>
+    <select name="plan" aria-label="العرض">
+      <option value="">كل العروض</option>
+      {% for plan in plan_options %}
+        <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
+      {% endfor %}
+    </select>
+    <select name="speed" aria-label="نوع السرعة">
+      <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
+      <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
+      <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
+      <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
+    </select>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
+  </div>
+</form>
+
 {% if items %}
 {% set _total_in  = items|sum(attribute='bytes_in') or 0 %}
 {% set _total_out = items|sum(attribute='bytes_out') or 0 %}
@@ -67,44 +232,188 @@
   {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
 </div>
 
+<div class="online-toolbar" data-online-actions>
+  <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" value="">
+    <input type="hidden" name="session_id" value="">
+    <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
+      <i class="fa-solid fa-scissors"></i> فصل الاتصال
+    </button>
+  </form>
+  <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="profile" href="#">
+    <i class="fa-solid fa-gauge-high"></i> عرض 360°
+  </a>
+  <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" value="">
+    <input type="hidden" name="session_id" value="">
+    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+      <i class="fa-solid fa-lock"></i> إغلاق بالماك
+    </button>
+  </form>
+  <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" value="">
+    <input type="hidden" name="session_id" value="">
+    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+      <i class="fa-solid fa-lock"></i> تثبيت IP
+    </button>
+  </form>
+  <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
+    <i class="fa-solid fa-pen-to-square"></i> تعديل
+  </a>
+  <form method="post" action="#" data-online-sms-form style="display:inline">
+    <input type="hidden" name="message" value="">
+    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+      <i class="fa-solid fa-paper-plane"></i> إرسال رسالة
+    </button>
+  </form>
+  <div class="online-col-menu" data-column-menu>
+    <button class="hub-btn hub-btn--secondary" type="button" data-column-toggle>
+      <i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة
+    </button>
+    <div class="online-col-panel" data-column-panel>
+      {% for key, label in [
+        ("select", "تحديد"),
+        ("rownum", "#"),
+        ("name", "الإسم"),
+        ("plan", "العرض"),
+        ("ip", "IP"),
+        ("nas", "NAS"),
+        ("device", "نوع الجهاز"),
+        ("down_speed", "سرعة التحميل"),
+        ("up_speed", "سرعة الرفع"),
+        ("speed_state", "تمييز السرعة"),
+        ("duration", "وقت الجلسة"),
+        ("download", "تحميل"),
+        ("upload", "رفع"),
+        ("mac", "ماك ادرس"),
+        ("manager", "المدير"),
+        ("service", "معرف الخدمة"),
+        ("port", "منفذ الاتصال للجهاز"),
+        ("actions", "إجراءات")
+      ] %}
+        <label class="online-col-option">
+          <input type="checkbox" data-col-choice="{{ key }}" checked>
+          <span>{{ label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
 {% call hub.section("الجلسات", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
     <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
       <thead>
         <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>المستخدم</th>
-          <th>IP</th>
-          <th>MAC</th>
-          <th>جهاز الشبكة</th>
-          <th>بدأت</th>
-          <th class="num">تنزيل</th>
-          <th class="num">رفع</th>
-          <th style="width:100px">إجراء</th>
+          <th class="online-select-cell" data-col="select">تحديد</th>
+          <th class="num" style="width:52px" data-col="rownum">#</th>
+          <th data-col="name">المستخدم</th>
+          <th data-col="plan">العرض</th>
+          <th data-col="ip">IP</th>
+          <th data-col="nas">NAS</th>
+          <th data-col="device">نوع الجهاز</th>
+          <th data-col="down_speed" class="num">سرعة التحميل</th>
+          <th data-col="up_speed" class="num">سرعة الرفع</th>
+          <th data-col="speed_state">السرعة</th>
+          <th data-col="duration">وقت الجلسة</th>
+          <th data-col="download" class="num">تحميل</th>
+          <th data-col="upload" class="num">رفع</th>
+          <th data-col="mac">ماك ادرس</th>
+          <th data-col="manager">المدير</th>
+          <th data-col="service">معرف الخدمة</th>
+          <th data-col="port">منفذ الاتصال</th>
+          <th data-col="actions" style="width:150px">إجراءات</th>
         </tr>
       </thead>
       <tbody>
         {% for s in items %}
-        <tr>
-          <td class="num mono">{{ loop.index }}</td>
-          <td><strong>{{ s.username }}</strong></td>
-          <td class="mono">{{ s.framed_ip or '—' }}</td>
-          <td class="mono">{{ s.mac_address or '—' }}</td>
-          <td class="mono small">{{ s.nas_address or '—' }}</td>
-          <td class="mono small">{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else '—' }}</td>
-          <td class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
-          <td class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
-          <td>
-            <form method="post" action="{{ url_for('radius.online_disconnect') }}"
-                  onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
-                  style="display:inline">
-              <input type="hidden" name="username" value="{{ s.username }}">
-              <input type="hidden" name="session_id" value="{{ s.session_id }}">
-              <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="قطع الجلسة">
-                <i class="fa-solid fa-plug-circle-xmark"></i> قطع
-              </button>
-            </form>
+        {% set _special = s.has_custom_speed or s.has_temporary_speed %}
+        {% set _is_card = s.user_type == 'card' %}
+        {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
+        {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
+        {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
+        <tr class="online-row {% if _special %}has-special-speed{% endif %}"
+            data-username="{{ s.username }}"
+            data-user-type="{{ s.user_type }}"
+            data-session-id="{{ s.session_id }}"
+            data-profile-url="{{ _profile_url }}"
+            data-edit-url="{{ _edit_url }}">
+          <td class="online-select-cell" data-col="select">
+            <input type="radio" name="online_session_select" aria-label="تحديد {{ s.username }}">
+          </td>
+          <td class="num mono" data-col="rownum">{{ loop.index }}</td>
+          <td data-col="name">
+            <strong>{{ s.full_name or s.username }}</strong>
+            {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
+          </td>
+          <td data-col="plan">{{ s.plan_name or '—' }}</td>
+          <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>
+          <td data-col="nas" class="mono small">{{ s.nas_address or '—' }}</td>
+          <td data-col="device">
+            {% if _device and _device.label %}
+              <span class="online-device-label" title="{{ _device.class_id or '' }}">
+                {% if _device.os_family %}
+                  {% set _os_icon = 'apple' if _device.os_family in ['ios', 'macos', 'apple'] else (_device.os_family if _device.os_family in ['android','windows','linux'] else 'android') %}
+                  <i class="fa-brands fa-{{ _os_icon }}"></i>
+                {% else %}
+                  <i class="fa-solid fa-network-wired"></i>
+                {% endif %}
+                <span>{{ _device.label }}</span>
+              </span>
+              <div class="online-device-meta">
+                {% if _device.brand or _device.model %}
+                  {{ _device.brand }}{% if _device.model %} · {{ _device.model }}{% endif %}
+                {% elif _device.class_id %}
+                  {{ _device.class_id }}
+                {% else %}
+                  DHCP
+                {% endif %}
+              </div>
+            {% else %}
+              <span class="hub-text-mute">—</span>
+            {% endif %}
+          </td>
+          <td data-col="down_speed" class="num mono">{{ fmt_speed(s.rate_down_kbps) }}</td>
+          <td data-col="up_speed" class="num mono">{{ fmt_speed(s.rate_up_kbps) }}</td>
+          <td data-col="speed_state">
+            {% if s.has_temporary_speed %}
+              <span class="online-speed-pill is-temp"><i class="fa-solid fa-clock"></i> مؤقتة</span>
+            {% elif s.has_custom_speed %}
+              <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> خاصة</span>
+            {% else %}
+              <span class="online-speed-pill is-normal">العرض</span>
+            {% endif %}
+          </td>
+          <td data-col="duration" class="mono small">{{ fmt_duration(s.started_at, now) }}</td>
+          <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
+          <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
+          <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>
+          <td data-col="manager">{{ s.manager_name or '—' }}</td>
+          <td data-col="service">{{ s.service_type or s.user_type or '—' }}</td>
+          <td data-col="port" class="mono small">{{ s.nas_port_id or s.nas_port_type or '—' }}</td>
+          <td data-col="actions">
+            <div class="online-mini-actions">
+              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="عرض 360°">
+                <i class="fa-solid fa-gauge-high"></i>
+              </a>
+              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="تعديل">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+                    onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
+                    style="display:inline">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <input type="hidden" name="username" value="{{ s.username }}">
+                <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="قطع">
+                  <i class="fa-solid fa-plug-circle-xmark"></i>
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -122,4 +431,148 @@
 {% endif %}
 
 </div>
+<script>
+(function(){
+  var page = document.querySelector('[data-online-sessions-page]');
+  if (!page) return;
+
+  var actions = Array.prototype.slice.call(page.querySelectorAll('.online-action'));
+  var disconnectForm = page.querySelector('[data-online-disconnect-form]');
+  var lockMacForm = page.querySelector('[data-online-lock-mac-form]');
+  var lockIpForm = page.querySelector('[data-online-lock-ip-form]');
+  var smsForm = page.querySelector('[data-online-sms-form]');
+  var rows = Array.prototype.slice.call(page.querySelectorAll('.online-row'));
+
+  function setDisabled(disabled){
+    actions.forEach(function(el){
+      el.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      if (el.tagName === 'BUTTON') el.disabled = disabled;
+    });
+    if (disconnectForm) {
+      var btn = disconnectForm.querySelector('button');
+      if (btn) btn.disabled = disabled;
+    }
+    if (lockMacForm) {
+      var macBtn = lockMacForm.querySelector('button');
+      if (macBtn) macBtn.disabled = disabled;
+    }
+    if (lockIpForm) {
+      var ipBtn = lockIpForm.querySelector('button');
+      if (ipBtn) ipBtn.disabled = disabled;
+    }
+    if (smsForm) {
+      var smsBtn = smsForm.querySelector('button');
+      if (smsBtn) smsBtn.disabled = disabled;
+    }
+  }
+
+  function selectRow(row){
+    rows.forEach(function(item){ item.classList.remove('is-selected'); });
+    row.classList.add('is-selected');
+    var radio = row.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+    setDisabled(false);
+
+    var username = row.getAttribute('data-username') || '';
+    var userType = row.getAttribute('data-user-type') || 'subscriber';
+    var sessionId = row.getAttribute('data-session-id') || '';
+    if (disconnectForm) {
+      disconnectForm.querySelector('[name="username"]').value = username;
+      disconnectForm.querySelector('[name="session_id"]').value = sessionId;
+      disconnectForm.onsubmit = function(){
+        return confirm('قطع جلسة «' + username + '»؟');
+      };
+    }
+    if (lockMacForm) {
+      lockMacForm.querySelector('[name="username"]').value = username;
+      lockMacForm.querySelector('[name="session_id"]').value = sessionId;
+      lockMacForm.onsubmit = function(){
+        return confirm('تثبيت MAC هذه الجلسة على «' + username + '»؟');
+      };
+    }
+    if (lockIpForm) {
+      var ipBtn = lockIpForm.querySelector('button');
+      lockIpForm.querySelector('[name="username"]').value = username;
+      lockIpForm.querySelector('[name="session_id"]').value = sessionId;
+      lockIpForm.onsubmit = function(){
+        if (userType === 'card') {
+          alert('تثبيت IP متاح للمشتركين فقط.');
+          return false;
+        }
+        return confirm('تثبيت IP هذه الجلسة على «' + username + '»؟');
+      };
+      if (ipBtn) ipBtn.disabled = userType === 'card';
+      ipBtn && ipBtn.setAttribute('aria-disabled', userType === 'card' ? 'true' : 'false');
+    }
+    if (smsForm) {
+      var smsBtn = smsForm.querySelector('button');
+      smsForm.action = '/admin/radius/users/' + encodeURIComponent(username) + '/sms';
+      smsForm.onsubmit = function(){
+        if (userType === 'card') {
+          alert('إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.');
+          return false;
+        }
+        var message = prompt('نص الرسالة إلى ' + username + ':');
+        if (!message || !message.trim()) return false;
+        smsForm.querySelector('[name="message"]').value = message.trim();
+        return true;
+      };
+      if (smsBtn) smsBtn.disabled = userType === 'card';
+      smsBtn && smsBtn.setAttribute('aria-disabled', userType === 'card' ? 'true' : 'false');
+    }
+    var profile = row.getAttribute('data-profile-url') || '#';
+    var edit = row.getAttribute('data-edit-url') || '#';
+    page.querySelectorAll('[data-action="profile"]').forEach(function(a){ a.href = profile; });
+    page.querySelectorAll('[data-action="edit"]').forEach(function(a){ a.href = edit; });
+  }
+
+  rows.forEach(function(row){
+    row.addEventListener('click', function(event){
+      if (event.target.closest('a,button,form')) return;
+      selectRow(row);
+    });
+    var radio = row.querySelector('input[type="radio"]');
+    if (radio) radio.addEventListener('change', function(){ selectRow(row); });
+  });
+  setDisabled(true);
+
+  var menu = page.querySelector('[data-column-menu]');
+  var panel = page.querySelector('[data-column-panel]');
+  var toggle = page.querySelector('[data-column-toggle]');
+  var storageKey = 'hoberadius.online.columns';
+  var hidden = {};
+  try { hidden = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; }
+  catch (e) { hidden = {}; }
+
+  function applyColumns(){
+    page.querySelectorAll('[data-col]').forEach(function(cell){
+      var key = cell.getAttribute('data-col');
+      cell.style.display = hidden[key] ? 'none' : '';
+    });
+    page.querySelectorAll('[data-col-choice]').forEach(function(input){
+      var key = input.getAttribute('data-col-choice');
+      input.checked = !hidden[key];
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(hidden)); } catch (e) {}
+  }
+
+  if (toggle && panel) {
+    toggle.addEventListener('click', function(){
+      panel.classList.toggle('is-open');
+    });
+    document.addEventListener('click', function(event){
+      if (menu && !menu.contains(event.target)) panel.classList.remove('is-open');
+    });
+  }
+
+  page.querySelectorAll('[data-col-choice]').forEach(function(input){
+    input.addEventListener('change', function(){
+      var key = input.getAttribute('data-col-choice');
+      hidden[key] = !input.checked;
+      applyColumns();
+    });
+  });
+  applyColumns();
+})();
+</script>
 {% endblock %}
