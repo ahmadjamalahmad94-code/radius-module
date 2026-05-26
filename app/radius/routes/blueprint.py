@@ -21,6 +21,10 @@ _PUBLIC_ENDPOINTS = {
     "radius.portal_card_purchase",
     "radius._radius_health",
     "radius._radius_healthz",
+    # Setup Wizard v3 — /wz/<short>.rsc must be reachable
+    # from MikroTik /tool fetch without admin session cookies.
+    # The secret short code in the URL path is the auth.
+    "radius.setup_wizard_v3_serve_script",
 }
 
 

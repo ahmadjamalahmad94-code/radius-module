@@ -362,11 +362,16 @@
       // reliable than pasting the full script (RouterOS
       // Terminal truncates lines >200 chars, dropping the
       // critical /user add and /radius add lines).
+      // NOTE: the path is /admin/radius/wz/<code>.rsc because
+      // the Flask blueprint has url_prefix=/admin/radius. The
+      // endpoint is whitelisted in _PUBLIC_ENDPOINTS so the
+      // router doesn't need a session cookie — the secret
+      // short code in the URL IS the authentication.
       const shortCode = data.short_code || "";
       if (shortCode) {
         const host = window.location.host;
         const fetchImport =
-          `/tool fetch url="http://${host}/wz/${shortCode}.rsc" mode=http dst-path="hr-setup.rsc"\n` +
+          `/tool fetch url="http://${host}/admin/radius/wz/${shortCode}.rsc" mode=http dst-path="hr-setup.rsc"\n` +
           `/import file-name="hr-setup.rsc"`;
         const pre = root.querySelector("[data-swz-fetch-import]");
         if (pre) pre.textContent = fetchImport;
