@@ -337,6 +337,28 @@ class RouterProvisioningService:
                     int(wizard_run_id),
                 ),
             )
+            # ── TTL stamp ───────────────────────────────────
+            # Mark this reservation as tentative — the janitor
+            # will reclaim it if the wizard doesn't promote it
+            # to vpn_verified within the TTL window.
+            from .setup_wizard_tentative_reclaimer import (
+                default_ttl as _ttl_default,
+            )
+            from datetime import datetime as _dt, timedelta as _td
+            ttl = _ttl_default()
+            started = _dt.utcnow()
+            expires = started + _td(minutes=ttl)
+            conn.execute(
+                """UPDATE router_provisioning_registry
+                   SET tentative_started_at=?,
+                       tentative_expires_at=?
+                   WHERE id=?""",
+                (
+                    started.isoformat() + "Z",
+                    expires.isoformat() + "Z",
+                    registry_id,
+                ),
+            )
             row = conn.execute(
                 "SELECT * FROM router_provisioning_registry WHERE id=?",
                 (registry_id,),

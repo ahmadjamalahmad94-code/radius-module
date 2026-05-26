@@ -176,6 +176,15 @@ def _start_workers(app: Flask) -> None:
         start_mt_reconciler()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
+    try:
+        from app.workers.setup_wizard_tentative_reclaimer_worker import (
+            start_setup_wizard_tentative_reclaimer,
+        )
+        start_setup_wizard_tentative_reclaimer(flask_app=app)
+    except Exception:  # noqa: BLE001
+        app.logger.exception(
+            "setup_wizard_tentative_reclaimer start failed"
+        )
 
 
 def _init_db(app: Flask) -> None:

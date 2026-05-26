@@ -223,6 +223,20 @@ class RouterLifecycleService:
                         now,
                     ),
                 )
+            # ── Promote to permanent on success ──────────────
+            # Once the router actually reaches a verified state,
+            # clear the TTL so the janitor leaves it alone.
+            from .setup_wizard_tentative_reclaimer import (
+                PERMANENT_STATES as _PERM,
+            )
+            if target in _PERM:
+                conn.execute(
+                    """UPDATE router_provisioning_registry
+                       SET tentative_expires_at='',
+                           tentative_started_at=''
+                       WHERE tenant_id=? AND id=?""",
+                    (int(tenant_id), int(registry_id)),
+                )
             updated = conn.execute(
                 """
                 SELECT * FROM router_provisioning_registry
