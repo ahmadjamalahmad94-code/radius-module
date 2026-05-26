@@ -942,12 +942,117 @@ class WizardV3Service:
                     "at": _now(),
                 }],
             )
+
+        # ── Surface the run in the fleet dashboard ─────────
+        # The fleet page reads from router_provisioning_registry.
+        # Without this insert, a completed v3 run would never
+        # appear in /admin/radius/setup-wizard/fleet — the
+        # operator would see the wizard say "✅ done" but the
+        # fleet stays empty. Idempotent: upserts by wizard
+        # run id so re-completing a run doesn't duplicate.
+        try:
+            self._upsert_fleet_registry(
+                tenant_id=tenant_id,
+                wizard_run_id=run_id,
+                router_label=name,
+                router_vpn_ip=vpn_ip,
+                api_user=api_user,
+                nas_device_id=nas_id,
+            )
+        except Exception:  # noqa: BLE001
+            # Don't fail the wizard finish on this — the
+            # operator's router is already in nas_devices and
+            # the tunnel is up. A missing fleet row is a
+            # visibility issue, not a functional one.
+            import logging
+            logging.getLogger(__name__).exception(
+                "v3 fleet-registry upsert failed for run %s",
+                run_id,
+            )
+
         return self._repo.update_state(
             tenant_id=tenant_id, run_id=run_id,
             state=STATE_COMPLETE,
             nas_device_id=nas_id,
             v3_completed_at=_now(),
         )
+
+    def _upsert_fleet_registry(
+        self, *,
+        tenant_id: int,
+        wizard_run_id: int,
+        router_label: str,
+        router_vpn_ip: str,
+        api_user: str,
+        nas_device_id: int,
+    ) -> None:
+        """Insert (or update) the matching row in
+        router_provisioning_registry so the fleet page picks
+        the run up. Permanent (no TTL) because the run has
+        reached COMPLETE — the tentative reclaimer leaves
+        these rows alone.
+
+        Derives allocation_index from the last octet of the
+        VPN IP (e.g. 10.10.0.13 → 13). This matches the
+        convention v2 uses for the unique-index constraint."""
+        # Allocation index = last octet of the assigned IP.
+        try:
+            last_octet = int(router_vpn_ip.rsplit(".", 1)[-1])
+        except (ValueError, AttributeError):
+            last_octet = int(wizard_run_id)
+        now = _now()
+        with transaction() as conn:
+            existing = conn.execute(
+                "SELECT id FROM router_provisioning_registry "
+                "WHERE tenant_id=? AND wizard_run_id=?",
+                (int(tenant_id), int(wizard_run_id)),
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    """UPDATE router_provisioning_registry SET
+                         router_label=?,
+                         status='verified',
+                         lifecycle_state='fully_onboarded',
+                         lifecycle_updated_at=?,
+                         router_vpn_ip=?,
+                         api_username=?,
+                         tentative_expires_at='',
+                         tentative_started_at='',
+                         updated_at=?
+                       WHERE id=?""",
+                    (
+                        router_label, now, router_vpn_ip,
+                        api_user, now, int(existing["id"]),
+                    ),
+                )
+                return
+            conn.execute(
+                """INSERT INTO router_provisioning_registry
+                     (tenant_id, wizard_run_id, router_label,
+                      router_identity, status, lifecycle_state,
+                      lifecycle_updated_at,
+                      vpn_pool_cidr, router_vpn_ip,
+                      server_vpn_ip,
+                      wireguard_interface_name,
+                      wireguard_peer_name,
+                      wireguard_public_key,
+                      wireguard_private_key_ref,
+                      radius_secret_ref,
+                      api_username, api_password_ref,
+                      allocation_index, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, 'verified',
+                           'fully_onboarded', ?,
+                           '10.10.0.0/24', ?, '10.10.0.1',
+                           'hr-wg', ?, '',
+                           '', '', ?, '', ?, ?, ?)""",
+                (
+                    int(tenant_id), int(wizard_run_id),
+                    router_label, router_label[:48],
+                    now, router_vpn_ip,
+                    f"wizard-v3-run-{wizard_run_id}",
+                    api_user, last_octet, now, now,
+                ),
+            )
 
 
 __all__ = [

@@ -272,21 +272,15 @@ class HotspotBootstrapPlanner:
                 ]
             )
 
-        # Tag every RADIUS row so subsequent runs can locate
-        # and update (rather than duplicate) the same entry.
-        radius_tag = f"HOBERADIUS_SETUP:{wizard_run_id}:hotspot"
+        # NOTE: RADIUS server entry is intentionally NOT added
+        # here. The Step 3 unified wizard script already added
+        # one RADIUS row covering all services (hotspot, ppp,
+        # login) with the run's pre-allocated secret. Adding
+        # another row from this script would duplicate the
+        # entry and confuse operators.
         lines.extend(
             [
                 "/ip dns set allow-remote-requests=yes",
-                "",
-                "# RADIUS entry — idempotent: skip if same-tag row exists",
-                f':if ([:len [/radius find where comment="{radius_tag}"]] = 0) do={{',
-                f'  /radius add service=hotspot address={radius_server_ip} secret="{radius_secret}" authentication-port=1812 accounting-port=1813 src-address={router_vpn_ip} timeout=3000ms comment="{radius_tag}"',
-                "} else={",
-                f'  /radius set [find where comment="{radius_tag}"] address={radius_server_ip} secret="{radius_secret}" src-address={router_vpn_ip}',
-                "}",
-                "",
-                "/radius incoming set accept=yes port=3799",
                 "",
             ]
         )
