@@ -90,6 +90,11 @@
   padding:28px 32px;
 }
 .swsvf-pane[hidden]{display:none}
+/* Same fix for inner flex elements that toggle via the HTML5 hidden
+   attribute — the explicit `display:flex` on their classes wins over
+   the user-agent `[hidden]{display:none}`, so we override here. */
+.swsvf-pane-foot[hidden],
+.swsvf-error-banner[hidden]{display:none !important}
 .swsvf-pane h2{
   margin:0 0 8px;color:var(--swsvf-ink);font-size:18px;font-weight:800;
 }

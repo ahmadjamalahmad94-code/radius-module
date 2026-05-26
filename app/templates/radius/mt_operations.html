@@ -375,6 +375,10 @@
     position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
     display:flex;align-items:center;justify-content:center;padding:20px;
   }
+  /* HTML5 `hidden` attribute by spec collapses to display:none, but
+     our explicit display:flex above wins — restore the override. The
+     bug shows up as a modal that ignores «إلغاء» / × and stays open. */
+  .mt-emergency-modal[hidden]{display:none !important}
   .mt-emergency-card{
     background:#fff;border-radius:14px;padding:28px;max-width:560px;
     width:100%;max-height:90vh;overflow-y:auto;position:relative;
