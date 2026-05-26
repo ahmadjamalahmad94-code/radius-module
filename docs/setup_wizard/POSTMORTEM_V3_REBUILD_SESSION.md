@@ -796,6 +796,74 @@ the convention to operators.
 
 ---
 
+## 18) Wizard-allocated IP collided with hardcoded clients.conf entry
+
+**Symptom.** After fixing the `$INCLUDE` syntax (issue #17),
+FreeRADIUS still wouldn't start. New error:
+
+```
+Failed to add duplicate client wizard-ccr2
+/data/freeradius-clients-wizard/wizard-run-42.conf[7]:
+Failed to add client router-42
+```
+
+**Root cause.** `deploy/freeradius/clients.conf` had a
+pre-existing hardcoded block from before the Setup Wizard
+existed:
+
+```
+client mt_vpn_10_10_0_2 {
+    ipaddr   = 10.10.0.2
+    secret   = 123123
+    ...
+}
+```
+
+The wizard's IP allocator picks the next free VPN IP by
+scanning `nas_devices.vpn_peer_address` for collisions. It
+does NOT look at hardcoded entries in clients.conf.
+
+After an emergency reset cleared `nas_devices`, the
+allocator saw 10.10.0.2 as free → assigned it to run #42 →
+wrote `wizard-run-42.conf` with `ipaddr = 10.10.0.2`.
+Result: two clients with the same ipaddr → FreeRADIUS
+refuses to start (it considers same-ipaddr clients as
+duplicates regardless of the client-block name).
+
+**Fix.** Removed the hardcoded `mt_vpn_10_10_0_2` block
+from `deploy/freeradius/clients.conf`. Replaced with a
+comment explaining why: the wizard now owns every VPN-range
+client. Manually-managed entries for routers OUTSIDE the
+VPN range (e.g. `mt_main_213_6_169_138` at a public IP)
+stay untouched.
+
+In-container immediate recovery (no rebuild needed):
+```bash
+docker exec hoberadius-freeradius sed -i \
+  '/^client mt_vpn_10_10_0_2 {/,/^}$/d' \
+  /etc/freeradius/clients.conf
+docker compose -f deploy/docker-compose.yml restart freeradius
+```
+
+**Prevention.**
+- **The wizard's IP allocator should also scan
+  clients.conf** (or any source of authoritative client
+  definitions) before assigning an IP. A follow-up slice
+  could add a config parser that walks the static
+  clients.conf and feeds the used-IP set the allocator
+  consults.
+- **Static clients.conf entries are an anti-pattern now
+  that the wizard exists.** Any entry that the wizard
+  could re-provision via its catalogue should move to
+  the wizard pipeline. Keep static entries only for
+  routers OUTSIDE the wizard's VPN range.
+- **When introducing a new authoritative system (here:
+  the wizard), audit existing manual configs for overlap.**
+  This block should have been removed in the same PR that
+  introduced the wizard-clients-wizard directory include.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

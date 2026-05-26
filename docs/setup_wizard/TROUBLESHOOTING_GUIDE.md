@@ -56,6 +56,32 @@ print(f'applied {n} migrations')
 If `n=0` and the column truly missing, the migration runner
 is reading the wrong DB path — check `HOBERADIUS_DB_PATH`.
 
+### `Failed to add duplicate client ...` after wizard run
+
+→ **Wizard allocated an IP already used by a hardcoded
+clients.conf entry.** Common pattern: legacy
+`mt_vpn_10_10_0_2` block conflicts with a new wizard run
+that got 10.10.0.2 from the allocator.
+
+**Recovery (no rebuild):**
+```bash
+docker exec hoberadius-freeradius sed -i \
+  '/^client mt_vpn_10_10_0_2 {/,/^}$/d' \
+  /etc/freeradius/clients.conf
+docker compose -f /opt/hoberadius/deploy/docker-compose.yml restart freeradius
+```
+
+**Permanent fix:** commit after issue #18 removed the
+conflicting block from `deploy/freeradius/clients.conf`.
+After `git pull && up -d --build freeradius` you won't hit
+this again. Future wizard runs are authoritative for the
+10.10.0.0/24 VPN range.
+
+If you find other `client X { ipaddr=10.10.0.Y ... }` blocks
+in clients.conf that overlap with the wizard's VPN range,
+move them to a `wizard-run-<id>.conf` (or delete them and
+re-run the wizard for that router).
+
 ### Subscriber login hangs with "no response" / `(0) No reply from server`
 
 → **FreeRADIUS is in a crash loop.** Check:
