@@ -304,6 +304,60 @@
   color: var(--c-primary-d);
 }
 
+/* RADIUS secret card — Step 3 result */
+
+.swz-radius-secret-card {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #f59e0b;
+  border-radius: var(--r-md);
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.swz-radius-secret-card > header strong {
+  color: #78350f;
+  display: block;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.swz-radius-secret-card > header p {
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.swz-radius-secret-card > header code {
+  background: #fef3c7;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 1px 5px;
+}
+
+.swz-radius-secret-card pre {
+  background: #1f2937;
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 13px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.swz-radius-secret-hint {
+  color: #92400e;
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+
+.swz-radius-secret-hint code {
+  background: #fde68a;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 1px 5px;
+}
+
 /* ─── Buttons ────────────────────────────────────────── */
 
 .swz-actions {

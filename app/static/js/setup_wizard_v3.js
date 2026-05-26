@@ -120,6 +120,22 @@
     state.scripts[target] = body || "";
   }
 
+  function renderClientsConfSnippet(secret, routerIp, runId) {
+    const card = root.querySelector("[data-swz-radius-secret]");
+    const pre = root.querySelector("[data-swz-clients-conf]");
+    if (!card || !pre) return;
+    const snippet =
+      `client router-${runId} {\n` +
+      `    ipaddr = ${routerIp || "10.10.0.X"}\n` +
+      `    secret = ${secret}\n` +
+      `    require_message_authenticator = no\n` +
+      `    nas_type = mikrotik\n` +
+      `}`;
+    pre.textContent = snippet;
+    state.scripts["clients_conf"] = snippet;
+    card.hidden = false;
+  }
+
   async function copyScript(target) {
     const text = state.scripts[target] || "";
     if (!text) {
@@ -164,15 +180,17 @@
       const body = cb.closest(".swz-service-card")
         .querySelector(".swz-service-body");
       if (body) body.hidden = !cb.checked;
-      // Auto-fill the RADIUS secret on first enable so the
-      // operator never sees a literal "REPLACE_ME" leaking
-      // into the generated script.
+      // Auto-fill the RADIUS secret on first enable. Prefer
+      // the secret allocated server-side at Step 3 (so router
+      // + hotspot + server clients.conf all share the SAME
+      // secret). Fall back to a fresh random one only when
+      // Step 3 hasn't run yet (operator skipped ahead).
       if (cb.checked && cb.dataset.swzServiceToggle === "hotspot") {
         const secretField = root.querySelector(
           "[data-swz-hotspot-secret]",
         );
         if (secretField && !secretField.value) {
-          secretField.value = generateSecret();
+          secretField.value = state.radiusSecret || generateSecret();
         }
       }
     });
@@ -323,6 +341,15 @@
         return;
       }
       showScript("step3", scriptText);
+      // Surface the RADIUS secret + clients.conf snippet so
+      // the operator knows what to paste on the server side.
+      const secret = data.radius_secret || "";
+      const routerVpnIp =
+        (data.run && data.run.router_vpn_ip) || "";
+      if (secret) {
+        state.radiusSecret = secret;  // cached for Step 5
+        renderClientsConfSnippet(secret, routerVpnIp, state.runId);
+      }
       const pasteBox = root.querySelector("[data-swz-step3-paste]");
       if (pasteBox) pasteBox.hidden = false;
       const genBtn = root.querySelector(
@@ -601,6 +628,10 @@
     const copyTarget = btn.dataset.swzCopyScript;
     if (copyTarget) {
       copyScript(copyTarget);
+      return;
+    }
+    if (btn.matches("[data-swz-copy-clients-conf]")) {
+      copyScript("clients_conf");
       return;
     }
 

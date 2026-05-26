@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526e">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526f">
 {% endblock %}
 
 {% block content %}
@@ -309,10 +309,11 @@ Steps:
     <div class="swz-script-card" data-swz-step3-script hidden>
       <header>
         <strong>✅ سكربت الربط جاهز</strong>
-        <p>الصقه في MikroTik Terminal على الراوتر، ثم انسخ
-           من شاشة MikroTik الكتلة التي تحتوي على
-           <code dir="ltr">public-key</code> والصقها في
-           الحقل أدناه.</p>
+        <p>يحتوي السكربت على WireGuard <strong>+</strong>
+           إعدادات RADIUS الكاملة. الصقه في MikroTik
+           Terminal، ثم انسخ سطر
+           <code dir="ltr">HOBERADIUS_PUBLIC_KEY=...</code>
+           والصقه في الحقل أدناه.</p>
       </header>
       <div class="swz-script-actions">
         <button type="button" class="swz-btn swz-btn-ghost"
@@ -322,6 +323,24 @@ Steps:
           <pre data-swz-step3-script-body></pre>
         </details>
       </div>
+    </div>
+
+    {# RADIUS secret display — only revealed after script generation. #}
+    <div class="swz-radius-secret-card" data-swz-radius-secret hidden>
+      <header>
+        <strong>🔐 سرّ RADIUS — احفظه على الخادم</strong>
+        <p>هذا السرّ مُضمَّن داخل سكربت الراوتر. للسماح
+           بالمصادقة من جهة الخادم، أضف السطر التالي إلى
+           <code dir="ltr">/etc/freeradius/clients.conf</code>
+           على الـ VPS:</p>
+      </header>
+      <pre data-swz-clients-conf dir="ltr"></pre>
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-copy-clients-conf>📋 نسخ سطر clients.conf</button>
+      <p class="swz-radius-secret-hint">
+        بعد إضافة السطر، أعد تشغيل FreeRADIUS:
+        <code dir="ltr">docker compose -f /opt/hoberadius/deploy/docker-compose.yml restart freeradius</code>
+      </p>
     </div>
 
     <div class="swz-field" data-swz-step3-paste hidden>
@@ -627,5 +646,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526e"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526f"></script>
 {% endblock %}

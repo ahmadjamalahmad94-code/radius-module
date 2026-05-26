@@ -495,6 +495,22 @@ class WizardV3Service:
             tenant_id=tenant_id,
         )
 
+        # Reuse an already-allocated RADIUS secret if the
+        # operator regenerates the script on the same run,
+        # otherwise mint a fresh 32-hex-char one. Stored in
+        # state_json so subsequent steps (hotspot, broadband,
+        # added services) read the same value instead of
+        # asking the operator to type it.
+        existing_state = self._repo._raw_state_json(
+            tenant_id, run_id,
+        )
+        radius_secret = str(
+            existing_state.get("radius_secret") or "",
+        ).strip()
+        if not radius_secret:
+            import secrets as _secrets
+            radius_secret = _secrets.token_hex(16)
+
         short_code = _next_short_code()
         body = self._render_unified_script(
             run_id=run_id,
@@ -504,6 +520,7 @@ class WizardV3Service:
             wg_listen_port=wg_listen_port,
             vps_endpoint_port=vps_endpoint_port,
             short_code=short_code,
+            radius_secret=radius_secret,
         )
         rec = self._repo.save_unified_script(
             tenant_id=tenant_id,
@@ -516,6 +533,7 @@ class WizardV3Service:
             state=STATE_AWAITING_HANDSHAKE,
             state_json_patch={
                 "router_vpn_ip": router_vpn_ip,
+                "radius_secret": radius_secret,
             },
             unified_script_short_code=short_code,
         )
@@ -525,6 +543,7 @@ class WizardV3Service:
             "short_code":   short_code,
             "sha256":       rec["sha256"],
             "expires_at":   rec["expires_at"],
+            "radius_secret": radius_secret,
         }
 
     def _allocate_router_vpn_ip(
@@ -571,6 +590,7 @@ class WizardV3Service:
         wg_listen_port: int,
         vps_endpoint_port: int,
         short_code: str,
+        radius_secret: str = "",
     ) -> str:
         """Build the one-paste RouterOS .rsc body.
 
@@ -579,10 +599,13 @@ class WizardV3Service:
           * creates fresh interface (generates new keys)
           * assigns the VPN IP
           * adds the peer to VPS
+          * adds RADIUS server entry (10.10.0.1 + pre-allocated
+            secret) — idempotent guard so re-pasting is safe
           * prints the new public key in a marker block the UI
             can highlight for the operator to copy back
         """
         vpn_tag = f"HOBERADIUS_SETUP:{run_id}:vpn"
+        radius_tag = f"HOBERADIUS_SETUP:{run_id}:radius"
         rtag = f"HOBERADIUS_RUN:{run_id}"
         lines = [
             "# ════════════════════════════════════════════════",
@@ -608,7 +631,18 @@ class WizardV3Service:
             f'/interface wireguard peers add interface="hr-wg" public-key="{vps_wg_pubkey}" endpoint-address="{vps_public_endpoint}" endpoint-port={vps_endpoint_port} allowed-address="10.10.0.1/32" persistent-keepalive=25s comment="{vpn_tag}:vps-peer {rtag}"',
             f'/ip route add dst-address="10.10.0.1/32" gateway="hr-wg" pref-src="{router_vpn_ip}" distance=1 comment="{vpn_tag} {rtag}"',
             "",
-            "# Step 4 — Print the new public key (copy + paste back)",
+            "# Step 4 — RADIUS server entry (idempotent)",
+            "# Adds 10.10.0.1 as the RADIUS server with a",
+            "# pre-allocated shared secret. The same secret must",
+            "# be present in FreeRADIUS clients.conf on the VPS",
+            "# (the wizard UI displays it to the operator after",
+            "# script generation). Re-pasting is safe: we remove",
+            "# any prior tag-matching row first, then add fresh.",
+            f'/radius remove [find where comment~"HOBERADIUS_SETUP:{run_id}:radius"]',
+            f'/radius add service=hotspot,ppp,login address=10.10.0.1 secret="{radius_secret}" authentication-port=1812 accounting-port=1813 src-address={router_vpn_ip} timeout=3000ms comment="{radius_tag} {rtag}"',
+            "/radius incoming set accept=yes port=3799",
+            "",
+            "# Step 5 — Print the new public key (copy + paste back)",
             "# IMPORTANT: each pasted line in MikroTik Terminal runs",
             "# in its own scope, so `:local` from one line is not",
             "# visible in the next. We inline the read into a single",
