@@ -202,6 +202,13 @@
           secretField.value = state.radiusSecret || generateSecret();
         }
       }
+      // If the operator enables Broadband AFTER discovery
+      // already ran for Hotspot, replay the discovered list
+      // into its grid so they see real interfaces (not the
+      // static ether3-5/sfp1 defaults).
+      if (cb.checked && cb.dataset.swzServiceToggle === "broadband") {
+        maybeReplayDiscoveryToBroadband();
+      }
     });
   }
 
@@ -487,19 +494,35 @@
   // ─── Optional services (step 5) ──────────────────────
 
   function renderDiscoveredInterfaces(interfaces) {
-    const grid = root.querySelector("[data-swz-hotspot-ifaces]");
-    if (!grid) return;
     if (!interfaces || !interfaces.length) {
       toast("لم يُعثر على منافذ صالحة.", "error");
       return;
     }
-    // Replace static defaults with what the router actually has.
+    // Cache the result so any service card that opens later
+    // can re-render from the same discovery (no need to ask
+    // the operator to re-run for each service).
+    state.discoveredInterfaces = interfaces;
+
+    // Hotspot grid: recommended-by-default (the common case).
+    renderGrid("[data-swz-hotspot-ifaces]", interfaces, true);
+    // Broadband grid: leave all unchecked so the operator
+    // explicitly opts in (don't auto-share with hotspot).
+    renderGrid("[data-swz-bb-ifaces]", interfaces, false);
+    toast(
+      `✅ تم اكتشاف ${interfaces.length} منفذ على الراوتر.`,
+      "ok",
+    );
+  }
+
+  function renderGrid(selector, interfaces, autoCheck) {
+    const grid = root.querySelector(selector);
+    if (!grid) return;
     grid.innerHTML = interfaces
       .map((it) => {
         const stateLabel = it.disabled
           ? " · معطّل"
           : it.running ? " · ✓" : "";
-        const checked = it.recommended ? "checked" : "";
+        const checked = autoCheck && it.recommended ? "checked" : "";
         return `
           <label class="swz-iface-check">
             <input type="checkbox" value="${it.name}" ${checked}>
@@ -510,10 +533,19 @@
         `;
       })
       .join("");
-    toast(
-      `✅ تم اكتشاف ${interfaces.length} منفذ على الراوتر.`,
-      "ok",
-    );
+  }
+
+  // Replay the discovery into the broadband grid whenever
+  // its body is revealed (so an operator who enables Broadband
+  // AFTER discovering for Hotspot doesn't see stale defaults).
+  function maybeReplayDiscoveryToBroadband() {
+    if (state.discoveredInterfaces && state.discoveredInterfaces.length) {
+      renderGrid(
+        "[data-swz-bb-ifaces]",
+        state.discoveredInterfaces,
+        false,
+      );
+    }
   }
 
   async function applyServerRadius(btn) {

@@ -339,6 +339,26 @@
   padding: 12px;
 }
 
+.swz-discover-mini {
+  background: #eff6ff;
+  border: 1px dashed var(--c-primary);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.swz-discover-mini > p {
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0 0 8px;
+}
+
+.swz-discover-mini > button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
 /* RADIUS secret card — Step 3 result */
 
 .swz-radius-secret-card {

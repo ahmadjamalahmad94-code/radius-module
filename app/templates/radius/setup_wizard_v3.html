@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526m">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526n">
 {% endblock %}
 
 {% block content %}
@@ -584,6 +584,22 @@ Steps:
         <div class="swz-service-body" hidden>
           <div class="swz-field">
             <label>منافذ PPPoE (اختر واحداً أو أكثر)</label>
+
+            <div class="swz-discover-mini" data-swz-bb-discover-mini>
+              <p>
+                💡 إذا لم تقم بالاكتشاف في بطاقة Hotspot،
+                اضغط هنا لجلب منافذ الراوتر الحقيقيّة:
+              </p>
+              <button type="button" class="swz-btn swz-btn-ghost"
+                      data-swz-action="discover-via-api">
+                🔍 اكتشاف تلقائي
+              </button>
+              <button type="button" class="swz-btn swz-btn-ghost"
+                      data-swz-toggle-paste-discover>
+                📋 لصق إخراج /interface print
+              </button>
+            </div>
+
             <div class="swz-iface-grid" data-swz-bb-ifaces>
               <label class="swz-iface-check">
                 <input type="checkbox" value="ether3" checked>
@@ -763,5 +779,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526m"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526n"></script>
 {% endblock %}
