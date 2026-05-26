@@ -411,6 +411,45 @@ def setup_wizard_v3_phase_plan(run_id: int, phase: str):
     })
 
 
+def setup_wizard_v3_handshake_status(run_id: int):
+    """Probe the router via the WireGuard tunnel. Returns
+    `tunnel_up: true` only when the API port is actually
+    reachable — meaning the handshake really completed and
+    the operator can advance from Step 4 safely."""
+    from ..services.setup_wizard_v3_handshake_probe import (
+        probe_tunnel_alive,
+    )
+
+    try:
+        run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound as exc:
+        return _err(str(exc), status=404, code="not_found")
+    except V3Error as exc:
+        return _err(str(exc))
+
+    result = probe_tunnel_alive(run.router_vpn_ip or "")
+
+    # When the tunnel becomes alive for the first time, advance
+    # the state machine — same path as the manual 'confirm'
+    # button used to take. Safe to call repeatedly: the v3
+    # service's mark_handshake_observed() is idempotent across
+    # AWAITING_HANDSHAKE → APPLYING_SERVER_PEER → VERIFYING.
+    if result.get("tunnel_up"):
+        try:
+            _svc().mark_handshake_observed(
+                tenant_id=_tid(), run_id=run_id,
+            )
+        except V3InvalidState:
+            # Already advanced — fine.
+            pass
+        except V3Error:
+            # Don't fail the probe response on this — the
+            # tunnel IS up, that's the headline info.
+            pass
+
+    return jsonify({"ok": True, **result})
+
+
 def setup_wizard_v3_configure_server_radius(run_id: int):
     """One-click: write the FreeRADIUS clients.conf snippet for
     this wizard run + trigger a server-side reload. Replaces
@@ -638,6 +677,12 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "setup_wizard_v3_phase_plan",
         setup_wizard_v3_phase_plan,
         methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/runs/<int:run_id>/handshake-status",
+        "setup_wizard_v3_handshake_status",
+        setup_wizard_v3_handshake_status,
+        methods=["GET"],
     )
     bp.add_url_rule(
         "/setup-wizard-v3/runs/<int:run_id>/configure-server-radius",

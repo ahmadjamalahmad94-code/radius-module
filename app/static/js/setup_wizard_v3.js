@@ -447,30 +447,72 @@
   }
 
   let handshakePoll = null;
+  let handshakePollStartMs = 0;
 
   function startHandshakePolling() {
     if (handshakePoll) clearInterval(handshakePoll);
+    handshakePollStartMs = Date.now();
+    // Hide the manual fallback button at first. We only show
+    // it after 60s of polling without a real tunnel-up signal.
+    const manualBtn = root.querySelector(
+      '[data-swz-action="mark-handshake"]',
+    );
+    if (manualBtn) manualBtn.hidden = true;
+
     handshakePoll = setInterval(async () => {
       try {
-        const data = await api("GET", `/runs/${state.runId}/state`);
-        const run = data.run || {};
-        if (run.v3_state === "verifying" || run.v3_state === "registering"
-            || run.handshake_first_seen_at) {
+        // Real check: probe the tunnel via TCP to router's API
+        // port. Only `tunnel_up: true` means the handshake
+        // actually completed and we can advance safely.
+        const data = await api(
+          "GET",
+          `/runs/${state.runId}/handshake-status`,
+        );
+        const elapsed = Math.floor(
+          (Date.now() - handshakePollStartMs) / 1000,
+        );
+        const status = root.querySelector("[data-swz-verify-status]");
+        if (data.tunnel_up) {
           clearInterval(handshakePoll);
           handshakePoll = null;
-          const status = root.querySelector("[data-swz-verify-status]");
           if (status) {
             status.innerHTML = `
-              <div class="swz-verify-spinner" style="font-size:48px">✅</div>
-              <strong>تم اكتشاف Handshake!</strong>
-              <p>الاتصال يعمل — تابع للخطوة التالية.</p>
+              <div class="swz-verify-spinner" style="font-size:48px;animation:none">✅</div>
+              <strong>تم اكتشاف الاتصال!</strong>
+              <p>
+                الـ tunnel شغّال — منفذ
+                <code dir="ltr">${data.probe_port}</code>
+                مفتوح على
+                <code dir="ltr">${data.router_vpn_ip}</code>
+                خلال ${data.latency_ms} ms.
+              </p>
+              <p style="color:#10b981;font-weight:700;margin-top:8px">
+                ⏭️ ننتقل للخطوة التالية تلقائياً...
+              </p>
             `;
           }
-          // Auto-advance after 1.5 seconds.
           setTimeout(() => showStep(5), 1500);
+        } else {
+          // Update the spinner card with live elapsed time +
+          // hint about what's likely blocking.
+          if (status) {
+            const hint = elapsed > 30
+              ? "إذا تأخّر أكثر من 60 ثانية، تأكّد من فتح UDP 51820 من جهة المزوّد."
+              : "تأكّد أن السكربت لُصق وأُفّذ بنجاح على الراوتر.";
+            status.innerHTML = `
+              <div class="swz-verify-spinner">⏳</div>
+              <strong>بانتظار اكتمال الاتصال... (${elapsed}s)</strong>
+              <p>${hint}</p>
+              <p style="font-size:12px;color:#94a3b8;margin-top:6px">
+                آخر فحص: ${data.error || "غير متاح"}
+              </p>
+            `;
+          }
+          // Reveal the manual-confirm fallback after 60s.
+          if (elapsed >= 60 && manualBtn) manualBtn.hidden = false;
         }
       } catch (err) {
-        // Silent — polling errors shouldn't toast on every tick.
+        // Silent — network blips shouldn't spam toasts.
       }
     }, 3000);
   }

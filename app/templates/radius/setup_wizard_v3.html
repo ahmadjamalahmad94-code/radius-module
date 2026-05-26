@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526n">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526o">
 {% endblock %}
 
 {% block content %}
@@ -415,8 +415,9 @@ Steps:
       <button type="button" class="swz-btn swz-btn-ghost"
               data-swz-back="4">→ السابق</button>
       <button type="button" class="swz-btn swz-btn-success"
-              data-swz-action="mark-handshake">
-        ✅ تأكيد: الاتصال يعمل
+              data-swz-action="mark-handshake" hidden
+              title="يظهر بعد 60 ثانية من المحاولة. استخدمه فقط إذا كنت متأكّداً أن الاتصال يعمل لكن الفحص التلقائي لا يكتشفه.">
+        ⚠️ تخطّي الفحص يدوياً
       </button>
     </footer>
   </section>
@@ -779,5 +780,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526n"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526o"></script>
 {% endblock %}
