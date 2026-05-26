@@ -55,6 +55,24 @@ class UsersService:
         return saved
 
     def update(self, *, actor: str, sub: Subscriber) -> Subscriber:
+        # Defense in depth — protect the stored password from being
+        # silently wiped by a form submit (or any caller) that didn't
+        # carry the password field. RADIUS PAP/CHAP needs the cleartext
+        # password; once erased the subscriber can never log in again,
+        # and the only fix is asking the operator to remember/reset
+        # the password. So: if the incoming DTO has an empty password
+        # AND the subscriber already exists with a non-empty one,
+        # preserve the existing value. The dedicated reset_password()
+        # path is the ONLY way to clear/change a password.
+        if not (sub.password or "").strip():
+            try:
+                existing = self._adapter.get_account(sub.username)
+                if existing and (existing.password or "").strip():
+                    from dataclasses import replace
+                    sub = replace(sub, password=existing.password)
+            except Exception:  # noqa: BLE001
+                # New subscriber or lookup failure — let _validate decide.
+                pass
         _validate(sub)
         saved = self._adapter.upsert_account(sub)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
