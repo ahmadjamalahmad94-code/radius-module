@@ -198,6 +198,263 @@ def setup_wizard_v3_router_services_dashboard(router_id: int):
     )
 
 
+def setup_wizard_v3_router_discover_interfaces(router_id: int):
+    """Router-scoped interface discovery for the Services Dashboard.
+
+    Calls the MikroTik API over the established VPN tunnel using the
+    credentials stored in `nas_devices` for this router. Used by every
+    per-service partial that needs to let the operator pick a real
+    interface (Hotspot, Broadband, etc.) instead of typing names.
+
+    Returns: { ok, interfaces: [{name, type, running, disabled, recommended}, ...] }
+    """
+    from ..db.repos import nas_repo
+    from ..services.setup_wizard_v3_interface_discovery import (
+        InterfaceDiscoveryError, discover_via_api,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err(
+            "لا توجد كلمة مرور API لهذا الراوتر — افتح صفحة تعديل الراوتر وأدخلها.",
+            status=409, code="no_api_password",
+        )
+    try:
+        interfaces = discover_via_api(
+            router_vpn_ip=nas.address,
+            api_user=nas.api_user or "admin",
+            api_password=nas.api_password,
+            port=int(nas.api_port or 8728),
+            use_tls=bool(nas.api_use_tls),
+        )
+    except InterfaceDiscoveryError as exc:
+        return _err(str(exc), status=502, code="discovery_failed")
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر اكتشاف الواجهات: {exc}", status=500,
+                    code="discovery_error")
+    return jsonify({"ok": True, "interfaces": interfaces})
+
+
+def _plan_hotspot(router_id: int, inputs: dict) -> dict:
+    """Shared planner call used by both preview and apply.
+    Returns: (plan_result_dict, http_status, error_dict_or_none)."""
+    from ..services.setup_wizard_hotspot_phase_planner import (
+        HotspotPhasePlanner,
+    )
+    try:
+        result = HotspotPhasePlanner().plan(run_id=router_id, inputs=inputs)
+    except Exception as exc:  # noqa: BLE001
+        return None, 500, {"error": f"planner failed: {exc}",
+                           "code": "planner_failed"}
+    return result, 200, None
+
+
+def _hotspot_preview_bullets(plan_result) -> list[str]:
+    """Translate a HotspotPhasePlanner result into plain-Arabic
+    bullets for the «معاينة» pane. Never expose the .rsc body."""
+    bullets = []
+    notes = list(getattr(plan_result, "notes", ()) or ())
+    if notes:
+        bullets.extend(notes)
+    # Fallback summary if the planner didn't emit notes.
+    if not bullets:
+        bullets.append("سيتم إنشاء خادم Hotspot جديد على الواجهات المختارة.")
+        bullets.append("سيُضاف خادم DHCP يوزّع عناوين IP على الأجهزة المتصلة.")
+        bullets.append("سيُربط بـ RADIUS الخاص بهذا الخادم لتفعيل الحسابات.")
+    warnings = list(getattr(plan_result, "warnings", ()) or ())
+    for w in warnings:
+        bullets.append(f"⚠ تنبيه: {w}")
+    return bullets
+
+
+def setup_wizard_v3_hotspot_preview(router_id: int):
+    """Phase 2 «معاينة»: run the Hotspot planner and turn the result
+    into plain-Arabic bullets. No router contact, no script exposure."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+
+    body = _body() or {}
+    inputs = {
+        "selected_interfaces": list(body.get("selected_interfaces") or []),
+        "subnet_base": str(body.get("subnet_base") or "10.20.0.0/16"),
+        "mode": "manual",
+        "blocked_interfaces": list(body.get("blocked_interfaces") or []),
+        "blocked_network_cidrs": [],
+    }
+    if not inputs["selected_interfaces"]:
+        return _err(
+            "اختر واجهة شبكة واحدة على الأقل قبل المعاينة.",
+            status=400, code="no_interface_selected",
+        )
+
+    plan_result, status, err = _plan_hotspot(router_id, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+
+    if plan_result.blocking_errors:
+        # Surface planner blockers as friendly bullets instead of
+        # raw codes.
+        return jsonify({
+            "ok": False,
+            "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+            "bullets": _hotspot_preview_bullets(plan_result),
+        }), 409
+
+    return jsonify({
+        "ok": True,
+        "bullets": _hotspot_preview_bullets(plan_result),
+    })
+
+
+def setup_wizard_v3_hotspot_apply(router_id: int):
+    """Phase 3 «إرسال»: re-plan (idempotent) + push the resulting
+    script to the router via LiveRouterExecutor. Returns per-substep
+    progress in one shot — the UI animates that on the client side."""
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+
+    body = _body() or {}
+    inputs = {
+        "selected_interfaces": list(body.get("selected_interfaces") or []),
+        "subnet_base": str(body.get("subnet_base") or "10.20.0.0/16"),
+        "mode": "manual",
+        "blocked_interfaces": list(body.get("blocked_interfaces") or []),
+        "blocked_network_cidrs": [],
+    }
+    if not inputs["selected_interfaces"]:
+        return _err("اختر واجهة شبكة واحدة على الأقل.",
+                    status=400, code="no_interface_selected")
+
+    plan_result, status, err = _plan_hotspot(router_id, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+        }), 409
+    if not plan_result.script or not plan_result.script.strip():
+        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+                    status=400, code="empty_script")
+
+    try:
+        executor = get_router_executor()
+        exec_result = executor.execute_forward(
+            router_id=router_id, script=plan_result.script,
+        )
+    except ExecutorNotConfigured:
+        return _err(
+            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم. "
+            "راجع المسؤول لتفعيل LiveRouterExecutor.",
+            status=503, code="executor_not_configured",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ غير متوقّع عند الإرسال: {exc}",
+                    status=500, code="apply_error")
+
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "apply_failed",
+            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "stderr": exec_result.stderr or "",
+            "duration_ms": exec_result.duration_ms,
+        }), 502
+
+    return jsonify({
+        "ok": True,
+        "duration_ms": exec_result.duration_ms,
+        "substeps": [
+            {"key": "connect", "status": "done"},
+            {"key": "send",    "status": "done"},
+            {"key": "commit",  "status": "done"},
+        ],
+    })
+
+
+def setup_wizard_v3_hotspot_verify(router_id: int):
+    """Phase 4 «تحقّق»: real probe on the router. Reads
+    /ip/hotspot/server/print and /ip/dhcp-server/print to confirm
+    the Hotspot + DHCP services are actually running. Each check
+    returns ok/fail with an Arabic label."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+
+    checks = []
+
+    # Lazy import — only when this endpoint is hit.
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+                    status=500, code="mt_client_load_error")
+
+    cfg = {
+        "host": nas.address,
+        "username": nas.api_user or "admin",
+        "password": nas.api_password,
+        "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls),
+        "timeout": 8.0,
+    }
+
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check 1: Hotspot server present & enabled.
+            servers = list(mt.print_("/ip/hotspot/server/print"))
+            running = [s for s in servers
+                       if str(s.get("disabled", "")).lower() in ("false", "no", "")]
+            checks.append({
+                "label": "خادم Hotspot يعمل",
+                "status": "ok" if running else "fail",
+            })
+            # Check 2: At least one DHCP server tied to a hotspot
+            # interface.
+            dhcp = list(mt.print_("/ip/dhcp-server/print"))
+            dhcp_active = [d for d in dhcp
+                           if str(d.get("disabled", "")).lower() in ("false", "no", "")]
+            checks.append({
+                "label": "خادم DHCP يوزّع العناوين",
+                "status": "ok" if dhcp_active else "fail",
+            })
+            # Check 3: Hotspot profile points at RADIUS (best effort).
+            profiles = list(mt.print_("/ip/hotspot/profile/print"))
+            radius_linked = any(
+                str(p.get("use-radius", "")).lower() in ("true", "yes")
+                for p in profiles
+            )
+            checks.append({
+                "label": "تفعيل مصادقة RADIUS",
+                "status": "ok" if radius_linked else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -782,6 +1039,33 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/<service_key>",
         "setup_wizard_v3_router_service_flow",
         setup_wizard_v3_router_service_flow,
+        methods=["GET"],
+    )
+    # Per-router interface discovery (shared by Hotspot + Broadband
+    # configure forms — operator picks from a real list).
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/discover-interfaces",
+        "setup_wizard_v3_router_discover_interfaces",
+        setup_wizard_v3_router_discover_interfaces,
+        methods=["POST"],
+    )
+    # Hotspot service flow endpoints (Phase 2/3/4 of the shell).
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/hotspot/preview",
+        "setup_wizard_v3_hotspot_preview",
+        setup_wizard_v3_hotspot_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/hotspot/apply",
+        "setup_wizard_v3_hotspot_apply",
+        setup_wizard_v3_hotspot_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/hotspot/verify",
+        "setup_wizard_v3_hotspot_verify",
+        setup_wizard_v3_hotspot_verify,
         methods=["GET"],
     )
     bp.add_url_rule(
