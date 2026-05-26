@@ -529,11 +529,30 @@
     const form = root.querySelector(
       "[data-swz-discover-api-form]",
     );
+    const userField = root.querySelector(
+      "[data-swz-discover-api-user]",
+    );
+    const passField = root.querySelector(
+      "[data-swz-discover-api-pass]",
+    );
+    // Pre-fill from the credentials the unified script baked
+    // into the router during Step 3. Operator only edits if
+    // they want to use a different account.
+    if (userField && !userField.value && state.apiUser) {
+      userField.value = state.apiUser;
+    }
+    if (passField && !passField.value && state.apiPassword) {
+      passField.value = state.apiPassword;
+    }
     if (form && form.hidden) {
       // First click reveals the credentials form.
       form.hidden = false;
+      const haveCreds = state.apiUser && state.apiPassword;
       toast(
-        "أدخل بيانات API للراوتر ثم اضغط الزر مرّة أخرى.",
+        haveCreds
+          ? "تم تعبئة بيانات API تلقائياً من سكربت الخطوة 3. "
+            + "اضغط الزر مرّة أخرى للاكتشاف."
+          : "أدخل بيانات API للراوتر ثم اضغط الزر مرّة أخرى.",
         "info",
       );
       return;
@@ -655,7 +674,8 @@
       const ifaceList = interfaces.join(", ");
       toast(
         `✅ سكربت Hotspot جاهز لـ ${interfaces.length} منفذ `
-        + `(${ifaceList}). لا تنسَ حفظ سرّ RADIUS.`,
+        + `(${ifaceList}). ⚠️ السكربت سيحذف أي إعدادات Hotspot `
+        + `سابقة لـ HobeRadius على نفس المنافذ.`,
         "ok",
       );
     } catch (err) {
@@ -712,7 +732,8 @@
       }
       showScript("broadband", plan.script);
       toast(
-        `✅ سكربت Broadband جاهز لـ ${interfaces.length} منفذ.`,
+        `✅ سكربت Broadband جاهز لـ ${interfaces.length} منفذ. `
+        + `⚠️ السكربت سيحذف أي إعدادات PPPoE سابقة لـ HobeRadius.`,
         "ok",
       );
     } catch (err) {

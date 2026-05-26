@@ -199,6 +199,42 @@ class HotspotBootstrapPlanner:
             )
 
         lines: list[str] = []
+        # ── Header + cleanup warning ─────────────────────────
+        # The first thing we tell the operator: this script
+        # WILL remove any prior HobeRadius hotspot config on
+        # the selected interfaces. Without this prepend, a
+        # second paste would create duplicate hotspot servers
+        # / DHCP servers / NAT rules / RADIUS rows.
+        lines.extend(
+            [
+                "# ════════════════════════════════════════════════",
+                "# HobeRadius Hotspot Setup",
+                f"# Run: {wizard_run_id}",
+                "# ⚠️  WARNING: this script REMOVES any prior",
+                "#     HobeRadius hotspot config on the same",
+                "#     interfaces before adding fresh state.",
+                "#     Tag scope: HOBE_HOTSPOT_<interface>.",
+                "#     Existing non-HobeRadius configs are",
+                "#     left untouched.",
+                "# ════════════════════════════════════════════════",
+                "",
+                "# ── Cleanup of prior HobeRadius hotspot rows ──",
+            ]
+        )
+        for plan in port_plans:
+            comment = plan["comment"]
+            lines.extend(
+                [
+                    f'/ip firewall nat remove [find where comment~"{comment}"]',
+                    f'/ip hotspot remove [find where name="{plan["server_name"]}"]',
+                    f'/ip hotspot profile remove [find where name="{plan["profile_name"]}"]',
+                    f'/ip dhcp-server remove [find where name="{plan["dhcp_server_name"]}"]',
+                    f'/ip dhcp-server network remove [find where comment~"{comment}"]',
+                    f'/ip pool remove [find where name="{plan["pool_name"]}"]',
+                    f'/ip address remove [find where comment~"{comment}"]',
+                ]
+            )
+        lines.append("")
         # Bootstrap the interface-list named "WAN" so the NAT
         # rule below has a valid match. Idempotent: skips if
         # the list or the member already exists. This block is
