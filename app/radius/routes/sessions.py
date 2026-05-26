@@ -3,8 +3,9 @@ routes للجلسات المباشرة (M3 — قراءة + disconnect واحد)
 """
 from __future__ import annotations
 
+import json
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -83,6 +84,161 @@ def _normalise_mac(raw: str) -> str:
     return ":".join(hex_only[i:i + 2] for i in range(0, 12, 2))
 
 
+def _parse_datetime(raw) -> datetime | None:
+    if not raw:
+        return None
+    if isinstance(raw, datetime):
+        dt = raw
+    else:
+        value = str(raw).strip()
+        if not value:
+            return None
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+                try:
+                    dt = datetime.strptime(value[:19], fmt)
+                    break
+                except ValueError:
+                    dt = None
+            if dt is None:
+                return None
+    if dt.tzinfo:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def _parse_meta(raw) -> dict:
+    try:
+        data = json.loads(raw or "{}") or {}
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _meta_value(meta: dict, key: str) -> str:
+    advanced = meta.get("advanced") if isinstance(meta.get("advanced"), dict) else {}
+    return str(advanced.get(key) or meta.get(key) or "").strip()
+
+
+def _int_or_zero(raw) -> int:
+    try:
+        return int(float(str(raw or "").strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _temporary_speed_states(usernames: set[str], now: datetime) -> dict[str, dict]:
+    if not usernames:
+        return {}
+
+    from ..db.connection import db
+
+    placeholders = ",".join("?" for _ in usernames)
+    rows = db().execute(
+        f"""
+        SELECT username, temporary_speed, custom_speed, metadata, updated_at
+          FROM subscribers
+         WHERE tenant_id = ?
+           AND username IN ({placeholders})
+        """,
+        (_tid(), *sorted(usernames)),
+    ).fetchall()
+
+    states: dict[str, dict] = {}
+    for row in rows:
+        username = row["username"]
+        has_flag = bool(row["temporary_speed"])
+        meta = _parse_meta(row["metadata"])
+        started_at = _parse_datetime(_meta_value(meta, "temporary_speed_from"))
+        ends_at = _parse_datetime(_meta_value(meta, "temporary_speed_to"))
+        duration_min = _int_or_zero(_meta_value(meta, "temporary_speed_duration_minutes"))
+        if not started_at:
+            started_at = _parse_datetime(row["updated_at"])
+        if not ends_at and started_at and duration_min > 0:
+            ends_at = started_at + timedelta(minutes=duration_min)
+
+        unknown = bool(has_flag and not ends_at)
+        remaining = int((ends_at - now).total_seconds()) if ends_at else None
+        active = bool(has_flag and (unknown or (remaining is not None and remaining > 0)))
+        states[username] = {
+            "active": active,
+            "unknown": unknown,
+            "expired": bool(has_flag and ends_at and not active),
+            "remaining_seconds": max(0, remaining) if remaining is not None else None,
+            "ends_at": ends_at.isoformat(timespec="seconds") if ends_at else "",
+            "custom_speed": bool(row["custom_speed"]),
+        }
+    return states
+
+
+def _temporary_speed_end(row) -> datetime | None:
+    meta = _parse_meta(row["metadata"])
+    started_at = _parse_datetime(_meta_value(meta, "temporary_speed_from"))
+    ends_at = _parse_datetime(_meta_value(meta, "temporary_speed_to"))
+    duration_min = _int_or_zero(_meta_value(meta, "temporary_speed_duration_minutes"))
+    if not started_at:
+        started_at = _parse_datetime(row["updated_at"])
+    if not ends_at and started_at and duration_min > 0:
+        ends_at = started_at + timedelta(minutes=duration_min)
+    return ends_at
+
+
+def _expire_temporary_speeds(now: datetime) -> None:
+    from ..db.connection import db
+
+    rows = db().execute(
+        """
+        SELECT id, temporary_speed, custom_speed, metadata, updated_at
+          FROM subscribers
+         WHERE tenant_id = ?
+           AND temporary_speed = 1
+        """,
+        (_tid(),),
+    ).fetchall()
+    expired_ids: list[int] = []
+    expired_temp_only_ids: list[int] = []
+    for row in rows:
+        ends_at = _temporary_speed_end(row)
+        if ends_at and ends_at <= now:
+            subscriber_id = int(row["id"])
+            expired_ids.append(subscriber_id)
+            if not bool(row["custom_speed"]):
+                expired_temp_only_ids.append(subscriber_id)
+    if not expired_ids:
+        return
+
+    placeholders = ",".join("?" for _ in expired_ids)
+    db().execute(
+        f"""
+        UPDATE subscribers
+           SET temporary_speed = 0,
+               updated_at = ?
+         WHERE tenant_id = ?
+           AND id IN ({placeholders})
+        """,
+        (now.isoformat(timespec="seconds"), _tid(), *expired_ids),
+    )
+    if expired_temp_only_ids:
+        temp_only_placeholders = ",".join("?" for _ in expired_temp_only_ids)
+        db().execute(
+            f"""
+            UPDATE subscribers
+               SET bandwidth_control_enabled = 0,
+                   download_speed_kbps = 0,
+                   upload_speed_kbps = 0,
+                   updated_at = ?
+             WHERE tenant_id = ?
+               AND id IN ({temp_only_placeholders})
+            """,
+            (now.isoformat(timespec="seconds"), _tid(), *expired_temp_only_ids),
+        )
+    db().commit()
+
+
 def online_list():
     """R12.2: فصل صارم بين شاشتين:
       - افتراضي (`/online`)          → المشتركون فقط (يستثني كل usernames
@@ -99,6 +255,14 @@ def online_list():
     selected_nas = (request.args.get("nas") or "").strip()
     selected_plan = (request.args.get("plan") or "").strip()
     selected_speed = (request.args.get("speed") or "").strip().lower()
+    selected_group_raw = (request.args.get("group_id") or "").strip()
+    selected_group_id = int(selected_group_raw) if selected_group_raw.isdigit() else None
+    now = datetime.utcnow()
+    try:
+        _expire_temporary_speeds(now)
+    except Exception:
+        pass
+
     try:
         items = svc.list(limit=500)
         error = None
@@ -121,17 +285,49 @@ def online_list():
 
     nas_options = sorted({it.nas_address for it in items if it.nas_address})
     plan_options = sorted({it.plan_name for it in items if it.plan_name})
+    group_options = []
+    if selected_group_id:
+        try:
+            from ..db.repos import subscriber_groups_repo
+            member_names = set(
+                subscriber_groups_repo.list_member_usernames(_tid(), selected_group_id)
+            )
+            items = [it for it in items if it.username in member_names]
+            group_options = subscriber_groups_repo.list_groups(_tid())
+        except Exception:
+            selected_group_id = None
+            group_options = []
+    else:
+        try:
+            from ..db.repos import subscriber_groups_repo
+            group_options = subscriber_groups_repo.list_groups(_tid())
+        except Exception:
+            group_options = []
+
+    temp_speed_state_by_username = _temporary_speed_states(
+        {it.username for it in items if it.username},
+        now,
+    )
+
+    def _has_active_temporary_speed(item) -> bool:
+        state = temp_speed_state_by_username.get(item.username)
+        if state is None:
+            return bool(item.has_temporary_speed)
+        return bool(state.get("active"))
+
+    def _has_special_speed(item) -> bool:
+        return bool(item.has_custom_speed or _has_active_temporary_speed(item))
 
     if selected_nas:
         items = [it for it in items if it.nas_address == selected_nas]
     if selected_plan:
         items = [it for it in items if it.plan_name == selected_plan]
     if selected_speed == "special":
-        items = [it for it in items if it.has_custom_speed or it.has_temporary_speed]
+        items = [it for it in items if _has_special_speed(it)]
     elif selected_speed == "temporary":
-        items = [it for it in items if it.has_temporary_speed]
+        items = [it for it in items if _has_active_temporary_speed(it)]
     elif selected_speed == "normal":
-        items = [it for it in items if not it.has_custom_speed and not it.has_temporary_speed]
+        items = [it for it in items if not _has_special_speed(it)]
 
     device_by_mac = {}
     try:
@@ -159,8 +355,11 @@ def online_list():
         selected_nas=selected_nas,
         selected_plan=selected_plan,
         selected_speed=selected_speed,
+        selected_group_id=selected_group_id,
+        group_options=group_options,
         device_by_mac=device_by_mac,
-        now=datetime.utcnow(),
+        temp_speed_state_by_username=temp_speed_state_by_username,
+        now=now,
     )
 
 

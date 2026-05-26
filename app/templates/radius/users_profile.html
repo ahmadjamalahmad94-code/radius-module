@@ -132,6 +132,384 @@
     margin-top:6px; font-size:11.5px; color:var(--hub-text-mute);
     display:flex; justify-content:space-between;
   }
+  .p360-pane .cc-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-lg);
+    box-shadow: var(--hub-sh-sm);
+    overflow: hidden;
+    margin-bottom: var(--hub-gap-section);
+  }
+  .p360-pane .cc-section-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--hub-border);
+  }
+  .p360-pane .cc-section-head-icon{
+    width:28px;
+    height:28px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#EEE9FE;
+    color:var(--hub-brand-ink);
+    border-radius:8px;
+    font-size:12.5px;
+    flex:0 0 auto;
+  }
+  .p360-pane .cc-section-head-title{
+    font-weight:800;
+    color:var(--hub-text);
+    font-size:13.5px;
+    flex:1;
+    min-width:0;
+  }
+  .p360-pane .cc-section-head-link{
+    font-size:12px;
+    color:var(--hub-text-mute);
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-weight:700;
+  }
+  .p360-pane .cc-section-body{ padding:16px 18px; }
+  .p360-pane .cc-timeline{
+    position:relative;
+    padding-inline-start:30px;
+  }
+  .p360-pane .cc-timeline::before{
+    content:"";
+    position:absolute;
+    inset-inline-start:9px;
+    top:12px;
+    bottom:12px;
+    width:2px;
+    background:linear-gradient(180deg, transparent 0%, var(--hub-border) 10%, var(--hub-border) 90%, transparent 100%);
+  }
+  .p360-pane .cc-tl-item{
+    position:relative;
+    display:grid;
+    grid-template-columns:1fr max-content;
+    gap:16px;
+    padding:12px 8px 12px 0;
+    border-radius:8px;
+  }
+  .p360-pane .cc-tl-item:hover{
+    background:linear-gradient(90deg, transparent 0%, rgba(107,90,237,.04) 100%);
+  }
+  .p360-pane .cc-tl-item + .cc-tl-item{
+    margin-top:4px;
+    border-top:1px dashed var(--hub-border);
+  }
+  .p360-pane .cc-tl-dot{
+    position:absolute;
+    inset-inline-start:-23px;
+    top:17px;
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background:var(--hub-bg-card);
+    border:4px solid var(--hub-brand);
+    box-shadow:0 0 0 3px rgba(107,90,237,.16), 0 2px 4px rgba(107,90,237,.20);
+  }
+  .p360-pane .cc-tl-dot.green{border-color:#26B673;box-shadow:0 0 0 3px rgba(38,182,115,.18),0 2px 4px rgba(38,182,115,.20);animation:p360-tl-pulse 2.4s ease-in-out infinite}
+  .p360-pane .cc-tl-dot.amber{border-color:#F39C12;box-shadow:0 0 0 3px rgba(243,156,18,.18),0 2px 4px rgba(243,156,18,.20)}
+  .p360-pane .cc-tl-dot.blue{border-color:#3D8DD6;box-shadow:0 0 0 3px rgba(61,141,214,.18),0 2px 4px rgba(61,141,214,.20)}
+  .p360-pane .cc-tl-dot.grey{border-color:#94A0AE;box-shadow:0 0 0 3px rgba(148,160,174,.18),0 2px 4px rgba(148,160,174,.20)}
+  @keyframes p360-tl-pulse{
+    0%,100%{box-shadow:0 0 0 3px rgba(38,182,115,.18),0 2px 4px rgba(38,182,115,.20)}
+    50%{box-shadow:0 0 0 8px rgba(38,182,115,0),0 2px 4px rgba(38,182,115,.10)}
+  }
+  .p360-pane .cc-tl-title{
+    font-size:13.5px;
+    font-weight:800;
+    color:var(--hub-text);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+  }
+  .p360-pane .cc-tl-desc{
+    font-size:12.5px;
+    color:var(--hub-text-soft);
+    line-height:1.55;
+  }
+  .p360-pane .cc-tl-time{
+    text-align:end;
+    white-space:nowrap;
+    align-self:start;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    margin-top:2px;
+  }
+  .p360-pane .cc-tl-time .hour{
+    font-weight:800;
+    color:var(--hub-text);
+    font-size:13px;
+    font-family:var(--hub-mono);
+  }
+  .p360-pane .cc-tl-time .day{
+    font-size:10.5px;
+    color:var(--hub-text-mute);
+    font-family:var(--hub-mono);
+  }
+  .p360-pane .cc-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:800;
+    white-space:nowrap;
+  }
+  .p360-pane .cc-pill .dot{width:6px;height:6px;border-radius:50%}
+  .p360-pane .cc-pill-green{background:#E1F6EC;color:#157F4E}
+  .p360-pane .cc-pill-green .dot{background:#26B673;box-shadow:0 0 0 3px rgba(38,182,115,.20)}
+  .p360-pane .cc-pill-blue{background:#E3EDF9;color:#1E5C9F}
+  .p360-pane .cc-pill-blue .dot{background:#3D8DD6}
+  .p360-pane .cc-pill-purple{background:#EEE9FE;color:var(--hub-brand-ink)}
+  .p360-pane .cc-pill-purple .dot{background:var(--hub-brand)}
+  .p360-pane .cc-pill-grey{background:#EDEAE1;color:#5B6470}
+  .p360-pane .cc-pill-grey .dot{background:#94A0AE}
+  .p360-pane .cc-pill-cyan{background:#DEF3F8;color:#0F627A}
+  .p360-pane .cc-pill-cyan .dot{background:#1F8FB0}
+  .p360-session-summary{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:10px;
+    margin-bottom:var(--hub-gap-section);
+  }
+  .p360-session-stat{
+    background:var(--hub-bg-card);
+    border:1px solid var(--hub-border);
+    border-radius:8px;
+    padding:12px 14px;
+    box-shadow:var(--hub-sh-sm);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-width:0;
+  }
+  .p360-session-stat .label{
+    font-size:11px;
+    font-weight:800;
+    color:var(--hub-text-mute);
+  }
+  .p360-session-stat .value{
+    margin-top:4px;
+    font-size:16px;
+    font-weight:900;
+    color:var(--hub-text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .p360-session-stat .sub{
+    margin-top:2px;
+    font-size:10.5px;
+    color:var(--hub-text-mute);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .p360-session-stat .icon{
+    width:34px;
+    height:34px;
+    border-radius:9px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#EEE9FE;
+    color:var(--hub-brand-ink);
+    flex:0 0 auto;
+  }
+  .p360-pane .cc-sessions-table-wrap{
+    overflow-x:auto;
+    border-radius:12px;
+    border:1px solid #E5E0F5;
+    background:#fff;
+    scrollbar-width:thin;
+  }
+  .p360-pane .cc-sessions-table-wrap::-webkit-scrollbar{height:10px}
+  .p360-pane .cc-sessions-table-wrap::-webkit-scrollbar-thumb{background:#D5CCF5;border-radius:5px}
+  .p360-pane .cc-sessions-table{
+    width:100%;
+    min-width:1180px;
+    border-collapse:collapse;
+    direction:rtl;
+  }
+  .p360-pane .cc-sessions-table thead th{
+    position:sticky;
+    top:0;
+    z-index:1;
+    background:#F4F1FE;
+    color:#475569;
+    font-size:11.5px;
+    font-weight:800;
+    text-align:center;
+    padding:11px 12px;
+    white-space:nowrap;
+    border-bottom:1px solid #E5E0F5;
+  }
+  .p360-pane .cc-sessions-table tbody td{
+    padding:10px 12px;
+    font-size:12.5px;
+    color:#1F2937;
+    border-bottom:1px solid #F1EEFA;
+    vertical-align:middle;
+    white-space:nowrap;
+    text-align:center;
+  }
+  .p360-pane .cc-sessions-table tbody tr:last-child td{border-bottom:0}
+  .p360-pane .cc-sessions-table tbody tr:hover td{background:#FBFAFF}
+  .p360-pane .cc-sessions-table tbody tr.is-live td{background:rgba(34,197,94,.04)}
+  .p360-pane .cc-sessions-table tbody tr.is-live td:first-child{border-inline-start:3px solid #22C55E}
+  .p360-pane .cc-sessions-table td.num{text-align:center;font-variant-numeric:tabular-nums}
+  .p360-pane .cc-sessions-table td.mono{
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:12px;
+    color:#475569;
+    direction:ltr;
+    text-align:center;
+  }
+  .p360-pane .cc-sessions-table td.mono.small{font-size:11px}
+  .p360-pane .cc-sessions-table td.muted{color:#94A3B8}
+  .p360-pane .cc-sessions-table td strong{color:var(--hub-brand-ink);font-weight:900}
+  .p360-pane .cc-sessions-table .cc-device-cell{
+    white-space:nowrap;
+    max-width:220px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .p360-pane .cc-device-label{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:3px 9px;
+    border-radius:8px;
+    background:#F4F1FE;
+    color:#5B4BD6;
+    border:1px solid #E5E0F5;
+    font-size:11.5px;
+    font-weight:700;
+    max-width:100%;
+    overflow:hidden;
+  }
+  .p360-pane .cc-device-label > span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .p360-pane .cc-device-label i{font-size:11px;opacity:.85}
+  .p360-chart-card{
+    background:var(--hub-bg-card);
+    border:1px solid var(--hub-border);
+    border-radius:8px;
+    box-shadow:var(--hub-sh-sm);
+    overflow:hidden;
+    margin-bottom:var(--hub-gap-section);
+  }
+  .p360-chart-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--hub-border);
+  }
+  .p360-chart-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:900;
+    color:var(--hub-text);
+  }
+  .p360-chart-meta{
+    font-size:12px;
+    color:var(--hub-text-mute);
+    font-weight:800;
+  }
+  .p360-bars{
+    padding:14px 18px 18px;
+    display:grid;
+    gap:10px;
+  }
+  .p360-bar-row{
+    display:grid;
+    grid-template-columns:112px 1fr 128px;
+    gap:12px;
+    align-items:center;
+    font-size:12px;
+  }
+  .p360-bar-label{
+    font-family:ui-monospace,Consolas,monospace;
+    color:var(--hub-text-mute);
+    direction:ltr;
+    text-align:start;
+  }
+  .p360-bar-track{
+    height:12px;
+    border-radius:999px;
+    overflow:hidden;
+    background:#F1EEFA;
+    display:flex;
+  }
+  .p360-bar-down{background:#3D8DD6}
+  .p360-bar-up{background:#26B673}
+  .p360-bar-total{
+    font-family:ui-monospace,Consolas,monospace;
+    direction:ltr;
+    text-align:end;
+    color:var(--hub-text);
+    font-weight:800;
+  }
+  .p360-live-panel{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:10px;
+    margin-bottom:var(--hub-gap-section);
+  }
+  .p360-live-card{
+    border:1px solid var(--hub-border);
+    background:var(--hub-bg-card);
+    border-radius:8px;
+    padding:14px;
+    box-shadow:var(--hub-sh-sm);
+  }
+  .p360-live-card .label{
+    color:var(--hub-text-mute);
+    font-size:11px;
+    font-weight:800;
+  }
+  .p360-live-card .value{
+    margin-top:4px;
+    color:var(--hub-text);
+    font-size:20px;
+    font-weight:900;
+    direction:ltr;
+    text-align:start;
+  }
+  .p360-live-card .sub{
+    margin-top:3px;
+    color:var(--hub-text-mute);
+    font-size:11.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  @media (max-width: 760px){
+    .p360-pane .cc-tl-item{grid-template-columns:1fr;gap:4px}
+    .p360-pane .cc-tl-time{text-align:start}
+    .p360-bar-row{grid-template-columns:1fr}
+    .p360-bar-total{text-align:start}
+  }
 </style>
 {% endblock %}
 
@@ -142,6 +520,23 @@
   {%- elif mb >= 1024 -%}{{ "%.2f GB"|format(mb / 1024) }}
   {%- else -%}{{ "%.0f MB"|format(mb) }}
   {%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_bytes_raw(bytes) -%}
+  {%- set b = bytes|int -%}
+  {%- if b >= 1099511627776 -%}{{ "%.2f TB"|format(b / 1099511627776) }}
+  {%- elif b >= 1073741824 -%}{{ "%.2f GB"|format(b / 1073741824) }}
+  {%- elif b >= 1048576 -%}{{ "%.2f MB"|format(b / 1048576) }}
+  {%- elif b >= 1024 -%}{{ "%.1f KB"|format(b / 1024) }}
+  {%- else -%}{{ b }} B{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_rate_bps(bps) -%}
+  {%- set b = bps|int -%}
+  {%- if b >= 1000000000 -%}{{ "%.2f Gbps"|format(b / 1000000000) }}
+  {%- elif b >= 1000000 -%}{{ "%.2f Mbps"|format(b / 1000000) }}
+  {%- elif b >= 1000 -%}{{ "%.1f Kbps"|format(b / 1000) }}
+  {%- else -%}{{ b }} bps{%- endif -%}
 {%- endmacro %}
 
 {% macro fmt_speed(kbps) -%}
@@ -157,6 +552,16 @@
   {%- elif s >= 3600 -%}{{ (s // 3600) }}س {{ ((s % 3600) // 60) }}د
   {%- elif s >= 60 -%}{{ (s // 60) }}د
   {%- else -%}{{ s }}ث{%- endif -%}
+{%- endmacro %}
+
+{% macro dt_split(value) -%}
+  {%- set raw = (value|string if value else '')|replace('T', ' ')|replace('Z', '') -%}
+  {%- if raw and raw != 'None' -%}
+    {%- set parts = raw.split(' ', 1) -%}
+    <span class="day">{{ parts[0] }}</span>
+    {%- if parts|length > 1 -%}<span class="hour">{{ parts[1][:8] }}</span>{%- endif -%}
+  {%- else -%}—
+  {%- endif -%}
 {%- endmacro %}
 
 {% macro status_pill(s) -%}
@@ -219,7 +624,7 @@
   </button>
   <button type="button" class="p360-tab" data-tab="events">
     <i class="fa-solid fa-clock-rotate-left"></i> الأحداث
-    {% if own_events %}<span class="count">{{ own_events|length }}</span>{% endif %}
+    {% if activity_events %}<span class="count">{{ activity_events|length }}</span>{% endif %}
   </button>
   <button type="button" class="p360-tab" data-tab="invoices">
     <i class="fa-solid fa-file-invoice-dollar"></i> فواتير
@@ -349,27 +754,36 @@
 
 {# ─── pane: EVENTS (own events) ─── #}
 <div class="p360-pane" data-pane="events">
-  {% if own_events %}
-    {% call hub.section("الأحداث الخاصّة بالمشترك", icon="clock-rotate-left",
-                        meta=(own_events|length)|string + " حدث", flush=True) %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0">
-        <table class="hub-table">
-          <thead><tr>
-            <th>الوقت</th><th>الحدث</th><th>المنفِّذ</th><th>تفاصيل</th>
-          </tr></thead>
-          <tbody>
-            {% for e in own_events %}
-            <tr>
-              <td class="small muted">{{ e.created_at or e.ts or "—" }}</td>
-              <td><strong>{{ e.action or e.event or "—" }}</strong></td>
-              <td class="small">{{ e.actor or "—" }}</td>
-              <td class="small mono">{{ (e.payload or {})|tojson if e.payload else "—" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  {% if activity_events %}
+    <section class="cc-section" data-cc-section="subscriber_timeline">
+      <header class="cc-section-head">
+        <span class="cc-section-head-icon"><i class="fa-solid fa-timeline"></i></span>
+        <span class="cc-section-head-title">النشاط الأخير للمشترك</span>
+        <span class="cc-section-head-link">{{ activity_events|length }} حدث</span>
+      </header>
+      <div class="cc-section-body">
+        <div class="cc-timeline">
+          {% for e in activity_events %}
+          <div class="cc-tl-item">
+            <div>
+              <span class="cc-tl-dot {{ e.dot_class or '' }}"></span>
+              <div class="cc-tl-body">
+                <div class="cc-tl-title">
+                  <span class="cc-pill {{ e.pill_class or 'cc-pill-grey' }}"><span class="dot"></span>{{ e.pill }}</span>
+                  {{ e.title }}
+                </div>
+                <div class="cc-tl-desc">
+                  {{ e.desc or '—' }}
+                  {% if e.actor %}<span class="hub-text-mute"> · {{ e.actor }}</span>{% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="cc-tl-time">{{ dt_split(e.at) }}</div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
-    {% endcall %}
+    </section>
   {% else %}
     {{ hub.empty("لا أحداث مسجَّلة", sub="لا يوجد سجلّ لهذا المشترك بعد.", icon="clock-rotate-left") }}
   {% endif %}
@@ -445,50 +859,177 @@
 
 {# ─── pane: SESSIONS ─── #}
 <div class="p360-pane" data-pane="sessions">
-  {% if session_rows %}
-    {% call hub.section("جلسات الاتصال", icon="plug",
-                        meta=(session_rows|length)|string + " جلسة", flush=True) %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0">
-        <table class="hub-table">
-          <thead><tr>
-            <th>البداية</th><th>المدّة</th>
-            <th>MAC</th><th>IP</th><th>NAS</th>
-            <th class="num">تنزيل</th><th class="num">رفع</th><th>الحالة</th>
-          </tr></thead>
-          <tbody>
-            {% for s in session_rows %}
-            {%- set live = not s.acctstoptime -%}
-            <tr class="{% if live %}is-live{% endif %}">
-              <td class="small muted">{{ s.acctstarttime or "—" }}</td>
-              <td class="small">{{ fmt_dur(s.acctsessiontime or 0) }}</td>
-              <td class="mono small">{{ s.callingstationid or "—" }}</td>
-              <td class="mono small">{{ s.framedipaddress or "—" }}</td>
-              <td class="small">{{ s.nasipaddress or "—" }}</td>
-              <td class="num">{{ fmt_bytes_mb(((s.acctinputoctets or 0) / 1024 / 1024)) }}</td>
-              <td class="num">{{ fmt_bytes_mb(((s.acctoutputoctets or 0) / 1024 / 1024)) }}</td>
-              <td>
-                {%- if live -%}{{ hub.pill("متصل", variant="green") }}
-                {%- else -%}{{ hub.pill("منتهية", variant="grey") }}{%- endif -%}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  {% if session_views %}
+    <div class="p360-session-summary">
+      <div class="p360-session-stat">
+        <div><div class="label">الجلسات</div><div class="value">{{ session_summary.sessions_count or session_views|length }}</div><div class="sub">نشطة الآن: {{ session_summary.online_sessions or 0 }}</div></div>
+        <span class="icon"><i class="fa-solid fa-wave-square"></i></span>
       </div>
-    {% endcall %}
+      <div class="p360-session-stat">
+        <div><div class="label">ماكات فريدة</div><div class="value">{{ session_summary.unique_macs or 0 }}</div><div class="sub">أجهزة ظهرت في السجل</div></div>
+        <span class="icon"><i class="fa-solid fa-fingerprint"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">IP فريد</div><div class="value">{{ session_summary.unique_ips or 0 }}</div><div class="sub">عناوين مستخدمة</div></div>
+        <span class="icon"><i class="fa-solid fa-globe"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">إجمالي التحميل</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">مجموع كل الجلسات</div></div>
+        <span class="icon"><i class="fa-solid fa-arrow-down"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">إجمالي الرفع</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">مجموع كل الجلسات</div></div>
+        <span class="icon"><i class="fa-solid fa-arrow-up"></i></span>
+      </div>
+    </div>
+
+    <section class="cc-section" data-cc-section="sessions">
+      <header class="cc-section-head">
+        <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+        <span class="cc-section-head-title">آخر الجلسات</span>
+        <span class="cc-section-head-link">{{ session_views|length }} جلسة</span>
+      </header>
+      <div class="cc-section-body">
+        <div class="cc-sessions-table-wrap" data-cc-sessions-region>
+          <table class="cc-sessions-table">
+            <thead>
+              <tr>
+                <th>الحالة</th>
+                <th>IP</th>
+                <th>MAC</th>
+                <th>الجهاز / النظام</th>
+                <th class="num">تحميل</th>
+                <th class="num">رفع</th>
+                <th class="num">تحميل مجاني</th>
+                <th class="num">رفع مجاني</th>
+                <th class="num">المحصّلة</th>
+                <th>تاريخ البدء</th>
+                <th>تاريخ الإنتهاء</th>
+                <th class="num">الوقت</th>
+                <th>معرّف الخدمة</th>
+                <th>منفذ الاتصال</th>
+                <th>NAS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ses in session_views %}
+              {% set total = (ses.upload_bytes or 0) + (ses.download_bytes or 0) %}
+              <tr data-cc-session="{{ ses.session_id or ses.id }}" class="{% if ses.online %}is-live{% endif %}">
+                <td>
+                  {% if ses.online %}
+                    <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
+                  {% else %}
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
+                  {% endif %}
+                </td>
+                <td class="mono">{{ ses.ip_address or '—' }}</td>
+                <td class="mono">{{ ses.mac_address or '—' }}</td>
+                <td class="cc-device-cell">
+                  {% if ses.dhcp_device and ses.dhcp_device.label %}
+                    <span class="cc-device-label" title="{{ ses.dhcp_device.class_id or '' }}">
+                      {% if ses.dhcp_device.os_family %}
+                        <i class="fa-brands fa-{{ ses.dhcp_device.os_family if ses.dhcp_device.os_family in ['android','windows','apple','linux'] else 'android' }}"></i>
+                      {% else %}
+                        <i class="fa-solid fa-network-wired"></i>
+                      {% endif %}
+                      <span>{{ ses.dhcp_device.label }}</span>
+                    </span>
+                  {% elif ses.device and ses.device.label %}
+                    <span class="cc-device-label">
+                      <i class="fa-solid fa-{{ ses.device.icon or 'network-wired' }}"></i>
+                      <span>{{ ses.device.label }}</span>
+                    </span>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="num">{{ fmt_bytes_raw(ses.download_bytes or 0) }}</td>
+                <td class="num">{{ fmt_bytes_raw(ses.upload_bytes or 0) }}</td>
+                <td class="num muted">—</td>
+                <td class="num muted">—</td>
+                <td class="num"><strong>{{ fmt_bytes_raw(total) }}</strong></td>
+                <td class="mono small">{{ ses.started_at or '—' }}</td>
+                <td class="mono small">{{ ses.stopped_at if ses.stopped_at else '—' }}</td>
+                <td class="num">{{ fmt_dur(ses.duration_seconds or 0) }}</td>
+                <td class="mono small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
+                  {% set _svc = ses.service_type or ses.framed_protocol %}
+                  {% if _svc %}
+                    {{ _svc }}
+                  {% elif ses.session_id %}
+                    {{ ses.session_id[:14] + '…' if ses.session_id|length > 14 else ses.session_id }}
+                  {% else %}—{% endif %}
+                </td>
+                <td class="mono small" title="{% if ses.nas_port_type %}{{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · {{ ses.nas_port }}{% endif %}">
+                  {% if ses.nas_port_type %}
+                    {{ ses.nas_port_type }}
+                  {% elif ses.nas_port and not (ses.nas_port|string).isdigit() %}
+                    {{ ses.nas_port[:14] + '…' if ses.nas_port and ses.nas_port|length > 14 else ses.nas_port }}
+                  {% elif ses.nas_port %}
+                    غير محدد
+                  {% else %}—{% endif %}
+                </td>
+                <td class="mono small">{{ ses.nas_address or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   {% else %}
     {{ hub.empty("لا جلسات", sub="لم يسجِّل المشترك أيّ جلسة اتصال بعد.", icon="plug-circle-xmark") }}
   {% endif %}
 </div>
 
 
-{# ─── pane: DAILY USAGE (placeholder) ─── #}
+{# ─── pane: DAILY USAGE ─── #}
 <div class="p360-pane" data-pane="daily">
-  {{ hub.empty(
-    "الاستخدام اليومي",
-    sub="رسم بياني تفصيلي للاستهلاك اليومي — قريبًا.",
-    icon="chart-line"
-  ) }}
+  {% if daily_usage %}
+    <div class="p360-session-summary">
+      <div class="p360-session-stat">
+        <div><div class="label">أيام فيها استخدام</div><div class="value">{{ daily_usage|length }}</div><div class="sub">آخر 14 يوم حسب الجلسات</div></div>
+        <span class="icon"><i class="fa-solid fa-calendar-day"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">إجمالي التحميل</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">من سجل الجلسات</div></div>
+        <span class="icon"><i class="fa-solid fa-arrow-down"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">إجمالي الرفع</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">من سجل الجلسات</div></div>
+        <span class="icon"><i class="fa-solid fa-arrow-up"></i></span>
+      </div>
+      <div class="p360-session-stat">
+        <div><div class="label">إجمالي الوقت</div><div class="value">{{ fmt_dur(session_summary.total_session_seconds or 0) }}</div><div class="sub">كل الأيام</div></div>
+        <span class="icon"><i class="fa-solid fa-clock"></i></span>
+      </div>
+    </div>
+
+    <section class="p360-chart-card">
+      <header class="p360-chart-head">
+        <div class="p360-chart-title"><i class="fa-solid fa-chart-column"></i> الاستهلاك اليومي</div>
+        <div class="p360-chart-meta">تحميل / رفع حسب يوم بداية الجلسة</div>
+      </header>
+      <div class="p360-bars">
+        {% for d in daily_usage %}
+          {% set down = d.download_bytes or 0 %}
+          {% set up = d.upload_bytes or 0 %}
+          {% set total = down + up %}
+          {% set down_pct = (down / daily_max_bytes * 100) if daily_max_bytes else 0 %}
+          {% set up_pct = (up / daily_max_bytes * 100) if daily_max_bytes else 0 %}
+          <div class="p360-bar-row">
+            <div class="p360-bar-label">{{ d.day }}</div>
+            <div class="p360-bar-track" title="تحميل {{ fmt_bytes_raw(down) }} / رفع {{ fmt_bytes_raw(up) }}">
+              <span class="p360-bar-down" style="width:{{ '%.2f'|format(down_pct) }}%"></span>
+              <span class="p360-bar-up" style="width:{{ '%.2f'|format(up_pct) }}%"></span>
+            </div>
+            <div class="p360-bar-total">{{ fmt_bytes_raw(total) }} · {{ d.sessions_count }} جلسة</div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    {{ hub.empty("لا استخدام يومي", sub="لا توجد جلسات محاسبة لهذا المشترك بعد.", icon="chart-line") }}
+  {% endif %}
 </div>
 
 
@@ -508,7 +1049,7 @@
               <td class="small muted">{{ e.created_at or e.ts or "—" }}</td>
               <td><strong>{{ e.actor or "—" }}</strong></td>
               <td>{{ e.action or e.event or "—" }}</td>
-              <td class="small mono">{{ (e.payload or {})|tojson if e.payload else "—" }}</td>
+              <td class="small mono">{{ e.payload_display or "—" }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -521,13 +1062,53 @@
 </div>
 
 
-{# ─── pane: BANDWIDTH (placeholder) ─── #}
+{# ─── pane: BANDWIDTH ─── #}
 <div class="p360-pane" data-pane="bw">
-  {{ hub.empty(
-    "الباندويث اللحظي",
-    sub="مخطّط لحظي للسرعة (RX/TX) — قريبًا.",
-    icon="gauge-high"
-  ) }}
+  {% if bandwidth_samples %}
+    <div class="p360-live-panel">
+      <div class="p360-live-card">
+        <div class="label">تحميل تقديري للجلسة الحالية</div>
+        <div class="value">{{ fmt_rate_bps(bandwidth_current.download_bps or 0) }}</div>
+        <div class="sub">{{ bandwidth_current.device or bandwidth_current.mac or bandwidth_current.ip or "آخر جلسة" }}</div>
+      </div>
+      <div class="p360-live-card">
+        <div class="label">رفع تقديري للجلسة الحالية</div>
+        <div class="value">{{ fmt_rate_bps(bandwidth_current.upload_bps or 0) }}</div>
+        <div class="sub">{{ "جلسة نشطة" if bandwidth_current.online else "آخر جلسة مسجلة" }}</div>
+      </div>
+      <div class="p360-live-card">
+        <div class="label">المحصلة</div>
+        <div class="value">{{ fmt_rate_bps(bandwidth_current.total_bps or 0) }}</div>
+        <div class="sub">محسوبة من حجم البيانات / مدة الجلسة</div>
+      </div>
+    </div>
+
+    <section class="p360-chart-card">
+      <header class="p360-chart-head">
+        <div class="p360-chart-title"><i class="fa-solid fa-gauge-high"></i> قراءة السرعة حسب الجلسات</div>
+        <div class="p360-chart-meta">متوسط تحميل / رفع لكل جلسة</div>
+      </header>
+      <div class="p360-bars">
+        {% for b in bandwidth_samples %}
+          {% set down_pct = (b.download_bps / bandwidth_max_bps * 100) if bandwidth_max_bps else 0 %}
+          {% set up_pct = (b.upload_bps / bandwidth_max_bps * 100) if bandwidth_max_bps else 0 %}
+          <div class="p360-bar-row">
+            <div class="p360-bar-label">{{ (b.device or b.mac or b.ip or b.label or "جلسة")[:18] }}</div>
+            <div class="p360-bar-track" title="تحميل {{ fmt_rate_bps(b.download_bps) }} / رفع {{ fmt_rate_bps(b.upload_bps) }}">
+              <span class="p360-bar-down" style="width:{{ '%.2f'|format(down_pct) }}%"></span>
+              <span class="p360-bar-up" style="width:{{ '%.2f'|format(up_pct) }}%"></span>
+            </div>
+            <div class="p360-bar-total">
+              {{ fmt_rate_bps(b.total_bps) }}
+              {% if b.online %}<span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    {{ hub.empty("لا قراءات سرعة", sub="لا توجد جلسات محاسبة لحساب متوسط السرعة.", icon="gauge-high") }}
+  {% endif %}
 </div>
 
 
@@ -630,6 +1211,12 @@
   if (initial && document.querySelector('.p360-pane[data-pane="' + initial + '"]')) {
     activate(initial);
   }
+  window.addEventListener("hashchange", () => {
+    const name = (location.hash || "").replace("#", "");
+    if (name && document.querySelector('.p360-pane[data-pane="' + name + '"]')) {
+      activate(name);
+    }
+  });
 })();
 </script>
 

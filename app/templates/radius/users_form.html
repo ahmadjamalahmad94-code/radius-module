@@ -142,6 +142,36 @@
   .uf-field label{ font-size: 12.5px; font-weight: 700; color: var(--hub-text-soft); }
   .uf-field label .req{ color: var(--hub-red); margin-inline-start: 2px; }
   .uf-field .help{ font-size: 11px; color: var(--hub-text-mute); margin-top: 2px; }
+  .uf-temp-countdown{
+    grid-column: 1 / -1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:-2px;
+    padding:10px 12px;
+    border:1px solid #d8cffd;
+    border-radius:10px;
+    background:#f7f4ff;
+    color:#4c3db2;
+    font-size:12px;
+    font-weight:800;
+  }
+  .uf-temp-countdown.is-muted{
+    background:#f8fafc;
+    border-color:#e2e8f0;
+    color:var(--hub-text-mute);
+  }
+  .uf-temp-countdown.is-expired{
+    background:#fff1f2;
+    border-color:#fecdd3;
+    color:#9f1239;
+  }
+  .uf-temp-countdown strong{
+    direction:ltr;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:13px;
+  }
 
   /* Inline checkbox row */
   .uf-chk{
@@ -1029,6 +1059,12 @@
           </div>
           <input type="hidden" name="temporary_speed_from" value="{{ sub.temporary_speed_from or '' }}">
           <input type="hidden" name="temporary_speed_to" value="{{ sub.temporary_speed_to or '' }}">
+          <div class="uf-temp-countdown is-muted"
+               data-temp-speed-countdown
+               data-temp-speed-updated-at="{{ sub.updated_at or '' }}">
+            <span data-temp-speed-status>السرعة المؤقتة غير مفعّلة</span>
+            <strong data-temp-speed-remaining>--:--</strong>
+          </div>
         </div>
 
         {# 2B. Scheduled speed rules (per-subscriber, cookbook §19) ─
@@ -1594,6 +1630,17 @@
   });
   // Temporary speed: duration + upload/download are enabled only when selected.
   var tempSpeed = document.getElementById('ts');
+  var tempDurationHidden = document.querySelector('[name="temporary_speed_duration_minutes"]');
+  var tempFromHidden = document.querySelector('[name="temporary_speed_from"]');
+  var tempToHidden = document.querySelector('[name="temporary_speed_to"]');
+  var tempCountdown = document.querySelector('[data-temp-speed-countdown]');
+  var tempCountdownStatus = document.querySelector('[data-temp-speed-status]');
+  var tempCountdownRemaining = document.querySelector('[data-temp-speed-remaining]');
+  var tempUpdatedAt = tempCountdown ? String(tempCountdown.getAttribute('data-temp-speed-updated-at') || '') : '';
+  var tempCountdownTimer = null;
+  var tempInitialFrom = tempFromHidden ? String(tempFromHidden.value || '') : '';
+  var tempInitialTo = tempToHidden ? String(tempToHidden.value || '') : '';
+  var tempWindowDirty = false;
   var tempInputs = Array.prototype.slice.call(document.querySelectorAll(
     '[name="temporary_speed_duration_minutes"], [name="temporary_download_speed_kbps"], [name="temporary_upload_speed_kbps"]'
   )).map(function(hidden){
@@ -1622,13 +1669,122 @@
     if (tempDown && down) down.value = tempDown.value || '0';
     if (tempUp && up) up.value = tempUp.value || '0';
   }
+  function parseLocalDate(value){
+    if (!value) return null;
+    var normalized = String(value).trim();
+    if (!normalized) return null;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+      normalized += 'Z';
+    }
+    var date = new Date(normalized);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  function formatIsoLocal(date){
+    function pad(n){ return String(n).padStart(2, '0'); }
+    return date.getUTCFullYear() + '-' +
+      pad(date.getUTCMonth() + 1) + '-' +
+      pad(date.getUTCDate()) + 'T' +
+      pad(date.getUTCHours()) + ':' +
+      pad(date.getUTCMinutes()) + ':' +
+      pad(date.getUTCSeconds());
+  }
+  function formatTempRemaining(totalSeconds){
+    var sec = Math.max(0, parseInt(totalSeconds, 10) || 0);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    function pad(n){ return String(n).padStart(2, '0'); }
+    return h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (pad(m) + ':' + pad(s));
+  }
+  function getTemporaryEndDate(){
+    var savedEnd = tempToHidden ? parseLocalDate(tempToHidden.value) : null;
+    if (savedEnd) return savedEnd;
+    var duration = parseInt((tempDurationHidden && tempDurationHidden.value) || '0', 10) || 0;
+    if (duration <= 0) return null;
+    var savedStart = tempFromHidden ? parseLocalDate(tempFromHidden.value) : null;
+    if (savedStart) return new Date(savedStart.getTime() + duration * 60 * 1000);
+    var updatedAt = parseLocalDate(tempUpdatedAt);
+    if (updatedAt) return new Date(updatedAt.getTime() + duration * 60 * 1000);
+    return null;
+  }
+  function ensureTemporarySpeedWindow(forceNew){
+    if (!tempSpeed || !tempSpeed.checked || !tempFromHidden || !tempToHidden) return;
+    if (!forceNew && !tempWindowDirty) return;
+    if (!tempWindowDirty && (tempInitialFrom || tempInitialTo)) return;
+    var now = new Date();
+    var duration = parseInt((tempDurationHidden && tempDurationHidden.value) || '0', 10) || 0;
+    if (duration <= 0) return;
+    tempFromHidden.value = formatIsoLocal(now);
+    tempToHidden.value = formatIsoLocal(new Date(now.getTime() + duration * 60 * 1000));
+    tempInitialFrom = tempFromHidden.value;
+    tempInitialTo = tempToHidden.value;
+    tempWindowDirty = false;
+  }
+  function resetTemporaryWindowForNewDuration(){
+    tempWindowDirty = true;
+    if (tempFromHidden) tempFromHidden.value = '';
+    if (tempToHidden) tempToHidden.value = '';
+    if (tempSpeed && tempSpeed.checked) {
+      ensureTemporarySpeedWindow(true);
+    }
+  }
+  function renderTemporaryCountdown(){
+    if (!tempCountdown || !tempCountdownStatus || !tempCountdownRemaining) return;
+    if (!tempSpeed || !tempSpeed.checked) {
+      tempCountdown.classList.add('is-muted');
+      tempCountdown.classList.remove('is-expired');
+      tempCountdownStatus.textContent = 'السرعة المؤقتة غير مفعّلة';
+      tempCountdownRemaining.textContent = '--:--';
+      return;
+    }
+    var endDate = getTemporaryEndDate();
+    tempCountdown.classList.remove('is-muted');
+    if (!endDate) {
+      tempCountdown.classList.add('is-expired');
+      tempCountdownStatus.textContent = 'لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد';
+      tempCountdownRemaining.textContent = '00:00';
+      return;
+    }
+    var remaining = Math.floor((endDate.getTime() - Date.now()) / 1000);
+    if (remaining <= 0) {
+      tempCountdown.classList.add('is-expired');
+      tempCountdownStatus.textContent = 'انتهت السرعة المؤقتة وسترجع لسرعة العرض';
+      tempCountdownRemaining.textContent = '00:00';
+      return;
+    }
+    tempCountdown.classList.remove('is-expired');
+    tempCountdownStatus.textContent = 'باقي على انتهاء السرعة المؤقتة';
+    tempCountdownRemaining.textContent = formatTempRemaining(remaining);
+  }
+  function startTemporaryCountdown(){
+    if (tempCountdownTimer) window.clearInterval(tempCountdownTimer);
+    renderTemporaryCountdown();
+    tempCountdownTimer = window.setInterval(renderTemporaryCountdown, 1000);
+  }
   function syncTemporarySpeedControls(){
     var enabled = tempSpeed && tempSpeed.checked;
     tempInputs.forEach(function(input){ input.disabled = !enabled; });
     copyTemporarySpeedsToEffectiveFields();
+    startTemporaryCountdown();
   }
   if (tempSpeed) {
-    tempSpeed.addEventListener('change', syncTemporarySpeedControls);
+    tempSpeed.addEventListener('change', function(){
+      if (tempSpeed.checked && !tempInitialFrom && !tempInitialTo) {
+        tempWindowDirty = true;
+        ensureTemporarySpeedWindow(true);
+      }
+      syncTemporarySpeedControls();
+    });
+    if (tempDurationHidden) {
+      tempDurationHidden.addEventListener('input', function(){
+        resetTemporaryWindowForNewDuration();
+        startTemporaryCountdown();
+      });
+      tempDurationHidden.addEventListener('change', function(){
+        resetTemporaryWindowForNewDuration();
+        startTemporaryCountdown();
+      });
+    }
     document.querySelectorAll('[name="temporary_download_speed_kbps"], [name="temporary_upload_speed_kbps"]').forEach(function(input){
       input.addEventListener('input', copyTemporarySpeedsToEffectiveFields);
       input.addEventListener('change', copyTemporarySpeedsToEffectiveFields);
@@ -1636,6 +1792,8 @@
     if (tempPreset30) {
       tempPreset30.addEventListener('click', function(){
         setUnitPickerValue('temporary_speed_duration_minutes', 30, 'min', 30);
+        resetTemporaryWindowForNewDuration();
+        startTemporaryCountdown();
       });
     }
     syncTemporarySpeedControls();
@@ -1654,7 +1812,10 @@
   }
   nameParts.forEach(function(input){ input.addEventListener('input', syncNameFields); });
   if (form) form.addEventListener('submit', syncNameFields);
-  if (form) form.addEventListener('submit', copyTemporarySpeedsToEffectiveFields);
+  if (form) form.addEventListener('submit', function(){
+    ensureTemporarySpeedWindow(true);
+    copyTemporarySpeedsToEffectiveFields();
+  });
 
   // ── Multi-MAC lock manager: writes the real policy field `mac_lock`.
   document.querySelectorAll('[data-mac-manager]').forEach(function(root){

@@ -125,6 +125,12 @@
       <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
     {% endfor %}
   </select>
+  <select class="hub-select" name="group_id">
+    <option value="">كل المجموعات</option>
+    {% for g in subscriber_groups or [] %}
+      <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+    {% endfor %}
+  </select>
   {{ hub.btn("تطبيق",   icon="filter", variant="primary",   type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {{ hub.btn("CSV",    icon="file-csv",   variant="secondary", size="sm") }}

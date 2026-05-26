@@ -9,6 +9,7 @@ Hybrid storage:
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
@@ -48,7 +49,7 @@ _META_GROUPS = {
         "temporary_upload_speed_kbps",
     ],
     "notifications": [
-        # placeholders للمرحلة القادمة
+        # reserved for notification-related subscriber settings
     ],
 }
 _META_FIELDS = [f for g in _META_GROUPS.values() for f in g]
@@ -237,6 +238,24 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         v = _s(mf)
         if v:
             flat_meta[mf] = v
+    if _b("temporary_speed"):
+        started = flat_meta.get("temporary_speed_from") or datetime.utcnow().isoformat(timespec="seconds")
+        flat_meta["temporary_speed_from"] = started
+        if not flat_meta.get("temporary_speed_to"):
+            try:
+                duration = int(float(flat_meta.get("temporary_speed_duration_minutes") or 0))
+            except (TypeError, ValueError):
+                duration = 0
+            if duration > 0:
+                try:
+                    start_dt = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                    if start_dt.tzinfo:
+                        start_dt = start_dt.replace(tzinfo=None)
+                except ValueError:
+                    start_dt = datetime.utcnow()
+                flat_meta["temporary_speed_to"] = (
+                    start_dt + timedelta(minutes=duration)
+                ).isoformat(timespec="seconds")
     meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
 
     return Subscriber(
@@ -332,7 +351,28 @@ def users_list():
     status = (request.args.get("status") or "").strip() or None
     plan_id = request.args.get("plan_id")
     plan_id = int(plan_id) if plan_id else None
+    group_id_raw = (request.args.get("group_id") or "").strip()
+    group_id = int(group_id_raw) if group_id_raw.isdigit() else None
     items = get_users_service().list(status=status, plan_id=plan_id, search=q, limit=1000)
+    subscriber_groups = []
+    selected_group = None
+    if group_id:
+        try:
+            from ..db.repos import subscriber_groups_repo
+
+            selected_group = subscriber_groups_repo.get(_tid(), group_id)
+            member_names = set(subscriber_groups_repo.list_member_usernames(_tid(), group_id))
+            items = [u for u in items if u.username in member_names]
+            subscriber_groups = subscriber_groups_repo.list_groups(_tid())
+        except Exception:  # noqa: BLE001
+            selected_group = None
+            subscriber_groups = []
+    else:
+        try:
+            from ..db.repos import subscriber_groups_repo
+            subscriber_groups = subscriber_groups_repo.list_groups(_tid())
+        except Exception:  # noqa: BLE001
+            subscriber_groups = []
     plans = list(get_plans_service().list(limit=500))
 
     # DHCP fingerprints (migration 026) — bulk look-up by mac_lock for
@@ -357,6 +397,8 @@ def users_list():
 
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
+        group_id=group_id, subscriber_groups=subscriber_groups,
+        selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         dhcp_by_username=dhcp_by_username)
 
@@ -496,22 +538,209 @@ def users_profile(username: str):
     except Exception:
         session_rows = []
 
+    try:
+        from ..db.repos import device_fingerprints_repo
+        from ..services.card_checker import _dhcp_device, _session, _utcnow
+
+        session_views = [_session(row, _utcnow()) for row in session_rows]
+        macs = [s["mac_address"] for s in session_views if s.get("mac_address")]
+        fp_by_mac = device_fingerprints_repo.get_many_by_macs(tid, macs) if macs else {}
+        for s in session_views:
+            mac_key = (s.get("mac_address") or "").lower()
+            s["dhcp_device"] = _dhcp_device(fp_by_mac.get(mac_key))
+    except Exception:
+        session_views = []
+        for row in session_rows:
+            online = not row.get("acctstoptime")
+            session_views.append({
+                "id": row.get("radacctid"),
+                "session_id": row.get("acctsessionid") or "",
+                "started_at": row.get("acctstarttime"),
+                "updated_at": row.get("acctupdatetime"),
+                "stopped_at": row.get("acctstoptime"),
+                "online": online,
+                "duration_seconds": row.get("acctsessiontime") or 0,
+                "upload_bytes": row.get("acctinputoctets") or 0,
+                "download_bytes": row.get("acctoutputoctets") or 0,
+                "mac_address": row.get("callingstationid"),
+                "ip_address": row.get("framedipaddress"),
+                "nas_address": row.get("nasipaddress"),
+                "nas_port": row.get("nasportid"),
+                "nas_port_type": row.get("nasporttype"),
+                "service_type": row.get("servicetype"),
+                "framed_protocol": row.get("framedprotocol"),
+                "dhcp_device": None,
+            })
+
+    try:
+        session_summary = cards_repo.summarize_card_accounting(tid, username)
+    except Exception:
+        session_summary = {}
+
+    try:
+        daily_rows = db().execute(
+            """
+            SELECT substr(replace(COALESCE(acctstarttime, acctupdatetime, acctstoptime, ''), 'T', ' '), 1, 10) AS day,
+                   COUNT(*) AS sessions_count,
+                   SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions,
+                   COALESCE(SUM(acctsessiontime), 0) AS total_seconds,
+                   COALESCE(SUM(acctinputoctets), 0) AS upload_bytes,
+                   COALESCE(SUM(acctoutputoctets), 0) AS download_bytes
+              FROM radacct
+             WHERE tenant_id = ?
+               AND username = ?
+               AND COALESCE(acctstarttime, acctupdatetime, acctstoptime, '') != ''
+             GROUP BY day
+             ORDER BY day DESC
+             LIMIT 14
+            """,
+            (tid, username),
+        ).fetchall()
+        daily_usage = [dict(r) for r in reversed(daily_rows)]
+    except Exception:
+        daily_usage = []
+    daily_max_bytes = max(
+        [((r.get("upload_bytes") or 0) + (r.get("download_bytes") or 0)) for r in daily_usage] or [0]
+    )
+
+    bandwidth_samples = []
+    for s in session_views[:12]:
+        duration = max(int(s.get("duration_seconds") or 0), 1)
+        download_bytes = int(s.get("download_bytes") or 0)
+        upload_bytes = int(s.get("upload_bytes") or 0)
+        down_bps = int((download_bytes * 8) / duration)
+        up_bps = int((upload_bytes * 8) / duration)
+        bandwidth_samples.append({
+            "label": s.get("started_at") or s.get("session_id") or "",
+            "online": bool(s.get("online")),
+            "mac": s.get("mac_address") or "",
+            "ip": s.get("ip_address") or "",
+            "device": (
+                ((s.get("dhcp_device") or {}).get("label"))
+                or ((s.get("device") or {}).get("label"))
+                or ""
+            ),
+            "download_bps": down_bps,
+            "upload_bps": up_bps,
+            "total_bps": down_bps + up_bps,
+        })
+    bandwidth_max_bps = max([r.get("total_bps") or 0 for r in bandwidth_samples] or [0])
+    bandwidth_current = next((r for r in bandwidth_samples if r.get("online")), bandwidth_samples[0] if bandwidth_samples else {})
+
+    def _audit_payload(e: dict) -> dict:
+        payload = e.get("payload") or e.get("_payload") or {}
+        if isinstance(payload, dict):
+            return payload
+        try:
+            return json.loads(e.get("payload_json") or "{}")
+        except (TypeError, ValueError):
+            return {}
+
     # ── 2. Audit events targeting this subscriber.
     #    audit_repo doesn't have a per-target filter yet — pull recent and
     #    filter in-memory (cheap for the typical 200-row window).
     try:
         all_events = audit_repo.recent(tid, limit=500)
-        events = [
-            e for e in all_events
-            if (e.get("target_type") == "subscriber" and e.get("target_id") == username)
-            or (e.get("target_type") == "card" and e.get("payload", {}).get("username") == username)
-        ][:100]
+        events = []
+        for e in all_events:
+            payload = _audit_payload(e)
+            e["_payload"] = payload
+            e["payload_display"] = " · ".join(
+                f"{key}={value}" for key, value in payload.items()
+                if key != "demo_profile_events"
+            )
+            if (
+                (e.get("target_type") == "subscriber" and e.get("target_id") == username)
+                or (e.get("target_type") == "card" and payload.get("username") == username)
+            ):
+                events.append(e)
+            if len(events) >= 100:
+                break
     except Exception:
         events = []
 
     # Split: actions BY this user vs actions ON this user
     manager_events = [e for e in events if e.get("actor", "").lower() != username.lower()][:50]
     own_events     = [e for e in events if e.get("actor", "").lower() == username.lower()][:50]
+
+    def _audit_event_title(action: str) -> str:
+        labels = {
+            "create": "تم إنشاء الحساب",
+            "update": "تم تعديل الحساب",
+            "archive": "تم أرشفة الحساب",
+            "enable": "تم تفعيل الحساب",
+            "disable": "تم تعطيل الحساب",
+            "reset_password": "تم تغيير كلمة المرور",
+            "subscriber.daily_quota_reset": "استعادة الكوتة اليومية",
+            "subscriber.quota_topup": "إضافة كوتة",
+            "subscriber.cash_balance_add": "إضافة رصيد نقدي",
+            "subscriber.plan_change": "تغيير العرض",
+        }
+        return labels.get(action or "", action or "حدث إداري")
+
+    activity_events: list[dict] = []
+    open_session = next((r for r in session_rows if not r.get("acctstoptime")), None)
+    if open_session:
+        activity_events.append({
+            "kind": "active",
+            "pill": "نشط",
+            "pill_class": "cc-pill-green",
+            "dot_class": "green",
+            "title": "جلسة نشطة الآن",
+            "desc": (
+                f"الاتصال عبر {open_session.get('nasporttype') or open_session.get('servicetype') or '—'} "
+                f"من {open_session.get('callingstationid') or '—'}"
+            ),
+            "at": open_session.get("acctupdatetime") or open_session.get("acctstarttime") or sub_obj.last_seen_at,
+        })
+
+    if sub_obj.first_login_at:
+        activity_events.append({
+            "kind": "first_login",
+            "pill": "اتصال",
+            "pill_class": "cc-pill-blue",
+            "dot_class": "blue",
+            "title": "بداية الجلسة الأولى",
+            "desc": "تم الاتصال لأول مرة باستخدام هذا الحساب.",
+            "at": sub_obj.first_login_at,
+        })
+
+    for e in events[:8]:
+        payload = _audit_payload(e)
+        action = e.get("action") or e.get("event") or ""
+        details = payload.get("note") or payload.get("notes") or payload.get("reason") or ""
+        if not details and payload:
+            preview = []
+            for key in ("plan_id", "quota_mb", "quota_target", "amount", "currency", "policy"):
+                if key in payload:
+                    preview.append(f"{key}={payload.get(key)}")
+            details = " · ".join(preview)
+        activity_events.append({
+            "kind": "audit",
+            "pill": "إدارة",
+            "pill_class": "cc-pill-purple",
+            "dot_class": "amber" if (e.get("severity") == "warning") else "",
+            "title": _audit_event_title(action),
+            "desc": details or f"نفّذها {e.get('actor') or 'system'}",
+            "at": e.get("created_at") or e.get("ts"),
+            "actor": e.get("actor") or "",
+        })
+
+    activity_events.append({
+        "kind": "created",
+        "pill": "إنشاء",
+        "pill_class": "cc-pill-purple",
+        "dot_class": "",
+        "title": "تم إنشاء حساب المشترك",
+        "desc": f"تم إصدار الحساب باسم المستخدم {sub_obj.username}.",
+        "at": sub_obj.created_at,
+    })
+
+    activity_events = sorted(
+        activity_events,
+        key=lambda item: str(item.get("at") or ""),
+        reverse=True,
+    )[:12]
 
     # ── 3. Invoices for this subscriber.
     try:
@@ -600,7 +829,15 @@ def users_profile(username: str):
         plan=plan,
         profile=profile,
         session_rows=session_rows,
+        session_views=session_views,
+        session_summary=session_summary,
+        daily_usage=daily_usage,
+        daily_max_bytes=daily_max_bytes,
+        bandwidth_samples=bandwidth_samples,
+        bandwidth_max_bps=bandwidth_max_bps,
+        bandwidth_current=bandwidth_current,
         events=events,
+        activity_events=activity_events,
         manager_events=manager_events,
         own_events=own_events,
         invoices=invoices,

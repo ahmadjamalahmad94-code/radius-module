@@ -13,7 +13,9 @@ from flask import (
 
 from ..core.errors import RadiusError
 from ..core.tenant import DEFAULT_TENANT_ID
-from ..db.repos import operations_repo, plans_repo
+from ..db.repos import operations_repo, plans_repo, subscriber_groups_repo
+from ..services.sessions import get_online_sessions_service
+from ..services.users import get_users_service
 from ..services.subscriber_groups import get_subscriber_groups_service
 from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
 
@@ -31,6 +33,12 @@ def register_subscriber_groups_routes(bp: Blueprint) -> None:
                     "subscriber_groups_update", sg_update, methods=["POST"])
     bp.add_url_rule("/subscriber-groups/<int:gid>/delete",
                     "subscriber_groups_delete", sg_delete, methods=["POST"])
+    bp.add_url_rule("/subscriber-groups/<int:gid>/disconnect-online",
+                    "subscriber_groups_disconnect_online",
+                    sg_disconnect_online, methods=["POST"])
+    bp.add_url_rule("/subscriber-groups/<int:gid>/quota/reset-daily",
+                    "subscriber_groups_quota_reset_daily",
+                    sg_quota_reset_daily, methods=["POST"])
 
 
 # ────────────────────────── helpers ─────────────────────────────
@@ -175,4 +183,68 @@ def sg_delete(gid: int):
     get_subscriber_groups_service().delete(
         actor=_actor(), tenant_id=_tid(), gid=gid)
     flash("تم حذف المجموعة (تم فصل المشتركين عنها).", "info")
+    return redirect(url_for("radius.subscriber_groups_list"))
+
+
+def sg_disconnect_online(gid: int):
+    group = subscriber_groups_repo.get(_tid(), gid)
+    if not group:
+        abort(404)
+    member_names = set(subscriber_groups_repo.list_member_usernames(_tid(), gid))
+    if not member_names:
+        flash("لا يوجد أعضاء في هذه المجموعة.", "info")
+        return redirect(url_for("radius.subscriber_groups_list"))
+
+    disconnected = 0
+    failed = 0
+    try:
+        sessions = get_online_sessions_service().list(limit=1000)
+        for item in sessions:
+            if item.username not in member_names:
+                continue
+            try:
+                get_online_sessions_service().disconnect(
+                    actor=_actor(),
+                    username=item.username,
+                    session_id=item.session_id,
+                )
+                disconnected += 1
+            except RadiusError:
+                failed += 1
+    except RadiusError as e:
+        flash(e.message or "تعذّر قراءة الجلسات المتصلة.", "error")
+        return redirect(url_for("radius.subscriber_groups_list"))
+
+    if disconnected:
+        flash(f"تم إرسال أمر فصل {disconnected} جلسة من مجموعة «{group['name']}».", "success")
+    elif failed:
+        flash("تعذّر فصل جلسات المجموعة المتصلة.", "error")
+    else:
+        flash(f"لا توجد جلسات متصلة حالياً لمجموعة «{group['name']}».", "info")
+    return redirect(url_for("radius.subscriber_groups_list"))
+
+
+def sg_quota_reset_daily(gid: int):
+    group = subscriber_groups_repo.get(_tid(), gid)
+    if not group:
+        abort(404)
+    usernames = subscriber_groups_repo.list_member_usernames(_tid(), gid)
+    if not usernames:
+        flash("لا يوجد أعضاء في هذه المجموعة.", "info")
+        return redirect(url_for("radius.subscriber_groups_list"))
+
+    reset_count = 0
+    failed = 0
+    svc = get_users_service()
+    for username in usernames:
+        try:
+            svc.reset_daily_quota(actor=_actor(), username=username)
+            reset_count += 1
+        except RadiusError:
+            failed += 1
+
+    if reset_count:
+        flash(f"تمت استعادة الكوتة اليومية لـ {reset_count} مشترك في مجموعة «{group['name']}».", "success")
+    if failed:
+        flash(f"تعذّرت استعادة الكوتة لـ {failed} مشترك.", "error")
     return redirect(url_for("radius.subscriber_groups_list"))

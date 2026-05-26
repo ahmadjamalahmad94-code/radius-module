@@ -97,6 +97,12 @@
   .online-speed-pill.is-normal{background:#f4f6f8;color:#52606d;border-color:#dce3ea}
   .online-speed-pill.is-custom{background:#fff6d8;color:#875500;border-color:#f2d071}
   .online-speed-pill.is-temp{background:#eaf6ff;color:#075985;border-color:#addcff}
+  .online-speed-countdown{
+    direction:ltr;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight:900;
+    padding-inline-start:2px;
+  }
   .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
   .online-mini-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
   [data-online-sessions-page] .hub-table th,
@@ -211,6 +217,12 @@
       <option value="">كل العروض</option>
       {% for plan in plan_options %}
         <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
+      {% endfor %}
+    </select>
+    <select name="group_id" aria-label="المجموعة">
+      <option value="">كل المجموعات</option>
+      {% for g in group_options or [] %}
+        <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
       {% endfor %}
     </select>
     <select name="speed" aria-label="نوع السرعة">
@@ -331,7 +343,10 @@
       </thead>
       <tbody>
         {% for s in items %}
-        {% set _special = s.has_custom_speed or s.has_temporary_speed %}
+        {% set _temp_state = (temp_speed_state_by_username or {}).get(s.username) %}
+        {% set _temp_active = (_temp_state and _temp_state.active) or ((not _temp_state) and s.has_temporary_speed) %}
+        {% set _temp_unknown = _temp_state and _temp_state.unknown %}
+        {% set _special = s.has_custom_speed or _temp_active %}
         {% set _is_card = s.user_type == 'card' %}
         {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
         {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
@@ -341,7 +356,8 @@
             data-user-type="{{ s.user_type }}"
             data-session-id="{{ s.session_id }}"
             data-profile-url="{{ _profile_url }}"
-            data-edit-url="{{ _edit_url }}">
+            data-edit-url="{{ _edit_url }}"
+            data-has-custom-speed="{{ 1 if s.has_custom_speed else 0 }}">
           <td class="online-select-cell" data-col="select">
             <input type="radio" name="online_session_select" aria-label="تحديد {{ s.username }}">
           </td>
@@ -380,8 +396,17 @@
           <td data-col="down_speed" class="num mono">{{ fmt_speed(s.rate_down_kbps) }}</td>
           <td data-col="up_speed" class="num mono">{{ fmt_speed(s.rate_up_kbps) }}</td>
           <td data-col="speed_state">
-            {% if s.has_temporary_speed %}
-              <span class="online-speed-pill is-temp"><i class="fa-solid fa-clock"></i> مؤقتة</span>
+            {% if _temp_active %}
+              <span class="online-speed-pill is-temp"
+                    title="{% if _temp_state and _temp_state.ends_at %}ينتهي: {{ _temp_state.ends_at }}{% else %}مؤقتة بدون وقت نهاية مسجّل{% endif %}">
+                <i class="fa-solid fa-clock"></i>
+                <span>مؤقتة</span>
+                {% if _temp_state and _temp_state.remaining_seconds is not none %}
+                  <span class="online-speed-countdown" data-temp-countdown="{{ _temp_state.remaining_seconds|int }}">--:--</span>
+                {% elif _temp_unknown %}
+                  <span class="online-speed-countdown">مفتوح</span>
+                {% endif %}
+              </span>
             {% elif s.has_custom_speed %}
               <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> خاصة</span>
             {% else %}
@@ -535,6 +560,40 @@
     if (radio) radio.addEventListener('change', function(){ selectRow(row); });
   });
   setDisabled(true);
+
+  function formatRemaining(totalSeconds){
+    var sec = Math.max(0, parseInt(totalSeconds, 10) || 0);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    function pad(n){ return String(n).padStart(2, '0'); }
+    return h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (pad(m) + ':' + pad(s));
+  }
+
+  function refreshTemporaryCountdowns(){
+    page.querySelectorAll('[data-temp-countdown]').forEach(function(el){
+      var remaining = parseInt(el.getAttribute('data-temp-countdown') || '0', 10);
+      el.textContent = formatRemaining(remaining);
+      if (remaining <= 0) {
+        var pill = el.closest('.online-speed-pill');
+        var row = el.closest('.online-row');
+        var hasCustom = row && row.getAttribute('data-has-custom-speed') === '1';
+        if (pill && hasCustom) {
+          pill.className = 'online-speed-pill is-custom';
+          pill.innerHTML = '<i class="fa-solid fa-bolt"></i> خاصة';
+        } else if (pill) {
+          pill.className = 'online-speed-pill is-normal';
+          pill.textContent = 'العرض';
+        }
+        if (row && !hasCustom) row.classList.remove('has-special-speed');
+        el.removeAttribute('data-temp-countdown');
+        return;
+      }
+      el.setAttribute('data-temp-countdown', String(remaining - 1));
+    });
+  }
+  refreshTemporaryCountdowns();
+  window.setInterval(refreshTemporaryCountdowns, 1000);
 
   var menu = page.querySelector('[data-column-menu]');
   var panel = page.querySelector('[data-column-panel]');

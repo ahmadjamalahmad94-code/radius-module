@@ -1,6 +1,5 @@
 {# Subscriber groups list — premium hub-v2.
-   Backend: app/radius/routes/subscriber_groups.py::sg_list
-   Pattern: SERVICES_COOKBOOK §15. #}
+   Backend: app/radius/routes/subscriber_groups.py::sg_list #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,11 +7,99 @@
 {% block page_icon %}<i class="fa-solid fa-people-group"></i>{% endblock %}
 {% block page_title %}مجموعات المشتركين{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  .sg-table th,
+  .sg-table td{
+    text-align:center;
+    vertical-align:middle;
+  }
+  .sg-name{
+    text-align:start;
+    min-width:210px;
+  }
+  .sg-name a{
+    font-weight:800;
+    color:var(--hub-brand-ink);
+    text-decoration:none;
+  }
+  .sg-name small{
+    display:block;
+    margin-top:4px;
+    color:var(--hub-text-mute);
+    line-height:1.45;
+  }
+  .sg-stat{
+    display:grid;
+    gap:2px;
+    line-height:1.2;
+  }
+  .sg-stat strong{
+    font-size:15px;
+    color:var(--hub-text);
+  }
+  .sg-stat span{
+    color:var(--hub-text-mute);
+    font-size:11px;
+  }
+  .sg-usage{
+    display:grid;
+    gap:5px;
+    min-width:130px;
+  }
+  .sg-usage-line{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    align-items:center;
+    color:var(--hub-text);
+    font-weight:800;
+    white-space:nowrap;
+  }
+  .sg-usage-line span{
+    color:var(--hub-text-mute);
+    font-size:11px;
+    min-width:34px;
+  }
+  .sg-pills{
+    display:flex;
+    justify-content:center;
+    gap:5px;
+    flex-wrap:wrap;
+  }
+  .sg-actions{
+    display:flex;
+    justify-content:center;
+    gap:5px;
+    flex-wrap:wrap;
+    min-width:210px;
+  }
+  .sg-actions form{
+    display:inline-flex;
+    margin:0;
+  }
+  @media (max-width: 900px){
+    .sg-name{min-width:170px}
+    .sg-actions{min-width:180px}
+  }
+</style>
+{% endblock %}
+
+{% macro fmt_bytes(value) -%}
+  {%- set b = value|int -%}
+  {%- if b >= 1073741824 -%}{{ "%.1f"|format(b / 1073741824) }} GB
+  {%- elif b >= 1048576 -%}{{ "%.1f"|format(b / 1048576) }} MB
+  {%- elif b > 0 -%}{{ "%.0f"|format(b / 1024) }} KB
+  {%- else -%}0 MB
+  {%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 
 {{ hub.hero(
   "مجموعات المشتركين",
-  subtitle="تجميع المشتركين تحت اسم واحد لتطبيق خدمات مشتركة عليهم: جدولة سرعة، تجديد تلقائي، باقة افتراضية، أيام العمل.",
+  subtitle="إدارة مجموعة كاملة من مكان واحد: الأعضاء، المتصلون، السرعة، الكوتة، والاستهلاك.",
   icon="people-group",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.subscriber_groups_new') + '">
@@ -21,69 +108,137 @@
   '
 ) }}
 
-{# ── KPIs ─────────────────────────────────────────────── #}
 {%- set total_members = items|sum(attribute='members') -%}
-{%- set with_schedule = items|selectattr('bandwidth_schedule_id')|list|length -%}
-{%- set with_plan = items|selectattr('default_plan_id')|list|length -%}
+{%- set total_online = items|sum(attribute='online_now') -%}
+{%- set total_down = items|sum(attribute='total_download_bytes') -%}
+{%- set total_up = items|sum(attribute='total_upload_bytes') -%}
 <div class="hub-kpi-grid">
   {{ hub.kpi("عدد المجموعات", count, icon="people-group", variant="brand") }}
   {{ hub.kpi("إجمالي الأعضاء", total_members, icon="users", variant="blue") }}
-  {{ hub.kpi("بجدولة سرعة", with_schedule, icon="gauge-high", variant="amber") }}
-  {{ hub.kpi("ببلاقة افتراضية", with_plan, icon="box-open", variant="green") }}
+  {{ hub.kpi("متصلون الآن", total_online, icon="wifi", variant="green") }}
+  {{ hub.kpi("إجمالي الاستهلاك", fmt_bytes(total_down + total_up), icon="chart-simple", variant="amber") }}
 </div>
 
-{# ── Table ────────────────────────────────────────────── #}
 {% if not items %}
   {{ hub.empty(
     "لا توجد مجموعات بعد",
-    sub="اضغطي «إضافة مجموعة» لإنشاء أوّل مجموعة وربط خدمات بها.",
+    sub="اضغط «إضافة مجموعة» لإنشاء أول مجموعة وربط الخدمات بها.",
     icon="people-group"
   ) }}
 {% else %}
   {% call hub.section("المجموعات", icon="table-list",
                       meta=(items|length)|string + " مجموعة", flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead><tr>
-          <th>الاسم</th>
-          <th>الوصف</th>
-          <th class="num">الأعضاء</th>
-          <th>الخدمات المربوطة</th>
-          <th>أيام العمل</th>
-          <th style="width:160px">إجراءات</th>
-        </tr></thead>
+      <table class="hub-table sg-table">
+        <thead>
+          <tr>
+            <th>المجموعة</th>
+            <th>الأعضاء</th>
+            <th>المتصلون</th>
+            <th>التحميل / الرفع</th>
+            <th>الحالة</th>
+            <th>الخدمات</th>
+            <th>السرعة</th>
+            <th>آخر نشاط</th>
+            <th>إجراءات المجموعة</th>
+          </tr>
+        </thead>
         <tbody>
           {% for g in items %}
           <tr>
-            <td>
-              <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}"
-                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
-                {{ g.name }}
-              </a>
+            <td class="sg-name">
+              <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{{ g.name }}</a>
+              <small>{{ g.description or 'بدون وصف' }}</small>
             </td>
-            <td class="small muted">{{ g.description or '—' }}</td>
-            <td class="num">{{ g.members }}</td>
             <td>
-              <div class="hub-flex-row" style="gap:6px;flex-wrap:wrap">
-                {% if g.bandwidth_schedule_id %}{{ hub.pill("جدولة سرعة", variant="amber") }}{% endif %}
-                {% if g.default_plan_id %}{{ hub.pill("باقة افتراضية", variant="brand") }}{% endif %}
-                {% if g.default_auto_renewal %}{{ hub.pill("تجديد تلقائي", variant="green") }}{% endif %}
+              <div class="sg-stat">
+                <strong>{{ g.members }}</strong>
+                <span>مشترك</span>
+              </div>
+            </td>
+            <td>
+              <div class="sg-stat">
+                <strong>{{ g.online_now }}</strong>
+                <span>جلسة نشطة</span>
+              </div>
+            </td>
+            <td>
+              <div class="sg-usage">
+                <div class="sg-usage-line"><span>تحميل</span>{{ fmt_bytes(g.total_download_bytes) }}</div>
+                <div class="sg-usage-line"><span>رفع</span>{{ fmt_bytes(g.total_upload_bytes) }}</div>
+              </div>
+            </td>
+            <td>
+              <div class="sg-pills">
+                {{ hub.pill("نشط " ~ g.enabled_members, variant="green") }}
+                {% if g.disabled_members %}{{ hub.pill("معطل " ~ g.disabled_members, variant="red") }}{% endif %}
+                {% if g.expired_members %}{{ hub.pill("منتهي " ~ g.expired_members, variant="amber") }}{% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="sg-pills">
+                {% if g.bandwidth_schedule_id %}
+                  {{ hub.pill(g.bandwidth_schedule_name or "جدولة سرعة", variant="amber") }}
+                {% endif %}
+                {% if g.default_plan_id %}
+                  {{ hub.pill(g.default_plan_name or "باقة افتراضية", variant="brand") }}
+                {% endif %}
+                {% if g.default_auto_renewal %}
+                  {{ hub.pill("تجديد تلقائي", variant="green") }}
+                {% endif %}
                 {% if not g.bandwidth_schedule_id and not g.default_plan_id and not g.default_auto_renewal %}
                   <span class="hub-text-mute">—</span>
                 {% endif %}
               </div>
             </td>
-            <td class="small">{{ g.working_days or '—' }}</td>
             <td>
-              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <div class="sg-pills">
+                {% if g.temporary_speed_members %}{{ hub.pill("مؤقتة " ~ g.temporary_speed_members, variant="blue") }}{% endif %}
+                {% if g.custom_speed_members %}{{ hub.pill("خاصة " ~ g.custom_speed_members, variant="amber") }}{% endif %}
+                {% if not g.temporary_speed_members and not g.custom_speed_members %}
+                  <span class="hub-text-mute">العرض</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="small mono">{{ (g.last_activity_at or '—')[:16] }}</td>
+            <td>
+              <div class="sg-actions">
+                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                   href="{{ url_for('radius.users_list', group_id=g.id) }}"
+                   title="عرض أعضاء المجموعة">
+                  <i class="fa-solid fa-users"></i> الأعضاء
+                </a>
+                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                   href="{{ url_for('radius.online_list', group_id=g.id) }}"
+                   title="عرض المتصلين من المجموعة">
+                  <i class="fa-solid fa-wifi"></i> المتصلون
+                </a>
+                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                   href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}"
+                   title="إدارة السرعة والخدمات">
+                  <i class="fa-solid fa-gauge-high"></i> السرعة
+                </a>
+                <form method="post"
+                      action="{{ url_for('radius.subscriber_groups_quota_reset_daily', gid=g.id) }}"
+                      onsubmit="return confirm('استعادة الكوتة اليومية لكل أعضاء مجموعة «{{ g.name|e }}»؟');">
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm" title="استعادة الكوتة اليومية">
+                    <i class="fa-solid fa-rotate-left"></i>
+                  </button>
+                </form>
+                <form method="post"
+                      action="{{ url_for('radius.subscriber_groups_disconnect_online', gid=g.id) }}"
+                      onsubmit="return confirm('فصل كل الجلسات المتصلة لمجموعة «{{ g.name|e }}»؟');">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="فصل المتصلين">
+                    <i class="fa-solid fa-scissors"></i>
+                  </button>
+                </form>
                 <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
                    href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="post"
                       action="{{ url_for('radius.subscriber_groups_delete', gid=g.id) }}"
-                      onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها (لن يُحذفوا).');"
-                      style="display:inline">
+                      onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها ولن يتم حذفهم.');">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
                     <i class="fa-solid fa-trash"></i>
                   </button>

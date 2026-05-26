@@ -1,10 +1,18 @@
 """Subscriber Groups repo — مجموعات المشتركين + خدماتها (migration 027)."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from ..connection import db, transaction
 from ..helpers import now_iso
+
+
+def _g(row: Any, key: str, default=None):
+    try:
+        value = row[key]
+        return default if value is None else value
+    except (KeyError, IndexError):
+        return default
 
 
 def _row(r) -> dict:
@@ -23,6 +31,19 @@ def _row(r) -> dict:
         "connection_schedule":    (r["connection_schedule"] or "") if "connection_schedule" in keys else "",
         "created_at":             r["created_at"],
         "updated_at":             r["updated_at"],
+        "members":                int(_g(r, "members", 0) or 0),
+        "online_now":             int(_g(r, "online_now", 0) or 0),
+        "enabled_members":        int(_g(r, "enabled_members", 0) or 0),
+        "disabled_members":       int(_g(r, "disabled_members", 0) or 0),
+        "expired_members":        int(_g(r, "expired_members", 0) or 0),
+        "custom_speed_members":   int(_g(r, "custom_speed_members", 0) or 0),
+        "temporary_speed_members": int(_g(r, "temporary_speed_members", 0) or 0),
+        "total_download_bytes":   int(_g(r, "total_download_bytes", 0) or 0),
+        "total_upload_bytes":     int(_g(r, "total_upload_bytes", 0) or 0),
+        "session_count":          int(_g(r, "session_count", 0) or 0),
+        "last_activity_at":       _g(r, "last_activity_at", "") or "",
+        "default_plan_name":      _g(r, "default_plan_name", "") or "",
+        "bandwidth_schedule_name": _g(r, "bandwidth_schedule_name", "") or "",
     }
 
 
@@ -30,20 +51,93 @@ def list_groups(tenant_id: int) -> list[dict]:
     """All non-deleted groups for this tenant + member count."""
     cur = db().execute("""
         SELECT g.*,
-               (SELECT COUNT(*) FROM subscribers s
+               p.name AS default_plan_name,
+               bs.name AS bandwidth_schedule_name,
+               (SELECT COUNT(*)
+                  FROM subscribers s
                  WHERE s.tenant_id = g.tenant_id
-                   AND s.subscriber_group_id = g.id
-                   AND s.deleted_at IS NULL) AS members
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS members,
+               (SELECT COUNT(*)
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND s.status = 'enabled'
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS enabled_members,
+               (SELECT COUNT(*)
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND s.status = 'disabled'
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS disabled_members,
+               (SELECT COUNT(*)
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND s.status = 'expired'
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS expired_members,
+               (SELECT COUNT(*)
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND s.custom_speed = 1
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS custom_speed_members,
+               (SELECT COUNT(*)
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND s.temporary_speed = 1
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS temporary_speed_members,
+               (SELECT COUNT(DISTINCT r.username)
+                  FROM subscribers s
+                  JOIN radacct r
+                    ON r.tenant_id = s.tenant_id
+                   AND r.username = s.username
+                   AND r.acctstoptime IS NULL
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS online_now,
+               (SELECT COALESCE(SUM(r.acctinputoctets), 0)
+                  FROM subscribers s
+                  JOIN radacct r
+                    ON r.tenant_id = s.tenant_id
+                   AND r.username = s.username
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_download_bytes,
+               (SELECT COALESCE(SUM(r.acctoutputoctets), 0)
+                  FROM subscribers s
+                  JOIN radacct r
+                    ON r.tenant_id = s.tenant_id
+                   AND r.username = s.username
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_upload_bytes,
+               (SELECT COUNT(r.radacctid)
+                  FROM subscribers s
+                  JOIN radacct r
+                    ON r.tenant_id = s.tenant_id
+                   AND r.username = s.username
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS session_count,
+               (SELECT MAX(COALESCE(s.last_seen_at, s.last_login_at))
+                  FROM subscribers s
+                 WHERE s.tenant_id = g.tenant_id
+                   AND s.deleted_at IS NULL
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS last_activity_at
         FROM subscriber_groups g
+        LEFT JOIN access_plans p
+          ON p.tenant_id = g.tenant_id
+         AND p.id = g.default_plan_id
+        LEFT JOIN bandwidth_schedules bs
+          ON bs.tenant_id = g.tenant_id
+         AND bs.id = g.bandwidth_schedule_id
         WHERE g.tenant_id = ?
           AND g.deleted_at IS NULL
         ORDER BY g.name COLLATE NOCASE
     """, (tenant_id,))
-    out: list[dict] = []
-    for r in cur.fetchall():
-        d = _row(r); d["members"] = r["members"]
-        out.append(d)
-    return out
+    return [_row(r) for r in cur.fetchall()]
 
 
 def get(tenant_id: int, gid: int) -> Optional[dict]:
@@ -134,11 +228,20 @@ def delete(tenant_id: int, gid: int) -> None:
 def list_members(tenant_id: int, gid: int, limit: int = 500) -> list[dict]:
     cur = db().execute("""
         SELECT id, username, full_name, status, mobile
-          FROM subscribers
-         WHERE tenant_id = ?
-           AND subscriber_group_id = ?
-           AND deleted_at IS NULL
+          FROM subscribers s
+          JOIN subscriber_groups g
+            ON g.tenant_id = s.tenant_id
+           AND g.id = ?
+           AND g.deleted_at IS NULL
+         WHERE s.tenant_id = ?
+           AND (s.subscriber_group_id = g.id OR s.group_name = g.name)
+           AND s.deleted_at IS NULL
          ORDER BY username
          LIMIT ?
-    """, (tenant_id, gid, limit))
+    """, (gid, tenant_id, limit))
     return [dict(r) for r in cur.fetchall()]
+
+
+def list_member_usernames(tenant_id: int, gid: int, limit: int = 10000) -> list[str]:
+    rows = list_members(tenant_id, gid, limit=limit)
+    return [str(r["username"]) for r in rows if r.get("username")]
