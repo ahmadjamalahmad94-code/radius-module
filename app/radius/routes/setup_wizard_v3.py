@@ -231,6 +231,44 @@ def setup_wizard_v3_mark_handshake(run_id: int):
     return jsonify({"ok": True, "run": run.to_dict()})
 
 
+def setup_wizard_v3_force_register(run_id: int):
+    """Recovery: manually re-run the register step on a run
+    that's stuck in BLOCKED with MISSING_REGISTRATION_INPUT.
+
+    Reads router_name + router_vpn_ip from state_json. If
+    they exist, transitions the run to REGISTERING and calls
+    register_router_in_inventory directly. Useful when a v3
+    run advanced state but lost state_json entries due to a
+    transient bug or operator skipping ahead.
+
+    Only intended for support — not a regular flow."""
+    body = _body()
+    api_user = str(body.get("api_user") or "admin")
+    api_password = str(body.get("api_password") or "")
+    try:
+        # First, unblock the state machine.
+        _svc()._repo.update_state(
+            tenant_id=_tid(), run_id=run_id,
+            state="REGISTERING",
+        )
+        run = _svc().register_router_in_inventory(
+            tenant_id=_tid(), run_id=run_id,
+            api_user=api_user,
+            api_password=api_password,
+        )
+    except V3InvalidState as exc:
+        return _err(str(exc), status=409, code="invalid_state")
+    except V3Error as exc:
+        return _err(str(exc))
+    except Exception as exc:  # noqa: BLE001
+        return _err(
+            f"force register failed: {exc}",
+            status=500,
+            code="force_register_failed",
+        )
+    return jsonify({"ok": True, "run": run.to_dict()})
+
+
 def setup_wizard_v3_register(run_id: int):
     body = _body()
     try:
@@ -676,6 +714,12 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/runs/<int:run_id>/phase-plan/<phase>",
         "setup_wizard_v3_phase_plan",
         setup_wizard_v3_phase_plan,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/runs/<int:run_id>/force-register",
+        "setup_wizard_v3_force_register",
+        setup_wizard_v3_force_register,
         methods=["POST"],
     )
     bp.add_url_rule(

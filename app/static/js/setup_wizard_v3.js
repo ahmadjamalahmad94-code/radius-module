@@ -890,7 +890,7 @@
   async function registerRouter(btn) {
     setBusy(btn, true);
     try {
-      await api(
+      const data = await api(
         "POST",
         `/runs/${state.runId}/register`,
         {
@@ -898,6 +898,29 @@
           api_password: getValue("[data-swz-api-pass]"),
         },
       );
+      // Backend may return HTTP 200 with run.v3_state=BLOCKED
+      // when state_json is missing required inputs (router_name
+      // or router_vpn_ip). Don't celebrate prematurely — check
+      // the actual run state.
+      const run = (data && data.run) || {};
+      if (run.v3_state === "BLOCKED") {
+        const diags = run.diagnostics || [];
+        const reason = diags.length
+          ? diags[diags.length - 1].ar
+            || diags[diags.length - 1].code
+            || "تعذّر التسجيل"
+          : "تعذّر التسجيل (state=BLOCKED)";
+        toast("⛔ التسجيل فشل: " + reason, "error");
+        return;
+      }
+      if (run.v3_state && run.v3_state !== "COMPLETE") {
+        toast(
+          `⚠️ التسجيل لم يكتمل (state=${run.v3_state}).`
+          + ` راجع لوحة التشخيص أو ابدأ run جديداً.`,
+          "error",
+        );
+        return;
+      }
       toast("🎉 تم تسجيل الراوتر بنجاح!", "ok");
       showStep(7);
     } catch (err) {
