@@ -7,7 +7,13 @@ rest {
     tls {
     }
 
-    connect_uri = "http://hoberadius:8000"
+    # Was: http://hoberadius:8000 (docker DNS via the hrnet bridge).
+    # Now: http://127.0.0.1:8000 because freeradius runs with
+    # network_mode: host (postmortem #19) and can no longer resolve
+    # the docker service name. The hoberadius service exposes
+    # 8000 on the host's loopback via `127.0.0.1:8000:8000`, so
+    # this works without exposing 8000 to the public internet.
+    connect_uri = "http://127.0.0.1:8000"
     connect_timeout = 4.0
 
     # ─ ملاحظة عن X-Internal-Secret ─
@@ -59,12 +65,13 @@ rest {
     }
 
     # ─ lazy pool: نتجنّب فتح أي connection عند startup ─
-    # السبب: DNS lookup لـ "hoberadius:8000" قد يفشل أثناء instantiation لو
-    # كان hoberadius container لم يصل بعدُ لحالة جاهزة (race مع docker DNS،
-    # خصوصًا لو hoberadius نفسه يدور في restart-loop). start=0 + min=0
-    # يجعل الـ pool يفتح connections عند أوّل طلب فعلي، لا أثناء الإقلاع.
-    # freeradius يبقى Ready to process requests حتى لو كان hoberadius
-    # مؤقّتًا غير قابل للوصول (طلب RADIUS سيُرجِع reject في تلك الحالة).
+    # السبب: TCP connect إلى "127.0.0.1:8000" قد يفشل أثناء instantiation
+    # لو كان hoberadius container لم يصل بعدُ لحالة جاهزة (race ضد
+    # supervisor start order، خصوصًا لو hoberadius يدور في restart-loop).
+    # start=0 + min=0 يجعل الـ pool يفتح connections عند أوّل طلب فعلي،
+    # لا أثناء الإقلاع. freeradius يبقى Ready to process requests حتى لو
+    # كان hoberadius مؤقّتًا غير قابل للوصول (طلب RADIUS سيُرجِع reject في
+    # تلك الحالة).
     pool {
         start          = 0
         min            = 0

@@ -24,6 +24,17 @@ services:
       - /etc/hoberadius/nginx-streams.d:/etc/hoberadius/nginx-streams.d:rw
     networks: [hrnet]
     expose: ["8000"]
+    # Bind hoberadius port 8000 to host's LOOPBACK only (not all
+    # interfaces) so the host-networked freeradius can reach the
+    # internal-auth endpoint via 127.0.0.1:8000. NOT exposed to
+    # the public internet — only processes on the host itself
+    # (or other containers via the docker bridge) can connect.
+    # This was added when freeradius moved to network_mode: host
+    # in postmortem #19 so RADIUS packets keep their real source
+    # IP (10.10.0.x from MT routers via WG) instead of being
+    # SNAT-ed to 172.18.0.1 by the docker bridge.
+    ports:
+      - "127.0.0.1:8000:8000"
 
   freeradius:
     build:
@@ -37,17 +48,38 @@ services:
     volumes:
       - ../instance:/data              # SQLite DB shared (read+write radacct)
       - ../logs/freeradius:/var/log/freeradius
+    # ─── Host networking (postmortem #19) ───────────────────
+    # Before: freeradius used the docker bridge network with
+    # ports: 1812/1813/3799 published. RADIUS packets from
+    # MT routers (10.10.0.x via WireGuard) got SNAT-ed by the
+    # bridge's MASQUERADE rule (`-s 10.10.0.0/24 ! -o wg0 -j
+    # MASQUERADE`), so freeradius saw src=172.18.0.1 instead
+    # of the real router IP. The fall-through `client
+    # docker_network` block matched with a stale catch-all
+    # secret → every wizard-provisioned router got rejected.
+    #
+    # After: host networking. freeradius binds directly to
+    # 0.0.0.0:1812/1813/3799 on the host. No DNAT, no SNAT.
+    # Packets arrive with their real WireGuard source IP, so
+    # the per-run `client router-<id> { ipaddr=10.10.0.x }`
+    # blocks match and the wizard's unique secrets work.
+    #
+    # Implication: freeradius can no longer resolve
+    # `hoberadius:8000` via docker DNS — it now uses
+    # 127.0.0.1:8000 instead, reachable thanks to the
+    # `127.0.0.1:8000:8000` mapping on the hoberadius
+    # service above.
+    network_mode: host
+    # `ports:` and `networks:` are incompatible with
+    # network_mode: host. freeradius binds directly to the
+    # host's interfaces; no port-publish is needed or
+    # respected.
     # نُحمِّل نفس .env الذي يستهلكه hoberadius — هذا يضمن أن
     # HOBERADIUS_INTERNAL_SECRET متطابق على الطرفَين دون الاعتماد على
     # interpolation ${VAR:-} الذي يقرأ من dir الـ compose file، لا من cwd.
     env_file: ../.env
     environment:
       - FREERADIUS_DEBUG_LEVEL=        # ضع "-X" للـ verbose debugging
-    ports:
-      - "1812:1812/udp"                # auth
-      - "1813:1813/udp"                # accounting
-      - "3799:3799/udp"                # CoA / Disconnect-Request (RFC 5176)
-    networks: [hrnet]
     healthcheck:
       # F1 — process-presence check بدون أي اعتمادات إضافية.
       # الـ image الرسمي freeradius/freeradius-server:3.2.5 لا يحوي

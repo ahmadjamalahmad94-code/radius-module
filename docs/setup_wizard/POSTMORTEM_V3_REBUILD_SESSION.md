@@ -864,6 +864,116 @@ docker compose -f deploy/docker-compose.yml restart freeradius
 
 ---
 
+## 19) Docker bridge SNAT-ed router RADIUS traffic to a generic catch-all
+
+**Symptom.** After issues #17 (`$INCLUDE` syntax) and #18
+(hardcoded VPN-IP collision) were fixed, FreeRADIUS finally
+booted with `Ready to process requests`. But a subscriber
+login attempt from the wizard-provisioned MT router at
+10.10.0.2 produced:
+
+```
+Info: Dropping packet without response because of error:
+Received packet from 172.18.0.1 with invalid Message-Authenticator!
+(Shared secret is incorrect.) (from client docker)
+```
+
+Two surprises:
+
+1. `Received packet from 172.18.0.1` — but the MT router's
+   tunnel IP is 10.10.0.2.
+2. `(from client docker)` — matched a catch-all
+   `client docker_network { ipaddr=172.16.0.0/12 secret=testing123 }`
+   block instead of the per-run `client router-42 { ipaddr=10.10.0.2 }`.
+
+**Root cause.** FreeRADIUS ran on the docker bridge network
+with `ports: "1812:1812/udp"` etc. Linux iptables on the host
+had a `MASQUERADE` rule for `-s 10.10.0.0/24 ! -o wg0`,
+intended to let routers reach the internet via the VPS uplink.
+But the same rule rewrote inbound RADIUS source IPs:
+
+```
+MT (10.10.0.2) → wg0 → host iptables PREROUTING (DNAT to
+   freeradius container ip) → routing decision: exit via
+   br-XXX (the docker bridge) → POSTROUTING MASQUERADE
+   matches (src=10.10.0.0/24, out!=wg0) → src rewritten to
+   172.18.0.1 → freeradius sees 172.18.0.1 → matches the
+   broad `client docker_network` block → secret mismatch
+   (catch-all uses legacy `testing123`, wizard-provisioned
+   routers use unique per-run secrets) → packet dropped.
+```
+
+Per-router unique secrets — the SAFE design — could never
+work as long as FreeRADIUS lived behind the docker bridge.
+
+**Fix.** Two changes:
+
+1. **`deploy/docker-compose.yml`**: switch freeradius to
+   `network_mode: host`. The daemon binds directly to
+   `0.0.0.0:1812/1813/3799` on the host's network stack.
+   No DNAT, no SNAT, no docker bridge between the router
+   packet and the daemon. RADIUS packets arrive with their
+   real WireGuard source IP (10.10.0.2), so
+   `client router-42 { ipaddr=10.10.0.2 secret=<unique> }`
+   matches and the wizard's per-router secrets work end to
+   end.
+
+2. **`deploy/freeradius/mods-enabled/rest`**: change
+   `connect_uri` from `http://hoberadius:8000` to
+   `http://127.0.0.1:8000`. The hostname `hoberadius` is a
+   docker-DNS name only resolvable from inside the bridge
+   network — a host-networked container can't reach it.
+   To make hoberadius reachable from host-networked
+   freeradius, the hoberadius service now publishes
+   `127.0.0.1:8000:8000`. This binds 8000 to the host's
+   LOOPBACK ONLY — not to all interfaces, so the policy
+   endpoint stays invisible to the public internet while
+   freeradius (and any other process on the host) can hit
+   it via 127.0.0.1.
+
+**Why NOT the alternative ("use `testing123` everywhere").**
+That was the fast path — just make every wizard run use the
+same shared secret as the catch-all client. It would have
+been a 2-line wizard change. But it sacrifices the security
+property the per-run secret was introduced for: if any one
+router gets compromised, an attacker can impersonate every
+other router under the same RADIUS server. The wizard's
+random `secrets.token_hex(16)` is wasted if all routers
+collapse to one shared key. Host networking preserves the
+property at the cost of a small compose + URL change.
+
+**Verification checklist:**
+- `docker compose ... up -d --build freeradius`
+- `docker logs hoberadius-freeradius --tail 20` shows
+  `Ready to process requests` with no `exited with code`
+  loop.
+- From host: `ss -lunp | grep 1812` shows freeradius (PID)
+  bound on `*:1812`.
+- A login from MT router produces a log line:
+  `Auth: Login OK: [<user>] (from client router-<run>
+  port 0)` — NOT `from client docker`.
+- `client docker_network` remains in clients.conf as a
+  catch-all for bridge-internal testing but should no longer
+  match any production traffic.
+
+**Prevention.**
+- **Daemons that need real source IPs (RADIUS, syslog,
+  GTP, IPSec, anything matching by client IP) should run
+  on host networking from day one.** The docker bridge's
+  SNAT magic breaks this class of protocols silently.
+- **Per-client identification at the network layer
+  (clients.conf matched by source IP) is fragile.** When
+  feasible, identify clients by an in-packet attribute
+  (e.g. `NAS-Identifier`) so SNAT can't break the lookup.
+- **`expose:` vs `ports:` matters.** `expose: ["8000"]`
+  makes the port accessible only on the bridge network.
+  `ports: "8000:8000"` exposes to ALL host interfaces.
+  `ports: "127.0.0.1:8000:8000"` exposes only to the host's
+  loopback — usually what you want for an internal service
+  reachable by host-networked sibling containers.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

@@ -56,6 +56,37 @@ print(f'applied {n} migrations')
 If `n=0` and the column truly missing, the migration runner
 is reading the wrong DB path — check `HOBERADIUS_DB_PATH`.
 
+### RADIUS auth dropped: "Received packet from 172.18.0.1 ... from client docker"
+
+→ **Docker bridge SNAT-ed the router's source IP.** The MT
+router sends from 10.10.0.x (over WG), but the docker bridge's
+`MASQUERADE -s 10.10.0.0/24 ! -o wg0` rule rewrites the
+source to 172.18.0.1 before freeradius sees it. The fallback
+`client docker_network` catch-all matches but its legacy
+`secret=testing123` doesn't match the wizard's per-run
+unique secret → drop.
+
+**Permanent fix:** commit after issue #19 puts freeradius on
+`network_mode: host` so it sees real source IPs. Combined
+with `127.0.0.1:8000:8000` on hoberadius, freeradius's rest
+module reaches the policy endpoint without docker DNS.
+
+After `git pull && docker compose ... up -d --build`, a
+fresh login should produce:
+```
+Auth: Login OK: [<user>] (from client router-<run> port 0)
+```
+
+NOT `from client docker`. If you still see "from client
+docker" lines, double-check:
+```bash
+docker inspect hoberadius-freeradius --format '{{.HostConfig.NetworkMode}}'
+```
+
+Should print `host` — if it prints `default` or a bridge
+name, the compose change didn't take effect (try
+`--force-recreate freeradius`).
+
 ### `Failed to add duplicate client ...` after wizard run
 
 → **Wizard allocated an IP already used by a hardcoded
