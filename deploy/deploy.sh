@@ -47,7 +47,13 @@ cmd_init() {
     # as an empty directory at the wrong perms (postmortem #1
     # / #5 / #7).
     mkdir -p /etc/hoberadius/nginx-streams.d
-    chmod 1777 /etc/hoberadius/nginx-streams.d
+    # Ownership: gid=999 matches the hoberadius container's
+    # primary group. The setgid+rwx-on-group bits (2775)
+    # mean any new file inherits gid=999 too. setgid avoids
+    # the chmod 1777 fallback (world-writable) that the
+    # earlier postmortems papered over the issue with.
+    chgrp 999 /etc/hoberadius/nginx-streams.d 2>/dev/null || true
+    chmod 2775 /etc/hoberadius/nginx-streams.d
 
     log "3b) فحص ملفّات nginx المطلوبة ..."
     for f in deploy/nginx-main.conf deploy/nginx-entrypoint.sh \
@@ -91,7 +97,13 @@ cmd_upgrade() {
         fi
     done
     mkdir -p /etc/hoberadius/nginx-streams.d
-    chmod 1777 /etc/hoberadius/nginx-streams.d
+    # Ownership: gid=999 matches the hoberadius container's
+    # primary group. The setgid+rwx-on-group bits (2775)
+    # mean any new file inherits gid=999 too. setgid avoids
+    # the chmod 1777 fallback (world-writable) that the
+    # earlier postmortems papered over the issue with.
+    chgrp 999 /etc/hoberadius/nginx-streams.d 2>/dev/null || true
+    chmod 2775 /etc/hoberadius/nginx-streams.d
     log "3) build + restart ..."
     $COMPOSE up -d --build
     log "4) status:"

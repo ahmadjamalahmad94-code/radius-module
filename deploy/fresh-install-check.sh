@@ -59,10 +59,11 @@ for d in /etc/hoberadius/wg-peers.d /etc/hoberadius/nginx-streams.d; do
         if [ "$gid" = "999" ]; then
             ok "$d exists (gid=999 OK)"
         else
-            warn "$d exists but gid=$gid (should be 999 — run deploy.sh init-wg-reloader)"
+            # One-shot fix the operator can paste verbatim:
+            warn "$d exists but gid=$gid (should be 999) — fix: sudo chgrp 999 $d && sudo chmod 2775 $d"
         fi
     else
-        fail "$d MISSING — run: sudo bash $(dirname "$0")/deploy.sh init-wg-reloader"
+        fail "$d MISSING — run: sudo bash $(dirname "$0")/deploy.sh init-wg-reloader && sudo bash $(dirname "$0")/deploy.sh up"
     fi
 done
 
