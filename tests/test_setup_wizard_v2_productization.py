@@ -108,15 +108,16 @@ def test_engineering_view_and_lab_controls_are_not_exposed_in_simple_flow(app):
 
 def test_mobile_friendly_product_classes_exist():
     css = _css_source("setup_wizard_v2.css")
-    fleet_css = _css_source("setup_wizard_fleet.css")
 
     assert ".swv2-confidence-journey" in css
     assert ".swv2-empty-state" in css
     assert ".swv2-success-card" in css
     assert "@media (max-width: 560px)" in css
     assert ".swv2-btn" in css and "width: 100%" in css
-    assert "@media (max-width: 720px)" in fleet_css
-    assert ".swfleet-table-wrap" in fleet_css
+    # Fleet CSS was removed in May 2026 when setup-wizard/fleet
+    # became a redirect to /mt/operations. Mobile responsiveness
+    # for the unified router page is covered by the design system
+    # styles already asserted above.
 
 
 def test_primary_ui_does_not_expose_raw_json_blocks(app):
