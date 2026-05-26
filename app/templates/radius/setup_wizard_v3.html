@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526h">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526i">
 {% endblock %}
 
 {% block content %}
@@ -558,20 +558,47 @@ Steps:
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>المنفذ على الراوتر</label>
-            <input type="text" data-swz-bb-iface
-                   placeholder="ether3" value="ether3" autocomplete="off">
+            <label>منافذ PPPoE (اختر واحداً أو أكثر)</label>
+            <div class="swz-iface-grid" data-swz-bb-ifaces>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether3" checked>
+                <span>ether3</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether4">
+                <span>ether4</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="ether5">
+                <span>ether5</span>
+              </label>
+              <label class="swz-iface-check">
+                <input type="checkbox" value="sfp1">
+                <span>sfp1</span>
+              </label>
+            </div>
+            <small>
+              المنفذ/المنافذ التي يتّصل بها مستخدمو PPPoE.
+              تُستثنى منفذ الإنترنت (WAN) و hr-wg تلقائياً.
+              يمكن إعادة استخدام منفذ اكتُشف في الـ Hotspot.
+            </small>
+            <input type="text" data-swz-bb-iface-custom dir="ltr"
+                   placeholder="منافذ إضافيّة مفصولة بفاصلة"
+                   autocomplete="off">
           </div>
           <div class="swz-field">
             <label>عنوان البوّابة المحليّة</label>
             <input type="text" data-swz-bb-local dir="ltr"
                    placeholder="192.168.50.1" value="192.168.50.1">
+            <small>عنوان الراوتر الخاص الذي يظهر لعملاء PPPoE
+              كبوّابة افتراضيّة.</small>
           </div>
           <div class="swz-field">
             <label>نطاق العملاء البعيدين</label>
             <input type="text" data-swz-bb-pool dir="ltr"
                    placeholder="192.168.50.0/24"
                    value="192.168.50.0/24">
+            <small>الـ IPs التي توزَّع تلقائياً للعملاء.</small>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-broadband">
@@ -664,21 +691,23 @@ ads.example"></textarea>
   <section class="swz-step" data-swz-step="6">
     <header>
       <h2>تسجيل الراوتر في القائمة</h2>
-      <p>أدخل بيانات الوصول الإداريّة (API) ليتمكّن النظام
-         من إدارة الراوتر تلقائياً.</p>
+      <p>تم توليد مستخدم API مخصّص للراوتر في سكربت الخطوة 3.
+         فقط اضغط (تسجيل وإنهاء) — لا حاجة لإدخال أي شيء.</p>
     </header>
 
     <div class="swz-field">
       <label>اسم مستخدم API</label>
-      <input type="text" data-swz-api-user dir="ltr"
-             value="admin" autocomplete="off">
-      <small>عادةً <code>admin</code> أو حساب مخصّص بصلاحيات API.</small>
+      <input type="text" data-swz-api-user dir="ltr" readonly
+             value="" autocomplete="off">
+      <small>مُولَّد تلقائياً (يبدأ بـ <code>hr-api-</code>).</small>
     </div>
 
     <div class="swz-field">
       <label>كلمة مرور API</label>
-      <input type="password" data-swz-api-pass dir="ltr"
-             autocomplete="new-password">
+      <input type="text" data-swz-api-pass dir="ltr" readonly
+             value="" autocomplete="off">
+      <small>مُولَّدة تلقائياً، آمنة، وموجودة على الراوتر
+        من خطوة الربط.</small>
     </div>
 
     <footer class="swz-actions">
@@ -709,5 +738,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526h"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526i"></script>
 {% endblock %}

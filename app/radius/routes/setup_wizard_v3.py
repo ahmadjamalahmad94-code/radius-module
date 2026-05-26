@@ -481,6 +481,10 @@ def setup_wizard_v3_discover_interfaces(run_id: int):
 
     body = _body() or {}
     mode = str(body.get("mode") or "").strip().lower()
+    blocked = [
+        str(x).strip() for x in (body.get("blocked_interfaces") or [])
+        if str(x).strip()
+    ]
     try:
         run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
     except V3NotFound as exc:
@@ -517,10 +521,21 @@ def setup_wizard_v3_discover_interfaces(run_id: int):
             code="discovery_error",
         )
 
+    # Filter out the operator-supplied blocked interfaces
+    # (usually the WAN port chosen in Step 2) so they can never
+    # be picked for hotspot/broadband — protects internet uplink
+    # from being torn down by a downstream phase script.
+    if blocked:
+        blocked_set = {b for b in blocked}
+        ifaces = [
+            i for i in ifaces if i.get("name") not in blocked_set
+        ]
+
     return jsonify({
         "ok": True,
         "mode": mode or "api",
         "interfaces": ifaces,
+        "blocked_interfaces": blocked,
         "router_vpn_ip": run.router_vpn_ip,
     })
 

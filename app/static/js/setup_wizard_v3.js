@@ -78,6 +78,15 @@
       li.classList.toggle("is-current", step === n);
       li.classList.toggle("is-done", step < n);
     });
+    // On Step 6, auto-fill the API user/password from the
+    // credentials the unified script baked into the router.
+    // Operator just presses 'register'.
+    if (n === 6 && state.apiUser) {
+      const u = root.querySelector("[data-swz-api-user]");
+      const p = root.querySelector("[data-swz-api-pass]");
+      if (u) u.value = state.apiUser;
+      if (p) p.value = state.apiPassword || "";
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -313,6 +322,14 @@
         toast(msg, "error");
         return;
       }
+      // Remember which physical interface is the WAN — later
+      // steps (hotspot, broadband, discovery) must NEVER pick
+      // it. Kept in client state; passed explicitly to the
+      // discovery endpoint as a blocked_iface hint.
+      state.routerWanInterface =
+        inputs.interface
+        || inputs.parent_interface
+        || "";
       showScript("step2", plan.script);
       const nextBtn = root.querySelector('[data-swz-next="2"]');
       if (nextBtn) nextBtn.hidden = false;
@@ -350,6 +367,11 @@
         state.radiusSecret = secret;  // cached for Step 5
         renderClientsConfSnippet(secret, routerVpnIp, state.runId);
       }
+      // Cache the API credentials the unified script baked
+      // into the router — Step 6 auto-fills these so the
+      // operator doesn't have to type anything.
+      if (data.api_user) state.apiUser = data.api_user;
+      if (data.api_password) state.apiPassword = data.api_password;
       const pasteBox = root.querySelector("[data-swz-step3-paste]");
       if (pasteBox) pasteBox.hidden = false;
       const genBtn = root.querySelector(
@@ -525,6 +547,9 @@
           mode: "api",
           api_user: getValue("[data-swz-discover-api-user]") || "admin",
           api_password: getValue("[data-swz-discover-api-pass]"),
+          blocked_interfaces: state.routerWanInterface
+            ? [state.routerWanInterface]
+            : [],
         },
       );
       renderDiscoveredInterfaces(data.interfaces);
@@ -544,6 +569,9 @@
         {
           mode: "paste",
           pasted_output: getValue("[data-swz-discover-paste]"),
+          blocked_interfaces: state.routerWanInterface
+            ? [state.routerWanInterface]
+            : [],
         },
       );
       renderDiscoveredInterfaces(data.interfaces);
@@ -611,6 +639,11 @@
           radius_secret: secret,
           router_vpn_ip: routerVpnIp,
           wan_interface: wanIface,
+          blocked_interfaces: [
+            wanIface,
+            state.routerWanInterface,
+            "hr-wg",
+          ].filter(Boolean),
         },
       );
       const plan = data.plan || {};
@@ -632,19 +665,44 @@
     }
   }
 
+  function collectBroadbandInterfaces() {
+    const checked = Array.from(
+      root.querySelectorAll(
+        "[data-swz-bb-ifaces] input[type=checkbox]:checked",
+      ),
+    ).map((cb) => cb.value);
+    const custom = (
+      getValue("[data-swz-bb-iface-custom]") || ""
+    )
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return Array.from(new Set([...checked, ...custom]));
+  }
+
   async function generateBroadbandScript(btn) {
     setBusy(btn, true);
     try {
+      const interfaces = collectBroadbandInterfaces();
+      if (!interfaces.length) {
+        toast(
+          "اختر على الأقل منفذاً واحداً لـ PPPoE.",
+          "error",
+        );
+        return;
+      }
       const data = await api(
         "POST",
         `/runs/${state.runId}/phase-plan/broadband`,
         {
           mode: "manual",
-          selected_interfaces: [
-            getValue("[data-swz-bb-iface]") || "ether3",
-          ],
+          selected_interfaces: interfaces,
           local_address: getValue("[data-swz-bb-local]"),
           remote_pool_cidr: getValue("[data-swz-bb-pool]"),
+          blocked_interfaces: [
+            state.routerWanInterface,
+            "hr-wg",
+          ].filter(Boolean),
         },
       );
       const plan = data.plan || {};
@@ -653,7 +711,10 @@
         return;
       }
       showScript("broadband", plan.script);
-      toast("✅ سكربت Broadband جاهز.", "ok");
+      toast(
+        `✅ سكربت Broadband جاهز لـ ${interfaces.length} منفذ.`,
+        "ok",
+      );
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {
