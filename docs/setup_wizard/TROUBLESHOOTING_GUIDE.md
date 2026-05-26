@@ -56,6 +56,36 @@ print(f'applied {n} migrations')
 If `n=0` and the column truly missing, the migration runner
 is reading the wrong DB path — check `HOBERADIUS_DB_PATH`.
 
+### Subscriber login hangs with "no response" / `(0) No reply from server`
+
+→ **FreeRADIUS is in a crash loop.** Check:
+
+```bash
+docker logs hoberadius-freeradius --tail 20
+```
+
+If you see `[entrypoint] freeradius exited with code 0, restarting in 1s`
+repeating every second, run:
+
+```bash
+docker exec hoberadius-freeradius freeradius -X 2>&1 | head -40
+```
+
+Common cause: `Unable to open file ".../freeradius-clients-wizard/*.conf"`
+— the wildcard `$INCLUDE` matches zero files because the
+directory is empty.
+
+**Recovery:**
+```bash
+docker exec hoberadius bash -c 'echo "# placeholder" > /app/instance/freeradius-clients-wizard/_placeholder.conf'
+docker compose -f /opt/hoberadius/deploy/docker-compose.yml restart freeradius
+```
+
+The entrypoint auto-creates this placeholder on boot (from
+commit after issue #17), but a manually-emptied directory
+between boots will still trigger the trap. Always leave
+`_placeholder.conf` in place.
+
 ### `/import` line vanishes after `/tool fetch` succeeded
 
 → **`/tool fetch` progress output ate the next pasted

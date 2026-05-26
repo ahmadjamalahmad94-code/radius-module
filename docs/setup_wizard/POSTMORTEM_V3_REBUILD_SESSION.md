@@ -691,6 +691,97 @@ Issue #15, so we're safe on both fronts.
 
 ---
 
+## 17) FreeRADIUS crash-loop when `$INCLUDE` glob matches no files
+
+**Symptom.** Subscriber tries to log in via Hotspot. Router
+shows `radius monitor: pending-replies: 1`. Login screen
+hangs and eventually says "لا يستجيب". `radclient` test from
+inside the freeradius container itself:
+
+```
+(0) No reply from server for ID 87 socket 3
+```
+
+docker logs of `hoberadius-freeradius`:
+
+```
+[entrypoint] freeradius exited with code 0, restarting in 1s
+[entrypoint] freeradius exited with code 0, restarting in 1s
+[entrypoint] freeradius exited with code 0, restarting in 1s
+... (every second forever)
+```
+
+Running `freeradius -X` manually:
+
+```
+including configuration file /data/freeradius-clients-wizard/*.conf
+Unable to open file "/data/freeradius-clients-wizard/*.conf":
+No such file or directory
+Errors reading or parsing /etc/freeradius/radiusd.conf
+```
+
+**Root cause.** `clients.conf` had this line (added in
+commit 67afa95):
+
+```
+$INCLUDE /data/freeradius-clients-wizard/*.conf
+```
+
+FreeRADIUS 3.x's `$INCLUDE` directive with a wildcard
+**fails the entire config parse** when the glob matches
+ZERO files. It does NOT silently skip an empty match.
+
+On first boot — before the wizard has provisioned its first
+router — the directory exists but contains no `.conf` files.
+Glob matches nothing. FreeRADIUS prints the error above and
+exits with code 0 (clean shutdown). My supervisor loop in
+entrypoint.sh then dutifully restarts it every second.
+
+Same crash trigger if an operator manually `rm -f`'s the
+wizard-run-*.conf files (e.g. as part of debugging a stale
+peer). The directory becomes empty, glob breaks, FreeRADIUS
+goes into a hidden crash loop.
+
+The supervisor loop made the symptom worse — it printed only
+the "restarting in 1s" line, hiding the underlying
+"Unable to open file" error from a casual `docker logs` look.
+
+**Fix.** Two layers:
+
+1. **Immediate manual recovery** (run on any deploy that's
+   already in this state):
+   ```bash
+   docker exec hoberadius bash -c 'echo "# placeholder" > /app/instance/freeradius-clients-wizard/_placeholder.conf'
+   docker compose -f deploy/docker-compose.yml restart freeradius
+   ```
+
+2. **Permanent fix in entrypoint.sh:** the entrypoint now
+   auto-creates `_placeholder.conf` (with header comments
+   explaining what it is) on every boot when the file is
+   missing. The wildcard always matches at least the
+   placeholder, so FreeRADIUS can start even with zero
+   real wizard rows.
+
+**Prevention.**
+- **Never use `$INCLUDE <dir>/*.conf` without guaranteeing
+  at least one matching file exists.** Either pre-create a
+  placeholder, or use `$-INCLUDE` (FR's "optional" variant),
+  or include the directory directly: `$INCLUDE <dir>/`
+  (loads all .conf files, doesn't fail on empty).
+- **Supervisor loops can hide real errors.** Mine restarted
+  freeradius every second on exit code 0, masking the parse
+  error. A supervisor should at minimum:
+    * log the first failure with full stderr context
+    * back off exponentially (1s → 2s → 4s → ...) so the
+      log doesn't drown in restart messages
+    * bail out after N consecutive immediate failures
+- **Any directory that holds operator-deletable files but
+  matters for daemon startup needs a placeholder file with
+  a `DO NOT REMOVE` header.** Document the placeholder in the
+  troubleshooting guide.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:
