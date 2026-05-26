@@ -1,0 +1,284 @@
+{# Broadband service — configure form (Phase 1) + JS wiring.
+
+   Mirrors the Hotspot partial structure:
+     Phase 1: pick interfaces (multi) + advanced pool overrides
+     Phase 2: POST /preview → bullets in Arabic
+     Phase 3: POST /apply  → animate substeps
+     Phase 4: GET  /verify → real probe (PPPoE server + RADIUS link)
+
+   Shell APIs used:
+     window.SWSVF.setPreview, setApplySubstep, setApplyLabel,
+                  showApplyError, setVerifyChecks, setPhase #}
+<h2>برمجة Broadband</h2>
+<p class="swsvf-pane-sub">
+  PPPoE — يفتح للمشتركين اشتراكاً ثابتاً (مستخدم + كلمة مرور). اختر الواجهات
+  التي سيُسمح عليها بالـ PPPoE، ثم اضغط «التالي».
+</p>
+
+<style>
+.swbb-section{margin:18px 0 10px}
+.swbb-section-title{
+  font-weight:700;color:var(--swsvf-ink);font-size:14px;margin:0 0 8px;
+}
+.swbb-help{color:var(--swsvf-mute);font-size:12px;margin:0 0 10px;line-height:1.7}
+.swbb-discover-btn{margin-bottom:10px}
+.swbb-iface-list{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:8px;margin:8px 0;
+}
+.swbb-iface-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border:1px solid var(--swsvf-line);border-radius:10px;
+  background:#fff;cursor:pointer;font-size:13px;transition:all .15s;
+}
+.swbb-iface-card:hover{border-color:var(--swsvf-green);background:#F8FAFC}
+.swbb-iface-card input{
+  width:16px;height:16px;cursor:pointer;accent-color:var(--swsvf-green);margin:0;
+}
+.swbb-iface-card.is-checked{background:var(--swsvf-green-soft);border-color:var(--swsvf-green)}
+.swbb-iface-name{font-weight:700;color:var(--swsvf-ink);font-family:monospace}
+.swbb-iface-meta{color:var(--swsvf-mute);font-size:11px;margin-inline-start:auto}
+.swbb-iface-empty{
+  color:var(--swsvf-mute);font-size:13px;font-style:italic;
+  padding:14px;text-align:center;background:#F8FAFC;border-radius:8px;
+  border:1px dashed var(--swsvf-line);
+}
+.swbb-fields{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+@media(max-width:560px){.swbb-fields{grid-template-columns:1fr}}
+.swbb-input{
+  display:block;width:100%;padding:8px 12px;
+  border:1px solid var(--swsvf-line);border-radius:8px;
+  font-size:14px;font-family:monospace;
+}
+.swbb-error{
+  color:#7F1D1D;background:var(--swsvf-red-soft);
+  border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;font-size:13px;margin:10px 0;
+}
+.swbb-error[hidden]{display:none}
+</style>
+
+{# ── Section 1: pick interfaces ── #}
+<div class="swbb-section">
+  <div class="swbb-section-title">واجهات الـ PPPoE</div>
+  <p class="swbb-help">
+    اختر الواجهة (أو الواجهات) التي ستُشغّل عليها خدمة PPPoE — عادةً منفذ LAN
+    موصّل بسويتش يوزّع على المشتركين.
+  </p>
+  <button type="button" class="swsvf-btn swbb-discover-btn"
+          data-swbb-discover>
+    <i class="fa-solid fa-magnifying-glass"></i>
+    اكتشف الواجهات من الراوتر
+  </button>
+  <div class="swbb-iface-list" data-swbb-iface-list>
+    <div class="swbb-iface-empty" data-swbb-iface-empty>
+      اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر.
+    </div>
+  </div>
+</div>
+
+{# ── Section 2: pool (optional) ── #}
+<div class="swbb-section">
+  <div class="swbb-section-title">عناوين الاشتراك (اختياري)</div>
+  <p class="swbb-help">
+    اتركها فارغة لاستخدام الإعدادات الافتراضيّة (10.30.0.1/32 للخادم،
+    10.30.1.0/24 للمشتركين). عدّلها فقط لو في تعارض مع شبكة أخرى.
+  </p>
+  <div class="swbb-fields">
+    <label>
+      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">عنوان الخادم (Local)</small>
+      <input type="text" class="swbb-input" data-swbb-local
+             placeholder="10.30.0.1/32">
+    </label>
+    <label>
+      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">نطاق المشتركين (Pool)</small>
+      <input type="text" class="swbb-input" data-swbb-pool
+             placeholder="10.30.1.0/24">
+    </label>
+  </div>
+</div>
+
+<div class="swbb-error" data-swbb-form-error hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const page  = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+  const routerId = page.dataset.routerId;
+  const ifaceList = page.querySelector("[data-swbb-iface-list]");
+  const discoverBtn = page.querySelector("[data-swbb-discover]");
+  const localInput = page.querySelector("[data-swbb-local]");
+  const poolInput = page.querySelector("[data-swbb-pool]");
+  const formError = page.querySelector("[data-swbb-form-error]");
+
+  function token() {
+    const el = document.querySelector('input[name="csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
+  function clearError() { formError.hidden = true; formError.textContent = ""; }
+  function getSelectedInterfaces() {
+    return Array.from(page.querySelectorAll("[data-swbb-iface]:checked"))
+                .map((el) => el.value);
+  }
+  function getPayload() {
+    return {
+      selected_interfaces: getSelectedInterfaces(),
+      local_address: localInput.value.trim() || "",
+      remote_pool_cidr: poolInput.value.trim() || "",
+      blocked_interfaces: [],
+    };
+  }
+  function refreshPayload() {
+    page.dataset.swsvfConfigurePayload = JSON.stringify(getPayload());
+  }
+
+  /* ── Interface discovery ── */
+  async function discoverInterfaces() {
+    discoverBtn.disabled = true;
+    const orig = discoverBtn.innerHTML;
+    discoverBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاكتشاف…';
+    clearError();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/discover-interfaces`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify({}) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      renderInterfaces(data.interfaces || []);
+    } catch (error) {
+      showError("فشل اكتشاف الواجهات: " + error.message);
+    } finally {
+      discoverBtn.disabled = false;
+      discoverBtn.innerHTML = orig;
+    }
+  }
+  function renderInterfaces(items) {
+    if (!items.length) {
+      ifaceList.innerHTML = '<div class="swbb-iface-empty">لم تُكتشَف واجهات صالحة.</div>';
+      return;
+    }
+    ifaceList.innerHTML = items.map((it) => {
+      const checked = it.recommended ? "checked" : "";
+      const meta = [
+        it.type || "",
+        it.running ? "يعمل" : "متوقّف",
+        it.disabled ? "معطّل" : "",
+      ].filter(Boolean).join(" · ");
+      return `
+        <label class="swbb-iface-card ${checked ? 'is-checked' : ''}">
+          <input type="checkbox" data-swbb-iface value="${it.name}" ${checked}>
+          <span class="swbb-iface-name">${it.name}</span>
+          <span class="swbb-iface-meta">${meta}</span>
+        </label>`;
+    }).join("");
+    ifaceList.querySelectorAll("[data-swbb-iface]").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        cb.closest(".swbb-iface-card").classList.toggle("is-checked", cb.checked);
+        refreshPayload();
+      });
+    });
+    refreshPayload();
+  }
+  if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
+  [localInput, poolInput].forEach((el) => el && el.addEventListener("input", refreshPayload));
+  refreshPayload();
+
+  /* ── Phase-change handler ── */
+  let lastPayload = null;
+
+  page.addEventListener("swsvf:phase-change", async (ev) => {
+    const phase = ev.detail.phase;
+    if (phase === "preview") {
+      lastPayload = ev.detail.payload || getPayload();
+      await runPreview(lastPayload);
+    } else if (phase === "apply") {
+      await runApply(lastPayload || getPayload());
+    } else if (phase === "verify") {
+      await runVerify();
+    }
+  });
+
+  async function runPreview(payload) {
+    if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
+      window.SWSVF.setPreview([]);
+      window.SWSVF.setPhase("configure");
+      showError("اختر واجهة شبكة واحدة على الأقل قبل المتابعة.");
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/broadband/preview`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        window.SWSVF.setPreview([`⚠ ${msg}`]);
+        return;
+      }
+      window.SWSVF.setPreview(data.bullets || []);
+    } catch (error) {
+      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+    }
+  }
+
+  async function runApply(payload) {
+    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "قد يستغرق ذلك بضع ثوان.");
+    window.SWSVF.setApplySubstep("connect", "active");
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/broadband/apply`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        return;
+      }
+      window.SWSVF.setApplySubstep("connect", "done");
+      window.SWSVF.setApplyLabel("إرسال الإعدادات…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("send", "done");
+      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      await sleep(400);
+      window.SWSVF.setApplySubstep("commit", "done");
+      window.SWSVF.setApplyLabel("تمّ الإرسال بنجاح", "ننتقل للتحقّق…");
+      await sleep(600);
+      window.SWSVF.setPhase("verify");
+    } catch (error) {
+      window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  async function runVerify() {
+    window.SWSVF.setVerifyChecks([
+      { label: "جارٍ الاتصال بالراوتر للفحص…", status: "pending" },
+    ]);
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/broadband/verify`,
+        { headers: { "X-CSRFToken": token() } });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const checks = data.checks || [];
+      if (!checks.length) {
+        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر تنفيذ الفحص", status: "fail" }]);
+        return;
+      }
+      window.SWSVF.setVerifyChecks(checks);
+    } catch (error) {
+      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+    }
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+})();
+</script>

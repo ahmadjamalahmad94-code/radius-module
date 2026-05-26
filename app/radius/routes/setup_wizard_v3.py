@@ -446,6 +446,198 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+def _plan_broadband(router_id: int, inputs: dict):
+    """Shared Broadband planner call. Returns (PhasePlanResult, status, err_dict)."""
+    from ..services.setup_wizard_broadband_phase_planner import (
+        BroadbandPhasePlanner,
+    )
+    try:
+        result = BroadbandPhasePlanner().plan(run_id=router_id, inputs=inputs)
+    except Exception as exc:  # noqa: BLE001
+        return None, 500, {"error": f"planner failed: {exc}",
+                           "code": "planner_failed"}
+    return result, 200, None
+
+
+def _broadband_preview_bullets(plan_result) -> list[str]:
+    bullets = []
+    notes = list(getattr(plan_result, "notes", ()) or ())
+    if notes:
+        bullets.extend(notes)
+    if not bullets:
+        bullets.append("سيتم تفعيل خادم PPPoE على الواجهات المختارة.")
+        bullets.append("سيُنشَأ pool عناوين IP يوزّع على المشتركين تلقائياً.")
+        bullets.append("سيُربط بـ RADIUS لمصادقة المشتركين باسم المستخدم وكلمة المرور.")
+    warnings = list(getattr(plan_result, "warnings", ()) or ())
+    for w in warnings:
+        bullets.append(f"⚠ تنبيه: {w}")
+    return bullets
+
+
+def setup_wizard_v3_broadband_preview(router_id: int):
+    """Phase 2 «معاينة»: Broadband planner → plain-Arabic bullets."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+
+    body = _body() or {}
+    inputs = {
+        "selected_interfaces": list(body.get("selected_interfaces") or []),
+        "local_address": str(body.get("local_address") or "") or None,
+        "remote_pool_cidr": str(body.get("remote_pool_cidr") or "") or None,
+        "mode": "manual",
+        "blocked_interfaces": list(body.get("blocked_interfaces") or []),
+        "blocked_network_cidrs": [],
+    }
+    if not inputs["selected_interfaces"]:
+        return _err("اختر واجهة شبكة واحدة على الأقل قبل المعاينة.",
+                    status=400, code="no_interface_selected")
+    plan_result, status, err = _plan_broadband(router_id, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+            "bullets": _broadband_preview_bullets(plan_result),
+        }), 409
+    return jsonify({"ok": True,
+                    "bullets": _broadband_preview_bullets(plan_result)})
+
+
+def setup_wizard_v3_broadband_apply(router_id: int):
+    """Phase 3 «إرسال»: re-plan + execute via LiveRouterExecutor."""
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+
+    body = _body() or {}
+    inputs = {
+        "selected_interfaces": list(body.get("selected_interfaces") or []),
+        "local_address": str(body.get("local_address") or "") or None,
+        "remote_pool_cidr": str(body.get("remote_pool_cidr") or "") or None,
+        "mode": "manual",
+        "blocked_interfaces": list(body.get("blocked_interfaces") or []),
+        "blocked_network_cidrs": [],
+    }
+    if not inputs["selected_interfaces"]:
+        return _err("اختر واجهة شبكة واحدة على الأقل.",
+                    status=400, code="no_interface_selected")
+    plan_result, status, err = _plan_broadband(router_id, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+    if plan_result.blocking_errors:
+        return jsonify({
+            "ok": False, "code": "planner_blocked",
+            "blocking_errors": list(plan_result.blocking_errors),
+        }), 409
+    if not plan_result.script or not plan_result.script.strip():
+        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+                    status=400, code="empty_script")
+    try:
+        exec_result = get_router_executor().execute_forward(
+            router_id=router_id, script=plan_result.script,
+        )
+    except ExecutorNotConfigured:
+        return _err(
+            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+            status=503, code="executor_not_configured",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ غير متوقّع: {exc}",
+                    status=500, code="apply_error")
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "apply_failed",
+            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "stderr": exec_result.stderr or "",
+            "duration_ms": exec_result.duration_ms,
+        }), 502
+    return jsonify({
+        "ok": True,
+        "duration_ms": exec_result.duration_ms,
+        "substeps": [
+            {"key": "connect", "status": "done"},
+            {"key": "send",    "status": "done"},
+            {"key": "commit",  "status": "done"},
+        ],
+    })
+
+
+def setup_wizard_v3_broadband_verify(router_id: int):
+    """Phase 4 «تحقّق»: probe PPPoE server + RADIUS link."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+                    status=409, code="no_api_password")
+
+    checks = []
+    try:
+        from ..services.mikrotik_admin_client import MikrotikClient
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+                    status=500, code="mt_client_load_error")
+
+    cfg = {
+        "host": nas.address,
+        "username": nas.api_user or "admin",
+        "password": nas.api_password,
+        "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls),
+        "timeout": 8.0,
+    }
+    try:
+        with MikrotikClient(**cfg) as mt:
+            # Check 1: PPPoE server present + enabled.
+            servers = list(mt.print_("/interface/pppoe-server/server/print"))
+            running = [s for s in servers
+                       if str(s.get("disabled", "")).lower() in ("false", "no", "")]
+            checks.append({
+                "label": "خادم PPPoE يعمل",
+                "status": "ok" if running else "fail",
+            })
+            # Check 2: IP pool exists.
+            pools = list(mt.print_("/ip/pool/print"))
+            checks.append({
+                "label": "نطاق IP المشتركين موجود",
+                "status": "ok" if pools else "fail",
+            })
+            # Check 3: PPP profile references RADIUS.
+            profiles = list(mt.print_("/ppp/profile/print"))
+            radius_linked = any(
+                str(p.get("use-radius", "")).lower() in ("true", "yes",
+                                                          "default-use-radius")
+                for p in profiles
+            ) or any(
+                "radius" in str(p.get("name", "")).lower()
+                for p in profiles
+            )
+            checks.append({
+                "label": "ملف PPP مرتبط بـ RADIUS",
+                "status": "ok" if radius_linked else "fail",
+            })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({
+            "ok": False, "code": "probe_failed",
+            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "checks": checks,
+        }), 502
+
+    all_ok = all(c["status"] == "ok" for c in checks)
+    return jsonify({"ok": all_ok, "checks": checks})
+
+
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     """Per-service phased flow.
 
@@ -1057,6 +1249,25 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/hotspot/verify",
         "setup_wizard_v3_hotspot_verify",
         setup_wizard_v3_hotspot_verify,
+        methods=["GET"],
+    )
+    # Broadband flow endpoints.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/broadband/preview",
+        "setup_wizard_v3_broadband_preview",
+        setup_wizard_v3_broadband_preview,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/broadband/apply",
+        "setup_wizard_v3_broadband_apply",
+        setup_wizard_v3_broadband_apply,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/broadband/verify",
+        "setup_wizard_v3_broadband_verify",
+        setup_wizard_v3_broadband_verify,
         methods=["GET"],
     )
     bp.add_url_rule(
