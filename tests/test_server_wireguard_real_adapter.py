@@ -128,7 +128,16 @@ def _readiness() -> ServerWireGuardReadinessService:
     return ServerWireGuardReadinessService(env=env, runner=runner)
 
 
-def test_real_adapter_disabled_by_default(app):
+def test_legacy_real_adapter_disabled_by_default(app, monkeypatch):
+    """Without HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET, the legacy
+    `wg set` path is not even selected — the production default
+    is now PeersDirectoryWriteAdapter (which is gate-free). To
+    pin "the four-flag gate still blocks when somebody opts into
+    the legacy path", this test does opt into legacy AND leaves
+    every flag off."""
+    monkeypatch.setenv(
+        "HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET", "1",
+    )
     peer = _prepared_peer(app)
     with app.app_context():
         service = ServerWireGuardPeerApplyService(readiness_service=_readiness())
@@ -143,6 +152,35 @@ def test_real_adapter_disabled_by_default(app):
     assert result["code"] == "server_wg_real_apply_flags_disabled"
 
 
+def test_peers_d_adapter_is_production_default(app, tmp_path,
+                                                monkeypatch):
+    """The new file-only adapter is the default and works
+    without any env flags. Writing a peer to peers.d is enough
+    — the host's wg-reload.path applies it within ~1s."""
+    monkeypatch.setenv(
+        "HOBERADIUS_WG_PEERS_DIR", str(tmp_path),
+    )
+    peer = _prepared_peer(app)
+    with app.app_context():
+        service = ServerWireGuardPeerApplyService(readiness_service=_readiness())
+        service.dry_run(tenant_id=1, prepared_peer_id=peer["prepared_peer_id"])
+        result = service.apply(
+            tenant_id=1,
+            prepared_peer_id=peer["prepared_peer_id"],
+            confirmation=server_peer_confirmation_phrase(peer["prepared_peer_id"]),
+        )
+    assert result["status"] in {
+        "applied_no_handshake", "verified_handshake",
+    }
+    # Verify the peer file landed in the watched directory.
+    confs = list(tmp_path.glob("router-*.conf"))
+    assert len(confs) == 1
+    body = confs[0].read_text(encoding="utf-8")
+    assert "[Peer]" in body
+    assert "PublicKey" in body
+    assert "AllowedIPs" in body
+
+
 @pytest.mark.parametrize(
     "missing_flag",
     [
@@ -153,7 +191,16 @@ def test_real_adapter_disabled_by_default(app):
     ],
 )
 def test_missing_any_flag_blocks_apply(app, monkeypatch, missing_flag):
+    """Legacy four-flag gate. The new default write path is the
+    file-only PeersDirectoryWriteAdapter — it doesn't need those
+    flags. This test pins the *legacy* `wg set` path's gate by
+    opting into HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET, which
+    selects the RealServerWireGuardWriteAdapter (the one that
+    still requires all four flags)."""
     _enable_all(monkeypatch)
+    monkeypatch.setenv(
+        "HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET", "1",
+    )
     monkeypatch.delenv(missing_flag, raising=False)
     peer = _prepared_peer(app)
     with app.app_context():

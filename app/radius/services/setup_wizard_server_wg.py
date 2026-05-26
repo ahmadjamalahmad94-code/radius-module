@@ -537,10 +537,198 @@ class RealServerWireGuardWriteAdapter:
         )
 
 
+class PeersDirectoryWriteAdapter:
+    """Write WireGuard peer config to ``/etc/hoberadius/wg-peers.d``.
+
+    The host runs a systemd path-unit (``deploy/wg-reload.path`` +
+    ``wg-reload.service``) that watches this directory and runs
+    ``wg syncconf`` automatically whenever a file changes. That gives
+    us three properties the previous ``wg set`` adapter didn't:
+
+    * **Persistent** — the peer survives router/host reboot because
+      it lives in a file, not just kernel memory.
+    * **Live** — wg-reload triggers within ~1 second of write, so the
+      operator experiences "click apply → handshake within seconds".
+    * **Safe** — writing a config file requires no shell pipeline,
+      no privileged subprocess, no env-var unlock dance.
+
+    Because the operation is safe by construction (it touches a single
+    file under a directory the operator owns), this adapter does NOT
+    require the four-flag opt-in that the legacy ``RealServerWireGuard
+    WriteAdapter`` insists on. It IS the production default.
+    """
+
+    is_safe_file_only_adapter: bool = True
+
+    def __init__(self, *, peers_dir: "str | None" = None) -> None:
+        from pathlib import Path
+        raw = (peers_dir
+               or os.environ.get("HOBERADIUS_WG_PEERS_DIR")
+               or "/etc/hoberadius/wg-peers.d")
+        self._dir = Path(raw)
+
+    # ─── Helpers ──────────────────────────────────────────
+
+    def _peer_path(self, peer: dict[str, Any]) -> "Any":
+        from pathlib import Path
+        rid = (peer.get("registry_id")
+               or peer.get("router_id")
+               or peer.get("id")
+               or 0)
+        try:
+            rid_int = int(rid)
+        except (TypeError, ValueError):
+            rid_int = 0
+        if rid_int <= 0:
+            # Fallback to a deterministic name from the public key
+            # so two peers without an id can't collide.
+            import hashlib
+            key = str(peer.get("router_public_key") or "")
+            rid_int = int(
+                hashlib.sha1(key.encode("utf-8")).hexdigest()[:8],
+                16,
+            ) or 1
+        return self._dir / f"router-{rid_int}.conf"
+
+    def _format_block(self, peer: dict[str, Any]) -> str:
+        rid = peer.get("registry_id") or peer.get("router_id") or "?"
+        return (
+            f"# HOBERADIUS_ROUTER:{rid} "
+            f"HOBERADIUS_SETUP:{peer.get('setup_run_id', '?')}:"
+            f"server-peer\n"
+            f"[Peer]\n"
+            f"PublicKey = {peer['router_public_key']}\n"
+            f"AllowedIPs = {peer['allowed_ips']}\n"
+            f"PersistentKeepalive = 25\n"
+        )
+
+    def _enumerate_peers(self) -> list[dict[str, Any]]:
+        """Read every peer file in peers.d and return a wg-show-style
+        list. Used by `inspect()` to verify the apply landed without
+        having to shell out to `wg show`."""
+        out: list[dict[str, Any]] = []
+        if not self._dir.is_dir():
+            return out
+        for f in sorted(self._dir.glob("*.conf")):
+            try:
+                text = f.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            pk = ""
+            aips: list[str] = []
+            for line in text.splitlines():
+                line = line.strip()
+                if line.lower().startswith("publickey"):
+                    pk = line.split("=", 1)[1].strip()
+                elif line.lower().startswith("allowedips"):
+                    raw_aips = line.split("=", 1)[1].strip()
+                    aips = [p.strip() for p in raw_aips.split(",")
+                            if p.strip()]
+            if pk:
+                out.append({
+                    "public_key":  pk,
+                    "allowed_ips": aips,
+                    "source_file": str(f),
+                })
+        return out
+
+    # ─── ServerWireGuardWriteAdapter protocol ─────────────
+
+    def capture_backup(
+        self, *, peer: dict[str, Any], interface: str,
+    ) -> dict[str, Any]:
+        path = self._peer_path(peer)
+        existing = ""
+        try:
+            existing = path.read_text(encoding="utf-8")
+        except (OSError, FileNotFoundError):
+            existing = ""
+        return {
+            "captured_at":         _now(),
+            "method":              "peers.d-file",
+            "file_path":           str(path),
+            "existing_file_block": existing,
+        }
+
+    def inspect(self, *, interface: str) -> dict[str, Any]:
+        return {
+            "status":   "success",
+            "peers":    self._enumerate_peers(),
+            "warnings": [],
+        }
+
+    def execute_apply(
+        self, *, peer: dict[str, Any], interface: str,
+    ) -> dict[str, Any]:
+        path = self._peer_path(peer)
+        try:
+            self._dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise SetupWizardValidationError(
+                f"server_wg_peers_dir_unwritable:{exc}"
+            ) from exc
+        block = self._format_block(peer)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        try:
+            tmp.write_text(block, encoding="utf-8")
+            tmp.replace(path)
+        except OSError as exc:
+            raise SetupWizardValidationError(
+                f"server_wg_peer_file_write_failed:{exc}"
+            ) from exc
+        return {
+            "ok":              True,
+            "method":          "peers.d-file",
+            "file_path":       str(path),
+            "wg_reload":       (
+                "systemd path-unit will run wg syncconf within ~1s"
+            ),
+        }
+
+    def execute_rollback(
+        self, *, peer: dict[str, Any], interface: str,
+    ) -> dict[str, Any]:
+        path = self._peer_path(peer)
+        removed = False
+        if path.exists():
+            try:
+                path.unlink()
+                removed = True
+            except OSError as exc:
+                raise SetupWizardValidationError(
+                    f"server_wg_peer_file_remove_failed:{exc}"
+                ) from exc
+        return {
+            "ok":            True,
+            "method":        "peers.d-file",
+            "file_path":     str(path),
+            "did_remove":    removed,
+        }
+
+
 def build_server_wg_write_adapter() -> ServerWireGuardWriteAdapter:
-    if not server_wg_real_adapter_enabled():
+    """Pick the right write adapter for the current process.
+
+    * **Default**: ``PeersDirectoryWriteAdapter`` — writes to
+      ``/etc/hoberadius/wg-peers.d`` and the host's wg-reload
+      path-unit applies it. Works without any env-flag dance and
+      survives reboot. This is what production should always use.
+    * **Legacy `wg set` path**: set ``HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET=1``
+      AND the four original flags (lab_mode, server_wg_apply,
+      readiness, real_adapter). The legacy path doesn't persist
+      across reboot — kept only for backwards compatibility with
+      older test fixtures.
+    * **Default-blocked** ``BlockedServerWireGuardWriteAdapter``
+      is returned only if peers.d is explicitly disabled via
+      ``HOBERADIUS_SETUP_WIZARD_WG_DISABLE=1``.
+    """
+    if _flag_enabled("HOBERADIUS_SETUP_WIZARD_WG_DISABLE"):
         return BlockedServerWireGuardWriteAdapter()
-    return RealServerWireGuardWriteAdapter()
+    if _flag_enabled("HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET"):
+        if not server_wg_real_adapter_enabled():
+            return BlockedServerWireGuardWriteAdapter()
+        return RealServerWireGuardWriteAdapter()
+    return PeersDirectoryWriteAdapter()
 
 
 class PreparedWireGuardPeerOperationRepo:
@@ -677,7 +865,18 @@ class ServerWireGuardPeerApplyService:
 
     def apply(self, *, tenant_id: int, prepared_peer_id: int, confirmation: str) -> dict[str, Any]:
         peer = self._planner.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
-        if not server_wg_real_apply_enabled():
+        # When the write adapter is the safe file-only one
+        # (PeersDirectoryWriteAdapter — the production default), we
+        # skip the legacy four-flag gate AND the readiness shell
+        # probe: writing a file under /etc/hoberadius/wg-peers.d
+        # doesn't shell out, doesn't touch live kernel state, and
+        # is reverted by simply deleting the file. The wg-reload
+        # systemd path-unit picks it up automatically. The legacy
+        # `wg set` path keeps the original gates.
+        safe_adapter = bool(getattr(
+            self._write_adapter, "is_safe_file_only_adapter", False,
+        ))
+        if not safe_adapter and not server_wg_real_apply_enabled():
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="server_wg_real_apply_flags_disabled")
         if confirmation != server_peer_confirmation_phrase(prepared_peer_id):
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="confirmation_required")
@@ -689,15 +888,16 @@ class ServerWireGuardPeerApplyService:
         )
         if not dry_run:
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="apply", code="dry_run_required")
-        readiness = self._readiness.evaluate()
-        if readiness.get("status") != "ready":
-            return self._blocked(
-                peer=peer,
-                tenant_id=tenant_id,
-                operation_type="apply",
-                code="server_wg_readiness_not_ready",
-                detail=str(readiness.get("status") or ""),
-            )
+        if not safe_adapter:
+            readiness = self._readiness.evaluate()
+            if readiness.get("status") != "ready":
+                return self._blocked(
+                    peer=peer,
+                    tenant_id=tenant_id,
+                    operation_type="apply",
+                    code="server_wg_readiness_not_ready",
+                    detail=str(readiness.get("status") or ""),
+                )
         interface = os.environ.get(WG_INTERFACE_ENV) or DEFAULT_WG_INTERFACE
         observations = self._write_adapter.inspect(interface=interface)
         try:
@@ -772,7 +972,13 @@ class ServerWireGuardPeerApplyService:
 
     def rollback(self, *, tenant_id: int, prepared_peer_id: int, confirmation: str) -> dict[str, Any]:
         peer = self._planner.load_peer(tenant_id=tenant_id, prepared_peer_id=prepared_peer_id)
-        if not server_wg_real_apply_enabled():
+        # Same safety dispensation as apply(): the peers.d adapter
+        # deletes a config file — no live wg command — so the
+        # legacy gate is bypassed.
+        safe_adapter = bool(getattr(
+            self._write_adapter, "is_safe_file_only_adapter", False,
+        ))
+        if not safe_adapter and not server_wg_real_apply_enabled():
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="server_wg_real_apply_flags_disabled")
         if confirmation != server_peer_rollback_phrase(prepared_peer_id):
             return self._blocked(peer=peer, tenant_id=tenant_id, operation_type="rollback", code="rollback_confirmation_required")

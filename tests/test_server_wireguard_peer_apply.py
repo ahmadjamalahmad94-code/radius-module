@@ -134,7 +134,14 @@ def test_server_peer_dry_run_creates_preview(app):
     assert "HOBERADIUS_SETUP" in result["plan"]["rollback_preview"]
 
 
-def test_server_peer_apply_blocked_by_default_flags(app):
+def test_server_peer_apply_blocked_by_default_flags(app, monkeypatch):
+    """Pin the legacy `wg set` path's gate. The production default
+    is now the safe PeersDirectoryWriteAdapter — it skips this
+    gate by design. To exercise the gate, opt into the legacy
+    path explicitly."""
+    monkeypatch.setenv(
+        "HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET", "1",
+    )
     peer = _prepared_peer(app)
     with app.app_context():
         service = ServerWireGuardPeerApplyService()
@@ -280,7 +287,14 @@ def test_no_plaintext_private_key_leak_in_dry_run(app):
     assert "PRIVATEKEY" not in serialized
 
 
-def test_default_adapter_remains_blocked_without_real_flag(app, monkeypatch):
+def test_legacy_adapter_remains_blocked_without_real_flag(app, monkeypatch):
+    """Legacy `wg set` adapter path: even with three of four
+    flags on, missing the `real_adapter` flag still blocks. The
+    new default file-based adapter is opt-out via
+    HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET=1."""
+    monkeypatch.setenv(
+        "HOBERADIUS_SETUP_WIZARD_WG_LEGACY_SET", "1",
+    )
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", "true")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_READINESS", "true")
