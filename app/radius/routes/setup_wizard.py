@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, abort, g, jsonify, render_template, request
+from flask import Blueprint, abort, g, jsonify, redirect, render_template, request, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..services.setup_wizard import (
@@ -170,7 +170,14 @@ def setup_wizard_v2_page():
 
 
 def setup_wizard_fleet_page():
-    return render_template("radius/setup_wizard_fleet.html")
+    """Legacy URL — the provisioning-only fleet page was consolidated
+    into the unified router management page (/mt/operations) in
+    May 2026. Kept as a 302 redirect so existing operator bookmarks
+    and the «العودة إلى أسطول الراوترات» link from the Router Services
+    Dashboard land on the same destination. The data + maintenance
+    API endpoints below remain at their original URLs because the
+    new page calls them via JS."""
+    return redirect(url_for("radius.mt_operations"), code=302)
 
 
 def setup_wizard_fleet_data():

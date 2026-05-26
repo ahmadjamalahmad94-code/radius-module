@@ -120,8 +120,9 @@
 
 {# Setup Wizard / Operations #}
 {%- set m_setup_wizard_v2 = (path == url_for('radius.setup_wizard_v2_page')) -%}
-{%- set m_setup_wizard_fleet = (path == url_for('radius.setup_wizard_fleet_page')) -%}
 {%- set m_setup_wizard_engineering = (path == url_for('radius.setup_wizard_page')) -%}
+{# m_setup_wizard_fleet retired May 2026: fleet page consolidated into
+   mt_operations (radius.mt_operations now serves both roles). #}
 
 {# Business OS #}
 {%- set m_business_dashboard = (path == url_for('radius.dashboard_alias')) -%}
@@ -304,14 +305,15 @@
            "الإعداد والتشغيل" section. #}
         {{ sub_item('radius.setup_wizard_v3_page',    '🚀 معالج الإعداد v3',  m_setup_wizard_v2) }}
         {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد (v2)',   m_setup_wizard_v2) }}
-        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات',      m_setup_wizard_fleet) }}
         {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
         {{ sub_item('radius.mt_setup_form',           'معالج إضافة راوتر',    m_mt) }}
 
-        {# Inventory + operational view #}
+        {# Inventory + operational view — mt_operations is now THE
+           unified router management page (replaced the old separate
+           «أسطول الراوترات» link). #}
         {{ sub_item('radius.devices_list',     'NAS',                  m_devices) }}
         {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
-        {{ sub_item('radius.mt_operations',    'غرفة عمليات MikroTik', m_mt) }}
+        {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   m_mt) }}
         {{ sub_item('radius.mt_topology',      'خريطة الشبكة',         m_topology) }}
         {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',         m_problems) }}
         {{ sub_item('radius.diagnostics',      'تشخيص الراوترات',     m_diag) }}

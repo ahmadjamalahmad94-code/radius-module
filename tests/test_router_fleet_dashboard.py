@@ -135,17 +135,16 @@ def test_retired_filter_excludes_when_requested(app):
     assert excluded["metrics"]["total_routers"] == 0
 
 
-def test_fleet_route_renders(app):
+def test_fleet_route_redirects_to_mt_operations(app):
+    """May 2026 consolidation: the provisioning fleet page was merged
+    into /mt/operations. The old URL must still resolve (operator
+    bookmarks) but as a 302 redirect — not a render."""
     with app.test_client() as client:
         _auth_session(client)
         res = client.get("/admin/radius/setup-wizard/fleet")
-        html = res.get_data(as_text=True)
 
-    assert res.status_code == 200
-    assert "data-setup-wizard-fleet" in html
-    assert "setup_wizard_fleet.css" in html
-    assert "setup_wizard_fleet.js" in html
-    assert "data-swfleet-action-needed" in html
+    assert res.status_code == 302
+    assert "/admin/radius/mt/operations" in res.headers.get("Location", "")
 
 
 def test_data_endpoint_masks_secret_refs(app):
