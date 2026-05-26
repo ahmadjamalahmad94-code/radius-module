@@ -10,6 +10,63 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<style>
+/* ─── Router Hub sections (May 2026 consolidation) ───
+   Two new layered sections sit between the hero and the live tabs:
+     1. خدمات الراوتر — 6 cards in a responsive grid, each opens
+        the 4-phase service flow (no scripts visible)
+     2. الأدوات — single-shot tools (login designer, backups, …)
+   The legacy `.mt-router-quicknav` style is reused for الأدوات so
+   the two sections stay visually consistent with what operators
+   were used to before. */
+.mt-hub-section{margin:18px 0}
+.mt-hub-section-head{margin-bottom:12px}
+.mt-hub-section-head h2{
+  margin:0;font-size:17px;font-weight:800;color:#0F172A;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.mt-hub-section-head h2 i{color:#6B5AED;font-size:16px}
+.mt-hub-section-head p{
+  margin:4px 0 0;color:#64748B;font-size:13px;line-height:1.6;
+}
+.mt-svc-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:14px;
+}
+.mt-svc-card{
+  display:flex;align-items:flex-start;gap:14px;
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:18px 20px;text-decoration:none;color:inherit;
+  transition:box-shadow .15s, transform .15s, border-color .15s;
+}
+.mt-svc-card:hover{
+  box-shadow:0 4px 16px rgba(15,23,42,.06);
+  transform:translateY(-1px);
+  border-color:#CBD5E1;
+}
+.mt-svc-icon{
+  width:44px;height:44px;border-radius:11px;color:#fff;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;font-size:19px;
+}
+.mt-svc-card--blue  .mt-svc-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.mt-svc-card--green .mt-svc-icon{background:linear-gradient(135deg,#10B981,#047857)}
+.mt-svc-card--red   .mt-svc-icon{background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.mt-svc-card--teal  .mt-svc-icon{background:linear-gradient(135deg,#14B8A6,#0F766E)}
+.mt-svc-card--amber .mt-svc-icon{background:linear-gradient(135deg,#F59E0B,#B45309)}
+.mt-svc-card--purple.mt-svc-icon, .mt-svc-card--purple .mt-svc-icon{
+  background:linear-gradient(135deg,#8B5CF6,#6D28D9);
+}
+.mt-svc-body{flex:1;min-width:0}
+.mt-svc-body h3{
+  margin:0 0 4px;font-size:15px;font-weight:800;color:#0F172A;
+}
+.mt-svc-body p{
+  margin:0 0 8px;color:#475569;font-size:12.5px;line-height:1.6;
+}
+.mt-svc-phases{color:#94A3B8;font-size:11.5px}
+.mt-svc-phases i{margin-inline-end:4px}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -26,86 +83,85 @@
     icon="router"
   ) }}
 
-  {# S1 — Cross-page nav. The Q (programming) and R (login
-     designer) flows live on their own URLs; without this strip
-     the operator has to type the URL by hand. #}
-  <nav class="mt-router-quicknav" data-mt-router-quicknav
-       aria-label="أدوات الراوتر">
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}"
-       data-mt-router-link="overview">
-      <i class="fa-solid fa-clipboard-check"></i>
-      <span class="mt-router-quicknav-label">نظرة عامة</span>
-      <span class="mt-router-quicknav-sub">حالة + أمان + إجراءات</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}"
-       data-mt-router-link="program">
-      <i class="fa-solid fa-diagram-project"></i>
-      <span class="mt-router-quicknav-label">برمجة الشبكة</span>
-      <span class="mt-router-quicknav-sub">Hotspot · PPPoE</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}"
-       data-mt-router-link="login-designer">
-      <i class="fa-solid fa-palette"></i>
-      <span class="mt-router-quicknav-label">مصمّم صفحة الدخول</span>
-      <span class="mt-router-quicknav-sub">قوالب + نشر</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
-       data-mt-router-link="backups">
-      <i class="fa-solid fa-floppy-disk"></i>
-      <span class="mt-router-quicknav-label">النسخ الاحتياطية</span>
-      <span class="mt-router-quicknav-sub">حفظ + فحص</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.diagnostics') }}"
-       data-mt-router-link="diagnostics">
-      <i class="fa-solid fa-stethoscope"></i>
-      <span class="mt-router-quicknav-label">تشخيص الفليت</span>
-      <span class="mt-router-quicknav-sub">سكربتات الإصلاح</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.site_exit_page', nas_id=nas.id) }}"
-       data-mt-router-link="site-exit">
-      <i class="fa-solid fa-route"></i>
-      <span class="mt-router-quicknav-label">توجيه مواقع عبر VPS</span>
-      <span class="mt-router-quicknav-sub">VX2 — وجهات مختارة فقط</span>
-    </a>
-    {# Three direct NPC entries — one per sub-service. The
-       previous single «سياسات الشبكة» landing card was removed
-       per operator feedback: every click on it just landed on
-       a chooser screen. These buttons jump straight to the
-       per-service list scoped to this router. #}
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.npc_remote_access_list_scoped',
-                         nas_id=nas.id) }}"
-       data-mt-router-link="npc-remote-access"
-       data-test="mt-dashboard-npc-remote-access-link">
-      <i class="fa-solid fa-shield-halved"></i>
-      <span class="mt-router-quicknav-label">الوصول البعيد</span>
-      <span class="mt-router-quicknav-sub">Winbox · WebFig · SSH</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.npc_web_block_list_scoped',
-                         nas_id=nas.id) }}"
-       data-mt-router-link="npc-web-block"
-       data-test="mt-dashboard-npc-web-block-link">
-      <i class="fa-solid fa-ban"></i>
-      <span class="mt-router-quicknav-label">حجب المواقع</span>
-      <span class="mt-router-quicknav-sub">قوائم سوداء على الراوتر</span>
-    </a>
-    <a class="mt-router-quicknav-link"
-       href="{{ url_for('radius.npc_walled_garden_list_scoped',
-                         nas_id=nas.id) }}"
-       data-mt-router-link="npc-walled-garden"
-       data-test="mt-dashboard-npc-walled-garden-link">
-      <i class="fa-solid fa-door-open"></i>
-      <span class="mt-router-quicknav-label">المواقع المسموحة</span>
-      <span class="mt-router-quicknav-sub">استثناءات قبل الدخول</span>
-    </a>
-  </nav>
+  {# ─── 🛠️ الخدمات ─────────────────────────────────────────
+     Unified Router Hub (May 2026 consolidation). Six service
+     cards replace the older mix of «برمجة الشبكة» + NPC chooser
+     + site-exit links — each card opens the same 4-phase flow
+     (تهيئة → معاينة → إرسال → تحقّق) without exposing scripts.
+
+     The standalone /setup-wizard-v3/routers/<id>/services page
+     redirects here, so links from mt/operations and from the v3
+     wizard's «إعداد خدمات» button land on this section. #}
+  <section class="mt-hub-section">
+    <div class="mt-hub-section-head">
+      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر</h2>
+      <p>إعداد بنقرات قليلة — بدون أي سكربتات أو أوامر RouterOS ظاهرة.</p>
+    </div>
+    <div class="mt-svc-grid">
+      {% for svc in [
+        {'key': 'hotspot',       'title': 'Hotspot',          'sub': 'بوابة دخول عامّة مع صفحة تسجيل', 'icon': 'wifi',          'color': 'blue',   'phases': 4},
+        {'key': 'broadband',     'title': 'Broadband',        'sub': 'PPPoE — اشتراك ثابت بمستخدم وكلمة', 'icon': 'ethernet',  'color': 'green',  'phases': 4},
+        {'key': 'block-sites',   'title': 'حجب مواقع',         'sub': 'منع الوصول لمواقع محدّدة',         'icon': 'ban',           'color': 'red',    'phases': 3},
+        {'key': 'open-sites',    'title': 'فتح مواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',     'icon': 'circle-check',  'color': 'teal',   'phases': 3},
+        {'key': 'public-ip',     'title': 'تغيير IP الخروج',  'sub': 'توجيه المشتركين عبر IP عام جديد',   'icon': 'globe',         'color': 'amber',  'phases': 4},
+        {'key': 'remote-access', 'title': 'اتصال عن بُعد',     'sub': 'نفق VPN للفنّي لإدارة الراوتر',      'icon': 'key',           'color': 'purple', 'phases': 3},
+      ] %}
+      <a class="mt-svc-card mt-svc-card--{{ svc.color }}"
+         href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                          router_id=nas.id, service_key=svc.key) }}">
+        <span class="mt-svc-icon"><i class="fa-solid fa-{{ svc.icon }}"></i></span>
+        <div class="mt-svc-body">
+          <h3>{{ svc.title }}</h3>
+          <p>{{ svc.sub }}</p>
+          <span class="mt-svc-phases">
+            <i class="fa-regular fa-circle-dot"></i> {{ svc.phases }} مراحل
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ─── 🧰 الأدوات ─────────────────────────────────────────
+     Things that don't fit the 4-phase model — single-shot tools.
+     Kept compact so the eye lands on services first. #}
+  <section class="mt-hub-section">
+    <div class="mt-hub-section-head">
+      <h2><i class="fa-solid fa-toolbox"></i> الأدوات</h2>
+      <p>أدوات لا تتبع نموذج 4 مراحل — كل واحدة مهمّة محدّدة.</p>
+    </div>
+    <nav class="mt-router-quicknav" data-mt-router-quicknav
+         aria-label="أدوات الراوتر">
+      <a class="mt-router-quicknav-link"
+         href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}"
+         data-mt-router-link="overview">
+        <i class="fa-solid fa-clipboard-check"></i>
+        <span class="mt-router-quicknav-label">نظرة عامة</span>
+        <span class="mt-router-quicknav-sub">حالة + أمان + إجراءات</span>
+      </a>
+      <a class="mt-router-quicknav-link"
+         href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}"
+         data-mt-router-link="login-designer">
+        <i class="fa-solid fa-palette"></i>
+        <span class="mt-router-quicknav-label">مصمّم صفحة الدخول</span>
+        <span class="mt-router-quicknav-sub">قوالب + نشر</span>
+      </a>
+      <a class="mt-router-quicknav-link"
+         href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
+         data-mt-router-link="backups">
+        <i class="fa-solid fa-floppy-disk"></i>
+        <span class="mt-router-quicknav-label">النسخ الاحتياطية</span>
+        <span class="mt-router-quicknav-sub">حفظ + فحص</span>
+      </a>
+      <a class="mt-router-quicknav-link"
+         href="{{ url_for('radius.diagnostics') }}"
+         data-mt-router-link="diagnostics">
+        <i class="fa-solid fa-stethoscope"></i>
+        <span class="mt-router-quicknav-label">تشخيص الفليت</span>
+        <span class="mt-router-quicknav-sub">سكربتات الإصلاح</span>
+      </a>
+    </nav>
+  </section>
 
   {# P1 — Tabs strip. The current K9 dashboard goes under
      'Overview'; the other tabs ship as honest empty states

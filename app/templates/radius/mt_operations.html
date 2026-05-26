@@ -258,13 +258,14 @@
           {% endif %}
         </td>
         <td>
-          {# Primary action — opens the Router Services Dashboard
-             (Hotspot, Broadband, حجب/فتح مواقع, تغيير IP, اتصال عن
-             بُعد). Placed first because this is the per-router entry
-             point operators reach for in daily ops. #}
+          {# Primary action — opens the unified Router Hub at
+             /mt/<id>/dashboard. The «خدمات الراوتر» section is at
+             the top of that page (Hotspot, Broadband, حجب/فتح
+             مواقع, تغيير IP, اتصال عن بُعد). Single entry point for
+             everything per-router. #}
           <a class="hub-btn hub-btn--sm hub-btn--primary"
-             href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=item.id) }}"
-             title="إعداد خدمات هذا الراوتر">
+             href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}"
+             title="فتح صفحة الراوتر — خدمات + مراقبة + أدوات">
             <i class="fa-solid fa-screwdriver-wrench"></i> خدمات
           </a>
           {% if item.is_provisioning and item.wizard_run_id %}

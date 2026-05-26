@@ -176,25 +176,16 @@ ROUTER_SERVICE_CARDS = [
 
 
 def setup_wizard_v3_router_services_dashboard(router_id: int):
-    """Lists configurable services for one router. Each card opens
-    its own multi-step phased flow (the per-service screen).
-
-    Renders a friendly 'router not found' fallback instead of 404
-    so the back-from-fleet UX doesn't dead-end if a router was
-    just retired.
-    """
-    from ..db.repos import nas_repo
-
-    router = nas_repo.get_nas(_tid(), router_id)
-    return render_template(
-        "radius/setup_wizard_v3_router_services.html",
-        router=router,
-        router_id=router_id,
-        service_cards=ROUTER_SERVICE_CARDS,
-        page_title=(
-            f"خدمات الراوتر «{router.name}»" if router
-            else "خدمات الراوتر"
-        ),
+    """Legacy URL — Router Services Dashboard was merged into the
+    per-router unified hub at /admin/radius/mt/<id>/dashboard in
+    May 2026. Kept as a 302 redirect so existing operator
+    bookmarks + the «إعداد خدمات» button from mt/operations land
+    on the same destination. The 6 service cards now appear as a
+    'خدمات الراوتر' section at the top of the hub."""
+    from flask import redirect, url_for
+    return redirect(
+        url_for("radius.mt_dashboard", nas_id=router_id),
+        code=302,
     )
 
 
