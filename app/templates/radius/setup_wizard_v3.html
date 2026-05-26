@@ -1,15 +1,27 @@
-{# Setup Wizard v3 — single-page onboarding.
-   The page is one scrollable column. Sections light up as the
-   state machine advances. JavaScript polls /state every 2s and
-   re-renders. No "next/previous" navigation. #}
+{# Setup Wizard v3 — multi-stage operator-friendly form.
+
+Six steps. Only one is visible at a time. No JSON, no code
+fields exposed. Each step calls the appropriate backend
+endpoint behind the scenes. The "engineer view" (raw scripts,
+diagnostic codes) is hidden behind collapsible "تفاصيل تقنية"
+disclosures — present for support but invisible by default.
+
+Steps:
+  1. عرّفنا على الراوتر — name + service type
+  2. مصدر الإنترنت — WAN type + dynamic fields per source
+  3. الربط بالخادم — generate unified script + paste-back key
+  4. التحقّق من الاتصال — wait for handshake / confirm
+  5. خدمات إضافية — optional cards (Hotspot / Broadband / etc.)
+  6. تسجيل وإنهاء — API user + final commit
+#}
 
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}{{ page_title or "معالج إضافة راوتر v3" }}{% endblock %}
+{% block title %}{{ page_title or "معالج إضافة راوتر" }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}إضافة راوتر جديد{% endblock %}
 {% block page_sub %}
-  <span class="sub">معالج موحَّد — صفحة واحدة، خطوة واحدة في كل مرة</span>
+  <span class="sub">خطوات واضحة — بدون أكواد أو تعقيدات</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -23,255 +35,546 @@
 <input type="hidden" name="_csrf_token"
        value="{{ csrf_token() if csrf_token else '' }}">
 
-<div class="wv3-page" data-wv3-page dir="rtl">
+<div class="swz" data-swz dir="rtl">
 
-  {# ─── Hero ──────────────────────────────────────────── #}
-  <header class="wv3-hero">
-    <div class="wv3-hero-icon">🚀</div>
-    <div class="wv3-hero-text">
-      <h1>إضافة راوتر جديد إلى الشبكة</h1>
-      <p>
-        خمس خطوات — كل واحدة بضغطة. صفحة واحدة لا تتغيّر.
-        نتابع كل خطوة بدلك ونُخبرك ماذا تفعل الآن.
-      </p>
-    </div>
-    <div class="wv3-hero-status">
-      <span class="wv3-state-badge" data-wv3-state-badge>
-        ⏳ جاهز للبدء
-      </span>
-    </div>
-  </header>
+  {# ─── Progress rail ──────────────────────────────── #}
+  <ol class="swz-rail" data-swz-rail>
+    <li data-swz-rail-step="1" class="is-current">
+      <span class="swz-rail-dot">١</span>
+      <span class="swz-rail-label">الراوتر</span>
+    </li>
+    <li data-swz-rail-step="2">
+      <span class="swz-rail-dot">٢</span>
+      <span class="swz-rail-label">الإنترنت</span>
+    </li>
+    <li data-swz-rail-step="3">
+      <span class="swz-rail-dot">٣</span>
+      <span class="swz-rail-label">الربط بالخادم</span>
+    </li>
+    <li data-swz-rail-step="4">
+      <span class="swz-rail-dot">٤</span>
+      <span class="swz-rail-label">التحقّق</span>
+    </li>
+    <li data-swz-rail-step="5">
+      <span class="swz-rail-dot">٥</span>
+      <span class="swz-rail-label">خدمات إضافيّة</span>
+    </li>
+    <li data-swz-rail-step="6">
+      <span class="swz-rail-dot">٦</span>
+      <span class="swz-rail-label">إنهاء</span>
+    </li>
+  </ol>
 
-  {# ─── Step 1: router info ───────────────────────────── #}
-  <section class="wv3-step" data-wv3-step="collecting">
-    <div class="wv3-step-num">١</div>
-    <div class="wv3-step-body">
-      <h2>عرّفنا على الراوتر</h2>
-      <p class="wv3-hint">
-        اختر اسماً وصفياً للراوتر (سيظهر في القوائم) ونوع
-        الخدمة الأساسيّة عليه.
-      </p>
-      <div class="wv3-grid">
-        <label class="wv3-field">
-          <span>اسم الراوتر</span>
-          <input type="text"
-                 data-wv3-router-name
-                 placeholder="مثلاً: مقهى الزهراء"
-                 autocomplete="off">
-        </label>
-        <label class="wv3-field">
-          <span>نوع الخدمة الأساسيّة</span>
-          <select data-wv3-router-type>
-            <option value="hotspot">Hotspot (الوصول العامّ)</option>
-            <option value="pppoe">PPPoE (اتّصال المشتركين)</option>
-            <option value="mixed">مختلط (الخدمتان)</option>
-          </select>
-        </label>
-      </div>
-      <div class="wv3-actions">
-        <button type="button"
-                class="wv3-btn wv3-btn-primary"
-                data-wv3-action="submit-router-info">
-          متابعة ←
-        </button>
-      </div>
-    </div>
-  </section>
+  {# Global error / hint surface ────────────────────── #}
+  <div class="swz-toast" data-swz-toast hidden role="status"></div>
 
-  {# ─── Step 2: the script ────────────────────────────── #}
-  <section class="wv3-step is-locked"
-           data-wv3-step="planning">
-    <div class="wv3-step-num">٢</div>
-    <div class="wv3-step-body">
-      <h2>السكربت — نسخه ولصقه على الراوتر</h2>
-      <p class="wv3-hint">
-        افتح Terminal على الراوتر MikroTik والصق السكربت
-        التالي. سيقوم بإنشاء اتّصال WireGuard آمن إلى الخادم
-        ويُولّد مفاتيح جديدة.
-      </p>
-      <div class="wv3-script-frame" data-wv3-script-frame hidden>
-        <div class="wv3-script-toolbar">
-          <span class="wv3-script-meta" data-wv3-script-meta>
-            رمز الـ run / hash السكربت
-          </span>
-          <button type="button"
-                  class="wv3-btn wv3-btn-ghost wv3-btn-small"
-                  data-wv3-action="copy-script">
-            <i class="fa-regular fa-copy"></i> نسخ السكربت
-          </button>
-        </div>
-        <pre class="wv3-script-body"
-             data-wv3-script-body></pre>
-      </div>
-      <div class="wv3-actions"
-           data-wv3-generate-actions>
-        <button type="button"
-                class="wv3-btn wv3-btn-primary"
-                data-wv3-action="generate-script">
-          توليد السكربت
-        </button>
-      </div>
-    </div>
-  </section>
-
-  {# ─── Step 3: paste WG output back ───────────────────── #}
-  <section class="wv3-step is-locked"
-           data-wv3-step="awaiting_handshake">
-    <div class="wv3-step-num">٣</div>
-    <div class="wv3-step-body">
-      <h2>ألصق مخرجات السكربت من الراوتر</h2>
-      <p class="wv3-hint">
-        بعد ما يشتغل السكربت على MikroTik، سيطبع سطراً يبدأ بـ
-        <code>HOBERADIUS_PUBLIC_KEY=</code>. الصق هذا السطر
-        (أو كل المخرجات إن أحببت) في الصندوق التالي.
-      </p>
-      <label class="wv3-field wv3-field-full">
-        <span>مخرجات السكربت (أو مفتاح WireGuard العام للراوتر)</span>
-        <textarea data-wv3-pasted-output
-                  rows="6"
-                  spellcheck="false"
-                  placeholder="HOBERADIUS_PUBLIC_KEY=..."></textarea>
-      </label>
-      <div class="wv3-actions">
-        <button type="button"
-                class="wv3-btn wv3-btn-primary"
-                data-wv3-action="submit-key">
-          استخراج المفتاح وتطبيقه
-        </button>
-      </div>
-    </div>
-  </section>
-
-  {# ─── Step 4: server peer + handshake ────────────────── #}
-  <section class="wv3-step is-locked"
-           data-wv3-step="applying_server_peer">
-    <div class="wv3-step-num">٤</div>
-    <div class="wv3-step-body">
-      <h2>تسجيل الراوتر على الخادم</h2>
-      <p class="wv3-hint">
-        كتابة ملفّ peer في
-        <code>/etc/hoberadius/wg-peers.d/wizard-v3-N.conf</code>،
-        ثمّ <code>wg syncconf</code> تلقائياً، ثمّ التحقّق من
-        أوّل handshake.
-      </p>
-      <div class="wv3-substeps"
-           data-wv3-substeps-applying>
-        <div class="wv3-substep" data-wv3-substep="write-peer">
-          <span class="wv3-substep-icon">⏳</span>
-          <span>كتابة إعدادات الـ peer على الخادم</span>
-        </div>
-        <div class="wv3-substep" data-wv3-substep="wg-reload">
-          <span class="wv3-substep-icon">⏳</span>
-          <span>إشعار wg-reload لتطبيق التغيير</span>
-        </div>
-        <div class="wv3-substep" data-wv3-substep="handshake">
-          <span class="wv3-substep-icon">⏳</span>
-          <span>التحقّق من أوّل handshake</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {# ─── Step 5: register router ─────────────────────────── #}
-  <section class="wv3-step is-locked"
-           data-wv3-step="registering">
-    <div class="wv3-step-num">٥</div>
-    <div class="wv3-step-body">
-      <h2>تسجيل الراوتر في النظام</h2>
-      <p class="wv3-hint">
-        تسجيل الراوتر في قائمة NAS وغرفة العمليات بحيث يظهر
-        مع باقي الراوترات للإدارة اليومية.
-      </p>
-      <label class="wv3-field">
-        <span>كلمة مرور admin على الراوتر (اختياري — لتفعيل API)</span>
-        <input type="password"
-               data-wv3-api-password
-               placeholder="••••••••"
-               autocomplete="off">
-      </label>
-      <div class="wv3-actions">
-        <button type="button"
-                class="wv3-btn wv3-btn-primary"
-                data-wv3-action="register">
-          تسجيل وإنهاء ✓
-        </button>
-      </div>
-    </div>
-  </section>
-
-  {# ─── Final: complete card ────────────────────────────── #}
-  <section class="wv3-step is-locked wv3-step-complete"
-           data-wv3-step="complete">
-    <div class="wv3-step-num">✓</div>
-    <div class="wv3-step-body">
-      <h2>🎉 اكتمل التجهيز</h2>
-      <p class="wv3-hint">
-        الراوتر متّصل، الـ handshake مؤكَّد، وعنوانه مسجَّل في
-        النظام. يمكنك الآن إدارته من غرفة العمليات.
-      </p>
-      <div class="wv3-final-grid"
-           data-wv3-final-grid>
-        {# Filled by JS. #}
-      </div>
-      <div class="wv3-actions">
-        <a class="wv3-btn wv3-btn-primary"
-           data-wv3-action="open-router"
-           href="#">
-          فتح الراوتر في لوحة التحكّم ←
-        </a>
-        <a class="wv3-btn wv3-btn-ghost"
-           href="{{ url_for('radius.setup_wizard_v3_page') }}">
-          إضافة راوتر آخر
-        </a>
-      </div>
-    </div>
-  </section>
-
-  {# ─── Diagnostics rail (always visible if any) ───────── #}
-  <aside class="wv3-diagnostics"
-         data-wv3-diagnostics hidden>
-    <h3>⚠️ تنبيهات تشخيصيّة</h3>
-    <div class="wv3-diagnostics-list"
-         data-wv3-diagnostics-list>
-      {# Filled by JS. #}
-    </div>
-  </aside>
-
-  {# ─── SW7: Phase Planner Preview ────────────────────── #}
-  <section class="wv3-phase-planner" data-wv3-phase-planner hidden>
+  {# ─── Step 1: Router info ────────────────────────── #}
+  <section class="swz-step is-active" data-swz-step="1">
     <header>
-      <h2>📦 معاينة سكربتات إضافية</h2>
-      <p>
-        بعد أن يكمل الراوتر الاتصال الأساسي، يمكنك توليد
-        سكربتات منفصلة لمراحل إضافية (Hotspot, Broadband,
-        خدمات إضافية). كل سكربت يحمل وسم
-        <code dir="ltr">HOBERADIUS_SETUP:&lt;run&gt;:&lt;phase&gt;</code>
-        للتمييز.
-      </p>
+      <h2>عرّفنا على الراوتر</h2>
+      <p>ابدأ باسم وصفي وتحديد نوع الخدمة الأساسيّة.</p>
     </header>
 
-    <div class="wv3-phase-list" data-wv3-phase-list>
-      {# Filled by JS from /phase-planners. #}
+    <div class="swz-field">
+      <label>اسم الراوتر</label>
+      <input type="text" data-swz-router-name
+             placeholder="مثال: مقهى الزهراء — فرع 1"
+             autocomplete="off" maxlength="64">
+      <small>اسم وصفي يظهر في القوائم لاحقاً.</small>
     </div>
 
-    <div class="wv3-phase-result" data-wv3-phase-result hidden>
-      <h3>السكربت المُولَّد</h3>
-      <div class="wv3-phase-result-meta"
-           data-wv3-phase-result-meta></div>
-      <details open>
-        <summary>محتوى السكربت</summary>
-        <pre data-wv3-phase-result-script>{}</pre>
-      </details>
-      <details>
-        <summary>أوامر التحقّق</summary>
-        <pre data-wv3-phase-result-validation>{}</pre>
-      </details>
-      <div class="wv3-phase-result-diagnostics"
-           data-wv3-phase-result-diagnostics hidden>
-        <h4>التشخيصات</h4>
-        <div data-wv3-phase-result-diagnostics-list></div>
+    <div class="swz-field">
+      <label>نوع الخدمة الأساسيّة</label>
+      <div class="swz-radio-grid">
+        <label class="swz-radio">
+          <input type="radio" name="router_type" value="hotspot" checked>
+          <span class="swz-radio-card">
+            <strong>Hotspot (وصول عام)</strong>
+            <small>صفحة دخول للمستخدمين عبر WiFi/كابل</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="router_type" value="pppoe">
+          <span class="swz-radio-card">
+            <strong>PPPoE (اشتراكات منزليّة)</strong>
+            <small>عملاء يستخدمون اسم مستخدم وكلمة سرّ</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="router_type" value="hybrid">
+          <span class="swz-radio-card">
+            <strong>Hybrid (الاثنين معاً)</strong>
+            <small>Hotspot + PPPoE على نفس الراوتر</small>
+          </span>
+        </label>
       </div>
     </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-primary"
+              data-swz-next="1">
+        التالي ←
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 2: Internet source ───────────────────── #}
+  <section class="swz-step" data-swz-step="2">
+    <header>
+      <h2>كيف يتصل الراوتر بالإنترنت؟</h2>
+      <p>اختر نوع الاتصال من مزوّد الخدمة، ثم املأ الحقول الظاهرة.</p>
+    </header>
+
+    <div class="swz-field">
+      <label>نوع الاتصال</label>
+      <div class="swz-radio-grid">
+        <label class="swz-radio">
+          <input type="radio" name="net_source" value="dhcp" checked
+                 data-swz-net-source>
+          <span class="swz-radio-card">
+            <strong>تلقائي (DHCP)</strong>
+            <small>المزوّد يعطي IP تلقائياً</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="net_source" value="static"
+                 data-swz-net-source>
+          <span class="swz-radio-card">
+            <strong>IP ثابت</strong>
+            <small>المزوّد أعطاك IP وبوّابة محدّدة</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="net_source" value="pppoe"
+                 data-swz-net-source>
+          <span class="swz-radio-card">
+            <strong>PPPoE</strong>
+            <small>اسم مستخدم + كلمة مرور من المزوّد</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="net_source" value="vlan"
+                 data-swz-net-source>
+          <span class="swz-radio-card">
+            <strong>VLAN</strong>
+            <small>وصلة موسومة بـ VLAN ID</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    {# Dynamic per-source fields. JS toggles visibility. #}
+    <div class="swz-source-fields" data-swz-source-fields="dhcp">
+      <div class="swz-field">
+        <label>منفذ الإنترنت على الراوتر</label>
+        <input type="text" data-swz-iface placeholder="ether1"
+               value="ether1" autocomplete="off">
+        <small>عادةً ether1 أو الواجهة المتّصلة بكابل المزوّد.</small>
+      </div>
+      <label class="swz-toggle">
+        <input type="checkbox" data-swz-nat checked>
+        <span>تفعيل NAT (مطلوب لأغلب الاتصالات)</span>
+      </label>
+    </div>
+
+    <div class="swz-source-fields" data-swz-source-fields="static" hidden>
+      <div class="swz-field">
+        <label>منفذ الإنترنت على الراوتر</label>
+        <input type="text" data-swz-static-iface placeholder="ether1"
+               value="ether1" autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>عنوان IP الخاص بك (مع القناع)</label>
+        <input type="text" data-swz-static-cidr
+               placeholder="مثال: 203.0.113.10/24" dir="ltr"
+               autocomplete="off">
+        <small>الصيغة: <span dir="ltr">x.x.x.x/24</span></small>
+      </div>
+      <div class="swz-field">
+        <label>بوّابة المزوّد (Gateway)</label>
+        <input type="text" data-swz-static-gateway
+               placeholder="مثال: 203.0.113.1" dir="ltr"
+               autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>خوادم DNS (اختياري)</label>
+        <input type="text" data-swz-static-dns
+               placeholder="1.1.1.1, 8.8.8.8" dir="ltr"
+               autocomplete="off">
+      </div>
+      <label class="swz-toggle">
+        <input type="checkbox" data-swz-static-nat checked>
+        <span>تفعيل NAT</span>
+      </label>
+    </div>
+
+    <div class="swz-source-fields" data-swz-source-fields="pppoe" hidden>
+      <div class="swz-field">
+        <label>منفذ الإنترنت على الراوتر</label>
+        <input type="text" data-swz-ppp-iface placeholder="ether1"
+               value="ether1" autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>اسم المستخدم (من المزوّد)</label>
+        <input type="text" data-swz-ppp-user dir="ltr"
+               autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>كلمة المرور (من المزوّد)</label>
+        <input type="password" data-swz-ppp-pass dir="ltr"
+               autocomplete="new-password">
+      </div>
+      <label class="swz-toggle">
+        <input type="checkbox" data-swz-ppp-nat checked>
+        <span>تفعيل NAT</span>
+      </label>
+    </div>
+
+    <div class="swz-source-fields" data-swz-source-fields="vlan" hidden>
+      <div class="swz-field">
+        <label>المنفذ الأب (Parent interface)</label>
+        <input type="text" data-swz-vlan-parent placeholder="ether1"
+               value="ether1" autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>VLAN ID</label>
+        <input type="number" data-swz-vlan-id min="1" max="4094"
+               placeholder="35" dir="ltr" autocomplete="off">
+      </div>
+      <div class="swz-field">
+        <label>وضع العنوان</label>
+        <select data-swz-vlan-mode>
+          <option value="dhcp">DHCP (تلقائي)</option>
+          <option value="static">IP ثابت</option>
+        </select>
+      </div>
+      <div class="swz-vlan-static" hidden>
+        <div class="swz-field">
+          <label>عنوان IP / CIDR</label>
+          <input type="text" data-swz-vlan-cidr dir="ltr"
+                 placeholder="203.0.113.10/24">
+        </div>
+        <div class="swz-field">
+          <label>Gateway</label>
+          <input type="text" data-swz-vlan-gateway dir="ltr"
+                 placeholder="203.0.113.1">
+        </div>
+      </div>
+      <label class="swz-toggle">
+        <input type="checkbox" data-swz-vlan-nat checked>
+        <span>تفعيل NAT</span>
+      </label>
+    </div>
+
+    {# Generated script — appears AFTER pressing the action. #}
+    <div class="swz-script-card" data-swz-step2-script hidden>
+      <header>
+        <strong>✅ تم توليد سكربت الإنترنت</strong>
+        <p>الصق هذا السكربت في MikroTik Terminal على الراوتر،
+           ثم انتظر اكتمال أوامر <code dir="ltr">/tool ping</code>
+           قبل المتابعة.</p>
+      </header>
+      <div class="swz-script-actions">
+        <button type="button" class="swz-btn swz-btn-ghost"
+                data-swz-copy-script="step2">📋 نسخ السكربت</button>
+        <details>
+          <summary>📜 عرض/إخفاء السكربت</summary>
+          <pre data-swz-step2-script-body></pre>
+        </details>
+      </div>
+    </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-back="2">→ السابق</button>
+      <button type="button" class="swz-btn swz-btn-primary"
+              data-swz-action="generate-internet">
+        توليد سكربت الإنترنت
+      </button>
+      <button type="button" class="swz-btn swz-btn-success"
+              data-swz-next="2" hidden>
+        نسخت السكربت — التالي ←
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 3: VPN / RADIUS bootstrap ───────────── #}
+  <section class="swz-step" data-swz-step="3">
+    <header>
+      <h2>الربط بالخادم (WireGuard + RADIUS)</h2>
+      <p>سيُولّد سكربت موحَّد يربط الراوتر بالخادم عبر VPN
+         آمن ويُهيّء RADIUS. لا تحتاج لكتابة أي شيء.</p>
+    </header>
+
+    <div class="swz-script-card" data-swz-step3-script hidden>
+      <header>
+        <strong>✅ سكربت الربط جاهز</strong>
+        <p>الصقه في MikroTik Terminal على الراوتر، ثم انسخ
+           من شاشة MikroTik الكتلة التي تحتوي على
+           <code dir="ltr">public-key</code> والصقها في
+           الحقل أدناه.</p>
+      </header>
+      <div class="swz-script-actions">
+        <button type="button" class="swz-btn swz-btn-ghost"
+                data-swz-copy-script="step3">📋 نسخ السكربت</button>
+        <details>
+          <summary>📜 عرض/إخفاء السكربت</summary>
+          <pre data-swz-step3-script-body></pre>
+        </details>
+      </div>
+    </div>
+
+    <div class="swz-field" data-swz-step3-paste hidden>
+      <label>الصق مخرجات MikroTik هنا</label>
+      <textarea data-swz-step3-output rows="8" dir="ltr"
+                placeholder='Flags: X - disabled; R - running...
+0   name="hr-wg" listen-port=13231 ...
+    public-key="abcd..."'></textarea>
+      <small>سنقرأ <code dir="ltr">public-key</code> تلقائياً ونُكمل.</small>
+    </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-back="3">→ السابق</button>
+      <button type="button" class="swz-btn swz-btn-primary"
+              data-swz-action="generate-vpn">
+        توليد سكربت الربط
+      </button>
+      <button type="button" class="swz-btn swz-btn-primary"
+              data-swz-action="submit-key" hidden>
+        قراءة المفتاح وتطبيقه
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 4: Verify handshake ─────────────────── #}
+  <section class="swz-step" data-swz-step="4">
+    <header>
+      <h2>التحقّق من اتصال VPN</h2>
+      <p>سنتأكّد أن الراوتر يتبادل WireGuard handshake
+         مع الخادم. هذا قد يستغرق 10–30 ثانية.</p>
+    </header>
+
+    <div class="swz-verify-status" data-swz-verify-status>
+      <div class="swz-verify-spinner">⏳</div>
+      <strong>بانتظار handshake من الراوتر...</strong>
+      <p>تأكّد أن السكربت قد لُصق على الراوتر وأن منفذ UDP
+         51820 مفتوح من جهة المزوّد.</p>
+    </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-back="4">→ السابق</button>
+      <button type="button" class="swz-btn swz-btn-success"
+              data-swz-action="mark-handshake">
+        ✅ تأكيد: الاتصال يعمل
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 5: Optional services ────────────────── #}
+  <section class="swz-step" data-swz-step="5">
+    <header>
+      <h2>خدمات إضافيّة (اختياري)</h2>
+      <p>فعّل ما تريده وستجد سكربتاً جاهزاً للنسخ لكل خدمة.
+         يمكنك تخطّي هذه الخطوة كلّها لو لم تحتجها.</p>
+    </header>
+
+    <div class="swz-services-grid">
+
+      {# Hotspot #}
+      <article class="swz-service-card" data-swz-service="hotspot">
+        <header>
+          <label class="swz-toggle">
+            <input type="checkbox" data-swz-service-toggle="hotspot">
+            <span><strong>Hotspot</strong> — صفحة دخول للمستخدمين</span>
+          </label>
+        </header>
+        <div class="swz-service-body" hidden>
+          <div class="swz-field">
+            <label>المنفذ على الراوتر</label>
+            <input type="text" data-swz-hotspot-iface
+                   placeholder="ether2" value="ether2" autocomplete="off">
+            <small>المنفذ الذي سيتّصل به مستخدمو الـ Hotspot.</small>
+          </div>
+          <div class="swz-field">
+            <label>نطاق الشبكة الداخليّة</label>
+            <input type="text" data-swz-hotspot-subnet dir="ltr"
+                   placeholder="10.99.0.0/16" value="10.99.0.0/16">
+            <small>عنوان شبكة كبير يُقسَّم تلقائياً بين الواجهات.</small>
+          </div>
+          <button type="button" class="swz-btn swz-btn-primary"
+                  data-swz-action="generate-hotspot">
+            توليد سكربت Hotspot
+          </button>
+          <div class="swz-script-card" data-swz-hotspot-script hidden>
+            <button type="button" class="swz-btn swz-btn-ghost"
+                    data-swz-copy-script="hotspot">📋 نسخ</button>
+            <details>
+              <summary>عرض السكربت</summary>
+              <pre data-swz-hotspot-script-body></pre>
+            </details>
+          </div>
+        </div>
+      </article>
+
+      {# Broadband / PPPoE server #}
+      <article class="swz-service-card" data-swz-service="broadband">
+        <header>
+          <label class="swz-toggle">
+            <input type="checkbox" data-swz-service-toggle="broadband">
+            <span><strong>Broadband (PPPoE server)</strong> — اشتراكات بعيدة</span>
+          </label>
+        </header>
+        <div class="swz-service-body" hidden>
+          <div class="swz-field">
+            <label>المنفذ على الراوتر</label>
+            <input type="text" data-swz-bb-iface
+                   placeholder="ether3" value="ether3" autocomplete="off">
+          </div>
+          <div class="swz-field">
+            <label>عنوان البوّابة المحليّة</label>
+            <input type="text" data-swz-bb-local dir="ltr"
+                   placeholder="192.168.50.1" value="192.168.50.1">
+          </div>
+          <div class="swz-field">
+            <label>نطاق العملاء البعيدين</label>
+            <input type="text" data-swz-bb-pool dir="ltr"
+                   placeholder="192.168.50.0/24"
+                   value="192.168.50.0/24">
+          </div>
+          <button type="button" class="swz-btn swz-btn-primary"
+                  data-swz-action="generate-broadband">
+            توليد سكربت Broadband
+          </button>
+          <div class="swz-script-card" data-swz-broadband-script hidden>
+            <button type="button" class="swz-btn swz-btn-ghost"
+                    data-swz-copy-script="broadband">📋 نسخ</button>
+            <details>
+              <summary>عرض السكربت</summary>
+              <pre data-swz-broadband-script-body></pre>
+            </details>
+          </div>
+        </div>
+      </article>
+
+      {# Walled garden #}
+      <article class="swz-service-card" data-swz-service="walled_garden">
+        <header>
+          <label class="swz-toggle">
+            <input type="checkbox" data-swz-service-toggle="walled_garden">
+            <span><strong>Walled Garden</strong> — مواقع مسموحة قبل الدخول</span>
+          </label>
+        </header>
+        <div class="swz-service-body" hidden>
+          <div class="swz-field">
+            <label>الدومينات المسموحة (دومين في كل سطر)</label>
+            <textarea data-swz-wg-domains dir="ltr" rows="4"
+                      placeholder="payment.local
+hotel.local"></textarea>
+          </div>
+          <button type="button" class="swz-btn swz-btn-primary"
+                  data-swz-action="generate-walled-garden">
+            توليد السكربت
+          </button>
+          <div class="swz-script-card" data-swz-wg-script hidden>
+            <button type="button" class="swz-btn swz-btn-ghost"
+                    data-swz-copy-script="walled_garden">📋 نسخ</button>
+            <details>
+              <summary>عرض السكربت</summary>
+              <pre data-swz-wg-script-body></pre>
+            </details>
+          </div>
+        </div>
+      </article>
+
+      {# Block sites #}
+      <article class="swz-service-card" data-swz-service="block_sites">
+        <header>
+          <label class="swz-toggle">
+            <input type="checkbox" data-swz-service-toggle="block_sites">
+            <span><strong>حجب مواقع</strong> — منع وجهات معيّنة</span>
+          </label>
+        </header>
+        <div class="swz-service-body" hidden>
+          <div class="swz-field">
+            <label>الدومينات المحجوبة (دومين في كل سطر)</label>
+            <textarea data-swz-bs-domains dir="ltr" rows="4"
+                      placeholder="malware.example
+ads.example"></textarea>
+          </div>
+          <button type="button" class="swz-btn swz-btn-primary"
+                  data-swz-action="generate-block-sites">
+            توليد السكربت
+          </button>
+          <div class="swz-script-card" data-swz-bs-script hidden>
+            <button type="button" class="swz-btn swz-btn-ghost"
+                    data-swz-copy-script="block_sites">📋 نسخ</button>
+            <details>
+              <summary>عرض السكربت</summary>
+              <pre data-swz-bs-script-body></pre>
+            </details>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-back="5">→ السابق</button>
+      <button type="button" class="swz-btn swz-btn-primary"
+              data-swz-next="5">
+        التالي ←
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 6: Register ──────────────────────────── #}
+  <section class="swz-step" data-swz-step="6">
+    <header>
+      <h2>تسجيل الراوتر في القائمة</h2>
+      <p>أدخل بيانات الوصول الإداريّة (API) ليتمكّن النظام
+         من إدارة الراوتر تلقائياً.</p>
+    </header>
+
+    <div class="swz-field">
+      <label>اسم مستخدم API</label>
+      <input type="text" data-swz-api-user dir="ltr"
+             value="admin" autocomplete="off">
+      <small>عادةً <code>admin</code> أو حساب مخصّص بصلاحيات API.</small>
+    </div>
+
+    <div class="swz-field">
+      <label>كلمة مرور API</label>
+      <input type="password" data-swz-api-pass dir="ltr"
+             autocomplete="new-password">
+    </div>
+
+    <footer class="swz-actions">
+      <button type="button" class="swz-btn swz-btn-ghost"
+              data-swz-back="6">→ السابق</button>
+      <button type="button" class="swz-btn swz-btn-success"
+              data-swz-action="register">
+        ✅ تسجيل وإنهاء
+      </button>
+    </footer>
+  </section>
+
+  {# ─── Step 7: Done ──────────────────────────────── #}
+  <section class="swz-step swz-final" data-swz-step="7">
+    <div class="swz-final-icon">🎉</div>
+    <h2>تم تجهيز الراوتر بنجاح!</h2>
+    <p>الراوتر يعمل الآن ضمن الأسطول ويتلقّى مصادقة RADIUS.</p>
+    <footer class="swz-actions">
+      <a class="swz-btn swz-btn-primary"
+         href="{{ url_for('radius.setup_wizard_fleet_page') }}">
+        عرض الأسطول
+      </a>
+      <a class="swz-btn swz-btn-ghost" href="">
+        إضافة راوتر آخر
+      </a>
+    </footer>
   </section>
 
 </div>
