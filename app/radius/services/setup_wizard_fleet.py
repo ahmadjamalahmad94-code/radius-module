@@ -99,6 +99,8 @@ class RouterFleetProvisioningService:
               r.wireguard_interface_name, r.wireguard_peer_name,
               r.api_username, r.allocation_index, r.created_at, r.updated_at,
               r.retired_at, r.lifecycle_state, r.failure_reason, r.lifecycle_updated_at,
+              r.tentative_started_at, r.tentative_expires_at,
+              r.tentative_reclaimed_at, r.tentative_reclaim_reason,
               p.status AS peer_status,
               p.router_public_key_masked,
               p.allowed_ips,
@@ -229,6 +231,15 @@ class RouterFleetProvisioningService:
                 "health": health,
                 "needs_action": needs_action,
                 "next_action": _next_action(lifecycle, peer_status, needs_action),
+                "tentative_started_at": data.get("tentative_started_at") or "",
+                "tentative_expires_at": data.get("tentative_expires_at") or "",
+                "tentative_reclaimed_at": data.get("tentative_reclaimed_at") or "",
+                "tentative_reclaim_reason": data.get("tentative_reclaim_reason") or "",
+                "is_tentative": bool(
+                    data.get("tentative_expires_at")
+                    and not data.get("tentative_reclaimed_at")
+                ),
+                "is_reclaimed": bool(data.get("tentative_reclaimed_at")),
             }
         )
 

@@ -37,6 +37,19 @@
     return value == null || value === "" ? fallback || "--" : String(value);
   }
 
+  function ttlCountdown(isoTimestamp) {
+    if (!isoTimestamp) return "";
+    const target = new Date(isoTimestamp);
+    if (isNaN(target.getTime())) return "";
+    const diffMs = target.getTime() - Date.now();
+    if (diffMs <= 0) return "انتهت";
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return "< 1 دقيقة";
+    if (minutes < 60) return `${minutes} دقيقة`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours} ساعة و ${minutes % 60} دقيقة`;
+  }
+
   function setKpi(name, value) {
     const node = page.querySelector(`[data-swfleet-kpi="${name}"]`);
     if (node) node.textContent = String(value || 0);
@@ -91,15 +104,27 @@
     routers.forEach((router) => {
       const health = router.health || {};
       const tr = document.createElement("tr");
+      const tentativeBadge = router.is_tentative
+        ? `<br><span class="swfleet-chip swfleet-chip-warn" title="هذه محاولة قيد التنفيذ — تنتهي تلقائياً عند ${text(router.tentative_expires_at)}">⏳ مؤقّت — ${ttlCountdown(router.tentative_expires_at)}</span>`
+        : "";
+      const reclaimedBadge = router.is_reclaimed
+        ? `<br><span class="swfleet-chip swfleet-chip-muted" title="تم تفريغها تلقائياً (${text(router.tentative_reclaim_reason)})">🧹 ملغاة</span>`
+        : "";
+      const cancelBtn = router.is_tentative
+        ? `<button type="button" class="swfleet-btn swfleet-btn-warn" data-router-cancel-tentative="${router.id}" title="إلغاء يدوي للمحاولة وتحرير الـ IP فوراً">إلغاء المحاولة</button>`
+        : "";
       tr.innerHTML = `
-        <td><strong>${text(router.router_label, "Router")}</strong><br><small>${text(router.router_identity)}</small></td>
+        <td><strong>${text(router.router_label, "Router")}</strong><br><small>${text(router.router_identity)}</small>${tentativeBadge}${reclaimedBadge}</td>
         <td>${text(router.router_vpn_ip)}</td>
         <td>${text(router.wireguard_peer_name)}</td>
         <td>${text(router.lifecycle_state)}</td>
         <td><span class="swfleet-chip ${chipClass(health.status)}">${text(health.label_ar || health.status)}</span></td>
         <td>${text(router.last_verification && router.last_verification.step_key)}</td>
         <td>${text(router.next_action)}</td>
-        <td class="swfleet-actions"><button type="button" class="swfleet-btn swfleet-btn-ghost" data-router-detail="${router.id}">تفاصيل</button></td>
+        <td class="swfleet-actions">
+          <button type="button" class="swfleet-btn swfleet-btn-ghost" data-router-detail="${router.id}">تفاصيل</button>
+          ${cancelBtn}
+        </td>
       `;
       rows.appendChild(tr);
     });
@@ -146,10 +171,79 @@
       openDetail(target.dataset.routerDetail);
     } else if (target.matches("[data-router-id]")) {
       openDetail(target.dataset.routerId);
+    } else if (target.matches("[data-router-cancel-tentative]")) {
+      cancelTentative(target.dataset.routerCancelTentative, target);
+    } else if (target.matches("[data-swfleet-reclaim-expired]")) {
+      reclaimAllExpired(target);
     } else if (target.matches("[data-swfleet-close]")) {
       if (drawer) drawer.hidden = true;
     }
   });
+
+  async function cancelTentative(registryId, btn) {
+    if (!registryId) return;
+    if (!window.confirm("هل تريد إلغاء هذه المحاولة وتحرير الـ IP فوراً؟")) {
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "...";
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard/fleet/router/${registryId}/cancel-tentative`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token(),
+          },
+          body: JSON.stringify({}),
+        },
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      await loadFleet();
+    } catch (error) {
+      window.alert("فشل إلغاء المحاولة: " + error.message);
+      btn.disabled = false;
+      btn.textContent = "إلغاء المحاولة";
+    }
+  }
+
+  async function reclaimAllExpired(btn) {
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "جارٍ التنظيف...";
+    try {
+      const res = await fetch(
+        "/admin/radius/setup-wizard/fleet/reclaim-expired",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token(),
+          },
+          body: JSON.stringify({}),
+        },
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const sweep = data.sweep || {};
+      window.alert(
+        `تم تنظيف ${sweep.reclaimed_count || 0} محاولة منتهية ` +
+        `(تم فحص ${sweep.scanned || 0}).`
+      );
+      await loadFleet();
+    } catch (error) {
+      window.alert("فشل التنظيف: " + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
 
   let searchTimer = 0;
   [statusFilter, lifecycleFilter, includeRetired].forEach((node) => {

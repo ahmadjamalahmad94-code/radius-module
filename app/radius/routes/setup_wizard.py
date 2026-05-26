@@ -75,6 +75,18 @@ def register_setup_wizard_routes(bp: Blueprint) -> None:
         setup_wizard_fleet_emergency_reset,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/setup-wizard/fleet/router/<int:registry_id>/cancel-tentative",
+        "setup_wizard_fleet_cancel_tentative",
+        setup_wizard_fleet_cancel_tentative,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/fleet/reclaim-expired",
+        "setup_wizard_fleet_reclaim_expired",
+        setup_wizard_fleet_reclaim_expired,
+        methods=["POST"],
+    )
     bp.add_url_rule("/setup-wizard/server-wg/readiness", "setup_wizard_server_wg_readiness", setup_wizard_server_wg_readiness, methods=["GET"])
     bp.add_url_rule("/setup-wizard/runs", "setup_wizard_create_run", setup_wizard_create_run, methods=["POST"])
     bp.add_url_rule("/setup-wizard/runs/<int:run_id>", "setup_wizard_get_run", setup_wizard_get_run, methods=["GET"])
@@ -251,6 +263,71 @@ def setup_wizard_fleet_emergency_reset():
             code="emergency_reset_failed",
         )
     return jsonify({"ok": True, "reset": summary})
+
+
+def setup_wizard_fleet_cancel_tentative(registry_id: int):
+    """Manually cancel a single tentative reservation. The
+    operator clicks this when they know a wizard run has failed
+    and they don't want to wait for the TTL to expire."""
+    from ..services.setup_wizard_tentative_reclaimer import (
+        SetupWizardTentativeReclaimer,
+    )
+    body = _body()
+    actor = str(
+        body.get("actor")
+        or getattr(g, "admin_username", "")
+        or "admin",
+    )
+    try:
+        result = SetupWizardTentativeReclaimer().reclaim_one(
+            tenant_id=_tid(),
+            registry_id=int(registry_id),
+            reason="manual_cancel",
+            actor=actor,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _json_error(
+            f"manual cancel failed: {exc}",
+            status=500,
+            code="manual_cancel_failed",
+        )
+    if result.get("status") == "not_found":
+        return _json_error(
+            "router not found",
+            status=404,
+            code="router_not_found",
+        )
+    if result.get("status") == "skipped_permanent":
+        return _json_error(
+            "router has already been verified — refusing to cancel",
+            status=409,
+            code="cannot_cancel_permanent",
+        )
+    return jsonify({"ok": True, "cancel": result})
+
+
+def setup_wizard_fleet_reclaim_expired():
+    """Sweep all expired tentative reservations on demand. Used
+    by the UI's 'Reclaim expired now' button — also runs every
+    5 min automatically via the background worker."""
+    from ..services.setup_wizard_tentative_reclaimer import (
+        SetupWizardTentativeReclaimer,
+    )
+    actor = str(
+        getattr(g, "admin_username", "") or "admin",
+    )
+    try:
+        result = SetupWizardTentativeReclaimer().reclaim_all_expired(
+            tenant_id=_tid(),
+            actor=actor,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _json_error(
+            f"sweep failed: {exc}",
+            status=500,
+            code="reclaim_sweep_failed",
+        )
+    return jsonify({"ok": True, "sweep": result})
 
 
 def setup_wizard_server_wg_readiness():

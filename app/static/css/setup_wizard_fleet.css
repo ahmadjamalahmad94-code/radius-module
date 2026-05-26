@@ -72,6 +72,46 @@
   color: #1e3a8a;
 }
 
+.swfleet-btn-warn {
+  background: #f59e0b;
+  color: #78350f;
+  font-weight: 700;
+}
+
+.swfleet-btn-warn:hover {
+  background: #d97706;
+  color: #fff;
+}
+
+.swfleet-btn-warn:disabled {
+  background: #fde68a;
+  cursor: not-allowed;
+}
+
+.swfleet-chip-warn {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+  padding: 2px 8px;
+}
+
+.swfleet-chip-muted {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+  padding: 2px 8px;
+}
+
 .swfleet-btn-danger {
   background: #dc2626;
   color: #fff;
