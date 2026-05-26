@@ -222,6 +222,7 @@
           <th style="width:36px"><input type="checkbox" aria-label="تحديد الكل" data-users-check-all></th>
           <th style="width:60px" class="num">#</th>
           <th>اليوزر</th>
+          <th style="width:170px">كلمة المرور</th>
           <th>الاسم</th>
           <th>الجوال</th>
           <th>الباقة</th>
@@ -256,6 +257,26 @@
                title="فتح ملف 360°">
               {{ u.username }}
             </a>
+          </td>
+          {# Password cell — masked by default; eye reveals, copy hands it to the operator
+             without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
+             page is admin-only, so this is intentional (matches the edit form behavior). #}
+          <td class="hr-pw-cell" data-hr-pw="{{ u.password|e }}" style="white-space:nowrap">
+            {% if u.password %}
+              <span class="hr-pw-text mono" data-hr-pw-text>••••••••</span>
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
+                      data-hr-pw-toggle aria-label="إظهار/إخفاء" title="إظهار/إخفاء"
+                      style="padding:2px 6px;min-width:0">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
+                      data-hr-pw-copy aria-label="نسخ" title="نسخ"
+                      style="padding:2px 6px;min-width:0">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            {% else %}
+              <span class="hub-text-mute">—</span>
+            {% endif %}
           </td>
           <td>{{ u.full_name or '—' }}</td>
           <td class="mono">{{ u.mobile or '—' }}</td>
@@ -780,6 +801,56 @@
     if (!window.confirm(`أرشفة ${username}؟ يمكن استعادته من سلة المحذوفات.`)) {
       event.preventDefault();
     }
+  });
+
+  // ── Password column: reveal-eye + copy-to-clipboard ──────────
+  // The masked text node holds the dots; data-hr-pw on the <td>
+  // carries the real password (the page is admin-only and the DB
+  // already stores plaintext for RADIUS PAP/CHAP).
+  document.querySelectorAll("[data-hr-pw-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cell = btn.closest(".hr-pw-cell");
+      if (!cell) return;
+      const txt = cell.querySelector("[data-hr-pw-text]");
+      const icon = btn.querySelector("i");
+      const pw = cell.dataset.hrPw || "";
+      const revealed = txt.dataset.revealed === "1";
+      if (revealed) {
+        txt.textContent = "••••••••";
+        txt.dataset.revealed = "0";
+        if (icon) { icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); }
+      } else {
+        txt.textContent = pw;
+        txt.dataset.revealed = "1";
+        if (icon) { icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); }
+      }
+    });
+  });
+  document.querySelectorAll("[data-hr-pw-copy]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cell = btn.closest(".hr-pw-cell");
+      if (!cell) return;
+      const pw = cell.dataset.hrPw || "";
+      if (!pw) return;
+      const icon = btn.querySelector("i");
+      const flash = (ok) => {
+        if (!icon) return;
+        const prev = icon.className;
+        icon.className = ok ? "fa-solid fa-check" : "fa-solid fa-xmark";
+        setTimeout(() => { icon.className = prev; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pw).then(() => flash(true), () => flash(false));
+      } else {
+        // Fallback for older / non-HTTPS contexts.
+        const ta = document.createElement("textarea");
+        ta.value = pw; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); flash(true); }
+        catch (e) { flash(false); }
+        document.body.removeChild(ta);
+      }
+    });
   });
 })();
 </script>
