@@ -31,6 +31,59 @@
   box-shadow:0 1px 2px rgba(15,23,42,.03);
 }
 
+/* ─── Collapse / expand toggle bar ─── */
+.rh-hub-toggle{
+  width:100%;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 20px;
+  background:#fff;border:0;cursor:pointer;text-align:start;
+  border-bottom:1px solid #EEEDF3;
+  transition:background .12s;
+}
+.rh-hub-toggle:hover{background:#FAFAFC}
+.rh-hub-toggle-summary{
+  display:flex;align-items:center;gap:12px;min-width:0;
+}
+.rh-hub-toggle-icon{
+  width:36px;height:36px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,#6B5AED,#4338CA);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:14px;
+}
+.rh-hub-toggle-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rh-hub-toggle-text strong{
+  font-size:14px;font-weight:800;color:#0F172A;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rh-hub-toggle-text small{
+  font-size:11.5px;color:#64748B;font-family:monospace;
+}
+.rh-hub-toggle-actions{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.rh-hub-toggle-state{
+  font-size:12px;font-weight:600;color:#475569;
+}
+.rh-hub-toggle-chevron{
+  width:28px;height:28px;border-radius:50%;
+  background:#F1F5F9;color:#475569;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;transition:transform .3s ease,background .15s;
+}
+.rh-hub-toggle:hover .rh-hub-toggle-chevron{background:#E2E8F0}
+
+/* ─── Collapsible body ─── */
+.rh-hub-body{
+  max-height:1600px;overflow:hidden;
+  transition:max-height .35s ease;
+}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-body{max-height:0}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle{border-bottom-color:transparent}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){
+  .rh-hub-body{transition:none}
+  .rh-hub-toggle-chevron{transition:none}
+}
+
 /* ─── Identity strip ─── */
 .rh-hub-identity{
   display:flex;align-items:center;gap:16px;
@@ -172,17 +225,44 @@
          data-mt-api-base="{{ api_base }}"
          data-mt-api-token="{{ api_token }}">
 
-  {# ─── 🔷 Router Hub — full redesign (May 2026) ───────────────
-     One unified hero with three clearly-spaced sections:
-       1. Identity strip — router name, NAS id, address, status
-       2. Services grid — 6 named cards (برمجة Hotspot, برمجة
-          Broadband, حجب/فتح مواقع, تغيير IP, اتصال عن بُعد).
-          Each card shows icon + title + short subtitle so the
-          operator reads intent without needing to hover.
-       3. Tools row — 4 compact cards for single-shot tools
-     Live tabs (الواجهات/الجلسات/السجلات…) keep their own strip
-     below — they're real-time MikroTik data, not entry points. #}
-  <header class="rh-hub" aria-label="مركز الراوتر">
+  {# ─── 🔷 Router Hub — collapsible (May 2026) ──────────────────
+     One unified hero with three sections, foldable like a sidebar:
+       • Toggle bar (always visible) — router name + status + chevron
+       • Collapsible body:
+         1. Identity strip
+         2. Services grid (6 cards)
+         3. Tools row (4 cards)
+     Operator's collapse preference persists in localStorage so the
+     state survives navigation between tabs/pages. The toggle animates
+     with a max-height transition (no JS height math). #}
+  <header class="rh-hub" data-rh-collapsed="false" aria-label="مركز الراوتر">
+
+    {# ── Toggle bar (always visible) ── #}
+    <button type="button" class="rh-hub-toggle"
+            data-rh-hub-toggle
+            aria-expanded="true"
+            aria-controls="rh-hub-body">
+      <span class="rh-hub-toggle-summary">
+        <span class="rh-hub-toggle-icon">
+          <i class="fa-solid fa-router"></i>
+        </span>
+        <span class="rh-hub-toggle-text">
+          <strong>{{ nas.name }}</strong>
+          <small>NAS {{ nas.id }} · {{ nas.address }}</small>
+        </span>
+      </span>
+      <span class="rh-hub-toggle-actions">
+        <span class="rh-hub-toggle-state" data-rh-hub-state-label>
+          الخدمات والأدوات
+        </span>
+        <span class="rh-hub-toggle-chevron">
+          <i class="fa-solid fa-chevron-up"></i>
+        </span>
+      </span>
+    </button>
+
+    {# ── Collapsible body ── #}
+    <div class="rh-hub-body" id="rh-hub-body" data-rh-hub-body>
 
     {# ── Identity strip ─────────────────────────────────────── #}
     <div class="rh-hub-identity">
@@ -200,9 +280,15 @@
         </p>
       </div>
       <div class="rh-hub-id-status">
-        <span class="rh-hub-status-pill" data-mt-status-pill>
+        {# Visual-only pill — the real status updates happen on the
+           [data-mt-status-pill] / [data-mt-status-label] elements in
+           the overview tab below. Keeping a second pill here in
+           sync would require touching mt_dashboard.js, so this stays
+           static and the operator gets live updates the moment they
+           glance at the overview body. #}
+        <span class="rh-hub-status-pill">
           <span class="rh-hub-status-dot"></span>
-          <span data-mt-status-label>جارٍ الاتصال…</span>
+          <span>راجع التفاصيل أدناه</span>
         </span>
       </div>
     </div>
@@ -288,7 +374,37 @@
       </div>
     </section>
 
+    </div>{# /rh-hub-body #}
   </header>
+
+  {# Inline collapse-toggle script. Persists state in localStorage so
+     navigating between tabs/pages keeps the operator's choice. #}
+  <script>
+    (function(){
+      const hub = document.querySelector('[data-mt-dashboard] .rh-hub');
+      const toggle = hub && hub.querySelector('[data-rh-hub-toggle]');
+      const body = hub && hub.querySelector('[data-rh-hub-body]');
+      if (!hub || !toggle || !body) return;
+      const KEY = 'rh-hub-collapsed';
+      function applyState(collapsed){
+        hub.dataset.rhCollapsed = String(collapsed);
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+        const label = hub.querySelector('[data-rh-hub-state-label]');
+        if (label) label.textContent = collapsed
+          ? 'افتح الخدمات والأدوات' : 'الخدمات والأدوات';
+      }
+      // Restore preference (default: open).
+      try {
+        const saved = localStorage.getItem(KEY);
+        if (saved === 'true') applyState(true);
+      } catch (_) {}
+      toggle.addEventListener('click', function(){
+        const next = hub.dataset.rhCollapsed !== 'true';
+        applyState(next);
+        try { localStorage.setItem(KEY, String(next)); } catch (_) {}
+      });
+    })();
+  </script>
 
   {# P1 — Tabs strip. The current K9 dashboard goes under
      'Overview'; the other tabs ship as honest empty states
