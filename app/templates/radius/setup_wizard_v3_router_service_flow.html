@@ -1,0 +1,95 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block head_extra %}
+<style>
+/* Per-service phased-flow shell — same visual language as the
+   dashboard. Each service plugs in its own multi-step UI here.
+   This file is the SHELL; commits 3-8 wire each service's real
+   steps + planner + verification probe.
+
+   IMPORTANT: nothing in the per-service flow shows scripts/keys/
+   secrets to the operator. They see intent + check-marks. */
+.swsvf-page{padding:24px;background:#F7F8FB;min-height:calc(100vh - 60px)}
+.swsvf-back{
+  display:inline-flex;align-items:center;gap:6px;
+  color:#475569;text-decoration:none;font-size:13px;
+  margin-bottom:14px;
+}
+.swsvf-back:hover{color:#1e293b}
+.swsvf-header{
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:22px 24px;margin-bottom:22px;
+  display:flex;align-items:center;gap:16px;
+}
+.swsvf-icon{
+  width:54px;height:54px;border-radius:13px;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:24px;
+}
+.swsvf-icon-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.swsvf-icon-green{background:linear-gradient(135deg,#10B981,#047857)}
+.swsvf-icon-red{background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.swsvf-icon-teal{background:linear-gradient(135deg,#14B8A6,#0F766E)}
+.swsvf-icon-amber{background:linear-gradient(135deg,#F59E0B,#B45309)}
+.swsvf-icon-purple{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
+.swsvf-header h1{margin:0;font-size:22px;font-weight:800;color:#0F172A}
+.swsvf-header .swsvf-sub{margin:4px 0 0;color:#64748B;font-size:13px}
+
+.swsvf-body{
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:42px;text-align:center;
+}
+.swsvf-body i.swsvf-big{
+  font-size:54px;color:#CBD5E1;margin-bottom:14px;display:block;
+}
+.swsvf-body h2{margin:0 0 6px;color:#0F172A;font-size:20px}
+.swsvf-body p{color:#64748B;margin:0 0 22px;font-size:14px;line-height:1.7}
+.swsvf-btn-ghost{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:8px;border:1px solid #CBD5E1;
+  background:#fff;color:#0F172A;text-decoration:none;font-weight:700;
+  font-size:13px;
+}
+.swsvf-btn-ghost:hover{background:#F8FAFC}
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="swsvf-page" dir="rtl">
+
+  <a class="swsvf-back" href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=router_id) }}">
+    <i class="fa-solid fa-arrow-right"></i>
+    <span>العودة إلى خدمات الراوتر</span>
+  </a>
+
+  <div class="swsvf-header">
+    <span class="swsvf-icon swsvf-icon-{{ card.color }}">
+      <i class="fa-solid fa-{{ card.icon }}"></i>
+    </span>
+    <div>
+      <h1>{{ card.title_ar }}</h1>
+      <p class="swsvf-sub">
+        {{ card.subtitle_ar }}
+        {% if router %} · الراوتر «{{ router.name }}»{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {# Placeholder body — replaced per-service in subsequent commits. #}
+  <div class="swsvf-body">
+    <i class="fa-solid fa-screwdriver-wrench swsvf-big"></i>
+    <h2>قيد التحضير</h2>
+    <p>
+      ستظهر هنا مراحل هذه الخدمة بالتفصيل المريح (تهيئة ← معاينة ← إرسال ← تحقّق).<br>
+      كل مرحلة بزر واحد، بدون أي سكربتات أو أكواد ظاهرة.
+    </p>
+    <a class="swsvf-btn-ghost"
+       href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=router_id) }}">
+      <i class="fa-solid fa-arrow-right"></i>
+      <span>عودة إلى لوحة الخدمات</span>
+    </a>
+  </div>
+
+</main>
+{% endblock %}

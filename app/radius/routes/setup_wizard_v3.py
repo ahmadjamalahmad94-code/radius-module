@@ -116,6 +116,116 @@ def setup_wizard_v3_page():
     )
 
 
+# Router Services Dashboard — landing page that opens AFTER a router
+# finishes the base setup wizard. Lists the optional configurations
+# the operator can do on this specific router (Hotspot, Broadband,
+# website block/open, public-IP change, remote tech access) — each
+# one its own multi-step phased flow, hidden behind a single "إعداد"
+# button per card. Designed to keep the operator focused on intent,
+# not on RouterOS commands.
+ROUTER_SERVICE_CARDS = [
+    {
+        "key": "hotspot",
+        "title_ar": "Hotspot",
+        "subtitle_ar": "بوابة دخول عامّة مع صفحة تسجيل دخول",
+        "icon": "wifi",
+        "color": "blue",
+        "phases_count": 4,
+    },
+    {
+        "key": "broadband",
+        "title_ar": "Broadband",
+        "subtitle_ar": "PPPoE — اشتراك ثابت بمستخدم وكلمة مرور",
+        "icon": "ethernet",
+        "color": "green",
+        "phases_count": 4,
+    },
+    {
+        "key": "block-sites",
+        "title_ar": "حجب مواقع",
+        "subtitle_ar": "منع الوصول لمواقع محدّدة",
+        "icon": "ban",
+        "color": "red",
+        "phases_count": 3,
+    },
+    {
+        "key": "open-sites",
+        "title_ar": "فتح مواقع",
+        "subtitle_ar": "السماح بمواقع بدون تسجيل دخول",
+        "icon": "circle-check",
+        "color": "teal",
+        "phases_count": 3,
+    },
+    {
+        "key": "public-ip",
+        "title_ar": "تغيير IP الخروج",
+        "subtitle_ar": "توجيه المشتركين عبر IP عام جديد",
+        "icon": "globe",
+        "color": "amber",
+        "phases_count": 4,
+    },
+    {
+        "key": "remote-access",
+        "title_ar": "اتصال عن بُعد",
+        "subtitle_ar": "نفق VPN للفنّي لإدارة الراوتر",
+        "icon": "key",
+        "color": "purple",
+        "phases_count": 3,
+    },
+]
+
+
+def setup_wizard_v3_router_services_dashboard(router_id: int):
+    """Lists configurable services for one router. Each card opens
+    its own multi-step phased flow (the per-service screen).
+
+    Renders a friendly 'router not found' fallback instead of 404
+    so the back-from-fleet UX doesn't dead-end if a router was
+    just retired.
+    """
+    from ..db.repos import nas_repo
+
+    router = nas_repo.get_nas(_tid(), router_id)
+    return render_template(
+        "radius/setup_wizard_v3_router_services.html",
+        router=router,
+        router_id=router_id,
+        service_cards=ROUTER_SERVICE_CARDS,
+        page_title=(
+            f"خدمات الراوتر «{router.name}»" if router
+            else "خدمات الراوتر"
+        ),
+    )
+
+
+def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
+    """Per-service phased flow. For each service key, renders the
+    same shell template — the concrete steps are driven by the
+    service definition. In this commit the page shows a 'coming
+    soon' placeholder; subsequent commits will wire each flow to
+    its planner + verification probe."""
+    from ..db.repos import nas_repo
+
+    router = nas_repo.get_nas(_tid(), router_id)
+    card = next(
+        (c for c in ROUTER_SERVICE_CARDS if c["key"] == service_key),
+        None,
+    )
+    if not card:
+        return _err(
+            f"خدمة غير معروفة: {service_key}",
+            status=404, code="unknown_service",
+        )
+    return render_template(
+        "radius/setup_wizard_v3_router_service_flow.html",
+        router=router,
+        router_id=router_id,
+        service_key=service_key,
+        card=card,
+        page_title=f"{card['title_ar']} — {router.name if router else ''}",
+    )
+
+
 def setup_wizard_v3_create_run():
     try:
         run = _svc().start_new_run(
@@ -644,6 +754,20 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3",
         "setup_wizard_v3_page",
         setup_wizard_v3_page,
+        methods=["GET"],
+    )
+    # Router Services Dashboard — opens AFTER base wizard ends.
+    # Each card on the dashboard links to a per-service phased flow.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services",
+        "setup_wizard_v3_router_services_dashboard",
+        setup_wizard_v3_router_services_dashboard,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/<service_key>",
+        "setup_wizard_v3_router_service_flow",
+        setup_wizard_v3_router_service_flow,
         methods=["GET"],
     )
     bp.add_url_rule(

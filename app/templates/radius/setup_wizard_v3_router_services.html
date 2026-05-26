@@ -1,0 +1,175 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ───── Router Services Dashboard — single-page card grid ─────
+   Operator opens this page AFTER the base setup wizard finishes
+   for a given router. Each card here represents ONE service the
+   operator can configure (Hotspot, Broadband, website filter, IP
+   change, remote tech access). No scripts/keys/secrets are shown
+   here or in any downstream flow — the operator sees intent +
+   results, never RouterOS commands. */
+.swsvc-page{
+  padding:24px;
+  background:#F7F8FB;
+  min-height:calc(100vh - 60px);
+}
+.swsvc-back{
+  display:inline-flex;align-items:center;gap:6px;
+  color:#475569;text-decoration:none;font-size:13px;
+  margin-bottom:14px;
+}
+.swsvc-back:hover{color:#1e293b}
+.swsvc-header{
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:22px 24px;margin-bottom:22px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.swsvc-header h1{
+  margin:0 0 6px;font-size:22px;font-weight:800;color:#0F172A;
+}
+.swsvc-header .swsvc-meta{
+  display:flex;flex-wrap:wrap;gap:14px;
+  color:#64748B;font-size:13px;
+}
+.swsvc-header .swsvc-meta span{display:inline-flex;align-items:center;gap:6px}
+.swsvc-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:999px;
+  font-size:12px;font-weight:700;
+}
+.swsvc-pill-ok{background:#ECFDF5;color:#065F46}
+.swsvc-pill-warn{background:#FEF3C7;color:#92400E}
+.swsvc-pill-off{background:#F1F5F9;color:#475569}
+
+.swsvc-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;
+}
+.swsvc-card{
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:20px;
+  display:flex;flex-direction:column;gap:12px;
+  transition:box-shadow .15s ease, transform .15s ease;
+}
+.swsvc-card:hover{
+  box-shadow:0 4px 16px rgba(15,23,42,.06);
+  transform:translateY(-1px);
+}
+.swsvc-card-head{display:flex;align-items:center;gap:12px}
+.swsvc-icon{
+  width:44px;height:44px;border-radius:11px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:20px;color:#fff;
+}
+.swsvc-icon-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.swsvc-icon-green{background:linear-gradient(135deg,#10B981,#047857)}
+.swsvc-icon-red{background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.swsvc-icon-teal{background:linear-gradient(135deg,#14B8A6,#0F766E)}
+.swsvc-icon-amber{background:linear-gradient(135deg,#F59E0B,#B45309)}
+.swsvc-icon-purple{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
+.swsvc-card h3{
+  margin:0;font-size:16px;font-weight:800;color:#0F172A;
+}
+.swsvc-card .swsvc-sub{
+  color:#64748B;font-size:13px;margin:0;line-height:1.6;
+  flex:1;
+}
+.swsvc-card-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;margin-top:4px;
+}
+.swsvc-phases{color:#94A3B8;font-size:12px}
+.swsvc-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:8px;
+  background:#0F172A;color:#fff;text-decoration:none;
+  font-weight:700;font-size:13px;border:none;cursor:pointer;
+  transition:background .15s;
+}
+.swsvc-btn:hover{background:#1e293b;color:#fff}
+.swsvc-empty{
+  background:#fff;border:1px dashed #CBD5E1;border-radius:14px;
+  padding:48px;text-align:center;color:#64748B;
+}
+.swsvc-empty i{font-size:42px;color:#CBD5E1;margin-bottom:12px;display:block}
+.swsvc-empty h3{margin:0 0 6px;color:#0F172A}
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="swsvc-page" dir="rtl">
+
+  <a class="swsvc-back" href="{{ url_for('radius.setup_wizard_fleet_page') }}">
+    <i class="fa-solid fa-arrow-right"></i>
+    <span>العودة إلى أسطول الراوترات</span>
+  </a>
+
+  {# ─────────────────── Router header ─────────────────── #}
+  {% if router %}
+  <div class="swsvc-header">
+    <div>
+      <h1>خدمات الراوتر «{{ router.name }}»</h1>
+      <div class="swsvc-meta">
+        <span><i class="fa-solid fa-network-wired"></i> {{ router.address or '—' }}</span>
+        <span><i class="fa-solid fa-microchip"></i> {{ router.vendor or 'MikroTik' }}</span>
+        {% if router.location %}
+        <span><i class="fa-solid fa-location-dot"></i> {{ router.location }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      {% if router.enabled %}
+        <span class="swsvc-pill swsvc-pill-ok">
+          <i class="fa-solid fa-circle-check"></i> مفعَّل
+        </span>
+      {% else %}
+        <span class="swsvc-pill swsvc-pill-off">
+          <i class="fa-solid fa-circle-pause"></i> معطَّل
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="swsvc-empty">
+    <i class="fa-solid fa-router"></i>
+    <h3>الراوتر غير موجود</h3>
+    <p>قد يكون تمت إزالته من الأسطول. ارجع للأسطول واختر راوتر آخر.</p>
+  </div>
+  {% endif %}
+
+  {# ─────────────────── Service cards grid ─────────────────── #}
+  {% if router %}
+  <div class="swsvc-grid">
+    {% for card in service_cards %}
+    <div class="swsvc-card">
+      <div class="swsvc-card-head">
+        <span class="swsvc-icon swsvc-icon-{{ card.color }}">
+          <i class="fa-solid fa-{{ card.icon }}"></i>
+        </span>
+        <div>
+          <h3>{{ card.title_ar }}</h3>
+        </div>
+      </div>
+      <p class="swsvc-sub">{{ card.subtitle_ar }}</p>
+      <div class="swsvc-card-foot">
+        <span class="swsvc-phases">
+          <i class="fa-regular fa-circle-dot"></i>
+          {{ card.phases_count }} مراحل
+        </span>
+        <a class="swsvc-btn"
+           href="{{ url_for('radius.setup_wizard_v3_router_service_flow', router_id=router_id, service_key=card.key) }}">
+          <span>إعداد</span>
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}
