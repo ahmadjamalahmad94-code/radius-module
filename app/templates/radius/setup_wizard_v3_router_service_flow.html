@@ -249,9 +249,11 @@ li[data-status="pending"] .swsvf-verify-icon{
 
   {{ csrf_token_input() | safe }}
 
-  <a class="swsvf-back" href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=router_id) }}">
+  {# Direct link to mt_dashboard (was services-dashboard but that's
+     now a 302 redirect anyway — saves one HTTP roundtrip). #}
+  <a class="swsvf-back" href="{{ url_for('radius.mt_dashboard', nas_id=router_id) }}">
     <i class="fa-solid fa-arrow-right"></i>
-    <span>العودة إلى خدمات الراوتر</span>
+    <span>العودة إلى صفحة الراوتر</span>
   </a>
 
   {# ─── Service header ─── #}
@@ -510,8 +512,9 @@ li[data-status="pending"] .swsvf-verify-icon{
   const finishBtn = page.querySelector("[data-swsvf-finish]");
   if (finishBtn) {
     finishBtn.addEventListener("click", () => {
-      const dashboardUrl = `/admin/radius/setup-wizard-v3/routers/${page.dataset.routerId}/services`;
-      window.location.href = dashboardUrl;
+      // Go straight to the unified Router Hub — the old
+      // /services URL is just a 302 to here anyway.
+      window.location.href = `/admin/radius/mt/${page.dataset.routerId}/dashboard`;
     });
   }
 

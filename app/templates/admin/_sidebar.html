@@ -189,7 +189,7 @@
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators -%}
 {%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge -%}
-{%- set sec_setup_ops_active = m_setup_wizard_v2 or m_setup_wizard_fleet or m_setup_wizard_engineering -%}
+{%- set sec_setup_ops_active = m_setup_wizard_v2 or m_setup_wizard_engineering -%}
 
 {# Standalone Dashboard #}
 {%- set m_dashboard = (path == url_for('radius.dashboard')) or (path == url_for('radius.dashboard_alias')) -%}
