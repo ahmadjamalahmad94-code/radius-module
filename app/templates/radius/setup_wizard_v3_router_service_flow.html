@@ -3,66 +3,230 @@
 
 {% block head_extra %}
 <style>
-/* Per-service phased-flow shell — same visual language as the
-   dashboard. Each service plugs in its own multi-step UI here.
-   This file is the SHELL; commits 3-8 wire each service's real
-   steps + planner + verification probe.
+/* ───── Per-service phased-flow shell ─────────────────────────────
+   Drives any service (Hotspot, Broadband, حجب-فتح مواقع, تغيير IP،
+   اتصال عن بُعد) through 4 fixed phases:
+     1. تهيئة      — service-specific input form
+     2. معاينة     — human-readable description of what will happen
+     3. إرسال     — apply on the router (progress bar in background)
+     4. تحقّق     — real probe; nothing is "done" without a green tick
 
-   IMPORTANT: nothing in the per-service flow shows scripts/keys/
-   secrets to the operator. They see intent + check-marks. */
+   This file is the SHELL — the configure form for each service is
+   injected via `service_config_partial` (a Jinja include path).
+   Backend wiring (preview/apply/verify endpoints) lands per-service
+   in subsequent commits. */
+:root{
+  --swsvf-blue:#3B82F6; --swsvf-blue-soft:#DBEAFE;
+  --swsvf-green:#10B981; --swsvf-green-soft:#D1FAE5;
+  --swsvf-red:#EF4444;   --swsvf-red-soft:#FEE2E2;
+  --swsvf-amber:#F59E0B; --swsvf-amber-soft:#FEF3C7;
+  --swsvf-teal:#14B8A6;  --swsvf-teal-soft:#CCFBF1;
+  --swsvf-purple:#8B5CF6;--swsvf-purple-soft:#EDE9FE;
+  --swsvf-ink:#0F172A; --swsvf-mute:#64748B; --swsvf-line:#EAECF0;
+}
 .swsvf-page{padding:24px;background:#F7F8FB;min-height:calc(100vh - 60px)}
 .swsvf-back{
   display:inline-flex;align-items:center;gap:6px;
   color:#475569;text-decoration:none;font-size:13px;
   margin-bottom:14px;
 }
-.swsvf-back:hover{color:#1e293b}
+.swsvf-back:hover{color:var(--swsvf-ink)}
+
+/* ─── Header ─── */
 .swsvf-header{
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:22px 24px;margin-bottom:22px;
+  background:#fff;border:1px solid var(--swsvf-line);border-radius:14px;
+  padding:22px 24px;margin-bottom:16px;
   display:flex;align-items:center;gap:16px;
 }
 .swsvf-icon{
   width:54px;height:54px;border-radius:13px;color:#fff;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:24px;
+  font-size:24px;flex-shrink:0;
 }
-.swsvf-icon-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.swsvf-icon-green{background:linear-gradient(135deg,#10B981,#047857)}
-.swsvf-icon-red{background:linear-gradient(135deg,#EF4444,#B91C1C)}
-.swsvf-icon-teal{background:linear-gradient(135deg,#14B8A6,#0F766E)}
-.swsvf-icon-amber{background:linear-gradient(135deg,#F59E0B,#B45309)}
+.swsvf-icon-blue  {background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.swsvf-icon-green {background:linear-gradient(135deg,#10B981,#047857)}
+.swsvf-icon-red   {background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.swsvf-icon-teal  {background:linear-gradient(135deg,#14B8A6,#0F766E)}
+.swsvf-icon-amber {background:linear-gradient(135deg,#F59E0B,#B45309)}
 .swsvf-icon-purple{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
-.swsvf-header h1{margin:0;font-size:22px;font-weight:800;color:#0F172A}
-.swsvf-header .swsvf-sub{margin:4px 0 0;color:#64748B;font-size:13px}
+.swsvf-header h1{margin:0;font-size:22px;font-weight:800;color:var(--swsvf-ink)}
+.swsvf-header .swsvf-sub{margin:4px 0 0;color:var(--swsvf-mute);font-size:13px}
 
-.swsvf-body{
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:42px;text-align:center;
+/* ─── Stepper ─── */
+.swsvf-stepper{
+  display:flex;align-items:center;gap:8px;
+  background:#fff;border:1px solid var(--swsvf-line);border-radius:14px;
+  padding:18px 24px;margin-bottom:16px;flex-wrap:wrap;
 }
-.swsvf-body i.swsvf-big{
-  font-size:54px;color:#CBD5E1;margin-bottom:14px;display:block;
+.swsvf-step{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 14px;border-radius:10px;font-size:13px;
+  color:var(--swsvf-mute);font-weight:600;
+  flex:1;min-width:140px;
 }
-.swsvf-body h2{margin:0 0 6px;color:#0F172A;font-size:20px}
-.swsvf-body p{color:#64748B;margin:0 0 22px;font-size:14px;line-height:1.7}
-.swsvf-btn-ghost{
+.swsvf-step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:#F1F5F9;color:#94A3B8;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;flex-shrink:0;
+}
+.swsvf-step.is-active{color:var(--swsvf-ink);background:var(--swsvf-blue-soft)}
+.swsvf-step.is-active .swsvf-step-num{background:var(--swsvf-blue);color:#fff}
+.swsvf-step.is-done{color:var(--swsvf-ink)}
+.swsvf-step.is-done .swsvf-step-num{
+  background:var(--swsvf-green);color:#fff;
+  position:relative;font-size:0;
+}
+.swsvf-step.is-done .swsvf-step-num::after{
+  content:"✓";font-size:16px;font-weight:800;
+}
+.swsvf-step.is-failed .swsvf-step-num{background:var(--swsvf-red);color:#fff}
+.swsvf-step-arrow{color:#CBD5E1;font-size:14px;flex-shrink:0}
+.swsvf-step-arrow:last-of-type{display:none}
+
+/* ─── Phase panes ─── */
+.swsvf-pane{
+  background:#fff;border:1px solid var(--swsvf-line);border-radius:14px;
+  padding:28px 32px;
+}
+.swsvf-pane[hidden]{display:none}
+.swsvf-pane h2{
+  margin:0 0 8px;color:var(--swsvf-ink);font-size:18px;font-weight:800;
+}
+.swsvf-pane .swsvf-pane-sub{
+  margin:0 0 20px;color:var(--swsvf-mute);font-size:13px;line-height:1.7;
+}
+.swsvf-pane-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--swsvf-line);
+}
+.swsvf-btn{
   display:inline-flex;align-items:center;gap:6px;
-  padding:9px 18px;border-radius:8px;border:1px solid #CBD5E1;
-  background:#fff;color:#0F172A;text-decoration:none;font-weight:700;
-  font-size:13px;
+  padding:10px 18px;border-radius:8px;border:1px solid var(--swsvf-line);
+  background:#fff;color:var(--swsvf-ink);text-decoration:none;
+  font-weight:700;font-size:13px;cursor:pointer;
+  transition:all .15s;
 }
-.swsvf-btn-ghost:hover{background:#F8FAFC}
+.swsvf-btn:hover{background:#F8FAFC}
+.swsvf-btn-primary{
+  background:var(--swsvf-ink);color:#fff;border-color:var(--swsvf-ink);
+}
+.swsvf-btn-primary:hover{background:#1e293b;color:#fff}
+.swsvf-btn-primary:disabled{
+  background:#94A3B8;border-color:#94A3B8;cursor:not-allowed;
+}
+.swsvf-btn-danger{background:var(--swsvf-red);color:#fff;border-color:var(--swsvf-red)}
+.swsvf-btn-danger:hover{background:#B91C1C;color:#fff}
+
+/* ─── Phase 2: Preview pane ─── */
+.swsvf-preview-list{
+  list-style:none;padding:0;margin:0;
+  display:flex;flex-direction:column;gap:10px;
+}
+.swsvf-preview-list li{
+  display:flex;align-items:flex-start;gap:10px;
+  background:#F8FAFC;border:1px solid var(--swsvf-line);border-radius:10px;
+  padding:14px 16px;color:var(--swsvf-ink);font-size:14px;line-height:1.7;
+}
+.swsvf-preview-list li i{
+  color:var(--swsvf-blue);font-size:16px;flex-shrink:0;margin-top:2px;
+}
+.swsvf-preview-empty{
+  color:var(--swsvf-mute);font-size:13px;font-style:italic;
+  padding:20px;text-align:center;
+}
+
+/* ─── Phase 3: Apply progress ─── */
+.swsvf-apply-status{text-align:center;padding:20px 0}
+.swsvf-apply-spinner{
+  width:56px;height:56px;border-radius:50%;
+  border:5px solid #E2E8F0;border-top-color:var(--swsvf-blue);
+  animation:swsvf-spin 0.9s linear infinite;
+  margin:0 auto 16px;
+}
+@keyframes swsvf-spin{to{transform:rotate(360deg)}}
+.swsvf-apply-label{
+  font-size:15px;color:var(--swsvf-ink);font-weight:700;margin:0;
+}
+.swsvf-apply-sub{
+  font-size:13px;color:var(--swsvf-mute);margin:6px 0 0;
+}
+.swsvf-apply-substeps{
+  list-style:none;padding:0;margin:20px 0 0;
+  display:flex;flex-direction:column;gap:8px;
+}
+.swsvf-apply-substeps li{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:8px;font-size:13px;
+  background:#F8FAFC;color:var(--swsvf-mute);
+}
+.swsvf-apply-substeps li[data-status="done"]{background:var(--swsvf-green-soft);color:#065F46}
+.swsvf-apply-substeps li[data-status="done"]::before{content:"✓ ";font-weight:800;color:var(--swsvf-green)}
+.swsvf-apply-substeps li[data-status="active"]{background:var(--swsvf-blue-soft);color:#1E40AF}
+.swsvf-apply-substeps li[data-status="active"]::before{content:"⏳ ";font-weight:800}
+.swsvf-apply-substeps li[data-status="failed"]{background:var(--swsvf-red-soft);color:#7F1D1D}
+.swsvf-apply-substeps li[data-status="failed"]::before{content:"✗ ";font-weight:800;color:var(--swsvf-red)}
+
+/* ─── Phase 4: Verify pane ─── */
+.swsvf-verify-list{
+  list-style:none;padding:0;margin:0;
+  display:flex;flex-direction:column;gap:12px;
+}
+.swsvf-verify-list li{
+  display:flex;align-items:center;gap:12px;
+  background:#F8FAFC;border:1px solid var(--swsvf-line);border-radius:10px;
+  padding:14px 16px;font-size:14px;color:var(--swsvf-ink);
+}
+.swsvf-verify-list li[data-status="ok"]{background:var(--swsvf-green-soft);border-color:#A7F3D0}
+.swsvf-verify-list li[data-status="fail"]{background:var(--swsvf-red-soft);border-color:#FCA5A5}
+.swsvf-verify-list li[data-status="pending"]{background:#F8FAFC}
+.swsvf-verify-icon{
+  width:28px;height:28px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;font-weight:800;flex-shrink:0;
+}
+li[data-status="ok"]   .swsvf-verify-icon{background:var(--swsvf-green)}
+li[data-status="fail"] .swsvf-verify-icon{background:var(--swsvf-red)}
+li[data-status="pending"] .swsvf-verify-icon{
+  background:#fff;border:2px solid #CBD5E1;color:#94A3B8;
+  font-size:11px;
+}
+
+/* ─── Success state (after verify all OK) ─── */
+.swsvf-done{text-align:center;padding:30px 20px}
+.swsvf-done-icon{
+  width:80px;height:80px;border-radius:50%;
+  background:var(--swsvf-green);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:36px;margin-bottom:14px;
+}
+.swsvf-done h2{margin:0 0 6px;color:var(--swsvf-ink);font-size:22px}
+.swsvf-done p{margin:0;color:var(--swsvf-mute);font-size:14px}
+
+/* ─── Failure banner ─── */
+.swsvf-error-banner{
+  background:var(--swsvf-red-soft);border:1px solid #FCA5A5;
+  border-radius:10px;padding:14px 16px;color:#7F1D1D;font-size:13px;
+  display:flex;align-items:flex-start;gap:10px;margin:12px 0;
+}
+.swsvf-error-banner i{font-size:16px;flex-shrink:0;margin-top:2px}
+.swsvf-error-banner strong{display:block;margin-bottom:4px}
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="swsvf-page" dir="rtl">
+<main class="swsvf-page" dir="rtl"
+      data-router-id="{{ router_id }}"
+      data-service-key="{{ service_key }}">
+
+  {{ csrf_token_input() | safe }}
 
   <a class="swsvf-back" href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=router_id) }}">
     <i class="fa-solid fa-arrow-right"></i>
     <span>العودة إلى خدمات الراوتر</span>
   </a>
 
+  {# ─── Service header ─── #}
   <div class="swsvf-header">
     <span class="swsvf-icon swsvf-icon-{{ card.color }}">
       <i class="fa-solid fa-{{ card.icon }}"></i>
@@ -76,20 +240,292 @@
     </div>
   </div>
 
-  {# Placeholder body — replaced per-service in subsequent commits. #}
-  <div class="swsvf-body">
-    <i class="fa-solid fa-screwdriver-wrench swsvf-big"></i>
-    <h2>قيد التحضير</h2>
-    <p>
-      ستظهر هنا مراحل هذه الخدمة بالتفصيل المريح (تهيئة ← معاينة ← إرسال ← تحقّق).<br>
-      كل مرحلة بزر واحد، بدون أي سكربتات أو أكواد ظاهرة.
-    </p>
-    <a class="swsvf-btn-ghost"
-       href="{{ url_for('radius.setup_wizard_v3_router_services_dashboard', router_id=router_id) }}">
-      <i class="fa-solid fa-arrow-right"></i>
-      <span>عودة إلى لوحة الخدمات</span>
-    </a>
+  {# ─── 4-phase stepper ─── #}
+  <div class="swsvf-stepper" data-swsvf-stepper>
+    <div class="swsvf-step is-active" data-swsvf-step="configure">
+      <span class="swsvf-step-num">1</span>
+      <span class="swsvf-step-label">تهيئة</span>
+    </div>
+    <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+    <div class="swsvf-step" data-swsvf-step="preview">
+      <span class="swsvf-step-num">2</span>
+      <span class="swsvf-step-label">معاينة</span>
+    </div>
+    <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+    <div class="swsvf-step" data-swsvf-step="apply">
+      <span class="swsvf-step-num">3</span>
+      <span class="swsvf-step-label">إرسال</span>
+    </div>
+    <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+    <div class="swsvf-step" data-swsvf-step="verify">
+      <span class="swsvf-step-num">4</span>
+      <span class="swsvf-step-label">تحقّق</span>
+    </div>
   </div>
 
+  {# ─── Phase 1: Configure (service-specific form) ─── #}
+  <section class="swsvf-pane" data-swsvf-pane="configure">
+    {% if service_config_partial %}
+      {% include service_config_partial ignore missing %}
+    {% else %}
+      <h2>تهيئة الخدمة</h2>
+      <p class="swsvf-pane-sub">
+        نموذج إعداد هذه الخدمة لم يُربط بعد. سنفعّله في تحديث قادم.
+      </p>
+    {% endif %}
+    <div class="swsvf-pane-foot">
+      <span style="color:var(--swsvf-mute);font-size:12px">
+        املأ الحقول أعلاه ثم اضغط التالي
+      </span>
+      <button type="button" class="swsvf-btn swsvf-btn-primary"
+              data-swsvf-next="preview">
+        التالي
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+    </div>
+  </section>
+
+  {# ─── Phase 2: Preview (what will happen) ─── #}
+  <section class="swsvf-pane" data-swsvf-pane="preview" hidden>
+    <h2>معاينة ما سيُطبَّق على الراوتر</h2>
+    <p class="swsvf-pane-sub">
+      راجع بنود التغيير بلغة بسيطة قبل الإرسال. لا يوجد أي تأثير على الراوتر
+      حتى تضغط «إرسال للراوتر».
+    </p>
+    <ul class="swsvf-preview-list" data-swsvf-preview-list>
+      <li class="swsvf-preview-empty">جارٍ تحضير المعاينة…</li>
+    </ul>
+    <div class="swsvf-pane-foot">
+      <button type="button" class="swsvf-btn" data-swsvf-prev="configure">
+        <i class="fa-solid fa-arrow-right"></i>
+        رجوع للتهيئة
+      </button>
+      <button type="button" class="swsvf-btn swsvf-btn-primary"
+              data-swsvf-next="apply">
+        إرسال للراوتر
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </section>
+
+  {# ─── Phase 3: Apply (progress) ─── #}
+  <section class="swsvf-pane" data-swsvf-pane="apply" hidden>
+    <h2>جارٍ الإرسال للراوتر</h2>
+    <p class="swsvf-pane-sub">
+      نحن نتولّى الباقي — لا حاجة لفتح نافذة طرفية أو لصق سكربتات.
+    </p>
+    <div class="swsvf-apply-status">
+      <div class="swsvf-apply-spinner" data-swsvf-apply-spinner></div>
+      <p class="swsvf-apply-label" data-swsvf-apply-label>الاتصال بالراوتر…</p>
+      <p class="swsvf-apply-sub" data-swsvf-apply-sub>قد يستغرق ذلك بضع ثوان.</p>
+    </div>
+    <ul class="swsvf-apply-substeps" data-swsvf-apply-substeps>
+      <li data-status="active" data-substep="connect">الاتصال بالراوتر</li>
+      <li data-substep="send">إرسال الإعدادات</li>
+      <li data-substep="commit">حفظ التغييرات</li>
+    </ul>
+    <div class="swsvf-error-banner" data-swsvf-apply-error hidden>
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div>
+        <strong>تعذّر الإرسال</strong>
+        <span data-swsvf-apply-error-msg></span>
+      </div>
+    </div>
+    <div class="swsvf-pane-foot" data-swsvf-apply-foot hidden>
+      <button type="button" class="swsvf-btn" data-swsvf-prev="preview">
+        <i class="fa-solid fa-arrow-right"></i>
+        رجوع للمعاينة
+      </button>
+      <button type="button" class="swsvf-btn swsvf-btn-primary"
+              data-swsvf-retry="apply">
+        <i class="fa-solid fa-rotate-right"></i>
+        إعادة المحاولة
+      </button>
+    </div>
+  </section>
+
+  {# ─── Phase 4: Verify (real probe) ─── #}
+  <section class="swsvf-pane" data-swsvf-pane="verify" hidden>
+    <h2>التحقّق من نجاح الإعداد</h2>
+    <p class="swsvf-pane-sub">
+      نفحص الراوتر فحصاً حقيقياً للتأكّد أنّ الخدمة تعمل فعلاً. لا تُسجَّل
+      كـ «مكتملة» إلّا بعد أن تنجح كل النقاط أدناه.
+    </p>
+    <ul class="swsvf-verify-list" data-swsvf-verify-list>
+      <li data-status="pending">
+        <span class="swsvf-verify-icon">…</span>
+        <span>جارٍ تحضير الفحوص…</span>
+      </li>
+    </ul>
+    <div class="swsvf-pane-foot">
+      <button type="button" class="swsvf-btn" data-swsvf-retry="verify">
+        <i class="fa-solid fa-rotate-right"></i>
+        إعادة الفحص
+      </button>
+      <button type="button" class="swsvf-btn swsvf-btn-primary"
+              data-swsvf-finish disabled>
+        تمّ — العودة للوحة الخدمات
+        <i class="fa-solid fa-check"></i>
+      </button>
+    </div>
+  </section>
+
 </main>
+
+<script>
+/* ───── Per-service flow state machine ─────────────────────────
+   Pure client-side phase navigator. Per-service backend wiring
+   (preview / apply / verify) lands in subsequent commits — when
+   each service's planner is plugged in, that service's partial
+   form fires the `swsvf:configure-submit` event and this script
+   takes the data forward through the remaining 3 phases.
+
+   For now the configure → preview transition is a UI-only stub
+   that displays «لم يُربط بعد» until per-service backends arrive.
+*/
+(function () {
+  "use strict";
+
+  const page = document.querySelector("[data-router-id][data-service-key]");
+  if (!page) return;
+
+  const PHASES = ["configure", "preview", "apply", "verify"];
+  let currentPhase = "configure";
+  let configurePayload = null;   // input collected in phase 1
+
+  function getStep(name)  { return page.querySelector(`[data-swsvf-step="${name}"]`); }
+  function getPane(name)  { return page.querySelector(`[data-swsvf-pane="${name}"]`); }
+
+  function setPhase(name) {
+    if (!PHASES.includes(name)) return;
+    // Hide all panes, show this one.
+    PHASES.forEach((p) => {
+      const pane = getPane(p);
+      if (pane) pane.hidden = (p !== name);
+    });
+    // Update stepper visual: prior phases done, current active, later neutral.
+    const i = PHASES.indexOf(name);
+    PHASES.forEach((p, idx) => {
+      const step = getStep(p);
+      if (!step) return;
+      step.classList.remove("is-active", "is-done", "is-failed");
+      if (idx < i)  step.classList.add("is-done");
+      if (idx === i) step.classList.add("is-active");
+    });
+    currentPhase = name;
+    // Notify per-service code that the phase changed.
+    page.dispatchEvent(new CustomEvent("swsvf:phase-change", {
+      detail: { phase: name, payload: configurePayload },
+    }));
+  }
+
+  /* ─── Navigation buttons ─── */
+  page.querySelectorAll("[data-swsvf-next]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.swsvfNext;
+      // When leaving "configure" → collect form data. The per-service
+      // partial is responsible for filling `data-swsvf-configure-payload`
+      // on the page element (as a JSON string) when it considers the
+      // form valid. Until that's wired (commits 3-8), we just advance.
+      if (currentPhase === "configure") {
+        const raw = page.dataset.swsvfConfigurePayload || "";
+        try {
+          configurePayload = raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          configurePayload = {};
+        }
+      }
+      setPhase(next);
+    });
+  });
+  page.querySelectorAll("[data-swsvf-prev]").forEach((btn) => {
+    btn.addEventListener("click", () => setPhase(btn.dataset.swsvfPrev));
+  });
+  page.querySelectorAll("[data-swsvf-retry]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      // Re-enter the same phase to restart it. Per-service handlers
+      // listen on `swsvf:phase-change` to kick off their work.
+      setPhase(btn.dataset.swsvfRetry);
+    });
+  });
+  const finishBtn = page.querySelector("[data-swsvf-finish]");
+  if (finishBtn) {
+    finishBtn.addEventListener("click", () => {
+      const dashboardUrl = `/admin/radius/setup-wizard-v3/routers/${page.dataset.routerId}/services`;
+      window.location.href = dashboardUrl;
+    });
+  }
+
+  /* ─── Helpers exposed for per-service wiring ─── */
+  window.SWSVF = {
+    setPhase,
+    /** Fill the preview list with bullets — call from per-service code. */
+    setPreview(bullets) {
+      const list = page.querySelector("[data-swsvf-preview-list]");
+      if (!list) return;
+      list.innerHTML = "";
+      if (!bullets || !bullets.length) {
+        list.innerHTML = '<li class="swsvf-preview-empty">لا تغييرات يلزم تطبيقها.</li>';
+        return;
+      }
+      bullets.forEach((b) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<i class="fa-solid fa-circle-info"></i><span></span>`;
+        li.querySelector("span").textContent = String(b);
+        list.appendChild(li);
+      });
+    },
+    /** Update one apply-substep status. */
+    setApplySubstep(key, status) {
+      const li = page.querySelector(`[data-substep="${key}"]`);
+      if (li) li.dataset.status = status;
+    },
+    /** Show an apply error banner + retry button. */
+    showApplyError(msg) {
+      const banner = page.querySelector("[data-swsvf-apply-error]");
+      const msgEl  = page.querySelector("[data-swsvf-apply-error-msg]");
+      const foot   = page.querySelector("[data-swsvf-apply-foot]");
+      const spin   = page.querySelector("[data-swsvf-apply-spinner]");
+      if (msgEl) msgEl.textContent = String(msg || "خطأ غير معروف");
+      if (banner) banner.hidden = false;
+      if (foot)   foot.hidden   = false;
+      if (spin)   spin.style.display = "none";
+      // Mark stepper as failed.
+      getStep("apply")?.classList.add("is-failed");
+    },
+    /** Set the apply label + sub text. */
+    setApplyLabel(label, sub) {
+      const labelEl = page.querySelector("[data-swsvf-apply-label]");
+      const subEl   = page.querySelector("[data-swsvf-apply-sub]");
+      if (labelEl) labelEl.textContent = String(label || "");
+      if (subEl)   subEl.textContent   = String(sub || "");
+    },
+    /** Fill the verify list. items = [{label, status: ok|fail|pending}] */
+    setVerifyChecks(items) {
+      const list = page.querySelector("[data-swsvf-verify-list]");
+      if (!list) return;
+      list.innerHTML = "";
+      (items || []).forEach((it) => {
+        const li = document.createElement("li");
+        li.dataset.status = it.status || "pending";
+        const icon = it.status === "ok" ? "✓"
+                   : it.status === "fail" ? "✗" : "…";
+        li.innerHTML = `<span class="swsvf-verify-icon">${icon}</span><span></span>`;
+        li.querySelector("span:last-child").textContent = String(it.label || "");
+        list.appendChild(li);
+      });
+      // Enable «تمّ» only when ALL checks are OK.
+      const finish = page.querySelector("[data-swsvf-finish]");
+      const allOk  = (items || []).length > 0
+                  && items.every((it) => it.status === "ok");
+      if (finish) finish.disabled = !allOk;
+      // Mark stepper green only when fully verified.
+      if (allOk) getStep("verify")?.classList.add("is-done");
+    },
+  };
+
+  // Default state.
+  setPhase("configure");
+})();
+</script>
 {% endblock %}

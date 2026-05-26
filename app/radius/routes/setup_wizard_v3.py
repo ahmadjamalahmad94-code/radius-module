@@ -199,11 +199,19 @@ def setup_wizard_v3_router_services_dashboard(router_id: int):
 
 
 def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
-    """Per-service phased flow. For each service key, renders the
-    same shell template — the concrete steps are driven by the
-    service definition. In this commit the page shows a 'coming
-    soon' placeholder; subsequent commits will wire each flow to
-    its planner + verification probe."""
+    """Per-service phased flow.
+
+    Renders the SAME shell template for every service — what differs
+    is the `service_config_partial` Jinja path injected per service.
+    The shell drives the 4 phases (تهيئة → معاينة → إرسال → تحقّق);
+    each per-service partial fills only the configure form for phase 1
+    and dispatches a `swsvf:configure-submit` event for the JS state
+    machine to take over.
+
+    In this commit only the shell + stepper navigation are live. The
+    per-service partials are stubbed (template lookup falls back to a
+    «not wired yet» message). Commits 3-8 each plug one service in.
+    """
     from ..db.repos import nas_repo
 
     router = nas_repo.get_nas(_tid(), router_id)
@@ -216,12 +224,18 @@ def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
             f"خدمة غير معروفة: {service_key}",
             status=404, code="unknown_service",
         )
+    # Per-service configure form. Each commit that wires a service
+    # adds a partial under templates/radius/svc_partials/. Missing
+    # partials fall back to the shell's «not wired yet» message via
+    # the {% include ... ignore missing %} clause.
+    partial = f"radius/svc_partials/{service_key}.html"
     return render_template(
         "radius/setup_wizard_v3_router_service_flow.html",
         router=router,
         router_id=router_id,
         service_key=service_key,
         card=card,
+        service_config_partial=partial,
         page_title=f"{card['title_ar']} — {router.name if router else ''}",
     )
 
