@@ -275,11 +275,14 @@
         `/runs/${state.runId}/generate-script`,
         {},
       );
-      if (!data.script_body) {
+      // The service returns the .rsc text under `script`. Some
+      // older callers used `script_body` — accept both.
+      const scriptText = data.script || data.script_body;
+      if (!scriptText) {
         toast("تعذّر توليد سكربت الربط.", "error");
         return;
       }
-      showScript("step3", data.script_body);
+      showScript("step3", scriptText);
       const pasteBox = root.querySelector("[data-swz-step3-paste]");
       if (pasteBox) pasteBox.hidden = false;
       const genBtn = root.querySelector(
