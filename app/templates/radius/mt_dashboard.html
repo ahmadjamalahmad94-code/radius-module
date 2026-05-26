@@ -66,6 +66,70 @@
 }
 .mt-svc-phases{color:#94A3B8;font-size:11.5px}
 .mt-svc-phases i{margin-inline-end:4px}
+
+/* ─── Option A: horizontal chips row ─── */
+.mt-svc-chips{
+  display:flex;flex-wrap:wrap;gap:8px;
+}
+.mt-svc-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:999px;
+  background:#fff;border:1px solid #EAECF0;
+  color:#334155;text-decoration:none;font-size:13px;font-weight:600;
+  transition:all .15s;
+}
+.mt-svc-chip i{font-size:13px}
+.mt-svc-chip:hover{
+  border-color:currentColor;transform:translateY(-1px);
+  box-shadow:0 2px 8px rgba(15,23,42,.05);
+}
+.mt-svc-chip--blue   { color:#1D4ED8 } .mt-svc-chip--blue:hover  {background:#EFF6FF}
+.mt-svc-chip--green  { color:#047857 } .mt-svc-chip--green:hover {background:#ECFDF5}
+.mt-svc-chip--red    { color:#B91C1C } .mt-svc-chip--red:hover   {background:#FEF2F2}
+.mt-svc-chip--teal   { color:#0F766E } .mt-svc-chip--teal:hover  {background:#F0FDFA}
+.mt-svc-chip--amber  { color:#B45309 } .mt-svc-chip--amber:hover {background:#FFFBEB}
+.mt-svc-chip--purple { color:#6D28D9 } .mt-svc-chip--purple:hover{background:#F5F3FF}
+
+/* ─── Option B: sidebar layout ─── */
+.mt-svc-sidebar-layout{
+  display:grid;grid-template-columns:220px 1fr;gap:14px;
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  overflow:hidden;
+}
+.mt-svc-sidebar{
+  background:#F8FAFC;border-inline-end:1px solid #EAECF0;
+  padding:14px 10px;
+}
+.mt-svc-sidebar h4{
+  margin:0 0 8px;padding:0 8px;font-size:11px;font-weight:800;
+  color:#64748B;text-transform:uppercase;letter-spacing:.05em;
+}
+.mt-svc-sidebar ul{list-style:none;padding:0;margin:0}
+.mt-svc-sidebar-link{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:8px;
+  color:#334155;text-decoration:none;font-size:13px;font-weight:600;
+  transition:all .12s;border-inline-start:3px solid transparent;
+}
+.mt-svc-sidebar-link i{width:18px;text-align:center;font-size:13px}
+.mt-svc-sidebar-link:hover{
+  background:#fff;color:#0F172A;
+}
+.mt-svc-sidebar-link--blue:hover  { border-inline-start-color:#3B82F6;color:#1D4ED8 }
+.mt-svc-sidebar-link--green:hover { border-inline-start-color:#10B981;color:#047857 }
+.mt-svc-sidebar-link--red:hover   { border-inline-start-color:#EF4444;color:#B91C1C }
+.mt-svc-sidebar-link--teal:hover  { border-inline-start-color:#14B8A6;color:#0F766E }
+.mt-svc-sidebar-link--amber:hover { border-inline-start-color:#F59E0B;color:#B45309 }
+.mt-svc-sidebar-link--purple:hover{ border-inline-start-color:#8B5CF6;color:#6D28D9 }
+.mt-svc-sidebar-hint{
+  display:flex;align-items:center;gap:10px;
+  padding:24px;color:#94A3B8;font-size:13px;
+}
+.mt-svc-sidebar-hint i{font-size:14px}
+@media (max-width:720px){
+  .mt-svc-sidebar-layout{grid-template-columns:1fr}
+  .mt-svc-sidebar{border-inline-end:none;border-bottom:1px solid #EAECF0}
+}
 </style>
 {% endblock %}
 
@@ -83,42 +147,68 @@
     icon="router"
   ) }}
 
-  {# ─── 🛠️ الخدمات ─────────────────────────────────────────
-     Unified Router Hub (May 2026 consolidation). Six service
-     cards replace the older mix of «برمجة الشبكة» + NPC chooser
-     + site-exit links — each card opens the same 4-phase flow
-     (تهيئة → معاينة → إرسال → تحقّق) without exposing scripts.
+  {# ─── 🛠️ خدمات الراوتر — جرّب الخيارين، قرّر، احذف اللي ما أعجبك ───
+     Two layout candidates are rendered together on purpose so the
+     operator can compare side-by-side. Once you pick one, tell me
+     and I'll delete the other in a follow-up commit.
 
-     The standalone /setup-wizard-v3/routers/<id>/services page
-     redirects here, so links from mt/operations and from the v3
-     wizard's «إعداد خدمات» button land on this section. #}
+     Both link to the same 4-phase flow (setup_wizard_v3_router_
+     service_flow), so the only thing that differs is HOW the picker
+     looks on this page. #}
+  {% set _services = [
+    {'key': 'hotspot',       'title': 'Hotspot',          'sub': 'بوابة دخول عامّة',           'icon': 'wifi',          'color': 'blue'},
+    {'key': 'broadband',     'title': 'Broadband',        'sub': 'PPPoE — اشتراك ثابت',       'icon': 'ethernet',      'color': 'green'},
+    {'key': 'block-sites',   'title': 'حجب مواقع',         'sub': 'منع الوصول',                'icon': 'ban',           'color': 'red'},
+    {'key': 'open-sites',    'title': 'فتح مواقع',         'sub': 'السماح بدون تسجيل دخول',    'icon': 'circle-check',  'color': 'teal'},
+    {'key': 'public-ip',     'title': 'تغيير IP',         'sub': 'IP عام جديد للخروج',        'icon': 'globe',         'color': 'amber'},
+    {'key': 'remote-access', 'title': 'اتصال عن بُعد',     'sub': 'نفق VPN للفنّي',             'icon': 'key',           'color': 'purple'},
+  ] %}
+
+  {# ───── 🅰️ Option A: horizontal chips row ───── #}
   <section class="mt-hub-section">
     <div class="mt-hub-section-head">
-      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر</h2>
-      <p>إعداد بنقرات قليلة — بدون أي سكربتات أو أوامر RouterOS ظاهرة.</p>
+      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر — خيار A: شريط chips</h2>
+      <p>صفّ واحد ناعم؛ يلتفّ تلقائياً لو الشاشة ضيّقة.</p>
     </div>
-    <div class="mt-svc-grid">
-      {% for svc in [
-        {'key': 'hotspot',       'title': 'Hotspot',          'sub': 'بوابة دخول عامّة مع صفحة تسجيل', 'icon': 'wifi',          'color': 'blue',   'phases': 4},
-        {'key': 'broadband',     'title': 'Broadband',        'sub': 'PPPoE — اشتراك ثابت بمستخدم وكلمة', 'icon': 'ethernet',  'color': 'green',  'phases': 4},
-        {'key': 'block-sites',   'title': 'حجب مواقع',         'sub': 'منع الوصول لمواقع محدّدة',         'icon': 'ban',           'color': 'red',    'phases': 3},
-        {'key': 'open-sites',    'title': 'فتح مواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',     'icon': 'circle-check',  'color': 'teal',   'phases': 3},
-        {'key': 'public-ip',     'title': 'تغيير IP الخروج',  'sub': 'توجيه المشتركين عبر IP عام جديد',   'icon': 'globe',         'color': 'amber',  'phases': 4},
-        {'key': 'remote-access', 'title': 'اتصال عن بُعد',     'sub': 'نفق VPN للفنّي لإدارة الراوتر',      'icon': 'key',           'color': 'purple', 'phases': 3},
-      ] %}
-      <a class="mt-svc-card mt-svc-card--{{ svc.color }}"
+    <div class="mt-svc-chips">
+      {% for svc in _services %}
+      <a class="mt-svc-chip mt-svc-chip--{{ svc.color }}"
          href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                          router_id=nas.id, service_key=svc.key) }}">
-        <span class="mt-svc-icon"><i class="fa-solid fa-{{ svc.icon }}"></i></span>
-        <div class="mt-svc-body">
-          <h3>{{ svc.title }}</h3>
-          <p>{{ svc.sub }}</p>
-          <span class="mt-svc-phases">
-            <i class="fa-regular fa-circle-dot"></i> {{ svc.phases }} مراحل
-          </span>
-        </div>
+                          router_id=nas.id, service_key=svc.key) }}"
+         title="{{ svc.sub }}">
+        <i class="fa-solid fa-{{ svc.icon }}"></i>
+        <span>{{ svc.title }}</span>
       </a>
       {% endfor %}
+    </div>
+  </section>
+
+  {# ───── 🅱️ Option B: sidebar (vertical list on the side) ───── #}
+  <section class="mt-hub-section">
+    <div class="mt-hub-section-head">
+      <h2><i class="fa-solid fa-screwdriver-wrench"></i> خدمات الراوتر — خيار B: قائمة جانبية</h2>
+      <p>قائمة عمودية على الجنب؛ المحتوى الرئيسي على اليسار.</p>
+    </div>
+    <div class="mt-svc-sidebar-layout">
+      <aside class="mt-svc-sidebar">
+        <h4>🛠️ الخدمات</h4>
+        <ul>
+          {% for svc in _services %}
+          <li>
+            <a class="mt-svc-sidebar-link mt-svc-sidebar-link--{{ svc.color }}"
+               href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                                router_id=nas.id, service_key=svc.key) }}">
+              <i class="fa-solid fa-{{ svc.icon }}"></i>
+              <span>{{ svc.title }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </aside>
+      <div class="mt-svc-sidebar-hint">
+        <i class="fa-solid fa-arrow-left"></i>
+        اختر خدمة من القائمة لفتح إعدادها بأربع مراحل.
+      </div>
     </div>
   </section>
 
