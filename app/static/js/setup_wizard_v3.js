@@ -164,7 +164,47 @@
       const body = cb.closest(".swz-service-card")
         .querySelector(".swz-service-body");
       if (body) body.hidden = !cb.checked;
+      // Auto-fill the RADIUS secret on first enable so the
+      // operator never sees a literal "REPLACE_ME" leaking
+      // into the generated script.
+      if (cb.checked && cb.dataset.swzServiceToggle === "hotspot") {
+        const secretField = root.querySelector(
+          "[data-swz-hotspot-secret]",
+        );
+        if (secretField && !secretField.value) {
+          secretField.value = generateSecret();
+        }
+      }
     });
+  }
+
+  function generateSecret() {
+    // 32 hex chars = 128 bits of entropy. Crypto API preferred,
+    // fall back to Math.random for older browsers.
+    const out = new Uint8Array(16);
+    if (window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(out);
+    } else {
+      for (let i = 0; i < out.length; i++) {
+        out[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(out)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  // Cache the run state so service-card builders can read the
+  // real router_vpn_ip instead of hard-coding a placeholder.
+  async function fetchRunState() {
+    if (!state.runId) return null;
+    try {
+      const data = await api("GET", `/runs/${state.runId}/state`);
+      state.runData = data.run || {};
+      return state.runData;
+    } catch (err) {
+      return null;
+    }
   }
 
   // ─── Step actions ────────────────────────────────────
@@ -381,6 +421,24 @@
   async function generateHotspotScript(btn) {
     setBusy(btn, true);
     try {
+      // Always pull the latest run state — router_vpn_ip is
+      // only set after Step 3 generates the unified script.
+      const run = await fetchRunState();
+      const routerVpnIp = (run && run.router_vpn_ip) || "";
+      if (!routerVpnIp) {
+        toast(
+          "أكمل الخطوة 3 (الربط بالخادم) أوّلاً — نحتاج "
+          + "إلى عنوان VPN للراوتر.",
+          "error",
+        );
+        return;
+      }
+      let secret = getValue("[data-swz-hotspot-secret]");
+      if (!secret) {
+        secret = generateSecret();
+        const fld = root.querySelector("[data-swz-hotspot-secret]");
+        if (fld) fld.value = secret;
+      }
       const data = await api(
         "POST",
         `/runs/${state.runId}/phase-plan/hotspot`,
@@ -391,8 +449,8 @@
           ],
           subnet_base:
             getValue("[data-swz-hotspot-subnet]") || "10.99.0.0/16",
-          radius_secret: "REPLACE_ME",
-          router_vpn_ip: "10.10.0.5",
+          radius_secret: secret,
+          router_vpn_ip: routerVpnIp,
         },
       );
       const plan = data.plan || {};
@@ -401,7 +459,11 @@
         return;
       }
       showScript("hotspot", plan.script);
-      toast("✅ سكربت Hotspot جاهز.", "ok");
+      toast(
+        "✅ سكربت Hotspot جاهز. لا تنسَ حفظ سرّ RADIUS — "
+        + "ستحتاجه على الخادم.",
+        "ok",
+      );
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {

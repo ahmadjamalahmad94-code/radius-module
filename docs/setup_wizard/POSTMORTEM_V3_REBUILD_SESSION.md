@@ -358,6 +358,69 @@ re-sync from the host.
 
 ---
 
+## 11) Hot-spot script pasted with placeholder values
+
+**Symptom.** After completing Step 5 (Hotspot service) and
+pasting into MikroTik, two RADIUS rows appeared in
+`/radius print` with:
+
+```
+secret: REPLACE_ME
+status: binding:Address not available
+```
+
+The "Address not available" came from `src-address=10.10.0.5`
+when the router actually had `10.10.0.8` (the run's
+allocated VPN IP). And `REPLACE_ME` was the literal string
+the JS sent — meaning even if authentication had been
+attempted, FreeRADIUS would reject it (shared-secret
+mismatch).
+
+**Root cause.** In the JS handler for
+`generateHotspotScript()`, both `radius_secret` and
+`router_vpn_ip` were hard-coded to placeholder values:
+
+```js
+radius_secret: "REPLACE_ME",
+router_vpn_ip: "10.10.0.5",
+```
+
+The phase planner faithfully baked those into the generated
+script, with no way of knowing they were placeholders.
+
+**Fix.** Commit (this slice):
+
+1. JS calls `fetchRunState()` to read the real
+   `router_vpn_ip` from the run before submitting.
+2. New `radius_secret` input field on the Hotspot card,
+   auto-filled with 32 hex chars from `crypto.getRandomValues`
+   on first toggle-on.
+3. Toast reminds the operator to save the secret because
+   FreeRADIUS `clients.conf` on the server must have the
+   same value.
+4. Guard: if the user reaches Step 5 before Step 3 generated
+   the unified script (so `router_vpn_ip` is still empty),
+   we block with a friendly Arabic message instead of
+   silently using a stale default.
+
+**Prevention.**
+- **Never hard-code per-run values** in client-side code.
+  Pull from server state at the moment of use.
+- Phase planner inputs that affect router-server integration
+  (secrets, IPs, ports) MUST come from the run state — not
+  the JS defaults. Validate this at the route level: if a
+  caller sends `radius_secret="REPLACE_ME"`, reject as 400.
+- Add a server-side check: any input value matching a
+  short-list of obvious sentinels (`REPLACE_ME`, `TODO`,
+  `X.X.X.X`) gets a 400 with a clear "looks like a
+  placeholder" error.
+- Idempotency for the hotspot RADIUS row: a follow-up
+  should wrap the `/radius add` in `:if ([:len [/radius
+  find where comment~"HOBERADIUS_SETUP:<run>:hotspot"]] = 0)`
+  so pasting twice doesn't double-add.
+
+---
+
 ## Themes
 
 Three root causes show up repeatedly:

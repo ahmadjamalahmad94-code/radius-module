@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526c">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526d">
 {% endblock %}
 
 {% block content %}
@@ -403,6 +403,15 @@ Steps:
                    placeholder="10.99.0.0/16" value="10.99.0.0/16">
             <small>عنوان شبكة كبير يُقسَّم تلقائياً بين الواجهات.</small>
           </div>
+          <div class="swz-field">
+            <label>سرّ RADIUS</label>
+            <input type="text" data-swz-hotspot-secret dir="ltr"
+                   autocomplete="off"
+                   placeholder="سيتم توليده تلقائياً">
+            <small>⚠️ احفظ هذا السرّ — يجب إدخاله في
+              FreeRADIUS clients.conf على الخادم لقبول
+              طلبات المصادقة من هذا الراوتر.</small>
+          </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-hotspot">
             توليد سكربت Hotspot
@@ -579,5 +588,5 @@ ads.example"></textarea>
 
 </div>
 
-<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526c"></script>
+<script src="{{ url_for('static', filename='js/setup_wizard_v3.js') }}?v=20260526d"></script>
 {% endblock %}
