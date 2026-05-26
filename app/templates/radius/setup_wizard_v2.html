@@ -522,53 +522,105 @@
           </div>
         </div>
         {# ─── One-button auto-finalize ──────────────────────
-           Replaces the «paste WG output → dry-run → apply»
-           three-button dance that operators kept skipping.
-           The new flow takes router IP + admin creds once and
-           runs the entire pipeline in one POST. #}
+           Two modes, both reach the same dry-run + apply +
+           verify pipeline:
+
+           1) Paste mode (default, works for ALL routers
+              including ones behind NAT/dynamic IP): operator
+              pastes `/interface wireguard print detail` from
+              MikroTik. The wizard extracts the public key
+              from the text — no router connectivity needed.
+
+           2) API mode (only when the router has a reachable
+              public IP + API port open): operator enters
+              address + creds and the wizard fetches the key
+              directly. #}
         <div class="swv2-auto-finalize-card"
              data-swv2-auto-finalize>
           <div class="swv2-auto-finalize-head">
             <span class="swv2-auto-finalize-badge">🚀 إنهاء تلقائي</span>
             <h3>تجهيز الربط الكامل بضغطة واحدة</h3>
             <p>
-              أدخل بيانات الدخول للراوتر مرّة واحدة. سيقوم HobeRadius
-              بـ: اكتشاف مفتاح WireGuard من الراوتر تلقائياً، ثمّ
-              تسجيله على الخادم، ثمّ التحقّق من الـ handshake. لا
-              حاجة لنسخ ولصق أيّ شيء يدوياً.
+              الراوتر خلف NAT أو الـ IP العامّ متغيّر؟ لا
+              مشكلة. ألصق مخرجات WireGuard من الراوتر هنا
+              وسنقوم بكل البقيّة تلقائياً — استخراج المفتاح،
+              تسجيله على الخادم، والتحقّق من الـ handshake.
             </p>
           </div>
 
-          <div class="swv2-auto-finalize-grid">
-            <label class="swv2-field">
-              <span>عنوان الراوتر (WAN IP أو الدومين)</span>
-              <input type="text"
-                     data-swv2-auto-router-address
-                     placeholder="مثال: 213.6.169.138"
-                     autocomplete="off">
+          {# Mode selector (paste vs API). #}
+          <div class="swv2-mode-tabs">
+            <button type="button"
+                    class="swv2-mode-tab is-active"
+                    data-swv2-mode-tab="paste">
+              📋 لصق مخرجات WireGuard (موصى به)
+            </button>
+            <button type="button"
+                    class="swv2-mode-tab"
+                    data-swv2-mode-tab="api">
+              🔌 اتصال مباشر بالراوتر (يحتاج IP عام)
+            </button>
+          </div>
+
+          {# Paste mode panel. #}
+          <div class="swv2-mode-panel"
+               data-swv2-mode-panel="paste">
+            <label class="swv2-field swv2-field-full">
+              <span>
+                مخرجات
+                <code>/interface wireguard print detail</code>
+                من الراوتر
+              </span>
+              <textarea data-swv2-paste-output
+                        rows="8"
+                        spellcheck="false"
+                        placeholder='Flags: X - disabled; R - running
+ 0  R ;;; HOBERADIUS_SETUP:N:vpn HOBERADIUS_ROUTER:N
+      name="hr-wg" mtu=1420 listen-port=13231
+      private-key="..."
+      public-key="WTJh1BA2Poeo4CV+qRqONyH62nYk5Mr/AdmM+DWqw1s="'
+              ></textarea>
+              <small class="swv2-field-hint">
+                انسخ كل المخرجات كما هي — سنستخرج المفتاح
+                العامّ تلقائياً. لست بحاجة لتقليصها.
+              </small>
             </label>
-            <label class="swv2-field">
-              <span>اسم مستخدم API على الراوتر</span>
-              <input type="text"
-                     data-swv2-auto-api-user
-                     placeholder="admin"
-                     value="admin"
-                     autocomplete="off">
-            </label>
-            <label class="swv2-field">
-              <span>كلمة مرور API</span>
-              <input type="password"
-                     data-swv2-auto-api-password
-                     placeholder="••••••••"
-                     autocomplete="off">
-            </label>
-            <label class="swv2-field swv2-field-narrow">
-              <span>منفذ API</span>
-              <input type="number"
-                     data-swv2-auto-api-port
-                     value="8728"
-                     min="1" max="65535">
-            </label>
+          </div>
+
+          {# API mode panel. #}
+          <div class="swv2-mode-panel"
+               data-swv2-mode-panel="api" hidden>
+            <div class="swv2-auto-finalize-grid">
+              <label class="swv2-field">
+                <span>عنوان الراوتر (WAN IP أو الدومين)</span>
+                <input type="text"
+                       data-swv2-auto-router-address
+                       placeholder="مثال: 213.6.169.138"
+                       autocomplete="off">
+              </label>
+              <label class="swv2-field">
+                <span>اسم مستخدم API على الراوتر</span>
+                <input type="text"
+                       data-swv2-auto-api-user
+                       placeholder="admin"
+                       value="admin"
+                       autocomplete="off">
+              </label>
+              <label class="swv2-field">
+                <span>كلمة مرور API</span>
+                <input type="password"
+                       data-swv2-auto-api-password
+                       placeholder="••••••••"
+                       autocomplete="off">
+              </label>
+              <label class="swv2-field swv2-field-narrow">
+                <span>منفذ API</span>
+                <input type="number"
+                       data-swv2-auto-api-port
+                       value="8728"
+                       min="1" max="65535">
+              </label>
+            </div>
           </div>
 
           <div class="swv2-action-row">
@@ -586,12 +638,10 @@
 
           <div class="swv2-auto-finalize-steps"
                data-swv2-auto-finalize-steps hidden>
-            {# Filled by JS — one line per step. #}
           </div>
 
           <div class="swv2-auto-finalize-result"
                data-swv2-auto-finalize-result hidden>
-            {# Filled by JS — final summary. #}
           </div>
         </div>
         <div class="swv2-success-state" hidden data-swv2-success="vpn">

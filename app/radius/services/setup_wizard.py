@@ -983,6 +983,229 @@ class SetupWizardService:
             confirmation=confirmation,
         )
 
+    @staticmethod
+    def _extract_pubkey_from_paste(text: str) -> str:
+        """Pull the WireGuard public key out of pasted RouterOS
+        `/interface wireguard print detail` output.
+
+        Accepts whole-output paste, single-line paste, or just
+        the bare key. Returns "" if no key is found.
+
+        Public keys are base64, 44 chars ending in `=`. RouterOS
+        prints them as `public-key="<key>"`.
+        """
+        import re as _re
+        if not text:
+            return ""
+        # Try the explicit RouterOS field first.
+        m = _re.search(
+            r'public-key="?([A-Za-z0-9+/]{43}=)"?',
+            text,
+        )
+        if m:
+            return m.group(1)
+        # Bare-key paste: 44-char base64 line.
+        for line in text.splitlines():
+            line = line.strip()
+            if _re.fullmatch(r"[A-Za-z0-9+/]{43}=", line):
+                return line
+        return ""
+
+    def server_peer_complete_setup_from_paste(
+        self,
+        *,
+        tenant_id: int,
+        run_id: int,
+        pasted_output: str,
+        actor: str = "wizard",
+    ) -> dict[str, Any]:
+        """End-to-end finalize when VPS *cannot* reach the router
+        (router behind NAT with dynamic IP — the common case).
+
+        Operator pastes the output of
+        `/interface wireguard print detail` from MikroTik. We
+        extract the public key, register it, run the full
+        apply+verify pipeline. No router API access required.
+
+        Same step-by-step result envelope as
+        `server_peer_complete_setup` so the UI renders both
+        modes identically.
+        """
+        import time as _time
+        from .setup_wizard_server_wg import (
+            server_peer_confirmation_phrase,
+        )
+
+        steps: list[dict[str, Any]] = []
+
+        def _step(name: str, status: str,
+                  ar: str, detail: Any = None) -> dict:
+            entry = {
+                "step":   name,
+                "status": status,
+                "ar":     ar,
+            }
+            if detail is not None:
+                entry["detail"] = detail
+            steps.append(entry)
+            return entry
+
+        public_key = self._extract_pubkey_from_paste(
+            pasted_output,
+        )
+        if not public_key:
+            _step(
+                "extract_key", "failed",
+                "تعذّر العثور على public-key في المخرجات "
+                "الملصقة. تأكّد أنّك نسخت مخرجات "
+                "/interface wireguard print detail كاملةً.",
+            )
+            return {
+                "ok":     False,
+                "stage":  "extract_key",
+                "steps":  steps,
+                "reason_ar":
+                    "تعذّر استخراج مفتاح الراوتر من النص "
+                    "الملصق.",
+            }
+        masked = (
+            f"{public_key[:6]}...{public_key[-6:]}"
+            if len(public_key) >= 16 else "***"
+        )
+        _step(
+            "extract_key", "ok",
+            f"تمّ استخراج مفتاح الراوتر: {masked}",
+        )
+
+        # Submit the key — promotes the prepared_peer to
+        # ready_to_apply.
+        try:
+            self.submit_router_public_key(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                public_key=public_key,
+                actor=actor,
+            )
+        except SetupWizardValidationError as exc:
+            _step("register_key", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok":     False,
+                "stage":  "register_key",
+                "steps":  steps,
+                "reason_ar": self._ar_explain(str(exc)),
+            }
+        _step(
+            "register_key", "ok",
+            "تمّ تسجيل المفتاح في سجل peer (status="
+            "ready_to_apply).",
+        )
+
+        # Locate the peer + dry-run + apply + verify — same
+        # subroutine the API-mode path uses.
+        try:
+            peer_id = self._prepared_peer_id_for_run(
+                tenant_id=tenant_id, run_id=run_id,
+            )
+        except SetupWizardValidationError as exc:
+            _step("locate_peer", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok":     False,
+                "stage":  "locate_peer",
+                "steps":  steps,
+                "reason_ar":
+                    "تعذّر العثور على سجل peer الجاهز.",
+            }
+        _step("locate_peer", "ok",
+              "تمّ العثور على سجل peer الجاهز.")
+
+        try:
+            dr = self._server_wg_apply.dry_run(
+                tenant_id=tenant_id, prepared_peer_id=peer_id,
+            )
+        except SetupWizardValidationError as exc:
+            _step("dry_run", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok": False, "stage": "dry_run",
+                "steps": steps,
+                "reason_ar": "فشل توليد الخطّة.",
+            }
+        if dr.get("status") != "ready":
+            _step("dry_run", "failed",
+                  "خطّة التطبيق غير جاهزة.", dr)
+            return {
+                "ok": False, "stage": "dry_run",
+                "steps": steps,
+                "reason_ar": "تعذّر تجهيز الخطّة.",
+            }
+        _step("dry_run", "ok", "خطّة التطبيق جاهزة.")
+
+        try:
+            applied = self._server_wg_apply.apply(
+                tenant_id=tenant_id,
+                prepared_peer_id=peer_id,
+                confirmation=server_peer_confirmation_phrase(
+                    peer_id,
+                ),
+            )
+        except SetupWizardValidationError as exc:
+            _step("apply", "failed",
+                  self._ar_explain(str(exc)), str(exc))
+            return {
+                "ok": False, "stage": "apply",
+                "steps": steps,
+                "reason_ar": "فشل تطبيق إعداد peer على الخادم.",
+            }
+        applied_status = str(applied.get("status") or "")
+        if applied_status not in {
+            "applied_no_handshake", "verified_handshake",
+        }:
+            _step("apply", "failed",
+                  self._ar_explain(applied_status), applied)
+            return {
+                "ok": False, "stage": "apply",
+                "steps": steps,
+                "reason_ar": "لم يكتمل التطبيق بنجاح.",
+            }
+        _step("apply", "ok",
+              "تمّ كتابة إعداد peer على الخادم.")
+
+        _time.sleep(3)
+        try:
+            verified = self._server_wg_apply.verify(
+                tenant_id=tenant_id,
+                prepared_peer_id=peer_id,
+            )
+            verified_status = str(verified.get("status") or "")
+        except Exception:  # noqa: BLE001
+            verified_status = applied_status
+            verified = applied
+        if verified_status == "verified_handshake":
+            _step("verify", "ok",
+                  "تمّ تأكيد الـ handshake.")
+        else:
+            _step(
+                "verify", "pending",
+                "تمّ التطبيق — بانتظار أوّل handshake "
+                "(قد يستغرق 5-30 ثانية).",
+            )
+
+        return {
+            "ok":           True,
+            "stage":        "complete",
+            "final_status": verified_status or applied_status,
+            "steps":        steps,
+            "applied":      applied,
+            "verified":     verified,
+            "reason_ar":    (
+                "تمّ التجهيز بنجاح. الـ handshake مؤكَّد."
+                if verified_status == "verified_handshake"
+                else "تمّ التطبيق. بانتظار تأكيد الـ handshake."
+            ),
+        }
+
     def server_peer_complete_setup(
         self,
         *,

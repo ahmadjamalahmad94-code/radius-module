@@ -1500,3 +1500,76 @@
   border: 1px solid #FDE68A;
   color: #78350F;
 }
+
+
+/* ─── Mode tabs (paste vs API) on the auto-finalize card ─── */
+
+.swv2-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.swv2-mode-tab {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid #E3E1EC;
+  border-radius: 10px;
+  background: #fff;
+  color: #4B5563;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.swv2-mode-tab:hover {
+  background: #F9FAFB;
+}
+
+.swv2-mode-tab.is-active {
+  background: #6B5AED;
+  color: #fff;
+  border-color: #6B5AED;
+  box-shadow: 0 2px 8px rgba(107, 90, 237, 0.25);
+}
+
+.swv2-mode-panel {
+  margin-bottom: 18px;
+}
+
+.swv2-field-full {
+  grid-column: 1 / -1;
+}
+
+.swv2-field textarea {
+  padding: 12px 14px;
+  border: 1px solid #E3E1EC;
+  border-radius: 9px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  background: #fff;
+  color: #111827;
+  resize: vertical;
+  min-height: 140px;
+  direction: ltr;
+  text-align: left;
+}
+
+.swv2-field textarea:focus {
+  outline: none;
+  border-color: #6B5AED;
+  box-shadow: 0 0 0 3px rgba(107, 90, 237, 0.15);
+}
+
+.swv2-field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #9CA3AF;
+  font-weight: 400;
+}

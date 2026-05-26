@@ -1436,18 +1436,58 @@
     resultBox.innerHTML = html;
   }
 
-  btn.addEventListener("click", async () => {
-    const address = (fAddress.value || "").trim();
-    const user    = (fUser.value || "").trim();
-    const pwd     = fPassword.value || "";
-    const port    = parseInt(fPort.value || "8728", 10);
+  // Mode tabs — switch between paste and API panels.
+  const tabs = card.querySelectorAll("[data-swv2-mode-tab]");
+  const panels = card.querySelectorAll("[data-swv2-mode-panel]");
+  let activeMode = "paste";
+  tabs.forEach(t => {
+    t.addEventListener("click", () => {
+      activeMode = t.dataset.swv2ModeTab;
+      tabs.forEach(x => x.classList.toggle(
+        "is-active", x === t,
+      ));
+      panels.forEach(p => {
+        p.hidden = p.dataset.swv2ModePanel !== activeMode;
+      });
+    });
+  });
 
-    if (!address || !user || !pwd) {
-      resultBox.hidden = false;
-      resultBox.className =
-        "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
-      resultBox.innerHTML = "❌ املأ عنوان الراوتر واسم المستخدم وكلمة المرور أوّلاً.";
-      return;
+  const fPaste = card.querySelector("[data-swv2-paste-output]");
+
+  btn.addEventListener("click", async () => {
+    let body = {};
+    if (activeMode === "paste") {
+      const pasted = (fPaste && fPaste.value || "").trim();
+      if (!pasted) {
+        resultBox.hidden = false;
+        resultBox.className =
+          "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
+        resultBox.innerHTML =
+          "❌ ألصق مخرجات /interface wireguard print detail أوّلاً.";
+        return;
+      }
+      body = { pasted_output: pasted };
+    } else {
+      const address = (fAddress.value || "").trim();
+      const user    = (fUser.value || "").trim();
+      const pwd     = fPassword.value || "";
+      const port    = parseInt(fPort.value || "8728", 10);
+
+      if (!address || !user || !pwd) {
+        resultBox.hidden = false;
+        resultBox.className =
+          "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
+        resultBox.innerHTML =
+          "❌ املأ عنوان الراوتر واسم المستخدم وكلمة المرور أوّلاً.";
+        return;
+      }
+      body = {
+        router_address: address,
+        api_user:       user,
+        api_password:   pwd,
+        api_port:       port,
+        api_use_tls:    false,
+      };
     }
 
     let runId = pickRunId();
@@ -1469,19 +1509,22 @@
     stepsBox.innerHTML = "";
     resultBox.hidden = true;
 
+    // Pull the CSRF token from the same hidden input the main
+    // wizard IIFE uses. Without this, Flask's CSRF guard rejects
+    // the POST with a non-JSON body ("CSRF failed").
+    const csrfInput = document.querySelector('input[name="_csrf_token"]');
+    const csrfToken = csrfInput ? csrfInput.value : "";
+
     try {
       const resp = await fetch(
         `/admin/radius/setup-wizard/runs/${runId}/server-peer/complete`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            router_address: address,
-            api_user:       user,
-            api_password:   pwd,
-            api_port:       port,
-            api_use_tls:    false,
-          }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken":  csrfToken,
+          },
+          body: JSON.stringify(body),
           credentials: "same-origin",
         }
       );
