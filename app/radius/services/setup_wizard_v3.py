@@ -456,6 +456,23 @@ class WizardV3Service:
             raise V3Error(
                 "router_type must be hotspot/pppoe/mixed"
             )
+        # Reject upfront if the name is already taken in
+        # nas_devices. This catches the operator's mistake at
+        # Step 1 instead of letting them walk through 5 more
+        # steps only to fail at Step 6 with a cryptic
+        # UNIQUE-constraint error. Tenant-scoped: same name
+        # can exist under a different tenant.
+        existing = db().execute(
+            "SELECT id FROM nas_devices "
+            "WHERE tenant_id=? AND LOWER(name)=LOWER(?) "
+            "LIMIT 1",
+            (int(tenant_id), name),
+        ).fetchone()
+        if existing:
+            raise V3Error(
+                f"اسم الراوتر «{name}» مستخدم من قبل في "
+                f"NAS. اختر اسماً آخر."
+            )
         return self._repo.update_state(
             tenant_id=tenant_id, run_id=run_id,
             state=STATE_PLANNING,
@@ -899,82 +916,60 @@ class WizardV3Service:
                 }],
             )
         # Insert into nas_devices with connection_mode='vpn'.
-        # If the operator picked a name already used by an
-        # earlier router, retry with " (rN)" suffix to keep
-        # the original label readable while satisfying the
-        # UNIQUE (tenant_id, name) constraint. run_id alone
-        # guarantees uniqueness across the run lifetime.
+        # Name uniqueness was validated at Step 1
+        # (submit_router_info) so a UNIQUE-constraint collision
+        # here is a race or a manual nas_devices edit — in
+        # either case we surface the error to the operator
+        # rather than silently renaming.
         now = _now()
-        candidate_name = name
-        nas_id: int | None = None
-        last_exc: Exception | None = None
-        for attempt in range(3):
-            try:
-                with transaction() as conn:
-                    cur = conn.execute(
-                        """
-                        INSERT INTO nas_devices
-                            (tenant_id, name, shortname, address,
-                             secret, vendor, nas_type, ports,
-                             snmp_community, auth_port,
-                             acct_port, coa_port, api_port,
-                             api_user, api_password, api_use_tls,
-                             location, coordinates,
-                             monitoring_enabled, description,
-                             enabled, require_message_authenticator,
-                             ssh_port, tags, metadata,
-                             created_at, updated_at,
-                             connection_mode, vpn_peer_address,
-                             vpn_interface)
-                        VALUES (?, ?, ?, ?, '', 'mikrotik',
-                                'router', 0, '', 1812, 1813,
-                                3799, 8728, ?, ?, 0,
-                                '', '', 0, '', 1, 0, 22,
-                                'wizard-v3', '{}', ?, ?,
-                                'vpn', ?, 'wg0')
-                        """,
-                        (
-                            int(tenant_id), candidate_name,
-                            candidate_name[:24],
-                            vpn_ip, api_user, api_password or "",
-                            now, now, vpn_ip,
-                        ),
-                    )
-                    nas_id = int(cur.lastrowid)
-                    break
-            except Exception as exc:  # noqa: BLE001
-                last_exc = exc
-                # UNIQUE constraint? Retry with a suffix.
-                msg = str(exc).lower()
-                if "unique" in msg and attempt < 2:
-                    if attempt == 0:
-                        candidate_name = f"{name} (r{run_id})"
-                    else:
-                        # Final attempt: include timestamp
-                        # fragment so collisions are mathematically
-                        # impossible on the same second.
-                        candidate_name = (
-                            f"{name} (r{run_id}-"
-                            f"{int(time.time())})"
-                        )
-                    continue
-                # Non-uniqueness error — bail out.
-                break
-        if nas_id is None:
+        try:
+            with transaction() as conn:
+                cur = conn.execute(
+                    """
+                    INSERT INTO nas_devices
+                        (tenant_id, name, shortname, address,
+                         secret, vendor, nas_type, ports,
+                         snmp_community, auth_port,
+                         acct_port, coa_port, api_port,
+                         api_user, api_password, api_use_tls,
+                         location, coordinates,
+                         monitoring_enabled, description,
+                         enabled, require_message_authenticator,
+                         ssh_port, tags, metadata,
+                         created_at, updated_at,
+                         connection_mode, vpn_peer_address,
+                         vpn_interface)
+                    VALUES (?, ?, ?, ?, '', 'mikrotik',
+                            'router', 0, '', 1812, 1813,
+                            3799, 8728, ?, ?, 0,
+                            '', '', 0, '', 1, 0, 22,
+                            'wizard-v3', '{}', ?, ?,
+                            'vpn', ?, 'wg0')
+                    """,
+                    (
+                        int(tenant_id), name, name[:24],
+                        vpn_ip, api_user, api_password or "",
+                        now, now, vpn_ip,
+                    ),
+                )
+                nas_id = int(cur.lastrowid)
+        except Exception as exc:  # noqa: BLE001
+            ar_msg = str(exc)
+            if "unique" in str(exc).lower():
+                ar_msg = (
+                    f"اسم الراوتر «{name}» مستخدم من قبل. "
+                    f"اختر اسماً مختلفاً واستأنف الإعداد."
+                )
             return self._repo.update_state(
                 tenant_id=tenant_id, run_id=run_id,
                 state=STATE_BLOCKED,
                 diagnostics=run.diagnostics + [{
                     "code": "NAS_INSERT_FAILED",
                     "ar":
-                        f"تعذّر تسجيل الراوتر في NAS: "
-                        f"{last_exc}",
+                        f"تعذّر تسجيل الراوتر في NAS: {ar_msg}",
                     "at": _now(),
                 }],
             )
-        # Use the (possibly-suffixed) name from here on so the
-        # fleet registry row matches what's in nas_devices.
-        name = candidate_name
 
         # ── Surface the run in the fleet dashboard ─────────
         # The fleet page reads from router_provisioning_registry.

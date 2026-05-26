@@ -86,6 +86,15 @@ _TABLES_IN_DELETE_ORDER: tuple[str, ...] = (
 )
 
 
+# Filtered cleanup for tables we DON'T want to wipe entirely.
+# The wizard tags every nas_devices row it creates with
+# tags='wizard-v3' — those are safe to remove. Manually-added
+# NAS entries (tags=NULL or any other value) stay untouched.
+_FILTERED_DELETES: dict[str, str] = {
+    "nas_devices": "tenant_id=? AND tags='wizard-v3'",
+}
+
+
 def _table_exists(conn, table: str) -> bool:
     row = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -113,6 +122,39 @@ def _count(conn, table: str, tenant_id: int) -> int:
         except Exception:  # noqa: BLE001
             return 0
     return int(row["c"]) if row else 0
+
+
+def _count_filtered(conn, table: str, clause: str, tenant_id: int) -> int:
+    if not _table_exists(conn, table):
+        return 0
+    try:
+        row = conn.execute(
+            f"SELECT COUNT(*) AS c FROM {table} WHERE {clause}",
+            (int(tenant_id),),
+        ).fetchone()
+        return int(row["c"]) if row else 0
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _delete_filtered(conn, table: str, clause: str, tenant_id: int) -> int:
+    """Filtered DELETE — only rows matching `clause`. The
+    clause is a static fragment from _FILTERED_DELETES (no
+    operator input), so safe to interpolate. The single ?
+    parameter is the tenant_id."""
+    if not _table_exists(conn, table):
+        return 0
+    try:
+        cur = conn.execute(
+            f"DELETE FROM {table} WHERE {clause}",
+            (int(tenant_id),),
+        )
+        return int(cur.rowcount or 0)
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "filtered delete on %s failed", table, exc_info=True,
+        )
+        return 0
 
 
 def _delete(conn, table: str, tenant_id: int) -> int:
@@ -169,12 +211,22 @@ class SetupWizardFleetEmergencyReset:
             table: _count(conn, table, tenant_id)
             for table in _TABLES_IN_DELETE_ORDER
         }
+        # Filtered-delete tables count rows that match the
+        # filter clause (not the full table).
+        filtered_counts: dict[str, int] = {}
+        for table, clause in _FILTERED_DELETES.items():
+            filtered_counts[table] = _count_filtered(
+                conn, table, clause, tenant_id,
+            )
         peer_files = self._list_peer_files()
         return {
             "tenant_id": int(tenant_id),
             "confirm_phrase": CONFIRM_PHRASE,
-            "row_counts": counts,
-            "total_rows": sum(counts.values()),
+            "row_counts": {**counts, **filtered_counts},
+            "total_rows": (
+                sum(counts.values()) + sum(filtered_counts.values())
+            ),
+            "filtered_tables": list(_FILTERED_DELETES.keys()),
             "peers_dir": str(self._peers_dir),
             "peer_files_count": len(peer_files),
             "peer_files": peer_files[:20],
@@ -207,6 +259,12 @@ class SetupWizardFleetEmergencyReset:
             conn.execute("BEGIN")
             for table in _TABLES_IN_DELETE_ORDER:
                 deleted[table] = _delete(conn, table, tenant_id)
+            # Filtered deletes (e.g. only wizard-tagged
+            # nas_devices, leaving manually-added rows alone).
+            for table, clause in _FILTERED_DELETES.items():
+                deleted[table] = _delete_filtered(
+                    conn, table, clause, tenant_id,
+                )
             conn.commit()
         except Exception:  # noqa: BLE001
             conn.rollback()
