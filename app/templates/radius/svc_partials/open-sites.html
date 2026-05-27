@@ -181,13 +181,23 @@ hotel.local
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        // Stage-aware: backend may include data.substeps with the
-        // precise failing stage. Fallback marks all three failed.
+        // Stage-aware + debug_script surface (same pattern as
+        // hotspot/broadband — the operator can paste the script into
+        // MikroTik Terminal to find traps we haven't seen yet).
         const subs = Array.isArray(data.substeps) && data.substeps.length
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        if (data.debug_script && window.console) {
+          console.warn("[Open-sites] FAILED — script that was sent to the router:\n" + data.debug_script);
+        }
+        let banner = (data.error || data.stderr ||
+                      `تعذّر الإرسال (HTTP ${res.status})`);
+        if (data.debug_script) {
+          banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
+                  + data.debug_script;
+        }
+        window.SWSVF.showApplyError(banner);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");

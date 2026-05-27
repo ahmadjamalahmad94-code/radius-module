@@ -1130,7 +1130,13 @@ def _plan_added_service(router_id: int, service_key: str, inputs: dict):
 
 
 def _added_service_apply(router_id: int, service_key: str, inputs: dict):
-    """Re-plan + push to the router. Returns Flask response."""
+    """Re-plan + push to the router. Returns Flask response.
+
+    On failure, includes the full post-processed script in the
+    response under ``debug_script`` so the operator can copy it
+    into MikroTik Terminal to find the offending line — same
+    pattern used by the hotspot + broadband flows.
+    """
     from ..db.repos import nas_repo
     from ..services.npc_router_executor import (
         ExecutorNotConfigured, get_router_executor,
@@ -1150,9 +1156,10 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
     if not plan_result.script or not plan_result.script.strip():
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
                     status=400, code="empty_script")
+    script_to_send = plan_result.script
     try:
         exec_result = get_router_executor().execute_forward(
-            router_id=router_id, script=plan_result.script,
+            router_id=router_id, script=script_to_send,
         )
     except ExecutorNotConfigured:
         return _err(
@@ -1171,6 +1178,10 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
             "duration_ms": exec_result.duration_ms,
             "fail_stage": fail_stage,
             "substeps": _build_fail_substeps(fail_stage),
+            # Same diagnostic surface as hotspot/broadband: full
+            # post-processed script so the operator can find the
+            # trap by pasting into MikroTik Terminal.
+            "debug_script": script_to_send,
         }), 502
     return jsonify({
         "ok": True,

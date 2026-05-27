@@ -253,7 +253,19 @@ streaming.service.com"></textarea>
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        // Log + append the post-processed script (when present) so
+        // the operator can paste it into MikroTik Terminal and find
+        // the offending line. Same pattern as hotspot/broadband.
+        if (data.debug_script && window.console) {
+          console.warn("[Public-IP] FAILED — script that was sent to the router:\n" + data.debug_script);
+        }
+        let banner = (data.error || data.stderr ||
+                      `تعذّر الإرسال (HTTP ${res.status})`);
+        if (data.debug_script) {
+          banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
+                  + data.debug_script;
+        }
+        window.SWSVF.showApplyError(banner);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");
