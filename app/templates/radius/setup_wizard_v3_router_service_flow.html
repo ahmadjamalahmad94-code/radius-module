@@ -123,6 +123,34 @@
 .swsvf-btn-danger{background:var(--swsvf-red);color:#fff;border-color:var(--swsvf-red)}
 .swsvf-btn-danger:hover{background:#B91C1C;color:#fff}
 
+/* ─── Optional script display in Phase 2 ─── */
+.swsvf-script-details{
+  margin-top:14px;border:1px solid var(--swsvf-line);border-radius:10px;
+  background:#FAFAFC;
+}
+.swsvf-script-details > summary{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  padding:10px 14px;font-size:13px;font-weight:600;color:var(--swsvf-mute);
+  list-style:none;
+}
+.swsvf-script-details > summary::-webkit-details-marker{display:none}
+.swsvf-script-details > summary::before{
+  content:"▸";color:#94A3B8;transition:transform .2s ease;display:inline-block;
+}
+.swsvf-script-details[open] > summary::before{transform:rotate(90deg)}
+.swsvf-script-badge{
+  background:linear-gradient(135deg,#FEF3C7,#FDE68A);
+  border:1px solid #FCD34D;border-radius:999px;
+  color:#92400E;font-size:10.5px;font-weight:800;
+  letter-spacing:.02em;padding:2px 9px;text-transform:uppercase;
+}
+.swsvf-script-text{
+  margin:0;padding:14px;background:#0F172A;color:#A5F3FC;
+  border-radius:0 0 10px 10px;font-family:monospace;
+  font-size:11.5px;line-height:1.6;
+  max-height:340px;overflow:auto;white-space:pre-wrap;
+}
+
 /* ─── Phase 2: Preview pane ─── */
 .swsvf-preview-list{
   list-style:none;padding:0;margin:0;
@@ -325,6 +353,17 @@ li[data-status="pending"] .swsvf-verify-icon{
     <ul class="swsvf-preview-list" data-swsvf-preview-list>
       <li class="swsvf-preview-empty">جارٍ تحضير المعاينة…</li>
     </ul>
+    {# Optional: full script display — only renders when the backend
+       returned `script` in the preview response. Collapsed by default
+       behind a «للفنّيين فقط» badge so non-technical operators don't
+       see RouterOS commands unless they specifically open the panel. #}
+    <details class="swsvf-script-details" data-swsvf-script-details hidden>
+      <summary>
+        <span class="swsvf-script-badge">للفنّيين فقط</span>
+        عرض السكربت بصيغته الخام (للمراجعة)
+      </summary>
+      <pre class="swsvf-script-text" data-swsvf-script-text dir="ltr"></pre>
+    </details>
     <div class="swsvf-pane-foot">
       <button type="button" class="swsvf-btn" data-swsvf-prev="configure">
         <i class="fa-solid fa-arrow-right"></i>
@@ -532,21 +571,38 @@ li[data-status="pending"] .swsvf-verify-icon{
   /* ─── Helpers exposed for per-service wiring ─── */
   window.SWSVF = {
     setPhase,
-    /** Fill the preview list with bullets — call from per-service code. */
-    setPreview(bullets) {
+    /** Fill the preview list with bullets — call from per-service
+     *  code. If `script` is provided, show the optional code panel
+     *  under the bullets. */
+    setPreview(bullets, script) {
       const list = page.querySelector("[data-swsvf-preview-list]");
-      if (!list) return;
-      list.innerHTML = "";
-      if (!bullets || !bullets.length) {
-        list.innerHTML = '<li class="swsvf-preview-empty">لا تغييرات يلزم تطبيقها.</li>';
-        return;
+      if (list) {
+        list.innerHTML = "";
+        if (!bullets || !bullets.length) {
+          list.innerHTML = '<li class="swsvf-preview-empty">لا تغييرات يلزم تطبيقها.</li>';
+        } else {
+          bullets.forEach((b) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<i class="fa-solid fa-circle-info"></i><span></span>`;
+            li.querySelector("span").textContent = String(b);
+            list.appendChild(li);
+          });
+        }
       }
-      bullets.forEach((b) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<i class="fa-solid fa-circle-info"></i><span></span>`;
-        li.querySelector("span").textContent = String(b);
-        list.appendChild(li);
-      });
+      // Optional code-review pane — only render when the partial
+      // passed in a non-empty script. Stays collapsed by default.
+      const details = page.querySelector("[data-swsvf-script-details]");
+      const scriptEl = page.querySelector("[data-swsvf-script-text]");
+      if (details && scriptEl) {
+        const text = String(script || "").trim();
+        if (text) {
+          scriptEl.textContent = text;
+          details.hidden = false;
+        } else {
+          details.hidden = true;
+          details.open = false;
+        }
+      }
     },
     /** Update one apply-substep status. */
     setApplySubstep(key, status) {

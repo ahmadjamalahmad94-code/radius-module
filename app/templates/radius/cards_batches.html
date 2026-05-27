@@ -215,7 +215,9 @@
             <div class="batch-card__chips">
               <span><i class="fa-regular fa-clock"></i> مدة البطاقة: {{ duration_label(b) }}</span>
               <span><i class="fa-solid fa-mobile-screen"></i> جهاز {{ b.device_count or 1 }}</span>
-              <span><i class="fa-solid fa-database"></i> MB {{ num(b.total_quota_mb or b.plan_quota_total_mb) if (b.total_quota_mb or b.plan_quota_total_mb) else '—' }}</span>
+              {% if b.total_quota_mb or b.plan_quota_total_mb %}
+                <span><i class="fa-solid fa-database"></i> {{ num(b.total_quota_mb or b.plan_quota_total_mb) }} MB</span>
+              {% endif %}
             </div>
 
             <div class="batch-card__stats">
@@ -224,11 +226,7 @@
               {{ metric("نشطة الآن", num(active_now), "signal") }}
               {{ metric("منتهية", num(expired_count), "hourglass-end") }}
               {{ metric("مستخدمة", num(used_count), "check") }}
-              {{ metric("محجوزة", num(b.reserved_count) if b.reserved_count is defined and b.reserved_count is not none else '—', "lock") }}
-              {{ metric("مطبوعة", num(b.printed_count) if b.printed_count is defined and b.printed_count is not none else '—', "print") }}
               {{ metric("متبقية", num(remaining_count), "box-open") }}
-              {{ metric("جلسات", num(b.sessions_count), "timeline") }}
-              {{ metric("MAC", num(b.unique_macs), "network-wired") }}
             </div>
 
             <div class="batch-card__progress">
@@ -239,19 +237,12 @@
               <div class="batch-progress" aria-label="استهلاك الحزمة">
                 <span style="width: {{ [progress_pct, 100]|min }}%"></span>
               </div>
-              <div class="batch-card__progress-notes">
-                <span>نشطة الآن {{ num(active_now) }}</span>
-                <span>منتهية {{ num(expired_count) }}</span>
-              </div>
             </div>
 
             <dl class="batch-card__meta">
               <div><dt>المدير/الموزع</dt><dd>{{ b.distributor_display_name or b.distributor_name or b.assigned_to or b.created_by or '—' }}</dd></div>
               <div><dt>السعر</dt><dd>{{ money(unit_price) }} <small>إجمالي ≈ {{ money(configured_value) }}</small></dd></div>
-              <div><dt>قواعد السرعة</dt><dd>{{ (b.active_speed_rules|string + ' مفعلة') if b.active_speed_rules else ('—' if not b.speed_rules_count else b.speed_rules_count|string + ' محفوظة') }}</dd></div>
               <div><dt>تاريخ الإنشاء</dt><dd>{{ (b.created_at|string)[:16].replace('T',' ') if b.created_at else '—' }}</dd></div>
-              <div><dt>آخر تفعيل</dt><dd>{{ (b.last_activation_at|string)[:16].replace('T',' ') if b.last_activation_at is defined and b.last_activation_at else '—' }}</dd></div>
-              <div><dt>نافذة التفعيل</dt><dd>{{ b.activation_window or b.validity_rule or '—' }}</dd></div>
             </dl>
 
             <footer class="batch-card__actions">
@@ -268,18 +259,9 @@
                       data-batch-total="{{ total_cards }}">
                 <i class="fa-solid fa-print"></i> طباعة
               </button>
-              <a class="batch-action" href="{{ url_for('radius.cards_batches_export_csv', q=b.batch_code or '', status='all') }}">
-                <i class="fa-solid fa-file-export"></i> تصدير
-              </a>
               <a class="batch-action" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}#speed-rules">
                 <i class="fa-solid fa-gauge-high"></i> السرعة
               </a>
-              <button class="batch-action batch-action--disabled" type="button" disabled title="قريبًا">
-                <i class="fa-solid fa-clone"></i> استنساخ
-              </button>
-              <button class="batch-action batch-action--disabled" type="button" disabled title="قريبًا">
-                <i class="fa-solid fa-qrcode"></i> مشاركة QR
-              </button>
               {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
                 <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                   <input type="hidden" name="return_to" value="{{ request.full_path }}">

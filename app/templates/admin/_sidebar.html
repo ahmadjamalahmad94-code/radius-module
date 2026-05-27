@@ -55,7 +55,6 @@
 {# Cards #}
 {%- set m_cards_overview   = '/cards/overview' in path -%}
 {%- set m_cards_checker    = '/cards/checker' in path -%}
-{%- set m_cards_checker_v2 = (path == url_for('radius.cards_checker_v2')) -%}
 {%- set m_cards_batches    = '/cards/batches' in path -%}
 {%- set m_cards_generate   = '/cards/generate' in path -%}
 {%- set m_cards_online     = (path == url_for('radius.online_list') and request.args.get('type') == 'card') -%}
@@ -168,7 +167,7 @@
 
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 -%}
-{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_checker_v2 or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates
+{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates
                                 or m_card_users or m_card_marketplace or m_card_pricing -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched or m_operations_speed -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
@@ -257,7 +256,6 @@
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.cards_overview', 'نظرة عامة',       m_cards_overview) }}
         {{ sub_item('radius.cards_checker',  'فحص بطاقة',       m_cards_checker) }}
-        {{ sub_item('radius.cards_checker_v2',  'فحص البطاقات V2',       m_cards_checker_v2) }}
         {{ sub_item('radius.cards_batches',  'حزم البطاقات',    m_cards_batches) }}
         {{ sub_item('radius.cards_generate', 'إضافة حزمة',      m_cards_generate) }}
         {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}

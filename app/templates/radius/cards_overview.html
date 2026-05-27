@@ -38,139 +38,501 @@
   .co-alert--amber{border-color:#fde68a;background:#fffbeb;color:#92400e}
   .co-alert--red{border-color:#fecdd3;background:#fff1f2;color:#9f1239}
   .co-alert--grey{background:#f8fafc;color:#475569}
-  .co-chart{
+  .co-stock-tables{
     display:grid;
-    grid-template-columns:repeat(7, minmax(26px, 1fr));
-    align-items:end;
-    gap:8px;
-    height:150px;
-    padding:10px 8px 0;
+    grid-template-columns:1fr;
+    gap:14px;
   }
-  .co-bar{
+  .co-stock-table-card{
+    display:grid;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    overflow:hidden;
+    background:#fff;
+  }
+  .co-stock-table-card .hub-table{
+    min-width:760px;
+  }
+  .co-stock-table-head{
     display:flex;
-    flex-direction:column;
     align-items:center;
-    justify-content:flex-end;
-    gap:6px;
-    min-width:0;
-    height:100%;
-  }
-  .co-bar-fill{
-    width:100%;
-    max-width:34px;
-    min-height:7px;
-    border-radius:6px 6px 2px 2px;
-    background:linear-gradient(180deg, #6d5dfc, #2baacc);
-  }
-  .co-bar small{
-    direction:ltr;
-    color:var(--hub-text-mute);
-    font-size:11px;
-  }
-  .co-stock-list{
-    display:grid;
-    gap:10px;
-  }
-  .co-stock-row{
-    display:grid;
-    grid-template-columns:minmax(0, 1fr) 68px;
-    gap:10px;
-    align-items:center;
-  }
-  .co-stock-title{
-    display:flex;
     justify-content:space-between;
     gap:10px;
-    margin-bottom:5px;
-    color:var(--hub-text);
-    font-weight:800;
+    padding:12px 14px;
+    border-bottom:1px solid #e2e8f0;
+    background:#fbfdff;
   }
-  .co-stock-title span:last-child{
+  .co-stock-table-title{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    color:#0f172a;
+    font-size:13px;
+    font-weight:900;
+  }
+  .co-stock-table-title i{
+    display:grid;
+    place-items:center;
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    background:#eef6f4;
+    color:#0f766e;
+  }
+  .co-stock-table-card--electronic .co-stock-table-title i{
+    background:#fff7ed;
+    color:#b45309;
+  }
+  .co-stock-table-total{
     direction:ltr;
-    color:var(--hub-text-mute);
+    color:#64748b;
     font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size:12px;
+    font-weight:900;
+  }
+  .co-stock-mini-progress{
+    overflow:hidden;
+    height:8px;
+    border-radius:999px;
+    background:#eef2f7;
+  }
+  .co-stock-mini-progress span{
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:#22c55e;
+  }
+  .co-stock-table-card--electronic .co-stock-mini-progress span{
+    background:#f59e0b;
+  }
+  .co-stock-pill{
+    padding:4px 8px;
+    border:1px solid #bbf7d0;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#15803d;
+    font-size:11px;
+    font-weight:900;
+    text-align:center;
+  }
+  .co-stock-table-card--electronic .co-stock-pill{
+    border-color:#fed7aa;
+    background:#ffedd5;
+    color:#c2410c;
   }
   .co-table-note{
     color:var(--hub-text-mute);
     font-size:12px;
   }
-  .co-sales-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(280px, 1fr));
-    gap:14px;
-  }
-  .co-sales-card{
-    position:relative;
-    display:grid;
-    grid-template-columns:84px minmax(0, 1fr);
-    min-height:112px;
+  .co-sales-board{
     overflow:hidden;
-    border:1px solid #8de8f4;
+    border:1px solid #d8dee8;
     border-radius:8px;
-    background:linear-gradient(135deg, #0bb5d1, #06a6c4);
-    color:#fff;
-    box-shadow:0 12px 24px rgba(6, 166, 196, .14);
+    background:
+      linear-gradient(90deg, rgba(15, 23, 42, .045) 1px, transparent 1px) 0 0 / 68px 100%,
+      linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    box-shadow:0 16px 34px rgba(15,23,42,.08);
   }
-  .co-sales-card--money{
-    background:linear-gradient(135deg, #05b6d3, #0596b4);
+  .co-sales-board-head{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:16px;
+    align-items:center;
+    padding:16px 18px;
+    border-bottom:1px solid #dbe3ee;
+    background:linear-gradient(180deg, #fff, #fbfcfe);
   }
-  .co-sales-icon{
+  .co-sales-summary{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:0;
+    border-bottom:1px solid #dbe3ee;
+    background:#fff;
+  }
+  .co-sales-summary-item{
     display:flex;
     align-items:center;
-    justify-content:center;
-    background:rgba(0, 74, 97, .25);
-    font-size:34px;
+    justify-content:space-between;
+    gap:12px;
+    min-width:0;
+    padding:16px 18px;
+    border-inline-start:1px solid #e2e8f0;
   }
-  .co-sales-body{
+  .co-sales-summary-item:first-child{
+    border-inline-start:0;
+  }
+  .co-sales-summary-item span{
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+  }
+  .co-sales-summary-item strong{
+    direction:ltr;
+    color:#0f172a;
+    font-size:22px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+  .co-sales-summary-icon{
     display:grid;
-    align-content:center;
-    gap:7px;
-    padding:14px 16px 12px;
+    place-items:center;
+    flex:0 0 auto;
+    width:42px;
+    height:42px;
+    border-radius:8px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:18px;
+  }
+  .co-sales-summary-item--money .co-sales-summary-icon{
+    background:#fff7ed;
+    color:#b45309;
+  }
+  .co-sales-summary-item--print .co-sales-summary-icon{
+    background:#eef6f4;
+    color:#0f766e;
+  }
+  .co-sales-summary-item--wallet .co-sales-summary-icon{
+    background:#fef3c7;
+    color:#b45309;
+  }
+  .co-sales-kicker{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+  }
+  .co-sales-kicker i{
+    color:#0f766e;
+  }
+  .co-sales-title{
+    margin-top:5px;
+    color:#0f172a;
+    font-size:20px;
+    font-weight:950;
+  }
+  .co-sales-ledger{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    background:#fff;
+    color:#475569;
+    font-size:12px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+  .co-sales-ledger strong{
+    direction:ltr;
+    color:#0f172a;
+    font-size:16px;
+  }
+  .co-sales-periods{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+  }
+  .co-sales-performance-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 18px;
+    color:#fff;
+    background:#0f1f3d;
+  }
+  .co-sales-performance-head strong{
+    font-size:15px;
+    font-weight:950;
+  }
+  .co-sales-performance-head i{
+    color:#dbeafe;
+  }
+  .co-sales-lane{
+    position:relative;
+    display:grid;
+    gap:14px;
+    min-width:0;
+    padding:16px;
+    border-inline-start:1px solid #e2e8f0;
+  }
+  .co-sales-lane:first-child{
+    border-inline-start:0;
+  }
+  .co-sales-lane::before{
+    content:"";
+    position:absolute;
+    inset-block:0;
+    inset-inline-start:0;
+    width:3px;
+    background:linear-gradient(180deg, #0f766e, #f59e0b);
+    opacity:.78;
+  }
+  .co-sales-period{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    color:#334155;
+    font-size:13px;
+    font-weight:950;
+  }
+  .co-sales-picker{
+    position:relative;
+    display:grid;
+    place-items:center;
+    border:0;
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    background:#eef6f4;
+    color:#0f766e;
+    cursor:pointer;
+    transition:transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+  }
+  .co-sales-picker:hover{
+    background:#dcfce7;
+    color:#047857;
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(15,118,110,.14);
+  }
+  .co-sales-picker.is-open{
+    background:#0f766e;
+    color:#fff;
+    z-index:1501;
+    box-shadow:0 10px 24px rgba(15,118,110,.26);
+  }
+  .co-sales-agenda{
+    position:fixed;
+    z-index:1400;
+    width:min(318px, calc(100vw - 28px));
+    border:1px solid #d7deea;
+    border-radius:8px;
+    background:rgba(255,255,255,.98);
+    box-shadow:0 24px 70px rgba(15,23,42,.24);
+    overflow:hidden;
+    opacity:0;
+    transform:translateY(8px) scale(.97);
+    transform-origin:top center;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .co-sales-agenda-body{
+    overflow:auto;
+  }
+  .co-sales-agenda.is-ready{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+  .co-sales-agenda-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:12px;
+    border-bottom:1px solid #e2e8f0;
+    background:linear-gradient(180deg, #f8fafc, #fff);
+  }
+  .co-sales-agenda-title{
+    display:grid;
+    gap:2px;
     min-width:0;
   }
-  .co-sales-label{
-    font-size:13px;
+  .co-sales-agenda-title strong{
+    color:#0f172a;
+    font-size:14px;
+    font-weight:950;
+  }
+  .co-sales-agenda-title span{
+    direction:ltr;
+    color:#64748b;
+    font-size:11px;
+    font-weight:800;
+  }
+  .co-sales-agenda-nav{
+    display:flex;
+    gap:6px;
+  }
+  .co-sales-agenda-nav button,
+  .co-sales-agenda-action{
+    display:grid;
+    place-items:center;
+    border:1px solid #dbe3ee;
+    border-radius:8px;
+    min-width:32px;
+    height:32px;
+    color:#334155;
+    background:#fff;
+    cursor:pointer;
+    font-family:inherit;
     font-weight:900;
-    opacity:.96;
+  }
+  .co-sales-agenda-nav button:hover,
+  .co-sales-agenda-action:hover{
+    border-color:#0f766e;
+    color:#0f766e;
+  }
+  .co-sales-agenda-body{padding:12px}
+  .co-sales-agenda-weekdays,
+  .co-sales-agenda-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:6px;
+  }
+  .co-sales-agenda-weekdays span{
+    color:#94a3b8;
+    font-size:11px;
+    font-weight:900;
+    text-align:center;
+  }
+  .co-sales-agenda-day,
+  .co-sales-agenda-choice{
+    border:1px solid transparent;
+    border-radius:8px;
+    min-height:34px;
+    color:#334155;
+    background:#fff;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:12px;
+    font-weight:900;
+    transition:transform .14s ease, background .14s ease, border-color .14s ease;
+  }
+  .co-sales-agenda-day:hover,
+  .co-sales-agenda-choice:hover{
+    border-color:#99f6e4;
+    background:#f0fdfa;
+    transform:translateY(-1px);
+  }
+  .co-sales-agenda-day.is-muted{
+    color:#cbd5e1;
+  }
+  .co-sales-agenda-day.is-selected,
+  .co-sales-agenda-choice.is-selected{
+    border-color:#0f766e;
+    background:#0f766e;
+    color:#fff;
+    box-shadow:0 10px 22px rgba(15,118,110,.18);
+  }
+  .co-sales-agenda-list{
+    display:grid;
+    gap:7px;
+  }
+  .co-sales-agenda-choice{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-height:38px;
+    padding:8px 10px;
+    text-align:start;
+  }
+  .co-sales-agenda-choice small{
+    direction:ltr;
+    color:inherit;
+    opacity:.72;
+    font-size:11px;
+  }
+  .co-sales-agenda-months,
+  .co-sales-agenda-years{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+  }
+  .co-sales-agenda-foot{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px 12px;
+    border-top:1px solid #e2e8f0;
+    background:#fbfdff;
+  }
+  .co-sales-metrics{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .co-sales-metric{
+    display:grid;
+    gap:5px;
+    min-width:0;
+    padding:10px;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    background:rgba(255,255,255,.72);
+  }
+  .co-sales-metric span{
+    color:#64748b;
+    font-size:11px;
+    font-weight:900;
   }
   .co-sales-value{
     direction:ltr;
     text-align:right;
+    color:#111827;
     font-size:24px;
-    font-weight:900;
+    font-weight:950;
     letter-spacing:0;
+    line-height:1.05;
+    white-space:nowrap;
+  }
+  .co-sales-value--money{
+    color:#92400e;
+    font-size:20px;
+  }
+  .co-sales-split{
+    display:grid;
+    gap:8px;
+  }
+  .co-sales-split-track{
+    display:flex;
+    overflow:hidden;
+    height:9px;
+    border-radius:999px;
+    background:#e8edf4;
+  }
+  .co-sales-split-print{
+    background:#0f766e;
+  }
+  .co-sales-split-electronic{
+    background:#f59e0b;
   }
   .co-sales-meta{
     display:flex;
     flex-wrap:wrap;
-    gap:6px;
-    padding-top:8px;
-    border-top:1px solid rgba(255,255,255,.62);
-    color:rgba(255,255,255,.88);
+    gap:7px;
+    color:#475569;
     font-size:12px;
-    font-weight:800;
+    font-weight:900;
   }
   .co-sales-meta span{
     display:inline-flex;
     align-items:center;
     gap:5px;
   }
+  .co-sales-meta i.fa-print{color:#0f766e}
+  .co-sales-meta i.fa-wallet{color:#b45309}
   .co-sales-link{
-    position:absolute;
-    inset-inline-end:10px;
-    bottom:9px;
     display:inline-flex;
     align-items:center;
-    gap:6px;
-    padding:5px 8px;
-    border:1px solid rgba(255,255,255,.5);
-    border-radius:999px;
-    color:#fff;
-    font-size:11px;
-    font-weight:900;
+    justify-content:center;
+    gap:7px;
+    width:100%;
+    min-height:34px;
+    padding:7px 10px;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    color:#0f172a;
+    font-size:12px;
+    font-weight:950;
     text-decoration:none;
-    background:rgba(255,255,255,.12);
+    background:#fff;
+  }
+  .co-sales-link:hover{
+    border-color:#0f766e;
+    color:#0f766e;
   }
   .co-sales-modal{
     position:fixed;
@@ -226,13 +588,23 @@
   .co-type-pill--electronic{background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe}
   @media (max-width: 980px){
     .cards-overview-grid,
-    .co-sales-grid{grid-template-columns:1fr}
+    .co-sales-periods,
+    .co-sales-summary{grid-template-columns:repeat(2, minmax(0, 1fr))}
+    .co-sales-board-head{grid-template-columns:1fr}
   }
   @media (max-width: 560px){
-    .co-sales-card{grid-template-columns:64px minmax(0, 1fr)}
-    .co-sales-icon{font-size:28px}
-    .co-sales-value{font-size:21px}
-    .co-sales-link{position:static;width:max-content;margin-top:2px}
+    .co-stock-tables{grid-template-columns:1fr}
+    .co-sales-board-head{grid-template-columns:1fr}
+    .co-sales-summary{grid-template-columns:1fr}
+    .co-sales-ledger{width:100%;justify-content:space-between}
+    .co-sales-periods{grid-template-columns:1fr}
+    .co-sales-lane{
+      border-inline-start:0;
+      border-top:1px solid #e2e8f0;
+    }
+    .co-sales-lane:first-child{border-top:0}
+    .co-sales-value{font-size:22px}
+    .co-sales-value--money{font-size:19px}
   }
 </style>
 {% endblock %}
@@ -245,6 +617,7 @@
 {%- endmacro %}
 
 {% block content %}
+{% set sales_currency = "₪" if (sales.currency or "ILS")|upper in ["ILS", "NIS"] else (sales.currency or "₪") %}
 <div class="hr-page-shell cards-overview">
 
 {{ hub.hero(
@@ -269,44 +642,107 @@
   {{ hub.kpi("إيراد الشهر", money_value(money.month), icon="coins", variant="brand", sub="تقديري من الكروت المستخدمة") }}
 </div>
 
+<div id="co-sales-section">
 {% call hub.section("مبيعات الكروت", icon="receipt", meta="مطبوعة + إلكترونية") %}
-  <div class="co-sales-grid">
-    {% for key, label in [("daily", "خلال يوم"), ("weekly", "خلال أسبوع"), ("monthly", "خلال شهر"), ("yearly", "خلال عام")] %}
-    <div class="co-sales-card">
-      <div class="co-sales-icon"><i class="fa-solid fa-bolt"></i></div>
-      <div class="co-sales-body">
-        <div class="co-sales-label">عدد الكروت المباعة {{ label }}</div>
-        <div class="co-sales-value">{{ sales.total[key].count }}</div>
-        <div class="co-sales-meta">
-          <span><i class="fa-solid fa-print"></i> مطبوعة {{ sales.printed[key].count }}</span>
-          <span><i class="fa-solid fa-wallet"></i> إلكترونية {{ sales.electronic[key].count }}</span>
-        </div>
-        <a class="co-sales-link" href="#sales-{{ key }}">
-          <i class="fa-solid fa-table-list"></i> عرض الكروت
-        </a>
+  <div class="co-sales-board">
+    <div class="co-sales-board-head">
+      <div>
+        <div class="co-sales-kicker"><i class="fa-solid fa-receipt"></i> سجل المبيعات حسب الفترة</div>
+        <div class="co-sales-title">حركة الكروت: كمية، إيراد، وقنوات البيع</div>
       </div>
     </div>
-    <div class="co-sales-card co-sales-card--money">
-      <div class="co-sales-icon"><i class="fa-solid fa-dollar-sign"></i></div>
-      <div class="co-sales-body">
-        <div class="co-sales-label">سعر الكروت المباعة {{ label }}</div>
-        <div class="co-sales-value">{{ sales.currency or "ILS" }} {{ "%.2f"|format(sales.total[key].amount|float) }}</div>
-        <div class="co-sales-meta">
-          <span>مطبوعة {{ money_value(sales.printed[key].amount) }}</span>
-          <span>إلكترونية {{ money_value(sales.electronic[key].amount) }}</span>
-        </div>
-        <a class="co-sales-link" href="#sales-{{ key }}">
-          <i class="fa-solid fa-table-list"></i> التفاصيل
-        </a>
+    <div class="co-sales-summary">
+      <div class="co-sales-summary-item">
+        <span>إجمالي الكروت المباعة</span>
+        <strong>{{ sales.total.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-receipt"></i>
+      </div>
+      <div class="co-sales-summary-item co-sales-summary-item--money">
+        <span>إجمالي الإيرادات</span>
+        <strong>{{ sales_currency }} {{ "%.2f"|format(sales.total.monthly.amount|float) }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-coins"></i>
+      </div>
+      <div class="co-sales-summary-item co-sales-summary-item--print">
+        <span>مطبوعة</span>
+        <strong>{{ sales.printed.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-print"></i>
+      </div>
+      <div class="co-sales-summary-item co-sales-summary-item--wallet">
+        <span>إلكترونية</span>
+        <strong>{{ sales.electronic.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-wallet"></i>
       </div>
     </div>
+    <div class="co-sales-performance-head">
+      <strong><i class="fa-solid fa-chart-line"></i> أداء مبيعات الكروت</strong>
+      <span>الفترات المختارة</span>
+    </div>
+    <div class="co-sales-periods">
+    {% for period in sales.periods %}
+      {% set key = period.key %}
+      {% set total_count = sales.total[key].count|int %}
+      {% set printed_count = sales.printed[key].count|int %}
+      {% set electronic_count = sales.electronic[key].count|int %}
+      {% set printed_pct = (printed_count / total_count * 100) if total_count else 0 %}
+      {% set electronic_pct = (electronic_count / total_count * 100) if total_count else 0 %}
+      <div class="co-sales-lane">
+        <div class="co-sales-period">
+          <span>{{ period.label }}</span>
+          {% if key == "daily" %}
+            {% set picker_param = "sales_day" %}
+            {% set picker_kind = "day" %}
+            {% set picker_value = sales.filters.daily %}
+          {% elif key == "weekly" %}
+            {% set picker_param = "sales_week" %}
+            {% set picker_kind = "week" %}
+            {% set picker_value = sales.filters.weekly %}
+          {% elif key == "monthly" %}
+            {% set picker_param = "sales_month" %}
+            {% set picker_kind = "month" %}
+            {% set picker_value = sales.filters.monthly %}
+          {% else %}
+            {% set picker_param = "sales_year" %}
+            {% set picker_kind = "year" %}
+            {% set picker_value = sales.filters.yearly %}
+          {% endif %}
+          <button class="co-sales-picker" type="button" title="اختيار {{ period.label }}" aria-label="اختيار {{ period.label }}" data-co-sales-param="{{ picker_param }}" data-co-sales-kind="{{ picker_kind }}" data-co-sales-value="{{ picker_value }}">
+            <i class="fa-solid fa-calendar-day"></i>
+          </button>
+        </div>
+        <div class="co-table-note">{{ period.range }}</div>
+        <div class="co-sales-metrics">
+          <div class="co-sales-metric">
+            <span>الكروت</span>
+            <strong class="co-sales-value">{{ sales.total[key].count }}</strong>
+          </div>
+          <div class="co-sales-metric">
+            <span>الإيراد</span>
+            <strong class="co-sales-value co-sales-value--money">{{ sales_currency }} {{ "%.2f"|format(sales.total[key].amount|float) }}</strong>
+          </div>
+        </div>
+        <div class="co-sales-split">
+          <div class="co-sales-split-track" aria-hidden="true">
+            <span class="co-sales-split-print" style="width:{{ printed_pct }}%"></span>
+            <span class="co-sales-split-electronic" style="width:{{ electronic_pct }}%"></span>
+          </div>
+          <div class="co-sales-meta">
+            <span><i class="fa-solid fa-print"></i> مطبوعة {{ sales.printed[key].count }} / {{ money_value(sales.printed[key].amount) }}</span>
+            <span><i class="fa-solid fa-wallet"></i> إلكترونية {{ sales.electronic[key].count }} / {{ money_value(sales.electronic[key].amount) }}</span>
+          </div>
+        </div>
+        <a class="co-sales-link" href="#sales-{{ key }}">
+          <i class="fa-solid fa-table-list"></i> فتح سجل الفترة
+        </a>
+      </div>
     {% endfor %}
+    </div>
   </div>
-  {% for key, label in [("daily", "خلال يوم"), ("weekly", "خلال أسبوع"), ("monthly", "خلال شهر"), ("yearly", "خلال عام")] %}
+  {% for period in sales.periods %}
+  {% set key = period.key %}
   <div class="co-sales-modal" id="sales-{{ key }}" role="dialog" aria-modal="true" aria-labelledby="sales-title-{{ key }}">
     <div class="co-sales-dialog">
       <div class="co-sales-dialog-head">
-        <h3 id="sales-title-{{ key }}">الكروت المباعة {{ label }}</h3>
+        <h3 id="sales-title-{{ key }}">الكروت المباعة - {{ period.label }} ({{ period.range }})</h3>
         <a class="co-sales-close" href="#" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></a>
       </div>
       {% if sales.details[key] %}
@@ -318,7 +754,7 @@
               <th>النوع</th>
               <th>اسم المستخدم</th>
               <th>حزمة</th>
-              <th class="num">السعر ({{ sales.currency or "ILS" }})</th>
+              <th class="num">السعر ({{ sales_currency }})</th>
               <th>الوقت</th>
             </tr>
           </thead>
@@ -349,6 +785,7 @@
   </div>
   {% endfor %}
 {% endcall %}
+</div>
 
 {% call hub.section("تنبيهات مختصرة", icon="bell") %}
     <div class="co-alerts">
@@ -361,43 +798,88 @@
     </div>
 {% endcall %}
 
-<div class="cards-overview-grid">
-  {% call hub.section("استخدام آخر 7 أيام", icon="chart-column", meta=(activity.used_month|string) ~ " هذا الشهر") %}
-    <div class="co-chart" aria-label="استخدام الكروت آخر 7 أيام">
-      {% for item in trend %}
-        {% set pct = ((item.used / trend_max * 100) if trend_max else 0)|int %}
-        <div class="co-bar" title="{{ item.day }}: {{ item.used }}">
-          <div class="co-bar-fill" style="height:{{ 7 + pct * 0.86 }}%"></div>
-          <small>{{ item.label }}</small>
+{% call hub.section("ملخص مخزون حزم البطاقات", icon="boxes-stacked") %}
+  {% set printed_packages = stock_packages.printed if stock_packages else [] %}
+  {% set electronic_packages = stock_packages.electronic if stock_packages else [] %}
+  {% if printed_packages or electronic_packages %}
+    <div class="co-stock-tables">
+      <div class="co-stock-table-card co-stock-table-card--printed">
+        <div class="co-stock-table-head">
+          <span class="co-stock-table-title"><i class="fa-solid fa-print"></i> حزم مطبوعة</span>
+          <span class="co-stock-table-total">دفعات الطباعة</span>
         </div>
-      {% endfor %}
-    </div>
-  {% endcall %}
-
-  {% call hub.section("حالة المخزون حسب العرض", icon="boxes-stacked") %}
-    {% if stock_by_plan %}
-      <div class="co-stock-list">
-        {% for plan in stock_by_plan %}
-          {% set total = plan.total_cards|int %}
-          {% set available = plan.available_cards|int %}
-          {% set pct = ((available / total * 100) if total else 0)|int %}
-          <div class="co-stock-row">
-            <div>
-              <div class="co-stock-title">
-                <span>{{ plan.plan_name }}</span>
-                <span>{{ available }} / {{ total }}</span>
-              </div>
-              {{ hub.progress(pct, "green" if pct > 30 else ("amber" if pct > 10 else "red")) }}
-            </div>
-            <div>{{ hub.pill((pct|string) ~ "%", variant="green" if pct > 30 else ("amber" if pct > 10 else "red"), dot=False) }}</div>
-          </div>
-        {% endfor %}
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>الحزمة</th>
+                <th class="num">إجمالي</th>
+                <th class="num">باقي</th>
+                <th class="num">منتهي</th>
+                <th class="num">متصل</th>
+                <th class="num">مستخدم غير متصل</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for package in printed_packages %}
+                <tr>
+                  <td>
+                    <strong>{{ package.package_name }}</strong>
+                    <div class="co-table-note mono">{{ package.batch_code }}</div>
+                  </td>
+                  <td class="num mono">{{ package.get("total_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("available_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("expired_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("online_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="co-table-note">لا توجد حزم مطبوعة بعد</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
-    {% else %}
-      {{ hub.empty("لا يوجد مخزون بعد", sub="بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.", icon="box-open") }}
-    {% endif %}
-  {% endcall %}
-</div>
+
+      <div class="co-stock-table-card co-stock-table-card--electronic">
+        <div class="co-stock-table-head">
+          <span class="co-stock-table-title"><i class="fa-solid fa-wallet"></i> حزم البيع الإلكتروني</span>
+          <span class="co-stock-table-total">سوق الكروت</span>
+        </div>
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>الحزمة</th>
+                <th class="num">مباع</th>
+                <th class="num">باقي</th>
+                <th class="num">منتهي</th>
+                <th class="num">متصل</th>
+                <th class="num">مستخدم غير متصل</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for package in electronic_packages %}
+                <tr>
+                  <td><strong>{{ package.package_name }}</strong></td>
+                  <td class="num mono">{{ package.get("total_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("available_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("expired_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("online_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="co-table-note">لا توجد حزم بيع إلكتروني بعد</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {{ hub.empty("لا يوجد مخزون بعد", sub="بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.", icon="box-open") }}
+  {% endif %}
+{% endcall %}
 
 {% if recent_batches %}
 {% call hub.section("آخر 5 دفعات", icon="clock-rotate-left", meta=recent_batches|length|string, flush=True) %}
@@ -433,6 +915,331 @@
 {% else %}
 {{ hub.empty("لا توجد دفعات بعد", sub="هذه الصفحة ستبقى مختصرة وتعرض آخر الدفعات فقط بعد إنشائها.", icon="boxes-stacked") }}
 {% endif %}
+
+<script>
+(() => {
+  const sectionId = "co-sales-section";
+  const popoverId = "co-sales-agenda";
+  const monthFormatter = new Intl.DateTimeFormat("ar", {month: "long", year: "numeric"});
+  const compactMonthFormatter = new Intl.DateTimeFormat("ar", {month: "long"});
+  const weekdays = ["س", "ح", "ن", "ث", "ر", "خ", "ج"];
+
+  function pad(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function dateValue(date) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function parseDay(value) {
+    const parts = String(value || "").split("-").map(Number);
+    if (parts.length === 3 && parts.every(Boolean)) return new Date(parts[0], parts[1] - 1, parts[2]);
+    return new Date();
+  }
+
+  function parseMonth(value) {
+    const parts = String(value || "").split("-").map(Number);
+    if (parts.length === 2 && parts.every(Boolean)) return new Date(parts[0], parts[1] - 1, 1);
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  function saturdayWeekStart(date) {
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+    return start;
+  }
+
+  function saturdayWeekOne(year) {
+    return saturdayWeekStart(new Date(year, 0, 1));
+  }
+
+  function saturdayWeekValue(date) {
+    const start = saturdayWeekStart(date);
+    let year = start.getFullYear();
+    if (start < saturdayWeekOne(year)) year -= 1;
+    const week = Math.floor((start - saturdayWeekOne(year)) / 604800000) + 1;
+    return `${year}-W${pad(week)}`;
+  }
+
+  function weekStartFromValue(value) {
+    const match = String(value || "").match(/^(\d{4})-W(\d{2})$/);
+    const now = new Date();
+    const year = match ? Number(match[1]) : now.getFullYear();
+    const week = match ? Number(match[2]) : Number(saturdayWeekValue(now).slice(-2));
+    const start = saturdayWeekOne(year);
+    start.setDate(start.getDate() + (week - 1) * 7);
+    return start;
+  }
+
+  function clearAgenda() {
+    document.querySelectorAll(".co-sales-picker.is-open").forEach((item) => item.classList.remove("is-open"));
+    const existing = document.getElementById(popoverId);
+    if (existing) existing.remove();
+    document.removeEventListener("keydown", onAgendaKeydown);
+    document.removeEventListener("click", onAgendaOutsideClick, true);
+  }
+
+  function onAgendaKeydown(event) {
+    if (event.key === "Escape") clearAgenda();
+  }
+
+  function onAgendaOutsideClick(event) {
+    const agenda = document.getElementById(popoverId);
+    if (!agenda) return;
+    if (agenda.contains(event.target) || event.target.closest(".co-sales-picker")) return;
+    clearAgenda();
+  }
+
+  function agendaShell(button, state) {
+    const agenda = document.createElement("div");
+    agenda.id = popoverId;
+    agenda.className = "co-sales-agenda";
+    agenda.dir = "rtl";
+    agenda.innerHTML = `
+      <div class="co-sales-agenda-head">
+        <div class="co-sales-agenda-title">
+          <strong>${state.title}</strong>
+          <span>${state.subtitle}</span>
+        </div>
+        <div class="co-sales-agenda-nav">
+          <button type="button" data-agenda-prev aria-label="السابق"><i class="fa-solid fa-chevron-right"></i></button>
+          <button type="button" data-agenda-next aria-label="التالي"><i class="fa-solid fa-chevron-left"></i></button>
+        </div>
+      </div>
+      <div class="co-sales-agenda-body"></div>
+    `;
+    document.body.appendChild(agenda);
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(318, window.innerWidth - 28);
+    const left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left + rect.width - width));
+    agenda.style.width = `${width}px`;
+    agenda.style.left = `${left}px`;
+    agenda.style.visibility = "hidden";
+    return agenda;
+  }
+
+  function placeAgenda(button, agenda) {
+    const rect = button.getBoundingClientRect();
+    const naturalHeight = agenda.offsetHeight;
+    const gap = 10;
+    const viewportPadding = 12;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+    const spaceAbove = rect.top - viewportPadding - gap;
+    const openAbove = naturalHeight > spaceBelow && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(180, openAbove ? spaceAbove : spaceBelow);
+    agenda.style.maxHeight = `${Math.min(naturalHeight, availableHeight)}px`;
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    const head = agenda.querySelector(".co-sales-agenda-head");
+    const foot = agenda.querySelector(".co-sales-agenda-foot");
+    if (body) {
+      const chromeHeight = (head?.offsetHeight || 0) + (foot?.offsetHeight || 0);
+      body.style.maxHeight = `${Math.max(120, Math.min(naturalHeight, availableHeight) - chromeHeight)}px`;
+    }
+    const height = agenda.offsetHeight;
+    const top = openAbove
+      ? rect.top - height - gap
+      : rect.bottom + gap;
+    agenda.style.top = `${Math.max(viewportPadding, Math.min(window.innerHeight - height - viewportPadding, top))}px`;
+    agenda.style.transformOrigin = openAbove ? "bottom center" : "top center";
+    agenda.style.visibility = "visible";
+    requestAnimationFrame(() => agenda.classList.add("is-ready"));
+  }
+
+  function selectValue(button, value) {
+    const root = document.getElementById(sectionId);
+    const param = button.dataset.coSalesParam;
+    clearAgenda();
+    if (param && value && root) updateSales(param, value, root);
+  }
+
+  function renderDay(button, baseDate) {
+    const view = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+    const selected = dateValue(parseDay(button.dataset.coSalesValue));
+    const agenda = agendaShell(button, {
+      title: monthFormatter.format(view),
+      subtitle: `${view.getFullYear()}-${pad(view.getMonth() + 1)}`
+    });
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    const firstDay = (view.getDay() + 1) % 7;
+    const start = new Date(view);
+    start.setDate(1 - firstDay);
+    body.innerHTML = `
+      <div class="co-sales-agenda-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div>
+      <div class="co-sales-agenda-grid"></div>
+      <div class="co-sales-agenda-foot">
+        <button type="button" class="co-sales-agenda-action" data-agenda-today>اليوم</button>
+        <button type="button" class="co-sales-agenda-action" data-agenda-clear>إغلاق</button>
+      </div>
+    `;
+    const grid = body.querySelector(".co-sales-agenda-grid");
+    for (let index = 0; index < 42; index += 1) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      const value = dateValue(day);
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-day";
+      if (day.getMonth() !== view.getMonth()) item.classList.add("is-muted");
+      if (value === selected) item.classList.add("is-selected");
+      item.textContent = day.getDate();
+      item.addEventListener("click", () => selectValue(button, value));
+      grid.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderDay(button, new Date(view.getFullYear(), view.getMonth() - 1, 1));
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderDay(button, new Date(view.getFullYear(), view.getMonth() + 1, 1));
+    });
+    agenda.querySelector("[data-agenda-today]").addEventListener("click", () => selectValue(button, dateValue(new Date())));
+    agenda.querySelector("[data-agenda-clear]").addEventListener("click", clearAgenda);
+    placeAgenda(button, agenda);
+  }
+
+  function renderWeek(button, startDate) {
+    const selected = button.dataset.coSalesValue || saturdayWeekValue(new Date());
+    const agenda = agendaShell(button, {title: "اختيار الأسبوع", subtitle: selected});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-list"></div>`;
+    const list = body.querySelector(".co-sales-agenda-list");
+    for (let index = -3; index <= 4; index += 1) {
+      const start = new Date(startDate);
+      start.setDate(startDate.getDate() + index * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const value = saturdayWeekValue(start);
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (value === selected) item.classList.add("is-selected");
+      item.innerHTML = `<span>الأسبوع ${Number(value.slice(-2))}</span><small>${dateValue(start)} - ${dateValue(end)}</small>`;
+      item.addEventListener("click", () => selectValue(button, value));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      const nextStart = new Date(startDate);
+      nextStart.setDate(startDate.getDate() - 56);
+      agenda.remove();
+      renderWeek(button, nextStart);
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      const nextStart = new Date(startDate);
+      nextStart.setDate(startDate.getDate() + 56);
+      agenda.remove();
+      renderWeek(button, nextStart);
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function renderMonth(button, baseDate) {
+    const selected = button.dataset.coSalesValue || `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}`;
+    const agenda = agendaShell(button, {title: `شهور ${baseDate.getFullYear()}`, subtitle: String(baseDate.getFullYear())});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-months"></div>`;
+    const list = body.querySelector(".co-sales-agenda-months");
+    for (let month = 0; month < 12; month += 1) {
+      const value = `${baseDate.getFullYear()}-${pad(month + 1)}`;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (value === selected) item.classList.add("is-selected");
+      item.textContent = compactMonthFormatter.format(new Date(baseDate.getFullYear(), month, 1));
+      item.addEventListener("click", () => selectValue(button, value));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderMonth(button, new Date(baseDate.getFullYear() - 1, 0, 1));
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderMonth(button, new Date(baseDate.getFullYear() + 1, 0, 1));
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function renderYear(button, selectedYear) {
+    const year = Number(selectedYear) || new Date().getFullYear();
+    const start = year - 5;
+    const agenda = agendaShell(button, {title: "اختيار السنة", subtitle: `${start} - ${start + 11}`});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-years"></div>`;
+    const list = body.querySelector(".co-sales-agenda-years");
+    for (let current = start; current < start + 12; current += 1) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (current === year) item.classList.add("is-selected");
+      item.textContent = current;
+      item.addEventListener("click", () => selectValue(button, String(current)));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderYear(button, year - 12);
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderYear(button, year + 12);
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function openAgenda(button) {
+    if (button.classList.contains("is-open")) {
+      clearAgenda();
+      return;
+    }
+    clearAgenda();
+    button.classList.add("is-open");
+    if (button.dataset.coSalesKind === "day") renderDay(button, parseDay(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "week") renderWeek(button, weekStartFromValue(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "month") renderMonth(button, parseMonth(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "year") renderYear(button, button.dataset.coSalesValue);
+    setTimeout(() => {
+      document.addEventListener("click", onAgendaOutsideClick, true);
+      document.addEventListener("keydown", onAgendaKeydown);
+    }, 0);
+  }
+
+  async function updateSales(param, value, root) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(param, value);
+    root.setAttribute("aria-busy", "true");
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {"X-Requested-With": "fetch"},
+        credentials: "same-origin"
+      });
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const next = doc.getElementById(sectionId);
+      const current = document.getElementById(sectionId);
+      if (next && current) {
+        current.replaceWith(next);
+        history.replaceState(null, "", url.toString());
+        bindSalesPickers(next);
+      }
+    } finally {
+      const current = document.getElementById(sectionId);
+      if (current) current.removeAttribute("aria-busy");
+    }
+  }
+
+  function bindSalesPickers(root) {
+    root.querySelectorAll(".co-sales-picker[data-co-sales-param]").forEach((button) => {
+      button.addEventListener("click", () => openAgenda(button));
+    });
+  }
+
+  const section = document.getElementById(sectionId);
+  if (section) bindSalesPickers(section);
+})();
+</script>
 
 </div>
 {% endblock %}

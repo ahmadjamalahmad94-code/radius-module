@@ -159,7 +159,7 @@ ads.network.com"></textarea>
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
-      window.SWSVF.setPreview(data.bullets || []);
+      window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
       window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
     }

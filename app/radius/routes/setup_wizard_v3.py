@@ -452,6 +452,7 @@ def setup_wizard_v3_hotspot_preview(router_id: int):
     return jsonify({
         "ok": True,
         "bullets": _hotspot_preview_bullets(plan_result),
+        "script": plan_result.script or "",
     })
 
 
@@ -672,8 +673,13 @@ def setup_wizard_v3_broadband_preview(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": _broadband_preview_bullets(plan_result),
         }), 409
-    return jsonify({"ok": True,
-                    "bullets": _broadband_preview_bullets(plan_result)})
+    return jsonify({
+        "ok": True,
+        "bullets": _broadband_preview_bullets(plan_result),
+        # Show the post-processed script so review reflects what's
+        # actually sent (after dns-server strip + IP unquote).
+        "script": _broadband_post_process_script(plan_result.script or ""),
+    })
 
 
 def _broadband_post_process_script(script: str) -> str:
@@ -1190,7 +1196,8 @@ def setup_wizard_v3_block_sites_preview(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
-    return jsonify({"ok": True, "bullets": bullets})
+    return jsonify({"ok": True, "bullets": bullets,
+                    "script": plan_result.script or ""})
 
 
 def setup_wizard_v3_block_sites_apply(router_id: int):
@@ -1282,7 +1289,8 @@ def setup_wizard_v3_open_sites_preview(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
-    return jsonify({"ok": True, "bullets": bullets})
+    return jsonify({"ok": True, "bullets": bullets,
+                    "script": plan_result.script or ""})
 
 
 def setup_wizard_v3_open_sites_apply(router_id: int):
@@ -1404,7 +1412,8 @@ def setup_wizard_v3_public_ip_preview(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
-    return jsonify({"ok": True, "bullets": bullets})
+    return jsonify({"ok": True, "bullets": bullets,
+                    "script": plan_result.script or ""})
 
 
 def setup_wizard_v3_public_ip_apply(router_id: int):
@@ -1568,7 +1577,15 @@ def setup_wizard_v3_remote_access_preview(router_id: int):
         f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها.",
         "يمكن إلغاء الوصول يدويّاً في أي وقت من بطاقة «اتصال عن بُعد».",
     ]
-    return jsonify({"ok": True, "bullets": bullets})
+    # Build a *preview* of the same script the apply path would send.
+    # The grant_token will be regenerated client-side at apply time,
+    # so this is a representative sample (not the exact final one).
+    preview_token = str(body.get("grant_token") or "PREVIEW")
+    script = _remote_access_build_script(
+        services=services, ttl_hours=ttl_hours,
+        source_ip=source_ip, grant_token=preview_token,
+    )
+    return jsonify({"ok": True, "bullets": bullets, "script": script})
 
 
 def setup_wizard_v3_remote_access_apply(router_id: int):

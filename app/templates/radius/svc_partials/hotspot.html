@@ -318,7 +318,7 @@
         it.running ? "يعمل" : "متوقّف",
         it.disabled ? "معطّل" : "",
         isWan ? "🔒 WAN — منفذ الإنترنت" : "",
-        isActive ? "✅ Hotspot مفعَّل حالياً" : "",
+        isActive ? "🔄 سيُعاد البرمجة (يُحذف القديم تلقائياً)" : "",
       ].filter(Boolean).join(" · ");
       const cls = [
         "swhs-iface-card",
@@ -447,7 +447,7 @@
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
-      window.SWSVF.setPreview(data.bullets || []);
+      window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
       window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
     }
