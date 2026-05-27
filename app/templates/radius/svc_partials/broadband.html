@@ -28,14 +28,41 @@
 }
 .swbb-iface-card{
   display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border:1px solid var(--swsvf-line);border-radius:10px;
+  padding:10px 12px;border:2px solid var(--swsvf-line);border-radius:10px;
   background:#fff;cursor:pointer;font-size:13px;transition:all .15s;
+  position:relative;
 }
 .swbb-iface-card:hover{border-color:var(--swsvf-green);background:#F8FAFC}
 .swbb-iface-card input{
-  width:16px;height:16px;cursor:pointer;accent-color:var(--swsvf-green);margin:0;
+  width:18px;height:18px;cursor:pointer;accent-color:var(--swsvf-green);margin:0;
 }
-.swbb-iface-card.is-checked{background:var(--swsvf-green-soft);border-color:var(--swsvf-green)}
+/* Primary feedback — CSS-driven via :has(input:checked) so the
+   chip lights up the instant the checkbox flips, no JS class race. */
+.swbb-iface-card:has(input:checked),
+.swbb-iface-card.is-checked{
+  background:var(--swsvf-green-soft);
+  border-color:var(--swsvf-green);
+  box-shadow:0 0 0 3px rgba(16,185,129,.1);
+}
+.swbb-iface-card:has(input:checked)::after,
+.swbb-iface-card.is-checked::after{
+  content:"✓";
+  position:absolute;top:-8px;inset-inline-end:-8px;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--swsvf-green);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;
+  box-shadow:0 2px 6px rgba(16,185,129,.4);
+}
+.swbb-iface-counter{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:#F1F5F9;color:#475569;
+  font-size:12px;font-weight:700;margin-inline-start:8px;
+}
+.swbb-iface-counter.is-ready{
+  background:var(--swsvf-green-soft);color:#065F46;
+}
 .swbb-iface-name{font-weight:700;color:var(--swsvf-ink);font-family:monospace}
 .swbb-iface-meta{color:var(--swsvf-mute);font-size:11px;margin-inline-start:auto}
 .swbb-iface-empty{
@@ -62,7 +89,10 @@
 
 {# ── Section 1: pick interfaces ── #}
 <div class="swbb-section">
-  <div class="swbb-section-title">واجهات الـ PPPoE</div>
+  <div class="swbb-section-title">
+    واجهات الـ PPPoE
+    <span class="swbb-iface-counter" data-swbb-counter>0 واجهة مختارة</span>
+  </div>
   <p class="swbb-help">
     اختر الواجهة (أو الواجهات) التي ستُشغّل عليها خدمة PPPoE — عادةً منفذ LAN
     موصّل بسويتش يوزّع على المشتركين.
@@ -102,6 +132,15 @@
 
 <div class="swbb-error" data-swbb-form-error hidden></div>
 
+{# Live JSON debug — open to confirm exactly what gets POSTed. #}
+<details style="margin-top:14px;background:#F8FAFC;border:1px solid var(--swsvf-line);border-radius:8px;padding:8px 12px;font-size:12px">
+  <summary style="cursor:pointer;color:var(--swsvf-mute);font-weight:600">
+    👁️ معاينة البيانات التي ستُرسل (للتشخيص)
+  </summary>
+  <pre style="margin:8px 0 0;padding:8px;background:#0F172A;color:#A5F3FC;border-radius:6px;font-family:monospace;font-size:11px;overflow:auto;direction:ltr;text-align:left"
+       data-swbb-debug-payload>{}</pre>
+</details>
+
 <script>
 (function () {
   "use strict";
@@ -113,6 +152,8 @@
   const localInput = page.querySelector("[data-swbb-local]");
   const poolInput = page.querySelector("[data-swbb-pool]");
   const formError = page.querySelector("[data-swbb-form-error]");
+  const counter = page.querySelector("[data-swbb-counter]");
+  const debugEl = page.querySelector("[data-swbb-debug-payload]");
 
   function token() {
     const el = document.querySelector('input[name="_csrf_token"]');
@@ -121,8 +162,10 @@
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function getSelectedInterfaces() {
+    // Defensive: trim + filter empties — matches the Hotspot partial.
     return Array.from(page.querySelectorAll("[data-swbb-iface]:checked"))
-                .map((el) => el.value);
+                .map((el) => (el.value || "").trim())
+                .filter(Boolean);
   }
   function getPayload() {
     return {
@@ -132,8 +175,20 @@
       blocked_interfaces: [],
     };
   }
+  function updateCounter() {
+    if (!counter) return;
+    const n = getSelectedInterfaces().length;
+    counter.textContent = n === 0
+      ? "اختر واجهة واحدة على الأقل"
+      : `${n} واجهة مختارة`;
+    counter.classList.toggle("is-ready", n > 0);
+  }
   function refreshPayload() {
-    page.dataset.swsvfConfigurePayload = JSON.stringify(getPayload());
+    const payload = getPayload();
+    page.dataset.swsvfConfigurePayload = JSON.stringify(payload);
+    updateCounter();
+    if (debugEl) debugEl.textContent = JSON.stringify(payload, null, 2);
+    if (window.console) console.debug("[Broadband] payload:", payload);
   }
 
   /* ── Interface discovery ── */
@@ -177,16 +232,26 @@
           <span class="swbb-iface-meta">${meta}</span>
         </label>`;
     }).join("");
-    ifaceList.querySelectorAll("[data-swbb-iface]").forEach((cb) => {
-      cb.addEventListener("change", () => {
-        cb.closest(".swbb-iface-card").classList.toggle("is-checked", cb.checked);
-        refreshPayload();
-      });
+    // Paint is-checked fallback class on any pre-checked cards
+    // for browsers without :has() support.
+    ifaceList.querySelectorAll("[data-swbb-iface]:checked").forEach((cb) => {
+      const card = cb.closest(".swbb-iface-card");
+      if (card) card.classList.add("is-checked");
     });
     refreshPayload();
   }
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
   [localInput, poolInput].forEach((el) => el && el.addEventListener("input", refreshPayload));
+  // Single delegated listener — catches every change event from
+  // any [data-swbb-iface], including newly rendered ones, and
+  // keeps both the visual fallback class and the payload in sync.
+  ifaceList.addEventListener("change", (e) => {
+    if (e.target && e.target.matches && e.target.matches("[data-swbb-iface]")) {
+      const card = e.target.closest(".swbb-iface-card");
+      if (card) card.classList.toggle("is-checked", e.target.checked);
+    }
+    refreshPayload();
+  });
   refreshPayload();
   // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
   page.addEventListener("swsvf:configure-collect", refreshPayload);
@@ -207,6 +272,17 @@
   });
 
   async function runPreview(payload) {
+    if (window.console) console.debug("[Broadband] runPreview called with:", payload);
+    // Fresh DOM re-read fallback in case the shell event passed
+    // a stale/empty payload for any reason.
+    if (!payload || !payload.selected_interfaces ||
+        !payload.selected_interfaces.length) {
+      const fresh = getPayload();
+      if (fresh.selected_interfaces && fresh.selected_interfaces.length) {
+        payload = fresh;
+        if (window.console) console.debug("[Broadband] fell back to fresh DOM read:", payload);
+      }
+    }
     if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
@@ -220,6 +296,7 @@
           headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
+      if (window.console) console.debug("[Broadband] preview response:", data);
       if (!res.ok || data.ok === false) {
         const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
