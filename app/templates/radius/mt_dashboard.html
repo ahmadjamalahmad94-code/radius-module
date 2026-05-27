@@ -1192,7 +1192,18 @@
       <span class="mt-card-meta">Ø£ÙˆØ§Ù…Ø± Ù…Ø¨Ø§Ø´Ø±Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±</span>
     </header>
     <div class="mt-card-body">
-      <div class="mt-actions-grid">
+      <div class="np-cmd-panel">
+
+        {# ── Group 1 — diagnostics & info (teal) ── #}
+        <div class="np-cmd-group np-cmd-group--info">
+          <header class="np-cmd-group-head">
+            <span class="np-cmd-group-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <div class="np-cmd-group-text">
+              <h4 class="np-cmd-group-title">تشخيص وقراءة</h4>
+              <p class="np-cmd-group-sub">أوامر آمنة لجمع المعلومات</p>
+            </div>
+          </header>
+          <div class="np-cmd-actions">
         {# â”€â”€ Read-only / info â€” teal â”€â”€ #}
         <button type="button" class="mt-action-btn mt-action-btn--info"
                 data-mt-action-ping>
@@ -1225,6 +1236,19 @@
         </button>
 
         {# â”€â”€ Maintenance â€” warn (amber) â”€â”€ #}
+          </div>
+        </div>
+
+        {# ── Group 2 — quick maintenance (amber) ── #}
+        <div class="np-cmd-group np-cmd-group--warn">
+          <header class="np-cmd-group-head">
+            <span class="np-cmd-group-icon"><i class="fa-solid fa-wrench"></i></span>
+            <div class="np-cmd-group-text">
+              <h4 class="np-cmd-group-title">صيانة سريعة</h4>
+              <p class="np-cmd-group-sub">مهام دوريّة تُنفَّذ فورًا</p>
+            </div>
+          </header>
+          <div class="np-cmd-actions">
         <button type="button" class="mt-action-btn mt-action-btn--warn"
                 data-mt-action-dns-flush>
           <i class="fa-solid fa-broom"></i>
@@ -1243,6 +1267,19 @@
         </button>
 
         {# â”€â”€ Destructive â€” red â”€â”€ #}
+          </div>
+        </div>
+
+        {# ── Group 3 — destructive / sensitive (red) ── #}
+        <div class="np-cmd-group np-cmd-group--err">
+          <header class="np-cmd-group-head">
+            <span class="np-cmd-group-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <div class="np-cmd-group-text">
+              <h4 class="np-cmd-group-title">عمليات حسّاسة</h4>
+              <p class="np-cmd-group-sub">تأكيد مطلوب قبل التنفيذ</p>
+            </div>
+          </header>
+          <div class="np-cmd-actions">
         <button type="button" class="mt-action-btn mt-action-btn--danger"
                 data-mt-action-identity>
           <i class="fa-solid fa-pen-to-square"></i>
@@ -1259,6 +1296,8 @@
             <span class="mt-action-sub">ÙŠÙ‚Ø·Ø¹ Ø§Ù„Ø§ØªØµØ§Ù„ Ù„Ø¯Ù‚ÙŠÙ‚Ø©</span>
           </span>
         </button>
+          </div>
+        </div>
       </div>
 
       {# Inline form area â€” populated per-action by JS. Stays empty
