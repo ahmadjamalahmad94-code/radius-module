@@ -311,11 +311,31 @@
       return `${map[s.name] || s.name} · المنفذ ${s.port}`;
     }).join("<br>");
     const rows = [];
-    if (conn.public_address) {
-      rows.push(`<tr><td>العنوان العام</td><td><code>${conn.public_address}</code></td></tr>`);
+    // Per-service VPS URLs (preferred — stable, work from anywhere on
+    // the internet). Each row shows the full <host>:<port> the tech
+    // pastes into Winbox / browser / SSH client.
+    const urls = Array.isArray(conn.urls) ? conn.urls : [];
+    urls.forEach((u) => {
+      const label = u.service_ar || u.service || "—";
+      const display = u.url || `${u.host || conn.public_host || ""}:${u.port || ""}`;
+      rows.push(
+        `<tr><td>${label}</td><td><code>${display}</code>` +
+        (u.hint_ar
+          ? `<small style="color:#475569;display:block;margin-top:2px;font-family:Cairo">${u.hint_ar}</small>`
+          : "") +
+        `</td></tr>`
+      );
+    });
+    // If no per-service URLs were allocated, fall back to showing
+    // just the VPS host so the operator knows where to point.
+    if (!urls.length && conn.public_host) {
+      rows.push(`<tr><td>عنوان VPS</td><td><code>${conn.public_host}</code>
+        <small style="color:#475569;display:block;margin-top:2px;font-family:Cairo">
+          (المنفذ سيُمنح تلقائياً عند تفعيل الخدمة)
+        </small></td></tr>`);
     }
     if (conn.vpn_address) {
-      rows.push(`<tr><td>عنوان شبكة VPN</td><td><code>${conn.vpn_address}</code>
+      rows.push(`<tr><td>عنوان شبكة VPN الداخلي</td><td><code>${conn.vpn_address}</code>
         <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
           (يصلح فقط لو الفنّي متصل على نفس الـ VPN)
         </small></td></tr>`);
@@ -341,11 +361,23 @@
     if (copyBtn) {
       copyBtn.onclick = function () {
         const lines = [];
-        if (conn.public_address) lines.push(`Public IP: ${conn.public_address}`);
+        // Prefer the per-service URLs (host:port, copy-paste ready)
+        // when the backend computed them. Fall back to raw host
+        // if allocation hasn't happened yet.
+        const urls = Array.isArray(conn.urls) ? conn.urls : [];
+        if (urls.length) {
+          urls.forEach((u) => {
+            lines.push(
+              `${u.service_ar || u.service}: ${u.clipboard || u.url}`
+            );
+          });
+        } else if (conn.public_host) {
+          lines.push(`VPS Host: ${conn.public_host}`);
+          (conn.services || []).forEach((s) => {
+            lines.push(`${s.name}: port ${s.port} (allocate via NPC)`);
+          });
+        }
         if (conn.vpn_address) lines.push(`VPN IP: ${conn.vpn_address}`);
-        (conn.services || []).forEach((s) => {
-          lines.push(`${s.name}: port ${s.port}`);
-        });
         if (conn.ttl_hours) lines.push(`Expires: ${conn.ttl_hours}h`);
         lines.push(`Grant ID: ${grantToken}`);
         const text = lines.join("\n");

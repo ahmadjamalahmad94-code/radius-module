@@ -1549,24 +1549,55 @@
   }
 
   function renderRemoteAccessBanner(info) {
-    const pub = (info.public_address || "").trim();
+    // The customer's own public IP is intentionally NOT used here:
+    // most ISPs rotate it (DHCP / CGNAT) so any URL based on it
+    // becomes stale within hours. Instead we surface the VPS IP +
+    // the per-router port allocated in npc_remote_port_mappings —
+    // that combo is stable for the lifetime of the deployment.
+    const urls = Array.isArray(info.remote_urls) ? info.remote_urls : [];
+    const pubHost = (info.public_host || "").trim();
     const vpn = (info.vpn_address || "").trim();
     const rows = [];
-    if (pub) {
+
+    // ── Per-service URL row — what the operator actually copies ──
+    urls.forEach((u) => {
+      const label = u.service_ar || u.service || "—";
+      const display = u.url || `${u.host || pubHost}:${u.port || ""}`;
+      const clip = u.clipboard || display;
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">العنوان العام</span>
-          <code class="rh-inv-conn-value">${safe(pub)}</code>
+          <span class="rh-inv-conn-label">${safe(label)}</span>
+          <code class="rh-inv-conn-value">${safe(display)}</code>
           <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(pub)}" title="نسخ">
+                  data-rh-inv-copy="${safe(clip)}" title="نسخ">
             <i class="fa-solid fa-copy"></i>
           </button>
         </div>`);
+    });
+
+    // ── VPS host (informational — useful when no URLs are wired
+    // yet so the operator still knows the base host name). ──────
+    if (pubHost && !urls.length) {
+      rows.push(`
+        <div class="rh-inv-conn-row">
+          <span class="rh-inv-conn-label">عنوان VPS</span>
+          <code class="rh-inv-conn-value">${safe(pubHost)}</code>
+          <button type="button" class="rh-inv-copy-btn"
+                  data-rh-inv-copy="${safe(pubHost)}" title="نسخ">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+          <small class="rh-inv-conn-hint">
+            فعّل خدمة عبر «اتصال عن بُعد» لتوليد رابط مع منفذ.
+          </small>
+        </div>`);
     }
+
+    // ── Internal-VPN address (for techs on the same WireGuard
+    // mesh — bypasses nginx, faster + no port-allocation needed).
     if (vpn) {
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان شبكة VPN</span>
+          <span class="rh-inv-conn-label">عنوان شبكة VPN الداخلي</span>
           <code class="rh-inv-conn-value">${safe(vpn)}</code>
           <button type="button" class="rh-inv-copy-btn"
                   data-rh-inv-copy="${safe(vpn)}" title="نسخ">
@@ -1575,14 +1606,14 @@
           <small class="rh-inv-conn-hint">للفنّي على نفس الـ VPN</small>
         </div>`);
     }
+
     if (!rows.length) {
       rows.push(`
         <div class="rh-inv-conn-row">
           <span class="rh-inv-conn-empty">
             <i class="fa-solid fa-circle-info"></i>
-            تعذّر تحديد عنوان عام للراوتر. شغّل
-            <code>/ip cloud set ddns-enabled=yes</code> على الراوتر
-            للحصول على عنوان قابل للوصول من خارج الشبكة.
+            لا يوجد عنوان VPS مُهيَّأ على الخادم بعد
+            (<code>HOBERADIUS_PUBLIC_HOST</code>). راجع المسؤول.
           </span>
         </div>`);
     }
@@ -1590,7 +1621,7 @@
       <div class="rh-inv-conn-banner">
         <div class="rh-inv-conn-head">
           <i class="fa-solid fa-network-wired"></i>
-          <strong>عنوان الاتصال لـ Winbox / SSH / WebFig</strong>
+          <strong>عناوين الاتصال (عبر VPS — ثابتة)</strong>
         </div>
         ${rows.join("")}
       </div>`;

@@ -1319,24 +1319,57 @@ def setup_wizard_v3_router_inventory(router_id: int):
     if not nas.api_password:
         return jsonify({"ok": True, "groups": []})
     groups: list = []
+    # ── VPS-side remote-access info (computed independently of the
+    # router) so the banner shows the correct host:port even when
+    # the customer's public IP is dynamic and the router itself is
+    # only reachable via the WireGuard tunnel. ──────────────────
+    public_host_value = ""
+    vps_urls: list = []
+    try:
+        from ..services import npc_remote_tunnel
+        from ..services.npc_remote_access_urls import (
+            compute_remote_access_urls,
+        )
+        from ..db.repos import npc_remote_port_mappings_repo as ports_repo
+
+        public_host_value = (
+            npc_remote_tunnel.public_host() or (nas.address or "")
+        )
+        existing_mappings = ports_repo.list_for_router(router_id)
+        # Synthesize the policy from whatever mappings actually exist:
+        # each enabled mapping tells us the service was previously
+        # programmed via NPC / the wizard, so the URL should appear.
+        synth_policy: dict = {"router_id": router_id}
+        for m in existing_mappings:
+            if not m.get("enabled"):
+                continue
+            svc = str(m.get("service") or "")
+            synth_policy[f"allow_{svc}"] = True
+        vps_urls = compute_remote_access_urls(
+            synth_policy,
+            public_host=public_host_value,
+            mappings=existing_mappings,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
     router_info: dict = {
-        "vpn_address": str(nas.address or ""),
-        "public_address": "",
+        "vpn_address":     str(nas.address or ""),
+        # VPS public host (the IP customers should actually use)
+        # plus the per-service URL list. Replaces the old
+        # public_address from /ip cloud which was unreliable on
+        # dynamic-IP connections.
+        "public_host":     public_host_value,
+        "remote_urls":     vps_urls,
+        # Backwards-compat: kept for any older client still reading
+        # `public_address`. Set to the same VPS host so legacy code
+        # paths point at the right thing instead of the dynamic
+        # customer IP.
+        "public_address":  public_host_value,
     }
     try:
         from ..integration.mikrotik import MikrotikClient
         with MikrotikClient(**_mt_client_for(nas)) as mt:
-            # Best-effort: pick up the MikroTik DDNS public address
-            # (free /ip cloud service) so the remote-access banner
-            # can show the tech where to point Winbox.
-            try:
-                cloud = list(mt.print_("/ip/cloud/print"))
-                if cloud:
-                    router_info["public_address"] = str(
-                        cloud[0].get("public-address", "") or ""
-                    ).strip()
-            except Exception:  # noqa: BLE001
-                pass
             # ─── Hotspot servers ────────────────────────────
             hotspot_items = []
             for s in mt.print_("/ip/hotspot/print"):
@@ -2201,42 +2234,81 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
             "fail_stage": fail_stage,
             "substeps": _build_fail_substeps(fail_stage),
         }), 502
-    # Build the connection-info payload the partial uses to show
-    # the tech where to point Winbox/SSH/WebFig. Try to read the
-    # router's public IP via /ip cloud (DDNS); fall back to the
-    # nas_devices address (which is the WG tunnel IP, only usable
-    # from inside the VPN).
-    public_ip = ""
+
+    # ── Allocate VPS public ports + build «from-outside» URLs ──
+    #
+    # The router-side firewall script alone only opens ports on the
+    # router; customers whose ISPs hand out dynamic public IPs can't
+    # rely on the router's own public-address being reachable. The
+    # production design (see npc_remote_port_mappings + nginx-stream
+    # in deploy/) routes remote access through the VPS: every enabled
+    # service gets a stable port in the 51000-51199 range that nginx
+    # forwards to the router over the WireGuard tunnel.
+    #
+    # We do this here (rather than in the script builder) so allocation
+    # only happens AFTER the router accepted the rules — no orphan
+    # mappings if the apply failed.
+    connection_urls: list[dict] = []
+    public_host_value = ""
     try:
-        from ..integration.mikrotik import MikrotikClient
-        with MikrotikClient(
-            host=nas.address,
-            username=nas.api_user or "admin",
-            password=nas.api_password,
-            port=int(nas.api_port or 8728),
-            use_tls=bool(nas.api_use_tls),
-            timeout=4.0,
-        ) as mt:
-            try:
-                cloud = list(mt.print_("/ip/cloud/print"))
-                if cloud:
-                    public_ip = (
-                        str(cloud[0].get("public-address", "") or "").strip()
-                    )
-            except Exception:  # noqa: BLE001
-                pass
+        from ..services import npc_remote_tunnel
+        from ..services.npc_remote_access_urls import (
+            compute_remote_access_urls,
+        )
+
+        # Map the wizard's free-form services list (name + port pairs)
+        # onto the canonical NPC policy keys understood by
+        # ensure_tunnels_for_policy + compute_remote_access_urls.
+        svc_names = {str(s.get("name", "")).lower() for s in services}
+        policy = {
+            "router_id":          router_id,
+            "allow_winbox":       "winbox" in svc_names,
+            "allow_ssh":          "ssh" in svc_names,
+            "allow_webfig_http":  "webfig" in svc_names,
+            "allow_api":          "api" in svc_names,
+        }
+        mappings = npc_remote_tunnel.ensure_tunnels_for_policy(
+            tenant_id=_tid(), policy=policy,
+        )
+        # Push the new mappings into the nginx stream config + signal
+        # the sidecar to reload. Best-effort — a stale config just
+        # means the operator's external URLs won't work yet; the
+        # router-side rules still work for VPN-internal access.
+        try:
+            npc_remote_tunnel.regenerate_and_reload()
+        except Exception:  # noqa: BLE001
+            pass
+
+        # VPS IP from env, falls back to nas.address (which is the
+        # WG tunnel IP — usable inside VPN only).
+        public_host_value = (
+            npc_remote_tunnel.public_host() or (nas.address or "")
+        )
+        connection_urls = compute_remote_access_urls(
+            policy, public_host=public_host_value, mappings=mappings,
+        )
     except Exception:  # noqa: BLE001
+        # Allocator must never block the apply from reporting success
+        # — the firewall script ran fine, just the VPS relay setup
+        # is degraded. Operator can re-trigger to retry.
         pass
+
     return jsonify({
         "ok": True,
         "duration_ms": exec_result.duration_ms,
         "grant_token": grant_token,
         "connection": {
-            "vpn_address": nas.address or "",
-            "public_address": public_ip or "",
-            "services": services,
-            "ttl_hours": ttl_hours,
-            "source_ip": source_ip,
+            # The address most operators want — the VPS public host
+            # they enter in Winbox / their browser, regardless of
+            # what the customer's ISP is doing with their public IP.
+            "public_host":   public_host_value,
+            "urls":          connection_urls,
+            # VPN address kept for internal-network use (techs on
+            # the same WireGuard mesh).
+            "vpn_address":   nas.address or "",
+            "services":      services,
+            "ttl_hours":     ttl_hours,
+            "source_ip":     source_ip,
         },
         "substeps": [
             {"key": "connect", "status": "done"},
