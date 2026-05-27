@@ -102,7 +102,21 @@
   3. حصرها على السيرفر (`/ip hotspot set [find] comment=`) → **trap عمود 52** — حتى السيرفر ما عنده `comment`!
 - **الحلّ النهائي:** الـ post-processor صار **لا يحقن أي comment** على hotspot. التصنيف يعتمد كلّياً على نمط الاسم (`hotspot-<iface>` / `hsprof-<iface>`) في `_classify_hotspot_source`.
 
-### 4.8 ⚠️ فرق Parser بين Terminal و `/system/script` (الاكتشاف الذهبي)
+### 4.8 ⚠️ Broadband Replacement Bug — الـ tag مشترك بين كل المداخل
+- **المشكلة:** الـ Broadband planner يُصدر كتلة تنظيف بـ tag مشترك `HOBERADIUS_SETUP:<run_id>:broadband`، والـ `run_id` يساوي `router_id` (في `_plan_broadband` السطر 691). يعني كل تشغيل على نفس الراوتر يستعمل نفس الـ tag.
+- **النتيجة:** السطر:
+  ```
+  /interface pppoe-server server remove [find where comment~"<tag>"]
+  ```
+  يمسح **كل** الـ pppoe-server entries على الراوتر، بما فيهم المداخل الأخرى من تشغيلات سابقة. برمجة ether3 تمسح ether2 بصمت.
+- **المقارنة مع Hotspot:** الـ Hotspot يستعمل tag per-interface (`HOBE_HOTSPOT_<iface>`)، فالتنظيف يقتصر على المدخل الواحد. هذا الفرق هو سبب عدم وجود المشكلة في Hotspot.
+- **الحل في `_broadband_post_process_script` (step 6):**
+  - فحص السكربت لاستخراج `/interface pppoe-server server add interface="X"` → معرفة المداخل المستهدفة في هذا التشغيل.
+  - استبدال `[find where comment~"<tag>"]` المشتركة بـ `[find where interface="X" and comment~"<tag>"]` per-interface.
+  - حذف `profile remove` / `pool remove` / `nat remove` كلّياً — الـ `:if` guards الموجودة في الـ planner تتعامل مع التكرار، والـ profile/pool/NAT مشتركة بين كل المداخل ولا يجب لمسها (وإلّا قطع الجلسات على المداخل الأخرى).
+- **النتيجة:** الـ Broadband صار additive — إضافة مدخل جديد لا تمسح الموجود.
+
+### 4.9 ⚠️ فرق Parser بين Terminal و `/system/script` (الاكتشاف الذهبي)
 - **المشكلة:** بعد إصلاح كل ما سبق، الـ trap لسا قائم. المُشغّل لصق السكربت في Terminal يدوياً ونجح!
 - **السبب الجذري:** الـ LiveRouterExecutor يستعمل `/system/script/add + /system/script/run`. الـ parser في وضع السكربت **أصرم** من CLI parser في:
   - معالجة القوائم المفصولة بفواصل غير المُقتبسة.
@@ -287,7 +301,9 @@
 | `e56507d` | Hotspot: split comment injection into separate `set` lines |
 | `754487e` | Hotspot: do not tag /ip hotspot profile (no comment field on 7.20.6) |
 | `2bccbe3` | Hotspot: drop comment tagging entirely (no comment field on hotspot at all) |
-| `f1f9525` | Hotspot: quote `login-by` comma-list to survive script-mode parser ← **نجح أخيراً** |
+| `f1f9525` | Hotspot: quote `login-by` comma-list to survive script-mode parser ← **حلّ ترَب Hotspot نهائياً** |
+| `5e17e86` | Docs: comprehensive lessons-learned for Setup Wizard v3 |
+| `69f5e1e` | Broadband: scope cleanup per-interface (fix replacement bug) ← **حلّ مشكلة الاستبدال** |
 
 ---
 
@@ -300,6 +316,7 @@
 3. اختبر في Terminal للتأكّد إن كان فرق parser.
 4. أضف سطر/فقرة جديدة لهذا الملف.
 
-> **آخر تحديث:** 2026-05-27 — بعد commit `f1f9525` الذي حلّ ترَب
-> Hotspot عبر اقتباس `login-by`. الإعداد الكامل لمدخلَيْن دفعة وحدة
-> صار يمرّ بنجاح حتى مرحلة «التحقّق».
+> **آخر تحديث:** 2026-05-27 — بعد commit `69f5e1e` الذي حلّ مشكلة
+> استبدال الـ Broadband. الـ Broadband صار additive: إضافة مدخل
+> جديد لا تمسح المداخل القائمة. الـ Hotspot كذلك سليم بفضل
+> per-interface tags الموجودة في الـ planner.
