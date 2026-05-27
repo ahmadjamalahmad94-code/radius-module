@@ -1180,31 +1180,45 @@ def _classify_broadband_source(row: dict) -> str:
 
 
 def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
-    """No-op for hotspot scripts.
+    """Quote comma-list values on /ip hotspot profile add lines.
 
-    History: we previously tried to inject a HOBERADIUS_SETUP comment
-    onto /ip hotspot (server) and /ip hotspot profile entries so the
-    «خدماتي» inventory tab could distinguish wizard-managed rows from
-    operator-manual ones. RouterOS 7.20.6 turns out to expose NO
-    ``comment`` property on either entry type — every attempt to
-    ``set comment=...`` raised «expected end of command» right at the
-    ``c`` of ``comment``.
+    Context: the operator confirmed that pasting the exact same
+    script body into the MikroTik *Terminal* works fine, but sending
+    it through ``/system/script/add + /system/script/run`` (which is
+    what LiveRouterExecutor does) raises «expected end of command».
+    The script-mode parser is stricter than the CLI parser about
+    bare comma-separated values: ``login-by=http-pap,cookie,mac-cookie``
+    parses fine interactively but is rejected inside a stored script.
 
-    Verified failures from a real router:
-      - line 47 col 59 → /ip hotspot profile set [...] comment="..."
-      - line 49 col 52 → /ip hotspot         set [...] comment="..."
+    Fix: wrap any ``login-by=…,…`` value in double quotes so the
+    parser treats it as a single string literal. RouterOS accepts
+    the quoted form on both the CLI and inside scripts.
 
-    Resolution: don't try. The inventory classifier already has a
-    name-pattern fallback (``_classify_hotspot_source``) that
-    recognises ``hotspot-<iface>`` / ``hsprof-<iface>`` as
-    wizard-managed regardless of comment state, so dropping the
-    tagging is harmless.
-
-    Keeping the function in place (rather than removing it from the
-    call site) so the apply route's seam stays stable in case a
-    future RouterOS revision exposes a comment-like field we can use.
+    Note about tagging: we previously also tried injecting a
+    ``comment="HOBERADIUS_SETUP:..."`` onto hotspot rows so the
+    «خدماتي» inventory could classify them, but RouterOS 7.20.6
+    exposes NO ``comment`` property on /ip hotspot or
+    /ip hotspot profile entries — both raised their own traps. The
+    inventory classifier already recognises wizard-managed entries
+    by their ``hotspot-<iface>`` / ``hsprof-<iface>`` name pattern,
+    so tagging is unnecessary.
     """
-    return script
+    import re as _re
+
+    # Quote login-by=<list> if it contains a comma AND is not
+    # already quoted. The pattern allows bare tokens such as
+    # ``http-pap,cookie,mac-cookie`` but stops at the next
+    # whitespace, which is the property boundary in RouterOS.
+    re_login_by = _re.compile(
+        r"(login-by=)(?!\")([^\s\"]*,[^\s\"]*)"
+    )
+
+    out: list[str] = []
+    for line in script.split("\n"):
+        if "/ip hotspot profile add " in line:
+            line = re_login_by.sub(r'\1"\2"', line)
+        out.append(line)
+    return "\n".join(out)
 
 
 def setup_wizard_v3_router_inventory(router_id: int):
