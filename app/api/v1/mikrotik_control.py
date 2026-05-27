@@ -283,6 +283,31 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_ip_dns_cache_flush),
         methods=["POST"],
     )
+    # O7 — Backup management (manifest + list + restore)
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/backups",
+        "mt_backups_list",
+        require_api_token(mt_backups_list),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/backups/<int:backup_id>/manifest",
+        "mt_backup_manifest",
+        require_api_token(mt_backup_manifest),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/backups/<int:backup_id>/restore",
+        "mt_backup_restore",
+        require_api_token(mt_backup_restore),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/backups/<int:backup_id>",
+        "mt_backup_delete",
+        require_api_token(mt_backup_delete),
+        methods=["DELETE"],
+    )
     # O1 — Operations Center counters
     bp.add_url_rule(
         "/mikrotik/<int:nas_id>/counters",
@@ -771,6 +796,20 @@ def mt_files_list(nas_id: int):
 
 
 def mt_system_backup_save(nas_id: int):
+    """Create a `.backup` file on the router AND persist a manifest
+    snapshot in HobeRadius so the operator can later see «what was
+    configured at this backup's date» without restoring the file.
+
+    The actual `.backup` binary still lives on the router for now
+    (the MikroTik wire client doesn't expose a binary download API
+    yet — see FileDownloadNotSupported in mikrotik_admin_client).
+    When that helper lands, `file_blob` here starts carrying real
+    bytes too.
+    """
+    from app.radius.db.repos import router_backups_repo as backups_repo
+    from app.radius.services import router_backup_manifest as manifest_svc
+    import json as _json
+
     nas = _load_nas(nas_id)
     if not nas:
         return fail("not_found", "الراوتر غير موجود", status=404)
@@ -778,13 +817,55 @@ def mt_system_backup_save(nas_id: int):
     if not isinstance(body, dict):
         return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
     name = str(body.get("name") or "").strip() or _default_backup_name()
+    notes_in = str(body.get("notes") or "").strip()
+
     result = mac.backup_save(nas, name=name)
     _audit_mutation(
         nas_id=nas_id, action="mt.system.backup.save",
         target_id=name, result=result,
     )
+
     payload = _envelope(result, router_id=nas_id)
     payload["backup_name"] = name
+
+    # On success, also capture the manifest + record the row.
+    # Failures here are NON-FATAL — the .backup file is already on
+    # the router, so we still return success to the operator; the
+    # missing manifest just means the «خدماتي/Backups» list will
+    # show «—» for this row. We log to make this discoverable.
+    if result.ok:
+        try:
+            built = manifest_svc.build_manifest(nas)
+            manifest_dict = built.get("manifest") or {}
+            summary = built.get("summary") or ""
+            router_filename = f"{name}.backup"
+            backup_id = backups_repo.record(
+                tenant_id=_tid(),
+                router_id=nas_id,
+                backup_type="binary",
+                filename=f"{name}.backup",
+                router_filename=router_filename,
+                # Migration 078: keep file_blob NULL for now — the
+                # router-side file is the source of truth until the
+                # binary download helper lands.
+                file_blob=None,
+                size_bytes=0,
+                manifest_json=_json.dumps(manifest_dict, ensure_ascii=False),
+                manifest_summary=summary,
+                router_status="on_router",
+                notes=notes_in,
+                created_by=None,
+                reason="manual",
+            )
+            payload["backup_id"]        = backup_id
+            payload["manifest_summary"] = summary
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "backup manifest persist failed for router %d: %s",
+                nas_id, exc,
+            )
+
     return ok(payload)
 
 
@@ -918,6 +999,181 @@ def mt_ip_dns_cache_flush(nas_id: int):
         target_id=str(nas_id), result=result,
     )
     return ok(_envelope(result, router_id=nas_id))
+
+
+# ─── O7 / Backup management — list + manifest viewer ────────────
+
+
+def mt_backups_list(nas_id: int):
+    """Return all backups HobeRadius has on file for this router,
+    most-recent first. Each row carries the manifest_summary one-
+    liner; the full manifest is fetched separately."""
+    from app.radius.db.repos import router_backups_repo as repo
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    rows = repo.list_for_router(_tid(), nas_id, limit=100)
+    # Strip heavy / sensitive columns from the list view.
+    pruned = []
+    for r in rows:
+        pruned.append({
+            "id":               r["id"],
+            "name":             r.get("filename") or "",
+            "filename":         r.get("filename") or "",
+            "router_filename":  r.get("router_filename") or r.get("filename") or "",
+            "size_bytes":       r.get("size_bytes") or 0,
+            "status":           r.get("status") or "saved",
+            "router_status":    r.get("router_status") or "on_router",
+            "manifest_summary": r.get("manifest_summary") or "",
+            "created_at":       r.get("created_at") or "",
+            "restored_at":      r.get("restored_at") or "",
+            "restored_by":      r.get("restored_by") or "",
+            "reason":           r.get("reason") or "",
+            "notes":            r.get("notes") or "",
+            "has_blob":         bool(r.get("file_blob")),
+        })
+    return ok({"backups": pruned, "count": len(pruned),
+               "router_id": nas_id})
+
+
+def mt_backup_manifest(nas_id: int, backup_id: int):
+    """Return the full manifest JSON for one backup — used by the
+    «التفاصيل» expander in the backup list."""
+    import json as _json
+    from app.radius.db.repos import router_backups_repo as repo
+
+    if not _load_nas(nas_id):
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    row = repo.get_by_id(_tid(), backup_id)
+    if not row or int(row.get("router_id") or 0) != int(nas_id):
+        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+                    status=404)
+    try:
+        manifest = _json.loads(row.get("manifest_json") or "{}")
+    except Exception:  # noqa: BLE001
+        manifest = {"error": "manifest_parse_failed"}
+    return ok({
+        "id":               row.get("id"),
+        "router_id":        row.get("router_id"),
+        "name":             row.get("filename") or "",
+        "router_filename":  row.get("router_filename") or "",
+        "size_bytes":       row.get("size_bytes") or 0,
+        "manifest":         manifest,
+        "manifest_summary": row.get("manifest_summary") or "",
+        "created_at":       row.get("created_at") or "",
+        "created_by":       row.get("created_by"),
+        "notes":            row.get("notes") or "",
+        "reason":           row.get("reason") or "",
+        "router_status":    row.get("router_status") or "on_router",
+        "restored_at":      row.get("restored_at") or "",
+        "restored_by":      row.get("restored_by") or "",
+        "has_blob":         bool(row.get("file_blob")),
+    })
+
+
+def mt_backup_restore(nas_id: int, backup_id: int):
+    """Restore a saved backup. Phase A: only supports backups whose
+    on-router file is still present (we instruct the router to
+    `/system/backup/load` from its own /file). Phase B (later) will
+    push a HobeRadius-stored blob back to the router first.
+
+    Requires confirm=true in body — destructive: the router will
+    reboot itself as part of the restore.
+    """
+    from app.radius.db.repos import router_backups_repo as repo
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("bad_request", "الجسم يجب أن يكون JSON object",
+                    status=400)
+    guard = _require_confirm(body)
+    if guard is not None:
+        return guard
+    row = repo.get_by_id(_tid(), backup_id)
+    if not row or int(row.get("router_id") or 0) != int(nas_id):
+        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+                    status=404)
+    router_filename = (row.get("router_filename")
+                       or row.get("filename") or "").strip()
+    if not router_filename:
+        return fail("bad_state",
+                    "لا يوجد اسم ملف صالح للنسخة الاحتياطية",
+                    status=409)
+
+    # Phase A: rely on the file still being on the router. If it's
+    # not, surface a clear error — the operator must re-create or
+    # we wait for Phase B (binary push).
+    if (row.get("router_status") or "on_router") != "on_router":
+        return fail(
+            "blob_not_pushable",
+            "هذه النسخة محفوظة فقط في HobeRadius — استعادة الملف "
+            "تحتاج رفعه إلى الراوتر أولاً (ميزة قيد التطوير).",
+            status=501,
+        )
+
+    # Issue the load via the existing executor pattern. We don't
+    # have a dedicated `/system/backup/load` helper yet, so we do
+    # it inline — the router reboots itself afterwards.
+    try:
+        from app.radius.integration.mikrotik import MikrotikClient
+        with MikrotikClient(
+            host=str(nas.get("address") or ""),
+            username=str(nas.get("api_user") or "admin"),
+            password=str(nas.get("api_password") or ""),
+            port=int(nas.get("api_port") or 8728),
+            use_tls=bool(nas.get("api_use_tls") or False),
+            timeout=20.0,
+        ) as mt:
+            mt.run("/system/backup/load", attrs={
+                "name": router_filename,
+            })
+    except Exception as exc:  # noqa: BLE001
+        _audit_mutation(
+            nas_id=nas_id, action="mt.system.backup.restore",
+            target_id=router_filename,
+            result=type("R", (), {"ok": False, "error": str(exc)})(),
+        )
+        return fail("restore_failed", f"فشل التحميل: {exc}", status=502)
+
+    actor = (getattr(g, "actor", "") or "").strip() or "operator"
+    repo.mark_restored(_tid(), backup_id, by=actor,
+                       notes=str(body.get("notes") or ""))
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.backup.restore",
+        target_id=router_filename,
+        result=type("R", (), {"ok": True})(),
+    )
+    return ok({
+        "ok": True,
+        "router_id":       nas_id,
+        "backup_id":       backup_id,
+        "router_filename": router_filename,
+        "message": (
+            "تم إرسال أمر استعادة النسخة. الراوتر سيُعيد التشغيل "
+            "تلقائياً خلال دقيقة لتطبيق الاستعادة."
+        ),
+    })
+
+
+def mt_backup_delete(nas_id: int, backup_id: int):
+    """Remove a HobeRadius-side backup row. The on-router file is
+    NOT touched — operator removes that via Winbox if desired."""
+    from app.radius.db.repos import router_backups_repo as repo
+    if not _load_nas(nas_id):
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    row = repo.get_by_id(_tid(), backup_id)
+    if not row or int(row.get("router_id") or 0) != int(nas_id):
+        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+                    status=404)
+    repo.delete(_tid(), backup_id)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.backup.delete",
+        target_id=str(backup_id),
+        result=type("R", (), {"ok": True})(),
+    )
+    return ok({"deleted": True, "backup_id": backup_id})
 
 
 
