@@ -1,0 +1,716 @@
+/* ============================================================
+ * dashboard_premium.css
+ * Unified premium SaaS look for the router dashboard.
+ *
+ * Design language: soft lavender/white background, glass-
+ * morphism floating nav, large rounded cards, subtle purple
+ * glow accents. Arabic RTL throughout.
+ *
+ * All classes here are prefixed `np-` («new-premium») to avoid
+ * any collision with the existing `.mt-*` / `.rh-*` styles.
+ * The template applies BOTH old and new classes so JS hooks
+ * (data-mt-*) keep working unchanged.
+ * ============================================================ */
+
+/* ─── Design tokens ─────────────────────────────────────── */
+:root {
+  /* Brand */
+  --np-purple-50:  #F5F3FF;
+  --np-purple-100: #EDE9FE;
+  --np-purple-200: #DDD6FE;
+  --np-purple-300: #C4B5FD;
+  --np-purple-400: #A78BFA;
+  --np-purple-500: #8B5CF6;
+  --np-purple-600: #7C3AED;
+  --np-purple-700: #6D28D9;
+  --np-purple-800: #5B21B6;
+
+  /* Neutral */
+  --np-bg-1:    #FAFAFF;
+  --np-bg-2:    #F5F3FF;
+  --np-bg-3:    #EEF2FF;
+  --np-ink:     #0F172A;
+  --np-ink-2:   #1F2937;
+  --np-text:    #334155;
+  --np-text-2:  #64748B;
+  --np-text-3:  #94A3B8;
+  --np-line:    #E5E7EB;
+  --np-line-2:  rgba(124, 58, 237, 0.18);
+
+  /* Status */
+  --np-ok:    #10B981;
+  --np-warn:  #F59E0B;
+  --np-err:   #EF4444;
+  --np-info:  #3B82F6;
+
+  /* Radii */
+  --np-r-xs: 8px;
+  --np-r-sm: 10px;
+  --np-r-md: 14px;
+  --np-r-lg: 18px;
+  --np-r-xl: 22px;
+  --np-r-2xl: 28px;
+
+  /* Shadows */
+  --np-sh-1: 0 1px 3px rgba(15, 23, 42, 0.04);
+  --np-sh-2: 0 4px 14px rgba(15, 23, 42, 0.06);
+  --np-sh-3: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --np-sh-purple: 0 8px 24px rgba(124, 58, 237, 0.18);
+  --np-sh-purple-strong: 0 12px 32px rgba(124, 58, 237, 0.28);
+}
+
+/* ─── Page background ──────────────────────────────────── */
+/* The whole dashboard sits over a soft lavender gradient with
+   two faint decorative glows. Scoped to .mt-dashboard so we
+   don't touch the rest of the admin shell. */
+.mt-dashboard {
+  position: relative;
+  isolation: isolate;
+}
+.mt-dashboard::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 92% 8%,  rgba(167, 139, 250, 0.22), transparent 38%),
+    radial-gradient(circle at 8%  92%, rgba(99, 102, 241, 0.14),  transparent 40%),
+    linear-gradient(180deg, var(--np-bg-1) 0%, var(--np-bg-2) 60%, var(--np-bg-3) 100%);
+}
+
+/* ─── Floating top navigation ──────────────────────────── */
+/* The whole tab strip becomes a single glass pill that
+   floats over the page. Active tab is a glowing purple pill
+   inside the strip; inactive tabs are calm text + icon. */
+.mt-dashboard .mt-tabs-row {
+  /* Override the older flat border style — keep the existing
+     selector so JS that targets .mt-tabs-row still works. */
+  border-bottom: 0 !important;
+  margin: 8px 0 28px !important;
+  gap: 14px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.mt-dashboard .mt-tabs {
+  position: relative;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-radius: 999px;
+  padding: 6px;
+  gap: 2px;
+  box-shadow: var(--np-sh-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1 1 auto;
+}
+.mt-dashboard .mt-tabs::-webkit-scrollbar { display: none; }
+.mt-dashboard .mt-tab {
+  border: 0;
+  background: transparent;
+  color: var(--np-text);
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(.4,0,.2,1);
+}
+.mt-dashboard .mt-tab i { font-size: 13px; color: var(--np-text-2); transition: color 0.18s; }
+.mt-dashboard .mt-tab:hover {
+  background: rgba(124, 58, 237, 0.06);
+  color: var(--np-purple-800);
+}
+.mt-dashboard .mt-tab:hover i { color: var(--np-purple-600); }
+.mt-dashboard .mt-tab.is-active {
+  background: linear-gradient(135deg, var(--np-purple-500) 0%, var(--np-purple-700) 100%);
+  color: #FFFFFF !important;
+  border-bottom: 0 !important;
+  box-shadow: var(--np-sh-purple-strong);
+}
+.mt-dashboard .mt-tab.is-active i { color: #FFFFFF !important; animation: none !important; }
+.mt-dashboard .mt-tab.is-active::after { display: none; }
+/* Re-purpose the «خدماتي» special — it's just a regular tab now;
+   the special treatment was an old style we no longer need. */
+.mt-dashboard .mt-tab[data-mt-tab="my-services"] {
+  margin: 0;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--np-text);
+  animation: none;
+}
+.mt-dashboard .mt-tab[data-mt-tab="my-services"] i {
+  color: var(--np-text-2);
+  animation: none;
+}
+.mt-dashboard .mt-tab[data-mt-tab="my-services"]::after { display: none; }
+.mt-dashboard .mt-tab[data-mt-tab="my-services"]:hover {
+  background: rgba(124, 58, 237, 0.06);
+  color: var(--np-purple-800);
+}
+.mt-dashboard .mt-tab[data-mt-tab="my-services"]:hover i { color: var(--np-purple-600); }
+.mt-dashboard .mt-tab[data-mt-tab="my-services"].is-active {
+  background: linear-gradient(135deg, var(--np-purple-500), var(--np-purple-700));
+  color: #FFFFFF;
+  box-shadow: var(--np-sh-purple-strong);
+}
+.mt-dashboard .mt-tab[data-mt-tab="my-services"].is-active i { color: #FFFFFF; }
+
+/* Status pill on the right of the nav row */
+.mt-dashboard .mt-tabs-status {
+  padding-bottom: 0;
+  flex-shrink: 0;
+}
+.mt-dashboard .mt-tabs-status-pill {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--np-sh-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.mt-dashboard .mt-tabs-status-meta {
+  font-size: 12px;
+  color: var(--np-text-2);
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--np-line);
+  backdrop-filter: blur(12px);
+}
+
+/* ─── Premium hero (replaces .mt-page-hero) ─────────────── */
+.mt-dashboard .mt-page-hero,
+.mt-dashboard .rh-inv-hero,
+.mt-dashboard .rh-bk-simple-head {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--np-r-2xl) !important;
+  background: linear-gradient(135deg,
+              rgba(255, 255, 255, 0.95) 0%,
+              rgba(245, 243, 255, 0.92) 60%,
+              rgba(238, 242, 255, 0.88) 100%) !important;
+  border: 1px solid var(--np-line-2) !important;
+  box-shadow: var(--np-sh-3) !important;
+  padding: 32px 36px !important;
+  margin-bottom: 28px !important;
+}
+.mt-dashboard .mt-page-hero::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -15%;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.26), transparent 60%);
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 0;
+}
+.mt-dashboard .mt-page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+.mt-dashboard .mt-page-hero-copy { flex: 1 1 380px; min-width: 0; }
+.mt-dashboard .mt-page-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--np-line-2);
+  color: var(--np-purple-700);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: var(--np-sh-1);
+}
+.mt-dashboard .mt-page-hero-kicker i {
+  width: 18px; height: 18px;
+  border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  color: #fff;
+  font-size: 10px;
+  box-shadow: var(--np-sh-purple);
+}
+.mt-dashboard .mt-page-hero h3 {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  color: var(--np-ink) !important;
+  letter-spacing: -0.015em;
+  line-height: 1.18 !important;
+  margin: 0 !important;
+}
+.mt-dashboard .mt-page-hero p {
+  font-size: 14.5px !important;
+  color: var(--np-text-2) !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+  max-width: 680px;
+  margin: 10px 0 0 !important;
+}
+.mt-dashboard .mt-page-hero-chips {
+  margin-top: 18px !important;
+  gap: 10px !important;
+}
+.mt-dashboard .mt-page-hero-chips span {
+  padding: 7px 14px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid var(--np-line-2) !important;
+  color: var(--np-text) !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  box-shadow: var(--np-sh-1);
+}
+
+/* ─── Section heading helper ────────────────────────────── */
+.np-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 4px 16px;
+  flex-wrap: wrap;
+}
+.np-section-head h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--np-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.np-section-head h4 .np-section-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--np-purple-100);
+  color: var(--np-purple-700);
+}
+.np-section-head p {
+  margin: 4px 0 0;
+  color: var(--np-text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  width: 100%;
+}
+
+/* ─── Filter chip bar ──────────────────────────────────── */
+.np-filter-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--np-line);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+}
+.np-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--np-text);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.np-filter-chip:hover { background: rgba(124, 58, 237, 0.05); color: var(--np-purple-800); }
+.np-filter-chip.is-active {
+  background: linear-gradient(135deg, var(--np-purple-500), var(--np-purple-700));
+  color: #fff;
+  box-shadow: var(--np-sh-purple);
+}
+.np-filter-chip-count {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+  color: inherit;
+}
+.np-filter-chip:not(.is-active) .np-filter-chip-count {
+  background: var(--np-purple-100);
+  color: var(--np-purple-700);
+}
+
+/* ─── Cards (generic premium card) ─────────────────────── */
+.mt-dashboard .mt-card,
+.mt-dashboard .rh-inv-group {
+  border-radius: var(--np-r-lg) !important;
+  border: 1px solid var(--np-line) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: var(--np-sh-2) !important;
+  backdrop-filter: blur(8px);
+}
+.mt-dashboard .mt-card-head {
+  background: linear-gradient(180deg, rgba(245, 243, 255, 0.5), transparent) !important;
+  border-bottom: 1px solid var(--np-line) !important;
+  padding: 16px 20px !important;
+}
+.mt-dashboard .mt-card-head h3 {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+.mt-dashboard .mt-card-head h3 i {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  color: #fff !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px !important;
+  box-shadow: var(--np-sh-purple);
+}
+
+/* ─── KPI cards (Overview hub-kpi) ─────────────────────── */
+.mt-dashboard .hub-kpi-grid {
+  gap: 16px !important;
+}
+.mt-dashboard .hub-kpi {
+  border-radius: var(--np-r-lg) !important;
+  border: 1px solid var(--np-line) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: var(--np-sh-2) !important;
+  padding: 18px !important;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.mt-dashboard .hub-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--np-sh-3) !important;
+}
+.mt-dashboard .hub-kpi-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  font-size: 18px !important;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700)) !important;
+  color: #fff !important;
+  box-shadow: var(--np-sh-purple) !important;
+}
+.mt-dashboard .hub-kpi--brand  .hub-kpi-icon { background: linear-gradient(135deg, #A78BFA, #7C3AED) !important; }
+.mt-dashboard .hub-kpi--blue   .hub-kpi-icon { background: linear-gradient(135deg, #60A5FA, #2563EB) !important; }
+.mt-dashboard .hub-kpi--green  .hub-kpi-icon { background: linear-gradient(135deg, #34D399, #059669) !important; }
+.mt-dashboard .hub-kpi--amber  .hub-kpi-icon { background: linear-gradient(135deg, #FBBF24, #D97706) !important; box-shadow: 0 8px 24px rgba(217, 119, 6, 0.18) !important; }
+.mt-dashboard .hub-kpi--purple .hub-kpi-icon { background: linear-gradient(135deg, #C084FC, #7E22CE) !important; }
+.mt-dashboard .hub-kpi--grey   .hub-kpi-icon { background: linear-gradient(135deg, #94A3B8, #475569) !important; box-shadow: 0 8px 24px rgba(71, 85, 105, 0.18) !important; }
+.mt-dashboard .hub-kpi-label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--np-text-2) !important;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.mt-dashboard .hub-kpi-value {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  color: var(--np-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+.mt-dashboard .hub-kpi-sub {
+  font-size: 11.5px !important;
+  color: var(--np-text-3) !important;
+  font-weight: 600 !important;
+}
+
+/* ─── Service card grid (My Services management area) ──── */
+.np-svc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.np-svc-card {
+  position: relative;
+  border-radius: var(--np-r-xl);
+  border: 1px solid var(--np-line);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 22px 22px 60px;
+  box-shadow: var(--np-sh-2);
+  transition: all 0.2s cubic-bezier(.4,0,.2,1);
+  text-decoration: none;
+  display: block;
+  color: inherit;
+  overflow: hidden;
+}
+.np-svc-card::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.18), transparent 70%);
+  filter: blur(10px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.np-svc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--np-sh-3);
+  border-color: var(--np-purple-200);
+}
+.np-svc-card:hover::before { opacity: 1; }
+.np-svc-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 14px;
+  box-shadow: var(--np-sh-purple);
+  position: relative;
+}
+.np-svc-icon--purple { background: linear-gradient(135deg, #A78BFA, #6D28D9); }
+.np-svc-icon--blue   { background: linear-gradient(135deg, #60A5FA, #1E40AF); }
+.np-svc-icon--green  { background: linear-gradient(135deg, #34D399, #047857); }
+.np-svc-icon--amber  { background: linear-gradient(135deg, #FBBF24, #B45309); box-shadow: 0 8px 24px rgba(217, 119, 6, 0.22); }
+.np-svc-icon--red    { background: linear-gradient(135deg, #F87171, #B91C1C); box-shadow: 0 8px 24px rgba(220, 38, 38, 0.22); }
+.np-svc-icon--teal   { background: linear-gradient(135deg, #2DD4BF, #0F766E); box-shadow: 0 8px 24px rgba(20, 184, 166, 0.22); }
+.np-svc-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--np-ink);
+  line-height: 1.3;
+}
+.np-svc-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--np-text-2);
+  font-weight: 600;
+  line-height: 1.6;
+}
+.np-svc-arrow {
+  position: absolute;
+  bottom: 16px;
+  left: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--np-purple-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+.np-svc-card:hover .np-svc-arrow {
+  background: var(--np-purple-600);
+  color: #fff;
+  transform: translateX(-3px);
+}
+.np-svc-status-dot {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--np-text-3);
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+}
+.np-svc-status-dot.is-active {
+  background: var(--np-ok);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+}
+.np-svc-status-dot.is-inactive {
+  background: var(--np-text-3);
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+}
+.np-svc-status-dot.is-unknown {
+  background: var(--np-warn);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+/* ─── Status card row (Added Services Status area) ─────── */
+.np-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+.np-status-card {
+  border-radius: var(--np-r-lg);
+  border: 1px solid var(--np-line);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 16px 18px;
+  box-shadow: var(--np-sh-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.18s;
+}
+.np-status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--np-sh-3);
+}
+.np-status-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.np-status-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--np-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.np-status-card-title i {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: #fff;
+}
+.np-status-card .np-svc-status-dot {
+  position: static;
+  margin-inline-start: auto;
+}
+.np-status-card-body {
+  font-size: 13px;
+  color: var(--np-text);
+  font-weight: 700;
+}
+.np-status-card-body strong {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--np-ink);
+}
+.np-status-card-meta {
+  font-size: 11.5px;
+  color: var(--np-text-3);
+  font-weight: 600;
+}
+.np-status-card-spark {
+  height: 22px;
+  margin-top: 2px;
+}
+.np-status-card-spark path { stroke-width: 2; fill: none; }
+.np-status-card--green  .np-status-card-spark path { stroke: var(--np-ok); }
+.np-status-card--amber  .np-status-card-spark path { stroke: var(--np-warn); }
+.np-status-card--red    .np-status-card-spark path { stroke: var(--np-err); }
+.np-status-card--blue   .np-status-card-spark path { stroke: var(--np-info); }
+
+/* ─── Empty state ──────────────────────────────────────── */
+.np-empty {
+  text-align: center;
+  padding: 56px 28px;
+  border-radius: var(--np-r-xl);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px dashed var(--np-line-2);
+  color: var(--np-text-2);
+}
+.np-empty-icon {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--np-purple-100), var(--np-purple-200));
+  color: var(--np-purple-600);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin-bottom: 14px;
+  box-shadow: var(--np-sh-1);
+}
+.np-empty h5 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--np-ink);
+}
+.np-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--np-text-2);
+  line-height: 1.7;
+}
+
+/* ─── Buttons (primary pill) ──────────────────────────── */
+.np-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--np-purple-800);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s;
+  backdrop-filter: blur(8px);
+}
+.np-btn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--np-purple-300);
+  transform: translateY(-1px);
+}
+.np-btn--primary {
+  background: linear-gradient(135deg, var(--np-purple-500), var(--np-purple-700));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--np-sh-purple);
+}
+.np-btn--primary:hover {
+  background: linear-gradient(135deg, var(--np-purple-600), var(--np-purple-800));
+  box-shadow: var(--np-sh-purple-strong);
+  color: #fff;
+}
+
+/* ─── Responsive ───────────────────────────────────────── */
+@media (max-width: 900px) {
+  .mt-dashboard .mt-tabs-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mt-dashboard .mt-tabs-status {
+    align-self: flex-end;
+  }
+  .mt-dashboard .mt-page-hero {
+    padding: 24px 22px !important;
+  }
+  .mt-dashboard .mt-page-hero h3 {
+    font-size: 24px !important;
+  }
+  .np-svc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .mt-dashboard .mt-tab {
+    padding: 8px 14px;
+    font-size: 12.5px;
+  }
+}

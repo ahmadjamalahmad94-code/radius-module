@@ -10,6 +10,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_premium.css') }}">
 <style>
 /* ──────────────────────────────────────────────────────────────
    Router Hub — full redesign (May 2026)
@@ -1696,19 +1697,21 @@
     </section>
   </section>{# /diagnostics panel — last of P-series #}
 
-  {# ─── «خدماتي» tab — unified active-services inventory ─── #}
+  {# ─── «خدماتي» tab — unified premium services hub ───────── #}
   <section class="mt-tab-panel rh-inventory"
            data-mt-tab-panel="my-services" role="tabpanel" hidden>
-    <div class="rh-inv-hero">
-      <div class="rh-inv-hero-glow" aria-hidden="true"></div>
-      <div class="rh-inv-hero-copy">
-        <span class="rh-inv-kicker">
-          <i class="fa-solid fa-screwdriver-wrench"></i>
+
+    {# ── Premium hero (mt-page-hero matches the rest of the
+         dashboard now — single visual language) ───────────── #}
+    <div class="mt-page-hero rh-inv-hero">
+      <div class="mt-page-hero-copy rh-inv-hero-copy">
+        <span class="mt-page-hero-kicker rh-inv-kicker">
+          <i class="fa-solid fa-bolt"></i>
           مركز خدمات الراوتر
         </span>
-        <h3>خدماتي على هذا الراوتر</h3>
-        <p>كل الخدمات المفعَّلة الآن، مع مصدرها وحذف آمن بتأكيد.</p>
-        <div class="rh-inv-hero-chips">
+        <h3>مركز خدمات الراوتر</h3>
+        <p>إدارة جميع خدمات الراوتر من مكان واحد — إضافة، ضبط، فحص ومراقبة الحالة.</p>
+        <div class="mt-page-hero-chips rh-inv-hero-chips">
           <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
           <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
           <span><i class="fa-solid fa-route"></i> عبر VPN</span>
@@ -1728,11 +1731,85 @@
           <span class="rh-inv-stat-lbl">يدوي</span>
         </div>
       </div>
-      <button type="button" class="rh-inv-refresh" data-rh-inv-refresh
-              title="تحديث القائمة">
-        <i class="fa-solid fa-rotate"></i>
-        <span>تحديث</span>
-      </button>
+    </div>
+
+    {# ── A) Service management grid — 6 service cards ──────
+         These link to the existing setup_wizard_v3 service flows
+         (same URLs as the Router Hub cards above). The data list
+         is identical to the rh-hub-cards--svc list earlier in this
+         template — kept inline so each tab is self-contained. #}
+    <div class="np-section-head">
+      <div>
+        <h4>
+          إدارة الخدمات
+          <span class="np-section-badge">6</span>
+        </h4>
+        <p>إضافة وضبط وإدارة جميع الخدمات على الراوتر — 4 مراحل لكل خدمة.</p>
+      </div>
+    </div>
+    <div class="np-svc-grid">
+      {% for svc in [
+        {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'sub': 'توجيه المشتركين عبر IP عام جديد',     'icon': 'globe',           'color': 'amber'},
+        {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ VPN آمن لإدارة الراوتر',          'icon': 'key',             'color': 'purple'},
+        {'key': 'hotspot',       'title': 'برمجة Hotspot',     'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
+        {'key': 'broadband',     'title': 'برمجة Broadband',   'sub': 'PPPoE — اشتراك ثابت لكل مستخدم',     'icon': 'ethernet',        'color': 'green'},
+        {'key': 'block-sites',   'title': 'حجب المواقع',        'sub': 'منع الوصول لمواقع محدّدة',             'icon': 'ban',             'color': 'red'},
+        {'key': 'open-sites',    'title': 'فتح المواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',        'icon': 'circle-check',    'color': 'teal'},
+      ] %}
+      {# Reuse `data-rh-svc-card` + `data-rh-svc-status` so the
+         existing probeStatus() loop fills the dot — no JS changes
+         needed. #}
+      <a class="np-svc-card"
+         data-rh-svc-card="{{ svc.key }}"
+         href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                          router_id=nas.id, service_key=svc.key) }}">
+        <span class="np-svc-status-dot" data-rh-svc-status
+              title="جارٍ الفحص…"></span>
+        <span class="np-svc-icon np-svc-icon--{{ svc.color }}">
+          <i class="fa-solid fa-{{ svc.icon }}"></i>
+        </span>
+        <h5 class="np-svc-title">{{ svc.title }}</h5>
+        <p class="np-svc-desc">{{ svc.sub }}</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+
+    {# ── B) Added services status area — filter + groups ──── #}
+    <div class="np-section-head">
+      <div>
+        <h4>
+          حالة الخدمات
+          <span class="np-section-badge" data-rh-inv-stat-total>0</span>
+        </h4>
+        <p>عرض حالة الخدمات المضافة يدوياً وتلقائياً، مع مصدر كل خدمة وزر حذف آمن.</p>
+      </div>
+      <div class="np-svc-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="np-filter-bar" role="tablist" aria-label="تصفية الخدمات">
+          <button type="button" class="np-filter-chip is-active"
+                  data-np-filter="all" role="tab" aria-selected="true">
+            الكل
+            <span class="np-filter-chip-count" data-rh-inv-stat-total>0</span>
+          </button>
+          <button type="button" class="np-filter-chip"
+                  data-np-filter="hoberadius" role="tab" aria-selected="false">
+            تلقائيّة
+            <span class="np-filter-chip-count" data-rh-inv-stat-hr>0</span>
+          </button>
+          <button type="button" class="np-filter-chip"
+                  data-np-filter="operator" role="tab" aria-selected="false">
+            يدويّة
+            <span class="np-filter-chip-count" data-rh-inv-stat-op>0</span>
+          </button>
+        </div>
+        <button type="button" class="np-btn rh-inv-refresh"
+                data-rh-inv-refresh title="تحديث القائمة">
+          <i class="fa-solid fa-rotate"></i>
+          <span>تحديث</span>
+        </button>
+      </div>
     </div>
     <div class="rh-inv-loading" data-rh-inv-loading>
       <i class="fa-solid fa-spinner fa-spin"></i>
@@ -2523,6 +2600,7 @@
       wireDeleteButtons();
       wireCopyButtons();
       startCountdowns();
+      applyFilter();
     } catch (err) {
       errorEl.textContent = String(err && err.message || err);
       errorEl.hidden = false;
@@ -2741,7 +2819,8 @@
            data-rh-inv-svc="${safe(g.service_type)}"
            data-rh-inv-target="${safe(it.target)}"
            data-rh-inv-label="${safe(it.label)}"
-           data-rh-inv-group-title="${safe(g.title)}">
+           data-rh-inv-group-title="${safe(g.title)}"
+           data-rh-source="${safe(it.source || 'hoberadius')}">
         <div class="rh-inv-card-head">
           <span class="rh-inv-card-label" title="${safe(it.label)}">${safe(it.label)}</span>
           ${permBlock}
@@ -2911,6 +2990,40 @@
   modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
   if (refreshBtn) refreshBtn.addEventListener("click", loadInventory);
+
+  // ── Filter chips (الكل / تلقائيّة / يدويّة) ─────────────
+  // Hide/show inventory cards whose .rh-inv-card[data-rh-inv-svc]
+  // → looked up via the card's `data-rh-source` attribute (which
+  // renderCard sets from the inventory item's source field).
+  // Empty groups (all cards filtered out) get hidden too so the
+  // operator doesn't see a header with no rows under it.
+  let currentFilter = "all";
+  const filterChips = panel.querySelectorAll("[data-np-filter]");
+  function applyFilter() {
+    panel.querySelectorAll(".rh-inv-card").forEach((card) => {
+      const src = card.dataset.rhSource || "hoberadius";
+      const ok = currentFilter === "all" || src === currentFilter;
+      card.style.display = ok ? "" : "none";
+    });
+    // Hide groups that have no visible cards.
+    panel.querySelectorAll(".rh-inv-group").forEach((g) => {
+      const visible = g.querySelectorAll(
+        ".rh-inv-card:not([style*=\"display: none\"])"
+      ).length;
+      g.style.display = visible ? "" : "none";
+    });
+  }
+  filterChips.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentFilter = btn.dataset.npFilter;
+      filterChips.forEach((c) => {
+        const on = c === btn;
+        c.classList.toggle("is-active", on);
+        c.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      applyFilter();
+    });
+  });
 
   // Lazy-load: don't hit the router unless the operator clicks the
   // tab. Avoids a needless API call on every dashboard open.
