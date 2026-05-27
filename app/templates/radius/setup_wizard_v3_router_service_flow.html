@@ -484,11 +484,13 @@ li[data-status="pending"] .swsvf-verify-icon{
   page.querySelectorAll("[data-swsvf-next]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const next = btn.dataset.swsvfNext;
-      // When leaving "configure" → collect form data. The per-service
-      // partial is responsible for filling `data-swsvf-configure-payload`
-      // on the page element (as a JSON string) when it considers the
-      // form valid. Until that's wired (commits 3-8), we just advance.
+      // When leaving "configure" → ask the partial to refresh its
+      // payload one last time (covers edge cases where the change/
+      // input events didn't fire for some interaction). Each partial
+      // listens for swsvf:configure-collect and re-runs refreshPayload.
+      // After the event, we read the freshly-written dataset value.
       if (currentPhase === "configure") {
+        page.dispatchEvent(new CustomEvent("swsvf:configure-collect"));
         const raw = page.dataset.swsvfConfigurePayload || "";
         try {
           configurePayload = raw ? JSON.parse(raw) : {};

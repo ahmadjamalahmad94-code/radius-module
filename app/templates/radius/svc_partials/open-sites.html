@@ -90,6 +90,8 @@ hotel.local
   }
   textarea.addEventListener("input", refreshPayload);
   refreshPayload();
+  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   let lastPayload = null;
 

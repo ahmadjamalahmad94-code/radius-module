@@ -141,6 +141,8 @@ streaming.service.com"></textarea>
   }
   nodeSel.addEventListener("change", refreshPayload);
   textarea.addEventListener("input", refreshPayload);
+  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   /* Load exit nodes on partial mount */
   async function loadNodes() {

@@ -272,6 +272,11 @@
   ifaceList.addEventListener("change", refreshPayload);
   subnetInput.addEventListener("input", refreshPayload);
   refreshPayload();
+  // Last-chance refresh: the shell fires this event right before
+  // reading the payload on «التالي», so even if change/input never
+  // fired for some interaction (autofill, fast clicks, programmatic
+  // checks), we re-serialize the current DOM state.
+  page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   /* ─── Phase-change handler: drive preview/apply/verify ─── */
   let lastPayload = null;

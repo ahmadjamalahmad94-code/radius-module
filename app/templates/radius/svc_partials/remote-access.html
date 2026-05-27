@@ -171,6 +171,8 @@
   ttlSel.addEventListener("change", refreshPayload);
   sourceInput.addEventListener("input", refreshPayload);
   refreshPayload();
+  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   let lastPayload = null;
   page.addEventListener("swsvf:phase-change", async (ev) => {

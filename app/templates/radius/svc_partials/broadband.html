@@ -188,6 +188,8 @@
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
   [localInput, poolInput].forEach((el) => el && el.addEventListener("input", refreshPayload));
   refreshPayload();
+  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   /* ── Phase-change handler ── */
   let lastPayload = null;
