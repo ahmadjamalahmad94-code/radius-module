@@ -950,8 +950,25 @@
         body: JSON.stringify(body || {}),
       });
       actionResEl && actionResEl.classList.remove("is-progress");
-      writeOutput(env || { status: res.status },
-                  res.ok && env && env.ok !== false);
+      // The API wraps results in a two-layer envelope:
+      //   env.ok          — HTTP-level success (always true on 2xx)
+      //   env.data.ok     — business-level result (router-side fail
+      //                     surfaces here even when HTTP returned 200)
+      //   env.data.error  — human-readable Arabic error from MT
+      // The renderer needs the INNER ok so a router-side failure
+      // doesn't render as a green «تم بنجاح» — which is what
+      // happened for the «test 1» backup name (space rejected by
+      // _sanitize_backup_name but UI still flashed success).
+      const inner = (env && env.data) || {};
+      const innerOk = !(inner && inner.ok === false);
+      const finalOk = !!(res.ok && env && env.ok !== false && innerOk);
+      // Promote inner.error to the top level so renderResultCard's
+      // failBody() can pick it up without changing its lookup path.
+      const surfaced = env || { status: res.status };
+      if (!finalOk && inner && inner.error && !surfaced.error) {
+        surfaced.error = inner.error;
+      }
+      writeOutput(surfaced, finalOk);
       return { res, env };
     } catch (err) {
       actionResEl && actionResEl.classList.remove("is-progress");
