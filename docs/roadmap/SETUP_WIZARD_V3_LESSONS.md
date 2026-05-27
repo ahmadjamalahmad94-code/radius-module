@@ -201,6 +201,14 @@
 - **المشكلة:** قال نجح لكن ما عرض شيء.
 - **الحلّ:** بناء حمولة `connection_info` كاملة في response الـ apply + إعادة استخدامها في الـ inventory.
 
+### 8.4 ⚠️ مبدأ التشغيل بدون terminal VPS (End-User Self-Service)
+- **القاعدة:** المنتج تجاري ومُوجَّه لمستخدمين نهائيين. أي إعداد بنيوي (env var، تعديل compose، SSH) **غير مقبول**.
+- **التطبيق على `public_host`:** بدل ما نخلّي المستخدم يفتح Terminal على الـ VPS ويعدّل `.env`، خلّيناها قابلة للضبط من «إعدادات النظام» في الواجهة:
+  - مفتاح DB: `infra.public_host` في جدول `tenant_settings`.
+  - الدالة `npc_remote_tunnel.public_host(tenant_id=...)` تقرأ من DB أولاً، ثم env var، ثم تُرجع فارغة.
+  - بانر «خدماتي» لو ما لقى عنوان، يعرض زر مباشر «افتح إعدادات النظام وأضف العنوان» بدل ما يخبر المستخدم عن متغيّر بيئة ما يفهمه.
+- **هذا مبدأ ثابت يُطبَّق على كل إعداد بنيوي مستقبلي:** أي قيمة كانت سابقاً في `.env` ويحتاجها المستخدم النهائي → تنتقل لجدول `tenant_settings` مع كاش env كـ fallback لـ bootstrap.
+
 ### 8.3 ⚠️ Remote-Access كان يعرض IP الراوتر بدل عنوان VPS
 - **المشكلة:** الـ apply كان يقرأ `/ip cloud` من الراوتر ويعرض الـ public-address الذي تمنحه ISP العميل. لكن أغلب ISPs بيعطو IPs متغيّرة (DHCP / CGNAT)، فالرابط بيصير قديم خلال ساعات.
 - **التصميم الصحيح في الـ codebase أصلاً موجود:**
@@ -321,6 +329,9 @@
 | `69f5e1e` | Broadband: scope cleanup per-interface (fix replacement bug) ← **حلّ مشكلة الاستبدال** |
 | `fc0f1ce` | Docs: log broadband replacement bug + per-interface cleanup fix |
 | `39600b1` | Remote-access: surface VPS host:port (not router public IP) ← **حلّ مشكلة IP المتغيّر** |
+| `6040e88` | Docs: log remote-access VPS-IP redirection (section 8.3) |
+| `2cd870f` | Env: document HOBERADIUS_PUBLIC_HOST in .env.example |
+| `cb5a4b0` | Settings: move public_host to DB (UI editable, no VPS terminal) ← **End-user self-service** |
 
 ---
 
