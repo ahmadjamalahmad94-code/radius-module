@@ -91,8 +91,11 @@ def render_forward_script(plan: ScriptPlan) -> str:
             plan.mangle_ops),
         ("nat — src-nat on the wg interface so VPS accepts packets",
             plan.nat_ops),
-        ("firewall filter — fail-mode protection",
+        ("firewall filter — FastTrack bypass + fail-mode protection",
             plan.firewall_filter_ops),
+        ("connection flush — re-evaluate ongoing sessions so they"
+         " pick up the new routing decision",
+            plan.connection_flush_ops),
     ]
     for header, cmds in sections:
         cmd_list = tuple(cmds)
@@ -237,13 +240,29 @@ def _render_add(cmd: PlanCommand, *, plan: ScriptPlan) -> str:
 
 
 def _render_remove(cmd: PlanCommand, *, plan: ScriptPlan) -> str:
+    head = "/" + " ".join(cmd.path.strip("/").split("/"))
+
+    # Special-case: connection-flush ops target the live
+    # `/ip/firewall/connection` table, which has NO `comment`
+    # column — the COMMENT_TAG safety check doesn't apply. The
+    # planner supplies a complete RouterOS filter expression
+    # (e.g. `[find dst-address-list="al"]`) so we emit it
+    # verbatim.
+    if cmd.section == "connection-flush":
+        pattern = cmd.find_pattern or ""
+        if not pattern.startswith("["):
+            raise RenderSafetyError(
+                "connection-flush requires a complete RouterOS"
+                " find expression (starting with `[`)"
+            )
+        return f"{head} remove {pattern}"
+
     pattern = cmd.find_pattern or plan.comment_prefix.rstrip(":")
     if COMMENT_TAG not in pattern:
         raise RenderSafetyError(
             "refusing to render a remove that doesn't target"
             f" {COMMENT_TAG} — would touch unmanaged rules"
         )
-    head = "/" + " ".join(cmd.path.strip("/").split("/"))
     # `[find comment~"PREFIX"]` — RouterOS substring match on
     # the comment column. Safe because the prefix uniquely
     # identifies our managed rows.

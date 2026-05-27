@@ -114,6 +114,10 @@ class ScriptPlan:
     mangle_ops:          tuple[PlanCommand, ...] = ()
     nat_ops:             tuple[PlanCommand, ...] = ()
     firewall_filter_ops: tuple[PlanCommand, ...] = ()
+    # VX2.6d — flush already-tracked connections after the rules
+    # are in place. Runs LAST so the freshly-mangled routing
+    # decision is what the kernel re-picks for ongoing sessions.
+    connection_flush_ops: tuple[PlanCommand, ...] = ()
 
     rollback_ops:        tuple[PlanCommand, ...] = ()
 
@@ -138,6 +142,7 @@ class ScriptPlan:
             + self.mangle_ops
             + self.nat_ops
             + self.firewall_filter_ops
+            + self.connection_flush_ops
         )
 
     @property
@@ -408,6 +413,96 @@ def build_plan(
         ),
     ]
 
+    # ── FastTrack bypass + connection flush ──
+    # VX2.6d — without these two, the apply «succeeds» on paper but
+    # the actual outbound IP DOES NOT change in the wild. Two
+    # independent reasons:
+    #
+    # 1) FastTrack: most RouterOS default configs have
+    #    `/ip/firewall/filter add chain=forward action=fasttrack-
+    #    connection connection-state=established,related`. After the
+    #    first packet of a connection, FastTrack short-circuits the
+    #    forwarding path; the mangle table is skipped, so the
+    #    routing-mark isn't re-applied. The connection's existing
+    #    routing decision sticks — if that decision was made BEFORE
+    #    our mangle rule existed, the traffic stays on the main WAN.
+    #
+    # 2) Already-tracked connections: at apply time, the kernel
+    #    already has connection-state entries for ongoing sessions
+    #    to the destinations. Those entries hold the original
+    #    routing decision. mangle only marks NEW connections.
+    #
+    # Both are solved here: emit an early `accept` rule that fires
+    # BEFORE the FastTrack rule (we use place-before=0 so we're
+    # the first rule in the chain), then flush any pre-existing
+    # connections to our destinations so subsequent packets
+    # re-traverse the full chain and pick up the new routing mark.
+    mangle_ops.append(
+        # `mark-connection` so even if a later FastTrack reaches the
+        # connection, the routing-mark is recoverable from the
+        # connection-mark on the very next mangle pass.
+        PlanCommand(
+            section="mangle",
+            path="/ip/firewall/mangle",
+            kind="add",
+            attrs={
+                "chain": "prerouting",
+                "dst-address-list": al_name,
+                "action": "mark-connection",
+                "new-connection-mark": rt_name,
+                "passthrough": "yes",
+                "comment": f"{cprefix}mark-conn",
+            },
+            note="tag the connection so the mark survives FastTrack",
+        )
+    )
+
+    # Single rule per chain-state to keep the values bare (no commas
+    # in any single attr). Same lesson from the Hotspot script-mode
+    # parser fix: comma-list values are unreliable inside
+    # `/system/script/run` even though they work in interactive CLI.
+    fasttrack_bypass_ops: list[PlanCommand] = []
+    for _cs in ("new", "established", "related"):
+        fasttrack_bypass_ops.append(PlanCommand(
+            section="firewall-filter",
+            path="/ip/firewall/filter",
+            kind="add",
+            attrs={
+                "chain": "forward",
+                "dst-address-list": al_name,
+                "connection-state": _cs,
+                "action": "accept",
+                "place-before": "0",
+                "comment": f"{cprefix}fasttrack-bypass:{_cs}",
+            },
+            note=f"accept-before-fasttrack ({_cs}) so mangle's"
+                 " routing mark isn't bypassed by /ip/firewall/"
+                 "filter's action=fasttrack-connection rule",
+        ))
+
+    # Connection-flush — pragmatic: RouterOS `/ip/firewall/connection`
+    # doesn't expose a `dst-address-list` column, so we can't filter
+    # `[find dst-address-list=...]`. We could walk every connection
+    # and cross-reference the address-list with `:foreach` but that
+    # gets expensive on big routers AND domain-typed list entries
+    # don't compare equal to packet dst-addresses (the list holds
+    # `example.com`, the connection holds `93.184.216.34`).
+    #
+    # The mark-connection rule + the fasttrack-bypass filter together
+    # ensure NEW connections pick the right path. For ongoing pre-
+    # existing connections to the managed destinations, the operator
+    # is told (via warning) to either wait for them to expire or
+    # manually flush them. Leaving connection_flush_ops empty keeps
+    # the renderer code path stable while not generating broken
+    # RouterOS syntax.
+    connection_flush_ops: list[PlanCommand] = []
+    warnings.append(
+        "الاتصالات الجارية مسبقًا قبل التطبيق قد تستمرّ على المسار "
+        "القديم لبضع دقائق. لتسريع التحوّل: أعِد تشغيل الجهاز "
+        "على شبكة العميل، أو امسح يدويًا "
+        "`/ip firewall connection` للوجهات المحدّدة."
+    )
+
     # ── NAT — src-nat on the WireGuard interface ──
     # VX2.6c — REQUIRED for the VPS peer to accept packets.
     # WireGuard cryptokey-routes on the VPS side configure the
@@ -438,7 +533,11 @@ def build_plan(
     ]
 
     # ── Fail-mode protection ──
-    firewall_filter_ops: list[PlanCommand] = []
+    # firewall_filter_ops starts with the FastTrack bypass rules so
+    # the operator's existing fasttrack-connection rule (the default
+    # MikroTik one) doesn't short-circuit our mangle's
+    # routing-mark.
+    firewall_filter_ops: list[PlanCommand] = list(fasttrack_bypass_ops)
     if fail_mode == "block_when_vps_down":
         if wan_interface_list:
             firewall_filter_ops.append(PlanCommand(
@@ -507,6 +606,7 @@ def build_plan(
         route_ops=route_ops,
         mangle_ops=tuple(mangle_ops),
         nat_ops=tuple(nat_ops),
+        connection_flush_ops=tuple(connection_flush_ops),
         firewall_filter_ops=tuple(firewall_filter_ops),
         rollback_ops=rollback_ops,
         warnings=tuple(warnings),
