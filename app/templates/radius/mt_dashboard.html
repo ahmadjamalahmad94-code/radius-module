@@ -350,7 +350,10 @@
 /* ─── 2-column grid (Traffic + Active users) ─── */
 .rh-overview .mt-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-  gap:14px;margin:0;
+  gap:16px;margin:0 0 18px;
+  /* Stretch cards to the same height so the visual baseline of the
+     grid stays flat regardless of content size differences. */
+  align-items:stretch;
 }
 
 /* ─── Cards (Traffic, Users, Actions) ─── */
@@ -358,7 +361,12 @@
   background:#fff;border:1px solid #EAECF0;border-radius:14px;
   overflow:hidden;
   box-shadow:0 1px 2px rgba(15,23,42,.03);
+  /* Cards stretch to match siblings in the grid + the body pushes
+     anything below it down via flex so empty states don't collapse. */
+  display:flex;flex-direction:column;
 }
+.rh-overview .mt-card-body{flex:1 1 auto}
+.rh-overview .mt-card--actions{margin-top:6px}
 .rh-overview .mt-card-head{
   display:flex;align-items:center;justify-content:space-between;
   gap:12px;padding:14px 18px;
@@ -377,35 +385,173 @@
   color:#94A3B8;font-size:13px;text-align:center;padding:16px 0;margin:0;
 }
 
-/* ─── Quick actions ─── */
+/* ─── Quick actions — redesigned tiles ────────────────────────
+   Each action becomes a tile with a coloured icon-tablet on the
+   side, a strong label, and a one-line plain-Arabic hint
+   (no raw API paths in the operator's face). Variants:
+     default → indigo / brand
+     danger  → red (destructive: reboot, identity change)
+     info    → teal (read-only: ping, dns flush)
+   Active state (form open) glows. */
 .rh-overview .mt-card--actions .mt-actions-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:10px;
+  gap:12px;
+  align-items:stretch;
 }
 .rh-overview .mt-action-btn{
-  display:flex;align-items:flex-start;gap:10px;
-  background:#fff;border:1px solid #EAECF0;border-radius:11px;
-  padding:11px 14px;text-align:start;cursor:pointer;
-  transition:all .15s;
+  display:flex;align-items:center;gap:12px;
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:14px 16px;text-align:start;cursor:pointer;
+  transition:all .18s ease;
+  min-height:64px;
 }
 .rh-overview .mt-action-btn:hover{
-  border-color:#6B5AED;transform:translateY(-1px);
-  box-shadow:0 3px 12px rgba(107,90,237,.10);
+  border-color:#A5B4FC;transform:translateY(-2px);
+  box-shadow:0 12px 26px rgba(99,102,241,.14);
+}
+.rh-overview .mt-action-btn.is-active{
+  border-color:#6366F1;background:#EEF2FF;
+  box-shadow:0 0 0 3px rgba(99,102,241,.20);
 }
 .rh-overview .mt-action-btn > i{
-  font-size:15px;color:#6B5AED;margin-top:2px;
+  flex-shrink:0;
+  width:42px;height:42px;border-radius:12px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:16px;color:#fff;
+  background:linear-gradient(135deg,#6366F1,#4F46E5);
+  box-shadow:0 4px 12px rgba(99,102,241,.32);
+  margin-top:0;
+}
+.rh-overview .mt-action-btn--danger > i{
+  background:linear-gradient(135deg,#F87171,#DC2626);
+  box-shadow:0 4px 12px rgba(220,38,38,.32);
+}
+.rh-overview .mt-action-btn--info > i{
+  background:linear-gradient(135deg,#2DD4BF,#0D9488);
+  box-shadow:0 4px 12px rgba(20,184,166,.32);
+}
+.rh-overview .mt-action-btn--warn > i{
+  background:linear-gradient(135deg,#FBBF24,#D97706);
+  box-shadow:0 4px 12px rgba(217,119,6,.32);
 }
 .rh-overview .mt-action-btn--danger:hover{
-  border-color:#EF4444;box-shadow:0 3px 12px rgba(239,68,68,.10);
+  border-color:#F87171;box-shadow:0 12px 26px rgba(239,68,68,.18);
 }
-.rh-overview .mt-action-btn--danger > i{color:#EF4444}
+.rh-overview .mt-action-btn--info:hover{
+  border-color:#2DD4BF;box-shadow:0 12px 26px rgba(20,184,166,.18);
+}
+.rh-overview .mt-action-btn--warn:hover{
+  border-color:#FBBF24;box-shadow:0 12px 26px rgba(217,119,6,.18);
+}
+.rh-overview .mt-action-btn-body{
+  display:flex;flex-direction:column;min-width:0;flex:1;
+}
 .rh-overview .mt-action-label{
-  display:block;font-size:13px;font-weight:700;color:#0F172A;line-height:1.3;
+  display:block;font-size:14px;font-weight:800;color:#0F172A;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .rh-overview .mt-action-sub{
-  display:block;font-size:11px;color:#94A3B8;
-  font-family:monospace;margin-top:2px;
+  display:block;font-size:11.5px;color:#64748B;
+  margin-top:3px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* ─── Pretty action result panel ─────────────────────────────
+   Replaces the raw JSON dump for known actions with a friendly
+   card. Raw JSON is still accessible via the «عرض الاستجابة
+   الخام» <details> below — operator can expand it for debug. */
+.rh-overview .mt-action-result{
+  margin-top:16px;border-radius:14px;overflow:hidden;
+  border:1px solid #E5E7EB;background:#fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.06);
+  animation:mt-action-pop .25s ease-out;
+}
+.rh-overview .mt-action-result[hidden]{display:none}
+.rh-overview .mt-action-result.is-ok   { border-color:#86EFAC; }
+.rh-overview .mt-action-result.is-fail { border-color:#FCA5A5; }
+.rh-overview .mt-action-result-head{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;border-bottom:1px solid #F1F5F9;
+}
+.rh-overview .mt-action-result.is-ok .mt-action-result-head{
+  background:#F0FDF4;border-bottom-color:#BBF7D0;
+}
+.rh-overview .mt-action-result.is-fail .mt-action-result-head{
+  background:#FEF2F2;border-bottom-color:#FCA5A5;
+}
+.rh-overview .mt-action-result-icon{
+  width:32px;height:32px;border-radius:10px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;
+}
+.rh-overview .mt-action-result.is-ok .mt-action-result-icon{
+  background:linear-gradient(135deg,#34D399,#10B981);
+}
+.rh-overview .mt-action-result.is-fail .mt-action-result-icon{
+  background:linear-gradient(135deg,#F87171,#DC2626);
+}
+.rh-overview .mt-action-result-title{
+  flex:1;font-size:14px;font-weight:800;color:#0F172A;
+}
+.rh-overview .mt-action-result.is-ok .mt-action-result-title{color:#065F46}
+.rh-overview .mt-action-result.is-fail .mt-action-result-title{color:#7F1D1D}
+.rh-overview .mt-action-result-meta{
+  font-size:11.5px;color:#64748B;font-family:monospace;
+}
+.rh-overview .mt-action-result-body{
+  padding:14px 18px;font-size:13px;color:#1F2937;
+}
+.rh-overview .mt-action-result-body .mt-kv{
+  display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;
+}
+.rh-overview .mt-action-result-body .mt-kv dt{
+  color:#64748B;font-weight:700;
+}
+.rh-overview .mt-action-result-body .mt-kv dd{
+  margin:0;font-family:monospace;color:#0F172A;
+}
+.rh-overview .mt-action-result-body table{
+  width:100%;border-collapse:collapse;font-size:12.5px;
+}
+.rh-overview .mt-action-result-body th{
+  text-align:start;padding:6px 8px;color:#64748B;font-weight:700;
+  border-bottom:1px solid #E5E7EB;background:#F8FAFC;
+}
+.rh-overview .mt-action-result-body td{
+  padding:6px 8px;color:#0F172A;font-family:monospace;
+  border-bottom:1px solid #F1F5F9;
+}
+.rh-overview .mt-action-result-body tr:last-child td{border-bottom:0}
+.rh-overview .mt-action-result-summary{
+  margin-top:12px;padding:10px 14px;border-radius:10px;
+  background:#F8FAFC;border:1px solid #E5E7EB;
+  font-size:12.5px;color:#475569;font-weight:600;
+}
+.rh-overview .mt-action-result.is-ok .mt-action-result-summary{
+  background:#ECFDF5;border-color:#BBF7D0;color:#065F46;
+}
+.rh-overview .mt-action-raw{
+  margin-top:10px;
+}
+.rh-overview .mt-action-raw[hidden]{display:none}
+.rh-overview .mt-action-raw > summary{
+  cursor:pointer;color:#94A3B8;font-size:11.5px;font-weight:700;
+  padding:6px 10px;list-style:none;user-select:none;
+}
+.rh-overview .mt-action-raw > summary::-webkit-details-marker{display:none}
+.rh-overview .mt-action-raw > summary::before{
+  content:"▸ ";color:#CBD5E1;transition:transform .15s;
+}
+.rh-overview .mt-action-raw[open] > summary::before{content:"▾ "}
+.rh-overview .mt-action-raw .mt-action-output{
+  margin:0;padding:12px 14px;background:#0F172A;color:#E2E8F0;
+  border-radius:10px;font-size:11.5px;line-height:1.5;
+  max-height:280px;overflow:auto;direction:ltr;text-align:start;
+}
+@keyframes mt-action-pop{
+  from{opacity:0;transform:translateY(8px);}
+  to  {opacity:1;transform:translateY(0);}
 }
 </style>
 {% endblock %}
@@ -838,32 +984,78 @@
   <section class="mt-card mt-card--actions" data-mt-quick-actions>
     <header class="mt-card-head">
       <h3><i class="fa-solid fa-bolt"></i> إجراءات سريعة</h3>
+      <span class="mt-card-meta">أوامر مباشرة على الراوتر</span>
     </header>
     <div class="mt-card-body">
       <div class="mt-actions-grid">
+        {# ── Read-only / info — teal ── #}
+        <button type="button" class="mt-action-btn mt-action-btn--info"
+                data-mt-action-ping>
+          <i class="fa-solid fa-bullseye"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">اختبار Ping</span>
+            <span class="mt-action-sub">فحص الوصول لعنوان</span>
+          </span>
+        </button>
+        <button type="button" class="mt-action-btn mt-action-btn--info"
+                data-mt-action-traceroute>
+          <i class="fa-solid fa-route"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">Traceroute</span>
+            <span class="mt-action-sub">مسار الحزم خطوة بخطوة</span>
+          </span>
+        </button>
+        <button type="button" class="mt-action-btn mt-action-btn--info"
+                data-mt-action-dns-resolve>
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">حلّ نطاق</span>
+            <span class="mt-action-sub">DNS resolve لاسم</span>
+          </span>
+        </button>
         <button type="button" class="mt-action-btn"
                 data-mt-action-backup>
           <i class="fa-solid fa-floppy-disk"></i>
-          <span class="mt-action-label">حفظ نسخة احتياطية</span>
-          <span class="mt-action-sub">POST /system/backup/save</span>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">حفظ نسخة احتياطية</span>
+            <span class="mt-action-sub">ينشئ ملف backup على الراوتر</span>
+          </span>
+        </button>
+
+        {# ── Maintenance — warn (amber) ── #}
+        <button type="button" class="mt-action-btn mt-action-btn--warn"
+                data-mt-action-dns-flush>
+          <i class="fa-solid fa-broom"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">مسح كاش DNS</span>
+            <span class="mt-action-sub">يفرغ /ip dns cache</span>
+          </span>
+        </button>
+        <button type="button" class="mt-action-btn mt-action-btn--warn"
+                data-mt-action-clock-sync>
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">مزامنة الوقت</span>
+            <span class="mt-action-sub">إعادة ضبط الـ NTP</span>
+          </span>
+        </button>
+
+        {# ── Destructive — red ── #}
+        <button type="button" class="mt-action-btn mt-action-btn--danger"
+                data-mt-action-identity>
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">تعديل اسم الراوتر</span>
+            <span class="mt-action-sub">يحتاج تأكيدًا</span>
+          </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--danger"
                 data-mt-action-reboot>
           <i class="fa-solid fa-power-off"></i>
-          <span class="mt-action-label">إعادة تشغيل</span>
-          <span class="mt-action-sub">يحتاج تأكيدًا</span>
-        </button>
-        <button type="button" class="mt-action-btn"
-                data-mt-action-ping>
-          <i class="fa-solid fa-bullseye"></i>
-          <span class="mt-action-label">Ping</span>
-          <span class="mt-action-sub">POST /tools/ping</span>
-        </button>
-        <button type="button" class="mt-action-btn mt-action-btn--danger"
-                data-mt-action-identity>
-          <i class="fa-solid fa-pen-to-square"></i>
-          <span class="mt-action-label">تعديل اسم الراوتر</span>
-          <span class="mt-action-sub">يحتاج تأكيدًا</span>
+          <span class="mt-action-btn-body">
+            <span class="mt-action-label">إعادة تشغيل</span>
+            <span class="mt-action-sub">يقطع الاتصال لدقيقة</span>
+          </span>
         </button>
       </div>
 
@@ -871,10 +1063,16 @@
          until an action is picked, so the page starts compact. #}
       <div class="mt-action-form" data-mt-action-form hidden></div>
 
-      {# Truthful output area: echoes the actual API response. No
-         pre-baked success messages. #}
-      <pre class="mt-action-output" data-mt-action-output
-           aria-live="polite"></pre>
+      {# Pretty output panel — JS renders a friendly card here for
+         known actions (ping summary, traceroute hops, DNS resolve,
+         backup confirmation …). Falls back to raw JSON via the
+         hidden <pre> below for unknown shapes / debugging. #}
+      <div class="mt-action-result" data-mt-action-result hidden></div>
+      <details class="mt-action-raw" data-mt-action-raw-wrap hidden>
+        <summary>عرض الاستجابة الخام (JSON)</summary>
+        <pre class="mt-action-output" data-mt-action-output
+             aria-live="polite"></pre>
+      </details>
     </div>
   </section>
 
@@ -1181,19 +1379,41 @@
   {# ─── «خدماتي» tab — unified active-services inventory ─── #}
   <section class="mt-tab-panel rh-inventory"
            data-mt-tab-panel="my-services" role="tabpanel" hidden>
-    <div class="rh-inv-head">
-      <h3>
-        <i class="fa-solid fa-screwdriver-wrench"></i>
-        خدماتي على هذا الراوتر
-      </h3>
-      <button type="button" class="rh-inv-refresh" data-rh-inv-refresh>
-        <i class="fa-solid fa-rotate"></i> تحديث
+    <div class="rh-inv-hero">
+      <div class="rh-inv-hero-glow" aria-hidden="true"></div>
+      <div class="rh-inv-hero-copy">
+        <span class="rh-inv-kicker">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          مركز خدمات الراوتر
+        </span>
+        <h3>خدماتي على هذا الراوتر</h3>
+        <p>كل الخدمات المفعَّلة الآن، مع مصدرها وحذف آمن بتأكيد.</p>
+        <div class="rh-inv-hero-chips">
+          <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
+          <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
+          <span><i class="fa-solid fa-route"></i> عبر VPN</span>
+        </div>
+      </div>
+      <div class="rh-inv-hero-stats" data-rh-inv-stats hidden>
+        <div class="rh-inv-stat">
+          <span class="rh-inv-stat-num" data-rh-inv-stat-total>0</span>
+          <span class="rh-inv-stat-lbl">إجمالي</span>
+        </div>
+        <div class="rh-inv-stat rh-inv-stat--hr">
+          <span class="rh-inv-stat-num" data-rh-inv-stat-hr>0</span>
+          <span class="rh-inv-stat-lbl">من البرمجة</span>
+        </div>
+        <div class="rh-inv-stat rh-inv-stat--op">
+          <span class="rh-inv-stat-num" data-rh-inv-stat-op>0</span>
+          <span class="rh-inv-stat-lbl">يدوي</span>
+        </div>
+      </div>
+      <button type="button" class="rh-inv-refresh" data-rh-inv-refresh
+              title="تحديث القائمة">
+        <i class="fa-solid fa-rotate"></i>
+        <span>تحديث</span>
       </button>
     </div>
-    <p class="rh-inv-help">
-      كل الخدمات المفعَّلة الآن على الراوتر، مع المصدر (من إعدادك أو من خارج
-      الموقع). كل بطاقة فيها زر حذف بتأكيد.
-    </p>
     <div class="rh-inv-loading" data-rh-inv-loading>
       <i class="fa-solid fa-spinner fa-spin"></i>
       <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
@@ -1247,6 +1467,91 @@
 <style>
 /* ─── «خدماتي» tab layout ─── */
 .rh-inventory{padding:0 !important}
+.rh-inv-hero{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  margin:0 0 24px;padding:24px 28px;
+  border:1px solid rgba(124,58,237,.22);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 88% -10%, rgba(124,58,237,.20), transparent 38%),
+    radial-gradient(circle at 8% 110%, rgba(20,184,166,.16), transparent 36%),
+    linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
+  box-shadow:0 18px 48px rgba(124,58,237,.10), 0 2px 6px rgba(15,23,42,.04);
+}
+/* Decorative glow that drifts — gives the page a "premium" feel
+   without distracting the operator. Disabled when the user has
+   prefers-reduced-motion. */
+.rh-inv-hero-glow{
+  position:absolute;top:-40%;left:-10%;
+  width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle, rgba(196,181,253,.28), transparent 60%);
+  filter:blur(14px);pointer-events:none;
+  animation:rh-inv-hero-drift 12s ease-in-out infinite;
+}
+@keyframes rh-inv-hero-drift{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%    {transform:translate(40px,30px) scale(1.08);}
+}
+@media (prefers-reduced-motion: reduce){
+  .rh-inv-hero-glow{animation:none}
+}
+.rh-inv-hero-copy{min-width:0;position:relative;z-index:1;flex:1 1 280px}
+.rh-inv-kicker{
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(255,255,255,.7);border:1px solid rgba(124,58,237,.18);
+  color:#6D28D9;font-size:11.5px;font-weight:900;letter-spacing:.01em;
+  backdrop-filter:blur(6px);
+}
+.rh-inv-kicker i{font-size:12px}
+.rh-inv-hero h3{
+  margin:0;color:#0F172A;font-size:26px;font-weight:950;letter-spacing:-.01em;
+  line-height:1.2;
+}
+.rh-inv-hero p{
+  margin:8px 0 0;color:#475569;font-size:13.5px;font-weight:600;
+  line-height:1.6;max-width:520px;
+}
+.rh-inv-hero-chips{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
+}
+.rh-inv-hero-chips span{
+  display:inline-flex;align-items:center;gap:6px;min-height:30px;
+  padding:0 12px;border:1px solid rgba(124,58,237,.22);border-radius:999px;
+  background:rgba(255,255,255,.82);color:#1F2937;
+  font-size:11.5px;font-weight:800;backdrop-filter:blur(6px);
+}
+.rh-inv-hero-chips i{color:#7C3AED}
+/* Hero stats — total / from-wizard / manual — populated by JS
+   once inventory loads. Hidden by default. */
+.rh-inv-hero-stats{
+  display:flex;align-items:stretch;gap:8px;position:relative;z-index:1;
+  flex-wrap:wrap;
+}
+.rh-inv-hero-stats[hidden]{display:none}
+.rh-inv-stat{
+  min-width:78px;padding:10px 14px;
+  background:rgba(255,255,255,.85);
+  border:1px solid rgba(124,58,237,.18);border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  backdrop-filter:blur(8px);
+  transition:transform .15s, box-shadow .15s;
+}
+.rh-inv-stat:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 18px rgba(124,58,237,.14);
+}
+.rh-inv-stat-num{
+  font-size:24px;font-weight:950;color:#5B21B6;line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.rh-inv-stat-lbl{
+  font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:.02em;
+}
+.rh-inv-stat--hr .rh-inv-stat-num{color:#5B21B6}
+.rh-inv-stat--op .rh-inv-stat-num{color:#B45309}
 .rh-inv-head{
   display:flex;align-items:center;justify-content:space-between;
   margin:0 0 6px;flex-wrap:wrap;gap:10px;
@@ -1257,12 +1562,29 @@
 }
 .rh-inv-head h3 i{color:#6B5AED;font-size:14px}
 .rh-inv-refresh{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 12px;border-radius:8px;border:1px solid #E2E8F0;
-  background:#fff;color:#475569;font-size:12.5px;font-weight:700;
-  cursor:pointer;transition:all .12s;
+  position:relative;z-index:1;
+  display:inline-flex;align-items:center;gap:8px;
+  min-height:42px;padding:0 18px;border-radius:14px;
+  border:1px solid rgba(124,58,237,.30);
+  background:linear-gradient(135deg,#FFF,#F5F3FF);
+  color:#5B21B6;font-size:13px;font-weight:900;
+  cursor:pointer;transition:all .15s;
+  box-shadow:0 8px 20px rgba(124,58,237,.10);
 }
-.rh-inv-refresh:hover{background:#F8FAFC;border-color:#CBD5E1}
+.rh-inv-refresh i{font-size:13px;transition:transform .4s}
+.rh-inv-refresh:hover{
+  border-color:rgba(124,58,237,.55);
+  background:linear-gradient(135deg,#F5F3FF,#EDE9FE);
+  transform:translateY(-1px);
+  box-shadow:0 12px 26px rgba(124,58,237,.18);
+}
+.rh-inv-refresh:hover i{transform:rotate(180deg)}
+.rh-inv-refresh.is-spinning i{
+  animation:rh-inv-refresh-spin .8s linear infinite;
+}
+@keyframes rh-inv-refresh-spin{
+  to{transform:rotate(360deg)}
+}
 .rh-inv-help{color:#64748B;font-size:12.5px;line-height:1.7;margin:0 0 14px}
 .rh-inv-loading{
   color:#475569;font-size:13.5px;padding:24px 18px;text-align:center;
@@ -1282,11 +1604,12 @@
   padding:10px 14px;color:#7F1D1D;font-size:13px;margin-bottom:12px;
 }
 .rh-inv-error[hidden]{display:none}
-.rh-inv-groups{display:flex;flex-direction:column;gap:18px}
+.rh-inv-groups{display:flex;flex-direction:column;gap:22px;margin-top:6px}
 
 .rh-inv-group{
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:14px 16px;
+  background:#fff;border:1px solid #EAECF0;border-radius:16px;
+  padding:18px 20px;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
 }
 .rh-inv-group-head{
   display:flex;align-items:center;gap:10px;margin-bottom:10px;
@@ -1312,19 +1635,27 @@
 }
 .rh-inv-cards{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:10px;
+  gap:12px;
+  /* Equal-height cards regardless of detail count. */
+  align-items:stretch;
 }
 .rh-inv-card{
   background:#FAFAFC;border:1px solid #EAECF0;border-radius:11px;
   padding:12px 14px;position:relative;
   transition:all .15s;
+  /* Make the card itself a column flex container so the delete
+     button always sits at the bottom regardless of how many
+     details rows are above it — kills the "ragged bottom edges"
+     look the operator pointed out. */
+  display:flex;flex-direction:column;
 }
 .rh-inv-card:hover{
   background:#fff;border-color:#CBD5E1;
   box-shadow:0 2px 8px rgba(15,23,42,.05);
+  transform:translateY(-1px);
 }
 .rh-inv-card-head{
-  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;
 }
 .rh-inv-card-label{
   font-family:monospace;font-size:14px;font-weight:800;color:#0F172A;
@@ -1339,6 +1670,9 @@
 .rh-inv-details{
   display:grid;grid-template-columns:auto 1fr;gap:3px 8px;
   font-size:11.5px;color:#475569;margin-bottom:10px;
+  /* Take all remaining vertical space inside the flex card so
+     short cards align their delete button with tall cards. */
+  flex:1 1 auto;align-content:start;
 }
 .rh-inv-details dt{color:#94A3B8;font-weight:700}
 .rh-inv-details dd{margin:0;font-family:monospace;color:#0F172A;
@@ -1492,6 +1826,11 @@
 .rh-inv-btn-danger{background:#EF4444;color:#fff;border-color:#EF4444}
 .rh-inv-btn-danger:hover{background:#DC2626;border-color:#DC2626}
 .rh-inv-btn-danger[disabled]{background:#94A3B8;border-color:#94A3B8;cursor:not-allowed}
+@media (max-width: 760px){
+  .rh-inv-hero{align-items:stretch;flex-direction:column;padding:16px}
+  .rh-inv-refresh{justify-content:center;width:100%}
+  .rh-inv-hero h3{font-size:21px}
+}
 </style>
 
 <script>
@@ -1575,6 +1914,12 @@
     errorEl.textContent = "";
     groupsEl.innerHTML = "";
     startLoadingStepAnimation();
+    // Spin the refresh icon for the duration of the fetch.
+    const refreshBtnEl = panel.querySelector("[data-rh-inv-refresh]");
+    if (refreshBtnEl) refreshBtnEl.classList.add("is-spinning");
+    // Hide stats until we have fresh numbers.
+    const statsEl = panel.querySelector("[data-rh-inv-stats]");
+    if (statsEl) statsEl.hidden = true;
     const t0 = performance.now();
     try {
       const res = await fetch(
@@ -1597,6 +1942,21 @@
       const groups = data.groups || [];
       if (!groups.length) { emptyEl.hidden = false; return; }
       const routerInfo = data.router_info || {};
+      // ── Populate hero stats (total / HobeRadius-managed / manual)
+      let total = 0, hr = 0, op = 0;
+      groups.forEach((g) => (g.items || []).forEach((it) => {
+        total++;
+        if (it.source === "operator") op++;
+        else hr++;
+      }));
+      const setStat = (sel, n) => {
+        const el = panel.querySelector(sel);
+        if (el) el.textContent = String(n);
+      };
+      setStat("[data-rh-inv-stat-total]", total);
+      setStat("[data-rh-inv-stat-hr]",    hr);
+      setStat("[data-rh-inv-stat-op]",    op);
+      if (statsEl) statsEl.hidden = false;
       groupsEl.innerHTML = groups.map(
         (g) => renderGroup(g, routerInfo)
       ).join("");
@@ -1609,6 +1969,7 @@
     } finally {
       stopLoadingStepAnimation();
       loadingEl.hidden = true;
+      if (refreshBtnEl) refreshBtnEl.classList.remove("is-spinning");
       loaded = true;
     }
   }

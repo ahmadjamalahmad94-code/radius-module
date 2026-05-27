@@ -439,6 +439,73 @@
 }
 .mt-tab.is-active i { color: #2563EB; }
 
+/* ─── «خدماتي» — featured tab ─────────────────────────────────
+   The most-used tab on the dashboard. Get it OUT of the row of
+   plain text tabs: gradient pill background, glowing border,
+   subtle pulse on the icon, slightly larger type — so the
+   operator's eye lands on it instantly. */
+.mt-tab[data-mt-tab="my-services"] {
+  margin-inline-start: 4px;
+  margin-inline-end: 8px;
+  padding: 8px 16px;
+  border-radius: 12px 12px 0 0;
+  border-bottom-width: 3px;
+  font-weight: 800;
+  font-size: 14.5px;
+  color: #5B21B6;
+  background: linear-gradient(135deg,
+              rgba(196,181,253,.22) 0%,
+              rgba(167,139,250,.18) 50%,
+              rgba(196,181,253,.22) 100%);
+  background-size: 200% 200%;
+  animation: my-svc-tab-shimmer 6s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+.mt-tab[data-mt-tab="my-services"] i {
+  color: #7C3AED;
+  animation: my-svc-tab-icon-pulse 2.4s ease-in-out infinite;
+}
+.mt-tab[data-mt-tab="my-services"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, #A78BFA, #7C3AED, #6D28D9);
+  opacity: 0.55;
+}
+.mt-tab[data-mt-tab="my-services"]:hover {
+  color: #4C1D95;
+  background: linear-gradient(135deg,
+              rgba(167,139,250,.35) 0%,
+              rgba(124,58,237,.25) 50%,
+              rgba(167,139,250,.35) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124,58,237,.18);
+}
+.mt-tab[data-mt-tab="my-services"].is-active {
+  color: #4C1D95;
+  border-bottom-color: #7C3AED;
+  background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+  box-shadow: 0 6px 20px rgba(124,58,237,.22);
+  animation: none;
+}
+.mt-tab[data-mt-tab="my-services"].is-active i { color: #6D28D9; animation: none; }
+.mt-tab[data-mt-tab="my-services"].is-active::after { opacity: 1; }
+
+@keyframes my-svc-tab-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes my-svc-tab-icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-tab[data-mt-tab="my-services"],
+  .mt-tab[data-mt-tab="my-services"] i { animation: none; }
+}
+
 .mt-tab-panel { display: block; }
 .mt-tab-panel[hidden] { display: none; }
 

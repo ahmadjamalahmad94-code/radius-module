@@ -427,14 +427,22 @@
   // additionally require the operator to tick a checkbox before
   // the Submit button enables.
 
-  const actionFormEl = root.querySelector("[data-mt-action-form]");
-  const actionOutEl  = root.querySelector("[data-mt-action-output]");
+  const actionFormEl  = root.querySelector("[data-mt-action-form]");
+  const actionOutEl   = root.querySelector("[data-mt-action-output]");
+  const actionResEl   = root.querySelector("[data-mt-action-result]");
+  const actionRawWrap = root.querySelector("[data-mt-action-raw-wrap]");
   const actionButtons = {
-    backup:   root.querySelector("[data-mt-action-backup]"),
-    reboot:   root.querySelector("[data-mt-action-reboot]"),
-    ping:     root.querySelector("[data-mt-action-ping]"),
-    identity: root.querySelector("[data-mt-action-identity]"),
+    backup:      root.querySelector("[data-mt-action-backup]"),
+    reboot:      root.querySelector("[data-mt-action-reboot]"),
+    ping:        root.querySelector("[data-mt-action-ping]"),
+    identity:    root.querySelector("[data-mt-action-identity]"),
+    // New (2026-05): info + maintenance actions.
+    traceroute:  root.querySelector("[data-mt-action-traceroute]"),
+    "dns-resolve": root.querySelector("[data-mt-action-dns-resolve]"),
+    "dns-flush":   root.querySelector("[data-mt-action-dns-flush]"),
+    "clock-sync":  root.querySelector("[data-mt-action-clock-sync]"),
   };
+  let currentActionKind = "";
 
   function clearActiveButtons() {
     for (const k in actionButtons) {
@@ -442,17 +450,219 @@
     }
   }
 
+  function safeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
   function writeOutput(payload, ok) {
-    if (!actionOutEl) return;
-    actionOutEl.textContent = JSON.stringify(payload, null, 2);
-    actionOutEl.classList.toggle("is-ok", !!ok);
-    actionOutEl.classList.toggle("is-fail", !ok);
+    // Raw JSON dump — always populated for the «عرض الاستجابة
+    // الخام» disclosure. Stays hidden until the operator expands.
+    if (actionOutEl) {
+      actionOutEl.textContent = JSON.stringify(payload, null, 2);
+      actionOutEl.classList.toggle("is-ok", !!ok);
+      actionOutEl.classList.toggle("is-fail", !ok);
+    }
+    if (actionRawWrap) actionRawWrap.hidden = false;
+    // Friendly card — built per action kind.
+    if (actionResEl) {
+      actionResEl.innerHTML = renderResultCard(currentActionKind, payload, ok);
+      actionResEl.classList.toggle("is-ok", !!ok);
+      actionResEl.classList.toggle("is-fail", !ok);
+      actionResEl.hidden = false;
+    }
+  }
+
+  /**
+   * Build a friendly HTML card for the operator instead of dumping
+   * raw JSON. Handles known action kinds (ping, traceroute, dns,
+   * backup, reboot, identity, clock); falls back to a one-line OK /
+   * fail summary for anything else.
+   */
+  function renderResultCard(kind, payload, ok) {
+    const data = (payload && typeof payload === "object")
+      ? (payload.data || payload) : {};
+    const errMsg = (payload && (payload.error || payload.message)) || "";
+    const headIcon = ok
+      ? '<i class="fa-solid fa-check"></i>'
+      : '<i class="fa-solid fa-xmark"></i>';
+    function head(title, meta) {
+      return `
+        <div class="mt-action-result-head">
+          <span class="mt-action-result-icon">${headIcon}</span>
+          <span class="mt-action-result-title">${safeHtml(title)}</span>
+          ${meta ? `<span class="mt-action-result-meta">${safeHtml(meta)}</span>` : ""}
+        </div>`;
+    }
+    function body(inner) {
+      return `<div class="mt-action-result-body">${inner}</div>`;
+    }
+    function failBody() {
+      return body(`
+        <div class="mt-action-result-summary">
+          ${safeHtml(errMsg || "تعذّر تنفيذ العملية على الراوتر.")}
+        </div>`);
+    }
+
+    // ── PING ──────────────────────────────────────────────
+    if (kind === "ping") {
+      if (!ok) return head("فشل اختبار Ping", "/tools/ping") + failBody();
+      const replies = Array.isArray(data.replies) ? data.replies : [];
+      const summary = data.summary || {};
+      const target = data.target || data.host || "";
+      let tableHtml = "";
+      if (replies.length) {
+        tableHtml = `
+          <table>
+            <thead>
+              <tr><th>#</th><th>السعة</th><th>TTL</th><th>الزمن</th><th>الحالة</th></tr>
+            </thead>
+            <tbody>
+              ${replies.map((r, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${safeHtml(r.size != null ? r.size + " B" : "—")}</td>
+                  <td>${safeHtml(r.ttl != null ? r.ttl : "—")}</td>
+                  <td>${safeHtml(r.time != null ? r.time : (r["avg-rtt"] || "—"))}</td>
+                  <td>${r.status === "ok" || r.received
+                    ? '<span style="color:#10B981">✓ وصل</span>'
+                    : '<span style="color:#DC2626">✗ ضاع</span>'}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      }
+      const sent   = summary.sent     != null ? summary.sent     : replies.length;
+      const recv   = summary.received != null ? summary.received : replies.filter(r => r.status === "ok" || r.received).length;
+      const loss   = sent > 0 ? Math.round(((sent - recv) / sent) * 100) : 0;
+      const avgRtt = summary["avg-rtt"] || summary.avg_rtt || "—";
+      return head(`Ping إلى ${target || "—"}`, "/tools/ping") + body(`
+        ${tableHtml}
+        <div class="mt-action-result-summary">
+          مُرسَل: <strong>${sent}</strong> ·
+          مُستلَم: <strong>${recv}</strong> ·
+          فاقد: <strong>${loss}%</strong> ·
+          متوسط زمن الذهاب-والإياب: <strong>${safeHtml(avgRtt)}</strong>
+        </div>
+      `);
+    }
+
+    // ── TRACEROUTE ────────────────────────────────────────
+    if (kind === "traceroute") {
+      if (!ok) return head("فشل Traceroute", "/tools/traceroute") + failBody();
+      const hops = Array.isArray(data.hops) ? data.hops : [];
+      const target = data.target || data.host || "";
+      const rows = hops.map((h, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${safeHtml(h.address || h.host || "*")}</td>
+          <td>${safeHtml(h.rtt || h.time || "—")}</td>
+          <td>${safeHtml(h.loss != null ? h.loss + "%" : "—")}</td>
+        </tr>`).join("");
+      return head(`Traceroute إلى ${target || "—"}`, "/tools/traceroute") + body(`
+        <table>
+          <thead><tr><th>القفزة</th><th>العنوان</th><th>RTT</th><th>الفقد</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="4">لا توجد قفزات</td></tr>'}</tbody>
+        </table>
+        <div class="mt-action-result-summary">
+          عدد القفزات: <strong>${hops.length}</strong>
+        </div>
+      `);
+    }
+
+    // ── DNS RESOLVE ───────────────────────────────────────
+    if (kind === "dns-resolve") {
+      if (!ok) return head("فشل حلّ النطاق", "/ip/dns/cache/lookup") + failBody();
+      const name = data.name || data.host || data.query || "";
+      const addrs = data.addresses || data.address || data.ips || [];
+      const list = (Array.isArray(addrs) ? addrs : [addrs])
+        .filter(Boolean)
+        .map(a => `<dd>${safeHtml(a)}</dd>`).join("");
+      return head(`نتيجة الحلّ — ${name}`, "DNS") + body(`
+        <dl class="mt-kv">
+          <dt>النطاق</dt><dd>${safeHtml(name)}</dd>
+          <dt>العناوين</dt>
+          ${list ? `<div>${list}</div>` : '<dd>— (لم يُحَلّ)</dd>'}
+        </dl>
+      `);
+    }
+
+    // ── DNS FLUSH ─────────────────────────────────────────
+    if (kind === "dns-flush") {
+      if (!ok) return head("فشل مسح كاش DNS", "/ip/dns/cache/flush") + failBody();
+      return head("تم مسح كاش DNS بنجاح", "/ip/dns/cache/flush") + body(`
+        <div class="mt-action-result-summary">
+          ✓ كاش DNS فارغ الآن. ستُعاد الاستعلامات من المصدر عند الطلب التالي.
+        </div>
+      `);
+    }
+
+    // ── CLOCK SYNC ────────────────────────────────────────
+    if (kind === "clock-sync") {
+      if (!ok) return head("فشل مزامنة الوقت", "/system/ntp") + failBody();
+      return head("تمت مزامنة الوقت", "/system/ntp/client") + body(`
+        <dl class="mt-kv">
+          ${data.time     ? `<dt>الوقت الآن</dt><dd>${safeHtml(data.time)}</dd>` : ""}
+          ${data.ntp_peer ? `<dt>خادم NTP</dt><dd>${safeHtml(data.ntp_peer)}</dd>` : ""}
+        </dl>
+        <div class="mt-action-result-summary">
+          ✓ ساعة الراوتر مضبوطة بنجاح من خادم NTP.
+        </div>
+      `);
+    }
+
+    // ── BACKUP ────────────────────────────────────────────
+    if (kind === "backup") {
+      if (!ok) return head("فشل حفظ النسخة الاحتياطية", "/system/backup/save") + failBody();
+      return head("تم حفظ النسخة الاحتياطية", "/system/backup/save") + body(`
+        <dl class="mt-kv">
+          ${data.name ? `<dt>اسم الملف</dt><dd>${safeHtml(data.name)}</dd>` : ""}
+          ${data.size ? `<dt>الحجم</dt><dd>${safeHtml(data.size)}</dd>` : ""}
+        </dl>
+        <div class="mt-action-result-summary">
+          ✓ ملف backup محفوظ على الراوتر. يمكنك تنزيله من File List في Winbox.
+        </div>
+      `);
+    }
+
+    // ── REBOOT ────────────────────────────────────────────
+    if (kind === "reboot") {
+      if (!ok) return head("فشل إعادة التشغيل", "/system/reboot") + failBody();
+      return head("تمت إعادة التشغيل", "/system/reboot") + body(`
+        <div class="mt-action-result-summary">
+          ⏳ الراوتر يُعيد التشغيل الآن. سيُقطع الاتصال لدقيقة تقريباً.
+          أعد تحميل الصفحة بعد دقيقة.
+        </div>
+      `);
+    }
+
+    // ── IDENTITY ──────────────────────────────────────────
+    if (kind === "identity") {
+      if (!ok) return head("فشل تعديل الاسم", "/system/identity") + failBody();
+      return head("تم تحديث اسم الراوتر", "/system/identity") + body(`
+        <dl class="mt-kv">
+          ${data.name ? `<dt>الاسم الجديد</dt><dd>${safeHtml(data.name)}</dd>` : ""}
+        </dl>
+      `);
+    }
+
+    // ── DEFAULT (unknown action) ──────────────────────────
+    return head(
+      ok ? "تمّ تنفيذ العملية" : "فشلت العملية",
+      ""
+    ) + (ok
+      ? body('<div class="mt-action-result-summary">✓ راجع «عرض الاستجابة الخام» للتفاصيل.</div>')
+      : failBody());
   }
 
   function closeForm() {
     if (!actionFormEl) return;
     actionFormEl.hidden = true;
     actionFormEl.textContent = "";
+    if (actionResEl)   { actionResEl.hidden = true; actionResEl.innerHTML = ""; }
+    if (actionRawWrap) { actionRawWrap.hidden = true; actionRawWrap.open = false; }
+    currentActionKind = "";
     clearActiveButtons();
   }
 
@@ -460,6 +670,9 @@
     if (!actionFormEl) return;
     actionFormEl.hidden = false;
     actionFormEl.innerHTML = html;
+    if (actionResEl)   { actionResEl.hidden = true; actionResEl.innerHTML = ""; }
+    if (actionRawWrap) { actionRawWrap.hidden = true; actionRawWrap.open = false; }
+    currentActionKind = key;
     clearActiveButtons();
     if (actionButtons[key]) actionButtons[key].classList.add("is-active");
     const cancel = actionFormEl.querySelector(".mt-cancel");
@@ -603,6 +816,120 @@
         await postJson(
           "/mikrotik/" + CFG.routerId + "/system/identity/set",
           { confirm: true, name, reason },
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── Traceroute (read-only) ──
+  if (actionButtons.traceroute) {
+    actionButtons.traceroute.addEventListener("click", () => {
+      openForm("traceroute", `
+        <label>الهدف
+          <input type="text" name="target" placeholder="8.8.8.8 أو example.com"
+                 data-mt-trace-target required>
+        </label>
+        <label>الحدّ الأقصى للقفزات (5-30)
+          <input type="number" name="max-hops" min="5" max="30" value="15"
+                 data-mt-trace-hops>
+        </label>
+        <div class="mt-action-row">
+          <button type="submit">شغّل Traceroute</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const target = actionFormEl.querySelector("[data-mt-trace-target]").value.trim();
+        if (!target) { writeOutput({ error: "أدخل عنوان الهدف" }, false); return; }
+        const raw = actionFormEl.querySelector("[data-mt-trace-hops]").value;
+        const maxHops = Math.max(5, Math.min(30, parseInt(raw, 10) || 15));
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/tools/traceroute",
+          { target, "max-hops": maxHops },
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── DNS resolve (read-only) ──
+  if (actionButtons["dns-resolve"]) {
+    actionButtons["dns-resolve"].addEventListener("click", () => {
+      openForm("dns-resolve", `
+        <label>اسم النطاق
+          <input type="text" name="name" placeholder="example.com"
+                 data-mt-dns-name required>
+        </label>
+        <div class="mt-action-row">
+          <button type="submit">حلّ الاسم</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const name = actionFormEl.querySelector("[data-mt-dns-name]").value.trim();
+        if (!name) { writeOutput({ error: "أدخل اسم النطاق" }, false); return; }
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/ip/dns/resolve",
+          { name },
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── DNS flush ──
+  if (actionButtons["dns-flush"]) {
+    actionButtons["dns-flush"].addEventListener("click", () => {
+      openForm("dns-flush", `
+        <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
+          سنُفرغ كاش DNS على الراوتر. هذا غير مدمّر —
+          الراوتر سيستعلم عن الأسماء من جديد عند الطلب.
+        </p>
+        <div class="mt-action-row">
+          <button type="submit">مسح الآن</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/ip/dns/cache/flush",
+          {},
+        );
+        submit.disabled = false;
+      });
+    });
+  }
+
+  // ── Clock sync (NTP) ──
+  if (actionButtons["clock-sync"]) {
+    actionButtons["clock-sync"].addEventListener("click", () => {
+      openForm("clock-sync", `
+        <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
+          إعادة مزامنة الوقت من خادم NTP. مفيد عند الإقلاع البارد
+          أو لو ساعة الراوتر منحرفة.
+        </p>
+        <div class="mt-action-row">
+          <button type="submit">مزامنة الآن</button>
+          <button type="button" class="mt-cancel">إلغاء</button>
+        </div>
+      `);
+      const submit = actionFormEl.querySelector("button[type=submit]");
+      submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        submit.disabled = true;
+        await postJson(
+          "/mikrotik/" + CFG.routerId + "/system/ntp/sync",
+          {},
         );
         submit.disabled = false;
       });
