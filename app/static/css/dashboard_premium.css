@@ -696,6 +696,262 @@
   color: #fff;
 }
 
+/* ─── Pass-2b: per-tab summary strips + grids ─────────── */
+/* Designed to add intentional structure to each tab without
+   touching the existing JS. The values come via tiny inline
+   MutationObservers that mirror updates from the existing
+   data-mt-*-count elements (already wired by mt_dashboard.js)
+   into the new pill values. */
+
+/* ── Stats strip (Interfaces / Addresses / Routes / Neighbors) ── */
+.np-stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--np-line-2);
+  border-radius: var(--np-r-md);
+  box-shadow: var(--np-sh-1);
+  backdrop-filter: blur(10px);
+}
+.np-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--np-r-sm);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--np-line);
+  min-width: 120px;
+  flex: 1 1 auto;
+  transition: all 0.18s;
+}
+.np-stat-pill:hover {
+  border-color: var(--np-purple-200);
+  transform: translateY(-1px);
+  box-shadow: var(--np-sh-2);
+}
+.np-stat-pill-icon {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  box-shadow: var(--np-sh-purple);
+}
+.np-stat-pill--ok    .np-stat-pill-icon { background: linear-gradient(135deg, #34D399, #047857); box-shadow: 0 4px 12px rgba(16,185,129,.18); }
+.np-stat-pill--warn  .np-stat-pill-icon { background: linear-gradient(135deg, #FBBF24, #B45309); box-shadow: 0 4px 12px rgba(217,119,6,.18); }
+.np-stat-pill--err   .np-stat-pill-icon { background: linear-gradient(135deg, #F87171, #B91C1C); box-shadow: 0 4px 12px rgba(220,38,38,.18); }
+.np-stat-pill--info  .np-stat-pill-icon { background: linear-gradient(135deg, #60A5FA, #1E40AF); box-shadow: 0 4px 12px rgba(37,99,235,.18); }
+.np-stat-pill--slate .np-stat-pill-icon { background: linear-gradient(135deg, #94A3B8, #475569); box-shadow: 0 4px 12px rgba(71,85,105,.18); }
+.np-stat-pill-body {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.np-stat-pill-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--np-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.np-stat-pill-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--np-ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── Session summary row (Sessions tab) ── */
+.np-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 18px;
+}
+@media (max-width: 760px) {
+  .np-summary-grid { grid-template-columns: 1fr; }
+}
+.np-summary-card {
+  position: relative;
+  border-radius: var(--np-r-lg);
+  border: 1px solid var(--np-line);
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,243,255,0.86));
+  padding: 14px 16px;
+  box-shadow: var(--np-sh-2);
+  overflow: hidden;
+  transition: all 0.18s;
+}
+.np-summary-card:hover { transform: translateY(-2px); box-shadow: var(--np-sh-3); }
+.np-summary-card::after {
+  content: "";
+  position: absolute;
+  top: -40%; right: -10%;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167,139,250,0.16), transparent 60%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+.np-summary-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+.np-summary-card-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  box-shadow: var(--np-sh-purple);
+}
+.np-summary-card--blue   .np-summary-card-icon { background: linear-gradient(135deg, #60A5FA, #1E40AF); }
+.np-summary-card--green  .np-summary-card-icon { background: linear-gradient(135deg, #34D399, #047857); }
+.np-summary-card--purple .np-summary-card-icon { background: linear-gradient(135deg, #C084FC, #7E22CE); }
+.np-summary-card-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--np-ink);
+  flex: 1;
+  min-width: 0;
+}
+.np-summary-card-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--np-text-3);
+  flex-shrink: 0;
+}
+.np-summary-card-dot.is-active {
+  background: var(--np-ok);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+.np-summary-card-body {
+  position: relative;
+  z-index: 1;
+}
+.np-summary-card-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--np-ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.np-summary-card-sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--np-text-2);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ── Diagnostics 3-card grid (Critical / Warning / OK) ── */
+.np-diag-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 16px;
+}
+@media (max-width: 760px) {
+  .np-diag-grid { grid-template-columns: 1fr; }
+}
+.np-diag-card {
+  position: relative;
+  border-radius: var(--np-r-lg);
+  padding: 16px 18px;
+  border: 1px solid;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--np-sh-2);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.18s;
+  overflow: hidden;
+}
+.np-diag-card:hover { transform: translateY(-2px); box-shadow: var(--np-sh-3); }
+.np-diag-card::after {
+  content: "";
+  position: absolute;
+  top: -50%; right: -10%;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
+}
+.np-diag-card--critical { border-color: #FCA5A5; background: linear-gradient(135deg, #FFFFFF, #FEF2F2); }
+.np-diag-card--critical::after { background: radial-gradient(circle, rgba(248,113,113,.22), transparent 60%); }
+.np-diag-card--warning  { border-color: #FCD34D; background: linear-gradient(135deg, #FFFFFF, #FFFBEB); }
+.np-diag-card--warning::after  { background: radial-gradient(circle, rgba(251,191,36,.22), transparent 60%); }
+.np-diag-card--ok       { border-color: #6EE7B7; background: linear-gradient(135deg, #FFFFFF, #ECFDF5); }
+.np-diag-card--ok::after       { background: radial-gradient(circle, rgba(110,231,183,.22), transparent 60%); }
+.np-diag-card-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  position: relative;
+  z-index: 1;
+}
+.np-diag-card--critical .np-diag-card-icon { background: linear-gradient(135deg, #F87171, #B91C1C); box-shadow: 0 6px 18px rgba(220,38,38,.22); }
+.np-diag-card--warning  .np-diag-card-icon { background: linear-gradient(135deg, #FBBF24, #B45309); box-shadow: 0 6px 18px rgba(217,119,6,.22); }
+.np-diag-card--ok       .np-diag-card-icon { background: linear-gradient(135deg, #34D399, #047857); box-shadow: 0 6px 18px rgba(16,185,129,.22); }
+.np-diag-card-body { position: relative; z-index: 1; min-width: 0; }
+.np-diag-card-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.np-diag-card--critical .np-diag-card-value { color: #7F1D1D; }
+.np-diag-card--warning  .np-diag-card-value { color: #92400E; }
+.np-diag-card--ok       .np-diag-card-value { color: #065F46; }
+.np-diag-card-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--np-text-2);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Inline tip card (Neighbors, anywhere we need a soft note) ── */
+.np-tip-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 0 14px;
+  border-radius: var(--np-r-md);
+  background: rgba(245, 243, 255, 0.6);
+  border: 1px solid var(--np-line-2);
+  color: var(--np-text);
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+.np-tip-card-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  box-shadow: var(--np-sh-purple);
+}
+
 /* ─── Premium data tables (Interfaces / IPs / Routes /
         Neighbors / Logs / Sessions) ───────────────────────── */
 /* All these tabs use `.mt-iface-table` (or close variants).

@@ -1292,6 +1292,30 @@
         </p>
       </div>
     </div>
+    {# Stats strip — mirrors data-mt-interfaces-count into a
+       prominent pill so the total is visible above the table. #}
+    <div class="np-stat-strip">
+      <div class="np-stat-pill">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-ethernet"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">إجمالي الواجهات</span>
+          <span class="np-stat-pill-value"
+                data-np-mirror="[data-mt-interfaces-count]">—</span>
+        </div>
+      </div>
+      <div class="np-stat-pill np-stat-pill--info">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-router"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-value" style="font-size:13px">/interface/print</span>
+        </div>
+      </div>
+    </div>
+
     <section class="mt-card" data-mt-interfaces-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-ethernet"></i> الواجهات</h3>
@@ -1342,6 +1366,28 @@
         </p>
       </div>
     </div>
+    <div class="np-stat-strip">
+      <div class="np-stat-pill">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-network-wired"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">إجمالي العناوين</span>
+          <span class="np-stat-pill-value"
+                data-np-mirror="[data-mt-ips-count]">—</span>
+        </div>
+      </div>
+      <div class="np-stat-pill np-stat-pill--info">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-database"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-value" style="font-size:13px">/ip/address/print</span>
+        </div>
+      </div>
+    </div>
+
     <section class="mt-card" data-mt-ips-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-network-wired"></i> العناوين</h3>
@@ -1388,6 +1434,28 @@
         </p>
       </div>
     </div>
+    <div class="np-stat-strip">
+      <div class="np-stat-pill np-stat-pill--warn">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-route"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">إجمالي المسارات</span>
+          <span class="np-stat-pill-value"
+                data-np-mirror="[data-mt-routes-count]">—</span>
+        </div>
+      </div>
+      <div class="np-stat-pill np-stat-pill--info">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-arrows-turn-to-dots"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-value" style="font-size:13px">/ip/route/print</span>
+        </div>
+      </div>
+    </div>
+
     <section class="mt-card" data-mt-routes-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-route"></i> المسارات</h3>
@@ -1435,6 +1503,39 @@
         </p>
       </div>
     </div>
+    <div class="np-stat-strip">
+      <div class="np-stat-pill np-stat-pill--err">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-people-arrows"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">أجهزة مكتشَفة</span>
+          <span class="np-stat-pill-value"
+                data-np-mirror="[data-mt-neighbors-count]">—</span>
+        </div>
+      </div>
+      <div class="np-stat-pill np-stat-pill--info">
+        <span class="np-stat-pill-icon">
+          <i class="fa-solid fa-tower-broadcast"></i>
+        </span>
+        <div class="np-stat-pill-body">
+          <span class="np-stat-pill-label">البروتوكولات</span>
+          <span class="np-stat-pill-value" style="font-size:13px">MNDP · CDP · LLDP</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="np-tip-card">
+      <span class="np-tip-card-icon">
+        <i class="fa-solid fa-info"></i>
+      </span>
+      <div>
+        قائمة الجيران تأتي من <code>/ip/neighbor</code> وتعتمد على
+        رسائل MNDP/CDP/LLDP من الأجهزة المجاورة. التغييرات قد تتأخّر
+        دقيقة أو أكثر بين الإشارات.
+      </div>
+    </div>
+
     <section class="mt-card" data-mt-neighbors-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-people-arrows"></i> الجيران</h3>
@@ -1448,10 +1549,6 @@
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-neighbors-msg>جارٍ التحميل…</p>
-        <p class="mt-tab-hint">
-          القائمة تأتي من /ip/neighbor (MNDP/CDP/LLDP) — قد تتأخّر
-          دقيقة أو أكثر بين الإشارات.
-        </p>
         <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
           <table class="mt-iface-table" data-mt-neighbors-table>
             <thead>
@@ -1549,6 +1646,56 @@
           جلسات Hotspot — كروت ويوزرات منفصلة — وجلسات PPPoE.
           كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
         </p>
+      </div>
+    </div>
+
+    {# Summary row — 3 mini-cards mirroring the live counts from
+       each sub-card. Visible at-a-glance before scrolling tables. #}
+    <div class="np-summary-grid">
+      <div class="np-summary-card np-summary-card--blue">
+        <div class="np-summary-card-head">
+          <span class="np-summary-card-icon">
+            <i class="fa-solid fa-credit-card"></i>
+          </span>
+          <span class="np-summary-card-title">جلسات الكروت</span>
+          <span class="np-summary-card-dot"
+                data-np-active-when="[data-mt-hotspot-cards-count]"></span>
+        </div>
+        <div class="np-summary-card-body">
+          <span class="np-summary-card-value"
+                data-np-mirror="[data-mt-hotspot-cards-count]">—</span>
+          <span class="np-summary-card-sub">متّصلون عبر بطاقات Hotspot</span>
+        </div>
+      </div>
+      <div class="np-summary-card np-summary-card--green">
+        <div class="np-summary-card-head">
+          <span class="np-summary-card-icon">
+            <i class="fa-solid fa-wifi"></i>
+          </span>
+          <span class="np-summary-card-title">جلسات اليوزرات</span>
+          <span class="np-summary-card-dot"
+                data-np-active-when="[data-mt-hotspot-users-count]"></span>
+        </div>
+        <div class="np-summary-card-body">
+          <span class="np-summary-card-value"
+                data-np-mirror="[data-mt-hotspot-users-count]">—</span>
+          <span class="np-summary-card-sub">يوزرات Hotspot الاعتياديّون</span>
+        </div>
+      </div>
+      <div class="np-summary-card np-summary-card--purple">
+        <div class="np-summary-card-head">
+          <span class="np-summary-card-icon">
+            <i class="fa-solid fa-plug"></i>
+          </span>
+          <span class="np-summary-card-title">جلسات PPP</span>
+          <span class="np-summary-card-dot"
+                data-np-active-when="[data-mt-ppp-sessions-count]"></span>
+        </div>
+        <div class="np-summary-card-body">
+          <span class="np-summary-card-value"
+                data-np-mirror="[data-mt-ppp-sessions-count]">—</span>
+          <span class="np-summary-card-sub">اشتراكات PPPoE النشطة</span>
+        </div>
       </div>
     </div>
 
@@ -1669,6 +1816,42 @@
         </p>
       </div>
     </div>
+    {# 3-card health grid — mirrors the leading number from the
+       existing summary chips (which still live inside the card
+       header so all JS hooks remain identical). #}
+    <div class="np-diag-grid">
+      <div class="np-diag-card np-diag-card--critical">
+        <span class="np-diag-card-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </span>
+        <div class="np-diag-card-body">
+          <span class="np-diag-card-value"
+                data-np-mirror-num="[data-mt-health-summary-critical]">0</span>
+          <span class="np-diag-card-label">إشارات حرجة</span>
+        </div>
+      </div>
+      <div class="np-diag-card np-diag-card--warning">
+        <span class="np-diag-card-icon">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </span>
+        <div class="np-diag-card-body">
+          <span class="np-diag-card-value"
+                data-np-mirror-num="[data-mt-health-summary-warning]">0</span>
+          <span class="np-diag-card-label">تحذيرات</span>
+        </div>
+      </div>
+      <div class="np-diag-card np-diag-card--ok">
+        <span class="np-diag-card-icon">
+          <i class="fa-solid fa-circle-check"></i>
+        </span>
+        <div class="np-diag-card-body">
+          <span class="np-diag-card-value"
+                data-np-mirror-num="[data-mt-health-summary-ok]">0</span>
+          <span class="np-diag-card-label">فحوصات سليمة</span>
+        </div>
+      </div>
+    </div>
+
     <section class="mt-card" data-mt-health-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-stethoscope"></i>
@@ -1834,6 +2017,8 @@
       <h3>
         <i class="fa-solid fa-floppy-disk"></i>
         النسخ الاحتياطية لهذا الراوتر
+        <span class="np-section-badge" data-rh-bk-count
+              style="margin-inline-start:6px">0</span>
       </h3>
       <button type="button" class="rh-bk-refresh" data-rh-bk-refresh
               title="تحديث">
@@ -3152,6 +3337,9 @@
         (body && Array.isArray(body.backups) && body.backups) ||
         [];
       console.log("[backups-tab] got", list.length, "backups");
+      // Mirror count into the new badge in the simple-head.
+      const countEl = document.querySelector("[data-rh-bk-count]");
+      if (countEl) countEl.textContent = String(list.length);
       if (!list.length) {
         show(emptyEl);
         return;
@@ -3331,5 +3519,77 @@
 
 <script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mt_dashboard.js') }}" defer></script>
+
+{# Pass-2b mirror helpers — keep the per-tab «stat strip» / «summary
+   grid» / «diag grid» values in sync with the existing data-mt-*
+   count cells WITHOUT modifying mt_dashboard.js. We watch each
+   source cell with a MutationObserver and copy its text into every
+   element that declares `data-np-mirror="<selector>"`. The
+   `data-np-mirror-num` variant extracts the leading integer from
+   text like «0 حرجة» → «0», used by the Diagnostics cards.
+   The `data-np-active-when` variant toggles an `.is-active` class
+   on the dot when the source number is > 0 (used by the Sessions
+   summary cards). #}
+<script>
+(function () {
+  "use strict";
+
+  function extractNumber(s) {
+    const m = String(s == null ? "" : s).match(/\d[\d,٬٫]*/);
+    return m ? m[0] : "0";
+  }
+
+  function applyOne(targetEl, srcText) {
+    if (targetEl.hasAttribute("data-np-mirror-num")) {
+      targetEl.textContent = extractNumber(srcText);
+    } else {
+      targetEl.textContent = String(srcText == null ? "—" : srcText);
+    }
+  }
+
+  function applyActive(dotEl, srcText) {
+    const n = parseInt(extractNumber(srcText), 10) || 0;
+    dotEl.classList.toggle("is-active", n > 0);
+  }
+
+  function setupMirror(targetEl, attr, applyFn) {
+    const sel = targetEl.getAttribute(attr);
+    if (!sel) return;
+    const src = document.querySelector(sel);
+    if (!src) return;
+    // Initial sync.
+    applyFn(targetEl, src.textContent);
+    // Watch for future updates.
+    const obs = new MutationObserver(() => {
+      applyFn(targetEl, src.textContent);
+    });
+    obs.observe(src, {
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function init() {
+    document.querySelectorAll(
+      "[data-np-mirror], [data-np-mirror-num]"
+    ).forEach((el) => {
+      const attr = el.hasAttribute("data-np-mirror-num")
+        ? "data-np-mirror-num"
+        : "data-np-mirror";
+      setupMirror(el, attr, applyOne);
+    });
+    document.querySelectorAll("[data-np-active-when]").forEach((el) => {
+      setupMirror(el, "data-np-active-when", applyActive);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
 
 {% endblock %}
