@@ -120,76 +120,13 @@
   padding:10px 14px;font-size:13px;margin:10px 0;
 }
 .swhs-error[hidden]{display:none}
-
-/* ─── Active installations — compact card grid ─── */
-.swhs-active-panel{
-  background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);
-  border:1px solid #93C5FD;border-radius:12px;
-  padding:12px 14px;margin:14px 0 18px;
-}
-.swhs-active-panel[hidden]{display:none}
-.swhs-active-head{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;
-}
-.swhs-active-head i{color:#1D4ED8;font-size:13px}
-.swhs-active-head strong{color:#1E3A8A;font-size:12.5px}
-.swhs-active-head small{color:#475569;font-size:11px;margin-inline-start:auto}
-.swhs-active-list{
-  list-style:none;margin:0;padding:0;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-  gap:8px;
-}
-.swhs-active-row{
-  position:relative;
-  background:#fff;border:1px solid #BFDBFE;border-radius:9px;
-  padding:8px 10px 8px 30px;
-  transition:all .15s;
-}
-.swhs-active-row:hover{
-  border-color:#3B82F6;
-  box-shadow:0 2px 8px rgba(59,130,246,.15);
-}
-.swhs-active-row > strong{
-  display:block;font-family:monospace;color:#1E3A8A;
-  font-size:13px;font-weight:800;line-height:1.2;
-}
-.swhs-active-row .swhs-active-meta{
-  display:block;color:#475569;font-family:monospace;
-  font-size:10.5px;margin-top:3px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.swhs-active-remove{
-  position:absolute;top:6px;inset-inline-start:6px;
-  width:22px;height:22px;border-radius:50%;padding:0;
-  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
-  font-size:11px;font-weight:700;cursor:pointer;
-  display:inline-flex;align-items:center;justify-content:center;
-  transition:all .12s;
-}
-.swhs-active-remove:hover{
-  background:#EF4444;color:#fff;border-color:#EF4444;transform:scale(1.1);
-}
-.swhs-active-remove[disabled]{
-  background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0;
-  cursor:default;transform:none;
-}
 </style>
 
-{# ───── Currently-active installations panel ─────
-   Shown only when the router already has Hotspot servers running.
-   Each row shows the interface + its subnet + a «احذف من هذا
-   المدخل» button that auto-unticks the corresponding card in the
-   picker below — operator clicks «التالي» → «إرسال» to commit. #}
-<div class="swhs-active-panel" data-swhs-active-panel hidden>
-  <div class="swhs-active-head">
-    <i class="fa-solid fa-circle-check"></i>
-    <strong>Hotspot مفعَّل حالياً</strong>
-    <small>اضغط × لاختيار حذف، ثم «التالي» → «إرسال»</small>
-  </div>
-  <ul class="swhs-active-list" data-swhs-active-list></ul>
-</div>
-
-{# ───── Section 1: pick interfaces ───── #}
+{# ───── Section 1: pick interfaces ─────
+   For deleting an already-active Hotspot on a specific port, use
+   the «خدماتي» tab on the router page — it lists every active
+   service with per-item delete + confirmation modal. This form
+   stays focused on creating / editing the active set. #}
 <div class="swhs-section">
   <div class="swhs-section-title">
     واجهات الشبكة
@@ -341,10 +278,11 @@
         throw new Error(data.error || `HTTP ${res.status}`);
       }
       wanInterfaces = data.wan_interfaces || [];
-      // Pre-tick + show active-panel: look up running Hotspots
-      // with their addresses + a per-row delete button.
+      // Pre-tick: look up running Hotspot interfaces so they keep
+      // their ticks across a re-apply (otherwise the planner's
+      // clean-replace would silently wipe peers). Per-item delete
+      // moved to the dedicated «خدماتي» tab.
       let activeInterfaces = [];
-      let activeInstallations = [];
       try {
         const cur = await fetch(
           `/admin/radius/setup-wizard-v3/routers/${routerId}/services/hotspot/current`,
@@ -354,12 +292,8 @@
         if (curData && Array.isArray(curData.interfaces)) {
           activeInterfaces = curData.interfaces;
         }
-        if (curData && Array.isArray(curData.installations)) {
-          activeInstallations = curData.installations;
-        }
       } catch (_) { /* soft-fail */ }
       renderInterfaces(data.interfaces || [], activeInterfaces);
-      renderActivePanel(activeInstallations);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
     } finally {
@@ -413,60 +347,6 @@
       if (card) card.classList.add("is-checked");
     });
     refreshPayload();
-  }
-
-  // Render the «currently active» panel above the picker. Each row
-  // gets a delete button that simply unticks the matching card in
-  // the picker and refreshes the payload — the planner's clean-
-  // replace handles the actual removal on apply.
-  function renderActivePanel(installations) {
-    const panel = page.querySelector("[data-swhs-active-panel]");
-    const list  = page.querySelector("[data-swhs-active-list]");
-    if (!panel || !list) return;
-    if (!installations || !installations.length) {
-      panel.hidden = true;
-      list.innerHTML = "";
-      return;
-    }
-    list.innerHTML = installations.map((it) => {
-      // Compact card: interface name big, just the subnet under it.
-      // Server-name / profile-name are auto-generated and not useful
-      // visually — dropped to keep the card small.
-      const subnet = it.address || "—";
-      return `
-        <li class="swhs-active-row" title="حذف ${it.interface}">
-          <button type="button" class="swhs-active-remove"
-                  data-swhs-active-remove="${it.interface}"
-                  title="حذف Hotspot من ${it.interface}">×</button>
-          <strong>${it.interface}</strong>
-          <span class="swhs-active-meta">${subnet}</span>
-        </li>`;
-    }).join("");
-    panel.hidden = false;
-    list.querySelectorAll("[data-swhs-active-remove]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const iface = btn.dataset.swhsActiveRemove;
-        // Untick the matching checkbox in the picker — the planner
-        // will clean it up on apply because it's no longer in the
-        // selected_interfaces list.
-        const cb = page.querySelector(
-          `[data-swhs-iface][value="${iface}"]`
-        );
-        if (cb) {
-          cb.checked = false;
-          cb.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        // Visual feedback: dim the card + change the button to ✓.
-        const card = btn.closest("li");
-        if (card) {
-          card.style.opacity = ".55";
-          card.style.textDecoration = "line-through";
-        }
-        btn.disabled = true;
-        btn.textContent = "✓";
-        btn.title = "سيُحذف عند الإرسال";
-      });
-    });
   }
 
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
