@@ -347,7 +347,20 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
         ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
-        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        // If the backend included the debug_script (set on failure),
+        // log it to the JS console + write it to the page so the
+        // operator can copy-paste into MikroTik Terminal and find
+        // the offending line.
+        if (data.debug_script && window.console) {
+          console.warn("[Broadband] FAILED — script that was sent to the router:\n" + data.debug_script);
+        }
+        let banner = (data.error || data.stderr ||
+                      `تعذّر الإرسال (HTTP ${res.status})`);
+        if (data.debug_script) {
+          banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
+                  + data.debug_script;
+        }
+        window.SWSVF.showApplyError(banner);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");

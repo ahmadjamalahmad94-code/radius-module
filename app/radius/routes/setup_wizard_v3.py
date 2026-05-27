@@ -779,6 +779,10 @@ def setup_wizard_v3_broadband_apply(router_id: int):
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            # Surface the exact post-processed script so the operator
+            # can copy it into MikroTik Terminal and find the offending
+            # line by hand. Only exposed on failure — never on success.
+            "debug_script": script_to_send,
         }), 502
     return jsonify({
         "ok": True,
@@ -788,6 +792,46 @@ def setup_wizard_v3_broadband_apply(router_id: int):
             {"key": "send",    "status": "done"},
             {"key": "commit",  "status": "done"},
         ],
+    })
+
+
+def setup_wizard_v3_broadband_script(router_id: int):
+    """Read-only debug endpoint — re-plans Broadband with the same
+    inputs the apply endpoint would use and returns the
+    post-processed .rsc text the executor would send. Operator
+    pastes it into MikroTik Terminal to find the offending line
+    when the apply traps somewhere we haven't seen yet."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    body = _body() or {}
+    inputs = {
+        "selected_interfaces": list(body.get("selected_interfaces") or []),
+        "local_address": (str(body.get("local_address") or "").strip()
+                          or "10.30.0.1"),
+        "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
+                             or "10.30.1.0/24"),
+        "dns_servers": (str(body.get("dns_servers") or "").strip()
+                        or "1.1.1.1"),
+        "mode": "manual",
+        "blocked_interfaces": list(body.get("blocked_interfaces") or []),
+        "blocked_network_cidrs": [],
+    }
+    if not inputs["selected_interfaces"]:
+        return _err("اختر واجهة شبكة واحدة على الأقل.",
+                    status=400, code="no_interface_selected")
+    plan_result, status, err = _plan_broadband(router_id, inputs)
+    if err:
+        return jsonify({"ok": False, **err}), status
+    raw = plan_result.script or ""
+    cleaned = _broadband_post_process_script(raw)
+    return jsonify({
+        "ok": True,
+        "raw_script": raw,
+        "cleaned_script": cleaned,
+        "blocking_errors": _translate_blockers(plan_result.blocking_errors),
     })
 
 
@@ -2260,6 +2304,12 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "setup_wizard_v3_broadband_verify",
         setup_wizard_v3_broadband_verify,
         methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/broadband/script",
+        "setup_wizard_v3_broadband_script",
+        setup_wizard_v3_broadband_script,
+        methods=["POST"],
     )
     # Block-sites flow endpoints.
     bp.add_url_rule(
