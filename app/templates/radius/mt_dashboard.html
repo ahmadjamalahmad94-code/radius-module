@@ -347,10 +347,13 @@
   font-size:11px;color:#64748B;line-height:1.5;
 }
 
+/* KPI strip bottom margin so it doesn't crowd the next row. */
+.rh-overview .hub-kpi-grid{margin-bottom:22px}
+
 /* ─── 2-column grid (Traffic + Active users) ─── */
 .rh-overview .mt-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-  gap:16px;margin:0 0 18px;
+  gap:16px;margin:0 0 22px;
   /* Stretch cards to the same height so the visual baseline of the
      grid stays flat regardless of content size differences. */
   align-items:stretch;
@@ -1045,8 +1048,8 @@
                 data-mt-action-dns-resolve>
           <i class="fa-solid fa-magnifying-glass"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">حلّ نطاق</span>
-            <span class="mt-action-sub">DNS resolve لاسم</span>
+            <span class="mt-action-label">معرفة IP لاسم نطاق</span>
+            <span class="mt-action-sub">مثلاً google.com → 8.8.8.8</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn"
@@ -1311,27 +1314,23 @@
   {# ─── P6 — Sessions tab (read-only) ──────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="sessions"
            role="tabpanel" hidden>
-    <p class="mt-tab-hint">
-      عرض للقراءة فقط في هذه المرحلة — قطع الجلسات يحتاج تأكيد
-      وسيُضاف في خطوة لاحقة مع زر POST + CSRF كاملين.
-    </p>
 
-    {# Hotspot sessions sub-card. #}
-    <section class="mt-card" data-mt-hotspot-card>
+    {# ── Hotspot — Cards sub-card (numeric/short usernames) ── #}
+    <section class="mt-card" data-mt-hotspot-cards-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-wifi"></i> جلسات Hotspot</h3>
+        <h3><i class="fa-solid fa-credit-card"></i> Hotspot — جلسات الكروت</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-sessions-count>—</span> متّصل ·
+          <span data-mt-hotspot-cards-count>—</span> متّصل ·
           <button type="button" class="mt-mini-btn"
-                  data-mt-hotspot-sessions-refresh>
+                  data-mt-hotspot-cards-refresh>
             <i class="fa-solid fa-rotate"></i> تحديث
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-hotspot-sessions-msg>جارٍ التحميل…</p>
-        <div class="mt-table-wrap" data-mt-hotspot-sessions-wrap hidden>
-          <table class="mt-iface-table" data-mt-hotspot-sessions-table>
+        <p class="mt-empty" data-mt-hotspot-cards-msg>جارٍ التحميل…</p>
+        <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
+          <table class="mt-iface-table" data-mt-hotspot-cards-table>
             <thead>
               <tr>
                 <th>المستخدم</th>
@@ -1341,16 +1340,51 @@
                 <th>RX</th>
                 <th>TX</th>
                 <th>تعليق</th>
+                <th>إجراء</th>
               </tr>
             </thead>
-            <tbody data-mt-hotspot-sessions-rows></tbody>
+            <tbody data-mt-hotspot-cards-rows></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    {# PPP sessions sub-card. #}
-    <section class="mt-card" data-mt-ppp-card>
+    {# ── Hotspot — Users sub-card (non-card usernames) ── #}
+    <section class="mt-card" data-mt-hotspot-users-card style="margin-top:18px">
+      <header class="mt-card-head">
+        <h3><i class="fa-solid fa-wifi"></i> Hotspot — جلسات اليوزرات</h3>
+        <span class="mt-card-meta">
+          <span data-mt-hotspot-users-count>—</span> متّصل ·
+          <button type="button" class="mt-mini-btn"
+                  data-mt-hotspot-users-refresh>
+            <i class="fa-solid fa-rotate"></i> تحديث
+          </button>
+        </span>
+      </header>
+      <div class="mt-card-body">
+        <p class="mt-empty" data-mt-hotspot-users-msg>جارٍ التحميل…</p>
+        <div class="mt-table-wrap" data-mt-hotspot-users-wrap hidden>
+          <table class="mt-iface-table" data-mt-hotspot-users-table>
+            <thead>
+              <tr>
+                <th>المستخدم</th>
+                <th>العنوان</th>
+                <th>MAC</th>
+                <th>المدة</th>
+                <th>RX</th>
+                <th>TX</th>
+                <th>تعليق</th>
+                <th>إجراء</th>
+              </tr>
+            </thead>
+            <tbody data-mt-hotspot-users-rows></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    {# ── PPP sessions sub-card ── #}
+    <section class="mt-card" data-mt-ppp-card style="margin-top:18px">
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-plug"></i> جلسات PPP</h3>
         <span class="mt-card-meta">
@@ -1372,6 +1406,7 @@
                 <th>العنوان</th>
                 <th>Caller</th>
                 <th>المدة</th>
+                <th>إجراء</th>
               </tr>
             </thead>
             <tbody data-mt-ppp-sessions-rows></tbody>

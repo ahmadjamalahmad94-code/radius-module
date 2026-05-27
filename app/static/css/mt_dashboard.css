@@ -602,6 +602,27 @@
 .mt-iface-state--down { background: #FEF3C7; color: #92400E; }
 .mt-iface-state--off  { background: #E2E8F0; color: #475569; }
 
+/* Per-row disconnect button in session tables (hotspot cards,
+   hotspot users, ppp). Compact + red so the operator's eye finds
+   it immediately, but not large enough to dominate the row. */
+.mt-row-disconnect {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 7px;
+  border: 1px solid #FCA5A5; background: #FEF2F2;
+  color: #B91C1C; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all .12s;
+  white-space: nowrap;
+}
+.mt-row-disconnect i { font-size: 11px; }
+.mt-row-disconnect:hover {
+  background: #FECACA; border-color: #F87171;
+  transform: translateY(-1px);
+}
+.mt-row-disconnect:disabled {
+  opacity: 0.6; cursor: wait;
+  background: #FEE2E2;
+}
+
 .mt-iface-errors {
   display: inline-block;
   padding: 2px 8px;

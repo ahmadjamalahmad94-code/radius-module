@@ -577,42 +577,87 @@
     }
 
     // ── TRACEROUTE ────────────────────────────────────────
+    // RouterOS shape:
+    //   { data: { data: [
+    //       { address, status, sent, last, avg, best, worst,
+    //         loss, "std-dev", ... }, ... ] } }
+    // Each row is one hop. RouterOS uses different field names than
+    // I assumed — address (not host), last/avg/best/worst (not rtt
+    // or time). The traceroute may also stream results — we get the
+    // final accumulated table back from the API endpoint.
     if (kind === "traceroute") {
       if (!ok) return head("فشل Traceroute", "/tools/traceroute") + failBody();
-      const hops = Array.isArray(data.hops) ? data.hops : [];
+      const hops = Array.isArray(data.data)    ? data.data
+                 : Array.isArray(data.hops)    ? data.hops
+                 : Array.isArray(data.replies) ? data.replies
+                 : Array.isArray(data)         ? data
+                 : [];
       const target = data.target || data.host || "";
-      const rows = hops.map((h, i) => `
-        <tr>
+      const rows = hops.map((h, i) => {
+        const addr = h.address || h.host || "*";
+        const last = h.last || h.rtt || h.time || "—";
+        const avg  = h.avg || "—";
+        const lossRaw = h.loss != null ? h.loss : h["packet-loss"];
+        const loss = lossRaw != null && lossRaw !== ""
+                   ? String(lossRaw).replace(/%$/, "") + "%" : "—";
+        const status = h.status || "";
+        const dim = (addr === "*" || /timeout|unreachable/i.test(status));
+        return `
+        <tr${dim ? ' style="opacity:.6"' : ""}>
           <td>${i + 1}</td>
-          <td>${safeHtml(h.address || h.host || "*")}</td>
-          <td>${safeHtml(h.rtt || h.time || "—")}</td>
-          <td>${safeHtml(h.loss != null ? h.loss + "%" : "—")}</td>
-        </tr>`).join("");
+          <td>${safeHtml(addr)}</td>
+          <td>${safeHtml(last)}${avg !== "—" ? ` <span style="color:#94A3B8">/${safeHtml(avg)}</span>` : ""}</td>
+          <td>${safeHtml(loss)}</td>
+        </tr>`;
+      }).join("");
       return head(`Traceroute إلى ${target || "—"}`, "/tools/traceroute") + body(`
         <table>
-          <thead><tr><th>القفزة</th><th>العنوان</th><th>RTT</th><th>الفقد</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="4">لا توجد قفزات</td></tr>'}</tbody>
+          <thead>
+            <tr><th>القفزة</th><th>العنوان</th><th>آخر/متوسط</th><th>الفقد</th></tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:#94A3B8">لا توجد قفزات</td></tr>'}</tbody>
         </table>
         <div class="mt-action-result-summary">
           عدد القفزات: <strong>${hops.length}</strong>
+          ${hops[hops.length-1] && hops[hops.length-1].status
+            ? ' · الحالة الأخيرة: <strong>' + safeHtml(hops[hops.length-1].status) + '</strong>'
+            : ''}
         </div>
       `);
     }
 
     // ── DNS RESOLVE ───────────────────────────────────────
+    // RouterOS may return the resolved address in the envelope
+    // directly OR as a row in `data.data[]`. We handle both shapes.
     if (kind === "dns-resolve") {
       if (!ok) return head("فشل حلّ النطاق", "/ip/dns/cache/lookup") + failBody();
-      const name = data.name || data.host || data.query || "";
-      const addrs = data.addresses || data.address || data.ips || [];
-      const list = (Array.isArray(addrs) ? addrs : [addrs])
+      const name = data.name || data.host || data.query
+                || (Array.isArray(data.data) && data.data[0] && data.data[0].name) || "";
+      // Collect addresses from any of the known shapes.
+      let addrs = [];
+      if (Array.isArray(data.addresses)) addrs = data.addresses;
+      else if (Array.isArray(data.ips))  addrs = data.ips;
+      else if (data.address)             addrs = [data.address];
+      else if (Array.isArray(data.data)) {
+        // Each row may have an `address` field, or be a string IP.
+        addrs = data.data
+          .map(r => (typeof r === "string" ? r : (r.address || r.host || "")))
+          .filter(Boolean);
+      }
+      const list = addrs
         .filter(Boolean)
         .map(a => `<dd>${safeHtml(a)}</dd>`).join("");
       return head(`نتيجة الحلّ — ${name}`, "DNS") + body(`
         <dl class="mt-kv">
           <dt>النطاق</dt><dd>${safeHtml(name)}</dd>
-          <dt>العناوين</dt>
-          ${list ? `<div>${list}</div>` : '<dd>— (لم يُحَلّ)</dd>'}
+          ${list
+            ? `<dt>العناوين</dt><dd>${addrs.length} نتيجة</dd>${list}`
+            : '<dt>العناوين</dt><dd>— (لم يُحَلّ)</dd>'}
         </dl>
+        ${list ? `
+          <div class="mt-action-result-summary">
+            ✓ النطاق متاح. هذي IPs اللي يحلّها الراوتر حالياً.
+          </div>` : ""}
       `);
     }
 
@@ -1228,7 +1273,12 @@
           if (count) count.textContent = "—";
           return;
         }
-        const list = Array.isArray(env.data) ? env.data : [];
+        let list = Array.isArray(env.data) ? env.data : [];
+        // Optional per-row predicate (e.g. card vs user split on the
+        // same /ip/hotspot/active feed). Skipped if not supplied.
+        if (typeof spec.filter === "function") {
+          list = list.filter(spec.filter);
+        }
         if (!list.length) {
           setMsg(spec.emptyMsg);
           wrap.hidden = true;
@@ -1416,38 +1466,97 @@
     if ((location.hash || "").replace(/^#/, "") === "tab-diagnostics") start();
   })();
 
-  // ─── P6 — Sessions (hotspot + ppp, read-only) ─────────────────
+  // ─── P6 — Sessions (hotspot cards + hotspot users + ppp) ─────
   //
-  // Both sub-cards live inside the `sessions` panel — they share
-  // the tab-change start/stop hook (same slug) but hit different
-  // endpoints so they can render side-by-side as the operator scrolls.
+  // Operator asked for the Hotspot session list to be split into
+  // two stacked tables — one for CARDS (timed/credit-style logins,
+  // usually purely-numeric or short alphanumeric usernames generated
+  // by the cards engine) and one for REGULAR USERS. We use a simple
+  // frontend heuristic to bucket each /ip/hotspot/active row:
+  //   - purely-digit username           → card
+  //   - 6-12 char alphanumeric, mixed   → card
+  //   - everything else                 → user
+  // The card filter is permissive — false positives bucket as cards
+  // (acceptable: the operator still sees them, just under a slightly
+  // wrong heading). A future commit can swap this for a backend
+  // lookup of cards_repo.get_card_by_username.
+  function isCardUsername(u) {
+    if (!u) return false;
+    if (/^\d+$/.test(u)) return true;                // all digits
+    if (/^[A-Za-z0-9]{4,12}$/.test(u) && /\d/.test(u)
+        && !/^\w+@\w+\./.test(u)) {
+      return true;                                    // short alphanum w/ digits
+    }
+    return false;
+  }
+
+  // Disconnect button + row builder shared by both Hotspot tables.
+  // The action posts to /mikrotik/<id>/hotspot/disconnect — the row
+  // is identified by either RouterOS `.id` or `user` (whichever the
+  // active row carries). Optimistic UI: row dims while in flight,
+  // gets reloaded on success.
+  function hotspotSessionRow(r) {
+    const id = String(r[".id"] || "");
+    const user = String(r.user || "");
+    return [
+      '<tr data-mt-session-row',
+      id   ? ' data-mt-session-id="'  + escapeText(id)   + '"' : '',
+      user ? ' data-mt-session-user="' + escapeText(user) + '"' : '',
+      '>',
+      '<td class="mt-iface-name">', escapeText(user || "—"), '</td>',
+      '<td class="mt-iface-mac">', escapeText(r.address || "—"), '</td>',
+      '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
+      '<td>', escapeText(r.uptime || "—"), '</td>',
+      '<td>', escapeText(r["bytes-in"] || "—"), '</td>',
+      '<td>', escapeText(r["bytes-out"] || "—"), '</td>',
+      '<td>', escapeText(r.comment || ""), '</td>',
+      '<td><button type="button" class="mt-row-disconnect"',
+      ' data-mt-disconnect="hotspot"',
+      ' title="قطع الاتصال">',
+      '<i class="fa-solid fa-link-slash"></i> قطع',
+      '</button></td>',
+      '</tr>',
+    ].join("");
+  }
+
+  // ── Hotspot CARDS ──
   initTableTab({
     slug: "sessions",
     path: "/hotspot/active",
     pollMs: 10_000,
-    cardSel: "[data-mt-hotspot-card]",
-    msgSel: "[data-mt-hotspot-sessions-msg]",
-    wrapSel: "[data-mt-hotspot-sessions-wrap]",
-    rowsSel: "[data-mt-hotspot-sessions-rows]",
-    countSel: "[data-mt-hotspot-sessions-count]",
-    refreshSel: "[data-mt-hotspot-sessions-refresh]",
-    emptyMsg: "لا توجد جلسات Hotspot نشطة الآن.",
+    cardSel: "[data-mt-hotspot-cards-card]",
+    msgSel: "[data-mt-hotspot-cards-msg]",
+    wrapSel: "[data-mt-hotspot-cards-wrap]",
+    rowsSel: "[data-mt-hotspot-cards-rows]",
+    countSel: "[data-mt-hotspot-cards-count]",
+    refreshSel: "[data-mt-hotspot-cards-refresh]",
+    emptyMsg: "لا توجد جلسات كروت نشطة الآن.",
     errorFallback: "الراوتر لم يرد على /ip/hotspot/active.",
-    row: function (r) {
-      return [
-        '<tr>',
-        '<td class="mt-iface-name">', escapeText(r.user || "—"), '</td>',
-        '<td class="mt-iface-mac">', escapeText(r.address || "—"), '</td>',
-        '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
-        '<td>', escapeText(r.uptime || "—"), '</td>',
-        '<td>', escapeText(r["bytes-in"] || "—"), '</td>',
-        '<td>', escapeText(r["bytes-out"] || "—"), '</td>',
-        '<td>', escapeText(r.comment || ""), '</td>',
-        '</tr>',
-      ].join("");
-    },
+    // Custom filter: bucket only card-pattern usernames into this
+    // table. The Users table below filters the inverse so each
+    // row appears in exactly one table.
+    filter: function (r) { return isCardUsername(r.user); },
+    row: hotspotSessionRow,
   });
 
+  // ── Hotspot USERS ──
+  initTableTab({
+    slug: "sessions",
+    path: "/hotspot/active",
+    pollMs: 10_000,
+    cardSel: "[data-mt-hotspot-users-card]",
+    msgSel: "[data-mt-hotspot-users-msg]",
+    wrapSel: "[data-mt-hotspot-users-wrap]",
+    rowsSel: "[data-mt-hotspot-users-rows]",
+    countSel: "[data-mt-hotspot-users-count]",
+    refreshSel: "[data-mt-hotspot-users-refresh]",
+    emptyMsg: "لا توجد جلسات يوزرات نشطة الآن.",
+    errorFallback: "الراوتر لم يرد على /ip/hotspot/active.",
+    filter: function (r) { return !isCardUsername(r.user); },
+    row: hotspotSessionRow,
+  });
+
+  // ── PPP sessions (single table, with disconnect) ──
   initTableTab({
     slug: "sessions",
     path: "/ppp/active",
@@ -1461,16 +1570,72 @@
     emptyMsg: "لا توجد جلسات PPP نشطة الآن.",
     errorFallback: "الراوتر لم يرد على /ppp/active.",
     row: function (r) {
+      const id   = String(r[".id"] || "");
+      const name = String(r.name  || "");
       return [
-        '<tr>',
-        '<td class="mt-iface-name">', escapeText(r.name || "—"), '</td>',
+        '<tr data-mt-session-row',
+        id   ? ' data-mt-session-id="'   + escapeText(id)   + '"' : '',
+        name ? ' data-mt-session-user="' + escapeText(name) + '"' : '',
+        '>',
+        '<td class="mt-iface-name">', escapeText(name || "—"), '</td>',
         '<td>', escapeText(r.service || "—"), '</td>',
         '<td class="mt-iface-mac">', escapeText(r.address || "—"), '</td>',
         '<td class="mt-iface-mac">', escapeText(r["caller-id"] || "—"), '</td>',
         '<td>', escapeText(r.uptime || "—"), '</td>',
+        '<td><button type="button" class="mt-row-disconnect"',
+        ' data-mt-disconnect="ppp"',
+        ' title="قطع الاتصال">',
+        '<i class="fa-solid fa-link-slash"></i> قطع',
+        '</button></td>',
         '</tr>',
       ].join("");
     },
+  });
+
+  // ── Disconnect wiring (event delegation, one listener for all
+  //    three tables) ──
+  // The router's actual disconnect endpoint depends on the session
+  // kind (`hotspot` vs `ppp`). Both endpoints expect either the
+  // RouterOS .id (preferred — exact match) or the username
+  // (fallback — kicks all sessions for that user).
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-mt-disconnect]");
+    if (!btn) return;
+    const kind = btn.dataset.mtDisconnect;
+    const tr   = btn.closest("[data-mt-session-row]");
+    if (!tr) return;
+    const id    = tr.dataset.mtSessionId   || "";
+    const user  = tr.dataset.mtSessionUser || "";
+    if (!id && !user) return;
+    // Inline confirm — no modal needed for read+kick. Keeps the row
+    // visible the whole time.
+    const label = user || id;
+    if (!window.confirm(`قطع اتصال «${label}»؟`)) return;
+    btn.disabled = true;
+    tr.style.opacity = "0.5";
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
+    try {
+      const path = kind === "ppp" ? "/ppp/disconnect" : "/hotspot/disconnect";
+      const body = id ? { id } : { user };
+      await api(
+        "/mikrotik/" + CFG.routerId + path,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      // Optimistically remove the row; the next poll will confirm.
+      tr.style.transition = "opacity .25s, transform .25s";
+      tr.style.transform = "translateX(40px)";
+      setTimeout(() => tr.remove(), 250);
+    } catch (err) {
+      btn.disabled = false;
+      tr.style.opacity = "1";
+      btn.innerHTML = origHtml;
+      alert("تعذّر قطع الاتصال: " + (err && err.message || err));
+    }
   });
 
   // ─── P5 — Logs viewer ─────────────────────────────────────────
