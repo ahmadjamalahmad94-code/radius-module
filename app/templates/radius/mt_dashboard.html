@@ -3106,10 +3106,53 @@
       openFor(card);
     });
 
+    // Strip the admin chrome (topbar + sidebar + decorative bg)
+    // from the iframe so the operator sees only the service flow
+    // — not a full second copy of the admin shell. Same-origin so
+    // contentDocument is accessible. Wrapped in try/catch to fall
+    // back gracefully if the iframe ever points cross-origin.
+    function stripIframeChrome(){
+      try {
+        const doc = frame.contentDocument;
+        if (!doc || !doc.head) return;
+        if (doc.getElementById('rh-svc-modal-embed-css')) return;
+        const style = doc.createElement('style');
+        style.id = 'rh-svc-modal-embed-css';
+        style.textContent = [
+          /* Hide everything that belongs to the surrounding admin
+             chrome — topbar, sidebar, decorative background. */
+          '.topbar, .hb-side, .hb-bg-net,',
+          '.hb-pkt, .hb-pkt-1, .hb-pkt-2, .hb-pkt-3,',
+          '.mt-warn-banner { display: none !important; }',
+          /* Drop the sidebar offset and let content fill the
+             iframe edge to edge. */
+          'main.main {',
+          '  inset-inline-start: 0 !important;',
+          '  margin: 0 !important;',
+          '  padding: 14px 18px !important;',
+          '  min-height: auto !important;',
+          '  width: 100% !important;',
+          '  max-width: 100% !important;',
+          '}',
+          /* Some pages read these custom props at the body level
+             to leave room for the sidebar; zero them out. */
+          'body {',
+          '  background: #fff !important;',
+          '  --hb-side-current-w: 0px !important;',
+          '  --hr-sidebar-w: 0px !important;',
+          '}',
+        ].join('\n');
+        doc.head.appendChild(style);
+      } catch (_) {
+        /* cross-origin or DOM not ready — fall back to full page */
+      }
+    }
+
     frame.addEventListener('load', function(){
       if (loading && frame.src && frame.src !== 'about:blank') {
         loading.hidden = true;
       }
+      stripIframeChrome();
     });
     closeBtn.addEventListener('click', close);
     modal.addEventListener('click', function(e){
