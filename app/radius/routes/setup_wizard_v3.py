@@ -676,6 +676,20 @@ def setup_wizard_v3_broadband_preview(router_id: int):
                     "bullets": _broadband_preview_bullets(plan_result)})
 
 
+def _broadband_post_process_script(script: str) -> str:
+    """Surgical fix-ups on the legacy planner's .rsc output.
+
+    The planner emits `dns-server="x.x.x.x"` inside /ppp profile add.
+    RouterOS 7 sometimes refuses a quoted IP value for that property
+    ("expected end of command" at the column right after the
+    closing quote). The simplest cross-version fix is to drop the
+    attribute entirely — the router falls back to system-wide DNS
+    (which is what most operators want anyway).
+    """
+    import re
+    return re.sub(r'\s+dns-server="[^"]*"', "", script)
+
+
 def setup_wizard_v3_broadband_apply(router_id: int):
     """Phase 3 «إرسال»: re-plan + execute via LiveRouterExecutor."""
     from ..db.repos import nas_repo
@@ -727,9 +741,14 @@ def setup_wizard_v3_broadband_apply(router_id: int):
     if not plan_result.script or not plan_result.script.strip():
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
                     status=400, code="empty_script")
+    # Post-process the legacy planner output before sending — strips
+    # the dns-server="x.x.x.x" attribute that RouterOS 7 refuses
+    # quoted. The router uses system-wide DNS as a fallback, which
+    # is the typical operator intent.
+    script_to_send = _broadband_post_process_script(plan_result.script)
     try:
         exec_result = get_router_executor().execute_forward(
-            router_id=router_id, script=plan_result.script,
+            router_id=router_id, script=script_to_send,
         )
     except ExecutorNotConfigured:
         return _err(
