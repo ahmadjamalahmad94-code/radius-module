@@ -228,6 +228,43 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
     return jsonify({"ok": True, "interfaces": interfaces})
 
 
+# ─── Friendly Arabic translations for planner blocking-error codes ───
+# Surfaced to the operator instead of raw codes like
+# `hotspot_no_interface_selected`. Falls back to the raw code when an
+# entry isn't in the map — so new errors degrade gracefully.
+_BLOCKING_ERRORS_AR = {
+    # Hotspot
+    "hotspot_no_interface_selected":
+        "اختر واجهة شبكة واحدة على الأقل قبل المتابعة.",
+    "hotspot_subnet_conflict":
+        "النطاق الذي اخترته يتعارض مع شبكة أخرى على الراوتر. "
+        "غيّره يدوياً أو اضغط «توليد».",
+    # Broadband
+    "broadband_no_interface_selected":
+        "اختر واجهة شبكة واحدة على الأقل قبل المتابعة.",
+    "broadband_pool_conflict":
+        "نطاق المشتركين يتعارض مع شبكة أخرى على الراوتر. "
+        "غيّر «نطاق المشتركين» يدوياً.",
+    # Added services (block_sites / walled_garden / site_exit)
+    "added_services_no_domains":
+        "اكتب موقعاً واحداً على الأقل قبل المتابعة.",
+    "added_services_too_many_targets":
+        "عدد المواقع تجاوز الحدّ الأقصى (200). اختصر القائمة وحاول مرة أخرى.",
+    "added_services_module_not_available":
+        "هذه الخدمة غير مدعومة بعد على هذه النسخة.",
+    "site_exit_no_exit_node":
+        "اختر عقدة خروج (VPS exit node) قبل المتابعة.",
+    "site_exit_invalid_destinations":
+        "صيغة المواقع غير صحيحة — تأكّد من كتابة domain صحيح في كل سطر.",
+}
+
+
+def _translate_blockers(blockers):
+    """Map planner blocking-error codes to plain-Arabic messages.
+    Unknown codes pass through (better than dropping them)."""
+    return [_BLOCKING_ERRORS_AR.get(str(b), str(b)) for b in (blockers or ())]
+
+
 def _plan_hotspot(router_id: int, inputs: dict) -> dict:
     """Shared planner call used by both preview and apply.
     Returns: (plan_result_dict, http_status, error_dict_or_none)."""
@@ -293,7 +330,7 @@ def setup_wizard_v3_hotspot_preview(router_id: int):
         return jsonify({
             "ok": False,
             "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": _hotspot_preview_bullets(plan_result),
         }), 409
 
@@ -334,7 +371,7 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
@@ -500,7 +537,7 @@ def setup_wizard_v3_broadband_preview(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": _broadband_preview_bullets(plan_result),
         }), 409
     return jsonify({"ok": True,
@@ -536,7 +573,7 @@ def setup_wizard_v3_broadband_apply(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
@@ -672,7 +709,7 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
@@ -732,7 +769,7 @@ def setup_wizard_v3_block_sites_preview(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
     return jsonify({"ok": True, "bullets": bullets})
@@ -825,7 +862,7 @@ def setup_wizard_v3_open_sites_preview(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
     return jsonify({"ok": True, "bullets": bullets})
@@ -947,7 +984,7 @@ def setup_wizard_v3_public_ip_preview(router_id: int):
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
-            "blocking_errors": list(plan_result.blocking_errors),
+            "blocking_errors": _translate_blockers(plan_result.blocking_errors),
             "bullets": bullets,
         }), 409
     return jsonify({"ok": True, "bullets": bullets})

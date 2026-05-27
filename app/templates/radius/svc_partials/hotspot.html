@@ -219,6 +219,7 @@
     if (!items.length) {
       ifaceList.innerHTML =
         '<div class="swhs-iface-empty">لم تُكتشَف واجهات صالحة.</div>';
+      refreshPayload();
       return;
     }
     ifaceList.innerHTML = items.map((it) => {
@@ -235,12 +236,24 @@
           <span class="swhs-iface-meta">${meta}</span>
         </label>`;
     }).join("");
-    // Toggle is-checked class on label when checkbox flips.
+    // Toggle is-checked class on label when checkbox flips + keep
+    // payload in sync (defensive — the parent listener already
+    // catches bubbled change events, but doing it here too means
+    // we never miss a state update no matter how the click was
+    // synthesized).
     ifaceList.querySelectorAll("[data-swhs-iface]").forEach((cb) => {
       cb.addEventListener("change", () => {
         cb.closest(".swhs-iface-card").classList.toggle("is-checked", cb.checked);
+        refreshPayload();
       });
     });
+    // CRITICAL: initial `checked` attributes from `recommended:true`
+    // do NOT fire a change event — they're just initial DOM state.
+    // Without this explicit call, the form payload stays at its
+    // pre-render empty value and the planner rejects with
+    // hotspot_no_interface_selected even though the operator sees
+    // checked boxes on screen.
+    refreshPayload();
   }
 
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
