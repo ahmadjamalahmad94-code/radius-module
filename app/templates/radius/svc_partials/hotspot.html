@@ -36,16 +36,43 @@
 }
 .swhs-iface-card{
   display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border:1px solid var(--swsvf-line);border-radius:10px;
+  padding:10px 12px;border:2px solid var(--swsvf-line);border-radius:10px;
   background:#fff;cursor:pointer;font-size:13px;
-  transition:all .15s;
+  transition:all .15s;position:relative;
 }
 .swhs-iface-card:hover{border-color:var(--swsvf-blue);background:#F8FAFC}
 .swhs-iface-card input{
-  width:16px;height:16px;cursor:pointer;accent-color:var(--swsvf-blue);margin:0;
+  width:18px;height:18px;cursor:pointer;accent-color:var(--swsvf-blue);margin:0;
 }
+/* Primary visual feedback — pure CSS via :has(input:checked) so
+   the chip lights up the millisecond the checkbox toggles, no JS
+   class-toggle race condition. The is-checked fallback below
+   covers older browsers (Chrome <105, Safari <15.4). */
+.swhs-iface-card:has(input:checked),
 .swhs-iface-card.is-checked{
-  background:var(--swsvf-blue-soft);border-color:var(--swsvf-blue);
+  background:var(--swsvf-blue-soft);
+  border-color:var(--swsvf-blue);
+  box-shadow:0 0 0 3px rgba(59,130,246,.1);
+}
+.swhs-iface-card:has(input:checked)::after,
+.swhs-iface-card.is-checked::after{
+  content:"✓";
+  position:absolute;top:-8px;inset-inline-end:-8px;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--swsvf-blue);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;
+  box-shadow:0 2px 6px rgba(59,130,246,.4);
+}
+/* Live counter showing how many interfaces are picked. */
+.swhs-iface-counter{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:#F1F5F9;color:#475569;
+  font-size:12px;font-weight:700;margin-inline-start:8px;
+}
+.swhs-iface-counter.is-ready{
+  background:var(--swsvf-blue-soft);color:#1D4ED8;
 }
 .swhs-iface-name{font-weight:700;color:var(--swsvf-ink);font-family:monospace}
 .swhs-iface-meta{color:var(--swsvf-mute);font-size:11px;margin-inline-start:auto}
@@ -86,7 +113,10 @@
 
 {# ───── Section 1: pick interfaces ───── #}
 <div class="swhs-section">
-  <div class="swhs-section-title">واجهات الشبكة</div>
+  <div class="swhs-section-title">
+    واجهات الشبكة
+    <span class="swhs-iface-counter" data-swhs-counter>0 واجهة مختارة</span>
+  </div>
   <p class="swhs-help">
     اختر الواجهة (أو الواجهات) التي يتّصل بها المستخدمون. عادةً ether2 أو ether3،
     أو واجهة Wi-Fi (wlan1) إن كان هناك بثّ لاسلكي.
@@ -136,6 +166,7 @@
   const discoverBtn = page.querySelector("[data-swhs-discover]");
   const subnetInput = page.querySelector("[data-swhs-subnet]");
   const formError = page.querySelector("[data-swhs-form-error]");
+  const counter = page.querySelector("[data-swhs-counter]");
 
   function token() {
     const el = document.querySelector('input[name="_csrf_token"]');
@@ -236,23 +267,15 @@
           <span class="swhs-iface-meta">${meta}</span>
         </label>`;
     }).join("");
-    // Toggle is-checked class on label when checkbox flips + keep
-    // payload in sync (defensive — the parent listener already
-    // catches bubbled change events, but doing it here too means
-    // we never miss a state update no matter how the click was
-    // synthesized).
-    ifaceList.querySelectorAll("[data-swhs-iface]").forEach((cb) => {
-      cb.addEventListener("change", () => {
-        cb.closest(".swhs-iface-card").classList.toggle("is-checked", cb.checked);
-        refreshPayload();
-      });
+    // Initial `checked` attributes from `recommended:true` do NOT
+    // fire a change event — they're just initial DOM state. So we
+    // force a refresh here AND also paint the is-checked fallback
+    // class onto any pre-checked cards in case the browser doesn't
+    // support :has() yet.
+    ifaceList.querySelectorAll("[data-swhs-iface]:checked").forEach((cb) => {
+      const card = cb.closest(".swhs-iface-card");
+      if (card) card.classList.add("is-checked");
     });
-    // CRITICAL: initial `checked` attributes from `recommended:true`
-    // do NOT fire a change event — they're just initial DOM state.
-    // Without this explicit call, the form payload stays at its
-    // pre-render empty value and the planner rejects with
-    // hotspot_no_interface_selected even though the operator sees
-    // checked boxes on screen.
     refreshPayload();
   }
 
@@ -266,10 +289,33 @@
   // but the preview pane will get our error from the API.
   // Cleaner: write the payload to the dataset whenever the form
   // changes. The shell reads it on navigation.
+  function updateCounter() {
+    if (!counter) return;
+    const n = getSelectedInterfaces().length;
+    counter.textContent = n === 0
+      ? "اختر واجهة واحدة على الأقل"
+      : `${n} واجهة مختارة`;
+    counter.classList.toggle("is-ready", n > 0);
+  }
   function refreshPayload() {
     page.dataset.swsvfConfigurePayload = JSON.stringify(getPayload());
+    updateCounter();
   }
-  ifaceList.addEventListener("change", refreshPayload);
+  // Event delegation — one listener on the parent catches every
+  // checkbox toggle, including those from labels-without-for,
+  // keyboard tabs, autofill, and screen readers. Also covers
+  // checkboxes added by future renderInterfaces() calls without
+  // re-attaching listeners.
+  ifaceList.addEventListener("change", (e) => {
+    if (e.target && e.target.matches && e.target.matches("[data-swhs-iface]")) {
+      // The :has(input:checked) CSS rule handles the visual state
+      // automatically on modern browsers; the legacy is-checked
+      // class is a fallback for older engines.
+      const card = e.target.closest(".swhs-iface-card");
+      if (card) card.classList.toggle("is-checked", e.target.checked);
+    }
+    refreshPayload();
+  });
   subnetInput.addEventListener("input", refreshPayload);
   refreshPayload();
   // Last-chance refresh: the shell fires this event right before
