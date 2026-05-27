@@ -1721,6 +1721,42 @@
     </div>
   </div>
 
+  {# Service-flow iframe modal — opens above the dashboard when the
+     operator clicks any service card so they stay in context (no
+     full-page navigation, no host-page reload). Loads the existing
+     setup_wizard_v3 service page inside an <iframe> without touching
+     that page's code. Operator: «صندوق منبثق وخلص بدون متتغير
+     الصفحة ويضل يعيد تحميل». #}
+  <div class="rh-svc-modal" data-rh-svc-modal hidden role="dialog"
+       aria-modal="true" aria-labelledby="rh-svc-modal-title">
+    <div class="rh-svc-modal-shell">
+      <header class="rh-svc-modal-head">
+        <h3 id="rh-svc-modal-title">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          <span data-rh-svc-modal-title-text>الخدمة</span>
+        </h3>
+        <div class="rh-svc-modal-actions">
+          <a href="#" target="_blank" rel="noopener noreferrer"
+             class="rh-svc-modal-newtab" data-rh-svc-modal-newtab
+             title="فتح في نافذة جديدة"
+             aria-label="فتح في نافذة جديدة">
+            <i class="fa-solid fa-up-right-from-square"></i>
+          </a>
+          <button type="button" class="rh-svc-modal-close"
+                  data-rh-svc-modal-close aria-label="إغلاق">×</button>
+        </div>
+      </header>
+      <div class="rh-svc-modal-loading" data-rh-svc-modal-loading>
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>جارٍ تحميل صفحة الخدمة…</span>
+      </div>
+      <iframe class="rh-svc-modal-frame"
+              data-rh-svc-modal-frame
+              title="صفحة الخدمة"
+              loading="lazy"></iframe>
+    </div>
+  </div>
+
 </section>
 
 <style>
@@ -2089,6 +2125,81 @@
   .rh-inv-hero{align-items:stretch;flex-direction:column;padding:16px}
   .rh-inv-refresh{justify-content:center;width:100%}
   .rh-inv-hero h3{font-size:21px}
+}
+
+/* ─── Service-flow iframe modal ───
+   Opens above the dashboard when a service card is clicked so the
+   operator never leaves the page. The iframe loads the existing
+   setup_wizard_v3 page unchanged. */
+.rh-svc-modal{
+  position:fixed;inset:0;z-index:10000;
+  background:rgba(15,23,42,.65);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;backdrop-filter:blur(2px);
+  animation:rh-svc-modal-fade .15s ease;
+}
+.rh-svc-modal[hidden]{display:none !important}
+@keyframes rh-svc-modal-fade{
+  from{opacity:0}
+  to{opacity:1}
+}
+.rh-svc-modal-shell{
+  width:100%;max-width:1280px;height:100%;max-height:88vh;
+  background:#fff;border-radius:18px;
+  box-shadow:0 30px 80px rgba(15,23,42,.35);
+  display:flex;flex-direction:column;overflow:hidden;
+  border:1px solid rgba(124,58,237,.18);
+  animation:rh-svc-modal-pop .2s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes rh-svc-modal-pop{
+  from{transform:scale(.96);opacity:0}
+  to  {transform:scale(1);opacity:1}
+}
+.rh-svc-modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;border-bottom:1px solid #EEF2FF;
+  background:linear-gradient(180deg,#FAFAFF,#FFFFFF);
+  flex-shrink:0;gap:12px;
+}
+.rh-svc-modal-head h3{
+  margin:0;font-size:15px;font-weight:800;color:#1F2937;
+  display:inline-flex;align-items:center;gap:9px;min-width:0;
+}
+.rh-svc-modal-head h3 i{color:#6B5AED;font-size:13px;flex-shrink:0}
+.rh-svc-modal-head h3 span{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.rh-svc-modal-actions{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.rh-svc-modal-newtab,.rh-svc-modal-close{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:9px;
+  border:1px solid #E2E8F0;background:#fff;color:#475569;
+  text-decoration:none;font-size:13px;cursor:pointer;
+  transition:all .12s;
+}
+.rh-svc-modal-newtab:hover{
+  background:#F5F3FF;border-color:#C4B5FD;color:#6D28D9;
+}
+.rh-svc-modal-close{font-size:18px;line-height:1;font-weight:700}
+.rh-svc-modal-close:hover{
+  background:#FEF2F2;border-color:#FECACA;color:#B91C1C;
+}
+.rh-svc-modal-loading{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:10px 18px;background:#F8FAFC;color:#6B5AED;
+  font-size:13px;font-weight:700;
+  border-bottom:1px solid #EEF2FF;
+}
+.rh-svc-modal-loading[hidden]{display:none}
+.rh-svc-modal-frame{
+  flex:1;width:100%;border:0;background:#fff;
+}
+@media (max-width:720px){
+  .rh-svc-modal{padding:8px}
+  .rh-svc-modal-shell{max-height:96vh;border-radius:12px}
+  .rh-svc-modal-head{padding:10px 14px}
+  .rh-svc-modal-head h3{font-size:13.5px}
 }
 </style>
 
@@ -2943,6 +3054,71 @@
     init();
   }
 })();
+</script>
+
+{# Service-flow modal controller. Intercepts clicks on any
+   .np-svc-card that has data-rh-svc-card (i.e. the 6 real service
+   cards — tool cards in section C don't carry that attribute, so
+   they keep normal navigation). Loads the card's href inside an
+   <iframe> so the dashboard never reloads. Operator: «اشي خفيف
+   ولطيف نفس الاداء الحالي». #}
+<script>
+  (function(){
+    const page = document.querySelector('[data-mt-dashboard]');
+    if (!page) return;
+    const modal = page.querySelector('[data-rh-svc-modal]');
+    if (!modal) return;
+    const frame    = modal.querySelector('[data-rh-svc-modal-frame]');
+    const titleEl  = modal.querySelector('[data-rh-svc-modal-title-text]');
+    const newtabEl = modal.querySelector('[data-rh-svc-modal-newtab]');
+    const loading  = modal.querySelector('[data-rh-svc-modal-loading]');
+    const closeBtn = modal.querySelector('[data-rh-svc-modal-close]');
+    if (!frame || !closeBtn) return;
+
+    function openFor(card){
+      const href = card.getAttribute('href');
+      if (!href || href === '#') return;
+      const tEl = card.querySelector('.np-svc-title');
+      if (titleEl) titleEl.textContent =
+        tEl ? tEl.textContent.trim() : 'الخدمة';
+      if (newtabEl) newtabEl.setAttribute('href', href);
+      if (loading) loading.hidden = false;
+      frame.src = href;
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      // Clear src to stop any background timers/sockets in the
+      // iframe. Same href will re-load fresh on the next click.
+      frame.src = 'about:blank';
+    }
+
+    // Delegated click — works for cards rendered after page load.
+    page.addEventListener('click', function(e){
+      // Let ctrl/middle/shift clicks open in a new tab as usual.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+      const card = e.target.closest(
+        '.np-svc-card[data-rh-svc-card]');
+      if (!card) return;
+      e.preventDefault();
+      openFor(card);
+    });
+
+    frame.addEventListener('load', function(){
+      if (loading && frame.src && frame.src !== 'about:blank') {
+        loading.hidden = true;
+      }
+    });
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', function(e){
+      if (e.target === modal) close();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !modal.hidden) close();
+    });
+  })();
 </script>
 
 {% endblock %}
