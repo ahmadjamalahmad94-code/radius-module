@@ -1344,6 +1344,31 @@
 }
 .rh-inv-del:hover{background:#FECACA;border-color:#F87171}
 
+/* ─── Remote-access per-grant badges + URL row ─── */
+.rh-inv-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 9px;border-radius:999px;font-size:10.5px;
+  font-weight:800;white-space:nowrap;letter-spacing:.02em;
+}
+.rh-inv-badge i{font-size:10px}
+.rh-inv-badge-perm{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
+.rh-inv-badge-tmp{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.rh-inv-badge-tmp.is-expired{background:#FEE2E2;color:#7F1D1D;border-color:#FCA5A5}
+.rh-inv-url-row{
+  display:flex;align-items:center;gap:6px;margin-bottom:8px;
+  background:#F5F3FF;border:1px solid #DDD6FE;border-radius:7px;
+  padding:4px 7px;
+}
+.rh-inv-url-value{
+  flex:1;min-width:0;font-family:monospace;font-size:12.5px;
+  color:#1F2937;direction:ltr;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:transparent;border:none;padding:2px 4px;
+}
+.rh-inv-url-row .rh-inv-copy-btn{
+  width:26px;height:26px;flex-shrink:0;
+}
+
 /* ─── Remote-access connection banner ─── */
 .rh-inv-conn-banner{
   background:linear-gradient(135deg,#EDE9FE 0%,#DDD6FE 100%);
@@ -1524,6 +1549,7 @@
       ).join("");
       wireDeleteButtons();
       wireCopyButtons();
+      startCountdowns();
     } catch (err) {
       errorEl.textContent = String(err && err.message || err);
       errorEl.hidden = false;
@@ -1666,6 +1692,38 @@
     const sourceTag = it.source === "operator"
       ? '<span class="rh-inv-source rh-inv-source-op">إعداد يدوي</span>'
       : '<span class="rh-inv-source rh-inv-source-hr">من البرمجة</span>';
+
+    // Remote-access cards get extra chrome: prominent VPS URL,
+    // permanent/temporary badge, and (when temporary) a live
+    // countdown until auto-revoke. Other service types stay plain.
+    let urlBlock = "";
+    let badgeBlock = "";
+    if (g.service_type === "remote-access") {
+      if (it.vps_url) {
+        urlBlock = `
+          <div class="rh-inv-url-row">
+            <code class="rh-inv-url-value">${safe(it.vps_url)}</code>
+            <button type="button" class="rh-inv-copy-btn"
+                    data-rh-inv-copy="${safe(it.vps_url)}" title="نسخ">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+          </div>`;
+      }
+      if (it.permanent) {
+        badgeBlock =
+          '<span class="rh-inv-badge rh-inv-badge-perm">' +
+          '<i class="fa-solid fa-infinity"></i> دائم' +
+          '</span>';
+      } else if (it.expires_at) {
+        badgeBlock =
+          '<span class="rh-inv-badge rh-inv-badge-tmp"' +
+          ` data-rh-expires="${safe(it.expires_at)}">` +
+          '<i class="fa-solid fa-hourglass-half"></i> ' +
+          `<span data-rh-countdown>${safe(it.expires_at)}</span>` +
+          '</span>';
+      }
+    }
+
     const details = Object.entries(it.details || {})
       .map(([k, v]) => `<dt>${safe(k)}</dt><dd>${safe(v)}</dd>`)
       .join("");
@@ -1677,13 +1735,67 @@
            data-rh-inv-group-title="${safe(g.title)}">
         <div class="rh-inv-card-head">
           <span class="rh-inv-card-label" title="${safe(it.label)}">${safe(it.label)}</span>
+          ${badgeBlock}
           ${sourceTag}
         </div>
+        ${urlBlock}
         <dl class="rh-inv-details">${details}</dl>
         <button type="button" class="rh-inv-del">
           <i class="fa-solid fa-trash"></i> حذف
         </button>
       </div>`;
+  }
+
+  // ── Live countdown for temporary remote-access grants ──────
+  //
+  // RouterOS gives next-run as "May/27/2026 18:42:17" or similar.
+  // We parse it to a Date once on render, then refresh the badge
+  // every 30s with the human-readable remaining time. When the
+  // countdown hits zero the badge flips to «منتهٍ» so the operator
+  // knows to refresh the list (RouterOS may take up to 1 min to
+  // actually fire the scheduler and reap the rule).
+  function startCountdowns() {
+    const badges = document.querySelectorAll("[data-rh-expires]");
+    if (!badges.length) return;
+    function tick() {
+      const now = Date.now();
+      badges.forEach((b) => {
+        const raw = b.dataset.rhExpires || "";
+        const span = b.querySelector("[data-rh-countdown]");
+        if (!span) return;
+        // RouterOS format: "mon/dd/yyyy hh:mm:ss" — JS Date can parse
+        // many variants but not this one reliably. Try ISO first,
+        // then a manual fallback. If both fail, show the raw value.
+        let when = Date.parse(raw);
+        if (Number.isNaN(when)) {
+          // "May/27/2026 18:42:17" → "May 27 2026 18:42:17"
+          when = Date.parse(raw.replace(/\//g, " "));
+        }
+        if (Number.isNaN(when)) {
+          span.textContent = raw;
+          return;
+        }
+        let diffSec = Math.floor((when - now) / 1000);
+        if (diffSec <= 0) {
+          span.textContent = "منتهٍ — حدِّث القائمة";
+          b.classList.add("is-expired");
+          return;
+        }
+        const d = Math.floor(diffSec / 86400);
+        diffSec -= d * 86400;
+        const h = Math.floor(diffSec / 3600);
+        diffSec -= h * 3600;
+        const m = Math.floor(diffSec / 60);
+        const parts = [];
+        if (d) parts.push(`${d}ي`);
+        if (h) parts.push(`${h}س`);
+        if (!d) parts.push(`${m}د`);
+        span.textContent = `متبقّي ${parts.join(" ")}`;
+      });
+    }
+    tick();
+    if (window._rhCountdownTimer) clearInterval(window._rhCountdownTimer);
+    window._rhCountdownTimer = setInterval(tick, 30000);
   }
 
   let currentCard = null;

@@ -1501,26 +1501,122 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "items": siteexit_items,
                 })
             # ─── Remote-access grants — firewall filter rules
+            #
+            # Each rule's comment encodes:
+            #   HOBERADIUS_TECH:<token>:<svc_name>[:<kind>:<ttl_h>]
+            # where the last two segments are new (older grants don't
+            # have them — we fall back gracefully). When kind=perm we
+            # show «دائم»; when kind=tmp we cross-reference the
+            # matching scheduler row to compute remaining time.
+            #
+            # Also we cache the per-router NPC port mappings so each
+            # grant card can surface its public VPS URL — answering
+            # the operator's "show me the connect address right on
+            # the card" feedback.
+            try:
+                schedulers = list(
+                    mt.print_("/system/scheduler/print")
+                )
+            except Exception:  # noqa: BLE001
+                schedulers = []
+            try:
+                from ..db.repos import (
+                    npc_remote_port_mappings_repo as _ports_repo,
+                )
+                _mappings_by_svc = {
+                    m["service"]: m
+                    for m in _ports_repo.list_for_router(router_id)
+                    if m.get("enabled")
+                }
+            except Exception:  # noqa: BLE001
+                _mappings_by_svc = {}
+
+            # Map wizard service name → ports_repo service id.
+            _SVC_TO_PORT_KEY = {
+                "winbox": "winbox",
+                "ssh":    "ssh",
+                "webfig": "webfig_http",
+                "api":    "api",
+            }
+
+            def _scheduler_next_run(token_: str) -> str:
+                """Find the scheduler that auto-revokes this grant
+                (matched by token). Returns the scheduler's
+                next-run timestamp (RouterOS format), or "" if no
+                scheduler exists (= permanent grant)."""
+                want = f"HOBERADIUS_TECH:{token_}:auto-revoke"
+                for s in schedulers:
+                    if want in str(s.get("comment", "") or ""):
+                        return str(s.get("next-run", "") or "").strip()
+                return ""
+
             remote_items = []
             for r in mt.print_("/ip/firewall/filter/print"):
                 comment = str(r.get("comment", "") or "")
                 if "HOBERADIUS_TECH" not in comment:
                     continue
-                # Parse the token out of "HOBERADIUS_TECH:abc123ef:winbox"
-                token = ""
+                # Parse:  HOBERADIUS_TECH : <token> : <svc> [: <kind> : <ttl_h>]
                 parts = [p for p in comment.split(":") if p]
-                if len(parts) >= 2:
-                    token = parts[1]
+                token = parts[1] if len(parts) >= 2 else ""
+                svc_name = parts[2] if len(parts) >= 3 else "?"
+                kind = parts[3] if len(parts) >= 4 else ""
+                ttl_h = parts[4] if len(parts) >= 5 else ""
+
+                # Determine effective kind: prefer explicit `perm`
+                # from the comment; otherwise infer from scheduler
+                # presence (legacy grants without `:perm:0` marker).
+                next_run = _scheduler_next_run(token)
+                is_permanent = (kind == "perm") or (
+                    kind != "tmp" and not next_run
+                )
+
+                # Per-grant connection URL — what the operator
+                # actually pastes into Winbox / browser.
+                mapping_key = _SVC_TO_PORT_KEY.get(svc_name)
+                vps_url = ""
+                if mapping_key and public_host_value:
+                    m = _mappings_by_svc.get(mapping_key)
+                    if m:
+                        port = int(m["public_port"])
+                        if svc_name == "winbox":
+                            vps_url = f"{public_host_value}:{port}"
+                        elif svc_name == "ssh":
+                            vps_url = f"{public_host_value}:{port}"
+                        elif svc_name == "webfig":
+                            vps_url = f"http://{public_host_value}:{port}/"
+                        elif svc_name == "api":
+                            vps_url = f"{public_host_value}:{port}"
+
+                details: dict = {}
+                if vps_url:
+                    details["عنوان الاتصال (VPS)"] = vps_url
+                details["المنفذ على الراوتر"] = str(r.get("dst-port", "") or "—")
+                details["IP المصدر"] = str(r.get("src-address", "") or "أي")
+                if is_permanent:
+                    details["المدّة"] = "دائم (لا يُحذف تلقائيّاً)"
+                else:
+                    if ttl_h:
+                        if ttl_h.isdigit() and int(ttl_h) >= 24 and int(ttl_h) % 24 == 0:
+                            details["المدّة المُحدّدة"] = f"{int(ttl_h) // 24} يوم"
+                        else:
+                            details["المدّة المُحدّدة"] = f"{ttl_h} ساعة"
+                    if next_run:
+                        details["ينتهي في"] = next_run
+                details["معرّف الإذن"] = token or "—"
+
                 remote_items.append({
-                    "target": str(r.get(".id", "") or ""),
+                    "target":       str(r.get(".id", "") or ""),
                     "service_type": "remote-access",
-                    "label": (parts[2] if len(parts) >= 3 else "?"),
-                    "details": {
-                        "المنفذ": str(r.get("dst-port", "") or "—"),
-                        "IP المصدر": str(r.get("src-address", "") or "أي"),
-                        "معرّف الإذن": token or "—",
-                    },
-                    "source": "hoberadius",
+                    "label":        svc_name,
+                    "details":      details,
+                    # New fields the dashboard JS can render with
+                    # nicer styling (badge for permanent, countdown
+                    # for temporary, copy button for the URL).
+                    "permanent":    is_permanent,
+                    "vps_url":      vps_url,
+                    "expires_at":   next_run,
+                    "ttl_hours":    int(ttl_h) if ttl_h.isdigit() else 0,
+                    "source":       "hoberadius",
                 })
             if remote_items:
                 groups.append({
@@ -2101,69 +2197,104 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
       2. Adds /ip firewall filter accept rules for each requested
          service port (Winbox/SSH/WebFig/API), constrained to the
          source IP if provided.
-      3. Adds /system scheduler entry that auto-removes those
-         rules + itself after ttl_hours.
+      3. If ``ttl_hours`` > 0, adds a /system scheduler entry that
+         auto-removes those rules + itself after ttl_hours. When
+         ``ttl_hours == 0`` the access is *permanent* and no
+         scheduler is emitted (the operator's own grant — revoke
+         is manual from the «خدماتي» tab).
+
     Lightweight on purpose — does not write to nas_devices or any
     DB table. The grant token in the comments is how the verify
-    + revoke endpoints find the rules later.
+    + revoke endpoints find the rules later. The comment also
+    encodes the kind (perm|tmp) and ttl so the inventory view can
+    render «دائم» vs «ينتهي بعد Nh» without re-fetching the
+    scheduler.
     """
+    permanent = (int(ttl_hours) <= 0)
+    kind = "perm" if permanent else "tmp"
     tag = f"HOBERADIUS_TECH:{grant_token}"
     sched_name = f"hr-tech-revoke-{grant_token}"
+    header = (
+        "# Remote tech access — permanent (manual revoke only)"
+        if permanent
+        else f"# Remote tech access — auto-expires in {ttl_hours}h"
+    )
     lines = [
-        f"# Remote tech access — auto-expires in {ttl_hours}h",
+        header,
         "/ip firewall filter",
         f':foreach r in=[find comment~"{tag}"] do={{remove $r}}',
     ]
     src_clause = f"src-address={source_ip}" if source_ip else ""
+    # Comment carries `name`, kind (perm|tmp), and the ttl hours
+    # so the inventory can display «دائم» / «ينتهي بعد N» without
+    # having to cross-reference the scheduler entry for every row.
+    ttl_token = "0" if permanent else str(int(ttl_hours))
     for svc in services or []:
         port = int(svc.get("port", 0) or 0)
         if not port:
             continue
         name = str(svc.get("name", "?"))
         proto = "tcp"
+        comment_val = f'{tag}:{name}:{kind}:{ttl_token}'
         parts = [
             "add", "chain=input", f"protocol={proto}", f"dst-port={port}",
-            "action=accept", f'comment="{tag}:{name}"',
+            "action=accept", f'comment="{comment_val}"',
             "place-before=0",
         ]
         if src_clause:
             parts.insert(4, src_clause)
         lines.append(" ".join(parts))
-    # Scheduler — fires after `interval` (set to ttl_hours), then the
-    # on-event removes the rules + the scheduler itself in one go.
-    #
-    # CRITICAL: the on-event value is itself a quoted string in the
-    # outer command. Any literal `"` inside it would terminate the
-    # outer string prematurely (MikrotikTrap: «expected end of
-    # command»). RouterOS treats `\"` as a literal quote inside a
-    # quoted string — we use that here for every nested quote.
-    on_event = (
-        f'/ip firewall filter remove [find comment~\\"{tag}\\"]; '
-        f'/system scheduler remove [find name=\\"{sched_name}\\"]'
-    )
-    lines += [
-        "/system scheduler",
-        f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
-        (
-            f'add name="{sched_name}" '
-            f'interval={int(ttl_hours)}h '
-            f'on-event="{on_event}" '
-            f'comment="{tag}:auto-revoke"'
-        ),
-    ]
+    if permanent:
+        # No scheduler — operator revokes manually from «خدماتي».
+        # We still emit a `/system scheduler` block that removes any
+        # previously created scheduler for this token (in case the
+        # operator is re-applying a previously-temporary grant as
+        # permanent — otherwise the old timer would still fire).
+        lines += [
+            "/system scheduler",
+            f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
+        ]
+    else:
+        # Scheduler — fires after `interval` (set to ttl_hours),
+        # then the on-event removes the rules + the scheduler
+        # itself in one go.
+        #
+        # CRITICAL: the on-event value is itself a quoted string
+        # in the outer command. Any literal `"` inside it would
+        # terminate the outer string prematurely (MikrotikTrap:
+        # «expected end of command»). RouterOS treats `\"` as a
+        # literal quote inside a quoted string — we use that here
+        # for every nested quote.
+        on_event = (
+            f'/ip firewall filter remove [find comment~\\"{tag}\\"]; '
+            f'/system scheduler remove [find name=\\"{sched_name}\\"]'
+        )
+        lines += [
+            "/system scheduler",
+            f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
+            (
+                f'add name="{sched_name}" '
+                f'interval={int(ttl_hours)}h '
+                f'on-event="{on_event}" '
+                f'comment="{tag}:auto-revoke"'
+            ),
+        ]
     return "\n".join(lines) + "\n"
 
 
 def setup_wizard_v3_remote_access_preview(router_id: int):
     body = _body() or {}
     services = list(body.get("services") or [])
+    # ttl_hours=0 means "permanent" (no scheduler). Anything > 720
+    # (30 days) we cap as defensive guard — the operator's UI tops
+    # out at 720 anyway.
     ttl_hours = int(body.get("ttl_hours") or 4)
     source_ip = str(body.get("source_ip") or "").strip()
     if not services:
         return _err("اختر خدمة واحدة على الأقل.",
                     status=400, code="no_services")
-    if ttl_hours < 1 or ttl_hours > 168:  # cap at one week
-        return _err("المدّة يجب أن تكون بين ساعة و 7 أيام.",
+    if ttl_hours < 0 or ttl_hours > 720:
+        return _err("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم).",
                     status=400, code="bad_ttl")
     svc_names_ar = {
         "winbox": "Winbox (8291)",
@@ -2173,12 +2304,24 @@ def setup_wizard_v3_remote_access_preview(router_id: int):
     }
     enabled = [svc_names_ar.get(s.get("name", "?"), s.get("name", "?"))
                for s in services]
+    if ttl_hours == 0:
+        duration_bullet = (
+            "المدّة: دائم — لا يُحذف تلقائيّاً (الإلغاء يدوي من «خدماتي»)."
+        )
+    elif ttl_hours >= 24 and ttl_hours % 24 == 0:
+        duration_bullet = (
+            f"المدّة: {ttl_hours // 24} يوم — تُحذف القواعد تلقائيّاً عند انتهائها."
+        )
+    else:
+        duration_bullet = (
+            f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها."
+        )
     bullets = [
         f"سيُسمح بالاتصال على: {' • '.join(enabled)}.",
         (f"من IP: {source_ip}" if source_ip
          else "من أي IP (الأفضل تحديد IP الفنّي)."),
-        f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها.",
-        "يمكن إلغاء الوصول يدويّاً في أي وقت من بطاقة «اتصال عن بُعد».",
+        duration_bullet,
+        "يمكن إلغاء الوصول يدويّاً في أي وقت من تبويب «خدماتي».",
     ]
     # Build a *preview* of the same script the apply path would send.
     # The grant_token will be regenerated client-side at apply time,
