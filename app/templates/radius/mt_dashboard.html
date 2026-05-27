@@ -2116,20 +2116,13 @@
 <style>
 /* ─── Reusable page hero — applied to every tab panel ────────
    Operator: «الهيرو الي عملته لخدماتي عجبني — طبعه ع باقي
-   الصفحات». Same shell as rh-inv-hero / rh-bk-hero but colour-
-   variant-driven via .mt-page-hero--<color>. */
-.mt-page-hero{
-  position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:16px;flex-wrap:wrap;
-  margin:0 0 22px;padding:22px 26px;
-  border-radius:24px;
-  background:
-    radial-gradient(circle at 90% -10%, rgba(99,102,241,.16), transparent 38%),
-    linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
-  border:1px solid rgba(99,102,241,.18);
-  box-shadow:0 18px 48px rgba(99,102,241,.08), 0 2px 6px rgba(15,23,42,.04);
-}
+   الصفحات». The PARENT .mt-page-hero rule lives in
+   dashboard_premium.css (compact 16/24 padding + glass bg +
+   shadow) — we used to redefine it here too with display:flex,
+   which silently doubled the hero's height once this <style>
+   block went live (it was wrongly opened as <script> for a
+   while and never applied). Only the children + colour variants
+   stay here. */
 .mt-page-hero-glow{
   position:absolute;top:-30%;right:-10%;
   width:480px;height:480px;border-radius:50%;
