@@ -174,11 +174,12 @@
 }
 .mt-dashboard .mt-tabs-status--float {
   position: absolute;
-  /* Lands inside the top-left (RTL visual left) of the hero band.
-     The hero starts right after .mt-tabs-row (margin: 8px 0 28px
-     + ~40px tab height ≈ 76px), so 84px places the pill ~8px into
-     the hero's padding area. */
-  top: 84px;
+  /* Lands roughly in the vertical middle of the hero band (not at
+     its very top). nav row eats ~81px (8 + ~45 + 28), hero is
+     ~150px tall, so its middle sits at ~156px; minus half the
+     pill height (~18px) → ~138px. Operator: «بده ينزل شوي بنص
+     الهيرو». */
+  top: 138px;
   inset-inline-end: 28px;
   z-index: 5;
   display: inline-flex;
