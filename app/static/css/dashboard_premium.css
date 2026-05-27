@@ -164,6 +164,22 @@
 }
 .mt-dashboard .mt-tab[data-mt-tab="my-services"].is-active i { color: #FFFFFF; }
 
+/* Icon-only tab variant (used for خدماتي per operator request).
+   Squashes the tab into a circular pill with no text — the icon
+   alone is the brand mark. aria-label keeps it accessible. */
+.mt-dashboard .mt-tab.mt-tab--icon-only {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  gap: 0;
+}
+.mt-dashboard .mt-tab.mt-tab--icon-only i { font-size: 14px; margin: 0; }
+.mt-dashboard .mt-tab.mt-tab--icon-only.is-active {
+  width: 40px; height: 40px;
+}
+
 /* Status pill on the right of the nav row */
 .mt-dashboard .mt-tabs-status {
   padding-bottom: 0;

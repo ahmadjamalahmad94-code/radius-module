@@ -1,27 +1,27 @@
-{# K9 — MikroTik per-router dashboard. All live data comes from the
-   K3–K8 JSON APIs; this template only ships the shell. #}
+﻿{# K9 â€” MikroTik per-router dashboard. All live data comes from the
+   K3â€“K8 JSON APIs; this template only ships the shell. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}لوحة الراوتر — {{ nas.name }}{% endblock %}
+{% block title %}Ù„ÙˆØ­Ø© Ø§Ù„Ø±Ø§ÙˆØªØ± â€” {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
-{% block page_title %}لوحة الراوتر {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
+{% block page_title %}Ù„ÙˆØ­Ø© Ø§Ù„Ø±Ø§ÙˆØªØ± {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">NAS #{{ nas.id }} Â· {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_premium.css') }}">
 <style>
-/* ──────────────────────────────────────────────────────────────
-   Router Hub — full redesign (May 2026)
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Router Hub â€” full redesign (May 2026)
    One outer card (.rh-hub) with three internal sections:
-     1. .rh-hub-identity    — router name strip with status pill
-     2. .rh-hub-block       — labeled section for خدمات / الأدوات
+     1. .rh-hub-identity    â€” router name strip with status pill
+     2. .rh-hub-block       â€” labeled section for Ø®Ø¯Ù…Ø§Øª / Ø§Ù„Ø£Ø¯ÙˆØ§Øª
         with .rh-hub-cards grid of .rh-hub-card cards
    All values use design tokens we own (no Tailwind, no Bootstrap).
    Border-radius / paddings tuned so everything fits the top half
    of a 1080p screen.
-   ────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .rh-hub{
   background:#fff;
   border:1px solid #EAECF0;
@@ -32,7 +32,7 @@
   box-shadow:0 1px 2px rgba(15,23,42,.03);
 }
 
-/* ─── Collapse / expand toggle bar ─── */
+/* â”€â”€â”€ Collapse / expand toggle bar â”€â”€â”€ */
 .rh-hub-toggle{
   width:100%;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -120,7 +120,7 @@
   .rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{animation:none}
 }
 
-/* ─── Collapsible body ─── */
+/* â”€â”€â”€ Collapsible body â”€â”€â”€ */
 .rh-hub-body{
   max-height:1600px;overflow:hidden;
   transition:max-height .35s ease;
@@ -133,7 +133,7 @@
   .rh-hub-toggle-chevron{transition:none}
 }
 
-/* ─── Identity strip ─── */
+/* â”€â”€â”€ Identity strip â”€â”€â”€ */
 .rh-hub-identity{
   display:flex;align-items:center;gap:16px;
   padding:20px 24px;
@@ -177,7 +177,7 @@
   0%,100%{opacity:.5} 50%{opacity:1}
 }
 
-/* ─── Block (services / tools) ─── */
+/* â”€â”€â”€ Block (services / tools) â”€â”€â”€ */
 .rh-hub-block{padding:18px 24px}
 .rh-hub-block + .rh-hub-block{border-top:1px solid #F1F5F9}
 .rh-hub-block-title{
@@ -192,7 +192,7 @@
   margin-inline-start:auto;
 }
 
-/* ─── Card grids ─── */
+/* â”€â”€â”€ Card grids â”€â”€â”€ */
 .rh-hub-cards{
   display:grid;gap:10px;
 }
@@ -203,7 +203,7 @@
   grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
 }
 
-/* ─── Individual card ─── */
+/* â”€â”€â”€ Individual card â”€â”€â”€ */
 .rh-hub-card{
   display:flex;align-items:center;gap:12px;
   padding:12px 14px;
@@ -212,7 +212,7 @@
   transition:all .15s;
   position:relative;
 }
-/* Live status dot — top-end corner. JS sets one of three classes:
+/* Live status dot â€” top-end corner. JS sets one of three classes:
    .is-active (green), .is-inactive (grey), .is-unknown (amber). */
 .rh-hub-card-badge{
   position:absolute;top:8px;inset-inline-end:10px;
@@ -251,7 +251,7 @@
   color:currentColor;transform:translateX(-2px);
 }
 
-/* ─── Per-color card variants ─── */
+/* â”€â”€â”€ Per-color card variants â”€â”€â”€ */
 .rh-hub-card--blue   { color:#1D4ED8 }
 .rh-hub-card--blue   .rh-hub-card-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
 .rh-hub-card--green  { color:#047857 }
@@ -267,7 +267,7 @@
 .rh-hub-card--slate  { color:#475569 }
 .rh-hub-card--slate  .rh-hub-card-icon{background:linear-gradient(135deg,#94A3B8,#475569)}
 
-/* ─── Responsive — stack on narrow screens ─── */
+/* â”€â”€â”€ Responsive â€” stack on narrow screens â”€â”€â”€ */
 @media (max-width:640px){
   .rh-hub-identity{flex-wrap:wrap}
   .rh-hub-id-status{flex-basis:100%;display:flex;justify-content:flex-start}
@@ -275,17 +275,17 @@
   .rh-hub-cards--svc, .rh-hub-cards--tool{grid-template-columns:1fr}
 }
 
-/* ──────────────────────────────────────────────────────────────
-   Overview panel — scoped restyle (May 2026)
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Overview panel â€” scoped restyle (May 2026)
    Keeps every [data-mt-*] hook intact so mt_dashboard.js fills
    values the same way. Only the visuals change: matching radii,
    spacing, soft shadows, and a calmer color palette so the body
    feels like part of the same Router Hub above.
-   ────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .rh-overview{padding:0 !important}
 .rh-overview > * + *{margin-top:14px}
 
-/* ─── Status bar ─── */
+/* â”€â”€â”€ Status bar â”€â”€â”€ */
 .rh-overview-status{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   background:#fff;border:1px solid #EAECF0;border-radius:14px;
@@ -304,7 +304,7 @@
   color:#64748B;font-size:12.5px;font-family:monospace;
 }
 
-/* ─── KPIs grid — re-skin existing .hub-kpi cards ─── */
+/* â”€â”€â”€ KPIs grid â€” re-skin existing .hub-kpi cards â”€â”€â”€ */
 .rh-overview .hub-kpi-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
@@ -351,7 +351,7 @@
 /* KPI strip bottom margin so it doesn't crowd the next row. */
 .rh-overview .hub-kpi-grid{margin-bottom:22px}
 
-/* ─── 2-column grid (Traffic + Active users) ─── */
+/* â”€â”€â”€ 2-column grid (Traffic + Active users) â”€â”€â”€ */
 .rh-overview .mt-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
   gap:16px;margin:0 0 22px;
@@ -360,7 +360,7 @@
   align-items:stretch;
 }
 
-/* ─── Cards (Traffic, Users, Actions) ─── */
+/* â”€â”€â”€ Cards (Traffic, Users, Actions) â”€â”€â”€ */
 .rh-overview .mt-card{
   background:#fff;border:1px solid #EAECF0;border-radius:14px;
   overflow:hidden;
@@ -372,9 +372,9 @@
 .rh-overview .mt-card-body{flex:1 1 auto;min-height:0}
 .rh-overview .mt-card--actions{margin-top:6px}
 
-/* ─── Live grid cards: fixed height + body scrolls ────────────
-   Operator: «بدي الصندوقين نفس الارتفاع وما يزيد. لو زادت
-   البيانات يصير سكرول».
+/* â”€â”€â”€ Live grid cards: fixed height + body scrolls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Operator: Â«Ø¨Ø¯ÙŠ Ø§Ù„ØµÙ†Ø¯ÙˆÙ‚ÙŠÙ† Ù†ÙØ³ Ø§Ù„Ø§Ø±ØªÙØ§Ø¹ ÙˆÙ…Ø§ ÙŠØ²ÙŠØ¯. Ù„Ùˆ Ø²Ø§Ø¯Øª
+   Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙŠØµÙŠØ± Ø³ÙƒØ±ÙˆÙ„Â».
    Previous attempt was getting overridden by min-height:80px on
    .mt-card-body from the external mt_dashboard.css. Force the
    constraints with !important on the height triple AND wipe any
@@ -386,7 +386,7 @@
    .mt-grid, so .mt-card--actions and other tabs are untouched. */
 .rh-overview .mt-grid{
   /* Force grid items to share the tallest row baseline, even though
-     we also lock the height — belts + braces. */
+     we also lock the height â€” belts + braces. */
   grid-auto-rows:360px;
 }
 .rh-overview .mt-grid > .mt-card,
@@ -441,13 +441,13 @@
   color:#94A3B8;font-size:13px;text-align:center;padding:16px 0;margin:0;
 }
 
-/* ─── Quick actions — redesigned tiles ────────────────────────
+/* â”€â”€â”€ Quick actions â€” redesigned tiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Each action becomes a tile with a coloured icon-tablet on the
    side, a strong label, and a one-line plain-Arabic hint
    (no raw API paths in the operator's face). Variants:
-     default → indigo / brand
-     danger  → red (destructive: reboot, identity change)
-     info    → teal (read-only: ping, dns flush)
+     default â†’ indigo / brand
+     danger  â†’ red (destructive: reboot, identity change)
+     info    â†’ teal (read-only: ping, dns flush)
    Active state (form open) glows. */
 .rh-overview .mt-card--actions .mt-actions-grid{
   display:grid;
@@ -513,10 +513,10 @@
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
-/* ─── Pretty action result panel ─────────────────────────────
+/* â”€â”€â”€ Pretty action result panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Replaces the raw JSON dump for known actions with a friendly
-   card. Raw JSON is still accessible via the «عرض الاستجابة
-   الخام» <details> below — operator can expand it for debug. */
+   card. Raw JSON is still accessible via the Â«Ø¹Ø±Ø¶ Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø©
+   Ø§Ù„Ø®Ø§Ù…Â» <details> below â€” operator can expand it for debug. */
 .rh-overview .mt-action-result{
   margin-top:16px;border-radius:14px;overflow:hidden;
   border:1px solid #E5E7EB;background:#fff;
@@ -557,11 +557,11 @@
 .rh-overview .mt-action-result.is-progress .mt-action-result-title{
   color:#5B21B6;
 }
-/* ─── Staged progress (per-action sequential steps) ─────────
-   The operator's «understand what's happening and where we got
-   to» request. Each stage is a row with a bullet + label + check.
-   Bullet color tracks state: grey idle → purple active (spinning)
-   → green done (✓). */
+/* â”€â”€â”€ Staged progress (per-action sequential steps) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   The operator's Â«understand what's happening and where we got
+   toÂ» request. Each stage is a row with a bullet + label + check.
+   Bullet color tracks state: grey idle â†’ purple active (spinning)
+   â†’ green done (âœ“). */
 .rh-overview .mt-action-stages{
   list-style:none;padding:0;margin:0 0 14px;
   display:flex;flex-direction:column;gap:6px;
@@ -593,7 +593,7 @@
   background:#D1FAE5;color:#10B981;font-size:11px;
   opacity:0;transform:scale(.6);transition:all .2s;
 }
-/* Active stage — purple spinning bullet, bold label */
+/* Active stage â€” purple spinning bullet, bold label */
 .rh-overview .mt-action-stage.is-active{
   background:#F5F3FF;border-color:#C4B5FD;
   box-shadow:0 2px 8px rgba(124,58,237,.10);
@@ -605,7 +605,7 @@
 .rh-overview .mt-action-stage.is-active .mt-action-stage-label{
   color:#5B21B6;
 }
-/* Done stage — green check */
+/* Done stage â€” green check */
 .rh-overview .mt-action-stage.is-done{
   background:#F0FDF4;border-color:#BBF7D0;
 }
@@ -631,7 +631,7 @@
   }
 }
 
-/* Animated stripe bar — the operator's «something IS happening»
+/* Animated stripe bar â€” the operator's Â«something IS happeningÂ»
    signal. The same width:100% with a moving gradient gives a clear
    "indeterminate progress" feel without committing to a percentage
    we can't actually report. */
@@ -707,9 +707,9 @@
 }
 .rh-overview .mt-action-raw > summary::-webkit-details-marker{display:none}
 .rh-overview .mt-action-raw > summary::before{
-  content:"▸ ";color:#CBD5E1;transition:transform .15s;
+  content:"â–¸ ";color:#CBD5E1;transition:transform .15s;
 }
-.rh-overview .mt-action-raw[open] > summary::before{content:"▾ "}
+.rh-overview .mt-action-raw[open] > summary::before{content:"â–¾ "}
 .rh-overview .mt-action-raw .mt-action-output{
   margin:0;padding:12px 14px;background:#0F172A;color:#E2E8F0;
   border-radius:10px;font-size:11.5px;line-height:1.5;
@@ -730,19 +730,19 @@
          data-mt-api-base="{{ api_base }}"
          data-mt-api-token="{{ api_token }}">
 
-  {# ─── 🔷 Router Hub — collapsible (May 2026) ──────────────────
+  {# â”€â”€â”€ ðŸ”· Router Hub â€” collapsible (May 2026) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      One unified hero with three sections, foldable like a sidebar:
-       • Toggle bar (always visible) — router name + status + chevron
-       • Collapsible body:
+       â€¢ Toggle bar (always visible) â€” router name + status + chevron
+       â€¢ Collapsible body:
          1. Identity strip
          2. Services grid (6 cards)
          3. Tools row (4 cards)
      Operator's collapse preference persists in localStorage so the
      state survives navigation between tabs/pages. The toggle animates
      with a max-height transition (no JS height math). #}
-  <header class="rh-hub" data-rh-collapsed="true" aria-label="مركز الراوتر">
+  <header class="rh-hub" data-rh-collapsed="true" aria-label="Ù…Ø±ÙƒØ² Ø§Ù„Ø±Ø§ÙˆØªØ±">
 
-    {# ── Toggle bar (always visible) ── #}
+    {# â”€â”€ Toggle bar (always visible) â”€â”€ #}
     {# Default state is COLLAPSED so the live overview body (status,
        KPIs, traffic, users) is the first thing the operator sees.
        The hub expands on click and stays open until the page is
@@ -757,12 +757,12 @@
         </span>
         <span class="rh-hub-toggle-text">
           <strong>{{ nas.name }}</strong>
-          <small>NAS {{ nas.id }} · {{ nas.address }}</small>
+          <small>NAS {{ nas.id }} Â· {{ nas.address }}</small>
         </span>
       </span>
       <span class="rh-hub-toggle-actions">
         <span class="rh-hub-toggle-state" data-rh-hub-state-label>
-          الخدمات والأدوات
+          Ø§Ù„Ø®Ø¯Ù…Ø§Øª ÙˆØ§Ù„Ø£Ø¯ÙˆØ§Øª
         </span>
         <span class="rh-hub-toggle-chevron">
           <i class="fa-solid fa-chevron-up"></i>
@@ -770,26 +770,26 @@
       </span>
     </button>
 
-    {# ── Collapsible body ── #}
+    {# â”€â”€ Collapsible body â”€â”€ #}
     <div class="rh-hub-body" id="rh-hub-body" data-rh-hub-body>
 
-    {# ── Identity strip ─────────────────────────────────────── #}
+    {# â”€â”€ Identity strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
     <div class="rh-hub-identity">
       <div class="rh-hub-id-icon">
         <i class="fa-solid fa-router"></i>
       </div>
       <div class="rh-hub-id-text">
-        <h1>لوحة الراوتر — <span class="rh-hub-id-name">{{ nas.name }}</span></h1>
+        <h1>Ù„ÙˆØ­Ø© Ø§Ù„Ø±Ø§ÙˆØªØ± â€” <span class="rh-hub-id-name">{{ nas.name }}</span></h1>
         <p class="rh-hub-id-meta">
           <span><i class="fa-solid fa-hashtag"></i> NAS {{ nas.id }}</span>
-          <span class="rh-hub-id-dot">·</span>
+          <span class="rh-hub-id-dot">Â·</span>
           <span><i class="fa-solid fa-network-wired"></i> <code>{{ nas.address }}</code></span>
-          <span class="rh-hub-id-dot">·</span>
-          <span><i class="fa-solid fa-clock-rotate-left"></i> تحديث كل 10 ثوانٍ</span>
+          <span class="rh-hub-id-dot">Â·</span>
+          <span><i class="fa-solid fa-clock-rotate-left"></i> ØªØ­Ø¯ÙŠØ« ÙƒÙ„ 10 Ø«ÙˆØ§Ù†Ù</span>
         </p>
       </div>
       <div class="rh-hub-id-status">
-        {# Visual-only pill — the real status updates happen on the
+        {# Visual-only pill â€” the real status updates happen on the
            [data-mt-status-pill] / [data-mt-status-label] elements in
            the overview tab below. Keeping a second pill here in
            sync would require touching mt_dashboard.js, so this stays
@@ -797,26 +797,26 @@
            glance at the overview body. #}
         <span class="rh-hub-status-pill">
           <span class="rh-hub-status-dot"></span>
-          <span>راجع التفاصيل أدناه</span>
+          <span>Ø±Ø§Ø¬Ø¹ Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø£Ø¯Ù†Ø§Ù‡</span>
         </span>
       </div>
     </div>
 
-    {# ── Services section ───────────────────────────────────── #}
+    {# â”€â”€ Services section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
     <section class="rh-hub-block" aria-labelledby="rh-block-services">
       <h2 class="rh-hub-block-title" id="rh-block-services">
         <i class="fa-solid fa-screwdriver-wrench"></i>
-        خدمات الراوتر
-        <span class="rh-hub-block-hint">إعداد بنقرات قليلة — بدون أي سكربتات ظاهرة</span>
+        Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ±
+        <span class="rh-hub-block-hint">Ø¥Ø¹Ø¯Ø§Ø¯ Ø¨Ù†Ù‚Ø±Ø§Øª Ù‚Ù„ÙŠÙ„Ø© â€” Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø³ÙƒØ±Ø¨ØªØ§Øª Ø¸Ø§Ù‡Ø±Ø©</span>
       </h2>
       <div class="rh-hub-cards rh-hub-cards--svc">
         {% for svc in [
-          {'key': 'hotspot',       'title': 'برمجة Hotspot',     'sub': 'بوابة دخول عامّة بصفحة تسجيل',     'icon': 'wifi',          'color': 'blue'},
-          {'key': 'broadband',     'title': 'برمجة Broadband',   'sub': 'PPPoE — اشتراك ثابت لكل مستخدم',  'icon': 'ethernet',      'color': 'green'},
-          {'key': 'block-sites',   'title': 'حجب المواقع',       'sub': 'منع الوصول لمواقع محدّدة',          'icon': 'ban',           'color': 'red'},
-          {'key': 'open-sites',    'title': 'فتح المواقع',        'sub': 'السماح بمواقع بدون تسجيل دخول',     'icon': 'circle-check',  'color': 'teal'},
-          {'key': 'public-ip',     'title': 'تغيير IP الخروج',  'sub': 'توجيه المشتركين عبر IP عام جديد',   'icon': 'globe',         'color': 'amber'},
-          {'key': 'remote-access', 'title': 'اتصال عن بُعد',      'sub': 'نفق VPN للفنّي لإدارة الراوتر',     'icon': 'key',           'color': 'purple'},
+          {'key': 'hotspot',       'title': 'Ø¨Ø±Ù…Ø¬Ø© Hotspot',     'sub': 'Ø¨ÙˆØ§Ø¨Ø© Ø¯Ø®ÙˆÙ„ Ø¹Ø§Ù…Ù‘Ø© Ø¨ØµÙØ­Ø© ØªØ³Ø¬ÙŠÙ„',     'icon': 'wifi',          'color': 'blue'},
+          {'key': 'broadband',     'title': 'Ø¨Ø±Ù…Ø¬Ø© Broadband',   'sub': 'PPPoE â€” Ø§Ø´ØªØ±Ø§Ùƒ Ø«Ø§Ø¨Øª Ù„ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…',  'icon': 'ethernet',      'color': 'green'},
+          {'key': 'block-sites',   'title': 'Ø­Ø¬Ø¨ Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹',       'sub': 'Ù…Ù†Ø¹ Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù…ÙˆØ§Ù‚Ø¹ Ù…Ø­Ø¯Ù‘Ø¯Ø©',          'icon': 'ban',           'color': 'red'},
+          {'key': 'open-sites',    'title': 'ÙØªØ­ Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹',        'sub': 'Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ù…ÙˆØ§Ù‚Ø¹ Ø¨Ø¯ÙˆÙ† ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„',     'icon': 'circle-check',  'color': 'teal'},
+          {'key': 'public-ip',     'title': 'ØªØºÙŠÙŠØ± IP Ø§Ù„Ø®Ø±ÙˆØ¬',  'sub': 'ØªÙˆØ¬ÙŠÙ‡ Ø§Ù„Ù…Ø´ØªØ±ÙƒÙŠÙ† Ø¹Ø¨Ø± IP Ø¹Ø§Ù… Ø¬Ø¯ÙŠØ¯',   'icon': 'globe',         'color': 'amber'},
+          {'key': 'remote-access', 'title': 'Ø§ØªØµØ§Ù„ Ø¹Ù† Ø¨ÙØ¹Ø¯',      'sub': 'Ù†ÙÙ‚ VPN Ù„Ù„ÙÙ†Ù‘ÙŠ Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±Ø§ÙˆØªØ±',     'icon': 'key',           'color': 'purple'},
         ] %}
         <a class="rh-hub-card rh-hub-card--{{ svc.color }}"
            data-rh-svc-card="{{ svc.key }}"
@@ -832,28 +832,28 @@
           <span class="rh-hub-card-arrow">
             <i class="fa-solid fa-arrow-left"></i>
           </span>
-          {# Live status dot — JS fills based on /services-status. #}
+          {# Live status dot â€” JS fills based on /services-status. #}
           <span class="rh-hub-card-badge" data-rh-svc-status
-                title="جارٍ الفحص…"></span>
+                title="Ø¬Ø§Ø±Ù Ø§Ù„ÙØ­Øµâ€¦"></span>
         </a>
         {% endfor %}
       </div>
     </section>
 
-    {# ── Tools section ──────────────────────────────────────── #}
+    {# â”€â”€ Tools section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
     <section class="rh-hub-block" aria-labelledby="rh-block-tools">
       <h2 class="rh-hub-block-title" id="rh-block-tools">
         <i class="fa-solid fa-toolbox"></i>
-        الأدوات
-        <span class="rh-hub-block-hint">أدوات مهمّتها محدّدة — لا تتبع نموذج 4 مراحل</span>
+        Ø§Ù„Ø£Ø¯ÙˆØ§Øª
+        <span class="rh-hub-block-hint">Ø£Ø¯ÙˆØ§Øª Ù…Ù‡Ù…Ù‘ØªÙ‡Ø§ Ù…Ø­Ø¯Ù‘Ø¯Ø© â€” Ù„Ø§ ØªØªØ¨Ø¹ Ù†Ù…ÙˆØ°Ø¬ 4 Ù…Ø±Ø§Ø­Ù„</span>
       </h2>
       <div class="rh-hub-cards rh-hub-cards--tool">
         <a class="rh-hub-card rh-hub-card--slate"
            href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
           <span class="rh-hub-card-icon"><i class="fa-solid fa-clipboard-check"></i></span>
           <span class="rh-hub-card-body">
-            <strong>نظرة عامة</strong>
-            <small>حالة + أمان + إجراءات</small>
+            <strong>Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ø©</strong>
+            <small>Ø­Ø§Ù„Ø© + Ø£Ù…Ø§Ù† + Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</small>
           </span>
           <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
@@ -861,8 +861,8 @@
            href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
           <span class="rh-hub-card-icon"><i class="fa-solid fa-palette"></i></span>
           <span class="rh-hub-card-body">
-            <strong>مصمّم صفحة الدخول</strong>
-            <small>قوالب + نشر</small>
+            <strong>Ù…ØµÙ…Ù‘Ù… ØµÙØ­Ø© Ø§Ù„Ø¯Ø®ÙˆÙ„</strong>
+            <small>Ù‚ÙˆØ§Ù„Ø¨ + Ù†Ø´Ø±</small>
           </span>
           <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
@@ -870,8 +870,8 @@
            href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
           <span class="rh-hub-card-icon"><i class="fa-solid fa-floppy-disk"></i></span>
           <span class="rh-hub-card-body">
-            <strong>النسخ الاحتياطية</strong>
-            <small>حفظ + فحص</small>
+            <strong>Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©</strong>
+            <small>Ø­ÙØ¸ + ÙØ­Øµ</small>
           </span>
           <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
@@ -879,8 +879,8 @@
            href="{{ url_for('radius.diagnostics') }}">
           <span class="rh-hub-card-icon"><i class="fa-solid fa-stethoscope"></i></span>
           <span class="rh-hub-card-body">
-            <strong>تشخيص الفلِيت</strong>
-            <small>سكربتات الإصلاح</small>
+            <strong>ØªØ´Ø®ÙŠØµ Ø§Ù„ÙÙ„ÙÙŠØª</strong>
+            <small>Ø³ÙƒØ±Ø¨ØªØ§Øª Ø§Ù„Ø¥ØµÙ„Ø§Ø­</small>
           </span>
           <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
@@ -904,7 +904,7 @@
         toggle.setAttribute('aria-expanded', String(!collapsed));
         const label = hub.querySelector('[data-rh-hub-state-label]');
         if (label) label.textContent = collapsed
-          ? '🛠️ افتح خدمات الراوتر' : '✕ إغلاق الخدمات';
+          ? 'ðŸ› ï¸ Ø§ÙØªØ­ Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ±' : 'âœ• Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø®Ø¯Ù…Ø§Øª';
       }
       // Initial label matches the default (collapsed).
       applyState(true);
@@ -916,8 +916,8 @@
   </script>
 
   {# Live service-status probe. Fires once on page load (and again
-     each time the hub opens) so the chips show 🟢/⚪ before the
-     operator clicks anything. Soft-fails — if the router is
+     each time the hub opens) so the chips show ðŸŸ¢/âšª before the
+     operator clicks anything. Soft-fails â€” if the router is
      unreachable, badges stay neutral with an explanatory title. #}
   <script>
     (function(){
@@ -944,15 +944,15 @@
             badge.classList.remove('is-active','is-inactive','is-unknown');
             if (state === true) {
               badge.classList.add('is-active');
-              badge.title = 'الخدمة مفعّلة على الراوتر';
+              badge.title = 'Ø§Ù„Ø®Ø¯Ù…Ø© Ù…ÙØ¹Ù‘Ù„Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±';
             } else if (state === false) {
               badge.classList.add('is-inactive');
-              badge.title = 'الخدمة غير مفعّلة';
+              badge.title = 'Ø§Ù„Ø®Ø¯Ù…Ø© ØºÙŠØ± Ù…ÙØ¹Ù‘Ù„Ø©';
             } else {
               badge.classList.add('is-unknown');
               badge.title = data && data.error
                 ? data.error
-                : 'تعذّر فحص حالة الخدمة';
+                : 'ØªØ¹Ø°Ù‘Ø± ÙØ­Øµ Ø­Ø§Ù„Ø© Ø§Ù„Ø®Ø¯Ù…Ø©';
             }
           });
         } catch (_) {
@@ -960,7 +960,7 @@
             const badge = card.querySelector('[data-rh-svc-status]');
             if (badge) {
               badge.classList.add('is-unknown');
-              badge.title = 'تعذّر الاتصال بالراوتر';
+              badge.title = 'ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±';
             }
           });
         }
@@ -971,79 +971,83 @@
       const toggle = hub && hub.querySelector('[data-rh-hub-toggle]');
       if (toggle) toggle.addEventListener('click', () => {
         if (hub.dataset.rhCollapsed === 'false') {
-          // Was just opened — re-fetch.
+          // Was just opened â€” re-fetch.
           probeStatus();
         }
       });
     })();
   </script>
 
-  {# P1 — Tabs strip. The current K9 dashboard goes under
+  {# P1 â€” Tabs strip. The current K9 dashboard goes under
      'Overview'; the other tabs ship as honest empty states
      until P2..P7 fill them in. Hash-based active state so
      deep-links / refresh keep the operator on the same tab. #}
   {# Tabs strip + live router-status pill in one row. The status
      used to live in a standalone row below the tabs (which the
      operator flagged as wasted vertical space). Now they share
-     the same line — flex space-between keeps the status on the
+     the same line â€” flex space-between keeps the status on the
      opposite edge from the tabs in RTL. #}
   <div class="mt-tabs-row">
-  <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
+  <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ø±Ø§ÙˆØªØ±">
     <button type="button" class="mt-tab is-active"
             data-mt-tab="overview" role="tab" aria-selected="true">
-      <i class="fa-solid fa-gauge-high"></i> نظرة عامة
+      <i class="fa-solid fa-gauge-high"></i> Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ø©
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="interfaces" role="tab" aria-selected="false">
-      <i class="fa-solid fa-ethernet"></i> الواجهات
+      <i class="fa-solid fa-ethernet"></i> Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§Øª
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="ips" role="tab" aria-selected="false">
-      <i class="fa-solid fa-network-wired"></i> العناوين
+      <i class="fa-solid fa-network-wired"></i> Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="routes" role="tab" aria-selected="false">
-      <i class="fa-solid fa-route"></i> المسارات
+      <i class="fa-solid fa-route"></i> Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="neighbors" role="tab" aria-selected="false">
-      <i class="fa-solid fa-people-arrows"></i> الجيران
+      <i class="fa-solid fa-people-arrows"></i> Ø§Ù„Ø¬ÙŠØ±Ø§Ù†
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="sessions" role="tab" aria-selected="false">
-      <i class="fa-solid fa-users"></i> الجلسات
+      <i class="fa-solid fa-users"></i> Ø§Ù„Ø¬Ù„Ø³Ø§Øª
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="logs" role="tab" aria-selected="false">
-      <i class="fa-solid fa-list"></i> السجلات
+      <i class="fa-solid fa-list"></i> Ø§Ù„Ø³Ø¬Ù„Ø§Øª
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="diagnostics" role="tab" aria-selected="false">
-      <i class="fa-solid fa-stethoscope"></i> التشخيص
+      <i class="fa-solid fa-stethoscope"></i> Ø§Ù„ØªØ´Ø®ÙŠØµ
     </button>
-    <button type="button" class="mt-tab"
-            data-mt-tab="my-services" role="tab" aria-selected="false">
-      <i class="fa-solid fa-screwdriver-wrench"></i> خدماتي
+    {# Â«Ø®Ø¯Ù…Ø§ØªÙŠÂ» â€” icon-only as requested (the wrench icon is its
+       own brand mark on this dashboard). aria-label keeps it
+       accessible for screen readers + assistive tech. #}
+    <button type="button" class="mt-tab mt-tab--icon-only"
+            data-mt-tab="my-services" role="tab" aria-selected="false"
+            aria-label="Ø®Ø¯Ù…Ø§ØªÙŠ" title="Ø®Ø¯Ù…Ø§ØªÙŠ">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
     </button>
-    <button type="button" class="mt-tab"
-            data-mt-tab="backups" role="tab" aria-selected="false">
-      <i class="fa-solid fa-floppy-disk"></i> النسخ الاحتياطية
-    </button>
+    {# Backups tab + panel removed (2026-05). Operator: Â«Ø§Ù„Ù†Ø³Ø®
+       Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠ ÙƒÙ„Ù‡ Ø§Ù„Ø²Ø± Ø´ÙŠÙ„Ù‡ ÙˆØ§Ù„Ø®Ø¯Ù…Ø© Ù…Ù† Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³Ø§Ø± ÙˆÙ‚ÙÙ‡Ø§Â».
+       Backend routes /backups/* stay registered (no UI consumer
+       inside the dashboard anymore â€” only externally callable). #}
   </nav>
 
-  {# Status pill — moved here from inside the Overview panel so it's
+  {# Status pill â€” moved here from inside the Overview panel so it's
      visible regardless of which tab is active. JS keeps the
      data-mt-status hooks unchanged. #}
   <div class="mt-tabs-status" data-mt-status>
     <span class="mt-tabs-status-pill" data-mt-status-pill>
       <span class="dot"></span>
-      <span data-mt-status-label>جارٍ الاتصال…</span>
+      <span data-mt-status-label>Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„â€¦</span>
     </span>
-    <span class="mt-tabs-status-meta" data-mt-status-meta>—</span>
+    <span class="mt-tabs-status-meta" data-mt-status-meta>â€”</span>
   </div>
   </div>{# /.mt-tabs-row #}
 
-  {# ─── Overview panel (live K9 dashboard) ─────────────────────
+  {# â”€â”€â”€ Overview panel (live K9 dashboard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      Wrapped in .rh-overview so the scoped CSS in the head block
      can re-style KPIs / cards / actions without touching the
      global design tokens used elsewhere. All [data-mt-*] hooks
@@ -1055,20 +1059,20 @@
      The old in-panel pill was duplicated work + ate vertical space.
      Hero for the overview tab comes next. #}
 
-  {# Overview hero — same shell as «خدماتي» / «النسخ الاحتياطية»
-     for visual consistency across tabs. Operator: «الهيرو الي
-     عملته لخدماتي عجبني — طبعه ع باقي الصفحات». #}
+  {# Overview hero â€” same shell as Â«Ø®Ø¯Ù…Ø§ØªÙŠÂ» / Â«Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©Â»
+     for visual consistency across tabs. Operator: Â«Ø§Ù„Ù‡ÙŠØ±Ùˆ Ø§Ù„ÙŠ
+     Ø¹Ù…Ù„ØªÙ‡ Ù„Ø®Ø¯Ù…Ø§ØªÙŠ Ø¹Ø¬Ø¨Ù†ÙŠ â€” Ø·Ø¨Ø¹Ù‡ Ø¹ Ø¨Ø§Ù‚ÙŠ Ø§Ù„ØµÙØ­Ø§ØªÂ». #}
   <div class="mt-page-hero mt-page-hero--blue">
     <div class="mt-page-hero-glow" aria-hidden="true"></div>
     <div class="mt-page-hero-copy">
       <span class="mt-page-hero-kicker">
         <i class="fa-solid fa-gauge-high"></i>
-        لوحة الراوتر — مباشرة
+        Ù„ÙˆØ­Ø© Ø§Ù„Ø±Ø§ÙˆØªØ± â€” Ù…Ø¨Ø§Ø´Ø±Ø©
       </span>
-      <h3>نظرة عامّة وقصص النشاط</h3>
+      <h3>Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ù‘Ø© ÙˆÙ‚ØµØµ Ø§Ù„Ù†Ø´Ø§Ø·</h3>
       <p>
-        صحّة الراوتر اللحظيّة، حركة الواجهات، المتصلون الآن،
-        وإجراءات سريعة للتنفيذ على الراوتر.
+        ØµØ­Ù‘Ø© Ø§Ù„Ø±Ø§ÙˆØªØ± Ø§Ù„Ù„Ø­Ø¸ÙŠÙ‘Ø©ØŒ Ø­Ø±ÙƒØ© Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§ØªØŒ Ø§Ù„Ù…ØªØµÙ„ÙˆÙ† Ø§Ù„Ø¢Ù†ØŒ
+        ÙˆØ¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø© Ù„Ù„ØªÙ†ÙÙŠØ° Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±.
       </p>
     </div>
   </div>
@@ -1080,48 +1084,48 @@
       <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
       <div class="hub-kpi-body">
         <div class="hub-kpi-label">Uptime</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub>Ù…Ù†Ø° Ø¢Ø®Ø± Ø¥Ù‚Ù„Ø§Ø¹</div>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="cpu">
       <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
       <div class="hub-kpi-body">
         <div class="hub-kpi-label">CPU</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>الحِمل اللحظي</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub>Ø§Ù„Ø­ÙÙ…Ù„ Ø§Ù„Ù„Ø­Ø¸ÙŠ</div>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--green" data-mt-kpi="memory">
       <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">الذاكرة</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
+        <div class="hub-kpi-label">Ø§Ù„Ø°Ø§ÙƒØ±Ø©</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub>Ù…ØªØ§Ø­ / Ø¥Ø¬Ù…Ø§Ù„ÙŠ</div>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--amber" data-mt-kpi="temperature">
       <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">حرارة CPU</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
+        <div class="hub-kpi-label">Ø­Ø±Ø§Ø±Ø© CPU</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub>Ù…Ù† /system/health</div>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--purple" data-mt-kpi="version">
       <span class="hub-kpi-icon"><i class="fa-solid fa-circle-info"></i></span>
       <div class="hub-kpi-body">
         <div class="hub-kpi-label">RouterOS</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>—</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>â€”</div>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--grey" data-mt-kpi="dialed">
       <span class="hub-kpi-icon"><i class="fa-solid fa-network-wired"></i></span>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">العنوان المتصل به</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
+        <div class="hub-kpi-label">Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ù…ØªØµÙ„ Ø¨Ù‡</div>
+        <div class="hub-kpi-value" data-mt-kpi-value>â€”</div>
+        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>â€”</div>
       </div>
     </div>
   </div>
@@ -1133,11 +1137,11 @@
   <div class="mt-grid">
     <section class="mt-card" data-mt-live-traffic>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-chart-line"></i> حركة الواجهات</h3>
+        <h3><i class="fa-solid fa-chart-line"></i> Ø­Ø±ÙƒØ© Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§Øª</h3>
         <span class="mt-card-meta">
-          <label class="mt-iface-label">الواجهة
+          <label class="mt-iface-label">Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©
             <select class="mt-iface-select" data-mt-interface-select>
-              <option value="">— اختر الواجهة —</option>
+              <option value="">â€” Ø§Ø®ØªØ± Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© â€”</option>
             </select>
           </label>
         </span>
@@ -1146,11 +1150,11 @@
         <div class="mt-traffic-readout">
           <div class="mt-traffic-stat">
             <span class="mt-traffic-stat-label">RX</span>
-            <span class="mt-traffic-stat-value" data-mt-traffic-rx>—</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-rx>â€”</span>
           </div>
           <div class="mt-traffic-stat">
             <span class="mt-traffic-stat-label">TX</span>
-            <span class="mt-traffic-stat-value" data-mt-traffic-tx>—</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-tx>â€”</span>
           </div>
         </div>
         <svg class="mt-spark" viewBox="0 0 300 80" preserveAspectRatio="none"
@@ -1158,23 +1162,23 @@
           <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
           <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
         </svg>
-        <p class="mt-empty" data-mt-traffic-msg>اختر واجهة لعرض الحركة الحيّة.</p>
+        <p class="mt-empty" data-mt-traffic-msg>Ø§Ø®ØªØ± ÙˆØ§Ø¬Ù‡Ø© Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„Ø­ÙŠÙ‘Ø©.</p>
       </div>
     </section>
 
     <section class="mt-card" data-mt-active-users>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-users"></i> المتصلون الآن</h3>
+        <h3><i class="fa-solid fa-users"></i> Ø§Ù„Ù…ØªØµÙ„ÙˆÙ† Ø§Ù„Ø¢Ù†</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-count>—</span> hotspot ·
-          <span data-mt-ppp-count>—</span> ppp
+          <span data-mt-hotspot-count>â€”</span> hotspot Â·
+          <span data-mt-ppp-count>â€”</span> ppp
         </span>
       </header>
       <div class="mt-card-body" data-mt-active-users-body>
-        <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-active-users-empty>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <table class="mt-users-table" data-mt-active-users-table hidden>
           <thead>
-            <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
+            <tr><th>Ø§Ù„Ù†ÙˆØ¹</th><th>Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</th><th>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th><th>Ø§Ù„Ù…Ø¯Ø©</th></tr>
           </thead>
           <tbody data-mt-active-users-rows></tbody>
         </table>
@@ -1184,18 +1188,18 @@
 
   <section class="mt-card mt-card--actions" data-mt-quick-actions>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-bolt"></i> إجراءات سريعة</h3>
-      <span class="mt-card-meta">أوامر مباشرة على الراوتر</span>
+      <h3><i class="fa-solid fa-bolt"></i> Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø©</h3>
+      <span class="mt-card-meta">Ø£ÙˆØ§Ù…Ø± Ù…Ø¨Ø§Ø´Ø±Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±</span>
     </header>
     <div class="mt-card-body">
       <div class="mt-actions-grid">
-        {# ── Read-only / info — teal ── #}
+        {# â”€â”€ Read-only / info â€” teal â”€â”€ #}
         <button type="button" class="mt-action-btn mt-action-btn--info"
                 data-mt-action-ping>
           <i class="fa-solid fa-bullseye"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">اختبار Ping</span>
-            <span class="mt-action-sub">فحص الوصول لعنوان</span>
+            <span class="mt-action-label">Ø§Ø®ØªØ¨Ø§Ø± Ping</span>
+            <span class="mt-action-sub">ÙØ­Øµ Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ø¹Ù†ÙˆØ§Ù†</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--info"
@@ -1203,71 +1207,71 @@
           <i class="fa-solid fa-route"></i>
           <span class="mt-action-btn-body">
             <span class="mt-action-label">Traceroute</span>
-            <span class="mt-action-sub">مسار الحزم خطوة بخطوة</span>
+            <span class="mt-action-sub">Ù…Ø³Ø§Ø± Ø§Ù„Ø­Ø²Ù… Ø®Ø·ÙˆØ© Ø¨Ø®Ø·ÙˆØ©</span>
           </span>
         </button>
-        {# DNS resolve tile removed — RouterOS 7 rejects the `/resolve
-           name=…` API form with «unknown parameter name», and the
+        {# DNS resolve tile removed â€” RouterOS 7 rejects the `/resolve
+           name=â€¦` API form with Â«unknown parameter nameÂ», and the
            alternatives (script-based or cache-based) introduced
-           more pain than the feature was worth. Operator: «اذا ما
-           الها حل خلص الغي الخدمة هذي». #}
+           more pain than the feature was worth. Operator: Â«Ø§Ø°Ø§ Ù…Ø§
+           Ø§Ù„Ù‡Ø§ Ø­Ù„ Ø®Ù„Øµ Ø§Ù„ØºÙŠ Ø§Ù„Ø®Ø¯Ù…Ø© Ù‡Ø°ÙŠÂ». #}
         <button type="button" class="mt-action-btn"
                 data-mt-action-backup>
           <i class="fa-solid fa-floppy-disk"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">حفظ نسخة احتياطية</span>
-            <span class="mt-action-sub">ينشئ ملف backup على الراوتر</span>
+            <span class="mt-action-label">Ø­ÙØ¸ Ù†Ø³Ø®Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©</span>
+            <span class="mt-action-sub">ÙŠÙ†Ø´Ø¦ Ù…Ù„Ù backup Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±</span>
           </span>
         </button>
 
-        {# ── Maintenance — warn (amber) ── #}
+        {# â”€â”€ Maintenance â€” warn (amber) â”€â”€ #}
         <button type="button" class="mt-action-btn mt-action-btn--warn"
                 data-mt-action-dns-flush>
           <i class="fa-solid fa-broom"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">مسح كاش DNS</span>
-            <span class="mt-action-sub">يفرغ /ip dns cache</span>
+            <span class="mt-action-label">Ù…Ø³Ø­ ÙƒØ§Ø´ DNS</span>
+            <span class="mt-action-sub">ÙŠÙØ±Øº /ip dns cache</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--warn"
                 data-mt-action-clock-sync>
           <i class="fa-solid fa-clock-rotate-left"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">مزامنة الوقت</span>
-            <span class="mt-action-sub">إعادة ضبط الـ NTP</span>
+            <span class="mt-action-label">Ù…Ø²Ø§Ù…Ù†Ø© Ø§Ù„ÙˆÙ‚Øª</span>
+            <span class="mt-action-sub">Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø· Ø§Ù„Ù€ NTP</span>
           </span>
         </button>
 
-        {# ── Destructive — red ── #}
+        {# â”€â”€ Destructive â€” red â”€â”€ #}
         <button type="button" class="mt-action-btn mt-action-btn--danger"
                 data-mt-action-identity>
           <i class="fa-solid fa-pen-to-square"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">تعديل اسم الراوتر</span>
-            <span class="mt-action-sub">يحتاج تأكيدًا</span>
+            <span class="mt-action-label">ØªØ¹Ø¯ÙŠÙ„ Ø§Ø³Ù… Ø§Ù„Ø±Ø§ÙˆØªØ±</span>
+            <span class="mt-action-sub">ÙŠØ­ØªØ§Ø¬ ØªØ£ÙƒÙŠØ¯Ù‹Ø§</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--danger"
                 data-mt-action-reboot>
           <i class="fa-solid fa-power-off"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">إعادة تشغيل</span>
-            <span class="mt-action-sub">يقطع الاتصال لدقيقة</span>
+            <span class="mt-action-label">Ø¥Ø¹Ø§Ø¯Ø© ØªØ´ØºÙŠÙ„</span>
+            <span class="mt-action-sub">ÙŠÙ‚Ø·Ø¹ Ø§Ù„Ø§ØªØµØ§Ù„ Ù„Ø¯Ù‚ÙŠÙ‚Ø©</span>
           </span>
         </button>
       </div>
 
-      {# Inline form area — populated per-action by JS. Stays empty
+      {# Inline form area â€” populated per-action by JS. Stays empty
          until an action is picked, so the page starts compact. #}
       <div class="mt-action-form" data-mt-action-form hidden></div>
 
-      {# Pretty output panel — JS renders a friendly card here for
+      {# Pretty output panel â€” JS renders a friendly card here for
          known actions (ping summary, traceroute hops, DNS resolve,
-         backup confirmation …). Falls back to raw JSON via the
+         backup confirmation â€¦). Falls back to raw JSON via the
          hidden <pre> below for unknown shapes / debugging. #}
       <div class="mt-action-result" data-mt-action-result hidden></div>
       <details class="mt-action-raw" data-mt-action-raw-wrap hidden>
-        <summary>عرض الاستجابة الخام (JSON)</summary>
+        <summary>Ø¹Ø±Ø¶ Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ø®Ø§Ù… (JSON)</summary>
         <pre class="mt-action-output" data-mt-action-output
              aria-live="polite"></pre>
       </details>
@@ -1276,23 +1280,23 @@
 
   </section>{# /overview panel #}
 
-  {# ─── P2 — Interfaces tab (real data) ───────────────────── #}
+  {# â”€â”€â”€ P2 â€” Interfaces tab (real data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="interfaces"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-ethernet"></i> الواجهات
+          <i class="fa-solid fa-ethernet"></i> Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§Øª
         </span>
-        <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
+        <h3>ÙˆØ§Ø¬Ù‡Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ± â€” Ø­Ø§Ù„Ø© ÙˆØ­Ø±ÙƒØ© Ù„Ø­Ø¸ÙŠÙ‘Ø©</h3>
         <p>
-          كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
-          وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
+          ÙƒÙ„ ÙˆØ§Ø¬Ù‡Ø© Ù…Ù† Ethernet Ø¥Ù„Ù‰ VLAN Ø¥Ù„Ù‰ BridgeØŒ Ù…Ø¹ Ø­Ø§Ù„Ø© Ø§Ù„ØªØ´ØºÙŠÙ„
+          ÙˆØ¹Ø¯Ù‘Ø§Ø¯Ø§Øª Ø§Ù„Ù€ RX/TX Ø§Ù„Ù„Ø­Ø¸ÙŠÙ‘Ø©. Ø§Ø®ØªØ± ÙˆØ§Ø¬Ù‡Ø© Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ø­Ø±ÙƒØªÙ‡Ø§.
         </p>
       </div>
     </div>
-    {# Stats strip — mirrors data-mt-interfaces-count into a
+    {# Stats strip â€” mirrors data-mt-interfaces-count into a
        prominent pill so the total is visible above the table. #}
     <div class="np-stat-strip">
       <div class="np-stat-pill">
@@ -1300,9 +1304,9 @@
           <i class="fa-solid fa-ethernet"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي الواجهات</span>
+          <span class="np-stat-pill-label">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§Øª</span>
           <span class="np-stat-pill-value"
-                data-np-mirror="[data-mt-interfaces-count]">—</span>
+                data-np-mirror="[data-mt-interfaces-count]">â€”</span>
         </div>
       </div>
       <div class="np-stat-pill np-stat-pill--info">
@@ -1310,7 +1314,7 @@
           <i class="fa-solid fa-router"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">Ø§Ù„Ù…Ù†Ø¨Ø¹</span>
           <span class="np-stat-pill-value" style="font-size:13px">/interface/print</span>
         </div>
       </div>
@@ -1318,29 +1322,29 @@
 
     <section class="mt-card" data-mt-interfaces-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-ethernet"></i> الواجهات</h3>
+        <h3><i class="fa-solid fa-ethernet"></i> Ø§Ù„ÙˆØ§Ø¬Ù‡Ø§Øª</h3>
         <span class="mt-card-meta">
-          <span data-mt-interfaces-count>—</span> واجهة ·
+          <span data-mt-interfaces-count>â€”</span> ÙˆØ§Ø¬Ù‡Ø© Â·
           <button type="button" class="mt-mini-btn"
                   data-mt-interfaces-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-interfaces-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-interfaces-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-interfaces-wrap hidden>
           <table class="mt-iface-table" data-mt-interfaces-table>
             <thead>
               <tr>
-                <th>الاسم</th>
-                <th>النوع</th>
+                <th>Ø§Ù„Ø§Ø³Ù…</th>
+                <th>Ø§Ù„Ù†ÙˆØ¹</th>
                 <th>MAC</th>
                 <th>MTU</th>
-                <th>الحالة</th>
+                <th>Ø§Ù„Ø­Ø§Ù„Ø©</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>أخطاء</th>
+                <th>Ø£Ø®Ø·Ø§Ø¡</th>
               </tr>
             </thead>
             <tbody data-mt-interfaces-rows></tbody>
@@ -1350,19 +1354,19 @@
     </section>
   </section>
 
-  {# ─── P3 — IP Addresses tab (real data) ──────────────── #}
+  {# â”€â”€â”€ P3 â€” IP Addresses tab (real data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="ips"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--teal">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-network-wired"></i> العناوين
+          <i class="fa-solid fa-network-wired"></i> Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†
         </span>
-        <h3>عناوين IP المُخصَّصة على الراوتر</h3>
+        <h3>Ø¹Ù†Ø§ÙˆÙŠÙ† IP Ø§Ù„Ù…ÙØ®ØµÙŽÙ‘ØµØ© Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±</h3>
         <p>
-          كل عنوان IP مربوط بواجهة — ثابت أو dynamic، مع الـ
-          subnet والـ comment. مفيد لتتبّع البرمجة قبل أيّ تغيير.
+          ÙƒÙ„ Ø¹Ù†ÙˆØ§Ù† IP Ù…Ø±Ø¨ÙˆØ· Ø¨ÙˆØ§Ø¬Ù‡Ø© â€” Ø«Ø§Ø¨Øª Ø£Ùˆ dynamicØŒ Ù…Ø¹ Ø§Ù„Ù€
+          subnet ÙˆØ§Ù„Ù€ comment. Ù…ÙÙŠØ¯ Ù„ØªØªØ¨Ù‘Ø¹ Ø§Ù„Ø¨Ø±Ù…Ø¬Ø© Ù‚Ø¨Ù„ Ø£ÙŠÙ‘ ØªØºÙŠÙŠØ±.
         </p>
       </div>
     </div>
@@ -1372,9 +1376,9 @@
           <i class="fa-solid fa-network-wired"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي العناوين</span>
+          <span class="np-stat-pill-label">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†</span>
           <span class="np-stat-pill-value"
-                data-np-mirror="[data-mt-ips-count]">—</span>
+                data-np-mirror="[data-mt-ips-count]">â€”</span>
         </div>
       </div>
       <div class="np-stat-pill np-stat-pill--info">
@@ -1382,7 +1386,7 @@
           <i class="fa-solid fa-database"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">Ø§Ù„Ù…Ù†Ø¨Ø¹</span>
           <span class="np-stat-pill-value" style="font-size:13px">/ip/address/print</span>
         </div>
       </div>
@@ -1390,25 +1394,25 @@
 
     <section class="mt-card" data-mt-ips-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-network-wired"></i> العناوين</h3>
+        <h3><i class="fa-solid fa-network-wired"></i> Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†</h3>
         <span class="mt-card-meta">
-          <span data-mt-ips-count>—</span> عنوان ·
+          <span data-mt-ips-count>â€”</span> Ø¹Ù†ÙˆØ§Ù† Â·
           <button type="button" class="mt-mini-btn" data-mt-ips-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-ips-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-ips-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-ips-wrap hidden>
           <table class="mt-iface-table" data-mt-ips-table>
             <thead>
               <tr>
-                <th>العنوان</th>
-                <th>الشبكة</th>
-                <th>الواجهة</th>
-                <th>الحالة</th>
-                <th>تعليق</th>
+                <th>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th>
+                <th>Ø§Ù„Ø´Ø¨ÙƒØ©</th>
+                <th>Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©</th>
+                <th>Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                <th>ØªØ¹Ù„ÙŠÙ‚</th>
               </tr>
             </thead>
             <tbody data-mt-ips-rows></tbody>
@@ -1418,19 +1422,19 @@
     </section>
   </section>
 
-  {# ─── P3 — Routes tab (real data) ────────────────────── #}
+  {# â”€â”€â”€ P3 â€” Routes tab (real data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="routes"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--amber">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-route"></i> المسارات
+          <i class="fa-solid fa-route"></i> Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª
         </span>
-        <h3>جدول التوجيه — أين تذهب الحزم</h3>
+        <h3>Ø¬Ø¯ÙˆÙ„ Ø§Ù„ØªÙˆØ¬ÙŠÙ‡ â€” Ø£ÙŠÙ† ØªØ°Ù‡Ø¨ Ø§Ù„Ø­Ø²Ù…</h3>
         <p>
-          كل route مع الـ destination والـ gateway والـ routing-table.
-          هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
+          ÙƒÙ„ route Ù…Ø¹ Ø§Ù„Ù€ destination ÙˆØ§Ù„Ù€ gateway ÙˆØ§Ù„Ù€ routing-table.
+          Ù‡Ù†Ø§ ØªØ´ÙˆÙ Ù…Ø³Ø§Ø±Ø§Øª Â«ØªØºÙŠÙŠØ± IP Ø§Ù„Ø®Ø±ÙˆØ¬Â» ÙˆØ£ÙŠ Ù…Ø³Ø§Ø± ÙŠØ¯ÙˆÙŠ.
         </p>
       </div>
     </div>
@@ -1440,9 +1444,9 @@
           <i class="fa-solid fa-route"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي المسارات</span>
+          <span class="np-stat-pill-label">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª</span>
           <span class="np-stat-pill-value"
-                data-np-mirror="[data-mt-routes-count]">—</span>
+                data-np-mirror="[data-mt-routes-count]">â€”</span>
         </div>
       </div>
       <div class="np-stat-pill np-stat-pill--info">
@@ -1450,7 +1454,7 @@
           <i class="fa-solid fa-arrows-turn-to-dots"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">Ø§Ù„Ù…Ù†Ø¨Ø¹</span>
           <span class="np-stat-pill-value" style="font-size:13px">/ip/route/print</span>
         </div>
       </div>
@@ -1458,26 +1462,26 @@
 
     <section class="mt-card" data-mt-routes-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-route"></i> المسارات</h3>
+        <h3><i class="fa-solid fa-route"></i> Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª</h3>
         <span class="mt-card-meta">
-          <span data-mt-routes-count>—</span> مسار ·
+          <span data-mt-routes-count>â€”</span> Ù…Ø³Ø§Ø± Â·
           <button type="button" class="mt-mini-btn" data-mt-routes-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-routes-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-routes-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-routes-wrap hidden>
           <table class="mt-iface-table" data-mt-routes-table>
             <thead>
               <tr>
-                <th>الوجهة</th>
+                <th>Ø§Ù„ÙˆØ¬Ù‡Ø©</th>
                 <th>Gateway</th>
-                <th>المسافة</th>
-                <th>الحالة</th>
-                <th>المصدر</th>
-                <th>تعليق</th>
+                <th>Ø§Ù„Ù…Ø³Ø§ÙØ©</th>
+                <th>Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                <th>Ø§Ù„Ù…ØµØ¯Ø±</th>
+                <th>ØªØ¹Ù„ÙŠÙ‚</th>
               </tr>
             </thead>
             <tbody data-mt-routes-rows></tbody>
@@ -1487,19 +1491,19 @@
     </section>
   </section>
 
-  {# ─── P4 — Neighbors tab (real data) ─────────────────── #}
+  {# â”€â”€â”€ P4 â€” Neighbors tab (real data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="neighbors"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-people-arrows"></i> الجيران
+          <i class="fa-solid fa-people-arrows"></i> Ø§Ù„Ø¬ÙŠØ±Ø§Ù†
         </span>
-        <h3>الأجهزة المكتشَفة على الشبكة</h3>
+        <h3>Ø§Ù„Ø£Ø¬Ù‡Ø²Ø© Ø§Ù„Ù…ÙƒØªØ´ÙŽÙØ© Ø¹Ù„Ù‰ Ø§Ù„Ø´Ø¨ÙƒØ©</h3>
         <p>
-          الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر
-          MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.
+          Ø§Ù„Ø±Ø§ÙˆØªØ±Ø§Øª ÙˆØ§Ù„Ø£Ø¬Ù‡Ø²Ø© Ø§Ù„Ø£Ø®Ø±Ù‰ Ø§Ù„Ù„ÙŠ ÙŠØ±Ø§Ù‡Ø§ Ù‡Ø°Ø§ Ø§Ù„Ø±Ø§ÙˆØªØ± Ø¹Ø¨Ø±
+          MNDP / LLDP / CDP â€” Ù…ÙÙŠØ¯ Ù„Ù„ØªØ¹Ø±Ù‘Ù Ø¹Ù„Ù‰ Ø¨Ù†ÙŠØ© Ø§Ù„Ø´Ø¨ÙƒØ© Ø§Ù„ÙØ¹Ù„ÙŠÙ‘Ø©.
         </p>
       </div>
     </div>
@@ -1509,9 +1513,9 @@
           <i class="fa-solid fa-people-arrows"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">أجهزة مكتشَفة</span>
+          <span class="np-stat-pill-label">Ø£Ø¬Ù‡Ø²Ø© Ù…ÙƒØªØ´ÙŽÙØ©</span>
           <span class="np-stat-pill-value"
-                data-np-mirror="[data-mt-neighbors-count]">—</span>
+                data-np-mirror="[data-mt-neighbors-count]">â€”</span>
         </div>
       </div>
       <div class="np-stat-pill np-stat-pill--info">
@@ -1519,8 +1523,8 @@
           <i class="fa-solid fa-tower-broadcast"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">البروتوكولات</span>
-          <span class="np-stat-pill-value" style="font-size:13px">MNDP · CDP · LLDP</span>
+          <span class="np-stat-pill-label">Ø§Ù„Ø¨Ø±ÙˆØªÙˆÙƒÙˆÙ„Ø§Øª</span>
+          <span class="np-stat-pill-value" style="font-size:13px">MNDP Â· CDP Â· LLDP</span>
         </div>
       </div>
     </div>
@@ -1530,36 +1534,36 @@
         <i class="fa-solid fa-info"></i>
       </span>
       <div>
-        قائمة الجيران تأتي من <code>/ip/neighbor</code> وتعتمد على
-        رسائل MNDP/CDP/LLDP من الأجهزة المجاورة. التغييرات قد تتأخّر
-        دقيقة أو أكثر بين الإشارات.
+        Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¬ÙŠØ±Ø§Ù† ØªØ£ØªÙŠ Ù…Ù† <code>/ip/neighbor</code> ÙˆØªØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰
+        Ø±Ø³Ø§Ø¦Ù„ MNDP/CDP/LLDP Ù…Ù† Ø§Ù„Ø£Ø¬Ù‡Ø²Ø© Ø§Ù„Ù…Ø¬Ø§ÙˆØ±Ø©. Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª Ù‚Ø¯ ØªØªØ£Ø®Ù‘Ø±
+        Ø¯Ù‚ÙŠÙ‚Ø© Ø£Ùˆ Ø£ÙƒØ«Ø± Ø¨ÙŠÙ† Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª.
       </div>
     </div>
 
     <section class="mt-card" data-mt-neighbors-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-people-arrows"></i> الجيران</h3>
+        <h3><i class="fa-solid fa-people-arrows"></i> Ø§Ù„Ø¬ÙŠØ±Ø§Ù†</h3>
         <span class="mt-card-meta">
-          <span data-mt-neighbors-count>—</span> جهاز ·
+          <span data-mt-neighbors-count>â€”</span> Ø¬Ù‡Ø§Ø² Â·
           <button type="button" class="mt-mini-btn"
                   data-mt-neighbors-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-neighbors-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-neighbors-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
           <table class="mt-iface-table" data-mt-neighbors-table>
             <thead>
               <tr>
-                <th>الاسم</th>
+                <th>Ø§Ù„Ø§Ø³Ù…</th>
                 <th>MAC</th>
                 <th>IPv4</th>
-                <th>الواجهة</th>
-                <th>المنصّة</th>
-                <th>اللوحة</th>
-                <th>الإصدار</th>
+                <th>Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©</th>
+                <th>Ø§Ù„Ù…Ù†ØµÙ‘Ø©</th>
+                <th>Ø§Ù„Ù„ÙˆØ­Ø©</th>
+                <th>Ø§Ù„Ø¥ØµØ¯Ø§Ø±</th>
               </tr>
             </thead>
             <tbody data-mt-neighbors-rows></tbody>
@@ -1569,33 +1573,33 @@
     </section>
   </section>
 
-  {# ─── P5 — Logs tab (real data) ──────────────────────── #}
+  {# â”€â”€â”€ P5 â€” Logs tab (real data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="logs"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--slate">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-list"></i> السجلّات
+          <i class="fa-solid fa-list"></i> Ø§Ù„Ø³Ø¬Ù„Ù‘Ø§Øª
         </span>
-        <h3>سجلّ أحداث الراوتر الحيّ</h3>
+        <h3>Ø³Ø¬Ù„Ù‘ Ø£Ø­Ø¯Ø§Ø« Ø§Ù„Ø±Ø§ÙˆØªØ± Ø§Ù„Ø­ÙŠÙ‘</h3>
         <p>
-          آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
-          حسب الموضوع (firewall, hotspot, ppp, …) لتركّز نظرك.
+          Ø¢Ø®Ø± 250 Ø³Ø·Ø± Ù…Ù† Ø³Ø¬Ù„Ù‘ Ø§Ù„Ø±Ø§ÙˆØªØ±ØŒ ÙŠØªØ­Ø¯Ù‘Ø« ÙƒÙ„ 5 Ø«ÙˆØ§Ù†Ù. ØµÙÙÙ‘
+          Ø­Ø³Ø¨ Ø§Ù„Ù…ÙˆØ¶ÙˆØ¹ (firewall, hotspot, ppp, â€¦) Ù„ØªØ±ÙƒÙ‘Ø² Ù†Ø¸Ø±Ùƒ.
         </p>
       </div>
     </div>
     <section class="mt-card" data-mt-logs-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-list"></i> السجلات الحيّة</h3>
+        <h3><i class="fa-solid fa-list"></i> Ø§Ù„Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ø­ÙŠÙ‘Ø©</h3>
         <span class="mt-card-meta">
-          <span data-mt-logs-count>—</span> سطر ·
+          <span data-mt-logs-count>â€”</span> Ø³Ø·Ø± Â·
           <label class="mt-logs-pause">
             <input type="checkbox" data-mt-logs-pause>
-            إيقاف مؤقّت
+            Ø¥ÙŠÙ‚Ø§Ù Ù…Ø¤Ù‚Ù‘Øª
           </label>
           <button type="button" class="mt-mini-btn" data-mt-logs-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
@@ -1604,17 +1608,17 @@
            on each row; the backend just substring-matches the chip
            values, so multi-select is a simple "any-of." #}
         <div class="mt-logs-topics" data-mt-logs-topics
-             aria-label="فلتر بالموضوع">
+             aria-label="ÙÙ„ØªØ± Ø¨Ø§Ù„Ù…ÙˆØ¶ÙˆØ¹">
           {% for slug, label in [
-            ('',         'الكلّ'),
-            ('error',    'أخطاء'),
-            ('warning',  'تحذيرات'),
-            ('critical', 'حرجة'),
-            ('info',     'معلومات'),
-            ('system',   'نظام'),
-            ('firewall', 'جدار حماية'),
-            ('account',  'محاسبة'),
-            ('hotspot',  'هوتسبوت'),
+            ('',         'Ø§Ù„ÙƒÙ„Ù‘'),
+            ('error',    'Ø£Ø®Ø·Ø§Ø¡'),
+            ('warning',  'ØªØ­Ø°ÙŠØ±Ø§Øª'),
+            ('critical', 'Ø­Ø±Ø¬Ø©'),
+            ('info',     'Ù…Ø¹Ù„ÙˆÙ…Ø§Øª'),
+            ('system',   'Ù†Ø¸Ø§Ù…'),
+            ('firewall', 'Ø¬Ø¯Ø§Ø± Ø­Ù…Ø§ÙŠØ©'),
+            ('account',  'Ù…Ø­Ø§Ø³Ø¨Ø©'),
+            ('hotspot',  'Ù‡ÙˆØªØ³Ø¨ÙˆØª'),
             ('dhcp',     'DHCP'),
           ] %}
           <button type="button" class="mt-logs-topic
@@ -1625,31 +1629,31 @@
           {% endfor %}
         </div>
 
-        <p class="mt-empty" data-mt-logs-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-logs-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <pre class="mt-logs-output" data-mt-logs-output
              aria-live="polite"></pre>
       </div>
     </section>
   </section>
 
-  {# ─── P6 — Sessions tab (read-only) ──────────────────── #}
+  {# â”€â”€â”€ P6 â€” Sessions tab (read-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="sessions"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-users"></i> الجلسات الحيّة
+          <i class="fa-solid fa-users"></i> Ø§Ù„Ø¬Ù„Ø³Ø§Øª Ø§Ù„Ø­ÙŠÙ‘Ø©
         </span>
-        <h3>المتصلون الآن على الراوتر</h3>
+        <h3>Ø§Ù„Ù…ØªØµÙ„ÙˆÙ† Ø§Ù„Ø¢Ù† Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±</h3>
         <p>
-          جلسات Hotspot — كروت ويوزرات منفصلة — وجلسات PPPoE.
-          كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
+          Ø¬Ù„Ø³Ø§Øª Hotspot â€” ÙƒØ±ÙˆØª ÙˆÙŠÙˆØ²Ø±Ø§Øª Ù…Ù†ÙØµÙ„Ø© â€” ÙˆØ¬Ù„Ø³Ø§Øª PPPoE.
+          ÙƒÙ„ Ø¬Ù„Ø³Ø© Ø¨Ø²Ø±Ù‘ Â«Ù‚Ø·Ø¹Â» Ù…Ø¨Ø§Ø´Ø± Ù„Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø§ØªØµØ§Ù„ ÙÙˆØ±Ø§Ù‹.
         </p>
       </div>
     </div>
 
-    {# Summary row — 3 mini-cards mirroring the live counts from
+    {# Summary row â€” 3 mini-cards mirroring the live counts from
        each sub-card. Visible at-a-glance before scrolling tables. #}
     <div class="np-summary-grid">
       <div class="np-summary-card np-summary-card--blue">
@@ -1657,14 +1661,14 @@
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-credit-card"></i>
           </span>
-          <span class="np-summary-card-title">جلسات الكروت</span>
+          <span class="np-summary-card-title">Ø¬Ù„Ø³Ø§Øª Ø§Ù„ÙƒØ±ÙˆØª</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-hotspot-cards-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
-                data-np-mirror="[data-mt-hotspot-cards-count]">—</span>
-          <span class="np-summary-card-sub">متّصلون عبر بطاقات Hotspot</span>
+                data-np-mirror="[data-mt-hotspot-cards-count]">â€”</span>
+          <span class="np-summary-card-sub">Ù…ØªÙ‘ØµÙ„ÙˆÙ† Ø¹Ø¨Ø± Ø¨Ø·Ø§Ù‚Ø§Øª Hotspot</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--green">
@@ -1672,14 +1676,14 @@
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-wifi"></i>
           </span>
-          <span class="np-summary-card-title">جلسات اليوزرات</span>
+          <span class="np-summary-card-title">Ø¬Ù„Ø³Ø§Øª Ø§Ù„ÙŠÙˆØ²Ø±Ø§Øª</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-hotspot-users-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
-                data-np-mirror="[data-mt-hotspot-users-count]">—</span>
-          <span class="np-summary-card-sub">يوزرات Hotspot الاعتياديّون</span>
+                data-np-mirror="[data-mt-hotspot-users-count]">â€”</span>
+          <span class="np-summary-card-sub">ÙŠÙˆØ²Ø±Ø§Øª Hotspot Ø§Ù„Ø§Ø¹ØªÙŠØ§Ø¯ÙŠÙ‘ÙˆÙ†</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--purple">
@@ -1687,44 +1691,44 @@
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-plug"></i>
           </span>
-          <span class="np-summary-card-title">جلسات PPP</span>
+          <span class="np-summary-card-title">Ø¬Ù„Ø³Ø§Øª PPP</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-ppp-sessions-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
-                data-np-mirror="[data-mt-ppp-sessions-count]">—</span>
-          <span class="np-summary-card-sub">اشتراكات PPPoE النشطة</span>
+                data-np-mirror="[data-mt-ppp-sessions-count]">â€”</span>
+          <span class="np-summary-card-sub">Ø§Ø´ØªØ±Ø§ÙƒØ§Øª PPPoE Ø§Ù„Ù†Ø´Ø·Ø©</span>
         </div>
       </div>
     </div>
 
-    {# ── Hotspot — Cards sub-card (numeric/short usernames) ── #}
+    {# â”€â”€ Hotspot â€” Cards sub-card (numeric/short usernames) â”€â”€ #}
     <section class="mt-card" data-mt-hotspot-cards-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-credit-card"></i> Hotspot — جلسات الكروت</h3>
+        <h3><i class="fa-solid fa-credit-card"></i> Hotspot â€” Ø¬Ù„Ø³Ø§Øª Ø§Ù„ÙƒØ±ÙˆØª</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-cards-count>—</span> متّصل ·
+          <span data-mt-hotspot-cards-count>â€”</span> Ù…ØªÙ‘ØµÙ„ Â·
           <button type="button" class="mt-mini-btn"
                   data-mt-hotspot-cards-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-hotspot-cards-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-hotspot-cards-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
           <table class="mt-iface-table" data-mt-hotspot-cards-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>العنوان</th>
+                <th>Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</th>
+                <th>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th>
                 <th>MAC</th>
-                <th>المدة</th>
+                <th>Ø§Ù„Ù…Ø¯Ø©</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>تعليق</th>
-                <th>إجراء</th>
+                <th>ØªØ¹Ù„ÙŠÙ‚</th>
+                <th>Ø¥Ø¬Ø±Ø§Ø¡</th>
               </tr>
             </thead>
             <tbody data-mt-hotspot-cards-rows></tbody>
@@ -1733,32 +1737,32 @@
       </div>
     </section>
 
-    {# ── Hotspot — Users sub-card (non-card usernames) ── #}
+    {# â”€â”€ Hotspot â€” Users sub-card (non-card usernames) â”€â”€ #}
     <section class="mt-card" data-mt-hotspot-users-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-wifi"></i> Hotspot — جلسات اليوزرات</h3>
+        <h3><i class="fa-solid fa-wifi"></i> Hotspot â€” Ø¬Ù„Ø³Ø§Øª Ø§Ù„ÙŠÙˆØ²Ø±Ø§Øª</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-users-count>—</span> متّصل ·
+          <span data-mt-hotspot-users-count>â€”</span> Ù…ØªÙ‘ØµÙ„ Â·
           <button type="button" class="mt-mini-btn"
                   data-mt-hotspot-users-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-hotspot-users-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-hotspot-users-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-hotspot-users-wrap hidden>
           <table class="mt-iface-table" data-mt-hotspot-users-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>العنوان</th>
+                <th>Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</th>
+                <th>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th>
                 <th>MAC</th>
-                <th>المدة</th>
+                <th>Ø§Ù„Ù…Ø¯Ø©</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>تعليق</th>
-                <th>إجراء</th>
+                <th>ØªØ¹Ù„ÙŠÙ‚</th>
+                <th>Ø¥Ø¬Ø±Ø§Ø¡</th>
               </tr>
             </thead>
             <tbody data-mt-hotspot-users-rows></tbody>
@@ -1767,30 +1771,30 @@
       </div>
     </section>
 
-    {# ── PPP sessions sub-card ── #}
+    {# â”€â”€ PPP sessions sub-card â”€â”€ #}
     <section class="mt-card" data-mt-ppp-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-plug"></i> جلسات PPP</h3>
+        <h3><i class="fa-solid fa-plug"></i> Ø¬Ù„Ø³Ø§Øª PPP</h3>
         <span class="mt-card-meta">
-          <span data-mt-ppp-sessions-count>—</span> متّصل ·
+          <span data-mt-ppp-sessions-count>â€”</span> Ù…ØªÙ‘ØµÙ„ Â·
           <button type="button" class="mt-mini-btn"
                   data-mt-ppp-sessions-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> ØªØ­Ø¯ÙŠØ«
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-ppp-sessions-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-ppp-sessions-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <div class="mt-table-wrap" data-mt-ppp-sessions-wrap hidden>
           <table class="mt-iface-table" data-mt-ppp-sessions-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>الخدمة</th>
-                <th>العنوان</th>
+                <th>Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</th>
+                <th>Ø§Ù„Ø®Ø¯Ù…Ø©</th>
+                <th>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th>
                 <th>Caller</th>
-                <th>المدة</th>
-                <th>إجراء</th>
+                <th>Ø§Ù„Ù…Ø¯Ø©</th>
+                <th>Ø¥Ø¬Ø±Ø§Ø¡</th>
               </tr>
             </thead>
             <tbody data-mt-ppp-sessions-rows></tbody>
@@ -1800,23 +1804,23 @@
     </section>
   </section>
 
-  {# ─── P7 — Diagnostics tab (risk signals) ────────────── #}
+  {# â”€â”€â”€ P7 â€” Diagnostics tab (risk signals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel" data-mt-tab-panel="diagnostics"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
       <div class="mt-page-hero-glow" aria-hidden="true"></div>
       <div class="mt-page-hero-copy">
         <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-stethoscope"></i> التشخيص
+          <i class="fa-solid fa-stethoscope"></i> Ø§Ù„ØªØ´Ø®ÙŠØµ
         </span>
-        <h3>إشارات خطر + صحّة الراوتر</h3>
+        <h3>Ø¥Ø´Ø§Ø±Ø§Øª Ø®Ø·Ø± + ØµØ­Ù‘Ø© Ø§Ù„Ø±Ø§ÙˆØªØ±</h3>
         <p>
-          فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي
-          العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …
+          ÙØ­ÙˆØµØ§Øª ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‘Ø© ØªÙƒØ´Ù Ø§Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù…Ø­ØªÙ…Ù„Ø© Ù‚Ø¨Ù„ Ø£Ù† ÙŠØ´ØªÙƒÙŠ
+          Ø§Ù„Ø¹Ù…ÙŠÙ„: Ø­Ø±Ø§Ø±Ø© Ø¹Ø§Ù„ÙŠØ©ØŒ CPU Ù…Ø±ØªÙØ¹ØŒ Ø§ØªØµØ§Ù„Ø§Øª Ø´Ø§Ø°Ù‘Ø©ØŒ â€¦
         </p>
       </div>
     </div>
-    {# 3-card health grid — mirrors the leading number from the
+    {# 3-card health grid â€” mirrors the leading number from the
        existing summary chips (which still live inside the card
        header so all JS hooks remain identical). #}
     <div class="np-diag-grid">
@@ -1827,7 +1831,7 @@
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-critical]">0</span>
-          <span class="np-diag-card-label">إشارات حرجة</span>
+          <span class="np-diag-card-label">Ø¥Ø´Ø§Ø±Ø§Øª Ø­Ø±Ø¬Ø©</span>
         </div>
       </div>
       <div class="np-diag-card np-diag-card--warning">
@@ -1837,7 +1841,7 @@
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-warning]">0</span>
-          <span class="np-diag-card-label">تحذيرات</span>
+          <span class="np-diag-card-label">ØªØ­Ø°ÙŠØ±Ø§Øª</span>
         </div>
       </div>
       <div class="np-diag-card np-diag-card--ok">
@@ -1847,7 +1851,7 @@
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-ok]">0</span>
-          <span class="np-diag-card-label">فحوصات سليمة</span>
+          <span class="np-diag-card-label">ÙØ­ÙˆØµØ§Øª Ø³Ù„ÙŠÙ…Ø©</span>
         </div>
       </div>
     </div>
@@ -1855,99 +1859,99 @@
     <section class="mt-card" data-mt-health-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-stethoscope"></i>
-            تحليل إشارات الخطر</h3>
+            ØªØ­Ù„ÙŠÙ„ Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø®Ø·Ø±</h3>
         <span class="mt-card-meta">
           <span class="mt-iface-state mt-iface-state--off"
-                data-mt-health-summary-critical>0 حرجة</span>
+                data-mt-health-summary-critical>0 Ø­Ø±Ø¬Ø©</span>
           <span class="mt-iface-state mt-iface-state--down"
-                data-mt-health-summary-warning>0 تحذير</span>
+                data-mt-health-summary-warning>0 ØªØ­Ø°ÙŠØ±</span>
           <span class="mt-iface-state mt-iface-state--up"
-                data-mt-health-summary-ok>0 سليمة</span>
+                data-mt-health-summary-ok>0 Ø³Ù„ÙŠÙ…Ø©</span>
           <button type="button" class="mt-mini-btn"
                   data-mt-health-refresh>
-            <i class="fa-solid fa-rotate"></i> فحص الآن
+            <i class="fa-solid fa-rotate"></i> ÙØ­Øµ Ø§Ù„Ø¢Ù†
           </button>
         </span>
       </header>
       <div class="mt-card-body">
         <p class="mt-tab-hint">
-          فحص محلي يعتمد على الردود المُخزّنة من
-          /interface و /ip/address — لا يُضيف ضغطًا على الراوتر.
+          ÙØ­Øµ Ù…Ø­Ù„ÙŠ ÙŠØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„Ù…ÙØ®Ø²Ù‘Ù†Ø© Ù…Ù†
+          /interface Ùˆ /ip/address â€” Ù„Ø§ ÙŠÙØ¶ÙŠÙ Ø¶ØºØ·Ù‹Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±.
         </p>
-        <p class="mt-empty" data-mt-health-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-health-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <ul class="mt-health-list" data-mt-health-list></ul>
       </div>
     </section>
-  </section>{# /diagnostics panel — last of P-series #}
+  </section>{# /diagnostics panel â€” last of P-series #}
 
-  {# ─── «خدماتي» tab — unified premium services hub ───────── #}
+  {# â”€â”€â”€ Â«Ø®Ø¯Ù…Ø§ØªÙŠÂ» tab â€” unified premium services hub â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
   <section class="mt-tab-panel rh-inventory"
            data-mt-tab-panel="my-services" role="tabpanel" hidden>
 
-    {# ── Premium hero (mt-page-hero matches the rest of the
-         dashboard now — single visual language) ───────────── #}
+    {# â”€â”€ Premium hero (mt-page-hero matches the rest of the
+         dashboard now â€” single visual language) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
     <div class="mt-page-hero rh-inv-hero">
       <div class="mt-page-hero-copy rh-inv-hero-copy">
         <span class="mt-page-hero-kicker rh-inv-kicker">
           <i class="fa-solid fa-bolt"></i>
-          مركز خدمات الراوتر
+          Ù…Ø±ÙƒØ² Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ±
         </span>
-        <h3>مركز خدمات الراوتر</h3>
-        <p>إدارة جميع خدمات الراوتر من مكان واحد — إضافة، ضبط، فحص ومراقبة الحالة.</p>
+        <h3>Ù…Ø±ÙƒØ² Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ±</h3>
+        <p>Ø¥Ø¯Ø§Ø±Ø© Ø¬Ù…ÙŠØ¹ Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ø±Ø§ÙˆØªØ± Ù…Ù† Ù…ÙƒØ§Ù† ÙˆØ§Ø­Ø¯ â€” Ø¥Ø¶Ø§ÙØ©ØŒ Ø¶Ø¨Ø·ØŒ ÙØ­Øµ ÙˆÙ…Ø±Ø§Ù‚Ø¨Ø© Ø§Ù„Ø­Ø§Ù„Ø©.</p>
         <div class="mt-page-hero-chips rh-inv-hero-chips">
-          <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
-          <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
-          <span><i class="fa-solid fa-route"></i> عبر VPN</span>
+          <span><i class="fa-solid fa-satellite-dish"></i> Ù‚Ø±Ø§Ø¡Ø© Ù…Ø¨Ø§Ø´Ø±Ø©</span>
+          <span><i class="fa-solid fa-shield-halved"></i> Ø­Ø°Ù Ø¨ØªØ£ÙƒÙŠØ¯</span>
+          <span><i class="fa-solid fa-route"></i> Ø¹Ø¨Ø± VPN</span>
         </div>
       </div>
       <div class="rh-inv-hero-stats" data-rh-inv-stats hidden>
         <div class="rh-inv-stat">
           <span class="rh-inv-stat-num" data-rh-inv-stat-total>0</span>
-          <span class="rh-inv-stat-lbl">إجمالي</span>
+          <span class="rh-inv-stat-lbl">Ø¥Ø¬Ù…Ø§Ù„ÙŠ</span>
         </div>
         <div class="rh-inv-stat rh-inv-stat--hr">
           <span class="rh-inv-stat-num" data-rh-inv-stat-hr>0</span>
-          <span class="rh-inv-stat-lbl">من البرمجة</span>
+          <span class="rh-inv-stat-lbl">Ù…Ù† Ø§Ù„Ø¨Ø±Ù…Ø¬Ø©</span>
         </div>
         <div class="rh-inv-stat rh-inv-stat--op">
           <span class="rh-inv-stat-num" data-rh-inv-stat-op>0</span>
-          <span class="rh-inv-stat-lbl">يدوي</span>
+          <span class="rh-inv-stat-lbl">ÙŠØ¯ÙˆÙŠ</span>
         </div>
       </div>
     </div>
 
-    {# ── A) Service management grid — 6 service cards ──────
+    {# â”€â”€ A) Service management grid â€” 6 service cards â”€â”€â”€â”€â”€â”€
          These link to the existing setup_wizard_v3 service flows
          (same URLs as the Router Hub cards above). The data list
          is identical to the rh-hub-cards--svc list earlier in this
-         template — kept inline so each tab is self-contained. #}
+         template â€” kept inline so each tab is self-contained. #}
     <div class="np-section-head">
       <div>
         <h4>
-          إدارة الخدمات
+          Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø®Ø¯Ù…Ø§Øª
           <span class="np-section-badge">6</span>
         </h4>
-        <p>إضافة وضبط وإدارة جميع الخدمات على الراوتر — 4 مراحل لكل خدمة.</p>
+        <p>Ø¥Ø¶Ø§ÙØ© ÙˆØ¶Ø¨Ø· ÙˆØ¥Ø¯Ø§Ø±Ø© Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ± â€” 4 Ù…Ø±Ø§Ø­Ù„ Ù„ÙƒÙ„ Ø®Ø¯Ù…Ø©.</p>
       </div>
     </div>
     <div class="np-svc-grid">
       {% for svc in [
-        {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'sub': 'توجيه المشتركين عبر IP عام جديد',     'icon': 'globe',           'color': 'amber'},
-        {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ VPN آمن لإدارة الراوتر',          'icon': 'key',             'color': 'purple'},
-        {'key': 'hotspot',       'title': 'برمجة Hotspot',     'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
-        {'key': 'broadband',     'title': 'برمجة Broadband',   'sub': 'PPPoE — اشتراك ثابت لكل مستخدم',     'icon': 'ethernet',        'color': 'green'},
-        {'key': 'block-sites',   'title': 'حجب المواقع',        'sub': 'منع الوصول لمواقع محدّدة',             'icon': 'ban',             'color': 'red'},
-        {'key': 'open-sites',    'title': 'فتح المواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',        'icon': 'circle-check',    'color': 'teal'},
+        {'key': 'public-ip',     'title': 'ØªØºÙŠÙŠØ± IP Ø§Ù„Ø®Ø±ÙˆØ¬',   'sub': 'ØªÙˆØ¬ÙŠÙ‡ Ø§Ù„Ù…Ø´ØªØ±ÙƒÙŠÙ† Ø¹Ø¨Ø± IP Ø¹Ø§Ù… Ø¬Ø¯ÙŠØ¯',     'icon': 'globe',           'color': 'amber'},
+        {'key': 'remote-access', 'title': 'Ø§ØªØµØ§Ù„ Ø¹Ù† Ø¨ÙØ¹Ø¯',       'sub': 'Ù†ÙØ° VPN Ø¢Ù…Ù† Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±Ø§ÙˆØªØ±',          'icon': 'key',             'color': 'purple'},
+        {'key': 'hotspot',       'title': 'Ø¨Ø±Ù…Ø¬Ø© Hotspot',     'sub': 'Ø¨ÙˆØ§Ø¨Ø© Ø¯Ø®ÙˆÙ„ Ø¹Ø§Ù…Ù‘Ø© Ù…Ø¹ ØµÙØ­Ø© ØªØ³Ø¬ÙŠÙ„',      'icon': 'wifi',            'color': 'blue'},
+        {'key': 'broadband',     'title': 'Ø¨Ø±Ù…Ø¬Ø© Broadband',   'sub': 'PPPoE â€” Ø§Ø´ØªØ±Ø§Ùƒ Ø«Ø§Ø¨Øª Ù„ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…',     'icon': 'ethernet',        'color': 'green'},
+        {'key': 'block-sites',   'title': 'Ø­Ø¬Ø¨ Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹',        'sub': 'Ù…Ù†Ø¹ Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù…ÙˆØ§Ù‚Ø¹ Ù…Ø­Ø¯Ù‘Ø¯Ø©',             'icon': 'ban',             'color': 'red'},
+        {'key': 'open-sites',    'title': 'ÙØªØ­ Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹',         'sub': 'Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ù…ÙˆØ§Ù‚Ø¹ Ø¨Ø¯ÙˆÙ† ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„',        'icon': 'circle-check',    'color': 'teal'},
       ] %}
       {# Reuse `data-rh-svc-card` + `data-rh-svc-status` so the
-         existing probeStatus() loop fills the dot — no JS changes
+         existing probeStatus() loop fills the dot â€” no JS changes
          needed. #}
       <a class="np-svc-card"
          data-rh-svc-card="{{ svc.key }}"
          href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                           router_id=nas.id, service_key=svc.key) }}">
         <span class="np-svc-status-dot" data-rh-svc-status
-              title="جارٍ الفحص…"></span>
+              title="Ø¬Ø§Ø±Ù Ø§Ù„ÙØ­Øµâ€¦"></span>
         <span class="np-svc-icon np-svc-icon--{{ svc.color }}">
           <i class="fa-solid fa-{{ svc.icon }}"></i>
         </span>
@@ -1960,113 +1964,88 @@
       {% endfor %}
     </div>
 
-    {# ── B) Added services status area — filter + groups ──── #}
+    {# â”€â”€ B) Added services status area â€” filter + groups â”€â”€â”€â”€ #}
     <div class="np-section-head">
       <div>
         <h4>
-          حالة الخدمات
+          Ø­Ø§Ù„Ø© Ø§Ù„Ø®Ø¯Ù…Ø§Øª
           <span class="np-section-badge" data-rh-inv-stat-total>0</span>
         </h4>
-        <p>عرض حالة الخدمات المضافة يدوياً وتلقائياً، مع مصدر كل خدمة وزر حذف آمن.</p>
+        <p>Ø¹Ø±Ø¶ Ø­Ø§Ù„Ø© Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ù…Ø¶Ø§ÙØ© ÙŠØ¯ÙˆÙŠØ§Ù‹ ÙˆØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ØŒ Ù…Ø¹ Ù…ØµØ¯Ø± ÙƒÙ„ Ø®Ø¯Ù…Ø© ÙˆØ²Ø± Ø­Ø°Ù Ø¢Ù…Ù†.</p>
       </div>
       <div class="np-svc-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="np-filter-bar" role="tablist" aria-label="تصفية الخدمات">
+        <div class="np-filter-bar" role="tablist" aria-label="ØªØµÙÙŠØ© Ø§Ù„Ø®Ø¯Ù…Ø§Øª">
           <button type="button" class="np-filter-chip is-active"
                   data-np-filter="all" role="tab" aria-selected="true">
-            الكل
+            Ø§Ù„ÙƒÙ„
             <span class="np-filter-chip-count" data-rh-inv-stat-total>0</span>
           </button>
           <button type="button" class="np-filter-chip"
                   data-np-filter="hoberadius" role="tab" aria-selected="false">
-            تلقائيّة
+            ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‘Ø©
             <span class="np-filter-chip-count" data-rh-inv-stat-hr>0</span>
           </button>
           <button type="button" class="np-filter-chip"
                   data-np-filter="operator" role="tab" aria-selected="false">
-            يدويّة
+            ÙŠØ¯ÙˆÙŠÙ‘Ø©
             <span class="np-filter-chip-count" data-rh-inv-stat-op>0</span>
           </button>
         </div>
         <button type="button" class="np-btn rh-inv-refresh"
-                data-rh-inv-refresh title="تحديث القائمة">
+                data-rh-inv-refresh title="ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©">
           <i class="fa-solid fa-rotate"></i>
-          <span>تحديث</span>
+          <span>ØªØ­Ø¯ÙŠØ«</span>
         </button>
       </div>
     </div>
     <div class="rh-inv-loading" data-rh-inv-loading>
       <i class="fa-solid fa-spinner fa-spin"></i>
-      <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
+      <span data-rh-inv-loading-text>Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦</span>
       <small class="rh-inv-loading-hint">
-        نقرأ 6 خدمات عبر الـ VPN — قد يستغرق ذلك حتى ثانيتَين.
+        Ù†Ù‚Ø±Ø£ 6 Ø®Ø¯Ù…Ø§Øª Ø¹Ø¨Ø± Ø§Ù„Ù€ VPN â€” Ù‚Ø¯ ÙŠØ³ØªØºØ±Ù‚ Ø°Ù„Ùƒ Ø­ØªÙ‰ Ø«Ø§Ù†ÙŠØªÙŽÙŠÙ†.
       </small>
     </div>
     <div class="rh-inv-empty" data-rh-inv-empty hidden>
       <i class="fa-solid fa-circle-info"></i>
-      لا توجد خدمات مفعَّلة حالياً. ارجع لـ«إدارة الراوترات» وأضف خدمة من
-      بطاقات الـ Hub أعلى الصفحة.
+      Ù„Ø§ ØªÙˆØ¬Ø¯ Ø®Ø¯Ù…Ø§Øª Ù…ÙØ¹ÙŽÙ‘Ù„Ø© Ø­Ø§Ù„ÙŠØ§Ù‹. Ø§Ø±Ø¬Ø¹ Ù„Ù€Â«Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±Ø§ÙˆØªØ±Ø§ØªÂ» ÙˆØ£Ø¶Ù Ø®Ø¯Ù…Ø© Ù…Ù†
+      Ø¨Ø·Ø§Ù‚Ø§Øª Ø§Ù„Ù€ Hub Ø£Ø¹Ù„Ù‰ Ø§Ù„ØµÙØ­Ø©.
     </div>
     <div class="rh-inv-error" data-rh-inv-error hidden></div>
     <div class="rh-inv-groups" data-rh-inv-groups></div>
   </section>
 
-  {# ─── «النسخ الاحتياطية» tab — minimal save + restore ────── #}
-  <section class="mt-tab-panel rh-backups"
-           data-mt-tab-panel="backups" role="tabpanel" hidden>
-    <div class="rh-bk-simple-head">
-      <h3>
-        <i class="fa-solid fa-floppy-disk"></i>
-        النسخ الاحتياطية لهذا الراوتر
-        <span class="np-section-badge" data-rh-bk-count
-              style="margin-inline-start:6px">0</span>
-      </h3>
-      <button type="button" class="rh-bk-refresh" data-rh-bk-refresh
-              title="تحديث">
-        <i class="fa-solid fa-rotate"></i>
-        <span>تحديث</span>
-      </button>
-    </div>
+  {# Backups panel removed (2026-05). Operator: Â«Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠ
+     ÙƒÙ„Ù‡ Ø§Ù„Ø²Ø± Ø´ÙŠÙ„Ù‡ ÙˆØ§Ù„Ø®Ø¯Ù…Ø© Ù…Ù† Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³Ø§Ø± ÙˆÙ‚ÙÙ‡Ø§Â». The /api/v1/
+     mikrotik/<id>/backups routes stay registered on the backend
+     for forward-compat; just no dashboard consumer anymore. #}
 
-    <div class="rh-bk-loading" data-rh-bk-loading>
-      <i class="fa-solid fa-spinner fa-spin"></i>
-      <span>جارٍ التحميل…</span>
-    </div>
-    <div class="rh-bk-empty" data-rh-bk-empty hidden>
-      <i class="fa-solid fa-circle-info"></i>
-      لا توجد نسخ احتياطية بعد. اضغط «حفظ نسخة احتياطية» من
-      «نظرة عامّة» → «إجراءات سريعة» لإنشاء أوّل نسخة.
-    </div>
-    <div class="rh-bk-error" data-rh-bk-error hidden></div>
-    <div class="rh-bk-list" data-rh-bk-list></div>
-  </section>
-
-  {# Delete confirmation modal — shared across all rh-inv cards. #}
+  {# Delete confirmation modal â€” shared across all rh-inv cards. #}
   <div class="rh-inv-modal" data-rh-inv-modal hidden role="dialog"
        aria-modal="true" aria-labelledby="rh-inv-modal-title">
     <div class="rh-inv-modal-card">
       <button type="button" class="rh-inv-modal-close"
-              data-rh-inv-modal-close aria-label="إغلاق">×</button>
+              data-rh-inv-modal-close aria-label="Ø¥ØºÙ„Ø§Ù‚">Ã—</button>
       <h3 id="rh-inv-modal-title">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        تأكيد الحذف
+        ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø­Ø°Ù
       </h3>
-      <p>هل تريد بالتأكيد حذف هذه البرمجة؟</p>
+      <p>Ù‡Ù„ ØªØ±ÙŠØ¯ Ø¨Ø§Ù„ØªØ£ÙƒÙŠØ¯ Ø­Ø°Ù Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø±Ù…Ø¬Ø©ØŸ</p>
       <div class="rh-inv-modal-target" data-rh-inv-modal-target></div>
       <div class="rh-inv-progress" data-rh-inv-progress hidden>
         <div class="rh-inv-progress-track">
           <div class="rh-inv-progress-bar" data-rh-inv-progress-bar></div>
         </div>
         <p class="rh-inv-progress-msg" data-rh-inv-progress-msg>
-          جارٍ الاتصال بالراوتر…
+          Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦
         </p>
       </div>
       <div class="rh-inv-modal-result" data-rh-inv-modal-result hidden></div>
       <div class="rh-inv-modal-actions">
         <button type="button" class="rh-inv-btn-ghost"
-                data-rh-inv-modal-cancel>إلغاء</button>
+                data-rh-inv-modal-cancel>Ø¥Ù„ØºØ§Ø¡</button>
         <button type="button" class="rh-inv-btn-danger"
                 data-rh-inv-modal-confirm>
-          <i class="fa-solid fa-trash"></i> نعم، احذف
+          <i class="fa-solid fa-trash"></i> Ù†Ø¹Ù…ØŒ Ø§Ø­Ø°Ù
         </button>
       </div>
     </div>
@@ -2075,7 +2054,7 @@
 </section>
 
 <style>
-/* ─── «خدماتي» tab layout ─── */
+/* â”€â”€â”€ Â«Ø®Ø¯Ù…Ø§ØªÙŠÂ» tab layout â”€â”€â”€ */
 .rh-inventory{padding:0 !important}
 .rh-inv-hero{
   position:relative;overflow:hidden;
@@ -2090,7 +2069,7 @@
     linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
   box-shadow:0 18px 48px rgba(124,58,237,.10), 0 2px 6px rgba(15,23,42,.04);
 }
-/* Decorative glow that drifts — gives the page a "premium" feel
+/* Decorative glow that drifts â€” gives the page a "premium" feel
    without distracting the operator. Disabled when the user has
    prefers-reduced-motion. */
 .rh-inv-hero-glow{
@@ -2134,7 +2113,7 @@
   font-size:11.5px;font-weight:800;backdrop-filter:blur(6px);
 }
 .rh-inv-hero-chips i{color:#7C3AED}
-/* Hero stats — total / from-wizard / manual — populated by JS
+/* Hero stats â€” total / from-wizard / manual â€” populated by JS
    once inventory loads. Hidden by default. */
 .rh-inv-hero-stats{
   display:flex;align-items:stretch;gap:8px;position:relative;z-index:1;
@@ -2255,7 +2234,7 @@
   transition:all .15s;
   /* Make the card itself a column flex container so the delete
      button always sits at the bottom regardless of how many
-     details rows are above it — kills the "ragged bottom edges"
+     details rows are above it â€” kills the "ragged bottom edges"
      look the operator pointed out. */
   display:flex;flex-direction:column;
 }
@@ -2295,7 +2274,7 @@
 }
 .rh-inv-del:hover{background:#FECACA;border-color:#F87171}
 
-/* ─── Remote-access per-grant badges + URL row ─── */
+/* â”€â”€â”€ Remote-access per-grant badges + URL row â”€â”€â”€ */
 .rh-inv-badge{
   display:inline-flex;align-items:center;gap:5px;
   padding:2px 9px;border-radius:999px;font-size:10.5px;
@@ -2305,7 +2284,7 @@
 .rh-inv-badge-perm{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
 .rh-inv-badge-tmp{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
 .rh-inv-badge-tmp.is-expired{background:#FEE2E2;color:#7F1D1D;border-color:#FCA5A5}
-/* Permission tier badges — visual risk gradient. */
+/* Permission tier badges â€” visual risk gradient. */
 .rh-inv-badge-perm-r{background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD}
 .rh-inv-badge-perm-w{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
 .rh-inv-badge-perm-f{background:#FEE2E2;color:#7F1D1D;border:1px solid #FCA5A5}
@@ -2324,7 +2303,7 @@
   width:26px;height:26px;flex-shrink:0;
 }
 
-/* ─── Remote-access connection banner ─── */
+/* â”€â”€â”€ Remote-access connection banner â”€â”€â”€ */
 .rh-inv-conn-banner{
   background:linear-gradient(135deg,#EDE9FE 0%,#DDD6FE 100%);
   border:1px solid #C4B5FD;border-radius:10px;
@@ -2377,7 +2356,7 @@
 .rh-inv-copy-btn:hover{background:#EDE9FE;border-color:#7C3AED}
 .rh-inv-copy-btn.is-ok{background:#10B981;color:#fff;border-color:#10B981}
 
-/* ─── Delete confirmation modal ─── */
+/* â”€â”€â”€ Delete confirmation modal â”€â”€â”€ */
 .rh-inv-modal{
   position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
   display:flex;align-items:center;justify-content:center;padding:20px;
@@ -2444,9 +2423,9 @@
 </style>
 
 <script>
-/* ─── Reusable page hero — applied to every tab panel ────────
-   Operator: «الهيرو الي عملته لخدماتي عجبني — طبعه ع باقي
-   الصفحات». Same shell as rh-inv-hero / rh-bk-hero but colour-
+/* â”€â”€â”€ Reusable page hero â€” applied to every tab panel â”€â”€â”€â”€â”€â”€â”€â”€
+   Operator: Â«Ø§Ù„Ù‡ÙŠØ±Ùˆ Ø§Ù„ÙŠ Ø¹Ù…Ù„ØªÙ‡ Ù„Ø®Ø¯Ù…Ø§ØªÙŠ Ø¹Ø¬Ø¨Ù†ÙŠ â€” Ø·Ø¨Ø¹Ù‡ Ø¹ Ø¨Ø§Ù‚ÙŠ
+   Ø§Ù„ØµÙØ­Ø§ØªÂ». Same shell as rh-inv-hero / rh-bk-hero but colour-
    variant-driven via .mt-page-hero--<color>. */
 .mt-page-hero{
   position:relative;overflow:hidden;
@@ -2499,7 +2478,7 @@
   font-size:11.5px;font-weight:800;
 }
 .mt-page-hero-chips i{color:#4F46E5}
-/* Colour variants — pick the accent that matches the tab's identity. */
+/* Colour variants â€” pick the accent that matches the tab's identity. */
 .mt-page-hero--blue   { border-color:rgba(59,130,246,.20); }
 .mt-page-hero--blue   .mt-page-hero-glow{background:radial-gradient(circle,rgba(96,165,250,.30),transparent 60%);}
 .mt-page-hero--blue   .mt-page-hero-kicker{color:#1E40AF;border-color:rgba(59,130,246,.22);}
@@ -2519,9 +2498,9 @@
 .mt-page-hero--slate  .mt-page-hero-glow{background:radial-gradient(circle,rgba(148,163,184,.30),transparent 60%);}
 .mt-page-hero--slate  .mt-page-hero-kicker{color:#334155;border-color:rgba(100,116,139,.24);}
 
-/* ─── «النسخ الاحتياطية» tab — minimal styling ──────────────
-   Operator: «عالفاضي خليه بس يحفظ النسخ الاحتياطية الي بتنتشا
-   ويرجعها بس». Stripped the animated hero + manifest expander
+/* â”€â”€â”€ Â«Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©Â» tab â€” minimal styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Operator: Â«Ø¹Ø§Ù„ÙØ§Ø¶ÙŠ Ø®Ù„ÙŠÙ‡ Ø¨Ø³ ÙŠØ­ÙØ¸ Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠØ© Ø§Ù„ÙŠ Ø¨ØªÙ†ØªØ´Ø§
+   ÙˆÙŠØ±Ø¬Ø¹Ù‡Ø§ Ø¨Ø³Â». Stripped the animated hero + manifest expander
    block; what remains is just title + list + restore/delete. */
 .rh-backups{padding:0 !important}
 .rh-bk-simple-head{
@@ -2656,7 +2635,7 @@
 }
 .rh-bk-mf-empty{font-size:12px;color:#94A3B8;font-style:italic}
 
-/* «خدماتي» tab — fetch the inventory, render groups + cards, and
+/* Â«Ø®Ø¯Ù…Ø§ØªÙŠÂ» tab â€” fetch the inventory, render groups + cards, and
    wire up the per-item delete modal with a fake progress bar.
    Lives on the unified router page so it has access to the dashboard
    wrapper's router id. */
@@ -2697,18 +2676,18 @@
 
   let loaded = false;
   // Animated loading hint that walks through the read stages so the
-  // user has something to watch (and feels less «stuck») while the
+  // user has something to watch (and feels less Â«stuckÂ») while the
   // backend cycles through 6 MikroTik API calls over the VPN tunnel.
   // Each step is an approximate label; the actual stage timings come
   // back in `data.timings` and are logged to the console.
   const LOADING_STEPS = [
-    "جارٍ الاتصال بالراوتر…",
-    "قراءة Hotspot…",
-    "قراءة Broadband…",
-    "قراءة قوائم المواقع…",
-    "قراءة قواعد الـ NAT…",
-    "قراءة قواعد الاتصال عن بُعد…",
-    "تجهيز النتائج…",
+    "Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦",
+    "Ù‚Ø±Ø§Ø¡Ø© Hotspotâ€¦",
+    "Ù‚Ø±Ø§Ø¡Ø© Broadbandâ€¦",
+    "Ù‚Ø±Ø§Ø¡Ø© Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹â€¦",
+    "Ù‚Ø±Ø§Ø¡Ø© Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„Ù€ NATâ€¦",
+    "Ù‚Ø±Ø§Ø¡Ø© Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¹Ù† Ø¨ÙØ¹Ø¯â€¦",
+    "ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ù†ØªØ§Ø¦Ø¬â€¦",
   ];
   let loadingStepTimer = 0;
   function startLoadingStepAnimation() {
@@ -2752,9 +2731,9 @@
       const elapsed = Math.round(performance.now() - t0);
       // Log per-stage timings so the operator can find the slow read
       // if the page is sluggish on their setup. Visible in DevTools
-      // → Console.
+      // â†’ Console.
       if (window.console && data.timings) {
-        console.log("[خدماتي] فحص الـ inventory:", elapsed + "ms total —", data.timings);
+        console.log("[Ø®Ø¯Ù…Ø§ØªÙŠ] ÙØ­Øµ Ø§Ù„Ù€ inventory:", elapsed + "ms total â€”", data.timings);
       }
       if (!res.ok || data.ok === false) {
         errorEl.textContent = data.error || `HTTP ${res.status}`;
@@ -2764,7 +2743,7 @@
       const groups = data.groups || [];
       if (!groups.length) { emptyEl.hidden = false; return; }
       const routerInfo = data.router_info || {};
-      // ── Populate hero stats (total / HobeRadius-managed / manual)
+      // â”€â”€ Populate hero stats (total / HobeRadius-managed / manual)
       let total = 0, hr = 0, op = 0;
       groups.forEach((g) => (g.items || []).forEach((it) => {
         total++;
@@ -2800,7 +2779,7 @@
   function renderGroup(g, routerInfo) {
     const cards = (g.items || []).map((it) => renderCard(g, it)).join("");
     // For remote-access, prepend a banner with the router's
-    // connect-here address(es) — operator was confused about
+    // connect-here address(es) â€” operator was confused about
     // where to point Winbox.
     let banner = "";
     if (g.service_type === "remote-access") {
@@ -2824,16 +2803,16 @@
     // The customer's own public IP is intentionally NOT used here:
     // most ISPs rotate it (DHCP / CGNAT) so any URL based on it
     // becomes stale within hours. Instead we surface the VPS IP +
-    // the per-router port allocated in npc_remote_port_mappings —
+    // the per-router port allocated in npc_remote_port_mappings â€”
     // that combo is stable for the lifetime of the deployment.
     const urls = Array.isArray(info.remote_urls) ? info.remote_urls : [];
     const pubHost = (info.public_host || "").trim();
     const vpn = (info.vpn_address || "").trim();
     const rows = [];
 
-    // ── Per-service URL row — what the operator actually copies ──
+    // â”€â”€ Per-service URL row â€” what the operator actually copies â”€â”€
     urls.forEach((u) => {
-      const label = u.service_ar || u.service || "—";
+      const label = u.service_ar || u.service || "â€”";
       const display = u.url || `${u.host || pubHost}:${u.port || ""}`;
       const clip = u.clipboard || display;
       rows.push(`
@@ -2841,60 +2820,60 @@
           <span class="rh-inv-conn-label">${safe(label)}</span>
           <code class="rh-inv-conn-value">${safe(display)}</code>
           <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(clip)}" title="نسخ">
+                  data-rh-inv-copy="${safe(clip)}" title="Ù†Ø³Ø®">
             <i class="fa-solid fa-copy"></i>
           </button>
         </div>`);
     });
 
-    // ── VPS host (informational — useful when no URLs are wired
-    // yet so the operator still knows the base host name). ──────
+    // â”€â”€ VPS host (informational â€” useful when no URLs are wired
+    // yet so the operator still knows the base host name). â”€â”€â”€â”€â”€â”€
     if (pubHost && !urls.length) {
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان VPS</span>
+          <span class="rh-inv-conn-label">Ø¹Ù†ÙˆØ§Ù† VPS</span>
           <code class="rh-inv-conn-value">${safe(pubHost)}</code>
           <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(pubHost)}" title="نسخ">
+                  data-rh-inv-copy="${safe(pubHost)}" title="Ù†Ø³Ø®">
             <i class="fa-solid fa-copy"></i>
           </button>
           <small class="rh-inv-conn-hint">
-            فعّل خدمة عبر «اتصال عن بُعد» لتوليد رابط مع منفذ.
+            ÙØ¹Ù‘Ù„ Ø®Ø¯Ù…Ø© Ø¹Ø¨Ø± Â«Ø§ØªØµØ§Ù„ Ø¹Ù† Ø¨ÙØ¹Ø¯Â» Ù„ØªÙˆÙ„ÙŠØ¯ Ø±Ø§Ø¨Ø· Ù…Ø¹ Ù…Ù†ÙØ°.
           </small>
         </div>`);
     }
 
-    // ── Internal-VPN address (for techs on the same WireGuard
-    // mesh — bypasses nginx, faster + no port-allocation needed).
+    // â”€â”€ Internal-VPN address (for techs on the same WireGuard
+    // mesh â€” bypasses nginx, faster + no port-allocation needed).
     if (vpn) {
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان شبكة VPN الداخلي</span>
+          <span class="rh-inv-conn-label">Ø¹Ù†ÙˆØ§Ù† Ø´Ø¨ÙƒØ© VPN Ø§Ù„Ø¯Ø§Ø®Ù„ÙŠ</span>
           <code class="rh-inv-conn-value">${safe(vpn)}</code>
           <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(vpn)}" title="نسخ">
+                  data-rh-inv-copy="${safe(vpn)}" title="Ù†Ø³Ø®">
             <i class="fa-solid fa-copy"></i>
           </button>
-          <small class="rh-inv-conn-hint">للفنّي على نفس الـ VPN</small>
+          <small class="rh-inv-conn-hint">Ù„Ù„ÙÙ†Ù‘ÙŠ Ø¹Ù„Ù‰ Ù†ÙØ³ Ø§Ù„Ù€ VPN</small>
         </div>`);
     }
 
     if (!rows.length) {
-      // No VPS host configured yet — point the operator straight at
+      // No VPS host configured yet â€” point the operator straight at
       // the settings page so they don't have to know about env vars
-      // or SSH. The link goes to «إعدادات النظام» where
+      // or SSH. The link goes to Â«Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…Â» where
       // `infra.public_host` is the canonical setting.
       rows.push(`
         <div class="rh-inv-conn-row">
           <span class="rh-inv-conn-empty">
             <i class="fa-solid fa-circle-info"></i>
-            لم يتمّ ضبط <strong>عنوان VPS العام</strong> بعد.
+            Ù„Ù… ÙŠØªÙ…Ù‘ Ø¶Ø¨Ø· <strong>Ø¹Ù†ÙˆØ§Ù† VPS Ø§Ù„Ø¹Ø§Ù…</strong> Ø¨Ø¹Ø¯.
             <a href="{{ url_for('radius.settings_page') }}"
                class="rh-inv-conn-link">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              افتح «إعدادات النظام» وأضف العنوان
+              Ø§ÙØªØ­ Â«Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù…Â» ÙˆØ£Ø¶Ù Ø§Ù„Ø¹Ù†ÙˆØ§Ù†
             </a>
-            ليبدأ المعالج بتوليد روابط الاتصال عن بُعد.
+            Ù„ÙŠØ¨Ø¯Ø£ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬ Ø¨ØªÙˆÙ„ÙŠØ¯ Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø§ØªØµØ§Ù„ Ø¹Ù† Ø¨ÙØ¹Ø¯.
           </span>
         </div>`);
     }
@@ -2902,7 +2881,7 @@
       <div class="rh-inv-conn-banner">
         <div class="rh-inv-conn-head">
           <i class="fa-solid fa-network-wired"></i>
-          <strong>عناوين الاتصال (عبر VPS — ثابتة)</strong>
+          <strong>Ø¹Ù†Ø§ÙˆÙŠÙ† Ø§Ù„Ø§ØªØµØ§Ù„ (Ø¹Ø¨Ø± VPS â€” Ø«Ø§Ø¨ØªØ©)</strong>
         </div>
         ${rows.join("")}
       </div>`;
@@ -2910,7 +2889,7 @@
 
   function wireCopyButtons() {
     // Delegate to the shared HobeCopy helper which has an HTTP
-    // fallback via document.execCommand('copy') — needed because
+    // fallback via document.execCommand('copy') â€” needed because
     // the production VPS runs on plain HTTP and navigator.clipboard
     // is undefined there. Without the fallback, all copy buttons
     // silently failed.
@@ -2921,8 +2900,8 @@
 
   function renderCard(g, it) {
     const sourceTag = it.source === "operator"
-      ? '<span class="rh-inv-source rh-inv-source-op">إعداد يدوي</span>'
-      : '<span class="rh-inv-source rh-inv-source-hr">من البرمجة</span>';
+      ? '<span class="rh-inv-source rh-inv-source-op">Ø¥Ø¹Ø¯Ø§Ø¯ ÙŠØ¯ÙˆÙŠ</span>'
+      : '<span class="rh-inv-source rh-inv-source-hr">Ù…Ù† Ø§Ù„Ø¨Ø±Ù…Ø¬Ø©</span>';
 
     // Remote-access cards get extra chrome: prominent VPS URL,
     // permanent/temporary badge, permission badge, dedicated copy
@@ -2938,13 +2917,13 @@
           <div class="rh-inv-url-row">
             <code class="rh-inv-url-value">${safe(it.vps_url)}</code>
             <button type="button" class="rh-inv-copy-btn"
-                    data-rh-inv-copy="${safe(it.vps_url)}" title="نسخ العنوان">
+                    data-rh-inv-copy="${safe(it.vps_url)}" title="Ù†Ø³Ø® Ø§Ù„Ø¹Ù†ÙˆØ§Ù†">
               <i class="fa-solid fa-copy"></i>
             </button>
           </div>`;
       }
       if (it.tech_user) {
-        // Username row — no password (we never stored it; tech must
+        // Username row â€” no password (we never stored it; tech must
         // get it from the original apply success card). Still useful
         // to see WHICH user account this grant created on the
         // router so the operator can cross-reference /user/print.
@@ -2958,7 +2937,7 @@
                   style="color:#854D0E">${safe(it.tech_user)}</code>
             <button type="button" class="rh-inv-copy-btn"
                     data-rh-inv-copy="${safe(it.tech_user)}"
-                    title="نسخ اسم المستخدم"
+                    title="Ù†Ø³Ø® Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…"
                     style="border-color:#FCD34D;color:#B45309">
               <i class="fa-solid fa-copy"></i>
             </button>
@@ -2967,7 +2946,7 @@
       if (it.permanent) {
         badgeBlock =
           '<span class="rh-inv-badge rh-inv-badge-perm">' +
-          '<i class="fa-solid fa-infinity"></i> دائم' +
+          '<i class="fa-solid fa-infinity"></i> Ø¯Ø§Ø¦Ù…' +
           '</span>';
       } else if (it.expires_at) {
         badgeBlock =
@@ -2977,13 +2956,13 @@
           `<span data-rh-countdown>${safe(it.expires_at)}</span>` +
           '</span>';
       }
-      // Permission tier badge — green / amber / red for the visual
+      // Permission tier badge â€” green / amber / red for the visual
       // risk gradient (read=safe, write=normal, full=dangerous).
       if (it.permission) {
         const permMap = {
-          read:  { ar: "قراءة",  cls: "rh-inv-badge-perm-r" },
-          write: { ar: "تعديل",  cls: "rh-inv-badge-perm-w" },
-          full:  { ar: "كامل",   cls: "rh-inv-badge-perm-f" },
+          read:  { ar: "Ù‚Ø±Ø§Ø¡Ø©",  cls: "rh-inv-badge-perm-r" },
+          write: { ar: "ØªØ¹Ø¯ÙŠÙ„",  cls: "rh-inv-badge-perm-w" },
+          full:  { ar: "ÙƒØ§Ù…Ù„",   cls: "rh-inv-badge-perm-f" },
         };
         const p = permMap[it.permission];
         if (p) {
@@ -3016,17 +2995,17 @@
         ${userBlock}
         <dl class="rh-inv-details">${details}</dl>
         <button type="button" class="rh-inv-del">
-          <i class="fa-solid fa-trash"></i> حذف
+          <i class="fa-solid fa-trash"></i> Ø­Ø°Ù
         </button>
       </div>`;
   }
 
-  // ── Live countdown for temporary remote-access grants ──────
+  // â”€â”€ Live countdown for temporary remote-access grants â”€â”€â”€â”€â”€â”€
   //
   // RouterOS gives next-run as "May/27/2026 18:42:17" or similar.
   // We parse it to a Date once on render, then refresh the badge
   // every 30s with the human-readable remaining time. When the
-  // countdown hits zero the badge flips to «منتهٍ» so the operator
+  // countdown hits zero the badge flips to Â«Ù…Ù†ØªÙ‡ÙÂ» so the operator
   // knows to refresh the list (RouterOS may take up to 1 min to
   // actually fire the scheduler and reap the rule).
   function startCountdowns() {
@@ -3038,12 +3017,12 @@
         const raw = b.dataset.rhExpires || "";
         const span = b.querySelector("[data-rh-countdown]");
         if (!span) return;
-        // RouterOS format: "mon/dd/yyyy hh:mm:ss" — JS Date can parse
+        // RouterOS format: "mon/dd/yyyy hh:mm:ss" â€” JS Date can parse
         // many variants but not this one reliably. Try ISO first,
         // then a manual fallback. If both fail, show the raw value.
         let when = Date.parse(raw);
         if (Number.isNaN(when)) {
-          // "May/27/2026 18:42:17" → "May 27 2026 18:42:17"
+          // "May/27/2026 18:42:17" â†’ "May 27 2026 18:42:17"
           when = Date.parse(raw.replace(/\//g, " "));
         }
         if (Number.isNaN(when)) {
@@ -3052,7 +3031,7 @@
         }
         let diffSec = Math.floor((when - now) / 1000);
         if (diffSec <= 0) {
-          span.textContent = "منتهٍ — حدِّث القائمة";
+          span.textContent = "Ù…Ù†ØªÙ‡Ù â€” Ø­Ø¯ÙÙ‘Ø« Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©";
           b.classList.add("is-expired");
           return;
         }
@@ -3062,10 +3041,10 @@
         diffSec -= h * 3600;
         const m = Math.floor(diffSec / 60);
         const parts = [];
-        if (d) parts.push(`${d}ي`);
-        if (h) parts.push(`${h}س`);
-        if (!d) parts.push(`${m}د`);
-        span.textContent = `متبقّي ${parts.join(" ")}`;
+        if (d) parts.push(`${d}ÙŠ`);
+        if (h) parts.push(`${h}Ø³`);
+        if (!d) parts.push(`${m}Ø¯`);
+        span.textContent = `Ù…ØªØ¨Ù‚Ù‘ÙŠ ${parts.join(" ")}`;
       });
     }
     tick();
@@ -3079,15 +3058,15 @@
     const groupTitle = card.dataset.rhInvGroupTitle;
     const label      = card.dataset.rhInvLabel;
     modalTarget.innerHTML =
-      `<strong>${safe(groupTitle)}</strong> · <code>${safe(label)}</code>`;
+      `<strong>${safe(groupTitle)}</strong> Â· <code>${safe(label)}</code>`;
     modalProg.hidden = true;
     modalProgBar.style.width = "0%";
-    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
+    modalProgMsg.textContent = "Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦";
     modalResult.hidden = true;
     modalResult.className = "rh-inv-modal-result";
     modalResult.textContent = "";
     modalConfirm.disabled = false;
-    modalConfirm.innerHTML = '<i class="fa-solid fa-trash"></i> نعم، احذف';
+    modalConfirm.innerHTML = '<i class="fa-solid fa-trash"></i> Ù†Ø¹Ù…ØŒ Ø§Ø­Ø°Ù';
     modal.hidden = false;
   }
   function closeModal() {
@@ -3103,20 +3082,20 @@
     });
   }
 
-  // Smooth fake progress bar — slides 0→90% over ~1.5s while the
+  // Smooth fake progress bar â€” slides 0â†’90% over ~1.5s while the
   // request is in-flight, then jumps to 100% on success.
   let progressTimer = null;
   function startProgress() {
     modalProg.hidden = false;
     modalProgBar.style.width = "0%";
-    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
+    modalProgMsg.textContent = "Ø¬Ø§Ø±Ù Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦";
     let val = 5;
     if (progressTimer) clearInterval(progressTimer);
     progressTimer = setInterval(() => {
       val = Math.min(90, val + Math.random() * 8 + 3);
       modalProgBar.style.width = val + "%";
-      if (val > 40 && val < 60) modalProgMsg.textContent = "جارٍ إرسال أمر الحذف…";
-      if (val > 60 && val < 85) modalProgMsg.textContent = "تأكيد التنفيذ على الراوتر…";
+      if (val > 40 && val < 60) modalProgMsg.textContent = "Ø¬Ø§Ø±Ù Ø¥Ø±Ø³Ø§Ù„ Ø£Ù…Ø± Ø§Ù„Ø­Ø°Ùâ€¦";
+      if (val > 60 && val < 85) modalProgMsg.textContent = "ØªØ£ÙƒÙŠØ¯ Ø§Ù„ØªÙ†ÙÙŠØ° Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§ÙˆØªØ±â€¦";
     }, 180);
   }
   function finishProgress(ok, msg) {
@@ -3125,7 +3104,7 @@
     modalProgBar.style.background = ok
       ? "linear-gradient(90deg,#10B981,#047857)"
       : "linear-gradient(90deg,#EF4444,#B91C1C)";
-    modalProgMsg.textContent = ok ? "تم الحذف ✓" : "فشل الحذف";
+    modalProgMsg.textContent = ok ? "ØªÙ… Ø§Ù„Ø­Ø°Ù âœ“" : "ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù";
     modalResult.hidden = false;
     modalResult.className = "rh-inv-modal-result " + (ok ? "is-ok" : "is-fail");
     modalResult.textContent = msg || "";
@@ -3136,7 +3115,7 @@
     const svc = currentCard.dataset.rhInvSvc;
     const target = currentCard.dataset.rhInvTarget;
     modalConfirm.disabled = true;
-    modalConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الحذف…';
+    modalConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ø¬Ø§Ø±Ù Ø§Ù„Ø­Ø°Ùâ€¦';
     startProgress();
     try {
       const res = await fetch(
@@ -3149,10 +3128,10 @@
       if (!res.ok || data.ok === false) {
         finishProgress(false, data.error || data.stderr || `HTTP ${res.status}`);
         modalConfirm.disabled = false;
-        modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+        modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©';
         return;
       }
-      finishProgress(true, "تم حذف العنصر من الراوتر.");
+      finishProgress(true, "ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ù†ØµØ± Ù…Ù† Ø§Ù„Ø±Ø§ÙˆØªØ±.");
       // Remove the card from the DOM after a short pause + reload
       // groups list to reflect new counts.
       setTimeout(() => {
@@ -3167,7 +3146,7 @@
     } catch (err) {
       finishProgress(false, String(err && err.message || err));
       modalConfirm.disabled = false;
-      modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+      modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©';
     }
   });
   modalCancel.addEventListener("click", closeModal);
@@ -3176,9 +3155,9 @@
 
   if (refreshBtn) refreshBtn.addEventListener("click", loadInventory);
 
-  // ── Filter chips (الكل / تلقائيّة / يدويّة) ─────────────
+  // â”€â”€ Filter chips (Ø§Ù„ÙƒÙ„ / ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‘Ø© / ÙŠØ¯ÙˆÙŠÙ‘Ø©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Hide/show inventory cards whose .rh-inv-card[data-rh-inv-svc]
-  // → looked up via the card's `data-rh-source` attribute (which
+  // â†’ looked up via the card's `data-rh-source` attribute (which
   // renderCard sets from the inventory item's source field).
   // Empty groups (all cards filtered out) get hidden too so the
   // operator doesn't see a header with no rows under it.
@@ -3219,314 +3198,19 @@
   }
 })();
 
-/* «النسخ الاحتياطية» tab — list + per-row manifest expander +
-   restore button. Hits the new /backups endpoints we added in
-   commit O7. Lazy-loaded on first tab click. */
-(function initBackupsTab() {
-  "use strict";
-  const root = document.querySelector("[data-mt-dashboard]");
-  if (!root) { console.warn("[backups-tab] no [data-mt-dashboard] root"); return; }
-  const panel    = root.querySelector('[data-mt-tab-panel="backups"]');
-  if (!panel) { console.warn("[backups-tab] no backups panel"); return; }
-  const tabBtn   = root.querySelector('[data-mt-tab="backups"]');
-  const listEl   = panel.querySelector("[data-rh-bk-list]");
-  const loadingEl= panel.querySelector("[data-rh-bk-loading]");
-  const emptyEl  = panel.querySelector("[data-rh-bk-empty]");
-  const errorEl  = panel.querySelector("[data-rh-bk-error]");
-  const refreshBtn = panel.querySelector("[data-rh-bk-refresh]");
-  const routerId = root.dataset.mtRouterId;
-  const apiBase  = (root.dataset.mtApiBase || "").replace(/\/$/, "");
-  const apiToken = root.dataset.mtApiToken || "";
-  let loaded = false;
-  // Diagnostic — surfaces in DevTools so the operator can see why
-  // the tab won't load (missing token? wrong api_base? router_id
-  // not rendered?). Logged once at init so we don't spam.
-  console.log("[backups-tab] init", {
-    routerId, apiBase,
-    hasToken: !!apiToken,
-    hasListEl: !!listEl,
-    hasLoadingEl: !!loadingEl,
-    hasErrorEl: !!errorEl,
-    hasTabBtn: !!tabBtn,
-  });
-
-  function safe(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function token() {
-    const el = document.querySelector('input[name="_csrf_token"]');
-    return (el && el.value) || "";
-  }
-  function arDate(s) {
-    if (!s) return "—";
-    // Handle both ISO ("2026-05-27T15:33:10Z") and RouterOS
-    // ("May/27/2026 15:33:10") date strings.
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return s;
-    const pad = (n) => (n < 10 ? "0" + n : String(n));
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  async function apiGet(path) {
-    const headers = { Accept: "application/json" };
-    if (apiToken) headers.Authorization = "Bearer " + apiToken;
-    // Hard 12s ceiling — if the API can't answer in 12s, something
-    // upstream is dead and we should tell the operator instead of
-    // spinning forever (the previous behaviour the operator hit).
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 12_000);
-    try {
-      const res = await fetch(apiBase + path,
-                              { headers, signal: ctrl.signal });
-      const body = await res.json().catch(() => ({}));
-      return { res, body };
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  // Bullet-proof helpers — every DOM op is wrapped so a null
-  // element CAN'T throw and leak past loadList (which would skip
-  // the finally block and leave the spinner forever).
-  function hide(el)   { try { if (el) el.hidden = true;  } catch (_) {} }
-  function show(el)   { try { if (el) el.hidden = false; } catch (_) {} }
-  function setText(el, t) {
-    try { if (el) el.textContent = String(t == null ? "" : t); }
-    catch (_) {}
-  }
-  function setHtml(el, h) {
-    try { if (el) el.innerHTML = h; } catch (_) {}
-  }
-
-  async function loadList() {
-    console.log("[backups-tab] loadList() start, routerId=", routerId);
-    // Reset visible state defensively — even if some element is null,
-    // we never let it throw out of this function.
-    show(loadingEl);
-    hide(emptyEl);
-    hide(errorEl);
-    setText(errorEl, "");
-    setHtml(listEl, "");
-    if (refreshBtn) {
-      try { refreshBtn.classList.add("is-spinning"); } catch (_) {}
-    }
-    let hadError = false;
-    try {
-      const url = apiBase + "/mikrotik/" + routerId + "/backups";
-      console.log("[backups-tab] fetching", url);
-      const { res, body } = await apiGet(
-        "/mikrotik/" + routerId + "/backups");
-      console.log("[backups-tab] response", res.status, body);
-      const inner = (body && body.data) || {};
-      if (!res.ok || (body && body.ok === false)
-          || (inner && inner.ok === false)) {
-        const msg = (inner && inner.error)
-                  || (body && body.error)
-                  || ("HTTP " + res.status);
-        setText(errorEl, msg);
-        show(errorEl);
-        hadError = true;
-        return;
-      }
-      // Empty state — covers both `{backups: []}` AND a totally
-      // missing field. Either way, we want the friendly empty
-      // card, NOT a stuck spinner.
-      const list =
-        (Array.isArray(inner.backups)  && inner.backups) ||
-        (body && Array.isArray(body.backups) && body.backups) ||
-        [];
-      console.log("[backups-tab] got", list.length, "backups");
-      // Mirror count into the new badge in the simple-head.
-      const countEl = document.querySelector("[data-rh-bk-count]");
-      if (countEl) countEl.textContent = String(list.length);
-      if (!list.length) {
-        show(emptyEl);
-        return;
-      }
-      setHtml(listEl, list.map(renderCard).join(""));
-      wireCardActions();
-    } catch (err) {
-      console.error("[backups-tab] load failed:", err);
-      const msg = (err && err.name === "AbortError")
-        ? "تعذّر التحميل: السيرفر لم يرد خلال 12 ثانية."
-        : String((err && err.message) || err || "خطأ غير معروف");
-      setText(errorEl, msg);
-      show(errorEl);
-      hadError = true;
-    } finally {
-      hide(loadingEl);
-      if (refreshBtn) {
-        try { refreshBtn.classList.remove("is-spinning"); } catch (_) {}
-      }
-      loaded = true;
-      console.log("[backups-tab] finally — loading hidden, error=", hadError);
-    }
-  }
-
-  function renderCard(b) {
-    const restored = b.restored_at
-      ? `<div class="rh-bk-card-when" style="color:#92400E">
-           ⟲ تمّت الاستعادة: ${safe(arDate(b.restored_at))}
-         </div>`
-      : '';
-    return `
-      <div class="rh-bk-card" data-rh-bk-card="${safe(b.id)}">
-        <div class="rh-bk-card-head">
-          <span class="rh-bk-card-icon">
-            <i class="fa-solid fa-floppy-disk"></i>
-          </span>
-          <div class="rh-bk-card-body-head">
-            <span class="rh-bk-card-name">${safe(b.router_filename || b.filename || b.name)}</span>
-            <span class="rh-bk-card-when">${safe(arDate(b.created_at))}</span>
-            ${restored}
-          </div>
-          <div class="rh-bk-card-actions">
-            <button type="button" class="rh-bk-btn rh-bk-btn--primary"
-                    data-rh-bk-restore="${safe(b.id)}">
-              <i class="fa-solid fa-rotate-left"></i> استعادة
-            </button>
-            <button type="button" class="rh-bk-btn rh-bk-btn--danger"
-                    data-rh-bk-delete="${safe(b.id)}">
-              <i class="fa-solid fa-trash"></i> حذف
-            </button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  // Manifest renderer + loader removed: operator said «عالفاضي
-  // — خليه بس يحفظ النسخ الاحتياطية الي بتنتشا ويرجعها بس».
-  // The backend route /backups/<id>/manifest is left registered
-  // as dead code; we just stopped calling it from the UI.
-
-  function wireCardActions() {
-    listEl.querySelectorAll("[data-rh-bk-restore]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.rhBkRestore;
-        if (!window.confirm(
-          "تأكيد الاستعادة؟\n\n" +
-          "سيُرسل ملف النسخة الاحتياطية إلى الراوتر " +
-          "والراوتر سيعيد التشغيل تلقائياً (دقيقة تقريباً). " +
-          "كل الإعدادات الحاليّة ستُستبدل بإعدادات النسخة."
-        )) return;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ…';
-        try {
-          const headers = { "Content-Type": "application/json" };
-          if (apiToken) headers.Authorization = "Bearer " + apiToken;
-          const res = await fetch(
-            apiBase + `/mikrotik/${routerId}/backups/${id}/restore`,
-            {
-              method: "POST", headers,
-              body: JSON.stringify({ confirm: true }),
-            });
-          const body = await res.json().catch(() => ({}));
-          if (!res.ok || body.ok === false) {
-            alert("فشل الاستعادة: " + ((body && body.error) || res.status));
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> استعادة';
-            return;
-          }
-          alert("تم إرسال أمر الاستعادة. الراوتر سيعيد التشغيل…");
-          loadList();
-        } catch (err) {
-          alert("خطأ في الشبكة: " + (err.message || err));
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> استعادة';
-        }
-      });
-    });
-
-    listEl.querySelectorAll("[data-rh-bk-delete]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.rhBkDelete;
-        if (!window.confirm(
-          "حذف هذه النسخة من سجل HobeRadius؟\n\n" +
-          "ملف .backup الفعلي على الراوتر لن يُحذف."
-        )) return;
-        btn.disabled = true;
-        try {
-          const headers = {};
-          if (apiToken) headers.Authorization = "Bearer " + apiToken;
-          const res = await fetch(
-            apiBase + `/mikrotik/${routerId}/backups/${id}`,
-            { method: "DELETE", headers });
-          if (!res.ok) {
-            alert("فشل الحذف.");
-            btn.disabled = false;
-            return;
-          }
-          loadList();
-        } catch (err) {
-          alert("خطأ: " + (err.message || err));
-          btn.disabled = false;
-        }
-      });
-    });
-  }
-
-  if (refreshBtn) refreshBtn.addEventListener("click", loadList);
-
-  // Belt + suspenders activation. The custom event covers
-  // every show() path (button click, deep-link, programmatic);
-  // the direct click listener is the historical hook; the
-  // synchronous hash check covers landing-page deep links;
-  // and the safety net below makes sure we NEVER leave the
-  // spinner up if all of those somehow miss.
-  function triggerIfNeeded(reason) {
-    if (loaded) return;
-    console.log("[backups-tab] activation:", reason);
-    loadList();
-  }
-  root.addEventListener("mt:tab-change", (e) => {
-    if (e.detail && e.detail.slug === "backups") {
-      triggerIfNeeded("mt:tab-change");
-    }
-  });
-  if (tabBtn) {
-    tabBtn.addEventListener("click", () => triggerIfNeeded("tabBtn click"));
-  }
-
-  // SAFETY NET — if the panel ever becomes visible and we haven't
-  // loaded yet, kick loadList. This catches every conceivable
-  // activation gap (custom-event timing, third-party tab switchers,
-  // browser back/forward, etc). Polls 4x/sec for the first 6s
-  // after init, then stops.
-  let safetyTicks = 0;
-  const safetyTimer = setInterval(() => {
-    safetyTicks++;
-    if (loaded || safetyTicks > 24) {
-      clearInterval(safetyTimer);
-      return;
-    }
-    if (panel && !panel.hidden) {
-      clearInterval(safetyTimer);
-      triggerIfNeeded("safety-net (panel visible without load)");
-    }
-  }, 250);
-  // If we land on the page with #tab-backups already in the URL,
-  // the main tab loop ran show("backups") before this IIFE
-  // registered the listener. Catch that case by checking the
-  // current state.
-  if ((location.hash || "").replace(/^#/, "") === "tab-backups"
-      && !loaded) {
-    console.log("[backups-tab] hash already set to tab-backups → loading");
-    loadList();
-  }
-})();
+// Backups IIFE removed (2026-05) — tab + service stopped per operator request.
 </script>
 
 <script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mt_dashboard.js') }}" defer></script>
 
-{# Pass-2b mirror helpers — keep the per-tab «stat strip» / «summary
-   grid» / «diag grid» values in sync with the existing data-mt-*
+{# Pass-2b mirror helpers â€” keep the per-tab Â«stat stripÂ» / Â«summary
+   gridÂ» / Â«diag gridÂ» values in sync with the existing data-mt-*
    count cells WITHOUT modifying mt_dashboard.js. We watch each
    source cell with a MutationObserver and copy its text into every
    element that declares `data-np-mirror="<selector>"`. The
    `data-np-mirror-num` variant extracts the leading integer from
-   text like «0 حرجة» → «0», used by the Diagnostics cards.
+   text like Â«0 Ø­Ø±Ø¬Ø©Â» â†’ Â«0Â», used by the Diagnostics cards.
    The `data-np-active-when` variant toggles an `.is-active` class
    on the dot when the source number is > 0 (used by the Sessions
    summary cards). #}
@@ -3535,7 +3219,7 @@
   "use strict";
 
   function extractNumber(s) {
-    const m = String(s == null ? "" : s).match(/\d[\d,٬٫]*/);
+    const m = String(s == null ? "" : s).match(/\d[\d,Ù¬Ù«]*/);
     return m ? m[0] : "0";
   }
 
@@ -3543,7 +3227,7 @@
     if (targetEl.hasAttribute("data-np-mirror-num")) {
       targetEl.textContent = extractNumber(srcText);
     } else {
-      targetEl.textContent = String(srcText == null ? "—" : srcText);
+      targetEl.textContent = String(srcText == null ? "â€”" : srcText);
     }
   }
 
