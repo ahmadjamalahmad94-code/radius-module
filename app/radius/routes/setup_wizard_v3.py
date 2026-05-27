@@ -429,7 +429,7 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
 
     # Lazy import — only when this endpoint is hit.
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
                     status=500, code="mt_client_load_error")
@@ -621,7 +621,7 @@ def setup_wizard_v3_broadband_verify(router_id: int):
 
     checks = []
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
                     status=500, code="mt_client_load_error")
@@ -795,7 +795,7 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
                     status=409, code="no_api_password")
     checks = []
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
                     code="mt_client_load_error")
@@ -888,7 +888,7 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
                     status=409, code="no_api_password")
     checks = []
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
                     status=500, code="mt_client_load_error")
@@ -1016,7 +1016,7 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
                     status=409, code="no_api_password")
     checks = []
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
                     code="mt_client_load_error")
@@ -1214,7 +1214,7 @@ def setup_wizard_v3_remote_access_verify(router_id: int):
         return _err("معرّف القاعدة مفقود.", status=400, code="missing_token")
     checks = []
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
                     code="mt_client_load_error")
@@ -1373,7 +1373,7 @@ def setup_wizard_v3_router_services_status(router_id: int):
             )},
         })
     try:
-        from ..services.mikrotik_admin_client import MikrotikClient
+        from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
                     code="mt_client_load_error")
