@@ -113,6 +113,11 @@ class ScriptPlan:
     route_ops:           tuple[PlanCommand, ...] = ()
     mangle_ops:          tuple[PlanCommand, ...] = ()
     nat_ops:             tuple[PlanCommand, ...] = ()
+    # VX2.6e — widen the wg peer's allowed-address so the kernel
+    # hands non-VPS-destined packets to the tunnel. Without this,
+    # WG silently drops every packet whose dst isn't already in
+    # allowed-ips → apply «succeeds» but no IP changes.
+    wg_peer_ops:         tuple[PlanCommand, ...] = ()
     firewall_filter_ops: tuple[PlanCommand, ...] = ()
     # VX2.6d — flush already-tracked connections after the rules
     # are in place. Runs LAST so the freshly-mangled routing
@@ -141,6 +146,7 @@ class ScriptPlan:
             + self.dns_ops
             + self.mangle_ops
             + self.nat_ops
+            + self.wg_peer_ops
             + self.firewall_filter_ops
             + self.connection_flush_ops
         )
@@ -532,6 +538,47 @@ def build_plan(
         ),
     ]
 
+    # ── WireGuard peer cryptokey-routing (VX2.6e) ──
+    #
+    # Field-tested issue: the apply succeeds, mangle counters tick
+    # (we've seen 60+ matched packets), the route is Active with
+    # gateway=hr-wg — but the actual outbound connections fail with
+    # «Network unreachable» from the router and the client gets
+    # nothing.
+    #
+    # Root cause: WireGuard cryptokey-routing. A peer's
+    # ``allowed-address`` defines the EXACT set of destinations whose
+    # packets the kernel will hand to that peer. The HobeRadius VPN
+    # bootstrap creates the VPS peer with
+    # ``allowed-address=10.10.0.1/32`` — fine for control-plane
+    # traffic to the VPS itself, but it silently drops every
+    # packet whose destination isn't 10.10.0.1. Site-exit's whole
+    # point is to forward traffic to ARBITRARY public IPs — none of
+    # which are in 10.10.0.1/32.
+    #
+    # Fix: widen the peer's ``allowed-address`` to ``0.0.0.0/0`` so
+    # the kernel hands ALL marked traffic to the wg peer. The custom
+    # routing table is what gates which traffic uses this peer (only
+    # marked packets reach this route), so widening allowed-address
+    # is purely a wg-side gate — doesn't accidentally route anything.
+    #
+    # Idempotent: re-running this `set` with the same value is a
+    # no-op on RouterOS. We narrow the `find` to interface=<wg_iface>
+    # so we only touch the peer we own.
+    wg_peer_ops: list[PlanCommand] = [
+        PlanCommand(
+            section="wg-peer",
+            path="/interface/wireguard/peers",
+            kind="set",
+            attrs={"allowed-address": "0.0.0.0/0"},
+            find_pattern=f'[find interface="{wg_iface}"]',
+            note="widen allowed-address so packets to non-VPS"
+                 " destinations are routed through the tunnel —"
+                 " required for site-exit to actually forward"
+                 " traffic via the VPS (cryptokey-routing fix)",
+        ),
+    ]
+
     # ── Fail-mode protection ──
     # firewall_filter_ops starts with the FastTrack bypass rules so
     # the operator's existing fasttrack-connection rule (the default
@@ -606,6 +653,7 @@ def build_plan(
         route_ops=route_ops,
         mangle_ops=tuple(mangle_ops),
         nat_ops=tuple(nat_ops),
+        wg_peer_ops=tuple(wg_peer_ops),
         connection_flush_ops=tuple(connection_flush_ops),
         firewall_filter_ops=tuple(firewall_filter_ops),
         rollback_ops=rollback_ops,

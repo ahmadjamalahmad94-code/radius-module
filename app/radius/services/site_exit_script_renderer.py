@@ -91,6 +91,10 @@ def render_forward_script(plan: ScriptPlan) -> str:
             plan.mangle_ops),
         ("nat — src-nat on the wg interface so VPS accepts packets",
             plan.nat_ops),
+        ("wireguard peer — widen allowed-address so the wg tunnel"
+         " actually forwards non-VPS-destined packets (cryptokey"
+         " routing fix)",
+            plan.wg_peer_ops),
         ("firewall filter — FastTrack bypass + fail-mode protection",
             plan.firewall_filter_ops),
         ("connection flush — re-evaluate ongoing sessions so they"
@@ -203,8 +207,43 @@ def _render_command(cmd: PlanCommand, *, plan: ScriptPlan) -> str:
         return _render_add(cmd, plan=plan)
     if cmd.kind == "remove":
         return _render_remove(cmd, plan=plan)
+    if cmd.kind == "set":
+        return _render_set(cmd, plan=plan)
     raise RenderSafetyError(
         f"unsupported PlanCommand.kind: {cmd.kind!r}")
+
+
+def _render_set(cmd: PlanCommand, *, plan: ScriptPlan) -> str:
+    """Emit a `<path> set [<find-expr>] k=v k=v ...` line.
+
+    Used for in-place mutations like widening a WireGuard peer's
+    allowed-address — operations that change EXISTING router state
+    rather than adding/removing tagged rows.
+
+    Safety: caller MUST supply ``cmd.find_pattern`` as a complete
+    RouterOS find expression (starting with `[`). We refuse to emit
+    a bare `set` (which would mutate every row) and we refuse
+    expressions that don't reference an obviously narrow selector
+    (interface= / name= / .id=) — keeps the blast radius tight."""
+    pattern = cmd.find_pattern or ""
+    if not pattern.startswith("["):
+        raise RenderSafetyError(
+            "set requires a complete find expression starting with `[`"
+        )
+    narrow_markers = (
+        "interface=", "name=", ".id=", "comment~",
+    )
+    if not any(m in pattern for m in narrow_markers):
+        raise RenderSafetyError(
+            f"set find-expression {pattern!r} lacks a narrow selector"
+            " (interface=/name=/.id=/comment~) — refusing to mutate"
+            " every row of the table"
+        )
+    head = "/" + " ".join(cmd.path.strip("/").split("/"))
+    parts: list[str] = [head, "set", pattern]
+    for k, v in cmd.attrs.items():
+        parts.append(_kv(k, str(v)))
+    return " ".join(parts)
 
 
 def _render_add(cmd: PlanCommand, *, plan: ScriptPlan) -> str:
