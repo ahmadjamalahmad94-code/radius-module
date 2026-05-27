@@ -2988,51 +2988,78 @@
     }
   }
 
+  // Bullet-proof helpers — every DOM op is wrapped so a null
+  // element CAN'T throw and leak past loadList (which would skip
+  // the finally block and leave the spinner forever).
+  function hide(el)   { try { if (el) el.hidden = true;  } catch (_) {} }
+  function show(el)   { try { if (el) el.hidden = false; } catch (_) {} }
+  function setText(el, t) {
+    try { if (el) el.textContent = String(t == null ? "" : t); }
+    catch (_) {}
+  }
+  function setHtml(el, h) {
+    try { if (el) el.innerHTML = h; } catch (_) {}
+  }
+
   async function loadList() {
     console.log("[backups-tab] loadList() start, routerId=", routerId);
-    loadingEl.hidden = false;
-    emptyEl.hidden = true;
-    errorEl.hidden = true;
-    errorEl.textContent = "";
-    listEl.innerHTML = "";
-    if (refreshBtn) refreshBtn.classList.add("is-spinning");
+    // Reset visible state defensively — even if some element is null,
+    // we never let it throw out of this function.
+    show(loadingEl);
+    hide(emptyEl);
+    hide(errorEl);
+    setText(errorEl, "");
+    setHtml(listEl, "");
+    if (refreshBtn) {
+      try { refreshBtn.classList.add("is-spinning"); } catch (_) {}
+    }
+    let hadError = false;
     try {
       const url = apiBase + "/mikrotik/" + routerId + "/backups";
       console.log("[backups-tab] fetching", url);
       const { res, body } = await apiGet(
         "/mikrotik/" + routerId + "/backups");
       console.log("[backups-tab] response", res.status, body);
-      // Two-layer envelope: outer (HTTP) + inner (business).
-      // Surface the inner error if the outer is fine but the
-      // payload reports failure.
       const inner = (body && body.data) || {};
       if (!res.ok || (body && body.ok === false)
           || (inner && inner.ok === false)) {
         const msg = (inner && inner.error)
                   || (body && body.error)
-                  || `HTTP ${res.status}`;
-        errorEl.textContent = msg;
-        errorEl.hidden = false;
+                  || ("HTTP " + res.status);
+        setText(errorEl, msg);
+        show(errorEl);
+        hadError = true;
         return;
       }
-      const data = inner.backups ? inner : (body.data || body);
-      const list = Array.isArray(data.backups) ? data.backups : [];
+      // Empty state — covers both `{backups: []}` AND a totally
+      // missing field. Either way, we want the friendly empty
+      // card, NOT a stuck spinner.
+      const list =
+        (Array.isArray(inner.backups)  && inner.backups) ||
+        (body && Array.isArray(body.backups) && body.backups) ||
+        [];
+      console.log("[backups-tab] got", list.length, "backups");
       if (!list.length) {
-        emptyEl.hidden = false;
+        show(emptyEl);
         return;
       }
-      listEl.innerHTML = list.map(renderCard).join("");
+      setHtml(listEl, list.map(renderCard).join(""));
       wireCardActions();
     } catch (err) {
+      console.error("[backups-tab] load failed:", err);
       const msg = (err && err.name === "AbortError")
         ? "تعذّر التحميل: السيرفر لم يرد خلال 12 ثانية."
-        : String(err && err.message || err);
-      errorEl.textContent = msg;
-      errorEl.hidden = false;
+        : String((err && err.message) || err || "خطأ غير معروف");
+      setText(errorEl, msg);
+      show(errorEl);
+      hadError = true;
     } finally {
-      loadingEl.hidden = true;
-      if (refreshBtn) refreshBtn.classList.remove("is-spinning");
+      hide(loadingEl);
+      if (refreshBtn) {
+        try { refreshBtn.classList.remove("is-spinning"); } catch (_) {}
+      }
       loaded = true;
+      console.log("[backups-tab] finally — loading hidden, error=", hadError);
     }
   }
 
@@ -3140,26 +3167,43 @@
 
   if (refreshBtn) refreshBtn.addEventListener("click", loadList);
 
-  // Two activation hooks so the tab loads regardless of how the
-  // operator got to it (button click vs URL-hash deep-link vs JS
-  // dispatch). The mt:tab-change custom event fires for ALL
-  // activation paths; the direct button click is a belt + braces
-  // for older browsers that mishandle dispatched events on
-  // dynamically-rebuilt elements.
+  // Belt + suspenders activation. The custom event covers
+  // every show() path (button click, deep-link, programmatic);
+  // the direct click listener is the historical hook; the
+  // synchronous hash check covers landing-page deep links;
+  // and the safety net below makes sure we NEVER leave the
+  // spinner up if all of those somehow miss.
+  function triggerIfNeeded(reason) {
+    if (loaded) return;
+    console.log("[backups-tab] activation:", reason);
+    loadList();
+  }
   root.addEventListener("mt:tab-change", (e) => {
-    if (e.detail && e.detail.slug === "backups" && !loaded) {
-      console.log("[backups-tab] mt:tab-change fired → loading");
-      loadList();
+    if (e.detail && e.detail.slug === "backups") {
+      triggerIfNeeded("mt:tab-change");
     }
   });
   if (tabBtn) {
-    tabBtn.addEventListener("click", () => {
-      if (!loaded) {
-        console.log("[backups-tab] tab button clicked → loading");
-        loadList();
-      }
-    });
+    tabBtn.addEventListener("click", () => triggerIfNeeded("tabBtn click"));
   }
+
+  // SAFETY NET — if the panel ever becomes visible and we haven't
+  // loaded yet, kick loadList. This catches every conceivable
+  // activation gap (custom-event timing, third-party tab switchers,
+  // browser back/forward, etc). Polls 4x/sec for the first 6s
+  // after init, then stops.
+  let safetyTicks = 0;
+  const safetyTimer = setInterval(() => {
+    safetyTicks++;
+    if (loaded || safetyTicks > 24) {
+      clearInterval(safetyTimer);
+      return;
+    }
+    if (panel && !panel.hidden) {
+      clearInterval(safetyTimer);
+      triggerIfNeeded("safety-net (panel visible without load)");
+    }
+  }, 250);
   // If we land on the page with #tab-backups already in the URL,
   // the main tab loop ran show("backups") before this IIFE
   // registered the listener. Catch that case by checking the
