@@ -2925,9 +2925,9 @@
 (function initBackupsTab() {
   "use strict";
   const root = document.querySelector("[data-mt-dashboard]");
-  if (!root) return;
+  if (!root) { console.warn("[backups-tab] no [data-mt-dashboard] root"); return; }
   const panel    = root.querySelector('[data-mt-tab-panel="backups"]');
-  if (!panel) return;
+  if (!panel) { console.warn("[backups-tab] no backups panel"); return; }
   const tabBtn   = root.querySelector('[data-mt-tab="backups"]');
   const listEl   = panel.querySelector("[data-rh-bk-list]");
   const loadingEl= panel.querySelector("[data-rh-bk-loading]");
@@ -2938,6 +2938,17 @@
   const apiBase  = (root.dataset.mtApiBase || "").replace(/\/$/, "");
   const apiToken = root.dataset.mtApiToken || "";
   let loaded = false;
+  // Diagnostic — surfaces in DevTools so the operator can see why
+  // the tab won't load (missing token? wrong api_base? router_id
+  // not rendered?). Logged once at init so we don't spam.
+  console.log("[backups-tab] init", {
+    routerId, apiBase,
+    hasToken: !!apiToken,
+    hasListEl: !!listEl,
+    hasLoadingEl: !!loadingEl,
+    hasErrorEl: !!errorEl,
+    hasTabBtn: !!tabBtn,
+  });
 
   function safe(s) {
     return String(s == null ? "" : s)
@@ -2976,6 +2987,7 @@
   }
 
   async function loadList() {
+    console.log("[backups-tab] loadList() start, routerId=", routerId);
     loadingEl.hidden = false;
     emptyEl.hidden = true;
     errorEl.hidden = true;
@@ -2983,8 +2995,11 @@
     listEl.innerHTML = "";
     if (refreshBtn) refreshBtn.classList.add("is-spinning");
     try {
+      const url = apiBase + "/mikrotik/" + routerId + "/backups";
+      console.log("[backups-tab] fetching", url);
       const { res, body } = await apiGet(
         "/mikrotik/" + routerId + "/backups");
+      console.log("[backups-tab] response", res.status, body);
       // Two-layer envelope: outer (HTTP) + inner (business).
       // Surface the inner error if the outer is fine but the
       // payload reports failure.
@@ -3262,12 +3277,16 @@
   // dynamically-rebuilt elements.
   root.addEventListener("mt:tab-change", (e) => {
     if (e.detail && e.detail.slug === "backups" && !loaded) {
+      console.log("[backups-tab] mt:tab-change fired → loading");
       loadList();
     }
   });
   if (tabBtn) {
     tabBtn.addEventListener("click", () => {
-      if (!loaded) loadList();
+      if (!loaded) {
+        console.log("[backups-tab] tab button clicked → loading");
+        loadList();
+      }
     });
   }
   // If we land on the page with #tab-backups already in the URL,
@@ -3276,6 +3295,7 @@
   // current state.
   if ((location.hash || "").replace(/^#/, "") === "tab-backups"
       && !loaded) {
+    console.log("[backups-tab] hash already set to tab-backups → loading");
     loadList();
   }
 })();
