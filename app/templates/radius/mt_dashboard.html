@@ -981,6 +981,12 @@
      'Overview'; the other tabs ship as honest empty states
      until P2..P7 fill them in. Hash-based active state so
      deep-links / refresh keep the operator on the same tab. #}
+  {# Tabs strip + live router-status pill in one row. The status
+     used to live in a standalone row below the tabs (which the
+     operator flagged as wasted vertical space). Now they share
+     the same line — flex space-between keeps the status on the
+     opposite edge from the tabs in RTL. #}
+  <div class="mt-tabs-row">
   <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
     <button type="button" class="mt-tab is-active"
             data-mt-tab="overview" role="tab" aria-selected="true">
@@ -1024,6 +1030,18 @@
     </button>
   </nav>
 
+  {# Status pill — moved here from inside the Overview panel so it's
+     visible regardless of which tab is active. JS keeps the
+     data-mt-status hooks unchanged. #}
+  <div class="mt-tabs-status" data-mt-status>
+    <span class="mt-tabs-status-pill" data-mt-status-pill>
+      <span class="dot"></span>
+      <span data-mt-status-label>جارٍ الاتصال…</span>
+    </span>
+    <span class="mt-tabs-status-meta" data-mt-status-meta>—</span>
+  </div>
+  </div>{# /.mt-tabs-row #}
+
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
      Wrapped in .rh-overview so the scoped CSS in the head block
      can re-style KPIs / cards / actions without touching the
@@ -1032,13 +1050,26 @@
   <section class="mt-tab-panel is-active rh-overview"
            data-mt-tab-panel="overview" role="tabpanel">
 
-  {# Status bar — pill + meta on one rounded card. #}
-  <div class="rh-overview-status mt-status-row" data-mt-status>
-    <span class="rh-overview-status-pill hub-pill hub-pill--grey" data-mt-status-pill>
-      <span class="dot"></span>
-      <span data-mt-status-label>جارٍ الاتصال…</span>
-    </span>
-    <span class="rh-overview-status-meta mt-status-meta" data-mt-status-meta>—</span>
+  {# Status bar moved into the tabs row above so it's tab-agnostic.
+     The old in-panel pill was duplicated work + ate vertical space.
+     Hero for the overview tab comes next. #}
+
+  {# Overview hero — same shell as «خدماتي» / «النسخ الاحتياطية»
+     for visual consistency across tabs. Operator: «الهيرو الي
+     عملته لخدماتي عجبني — طبعه ع باقي الصفحات». #}
+  <div class="mt-page-hero mt-page-hero--blue">
+    <div class="mt-page-hero-glow" aria-hidden="true"></div>
+    <div class="mt-page-hero-copy">
+      <span class="mt-page-hero-kicker">
+        <i class="fa-solid fa-gauge-high"></i>
+        لوحة الراوتر — مباشرة
+      </span>
+      <h3>نظرة عامّة وقصص النشاط</h3>
+      <p>
+        صحّة الراوتر اللحظيّة، حركة الواجهات، المتصلون الآن،
+        وإجراءات سريعة للتنفيذ على الراوتر.
+      </p>
+    </div>
   </div>
 
   {# KPI strip. Initial values are em-dashes (NOT zeros) so the page
@@ -1250,6 +1281,19 @@
   {# ─── P2 — Interfaces tab (real data) ───────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="interfaces"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--green">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-ethernet"></i> الواجهات
+        </span>
+        <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
+        <p>
+          كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
+          وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-interfaces-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-ethernet"></i> الواجهات</h3>
@@ -1287,6 +1331,19 @@
   {# ─── P3 — IP Addresses tab (real data) ──────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="ips"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--teal">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-network-wired"></i> العناوين
+        </span>
+        <h3>عناوين IP المُخصَّصة على الراوتر</h3>
+        <p>
+          كل عنوان IP مربوط بواجهة — ثابت أو dynamic، مع الـ
+          subnet والـ comment. مفيد لتتبّع البرمجة قبل أيّ تغيير.
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-ips-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-network-wired"></i> العناوين</h3>
@@ -1320,6 +1377,19 @@
   {# ─── P3 — Routes tab (real data) ────────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="routes"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--amber">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-route"></i> المسارات
+        </span>
+        <h3>جدول التوجيه — أين تذهب الحزم</h3>
+        <p>
+          كل route مع الـ destination والـ gateway والـ routing-table.
+          هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-routes-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-route"></i> المسارات</h3>
@@ -1354,6 +1424,19 @@
   {# ─── P4 — Neighbors tab (real data) ─────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="neighbors"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--rose">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-people-arrows"></i> الجيران
+        </span>
+        <h3>الأجهزة المكتشَفة على الشبكة</h3>
+        <p>
+          الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر
+          MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-neighbors-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-people-arrows"></i> الجيران</h3>
@@ -1394,6 +1477,19 @@
   {# ─── P5 — Logs tab (real data) ──────────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="logs"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--slate">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-list"></i> السجلّات
+        </span>
+        <h3>سجلّ أحداث الراوتر الحيّ</h3>
+        <p>
+          آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
+          حسب الموضوع (firewall, hotspot, ppp, …) لتركّز نظرك.
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-logs-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-list"></i> السجلات الحيّة</h3>
@@ -1444,6 +1540,19 @@
   {# ─── P6 — Sessions tab (read-only) ──────────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="sessions"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--green">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-users"></i> الجلسات الحيّة
+        </span>
+        <h3>المتصلون الآن على الراوتر</h3>
+        <p>
+          جلسات Hotspot — كروت ويوزرات منفصلة — وجلسات PPPoE.
+          كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
+        </p>
+      </div>
+    </div>
 
     {# ── Hotspot — Cards sub-card (numeric/short usernames) ── #}
     <section class="mt-card" data-mt-hotspot-cards-card>
@@ -1549,6 +1658,19 @@
   {# ─── P7 — Diagnostics tab (risk signals) ────────────── #}
   <section class="mt-tab-panel" data-mt-tab-panel="diagnostics"
            role="tabpanel" hidden>
+    <div class="mt-page-hero mt-page-hero--rose">
+      <div class="mt-page-hero-glow" aria-hidden="true"></div>
+      <div class="mt-page-hero-copy">
+        <span class="mt-page-hero-kicker">
+          <i class="fa-solid fa-stethoscope"></i> التشخيص
+        </span>
+        <h3>إشارات خطر + صحّة الراوتر</h3>
+        <p>
+          فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي
+          العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …
+        </p>
+      </div>
+    </div>
     <section class="mt-card" data-mt-health-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-stethoscope"></i>
@@ -2073,6 +2195,81 @@
 </style>
 
 <script>
+/* ─── Reusable page hero — applied to every tab panel ────────
+   Operator: «الهيرو الي عملته لخدماتي عجبني — طبعه ع باقي
+   الصفحات». Same shell as rh-inv-hero / rh-bk-hero but colour-
+   variant-driven via .mt-page-hero--<color>. */
+.mt-page-hero{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  margin:0 0 22px;padding:22px 26px;
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 90% -10%, rgba(99,102,241,.16), transparent 38%),
+    linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
+  border:1px solid rgba(99,102,241,.18);
+  box-shadow:0 18px 48px rgba(99,102,241,.08), 0 2px 6px rgba(15,23,42,.04);
+}
+.mt-page-hero-glow{
+  position:absolute;top:-30%;right:-10%;
+  width:480px;height:480px;border-radius:50%;
+  background:radial-gradient(circle, rgba(167,139,250,.26), transparent 60%);
+  filter:blur(14px);pointer-events:none;
+  animation:mt-page-hero-drift 12s ease-in-out infinite;
+}
+@keyframes mt-page-hero-drift{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%    {transform:translate(-30px,20px) scale(1.06);}
+}
+@media (prefers-reduced-motion: reduce){.mt-page-hero-glow{animation:none}}
+.mt-page-hero-copy{flex:1 1 320px;min-width:0;position:relative;z-index:1}
+.mt-page-hero-kicker{
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(255,255,255,.72);border:1px solid rgba(99,102,241,.20);
+  color:#4338CA;font-size:11.5px;font-weight:900;
+  backdrop-filter:blur(6px);
+}
+.mt-page-hero-kicker i{font-size:12px}
+.mt-page-hero h3{
+  margin:0;color:#0F172A;font-size:25px;font-weight:950;
+  line-height:1.2;letter-spacing:-.01em;
+}
+.mt-page-hero p{
+  margin:8px 0 0;color:#475569;font-size:13.5px;font-weight:600;
+  line-height:1.65;max-width:620px;
+}
+.mt-page-hero-chips{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
+}
+.mt-page-hero-chips span{
+  display:inline-flex;align-items:center;gap:6px;min-height:30px;
+  padding:0 12px;border:1px solid rgba(99,102,241,.20);border-radius:999px;
+  background:rgba(255,255,255,.78);color:#1F2937;
+  font-size:11.5px;font-weight:800;
+}
+.mt-page-hero-chips i{color:#4F46E5}
+/* Colour variants — pick the accent that matches the tab's identity. */
+.mt-page-hero--blue   { border-color:rgba(59,130,246,.20); }
+.mt-page-hero--blue   .mt-page-hero-glow{background:radial-gradient(circle,rgba(96,165,250,.30),transparent 60%);}
+.mt-page-hero--blue   .mt-page-hero-kicker{color:#1E40AF;border-color:rgba(59,130,246,.22);}
+.mt-page-hero--green  { border-color:rgba(16,185,129,.22); }
+.mt-page-hero--green  .mt-page-hero-glow{background:radial-gradient(circle,rgba(110,231,183,.32),transparent 60%);}
+.mt-page-hero--green  .mt-page-hero-kicker{color:#065F46;border-color:rgba(16,185,129,.24);}
+.mt-page-hero--teal   { border-color:rgba(20,184,166,.22); }
+.mt-page-hero--teal   .mt-page-hero-glow{background:radial-gradient(circle,rgba(45,212,191,.30),transparent 60%);}
+.mt-page-hero--teal   .mt-page-hero-kicker{color:#0F766E;border-color:rgba(20,184,166,.24);}
+.mt-page-hero--amber  { border-color:rgba(245,158,11,.22); }
+.mt-page-hero--amber  .mt-page-hero-glow{background:radial-gradient(circle,rgba(251,191,36,.32),transparent 60%);}
+.mt-page-hero--amber  .mt-page-hero-kicker{color:#92400E;border-color:rgba(245,158,11,.24);}
+.mt-page-hero--rose   { border-color:rgba(244,63,94,.20); }
+.mt-page-hero--rose   .mt-page-hero-glow{background:radial-gradient(circle,rgba(251,113,133,.30),transparent 60%);}
+.mt-page-hero--rose   .mt-page-hero-kicker{color:#9F1239;border-color:rgba(244,63,94,.22);}
+.mt-page-hero--slate  { border-color:rgba(100,116,139,.22); }
+.mt-page-hero--slate  .mt-page-hero-glow{background:radial-gradient(circle,rgba(148,163,184,.30),transparent 60%);}
+.mt-page-hero--slate  .mt-page-hero-kicker{color:#334155;border-color:rgba(100,116,139,.24);}
+
 /* ─── «النسخ الاحتياطية» tab styling ───────────────────────── */
 .rh-backups{padding:0 !important}
 .rh-bk-hero{
