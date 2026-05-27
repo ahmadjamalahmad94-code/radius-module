@@ -769,7 +769,7 @@ def _broadband_post_process_script(script: str) -> str:
     """Surgical fix-ups on the legacy planner's .rsc output so it
     works on RouterOS 7 (verified on 7.20.6 with operator).
 
-    Five fix-ups, in order:
+    Six fix-ups, in order:
 
       1. dns-server="x.x.x.x" on /ppp profile  →  drop entirely
          IP-typed property doesn't accept quoted string. Router
@@ -790,6 +790,25 @@ def _broadband_post_process_script(script: str) -> str:
          /ppp aaa set use-radius=yes  on its own line at the end.
          RADIUS for PPP lives on /ppp aaa in RouterOS 7, not on
          the profile.
+
+      6. ⚠ Per-interface cleanup scoping (THE REPLACEMENT BUG FIX).
+         The legacy planner emits a SHARED cleanup block keyed by the
+         wizard run-id, which in turn equals the router-id. Every
+         apply on the same router uses the same tag, so the cleanup
+         wipes EVERY HobeRadius pppoe-server entry — including ones
+         on other interfaces from previous runs. Result: programming
+         ether3 silently nukes the ether2 setup.
+
+         Fix: rewrite the cleanup so it only targets the interfaces
+         the operator is actually re-programming in THIS run. We scan
+         the script for ``/interface pppoe-server server add
+         interface="X"`` lines, then replace the shared
+         ``[find where comment~"<tag>"]`` cleanup with a precise
+         ``[find where interface=X comment~"<tag>"]`` per-interface
+         cleanup. The shared profile / pool / NAT entries are left
+         untouched — they survive because the idempotent ``:if`` guards
+         skip recreation, so concurrent sessions on other interfaces
+         keep working.
     """
     import re
     # 1.
@@ -816,6 +835,66 @@ def _broadband_post_process_script(script: str) -> str:
             "# Enable RADIUS authentication for PPP globally\n"
             "/ppp aaa set use-radius=yes\n"
         )
+    # 6. ── Per-interface cleanup scoping ─────────────────────────
+    # Collect the interfaces this run is going to (re-)program by
+    # parsing the planner's own `add interface="X"` lines.
+    target_ifaces = list(dict.fromkeys(  # de-dupe, preserve order
+        _re_add.group(1)
+        for _re_add in re.finditer(
+            r'/interface\s+pppoe-server\s+server\s+add\s+'
+            r'interface="([^"]+)"',
+            script,
+        )
+    ))
+    if target_ifaces:
+        # Extract the tag from any existing cleanup line so we don't
+        # have to know it independently.
+        tag_m = re.search(
+            r'/interface\s+pppoe-server\s+server\s+remove\s+'
+            r'\[find where comment~"([^"]+)"\]',
+            script,
+        )
+        if tag_m:
+            tag = tag_m.group(1)
+            # Replace the shared pppoe-server cleanup with one targeted
+            # remove per interface we're about to (re)program.
+            iface_removes = "\n".join(
+                f'/interface pppoe-server server remove '
+                f'[find where interface="{i}" and comment~"{tag}"]'
+                for i in target_ifaces
+            )
+            script = re.sub(
+                r'/interface\s+pppoe-server\s+server\s+remove\s+'
+                r'\[find where comment~"[^"]+"\]',
+                iface_removes,
+                script,
+                count=1,
+            )
+            # The shared profile / pool / NAT removes would also wipe
+            # state used by OTHER interfaces' active sessions. Drop
+            # them — the idempotent `:if` guards re-create what's
+            # missing without disturbing what exists.
+            script = re.sub(
+                r'^/ppp\s+profile\s+remove\s+'
+                r'\[find where comment~"[^"]+"\]\s*\n',
+                "",
+                script,
+                flags=re.MULTILINE,
+            )
+            script = re.sub(
+                r'^/ip\s+pool\s+remove\s+'
+                r'\[find where comment~"[^"]+"\]\s*\n',
+                "",
+                script,
+                flags=re.MULTILINE,
+            )
+            script = re.sub(
+                r'^/ip\s+firewall\s+nat\s+remove\s+'
+                r'\[find where comment~"[^"]+"\]\s*\n',
+                "",
+                script,
+                flags=re.MULTILINE,
+            )
     return script
 
 
