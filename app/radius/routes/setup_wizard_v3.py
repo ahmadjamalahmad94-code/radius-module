@@ -1180,21 +1180,47 @@ def _classify_broadband_source(row: dict) -> str:
 
 
 def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
-    """Inject a HOBERADIUS_SETUP comment onto the /ip hotspot add
-    and /ip hotspot profile add lines so the inventory tab can
-    later identify them as wizard-managed. Idempotent: lines that
-    already have a `comment=` attribute are left alone."""
+    """Inject a HOBERADIUS_SETUP comment for /ip hotspot add and
+    /ip hotspot profile add entries so the inventory tab can later
+    identify them as wizard-managed.
+
+    Strategy: instead of *appending* ``comment="..."`` to the same
+    `add` line (which on RouterOS 7.20.6 trips «expected end of
+    command» after a comma-list value like
+    ``login-by=http-pap,cookie,mac-cookie`` — the parser thinks the
+    command ended), we emit a *separate* ``set`` line right after
+    each add. This keeps the add line short and survives picky
+    parsers across all 7.x revisions.
+
+    Idempotent: skips lines that already have ``comment=``.
+    """
+    import re as _re
+
     tag = f"HOBERADIUS_SETUP:{router_id}:hotspot"
+    # match /ip hotspot add ... name=<value> (value may be bare or
+    # quoted); we need the name to anchor the follow-up `set`.
+    re_name = _re.compile(r"\bname=(\"([^\"]+)\"|(\S+))")
+
     out: list[str] = []
     for line in script.split("\n"):
-        stripped = line.lstrip()
-        is_target = (
-            stripped.startswith("/ip hotspot add ")
-            or stripped.startswith("/ip hotspot profile add ")
-        )
-        if is_target and "comment=" not in line:
-            line = f'{line} comment="{tag}"'
         out.append(line)
+        stripped = line.lstrip()
+        if "comment=" in line:
+            continue
+        if stripped.startswith("/ip hotspot profile add "):
+            base = "/ip hotspot profile set"
+        elif stripped.startswith("/ip hotspot add "):
+            base = "/ip hotspot set"
+        else:
+            continue
+        m = re_name.search(line)
+        if not m:
+            continue
+        name_val = m.group(2) or m.group(3)
+        out.append(
+            f'{base} [find where name="{name_val}"] '
+            f'comment="{tag}"'
+        )
     return "\n".join(out)
 
 
