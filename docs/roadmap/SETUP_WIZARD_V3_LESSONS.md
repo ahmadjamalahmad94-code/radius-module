@@ -201,6 +201,20 @@
 - **المشكلة:** قال نجح لكن ما عرض شيء.
 - **الحلّ:** بناء حمولة `connection_info` كاملة في response الـ apply + إعادة استخدامها في الـ inventory.
 
+### 8.5 ⚠️ Public-IP «يطبّق لكن ما يغيّر IP» — FastTrack يتجاوز الـ mangle
+- **المشكلة:** بعد التطبيق الناجح، كل القواعد تظهر في الراوتر (route, mangle, srcnat, address-list) — لكن الـ outbound IP لا يتغيّر.
+- **السبب الجذري:**
+  - الإعداد الافتراضي في MikroTik يحتوي قاعدة `action=fasttrack-connection` في `/ip/firewall/filter`.
+  - بعد أوّل packet من أي اتصال، الـ FastTrack بيقفز فوق جدول الـ mangle كاملاً → الـ `mark-routing` ما يطبّق مرّة ثانية.
+  - الاتصالات القائمة قبل تطبيق الـ mangle ما عندها أي routing mark، فتبقى على المسار الافتراضي.
+- **سابقاً (VX2.6c):** أُصلح srcnat + gateway-by-interface + mangle output — هذي ما زالت موجودة ولم تُكسر.
+- **الإصلاح الجديد (VX2.6d):**
+  1. **mark-connection** على mangle prerouting: `action=mark-connection new-connection-mark=<rt> passthrough=yes`. الـ routing-mark يصير قابلاً للاستعادة من connection-mark حتى مع FastTrack.
+  2. **3 قواعد FastTrack-bypass** في `/ip/firewall/filter`: واحدة لكل قيمة `connection-state` (new, established, related) **بدل** قيمة واحدة مفصولة بفواصل — لأنّ الـ script-mode parser يرفض الـ comma-lists (نفس الدرس من إصلاح `login-by` في Hotspot).
+  3. **`place-before=0`** ليتقدّم على قاعدة fasttrack-connection الموجودة عند المُشغّل.
+  4. **حذف محاولة `/ip firewall connection remove [find dst-address-list=...]`** — هذا العمود غير موجود في جدول الـ connection على RouterOS. أُستبدل بتحذير للمُشغّل: الاتصالات القائمة قد تحتاج reboot الجهاز أو flush يدوي.
+- **الـ Renderer:** أضيفت معالجة خاصّة لـ `section == "connection-flush"` تتجاوز فحص COMMENT_TAG (لأنّ جدول الاتصالات ما عنده عمود comment).
+
 ### 8.4 ⚠️ مبدأ التشغيل بدون terminal VPS (End-User Self-Service)
 - **القاعدة:** المنتج تجاري ومُوجَّه لمستخدمين نهائيين. أي إعداد بنيوي (env var، تعديل compose، SSH) **غير مقبول**.
 - **التطبيق على `public_host`:** بدل ما نخلّي المستخدم يفتح Terminal على الـ VPS ويعدّل `.env`، خلّيناها قابلة للضبط من «إعدادات النظام» في الواجهة:
@@ -332,6 +346,8 @@
 | `6040e88` | Docs: log remote-access VPS-IP redirection (section 8.3) |
 | `2cd870f` | Env: document HOBERADIUS_PUBLIC_HOST in .env.example |
 | `cb5a4b0` | Settings: move public_host to DB (UI editable, no VPS terminal) ← **End-user self-service** |
+| `18784a6` | Added-services: surface debug_script on failure (public-ip, block, open) |
+| `9c3f1b0` | Site-exit: mark-connection + FastTrack bypass ← **حلّ مشكلة «يطبّق ولا يغيّر IP»** |
 
 ---
 
