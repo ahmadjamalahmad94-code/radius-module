@@ -2963,8 +2963,19 @@
   async function apiGet(path) {
     const headers = { Accept: "application/json" };
     if (apiToken) headers.Authorization = "Bearer " + apiToken;
-    const res = await fetch(apiBase + path, { headers });
-    return { res, body: await res.json().catch(() => ({})) };
+    // Hard 12s ceiling — if the API can't answer in 12s, something
+    // upstream is dead and we should tell the operator instead of
+    // spinning forever (the previous behaviour the operator hit).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12_000);
+    try {
+      const res = await fetch(apiBase + path,
+                              { headers, signal: ctrl.signal });
+      const body = await res.json().catch(() => ({}));
+      return { res, body };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async function loadList() {
@@ -2975,13 +2986,22 @@
     listEl.innerHTML = "";
     if (refreshBtn) refreshBtn.classList.add("is-spinning");
     try {
-      const { res, body } = await apiGet(`/mikrotik/${routerId}/backups`);
-      if (!res.ok || !body || body.ok === false) {
-        errorEl.textContent = (body && body.error) || `HTTP ${res.status}`;
+      const { res, body } = await apiGet(
+        "/mikrotik/" + routerId + "/backups");
+      // Two-layer envelope: outer (HTTP) + inner (business).
+      // Surface the inner error if the outer is fine but the
+      // payload reports failure.
+      const inner = (body && body.data) || {};
+      if (!res.ok || (body && body.ok === false)
+          || (inner && inner.ok === false)) {
+        const msg = (inner && inner.error)
+                  || (body && body.error)
+                  || `HTTP ${res.status}`;
+        errorEl.textContent = msg;
         errorEl.hidden = false;
         return;
       }
-      const data = body.data || body;
+      const data = inner.backups ? inner : (body.data || body);
       const list = Array.isArray(data.backups) ? data.backups : [];
       if (!list.length) {
         emptyEl.hidden = false;
@@ -2990,7 +3010,10 @@
       listEl.innerHTML = list.map(renderCard).join("");
       wireCardActions();
     } catch (err) {
-      errorEl.textContent = String(err && err.message || err);
+      const msg = (err && err.name === "AbortError")
+        ? "تعذّر التحميل: السيرفر لم يرد خلال 12 ثانية."
+        : String(err && err.message || err);
+      errorEl.textContent = msg;
       errorEl.hidden = false;
     } finally {
       loadingEl.hidden = true;
@@ -3233,11 +3256,30 @@
   }
 
   if (refreshBtn) refreshBtn.addEventListener("click", loadList);
-  // Lazy-load on first tab click.
+
+  // Two activation hooks so the tab loads regardless of how the
+  // operator got to it (button click vs URL-hash deep-link vs JS
+  // dispatch). The mt:tab-change custom event fires for ALL
+  // activation paths; the direct button click is a belt + braces
+  // for older browsers that mishandle dispatched events on
+  // dynamically-rebuilt elements.
+  root.addEventListener("mt:tab-change", (e) => {
+    if (e.detail && e.detail.slug === "backups" && !loaded) {
+      loadList();
+    }
+  });
   if (tabBtn) {
     tabBtn.addEventListener("click", () => {
       if (!loaded) loadList();
     });
+  }
+  // If we land on the page with #tab-backups already in the URL,
+  // the main tab loop ran show("backups") before this IIFE
+  // registered the listener. Catch that case by checking the
+  // current state.
+  if ((location.hash || "").replace(/^#/, "") === "tab-backups"
+      && !loaded) {
+    loadList();
   }
 })();
 </script>
