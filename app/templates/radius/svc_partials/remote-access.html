@@ -57,6 +57,58 @@
   border-radius:8px;padding:10px 14px;margin-top:10px;
   font-family:monospace;font-size:12px;color:var(--swsvf-mute);
 }
+/* Permission picker */
+.swra-perms{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+@media(max-width:760px){.swra-perms{grid-template-columns:1fr}}
+.swra-perm-chip{
+  display:flex;gap:10px;padding:10px 12px;cursor:pointer;
+  border:1px solid var(--swsvf-line);border-radius:10px;background:#fff;
+  transition:all .15s;
+}
+.swra-perm-chip input{
+  width:18px;height:18px;cursor:pointer;accent-color:var(--swsvf-purple);
+  margin-top:2px;flex-shrink:0;
+}
+.swra-perm-chip.is-checked{
+  background:var(--swsvf-purple-soft);border-color:var(--swsvf-purple);
+}
+.swra-perm-body{display:flex;flex-direction:column;gap:3px;line-height:1.4;min-width:0}
+.swra-perm-body strong{font-size:13.5px;color:#1F2937;font-weight:800}
+.swra-perm-chip.is-checked .swra-perm-body strong{color:#5B21B6}
+.swra-perm-body span{font-size:11.5px;color:var(--swsvf-mute)}
+/* Tech-credentials card — extra-prominent because the password is
+   the operator's ONLY chance to copy it (we don't store it). */
+.swra-creds{
+  background:#FEFCE8;border:2px solid #FACC15;border-radius:10px;
+  padding:12px 16px;margin-top:12px;
+}
+.swra-creds h4{
+  margin:0 0 6px;font-size:13px;color:#854D0E;font-weight:800;
+  display:flex;align-items:center;gap:6px;
+}
+.swra-creds .swra-warn{
+  font-size:11.5px;color:#854D0E;margin-bottom:8px;line-height:1.6;
+}
+.swra-creds-row{
+  display:flex;align-items:center;gap:8px;margin:5px 0;
+  background:#fff;border:1px solid #FDE68A;border-radius:7px;
+  padding:5px 9px;
+}
+.swra-creds-label{font-size:12px;color:#92400E;font-weight:700;min-width:90px}
+.swra-creds-value{
+  flex:1;min-width:0;font-family:monospace;font-size:13px;
+  color:#1F2937;direction:ltr;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.swra-creds-copy{
+  width:30px;height:30px;border-radius:7px;flex-shrink:0;
+  border:1px solid #FCD34D;background:#fff;color:#B45309;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.swra-creds-copy:hover{background:#FEF3C7}
+.swra-creds-copy.is-ok{background:#10B981;color:#fff;border-color:#10B981}
+.swra-creds-copy.is-fail{background:#EF4444;color:#fff;border-color:#EF4444}
 </style>
 
 <div class="swra-section">
@@ -121,6 +173,38 @@
   </div>
 </div>
 
+<div class="swra-section">
+  <div class="swra-section-title">صلاحيّات الفنّي على الراوتر</div>
+  <div class="swra-help">
+    سنُنشئ مستخدم RouterOS مؤقّت خاص بهذا الوصول. لن يستعمل الفنّي
+    كلمة مرور الـ admin تبعك. عند انتهاء المدّة، يُحذف المستخدم
+    تلقائياً مع القاعدة.
+  </div>
+  <div class="swra-perms" data-swra-perms>
+    <label class="swra-perm-chip">
+      <input type="radio" name="swra-perm" value="read">
+      <div class="swra-perm-body">
+        <strong>قراءة فقط</strong>
+        <span>مشاهدة الإعدادات دون التعديل. للاطّلاع/التشخيص.</span>
+      </div>
+    </label>
+    <label class="swra-perm-chip is-checked">
+      <input type="radio" name="swra-perm" value="write" checked>
+      <div class="swra-perm-body">
+        <strong>تعديل محدود</strong>
+        <span>قراءة + كتابة على الشبكة، بدون system/users/ملفّات.</span>
+      </div>
+    </label>
+    <label class="swra-perm-chip">
+      <input type="radio" name="swra-perm" value="full">
+      <div class="swra-perm-body">
+        <strong>تعديل كامل</strong>
+        <span>صلاحيّات admin كاملة — استعمله بحذر للفنّيين الموثوقين.</span>
+      </div>
+    </label>
+  </div>
+</div>
+
 <div class="swra-token-row" data-swra-token-display hidden>
   معرّف القاعدة: <span data-swra-token>—</span>
 </div>
@@ -135,13 +219,49 @@
   <p class="swra-help" style="margin-bottom:10px">
     أعطِ الفنّي القيم التالية ليفتح Winbox/SSH/WebFig على الراوتر:
   </p>
+
+  {# Temporary credentials — shown ONCE here at apply time. The
+     password is not stored anywhere in HobeRadius after this point,
+     so the operator must copy it from this card. #}
+  <div class="swra-creds" data-swra-creds hidden>
+    <h4>
+      <i class="fa-solid fa-shield-halved"></i>
+      مستخدم مؤقّت خاص بهذا الوصول
+    </h4>
+    <div class="swra-warn">
+      ⚠️ هذي آخر فرصة لنسخ كلمة المرور. لا يتمّ حفظها في HobeRadius —
+      بعد إغلاق الصفحة لن تستطيع استرجاعها.
+    </div>
+    <div class="swra-creds-row">
+      <span class="swra-creds-label">اسم المستخدم</span>
+      <span class="swra-creds-value" data-swra-creds-user>—</span>
+      <button type="button" class="swra-creds-copy"
+              data-rh-inv-copy="" data-which="user" title="نسخ">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+    <div class="swra-creds-row">
+      <span class="swra-creds-label">كلمة المرور</span>
+      <span class="swra-creds-value" data-swra-creds-pass>—</span>
+      <button type="button" class="swra-creds-copy"
+              data-rh-inv-copy="" data-which="pass" title="نسخ">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+    <div class="swra-creds-row">
+      <span class="swra-creds-label">الصلاحيّة</span>
+      <span class="swra-creds-value" data-swra-creds-perm
+            style="font-family:Cairo">—</span>
+    </div>
+  </div>
+
   <table class="swra-conn-table">
     <tbody data-swra-conn-rows></tbody>
   </table>
   <button type="button" class="swsvf-btn swra-copy-btn" data-swra-copy
           style="margin-top:10px">
     <i class="fa-solid fa-copy"></i>
-    نسخ المعلومات للحافظة
+    نسخ كل المعلومات للحافظة
   </button>
 </div>
 
@@ -212,11 +332,16 @@
     });
     return items;
   }
+  function getPermission() {
+    const checked = page.querySelector('input[name="swra-perm"]:checked');
+    return (checked && checked.value) || "write";
+  }
   function refreshPayload() {
     page.dataset.swsvfConfigurePayload = JSON.stringify({
       services: getServices(),
       ttl_hours: Number(ttlSel.value || 4),
       source_ip: sourceInput.value.trim() || "",
+      permission: getPermission(),
       grant_token: grantToken,
     });
   }
@@ -224,6 +349,18 @@
     cb.closest(".swra-svc-chip").classList.toggle("is-checked", cb.checked);
     refreshPayload();
   }));
+  // Permission radio — also toggle the .is-checked class on the chip
+  // so the visual state matches the underlying input. We don't rely
+  // on :has() because some embedded webviews don't support it.
+  page.querySelectorAll('input[name="swra-perm"]').forEach((rb) => {
+    rb.addEventListener("change", () => {
+      page.querySelectorAll(".swra-perm-chip").forEach((chip) => {
+        const inp = chip.querySelector("input");
+        chip.classList.toggle("is-checked", inp && inp.checked);
+      });
+      refreshPayload();
+    });
+  });
   ttlSel.addEventListener("change", refreshPayload);
   sourceInput.addEventListener("input", refreshPayload);
   refreshPayload();
@@ -313,6 +450,40 @@
     const card = page.querySelector("[data-swra-conn-card]");
     const tbody = page.querySelector("[data-swra-conn-rows]");
     if (!card || !tbody) return;
+
+    // ── Temporary user credentials — shown only on apply success.
+    // The password lives only in this DOM, never in DB. Each copy
+    // button wires through HobeCopy so it works on HTTP.
+    const creds = conn.tech_user || null;
+    const credsBox = page.querySelector("[data-swra-creds]");
+    if (credsBox && creds && creds.username) {
+      const userEl = page.querySelector("[data-swra-creds-user]");
+      const passEl = page.querySelector("[data-swra-creds-pass]");
+      const permEl = page.querySelector("[data-swra-creds-perm]");
+      if (userEl) userEl.textContent = creds.username;
+      if (passEl) passEl.textContent = creds.password || "—";
+      if (permEl) {
+        const permMap = {
+          read:  "قراءة فقط",
+          write: "تعديل محدود (بدون system/users)",
+          full:  "تعديل كامل (admin)",
+        };
+        permEl.textContent = permMap[creds.permission] || creds.permission || "—";
+      }
+      // Wire copy buttons for user + pass via the HTTP-safe helper.
+      page.querySelectorAll(".swra-creds-copy").forEach((btn) => {
+        const which = btn.dataset.which;
+        const val = which === "pass" ? (creds.password || "")
+                                     : (creds.username || "");
+        btn.dataset.rhInvCopy = val;
+        if (window.HobeCopy) {
+          window.HobeCopy.wireButton(btn, val);
+        }
+      });
+      credsBox.hidden = false;
+    } else if (credsBox) {
+      credsBox.hidden = true;
+    }
     const services = (conn.services || []).map((s) => {
       const map = {
         winbox: "Winbox",
@@ -368,41 +539,31 @@
     tbody.innerHTML = rows.join("");
     card.hidden = false;
 
-    // Wire the copy-to-clipboard button.
+    // Wire the «copy everything» button via the HTTP-safe helper.
+    // Builds a multi-line plaintext bundle the operator can paste
+    // into WhatsApp / Telegram for the tech.
     const copyBtn = page.querySelector("[data-swra-copy]");
-    if (copyBtn) {
-      copyBtn.onclick = function () {
+    if (copyBtn && window.HobeCopy) {
+      window.HobeCopy.wireButton(copyBtn, () => {
         const lines = [];
-        // Prefer the per-service URLs (host:port, copy-paste ready)
-        // when the backend computed them. Fall back to raw host
-        // if allocation hasn't happened yet.
         const urls = Array.isArray(conn.urls) ? conn.urls : [];
         if (urls.length) {
           urls.forEach((u) => {
-            lines.push(
-              `${u.service_ar || u.service}: ${u.clipboard || u.url}`
-            );
+            lines.push(`${u.service_ar || u.service}: ${u.clipboard || u.url}`);
           });
         } else if (conn.public_host) {
           lines.push(`VPS Host: ${conn.public_host}`);
-          (conn.services || []).forEach((s) => {
-            lines.push(`${s.name}: port ${s.port} (allocate via NPC)`);
-          });
+        }
+        if (creds && creds.username) {
+          lines.push(`User: ${creds.username}`);
+          if (creds.password) lines.push(`Password: ${creds.password}`);
         }
         if (conn.vpn_address) lines.push(`VPN IP: ${conn.vpn_address}`);
         if (conn.ttl_hours) lines.push(`Expires: ${conn.ttl_hours}h`);
+        else lines.push(`Expires: permanent`);
         lines.push(`Grant ID: ${grantToken}`);
-        const text = lines.join("\n");
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(
-            () => { copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ'; },
-            () => { copyBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> فشل النسخ'; }
-          );
-        }
-        setTimeout(() => {
-          copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> نسخ المعلومات للحافظة';
-        }, 2000);
-      };
+        return lines.join("\n");
+      });
     }
   }
 

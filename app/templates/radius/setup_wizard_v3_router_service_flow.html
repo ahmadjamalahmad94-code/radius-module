@@ -276,6 +276,10 @@ li[data-status="pending"] .swsvf-verify-icon{
 {% endblock %}
 
 {% block content %}
+{# Shared clipboard helper — HTTP-safe fallback so copy buttons work
+   on plain-HTTP deployments where navigator.clipboard is undefined. #}
+<script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>
+
 <main class="swsvf-page" dir="rtl"
       data-router-id="{{ router_id }}"
       data-service-key="{{ service_key }}">

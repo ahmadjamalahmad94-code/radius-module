@@ -1555,12 +1555,13 @@ def setup_wizard_v3_router_inventory(router_id: int):
                 comment = str(r.get("comment", "") or "")
                 if "HOBERADIUS_TECH" not in comment:
                     continue
-                # Parse:  HOBERADIUS_TECH : <token> : <svc> [: <kind> : <ttl_h>]
+                # Parse:  HOBERADIUS_TECH : <token> : <svc> [: <kind> : <ttl_h> [: <perm>]]
                 parts = [p for p in comment.split(":") if p]
                 token = parts[1] if len(parts) >= 2 else ""
                 svc_name = parts[2] if len(parts) >= 3 else "?"
                 kind = parts[3] if len(parts) >= 4 else ""
                 ttl_h = parts[4] if len(parts) >= 5 else ""
+                perm_tier = parts[5] if len(parts) >= 6 else ""
 
                 # Determine effective kind: prefer explicit `perm`
                 # from the comment; otherwise infer from scheduler
@@ -1587,9 +1588,25 @@ def setup_wizard_v3_router_inventory(router_id: int):
                         elif svc_name == "api":
                             vps_url = f"{public_host_value}:{port}"
 
+                # Username is derivable from the token (we always use
+                # ``hr-tech-<first-10-chars-of-token>``). The password
+                # is intentionally NOT recoverable — by design we
+                # never persist it.
+                tech_user_name = f"hr-tech-{token[:10]}" if token else ""
+                # Permission label in Arabic for the inventory card.
+                perm_ar = {
+                    "read":  "قراءة فقط",
+                    "write": "تعديل محدود",
+                    "full":  "تعديل كامل",
+                }.get(perm_tier, "—")
+
                 details: dict = {}
                 if vps_url:
                     details["عنوان الاتصال (VPS)"] = vps_url
+                if tech_user_name:
+                    details["اسم المستخدم"] = tech_user_name
+                if perm_tier:
+                    details["الصلاحيّة"] = perm_ar
                 details["المنفذ على الراوتر"] = str(r.get("dst-port", "") or "—")
                 details["IP المصدر"] = str(r.get("src-address", "") or "أي")
                 if is_permanent:
@@ -1611,11 +1628,13 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "details":      details,
                     # New fields the dashboard JS can render with
                     # nicer styling (badge for permanent, countdown
-                    # for temporary, copy button for the URL).
+                    # for temporary, copy buttons, etc.).
                     "permanent":    is_permanent,
                     "vps_url":      vps_url,
                     "expires_at":   next_run,
                     "ttl_hours":    int(ttl_h) if ttl_h.isdigit() else 0,
+                    "tech_user":    tech_user_name,
+                    "permission":   perm_tier,
                     "source":       "hoberadius",
                 })
             if remote_items:
@@ -1673,13 +1692,53 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
         return _err(f"نوع خدمة غير مدعوم: {service_type}",
                     status=400, code="unknown_service")
 
-    # The script removes a single row by its .id value (RouterOS
-    # `find where .id=X` is the safest way to reference one entry).
-    # Single quotes around target are safe — .id values are like
-    # `*A1B2` (alphanumeric with leading `*`).
-    script = (
-        f'{path} remove [find where .id=\"{target}\"]\n'
-    )
+    # ── Special case: remote-access entries are a tuple of
+    # (filter rule, scheduler, user) all bound by the same
+    # HOBERADIUS_TECH:<token> tag. Single-row delete would leave
+    # the user + scheduler dangling — the tech could still log in
+    # via Winbox until the timer eventually fires.
+    #
+    # For remote-access we read the filter rule's comment to extract
+    # the token, then emit a 3-step cleanup. For everything else we
+    # use the original single-row delete.
+    if service_type == "remote-access":
+        token_to_kill = ""
+        try:
+            from ..integration.mikrotik import MikrotikClient
+            with MikrotikClient(**_mt_client_for(nas)) as mt:
+                for r in mt.print_("/ip/firewall/filter/print"):
+                    if str(r.get(".id", "")) == target:
+                        c = str(r.get("comment", "") or "")
+                        parts = [p for p in c.split(":") if p]
+                        if len(parts) >= 2 and parts[0] == "HOBERADIUS_TECH":
+                            token_to_kill = parts[1]
+                        break
+        except Exception:  # noqa: BLE001
+            pass
+        if token_to_kill:
+            tag = f"HOBERADIUS_TECH:{token_to_kill}"
+            sched_name = f"hr-tech-revoke-{token_to_kill}"
+            # Sweep the firewall (all services with this token, not
+            # just one), the temp user, and the auto-revoke scheduler.
+            script = (
+                f'/ip firewall filter remove [find comment~"{tag}"]\n'
+                f'/user remove [find comment~"{tag}"]\n'
+                f'/system scheduler remove [find name="{sched_name}"]\n'
+            )
+        else:
+            # No token recovered — fall back to the per-row delete
+            # so the operator at least gets the rule gone.
+            script = (
+                f'/ip firewall filter remove [find where .id="{target}"]\n'
+            )
+    else:
+        # The script removes a single row by its .id value (RouterOS
+        # `find where .id=X` is the safest way to reference one entry).
+        # Single quotes around target are safe — .id values are like
+        # `*A1B2` (alphanumeric with leading `*`).
+        script = (
+            f'{path} remove [find where .id="{target}"]\n'
+        )
     try:
         exec_result = get_router_executor().execute_forward(
             router_id=router_id, script=script,
@@ -2189,8 +2248,33 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
     return jsonify({"ok": all_ok, "checks": checks})
 
 
+# RouterOS built-in groups we expose as «صلاحيّة الفنّي».
+# - read:  read-only — no risk of accidental changes.
+# - write: read + write to network state, EXCEPT system/users/files.
+# - full:  admin equivalent — only for fully-trusted techs.
+_REMOTE_ACCESS_GROUPS = {"read", "write", "full"}
+
+
+def _gen_tech_password(length: int = 16) -> str:
+    """Generate a strong random password the operator can hand to a
+    tech. URL-safe alphabet so it survives paste through chat apps
+    without quoting headaches, but keeps enough entropy (~95 bits at
+    length 16). Uses ``secrets`` for cryptographic randomness."""
+    import secrets
+    alphabet = (
+        "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I, O
+        "abcdefghijkmnopqrstuvwxyz"  # no l
+        "23456789"                   # no 0, 1
+        "!@#$%*+-_"
+    )
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
 def _remote_access_build_script(*, services: list, ttl_hours: int,
-                                source_ip: str, grant_token: str) -> str:
+                                source_ip: str, grant_token: str,
+                                permission: str = "write",
+                                tech_user: str = "",
+                                tech_password: str = "") -> str:
     """Build a small idempotent RouterOS v7 script that:
       1. Removes any prior rules carrying the same HOBERADIUS_TECH
          comment tag (idempotent re-apply).
@@ -2212,22 +2296,42 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
     """
     permanent = (int(ttl_hours) <= 0)
     kind = "perm" if permanent else "tmp"
+    perm_norm = permission if permission in _REMOTE_ACCESS_GROUPS else "write"
     tag = f"HOBERADIUS_TECH:{grant_token}"
     sched_name = f"hr-tech-revoke-{grant_token}"
+    has_user = bool(tech_user and tech_password)
     header = (
         "# Remote tech access — permanent (manual revoke only)"
         if permanent
         else f"# Remote tech access — auto-expires in {ttl_hours}h"
     )
-    lines = [
-        header,
+    lines = [header]
+
+    # ── 1) Create the temporary RouterOS user (if requested) ──
+    # The user is independent per grant — its name embeds the token
+    # so multiple coexisting grants don't collide. Idempotent via
+    # `:foreach` remove before add, scoped by our comment tag.
+    if has_user:
+        lines += [
+            "# Temporary RouterOS user for this grant",
+            "/user",
+            f':foreach u in=[find comment~"{tag}"] do={{remove $u}}',
+            (
+                f'add name="{tech_user}" password="{tech_password}" '
+                f'group={perm_norm} disabled=no '
+                f'comment="{tag}:user:{perm_norm}"'
+            ),
+        ]
+
+    # ── 2) Open the firewall ports ──
+    lines += [
         "/ip firewall filter",
         f':foreach r in=[find comment~"{tag}"] do={{remove $r}}',
     ]
     src_clause = f"src-address={source_ip}" if source_ip else ""
-    # Comment carries `name`, kind (perm|tmp), and the ttl hours
-    # so the inventory can display «دائم» / «ينتهي بعد N» without
-    # having to cross-reference the scheduler entry for every row.
+    # Comment now carries: name, kind (perm|tmp), ttl_h, and the
+    # permission tier. The inventory page parses this to render
+    # «دائم» / «ينتهي بعد N» + «صلاحيّة: ...» without extra reads.
     ttl_token = "0" if permanent else str(int(ttl_hours))
     for svc in services or []:
         port = int(svc.get("port", 0) or 0)
@@ -2235,7 +2339,7 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
             continue
         name = str(svc.get("name", "?"))
         proto = "tcp"
-        comment_val = f'{tag}:{name}:{kind}:{ttl_token}'
+        comment_val = f'{tag}:{name}:{kind}:{ttl_token}:{perm_norm}'
         parts = [
             "add", "chain=input", f"protocol={proto}", f"dst-port={port}",
             "action=accept", f'comment="{comment_val}"',
@@ -2244,6 +2348,8 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
         if src_clause:
             parts.insert(4, src_clause)
         lines.append(" ".join(parts))
+
+    # ── 3) Scheduler for auto-revoke (temporary grants only) ──
     if permanent:
         # No scheduler — operator revokes manually from «خدماتي».
         # We still emit a `/system scheduler` block that removes any
@@ -2255,9 +2361,10 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
             f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
         ]
     else:
-        # Scheduler — fires after `interval` (set to ttl_hours),
-        # then the on-event removes the rules + the scheduler
-        # itself in one go.
+        # The on-event now ALSO removes the temporary user, so the
+        # tech can't keep using their credentials after the grant
+        # expires. Order matters: scheduler last (it's the one that
+        # has to keep running until the very last line of the event).
         #
         # CRITICAL: the on-event value is itself a quoted string
         # in the outer command. Any literal `"` inside it would
@@ -2265,10 +2372,17 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
         # «expected end of command»). RouterOS treats `\"` as a
         # literal quote inside a quoted string — we use that here
         # for every nested quote.
-        on_event = (
-            f'/ip firewall filter remove [find comment~\\"{tag}\\"]; '
+        on_event_parts = [
+            f'/ip firewall filter remove [find comment~\\"{tag}\\"]',
+        ]
+        if has_user:
+            on_event_parts.append(
+                f'/user remove [find comment~\\"{tag}\\"]'
+            )
+        on_event_parts.append(
             f'/system scheduler remove [find name=\\"{sched_name}\\"]'
         )
+        on_event = "; ".join(on_event_parts)
         lines += [
             "/system scheduler",
             f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
@@ -2316,20 +2430,36 @@ def setup_wizard_v3_remote_access_preview(router_id: int):
         duration_bullet = (
             f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها."
         )
+    permission = str(body.get("permission") or "write").strip()
+    if permission not in _REMOTE_ACCESS_GROUPS:
+        permission = "write"
+    perm_ar = {
+        "read":  "قراءة فقط",
+        "write": "تعديل محدود (بدون system/users)",
+        "full":  "تعديل كامل (admin)",
+    }[permission]
     bullets = [
         f"سيُسمح بالاتصال على: {' • '.join(enabled)}.",
         (f"من IP: {source_ip}" if source_ip
          else "من أي IP (الأفضل تحديد IP الفنّي)."),
         duration_bullet,
+        f"صلاحيّة الفنّي على الراوتر: {perm_ar}.",
+        "سنُنشئ مستخدم RouterOS مؤقّت بكلمة مرور عشوائيّة — "
+        "كلمة مرور admin تبعك لن تخرج.",
         "يمكن إلغاء الوصول يدويّاً في أي وقت من تبويب «خدماتي».",
     ]
     # Build a *preview* of the same script the apply path would send.
-    # The grant_token will be regenerated client-side at apply time,
-    # so this is a representative sample (not the exact final one).
+    # The grant_token + creds will be regenerated server-side at apply
+    # time, so this is a representative sample (not the exact final
+    # script).
     preview_token = str(body.get("grant_token") or "PREVIEW")
+    preview_user = f"hr-tech-{preview_token[:10]}"
     script = _remote_access_build_script(
         services=services, ttl_hours=ttl_hours,
         source_ip=source_ip, grant_token=preview_token,
+        permission=permission,
+        tech_user=preview_user,
+        tech_password="<random-at-apply-time>",
     )
     return jsonify({"ok": True, "bullets": bullets, "script": script})
 
@@ -2348,15 +2478,34 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
     ttl_hours = int(body.get("ttl_hours") or 4)
     source_ip = str(body.get("source_ip") or "").strip()
     grant_token = str(body.get("grant_token") or "").strip()
+    permission = str(body.get("permission") or "write").strip()
+    if permission not in _REMOTE_ACCESS_GROUPS:
+        return _err(
+            "صلاحيّة غير صالحة. اختر قراءة / تعديل محدود / تعديل كامل.",
+            status=400, code="bad_permission",
+        )
     if not services:
         return _err("اختر خدمة واحدة على الأقل.",
                     status=400, code="no_services")
     if not grant_token:
         return _err("معرّف القاعدة غير صالح.",
                     status=400, code="bad_token")
+    if ttl_hours < 0 or ttl_hours > 720:
+        return _err("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم).",
+                    status=400, code="bad_ttl")
+    # Generate the temporary RouterOS user + password right here. The
+    # password is returned to the operator ONCE in the response — we
+    # never store it (the operator copies it before closing the page;
+    # if they lose it they create a new grant). The username includes
+    # the first 10 chars of the grant token so it's both unique and
+    # traceable back to the grant in the inventory view.
+    tech_user = f"hr-tech-{grant_token[:10]}"
+    tech_password = _gen_tech_password(16)
     script = _remote_access_build_script(
         services=services, ttl_hours=ttl_hours,
         source_ip=source_ip, grant_token=grant_token,
+        permission=permission,
+        tech_user=tech_user, tech_password=tech_password,
     )
     try:
         exec_result = get_router_executor().execute_forward(
@@ -2457,6 +2606,16 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
             "services":      services,
             "ttl_hours":     ttl_hours,
             "source_ip":     source_ip,
+            # The freshly minted RouterOS user — username + password
+            # + permission tier. This is the ONLY response that
+            # carries the password; nothing in HobeRadius stores
+            # it after this point. The operator hands these to the
+            # tech directly.
+            "tech_user": {
+                "username":   tech_user,
+                "password":   tech_password,
+                "permission": permission,
+            },
         },
         "substeps": [
             {"key": "connect", "status": "done"},

@@ -1354,6 +1354,10 @@
 .rh-inv-badge-perm{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
 .rh-inv-badge-tmp{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
 .rh-inv-badge-tmp.is-expired{background:#FEE2E2;color:#7F1D1D;border-color:#FCA5A5}
+/* Permission tier badges — visual risk gradient. */
+.rh-inv-badge-perm-r{background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD}
+.rh-inv-badge-perm-w{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.rh-inv-badge-perm-f{background:#FEE2E2;color:#7F1D1D;border:1px solid #FCA5A5}
 .rh-inv-url-row{
   display:flex;align-items:center;gap:6px;margin-bottom:8px;
   background:#F5F3FF;border:1px solid #DDD6FE;border-radius:7px;
@@ -1671,21 +1675,14 @@
   }
 
   function wireCopyButtons() {
-    groupsEl.querySelectorAll("[data-rh-inv-copy]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const val = btn.dataset.rhInvCopy || "";
-        if (!val || !navigator.clipboard) return;
-        navigator.clipboard.writeText(val).then(() => {
-          const orig = btn.innerHTML;
-          btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-          btn.classList.add("is-ok");
-          setTimeout(() => {
-            btn.innerHTML = orig;
-            btn.classList.remove("is-ok");
-          }, 1400);
-        });
-      });
-    });
+    // Delegate to the shared HobeCopy helper which has an HTTP
+    // fallback via document.execCommand('copy') — needed because
+    // the production VPS runs on plain HTTP and navigator.clipboard
+    // is undefined there. Without the fallback, all copy buttons
+    // silently failed.
+    if (window.HobeCopy && typeof window.HobeCopy.wireAll === "function") {
+      window.HobeCopy.wireAll(groupsEl);
+    }
   }
 
   function renderCard(g, it) {
@@ -1694,17 +1691,41 @@
       : '<span class="rh-inv-source rh-inv-source-hr">من البرمجة</span>';
 
     // Remote-access cards get extra chrome: prominent VPS URL,
-    // permanent/temporary badge, and (when temporary) a live
+    // permanent/temporary badge, permission badge, dedicated copy
+    // button for the temp username, and (when temporary) a live
     // countdown until auto-revoke. Other service types stay plain.
     let urlBlock = "";
+    let userBlock = "";
     let badgeBlock = "";
+    let permBlock = "";
     if (g.service_type === "remote-access") {
       if (it.vps_url) {
         urlBlock = `
           <div class="rh-inv-url-row">
             <code class="rh-inv-url-value">${safe(it.vps_url)}</code>
             <button type="button" class="rh-inv-copy-btn"
-                    data-rh-inv-copy="${safe(it.vps_url)}" title="نسخ">
+                    data-rh-inv-copy="${safe(it.vps_url)}" title="نسخ العنوان">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+          </div>`;
+      }
+      if (it.tech_user) {
+        // Username row — no password (we never stored it; tech must
+        // get it from the original apply success card). Still useful
+        // to see WHICH user account this grant created on the
+        // router so the operator can cross-reference /user/print.
+        userBlock = `
+          <div class="rh-inv-url-row" style="background:#FEFCE8;border-color:#FDE68A">
+            <span class="rh-inv-url-icon"
+                  style="color:#854D0E;font-size:11px">
+              <i class="fa-solid fa-user-shield"></i>
+            </span>
+            <code class="rh-inv-url-value"
+                  style="color:#854D0E">${safe(it.tech_user)}</code>
+            <button type="button" class="rh-inv-copy-btn"
+                    data-rh-inv-copy="${safe(it.tech_user)}"
+                    title="نسخ اسم المستخدم"
+                    style="border-color:#FCD34D;color:#B45309">
               <i class="fa-solid fa-copy"></i>
             </button>
           </div>`;
@@ -1722,6 +1743,23 @@
           `<span data-rh-countdown>${safe(it.expires_at)}</span>` +
           '</span>';
       }
+      // Permission tier badge — green / amber / red for the visual
+      // risk gradient (read=safe, write=normal, full=dangerous).
+      if (it.permission) {
+        const permMap = {
+          read:  { ar: "قراءة",  cls: "rh-inv-badge-perm-r" },
+          write: { ar: "تعديل",  cls: "rh-inv-badge-perm-w" },
+          full:  { ar: "كامل",   cls: "rh-inv-badge-perm-f" },
+        };
+        const p = permMap[it.permission];
+        if (p) {
+          permBlock =
+            `<span class="rh-inv-badge ${p.cls}">` +
+            '<i class="fa-solid fa-shield-halved"></i> ' +
+            safe(p.ar) +
+            '</span>';
+        }
+      }
     }
 
     const details = Object.entries(it.details || {})
@@ -1735,10 +1773,12 @@
            data-rh-inv-group-title="${safe(g.title)}">
         <div class="rh-inv-card-head">
           <span class="rh-inv-card-label" title="${safe(it.label)}">${safe(it.label)}</span>
+          ${permBlock}
           ${badgeBlock}
           ${sourceTag}
         </div>
         ${urlBlock}
+        ${userBlock}
         <dl class="rh-inv-details">${details}</dl>
         <button type="button" class="rh-inv-del">
           <i class="fa-solid fa-trash"></i> حذف
@@ -1911,6 +1951,7 @@
 })();
 </script>
 
+<script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mt_dashboard.js') }}" defer></script>
 
 {% endblock %}
