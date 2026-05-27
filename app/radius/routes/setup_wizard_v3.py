@@ -493,10 +493,17 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
         return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
                     status=400, code="empty_script")
 
+    # Inject HOBERADIUS_SETUP tag on /ip hotspot add + /ip hotspot
+    # profile add lines so the «خدماتي» tab can correctly identify
+    # these entries as wizard-managed (the legacy planner only tags
+    # address-list / walled-garden rows).
+    script_to_send = _hotspot_post_process_script(
+        plan_result.script, router_id=router_id,
+    )
     try:
         executor = get_router_executor()
         exec_result = executor.execute_forward(
-            router_id=router_id, script=plan_result.script,
+            router_id=router_id, script=script_to_send,
         )
     except ExecutorNotConfigured:
         return _err(
@@ -1058,6 +1065,57 @@ def _classify_source(comment: str) -> str:
     return "operator"
 
 
+def _classify_hotspot_source(row: dict) -> str:
+    """Hotspot-aware classifier. The legacy planner doesn't write
+    a HOBERADIUS_SETUP comment on /ip hotspot rows, so the generic
+    classifier above always returns "operator" for them. We catch
+    that with a name-pattern fallback — the planner names the
+    server `hotspot-<iface>` and the profile `hsprof-<iface>`."""
+    src = _classify_source(row.get("comment", ""))
+    if src == "hoberadius":
+        return src
+    name = str(row.get("name", "") or "")
+    profile = str(row.get("profile", "") or "")
+    if name.startswith("hotspot-") and profile.startswith("hsprof-"):
+        return "hoberadius"
+    return "operator"
+
+
+def _classify_broadband_source(row: dict) -> str:
+    """Broadband-aware classifier. The planner DOES write a comment
+    on /interface pppoe-server server add, but we keep a name-
+    pattern fallback in case an operator's previous wizard run
+    pre-dates the tagging change."""
+    src = _classify_source(row.get("comment", ""))
+    if src == "hoberadius":
+        return src
+    service = str(row.get("service-name", "") or "")
+    profile = str(row.get("default-profile", "") or "")
+    if (service.startswith("hr-pppoe-") or
+            profile.startswith("hr-ppp-profile-")):
+        return "hoberadius"
+    return "operator"
+
+
+def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
+    """Inject a HOBERADIUS_SETUP comment onto the /ip hotspot add
+    and /ip hotspot profile add lines so the inventory tab can
+    later identify them as wizard-managed. Idempotent: lines that
+    already have a `comment=` attribute are left alone."""
+    tag = f"HOBERADIUS_SETUP:{router_id}:hotspot"
+    out: list[str] = []
+    for line in script.split("\n"):
+        stripped = line.lstrip()
+        is_target = (
+            stripped.startswith("/ip hotspot add ")
+            or stripped.startswith("/ip hotspot profile add ")
+        )
+        if is_target and "comment=" not in line:
+            line = f'{line} comment="{tag}"'
+        out.append(line)
+    return "\n".join(out)
+
+
 def setup_wizard_v3_router_inventory(router_id: int):
     """Returns every active service entry the router currently has,
     grouped by service type. Each item carries:
@@ -1110,7 +1168,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
                                    if str(s.get("disabled", "")).lower() in ("true", "yes")
                                    else "يعمل"),
                     },
-                    "source": _classify_source(s.get("comment", "")),
+                    "source": _classify_hotspot_source(s),
                 })
             if hotspot_items:
                 groups.append({
@@ -1135,7 +1193,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
                                    if str(s.get("disabled", "")).lower() in ("true", "yes")
                                    else "يعمل"),
                     },
-                    "source": _classify_source(s.get("comment", "")),
+                    "source": _classify_broadband_source(s),
                 })
             if pppoe_items:
                 groups.append({
