@@ -639,16 +639,23 @@ def setup_wizard_v3_broadband_preview(router_id: int):
     # local_address + remote_pool_cidr (raises if either is empty).
     # IMPORTANT: local_address is a single IPv4 HOST (validated by
     # ipaddress.IPv4Address which rejects /xx prefixes), while
-    # remote_pool_cidr is an IPv4 NETWORK (CIDR). Earlier defaults
-    # of "10.30.0.1/32" tripped the host-only validator and the
-    # error was mistranslated to «no interface selected» by the
-    # mapper's keyword fallback.
+    # remote_pool_cidr is an IPv4 NETWORK (CIDR).
+    #
+    # dns_servers default = a SINGLE IP. The planner's own default
+    # ("1.1.1.1,8.8.8.8") wraps the value in quotes inside the .rsc:
+    #     dns-server="1.1.1.1,8.8.8.8"
+    # RouterOS's `dns-server` property takes a list (IP[,IP]) but
+    # quoting it as a comma-bearing string trips the parser
+    # («expected end of command»). Using one IP avoids the issue
+    # while keeping the script idempotent.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
         "local_address": (str(body.get("local_address") or "").strip()
                           or "10.30.0.1"),
         "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
                              or "10.30.1.0/24"),
+        "dns_servers": (str(body.get("dns_servers") or "").strip()
+                        or "1.1.1.1"),
         "mode": "manual",
         "blocked_interfaces": list(body.get("blocked_interfaces") or []),
         "blocked_network_cidrs": [],
@@ -685,16 +692,23 @@ def setup_wizard_v3_broadband_apply(router_id: int):
     # local_address + remote_pool_cidr (raises if either is empty).
     # IMPORTANT: local_address is a single IPv4 HOST (validated by
     # ipaddress.IPv4Address which rejects /xx prefixes), while
-    # remote_pool_cidr is an IPv4 NETWORK (CIDR). Earlier defaults
-    # of "10.30.0.1/32" tripped the host-only validator and the
-    # error was mistranslated to «no interface selected» by the
-    # mapper's keyword fallback.
+    # remote_pool_cidr is an IPv4 NETWORK (CIDR).
+    #
+    # dns_servers default = a SINGLE IP. The planner's own default
+    # ("1.1.1.1,8.8.8.8") wraps the value in quotes inside the .rsc:
+    #     dns-server="1.1.1.1,8.8.8.8"
+    # RouterOS's `dns-server` property takes a list (IP[,IP]) but
+    # quoting it as a comma-bearing string trips the parser
+    # («expected end of command»). Using one IP avoids the issue
+    # while keeping the script idempotent.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
         "local_address": (str(body.get("local_address") or "").strip()
                           or "10.30.0.1"),
         "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
                              or "10.30.1.0/24"),
+        "dns_servers": (str(body.get("dns_servers") or "").strip()
+                        or "1.1.1.1"),
         "mode": "manual",
         "blocked_interfaces": list(body.get("blocked_interfaces") or []),
         "blocked_network_cidrs": [],
