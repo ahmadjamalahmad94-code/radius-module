@@ -59,6 +59,23 @@
   border:1px solid var(--swsvf-line);border-radius:8px;
   font-size:14px;font-family:monospace;
 }
+.swhs-input-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.swhs-gen-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;border:1px solid var(--swsvf-line);
+  background:#fff;color:var(--swsvf-blue);
+  font-size:13px;font-weight:700;cursor:pointer;
+  transition:all .15s;
+}
+.swhs-gen-btn:hover{
+  background:var(--swsvf-blue-soft);border-color:var(--swsvf-blue);
+  transform:translateY(-1px);
+}
+.swhs-gen-btn i{font-size:12px}
+.swhs-gen-btn.is-rolling i{animation:swhs-spin .6s linear}
+@keyframes swhs-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .swhs-error{
   color:#7F1D1D;background:var(--swsvf-red-soft);
   border:1px solid #FCA5A5;border-radius:8px;
@@ -91,10 +108,18 @@
   <div class="swhs-section-title">نطاق العناوين الداخلي</div>
   <p class="swhs-help">
     النطاق الذي يوزّعه DHCP على أجهزة المستخدمين. اتركه على الافتراضي إن لم
-    يكن لديك تعارض مع شبكة أخرى.
+    يكن لديك تعارض مع شبكة أخرى — أو اضغط <strong>توليد</strong> ليُحسب رقم
+    عشوائي ضمن النطاقات الخاصّة الآمنة (RFC1918).
   </p>
-  <input type="text" class="swhs-input" data-swhs-subnet
-         value="10.20.0.0/16" placeholder="10.20.0.0/16">
+  <div class="swhs-input-row">
+    <input type="text" class="swhs-input" data-swhs-subnet
+           value="10.20.0.0/16" placeholder="10.20.0.0/16">
+    <button type="button" class="swhs-gen-btn" data-swhs-gen
+            title="توليد نطاق عشوائي آمن">
+      <i class="fa-solid fa-dice"></i>
+      <span>توليد</span>
+    </button>
+  </div>
 </div>
 
 {# ───── Inline error ───── #}
@@ -131,6 +156,36 @@
       subnet_base: subnetInput.value.trim() || "10.20.0.0/16",
       blocked_interfaces: [],
     };
+  }
+
+  /* ─── Generate random private CIDR ───
+     Picks a /16 from 10.x.0.0/16 with x ∈ [11,250] — avoids the
+     reserved-ish endpoints (10.0-10.10 are commonly used by VPN/
+     overlay setups, 10.255 by some legacy routers). Result is a
+     valid RFC1918 private network with 65k usable hosts. */
+  const genBtn = page.querySelector("[data-swhs-gen]");
+  function generateCidr() {
+    // Cryptographically random for fairness across re-rolls.
+    const arr = new Uint8Array(1);
+    (window.crypto || window.msCrypto).getRandomValues(arr);
+    // Squeeze to range [11, 250] inclusive — 240 values, plenty.
+    const octet = 11 + (arr[0] % 240);
+    return `10.${octet}.0.0/16`;
+  }
+  if (genBtn) {
+    genBtn.addEventListener("click", () => {
+      const newValue = generateCidr();
+      const oldValue = subnetInput.value;
+      // Reroll if we somehow got the same value (rare but possible).
+      subnetInput.value = (newValue === oldValue) ? generateCidr() : newValue;
+      // Small dice-spin animation for tactile feedback.
+      genBtn.classList.remove("is-rolling");
+      void genBtn.offsetWidth;  // force reflow so the class reapplies
+      genBtn.classList.add("is-rolling");
+      setTimeout(() => genBtn.classList.remove("is-rolling"), 600);
+      // Keep the form payload in sync.
+      refreshPayload();
+    });
   }
 
   /* ─── Interface discovery ─── */
