@@ -121,40 +121,58 @@
 }
 .swhs-error[hidden]{display:none}
 
-/* ─── Active installations panel ─── */
+/* ─── Active installations — compact card grid ─── */
 .swhs-active-panel{
-  background:var(--swsvf-blue-soft);border:1px solid #93C5FD;
-  border-radius:10px;padding:12px 16px;margin:14px 0 18px;
+  background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);
+  border:1px solid #93C5FD;border-radius:12px;
+  padding:12px 14px;margin:14px 0 18px;
 }
 .swhs-active-panel[hidden]{display:none}
 .swhs-active-head{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;
 }
-.swhs-active-head i{color:#1D4ED8;font-size:14px}
-.swhs-active-head strong{color:#1E3A8A;font-size:13px}
-.swhs-active-head small{
-  color:#475569;font-size:11.5px;
-  flex-basis:100%;margin-top:2px;
+.swhs-active-head i{color:#1D4ED8;font-size:13px}
+.swhs-active-head strong{color:#1E3A8A;font-size:12.5px}
+.swhs-active-head small{color:#475569;font-size:11px;margin-inline-start:auto}
+.swhs-active-list{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:8px;
 }
-.swhs-active-list{list-style:none;margin:0;padding:0;display:flex;
-  flex-direction:column;gap:6px}
 .swhs-active-row{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  background:#fff;border:1px solid #BFDBFE;border-radius:8px;
-  padding:8px 12px;font-size:12.5px;
+  position:relative;
+  background:#fff;border:1px solid #BFDBFE;border-radius:9px;
+  padding:8px 10px 8px 30px;
+  transition:all .15s;
+}
+.swhs-active-row:hover{
+  border-color:#3B82F6;
+  box-shadow:0 2px 8px rgba(59,130,246,.15);
 }
 .swhs-active-row > strong{
-  font-family:monospace;color:var(--swsvf-ink);min-width:80px;
+  display:block;font-family:monospace;color:#1E3A8A;
+  font-size:13px;font-weight:800;line-height:1.2;
 }
 .swhs-active-row .swhs-active-meta{
-  color:#475569;font-family:monospace;font-size:11.5px;flex:1;
+  display:block;color:#475569;font-family:monospace;
+  font-size:10.5px;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .swhs-active-remove{
+  position:absolute;top:6px;inset-inline-start:6px;
+  width:22px;height:22px;border-radius:50%;padding:0;
   border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
-  border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;
-  cursor:pointer;transition:all .12s;
+  font-size:11px;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all .12s;
 }
-.swhs-active-remove:hover{background:#FECACA;border-color:#F87171}
+.swhs-active-remove:hover{
+  background:#EF4444;color:#fff;border-color:#EF4444;transform:scale(1.1);
+}
+.swhs-active-remove[disabled]{
+  background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0;
+  cursor:default;transform:none;
+}
 </style>
 
 {# ───── Currently-active installations panel ─────
@@ -165,8 +183,8 @@
 <div class="swhs-active-panel" data-swhs-active-panel hidden>
   <div class="swhs-active-head">
     <i class="fa-solid fa-circle-check"></i>
-    <strong>Hotspot مفعَّل حالياً على هذه المنافذ</strong>
-    <small>اضغط «احذف» على أي صف ثم «التالي» → «إرسال» للإيقاف</small>
+    <strong>Hotspot مفعَّل حالياً</strong>
+    <small>اضغط × لاختيار حذف، ثم «التالي» → «إرسال»</small>
   </div>
   <ul class="swhs-active-list" data-swhs-active-list></ul>
 </div>
@@ -411,19 +429,17 @@
       return;
     }
     list.innerHTML = installations.map((it) => {
-      const meta = [
-        it.address ? `الشبكة ${it.address}` : "",
-        it.name ? `الخادم ${it.name}` : "",
-        it.profile ? `الملف الشخصي ${it.profile}` : "",
-      ].filter(Boolean).join(" · ");
+      // Compact card: interface name big, just the subnet under it.
+      // Server-name / profile-name are auto-generated and not useful
+      // visually — dropped to keep the card small.
+      const subnet = it.address || "—";
       return `
-        <li class="swhs-active-row">
-          <strong>${it.interface}</strong>
-          <span class="swhs-active-meta">${meta || "—"}</span>
+        <li class="swhs-active-row" title="حذف ${it.interface}">
           <button type="button" class="swhs-active-remove"
-                  data-swhs-active-remove="${it.interface}">
-            🗑️ احذف من هذا المدخل
-          </button>
+                  data-swhs-active-remove="${it.interface}"
+                  title="حذف Hotspot من ${it.interface}">×</button>
+          <strong>${it.interface}</strong>
+          <span class="swhs-active-meta">${subnet}</span>
         </li>`;
     }).join("");
     panel.hidden = false;
@@ -440,11 +456,15 @@
           cb.checked = false;
           cb.dispatchEvent(new Event("change", { bubbles: true }));
         }
-        // Visual feedback: cross out the row + disable the button.
-        btn.closest("li").style.opacity = ".5";
-        btn.closest("li").style.textDecoration = "line-through";
+        // Visual feedback: dim the card + change the button to ✓.
+        const card = btn.closest("li");
+        if (card) {
+          card.style.opacity = ".55";
+          card.style.textDecoration = "line-through";
+        }
         btn.disabled = true;
-        btn.textContent = "✓ سيُحذف عند الإرسال";
+        btn.textContent = "✓";
+        btn.title = "سيُحذف عند الإرسال";
       });
     });
   }

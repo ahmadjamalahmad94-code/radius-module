@@ -96,47 +96,66 @@
 }
 .swbb-error[hidden]{display:none}
 
-/* ─── Active installations panel ─── */
+/* ─── Active installations — compact card grid ─── */
 .swbb-active-panel{
-  background:var(--swsvf-green-soft);border:1px solid #6EE7B7;
-  border-radius:10px;padding:12px 16px;margin:14px 0 18px;
+  background:linear-gradient(135deg,#ECFDF5 0%,#D1FAE5 100%);
+  border:1px solid #6EE7B7;border-radius:12px;
+  padding:12px 14px;margin:14px 0 18px;
 }
 .swbb-active-panel[hidden]{display:none}
 .swbb-active-head{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;
 }
-.swbb-active-head i{color:#047857;font-size:14px}
-.swbb-active-head strong{color:#064E3B;font-size:13px}
-.swbb-active-head small{
-  color:#475569;font-size:11.5px;flex-basis:100%;margin-top:2px;
+.swbb-active-head i{color:#047857;font-size:13px}
+.swbb-active-head strong{color:#064E3B;font-size:12.5px}
+.swbb-active-head small{color:#475569;font-size:11px;margin-inline-start:auto}
+.swbb-active-list{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:8px;
 }
-.swbb-active-list{list-style:none;margin:0;padding:0;display:flex;
-  flex-direction:column;gap:6px}
 .swbb-active-row{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  background:#fff;border:1px solid #A7F3D0;border-radius:8px;
-  padding:8px 12px;font-size:12.5px;
+  position:relative;
+  background:#fff;border:1px solid #A7F3D0;border-radius:9px;
+  padding:8px 10px 8px 30px;
+  transition:all .15s;
+}
+.swbb-active-row:hover{
+  border-color:#10B981;
+  box-shadow:0 2px 8px rgba(16,185,129,.15);
 }
 .swbb-active-row > strong{
-  font-family:monospace;color:var(--swsvf-ink);min-width:80px;
+  display:block;font-family:monospace;color:#064E3B;
+  font-size:13px;font-weight:800;line-height:1.2;
 }
 .swbb-active-row .swbb-active-meta{
-  color:#475569;font-family:monospace;font-size:11.5px;flex:1;
+  display:block;color:#475569;font-family:monospace;
+  font-size:10.5px;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .swbb-active-remove{
+  position:absolute;top:6px;inset-inline-start:6px;
+  width:22px;height:22px;border-radius:50%;padding:0;
   border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
-  border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;
-  cursor:pointer;transition:all .12s;
+  font-size:11px;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all .12s;
 }
-.swbb-active-remove:hover{background:#FECACA;border-color:#F87171}
+.swbb-active-remove:hover{
+  background:#EF4444;color:#fff;border-color:#EF4444;transform:scale(1.1);
+}
+.swbb-active-remove[disabled]{
+  background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0;
+  cursor:default;transform:none;
+}
 </style>
 
 {# ── Currently-active installations panel ── #}
 <div class="swbb-active-panel" data-swbb-active-panel hidden>
   <div class="swbb-active-head">
     <i class="fa-solid fa-circle-check"></i>
-    <strong>PPPoE مفعَّل حالياً على هذه المنافذ</strong>
-    <small>اضغط «احذف» على أي صف ثم «التالي» → «إرسال» للإيقاف</small>
+    <strong>PPPoE مفعَّل حالياً</strong>
+    <small>اضغط × لاختيار حذف، ثم «التالي» → «إرسال»</small>
   </div>
   <ul class="swbb-active-list" data-swbb-active-list></ul>
 </div>
@@ -346,19 +365,16 @@
       return;
     }
     list.innerHTML = installations.map((it) => {
-      const meta = [
-        it.pool_range ? `الـ Pool ${it.pool_range}` : "",
-        it.name ? `الخدمة ${it.name}` : "",
-        it.profile ? `الملف الشخصي ${it.profile}` : "",
-      ].filter(Boolean).join(" · ");
+      // Compact card: just interface + pool range. Other metadata
+      // dropped to keep card small.
+      const meta = it.pool_range || "—";
       return `
-        <li class="swbb-active-row">
-          <strong>${it.interface}</strong>
-          <span class="swbb-active-meta">${meta || "—"}</span>
+        <li class="swbb-active-row" title="حذف ${it.interface}">
           <button type="button" class="swbb-active-remove"
-                  data-swbb-active-remove="${it.interface}">
-            🗑️ احذف من هذا المدخل
-          </button>
+                  data-swbb-active-remove="${it.interface}"
+                  title="حذف PPPoE من ${it.interface}">×</button>
+          <strong>${it.interface}</strong>
+          <span class="swbb-active-meta">${meta}</span>
         </li>`;
     }).join("");
     panel.hidden = false;
@@ -372,10 +388,14 @@
           cb.checked = false;
           cb.dispatchEvent(new Event("change", { bubbles: true }));
         }
-        btn.closest("li").style.opacity = ".5";
-        btn.closest("li").style.textDecoration = "line-through";
+        const card = btn.closest("li");
+        if (card) {
+          card.style.opacity = ".55";
+          card.style.textDecoration = "line-through";
+        }
         btn.disabled = true;
-        btn.textContent = "✓ سيُحذف عند الإرسال";
+        btn.textContent = "✓";
+        btn.title = "سيُحذف عند الإرسال";
       });
     });
   }
