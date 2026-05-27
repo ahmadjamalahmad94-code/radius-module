@@ -120,7 +120,11 @@ def test_route_goes_only_into_custom_routing_table_never_main():
 def test_mangle_emits_both_prerouting_and_output_chains_always():
     """VX2.6c — output chain mangle MUST be emitted even when
     include_router_output is False, so that router-originated
-    `/tool fetch` works out of the box."""
+    `/tool fetch` works out of the box.
+
+    VX2.6d update — a third mangle rule (prerouting mark-connection)
+    is now also emitted so the routing-mark survives FastTrack.
+    The chains expected are therefore: 2× prerouting + 1× output."""
     from app.radius.services import site_exit_script_planner as p
     plan = p.build_plan(
         policy=_policy(include_router_output=0),
@@ -128,7 +132,9 @@ def test_mangle_emits_both_prerouting_and_output_chains_always():
         targets=[_target()],
     )
     chains = sorted(c.attrs["chain"] for c in plan.mangle_ops)
-    assert chains == ["output", "prerouting"]
+    assert chains == ["output", "prerouting", "prerouting"]
+    actions = sorted(c.attrs["action"] for c in plan.mangle_ops)
+    assert actions == ["mark-connection", "mark-routing", "mark-routing"]
 
 
 def test_planner_emits_srcnat_on_wg_interface():
@@ -176,6 +182,55 @@ def test_rendered_script_contains_srcnat_line():
     assert "/ip firewall nat add" in body
     assert "out-interface=wg-vps" in body
     assert "action=masquerade" in body
+
+
+# ─── VX2.6e — WireGuard peer allowed-address widening ──────
+# Field-verified 2026-05-27 on router 17 / RouterOS 7.20.6.
+# Without this block the entire site-exit feature is broken:
+# packets get marked + routed correctly but WireGuard cryptokey-
+# routing silently drops them because the peer's allowed-address
+# is restricted to 10.10.0.1/32 by the HobeRadius VPN bootstrap.
+# See docs/roadmap/SETUP_WIZARD_V3_LESSONS.md § 8.6.
+
+
+def test_planner_emits_wg_peer_allowed_address_widening():
+    """VX2.6e — every site-exit plan MUST emit a `set` on the
+    WireGuard peer that widens allowed-address to 0.0.0.0/0,
+    otherwise the kernel silently drops site-exit traffic at
+    the cryptokey-routing gate."""
+    from app.radius.services import site_exit_script_planner as p
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    assert plan.wg_peer_ops, (
+        "expected at least one wg_peer_ops entry — without it, "
+        "site-exit is broken (silent WG cryptokey-routing drop)"
+    )
+    wg_op = plan.wg_peer_ops[0]
+    assert wg_op.kind == "set"
+    assert wg_op.path == "/interface/wireguard/peers"
+    assert wg_op.attrs.get("allowed-address") == "0.0.0.0/0"
+    # The `find` must narrow to OUR wg interface — otherwise the
+    # `set` would mutate every wg peer on the router.
+    assert 'interface="wg-vps"' in wg_op.find_pattern
+
+
+def test_rendered_script_widens_wg_allowed_address():
+    """End-to-end render check: the literal line that fixes the
+    'apply succeeds but IP doesn't change' field bug MUST be
+    present in every rendered forward script."""
+    from app.radius.services import site_exit_script_planner as p
+    from app.radius.services import site_exit_script_renderer as r
+    plan = p.build_plan(
+        policy=_policy(), exit_node=_node(),
+        targets=[_target()],
+    )
+    body = r.render_forward_script(plan)
+    assert "/interface wireguard peers set" in body
+    assert 'allowed-address=0.0.0.0/0' in body
+    # Must scope to the wg interface name, not all peers.
+    assert 'interface="wg-vps"' in body
 
 
 def test_rendered_route_uses_interface_not_ip():
@@ -371,6 +426,22 @@ def test_planner_blocks_when_zero_active_targets():
 # ─── Planner — fail modes ────────────────────────────────────
 
 
+def _drop_rules(ops):
+    """Helper — filter firewall_filter_ops down to drop rules only.
+
+    Since VX2.6d, firewall_filter_ops starts with 3 fasttrack-bypass
+    accept rules. The historical assertions in this file were
+    written for the failsafe-drop rule only, so we filter for it."""
+    return [r for r in ops if r.attrs.get("action") == "drop"]
+
+
+def _fasttrack_bypass_rules(ops):
+    """Helper — filter to the VX2.6d fasttrack-bypass accept rules."""
+    return [r for r in ops
+            if r.attrs.get("action") == "accept"
+            and "fasttrack-bypass" in r.attrs.get("comment", "")]
+
+
 def test_block_when_vps_down_with_wan_emits_failsafe_drop():
     from app.radius.services import site_exit_script_planner as p
     plan = p.build_plan(
@@ -379,8 +450,12 @@ def test_block_when_vps_down_with_wan_emits_failsafe_drop():
         targets=[_target()],
         wan_interface_list="WAN",
     )
-    assert len(plan.firewall_filter_ops) == 1
-    rule = plan.firewall_filter_ops[0]
+    # VX2.6d — firewall_filter_ops now also contains 3 fasttrack-
+    # bypass accept rules. The failsafe-drop is a single rule among
+    # them.
+    drops = _drop_rules(plan.firewall_filter_ops)
+    assert len(drops) == 1
+    rule = drops[0]
     assert rule.attrs["chain"]  == "forward"
     assert rule.attrs["action"] == "drop"
     assert rule.attrs["dst-address-list"] == "HOBE_VX2_DST_42"
@@ -388,6 +463,8 @@ def test_block_when_vps_down_with_wan_emits_failsafe_drop():
     # No warning about missing WAN config.
     assert not any("wan_interface_list" in w
                     for w in plan.warnings)
+    # VX2.6d — 3 fasttrack-bypass accept rules always present.
+    assert len(_fasttrack_bypass_rules(plan.firewall_filter_ops)) == 3
 
 
 def test_block_when_vps_down_without_wan_warns_not_blocks():
@@ -399,7 +476,11 @@ def test_block_when_vps_down_without_wan_warns_not_blocks():
         # No wan_interface_list — still allowed but with warning.
     )
     assert plan.can_apply
-    assert plan.firewall_filter_ops == ()
+    # No drop rule emitted (no WAN list to constrain to).
+    assert _drop_rules(plan.firewall_filter_ops) == []
+    # VX2.6d — fasttrack-bypass rules are still emitted regardless
+    # of fail-mode, so firewall_filter_ops is not empty.
+    assert len(_fasttrack_bypass_rules(plan.firewall_filter_ops)) == 3
     assert any("wan_interface_list" in w
                for w in plan.warnings)
 
@@ -413,7 +494,10 @@ def test_fallback_to_wan_emits_strong_warning_no_drop():
         wan_interface_list="WAN",
     )
     assert plan.can_apply
-    assert plan.firewall_filter_ops == ()
+    # No drop rule for fallback_to_wan mode.
+    assert _drop_rules(plan.firewall_filter_ops) == []
+    # VX2.6d — fasttrack-bypass rules still present.
+    assert len(_fasttrack_bypass_rules(plan.firewall_filter_ops)) == 3
     text = " ".join(plan.warnings).lower()
     assert "fallback_to_wan" in text
     assert "original public ip" in text
@@ -460,8 +544,10 @@ def test_include_router_output_flag_kept_for_backwards_compat():
     )
     on_chains = sorted(c.attrs["chain"] for c in plan_on.mangle_ops)
     off_chains = sorted(c.attrs["chain"] for c in plan_off.mangle_ops)
-    # Both produce the same shape — output chain is unconditional.
-    assert on_chains == off_chains == ["output", "prerouting"]
+    # Both produce the same shape. VX2.6d — third mangle rule
+    # (prerouting mark-connection) added, so we expect:
+    # 2× prerouting + 1× output regardless of the flag.
+    assert on_chains == off_chains == ["output", "prerouting", "prerouting"]
 
 
 def test_disabled_targets_are_skipped_not_silently_dropped():
@@ -723,7 +809,12 @@ def test_renderer_quotes_values_with_special_chars():
 def test_renderer_emits_no_default_route_outside_custom_table():
     """Scan the entire body for any 0.0.0.0/0 that is NOT in
     the same line as routing-table=HOBE_VX2_<id>. Belt-and-
-    braces for the planner's assertion."""
+    braces for the planner's assertion.
+
+    VX2.6e exception: the WireGuard peer's allowed-address line
+    legitimately uses 0.0.0.0/0 (cryptokey-routing gate). That
+    line targets /interface/wireguard/peers, not /ip/route, so
+    it doesn't risk hijacking the main routing table."""
     from app.radius.services import site_exit_script_planner as p
     from app.radius.services import site_exit_script_renderer as r
     plan = p.build_plan(
@@ -733,6 +824,9 @@ def test_renderer_emits_no_default_route_outside_custom_table():
     body = r.render_forward_script(plan)
     for line in body.splitlines():
         if "0.0.0.0/0" in line:
+            # Allow the VX2.6e WG-peer line — it's not a route.
+            if "/interface wireguard peers" in line:
+                continue
             assert "routing-table=HOBE_VX2_42" in line
 
 
@@ -754,11 +848,15 @@ def test_script_summary_matches_plan_counts():
     assert s["routing_table"] == "HOBE_VX2_42"
     assert s["section_counts"]["routing_table"] == 1
     assert s["section_counts"]["route"] == 1
-    # VX2.6c — mangle now always emits BOTH prerouting + output.
-    assert s["section_counts"]["mangle"] == 2
+    # VX2.6c — both prerouting + output mangle rules.
+    # VX2.6d — added a third mangle rule (prerouting
+    # mark-connection) for FastTrack survival → 3 total.
+    assert s["section_counts"]["mangle"] == 3
     # VX2.6c — src-NAT on wg interface emitted unconditionally.
     assert s["section_counts"]["nat"] == 1
-    assert s["section_counts"]["firewall_filter"] == 1
+    # VX2.6d — firewall_filter_ops now contains 3 fasttrack-bypass
+    # accept rules + 1 failsafe-drop = 4.
+    assert s["section_counts"]["firewall_filter"] == 4
     # 2 root domains × (1 base + 1 www companion) = 4 entries.
     assert s["section_counts"]["address_list"] == 4
     assert s["command_count"] == plan.total_commands

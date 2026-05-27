@@ -540,9 +540,16 @@ def build_plan(
 
     # ── WireGuard peer cryptokey-routing (VX2.6e) ──
     #
-    # Field-tested issue: the apply succeeds, mangle counters tick
-    # (we've seen 60+ matched packets), the route is Active with
-    # gateway=hr-wg — but the actual outbound connections fail with
+    # ⚠️  DO NOT REMOVE THIS BLOCK without re-validating site-exit
+    # on a real router. Field-verified 2026-05-27 — without this
+    # the entire site-exit feature is broken.
+    # See: docs/roadmap/SETUP_WIZARD_V3_LESSONS.md § 8.6
+    #
+    # Field-tested failure mode (router 17, RouterOS 7.20.6):
+    # the apply succeeds, mangle counters tick (we saw 60+ matched
+    # packets), the route is Active with gateway=hr-wg, the VPS
+    # MASQUERADE counter is positive, and the wg handshake is
+    # current — but the actual outbound connections fail with
     # «Network unreachable» from the router and the client gets
     # nothing.
     #
