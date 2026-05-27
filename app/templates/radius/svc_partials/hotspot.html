@@ -155,6 +155,18 @@
 {# ───── Inline error ───── #}
 <div class="swhs-error" data-swhs-form-error hidden></div>
 
+{# Live JSON payload preview — visible to the operator so they can
+   verify exactly what will be sent before clicking «التالي». If
+   this shows [] instead of ["ether2","ether3"] after a click, we
+   know the bug is in the DOM/JS layer, not the backend. #}
+<details style="margin-top:14px;background:#F8FAFC;border:1px solid var(--swsvf-line);border-radius:8px;padding:8px 12px;font-size:12px">
+  <summary style="cursor:pointer;color:var(--swsvf-mute);font-weight:600">
+    👁️ معاينة البيانات التي ستُرسل (للتشخيص)
+  </summary>
+  <pre style="margin:8px 0 0;padding:8px;background:#0F172A;color:#A5F3FC;border-radius:6px;font-family:monospace;font-size:11px;overflow:auto;direction:ltr;text-align:left"
+       data-swhs-debug-payload>{}</pre>
+</details>
+
 <script>
 (function () {
   "use strict";
@@ -178,8 +190,14 @@
   }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function getSelectedInterfaces() {
+    // Defensive: trim + filter empties. We've seen cases where the
+    // checkbox value resolves to "" for unclear reasons (corrupted
+    // discovery payload, encoding glitch, etc). Sending [""] to the
+    // planner trips the same hotspot_no_interface_selected check as
+    // sending [] would — better to surface the issue here.
     return Array.from(page.querySelectorAll("[data-swhs-iface]:checked"))
-                .map((el) => el.value);
+                .map((el) => (el.value || "").trim())
+                .filter(Boolean);
   }
   function getPayload() {
     return {
@@ -298,8 +316,15 @@
     counter.classList.toggle("is-ready", n > 0);
   }
   function refreshPayload() {
-    page.dataset.swsvfConfigurePayload = JSON.stringify(getPayload());
+    const payload = getPayload();
+    const json = JSON.stringify(payload);
+    page.dataset.swsvfConfigurePayload = json;
     updateCounter();
+    // Live debug preview — pretty-print what will be sent.
+    const debugEl = page.querySelector("[data-swhs-debug-payload]");
+    if (debugEl) debugEl.textContent = JSON.stringify(payload, null, 2);
+    // Surface to the JS console too for diagnostics with F12 open.
+    if (window.console) console.debug("[Hotspot] payload:", payload);
   }
   // Event delegation — one listener on the parent catches every
   // checkbox toggle, including those from labels-without-for,
@@ -340,6 +365,19 @@
   });
 
   async function runPreview(payload) {
+    if (window.console) console.debug("[Hotspot] runPreview called with:", payload);
+    // Belt + suspenders: re-collect from DOM in case the payload
+    // coming through the shell event got corrupted in transit.
+    // The first source of truth is the live DOM, not whatever was
+    // serialized minutes ago.
+    if (!payload || !payload.selected_interfaces ||
+        !payload.selected_interfaces.length) {
+      const fresh = getPayload();
+      if (fresh.selected_interfaces && fresh.selected_interfaces.length) {
+        payload = fresh;
+        if (window.console) console.debug("[Hotspot] fell back to fresh DOM read:", payload);
+      }
+    }
     if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
@@ -356,6 +394,7 @@
         }
       );
       const data = await res.json().catch(() => ({ ok: false }));
+      if (window.console) console.debug("[Hotspot] preview response:", data);
       if (!res.ok || data.ok === false) {
         const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
