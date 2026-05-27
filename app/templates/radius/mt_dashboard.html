@@ -481,12 +481,21 @@
       if (!cards.length) return;
 
       async function probeStatus(){
+        // 15s timeout so a dead VPN doesn't leave the badges in the
+        // is-unknown state forever — fall through to the catch block
+        // and label them explicitly «تعذّر فحص الحالة».
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 15000);
         try {
           const res = await fetch(
             `/admin/radius/setup-wizard-v3/routers/${routerId}/services-status`,
-            { headers: { Accept: 'application/json' } }
+            { headers: { Accept: 'application/json' }, signal: controller.signal }
           );
+          clearTimeout(tid);
           const data = await res.json().catch(() => ({ ok: false }));
+          if (window.console) {
+            console.log('[services-status] HTTP', res.status, '—', data);
+          }
           const svcMap = (data && data.services) || {};
           cards.forEach((card) => {
             const key = card.dataset.rhSvcCard;
@@ -507,12 +516,17 @@
                 : 'تعذّر فحص حالة الخدمة';
             }
           });
-        } catch (_) {
+        } catch (err) {
+          clearTimeout(tid);
+          if (window.console) console.error('[services-status]', err);
+          const reason = (err && err.name === 'AbortError')
+            ? 'انتهت مهلة الاتصال بالراوتر (15 ثانية).'
+            : 'تعذّر الاتصال بالراوتر — ' + (err && err.message || err);
           cards.forEach((card) => {
             const badge = card.querySelector('[data-rh-svc-status]');
             if (badge) {
               badge.classList.add('is-unknown');
-              badge.title = 'تعذّر الاتصال بالراوتر';
+              badge.title = reason;
             }
           });
         }
@@ -2399,11 +2413,19 @@
     const statsEl = panel.querySelector("[data-rh-inv-stats]");
     if (statsEl) statsEl.hidden = true;
     const t0 = performance.now();
+    // 20s hard ceiling so a dead VPN / unreachable router surfaces as
+    // a visible error instead of a spinner that runs forever. The
+    // backend reads 6 endpoints sequentially over the tunnel, so
+    // healthy connections finish in 1-3 s; anything past ~15 s means
+    // we're stuck on a TCP retry.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
       const res = await fetch(
         `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory`,
-        { headers: { Accept: "application/json" } }
+        { headers: { Accept: "application/json" }, signal: controller.signal }
       );
+      clearTimeout(timeoutId);
       const data = await res.json().catch(() => ({ ok: false }));
       const elapsed = Math.round(performance.now() - t0);
       // Log per-stage timings so the operator can find the slow read
@@ -2412,8 +2434,12 @@
       if (window.console && data.timings) {
         console.log("[خدماتي] فحص الـ inventory:", elapsed + "ms total —", data.timings);
       }
+      if (window.console) {
+        console.log("[خدماتي] HTTP", res.status, "—", data);
+      }
       if (!res.ok || data.ok === false) {
-        errorEl.textContent = data.error || `HTTP ${res.status}`;
+        errorEl.textContent = (data.error
+          || `فشل الجلب — HTTP ${res.status}. افتح Console للتفاصيل.`);
         errorEl.hidden = false;
         return;
       }
@@ -2443,8 +2469,16 @@
       startCountdowns();
       applyFilter();
     } catch (err) {
-      errorEl.textContent = String(err && err.message || err);
+      clearTimeout(timeoutId);
+      if (err && err.name === "AbortError") {
+        errorEl.textContent = "انتهت مهلة الاتصال بالراوتر (20 ثانية). "
+          + "تأكد من اتصال الـ VPN، ثم اضغط «تحديث».";
+      } else {
+        errorEl.textContent = "خطأ في الاتصال: "
+          + String(err && err.message || err);
+      }
       errorEl.hidden = false;
+      if (window.console) console.error("[خدماتي] fetch error:", err);
     } finally {
       stopLoadingStepAnimation();
       loadingEl.hidden = true;
