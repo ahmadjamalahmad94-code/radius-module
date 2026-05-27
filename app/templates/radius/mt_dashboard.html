@@ -1344,6 +1344,51 @@
 }
 .rh-inv-del:hover{background:#FECACA;border-color:#F87171}
 
+/* ─── Remote-access connection banner ─── */
+.rh-inv-conn-banner{
+  background:linear-gradient(135deg,#EDE9FE 0%,#DDD6FE 100%);
+  border:1px solid #C4B5FD;border-radius:10px;
+  padding:10px 14px;margin-bottom:10px;
+}
+.rh-inv-conn-head{
+  display:flex;align-items:center;gap:8px;
+  color:#5B21B6;font-size:12.5px;font-weight:800;margin-bottom:6px;
+}
+.rh-inv-conn-head i{font-size:13px}
+.rh-inv-conn-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:5px;
+}
+.rh-inv-conn-label{
+  font-size:11.5px;color:#5B21B6;font-weight:700;min-width:120px;
+}
+.rh-inv-conn-value{
+  background:#fff;border:1px solid #DDD6FE;border-radius:5px;
+  padding:3px 9px;font-family:monospace;font-size:12.5px;
+  color:#1F2937;direction:ltr;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rh-inv-conn-hint{
+  font-size:10.5px;color:#7C3AED;font-style:italic;flex-basis:100%;
+  margin-inline-start:128px;
+}
+.rh-inv-conn-empty{
+  font-size:12px;color:#5B21B6;line-height:1.7;
+}
+.rh-inv-conn-empty code{
+  background:#fff;border-radius:4px;padding:1px 6px;
+  font-size:11.5px;direction:ltr;
+}
+.rh-inv-copy-btn{
+  width:28px;height:28px;border-radius:7px;
+  border:1px solid #C4B5FD;background:#fff;color:#7C3AED;
+  font-size:11px;cursor:pointer;transition:all .12s;
+  display:inline-flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.rh-inv-copy-btn:hover{background:#EDE9FE;border-color:#7C3AED}
+.rh-inv-copy-btn.is-ok{background:#10B981;color:#fff;border-color:#10B981}
+
 /* ─── Delete confirmation modal ─── */
 .rh-inv-modal{
   position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
@@ -1465,8 +1510,12 @@
       }
       const groups = data.groups || [];
       if (!groups.length) { emptyEl.hidden = false; return; }
-      groupsEl.innerHTML = groups.map(renderGroup).join("");
+      const routerInfo = data.router_info || {};
+      groupsEl.innerHTML = groups.map(
+        (g) => renderGroup(g, routerInfo)
+      ).join("");
       wireDeleteButtons();
+      wireCopyButtons();
     } catch (err) {
       errorEl.textContent = String(err && err.message || err);
       errorEl.hidden = false;
@@ -1476,8 +1525,15 @@
     }
   }
 
-  function renderGroup(g) {
+  function renderGroup(g, routerInfo) {
     const cards = (g.items || []).map((it) => renderCard(g, it)).join("");
+    // For remote-access, prepend a banner with the router's
+    // connect-here address(es) — operator was confused about
+    // where to point Winbox.
+    let banner = "";
+    if (g.service_type === "remote-access") {
+      banner = renderRemoteAccessBanner(routerInfo || {});
+    }
     return `
       <div class="rh-inv-group">
         <div class="rh-inv-group-head">
@@ -1487,8 +1543,75 @@
           <h4 class="rh-inv-group-title">${safe(g.title)}</h4>
           <span class="rh-inv-group-count">${(g.items||[]).length}</span>
         </div>
+        ${banner}
         <div class="rh-inv-cards">${cards}</div>
       </div>`;
+  }
+
+  function renderRemoteAccessBanner(info) {
+    const pub = (info.public_address || "").trim();
+    const vpn = (info.vpn_address || "").trim();
+    const rows = [];
+    if (pub) {
+      rows.push(`
+        <div class="rh-inv-conn-row">
+          <span class="rh-inv-conn-label">العنوان العام</span>
+          <code class="rh-inv-conn-value">${safe(pub)}</code>
+          <button type="button" class="rh-inv-copy-btn"
+                  data-rh-inv-copy="${safe(pub)}" title="نسخ">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+        </div>`);
+    }
+    if (vpn) {
+      rows.push(`
+        <div class="rh-inv-conn-row">
+          <span class="rh-inv-conn-label">عنوان شبكة VPN</span>
+          <code class="rh-inv-conn-value">${safe(vpn)}</code>
+          <button type="button" class="rh-inv-copy-btn"
+                  data-rh-inv-copy="${safe(vpn)}" title="نسخ">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+          <small class="rh-inv-conn-hint">للفنّي على نفس الـ VPN</small>
+        </div>`);
+    }
+    if (!rows.length) {
+      rows.push(`
+        <div class="rh-inv-conn-row">
+          <span class="rh-inv-conn-empty">
+            <i class="fa-solid fa-circle-info"></i>
+            تعذّر تحديد عنوان عام للراوتر. شغّل
+            <code>/ip cloud set ddns-enabled=yes</code> على الراوتر
+            للحصول على عنوان قابل للوصول من خارج الشبكة.
+          </span>
+        </div>`);
+    }
+    return `
+      <div class="rh-inv-conn-banner">
+        <div class="rh-inv-conn-head">
+          <i class="fa-solid fa-network-wired"></i>
+          <strong>عنوان الاتصال لـ Winbox / SSH / WebFig</strong>
+        </div>
+        ${rows.join("")}
+      </div>`;
+  }
+
+  function wireCopyButtons() {
+    groupsEl.querySelectorAll("[data-rh-inv-copy]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const val = btn.dataset.rhInvCopy || "";
+        if (!val || !navigator.clipboard) return;
+        navigator.clipboard.writeText(val).then(() => {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+          btn.classList.add("is-ok");
+          setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.remove("is-ok");
+          }, 1400);
+        });
+      });
+    });
   }
 
   function renderCard(g, it) {

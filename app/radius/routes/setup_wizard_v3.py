@@ -1077,9 +1077,24 @@ def setup_wizard_v3_router_inventory(router_id: int):
     if not nas.api_password:
         return jsonify({"ok": True, "groups": []})
     groups: list = []
+    router_info: dict = {
+        "vpn_address": str(nas.address or ""),
+        "public_address": "",
+    }
     try:
         from ..integration.mikrotik import MikrotikClient
         with MikrotikClient(**_mt_client_for(nas)) as mt:
+            # Best-effort: pick up the MikroTik DDNS public address
+            # (free /ip cloud service) so the remote-access banner
+            # can show the tech where to point Winbox.
+            try:
+                cloud = list(mt.print_("/ip/cloud/print"))
+                if cloud:
+                    router_info["public_address"] = str(
+                        cloud[0].get("public-address", "") or ""
+                    ).strip()
+            except Exception:  # noqa: BLE001
+                pass
             # ─── Hotspot servers ────────────────────────────
             hotspot_items = []
             for s in mt.print_("/ip/hotspot/print"):
@@ -1242,8 +1257,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False,
                         "error": f"تعذّر قراءة الخدمات: {exc}",
-                        "groups": groups}), 502
-    return jsonify({"ok": True, "groups": groups})
+                        "groups": groups,
+                        "router_info": router_info}), 502
+    return jsonify({"ok": True, "groups": groups,
+                    "router_info": router_info})
 
 
 def setup_wizard_v3_router_inventory_remove(router_id: int):
