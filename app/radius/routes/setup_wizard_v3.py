@@ -1629,10 +1629,43 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
         }), 502
+    # Build the connection-info payload the partial uses to show
+    # the tech where to point Winbox/SSH/WebFig. Try to read the
+    # router's public IP via /ip cloud (DDNS); fall back to the
+    # nas_devices address (which is the WG tunnel IP, only usable
+    # from inside the VPN).
+    public_ip = ""
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        with MikrotikClient(
+            host=nas.address,
+            username=nas.api_user or "admin",
+            password=nas.api_password,
+            port=int(nas.api_port or 8728),
+            use_tls=bool(nas.api_use_tls),
+            timeout=4.0,
+        ) as mt:
+            try:
+                cloud = list(mt.print_("/ip/cloud/print"))
+                if cloud:
+                    public_ip = (
+                        str(cloud[0].get("public-address", "") or "").strip()
+                    )
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        pass
     return jsonify({
         "ok": True,
         "duration_ms": exec_result.duration_ms,
         "grant_token": grant_token,
+        "connection": {
+            "vpn_address": nas.address or "",
+            "public_address": public_ip or "",
+            "services": services,
+            "ttl_hours": ttl_hours,
+            "source_ip": source_ip,
+        },
         "substeps": [
             {"key": "connect", "status": "done"},
             {"key": "send",    "status": "done"},

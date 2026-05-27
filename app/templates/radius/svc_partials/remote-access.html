@@ -113,7 +113,51 @@
   معرّف القاعدة: <span data-swra-token>—</span>
 </div>
 
+{# Post-apply connection card — operator hands this to the tech.
+   Stays hidden until the apply endpoint returns successfully. #}
+<div class="swra-conn-card" data-swra-conn-card hidden>
+  <h3>
+    <i class="fa-solid fa-circle-check" style="color:var(--swsvf-green)"></i>
+    معلومات الاتصال للفنّي
+  </h3>
+  <p class="swra-help" style="margin-bottom:10px">
+    أعطِ الفنّي القيم التالية ليفتح Winbox/SSH/WebFig على الراوتر:
+  </p>
+  <table class="swra-conn-table">
+    <tbody data-swra-conn-rows></tbody>
+  </table>
+  <button type="button" class="swsvf-btn swra-copy-btn" data-swra-copy
+          style="margin-top:10px">
+    <i class="fa-solid fa-copy"></i>
+    نسخ المعلومات للحافظة
+  </button>
+</div>
+
 <div class="swra-error" data-swra-form-error hidden></div>
+
+<style>
+.swra-conn-card{
+  background:var(--swsvf-green-soft);border:1px solid #6EE7B7;
+  border-radius:12px;padding:16px 18px;margin-top:14px;
+}
+.swra-conn-card h3{
+  margin:0 0 8px;font-size:15px;color:#065F46;font-weight:800;
+  display:flex;align-items:center;gap:8px;
+}
+.swra-conn-card[hidden]{display:none}
+.swra-conn-table{width:100%;border-collapse:collapse;font-size:13px}
+.swra-conn-table td{padding:6px 0;vertical-align:top}
+.swra-conn-table td:first-child{
+  color:#065F46;font-weight:700;width:140px;white-space:nowrap;
+}
+.swra-conn-table td:last-child{
+  font-family:monospace;color:var(--swsvf-ink);direction:ltr;
+}
+.swra-conn-table code{
+  background:#fff;border:1px solid #A7F3D0;border-radius:5px;
+  padding:1px 7px;font-size:12px;
+}
+</style>
 
 <script>
 (function () {
@@ -236,10 +280,80 @@
       await sleep(400);
       window.SWSVF.setApplySubstep("commit", "done");
       window.SWSVF.setApplyLabel("تمّ منح الوصول", "ننتقل للتحقّق…");
+      // Render the connection card with the addresses the tech needs.
+      renderConnectionCard(data.connection || {});
       await sleep(600);
       window.SWSVF.setPhase("verify");
     } catch (error) {
       window.SWSVF.showApplyError(error.message);
+    }
+  }
+
+  // Render the connection-info card with what the tech needs to
+  // know to reach the router (IP + open ports). Called once apply
+  // succeeds; the same data is used by the copy-to-clipboard button.
+  function renderConnectionCard(conn) {
+    const card = page.querySelector("[data-swra-conn-card]");
+    const tbody = page.querySelector("[data-swra-conn-rows]");
+    if (!card || !tbody) return;
+    const services = (conn.services || []).map((s) => {
+      const map = {
+        winbox: "Winbox",
+        ssh: "SSH",
+        webfig: "WebFig (HTTP)",
+        api: "API",
+      };
+      return `${map[s.name] || s.name} · المنفذ ${s.port}`;
+    }).join("<br>");
+    const rows = [];
+    if (conn.public_address) {
+      rows.push(`<tr><td>العنوان العام</td><td><code>${conn.public_address}</code></td></tr>`);
+    }
+    if (conn.vpn_address) {
+      rows.push(`<tr><td>عنوان شبكة VPN</td><td><code>${conn.vpn_address}</code>
+        <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
+          (يصلح فقط لو الفنّي متصل على نفس الـ VPN)
+        </small></td></tr>`);
+    }
+    rows.push(`<tr><td>الخدمات والمنافذ</td><td>${services || "—"}</td></tr>`);
+    if (conn.ttl_hours) {
+      rows.push(`<tr><td>المدّة</td><td>${conn.ttl_hours} ساعة (إلغاء تلقائي بعدها)</td></tr>`);
+    }
+    if (conn.source_ip) {
+      rows.push(`<tr><td>IP المصدر المسموح</td><td><code>${conn.source_ip}</code></td></tr>`);
+    } else {
+      rows.push(`<tr><td>IP المصدر</td><td>أي IP (مسموح من أيّ مصدر)</td></tr>`);
+    }
+    rows.push(`<tr><td>معرّف الإذن</td><td><code>${grantToken}</code>
+      <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
+        احفظه لو أردت إلغاء هذا الوصول تحديداً لاحقاً
+      </small></td></tr>`);
+    tbody.innerHTML = rows.join("");
+    card.hidden = false;
+
+    // Wire the copy-to-clipboard button.
+    const copyBtn = page.querySelector("[data-swra-copy]");
+    if (copyBtn) {
+      copyBtn.onclick = function () {
+        const lines = [];
+        if (conn.public_address) lines.push(`Public IP: ${conn.public_address}`);
+        if (conn.vpn_address) lines.push(`VPN IP: ${conn.vpn_address}`);
+        (conn.services || []).forEach((s) => {
+          lines.push(`${s.name}: port ${s.port}`);
+        });
+        if (conn.ttl_hours) lines.push(`Expires: ${conn.ttl_hours}h`);
+        lines.push(`Grant ID: ${grantToken}`);
+        const text = lines.join("\n");
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(
+            () => { copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ'; },
+            () => { copyBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> فشل النسخ'; }
+          );
+        }
+        setTimeout(() => {
+          copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> نسخ المعلومات للحافظة';
+        }, 2000);
+      };
     }
   }
 
