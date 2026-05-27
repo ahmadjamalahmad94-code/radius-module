@@ -3092,18 +3092,30 @@
     }
     const r = m.router || {};
     const counts = [];
-    if (m.hotspot_servers?.length)     counts.push({ k:"Hotspot",   v:m.hotspot_servers.length });
-    if (m.hotspot_profiles?.length)    counts.push({ k:"بروفايلات Hotspot", v:m.hotspot_profiles.length });
-    if (m.broadband_servers?.length)   counts.push({ k:"Broadband", v:m.broadband_servers.length });
-    if (m.ppp_profiles?.length)        counts.push({ k:"بروفايلات PPP", v:m.ppp_profiles.length });
-    if (m.dhcp_servers?.length)        counts.push({ k:"DHCP",      v:m.dhcp_servers.length });
-    if (m.firewall?.filter_rules)      counts.push({ k:"Filter",    v:m.firewall.filter_rules });
-    if (m.firewall?.nat_rules)         counts.push({ k:"NAT",       v:m.firewall.nat_rules });
-    if (m.firewall?.mangle_rules)      counts.push({ k:"Mangle",    v:m.firewall.mangle_rules });
-    if (m.firewall?.address_lists)     counts.push({ k:"AL entries",v:m.firewall.address_lists });
-    if (m.wireguard?.peers_count)      counts.push({ k:"WG peers",  v:m.wireguard.peers_count });
-    if (m.sessions?.hotspot_active)    counts.push({ k:"Hotspot نشطة", v:m.sessions.hotspot_active });
-    if (m.sessions?.ppp_active)        counts.push({ k:"PPP نشطة",   v:m.sessions.ppp_active });
+    if (m.hotspot_servers && m.hotspot_servers.length)
+      counts.push({ k:"Hotspot", v:m.hotspot_servers.length });
+    if (m.hotspot_profiles && m.hotspot_profiles.length)
+      counts.push({ k:"بروفايلات Hotspot", v:m.hotspot_profiles.length });
+    if (m.broadband_servers && m.broadband_servers.length)
+      counts.push({ k:"Broadband", v:m.broadband_servers.length });
+    if (m.ppp_profiles && m.ppp_profiles.length)
+      counts.push({ k:"بروفايلات PPP", v:m.ppp_profiles.length });
+    if (m.dhcp_servers && m.dhcp_servers.length)
+      counts.push({ k:"DHCP", v:m.dhcp_servers.length });
+    if (m.firewall && m.firewall.filter_rules)
+      counts.push({ k:"Filter", v:m.firewall.filter_rules });
+    if (m.firewall && m.firewall.nat_rules)
+      counts.push({ k:"NAT", v:m.firewall.nat_rules });
+    if (m.firewall && m.firewall.mangle_rules)
+      counts.push({ k:"Mangle", v:m.firewall.mangle_rules });
+    if (m.firewall && m.firewall.address_lists)
+      counts.push({ k:"AL entries", v:m.firewall.address_lists });
+    if (m.wireguard && m.wireguard.peers_count)
+      counts.push({ k:"WG peers", v:m.wireguard.peers_count });
+    if (m.sessions && m.sessions.hotspot_active)
+      counts.push({ k:"Hotspot نشطة", v:m.sessions.hotspot_active });
+    if (m.sessions && m.sessions.ppp_active)
+      counts.push({ k:"PPP نشطة", v:m.sessions.ppp_active });
 
     return `
       <div class="rh-bk-mf-section">
@@ -3125,7 +3137,7 @@
             ${counts.map(c => `<span class="rh-bk-mf-count">${safe(c.k)}: <strong>${safe(c.v)}</strong></span>`).join("")}
           </div>
         </div>` : ""}
-      ${m.hotspot_servers?.length ? `
+      ${m.hotspot_servers && m.hotspot_servers.length ? `
         <div class="rh-bk-mf-section">
           <h5>خوادم Hotspot</h5>
           <ul class="rh-bk-mf-list">
@@ -3135,7 +3147,7 @@
             `).join("")}
           </ul>
         </div>` : ""}
-      ${m.broadband_servers?.length ? `
+      ${m.broadband_servers && m.broadband_servers.length ? `
         <div class="rh-bk-mf-section">
           <h5>خوادم Broadband (PPPoE)</h5>
           <ul class="rh-bk-mf-list">
@@ -3145,14 +3157,14 @@
             `).join("")}
           </ul>
         </div>` : ""}
-      ${m.ip_addresses?.length ? `
+      ${m.ip_addresses && m.ip_addresses.length ? `
         <div class="rh-bk-mf-section">
           <h5>عناوين IP</h5>
           <ul class="rh-bk-mf-list">
             ${m.ip_addresses.map(a => `<li>${safe(a.address)} على ${safe(a.interface)}</li>`).join("")}
           </ul>
         </div>` : ""}
-      ${m.wireguard?.interfaces?.length ? `
+      ${m.wireguard && m.wireguard.interfaces && m.wireguard.interfaces.length ? `
         <div class="rh-bk-mf-section">
           <h5>WireGuard</h5>
           <ul class="rh-bk-mf-list">
