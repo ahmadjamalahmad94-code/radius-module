@@ -521,6 +521,9 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            # Surface the exact post-processed script so the operator
+            # can copy it into MikroTik Terminal to find the trap.
+            "debug_script": script_to_send,
         }), 502
 
     return jsonify({
