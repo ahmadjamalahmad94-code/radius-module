@@ -475,7 +475,7 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
     try:
         with MikrotikClient(**cfg) as mt:
             # Check 1: Hotspot server present & enabled.
-            servers = list(mt.print_("/ip/hotspot/server/print"))
+            servers = list(mt.print_("/ip/hotspot/print"))
             running = [s for s in servers
                        if str(s.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
@@ -938,7 +938,7 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
                 "status": "ok" if managed else "fail",
             })
             # Check: Hotspot must be active for walled-garden to take effect.
-            servers = list(mt.print_("/ip/hotspot/server/print"))
+            servers = list(mt.print_("/ip/hotspot/print"))
             running = [s for s in servers
                        if str(s.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
@@ -1426,7 +1426,7 @@ def setup_wizard_v3_router_services_status(router_id: int):
     try:
         with MikrotikClient(**cfg) as mt:
             # Hotspot: any enabled hotspot server.
-            servers = list(mt.print_("/ip/hotspot/server/print"))
+            servers = list(mt.print_("/ip/hotspot/print"))
             status["hotspot"] = any(
                 str(s.get("disabled", "")).lower() in ("false", "no", "")
                 for s in servers
