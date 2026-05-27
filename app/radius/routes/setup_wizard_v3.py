@@ -1042,6 +1042,273 @@ def _is_block_sites_entry(comment: str) -> bool:
     )
 
 
+def _classify_source(comment: str) -> str:
+    """Tell whether a RouterOS row was created by HobeRadius
+    (carries our comment tag) or by the operator manually.
+    Surfaced in the «خدماتي» tab so the operator knows what they
+    can safely re-create from the wizard vs what they manage by hand.
+    """
+    c = str(comment or "")
+    if (
+        "HOBERADIUS_SETUP" in c
+        or "HOBE_NPC_" in c
+        or "HOBERADIUS_TECH" in c
+    ):
+        return "hoberadius"
+    return "operator"
+
+
+def setup_wizard_v3_router_inventory(router_id: int):
+    """Returns every active service entry the router currently has,
+    grouped by service type. Each item carries:
+      - a unique `target` identifier (the RouterOS internal .id),
+      - a few human-readable detail fields,
+      - a `source` flag (hoberadius / operator).
+
+    Used by the «خدماتي» tab on the router page so the operator
+    sees one consolidated list across all six services with per-
+    item delete buttons.
+    """
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "groups": []})
+    groups: list = []
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        with MikrotikClient(**_mt_client_for(nas)) as mt:
+            # ─── Hotspot servers ────────────────────────────
+            hotspot_items = []
+            for s in mt.print_("/ip/hotspot/print"):
+                hotspot_items.append({
+                    "target": str(s.get(".id", "") or ""),
+                    "service_type": "hotspot",
+                    "label": str(s.get("interface", "") or "—"),
+                    "details": {
+                        "الواجهة": str(s.get("interface", "") or "—"),
+                        "اسم الخادم": str(s.get("name", "") or "—"),
+                        "الملف": str(s.get("profile", "") or "—"),
+                        "الحالة": ("معطّل"
+                                   if str(s.get("disabled", "")).lower() in ("true", "yes")
+                                   else "يعمل"),
+                    },
+                    "source": _classify_source(s.get("comment", "")),
+                })
+            if hotspot_items:
+                groups.append({
+                    "service_type": "hotspot",
+                    "title": "Hotspot",
+                    "color": "blue",
+                    "icon": "wifi",
+                    "items": hotspot_items,
+                })
+            # ─── PPPoE / Broadband ──────────────────────────
+            pppoe_items = []
+            for s in mt.print_("/interface/pppoe-server/server/print"):
+                pppoe_items.append({
+                    "target": str(s.get(".id", "") or ""),
+                    "service_type": "broadband",
+                    "label": str(s.get("interface", "") or "—"),
+                    "details": {
+                        "الواجهة": str(s.get("interface", "") or "—"),
+                        "الخدمة": str(s.get("service-name", "") or "—"),
+                        "الملف الافتراضي": str(s.get("default-profile", "") or "—"),
+                        "الحالة": ("معطّل"
+                                   if str(s.get("disabled", "")).lower() in ("true", "yes")
+                                   else "يعمل"),
+                    },
+                    "source": _classify_source(s.get("comment", "")),
+                })
+            if pppoe_items:
+                groups.append({
+                    "service_type": "broadband",
+                    "title": "Broadband (PPPoE)",
+                    "color": "green",
+                    "icon": "ethernet",
+                    "items": pppoe_items,
+                })
+            # ─── Block-sites (address-list entries) ─────────
+            block_items = []
+            for e in mt.print_("/ip/firewall/address-list/print"):
+                if not _is_block_sites_entry(e.get("comment", "")):
+                    continue
+                addr = str(e.get("address", "") or "").strip()
+                if not addr:
+                    continue
+                block_items.append({
+                    "target": str(e.get(".id", "") or ""),
+                    "service_type": "block-sites",
+                    "label": addr,
+                    "details": {
+                        "الموقع": addr,
+                        "القائمة": str(e.get("list", "") or "—"),
+                    },
+                    "source": _classify_source(e.get("comment", "")),
+                })
+            if block_items:
+                groups.append({
+                    "service_type": "block-sites",
+                    "title": "حجب مواقع",
+                    "color": "red",
+                    "icon": "ban",
+                    "items": block_items,
+                })
+            # ─── Walled garden / open-sites ────────────────
+            open_items = []
+            for e in mt.print_("/ip/hotspot/walled-garden/print"):
+                if not _is_walled_garden_entry(e.get("comment", "")):
+                    continue
+                host = (str(e.get("dst-host", "") or "").strip()
+                        or str(e.get("dst-address", "") or "").strip())
+                if not host:
+                    continue
+                open_items.append({
+                    "target": str(e.get(".id", "") or ""),
+                    "service_type": "open-sites",
+                    "label": host,
+                    "details": {
+                        "الموقع": host,
+                        "البروتوكول": str(e.get("server", "") or "—"),
+                    },
+                    "source": _classify_source(e.get("comment", "")),
+                })
+            if open_items:
+                groups.append({
+                    "service_type": "open-sites",
+                    "title": "فتح مواقع (Walled Garden)",
+                    "color": "teal",
+                    "icon": "circle-check",
+                    "items": open_items,
+                })
+            # ─── Public-IP (site-exit) — mangle rules ──────
+            siteexit_items = []
+            for r in mt.print_("/ip/firewall/mangle/print"):
+                comment = str(r.get("comment", "") or "")
+                if "HOBERADIUS_SETUP" not in comment or "site_exit" not in comment:
+                    continue
+                siteexit_items.append({
+                    "target": str(r.get(".id", "") or ""),
+                    "service_type": "public-ip",
+                    "label": str(r.get("action", "") or "mark"),
+                    "details": {
+                        "السلسلة": str(r.get("chain", "") or "—"),
+                        "العمل": str(r.get("action", "") or "—"),
+                        "الهدف": str(r.get("dst-address-list", "")
+                                     or r.get("new-routing-mark", "") or "—"),
+                    },
+                    "source": "hoberadius",
+                })
+            if siteexit_items:
+                groups.append({
+                    "service_type": "public-ip",
+                    "title": "تغيير IP الخروج",
+                    "color": "amber",
+                    "icon": "globe",
+                    "items": siteexit_items,
+                })
+            # ─── Remote-access grants — firewall filter rules
+            remote_items = []
+            for r in mt.print_("/ip/firewall/filter/print"):
+                comment = str(r.get("comment", "") or "")
+                if "HOBERADIUS_TECH" not in comment:
+                    continue
+                # Parse the token out of "HOBERADIUS_TECH:abc123ef:winbox"
+                token = ""
+                parts = [p for p in comment.split(":") if p]
+                if len(parts) >= 2:
+                    token = parts[1]
+                remote_items.append({
+                    "target": str(r.get(".id", "") or ""),
+                    "service_type": "remote-access",
+                    "label": (parts[2] if len(parts) >= 3 else "?"),
+                    "details": {
+                        "المنفذ": str(r.get("dst-port", "") or "—"),
+                        "IP المصدر": str(r.get("src-address", "") or "أي"),
+                        "معرّف الإذن": token or "—",
+                    },
+                    "source": "hoberadius",
+                })
+            if remote_items:
+                groups.append({
+                    "service_type": "remote-access",
+                    "title": "اتصال عن بُعد",
+                    "color": "purple",
+                    "icon": "key",
+                    "items": remote_items,
+                })
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False,
+                        "error": f"تعذّر قراءة الخدمات: {exc}",
+                        "groups": groups}), 502
+    return jsonify({"ok": True, "groups": groups})
+
+
+def setup_wizard_v3_router_inventory_remove(router_id: int):
+    """Delete one specific service entry by its RouterOS .id. The
+    cleanup is precise — we remove exactly the row the operator
+    confirmed, no cascading wipes. Pools / DHCP / IP addresses
+    that the planner co-created stay behind so the operator can
+    inspect them if they want; the «إيقاف الخدمة» button on each
+    service flow still does the broader sweep.
+
+    Body: { service_type: "hotspot"|"broadband"|..., target: ".id" }
+    """
+    from ..db.repos import nas_repo
+    from ..services.npc_router_executor import (
+        ExecutorNotConfigured, get_router_executor,
+    )
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    body = _body() or {}
+    service_type = str(body.get("service_type") or "").strip()
+    target = str(body.get("target") or "").strip()
+    if not target:
+        return _err("معرّف العنصر مفقود.", status=400, code="missing_target")
+
+    # Map service_type → RouterOS path the row lives in.
+    SVC_PATHS = {
+        "hotspot":       "/ip hotspot",
+        "broadband":     "/interface pppoe-server server",
+        "block-sites":   "/ip firewall address-list",
+        "open-sites":    "/ip hotspot walled-garden",
+        "public-ip":     "/ip firewall mangle",
+        "remote-access": "/ip firewall filter",
+    }
+    path = SVC_PATHS.get(service_type)
+    if not path:
+        return _err(f"نوع خدمة غير مدعوم: {service_type}",
+                    status=400, code="unknown_service")
+
+    # The script removes a single row by its .id value (RouterOS
+    # `find where .id=X` is the safest way to reference one entry).
+    # Single quotes around target are safe — .id values are like
+    # `*A1B2` (alphanumeric with leading `*`).
+    script = (
+        f'{path} remove [find where .id=\"{target}\"]\n'
+    )
+    try:
+        exec_result = get_router_executor().execute_forward(
+            router_id=router_id, script=script,
+        )
+    except ExecutorNotConfigured:
+        return _err("وحدة تنفيذ السكربتات غير مُهيّأة.",
+                    status=503, code="executor_not_configured")
+    except Exception as exc:  # noqa: BLE001
+        return _err(f"خطأ: {exc}", status=500, code="remove_error")
+    if not exec_result.ok:
+        return jsonify({
+            "ok": False, "code": "remove_failed",
+            "error": exec_result.error_message or "تعذّر الحذف",
+            "stderr": exec_result.stderr or "",
+        }), 502
+    return jsonify({"ok": True, "duration_ms": exec_result.duration_ms})
+
+
 def setup_wizard_v3_hotspot_current(router_id: int):
     """Read which interfaces have a Hotspot server running, plus the
     subnet that each one serves. Returns both the flat interface
@@ -2661,6 +2928,19 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "setup_wizard_v3_broadband_current",
         setup_wizard_v3_broadband_current,
         methods=["GET"],
+    )
+    # «خدماتي» tab — unified inventory + per-item remove.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/inventory",
+        "setup_wizard_v3_router_inventory",
+        setup_wizard_v3_router_inventory,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/inventory/remove",
+        "setup_wizard_v3_router_inventory_remove",
+        setup_wizard_v3_router_inventory_remove,
+        methods=["POST"],
     )
     # Public-IP (site exit) — helper to list exit nodes + 3 flow endpoints.
     bp.add_url_rule(

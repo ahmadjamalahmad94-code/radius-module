@@ -703,6 +703,10 @@
             data-mt-tab="diagnostics" role="tab" aria-selected="false">
       <i class="fa-solid fa-stethoscope"></i> التشخيص
     </button>
+    <button type="button" class="mt-tab"
+            data-mt-tab="my-services" role="tab" aria-selected="false">
+      <i class="fa-solid fa-screwdriver-wrench"></i> خدماتي
+    </button>
   </nav>
 
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
@@ -1174,7 +1178,455 @@
     </section>
   </section>{# /diagnostics panel — last of P-series #}
 
+  {# ─── «خدماتي» tab — unified active-services inventory ─── #}
+  <section class="mt-tab-panel rh-inventory"
+           data-mt-tab-panel="my-services" role="tabpanel" hidden>
+    <div class="rh-inv-head">
+      <h3>
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        خدماتي على هذا الراوتر
+      </h3>
+      <button type="button" class="rh-inv-refresh" data-rh-inv-refresh>
+        <i class="fa-solid fa-rotate"></i> تحديث
+      </button>
+    </div>
+    <p class="rh-inv-help">
+      كل الخدمات المفعَّلة الآن على الراوتر، مع المصدر (من إعدادك أو من خارج
+      الموقع). كل بطاقة فيها زر حذف بتأكيد.
+    </p>
+    <div class="rh-inv-loading" data-rh-inv-loading>
+      <i class="fa-solid fa-spinner fa-spin"></i> جارٍ القراءة من الراوتر…
+    </div>
+    <div class="rh-inv-empty" data-rh-inv-empty hidden>
+      <i class="fa-solid fa-circle-info"></i>
+      لا توجد خدمات مفعَّلة حالياً. ارجع لـ«إدارة الراوترات» وأضف خدمة من
+      بطاقات الـ Hub أعلى الصفحة.
+    </div>
+    <div class="rh-inv-error" data-rh-inv-error hidden></div>
+    <div class="rh-inv-groups" data-rh-inv-groups></div>
+  </section>
+
+  {# Delete confirmation modal — shared across all rh-inv cards. #}
+  <div class="rh-inv-modal" data-rh-inv-modal hidden role="dialog"
+       aria-modal="true" aria-labelledby="rh-inv-modal-title">
+    <div class="rh-inv-modal-card">
+      <button type="button" class="rh-inv-modal-close"
+              data-rh-inv-modal-close aria-label="إغلاق">×</button>
+      <h3 id="rh-inv-modal-title">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        تأكيد الحذف
+      </h3>
+      <p>هل تريد بالتأكيد حذف هذه البرمجة؟</p>
+      <div class="rh-inv-modal-target" data-rh-inv-modal-target></div>
+      <div class="rh-inv-progress" data-rh-inv-progress hidden>
+        <div class="rh-inv-progress-track">
+          <div class="rh-inv-progress-bar" data-rh-inv-progress-bar></div>
+        </div>
+        <p class="rh-inv-progress-msg" data-rh-inv-progress-msg>
+          جارٍ الاتصال بالراوتر…
+        </p>
+      </div>
+      <div class="rh-inv-modal-result" data-rh-inv-modal-result hidden></div>
+      <div class="rh-inv-modal-actions">
+        <button type="button" class="rh-inv-btn-ghost"
+                data-rh-inv-modal-cancel>إلغاء</button>
+        <button type="button" class="rh-inv-btn-danger"
+                data-rh-inv-modal-confirm>
+          <i class="fa-solid fa-trash"></i> نعم، احذف
+        </button>
+      </div>
+    </div>
+  </div>
+
 </section>
+
+<style>
+/* ─── «خدماتي» tab layout ─── */
+.rh-inventory{padding:0 !important}
+.rh-inv-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin:0 0 6px;flex-wrap:wrap;gap:10px;
+}
+.rh-inv-head h3{
+  margin:0;font-size:16px;font-weight:800;color:#0F172A;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.rh-inv-head h3 i{color:#6B5AED;font-size:14px}
+.rh-inv-refresh{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:8px;border:1px solid #E2E8F0;
+  background:#fff;color:#475569;font-size:12.5px;font-weight:700;
+  cursor:pointer;transition:all .12s;
+}
+.rh-inv-refresh:hover{background:#F8FAFC;border-color:#CBD5E1}
+.rh-inv-help{color:#64748B;font-size:12.5px;line-height:1.7;margin:0 0 14px}
+.rh-inv-loading{
+  color:#94A3B8;font-size:13px;padding:18px;text-align:center;
+}
+.rh-inv-empty{
+  background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:12px;
+  padding:24px;text-align:center;color:#64748B;font-size:13px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.rh-inv-empty i{font-size:20px;color:#CBD5E1}
+.rh-inv-empty[hidden]{display:none}
+.rh-inv-error{
+  background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;
+  padding:10px 14px;color:#7F1D1D;font-size:13px;margin-bottom:12px;
+}
+.rh-inv-error[hidden]{display:none}
+.rh-inv-groups{display:flex;flex-direction:column;gap:18px}
+
+.rh-inv-group{
+  background:#fff;border:1px solid #EAECF0;border-radius:14px;
+  padding:14px 16px;
+}
+.rh-inv-group-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.rh-inv-group-icon{
+  width:36px;height:36px;border-radius:10px;color:#fff;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:15px;
+}
+.rh-inv-icon-blue  {background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
+.rh-inv-icon-green {background:linear-gradient(135deg,#10B981,#047857)}
+.rh-inv-icon-red   {background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.rh-inv-icon-teal  {background:linear-gradient(135deg,#14B8A6,#0F766E)}
+.rh-inv-icon-amber {background:linear-gradient(135deg,#F59E0B,#B45309)}
+.rh-inv-icon-purple{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
+.rh-inv-group-title{
+  margin:0;font-size:14px;font-weight:800;color:#0F172A;
+}
+.rh-inv-group-count{
+  font-size:11px;color:#94A3B8;font-weight:600;
+  margin-inline-start:auto;background:#F1F5F9;border-radius:999px;
+  padding:3px 10px;
+}
+.rh-inv-cards{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:10px;
+}
+.rh-inv-card{
+  background:#FAFAFC;border:1px solid #EAECF0;border-radius:11px;
+  padding:12px 14px;position:relative;
+  transition:all .15s;
+}
+.rh-inv-card:hover{
+  background:#fff;border-color:#CBD5E1;
+  box-shadow:0 2px 8px rgba(15,23,42,.05);
+}
+.rh-inv-card-head{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.rh-inv-card-label{
+  font-family:monospace;font-size:14px;font-weight:800;color:#0F172A;
+  flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rh-inv-source{
+  font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;
+  white-space:nowrap;letter-spacing:.02em;
+}
+.rh-inv-source-hr{background:#EDE9FE;color:#5B21B6}
+.rh-inv-source-op{background:#FEF3C7;color:#92400E}
+.rh-inv-details{
+  display:grid;grid-template-columns:auto 1fr;gap:3px 8px;
+  font-size:11.5px;color:#475569;margin-bottom:10px;
+}
+.rh-inv-details dt{color:#94A3B8;font-weight:700}
+.rh-inv-details dd{margin:0;font-family:monospace;color:#0F172A;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rh-inv-del{
+  width:100%;padding:6px 10px;border-radius:7px;
+  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+.rh-inv-del:hover{background:#FECACA;border-color:#F87171}
+
+/* ─── Delete confirmation modal ─── */
+.rh-inv-modal{
+  position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.rh-inv-modal[hidden]{display:none !important}
+.rh-inv-modal-card{
+  background:#fff;border-radius:14px;padding:24px 26px;max-width:460px;
+  width:100%;box-shadow:0 20px 60px rgba(15,23,42,.25);position:relative;
+}
+.rh-inv-modal-close{
+  position:absolute;top:10px;inset-inline-start:10px;
+  background:none;border:none;font-size:22px;color:#94A3B8;
+  cursor:pointer;padding:4px 10px;border-radius:6px;
+}
+.rh-inv-modal-close:hover{background:#F1F5F9}
+.rh-inv-modal-card h3{
+  margin:0 0 10px;font-size:17px;color:#B91C1C;font-weight:800;
+  display:flex;align-items:center;gap:8px;
+}
+.rh-inv-modal-card > p{
+  margin:0 0 10px;color:#0F172A;font-size:14px;line-height:1.7;
+}
+.rh-inv-modal-target{
+  background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;
+  padding:10px 12px;font-family:monospace;font-size:12.5px;
+  color:#0F172A;margin:10px 0;
+}
+.rh-inv-progress{margin:12px 0}
+.rh-inv-progress[hidden]{display:none}
+.rh-inv-progress-track{
+  height:6px;background:#E2E8F0;border-radius:999px;overflow:hidden;
+}
+.rh-inv-progress-bar{
+  height:100%;width:0%;background:linear-gradient(90deg,#6B5AED,#3B82F6);
+  border-radius:999px;transition:width .3s ease;
+}
+.rh-inv-progress-msg{
+  text-align:center;color:#475569;font-size:12px;margin:6px 0 0;
+}
+.rh-inv-modal-result{
+  padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;
+}
+.rh-inv-modal-result[hidden]{display:none}
+.rh-inv-modal-result.is-ok{background:#ECFDF5;color:#065F46}
+.rh-inv-modal-result.is-fail{background:#FEF2F2;color:#7F1D1D}
+.rh-inv-modal-actions{
+  display:flex;justify-content:flex-end;gap:8px;margin-top:14px;
+}
+.rh-inv-btn-ghost,.rh-inv-btn-danger{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .12s;border:1px solid;
+}
+.rh-inv-btn-ghost{background:#fff;color:#475569;border-color:#CBD5E1}
+.rh-inv-btn-ghost:hover{background:#F8FAFC}
+.rh-inv-btn-danger{background:#EF4444;color:#fff;border-color:#EF4444}
+.rh-inv-btn-danger:hover{background:#DC2626;border-color:#DC2626}
+.rh-inv-btn-danger[disabled]{background:#94A3B8;border-color:#94A3B8;cursor:not-allowed}
+</style>
+
+<script>
+/* «خدماتي» tab — fetch the inventory, render groups + cards, and
+   wire up the per-item delete modal with a fake progress bar.
+   Lives on the unified router page so it has access to the dashboard
+   wrapper's router id. */
+(function () {
+  "use strict";
+  const root  = document.querySelector("[data-mt-dashboard]");
+  if (!root) return;
+  const routerId = root.dataset.mtRouterId;
+  if (!routerId) return;
+
+  const panel    = root.querySelector('[data-mt-tab-panel="my-services"]');
+  if (!panel) return;
+  const tabBtn   = root.querySelector('[data-mt-tab="my-services"]');
+  const loadingEl= panel.querySelector("[data-rh-inv-loading]");
+  const emptyEl  = panel.querySelector("[data-rh-inv-empty]");
+  const errorEl  = panel.querySelector("[data-rh-inv-error]");
+  const groupsEl = panel.querySelector("[data-rh-inv-groups]");
+  const refreshBtn = panel.querySelector("[data-rh-inv-refresh]");
+
+  const modal    = root.querySelector("[data-rh-inv-modal]");
+  const modalTarget = modal.querySelector("[data-rh-inv-modal-target]");
+  const modalProg = modal.querySelector("[data-rh-inv-progress]");
+  const modalProgBar = modal.querySelector("[data-rh-inv-progress-bar]");
+  const modalProgMsg = modal.querySelector("[data-rh-inv-progress-msg]");
+  const modalResult = modal.querySelector("[data-rh-inv-modal-result]");
+  const modalConfirm = modal.querySelector("[data-rh-inv-modal-confirm]");
+  const modalCancel = modal.querySelector("[data-rh-inv-modal-cancel]");
+  const modalClose = modal.querySelector("[data-rh-inv-modal-close]");
+
+  function token() {
+    const el = document.querySelector('input[name="_csrf_token"]');
+    return (el && el.value) || "";
+  }
+  function safe(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  let loaded = false;
+  async function loadInventory() {
+    loadingEl.hidden = false;
+    emptyEl.hidden   = true;
+    errorEl.hidden   = true;
+    errorEl.textContent = "";
+    groupsEl.innerHTML = "";
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        errorEl.textContent = data.error || `HTTP ${res.status}`;
+        errorEl.hidden = false;
+        return;
+      }
+      const groups = data.groups || [];
+      if (!groups.length) { emptyEl.hidden = false; return; }
+      groupsEl.innerHTML = groups.map(renderGroup).join("");
+      wireDeleteButtons();
+    } catch (err) {
+      errorEl.textContent = String(err && err.message || err);
+      errorEl.hidden = false;
+    } finally {
+      loadingEl.hidden = true;
+      loaded = true;
+    }
+  }
+
+  function renderGroup(g) {
+    const cards = (g.items || []).map((it) => renderCard(g, it)).join("");
+    return `
+      <div class="rh-inv-group">
+        <div class="rh-inv-group-head">
+          <span class="rh-inv-group-icon rh-inv-icon-${safe(g.color)}">
+            <i class="fa-solid fa-${safe(g.icon)}"></i>
+          </span>
+          <h4 class="rh-inv-group-title">${safe(g.title)}</h4>
+          <span class="rh-inv-group-count">${(g.items||[]).length}</span>
+        </div>
+        <div class="rh-inv-cards">${cards}</div>
+      </div>`;
+  }
+
+  function renderCard(g, it) {
+    const sourceTag = it.source === "operator"
+      ? '<span class="rh-inv-source rh-inv-source-op">إعداد يدوي</span>'
+      : '<span class="rh-inv-source rh-inv-source-hr">من البرمجة</span>';
+    const details = Object.entries(it.details || {})
+      .map(([k, v]) => `<dt>${safe(k)}</dt><dd>${safe(v)}</dd>`)
+      .join("");
+    return `
+      <div class="rh-inv-card"
+           data-rh-inv-svc="${safe(g.service_type)}"
+           data-rh-inv-target="${safe(it.target)}"
+           data-rh-inv-label="${safe(it.label)}"
+           data-rh-inv-group-title="${safe(g.title)}">
+        <div class="rh-inv-card-head">
+          <span class="rh-inv-card-label" title="${safe(it.label)}">${safe(it.label)}</span>
+          ${sourceTag}
+        </div>
+        <dl class="rh-inv-details">${details}</dl>
+        <button type="button" class="rh-inv-del">
+          <i class="fa-solid fa-trash"></i> حذف
+        </button>
+      </div>`;
+  }
+
+  let currentCard = null;
+  function openModalFor(card) {
+    currentCard = card;
+    const groupTitle = card.dataset.rhInvGroupTitle;
+    const label      = card.dataset.rhInvLabel;
+    modalTarget.innerHTML =
+      `<strong>${safe(groupTitle)}</strong> · <code>${safe(label)}</code>`;
+    modalProg.hidden = true;
+    modalProgBar.style.width = "0%";
+    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
+    modalResult.hidden = true;
+    modalResult.className = "rh-inv-modal-result";
+    modalResult.textContent = "";
+    modalConfirm.disabled = false;
+    modalConfirm.innerHTML = '<i class="fa-solid fa-trash"></i> نعم، احذف';
+    modal.hidden = false;
+  }
+  function closeModal() {
+    modal.hidden = true;
+    currentCard = null;
+  }
+  function wireDeleteButtons() {
+    groupsEl.querySelectorAll(".rh-inv-del").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".rh-inv-card");
+        if (card) openModalFor(card);
+      });
+    });
+  }
+
+  // Smooth fake progress bar — slides 0→90% over ~1.5s while the
+  // request is in-flight, then jumps to 100% on success.
+  let progressTimer = null;
+  function startProgress() {
+    modalProg.hidden = false;
+    modalProgBar.style.width = "0%";
+    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
+    let val = 5;
+    if (progressTimer) clearInterval(progressTimer);
+    progressTimer = setInterval(() => {
+      val = Math.min(90, val + Math.random() * 8 + 3);
+      modalProgBar.style.width = val + "%";
+      if (val > 40 && val < 60) modalProgMsg.textContent = "جارٍ إرسال أمر الحذف…";
+      if (val > 60 && val < 85) modalProgMsg.textContent = "تأكيد التنفيذ على الراوتر…";
+    }, 180);
+  }
+  function finishProgress(ok, msg) {
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    modalProgBar.style.width = "100%";
+    modalProgBar.style.background = ok
+      ? "linear-gradient(90deg,#10B981,#047857)"
+      : "linear-gradient(90deg,#EF4444,#B91C1C)";
+    modalProgMsg.textContent = ok ? "تم الحذف ✓" : "فشل الحذف";
+    modalResult.hidden = false;
+    modalResult.className = "rh-inv-modal-result " + (ok ? "is-ok" : "is-fail");
+    modalResult.textContent = msg || "";
+  }
+
+  modalConfirm.addEventListener("click", async () => {
+    if (!currentCard) return;
+    const svc = currentCard.dataset.rhInvSvc;
+    const target = currentCard.dataset.rhInvTarget;
+    modalConfirm.disabled = true;
+    modalConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الحذف…';
+    startProgress();
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory/remove`,
+        { method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+          body: JSON.stringify({ service_type: svc, target: target }) }
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        finishProgress(false, data.error || data.stderr || `HTTP ${res.status}`);
+        modalConfirm.disabled = false;
+        modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+        return;
+      }
+      finishProgress(true, "تم حذف العنصر من الراوتر.");
+      // Remove the card from the DOM after a short pause + reload
+      // groups list to reflect new counts.
+      setTimeout(() => {
+        currentCard.style.transition = "opacity .3s, transform .3s";
+        currentCard.style.opacity = "0";
+        currentCard.style.transform = "scale(.92)";
+        setTimeout(() => {
+          closeModal();
+          loadInventory();
+        }, 320);
+      }, 600);
+    } catch (err) {
+      finishProgress(false, String(err && err.message || err));
+      modalConfirm.disabled = false;
+      modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+    }
+  });
+  modalCancel.addEventListener("click", closeModal);
+  modalClose.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  if (refreshBtn) refreshBtn.addEventListener("click", loadInventory);
+
+  // Lazy-load: don't hit the router unless the operator clicks the
+  // tab. Avoids a needless API call on every dashboard open.
+  if (tabBtn) {
+    tabBtn.addEventListener("click", () => {
+      if (!loaded) loadInventory();
+    });
+  }
+})();
+</script>
 
 <script src="{{ url_for('static', filename='js/mt_dashboard.js') }}" defer></script>
 
