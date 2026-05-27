@@ -201,6 +201,23 @@
 - **المشكلة:** قال نجح لكن ما عرض شيء.
 - **الحلّ:** بناء حمولة `connection_info` كاملة في response الـ apply + إعادة استخدامها في الـ inventory.
 
+### 8.6 ⚠️ Site-exit: WG peer `allowed-address` ضيّق جداً (cryptokey routing) — VX2.6e
+- **العَرَض:** بعد VX2.6d، الـ apply ينجح، الـ route صار `As 0.0.0.0/0 hr-wg HOBE_VX2_<id>`، الـ mangle counters تتقدّم (60+ packets على prerouting)، srcnat counters تتقدّم، الـ VPS عنده MASQUERADE + ip_forward صحيح، لكن:
+  - `/tool fetch myip.com` من الراوتر يرجع `Network unreachable`
+  - العملاء على الراوتر ما يقدروا يفتحوا الـ destinations
+- **السبب الجذري:** **WireGuard cryptokey routing**. خاصيّة `allowed-address` على الـ peer تحدّد المجموعة **بالضبط** للـ destinations اللي الـ kernel رح يبعثها لذلك الـ peer. HobeRadius VPN bootstrap بينشئ الـ VPS peer بـ `allowed-address=10.10.0.1/32`، فالـ kernel يرمي **بصمت** كل packet لو dst ≠ `10.10.0.1`. كل الـ destinations العامّة (Cloudflare, etc.) تُرمى قبل أن تدخل الـ tunnel.
+- **التشخيص:** من الراوتر `/interface wireguard peers print` يُظهر `allowed-address = 10.10.0.1/32` للـ peer المُستهدف. على الـ VPS `wg show` يُظهر `transfer: 8.63 MiB received` (الـ tunnel يعمل) لكن الـ MASQUERADE counter ما يرتفع عند محاولة site-exit (لأنّ الترافيك ما وصل للـ VPS أصلاً).
+- **الإصلاح في الـ planner (VX2.6e):**
+  - قسم جديد `wg_peer_ops` يُصدر:
+    ```
+    /interface wireguard peers set [find interface="hr-wg"]
+        allowed-address=0.0.0.0/0
+    ```
+  - Idempotent (تنفيذ مكرّر = no-op).
+  - الـ find narrowed بـ `interface=` فقط peer الـ wg المعنيّ يُعدَّل.
+  - **الأمان:** الـ custom routing table هو اللي يقرّر أي traffic يستعمل الـ peer (فقط marked packets تصل لـ `0.0.0.0/0` داخل `HOBE_VX2_<id>`). توسيع allowed-address يفتح بوّابة WG فقط، بدون توجيه أي traffic لم يكن مُعلَّماً.
+- **Renderer:** أُضيف `kind="set"` كنوع جديد لـ PlanCommand + helper `_render_set()` مع safety guards (يرفض `set` بدون find expression، ويرفض expressions بدون narrow selector مثل `interface=/name=/.id=/comment~`).
+
 ### 8.5 ⚠️ Public-IP «يطبّق لكن ما يغيّر IP» — FastTrack يتجاوز الـ mangle
 - **المشكلة:** بعد التطبيق الناجح، كل القواعد تظهر في الراوتر (route, mangle, srcnat, address-list) — لكن الـ outbound IP لا يتغيّر.
 - **السبب الجذري:**
@@ -347,7 +364,8 @@
 | `2cd870f` | Env: document HOBERADIUS_PUBLIC_HOST in .env.example |
 | `cb5a4b0` | Settings: move public_host to DB (UI editable, no VPS terminal) ← **End-user self-service** |
 | `18784a6` | Added-services: surface debug_script on failure (public-ip, block, open) |
-| `9c3f1b0` | Site-exit: mark-connection + FastTrack bypass ← **حلّ مشكلة «يطبّق ولا يغيّر IP»** |
+| `9c3f1b0` | Site-exit: mark-connection + FastTrack bypass (VX2.6d) |
+| `fc677f8` | Site-exit: WG peer allowed-address widening (VX2.6e) ← **الحلّ النهائي لـ «Network unreachable»** |
 
 ---
 
