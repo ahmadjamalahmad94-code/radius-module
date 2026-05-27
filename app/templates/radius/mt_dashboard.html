@@ -1027,17 +1027,19 @@
     </button>
   </nav>
 
-  {# Status pill — moved here from inside the Overview panel so it's
-     visible regardless of which tab is active. JS keeps the
-     data-mt-status hooks unchanged. #}
-  <div class="mt-tabs-status" data-mt-status>
+  </div>{# /.mt-tabs-row #}
+
+  {# Status pill — kept as a single DOM element (all JS hooks
+     unchanged) but positioned absolutely so it visually floats over
+     the active tab's hero. Operator: «انقلهم بالهيرو تبع الاقسام،
+     لانه حاشر شريط القوائم». #}
+  <div class="mt-tabs-status mt-tabs-status--float" data-mt-status>
     <span class="mt-tabs-status-pill" data-mt-status-pill>
       <span class="dot"></span>
       <span data-mt-status-label>جارٍ الاتصال…</span>
     </span>
     <span class="mt-tabs-status-meta" data-mt-status-meta>—</span>
   </div>
-  </div>{# /.mt-tabs-row #}
 
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
      Wrapped in .rh-overview so the scoped CSS in the head block
