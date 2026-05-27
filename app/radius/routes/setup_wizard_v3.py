@@ -1043,60 +1043,103 @@ def _is_block_sites_entry(comment: str) -> bool:
 
 
 def setup_wizard_v3_hotspot_current(router_id: int):
-    """Read which interfaces already have a Hotspot server running.
-    Returns the list so the partial can pre-tick those boxes —
-    avoids the «I picked ether3, ether2 lost its Hotspot» surprise
-    when the planner's idempotent re-apply wipes-and-rebuilds the
-    full set instead of merging."""
+    """Read which interfaces have a Hotspot server running, plus the
+    subnet that each one serves. Returns both the flat interface
+    list (for pre-tick) AND an `installations` array with per-
+    interface details for the "currently active" panel."""
     from ..db.repos import nas_repo
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
         return _err("الراوتر غير موجود", status=404, code="router_not_found")
     if not nas.api_password:
-        return jsonify({"ok": True, "interfaces": []})
+        return jsonify({"ok": True, "interfaces": [], "installations": []})
     try:
         from ..integration.mikrotik import MikrotikClient
         with MikrotikClient(**_mt_client_for(nas)) as mt:
             servers = list(mt.print_("/ip/hotspot/print"))
-            interfaces = sorted({
-                str(s.get("interface", "") or "").strip()
-                for s in servers
-                if str(s.get("disabled", "")).lower() in ("false", "no", "")
-                and str(s.get("interface", "") or "").strip()
-            })
-        return jsonify({"ok": True, "interfaces": interfaces,
-                        "servers_scanned": len(servers) if servers else 0})
+            addresses = list(mt.print_("/ip/address/print"))
+            # Index addresses by interface for quick lookup
+            addr_by_iface: dict[str, str] = {}
+            for a in addresses:
+                ifn = str(a.get("interface", "") or "").strip()
+                val = str(a.get("address", "") or "").strip()
+                if ifn and val and ifn not in addr_by_iface:
+                    addr_by_iface[ifn] = val
+            installations = []
+            interfaces = set()
+            for s in servers:
+                if str(s.get("disabled", "")).lower() not in ("false", "no", ""):
+                    continue
+                ifn = str(s.get("interface", "") or "").strip()
+                if not ifn:
+                    continue
+                interfaces.add(ifn)
+                installations.append({
+                    "interface": ifn,
+                    "name": str(s.get("name", "") or ""),
+                    "profile": str(s.get("profile", "") or ""),
+                    "address": addr_by_iface.get(ifn, ""),
+                })
+        return jsonify({
+            "ok": True,
+            "interfaces": sorted(interfaces),
+            "installations": installations,
+        })
     except Exception as exc:  # noqa: BLE001
-        return jsonify({"ok": True, "interfaces": [], "warning": str(exc)})
+        return jsonify({"ok": True, "interfaces": [],
+                        "installations": [], "warning": str(exc)})
 
 
 def setup_wizard_v3_broadband_current(router_id: int):
-    """Same as hotspot/current — read /interface/pppoe-server/server
-    so the operator sees pre-ticked the interfaces already serving
-    PPPoE. Without this, picking a single new interface replaces
-    the whole config and they lose existing servers."""
+    """Same idea as hotspot/current — list active PPPoE servers and
+    surface enough detail for the "currently active" panel."""
     from ..db.repos import nas_repo
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
         return _err("الراوتر غير موجود", status=404, code="router_not_found")
     if not nas.api_password:
-        return jsonify({"ok": True, "interfaces": []})
+        return jsonify({"ok": True, "interfaces": [], "installations": []})
     try:
         from ..integration.mikrotik import MikrotikClient
         with MikrotikClient(**_mt_client_for(nas)) as mt:
             servers = list(mt.print_("/interface/pppoe-server/server/print"))
-            interfaces = sorted({
-                str(s.get("interface", "") or "").strip()
-                for s in servers
-                if str(s.get("disabled", "")).lower() in ("false", "no", "")
-                and str(s.get("interface", "") or "").strip()
-            })
-        return jsonify({"ok": True, "interfaces": interfaces,
-                        "servers_scanned": len(servers) if servers else 0})
+            profiles = list(mt.print_("/ppp/profile/print"))
+            pools = list(mt.print_("/ip/pool/print"))
+            pool_ranges = {
+                str(p.get("name", "") or ""): str(p.get("ranges", "") or "")
+                for p in pools
+            }
+            profile_remote = {
+                str(p.get("name", "") or ""): str(p.get("remote-address", "") or "")
+                for p in profiles
+            }
+            installations = []
+            interfaces = set()
+            for s in servers:
+                if str(s.get("disabled", "")).lower() not in ("false", "no", ""):
+                    continue
+                ifn = str(s.get("interface", "") or "").strip()
+                if not ifn:
+                    continue
+                interfaces.add(ifn)
+                profile = str(s.get("default-profile", "") or "")
+                pool = profile_remote.get(profile, "")
+                installations.append({
+                    "interface": ifn,
+                    "name": str(s.get("service-name", "") or ""),
+                    "profile": profile,
+                    "pool_range": pool_ranges.get(pool, ""),
+                })
+        return jsonify({
+            "ok": True,
+            "interfaces": sorted(interfaces),
+            "installations": installations,
+        })
     except Exception as exc:  # noqa: BLE001
-        return jsonify({"ok": True, "interfaces": [], "warning": str(exc)})
+        return jsonify({"ok": True, "interfaces": [],
+                        "installations": [], "warning": str(exc)})
 
 
 def _is_walled_garden_entry(comment: str) -> bool:

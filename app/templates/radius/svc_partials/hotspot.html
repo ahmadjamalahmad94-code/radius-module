@@ -120,7 +120,56 @@
   padding:10px 14px;font-size:13px;margin:10px 0;
 }
 .swhs-error[hidden]{display:none}
+
+/* ─── Active installations panel ─── */
+.swhs-active-panel{
+  background:var(--swsvf-blue-soft);border:1px solid #93C5FD;
+  border-radius:10px;padding:12px 16px;margin:14px 0 18px;
+}
+.swhs-active-panel[hidden]{display:none}
+.swhs-active-head{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;
+}
+.swhs-active-head i{color:#1D4ED8;font-size:14px}
+.swhs-active-head strong{color:#1E3A8A;font-size:13px}
+.swhs-active-head small{
+  color:#475569;font-size:11.5px;
+  flex-basis:100%;margin-top:2px;
+}
+.swhs-active-list{list-style:none;margin:0;padding:0;display:flex;
+  flex-direction:column;gap:6px}
+.swhs-active-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#fff;border:1px solid #BFDBFE;border-radius:8px;
+  padding:8px 12px;font-size:12.5px;
+}
+.swhs-active-row > strong{
+  font-family:monospace;color:var(--swsvf-ink);min-width:80px;
+}
+.swhs-active-row .swhs-active-meta{
+  color:#475569;font-family:monospace;font-size:11.5px;flex:1;
+}
+.swhs-active-remove{
+  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
+  border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;
+  cursor:pointer;transition:all .12s;
+}
+.swhs-active-remove:hover{background:#FECACA;border-color:#F87171}
 </style>
+
+{# ───── Currently-active installations panel ─────
+   Shown only when the router already has Hotspot servers running.
+   Each row shows the interface + its subnet + a «احذف من هذا
+   المدخل» button that auto-unticks the corresponding card in the
+   picker below — operator clicks «التالي» → «إرسال» to commit. #}
+<div class="swhs-active-panel" data-swhs-active-panel hidden>
+  <div class="swhs-active-head">
+    <i class="fa-solid fa-circle-check"></i>
+    <strong>Hotspot مفعَّل حالياً على هذه المنافذ</strong>
+    <small>اضغط «احذف» على أي صف ثم «التالي» → «إرسال» للإيقاف</small>
+  </div>
+  <ul class="swhs-active-list" data-swhs-active-list></ul>
+</div>
 
 {# ───── Section 1: pick interfaces ───── #}
 <div class="swhs-section">
@@ -274,10 +323,10 @@
         throw new Error(data.error || `HTTP ${res.status}`);
       }
       wanInterfaces = data.wan_interfaces || [];
-      // Look up which interfaces ALREADY have a Hotspot server so
-      // they show up pre-ticked. Avoids the «pick one new → lose the
-      // old» surprise the planner causes with idempotent re-apply.
+      // Pre-tick + show active-panel: look up running Hotspots
+      // with their addresses + a per-row delete button.
       let activeInterfaces = [];
+      let activeInstallations = [];
       try {
         const cur = await fetch(
           `/admin/radius/setup-wizard-v3/routers/${routerId}/services/hotspot/current`,
@@ -287,8 +336,12 @@
         if (curData && Array.isArray(curData.interfaces)) {
           activeInterfaces = curData.interfaces;
         }
+        if (curData && Array.isArray(curData.installations)) {
+          activeInstallations = curData.installations;
+        }
       } catch (_) { /* soft-fail */ }
       renderInterfaces(data.interfaces || [], activeInterfaces);
+      renderActivePanel(activeInstallations);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
     } finally {
@@ -342,6 +395,58 @@
       if (card) card.classList.add("is-checked");
     });
     refreshPayload();
+  }
+
+  // Render the «currently active» panel above the picker. Each row
+  // gets a delete button that simply unticks the matching card in
+  // the picker and refreshes the payload — the planner's clean-
+  // replace handles the actual removal on apply.
+  function renderActivePanel(installations) {
+    const panel = page.querySelector("[data-swhs-active-panel]");
+    const list  = page.querySelector("[data-swhs-active-list]");
+    if (!panel || !list) return;
+    if (!installations || !installations.length) {
+      panel.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+    list.innerHTML = installations.map((it) => {
+      const meta = [
+        it.address ? `الشبكة ${it.address}` : "",
+        it.name ? `الخادم ${it.name}` : "",
+        it.profile ? `الملف الشخصي ${it.profile}` : "",
+      ].filter(Boolean).join(" · ");
+      return `
+        <li class="swhs-active-row">
+          <strong>${it.interface}</strong>
+          <span class="swhs-active-meta">${meta || "—"}</span>
+          <button type="button" class="swhs-active-remove"
+                  data-swhs-active-remove="${it.interface}">
+            🗑️ احذف من هذا المدخل
+          </button>
+        </li>`;
+    }).join("");
+    panel.hidden = false;
+    list.querySelectorAll("[data-swhs-active-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const iface = btn.dataset.swhsActiveRemove;
+        // Untick the matching checkbox in the picker — the planner
+        // will clean it up on apply because it's no longer in the
+        // selected_interfaces list.
+        const cb = page.querySelector(
+          `[data-swhs-iface][value="${iface}"]`
+        );
+        if (cb) {
+          cb.checked = false;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        // Visual feedback: cross out the row + disable the button.
+        btn.closest("li").style.opacity = ".5";
+        btn.closest("li").style.textDecoration = "line-through";
+        btn.disabled = true;
+        btn.textContent = "✓ سيُحذف عند الإرسال";
+      });
+    });
   }
 
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);

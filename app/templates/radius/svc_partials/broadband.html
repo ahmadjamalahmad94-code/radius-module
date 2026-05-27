@@ -95,7 +95,51 @@
   padding:10px 14px;font-size:13px;margin:10px 0;
 }
 .swbb-error[hidden]{display:none}
+
+/* ─── Active installations panel ─── */
+.swbb-active-panel{
+  background:var(--swsvf-green-soft);border:1px solid #6EE7B7;
+  border-radius:10px;padding:12px 16px;margin:14px 0 18px;
+}
+.swbb-active-panel[hidden]{display:none}
+.swbb-active-head{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;
+}
+.swbb-active-head i{color:#047857;font-size:14px}
+.swbb-active-head strong{color:#064E3B;font-size:13px}
+.swbb-active-head small{
+  color:#475569;font-size:11.5px;flex-basis:100%;margin-top:2px;
+}
+.swbb-active-list{list-style:none;margin:0;padding:0;display:flex;
+  flex-direction:column;gap:6px}
+.swbb-active-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#fff;border:1px solid #A7F3D0;border-radius:8px;
+  padding:8px 12px;font-size:12.5px;
+}
+.swbb-active-row > strong{
+  font-family:monospace;color:var(--swsvf-ink);min-width:80px;
+}
+.swbb-active-row .swbb-active-meta{
+  color:#475569;font-family:monospace;font-size:11.5px;flex:1;
+}
+.swbb-active-remove{
+  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
+  border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:700;
+  cursor:pointer;transition:all .12s;
+}
+.swbb-active-remove:hover{background:#FECACA;border-color:#F87171}
 </style>
+
+{# ── Currently-active installations panel ── #}
+<div class="swbb-active-panel" data-swbb-active-panel hidden>
+  <div class="swbb-active-head">
+    <i class="fa-solid fa-circle-check"></i>
+    <strong>PPPoE مفعَّل حالياً على هذه المنافذ</strong>
+    <small>اضغط «احذف» على أي صف ثم «التالي» → «إرسال» للإيقاف</small>
+  </div>
+  <ul class="swbb-active-list" data-swbb-active-list></ul>
+</div>
 
 {# ── Section 1: pick interfaces ── #}
 <div class="swbb-section">
@@ -224,9 +268,9 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
       wanInterfaces = data.wan_interfaces || [];
-      // Pre-tick interfaces that already have a PPPoE server so
-      // single-pick re-apply doesn't wipe peers.
+      // Pre-tick + active panel.
       let activeInterfaces = [];
+      let activeInstallations = [];
       try {
         const cur = await fetch(
           `/admin/radius/setup-wizard-v3/routers/${routerId}/services/broadband/current`,
@@ -236,8 +280,12 @@
         if (curData && Array.isArray(curData.interfaces)) {
           activeInterfaces = curData.interfaces;
         }
+        if (curData && Array.isArray(curData.installations)) {
+          activeInstallations = curData.installations;
+        }
       } catch (_) { /* soft-fail */ }
       renderInterfaces(data.interfaces || [], activeInterfaces);
+      renderActivePanel(activeInstallations);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
     } finally {
@@ -285,6 +333,53 @@
     });
     refreshPayload();
   }
+
+  // «حاليّاً مفعَّل» panel — per-row delete unticks the matching
+  // picker checkbox so apply's clean-replace removes the entry.
+  function renderActivePanel(installations) {
+    const panel = page.querySelector("[data-swbb-active-panel]");
+    const list  = page.querySelector("[data-swbb-active-list]");
+    if (!panel || !list) return;
+    if (!installations || !installations.length) {
+      panel.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+    list.innerHTML = installations.map((it) => {
+      const meta = [
+        it.pool_range ? `الـ Pool ${it.pool_range}` : "",
+        it.name ? `الخدمة ${it.name}` : "",
+        it.profile ? `الملف الشخصي ${it.profile}` : "",
+      ].filter(Boolean).join(" · ");
+      return `
+        <li class="swbb-active-row">
+          <strong>${it.interface}</strong>
+          <span class="swbb-active-meta">${meta || "—"}</span>
+          <button type="button" class="swbb-active-remove"
+                  data-swbb-active-remove="${it.interface}">
+            🗑️ احذف من هذا المدخل
+          </button>
+        </li>`;
+    }).join("");
+    panel.hidden = false;
+    list.querySelectorAll("[data-swbb-active-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const iface = btn.dataset.swbbActiveRemove;
+        const cb = page.querySelector(
+          `[data-swbb-iface][value="${iface}"]`
+        );
+        if (cb) {
+          cb.checked = false;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        btn.closest("li").style.opacity = ".5";
+        btn.closest("li").style.textDecoration = "line-through";
+        btn.disabled = true;
+        btn.textContent = "✓ سيُحذف عند الإرسال";
+      });
+    });
+  }
+
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
   [localInput, poolInput].forEach((el) => el && el.addEventListener("input", refreshPayload));
   // Single delegated listener — catches every change event from
