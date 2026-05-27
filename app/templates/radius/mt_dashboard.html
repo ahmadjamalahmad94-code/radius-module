@@ -13,269 +13,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_premium.css') }}">
 <style>
 /* ──────────────────────────────────────────────────────────────
-   Router Hub — full redesign (May 2026)
-   One outer card (.rh-hub) with three internal sections:
-     1. .rh-hub-identity    — router name strip with status pill
-     2. .rh-hub-block       — labeled section for خدمات / الأدوات
-        with .rh-hub-cards grid of .rh-hub-card cards
-   All values use design tokens we own (no Tailwind, no Bootstrap).
-   Border-radius / paddings tuned so everything fits the top half
-   of a 1080p screen.
-   ────────────────────────────────────────────────────────────── */
-.rh-hub{
-  background:#fff;
-  border:1px solid #EAECF0;
-  border-radius:18px;
-  padding:0;                /* sections set their own padding */
-  margin-bottom:16px;
-  overflow:hidden;
-  box-shadow:0 1px 2px rgba(15,23,42,.03);
-}
-
-/* ─── Collapse / expand toggle bar ─── */
-.rh-hub-toggle{
-  width:100%;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:14px 22px;
-  background:linear-gradient(135deg,#FAFAFF 0%,#F4F1FE 100%);
-  border:0;cursor:pointer;text-align:start;
-  border-bottom:1px solid #EEEDF3;
-  transition:background .15s, box-shadow .15s;
-  position:relative;
-}
-.rh-hub-toggle:hover{
-  background:linear-gradient(135deg,#F4F1FE 0%,#EDE9FE 100%);
-  box-shadow:inset 0 -2px 0 #6B5AED;
-}
-/* When the hub is collapsed (default state), nudge the toggle to
-   advertise itself: subtle right-to-left gradient shimmer + a thicker
-   right-edge accent so the operator's eye is drawn to it. */
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle{
-  border-inline-end:4px solid #6B5AED;
-}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle::before{
-  content:"";position:absolute;top:0;bottom:0;
-  inset-inline-start:0;width:60%;
-  background:linear-gradient(90deg,transparent 0%,rgba(107,90,237,.08) 100%);
-  animation:rh-hub-shimmer 3s ease-in-out infinite;
-  pointer-events:none;
-}
-@keyframes rh-hub-shimmer{
-  0%,100%{opacity:.3}
-  50%{opacity:.9}
-}
-@media (prefers-reduced-motion:reduce){
-  .rh-hub[data-rh-collapsed="true"] .rh-hub-toggle::before{animation:none;opacity:.4}
-}
-.rh-hub-toggle-summary{
-  display:flex;align-items:center;gap:12px;min-width:0;
-}
-.rh-hub-toggle-icon{
-  width:36px;height:36px;border-radius:9px;flex-shrink:0;
-  background:linear-gradient(135deg,#6B5AED,#4338CA);color:#fff;
-  display:inline-flex;align-items:center;justify-content:center;font-size:14px;
-}
-.rh-hub-toggle-text{display:flex;flex-direction:column;gap:1px;min-width:0}
-.rh-hub-toggle-text strong{
-  font-size:14px;font-weight:800;color:#0F172A;line-height:1.3;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.rh-hub-toggle-text small{
-  font-size:11.5px;color:#64748B;font-family:monospace;
-}
-.rh-hub-toggle-actions{
-  display:flex;align-items:center;gap:10px;flex-shrink:0;
-}
-.rh-hub-toggle-state{
-  font-size:13px;font-weight:700;color:#475569;
-  padding:6px 14px;border-radius:999px;
-  background:#fff;border:1px solid #E2E8F0;
-  transition:all .15s;
-}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-state{
-  background:linear-gradient(135deg,#6B5AED,#4338CA);
-  color:#fff;border-color:transparent;
-  box-shadow:0 4px 12px rgba(107,90,237,.3);
-}
-.rh-hub-toggle:hover .rh-hub-toggle-state{transform:translateX(-2px)}
-.rh-hub-toggle-chevron{
-  width:32px;height:32px;border-radius:50%;
-  background:#F1F5F9;color:#475569;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:13px;transition:transform .3s ease,background .15s;
-}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{
-  background:#6B5AED;color:#fff;
-  animation:rh-hub-bounce 1.8s ease-in-out infinite;
-}
-@keyframes rh-hub-bounce{
-  0%,100%{transform:translateY(0) rotate(180deg)}
-  50%{transform:translateY(-3px) rotate(180deg)}
-}
-.rh-hub-toggle:hover .rh-hub-toggle-chevron{background:#E2E8F0}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle:hover .rh-hub-toggle-chevron{
-  background:#4338CA;
-}
-@media (prefers-reduced-motion:reduce){
-  .rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{animation:none}
-}
-
-/* ─── Collapsible body ─── */
-.rh-hub-body{
-  max-height:1600px;overflow:hidden;
-  transition:max-height .35s ease;
-}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-body{max-height:0}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle{border-bottom-color:transparent}
-.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{transform:rotate(180deg)}
-@media (prefers-reduced-motion:reduce){
-  .rh-hub-body{transition:none}
-  .rh-hub-toggle-chevron{transition:none}
-}
-
-/* ─── Identity strip ─── */
-.rh-hub-identity{
-  display:flex;align-items:center;gap:16px;
-  padding:20px 24px;
-  background:linear-gradient(135deg,#F8FAFF 0%,#F4F1FE 100%);
-  border-bottom:1px solid #EEEDF3;
-}
-.rh-hub-id-icon{
-  width:54px;height:54px;border-radius:14px;flex-shrink:0;
-  background:linear-gradient(135deg,#6B5AED,#4338CA);color:#fff;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:22px;
-  box-shadow:0 6px 16px rgba(107,90,237,.25);
-}
-.rh-hub-id-text{flex:1;min-width:0}
-.rh-hub-id-text h1{
-  margin:0;font-size:19px;font-weight:800;color:#0F172A;
-  line-height:1.3;letter-spacing:-.01em;
-}
-.rh-hub-id-name{color:#4F46E5}
-.rh-hub-id-meta{
-  margin:5px 0 0;color:#64748B;font-size:12.5px;
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px;line-height:1.6;
-}
-.rh-hub-id-meta i{font-size:11px;color:#94A3B8;margin-inline-end:3px}
-.rh-hub-id-meta code{
-  background:#fff;color:#0F172A;border:1px solid #E2E8F0;
-  padding:1px 7px;border-radius:5px;font-size:12px;font-family:monospace;
-}
-.rh-hub-id-dot{color:#CBD5E1}
-.rh-hub-id-status{flex-shrink:0}
-.rh-hub-status-pill{
-  display:inline-flex;align-items:center;gap:7px;
-  background:#fff;border:1px solid #E2E8F0;border-radius:999px;
-  padding:5px 12px;color:#475569;font-size:12px;font-weight:700;
-}
-.rh-hub-status-dot{
-  width:8px;height:8px;border-radius:50%;background:#94A3B8;
-  animation:rh-hub-pulse 1.6s ease-in-out infinite;
-}
-@keyframes rh-hub-pulse{
-  0%,100%{opacity:.5} 50%{opacity:1}
-}
-
-/* ─── Block (services / tools) ─── */
-.rh-hub-block{padding:18px 24px}
-.rh-hub-block + .rh-hub-block{border-top:1px solid #F1F5F9}
-.rh-hub-block-title{
-  display:flex;align-items:center;gap:8px;
-  margin:0 0 14px;font-size:14px;font-weight:800;color:#0F172A;
-}
-.rh-hub-block-title > i{
-  color:#6B5AED;font-size:14px;
-}
-.rh-hub-block-hint{
-  font-weight:500;color:#94A3B8;font-size:12px;
-  margin-inline-start:auto;
-}
-
-/* ─── Card grids ─── */
-.rh-hub-cards{
-  display:grid;gap:10px;
-}
-.rh-hub-cards--svc{
-  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-}
-.rh-hub-cards--tool{
-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-}
-
-/* ─── Individual card ─── */
-.rh-hub-card{
-  display:flex;align-items:center;gap:12px;
-  padding:12px 14px;
-  background:#fff;border:1px solid #EAECF0;border-radius:12px;
-  text-decoration:none;color:inherit;
-  transition:all .15s;
-  position:relative;
-}
-/* Live status dot — top-end corner. JS sets one of three classes:
-   .is-active (green), .is-inactive (grey), .is-unknown (amber). */
-.rh-hub-card-badge{
-  position:absolute;top:8px;inset-inline-end:10px;
-  width:8px;height:8px;border-radius:50%;
-  background:#CBD5E1;
-  box-shadow:0 0 0 2px #fff;
-}
-.rh-hub-card-badge.is-active{background:#10B981;animation:rh-hub-pulse 1.6s ease-in-out infinite}
-.rh-hub-card-badge.is-inactive{background:#CBD5E1}
-.rh-hub-card-badge.is-unknown{background:#F59E0B}
-.rh-hub-card:hover{
-  border-color:currentColor;
-  transform:translateY(-1px);
-  box-shadow:0 4px 14px rgba(15,23,42,.06);
-}
-.rh-hub-card-icon{
-  width:38px;height:38px;border-radius:10px;color:#fff;flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:16px;
-}
-.rh-hub-card-body{
-  flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;
-}
-.rh-hub-card-body strong{
-  font-size:13.5px;font-weight:800;color:#0F172A;
-  line-height:1.3;
-}
-.rh-hub-card-body small{
-  font-size:11.5px;color:#64748B;line-height:1.5;
-}
-.rh-hub-card-arrow{
-  color:#CBD5E1;font-size:13px;flex-shrink:0;
-  transition:transform .15s,color .15s;
-}
-.rh-hub-card:hover .rh-hub-card-arrow{
-  color:currentColor;transform:translateX(-2px);
-}
-
-/* ─── Per-color card variants ─── */
-.rh-hub-card--blue   { color:#1D4ED8 }
-.rh-hub-card--blue   .rh-hub-card-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.rh-hub-card--green  { color:#047857 }
-.rh-hub-card--green  .rh-hub-card-icon{background:linear-gradient(135deg,#10B981,#047857)}
-.rh-hub-card--red    { color:#B91C1C }
-.rh-hub-card--red    .rh-hub-card-icon{background:linear-gradient(135deg,#EF4444,#B91C1C)}
-.rh-hub-card--teal   { color:#0F766E }
-.rh-hub-card--teal   .rh-hub-card-icon{background:linear-gradient(135deg,#14B8A6,#0F766E)}
-.rh-hub-card--amber  { color:#B45309 }
-.rh-hub-card--amber  .rh-hub-card-icon{background:linear-gradient(135deg,#F59E0B,#B45309)}
-.rh-hub-card--purple { color:#6D28D9 }
-.rh-hub-card--purple .rh-hub-card-icon{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
-.rh-hub-card--slate  { color:#475569 }
-.rh-hub-card--slate  .rh-hub-card-icon{background:linear-gradient(135deg,#94A3B8,#475569)}
-
-/* ─── Responsive — stack on narrow screens ─── */
-@media (max-width:640px){
-  .rh-hub-identity{flex-wrap:wrap}
-  .rh-hub-id-status{flex-basis:100%;display:flex;justify-content:flex-start}
-  .rh-hub-block-hint{display:none}
-  .rh-hub-cards--svc, .rh-hub-cards--tool{grid-template-columns:1fr}
-}
-
-/* ──────────────────────────────────────────────────────────────
    Overview panel — scoped restyle (May 2026)
    Keeps every [data-mt-*] hook intact so mt_dashboard.js fills
    values the same way. Only the visuals change: matching radii,
@@ -730,191 +467,6 @@
          data-mt-api-base="{{ api_base }}"
          data-mt-api-token="{{ api_token }}">
 
-  {# ─── 🔷 Router Hub — collapsible (May 2026) ──────────────────
-     One unified hero with three sections, foldable like a sidebar:
-       • Toggle bar (always visible) — router name + status + chevron
-       • Collapsible body:
-         1. Identity strip
-         2. Services grid (6 cards)
-         3. Tools row (4 cards)
-     Operator's collapse preference persists in localStorage so the
-     state survives navigation between tabs/pages. The toggle animates
-     with a max-height transition (no JS height math). #}
-  <header class="rh-hub" data-rh-collapsed="true" aria-label="مركز الراوتر">
-
-    {# ── Toggle bar (always visible) ── #}
-    {# Default state is COLLAPSED so the live overview body (status,
-       KPIs, traffic, users) is the first thing the operator sees.
-       The hub expands on click and stays open until the page is
-       refreshed/navigated away from. #}
-    <button type="button" class="rh-hub-toggle"
-            data-rh-hub-toggle
-            aria-expanded="false"
-            aria-controls="rh-hub-body">
-      <span class="rh-hub-toggle-summary">
-        <span class="rh-hub-toggle-icon">
-          <i class="fa-solid fa-router"></i>
-        </span>
-        <span class="rh-hub-toggle-text">
-          <strong>{{ nas.name }}</strong>
-          <small>NAS {{ nas.id }} · {{ nas.address }}</small>
-        </span>
-      </span>
-      <span class="rh-hub-toggle-actions">
-        <span class="rh-hub-toggle-state" data-rh-hub-state-label>
-          الخدمات والأدوات
-        </span>
-        <span class="rh-hub-toggle-chevron">
-          <i class="fa-solid fa-chevron-up"></i>
-        </span>
-      </span>
-    </button>
-
-    {# ── Collapsible body ── #}
-    <div class="rh-hub-body" id="rh-hub-body" data-rh-hub-body>
-
-    {# ── Identity strip ─────────────────────────────────────── #}
-    <div class="rh-hub-identity">
-      <div class="rh-hub-id-icon">
-        <i class="fa-solid fa-router"></i>
-      </div>
-      <div class="rh-hub-id-text">
-        <h1>لوحة الراوتر — <span class="rh-hub-id-name">{{ nas.name }}</span></h1>
-        <p class="rh-hub-id-meta">
-          <span><i class="fa-solid fa-hashtag"></i> NAS {{ nas.id }}</span>
-          <span class="rh-hub-id-dot">·</span>
-          <span><i class="fa-solid fa-network-wired"></i> <code>{{ nas.address }}</code></span>
-          <span class="rh-hub-id-dot">·</span>
-          <span><i class="fa-solid fa-clock-rotate-left"></i> تحديث كل 10 ثوانٍ</span>
-        </p>
-      </div>
-      <div class="rh-hub-id-status">
-        {# Visual-only pill — the real status updates happen on the
-           [data-mt-status-pill] / [data-mt-status-label] elements in
-           the overview tab below. Keeping a second pill here in
-           sync would require touching mt_dashboard.js, so this stays
-           static and the operator gets live updates the moment they
-           glance at the overview body. #}
-        <span class="rh-hub-status-pill">
-          <span class="rh-hub-status-dot"></span>
-          <span>راجع التفاصيل أدناه</span>
-        </span>
-      </div>
-    </div>
-
-    {# ── Services section ───────────────────────────────────── #}
-    <section class="rh-hub-block" aria-labelledby="rh-block-services">
-      <h2 class="rh-hub-block-title" id="rh-block-services">
-        <i class="fa-solid fa-screwdriver-wrench"></i>
-        خدمات الراوتر
-        <span class="rh-hub-block-hint">إعداد بنقرات قليلة — بدون أي سكربتات ظاهرة</span>
-      </h2>
-      <div class="rh-hub-cards rh-hub-cards--svc">
-        {% for svc in [
-          {'key': 'hotspot',       'title': 'برمجة Hotspot',     'sub': 'بوابة دخول عامّة بصفحة تسجيل',     'icon': 'wifi',          'color': 'blue'},
-          {'key': 'broadband',     'title': 'برمجة Broadband',   'sub': 'PPPoE — اشتراك ثابت لكل مستخدم',  'icon': 'ethernet',      'color': 'green'},
-          {'key': 'block-sites',   'title': 'حجب المواقع',       'sub': 'منع الوصول لمواقع محدّدة',          'icon': 'ban',           'color': 'red'},
-          {'key': 'open-sites',    'title': 'فتح المواقع',        'sub': 'السماح بمواقع بدون تسجيل دخول',     'icon': 'circle-check',  'color': 'teal'},
-          {'key': 'public-ip',     'title': 'تغيير IP الخروج',  'sub': 'توجيه المشتركين عبر IP عام جديد',   'icon': 'globe',         'color': 'amber'},
-          {'key': 'remote-access', 'title': 'اتصال عن بُعد',      'sub': 'نفق VPN للفنّي لإدارة الراوتر',     'icon': 'key',           'color': 'purple'},
-        ] %}
-        <a class="rh-hub-card rh-hub-card--{{ svc.color }}"
-           data-rh-svc-card="{{ svc.key }}"
-           href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                            router_id=nas.id, service_key=svc.key) }}">
-          <span class="rh-hub-card-icon">
-            <i class="fa-solid fa-{{ svc.icon }}"></i>
-          </span>
-          <span class="rh-hub-card-body">
-            <strong>{{ svc.title }}</strong>
-            <small>{{ svc.sub }}</small>
-          </span>
-          <span class="rh-hub-card-arrow">
-            <i class="fa-solid fa-arrow-left"></i>
-          </span>
-          {# Live status dot — JS fills based on /services-status. #}
-          <span class="rh-hub-card-badge" data-rh-svc-status
-                title="جارٍ الفحص…"></span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-
-    {# ── Tools section ──────────────────────────────────────── #}
-    <section class="rh-hub-block" aria-labelledby="rh-block-tools">
-      <h2 class="rh-hub-block-title" id="rh-block-tools">
-        <i class="fa-solid fa-toolbox"></i>
-        الأدوات
-        <span class="rh-hub-block-hint">أدوات مهمّتها محدّدة — لا تتبع نموذج 4 مراحل</span>
-      </h2>
-      <div class="rh-hub-cards rh-hub-cards--tool">
-        <a class="rh-hub-card rh-hub-card--slate"
-           href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
-          <span class="rh-hub-card-icon"><i class="fa-solid fa-clipboard-check"></i></span>
-          <span class="rh-hub-card-body">
-            <strong>نظرة عامة</strong>
-            <small>حالة + أمان + إجراءات</small>
-          </span>
-          <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
-        </a>
-        <a class="rh-hub-card rh-hub-card--slate"
-           href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
-          <span class="rh-hub-card-icon"><i class="fa-solid fa-palette"></i></span>
-          <span class="rh-hub-card-body">
-            <strong>مصمّم صفحة الدخول</strong>
-            <small>قوالب + نشر</small>
-          </span>
-          <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
-        </a>
-        <a class="rh-hub-card rh-hub-card--slate"
-           href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
-          <span class="rh-hub-card-icon"><i class="fa-solid fa-floppy-disk"></i></span>
-          <span class="rh-hub-card-body">
-            <strong>النسخ الاحتياطية</strong>
-            <small>حفظ + فحص</small>
-          </span>
-          <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
-        </a>
-        <a class="rh-hub-card rh-hub-card--slate"
-           href="{{ url_for('radius.diagnostics') }}">
-          <span class="rh-hub-card-icon"><i class="fa-solid fa-stethoscope"></i></span>
-          <span class="rh-hub-card-body">
-            <strong>تشخيص الفلِيت</strong>
-            <small>سكربتات الإصلاح</small>
-          </span>
-          <span class="rh-hub-card-arrow"><i class="fa-solid fa-arrow-left"></i></span>
-        </a>
-      </div>
-    </section>
-
-    </div>{# /rh-hub-body #}
-  </header>
-
-  {# Inline collapse-toggle script. State is per-session (no
-     localStorage): hub always opens collapsed after a refresh so
-     the live overview body is the first thing the operator sees. #}
-  <script>
-    (function(){
-      const hub = document.querySelector('[data-mt-dashboard] .rh-hub');
-      const toggle = hub && hub.querySelector('[data-rh-hub-toggle]');
-      const body = hub && hub.querySelector('[data-rh-hub-body]');
-      if (!hub || !toggle || !body) return;
-      function applyState(collapsed){
-        hub.dataset.rhCollapsed = String(collapsed);
-        toggle.setAttribute('aria-expanded', String(!collapsed));
-        const label = hub.querySelector('[data-rh-hub-state-label]');
-        if (label) label.textContent = collapsed
-          ? '🛠️ افتح خدمات الراوتر' : '✕ إغلاق الخدمات';
-      }
-      // Initial label matches the default (collapsed).
-      applyState(true);
-      toggle.addEventListener('click', function(){
-        const next = hub.dataset.rhCollapsed !== 'true';
-        applyState(next);
-      });
-    })();
-  </script>
-
   {# Live service-status probe. Fires once on page load (and again
      each time the hub opens) so the chips show 🟢/⚪ before the
      operator clicks anything. Soft-fails — if the router is
@@ -966,15 +518,6 @@
         }
       }
       probeStatus();
-      // Re-probe when the hub is expanded so refresh is fresh.
-      const hub = page.querySelector('.rh-hub');
-      const toggle = hub && hub.querySelector('[data-rh-hub-toggle]');
-      if (toggle) toggle.addEventListener('click', () => {
-        if (hub.dataset.rhCollapsed === 'false') {
-          // Was just opened — re-fetch.
-          probeStatus();
-        }
-      });
     })();
   </script>
 
@@ -1992,10 +1535,10 @@
     </div>
 
     {# ── A) Service management grid — 6 service cards ──────
-         These link to the existing setup_wizard_v3 service flows
-         (same URLs as the Router Hub cards above). The data list
-         is identical to the rh-hub-cards--svc list earlier in this
-         template — kept inline so each tab is self-contained. #}
+         These link to the existing setup_wizard_v3 service flows.
+         The old Router Hub above this tab was removed because its
+         service cards duplicated this list; the 4 tools that used
+         to live there now sit in section C below. #}
     <div class="np-section-head">
       <div>
         <h4>
@@ -2083,6 +1626,67 @@
     </div>
     <div class="rh-inv-error" data-rh-inv-error hidden></div>
     <div class="rh-inv-groups" data-rh-inv-groups></div>
+
+    {# ── C) Tools — moved here from the old Router Hub, which was
+         removed because its service cards duplicated section A.
+         These 4 tools are unique to this page and link out to
+         standalone pages (overview / login designer / backups /
+         fleet diagnostics). #}
+    <div class="np-section-head">
+      <div>
+        <h4>
+          الأدوات
+          <span class="np-section-badge">4</span>
+        </h4>
+        <p>أدوات مهمّتها محدّدة — لا تتبع نموذج 4 مراحل.</p>
+      </div>
+    </div>
+    <div class="np-svc-grid">
+      <a class="np-svc-card np-svc-card--tool"
+         href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
+        <span class="np-svc-icon np-svc-icon--slate">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </span>
+        <h5 class="np-svc-title">نظرة عامة</h5>
+        <p class="np-svc-desc">حالة + أمان + إجراءات</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
+      <a class="np-svc-card np-svc-card--tool"
+         href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
+        <span class="np-svc-icon np-svc-icon--slate">
+          <i class="fa-solid fa-palette"></i>
+        </span>
+        <h5 class="np-svc-title">مصمّم صفحة الدخول</h5>
+        <p class="np-svc-desc">قوالب + نشر</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
+      <a class="np-svc-card np-svc-card--tool"
+         href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
+        <span class="np-svc-icon np-svc-icon--slate">
+          <i class="fa-solid fa-floppy-disk"></i>
+        </span>
+        <h5 class="np-svc-title">النسخ الاحتياطية</h5>
+        <p class="np-svc-desc">حفظ + فحص</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
+      <a class="np-svc-card np-svc-card--tool"
+         href="{{ url_for('radius.diagnostics') }}">
+        <span class="np-svc-icon np-svc-icon--slate">
+          <i class="fa-solid fa-stethoscope"></i>
+        </span>
+        <h5 class="np-svc-title">تشخيص الفلِيت</h5>
+        <p class="np-svc-desc">سكربتات الإصلاح</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
+    </div>
   </section>
 
   {# Delete confirmation modal — shared across all rh-inv cards. #}

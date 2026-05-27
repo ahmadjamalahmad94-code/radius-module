@@ -520,6 +520,9 @@
 .np-svc-icon--amber  { background: linear-gradient(135deg, #FBBF24, #B45309); box-shadow: 0 8px 24px rgba(217, 119, 6, 0.22); }
 .np-svc-icon--red    { background: linear-gradient(135deg, #F87171, #B91C1C); box-shadow: 0 8px 24px rgba(220, 38, 38, 0.22); }
 .np-svc-icon--teal   { background: linear-gradient(135deg, #2DD4BF, #0F766E); box-shadow: 0 8px 24px rgba(20, 184, 166, 0.22); }
+/* Slate — reserved for the «الأدوات» row inside «خدماتي» so tools
+   read as visually distinct from the 6 colourful service cards. */
+.np-svc-icon--slate  { background: linear-gradient(135deg, #94A3B8, #475569); box-shadow: 0 8px 24px rgba(71, 85, 105, 0.22); }
 .np-svc-title {
   margin: 0 0 6px;
   font-size: 16px;
