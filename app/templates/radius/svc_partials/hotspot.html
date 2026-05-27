@@ -274,7 +274,21 @@
         throw new Error(data.error || `HTTP ${res.status}`);
       }
       wanInterfaces = data.wan_interfaces || [];
-      renderInterfaces(data.interfaces || []);
+      // Look up which interfaces ALREADY have a Hotspot server so
+      // they show up pre-ticked. Avoids the «pick one new → lose the
+      // old» surprise the planner causes with idempotent re-apply.
+      let activeInterfaces = [];
+      try {
+        const cur = await fetch(
+          `/admin/radius/setup-wizard-v3/routers/${routerId}/services/hotspot/current`,
+          { headers: { Accept: "application/json" } }
+        );
+        const curData = await cur.json().catch(() => ({}));
+        if (curData && Array.isArray(curData.interfaces)) {
+          activeInterfaces = curData.interfaces;
+        }
+      } catch (_) { /* soft-fail */ }
+      renderInterfaces(data.interfaces || [], activeInterfaces);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
     } finally {
@@ -282,7 +296,9 @@
       discoverBtn.innerHTML = orig;
     }
   }
-  function renderInterfaces(items) {
+  function renderInterfaces(items, activeInterfaces) {
+    activeInterfaces = activeInterfaces || [];
+    const activeSet = new Set(activeInterfaces);
     if (!items.length) {
       ifaceList.innerHTML =
         '<div class="swhs-iface-empty">لم تُكتشَف واجهات صالحة.</div>';
@@ -291,13 +307,18 @@
     }
     ifaceList.innerHTML = items.map((it) => {
       const isWan = !!it.is_wan;
-      const checked = (!isWan && it.recommended) ? "checked" : "";
+      const isActive = activeSet.has(it.name);
+      // Auto-tick: already-running interfaces ALWAYS pre-tick (so
+      // re-apply preserves them). Otherwise fall back to the
+      // planner's `recommended` hint. WAN never pre-ticks.
+      const checked = (!isWan && (isActive || it.recommended)) ? "checked" : "";
       const disabled = isWan ? "disabled" : "";
       const meta = [
         it.type || "",
         it.running ? "يعمل" : "متوقّف",
         it.disabled ? "معطّل" : "",
         isWan ? "🔒 WAN — منفذ الإنترنت" : "",
+        isActive ? "✅ Hotspot مفعَّل حالياً" : "",
       ].filter(Boolean).join(" · ");
       const cls = [
         "swhs-iface-card",

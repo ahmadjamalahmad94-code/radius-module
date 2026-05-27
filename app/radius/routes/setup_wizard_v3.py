@@ -1036,6 +1036,63 @@ def _is_block_sites_entry(comment: str) -> bool:
     )
 
 
+def setup_wizard_v3_hotspot_current(router_id: int):
+    """Read which interfaces already have a Hotspot server running.
+    Returns the list so the partial can pre-tick those boxes —
+    avoids the «I picked ether3, ether2 lost its Hotspot» surprise
+    when the planner's idempotent re-apply wipes-and-rebuilds the
+    full set instead of merging."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "interfaces": []})
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        with MikrotikClient(**_mt_client_for(nas)) as mt:
+            servers = list(mt.print_("/ip/hotspot/print"))
+            interfaces = sorted({
+                str(s.get("interface", "") or "").strip()
+                for s in servers
+                if str(s.get("disabled", "")).lower() in ("false", "no", "")
+                and str(s.get("interface", "") or "").strip()
+            })
+        return jsonify({"ok": True, "interfaces": interfaces,
+                        "servers_scanned": len(servers) if servers else 0})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": True, "interfaces": [], "warning": str(exc)})
+
+
+def setup_wizard_v3_broadband_current(router_id: int):
+    """Same as hotspot/current — read /interface/pppoe-server/server
+    so the operator sees pre-ticked the interfaces already serving
+    PPPoE. Without this, picking a single new interface replaces
+    the whole config and they lose existing servers."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "interfaces": []})
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        with MikrotikClient(**_mt_client_for(nas)) as mt:
+            servers = list(mt.print_("/interface/pppoe-server/server/print"))
+            interfaces = sorted({
+                str(s.get("interface", "") or "").strip()
+                for s in servers
+                if str(s.get("disabled", "")).lower() in ("false", "no", "")
+                and str(s.get("interface", "") or "").strip()
+            })
+        return jsonify({"ok": True, "interfaces": interfaces,
+                        "servers_scanned": len(servers) if servers else 0})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": True, "interfaces": [], "warning": str(exc)})
+
+
 def _is_walled_garden_entry(comment: str) -> bool:
     c = str(comment or "")
     return (
@@ -2495,6 +2552,21 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/current",
         "setup_wizard_v3_open_sites_current",
         setup_wizard_v3_open_sites_current,
+        methods=["GET"],
+    )
+    # Hotspot/Broadband current-state: which interfaces are already
+    # serving each service, so the partial pre-ticks them and a
+    # single-pick replacement doesn't accidentally wipe peers.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/hotspot/current",
+        "setup_wizard_v3_hotspot_current",
+        setup_wizard_v3_hotspot_current,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/broadband/current",
+        "setup_wizard_v3_broadband_current",
+        setup_wizard_v3_broadband_current,
         methods=["GET"],
     )
     # Public-IP (site exit) — helper to list exit nodes + 3 flow endpoints.

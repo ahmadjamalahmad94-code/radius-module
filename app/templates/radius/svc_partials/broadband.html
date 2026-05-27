@@ -224,7 +224,20 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
       wanInterfaces = data.wan_interfaces || [];
-      renderInterfaces(data.interfaces || []);
+      // Pre-tick interfaces that already have a PPPoE server so
+      // single-pick re-apply doesn't wipe peers.
+      let activeInterfaces = [];
+      try {
+        const cur = await fetch(
+          `/admin/radius/setup-wizard-v3/routers/${routerId}/services/broadband/current`,
+          { headers: { Accept: "application/json" } }
+        );
+        const curData = await cur.json().catch(() => ({}));
+        if (curData && Array.isArray(curData.interfaces)) {
+          activeInterfaces = curData.interfaces;
+        }
+      } catch (_) { /* soft-fail */ }
+      renderInterfaces(data.interfaces || [], activeInterfaces);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
     } finally {
@@ -232,20 +245,25 @@
       discoverBtn.innerHTML = orig;
     }
   }
-  function renderInterfaces(items) {
+  function renderInterfaces(items, activeInterfaces) {
+    activeInterfaces = activeInterfaces || [];
+    const activeSet = new Set(activeInterfaces);
     if (!items.length) {
       ifaceList.innerHTML = '<div class="swbb-iface-empty">لم تُكتشَف واجهات صالحة.</div>';
       return;
     }
     ifaceList.innerHTML = items.map((it) => {
       const isWan = !!it.is_wan;
-      const checked = (!isWan && it.recommended) ? "checked" : "";
+      const isActive = activeSet.has(it.name);
+      // Already-serving interfaces auto-tick so re-apply keeps them.
+      const checked = (!isWan && (isActive || it.recommended)) ? "checked" : "";
       const disabled = isWan ? "disabled" : "";
       const meta = [
         it.type || "",
         it.running ? "يعمل" : "متوقّف",
         it.disabled ? "معطّل" : "",
         isWan ? "🔒 WAN — منفذ الإنترنت" : "",
+        isActive ? "✅ PPPoE مفعَّل حالياً" : "",
       ].filter(Boolean).join(" · ");
       const cls = [
         "swbb-iface-card",
