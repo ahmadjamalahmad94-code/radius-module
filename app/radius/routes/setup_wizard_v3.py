@@ -1180,17 +1180,23 @@ def _classify_broadband_source(row: dict) -> str:
 
 
 def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
-    """Inject a HOBERADIUS_SETUP comment for /ip hotspot add and
-    /ip hotspot profile add entries so the inventory tab can later
-    identify them as wizard-managed.
+    """Inject a HOBERADIUS_SETUP comment for /ip hotspot server
+    entries so the inventory tab can later identify them as
+    wizard-managed.
 
-    Strategy: instead of *appending* ``comment="..."`` to the same
-    `add` line (which on RouterOS 7.20.6 trips «expected end of
-    command» after a comma-list value like
-    ``login-by=http-pap,cookie,mac-cookie`` — the parser thinks the
-    command ended), we emit a *separate* ``set`` line right after
-    each add. This keeps the add line short and survives picky
-    parsers across all 7.x revisions.
+    Important: we DO NOT tag /ip hotspot profile entries because
+    RouterOS 7.20.6 (and several other 7.x revisions) does not
+    expose a ``comment`` property on hotspot *profiles* — trying to
+    ``set comment=...`` raises «expected end of command (line N
+    column 59)». Profile entries are still recognised by their
+    ``hsprof-<iface>`` name pattern (see _classify_hotspot_source).
+
+    Strategy for server entries: instead of *appending* ``comment=…``
+    to the same `add` line (which on 7.20.6 also trips the parser
+    after the comma-list ``login-by=http-pap,cookie,mac-cookie``),
+    we emit a *separate* ``set`` line right after each add. This
+    keeps the add line short and survives picky parsers across all
+    7.x revisions.
 
     Idempotent: skips lines that already have ``comment=``.
     """
@@ -1207,18 +1213,17 @@ def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
         stripped = line.lstrip()
         if "comment=" in line:
             continue
-        if stripped.startswith("/ip hotspot profile add "):
-            base = "/ip hotspot profile set"
-        elif stripped.startswith("/ip hotspot add "):
-            base = "/ip hotspot set"
-        else:
+        # Only target /ip hotspot server entries — profile entries
+        # do not support `comment` on RouterOS 7.20.6 and would
+        # raise «expected end of command».
+        if not stripped.startswith("/ip hotspot add "):
             continue
         m = re_name.search(line)
         if not m:
             continue
         name_val = m.group(2) or m.group(3)
         out.append(
-            f'{base} [find where name="{name_val}"] '
+            f'/ip hotspot set [find where name="{name_val}"] '
             f'comment="{tag}"'
         )
     return "\n".join(out)
