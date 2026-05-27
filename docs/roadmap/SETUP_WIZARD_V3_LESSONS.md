@@ -201,6 +201,21 @@
 - **المشكلة:** قال نجح لكن ما عرض شيء.
 - **الحلّ:** بناء حمولة `connection_info` كاملة في response الـ apply + إعادة استخدامها في الـ inventory.
 
+### 8.3 ⚠️ Remote-Access كان يعرض IP الراوتر بدل عنوان VPS
+- **المشكلة:** الـ apply كان يقرأ `/ip cloud` من الراوتر ويعرض الـ public-address الذي تمنحه ISP العميل. لكن أغلب ISPs بيعطو IPs متغيّرة (DHCP / CGNAT)، فالرابط بيصير قديم خلال ساعات.
+- **التصميم الصحيح في الـ codebase أصلاً موجود:**
+  - جدول `npc_remote_port_mappings` بيخصّص منفذ ثابت في النطاق 51000-51199 لكل (راوتر, خدمة).
+  - nginx-stream في الـ VPS يحوّل المنفذ → tunnel WireGuard → الراوتر.
+  - `HOBERADIUS_PUBLIC_HOST` env var يحمل عنوان الـ VPS.
+- **الحلّ في `setup_wizard_v3_remote_access_apply`:**
+  - بعد نجاح سكربت الراوتر، استدعاء `npc_remote_tunnel.ensure_tunnels_for_policy()` يخصّص منفذ لكل خدمة مفعّلة.
+  - `regenerate_and_reload()` يحدّث nginx-stream config.
+  - `compute_remote_access_urls()` يبني روابط جاهزة `https://<VPS-IP>:51001/` للنسخ المباشر.
+  - الـ response صار يحمل `connection.public_host`, `connection.urls[]`, `connection.vpn_address` — الـ `public_address` القديم اختفى لأنّه كان مضلّلاً.
+- **الحلّ في الـ inventory:** يبني policy synth من mappings الموجودة + ينادي نفس `compute_remote_access_urls()` لتظهر روابط VPS في banner «خدماتي» بدون الحاجة لإعادة تشغيل apply.
+- **الواجهة:** تبويب «خدماتي» في `mt_dashboard.html` + بطاقة النجاح في `remote-access.html` صارتا تعرضان `urls[]` per-service مع زر نسخ ذكي ينسخ كل الروابط دفعة وحدة.
+- **متطلّب تشغيلي:** `HOBERADIUS_PUBLIC_HOST` على الـ VPS يجب يحمل الـ IP/hostname العام. لو فاضي، تراجع إلى `nas.address` (الـ WG tunnel IP) — يصلح من داخل الـ VPN فقط.
+
 ---
 
 ## 9) خدماتي (Inventory & Delete UI)
@@ -304,6 +319,8 @@
 | `f1f9525` | Hotspot: quote `login-by` comma-list to survive script-mode parser ← **حلّ ترَب Hotspot نهائياً** |
 | `5e17e86` | Docs: comprehensive lessons-learned for Setup Wizard v3 |
 | `69f5e1e` | Broadband: scope cleanup per-interface (fix replacement bug) ← **حلّ مشكلة الاستبدال** |
+| `fc0f1ce` | Docs: log broadband replacement bug + per-interface cleanup fix |
+| `39600b1` | Remote-access: surface VPS host:port (not router public IP) ← **حلّ مشكلة IP المتغيّر** |
 
 ---
 
