@@ -637,14 +637,16 @@ def setup_wizard_v3_broadband_preview(router_id: int):
     body = _body() or {}
     # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
     # local_address + remote_pool_cidr (raises if either is empty).
-    # The form's placeholder values are 10.30.0.1/32 and 10.30.1.0/24;
-    # use them as defaults so an operator who hits «التالي» without
-    # touching the optional fields gets a working plan rather than
-    # an inscrutable «اختر واجهة» error from the mapped trap.
+    # IMPORTANT: local_address is a single IPv4 HOST (validated by
+    # ipaddress.IPv4Address which rejects /xx prefixes), while
+    # remote_pool_cidr is an IPv4 NETWORK (CIDR). Earlier defaults
+    # of "10.30.0.1/32" tripped the host-only validator and the
+    # error was mistranslated to «no interface selected» by the
+    # mapper's keyword fallback.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
         "local_address": (str(body.get("local_address") or "").strip()
-                          or "10.30.0.1/32"),
+                          or "10.30.0.1"),
         "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
                              or "10.30.1.0/24"),
         "mode": "manual",
@@ -681,14 +683,16 @@ def setup_wizard_v3_broadband_apply(router_id: int):
     body = _body() or {}
     # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
     # local_address + remote_pool_cidr (raises if either is empty).
-    # The form's placeholder values are 10.30.0.1/32 and 10.30.1.0/24;
-    # use them as defaults so an operator who hits «التالي» without
-    # touching the optional fields gets a working plan rather than
-    # an inscrutable «اختر واجهة» error from the mapped trap.
+    # IMPORTANT: local_address is a single IPv4 HOST (validated by
+    # ipaddress.IPv4Address which rejects /xx prefixes), while
+    # remote_pool_cidr is an IPv4 NETWORK (CIDR). Earlier defaults
+    # of "10.30.0.1/32" tripped the host-only validator and the
+    # error was mistranslated to «no interface selected» by the
+    # mapper's keyword fallback.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
         "local_address": (str(body.get("local_address") or "").strip()
-                          or "10.30.0.1/32"),
+                          or "10.30.0.1"),
         "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
                              or "10.30.1.0/24"),
         "mode": "manual",

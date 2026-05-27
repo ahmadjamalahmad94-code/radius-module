@@ -123,17 +123,21 @@
 <div class="swbb-section">
   <div class="swbb-section-title">عناوين الاشتراك (اختياري)</div>
   <p class="swbb-help">
-    اتركها فارغة لاستخدام الإعدادات الافتراضيّة (10.30.0.1/32 للخادم،
+    اتركها فارغة لاستخدام الإعدادات الافتراضيّة (10.30.0.1 للخادم،
     10.30.1.0/24 للمشتركين). عدّلها فقط لو في تعارض مع شبكة أخرى.
   </p>
   <div class="swbb-fields">
     <label>
-      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">عنوان الخادم (Local)</small>
+      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">
+        عنوان الخادم (Local) — IP فقط
+      </small>
       <input type="text" class="swbb-input" data-swbb-local
-             placeholder="10.30.0.1/32">
+             placeholder="10.30.0.1">
     </label>
     <label>
-      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">نطاق المشتركين (Pool)</small>
+      <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">
+        نطاق المشتركين (Pool) — CIDR
+      </small>
       <input type="text" class="swbb-input" data-swbb-pool
              placeholder="10.30.1.0/24">
     </label>
