@@ -595,7 +595,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   const revokeConfirm= page.querySelector("[data-swsvf-revoke-confirm]");
   const revokeResult = page.querySelector("[data-swsvf-revoke-result]");
   function token() {
-    const el = document.querySelector('input[name="csrf_token"]');
+    const el = document.querySelector('input[name="_csrf_token"]');
     return (el && el.value) || "";
   }
   if (revokeBtn && revokeModal) {

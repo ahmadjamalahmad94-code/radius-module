@@ -113,7 +113,7 @@
   const formError = page.querySelector("[data-swhs-form-error]");
 
   function token() {
-    const el = document.querySelector('input[name="csrf_token"]');
+    const el = document.querySelector('input[name="_csrf_token"]');
     return (el && el.value) || "";
   }
   function showError(msg) {

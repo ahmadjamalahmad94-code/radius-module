@@ -68,7 +68,7 @@ hotel.local
   const formError = page.querySelector("[data-swop-form-error]");
 
   function token() {
-    const el = document.querySelector('input[name="csrf_token"]');
+    const el = document.querySelector('input[name="_csrf_token"]');
     return (el && el.value) || "";
   }
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }

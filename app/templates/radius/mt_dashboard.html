@@ -35,12 +35,37 @@
 .rh-hub-toggle{
   width:100%;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:12px 20px;
-  background:#fff;border:0;cursor:pointer;text-align:start;
+  padding:14px 22px;
+  background:linear-gradient(135deg,#FAFAFF 0%,#F4F1FE 100%);
+  border:0;cursor:pointer;text-align:start;
   border-bottom:1px solid #EEEDF3;
-  transition:background .12s;
+  transition:background .15s, box-shadow .15s;
+  position:relative;
 }
-.rh-hub-toggle:hover{background:#FAFAFC}
+.rh-hub-toggle:hover{
+  background:linear-gradient(135deg,#F4F1FE 0%,#EDE9FE 100%);
+  box-shadow:inset 0 -2px 0 #6B5AED;
+}
+/* When the hub is collapsed (default state), nudge the toggle to
+   advertise itself: subtle right-to-left gradient shimmer + a thicker
+   right-edge accent so the operator's eye is drawn to it. */
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle{
+  border-inline-end:4px solid #6B5AED;
+}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle::before{
+  content:"";position:absolute;top:0;bottom:0;
+  inset-inline-start:0;width:60%;
+  background:linear-gradient(90deg,transparent 0%,rgba(107,90,237,.08) 100%);
+  animation:rh-hub-shimmer 3s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes rh-hub-shimmer{
+  0%,100%{opacity:.3}
+  50%{opacity:.9}
+}
+@media (prefers-reduced-motion:reduce){
+  .rh-hub[data-rh-collapsed="true"] .rh-hub-toggle::before{animation:none;opacity:.4}
+}
 .rh-hub-toggle-summary{
   display:flex;align-items:center;gap:12px;min-width:0;
 }
@@ -61,15 +86,38 @@
   display:flex;align-items:center;gap:10px;flex-shrink:0;
 }
 .rh-hub-toggle-state{
-  font-size:12px;font-weight:600;color:#475569;
+  font-size:13px;font-weight:700;color:#475569;
+  padding:6px 14px;border-radius:999px;
+  background:#fff;border:1px solid #E2E8F0;
+  transition:all .15s;
 }
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-state{
+  background:linear-gradient(135deg,#6B5AED,#4338CA);
+  color:#fff;border-color:transparent;
+  box-shadow:0 4px 12px rgba(107,90,237,.3);
+}
+.rh-hub-toggle:hover .rh-hub-toggle-state{transform:translateX(-2px)}
 .rh-hub-toggle-chevron{
-  width:28px;height:28px;border-radius:50%;
+  width:32px;height:32px;border-radius:50%;
   background:#F1F5F9;color:#475569;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:11px;transition:transform .3s ease,background .15s;
+  font-size:13px;transition:transform .3s ease,background .15s;
+}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{
+  background:#6B5AED;color:#fff;
+  animation:rh-hub-bounce 1.8s ease-in-out infinite;
+}
+@keyframes rh-hub-bounce{
+  0%,100%{transform:translateY(0) rotate(180deg)}
+  50%{transform:translateY(-3px) rotate(180deg)}
 }
 .rh-hub-toggle:hover .rh-hub-toggle-chevron{background:#E2E8F0}
+.rh-hub[data-rh-collapsed="true"] .rh-hub-toggle:hover .rh-hub-toggle-chevron{
+  background:#4338CA;
+}
+@media (prefers-reduced-motion:reduce){
+  .rh-hub[data-rh-collapsed="true"] .rh-hub-toggle-chevron{animation:none}
+}
 
 /* ─── Collapsible body ─── */
 .rh-hub-body{
@@ -544,7 +592,7 @@
         toggle.setAttribute('aria-expanded', String(!collapsed));
         const label = hub.querySelector('[data-rh-hub-state-label]');
         if (label) label.textContent = collapsed
-          ? 'افتح الخدمات والأدوات' : 'الخدمات والأدوات';
+          ? '🛠️ افتح خدمات الراوتر' : '✕ إغلاق الخدمات';
       }
       // Initial label matches the default (collapsed).
       applyState(true);
