@@ -1180,53 +1180,31 @@ def _classify_broadband_source(row: dict) -> str:
 
 
 def _hotspot_post_process_script(script: str, *, router_id: int) -> str:
-    """Inject a HOBERADIUS_SETUP comment for /ip hotspot server
-    entries so the inventory tab can later identify them as
-    wizard-managed.
+    """No-op for hotspot scripts.
 
-    Important: we DO NOT tag /ip hotspot profile entries because
-    RouterOS 7.20.6 (and several other 7.x revisions) does not
-    expose a ``comment`` property on hotspot *profiles* — trying to
-    ``set comment=...`` raises «expected end of command (line N
-    column 59)». Profile entries are still recognised by their
-    ``hsprof-<iface>`` name pattern (see _classify_hotspot_source).
+    History: we previously tried to inject a HOBERADIUS_SETUP comment
+    onto /ip hotspot (server) and /ip hotspot profile entries so the
+    «خدماتي» inventory tab could distinguish wizard-managed rows from
+    operator-manual ones. RouterOS 7.20.6 turns out to expose NO
+    ``comment`` property on either entry type — every attempt to
+    ``set comment=...`` raised «expected end of command» right at the
+    ``c`` of ``comment``.
 
-    Strategy for server entries: instead of *appending* ``comment=…``
-    to the same `add` line (which on 7.20.6 also trips the parser
-    after the comma-list ``login-by=http-pap,cookie,mac-cookie``),
-    we emit a *separate* ``set`` line right after each add. This
-    keeps the add line short and survives picky parsers across all
-    7.x revisions.
+    Verified failures from a real router:
+      - line 47 col 59 → /ip hotspot profile set [...] comment="..."
+      - line 49 col 52 → /ip hotspot         set [...] comment="..."
 
-    Idempotent: skips lines that already have ``comment=``.
+    Resolution: don't try. The inventory classifier already has a
+    name-pattern fallback (``_classify_hotspot_source``) that
+    recognises ``hotspot-<iface>`` / ``hsprof-<iface>`` as
+    wizard-managed regardless of comment state, so dropping the
+    tagging is harmless.
+
+    Keeping the function in place (rather than removing it from the
+    call site) so the apply route's seam stays stable in case a
+    future RouterOS revision exposes a comment-like field we can use.
     """
-    import re as _re
-
-    tag = f"HOBERADIUS_SETUP:{router_id}:hotspot"
-    # match /ip hotspot add ... name=<value> (value may be bare or
-    # quoted); we need the name to anchor the follow-up `set`.
-    re_name = _re.compile(r"\bname=(\"([^\"]+)\"|(\S+))")
-
-    out: list[str] = []
-    for line in script.split("\n"):
-        out.append(line)
-        stripped = line.lstrip()
-        if "comment=" in line:
-            continue
-        # Only target /ip hotspot server entries — profile entries
-        # do not support `comment` on RouterOS 7.20.6 and would
-        # raise «expected end of command».
-        if not stripped.startswith("/ip hotspot add "):
-            continue
-        m = re_name.search(line)
-        if not m:
-            continue
-        name_val = m.group(2) or m.group(3)
-        out.append(
-            f'/ip hotspot set [find where name="{name_val}"] '
-            f'comment="{tag}"'
-        )
-    return "\n".join(out)
+    return script
 
 
 def setup_wizard_v3_router_inventory(router_id: int):
