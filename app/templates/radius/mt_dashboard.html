@@ -1750,24 +1750,14 @@
     <div class="rh-inv-groups" data-rh-inv-groups></div>
   </section>
 
-  {# ─── «النسخ الاحتياطية» tab ── O7 backup management ───── #}
+  {# ─── «النسخ الاحتياطية» tab — minimal save + restore ────── #}
   <section class="mt-tab-panel rh-backups"
            data-mt-tab-panel="backups" role="tabpanel" hidden>
-    <div class="rh-bk-hero">
-      <div class="rh-bk-hero-glow" aria-hidden="true"></div>
-      <div class="rh-bk-hero-copy">
-        <span class="rh-bk-kicker">
-          <i class="fa-solid fa-floppy-disk"></i>
-          نسخ احتياطية + تفاصيل
-        </span>
-        <h3>النسخ الاحتياطية لهذا الراوتر</h3>
-        <p>
-          كل عمليّة «حفظ نسخة احتياطية» تُسجِّل manifest تفصيلي
-          (الخدمات، الواجهات، WireGuard…) حتى تعرف ماذا كان مُهيَّأً
-          وقت النسخة. يمكنك استعادة أيّ نسخة من هنا — الراوتر
-          سيُعيد التشغيل تلقائياً.
-        </p>
-      </div>
+    <div class="rh-bk-simple-head">
+      <h3>
+        <i class="fa-solid fa-floppy-disk"></i>
+        النسخ الاحتياطية لهذا الراوتر
+      </h3>
       <button type="button" class="rh-bk-refresh" data-rh-bk-refresh
               title="تحديث">
         <i class="fa-solid fa-rotate"></i>
@@ -1777,7 +1767,7 @@
 
     <div class="rh-bk-loading" data-rh-bk-loading>
       <i class="fa-solid fa-spinner fa-spin"></i>
-      <span>جارٍ قراءة سِجل النسخ الاحتياطية…</span>
+      <span>جارٍ التحميل…</span>
     </div>
     <div class="rh-bk-empty" data-rh-bk-empty hidden>
       <i class="fa-solid fa-circle-info"></i>
@@ -2267,8 +2257,20 @@
 .mt-page-hero--slate  .mt-page-hero-glow{background:radial-gradient(circle,rgba(148,163,184,.30),transparent 60%);}
 .mt-page-hero--slate  .mt-page-hero-kicker{color:#334155;border-color:rgba(100,116,139,.24);}
 
-/* ─── «النسخ الاحتياطية» tab styling ───────────────────────── */
+/* ─── «النسخ الاحتياطية» tab — minimal styling ──────────────
+   Operator: «عالفاضي خليه بس يحفظ النسخ الاحتياطية الي بتنتشا
+   ويرجعها بس». Stripped the animated hero + manifest expander
+   block; what remains is just title + list + restore/delete. */
 .rh-backups{padding:0 !important}
+.rh-bk-simple-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin:0 0 16px;padding:0 4px;
+}
+.rh-bk-simple-head h3{
+  margin:0;font-size:18px;font-weight:800;color:#0F172A;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.rh-bk-simple-head h3 i{color:#7C3AED;font-size:16px}
 .rh-bk-hero{
   position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:space-between;
@@ -3035,13 +3037,9 @@
   }
 
   function renderCard(b) {
-    const where = b.router_status === "on_router"
-      ? '<span style="color:#10B981">● على الراوتر</span>'
-      : '<span style="color:#94A3B8">على HobeRadius فقط</span>';
     const restored = b.restored_at
       ? `<div class="rh-bk-card-when" style="color:#92400E">
            ⟲ تمّت الاستعادة: ${safe(arDate(b.restored_at))}
-           ${b.restored_by ? ' (' + safe(b.restored_by) + ')' : ''}
          </div>`
       : '';
     return `
@@ -3052,9 +3050,7 @@
           </span>
           <div class="rh-bk-card-body-head">
             <span class="rh-bk-card-name">${safe(b.router_filename || b.filename || b.name)}</span>
-            <span class="rh-bk-card-when">
-              ${safe(arDate(b.created_at))} · ${where}
-            </span>
+            <span class="rh-bk-card-when">${safe(arDate(b.created_at))}</span>
             ${restored}
           </div>
           <div class="rh-bk-card-actions">
@@ -3068,152 +3064,15 @@
             </button>
           </div>
         </div>
-        ${b.manifest_summary ? `
-          <div class="rh-bk-card-summary">
-            <strong>ما كان مُهيَّأً:</strong> ${safe(b.manifest_summary)}
-          </div>` : ""}
-        <div class="rh-bk-manifest"
-             data-rh-bk-manifest-host="${safe(b.id)}">
-          <div class="rh-bk-mf-empty">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            جارٍ تحميل التفاصيل…
-          </div>
-        </div>
-        <button type="button" class="rh-bk-toggle"
-                data-rh-bk-toggle="${safe(b.id)}">
-          عرض التفاصيل الكاملة ↓
-        </button>
       </div>`;
   }
 
-  function renderManifest(m) {
-    if (!m || typeof m !== "object") {
-      return '<div class="rh-bk-mf-empty">لا توجد تفاصيل.</div>';
-    }
-    const r = m.router || {};
-    const counts = [];
-    if (m.hotspot_servers && m.hotspot_servers.length)
-      counts.push({ k:"Hotspot", v:m.hotspot_servers.length });
-    if (m.hotspot_profiles && m.hotspot_profiles.length)
-      counts.push({ k:"بروفايلات Hotspot", v:m.hotspot_profiles.length });
-    if (m.broadband_servers && m.broadband_servers.length)
-      counts.push({ k:"Broadband", v:m.broadband_servers.length });
-    if (m.ppp_profiles && m.ppp_profiles.length)
-      counts.push({ k:"بروفايلات PPP", v:m.ppp_profiles.length });
-    if (m.dhcp_servers && m.dhcp_servers.length)
-      counts.push({ k:"DHCP", v:m.dhcp_servers.length });
-    if (m.firewall && m.firewall.filter_rules)
-      counts.push({ k:"Filter", v:m.firewall.filter_rules });
-    if (m.firewall && m.firewall.nat_rules)
-      counts.push({ k:"NAT", v:m.firewall.nat_rules });
-    if (m.firewall && m.firewall.mangle_rules)
-      counts.push({ k:"Mangle", v:m.firewall.mangle_rules });
-    if (m.firewall && m.firewall.address_lists)
-      counts.push({ k:"AL entries", v:m.firewall.address_lists });
-    if (m.wireguard && m.wireguard.peers_count)
-      counts.push({ k:"WG peers", v:m.wireguard.peers_count });
-    if (m.sessions && m.sessions.hotspot_active)
-      counts.push({ k:"Hotspot نشطة", v:m.sessions.hotspot_active });
-    if (m.sessions && m.sessions.ppp_active)
-      counts.push({ k:"PPP نشطة", v:m.sessions.ppp_active });
-
-    return `
-      <div class="rh-bk-mf-section">
-        <h5>الراوتر</h5>
-        <dl class="rh-bk-mf-kv">
-          <dt>الاسم</dt>   <dd>${safe(r.name || "—")}</dd>
-          <dt>الإصدار</dt> <dd>${safe(r.version || "—")}</dd>
-          <dt>الموديل</dt> <dd>${safe(r.model || r.board || "—")}</dd>
-          ${r.serial ? `<dt>السيريال</dt><dd>${safe(r.serial)}</dd>` : ""}
-          ${r.uptime ? `<dt>Uptime</dt><dd>${safe(r.uptime)}</dd>` : ""}
-          ${r.vpn_address ? `<dt>عنوان VPN</dt><dd>${safe(r.vpn_address)}</dd>` : ""}
-          ${m.captured_at ? `<dt>وقت اللقطة على الراوتر</dt><dd>${safe(m.captured_at)}</dd>` : ""}
-        </dl>
-      </div>
-      ${counts.length ? `
-        <div class="rh-bk-mf-section">
-          <h5>إحصائيات سريعة</h5>
-          <div class="rh-bk-mf-counts">
-            ${counts.map(c => `<span class="rh-bk-mf-count">${safe(c.k)}: <strong>${safe(c.v)}</strong></span>`).join("")}
-          </div>
-        </div>` : ""}
-      ${m.hotspot_servers && m.hotspot_servers.length ? `
-        <div class="rh-bk-mf-section">
-          <h5>خوادم Hotspot</h5>
-          <ul class="rh-bk-mf-list">
-            ${m.hotspot_servers.map(s => `
-              <li>${safe(s.name)} على <strong>${safe(s.interface)}</strong>
-                  ← profile=${safe(s.profile)}, pool=${safe(s.pool)}</li>
-            `).join("")}
-          </ul>
-        </div>` : ""}
-      ${m.broadband_servers && m.broadband_servers.length ? `
-        <div class="rh-bk-mf-section">
-          <h5>خوادم Broadband (PPPoE)</h5>
-          <ul class="rh-bk-mf-list">
-            ${m.broadband_servers.map(s => `
-              <li>${safe(s.service_name)} على <strong>${safe(s.interface)}</strong>
-                  ← profile=${safe(s.default_profile)}</li>
-            `).join("")}
-          </ul>
-        </div>` : ""}
-      ${m.ip_addresses && m.ip_addresses.length ? `
-        <div class="rh-bk-mf-section">
-          <h5>عناوين IP</h5>
-          <ul class="rh-bk-mf-list">
-            ${m.ip_addresses.map(a => `<li>${safe(a.address)} على ${safe(a.interface)}</li>`).join("")}
-          </ul>
-        </div>` : ""}
-      ${m.wireguard && m.wireguard.interfaces && m.wireguard.interfaces.length ? `
-        <div class="rh-bk-mf-section">
-          <h5>WireGuard</h5>
-          <ul class="rh-bk-mf-list">
-            ${m.wireguard.interfaces.map(w => `<li>${safe(w.name)} (listen=${safe(w.listen_port)})</li>`).join("")}
-          </ul>
-        </div>` : ""}
-    `;
-  }
-
-  async function loadManifest(backupId, hostEl) {
-    try {
-      const { res, body } = await apiGet(
-        `/mikrotik/${routerId}/backups/${backupId}/manifest`);
-      if (!res.ok || !body || body.ok === false) {
-        hostEl.innerHTML = `<div class="rh-bk-mf-empty">
-          تعذّر تحميل التفاصيل: ${safe((body && body.error) || res.status)}
-        </div>`;
-        return;
-      }
-      const data = body.data || body;
-      hostEl.innerHTML = renderManifest(data.manifest);
-    } catch (err) {
-      hostEl.innerHTML = `<div class="rh-bk-mf-empty">
-        خطأ في الشبكة: ${safe(err.message || err)}
-      </div>`;
-    }
-  }
+  // Manifest renderer + loader removed: operator said «عالفاضي
+  // — خليه بس يحفظ النسخ الاحتياطية الي بتنتشا ويرجعها بس».
+  // The backend route /backups/<id>/manifest is left registered
+  // as dead code; we just stopped calling it from the UI.
 
   function wireCardActions() {
-    listEl.querySelectorAll("[data-rh-bk-toggle]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.rhBkToggle;
-        const card = btn.closest(".rh-bk-card");
-        if (!card) return;
-        const opening = !card.classList.contains("is-open");
-        card.classList.toggle("is-open", opening);
-        btn.textContent = opening
-          ? "إخفاء التفاصيل ↑"
-          : "عرض التفاصيل الكاملة ↓";
-        if (opening) {
-          const host = card.querySelector(`[data-rh-bk-manifest-host="${id}"]`);
-          if (host && !host.dataset.loaded) {
-            await loadManifest(id, host);
-            host.dataset.loaded = "1";
-          }
-        }
-      });
-    });
-
     listEl.querySelectorAll("[data-rh-bk-restore]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.rhBkRestore;
