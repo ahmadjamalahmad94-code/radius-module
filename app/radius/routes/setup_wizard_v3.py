@@ -106,6 +106,76 @@ def _err(msg: str, status: int = 400, code: str = "v3_error"):
     }), status
 
 
+def _infer_fail_stage(exec_result) -> str:
+    """Classify a failed ExecutionResult into one of the three
+    progress stages the UI shows: connect / send / commit.
+
+    The router executor returns a single ``ok=False`` regardless of
+    whether the failure was at the TCP/auth layer, refusing-to-send
+    layer, or a RouterOS trap from the script body itself. The UI
+    pretends these are separate substeps for the operator's mental
+    model, so we infer the stage from the error text rather than
+    marking all three as failed at once (which is misleading)."""
+    text = " ".join([
+        (exec_result.error_message or ""),
+        (exec_result.stderr or ""),
+    ]).lower()
+
+    # ── stage 1: connect ── (couldn't even reach the router)
+    connect_markers = (
+        "not found in nas_devices",
+        "no api credentials",
+        "connecterror",
+        "autherror",
+        "timed out",
+        "timeout",
+        "connection refused",
+        "unreachable",
+        "no route to host",
+        "name or service not known",
+        "executor not configured",
+        "executornotconfigured",
+        "network is unreachable",
+    )
+    if any(m in text for m in connect_markers):
+        return "connect"
+
+    # ── stage 2: send ── (connected but refused to ship the script)
+    send_markers = (
+        "refusing to execute empty",
+        "exceeds max size",
+        "script create rejected",
+        "refusing to send",
+    )
+    if any(m in text for m in send_markers):
+        return "send"
+
+    # ── stage 3: commit ── (script reached RouterOS and was rejected)
+    # Default — this is the «trap» case (expected end of command,
+    # no such item, invalid value, etc.). Most failures land here.
+    return "commit"
+
+
+def _build_fail_substeps(fail_stage: str) -> list[dict]:
+    """Return the substeps list for the JSON apply-failure response.
+    Stages before ``fail_stage`` are marked done, ``fail_stage`` is
+    marked failed, and any stage after it stays pending so the UI
+    can render «−» instead of «✗» for steps we never attempted."""
+    order = ("connect", "send", "commit")
+    out = []
+    seen_fail = False
+    for key in order:
+        if key == fail_stage:
+            status = "failed"
+            seen_fail = True
+        elif seen_fail:
+            status = "pending"
+        else:
+            status = "done"
+        out.append({"key": key, "status": status})
+    return out
+
+
 # ─── Handlers ───────────────────────────────────────────────
 
 
@@ -516,11 +586,14 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
                     status=500, code="apply_error")
 
     if not exec_result.ok:
+        fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            "fail_stage": fail_stage,
+            "substeps": _build_fail_substeps(fail_stage),
             # Surface the exact post-processed script so the operator
             # can copy it into MikroTik Terminal to find the trap.
             "debug_script": script_to_send,
@@ -815,11 +888,14 @@ def setup_wizard_v3_broadband_apply(router_id: int):
         return _err(f"خطأ غير متوقّع: {exc}",
                     status=500, code="apply_error")
     if not exec_result.ok:
+        fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            "fail_stage": fail_stage,
+            "substeps": _build_fail_substeps(fail_stage),
             # Surface the exact post-processed script so the operator
             # can copy it into MikroTik Terminal and find the offending
             # line by hand. Only exposed on failure — never on success.
@@ -1008,11 +1084,14 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
         return _err(f"خطأ غير متوقّع: {exc}",
                     status=500, code="apply_error")
     if not exec_result.ok:
+        fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            "fail_stage": fail_stage,
+            "substeps": _build_fail_substeps(fail_stage),
         }), 502
     return jsonify({
         "ok": True,
@@ -2011,11 +2090,14 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
         return _err(f"خطأ غير متوقّع: {exc}",
                     status=500, code="apply_error")
     if not exec_result.ok:
+        fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
             "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
+            "fail_stage": fail_stage,
+            "substeps": _build_fail_substeps(fail_stage),
         }), 502
     # Build the connection-info payload the partial uses to show
     # the tech where to point Winbox/SSH/WebFig. Try to read the

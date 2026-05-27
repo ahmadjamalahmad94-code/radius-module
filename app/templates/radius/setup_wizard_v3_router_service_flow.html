@@ -199,6 +199,11 @@
 .swsvf-apply-substeps li[data-status="active"]::before{content:"⏳ ";font-weight:800}
 .swsvf-apply-substeps li[data-status="failed"]{background:var(--swsvf-red-soft);color:#7F1D1D}
 .swsvf-apply-substeps li[data-status="failed"]::before{content:"✗ ";font-weight:800;color:var(--swsvf-red)}
+/* "pending" = not attempted yet (e.g. a later stage when an earlier
+   one failed). Neutral grey + en-dash to distinguish from "active"
+   (in-progress) and "failed" (attempted and rejected). */
+.swsvf-apply-substeps li[data-status="pending"]{background:#F1F5F9;color:#94A3B8}
+.swsvf-apply-substeps li[data-status="pending"]::before{content:"— ";font-weight:800;color:#94A3B8}
 
 /* ─── Phase 4: Verify pane ─── */
 .swsvf-verify-list{

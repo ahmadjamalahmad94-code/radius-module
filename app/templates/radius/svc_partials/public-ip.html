@@ -247,7 +247,12 @@ streaming.service.com"></textarea>
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        ["connect", "send", "commit"].forEach((k) => window.SWSVF.setApplySubstep(k, "failed"));
+        // Stage-aware: backend may include data.substeps with the
+        // precise failing stage. Fallback marks all three failed.
+        const subs = Array.isArray(data.substeps) && data.substeps.length
+          ? data.substeps
+          : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
+        subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
         window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
         return;
       }

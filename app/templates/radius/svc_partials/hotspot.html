@@ -472,8 +472,15 @@
       );
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        ["connect", "send", "commit"].forEach((k) =>
-          window.SWSVF.setApplySubstep(k, "failed"));
+        // Stage-aware substep update: if the backend told us exactly
+        // which stage failed (connect/send/commit), mark earlier
+        // stages as done, the failing one as failed, and later ones
+        // as pending. Falls back to the old behaviour (mark all 3
+        // failed) for older backend responses missing substeps.
+        const subs = Array.isArray(data.substeps) && data.substeps.length
+          ? data.substeps
+          : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
+        subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
         // If the backend included the debug_script (set on failure),
         // log it to the JS console + append it to the error banner so
         // the operator can copy-paste into MikroTik Terminal and find
