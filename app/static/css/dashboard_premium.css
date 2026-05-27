@@ -189,31 +189,37 @@
   backdrop-filter: blur(12px);
 }
 
-/* ─── Premium hero (replaces .mt-page-hero) ─────────────── */
+/* ─── Compact premium hero ──────────────────────────────── */
+/* Pass 2: ~50% vertical reduction. The hero used to be a tall
+   landing-page banner (32×36 padding, 32px title, 520px glow).
+   Now it's a slim premium header that lets the page content
+   appear above the fold immediately. */
 .mt-dashboard .mt-page-hero,
 .mt-dashboard .rh-inv-hero,
 .mt-dashboard .rh-bk-simple-head {
   position: relative;
   overflow: hidden;
-  border-radius: var(--np-r-2xl) !important;
+  border-radius: var(--np-r-xl) !important;
   background: linear-gradient(135deg,
               rgba(255, 255, 255, 0.95) 0%,
               rgba(245, 243, 255, 0.92) 60%,
               rgba(238, 242, 255, 0.88) 100%) !important;
   border: 1px solid var(--np-line-2) !important;
-  box-shadow: var(--np-sh-3) !important;
-  padding: 32px 36px !important;
-  margin-bottom: 28px !important;
+  box-shadow: var(--np-sh-2) !important;
+  padding: 16px 24px !important;
+  margin-bottom: 16px !important;
+  align-items: center !important;
+  gap: 14px !important;
 }
 .mt-dashboard .mt-page-hero::before {
   content: "";
   position: absolute;
-  top: -50%;
-  right: -15%;
-  width: 520px;
-  height: 520px;
+  top: -60%;
+  right: -10%;
+  width: 260px;
+  height: 260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.26), transparent 60%);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.22), transparent 60%);
   filter: blur(8px);
   pointer-events: none;
   z-index: 0;
@@ -226,57 +232,58 @@
 .mt-dashboard .mt-page-hero-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 7px 16px;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 3px 11px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--np-line-2);
   color: var(--np-purple-700);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.01em;
   box-shadow: var(--np-sh-1);
 }
 .mt-dashboard .mt-page-hero-kicker i {
-  width: 18px; height: 18px;
-  border-radius: 6px;
+  width: 14px; height: 14px;
+  border-radius: 4px;
   display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   box-shadow: var(--np-sh-purple);
 }
 .mt-dashboard .mt-page-hero h3 {
-  font-size: 32px !important;
+  font-size: 19px !important;
   font-weight: 900 !important;
   color: var(--np-ink) !important;
-  letter-spacing: -0.015em;
-  line-height: 1.18 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.25 !important;
   margin: 0 !important;
 }
 .mt-dashboard .mt-page-hero p {
-  font-size: 14.5px !important;
+  font-size: 12.5px !important;
   color: var(--np-text-2) !important;
   font-weight: 500 !important;
-  line-height: 1.7 !important;
-  max-width: 680px;
-  margin: 10px 0 0 !important;
+  line-height: 1.55 !important;
+  max-width: 720px;
+  margin: 4px 0 0 !important;
 }
 .mt-dashboard .mt-page-hero-chips {
-  margin-top: 18px !important;
-  gap: 10px !important;
+  margin-top: 8px !important;
+  gap: 6px !important;
 }
 .mt-dashboard .mt-page-hero-chips span {
-  padding: 7px 14px !important;
+  padding: 3px 10px !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.92) !important;
   border: 1px solid var(--np-line-2) !important;
   color: var(--np-text) !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 10.5px !important;
   box-shadow: var(--np-sh-1);
 }
+.mt-dashboard .mt-page-hero-chips span i { font-size: 10px; }
 
 /* ─── Section heading helper ────────────────────────────── */
 .np-section-head {
@@ -689,6 +696,312 @@
   color: #fff;
 }
 
+/* ─── Premium data tables (Interfaces / IPs / Routes /
+        Neighbors / Logs / Sessions) ───────────────────────── */
+/* All these tabs use `.mt-iface-table` (or close variants).
+   Wrap in glass card + soft rows + status badges. No hooks
+   touched — the tbody rows are populated by existing JS. */
+.mt-dashboard .mt-table-wrap {
+  border-radius: var(--np-r-md);
+  border: 1px solid var(--np-line);
+  background: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+}
+.mt-dashboard .mt-iface-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+.mt-dashboard .mt-iface-table thead th {
+  background: linear-gradient(180deg,
+              rgba(245, 243, 255, 0.65),
+              rgba(238, 242, 255, 0.45));
+  color: var(--np-text-2);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 11px 14px;
+  text-align: start;
+  border-bottom: 1px solid var(--np-line);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.mt-dashboard .mt-iface-table tbody td {
+  padding: 12px 14px;
+  color: var(--np-ink);
+  font-size: 12.5px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+  vertical-align: middle;
+}
+.mt-dashboard .mt-iface-table tbody tr:last-child td { border-bottom: 0; }
+.mt-dashboard .mt-iface-table tbody tr {
+  transition: background 0.15s;
+}
+.mt-dashboard .mt-iface-table tbody tr:hover {
+  background: rgba(124, 58, 237, 0.04);
+}
+.mt-dashboard .mt-iface-name {
+  font-weight: 800;
+  color: var(--np-ink);
+}
+.mt-dashboard .mt-iface-mac {
+  font-family: ui-monospace, "JetBrains Mono", "Cairo", monospace;
+  font-size: 11.5px;
+  color: var(--np-text);
+  background: var(--np-bg-2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Premium status pills used across tabs. */
+.mt-dashboard .mt-iface-state,
+.mt-dashboard .mt-iface-table .mt-iface-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+.mt-dashboard .mt-iface-state::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.mt-dashboard .mt-iface-state--up   { background: #ECFDF5; color: #065F46; border-color: #BBF7D0; }
+.mt-dashboard .mt-iface-state--down { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+.mt-dashboard .mt-iface-state--off  { background: #F1F5F9; color: #475569; border-color: #E2E8F0; }
+
+/* Card head meta (count + refresh button) — make it premium. */
+.mt-dashboard .mt-card-head .mt-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--np-purple-700);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-inline-start: 8px;
+}
+.mt-dashboard .mt-card-head .mt-mini-btn:hover {
+  background: var(--np-purple-100);
+  border-color: var(--np-purple-300);
+  transform: translateY(-1px);
+}
+.mt-dashboard .mt-card-head .mt-mini-btn i { font-size: 10px; }
+
+/* Card body comfort — slightly tighter so we don't crowd the
+   reduced-hero gain back. */
+.mt-dashboard .mt-card-body {
+  padding: 16px !important;
+}
+.mt-dashboard .mt-empty {
+  background: var(--np-bg-2);
+  border-radius: var(--np-r-md);
+  border: 1px dashed var(--np-line-2);
+  color: var(--np-text-2);
+  padding: 32px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ─── Logs — chip filter + log lines polish ─────────────── */
+.mt-dashboard [data-mt-logs-topics] {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 12px;
+  background: rgba(245, 243, 255, 0.45);
+  border-bottom: 1px solid var(--np-line);
+}
+.mt-dashboard [data-mt-logs-topic] {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--np-text);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mt-dashboard [data-mt-logs-topic]:hover {
+  background: var(--np-purple-50);
+  border-color: var(--np-purple-300);
+}
+.mt-dashboard [data-mt-logs-topic].is-active {
+  background: linear-gradient(135deg, var(--np-purple-500), var(--np-purple-700));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--np-sh-purple);
+}
+.mt-dashboard [data-mt-logs-output] {
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  padding: 16px;
+  background: linear-gradient(180deg, #fafafe, #f5f3ff);
+  border-radius: var(--np-r-md);
+  color: var(--np-ink);
+  max-height: 540px;
+  overflow: auto;
+  direction: ltr;
+  text-align: start;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Diagnostics — health summary chips + tools rows ──── */
+.mt-dashboard [data-mt-health-summary-critical],
+.mt-dashboard [data-mt-health-summary-warning],
+.mt-dashboard [data-mt-health-summary-ok] {
+  margin-inline-start: 6px;
+}
+.mt-dashboard .mt-iface-state--off[data-mt-health-summary-critical] { background: #FEE2E2; color: #7F1D1D; border-color: #FCA5A5; }
+.mt-dashboard .mt-iface-state--down[data-mt-health-summary-warning]  { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+.mt-dashboard .mt-iface-state--up[data-mt-health-summary-ok]         { background: #ECFDF5; color: #065F46; border-color: #BBF7D0; }
+
+/* ─── Backups — list rows on the new premium baseline ─── */
+.mt-dashboard .rh-bk-simple-head {
+  /* Override the generic hero block — simple-head is a slim
+     row already, just tighten further. */
+  padding: 12px 18px !important;
+  margin-bottom: 14px !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  display: flex !important;
+}
+.mt-dashboard .rh-bk-simple-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--np-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+.mt-dashboard .rh-bk-simple-head h3 i {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  box-shadow: var(--np-sh-purple);
+}
+.mt-dashboard .rh-bk-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--np-line);
+  border-radius: var(--np-r-lg);
+  padding: 14px 18px;
+  box-shadow: var(--np-sh-2);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.18s;
+  margin-bottom: 10px;
+}
+.mt-dashboard .rh-bk-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--np-sh-3);
+}
+.mt-dashboard .rh-bk-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.mt-dashboard .rh-bk-card-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  box-shadow: var(--np-sh-purple);
+  flex-shrink: 0;
+}
+.mt-dashboard .rh-bk-card-body-head { flex: 1; min-width: 0; }
+.mt-dashboard .rh-bk-card-name {
+  display: block;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--np-ink);
+}
+.mt-dashboard .rh-bk-card-when {
+  display: block;
+  font-size: 11.5px;
+  color: var(--np-text-2);
+  margin-top: 2px;
+}
+.mt-dashboard .rh-bk-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mt-dashboard .rh-bk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--np-line-2);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--np-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mt-dashboard .rh-bk-btn:hover { background: var(--np-purple-50); border-color: var(--np-purple-300); }
+.mt-dashboard .rh-bk-btn--primary {
+  background: linear-gradient(135deg, var(--np-purple-500), var(--np-purple-700));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--np-sh-purple);
+}
+.mt-dashboard .rh-bk-btn--primary:hover {
+  background: linear-gradient(135deg, var(--np-purple-600), var(--np-purple-800));
+  color: #fff;
+}
+.mt-dashboard .rh-bk-btn--danger { color: #B91C1C; border-color: #FCA5A5; background: #FEF2F2; }
+.mt-dashboard .rh-bk-btn--danger:hover { background: #FECACA; }
+.mt-dashboard .rh-bk-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--np-text-2);
+  font-size: 13px;
+}
+.mt-dashboard .rh-bk-loading i { color: var(--np-purple-600); font-size: 18px; margin-inline-end: 6px; }
+.mt-dashboard .rh-bk-empty {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--np-bg-2);
+  border: 1px dashed var(--np-line-2);
+  border-radius: var(--np-r-lg);
+  color: var(--np-text-2);
+  font-size: 13px;
+}
+.mt-dashboard .rh-bk-empty i {
+  display: block;
+  font-size: 32px;
+  color: var(--np-purple-300);
+  margin-bottom: 10px;
+}
+
 /* ─── Responsive ───────────────────────────────────────── */
 @media (max-width: 900px) {
   .mt-dashboard .mt-tabs-row {
@@ -699,10 +1012,10 @@
     align-self: flex-end;
   }
   .mt-dashboard .mt-page-hero {
-    padding: 24px 22px !important;
+    padding: 14px 18px !important;
   }
   .mt-dashboard .mt-page-hero h3 {
-    font-size: 24px !important;
+    font-size: 17px !important;
   }
   .np-svc-grid {
     grid-template-columns: 1fr;
