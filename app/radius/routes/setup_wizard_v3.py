@@ -1100,18 +1100,25 @@ def _remote_access_build_script(*, services: list, ttl_hours: int,
         if src_clause:
             parts.insert(4, src_clause)
         lines.append(" ".join(parts))
-    # Scheduler — fires after ttl_hours, removes rules + itself.
+    # Scheduler — fires after `interval` (set to ttl_hours), then the
+    # on-event removes the rules + the scheduler itself in one go.
+    #
+    # CRITICAL: the on-event value is itself a quoted string in the
+    # outer command. Any literal `"` inside it would terminate the
+    # outer string prematurely (MikrotikTrap: «expected end of
+    # command»). RouterOS treats `\"` as a literal quote inside a
+    # quoted string — we use that here for every nested quote.
     on_event = (
-        f'/ip firewall filter remove [find comment~"{tag}"]; '
-        f'/system scheduler remove [find name="{sched_name}"]'
+        f'/ip firewall filter remove [find comment~\\"{tag}\\"]; '
+        f'/system scheduler remove [find name=\\"{sched_name}\\"]'
     )
     lines += [
         "/system scheduler",
         f':foreach s in=[find name="{sched_name}"] do={{remove $s}}',
         (
             f'add name="{sched_name}" '
-            f'interval=0s start-time=startup '
-            f'on-event=":delay {int(ttl_hours)}h; {on_event}" '
+            f'interval={int(ttl_hours)}h '
+            f'on-event="{on_event}" '
             f'comment="{tag}:auto-revoke"'
         ),
     ]

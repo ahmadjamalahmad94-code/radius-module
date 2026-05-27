@@ -118,9 +118,24 @@ streaming.service.com"></textarea>
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function parseDomains() {
+    // RouterOS DNS hosts (used by site-exit + walled-garden + block)
+    // refuse anything except a bare hostname. We strip in this order:
+    //   1. protocol prefix (https:// / http://)
+    //   2. www. leading subdomain
+    //   3. anything after the first /  → strips paths like /foo/bar
+    //   4. trailing port (:8080) — site-exit lookups are L3, not L4
+    //   5. all whitespace
+    // Empty results after stripping are filtered out so we never
+    // POST «» as a domain.
     return textarea.value
       .split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
-      .map((s) => s.replace(/^https?:\/\//i, "").replace(/^www\./i, ""));
+      .map((s) => s
+        .replace(/^https?:\/\//i, "")
+        .replace(/^www\./i, "")
+        .replace(/\/.*$/, "")
+        .replace(/:\d+$/, "")
+        .replace(/\s+/g, ""))
+      .filter(Boolean);
   }
   function refreshPayload() {
     counter.textContent = parseDomains().length;

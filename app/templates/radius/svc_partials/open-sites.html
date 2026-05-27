@@ -74,11 +74,19 @@ hotel.local
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function parseDomains() {
+    // Strip protocol, www, path, port, whitespace — see public-ip
+    // partial for the rationale. Empty strings filtered out at end.
     return textarea.value
       .split(/[\n,;]+/)
       .map((s) => s.trim())
       .filter(Boolean)
-      .map((s) => s.replace(/^https?:\/\//i, "").replace(/^www\./i, ""));
+      .map((s) => s
+        .replace(/^https?:\/\//i, "")
+        .replace(/^www\./i, "")
+        .replace(/\/.*$/, "")
+        .replace(/:\d+$/, "")
+        .replace(/\s+/g, ""))
+      .filter(Boolean);
   }
   function refreshPayload() {
     const domains = parseDomains();
