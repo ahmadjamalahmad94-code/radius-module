@@ -627,27 +627,38 @@
     }
 
     // ── DNS RESOLVE ───────────────────────────────────────
-    // RouterOS may return the resolved address in the envelope
-    // directly OR as a row in `data.data[]`. We handle both shapes.
+    // RouterOS shape varies by version. The backend now always
+    // injects an aggregator row at index 0 with addresses[] so the
+    // shape lookup is deterministic. We still defensively handle
+    // every legacy shape.
     if (kind === "dns-resolve") {
-      if (!ok) return head("فشل حلّ النطاق", "/ip/dns/cache/lookup") + failBody();
-      const name = data.name || data.host || data.query
-                || (Array.isArray(data.data) && data.data[0] && data.data[0].name) || "";
+      if (!ok) return head("فشل حلّ النطاق", "/resolve") + failBody();
+      const rows = Array.isArray(data.data) ? data.data : [];
+      const first = rows[0] || {};
+      const name = data.name || data.host || data.query || first.name || "";
       // Collect addresses from any of the known shapes.
-      let addrs = [];
-      if (Array.isArray(data.addresses)) addrs = data.addresses;
-      else if (Array.isArray(data.ips))  addrs = data.ips;
-      else if (data.address)             addrs = [data.address];
-      else if (Array.isArray(data.data)) {
-        // Each row may have an `address` field, or be a string IP.
-        addrs = data.data
-          .map(r => (typeof r === "string" ? r : (r.address || r.host || "")))
-          .filter(Boolean);
-      }
-      const list = addrs
-        .filter(Boolean)
-        .map(a => `<dd>${safeHtml(a)}</dd>`).join("");
-      return head(`نتيجة الحلّ — ${name}`, "DNS") + body(`
+      const seen = new Set();
+      const addrs = [];
+      const push = (v) => {
+        if (!v) return;
+        // Handle comma-separated address-list strings.
+        String(v).split(",").map(s => s.trim()).filter(Boolean)
+          .forEach(a => { if (!seen.has(a)) { seen.add(a); addrs.push(a); } });
+      };
+      if (Array.isArray(data.addresses)) data.addresses.forEach(push);
+      if (Array.isArray(data.ips))       data.ips.forEach(push);
+      if (data.address)                  push(data.address);
+      rows.forEach(r => {
+        if (typeof r === "string")     return push(r);
+        if (Array.isArray(r.addresses)) r.addresses.forEach(push);
+        push(r.address);
+        push(r.ipv6);
+        push(r.address6);
+        push(r["address-list"]);
+        push(r.host);
+      });
+      const list = addrs.map(a => `<dd>${safeHtml(a)}</dd>`).join("");
+      return head(`نتيجة الحلّ — ${name}`, "/resolve") + body(`
         <dl class="mt-kv">
           <dt>النطاق</dt><dd>${safeHtml(name)}</dd>
           ${list
@@ -657,7 +668,17 @@
         ${list ? `
           <div class="mt-action-result-summary">
             ✓ النطاق متاح. هذي IPs اللي يحلّها الراوتر حالياً.
-          </div>` : ""}
+          </div>` : `
+          <div class="mt-action-result-summary"
+               style="background:#FEF3C7;border-color:#FCD34D;color:#92400E">
+            ⚠ الراوتر استلم الطلب لكن لم يُرجع أي IP. الأسباب الشائعة:
+            <ol style="margin:6px 14px 0;padding:0;font-size:12px">
+              <li>الـ DNS غير مُهيَّأ على الراوتر — تحقّق من
+                  <code>/ip dns set servers=…</code></li>
+              <li>النطاق غير موجود (NXDOMAIN)</li>
+              <li>الـ tunnel لا يصل لخادم DNS الذي يستعمله الراوتر</li>
+            </ol>
+          </div>`}
       `);
     }
 

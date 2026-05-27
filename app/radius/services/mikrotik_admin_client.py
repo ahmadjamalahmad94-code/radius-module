@@ -743,7 +743,19 @@ def tool_traceroute(
 def tool_dns_resolve(
     nas: Mapping[str, Any], *, name: str, server: str = "",
 ) -> MtResult:
-    """`/resolve name=<n> [server=<s>]` — RouterOS 7+ resolver."""
+    """`/resolve name=<n> [server=<s>]` — RouterOS 7+ resolver.
+
+    Field-quirk worth remembering: in some RouterOS 7 revisions
+    `/resolve` puts the answer in the !done reply attrs, not in a
+    !re row. The previous version of this helper filtered for !re
+    only and lost every answer. We now harvest any reply (!re,
+    !done, !trap) that carries an address-like attribute — that
+    covers all observed shapes.
+
+    We also synthesise an `addresses[]` list from `address` and the
+    comma-separated `address-list` field so the UI doesn't have to
+    parse the comma string.
+    """
     target = (name or "").strip()
     if not target:
         return MtResult(ok=False, error="اسم النطاق غير محدد")
@@ -754,7 +766,40 @@ def tool_dns_resolve(
 
     def work(client):
         rows = client.run("/resolve", attrs=attrs)
-        return [s["attrs"] for s in rows if s.get("reply") == "!re"]
+        out = []
+        all_addrs: list[str] = []
+        for s in rows or []:
+            a = (s.get("attrs") or {}) if isinstance(s, dict) else {}
+            if not a:
+                continue
+            # Any reply with an address-like attr counts as an answer.
+            addr     = (a.get("address") or "").strip()
+            addr6    = (a.get("ipv6") or a.get("address6") or "").strip()
+            addr_csv = (a.get("address-list") or "").strip()
+            if not (addr or addr6 or addr_csv):
+                # Skip pure status replies (no address attached).
+                continue
+            row = dict(a)
+            row.setdefault("name", target)
+            out.append(row)
+            if addr:    all_addrs.append(addr)
+            if addr6:   all_addrs.append(addr6)
+            if addr_csv:
+                for piece in addr_csv.split(","):
+                    p = piece.strip()
+                    if p and p not in all_addrs:
+                        all_addrs.append(p)
+        if all_addrs:
+            # Inject a synthesized aggregator row so the UI's
+            # `data.addresses` / `data.data[].address` lookups both
+            # succeed even if RouterOS only ever returned a single
+            # !done reply.
+            agg = {"name": target, "address": all_addrs[0],
+                   "addresses": all_addrs}
+            # Put aggregator first so the renderer's "first row"
+            # shortcut hits it.
+            out.insert(0, agg)
+        return out
 
     return _run_diagnostic(
         nas, operation=f"tool/resolve:{target}", work=work,
