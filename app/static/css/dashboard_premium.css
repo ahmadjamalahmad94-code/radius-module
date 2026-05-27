@@ -1416,3 +1416,95 @@
     margin-bottom: 10px;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Logs tab — premium severity legend
+   Counts are populated by mt_dashboard.js using the same
+   topic-substring logic that colours individual log rows, so the
+   pills always match the visible output. No fake buckets.
+   ────────────────────────────────────────────────────────────── */
+.mt-dashboard .np-logs-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 12px 0 14px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.78) 0%,
+    rgba(255, 255, 255, 0.42) 100%);
+  border: 1px solid rgba(180, 168, 230, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 6px 16px -14px rgba(102, 84, 196, 0.30);
+}
+.mt-dashboard .np-logs-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(180, 168, 230, 0.22);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--np-purple-800, #2f2660);
+  line-height: 1;
+}
+.mt-dashboard .np-logs-stat-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--np-logs-dot, #a99cf0);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
+  flex: 0 0 auto;
+}
+.mt-dashboard .np-logs-stat--crit { --np-logs-dot: #d94862; }
+.mt-dashboard .np-logs-stat--err  { --np-logs-dot: #e67c3c; }
+.mt-dashboard .np-logs-stat--warn { --np-logs-dot: #d9b22a; }
+.mt-dashboard .np-logs-stat--info { --np-logs-dot: #8a82a8; }
+.mt-dashboard .np-logs-stat-label {
+  color: var(--np-purple-700, #4a3f8a);
+  font-weight: 600;
+}
+.mt-dashboard .np-logs-stat-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 2px 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--np-purple-800, #2f2660);
+  background: rgba(102, 84, 196, 0.10);
+  border-radius: 7px;
+  font-variant-numeric: tabular-nums;
+}
+.mt-dashboard .np-logs-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+  font-size: 11.5px;
+  color: var(--np-purple-700, #4a3f8a);
+  font-variant-numeric: tabular-nums;
+}
+.mt-dashboard .np-logs-updated i {
+  color: var(--np-purple-500, #6654c4);
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .mt-dashboard .np-logs-legend {
+    gap: 6px 10px;
+    padding: 9px 11px;
+  }
+  .mt-dashboard .np-logs-stat {
+    padding: 3px 9px 3px 7px;
+    font-size: 11.5px;
+  }
+  .mt-dashboard .np-logs-updated {
+    margin-inline-start: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

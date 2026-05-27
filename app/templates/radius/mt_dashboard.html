@@ -1668,6 +1668,44 @@
           {% endfor %}
         </div>
 
+        {# Premium severity legend. Counts are derived from the exact
+           same topic-substring logic that severityClass() in
+           mt_dashboard.js uses to colour rows, so the numbers always
+           match what the user sees in the output below. No fake
+           buckets — if the loaded buffer has zero criticals, that
+           pill simply shows 0. #}
+        <div class="np-logs-legend" data-mt-logs-legend>
+          <div class="np-logs-stat np-logs-stat--crit">
+            <span class="np-logs-stat-dot" aria-hidden="true"></span>
+            <span class="np-logs-stat-label">حرج</span>
+            <span class="np-logs-stat-num"
+                  data-mt-logs-stat-critical>0</span>
+          </div>
+          <div class="np-logs-stat np-logs-stat--err">
+            <span class="np-logs-stat-dot" aria-hidden="true"></span>
+            <span class="np-logs-stat-label">خطأ</span>
+            <span class="np-logs-stat-num"
+                  data-mt-logs-stat-error>0</span>
+          </div>
+          <div class="np-logs-stat np-logs-stat--warn">
+            <span class="np-logs-stat-dot" aria-hidden="true"></span>
+            <span class="np-logs-stat-label">تحذير</span>
+            <span class="np-logs-stat-num"
+                  data-mt-logs-stat-warn>0</span>
+          </div>
+          <div class="np-logs-stat np-logs-stat--info">
+            <span class="np-logs-stat-dot" aria-hidden="true"></span>
+            <span class="np-logs-stat-label">معلومات</span>
+            <span class="np-logs-stat-num"
+                  data-mt-logs-stat-info>0</span>
+          </div>
+          <div class="np-logs-updated">
+            <i class="fa-solid fa-clock-rotate-left"
+               aria-hidden="true"></i>
+            آخر تحديث: <span data-mt-logs-updated>—</span>
+          </div>
+        </div>
+
         <p class="mt-empty" data-mt-logs-msg>Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù…ÙŠÙ„â€¦</p>
         <pre class="mt-logs-output" data-mt-logs-output
              aria-live="polite"></pre>

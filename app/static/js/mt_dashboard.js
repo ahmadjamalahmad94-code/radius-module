@@ -1790,6 +1790,16 @@
     const topicBtns = Array.from(
       topicsBar.querySelectorAll("[data-mt-logs-topic]"));
 
+    // Severity legend pills (real counts only — derived from the same
+    // topic-substring logic used to colour rows). All optional: if the
+    // template ever drops the legend block these stay null and the
+    // code keeps working.
+    const statCrit = card.querySelector("[data-mt-logs-stat-critical]");
+    const statErr  = card.querySelector("[data-mt-logs-stat-error]");
+    const statWarn = card.querySelector("[data-mt-logs-stat-warn]");
+    const statInfo = card.querySelector("[data-mt-logs-stat-info]");
+    const updated  = card.querySelector("[data-mt-logs-updated]");
+
     let timer = null;
     let inflight = false;
     // The empty-string slug is "show all". An empty `selected` set
@@ -1831,6 +1841,30 @@
       return "";
     }
 
+    function updateSeverityStats(list) {
+      let crit = 0, err = 0, warn = 0, info = 0;
+      for (const r of (list || [])) {
+        const t = (r && r.topics ? r.topics : "").toLowerCase();
+        if      (t.includes("critical")) crit++;
+        else if (t.includes("error"))    err++;
+        else if (t.includes("warning"))  warn++;
+        else                              info++;
+      }
+      if (statCrit) statCrit.textContent = String(crit);
+      if (statErr)  statErr.textContent  = String(err);
+      if (statWarn) statWarn.textContent = String(warn);
+      if (statInfo) statInfo.textContent = String(info);
+    }
+
+    function setUpdatedNow() {
+      if (!updated) return;
+      const d = new Date();
+      const pad = (n) => (n < 10 ? "0" + n : String(n));
+      updated.textContent = pad(d.getHours()) + ":"
+                          + pad(d.getMinutes()) + ":"
+                          + pad(d.getSeconds());
+    }
+
     function escapeText(v) {
       return String(v == null ? "" : v).replace(/[<>&"]/g, ch => ({
         "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;",
@@ -1861,6 +1895,8 @@
           setMsg("لا توجد سطور تطابق الفلتر الحالي.");
           output.innerHTML = "";
           if (count) count.textContent = "0";
+          updateSeverityStats([]);
+          setUpdatedNow();
           return;
         }
         const html = list.map(r => {
@@ -1871,6 +1907,8 @@
         }).join("");
         output.innerHTML = html;
         if (count) count.textContent = String(list.length);
+        updateSeverityStats(list);
+        setUpdatedNow();
         setMsg("");
         // Auto-scroll to bottom (newest entries).
         output.scrollTop = output.scrollHeight;
