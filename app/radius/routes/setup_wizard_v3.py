@@ -677,31 +677,56 @@ def setup_wizard_v3_broadband_preview(router_id: int):
 
 
 def _broadband_post_process_script(script: str) -> str:
-    """Surgical fix-ups on the legacy planner's .rsc output.
+    """Surgical fix-ups on the legacy planner's .rsc output so it
+    works on RouterOS 7 (verified on 7.20.6 with operator).
 
-    RouterOS 7 (and current 6.49+) refuses string-typed values
-    where the property declares an IP type. The planner wraps EVERY
-    attribute in quotes, including:
-        local-address="x.x.x.x"   (/ppp profile)
-        dns-server="x.x.x.x"      (/ppp profile)
-    These both trip «expected end of command» at the column right
-    after the closing quote — even though name/comment/service-name
-    quote happily as expected (they're string-typed).
+    Five fix-ups, in order:
 
-    Two-stage fix:
-      1. Drop dns-server entirely — router inherits /ip dns.
-      2. Unquote any local-address whose value parses as IPv4.
-         Trickier but safe: the regex requires a pure dotted-decimal
-         value (no slashes, no commas), so string-typed properties
-         elsewhere aren't touched even by accident.
+      1. dns-server="x.x.x.x" on /ppp profile  →  drop entirely
+         IP-typed property doesn't accept quoted string. Router
+         falls back to /ip dns servers — normal operator intent.
+
+      2. local-address="x.x.x.x" on /ppp profile  →  unquote
+         IP-typed; strict IPv4 pattern so string-typed properties
+         elsewhere (name=, comment=, service-name=) aren't touched.
+
+      3. use-radius=yes anywhere on /ppp profile  →  drop entirely
+         Property doesn't exist on /ppp profile in RouterOS 7.
+
+      4. /ppp profile set "name" …  →  /ppp profile set [find name="name"] …
+         Direct-name set raises "no such item" even when the entry
+         exists; the query form works.
+
+      5. If step 3 dropped a use-radius=yes, append
+         /ppp aaa set use-radius=yes  on its own line at the end.
+         RADIUS for PPP lives on /ppp aaa in RouterOS 7, not on
+         the profile.
     """
     import re
+    # 1.
     script = re.sub(r'\s+dns-server="[^"]*"', "", script)
+    # 2.
     script = re.sub(
         r'local-address="(\d{1,3}(?:\.\d{1,3}){3})"',
         r'local-address=\1',
         script,
     )
+    # 3.
+    had_use_radius = bool(re.search(r'\buse-radius=yes\b', script))
+    script = re.sub(r'\s+use-radius=yes', "", script)
+    # 4.
+    script = re.sub(
+        r'(/ppp\s+profile\s+set)\s+"([^"]+)"',
+        r'\1 [find name="\2"]',
+        script,
+    )
+    # 5.
+    if had_use_radius and "/ppp aaa set use-radius=yes" not in script:
+        script += (
+            "\n"
+            "# Enable RADIUS authentication for PPP globally\n"
+            "/ppp aaa set use-radius=yes\n"
+        )
     return script
 
 
