@@ -679,15 +679,30 @@ def setup_wizard_v3_broadband_preview(router_id: int):
 def _broadband_post_process_script(script: str) -> str:
     """Surgical fix-ups on the legacy planner's .rsc output.
 
-    The planner emits `dns-server="x.x.x.x"` inside /ppp profile add.
-    RouterOS 7 sometimes refuses a quoted IP value for that property
-    ("expected end of command" at the column right after the
-    closing quote). The simplest cross-version fix is to drop the
-    attribute entirely — the router falls back to system-wide DNS
-    (which is what most operators want anyway).
+    RouterOS 7 (and current 6.49+) refuses string-typed values
+    where the property declares an IP type. The planner wraps EVERY
+    attribute in quotes, including:
+        local-address="x.x.x.x"   (/ppp profile)
+        dns-server="x.x.x.x"      (/ppp profile)
+    These both trip «expected end of command» at the column right
+    after the closing quote — even though name/comment/service-name
+    quote happily as expected (they're string-typed).
+
+    Two-stage fix:
+      1. Drop dns-server entirely — router inherits /ip dns.
+      2. Unquote any local-address whose value parses as IPv4.
+         Trickier but safe: the regex requires a pure dotted-decimal
+         value (no slashes, no commas), so string-typed properties
+         elsewhere aren't touched even by accident.
     """
     import re
-    return re.sub(r'\s+dns-server="[^"]*"', "", script)
+    script = re.sub(r'\s+dns-server="[^"]*"', "", script)
+    script = re.sub(
+        r'local-address="(\d{1,3}(?:\.\d{1,3}){3})"',
+        r'local-address=\1',
+        script,
+    )
+    return script
 
 
 def setup_wizard_v3_broadband_apply(router_id: int):
