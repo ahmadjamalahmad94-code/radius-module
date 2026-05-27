@@ -1379,6 +1379,14 @@
   background:#fff;border-radius:4px;padding:1px 6px;
   font-size:11.5px;direction:ltr;
 }
+.rh-inv-conn-link{
+  display:inline-flex;align-items:center;gap:6px;
+  margin:4px 0;padding:5px 11px;
+  background:#7C3AED;color:#fff;border-radius:7px;
+  font-size:12px;font-weight:600;text-decoration:none;
+  transition:background .15s;
+}
+.rh-inv-conn-link:hover{background:#6D28D9;color:#fff;}
 .rh-inv-copy-btn{
   width:28px;height:28px;border-radius:7px;
   border:1px solid #C4B5FD;background:#fff;color:#7C3AED;
@@ -1608,12 +1616,21 @@
     }
 
     if (!rows.length) {
+      // No VPS host configured yet — point the operator straight at
+      // the settings page so they don't have to know about env vars
+      // or SSH. The link goes to «إعدادات النظام» where
+      // `infra.public_host` is the canonical setting.
       rows.push(`
         <div class="rh-inv-conn-row">
           <span class="rh-inv-conn-empty">
             <i class="fa-solid fa-circle-info"></i>
-            لا يوجد عنوان VPS مُهيَّأ على الخادم بعد
-            (<code>HOBERADIUS_PUBLIC_HOST</code>). راجع المسؤول.
+            لم يتمّ ضبط <strong>عنوان VPS العام</strong> بعد.
+            <a href="{{ url_for('radius.settings_page') }}"
+               class="rh-inv-conn-link">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              افتح «إعدادات النظام» وأضف العنوان
+            </a>
+            ليبدأ المعالج بتوليد روابط الاتصال عن بُعد.
           </span>
         </div>`);
     }

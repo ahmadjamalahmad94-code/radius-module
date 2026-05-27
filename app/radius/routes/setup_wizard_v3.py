@@ -1333,7 +1333,8 @@ def setup_wizard_v3_router_inventory(router_id: int):
         from ..db.repos import npc_remote_port_mappings_repo as ports_repo
 
         public_host_value = (
-            npc_remote_tunnel.public_host() or (nas.address or "")
+            npc_remote_tunnel.public_host(tenant_id=_tid())
+            or (nas.address or "")
         )
         existing_mappings = ports_repo.list_for_router(router_id)
         # Synthesize the policy from whatever mappings actually exist:
@@ -2279,10 +2280,14 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
         except Exception:  # noqa: BLE001
             pass
 
-        # VPS IP from env, falls back to nas.address (which is the
-        # WG tunnel IP — usable inside VPN only).
+        # VPS IP — preferred source is the per-tenant DB setting
+        # ``infra.public_host`` (editable from «إعدادات النظام»);
+        # falls back to HOBERADIUS_PUBLIC_HOST env var, then to
+        # nas.address (which is the WG tunnel IP, usable inside
+        # the VPN only).
         public_host_value = (
-            npc_remote_tunnel.public_host() or (nas.address or "")
+            npc_remote_tunnel.public_host(tenant_id=_tid())
+            or (nas.address or "")
         )
         connection_urls = compute_remote_access_urls(
             policy, public_host=public_host_value, mappings=mappings,

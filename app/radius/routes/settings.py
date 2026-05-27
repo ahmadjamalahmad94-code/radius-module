@@ -30,6 +30,11 @@ _SETTINGS_KEYS = [
     ("mikrotik.default_router_id","رقم MT الافتراضي",     ""),
     ("session.timeout_minutes", "مهلة جلسة الإدارة (دقيقة)", "60"),
     ("display.records_per_page","صفوف الصفحة الافتراضية", "20"),
+    # عنوان الـ VPS العام — يُستخدم في معالج «اتصال عن بُعد» لبناء
+    # روابط Winbox/SSH/WebFig/API من خارج الشبكة (المنافذ
+    # 51000-51199 عبر nginx-stream). اتركه فارغاً للرجوع إلى env
+    # var HOBERADIUS_PUBLIC_HOST أو عنوان WG داخلي.
+    ("infra.public_host",       "عنوان VPS العام (لروابط الاتصال عن بُعد)", ""),
 ]
 
 

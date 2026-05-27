@@ -84,9 +84,34 @@ def _port_range() -> tuple[int, int]:
     return base, ceil
 
 
-def public_host() -> str:
+def public_host(tenant_id: Optional[int] = None) -> str:
     """The address the operator should see in the URLs. Empty
-    string means "fall back to the browser's request host"."""
+    string means "fall back to the browser's request host".
+
+    Resolution order (DB first, env as fallback) so end-users can
+    configure the VPS IP from the admin UI («إعدادات النظام» →
+    «عنوان VPS العام») without SSHing into the host:
+
+      1. tenant_settings row ``infra.public_host`` for the given
+         tenant. If ``tenant_id`` is None we read DEFAULT_TENANT_ID.
+      2. ``HOBERADIUS_PUBLIC_HOST`` env var (legacy / bootstrap path
+         for fresh installs before the operator opens settings).
+      3. Empty string — caller decides the next fallback (usually
+         the WG tunnel IP from nas_devices, useful only from inside
+         the VPN).
+    """
+    # DB lookup is best-effort — if anything goes wrong (no app
+    # context, schema not migrated yet, etc.) we silently fall back
+    # to the env var so this function never breaks the apply path.
+    try:
+        from ..db.repos import tenants_repo
+        from ..core.tenant import DEFAULT_TENANT_ID
+        tid = int(tenant_id) if tenant_id is not None else DEFAULT_TENANT_ID
+        v = (tenants_repo.get_setting(tid, "infra.public_host", "") or "").strip()
+        if v:
+            return v
+    except Exception:  # noqa: BLE001
+        pass
     return (os.environ.get("HOBERADIUS_PUBLIC_HOST") or "").strip()
 
 
