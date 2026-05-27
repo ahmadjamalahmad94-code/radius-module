@@ -1578,54 +1578,60 @@
       {% endfor %}
     </div>
 
-    {# ── B) Added services status area — filter + groups ──── #}
-    <div class="np-section-head">
-      <div>
-        <h4>
-          حالة الخدمات
-          <span class="np-section-badge" data-rh-inv-stat-total>0</span>
-        </h4>
-        <p>عرض حالة الخدمات المضافة يدوياً وتلقائياً، مع مصدر كل خدمة وزر حذف آمن.</p>
-      </div>
-      <div class="np-svc-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="np-filter-bar" role="tablist" aria-label="تصفية الخدمات">
-          <button type="button" class="np-filter-chip is-active"
-                  data-np-filter="all" role="tab" aria-selected="true">
-            الكل
-            <span class="np-filter-chip-count" data-rh-inv-stat-total>0</span>
-          </button>
-          <button type="button" class="np-filter-chip"
-                  data-np-filter="hoberadius" role="tab" aria-selected="false">
-            تلقائيّة
-            <span class="np-filter-chip-count" data-rh-inv-stat-hr>0</span>
-          </button>
-          <button type="button" class="np-filter-chip"
-                  data-np-filter="operator" role="tab" aria-selected="false">
-            يدويّة
-            <span class="np-filter-chip-count" data-rh-inv-stat-op>0</span>
+    {# ── B) Added services status area — filter + groups ────
+         Wrapped in .np-status-panel so it reads as a single card
+         surface (like the hero / cards above) instead of sitting
+         flat on the page background. Operator: «اعملو خلفية زي
+         باقي الاقسام». #}
+    <div class="np-status-panel">
+      <div class="np-section-head">
+        <div>
+          <h4>
+            حالة الخدمات
+            <span class="np-section-badge" data-rh-inv-stat-total>0</span>
+          </h4>
+          <p>عرض حالة الخدمات المضافة يدوياً وتلقائياً، مع مصدر كل خدمة وزر حذف آمن.</p>
+        </div>
+        <div class="np-svc-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="np-filter-bar" role="tablist" aria-label="تصفية الخدمات">
+            <button type="button" class="np-filter-chip is-active"
+                    data-np-filter="all" role="tab" aria-selected="true">
+              الكل
+              <span class="np-filter-chip-count" data-rh-inv-stat-total>0</span>
+            </button>
+            <button type="button" class="np-filter-chip"
+                    data-np-filter="hoberadius" role="tab" aria-selected="false">
+              تلقائيّة
+              <span class="np-filter-chip-count" data-rh-inv-stat-hr>0</span>
+            </button>
+            <button type="button" class="np-filter-chip"
+                    data-np-filter="operator" role="tab" aria-selected="false">
+              يدويّة
+              <span class="np-filter-chip-count" data-rh-inv-stat-op>0</span>
+            </button>
+          </div>
+          <button type="button" class="np-btn rh-inv-refresh"
+                  data-rh-inv-refresh title="تحديث القائمة">
+            <i class="fa-solid fa-rotate"></i>
+            <span>تحديث</span>
           </button>
         </div>
-        <button type="button" class="np-btn rh-inv-refresh"
-                data-rh-inv-refresh title="تحديث القائمة">
-          <i class="fa-solid fa-rotate"></i>
-          <span>تحديث</span>
-        </button>
       </div>
+      <div class="rh-inv-loading" data-rh-inv-loading>
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
+        <small class="rh-inv-loading-hint">
+          نقرأ 6 خدمات عبر الـ VPN — قد يستغرق ذلك حتى ثانيتَين.
+        </small>
+      </div>
+      <div class="rh-inv-empty" data-rh-inv-empty hidden>
+        <i class="fa-solid fa-circle-info"></i>
+        لا توجد خدمات مفعَّلة حالياً. ارجع لـ«إدارة الراوترات» وأضف خدمة من
+        بطاقات الـ Hub أعلى الصفحة.
+      </div>
+      <div class="rh-inv-error" data-rh-inv-error hidden></div>
+      <div class="rh-inv-groups" data-rh-inv-groups></div>
     </div>
-    <div class="rh-inv-loading" data-rh-inv-loading>
-      <i class="fa-solid fa-spinner fa-spin"></i>
-      <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
-      <small class="rh-inv-loading-hint">
-        نقرأ 6 خدمات عبر الـ VPN — قد يستغرق ذلك حتى ثانيتَين.
-      </small>
-    </div>
-    <div class="rh-inv-empty" data-rh-inv-empty hidden>
-      <i class="fa-solid fa-circle-info"></i>
-      لا توجد خدمات مفعَّلة حالياً. ارجع لـ«إدارة الراوترات» وأضف خدمة من
-      بطاقات الـ Hub أعلى الصفحة.
-    </div>
-    <div class="rh-inv-error" data-rh-inv-error hidden></div>
-    <div class="rh-inv-groups" data-rh-inv-groups></div>
 
     {# ── C) Tools — moved here from the old Router Hub, which was
          removed because its service cards duplicated section A.

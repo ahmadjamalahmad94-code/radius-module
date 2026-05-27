@@ -1310,6 +1310,35 @@
     font-size: 17px !important;
   }
 }
+/* Status-panel card surface — wraps the «حالة الخدمات» area
+   inside «خدماتي» so it looks like part of the dashboard's card
+   language instead of sitting flat on the page background. */
+.mt-dashboard .np-status-panel {
+  position: relative;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(255, 255, 255, 0.50) 100%);
+  border: 1px solid rgba(180, 168, 230, 0.28);
+  border-radius: 18px;
+  padding: 18px 22px 22px;
+  box-shadow: 0 8px 22px -16px rgba(102, 84, 196, 0.30);
+  margin-bottom: 28px;
+}
+.mt-dashboard .np-status-panel .np-section-head {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+.mt-dashboard .np-status-panel .rh-inv-loading,
+.mt-dashboard .np-status-panel .rh-inv-empty {
+  margin: 6px 0;
+}
+@media (max-width: 760px) {
+  .mt-dashboard .np-status-panel {
+    padding: 14px 14px 16px;
+    border-radius: 14px;
+  }
+}
+
 /* Service-grid responsive — listed largest-to-smallest so later
    rules correctly override earlier ones in the cascade. */
 @media (max-width: 1280px) { .np-svc-grid { grid-template-columns: repeat(4, 1fr); } }
