@@ -270,6 +270,39 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
                         wan_names.add(name)
             except Exception:  # noqa: BLE001
                 pass  # WireGuard package may not be installed
+            # 3. Trace logical WAN interfaces (PPPoE client, VLAN,
+            #    L2TP/PPP, EoIP, IPIP, GRE …) back to the PHYSICAL
+            #    ether port they ride on. Repeat until no new
+            #    parent names are discovered — handles nested
+            #    constructs like a VLAN on top of a bridge.
+            def _walk_parents() -> bool:
+                """Returns True if we added something new."""
+                added = False
+                for path in (
+                    "/interface/pppoe-client/print",
+                    "/interface/vlan/print",
+                    "/interface/eoip/print",
+                    "/interface/gre/print",
+                    "/interface/ipip/print",
+                    "/interface/l2tp-client/print",
+                ):
+                    try:
+                        rows = list(mt.print_(path))
+                    except Exception:  # noqa: BLE001
+                        continue  # protocol not enabled — fine
+                    for row in rows:
+                        if str(row.get("name", "") or "") not in wan_names:
+                            continue
+                        parent = (str(row.get("interface", "") or "").strip()
+                                  or str(row.get("master-interface", "") or "").strip())
+                        if parent and parent not in wan_names:
+                            wan_names.add(parent)
+                            added = True
+                return added
+            # A couple of passes covers PPPoE-on-VLAN-on-ether etc.
+            for _ in range(3):
+                if not _walk_parents():
+                    break
     except Exception:  # noqa: BLE001
         pass  # WAN detection is best-effort
     for it in interfaces:
