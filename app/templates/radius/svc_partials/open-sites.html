@@ -44,8 +44,14 @@
   <div class="swop-section-title">قائمة المواقع المسموحة (Walled Garden)</div>
   <p class="swop-help">
     اكتب domain في كل سطر، مثل <code>payment.example.com</code>. لا تحتاج
-    <code>https://</code> أو <code>www.</code>.
+    <code>https://</code> أو <code>www.</code>.<br>
+    <strong>ملاحظة:</strong> هذه القائمة <strong>الكاملة</strong> — ما تُرسله
+    يحلّ محلّ ما كان موجوداً سابقاً.
   </p>
+  <div class="swop-loading" data-swop-loading hidden style="color:var(--swsvf-mute);font-size:12px;margin-bottom:8px">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    جارٍ تحميل القائمة الحاليّة من الراوتر…
+  </div>
   <textarea class="swop-textarea" data-swop-domains
             placeholder="payment.example.com
 hotel.local
@@ -100,6 +106,28 @@ hotel.local
   refreshPayload();
   // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
   page.addEventListener("swsvf:configure-collect", refreshPayload);
+
+  // Pre-fill from the router (same pattern as block-sites).
+  (async function preloadCurrent() {
+    if (textarea.value.trim()) return;
+    const loadingEl = page.querySelector("[data-swop-loading]");
+    if (loadingEl) loadingEl.hidden = false;
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/open-sites/current`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data && data.ok && Array.isArray(data.domains) && data.domains.length) {
+        textarea.value = data.domains.join("\n");
+        refreshPayload();
+      }
+    } catch (_) {
+      // soft-fail
+    } finally {
+      if (loadingEl) loadingEl.hidden = true;
+    }
+  })();
 
   let lastPayload = null;
 

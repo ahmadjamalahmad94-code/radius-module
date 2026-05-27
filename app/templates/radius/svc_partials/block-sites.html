@@ -32,8 +32,15 @@
   <div class="swbl-section-title">قائمة المواقع المحجوبة</div>
   <p class="swbl-help">
     اكتب domain في كل سطر، مثل <code>facebook.com</code> أو <code>twitter.com</code>.
-    لا تكتب <code>https://</code> أو <code>www.</code> — فقط اسم النطاق.
+    لا تكتب <code>https://</code> أو <code>www.</code> — فقط اسم النطاق.<br>
+    <strong>ملاحظة:</strong> هذه القائمة <strong>الكاملة</strong> — ما تُرسله
+    يحلّ محلّ ما كان موجوداً سابقاً. لإضافة موقع جديد: احتفظ بالقديم واكتب
+    الجديد تحته. لحذف موقع: امسحه من القائمة.
   </p>
+  <div class="swbl-loading" data-swbl-loading hidden style="color:var(--swsvf-mute);font-size:12px;margin-bottom:8px">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    جارٍ تحميل القائمة الحاليّة من الراوتر…
+  </div>
   <textarea class="swbl-textarea" data-swbl-domains
             placeholder="example.com
 another-site.com
@@ -89,6 +96,33 @@ ads.network.com"></textarea>
   refreshPayload();
   // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
   page.addEventListener("swsvf:configure-collect", refreshPayload);
+
+  // Pre-fill from the router: read what's already in the
+  // address-list with our HOBERADIUS_SETUP tag and put it in the
+  // textarea. Operator can then edit-in-place (add / remove)
+  // instead of being surprised that re-applying replaces the
+  // previous list. Fires once on mount; idempotent if the user
+  // already typed something — we only fill if empty.
+  (async function preloadCurrent() {
+    if (textarea.value.trim()) return;  // operator typed something already
+    const loadingEl = page.querySelector("[data-swbl-loading]");
+    if (loadingEl) loadingEl.hidden = false;
+    try {
+      const res = await fetch(
+        `/admin/radius/setup-wizard-v3/routers/${routerId}/services/block-sites/current`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data && data.ok && Array.isArray(data.domains) && data.domains.length) {
+        textarea.value = data.domains.join("\n");
+        refreshPayload();
+      }
+    } catch (_) {
+      // soft-fail — operator can still type from scratch
+    } finally {
+      if (loadingEl) loadingEl.hidden = true;
+    }
+  })();
 
   let lastPayload = null;
 

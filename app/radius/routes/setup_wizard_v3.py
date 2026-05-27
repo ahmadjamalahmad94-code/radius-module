@@ -1009,6 +1009,84 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
     })
 
 
+def setup_wizard_v3_block_sites_current(router_id: int):
+    """Read the currently-blocked domains for this router so the
+    partial can pre-fill the textarea. Without this the operator
+    sees an empty box and assumes typing 3 new domains will ADD
+    to the existing 4 — but the planner is idempotent (replace
+    not append). Surfacing the current list lets the operator
+    edit-in-place: keep what they want, drop what they don't,
+    type any new ones."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "domains": []})  # silent — no API
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        cfg = {
+            "host": nas.address,
+            "username": nas.api_user or "admin",
+            "password": nas.api_password,
+            "port": int(nas.api_port or 8728),
+            "use_tls": bool(nas.api_use_tls),
+            "timeout": 6.0,
+        }
+        rid_tag = f"HOBERADIUS_SETUP:{router_id}"
+        with MikrotikClient(**cfg) as mt:
+            entries = list(mt.print_("/ip/firewall/address-list/print"))
+            domains = sorted({
+                str(e.get("address", "") or "").strip()
+                for e in entries
+                if rid_tag in str(e.get("comment", ""))
+                and "block_sites" in str(e.get("comment", ""))
+                and str(e.get("address", "") or "").strip()
+            })
+        return jsonify({"ok": True, "domains": domains})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": True, "domains": [],
+                        "warning": str(exc)})  # soft-fail
+
+
+def setup_wizard_v3_open_sites_current(router_id: int):
+    """Same idea for walled-garden — pre-fill the textarea with
+    the currently-allowed hosts."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "domains": []})
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        cfg = {
+            "host": nas.address,
+            "username": nas.api_user or "admin",
+            "password": nas.api_password,
+            "port": int(nas.api_port or 8728),
+            "use_tls": bool(nas.api_use_tls),
+            "timeout": 6.0,
+        }
+        rid_tag = f"HOBERADIUS_SETUP:{router_id}"
+        with MikrotikClient(**cfg) as mt:
+            entries = list(mt.print_("/ip/hotspot/walled-garden/print"))
+            # Walled-garden entries use `dst-host` (a hostname) rather
+            # than `address`. Strip empties + dedupe + sort.
+            domains = sorted({
+                str(e.get("dst-host", "") or "").strip()
+                for e in entries
+                if rid_tag in str(e.get("comment", ""))
+                and "walled_garden" in str(e.get("comment", ""))
+                and str(e.get("dst-host", "") or "").strip()
+            })
+        return jsonify({"ok": True, "domains": domains})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": True, "domains": [], "warning": str(exc)})
+
+
 def setup_wizard_v3_block_sites_preview(router_id: int):
     body = _body() or {}
     domains = list(body.get("domains") or [])
@@ -2385,6 +2463,21 @@ def register_setup_wizard_v3_routes(bp: Blueprint) -> None:
         "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/verify",
         "setup_wizard_v3_open_sites_verify",
         setup_wizard_v3_open_sites_verify,
+        methods=["GET"],
+    )
+    # Read-current endpoints so each partial can pre-fill its textarea
+    # with what's already configured — solves the «I added 4 then tried
+    # to add 3 and the first 4 disappeared» surprise.
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/block-sites/current",
+        "setup_wizard_v3_block_sites_current",
+        setup_wizard_v3_block_sites_current,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard-v3/routers/<int:router_id>/services/open-sites/current",
+        "setup_wizard_v3_open_sites_current",
+        setup_wizard_v3_open_sites_current,
         methods=["GET"],
     )
     # Public-IP (site exit) — helper to list exit nodes + 3 flow endpoints.
