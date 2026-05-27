@@ -270,6 +270,19 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_system_identity_set),
         methods=["POST"],
     )
+    # K8.2 — light maintenance: NTP resync + DNS cache flush
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/system/ntp/sync",
+        "mt_system_ntp_sync",
+        require_api_token(mt_system_ntp_sync),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/ip/dns/cache/flush",
+        "mt_ip_dns_cache_flush",
+        require_api_token(mt_ip_dns_cache_flush),
+        methods=["POST"],
+    )
     # O1 — Operations Center counters
     bp.add_url_rule(
         "/mikrotik/<int:nas_id>/counters",
@@ -875,6 +888,36 @@ def mt_system_identity_set(nas_id: int):
     payload = _envelope(result, router_id=nas_id)
     payload["new_name"] = name
     return ok(payload)
+
+
+def mt_system_ntp_sync(nas_id: int):
+    """Force a fresh NTP sync (disable+enable toggle on the router-
+    side client). No-confirm: it's non-destructive — just nudges
+    the existing NTP client to re-resolve. Returns the post-toggle
+    clock + ntp client state."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.system_ntp_sync(nas)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.system.ntp.sync",
+        target_id=str(nas_id), result=result,
+    )
+    return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_ip_dns_cache_flush(nas_id: int):
+    """Clear the router's DNS resolver cache. Non-destructive —
+    future lookups just re-fetch from upstream. No confirm required."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    result = mac.ip_dns_cache_flush(nas)
+    _audit_mutation(
+        nas_id=nas_id, action="mt.ip.dns.cache.flush",
+        target_id=str(nas_id), result=result,
+    )
+    return ok(_envelope(result, router_id=nas_id))
 
 
 

@@ -753,61 +753,171 @@
   }
 
   /**
-   * Friendly per-action progress label. The router can take 5-10s
-   * for ping / traceroute over the WG tunnel, and longer for
-   * backup. Empty string → generic «جارٍ التنفيذ…».
+   * Per-action stage scripts. Each stage is what the operator sees
+   * happening; we fake the timing client-side (we don't have real
+   * server-streamed events), but the durations are calibrated to
+   * typical observed wall-clock for each command type so the stage
+   * doesn't run ahead of the actual server response.
+   *
+   * Each stage: { label, hint, duration_ms }.
    */
-  const PROGRESS_LABEL = {
-    ping:          "جارٍ إرسال حزم Ping عبر الراوتر…",
-    traceroute:    "جارٍ تتبّع مسار الحزم — قد يستغرق حتى 30 ثانية…",
-    "dns-resolve": "جارٍ سؤال DNS…",
-    "dns-flush":   "جارٍ إفراغ كاش DNS…",
-    "clock-sync":  "جارٍ مزامنة الوقت من خادم NTP…",
-    backup:        "جارٍ كتابة نسخة احتياطية على الراوتر…",
-    reboot:        "جارٍ إرسال أمر إعادة التشغيل…",
-    identity:      "جارٍ تحديث اسم الراوتر…",
+  const PROGRESS_STAGES = {
+    ping: [
+      { label: "الاتصال بالراوتر عبر VPN",     hint: "إنشاء قناة آمنة عبر WireGuard", t: 400 },
+      { label: "إرسال حزم Ping من الراوتر",    hint: "نطلب من الراوتر أن يُرسل الحزم للهدف", t: 1200 },
+      { label: "انتظار الردود من الهدف",        hint: "كل حزمة تنتظر TTL لإلتقاط ردّها", t: 1600 },
+      { label: "جلب النتيجة من الراوتر",        hint: "جمع الإحصائيات النهائية", t: 400 },
+    ],
+    traceroute: [
+      { label: "الاتصال بالراوتر عبر VPN",     hint: "إنشاء قناة آمنة عبر WireGuard", t: 400 },
+      { label: "تنفيذ traceroute على الراوتر",  hint: "خطوة-بخطوة عبر شبكة الـ ISP", t: 4000 },
+      { label: "جمع القفزات",                   hint: "بعض القفزات قد تتأخّر — لا تقلق", t: 3000 },
+      { label: "إرسال النتيجة",                 hint: "جلب الجدول النهائي", t: 400 },
+    ],
+    "dns-resolve": [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "استعلام DNS",                    hint: "سؤال خادم DNS عن الاسم", t: 800 },
+      { label: "جلب النتيجة",                    hint: "العناوين IP المُحلَّلة", t: 200 },
+    ],
+    "dns-flush": [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "تنفيذ /ip/dns/cache/flush",      hint: "إفراغ كاش الـ DNS", t: 500 },
+      { label: "تأكيد العملية",                  hint: "الكاش فارغ الآن", t: 200 },
+    ],
+    "clock-sync": [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "إيقاف عميل NTP مؤقّتاً",         hint: "خطوة تحضيرية", t: 400 },
+      { label: "إعادة تفعيله للمزامنة",          hint: "العميل يربط مع pool خوادم NTP", t: 1000 },
+      { label: "قراءة الساعة الجديدة",           hint: "للتحقّق", t: 300 },
+    ],
+    backup: [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 400 },
+      { label: "تنفيذ /system/backup/save",       hint: "الراوتر يكتب الملف على الذاكرة الداخلية", t: 1500 },
+      { label: "التحقق من إنشاء الملف",          hint: "قائمة /file بعد الحفظ", t: 600 },
+    ],
+    reboot: [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "إرسال أمر /system/reboot",        hint: "الراوتر يبدأ الإقلاع", t: 500 },
+    ],
+    identity: [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "تعديل /system/identity",          hint: "تطبيق الاسم الجديد", t: 400 },
+      { label: "تأكيد التغيير",                   hint: "قراءة الاسم بعد التعديل", t: 300 },
+    ],
+    disconnect: [
+      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "إزالة الجلسة من /active",        hint: "كَيك الجلسة", t: 400 },
+    ],
   };
 
   /**
-   * Show an in-progress card while a postJson() is in flight, so the
-   * operator sees we're working — not stuck. Replaces the result
-   * card during execution; result card takes over once we have a
-   * response. Survives on any action kind.
+   * Show an in-progress card with sequential STAGES so the operator
+   * sees exactly what's happening + where we are. Each stage flips
+   * to «✓ مكتمل» when its synthetic timer expires; the LAST stage
+   * waits for the real fetch to return (its timer pauses near the
+   * end, so we don't claim completion before the server responds).
    */
   function showProgress(kind) {
-    if (!actionResEl) return;
-    const label = PROGRESS_LABEL[kind] || "جارٍ التنفيذ على الراوتر…";
+    if (!actionResEl) return () => {};
+    const stages = PROGRESS_STAGES[kind] || [
+      { label: "الاتصال بالراوتر",        hint: "قناة API آمنة", t: 400 },
+      { label: "تنفيذ الأمر",              hint: "يعمل…", t: 1500 },
+      { label: "جلب النتيجة",              hint: "نهائي", t: 400 },
+    ];
     actionResEl.classList.remove("is-ok", "is-fail");
     actionResEl.classList.add("is-progress");
+    const titleMap = {
+      ping:          "اختبار Ping",
+      traceroute:    "Traceroute",
+      "dns-resolve": "حلّ نطاق DNS",
+      "dns-flush":   "مسح كاش DNS",
+      "clock-sync":  "مزامنة الوقت",
+      backup:        "حفظ نسخة احتياطية",
+      reboot:        "إعادة تشغيل",
+      identity:      "تعديل اسم الراوتر",
+      disconnect:    "قطع الاتصال",
+    };
     actionResEl.innerHTML = `
       <div class="mt-action-result-head">
         <span class="mt-action-result-icon">
           <i class="fa-solid fa-spinner fa-spin"></i>
         </span>
-        <span class="mt-action-result-title">${safeHtml(label)}</span>
+        <span class="mt-action-result-title">
+          ${safeHtml(titleMap[kind] || "تنفيذ العملية")} — جارٍ المعالجة…
+        </span>
         <span class="mt-action-result-meta" data-mt-progress-tick>0.0s</span>
       </div>
       <div class="mt-action-result-body">
+        <ol class="mt-action-stages" aria-label="مراحل التنفيذ">
+          ${stages.map((s, i) => `
+            <li class="mt-action-stage" data-stage-index="${i}">
+              <span class="mt-action-stage-bullet">
+                <i class="fa-solid fa-circle"></i>
+              </span>
+              <div class="mt-action-stage-body">
+                <span class="mt-action-stage-label">${safeHtml(s.label)}</span>
+                <span class="mt-action-stage-hint">${safeHtml(s.hint || "")}</span>
+              </div>
+              <span class="mt-action-stage-check">
+                <i class="fa-solid fa-check"></i>
+              </span>
+            </li>
+          `).join("")}
+        </ol>
         <div class="mt-action-progress-bar"
              aria-label="جارٍ التنفيذ" role="progressbar">
           <div class="mt-action-progress-bar-fill"></div>
         </div>
         <div class="mt-action-result-summary">
-          نُنفّذ الأمر على الراوتر عبر الـ VPN. لا تُغلق الصفحة.
+          ⚡ نُنفّذ الأمر على الراوتر عبر الـ VPN. لا تُغلق الصفحة.
         </div>
       </div>
     `;
     actionResEl.hidden = false;
     if (actionRawWrap) actionRawWrap.hidden = true;
-    // Live elapsed counter so the operator sees motion every second.
+
+    // Live elapsed counter.
     const tickEl = actionResEl.querySelector("[data-mt-progress-tick]");
     const started = Date.now();
-    let timer = setInterval(() => {
-      if (!tickEl || !tickEl.isConnected) { clearInterval(timer); return; }
+    const tickTimer = setInterval(() => {
+      if (!tickEl || !tickEl.isConnected) return;
       const elapsed = (Date.now() - started) / 1000;
       tickEl.textContent = elapsed.toFixed(1) + "s";
     }, 100);
-    return () => clearInterval(timer);
+
+    // Walk through stages sequentially. The first N-1 stages auto-
+    // complete on their timer; the LAST stage stays «active» until
+    // the postJson() finishes and we explicitly mark it done. This
+    // way the stage progress always converges on real server time.
+    const stageEls = actionResEl.querySelectorAll(".mt-action-stage");
+    if (stageEls.length === 0) return () => clearInterval(tickTimer);
+    let currentIdx = 0;
+    const setActive = (idx) => {
+      stageEls.forEach((el, i) => {
+        el.classList.toggle("is-active", i === idx);
+        el.classList.toggle("is-done", i < idx);
+      });
+    };
+    setActive(0);
+    const stageTimers = [];
+    for (let i = 0; i < stages.length - 1; i++) {
+      const acc = stages.slice(0, i + 1).reduce((s, x) => s + (x.t || 600), 0);
+      stageTimers.push(setTimeout(() => {
+        currentIdx = Math.max(currentIdx, i + 1);
+        setActive(currentIdx);
+      }, acc));
+    }
+
+    // Returned cleanup ALSO marks the final stage done — called by
+    // postJson() in the finally{} branch.
+    return function finishProgress() {
+      clearInterval(tickTimer);
+      stageTimers.forEach(clearTimeout);
+      stageEls.forEach((el) => {
+        el.classList.add("is-done");
+        el.classList.remove("is-active");
+      });
+    };
   }
 
   async function postJson(path, body) {
@@ -1018,7 +1128,7 @@
         if (!name) { writeOutput({ error: "أدخل اسم النطاق" }, false); return; }
         submit.disabled = true;
         await postJson(
-          "/mikrotik/" + CFG.routerId + "/ip/dns/resolve",
+          "/mikrotik/" + CFG.routerId + "/tools/dns-resolve",
           { name },
         );
         submit.disabled = false;

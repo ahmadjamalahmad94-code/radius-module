@@ -891,6 +891,82 @@ def system_reboot(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+def system_ntp_sync(nas: Mapping[str, Any]) -> MtResult:
+    """Force a fresh NTP sync. RouterOS has no single «sync now»
+    verb — instead we toggle the NTP client off+on, which retriggers
+    the initial poll against the configured server pool. If the
+    client wasn't enabled to begin with, this still leaves it
+    enabled afterwards (intentional: the operator clearly wants the
+    clock synced).
+
+    Returns the post-toggle /system/clock + /system/ntp/client/print
+    rows so the operator can confirm the new time without a refresh.
+    """
+    def _work(c):
+        # Step 1: disable (idempotent), step 2: re-enable. Each call
+        # is wire-cheap; the gap forces the client to re-bind to its
+        # pool peers on the next packet.
+        try:
+            c.run("/system/ntp/client/set", attrs={"enabled": "no"})
+        except Exception:  # noqa: BLE001
+            # Some RouterOS revisions structure NTP under
+            # /system/ntp/client/set, others under /ip/ntp/client.
+            # Swallow disable-side failures and let enable be the
+            # authoritative step.
+            pass
+        c.run("/system/ntp/client/set", attrs={"enabled": "yes"})
+        # Best-effort: include the current clock + client state so
+        # the UI shows the new time without polling. If either lookup
+        # fails (older revisions returned them under different
+        # paths), an empty dict is fine — the friendly card still
+        # renders the success header.
+        clock = []
+        client_state = []
+        try:
+            clock = list(c.run("/system/clock/print"))
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            client_state = list(c.run("/system/ntp/client/print"))
+        except Exception:  # noqa: BLE001
+            pass
+        out = {}
+        if clock:
+            out["time"] = (clock[0].get("time") or "")
+            out["date"] = (clock[0].get("date") or "")
+        if client_state:
+            cs = client_state[0]
+            out["ntp_peer"] = (cs.get("servers")
+                               or cs.get("primary-ntp")
+                               or "")
+            out["status"] = cs.get("status") or ""
+        return out
+
+    return _run_mutation(
+        nas,
+        operation="system/ntp/sync",
+        work=_work,
+        invalidate=("system/clock", "system/resource"),
+    )
+
+
+def ip_dns_cache_flush(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/dns/cache/flush` — clears the resolver cache. Useful
+    after changing upstream DNS or after a customer reports stale
+    resolutions. Non-destructive: future lookups simply re-fetch
+    from the configured server pool."""
+    def _work(c):
+        c.run("/ip/dns/cache/flush")
+        return {"flushed": True}
+
+    return _run_mutation(
+        nas,
+        operation="ip/dns/cache/flush",
+        work=_work,
+        invalidate=(),
+    )
+
+
 def system_identity_set(
     nas: Mapping[str, Any], *, name: str,
 ) -> MtResult:
