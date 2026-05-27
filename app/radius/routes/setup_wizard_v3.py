@@ -1009,50 +1009,49 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
     })
 
 
+def _mt_client_for(nas):
+    """Build a MikrotikClient config dict from a nas_devices row."""
+    return {
+        "host": nas.address,
+        "username": nas.api_user or "admin",
+        "password": nas.api_password,
+        "port": int(nas.api_port or 8728),
+        "use_tls": bool(nas.api_use_tls),
+        "timeout": 6.0,
+    }
+
+
+def _is_block_sites_entry(comment: str) -> bool:
+    """Match comments from BOTH the NPC engine that actually applies
+    block-sites (uses `HOBE_NPC_WEB-BLOCK:<pid>:` prefix) AND any
+    direct HOBERADIUS_SETUP tags. Earlier filter only matched the
+    second form, missed everything the planner actually writes."""
+    c = str(comment or "")
+    return (
+        "HOBE_NPC_WEB-BLOCK" in c
+        or "HOBE_NPC_BLOCK" in c
+        or ("HOBERADIUS_SETUP" in c and "block_sites" in c)
+        or ("HOBERADIUS_SETUP" in c and "block-sites" in c)
+        or ("HOBERADIUS_SETUP" in c and "web-block" in c)
+    )
+
+
+def _is_walled_garden_entry(comment: str) -> bool:
+    c = str(comment or "")
+    return (
+        "HOBE_NPC_WALLED-GARDEN" in c
+        or "HOBE_NPC_WALLED_GARDEN" in c
+        or ("HOBERADIUS_SETUP" in c and "walled_garden" in c)
+        or ("HOBERADIUS_SETUP" in c and "walled-garden" in c)
+        or ("HOBERADIUS_SETUP" in c and "open_sites" in c)
+    )
+
+
 def setup_wizard_v3_block_sites_current(router_id: int):
     """Read the currently-blocked domains for this router so the
-    partial can pre-fill the textarea. Without this the operator
-    sees an empty box and assumes typing 3 new domains will ADD
-    to the existing 4 — but the planner is idempotent (replace
-    not append). Surfacing the current list lets the operator
-    edit-in-place: keep what they want, drop what they don't,
-    type any new ones."""
-    from ..db.repos import nas_repo
-
-    nas = nas_repo.get_nas(_tid(), router_id)
-    if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
-    if not nas.api_password:
-        return jsonify({"ok": True, "domains": []})  # silent — no API
-    try:
-        from ..integration.mikrotik import MikrotikClient
-        cfg = {
-            "host": nas.address,
-            "username": nas.api_user or "admin",
-            "password": nas.api_password,
-            "port": int(nas.api_port or 8728),
-            "use_tls": bool(nas.api_use_tls),
-            "timeout": 6.0,
-        }
-        rid_tag = f"HOBERADIUS_SETUP:{router_id}"
-        with MikrotikClient(**cfg) as mt:
-            entries = list(mt.print_("/ip/firewall/address-list/print"))
-            domains = sorted({
-                str(e.get("address", "") or "").strip()
-                for e in entries
-                if rid_tag in str(e.get("comment", ""))
-                and "block_sites" in str(e.get("comment", ""))
-                and str(e.get("address", "") or "").strip()
-            })
-        return jsonify({"ok": True, "domains": domains})
-    except Exception as exc:  # noqa: BLE001
-        return jsonify({"ok": True, "domains": [],
-                        "warning": str(exc)})  # soft-fail
-
-
-def setup_wizard_v3_open_sites_current(router_id: int):
-    """Same idea for walled-garden — pre-fill the textarea with
-    the currently-allowed hosts."""
+    partial can pre-fill the textarea. Matches BOTH HOBE_NPC_WEB-
+    BLOCK (the actual prefix the legacy planner writes) and the
+    HOBERADIUS_SETUP fallback for forward compatibility."""
     from ..db.repos import nas_repo
 
     nas = nas_repo.get_nas(_tid(), router_id)
@@ -1062,27 +1061,46 @@ def setup_wizard_v3_open_sites_current(router_id: int):
         return jsonify({"ok": True, "domains": []})
     try:
         from ..integration.mikrotik import MikrotikClient
-        cfg = {
-            "host": nas.address,
-            "username": nas.api_user or "admin",
-            "password": nas.api_password,
-            "port": int(nas.api_port or 8728),
-            "use_tls": bool(nas.api_use_tls),
-            "timeout": 6.0,
-        }
-        rid_tag = f"HOBERADIUS_SETUP:{router_id}"
-        with MikrotikClient(**cfg) as mt:
-            entries = list(mt.print_("/ip/hotspot/walled-garden/print"))
-            # Walled-garden entries use `dst-host` (a hostname) rather
-            # than `address`. Strip empties + dedupe + sort.
+        with MikrotikClient(**_mt_client_for(nas)) as mt:
+            entries = list(mt.print_("/ip/firewall/address-list/print"))
             domains = sorted({
-                str(e.get("dst-host", "") or "").strip()
+                str(e.get("address", "") or "").strip()
                 for e in entries
-                if rid_tag in str(e.get("comment", ""))
-                and "walled_garden" in str(e.get("comment", ""))
-                and str(e.get("dst-host", "") or "").strip()
+                if _is_block_sites_entry(e.get("comment", ""))
+                and str(e.get("address", "") or "").strip()
             })
-        return jsonify({"ok": True, "domains": domains})
+        return jsonify({"ok": True, "domains": domains,
+                        "entries_scanned": len(entries) if entries else 0})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": True, "domains": [], "warning": str(exc)})
+
+
+def setup_wizard_v3_open_sites_current(router_id: int):
+    """Same idea for walled-garden — pre-fill from /ip hotspot
+    walled-garden entries matching either prefix."""
+    from ..db.repos import nas_repo
+
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+    if not nas.api_password:
+        return jsonify({"ok": True, "domains": []})
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        with MikrotikClient(**_mt_client_for(nas)) as mt:
+            entries = list(mt.print_("/ip/hotspot/walled-garden/print"))
+            # Walled-garden uses `dst-host` (DNS) — fall back to
+            # `dst-address` in case the operator added an IP form.
+            domains = sorted({
+                (str(e.get("dst-host", "") or "").strip()
+                 or str(e.get("dst-address", "") or "").strip())
+                for e in entries
+                if _is_walled_garden_entry(e.get("comment", ""))
+                and (str(e.get("dst-host", "") or "").strip()
+                     or str(e.get("dst-address", "") or "").strip())
+            })
+        return jsonify({"ok": True, "domains": domains,
+                        "entries_scanned": len(entries) if entries else 0})
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": True, "domains": [], "warning": str(exc)})
 
@@ -1149,11 +1167,11 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
     }
     try:
         with MikrotikClient(**cfg) as mt:
-            # Check 1: address-list entries created by this run.
+            # Check 1: address-list entries — match both NPC engine
+            # prefix (the actual format) and the HOBERADIUS_SETUP tag.
             entries = list(mt.print_("/ip/firewall/address-list/print"))
             managed = [e for e in entries
-                       if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
-                       and "block_sites" in str(e.get("comment", ""))]
+                       if _is_block_sites_entry(e.get("comment", ""))]
             checks.append({
                 "label": f"قائمة العناوين المحجوبة موجودة ({len(managed)} إدخالاً)",
                 "status": "ok" if managed else "fail",
@@ -1162,8 +1180,7 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
             rules = list(mt.print_("/ip/firewall/filter/print"))
             blocked_rules = [r for r in rules
                              if str(r.get("action", "")).lower() == "drop"
-                             and "HOBERADIUS_SETUP" in str(r.get("comment", ""))
-                             and "block_sites" in str(r.get("comment", ""))]
+                             and _is_block_sites_entry(r.get("comment", ""))]
             checks.append({
                 "label": "قاعدة الحجب نشطة في جدار الحماية",
                 "status": "ok" if blocked_rules else "fail",
@@ -1242,11 +1259,11 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
     }
     try:
         with MikrotikClient(**cfg) as mt:
-            # Check: walled-garden host entries created by this run.
+            # Check: walled-garden host entries — match both NPC
+            # engine prefix and the HOBERADIUS_SETUP fallback.
             entries = list(mt.print_("/ip/hotspot/walled-garden/print"))
             managed = [e for e in entries
-                       if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
-                       and "walled_garden" in str(e.get("comment", ""))]
+                       if _is_walled_garden_entry(e.get("comment", ""))]
             checks.append({
                 "label": f"إدخالات المواقع المسموحة موجودة ({len(managed)} موقعاً)",
                 "status": "ok" if managed else "fail",
