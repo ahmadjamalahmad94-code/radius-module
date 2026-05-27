@@ -468,8 +468,9 @@
   animation:mt-action-pop .25s ease-out;
 }
 .rh-overview .mt-action-result[hidden]{display:none}
-.rh-overview .mt-action-result.is-ok   { border-color:#86EFAC; }
-.rh-overview .mt-action-result.is-fail { border-color:#FCA5A5; }
+.rh-overview .mt-action-result.is-ok       { border-color:#86EFAC; }
+.rh-overview .mt-action-result.is-fail     { border-color:#FCA5A5; }
+.rh-overview .mt-action-result.is-progress { border-color:#C4B5FD; }
 .rh-overview .mt-action-result-head{
   display:flex;align-items:center;gap:10px;
   padding:12px 16px;border-bottom:1px solid #F1F5F9;
@@ -479,6 +480,9 @@
 }
 .rh-overview .mt-action-result.is-fail .mt-action-result-head{
   background:#FEF2F2;border-bottom-color:#FCA5A5;
+}
+.rh-overview .mt-action-result.is-progress .mt-action-result-head{
+  background:#F5F3FF;border-bottom-color:#DDD6FE;
 }
 .rh-overview .mt-action-result-icon{
   width:32px;height:32px;border-radius:10px;flex-shrink:0;
@@ -490,6 +494,38 @@
 }
 .rh-overview .mt-action-result.is-fail .mt-action-result-icon{
   background:linear-gradient(135deg,#F87171,#DC2626);
+}
+.rh-overview .mt-action-result.is-progress .mt-action-result-icon{
+  background:linear-gradient(135deg,#A78BFA,#7C3AED);
+}
+.rh-overview .mt-action-result.is-progress .mt-action-result-title{
+  color:#5B21B6;
+}
+/* Animated stripe bar — the operator's «something IS happening»
+   signal. The same width:100% with a moving gradient gives a clear
+   "indeterminate progress" feel without committing to a percentage
+   we can't actually report. */
+.rh-overview .mt-action-progress-bar{
+  position:relative;height:6px;border-radius:999px;overflow:hidden;
+  background:#EDE9FE;margin-bottom:10px;
+}
+.rh-overview .mt-action-progress-bar-fill{
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,
+              transparent 0%,
+              #7C3AED   50%,
+              transparent 100%);
+  background-size:50% 100%;
+  animation:mt-action-progress-sweep 1.2s linear infinite;
+}
+@keyframes mt-action-progress-sweep{
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX( 200%); }
+}
+@media (prefers-reduced-motion: reduce){
+  .rh-overview .mt-action-progress-bar-fill{
+    animation:none;background:#7C3AED;
+  }
 }
 .rh-overview .mt-action-result-title{
   flex:1;font-size:14px;font-weight:800;color:#0F172A;

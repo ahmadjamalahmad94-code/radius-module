@@ -505,11 +505,27 @@
     }
 
     // ── PING ──────────────────────────────────────────────
+    // RouterOS shape:
+    //   { data: { cached, count, data: [
+    //       { host, seq, size, time, ttl,
+    //         sent, received, "packet-loss",
+    //         "min-rtt", "avg-rtt", "max-rtt", ... },
+    //       ...
+    //     ] } }
+    // Each entry is one sequence (ping iteration). The cumulative
+    // counters (sent / received / packet-loss / avg-rtt) update on
+    // each row — the LAST row carries the final totals.
     if (kind === "ping") {
       if (!ok) return head("فشل اختبار Ping", "/tools/ping") + failBody();
-      const replies = Array.isArray(data.replies) ? data.replies : [];
-      const summary = data.summary || {};
-      const target = data.target || data.host || "";
+      // The API wraps the array in `data.data` (envelope has its own
+      // `data` key, the inner row-set is also called `data`). Try
+      // both shapes so a future API change doesn't break us.
+      const replies = Array.isArray(data.data) ? data.data
+                    : Array.isArray(data.replies) ? data.replies
+                    : Array.isArray(data) ? data
+                    : [];
+      const target = data.target || data.host
+                  || (replies[0] && replies[0].host) || "";
       let tableHtml = "";
       if (replies.length) {
         tableHtml = `
@@ -518,32 +534,44 @@
               <tr><th>#</th><th>السعة</th><th>TTL</th><th>الزمن</th><th>الحالة</th></tr>
             </thead>
             <tbody>
-              ${replies.map((r, i) => `
+              ${replies.map((r, i) => {
+                const arrived = (r.time != null && r.time !== "")
+                              || (r["received"] && Number(r["received"]) > Number(r["sent"] || 0) - 1 && r.time);
+                return `
                 <tr>
-                  <td>${i + 1}</td>
+                  <td>${safeHtml(r.seq != null ? Number(r.seq) + 1 : i + 1)}</td>
                   <td>${safeHtml(r.size != null ? r.size + " B" : "—")}</td>
                   <td>${safeHtml(r.ttl != null ? r.ttl : "—")}</td>
-                  <td>${safeHtml(r.time != null ? r.time : (r["avg-rtt"] || "—"))}</td>
-                  <td>${r.status === "ok" || r.received
+                  <td>${safeHtml(r.time != null && r.time !== "" ? r.time : "—")}</td>
+                  <td>${arrived
                     ? '<span style="color:#10B981">✓ وصل</span>'
                     : '<span style="color:#DC2626">✗ ضاع</span>'}</td>
-                </tr>
-              `).join("")}
+                </tr>`;
+              }).join("")}
             </tbody>
           </table>
         `;
       }
-      const sent   = summary.sent     != null ? summary.sent     : replies.length;
-      const recv   = summary.received != null ? summary.received : replies.filter(r => r.status === "ok" || r.received).length;
-      const loss   = sent > 0 ? Math.round(((sent - recv) / sent) * 100) : 0;
-      const avgRtt = summary["avg-rtt"] || summary.avg_rtt || "—";
+      // Final cumulative counters live on the LAST row.
+      const last = replies[replies.length - 1] || {};
+      const sent   = Number(last.sent     != null ? last.sent     : replies.length);
+      const recv   = Number(last.received != null ? last.received : replies.filter(r => r.time).length);
+      const lossRaw = last["packet-loss"];
+      const loss   = lossRaw != null && lossRaw !== ""
+                    ? String(lossRaw).replace(/%$/, "")
+                    : (sent > 0 ? Math.round(((sent - recv) / sent) * 100) : 0);
+      const avgRtt = last["avg-rtt"] || last.avg_rtt || last.time || "—";
+      const minRtt = last["min-rtt"] || "—";
+      const maxRtt = last["max-rtt"] || "—";
       return head(`Ping إلى ${target || "—"}`, "/tools/ping") + body(`
         ${tableHtml}
         <div class="mt-action-result-summary">
           مُرسَل: <strong>${sent}</strong> ·
           مُستلَم: <strong>${recv}</strong> ·
           فاقد: <strong>${loss}%</strong> ·
-          متوسط زمن الذهاب-والإياب: <strong>${safeHtml(avgRtt)}</strong>
+          متوسط: <strong>${safeHtml(avgRtt)}</strong> ·
+          أدنى: <strong>${safeHtml(minRtt)}</strong> ·
+          أعلى: <strong>${safeHtml(maxRtt)}</strong>
         </div>
       `);
     }
@@ -679,14 +707,83 @@
     if (cancel) cancel.addEventListener("click", closeForm);
   }
 
+  /**
+   * Friendly per-action progress label. The router can take 5-10s
+   * for ping / traceroute over the WG tunnel, and longer for
+   * backup. Empty string → generic «جارٍ التنفيذ…».
+   */
+  const PROGRESS_LABEL = {
+    ping:          "جارٍ إرسال حزم Ping عبر الراوتر…",
+    traceroute:    "جارٍ تتبّع مسار الحزم — قد يستغرق حتى 30 ثانية…",
+    "dns-resolve": "جارٍ سؤال DNS…",
+    "dns-flush":   "جارٍ إفراغ كاش DNS…",
+    "clock-sync":  "جارٍ مزامنة الوقت من خادم NTP…",
+    backup:        "جارٍ كتابة نسخة احتياطية على الراوتر…",
+    reboot:        "جارٍ إرسال أمر إعادة التشغيل…",
+    identity:      "جارٍ تحديث اسم الراوتر…",
+  };
+
+  /**
+   * Show an in-progress card while a postJson() is in flight, so the
+   * operator sees we're working — not stuck. Replaces the result
+   * card during execution; result card takes over once we have a
+   * response. Survives on any action kind.
+   */
+  function showProgress(kind) {
+    if (!actionResEl) return;
+    const label = PROGRESS_LABEL[kind] || "جارٍ التنفيذ على الراوتر…";
+    actionResEl.classList.remove("is-ok", "is-fail");
+    actionResEl.classList.add("is-progress");
+    actionResEl.innerHTML = `
+      <div class="mt-action-result-head">
+        <span class="mt-action-result-icon">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+        </span>
+        <span class="mt-action-result-title">${safeHtml(label)}</span>
+        <span class="mt-action-result-meta" data-mt-progress-tick>0.0s</span>
+      </div>
+      <div class="mt-action-result-body">
+        <div class="mt-action-progress-bar"
+             aria-label="جارٍ التنفيذ" role="progressbar">
+          <div class="mt-action-progress-bar-fill"></div>
+        </div>
+        <div class="mt-action-result-summary">
+          نُنفّذ الأمر على الراوتر عبر الـ VPN. لا تُغلق الصفحة.
+        </div>
+      </div>
+    `;
+    actionResEl.hidden = false;
+    if (actionRawWrap) actionRawWrap.hidden = true;
+    // Live elapsed counter so the operator sees motion every second.
+    const tickEl = actionResEl.querySelector("[data-mt-progress-tick]");
+    const started = Date.now();
+    let timer = setInterval(() => {
+      if (!tickEl || !tickEl.isConnected) { clearInterval(timer); return; }
+      const elapsed = (Date.now() - started) / 1000;
+      tickEl.textContent = elapsed.toFixed(1) + "s";
+    }, 100);
+    return () => clearInterval(timer);
+  }
+
   async function postJson(path, body) {
-    const { res, body: env } = await api(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body || {}),
-    });
-    writeOutput(env || { status: res.status }, res.ok && env && env.ok !== false);
-    return { res, env };
+    const stopTick = showProgress(currentActionKind);
+    try {
+      const { res, body: env } = await api(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {}),
+      });
+      actionResEl && actionResEl.classList.remove("is-progress");
+      writeOutput(env || { status: res.status },
+                  res.ok && env && env.ok !== false);
+      return { res, env };
+    } catch (err) {
+      actionResEl && actionResEl.classList.remove("is-progress");
+      writeOutput({ error: String(err && err.message || err) }, false);
+      return { res: null, env: null };
+    } finally {
+      if (typeof stopTick === "function") stopTick();
+    }
   }
 
   // ── Backup ──
