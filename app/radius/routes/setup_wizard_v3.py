@@ -1368,9 +1368,18 @@ def setup_wizard_v3_router_inventory(router_id: int):
         # customer IP.
         "public_address":  public_host_value,
     }
+    # Per-stage timing — surfaced in the response so the UI can show
+    # the operator which read was slow if the page takes >1.5s.
+    import time as _t
+    timings: dict = {}
+    _t_start = _t.perf_counter()
     try:
         from ..integration.mikrotik import MikrotikClient
         with MikrotikClient(**_mt_client_for(nas)) as mt:
+            timings["connect_ms"] = int(
+                (_t.perf_counter() - _t_start) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── Hotspot servers ────────────────────────────
             hotspot_items = []
             for s in mt.print_("/ip/hotspot/print"):
@@ -1396,6 +1405,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "wifi",
                     "items": hotspot_items,
                 })
+            timings["hotspot_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── PPPoE / Broadband ──────────────────────────
             pppoe_items = []
             for s in mt.print_("/interface/pppoe-server/server/print"):
@@ -1421,6 +1434,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "ethernet",
                     "items": pppoe_items,
                 })
+            timings["broadband_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── Block-sites (address-list entries) ─────────
             block_items = []
             for e in mt.print_("/ip/firewall/address-list/print"):
@@ -1447,6 +1464,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "ban",
                     "items": block_items,
                 })
+            timings["block_sites_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── Walled garden / open-sites ────────────────
             open_items = []
             for e in mt.print_("/ip/hotspot/walled-garden/print"):
@@ -1474,6 +1495,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "circle-check",
                     "items": open_items,
                 })
+            timings["open_sites_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── Public-IP (site-exit) — mangle rules ──────
             siteexit_items = []
             for r in mt.print_("/ip/firewall/mangle/print"):
@@ -1500,35 +1525,47 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "globe",
                     "items": siteexit_items,
                 })
+            timings["public_ip_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
+            _t_stage = _t.perf_counter()
             # ─── Remote-access grants — firewall filter rules
             #
             # Each rule's comment encodes:
-            #   HOBERADIUS_TECH:<token>:<svc_name>[:<kind>:<ttl_h>]
-            # where the last two segments are new (older grants don't
+            #   HOBERADIUS_TECH:<token>:<svc_name>[:<kind>:<ttl_h>[:<perm>]]
+            # where the last segments are new (older grants don't
             # have them — we fall back gracefully). When kind=perm we
             # show «دائم»; when kind=tmp we cross-reference the
             # matching scheduler row to compute remaining time.
             #
-            # Also we cache the per-router NPC port mappings so each
-            # grant card can surface its public VPS URL — answering
-            # the operator's "show me the connect address right on
-            # the card" feedback.
-            try:
-                schedulers = list(
-                    mt.print_("/system/scheduler/print")
-                )
-            except Exception:  # noqa: BLE001
+            # PERF: filter rules are fetched in a single pass + filtered
+            # client-side. Schedulers + port-mappings are fetched ONLY
+            # if we found at least one HOBERADIUS_TECH rule — empty
+            # routers save 1-2 roundtrips this way.
+            filter_rules = [
+                r for r in mt.print_("/ip/firewall/filter/print")
+                if "HOBERADIUS_TECH" in str(r.get("comment", "") or "")
+            ]
+            if filter_rules:
+                try:
+                    schedulers = list(
+                        mt.print_("/system/scheduler/print")
+                    )
+                except Exception:  # noqa: BLE001
+                    schedulers = []
+                try:
+                    from ..db.repos import (
+                        npc_remote_port_mappings_repo as _ports_repo,
+                    )
+                    _mappings_by_svc = {
+                        m["service"]: m
+                        for m in _ports_repo.list_for_router(router_id)
+                        if m.get("enabled")
+                    }
+                except Exception:  # noqa: BLE001
+                    _mappings_by_svc = {}
+            else:
                 schedulers = []
-            try:
-                from ..db.repos import (
-                    npc_remote_port_mappings_repo as _ports_repo,
-                )
-                _mappings_by_svc = {
-                    m["service"]: m
-                    for m in _ports_repo.list_for_router(router_id)
-                    if m.get("enabled")
-                }
-            except Exception:  # noqa: BLE001
                 _mappings_by_svc = {}
 
             # Map wizard service name → ports_repo service id.
@@ -1551,10 +1588,10 @@ def setup_wizard_v3_router_inventory(router_id: int):
                 return ""
 
             remote_items = []
-            for r in mt.print_("/ip/firewall/filter/print"):
+            # filter_rules was already filtered to HOBERADIUS_TECH rows
+            # above, in a single round-trip; no second fetch here.
+            for r in filter_rules:
                 comment = str(r.get("comment", "") or "")
-                if "HOBERADIUS_TECH" not in comment:
-                    continue
                 # Parse:  HOBERADIUS_TECH : <token> : <svc> [: <kind> : <ttl_h> [: <perm>]]
                 parts = [p for p in comment.split(":") if p]
                 token = parts[1] if len(parts) >= 2 else ""
@@ -1645,13 +1682,19 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "icon": "key",
                     "items": remote_items,
                 })
+            timings["remote_access_ms"] = int(
+                (_t.perf_counter() - _t_stage) * 1000
+            )
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False,
                         "error": f"تعذّر قراءة الخدمات: {exc}",
                         "groups": groups,
-                        "router_info": router_info}), 502
+                        "router_info": router_info,
+                        "timings": timings}), 502
+    timings["total_ms"] = int((_t.perf_counter() - _t_start) * 1000)
     return jsonify({"ok": True, "groups": groups,
-                    "router_info": router_info})
+                    "router_info": router_info,
+                    "timings": timings})
 
 
 def setup_wizard_v3_router_inventory_remove(router_id: int):
