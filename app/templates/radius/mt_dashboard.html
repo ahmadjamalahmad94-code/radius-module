@@ -374,17 +374,39 @@
 /* ─── Live grid cards: fixed height + body scrolls ────────────
    Operator: «بدي الصندوقين نفس الارتفاع وما يزيد. لو زادت
    البيانات يصير سكرول».
-   Apply ONLY to cards inside .mt-grid (the 2-column live cards),
-   not to .mt-card--actions or stand-alone cards in other tabs —
-   those have natural single-screen content already. */
-.rh-overview .mt-grid > .mt-card{
-  height:360px;       /* fixed — does not grow with data */
-  min-height:360px;
-  max-height:360px;
+   Previous attempt was getting overridden by min-height:80px on
+   .mt-card-body from the external mt_dashboard.css. Force the
+   constraints with !important on the height triple AND wipe any
+   competing min-height from the inner body so the flex children
+   are bounded by the parent. Specificity is high enough to win
+   against base + we double-belt with !important.
+
+   Scope guard kept: only matches direct mt-card children of
+   .mt-grid, so .mt-card--actions and other tabs are untouched. */
+.rh-overview .mt-grid{
+  /* Force grid items to share the tallest row baseline, even though
+     we also lock the height — belts + braces. */
+  grid-auto-rows:360px;
+}
+.rh-overview .mt-grid > .mt-card,
+.rh-overview .mt-grid > section.mt-card,
+.rh-overview .mt-grid > .mt-card[data-mt-live-traffic],
+.rh-overview .mt-grid > .mt-card[data-mt-active-users]{
+  height:360px !important;
+  min-height:360px !important;
+  max-height:360px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+}
+.rh-overview .mt-grid > .mt-card > .mt-card-head{
+  flex:0 0 auto;
 }
 .rh-overview .mt-grid > .mt-card > .mt-card-body{
-  overflow-y:auto;    /* scroll when content overflows */
-  overflow-x:hidden;
+  flex:1 1 0 !important;
+  min-height:0 !important;     /* override base mt-card-body min-height:80px */
+  overflow-y:auto !important;  /* scroll when content overflows */
+  overflow-x:hidden !important;
 }
 /* Subtle scrollbar so the scroll affordance is visible without
    shouting at the operator on macOS / Firefox. */
