@@ -3075,6 +3075,16 @@
     const closeBtn = modal.querySelector('[data-rh-svc-modal-close]');
     if (!frame || !closeBtn) return;
 
+    // .mt-dashboard sets `isolation: isolate`, which traps every
+    // child z-index inside its own stacking context. The admin
+    // sidebar (.hb-side) sits at z-index:60 in the ROOT context,
+    // so it paints on top of anything inside .mt-dashboard no
+    // matter how high we go locally. Portal the modal node up to
+    // <body> once at init so its z-index:10000 wins globally.
+    if (modal.parentNode !== document.body) {
+      document.body.appendChild(modal);
+    }
+
     function openFor(card){
       const href = card.getAttribute('href');
       if (!href || href === '#') return;
