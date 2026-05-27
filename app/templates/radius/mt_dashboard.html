@@ -368,8 +368,38 @@
      anything below it down via flex so empty states don't collapse. */
   display:flex;flex-direction:column;
 }
-.rh-overview .mt-card-body{flex:1 1 auto}
+.rh-overview .mt-card-body{flex:1 1 auto;min-height:0}
 .rh-overview .mt-card--actions{margin-top:6px}
+
+/* ─── Live grid cards: fixed height + body scrolls ────────────
+   Operator: «بدي الصندوقين نفس الارتفاع وما يزيد. لو زادت
+   البيانات يصير سكرول».
+   Apply ONLY to cards inside .mt-grid (the 2-column live cards),
+   not to .mt-card--actions or stand-alone cards in other tabs —
+   those have natural single-screen content already. */
+.rh-overview .mt-grid > .mt-card{
+  height:360px;       /* fixed — does not grow with data */
+  min-height:360px;
+  max-height:360px;
+}
+.rh-overview .mt-grid > .mt-card > .mt-card-body{
+  overflow-y:auto;    /* scroll when content overflows */
+  overflow-x:hidden;
+}
+/* Subtle scrollbar so the scroll affordance is visible without
+   shouting at the operator on macOS / Firefox. */
+.rh-overview .mt-grid > .mt-card > .mt-card-body::-webkit-scrollbar{
+  width:8px;
+}
+.rh-overview .mt-grid > .mt-card > .mt-card-body::-webkit-scrollbar-thumb{
+  background:#CBD5E1;border-radius:999px;
+}
+.rh-overview .mt-grid > .mt-card > .mt-card-body::-webkit-scrollbar-thumb:hover{
+  background:#94A3B8;
+}
+.rh-overview .mt-grid > .mt-card > .mt-card-body{
+  scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent;
+}
 .rh-overview .mt-card-head{
   display:flex;align-items:center;justify-content:space-between;
   gap:12px;padding:14px 18px;
