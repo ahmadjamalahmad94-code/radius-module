@@ -225,7 +225,60 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
     except Exception as exc:  # noqa: BLE001
         return _err(f"تعذّر اكتشاف الواجهات: {exc}", status=500,
                     code="discovery_error")
-    return jsonify({"ok": True, "interfaces": interfaces})
+    # Detect WAN-side interface(s): look up the default route and
+    # the WireGuard tunnel interface, and mark them in the response
+    # so the operator can't accidentally turn them into a Hotspot
+    # uplink or PPPoE server (which would brick the router's own
+    # internet access). Soft-fail — if the probe doesn't work the
+    # interfaces still load, just without is_wan flags.
+    wan_names: set[str] = set()
+    try:
+        from ..integration.mikrotik import MikrotikClient
+        cfg = {
+            "host": nas.address,
+            "username": nas.api_user or "admin",
+            "password": nas.api_password,
+            "port": int(nas.api_port or 8728),
+            "use_tls": bool(nas.api_use_tls),
+            "timeout": 6.0,
+        }
+        with MikrotikClient(**cfg) as mt:
+            # 1. Default-route gateway interface (typical WAN).
+            #    The `gateway` field is either an IP, an iface name,
+            #    or "IP%iface" format depending on RouterOS version.
+            routes = list(mt.print_("/ip/route/print"))
+            for r in routes:
+                if str(r.get("dst-address", "")) != "0.0.0.0/0":
+                    continue
+                if str(r.get("active", "")).lower() not in ("true", "yes"):
+                    continue
+                gw = str(r.get("gateway", "") or "")
+                # "1.2.3.4%ether1" → "ether1"
+                if "%" in gw:
+                    wan_names.add(gw.split("%")[-1])
+                # Pure interface name (no IP, no %).
+                elif gw and "." not in gw and ":" not in gw:
+                    wan_names.add(gw)
+            # 2. Every WireGuard interface — it carries the VPN
+            #    tunnel back to the HobeRadius VPS and must never
+            #    be repurposed as LAN.
+            try:
+                wg_ifaces = list(mt.print_("/interface/wireguard/print"))
+                for w in wg_ifaces:
+                    name = str(w.get("name", "") or "").strip()
+                    if name:
+                        wan_names.add(name)
+            except Exception:  # noqa: BLE001
+                pass  # WireGuard package may not be installed
+    except Exception:  # noqa: BLE001
+        pass  # WAN detection is best-effort
+    for it in interfaces:
+        it["is_wan"] = it.get("name") in wan_names
+        if it["is_wan"]:
+            # Unset the "recommended" hint and force not-checked default.
+            it["recommended"] = False
+    return jsonify({"ok": True, "interfaces": interfaces,
+                    "wan_interfaces": sorted(wan_names)})
 
 
 # ─── Friendly Arabic translations for planner blocking-error codes ───
@@ -549,10 +602,18 @@ def setup_wizard_v3_broadband_preview(router_id: int):
         return _err("الراوتر غير موجود", status=404, code="router_not_found")
 
     body = _body() or {}
+    # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
+    # local_address + remote_pool_cidr (raises if either is empty).
+    # The form's placeholder values are 10.30.0.1/32 and 10.30.1.0/24;
+    # use them as defaults so an operator who hits «التالي» without
+    # touching the optional fields gets a working plan rather than
+    # an inscrutable «اختر واجهة» error from the mapped trap.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
-        "local_address": str(body.get("local_address") or "") or None,
-        "remote_pool_cidr": str(body.get("remote_pool_cidr") or "") or None,
+        "local_address": (str(body.get("local_address") or "").strip()
+                          or "10.30.0.1/32"),
+        "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
+                             or "10.30.1.0/24"),
         "mode": "manual",
         "blocked_interfaces": list(body.get("blocked_interfaces") or []),
         "blocked_network_cidrs": [],
@@ -585,10 +646,18 @@ def setup_wizard_v3_broadband_apply(router_id: int):
         return _err("الراوتر غير موجود", status=404, code="router_not_found")
 
     body = _body() or {}
+    # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
+    # local_address + remote_pool_cidr (raises if either is empty).
+    # The form's placeholder values are 10.30.0.1/32 and 10.30.1.0/24;
+    # use them as defaults so an operator who hits «التالي» without
+    # touching the optional fields gets a working plan rather than
+    # an inscrutable «اختر واجهة» error from the mapped trap.
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
-        "local_address": str(body.get("local_address") or "") or None,
-        "remote_pool_cidr": str(body.get("remote_pool_cidr") or "") or None,
+        "local_address": (str(body.get("local_address") or "").strip()
+                          or "10.30.0.1/32"),
+        "remote_pool_cidr": (str(body.get("remote_pool_cidr") or "").strip()
+                             or "10.30.1.0/24"),
         "mode": "manual",
         "blocked_interfaces": list(body.get("blocked_interfaces") or []),
         "blocked_network_cidrs": [],

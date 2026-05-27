@@ -74,6 +74,17 @@
 .swhs-iface-counter.is-ready{
   background:var(--swsvf-blue-soft);color:#1D4ED8;
 }
+/* WAN-locked interface — visually muted, click-blocked, with a
+   warning that picking it would brick the router's own uplink. */
+.swhs-iface-card.is-wan{
+  background:#FEF2F2;border-color:#FCA5A5;
+  cursor:not-allowed;opacity:.85;
+}
+.swhs-iface-card.is-wan:hover{
+  background:#FEF2F2;border-color:#FCA5A5;
+}
+.swhs-iface-card.is-wan .swhs-iface-meta{color:#B91C1C;font-weight:700}
+.swhs-iface-card.is-wan input{cursor:not-allowed}
 .swhs-iface-name{font-weight:700;color:var(--swsvf-ink);font-family:monospace}
 .swhs-iface-meta{color:var(--swsvf-mute);font-size:11px;margin-inline-start:auto}
 .swhs-iface-empty{
@@ -199,11 +210,17 @@
                 .map((el) => (el.value || "").trim())
                 .filter(Boolean);
   }
+  // WAN interface names captured from /discover-interfaces. Sent back
+  // as blocked_interfaces so the planner refuses them even if the
+  // operator manages to tick one (shouldn't happen — they're disabled
+  // in the UI — but defense in depth).
+  let wanInterfaces = [];
+
   function getPayload() {
     return {
       selected_interfaces: getSelectedInterfaces(),
       subnet_base: subnetInput.value.trim() || "10.20.0.0/16",
-      blocked_interfaces: [],
+      blocked_interfaces: wanInterfaces.slice(),
     };
   }
 
@@ -256,6 +273,7 @@
       if (!res.ok || data.ok === false) {
         throw new Error(data.error || `HTTP ${res.status}`);
       }
+      wanInterfaces = data.wan_interfaces || [];
       renderInterfaces(data.interfaces || []);
     } catch (error) {
       showError("فشل اكتشاف الواجهات: " + error.message);
@@ -272,15 +290,23 @@
       return;
     }
     ifaceList.innerHTML = items.map((it) => {
-      const checked = it.recommended ? "checked" : "";
+      const isWan = !!it.is_wan;
+      const checked = (!isWan && it.recommended) ? "checked" : "";
+      const disabled = isWan ? "disabled" : "";
       const meta = [
         it.type || "",
         it.running ? "يعمل" : "متوقّف",
         it.disabled ? "معطّل" : "",
+        isWan ? "🔒 WAN — منفذ الإنترنت" : "",
       ].filter(Boolean).join(" · ");
+      const cls = [
+        "swhs-iface-card",
+        checked ? "is-checked" : "",
+        isWan ? "is-wan" : "",
+      ].filter(Boolean).join(" ");
       return `
-        <label class="swhs-iface-card ${checked ? 'is-checked' : ''}">
-          <input type="checkbox" data-swhs-iface value="${it.name}" ${checked}>
+        <label class="${cls}">
+          <input type="checkbox" data-swhs-iface value="${it.name}" ${checked} ${disabled}>
           <span class="swhs-iface-name">${it.name}</span>
           <span class="swhs-iface-meta">${meta}</span>
         </label>`;
