@@ -210,12 +210,15 @@ class HotspotBootstrapPlanner:
                 "# ════════════════════════════════════════════════",
                 "# HobeRadius Hotspot Setup",
                 f"# Run: {wizard_run_id}",
-                "# ⚠️  WARNING: this script REMOVES any prior",
-                "#     HobeRadius hotspot config on the same",
-                "#     interfaces before adding fresh state.",
-                "#     Tag scope: HOBE_HOTSPOT_<interface>.",
-                "#     Existing non-HobeRadius configs are",
-                "#     left untouched.",
+                "# ⚠️  WARNING: this script REMOVES every prior",
+                "#     /ip hotspot and /ip dhcp-server bound to",
+                "#     the target interfaces before adding fresh",
+                "#     state. NAT / pool / address rows are kept",
+                "#     scoped to HOBE_HOTSPOT_<interface>, but the",
+                "#     hotspot + dhcp server entries are removed",
+                "#     by interface — otherwise MikroTik refuses",
+                "#     the new add with «server or relay with",
+                "#     such interface already exists».",
                 "# ════════════════════════════════════════════════",
                 "",
                 "# ── Cleanup of prior HobeRadius hotspot rows ──",
@@ -223,12 +226,21 @@ class HotspotBootstrapPlanner:
         )
         for plan in port_plans:
             comment = plan["comment"]
+            iface = plan["interface"]
             lines.extend(
                 [
                     f'/ip firewall nat remove [find where comment~"{comment}"]',
+                    # Remove by NAME first (HobeRadius-tagged rows).
                     f'/ip hotspot remove [find where name="{plan["server_name"]}"]',
                     f'/ip hotspot profile remove [find where name="{plan["profile_name"]}"]',
                     f'/ip dhcp-server remove [find where name="{plan["dhcp_server_name"]}"]',
+                    # Then sweep anything still bound to the same INTERFACE
+                    # — a hotspot/dhcp from a prior tool, an older HobeRadius
+                    # naming scheme, or a half-cleaned manual setup will
+                    # otherwise make /ip hotspot add fail with
+                    # «server or relay with such interface already exists».
+                    f'/ip hotspot remove [find where interface="{iface}"]',
+                    f'/ip dhcp-server remove [find where interface="{iface}"]',
                     f'/ip dhcp-server network remove [find where comment~"{comment}"]',
                     f'/ip pool remove [find where name="{plan["pool_name"]}"]',
                     f'/ip address remove [find where comment~"{comment}"]',
