@@ -286,11 +286,15 @@ li[data-status="pending"] .swsvf-verify-icon{
 
   {{ csrf_token_input() | safe }}
 
-  {# Direct link to mt_dashboard (was services-dashboard but that's
-     now a 302 redirect anyway — saves one HTTP roundtrip). #}
-  <a class="swsvf-back" href="{{ url_for('radius.mt_dashboard', nas_id=router_id) }}">
+  {# Back link — returns to the «خدماتي» tab of the dashboard,
+     not the default Overview tab, so the operator lands back on
+     the same context they came from. The #tab-my-services hash
+     is picked up by mt_dashboard.js on load. Operator:
+     «خليه يرجع ع صفحة الخدمات». #}
+  <a class="swsvf-back"
+     href="{{ url_for('radius.mt_dashboard', nas_id=router_id, _anchor='tab-my-services') }}">
     <i class="fa-solid fa-arrow-right"></i>
-    <span>العودة إلى صفحة الراوتر</span>
+    <span>العودة إلى خدماتي</span>
   </a>
 
   {# ─── Service header ─── #}

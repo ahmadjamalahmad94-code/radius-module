@@ -1617,7 +1617,7 @@
           </button>
         </div>
       </div>
-      <div class="rh-inv-loading" data-rh-inv-loading>
+      <div class="rh-inv-loading" data-rh-inv-loading hidden>
         <i class="fa-solid fa-spinner fa-spin"></i>
         <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
         <small class="rh-inv-loading-hint">
@@ -2866,13 +2866,29 @@
     });
   });
 
-  // Lazy-load: don't hit the router unless the operator clicks the
-  // tab. Avoids a needless API call on every dashboard open.
+  // Lazy-load: don't hit the router unless the operator opens the
+  // tab. Two triggers — direct click on the tab button, OR a
+  // hash-based activation (e.g. coming back from a service flow
+  // page with #tab-my-services). Both fire only once; subsequent
+  // activations are no-ops because `loaded` flips true after the
+  // first successful (or failed) fetch.
   if (tabBtn) {
     tabBtn.addEventListener("click", () => {
       if (!loaded) loadInventory();
     });
   }
+  root.addEventListener("mt:tab-change", (e) => {
+    if (e.detail && e.detail.slug === "my-services" && !loaded) {
+      loadInventory();
+    }
+  });
+  // Safety net — if the page loaded already on the my-services
+  // tab (hash navigation), the mt:tab-change event may have
+  // fired before this listener was attached. Check the panel
+  // visibility once on next tick and load if appropriate.
+  setTimeout(() => {
+    if (!loaded && !panel.hasAttribute("hidden")) loadInventory();
+  }, 0);
 })();
 
 </script>
