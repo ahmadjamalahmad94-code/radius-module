@@ -438,7 +438,11 @@
     identity:    root.querySelector("[data-mt-action-identity]"),
     // New (2026-05): info + maintenance actions.
     traceroute:  root.querySelector("[data-mt-action-traceroute]"),
-    "dns-resolve": root.querySelector("[data-mt-action-dns-resolve]"),
+    // dns-resolve removed 2026-05 — RouterOS 7 rejects /resolve
+    // with «unknown parameter name» and the operator asked to
+    // drop the tile rather than chase more shape fixes. The
+    // backend route /tools/dns-resolve is left intact in case a
+    // future revision lands a working path.
     "dns-flush":   root.querySelector("[data-mt-action-dns-flush]"),
     "clock-sync":  root.querySelector("[data-mt-action-clock-sync]"),
   };
@@ -1146,33 +1150,12 @@
     });
   }
 
-  // ── DNS resolve (read-only) ──
-  if (actionButtons["dns-resolve"]) {
-    actionButtons["dns-resolve"].addEventListener("click", () => {
-      openForm("dns-resolve", `
-        <label>اسم النطاق
-          <input type="text" name="name" placeholder="example.com"
-                 data-mt-dns-name required>
-        </label>
-        <div class="mt-action-row">
-          <button type="submit">حلّ الاسم</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
-        </div>
-      `);
-      const submit = actionFormEl.querySelector("button[type=submit]");
-      submit.addEventListener("click", async (e) => {
-        e.preventDefault();
-        const name = actionFormEl.querySelector("[data-mt-dns-name]").value.trim();
-        if (!name) { writeOutput({ error: "أدخل اسم النطاق" }, false); return; }
-        submit.disabled = true;
-        await postJson(
-          "/mikrotik/" + CFG.routerId + "/tools/dns-resolve",
-          { name },
-        );
-        submit.disabled = false;
-      });
-    });
-  }
+  // DNS resolve action removed (2026-05). RouterOS 7's API rejects
+  // /resolve with «unknown parameter name» across every shape we
+  // tried (name=, server=, server-address=, positional). Operator
+  // asked to drop the feature instead of more shape-chasing. The
+  // backend /tools/dns-resolve route + renderer branch are kept as
+  // dead code — easy to revive when a working API path lands.
 
   // ── DNS flush ──
   if (actionButtons["dns-flush"]) {

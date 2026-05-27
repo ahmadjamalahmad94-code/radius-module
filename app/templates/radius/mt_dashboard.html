@@ -1205,14 +1205,11 @@
             <span class="mt-action-sub">مسار الحزم خطوة بخطوة</span>
           </span>
         </button>
-        <button type="button" class="mt-action-btn mt-action-btn--info"
-                data-mt-action-dns-resolve>
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <span class="mt-action-btn-body">
-            <span class="mt-action-label">معرفة IP لاسم نطاق</span>
-            <span class="mt-action-sub">مثلاً google.com → 8.8.8.8</span>
-          </span>
-        </button>
+        {# DNS resolve tile removed — RouterOS 7 rejects the `/resolve
+           name=…` API form with «unknown parameter name», and the
+           alternatives (script-based or cache-based) introduced
+           more pain than the feature was worth. Operator: «اذا ما
+           الها حل خلص الغي الخدمة هذي». #}
         <button type="button" class="mt-action-btn"
                 data-mt-action-backup>
           <i class="fa-solid fa-floppy-disk"></i>
