@@ -105,6 +105,13 @@
   overflow-x: auto;
   scrollbar-width: none;
   flex: 1 1 auto;
+  /* Mask the inline-end edge so the last tab fades out instead of
+     being clipped mid-character — a visual hint that more tabs are
+     reachable via horizontal scroll on narrow screens. */
+  mask-image: linear-gradient(to left,
+              transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to left,
+              transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
 }
 .mt-dashboard .mt-tabs::-webkit-scrollbar { display: none; }
 .mt-dashboard .mt-tab {
@@ -1345,10 +1352,30 @@
 @media (max-width: 1024px) { .np-svc-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 760px)  { .np-svc-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px)  { .np-svc-grid { grid-template-columns: 1fr; } }
+/* Tab-strip responsive — shrink padding + font progressively so 10
+   tabs fit without horizontal clipping. The .mt-tabs container
+   still scrolls horizontally as a safety net for very narrow
+   viewports (fade mask hints at it). */
+@media (max-width: 1280px) {
+  .mt-dashboard .mt-tab {
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+  .mt-dashboard .mt-tab i { font-size: 12px; }
+}
+@media (max-width: 1024px) {
+  .mt-dashboard .mt-tab {
+    padding: 7px 10px;
+    font-size: 11.5px;
+    gap: 6px;
+  }
+  .mt-dashboard .mt-tab i { font-size: 11px; }
+  .mt-dashboard .mt-tabs { padding: 4px; }
+}
 @media (max-width: 600px) {
   .mt-dashboard .mt-tab {
-    padding: 8px 14px;
-    font-size: 12.5px;
+    padding: 7px 10px;
+    font-size: 11.5px;
   }
 }
 
