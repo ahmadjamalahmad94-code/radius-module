@@ -100,20 +100,17 @@
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   border-radius: 999px;
   padding: 6px;
-  gap: 2px;
+  gap: 4px;
   box-shadow: var(--np-sh-3);
-  overflow-x: auto;
-  scrollbar-width: none;
   flex: 1 1 auto;
-  /* Mask the inline-end edge so the last tab fades out instead of
-     being clipped mid-character — a visual hint that more tabs are
-     reachable via horizontal scroll on narrow screens. */
-  mask-image: linear-gradient(to left,
-              transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to left,
-              transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  /* Wrap to a second row when the strip can't fit on one line —
+     operator preferred stacking over horizontal scrolling. The
+     stadium shape (999px border-radius capped at half-height)
+     looks fine whether the strip is 1 row or 2. */
+  flex-wrap: wrap;
+  row-gap: 4px;
+  justify-content: flex-start;
 }
-.mt-dashboard .mt-tabs::-webkit-scrollbar { display: none; }
 .mt-dashboard .mt-tab {
   border: 0;
   background: transparent;
