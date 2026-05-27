@@ -902,18 +902,31 @@ def setup_wizard_v3_broadband_verify(router_id: int):
                 "label": "نطاق IP المشتركين موجود",
                 "status": "ok" if pools else "fail",
             })
-            # Check 3: PPP profile references RADIUS.
-            profiles = list(mt.print_("/ppp/profile/print"))
-            radius_linked = any(
-                str(p.get("use-radius", "")).lower() in ("true", "yes",
-                                                          "default-use-radius")
-                for p in profiles
-            ) or any(
-                "radius" in str(p.get("name", "")).lower()
-                for p in profiles
-            )
+            # Check 3: PPP global RADIUS enable. In RouterOS 7 this
+            # property lives on /ppp aaa, NOT on /ppp profile (where
+            # it used to be in earlier versions). The post-processor
+            # ensures `/ppp aaa set use-radius=yes` runs on apply, so
+            # we mirror that here. Fallback: legacy profile-level
+            # use-radius (RouterOS 6) for forward/backward safety.
+            radius_linked = False
+            try:
+                aaa_rows = list(mt.print_("/ppp/aaa/print"))
+                radius_linked = any(
+                    str(a.get("use-radius", "")).lower() in ("true", "yes")
+                    for a in aaa_rows
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            if not radius_linked:
+                profiles = list(mt.print_("/ppp/profile/print"))
+                radius_linked = any(
+                    str(p.get("use-radius", "")).lower() in (
+                        "true", "yes", "default-use-radius",
+                    )
+                    for p in profiles
+                )
             checks.append({
-                "label": "ملف PPP مرتبط بـ RADIUS",
+                "label": "RADIUS مفعَّل لـ PPP",
                 "status": "ok" if radius_linked else "fail",
             })
     except Exception as exc:  # noqa: BLE001
