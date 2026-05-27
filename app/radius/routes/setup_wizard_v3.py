@@ -256,6 +256,8 @@ _BLOCKING_ERRORS_AR = {
         "اختر عقدة خروج (VPS exit node) قبل المتابعة.",
     "site_exit_invalid_destinations":
         "صيغة المواقع غير صحيحة — تأكّد من كتابة domain صحيح في كل سطر.",
+    "radius_secret_mismatch":
+        "سرّ RADIUS مفقود أو غير صحيح لهذا الراوتر. تحقّق من صفحة تعديل الراوتر.",
 }
 
 
@@ -267,9 +269,36 @@ def _translate_blockers(blockers):
 
 def _plan_hotspot(router_id: int, inputs: dict) -> dict:
     """Shared planner call used by both preview and apply.
-    Returns: (plan_result_dict, http_status, error_dict_or_none)."""
+
+    The HotspotBootstrapPlanner needs THREE fields from the router's
+    registry record that the operator never sees in the form:
+
+      • radius_secret  — pre-shared secret between FreeRADIUS and the
+                         router (lives in nas_devices.secret)
+      • router_vpn_ip  — the router's address on the WireGuard tunnel
+                         (lives in nas_devices.address since the
+                         wizard registers it that way)
+      • radius_server_ip — the FreeRADIUS box's WG-side address;
+                           HOBERADIUS_WG_SERVER_IP env var or 10.10.0.1
+
+    Inject them here so the operator's form payload stays minimal.
+    Returns: (plan_result_dict, http_status, error_dict_or_none).
+    """
+    import os
+    from ..db.repos import nas_repo
     from ..services.setup_wizard_hotspot_phase_planner import (
         HotspotPhasePlanner,
+    )
+    nas = nas_repo.get_nas(_tid(), router_id)
+    if not nas:
+        return None, 404, {"error": "الراوتر غير موجود",
+                           "code": "router_not_found"}
+    inputs = dict(inputs)
+    inputs.setdefault("radius_secret", str(nas.secret or ""))
+    inputs.setdefault("router_vpn_ip", str(nas.address or ""))
+    inputs.setdefault(
+        "radius_server_ip",
+        os.environ.get("HOBERADIUS_WG_SERVER_IP", "10.10.0.1"),
     )
     try:
         result = HotspotPhasePlanner().plan(run_id=router_id, inputs=inputs)
