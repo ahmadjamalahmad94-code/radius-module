@@ -426,12 +426,45 @@ def system_routerboard(nas: Mapping[str, Any]) -> MtResult:
 def interface_list(nas: Mapping[str, Any]) -> MtResult:
     """`/interface/print` — every interface with rx/tx-byte counters,
     MAC, type, running flag. The dashboard renders this as a table
-    and the SSE stream (K4.2) uses one of the names from it."""
+    and the SSE stream (K4.2) uses one of the names from it.
+
+    Enriched with /interface/ethernet/print so ethernet rows pick up
+    the negotiated `rate` (10Mbps / 100Mbps / 1Gbps) +
+    `auto-negotiation` + `full-duplex` — that's what shows up in the
+    dashboard's «نوع الاتصال» column. Non-ethernet rows (VLANs,
+    bridges, PPPoE, …) just don't get those keys, which the
+    frontend renders as «—».
+    """
+    def _work(c):
+        ifaces = list(c.print_("/interface/print"))
+        eths_by_name: dict[str, dict] = {}
+        try:
+            for e in c.print_("/interface/ethernet/print"):
+                name = (e or {}).get("name")
+                if name:
+                    eths_by_name[name] = e
+        except Exception:  # noqa: BLE001
+            # Some MikroTik builds disallow read of /interface/ethernet
+            # for non-full users. Soft-fail — the dashboard already
+            # tolerates missing `rate` fields.
+            pass
+        for iface in ifaces:
+            name = (iface or {}).get("name")
+            eth = eths_by_name.get(name) if name else None
+            if eth:
+                # Only attach the fields the dashboard actually uses,
+                # so we don't bloat the JSON with every ethernet attr.
+                for key in ("rate", "auto-negotiation",
+                            "full-duplex", "sfp-rate-select"):
+                    if eth.get(key) and not iface.get(key):
+                        iface[key] = eth[key]
+        return ifaces
+
     return fetch_cached(
         nas=nas,
         operation="interface/list",
         ttl_sec=TTL_INTERFACES,
-        work=lambda c: list(c.print_("/interface/print")),
+        work=_work,
     )
 
 

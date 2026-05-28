@@ -654,13 +654,13 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 720px;
+  min-width: 980px;
 }
 .mt-iface-table thead th {
   background: #F8FAFC;
-  text-align: start;
+  text-align: center;
   padding: 10px 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: #475569;
   border-bottom: 1px solid #E2E8F0;
   white-space: nowrap;
@@ -670,15 +670,38 @@
   border-bottom: 1px solid #F1F5F9;
   color: #0F172A;
   white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
 }
 .mt-iface-table tbody tr:last-child td { border-bottom: 0; }
 .mt-iface-table tbody tr:hover { background: #F8FAFC; }
 
-.mt-iface-name { font-weight: 600; }
+.mt-iface-name { font-weight: 700; }
 .mt-iface-mac {
   font-family: ui-monospace, "Cairo", monospace;
   font-size: 12px;
   color: #475569;
+}
+/* Negotiated link rate chip — short label (10 M / 100 M / 1 G). */
+.mt-iface-rate {
+  font-family: ui-monospace, "Cairo", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1F2937;
+}
+/* Live RX / TX bits-per-second cells — LTR-isolated so the
+   number + unit render in the correct order inside the RTL table. */
+.mt-iface-bps {
+  font-family: ui-monospace, "Cairo", monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.mt-iface-bps--rx { color: #047857; }   /* download — green */
+.mt-iface-bps--tx { color: #1E40AF; }   /* upload — blue */
+.mt-iface-total {
+  font-family: ui-monospace, "Cairo", monospace;
+  font-size: 11.5px;
+  color: #64748B;
 }
 
 .mt-iface-state {

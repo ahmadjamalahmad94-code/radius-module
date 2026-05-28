@@ -1278,7 +1278,10 @@
   // — no point hammering the router for a panel the operator
   // isn't looking at.
   (function initInterfacesTab() {
-    const INTERFACES_POLL_MS = 15_000;
+    /* Faster poll so the live RX/TX speed columns feel close to
+       real-time. 5 s gives a "alive" feel without hammering the
+       router. */
+    const INTERFACES_POLL_MS = 5_000;
     const card  = root.querySelector("[data-mt-interfaces-card]");
     if (!card) return;
     const msg   = card.querySelector("[data-mt-interfaces-msg]");
@@ -1289,6 +1292,11 @@
 
     let timer = null;
     let inflight = false;
+    /* Map of interface-name → { rxByte, txByte, t } from the previous
+       poll. We diff the byte counters between polls and divide by
+       the elapsed time to compute live bps. First poll has no prior
+       sample, so speeds show "—" until the next tick. */
+    const prevByName = new Map();
 
     function setMsg(text) {
       if (!msg) return;
@@ -1304,6 +1312,33 @@
       let val = n / 1024, i = 0;
       while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
       return val.toFixed(val >= 100 ? 0 : 1) + " " + units[i];
+    }
+
+    /* Bits-per-second formatter for live speed.
+       Inputs come in as bps (already × 8 from the caller). */
+    function bpsHuman(bps) {
+      if (!Number.isFinite(bps) || bps < 0) return "—";
+      if (bps < 1) return "0";
+      if (bps < 1_000) return bps.toFixed(0) + " bps";
+      if (bps < 1_000_000) return (bps / 1_000).toFixed(bps < 10_000 ? 1 : 0) + " Kbps";
+      if (bps < 1_000_000_000) return (bps / 1_000_000).toFixed(bps < 10_000_000 ? 2 : 1) + " Mbps";
+      return (bps / 1_000_000_000).toFixed(2) + " Gbps";
+    }
+
+    /* The negotiated link rate from /interface/ethernet/print —
+       collapse the verbose values RouterOS returns into the short
+       label the operator wanted (10 / 100 / 1G / 10G). */
+    function rateHuman(r) {
+      const s = String(r || "").toLowerCase().trim();
+      if (!s) return "—";
+      if (s.includes("10gbps") || s.includes("10g"))  return "10 G";
+      if (s.includes("2.5g"))                          return "2.5 G";
+      if (s.includes("1gbps")  || s === "1000mbps")    return "1 G";
+      if (s.includes("100mbps"))                       return "100 M";
+      if (s.includes("10mbps"))                        return "10 M";
+      // fall through with original value if RouterOS gave us
+      // something unexpected
+      return String(r);
     }
 
     function statusCell(row) {
@@ -1328,6 +1363,7 @@
     }
 
     function renderRows(list) {
+      const now = Date.now();
       const html = list.map(r => {
         const rxErr = parseFloat(r["rx-error"]) || 0;
         const txErr = parseFloat(r["tx-error"]) || 0;
@@ -1335,15 +1371,35 @@
         const errCell = errs > 0
           ? '<span class="mt-iface-errors">' + errs + '</span>'
           : '<span class="mt-iface-errors mt-iface-errors--ok">0</span>';
+
+        // Live speed via byte-counter diff against the previous poll.
+        const rxByte = parseFloat(r["rx-byte"]) || 0;
+        const txByte = parseFloat(r["tx-byte"]) || 0;
+        const prev = prevByName.get(r.name);
+        let rxBps = null, txBps = null;
+        if (prev && now > prev.t) {
+          const dt = (now - prev.t) / 1000;
+          if (dt > 0 && dt < 60) { // 60 s sanity cap
+            rxBps = Math.max(0, (rxByte - prev.rxByte) * 8 / dt);
+            txBps = Math.max(0, (txByte - prev.txByte) * 8 / dt);
+          }
+        }
+        prevByName.set(r.name, { rxByte, txByte, t: now });
+
         return [
           '<tr data-mt-iface-row="', escapeText(r.name || ""), '">',
           '<td class="mt-iface-name">', escapeText(r.name || "—"), '</td>',
           '<td>', escapeText(r.type || "—"), '</td>',
+          '<td class="mt-iface-rate">', escapeText(rateHuman(r.rate)), '</td>',
           '<td class="mt-iface-mac">', escapeText(r["mac-address"] || "—"), '</td>',
           '<td>', escapeText(r.mtu || "—"), '</td>',
           '<td>', statusCell(r), '</td>',
-          '<td>', bytesHumanLocal(r["rx-byte"]), '</td>',
-          '<td>', bytesHumanLocal(r["tx-byte"]), '</td>',
+          '<td class="mt-iface-bps mt-iface-bps--rx" dir="ltr">',
+          rxBps == null ? '—' : bpsHuman(rxBps), '</td>',
+          '<td class="mt-iface-bps mt-iface-bps--tx" dir="ltr">',
+          txBps == null ? '—' : bpsHuman(txBps), '</td>',
+          '<td class="mt-iface-total" dir="ltr">',
+          bytesHumanLocal(rxByte), ' / ', bytesHumanLocal(txByte), '</td>',
           '<td>', errCell, '</td>',
           '</tr>',
         ].join("");
