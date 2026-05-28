@@ -133,7 +133,7 @@ def parse(file_bytes: bytes, filename: str) -> EngineResult:
         return result
 
     try:
-        table, sheet_names = extract_table(file_bytes, fmt)
+        table, sheet_names, hint = extract_table(file_bytes, fmt)
     except _EngineExtractionError as exc:
         result.warnings.append(str(exc))
         return result
@@ -147,6 +147,12 @@ def parse(file_bytes: bytes, filename: str) -> EngineResult:
         return result
 
     cards, detected, info = detect_credentials(table)
+    # The PDF extractors may report a more specific strategy hint
+    # (labelled-grid, grid-pair, pair-token). Surface it to the UI
+    # instead of the downstream "header" rediscovery on the
+    # materialised pair-table.
+    if hint:
+        detected.strategy = hint
     result.cards = cards
     result.detected = detected
     result.rows_seen = info["rows_seen"]
@@ -170,17 +176,26 @@ def parse_text(text: str) -> EngineResult:
     table = _table_from_csv_text(raw.encode("utf-8"))
     result = EngineResult(fmt="csv")
 
-    # Try PDF-grid pairs first when the table is single-column-ish.
+    # Try the labelled-grid + PDF-grid pairs first when the table is
+    # single-column-ish — these handle the patterns we see in
+    # printable card sheets and labelled card sheets respectively.
     if not table or _avg_cols(table) < 2:
-        grid_pairs = _extract_grid_pairs(raw.splitlines())
+        lines = raw.splitlines()
+        labelled = _extract_labelled_grid_pairs(lines)
+        if labelled:
+            result.cards = labelled
+            result.detected.strategy = "labelled-grid"
+            result.detected.header_row_present = False
+            result.rows_seen = len(labelled)
+            return result
+        grid_pairs = _extract_grid_pairs(lines)
         if grid_pairs:
             result.cards = grid_pairs
             result.detected.strategy = "grid-pair"
             result.detected.header_row_present = False
             result.rows_seen = len(grid_pairs)
             return result
-        # Then «User: / Pass:» labelled blocks.
-        pdf_pairs = _extract_inline_pairs(raw.splitlines())
+        pdf_pairs = _extract_inline_pairs(lines)
         if pdf_pairs and len(pdf_pairs) >= max(1, len(table) // 2):
             result.cards = pdf_pairs
             result.detected.strategy = "pair-token"
@@ -261,13 +276,22 @@ class _EngineExtractionError(Exception):
     """Recoverable extraction error — message is operator-facing."""
 
 
-def extract_table(file_bytes: bytes, fmt: str) -> tuple[list[list[str]], list[str]]:
+def extract_table(file_bytes: bytes, fmt: str) -> tuple[list[list[str]], list[str], str | None]:
+    """Returns (rows, sheet_names, strategy_hint).
+
+    strategy_hint is set when the extractor itself already identified
+    the column layout (e.g. labelled-grid or grid-pair PDFs). The
+    caller uses it to override the strategy that detect_credentials
+    would otherwise report from the materialised table.
+    """
     if fmt == "csv":
-        return _table_from_csv_text(file_bytes), []
+        return _table_from_csv_text(file_bytes), [], None
     if fmt == "xlsx":
-        return _table_from_xlsx(file_bytes)
+        rows, sheets = _table_from_xlsx(file_bytes)
+        return rows, sheets, None
     if fmt == "pdf":
-        return _table_from_pdf(file_bytes), []
+        rows, hint = _table_from_pdf(file_bytes)
+        return rows, [], hint
     if fmt == "xls-legacy":
         raise _EngineExtractionError(
             "صيغة .xls القديمة غير مدعومة مباشرة. "
@@ -388,20 +412,21 @@ def _xlsx_cell_to_str(value) -> str:
 
 # PDF --------------------------------------------------------------
 
-def _table_from_pdf(file_bytes: bytes) -> list[list[str]]:
+def _table_from_pdf(file_bytes: bytes) -> tuple[list[list[str]], str | None]:
     """Try the richest extractor available, then fall back gracefully.
 
     Order: pdfplumber (tables + text) → pypdf (text only) → error.
+    Returns (rows, strategy_hint).
     """
     # 1. pdfplumber — handles tabular PDFs cleanly.
-    rows = _pdf_via_pdfplumber(file_bytes)
+    rows, hint = _pdf_via_pdfplumber(file_bytes)
     if rows:
-        return rows
+        return rows, hint
 
     # 2. pypdf — text only; reconstruct cards by scanning lines.
-    rows = _pdf_via_pypdf(file_bytes)
+    rows, hint = _pdf_via_pypdf(file_bytes)
     if rows:
-        return rows
+        return rows, hint
 
     raise _EngineExtractionError(
         "تعذّر استخراج محتوى PDF. ركّب pdfplumber أو pypdf على الخادم، "
@@ -409,11 +434,11 @@ def _table_from_pdf(file_bytes: bytes) -> list[list[str]]:
     )
 
 
-def _pdf_via_pdfplumber(file_bytes: bytes) -> list[list[str]]:
+def _pdf_via_pdfplumber(file_bytes: bytes) -> tuple[list[list[str]], str | None]:
     try:
         import pdfplumber  # type: ignore
     except ImportError:
-        return []
+        return [], None
 
     rows: list[list[str]] = []
     fallback_lines: list[str] = []
@@ -437,47 +462,38 @@ def _pdf_via_pdfplumber(file_bytes: bytes) -> list[list[str]]:
                     text = page.extract_text() or ""
                     fallback_lines.extend(text.splitlines())
     except Exception:  # noqa: BLE001
-        return []
+        return [], None
 
-    # If the table rows themselves look like multi-card grid rows
-    # (one row = N concatenated cards), expand them line-style so
-    # the grid pairer below can handle them uniformly.
-    if rows and _rows_look_like_grid_lines(rows):
-        fallback_lines = [" ".join(c for c in row if c) for row in rows]
-        rows = []
+    # If pdfplumber returned a "table" that is actually a labelled
+    # grid (rows of [Label, val, Label, val, ...]) or a multi-card
+    # grid (each row = one concatenated line with many credentials),
+    # flatten it into lines so the credential strategies can pair
+    # things up uniformly.
+    if rows:
+        flat = [" ".join(c for c in row if c) for row in rows]
+        # Try labelled grid first — most discriminative.
+        labelled = _extract_labelled_grid_pairs(flat)
+        if labelled:
+            return _pairs_to_table(labelled), "labelled-grid"
+        # Try printable-card grid pattern next.
+        if _rows_look_like_grid_lines(rows):
+            fallback_lines = flat
+            rows = []
 
     if rows:
-        return rows
+        return rows, None
 
-    # ── Strategy A: printable-card grid (the FUTURE-NET layout). ──
-    # Pairs consecutive lines where line N holds N usernames and
-    # line N+1 holds N passwords, separated by whitespace.
-    grid_pairs = _extract_grid_pairs(fallback_lines)
-    if grid_pairs:
-        out: list[list[str]] = [["username", "password"]]
-        out.extend([c.username, c.password] for c in grid_pairs)
-        return out
-
-    # ── Strategy B: inline "User: x / Pass: y" labelled pairs. ──
-    pairs = _extract_inline_pairs(fallback_lines)
-    if pairs:
-        # Materialise as a 2-column "header + rows" table so detection
-        # downstream can pick it up uniformly.
-        out = [["username", "password"]]
-        out.extend([c.username, c.password] for c in pairs)
-        return out
-    # Last attempt — treat each non-empty line as a single-column row.
-    return [[ln] for ln in (_clean_cell(line) for line in fallback_lines) if ln]
+    return _pdf_text_to_table(fallback_lines)
 
 
-def _pdf_via_pypdf(file_bytes: bytes) -> list[list[str]]:
+def _pdf_via_pypdf(file_bytes: bytes) -> tuple[list[list[str]], str | None]:
     try:
         from pypdf import PdfReader  # type: ignore
     except ImportError:
         try:
             from PyPDF2 import PdfReader  # type: ignore
         except ImportError:
-            return []
+            return [], None
 
     lines: list[str] = []
     try:
@@ -486,22 +502,44 @@ def _pdf_via_pypdf(file_bytes: bytes) -> list[list[str]]:
             text = page.extract_text() or ""
             lines.extend(text.splitlines())
     except Exception:  # noqa: BLE001
-        return []
+        return [], None
 
-    # Strategy A: printable-card grid.
+    return _pdf_text_to_table(lines)
+
+
+def _pdf_text_to_table(lines: list[str]) -> tuple[list[list[str]], str | None]:
+    """Shared post-processing for PDF text — tries every credential
+    extraction strategy in order of specificity and returns the first
+    that produces results, along with a strategy hint.
+    """
+    # ── Strategy 0: labelled grid ("Username val Username val ..."
+    # then "Password val Password val ..."). Most specific — runs
+    # first so it doesn't get clobbered by the looser pairers.
+    labelled = _extract_labelled_grid_pairs(lines)
+    if labelled:
+        return _pairs_to_table(labelled), "labelled-grid"
+
+    # ── Strategy A: printable-card grid (FUTURE-NET layout). ──
     grid_pairs = _extract_grid_pairs(lines)
     if grid_pairs:
-        out: list[list[str]] = [["username", "password"]]
-        out.extend([c.username, c.password] for c in grid_pairs)
-        return out
+        return _pairs_to_table(grid_pairs), "grid-pair"
 
-    # Strategy B: inline labelled pairs.
+    # ── Strategy B: inline "User: x / Pass: y" labelled pairs. ──
     pairs = _extract_inline_pairs(lines)
     if pairs:
-        out = [["username", "password"]]
-        out.extend([c.username, c.password] for c in pairs)
-        return out
-    return [[ln] for ln in (_clean_cell(line) for line in lines) if ln]
+        return _pairs_to_table(pairs), "pair-token"
+
+    # Last attempt — treat each non-empty line as a single-column row.
+    return [[ln] for ln in (_clean_cell(line) for line in lines) if ln], None
+
+
+def _pairs_to_table(pairs: list[Card]) -> list[list[str]]:
+    """Materialise extracted card pairs as a header + rows table
+    that ``detect_credentials`` can re-ingest uniformly.
+    """
+    out: list[list[str]] = [["username", "password"]]
+    out.extend([c.username, c.password or ""] for c in pairs)
+    return out
 
 
 def _rows_look_like_grid_lines(rows: list[list[str]]) -> bool:
@@ -532,6 +570,89 @@ def _token_looks_like_credential(token: str) -> bool:
     # Allow alphanumerics, dashes, underscores. Reject everything else
     # (Latin punctuation, currency symbols, dots, slashes, …).
     return bool(re.fullmatch(r"[A-Za-z0-9_\-]+", token))
+
+
+def _extract_labelled_grid_pairs(lines: Iterable[str]) -> list[Card]:
+    """Parse labelled-grid PDFs where each row carries the label
+    repeated K times alongside its value:
+
+        'Username 610069023347 Username 295068912347 Username ... '
+        'Password 762778       Password 522728       Password ...'
+
+    Pair line A's values (after stripping the label tokens) with the
+    next compatible line B's values, column-by-column.
+
+    Labels are matched against the same Arabic + English synonym sets
+    the header strategy uses, so a sheet labelled in Arabic works too.
+    """
+    user_set = _USERNAME_SYNONYMS_STRONG | _USERNAME_SYNONYMS_WEAK
+    pass_set = _PASSWORD_SYNONYMS_STRONG | _PASSWORD_SYNONYMS_WEAK
+
+    def parse_line(raw: str) -> dict | None:
+        line = _clean_cell(raw)
+        if not line:
+            return None
+        tokens = line.split()
+        if len(tokens) < 2 or len(tokens) % 2 != 0:
+            return None
+
+        def _label_key(t: str) -> str:
+            return _normalise_key(t.rstrip(":：،,"))
+
+        first_key = _label_key(tokens[0])
+        if first_key in user_set:
+            kind = "user"
+            valid_set = user_set
+        elif first_key in pass_set:
+            kind = "pass"
+            valid_set = pass_set
+        else:
+            return None
+
+        values: list[str] = []
+        for i in range(0, len(tokens), 2):
+            label = _label_key(tokens[i])
+            if label not in valid_set:
+                return None
+            value = tokens[i + 1]
+            if not _token_looks_like_credential(value):
+                return None
+            values.append(value)
+        if not values:
+            return None
+        return {"kind": kind, "values": values}
+
+    classified = [parse_line(ln) for ln in lines]
+    pairs: list[Card] = []
+    used: set[int] = set()
+    n = len(classified)
+    i = 0
+    while i < n:
+        if i in used or classified[i] is None or classified[i]["kind"] != "user":
+            i += 1
+            continue
+        a = classified[i]
+        match_j = -1
+        # Look ahead up to 6 lines for the matching password row.
+        for j in range(i + 1, min(i + 7, n)):
+            if j in used:
+                continue
+            b = classified[j]
+            if b is None:
+                continue
+            if b["kind"] == "pass" and len(b["values"]) == len(a["values"]):
+                match_j = j
+                break
+        if match_j < 0:
+            i += 1
+            continue
+        b = classified[match_j]
+        for u, p in zip(a["values"], b["values"]):
+            pairs.append(Card(username=u, password=p))
+        used.add(i)
+        used.add(match_j)
+        i = match_j + 1
+    return pairs
 
 
 def _extract_grid_pairs(lines: Iterable[str]) -> list[Card]:
