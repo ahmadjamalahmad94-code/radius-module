@@ -158,7 +158,8 @@ def parse(file_bytes: bytes, filename: str) -> EngineResult:
 def parse_text(text: str) -> EngineResult:
     """Parse pasted text (the existing textarea path) through the same
     detection logic. This lets the operator paste anything — CSV /
-    TSV / «User: x  Pass: y» blocks — and still get clean rows.
+    TSV / «User: x  Pass: y» blocks / PDF-grid line dumps — and
+    still get clean rows.
     """
     raw = (text or "").strip()
     if not raw:
@@ -167,18 +168,25 @@ def parse_text(text: str) -> EngineResult:
         return result
 
     table = _table_from_csv_text(raw.encode("utf-8"))
-    pdf_pairs: list[Card] = []
-    if not table or _avg_cols(table) < 2:
-        # Try PDF-style «User: x  Pass: y» line parsing as a fallback.
-        pdf_pairs = _extract_inline_pairs(raw.splitlines())
-
     result = EngineResult(fmt="csv")
-    if pdf_pairs and len(pdf_pairs) >= max(1, len(table) // 2):
-        result.cards = pdf_pairs
-        result.detected.strategy = "pair-token"
-        result.detected.header_row_present = False
-        result.rows_seen = len(pdf_pairs)
-        return result
+
+    # Try PDF-grid pairs first when the table is single-column-ish.
+    if not table or _avg_cols(table) < 2:
+        grid_pairs = _extract_grid_pairs(raw.splitlines())
+        if grid_pairs:
+            result.cards = grid_pairs
+            result.detected.strategy = "grid-pair"
+            result.detected.header_row_present = False
+            result.rows_seen = len(grid_pairs)
+            return result
+        # Then «User: / Pass:» labelled blocks.
+        pdf_pairs = _extract_inline_pairs(raw.splitlines())
+        if pdf_pairs and len(pdf_pairs) >= max(1, len(table) // 2):
+            result.cards = pdf_pairs
+            result.detected.strategy = "pair-token"
+            result.detected.header_row_present = False
+            result.rows_seen = len(pdf_pairs)
+            return result
 
     if table:
         cards, detected, info = detect_credentials(table)
@@ -431,14 +439,31 @@ def _pdf_via_pdfplumber(file_bytes: bytes) -> list[list[str]]:
     except Exception:  # noqa: BLE001
         return []
 
+    # If the table rows themselves look like multi-card grid rows
+    # (one row = N concatenated cards), expand them line-style so
+    # the grid pairer below can handle them uniformly.
+    if rows and _rows_look_like_grid_lines(rows):
+        fallback_lines = [" ".join(c for c in row if c) for row in rows]
+        rows = []
+
     if rows:
         return rows
-    # Tables yielded nothing — fall back to inline pair extraction.
+
+    # ── Strategy A: printable-card grid (the FUTURE-NET layout). ──
+    # Pairs consecutive lines where line N holds N usernames and
+    # line N+1 holds N passwords, separated by whitespace.
+    grid_pairs = _extract_grid_pairs(fallback_lines)
+    if grid_pairs:
+        out: list[list[str]] = [["username", "password"]]
+        out.extend([c.username, c.password] for c in grid_pairs)
+        return out
+
+    # ── Strategy B: inline "User: x / Pass: y" labelled pairs. ──
     pairs = _extract_inline_pairs(fallback_lines)
     if pairs:
         # Materialise as a 2-column "header + rows" table so detection
         # downstream can pick it up uniformly.
-        out: list[list[str]] = [["username", "password"]]
+        out = [["username", "password"]]
         out.extend([c.username, c.password] for c in pairs)
         return out
     # Last attempt — treat each non-empty line as a single-column row.
@@ -463,12 +488,125 @@ def _pdf_via_pypdf(file_bytes: bytes) -> list[list[str]]:
     except Exception:  # noqa: BLE001
         return []
 
+    # Strategy A: printable-card grid.
+    grid_pairs = _extract_grid_pairs(lines)
+    if grid_pairs:
+        out: list[list[str]] = [["username", "password"]]
+        out.extend([c.username, c.password] for c in grid_pairs)
+        return out
+
+    # Strategy B: inline labelled pairs.
     pairs = _extract_inline_pairs(lines)
     if pairs:
-        out: list[list[str]] = [["username", "password"]]
+        out = [["username", "password"]]
         out.extend([c.username, c.password] for c in pairs)
         return out
     return [[ln] for ln in (_clean_cell(line) for line in lines) if ln]
+
+
+def _rows_look_like_grid_lines(rows: list[list[str]]) -> bool:
+    """Heuristic — pdfplumber sometimes returns each grid line as a
+    single-cell row containing many space-separated credentials. If
+    most rows look that way, treat them as flat lines so the grid
+    pairer can process them.
+    """
+    if not rows:
+        return False
+    candidates = 0
+    sampled = rows[:60]
+    for row in sampled:
+        if len(row) == 1 and row[0]:
+            tokens = row[0].split()
+            if len(tokens) >= 3 and all(_token_looks_like_credential(t) for t in tokens):
+                candidates += 1
+    return candidates >= max(2, len(sampled) * 0.4)
+
+
+def _token_looks_like_credential(token: str) -> bool:
+    if not token:
+        return False
+    if len(token) < 3 or len(token) > 24:
+        return False
+    if _contains_arabic(token):
+        return False
+    # Allow alphanumerics, dashes, underscores. Reject everything else
+    # (Latin punctuation, currency symbols, dots, slashes, …).
+    return bool(re.fullmatch(r"[A-Za-z0-9_\-]+", token))
+
+
+def _extract_grid_pairs(lines: Iterable[str]) -> list[Card]:
+    """Pair up consecutive lines that look like a row of usernames
+    and a row of passwords from a printable card grid.
+
+    Heuristic — for each line:
+      * Split on whitespace.
+      * Require ≥ 2 tokens, all credential-shaped, length variance ≤ 2.
+      * Skip lines whose tokens are all identical (repeated brand
+        like "FUTURE NET FUTURE NET ..." or "بطاقة ١٠ ساعات ...").
+      * Skip lines containing Arabic text.
+
+    Then walk the classified lines and pair each line A with the
+    next compatible line B where:
+      * A.n == B.n  (same column count).
+      * |avg(A) - avg(B)| ≥ 2  (different shape — usernames vs passwords).
+    """
+    def classify(raw_line: str) -> dict | None:
+        line = _clean_cell(raw_line)
+        if not line or _contains_arabic(line):
+            return None
+        tokens = line.split()
+        if len(tokens) < 2:
+            return None
+        # Repeated single-token lines are brand/desc noise, not data.
+        if len(set(tokens)) == 1:
+            return None
+        if not all(_token_looks_like_credential(t) for t in tokens):
+            return None
+        lengths = [len(t) for t in tokens]
+        if max(lengths) - min(lengths) > 2:
+            return None
+        avg = sum(lengths) / len(lengths)
+        return {"tokens": tokens, "avg_len": avg, "n": len(tokens)}
+
+    classified = [classify(ln) for ln in lines]
+    pairs: list[Card] = []
+    used: set[int] = set()
+    i = 0
+    n = len(classified)
+    while i < n:
+        if i in used or classified[i] is None:
+            i += 1
+            continue
+        a = classified[i]
+        # Look ahead up to 5 lines for a matching B (skipping over
+        # brand/desc lines that classify() already dropped to None).
+        match_j = -1
+        for j in range(i + 1, min(i + 6, n)):
+            if j in used:
+                continue
+            b = classified[j]
+            if b is None:
+                continue
+            if b["n"] == a["n"] and abs(b["avg_len"] - a["avg_len"]) >= 2:
+                match_j = j
+                break
+        if match_j < 0:
+            i += 1
+            continue
+        b = classified[match_j]
+        # Decide which line is usernames vs passwords. Convention:
+        # usernames tend to be LONGER (account IDs / card numbers),
+        # passwords tend to be SHORTER (PINs / short codes).
+        if a["avg_len"] >= b["avg_len"]:
+            user_tokens, pass_tokens = a["tokens"], b["tokens"]
+        else:
+            user_tokens, pass_tokens = b["tokens"], a["tokens"]
+        for u, p in zip(user_tokens, pass_tokens):
+            pairs.append(Card(username=u, password=p))
+        used.add(i)
+        used.add(match_j)
+        i = match_j + 1
+    return pairs
 
 
 # ─── Detection ───────────────────────────────────────────────────────
