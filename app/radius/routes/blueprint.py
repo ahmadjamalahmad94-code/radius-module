@@ -101,6 +101,7 @@ def _register_all(bp: Blueprint) -> None:
     from .network_device_bypass import register_network_device_bypass_routes
     from .network_ip_scan import register_network_ip_scan_routes
     from .remote_device_access import register_remote_device_access_routes
+    from .router_events import register_router_events_routes
     from .network_telegram_settings import register_network_telegram_routes
     from .sessions import register_sessions_routes
     from .plans import register_plans_routes
@@ -135,6 +136,7 @@ def _register_all(bp: Blueprint) -> None:
     register_network_device_bypass_routes(bp)
     register_network_ip_scan_routes(bp)
     register_remote_device_access_routes(bp)
+    register_router_events_routes(bp)
     register_network_telegram_routes(bp)
     register_sessions_routes(bp)
     register_plans_routes(bp)

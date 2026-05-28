@@ -202,5 +202,51 @@
 
 </form>
 
+{% if is_edit and device.ip_address %}
+{# ── Router-side Netwatch (Sprint 6) ────────────────────────
+   Installs /tool netwatch on the customer's MikroTik so the
+   router itself pings the device every minute and webhooks
+   HobeRadius on every flip. Useful when the VPS-side cron
+   can't reach the LAN (no hr-wg → LAN route configured). #}
+<section style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:14px;padding:18px 22px;margin-top:18px">
+  <h3 style="margin:0 0 8px;color:#0C4A6E;font-size:14px;font-weight:800">
+    <i class="fa-solid fa-tower-broadcast"></i> مراقبة من الراوتر (Netwatch)
+  </h3>
+  <p style="margin:0 0 14px;color:#075985;font-size:12.5px;line-height:1.7">
+    خيار متقدّم: يُفعِّل <code>/tool netwatch</code> على الراوتر بنفسه ليرسل
+    تنبيهًا لـ HobeRadius فور تغيُّر حالة الجهاز (انقطاع/عودة). مفيد عندما
+    لا يصل VPS مباشرة للـ LAN. يعمل بالتوازي مع المراقبة الدوريّة من VPS —
+    أيّهما يأتي أولًا يُسجَّل، الـ Telegram يُطلق مرة بفضل cooldown.
+  </p>
+  <div style="display:flex;gap:10px">
+    <form method="post"
+          action="{{ url_for('radius.router_events_netwatch_install', device_id=device.id) }}"
+          style="display:inline">
+      {{ csrf_token_input() | safe }}
+      <button type="submit" class="hub-btn hub-btn--primary"
+              style="padding:6px 14px;font-size:12.5px">
+        <i class="fa-solid fa-play"></i> فعِّل على الراوتر
+      </button>
+    </form>
+    <form method="post"
+          action="{{ url_for('radius.router_events_netwatch_remove', device_id=device.id) }}"
+          onsubmit="return confirm('إزالة netwatch من الراوتر؟');"
+          style="display:inline">
+      {{ csrf_token_input() | safe }}
+      <button type="submit" class="hub-btn hub-btn--ghost"
+              style="padding:6px 14px;font-size:12.5px">
+        <i class="fa-solid fa-stop"></i> ألغِ من الراوتر
+      </button>
+    </form>
+  </div>
+  <p style="margin:14px 0 0;color:#0369A1;font-size:11.5px;line-height:1.7">
+    <i class="fa-solid fa-circle-info"></i>
+    يحتاج المتغيّر <code>HOBERADIUS_PUBLIC_URL</code> مضبوطًا في الخادم
+    (مثل <code dir="ltr">https://radius.example.com</code>) ليصل الـ webhook
+    من الراوتر بنجاح.
+  </p>
+</section>
+{% endif %}
+
 </div>
 {% endblock %}
