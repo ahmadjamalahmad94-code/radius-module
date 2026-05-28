@@ -209,60 +209,72 @@
   backdrop-filter: blur(12px);
 }
 
-/* ─── Compact premium hero ──────────────────────────────── */
-/* Pass 2: ~50% vertical reduction. The hero used to be a tall
-   landing-page banner (32×36 padding, 32px title, 520px glow).
-   Now it's a slim premium header that lets the page content
-   appear above the fold immediately. */
+/* ──────────────────────────────────────────────────────────
+   Premium hero — FRESH BUILD (replaces 3 buggy passes)
+   Operator: «امسحو كله وعيد تصميمه».
+
+   Hard rules:
+     • Plain block layout — NO flex on the parent. (Past
+       attempts at `display:flex; align-items:center` made
+       the hero stretch to fill its parent's height and
+       floated the text in the middle/bottom of a 700px box.)
+     • Height is content-driven — explicit min/max guards so
+       even a future stray rule can't blow it up again.
+     • Decorative glow is purely cosmetic (absolute + clipped).
+     • Children stack from the top in normal flow.
+   ────────────────────────────────────────────────────────── */
 .mt-dashboard .mt-page-hero,
 .mt-dashboard .rh-inv-hero,
 .mt-dashboard .rh-bk-simple-head {
+  display: block !important;
   position: relative;
   overflow: hidden;
-  border-radius: var(--np-r-xl) !important;
-  background: linear-gradient(135deg,
-              rgba(255, 255, 255, 0.95) 0%,
-              rgba(245, 243, 255, 0.92) 60%,
-              rgba(238, 242, 255, 0.88) 100%) !important;
-  border: 1px solid var(--np-line-2) !important;
-  box-shadow: var(--np-sh-2) !important;
-  padding: 16px 24px !important;
-  margin-bottom: 16px !important;
-  align-items: center !important;
-  gap: 14px !important;
+  padding: 16px 22px !important;
+  margin: 0 0 16px !important;
+  border-radius: 16px !important;
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(245, 243, 255, 0.92) 60%,
+      rgba(238, 242, 255, 0.88) 100%) !important;
+  border: 1px solid rgba(124, 58, 237, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  /* Belt-and-braces: even if a future rule sneaks in flex,
+     these guards keep the hero compact. */
+  min-height: 0 !important;
+  height: auto !important;
+  align-items: initial !important;
+  justify-content: initial !important;
+  flex-wrap: initial !important;
+  gap: 0 !important;
 }
 .mt-dashboard .mt-page-hero::before {
   content: "";
   position: absolute;
-  top: -60%;
-  right: -10%;
-  width: 260px;
-  height: 260px;
+  top: -50%;
+  inset-inline-end: -8%;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.22), transparent 60%);
-  filter: blur(8px);
+  background: radial-gradient(circle,
+              rgba(167, 139, 250, 0.18), transparent 65%);
   pointer-events: none;
   z-index: 0;
 }
-.mt-dashboard .mt-page-hero > * {
-  position: relative;
-  z-index: 1;
-}
-.mt-dashboard .mt-page-hero-copy { flex: 1 1 380px; min-width: 0; }
+.mt-dashboard .mt-page-hero > * { position: relative; z-index: 1; }
+
 .mt-dashboard .mt-page-hero-kicker {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 4px;
-  padding: 3px 11px;
+  margin: 0 0 6px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
-  border: 1px solid var(--np-line-2);
+  border: 1px solid rgba(124, 58, 237, 0.18);
   color: var(--np-purple-700);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow: var(--np-sh-1);
 }
 .mt-dashboard .mt-page-hero-kicker i {
   width: 14px; height: 14px;
@@ -271,39 +283,55 @@
   background: linear-gradient(135deg, var(--np-purple-400), var(--np-purple-700));
   color: #fff;
   font-size: 9px;
-  box-shadow: var(--np-sh-purple);
 }
 .mt-dashboard .mt-page-hero h3 {
-  font-size: 19px !important;
+  margin: 0 !important;
+  font-size: 18px !important;
   font-weight: 900 !important;
   color: var(--np-ink) !important;
-  letter-spacing: -0.01em;
   line-height: 1.25 !important;
-  margin: 0 !important;
+  letter-spacing: -0.01em;
 }
 .mt-dashboard .mt-page-hero p {
+  margin: 4px 0 0 !important;
   font-size: 12.5px !important;
-  color: var(--np-text-2) !important;
   font-weight: 500 !important;
+  color: var(--np-text-2) !important;
   line-height: 1.55 !important;
   max-width: 720px;
-  margin: 4px 0 0 !important;
 }
 .mt-dashboard .mt-page-hero-chips {
-  margin-top: 8px !important;
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px !important;
+  margin: 8px 0 0 !important;
 }
 .mt-dashboard .mt-page-hero-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 3px 10px !important;
   border-radius: 999px !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 1px solid var(--np-line-2) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(124, 58, 237, 0.14) !important;
   color: var(--np-text) !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
-  font-size: 10.5px !important;
-  box-shadow: var(--np-sh-1);
 }
-.mt-dashboard .mt-page-hero-chips span i { font-size: 10px; }
+.mt-dashboard .mt-page-hero-chips span i {
+  font-size: 10px;
+  color: var(--np-purple-600);
+}
+/* Hide the legacy `.mt-page-hero-copy` flex-basis declarations
+   that newer markup still carries — block layout doesn't need
+   them, and forcing min-width here prevents accidental width
+   collapse from the original flex:1 1 380px rule. */
+.mt-dashboard .mt-page-hero-copy,
+.mt-dashboard .rh-inv-hero-copy {
+  min-width: 0;
+  flex: initial !important;
+}
 
 /* ─── Section heading helper ────────────────────────────── */
 .np-section-head {

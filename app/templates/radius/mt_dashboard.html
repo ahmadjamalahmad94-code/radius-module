@@ -1746,19 +1746,11 @@
 <style>
 /* ─── «خدماتي» tab layout ─── */
 .rh-inventory{padding:0 !important}
-.rh-inv-hero{
-  position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:16px;flex-wrap:wrap;
-  margin:0 0 24px;padding:24px 28px;
-  border:1px solid rgba(124,58,237,.22);
-  border-radius:24px;
-  background:
-    radial-gradient(circle at 88% -10%, rgba(124,58,237,.20), transparent 38%),
-    radial-gradient(circle at 8% 110%, rgba(20,184,166,.16), transparent 36%),
-    linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
-  box-shadow:0 18px 48px rgba(124,58,237,.10), 0 2px 6px rgba(15,23,42,.04);
-}
+/* .rh-inv-hero parent styles are inherited from .mt-page-hero in
+   dashboard_premium.css (the «خدماتي» hero uses BOTH classes:
+   `class="mt-page-hero rh-inv-hero"`). We used to redefine the
+   whole rule here with display:flex which fought the new clean
+   build — removed. */
 /* Decorative glow that drifts — gives the page a "premium" feel
    without distracting the operator. Disabled when the user has
    prefers-reduced-motion. */
@@ -2118,19 +2110,11 @@
    Operator: «الهيرو الي عملته لخدماتي عجبني — طبعه ع باقي
    الصفحات». Same shell as rh-inv-hero / rh-bk-hero but colour-
    variant-driven via .mt-page-hero--<color>. */
-.mt-page-hero{
-  /* Plain block — earlier `display:flex; align-items:center` combo
-     stretched the hero to fill the parent's height and floated the
-     text in the middle. dashboard_premium.css controls everything
-     else (padding, bg, border, shadow); the inline rule below only
-     supplies a slightly thicker border + softer purple shadow on
-     top of that. */
-  position:relative;overflow:hidden;
-  margin:0 0 22px;
-  border-radius:24px;
-  border:1px solid rgba(99,102,241,.18);
-  box-shadow:0 18px 48px rgba(99,102,241,.08), 0 2px 6px rgba(15,23,42,.04);
-}
+/* The .mt-page-hero parent rule lives ONLY in dashboard_premium.css
+   now — that file uses block layout + `!important` guards so a
+   future stray rule can't re-inflate the hero. Anything we used
+   to set here (display:flex, align-items, etc.) caused the hero
+   to stretch to 700px and float the text in the middle. */
 .mt-page-hero-glow{
   position:absolute;top:-30%;right:-10%;
   width:480px;height:480px;border-radius:50%;
