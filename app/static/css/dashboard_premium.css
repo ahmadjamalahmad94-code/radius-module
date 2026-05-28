@@ -240,9 +240,12 @@
   border: 1px solid rgba(124, 58, 237, 0.15) !important;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
   /* Belt-and-braces: even if a future rule sneaks in flex,
-     these guards keep the hero compact. */
+     these guards keep the hero compact. The hard max-height
+     ceiling is the final safety net — nothing can blow past
+     it without explicit !important from a later rule. */
   min-height: 0 !important;
   height: auto !important;
+  max-height: 200px !important;
   align-items: initial !important;
   justify-content: initial !important;
   flex-wrap: initial !important;

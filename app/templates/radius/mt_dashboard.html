@@ -41,52 +41,180 @@
   color:#64748B;font-size:12.5px;font-family:monospace;
 }
 
-/* ─── KPIs grid — re-skin existing .hub-kpi cards ─── */
+/* ─── Premium overview command cards ─── */
 .rh-overview .hub-kpi-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-  gap:12px;margin:0;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+  margin:0 0 24px;
+  padding:18px;
+  border:1px solid rgba(226,232,240,.78);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(124,58,237,.10), transparent 30%),
+    radial-gradient(circle at 92% 12%, rgba(37,99,235,.10), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.86), rgba(245,247,255,.74));
+  box-shadow:0 22px 70px rgba(65,73,118,.10);
+  backdrop-filter:blur(18px);
 }
 .rh-overview .hub-kpi{
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:14px 16px;
-  display:flex;align-items:center;gap:12px;
-  box-shadow:0 1px 2px rgba(15,23,42,.03);
-  transition:box-shadow .15s,border-color .15s,transform .15s;
+  --kpi-accent:#6B5AED;
+  --kpi-soft:rgba(107,90,237,.12);
+  --kpi-progress:0;
+  position:relative;
+  overflow:hidden;
+  min-height:176px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:16px;
+  padding:17px;
+  border:1px solid rgba(226,232,240,.82);
+  border-radius:21px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.86)),
+    radial-gradient(circle at 16% 12%, var(--kpi-soft), transparent 38%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 18px 42px rgba(38,51,90,.08);
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
 }
 .rh-overview .hub-kpi:hover{
-  box-shadow:0 4px 14px rgba(15,23,42,.06);
-  transform:translateY(-1px);
+  transform:translateY(-3px);
+  border-color:rgba(148,163,184,.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 26px 58px rgba(38,51,90,.13);
+}
+.rh-overview .hub-kpi::before{
+  content:"";
+  position:absolute;
+  inset:auto 16px 14px 16px;
+  height:5px;
+  border-radius:999px;
+  background:rgba(226,232,240,.82);
+}
+.rh-overview .hub-kpi::after{
+  content:"";
+  position:absolute;
+  inset:auto 16px 14px auto;
+  width:calc((100% - 32px) * var(--kpi-progress) / 100);
+  height:5px;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--kpi-accent),#8B5CF6);
+  box-shadow:0 0 20px color-mix(in srgb, var(--kpi-accent) 35%, transparent);
+  transition:width .35s ease;
+}
+.rh-overview .hub-kpi-head{
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
 }
 .rh-overview .hub-kpi-icon{
-  width:40px;height:40px;border-radius:11px;flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;
-  color:#fff;font-size:16px;
+  width:45px;
+  height:45px;
+  border-radius:15px;
+  flex-shrink:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--kpi-accent);
+  font-size:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(245,243,255,.82));
+  border:1px solid rgba(255,255,255,.96);
+  box-shadow:0 12px 26px var(--kpi-soft);
 }
-/* Per-color KPI icon gradients (matches Router Hub service cards) */
-.rh-overview .hub-kpi--brand  .hub-kpi-icon{background:linear-gradient(135deg,#6B5AED,#4338CA)}
-.rh-overview .hub-kpi--blue   .hub-kpi-icon{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.rh-overview .hub-kpi--green  .hub-kpi-icon{background:linear-gradient(135deg,#10B981,#047857)}
-.rh-overview .hub-kpi--amber  .hub-kpi-icon{background:linear-gradient(135deg,#F59E0B,#B45309)}
-.rh-overview .hub-kpi--red    .hub-kpi-icon{background:linear-gradient(135deg,#EF4444,#B91C1C)}
-.rh-overview .hub-kpi--purple .hub-kpi-icon{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
-.rh-overview .hub-kpi--grey   .hub-kpi-icon{background:linear-gradient(135deg,#94A3B8,#475569)}
-.rh-overview .hub-kpi-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .rh-overview .hub-kpi-label{
-  font-size:11px;font-weight:700;color:#94A3B8;
-  text-transform:uppercase;letter-spacing:.04em;line-height:1;
+  margin-top:3px;
+  color:#111B31;
+  font-size:13.5px;
+  line-height:1.45;
+  font-weight:900;
+  letter-spacing:0;
+}
+.rh-overview .hub-kpi-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+  padding:0 9px;
+  border-radius:999px;
+  color:var(--kpi-accent);
+  background:var(--kpi-soft);
+  font-size:10.5px;
+  font-weight:900;
+}
+.rh-overview .hub-kpi-body{
+  position:relative;
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+}
+.rh-overview .hub-kpi-copy{
+  min-width:0;
 }
 .rh-overview .hub-kpi-value{
-  font-size:18px;font-weight:800;color:#0F172A;
-  line-height:1.2;font-variant-numeric:tabular-nums;
+  color:#101B33;
+  font-size:27px;
+  font-weight:950;
+  line-height:1.12;
+  font-variant-numeric:tabular-nums;
   word-break:break-word;
 }
 .rh-overview .hub-kpi-sub{
-  font-size:11px;color:#64748B;line-height:1.5;
+  margin-top:7px;
+  color:#718096;
+  font-size:11.5px;
+  line-height:1.55;
+  font-weight:800;
 }
-
-/* KPI strip bottom margin so it doesn't crowd the next row. */
-.rh-overview .hub-kpi-grid{margin-bottom:22px}
+.rh-overview .hub-kpi-ring{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  color:var(--kpi-accent);
+  background:
+    conic-gradient(var(--kpi-accent) calc(var(--kpi-progress) * 1%), rgba(226,232,240,.9) 0),
+    linear-gradient(#fff,#fff);
+  box-shadow:inset 0 0 0 7px #fff, 0 12px 24px var(--kpi-soft);
+}
+.rh-overview .hub-kpi-ring i{
+  position:relative;
+  z-index:1;
+  font-size:16px;
+}
+.rh-overview .hub-kpi-wave{
+  position:absolute;
+  inset:auto -20px 34px 22px;
+  height:38px;
+  opacity:.23;
+  background:
+    radial-gradient(16px 15px at 15% 48%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%),
+    radial-gradient(20px 18px at 42% 48%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%),
+    radial-gradient(24px 20px at 72% 50%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%);
+  pointer-events:none;
+}
+.rh-overview .hub-kpi--brand{--kpi-accent:#6B5AED;--kpi-soft:rgba(107,90,237,.14)}
+.rh-overview .hub-kpi--blue{--kpi-accent:#2563EB;--kpi-soft:rgba(37,99,235,.13)}
+.rh-overview .hub-kpi--green{--kpi-accent:#10B981;--kpi-soft:rgba(16,185,129,.13)}
+.rh-overview .hub-kpi--amber{--kpi-accent:#F59E0B;--kpi-soft:rgba(245,158,11,.15)}
+.rh-overview .hub-kpi--red{--kpi-accent:#EF4444;--kpi-soft:rgba(239,68,68,.13)}
+.rh-overview .hub-kpi--purple{--kpi-accent:#8B5CF6;--kpi-soft:rgba(139,92,246,.14)}
+.rh-overview .hub-kpi--grey{--kpi-accent:#64748B;--kpi-soft:rgba(100,116,139,.13)}
+.rh-overview .hub-kpi--teal{--kpi-accent:#14B8A6;--kpi-soft:rgba(20,184,166,.14)}
+@media (max-width:1200px){
+  .rh-overview .hub-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .rh-overview .hub-kpi-grid{grid-template-columns:1fr;padding:12px;border-radius:18px}
+  .rh-overview .hub-kpi{min-height:158px}
+}
 
 /* ─── 2-column grid (Traffic + Active users) ─── */
 .rh-overview .mt-grid{
@@ -614,9 +742,7 @@
      for visual consistency across tabs. Operator: «الهيرو الي
      عملته لخدماتي عجبني — طبعه ع باقي الصفحات». #}
   <div class="mt-page-hero mt-page-hero--blue">
-    <div class="mt-page-hero-glow" aria-hidden="true"></div>
-    <div class="mt-page-hero-copy">
-      <span class="mt-page-hero-kicker">
+          <span class="mt-page-hero-kicker">
         <i class="fa-solid fa-gauge-high"></i>
         لوحة الراوتر — مباشرة
       </span>
@@ -625,58 +751,140 @@
         صحّة الراوتر اللحظيّة، حركة الواجهات، المتصلون الآن،
         وإجراءات سريعة للتنفيذ على الراوتر.
       </p>
-    </div>
+    
   </div>
 
   {# KPI strip. Initial values are em-dashes (NOT zeros) so the page
      never reads as 'CPU=0%' when in fact we haven't fetched yet. #}
   <div class="hub-kpi-grid" data-mt-kpi-strip>
     <div class="hub-kpi hub-kpi--brand" data-mt-kpi="uptime">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">Uptime</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+        <div>
+          <div class="hub-kpi-label">مدة تشغيل النظام</div>
+          <span class="hub-kpi-status">زمن التشغيل</span>
+        </div>
       </div>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-power-off"></i></span>
+      </div>
+      <span class="hub-kpi-wave" aria-hidden="true"></span>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="cpu">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
+        <div>
+          <div class="hub-kpi-label">استخدام المعالج</div>
+          <span class="hub-kpi-status">CPU</span>
+        </div>
+      </div>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">CPU</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>الحِمل اللحظي</div>
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>الحمل اللحظي</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-gauge-high"></i></span>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--green" data-mt-kpi="memory">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
+        <div>
+          <div class="hub-kpi-label">استهلاك الذاكرة</div>
+          <span class="hub-kpi-status">RAM</span>
+        </div>
+      </div>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">الذاكرة</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-memory"></i></span>
+      </div>
+    </div>
+    <div class="hub-kpi hub-kpi--teal" data-mt-kpi="disk">
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-hard-drive"></i></span>
+        <div>
+          <div class="hub-kpi-label">استخدام القرص</div>
+          <span class="hub-kpi-status">Storage</span>
+        </div>
+      </div>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>مستخدم / إجمالي</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--amber" data-mt-kpi="temperature">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
+        <div>
+          <div class="hub-kpi-label">حرارة المعالج</div>
+          <span class="hub-kpi-status">Health</span>
+        </div>
+      </div>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">حرارة CPU</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-temperature-half"></i></span>
+      </div>
+    </div>
+    <div class="hub-kpi hub-kpi--blue" data-mt-kpi="clock">
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
+        <div>
+          <div class="hub-kpi-label">الوقت داخل النظام</div>
+          <span class="hub-kpi-status">Clock</span>
+        </div>
+      </div>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub>وقت الراوتر الحالي</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
       </div>
     </div>
     <div class="hub-kpi hub-kpi--purple" data-mt-kpi="version">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-circle-info"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">RouterOS</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>—</div>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-award"></i></span>
+        <div>
+          <div class="hub-kpi-label">إصدار النظام</div>
+          <span class="hub-kpi-status">RouterOS</span>
+        </div>
       </div>
+      <div class="hub-kpi-body">
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>—</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-code-branch"></i></span>
+      </div>
+      <span class="hub-kpi-wave" aria-hidden="true"></span>
     </div>
     <div class="hub-kpi hub-kpi--grey" data-mt-kpi="dialed">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-network-wired"></i></span>
+      <div class="hub-kpi-head">
+        <span class="hub-kpi-icon"><i class="fa-solid fa-network-wired"></i></span>
+        <div>
+          <div class="hub-kpi-label">العنوان المتصل به</div>
+          <span class="hub-kpi-status">Link</span>
+        </div>
+      </div>
       <div class="hub-kpi-body">
-        <div class="hub-kpi-label">العنوان المتصل به</div>
-        <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-        <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
+        <div class="hub-kpi-copy">
+          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
+          <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
+        </div>
+        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-circle-nodes"></i></span>
       </div>
     </div>
   </div>
@@ -874,9 +1082,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="interfaces"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-ethernet"></i> الواجهات
         </span>
         <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
@@ -884,7 +1090,7 @@
           كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
           وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
         </p>
-      </div>
+      
     </div>
     {# Stats strip — mirrors data-mt-interfaces-count into a
        prominent pill so the total is visible above the table. #}
@@ -948,9 +1154,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="ips"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--teal">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-network-wired"></i> العناوين
         </span>
         <h3>عناوين IP المُخصَّصة على الراوتر</h3>
@@ -958,7 +1162,7 @@
           كل عنوان IP مربوط بواجهة — ثابت أو dynamic، مع الـ
           subnet والـ comment. مفيد لتتبّع البرمجة قبل أيّ تغيير.
         </p>
-      </div>
+      
     </div>
     <div class="np-stat-strip">
       <div class="np-stat-pill">
@@ -1016,9 +1220,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="routes"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--amber">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-route"></i> المسارات
         </span>
         <h3>جدول التوجيه — أين تذهب الحزم</h3>
@@ -1026,7 +1228,7 @@
           كل route مع الـ destination والـ gateway والـ routing-table.
           هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
         </p>
-      </div>
+      
     </div>
     <div class="np-stat-strip">
       <div class="np-stat-pill np-stat-pill--warn">
@@ -1085,9 +1287,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="neighbors"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-people-arrows"></i> الجيران
         </span>
         <h3>الأجهزة المكتشَفة على الشبكة</h3>
@@ -1095,7 +1295,7 @@
           الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر
           MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.
         </p>
-      </div>
+      
     </div>
     <div class="np-stat-strip">
       <div class="np-stat-pill np-stat-pill--err">
@@ -1167,9 +1367,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="logs"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--slate">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-list"></i> السجلّات
         </span>
         <h3>سجلّ أحداث الراوتر الحيّ</h3>
@@ -1177,7 +1375,7 @@
           آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
           حسب الموضوع (firewall, hotspot, ppp, …) لتركّز نظرك.
         </p>
-      </div>
+      
     </div>
     <section class="mt-card" data-mt-logs-card>
       <header class="mt-card-head">
@@ -1268,9 +1466,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="sessions"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-users"></i> الجلسات الحيّة
         </span>
         <h3>المتصلون الآن على الراوتر</h3>
@@ -1278,7 +1474,7 @@
           جلسات Hotspot — كروت ويوزرات منفصلة — وجلسات PPPoE.
           كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
         </p>
-      </div>
+      
     </div>
 
     {# Summary row — 3 mini-cards mirroring the live counts from
@@ -1436,9 +1632,7 @@
   <section class="mt-tab-panel" data-mt-tab-panel="diagnostics"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
-      <div class="mt-page-hero-glow" aria-hidden="true"></div>
-      <div class="mt-page-hero-copy">
-        <span class="mt-page-hero-kicker">
+              <span class="mt-page-hero-kicker">
           <i class="fa-solid fa-stethoscope"></i> التشخيص
         </span>
         <h3>إشارات خطر + صحّة الراوتر</h3>
@@ -1446,7 +1640,7 @@
           فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي
           العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …
         </p>
-      </div>
+      
     </div>
     {# 3-card health grid — mirrors the leading number from the
        existing summary chips (which still live inside the card
@@ -1519,8 +1713,7 @@
     {# ── Premium hero (mt-page-hero matches the rest of the
          dashboard now — single visual language) ───────────── #}
     <div class="mt-page-hero rh-inv-hero">
-      <div class="mt-page-hero-copy rh-inv-hero-copy">
-        <span class="mt-page-hero-kicker rh-inv-kicker">
+              <span class="mt-page-hero-kicker rh-inv-kicker">
           <i class="fa-solid fa-bolt"></i>
           مركز خدمات الراوتر
         </span>
@@ -1530,7 +1723,7 @@
           <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
           <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
           <span><i class="fa-solid fa-route"></i> عبر VPN</span>
-        </div>
+        
       </div>
       <div class="rh-inv-hero-stats" data-rh-inv-stats hidden>
         <div class="rh-inv-stat">
