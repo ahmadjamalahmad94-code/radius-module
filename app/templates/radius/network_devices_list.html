@@ -143,6 +143,12 @@
               </button>
             </form>
             <a class="hub-btn hub-btn--ghost"
+               href="{{ url_for('radius.network_device_bypass_form', device_id=d.id) }}"
+               style="padding:4px 10px;font-size:11.5px"
+               title="DHCP lease + IP-binding + address-list">
+              <i class="fa-solid fa-link"></i> تجهيز
+            </a>
+            <a class="hub-btn hub-btn--ghost"
                href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
                style="padding:4px 10px;font-size:11.5px">
               <i class="fa-solid fa-pen-to-square"></i> تعديل

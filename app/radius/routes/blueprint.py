@@ -98,6 +98,7 @@ def _register_all(bp: Blueprint) -> None:
     from .dashboard import register_dashboard_routes
     from .devices import register_devices_routes
     from .network_devices import register_network_devices_routes
+    from .network_device_bypass import register_network_device_bypass_routes
     from .network_telegram_settings import register_network_telegram_routes
     from .sessions import register_sessions_routes
     from .plans import register_plans_routes
@@ -129,6 +130,7 @@ def _register_all(bp: Blueprint) -> None:
     register_dashboard_routes(bp)
     register_devices_routes(bp)
     register_network_devices_routes(bp)
+    register_network_device_bypass_routes(bp)
     register_network_telegram_routes(bp)
     register_sessions_routes(bp)
     register_plans_routes(bp)
