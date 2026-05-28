@@ -126,6 +126,14 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_interface_sse),
         methods=["GET"],
     )
+    # K4.3 — single SSE stream for ALL interfaces of the router.
+    # Optional / toggled by the «تفعيل البث الحي» button in the UI.
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/interfaces/stream",
+        "mt_interfaces_stream",
+        require_api_token(mt_interfaces_stream),
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/mikrotik/<int:nas_id>/ip/addresses",
         "mt_ip_addresses",
@@ -1212,6 +1220,84 @@ def mt_interface_sse(nas_id: int, name: str):
         headers={
             # Tell every middlebox not to buffer the stream — chunks
             # need to reach the browser the instant we yield them.
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ─── K4.3: live-bridge SSE — ALL interfaces at once ───────────────
+
+
+def mt_interfaces_stream(nas_id: int):
+    """Server-Sent Events for live RX/TX across EVERY interface.
+
+    Behind the scenes: app/radius/services/mt_stream_bus.py owns one
+    worker thread per router that polls `interface_list()` every
+    1 s, diffs the byte counters, and fans the deltas out to every
+    subscriber. This endpoint is the subscriber side — it
+    registers a queue with the bus and yields each broadcast as an
+    SSE-formatted chunk.
+
+    Optional / additive. The polled /interfaces endpoint stays the
+    default; this stream only kicks in when the operator presses
+    the «تفعيل البث الحي» toggle on the interfaces tab. Operator:
+    «وتكون اضافة مش اساسي واختياري».
+
+    Wire format:
+        event: hello            ← once on connect
+        data: {"router_id": 17}
+
+        event: traffic
+        data: {"iface":"ether1","rx_bps":…,"tx_bps":…,"running":true}
+
+        event: status
+        data: {"connected":true}
+
+        : heartbeat             ← every ~25 s so proxies don't kill us
+    """
+    import queue as _queue
+    from ...radius.services.mt_stream_bus import (
+        get_stream as _get_stream,
+        QUEUE_MAXSIZE as _QSIZE,
+        SUBSCRIBER_QUEUE_TIMEOUT as _Q_TIMEOUT,
+    )
+
+    nas = _load_nas(nas_id)
+    if not nas:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+
+    stream = _get_stream(nas)
+
+    def gen():
+        q: _queue.Queue = _queue.Queue(maxsize=_QSIZE)
+        stream.add_subscriber(q)
+        try:
+            # Hello frame so the browser knows the channel is open
+            # even before the first /interface/print sample lands.
+            yield 'event: hello\ndata: {"router_id": ' \
+                  + str(nas_id) + '}\n\n'
+            while True:
+                try:
+                    msg = q.get(timeout=_Q_TIMEOUT)
+                    yield msg
+                except _queue.Empty:
+                    # Comment line — keeps middleboxes / proxies
+                    # from treating the connection as idle. The
+                    # browser silently drops `:`-prefixed lines.
+                    yield ": heartbeat\n\n"
+        except GeneratorExit:
+            # Browser closed (page reload, manual stop). Clean up
+            # so the worker can scale down when no one is watching.
+            pass
+        finally:
+            stream.remove_subscriber(q)
+
+    return Response(
+        gen(),
+        mimetype="text/event-stream",
+        headers={
             "Cache-Control": "no-cache, no-transform",
             "X-Accel-Buffering": "no",
             "Connection": "keep-alive",
