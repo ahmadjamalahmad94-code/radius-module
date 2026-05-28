@@ -161,13 +161,61 @@ def tick() -> dict:
             if fired:
                 summary["alerts"] += 1
 
+    # Sprint 5 — sweep expired remote-access sessions in the same
+    # tick. Cheap when no expirations are pending (one indexed
+    # `WHERE status='active' AND expires_at <= now` query).
+    try:
+        from . import remote_device_access
+        summary["expired_sessions"] = remote_device_access.sweep_expired(
+            _load_nas_for_router,
+        )
+    except Exception:  # noqa: BLE001
+        _LOG.exception("[net-monitor] session sweep failed")
+        summary["expired_sessions"] = 0
+
     elapsed_ms = (time.perf_counter() - started) * 1000.0
     _LOG.info(
-        "[net-monitor] tick scanned=%d up=%d down=%d alerts=%d in %.0fms",
+        "[net-monitor] tick scanned=%d up=%d down=%d alerts=%d "
+        "expired=%d in %.0fms",
         summary["scanned"], summary["up"], summary["down"],
-        summary["alerts"], elapsed_ms,
+        summary["alerts"], summary["expired_sessions"],
+        elapsed_ms,
     )
     return summary
+
+
+def _load_nas_for_router(router_id: int) -> dict | None:
+    """nas-dict loader injected into remote_device_access.sweep_expired
+    so that service stays free of nas_repo imports. Returns the
+    dict shape MikrotikClient expects, or None when the router
+    has been deleted under us."""
+    from ..db.repos import nas_repo
+    # The sweep walks distinct tenants — we don't have one here.
+    # `get_nas` without tenant scoping isn't exposed, so do the
+    # right thing: scan every tenant's view. For a small fleet
+    # this is fine; if it grows we'd add an admin-scope helper.
+    from ..db.connection import db
+    cur = db().execute(
+        "SELECT tenant_id FROM nas_devices WHERE id = ?",
+        (int(router_id),),
+    )
+    r = cur.fetchone()
+    if not r:
+        return None
+    nas_dc = nas_repo.get_nas(int(r["tenant_id"]), int(router_id))
+    if not nas_dc:
+        return None
+    return {
+        "id":              nas_dc.id,
+        "tenant_id":       nas_dc.tenant_id,
+        "name":            nas_dc.name,
+        "address":         nas_dc.address,
+        "api_port":        nas_dc.api_port,
+        "api_user":        nas_dc.api_user,
+        "api_password":    nas_dc.api_password,
+        "api_use_tls":     nas_dc.api_use_tls,
+        "api_timeout_sec": getattr(nas_dc, "api_timeout_sec", 3) or 3,
+    }
 
 
 # ─── internals ─────────────────────────────────────────────────
