@@ -74,10 +74,29 @@ def _allowed_env_tokens() -> tuple[str, ...]:
 
 
 def _extract_bearer() -> Optional[str]:
+    """Read the API token from the request.
+
+    Primary source: `Authorization: Bearer <token>` header — the
+    canonical pattern used by every regular fetch() call.
+
+    Fallback: `?api_token=<token>` query string. Required for
+    `EventSource` (Server-Sent Events) requests, which the browser
+    spec doesn't let us attach custom headers to. Only ever read on
+    GET requests so a token can't accidentally leak into a POST log
+    line via a re-issued form.
+    """
     h = request.headers.get("Authorization") or ""
-    if not h.lower().startswith("bearer "):
-        return None
-    return h.split(None, 1)[1].strip() or None
+    if h.lower().startswith("bearer "):
+        tok = h.split(None, 1)[1].strip()
+        if tok:
+            return tok
+    # Query-string fallback — SSE only. Guard on the method so
+    # bearer-via-query is never accepted for state-changing verbs.
+    if request.method == "GET":
+        q = (request.args.get("api_token") or "").strip()
+        if q:
+            return q
+    return None
 
 
 def _rate_limit_check(token_key: str, *, per_minute: int = 60) -> bool:

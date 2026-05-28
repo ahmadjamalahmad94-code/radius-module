@@ -1532,9 +1532,23 @@
         liveSetState("error");
         return;
       }
+      if (!CFG.apiToken) {
+        // No token configured → EventSource would 401 immediately.
+        // Better to fail loudly upfront than to ping-pong reconnect.
+        liveSetState("error");
+        if (window.console) {
+          console.warn("[live-bridge] no API token — stream disabled");
+        }
+        return;
+      }
       try {
+        // EventSource can't set custom headers, so the token rides
+        // in the query string (the SSE-only fallback in
+        // _extract_bearer). Encoded to be safe.
+        const tok = encodeURIComponent(CFG.apiToken);
         liveSrc = new EventSource(
-          "/api/v1/mikrotik/" + CFG.routerId + "/interfaces/stream");
+          "/api/v1/mikrotik/" + CFG.routerId +
+          "/interfaces/stream?api_token=" + tok);
       } catch (e) {
         liveSetState("error");
         return;
