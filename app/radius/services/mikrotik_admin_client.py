@@ -437,25 +437,49 @@ def interface_list(nas: Mapping[str, Any]) -> MtResult:
     """
     def _work(c):
         ifaces = list(c.print_("/interface/print"))
-        eths_by_name: dict[str, dict] = {}
-        try:
-            for e in c.print_("/interface/ethernet/print"):
-                name = (e or {}).get("name")
-                if name:
-                    eths_by_name[name] = e
-        except Exception:  # noqa: BLE001
-            # Some MikroTik builds disallow read of /interface/ethernet
-            # for non-full users. Soft-fail — the dashboard already
-            # tolerates missing `rate` fields.
-            pass
+
+        # Names of ethernet interfaces — feed them to monitor once=
+        # in one round-trip so we get rate/auto-neg/full-duplex per
+        # name. `/interface/ethernet/print` only shows the CONFIGURED
+        # bandwidth, not the negotiated link rate — operator's
+        # «Auto Negotiation: done, Rate: 100Mbps» comes from MONITOR.
+        eth_names = [
+            (i or {}).get("name") for i in ifaces
+            if (i or {}).get("type") == "ether"
+        ]
+        eth_names = [n for n in eth_names if n]
+        eth_status_by_name: dict[str, dict] = {}
+        if eth_names:
+            try:
+                # Single call, comma-joined names — RouterOS returns
+                # one !re per name with its current rate/status.
+                rows = c.run(
+                    "/interface/ethernet/monitor",
+                    attrs={
+                        "numbers": ",".join(eth_names),
+                        "once": "",
+                    },
+                )
+                for s in rows:
+                    if s.get("reply") != "!re":
+                        continue
+                    a = s.get("attrs") or {}
+                    name = a.get("name")
+                    if name:
+                        eth_status_by_name[name] = a
+            except Exception:  # noqa: BLE001
+                # Soft-fail — the dashboard tolerates missing `rate`.
+                pass
+
         for iface in ifaces:
             name = (iface or {}).get("name")
-            eth = eths_by_name.get(name) if name else None
+            eth = eth_status_by_name.get(name) if name else None
             if eth:
-                # Only attach the fields the dashboard actually uses,
-                # so we don't bloat the JSON with every ethernet attr.
+                # `rate` is the negotiated link rate (100Mbps / 1Gbps).
+                # `status` is link-ok / no-link.
+                # `auto-negotiation` is done / incomplete.
                 for key in ("rate", "auto-negotiation",
-                            "full-duplex", "sfp-rate-select"):
+                            "full-duplex", "status"):
                     if eth.get(key) and not iface.get(key):
                         iface[key] = eth[key]
         return ifaces

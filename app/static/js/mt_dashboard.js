@@ -1369,6 +1369,20 @@
 
     function renderRows(list) {
       const now = Date.now();
+      // Diagnostic — log the first row's keys so we can tell whether
+      // the backend's ethernet-merge step (interface_list →
+      // /interface/ethernet/print) actually landed the `rate` field
+      // on this router. Operator: «ما عرض حالة الاتصال 10/100/1000».
+      if (window.console && list[0]) {
+        const ethRow = list.find((r) =>
+          String(r.type || "").toLowerCase() === "ether") || list[0];
+        const ethKeys = ["name", "type", "rate", "auto-negotiation",
+                         "full-duplex", "sfp-rate-select"];
+        const vals = ethKeys.map((k) => k + "=" + (ethRow[k] || "(missing)"));
+        console.log("[interfaces] first ether row keys:",
+                    Object.keys(ethRow).join(", "));
+        console.log("[interfaces] ether fields:", vals.join(" | "));
+      }
       const html = list.map(r => {
         const rxErr = parseFloat(r["rx-error"]) || 0;
         const txErr = parseFloat(r["tx-error"]) || 0;
