@@ -34,6 +34,8 @@
                           or speed_rules_panel.plan_id
                           or speed_rules_panel.card_batch_id
                           or speed_rules_panel.subscriber_group_id) -%}
+{%- set sr_pending_target_label = 'الحزمة' if speed_rules_panel.target_type == 'card_batch' else ('العرض' if speed_rules_panel.target_type == 'plan' else 'المشترك') -%}
+{%- set sr_pending_save_label = 'إنشاء الحزمة' if speed_rules_panel.target_type == 'card_batch' else ('حفظ العرض' if speed_rules_panel.target_type == 'plan' else 'حفظ المشترك') -%}
 
 <style>
   /* ── Panel shell ───────────────────────────────────────────── */
@@ -311,9 +313,42 @@
     font-size: 13px;
   }
   .sr2-empty i{ display: block; font-size: 22px; margin-bottom: 6px; color: var(--hub-brand-ink); opacity: .6; }
+  .sr2-rule--pending{
+    border-inline-start: 4px solid #f59e0b !important;
+    background: linear-gradient(90deg, #fffbeb 0%, #fff 18%) !important;
+  }
+  .sr2-pending-badge{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: #fef3c7; color: #92400e;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 800;
+  }
+  .sr2-toast-root{
+    position: fixed; bottom: 24px; inset-inline-start: 24px;
+    z-index: 99999;
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: none;
+  }
+  .sr2-toast{
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    border-radius: var(--hub-r-md);
+    background: #fff;
+    color: var(--hub-text);
+    font-size: 13px; font-weight: 700;
+    box-shadow: 0 12px 32px rgba(20, 18, 50, .18),
+                0 2px 6px rgba(20, 18, 50, .08);
+    opacity: 0; transform: translateX(-12px);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .sr2-toast.is-shown{ opacity: 1; transform: translateX(0); }
+  .sr2-toast.ok i{ color: #16a34a; }
+  .sr2-toast.error i{ color: #dc2626; }
 </style>
 
-<section class="sr2-panel">
+<section class="sr2-panel" data-sr-pending="{{ 1 if sr_pending else 0 }}" data-sr-target-label="{{ sr_pending_target_label }}">
   <div class="sr2-head">
     <div>
       <span class="sr2-title">
@@ -584,8 +619,16 @@
       {% if sr_pending %}
         <span class="sr2-help" style="flex:1; color: var(--hub-brand-ink); font-weight:700">
           <i class="fa-solid fa-circle-info"></i>
-          املئي الحقول هنا وستُحفظ القاعدة مع المشترك تلقائيًا عند الضغط على «حفظ المشترك» أسفل الصفحة.
+          املأ الحقول هنا وستُحفظ القاعدة مع {{ sr_pending_target_label }} تلقائيًا عند الضغط على «{{ sr_pending_save_label }}» أسفل الصفحة.
         </span>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
+                data-add-action="copy">
+          <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+        </button>
+        <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
+                data-add-action="manual">
+          <i class="fa-solid fa-plus"></i> إضافة القاعدة
+        </button>
       {% else %}
         <span class="sr2-help" style="flex:1">
           لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
@@ -611,13 +654,189 @@
 
     {# Presets data for the JS «نسخ» handler — only emitted in non-
        pending mode (we have actual presets to copy from). #}
-    {% if not sr_pending %}
     <script type="application/json" data-sr-presets>
       {{ (speed_rules_panel.presets or []) | tojson }}
     </script>
-    {% endif %}
   </div>
 </section>
+
+<script>
+(function(){
+  if (window.__sr2PendingRulesInit) return;
+  window.__sr2PendingRulesInit = true;
+  var pendingIdx = 0;
+  function escapeHtml(s){
+    return String(s || '').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function toast(message, type){
+    var root = document.querySelector('.sr2-toast-root');
+    if (!root){
+      root = document.createElement('div');
+      root.className = 'sr2-toast-root';
+      document.body.appendChild(root);
+    }
+    var item = document.createElement('div');
+    item.className = 'sr2-toast ' + (type || 'ok');
+    item.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i><span>' + escapeHtml(message) + '</span>';
+    root.appendChild(item);
+    requestAnimationFrame(function(){ item.classList.add('is-shown'); });
+    setTimeout(function(){
+      item.classList.remove('is-shown');
+      setTimeout(function(){ item.remove(); }, 220);
+    }, 2400);
+  }
+  function field(panel, name){ return panel.querySelector('[name="' + name + '"]'); }
+  function fmtKbpsHuman(v){
+    var n = parseInt(v, 10) || 0;
+    if (n >= 1024 && n % 1024 === 0) return (n / 1024) + ' Mbps';
+    if (n >= 1024) return (n / 1024).toFixed(1) + ' Mbps';
+    return n + ' Kbps';
+  }
+  function fmtTime(s){
+    if (!s || s.indexOf(':') < 0) return '--:--';
+    var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
+    if (isNaN(h)) return '--:--';
+    if (h === 0) return '12:' + m + ' ص';
+    if (h < 12) return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
+    if (h === 12) return '12:' + m + ' م';
+    var h12 = h - 12;
+    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+  }
+  function readAddCard(panel){
+    var dayInputs = Array.from(panel.querySelectorAll('.sr2-add input[type="checkbox"][name="sr_days"]:checked'));
+    return {
+      name: ((field(panel, 'sr_name') || {}).value || '').trim() || 'قاعدة سرعة',
+      days_csv: dayInputs.map(function(c){ return c.value; }).join(','),
+      days_labels: dayInputs.map(function(c){
+        var lbl = c.closest('label'); var sp = lbl && lbl.querySelector('span');
+        return sp ? sp.textContent : c.value;
+      }),
+      starts_at_time: (field(panel, 'sr_starts_at_time') || {}).value || '',
+      ends_at_time: (field(panel, 'sr_ends_at_time') || {}).value || '',
+      speed_down_kbps: (field(panel, 'sr_speed_down_kbps') || {}).value || '0',
+      speed_up_kbps: (field(panel, 'sr_speed_up_kbps') || {}).value || '0',
+      cir_down_kbps: (field(panel, 'sr_cir_down_kbps') || {}).value || '0',
+      cir_up_kbps: (field(panel, 'sr_cir_up_kbps') || {}).value || '0',
+      restore_mode: (field(panel, 'sr_restore_mode') || {}).value || 'profile_default',
+      priority: (field(panel, 'sr_priority') || {}).value || '5',
+      source_schedule_id: (field(panel, 'sr_source_schedule_id') || {}).value || '',
+      notes: (field(panel, 'sr_notes') || {}).value || '',
+    };
+  }
+  function clearAddCard(panel){
+    ['sr_name','sr_starts_at_time','sr_ends_at_time','sr_speed_down_kbps','sr_speed_up_kbps','sr_cir_down_kbps','sr_cir_up_kbps','sr_source_schedule_id','sr_notes'].forEach(function(name){
+      var el = field(panel, name);
+      if (!el) return;
+      el.value = name.indexOf('_kbps') >= 0 ? '0' : '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    panel.querySelectorAll('.sr2-add input[type="checkbox"][name="sr_days"]').forEach(function(c){
+      c.checked = false;
+      c.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+  function appendPending(panel, data){
+    pendingIdx += 1;
+    var idx = Date.now().toString(36) + '_' + pendingIdx;
+    var daysText;
+    if (!data.days_labels || data.days_labels.length === 0 || data.days_labels.length === 7){
+      daysText = 'كل الأيام';
+    } else if (data.days_labels.length <= 3){
+      daysText = data.days_labels.join(' · ');
+    } else {
+      daysText = data.days_labels.length + ' أيام';
+    }
+    var targetLabel = panel.getAttribute('data-sr-target-label') || 'العنصر';
+    var wrap = document.createElement('div');
+    wrap.className = 'sr2-rule sr2-rule--pending';
+    wrap.innerHTML = ''
+      + '<div class="sr2-rule-summary">'
+      + '  <span class="sr2-sum-pulse is-on"></span>'
+      + '  <span class="sr2-sum-name">' + escapeHtml(data.name) + '</span>'
+      + '  <span class="sr2-sum-time"><i class="fa-regular fa-clock"></i> ' + fmtTime(data.starts_at_time) + ' ← ' + fmtTime(data.ends_at_time) + '</span>'
+      + '  <span class="sr2-sum-speed"><i class="fa-solid fa-arrow-down"></i> ' + fmtKbpsHuman(data.speed_down_kbps) + '<span class="sr2-sum-sep">·</span><i class="fa-solid fa-arrow-up"></i> ' + fmtKbpsHuman(data.speed_up_kbps) + '</span>'
+      + '  <span class="sr2-sum-days">' + escapeHtml(daysText) + '</span>'
+      + '  <span class="sr2-sum-spacer"></span>'
+      + '  <span class="sr2-pending-badge"><i class="fa-solid fa-clock-rotate-left"></i> ستحفظ مع ' + escapeHtml(targetLabel) + '</span>'
+      + '  <button type="button" class="sr2-sum-del" data-drop-pending title="إزالة"><i class="fa-solid fa-xmark"></i></button>'
+      + '</div>';
+    ['name','days_csv','starts_at_time','ends_at_time','speed_down_kbps','speed_up_kbps','cir_down_kbps','cir_up_kbps','restore_mode','priority','source_schedule_id','notes'].forEach(function(k){
+      var inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'sr_new_' + idx + '_' + k;
+      inp.value = data[k] != null ? String(data[k]) : '';
+      wrap.appendChild(inp);
+    });
+    var en = document.createElement('input');
+    en.type = 'hidden';
+    en.name = 'sr_new_' + idx + '_enabled';
+    en.value = '1';
+    wrap.appendChild(en);
+    var list = panel.querySelector('.sr2-rules');
+    if (list) list.appendChild(wrap);
+    var empty = list && list.querySelector('.sr2-empty');
+    if (empty) empty.remove();
+  }
+  function presetData(panel){
+    var presetsEl = panel.querySelector('[data-sr-presets]');
+    try { return presetsEl ? JSON.parse(presetsEl.textContent) : []; }
+    catch(_){ return []; }
+  }
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-add-action]');
+    var drop = e.target.closest('[data-drop-pending]');
+    var control = btn || drop;
+    var panel = control && control.closest('.sr2-panel[data-sr-pending="1"]');
+    if (!panel) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    if (drop){
+      var pendingRule = drop.closest('.sr2-rule--pending');
+      if (pendingRule) pendingRule.remove();
+      return;
+    }
+    var data = readAddCard(panel);
+    if (btn.dataset.addAction === 'copy'){
+      if (!data.source_schedule_id){
+        toast('اختر جدول سرعة محفوظ أولًا', 'error');
+        return;
+      }
+      var src = presetData(panel).find(function(p){ return String(p.id) === String(data.source_schedule_id); });
+      if (!src){
+        toast('الجدول المصدر غير موجود', 'error');
+        return;
+      }
+      data.name = data.name && data.name !== 'قاعدة سرعة' ? data.name : ('نسخة من ' + (src.name || 'جدول محفوظ'));
+      data.starts_at_time = src.starts_at_time || data.starts_at_time;
+      data.ends_at_time = src.ends_at_time || data.ends_at_time;
+      data.speed_down_kbps = src.speed_down_kbps || data.speed_down_kbps;
+      data.speed_up_kbps = src.speed_up_kbps || data.speed_up_kbps;
+      data.cir_down_kbps = src.cir_down_kbps || data.cir_down_kbps;
+      data.cir_up_kbps = src.cir_up_kbps || data.cir_up_kbps;
+      data.restore_mode = src.restore_mode || data.restore_mode;
+      data.priority = src.priority || data.priority;
+    } else {
+      if (!data.starts_at_time || !data.ends_at_time){
+        toast('أدخل وقت البداية والنهاية', 'error');
+        return;
+      }
+      var dKb = parseInt(data.speed_down_kbps, 10) || 0;
+      var uKb = parseInt(data.speed_up_kbps, 10) || 0;
+      if (dKb === 0 && uKb === 0 && data.restore_mode !== 'disconnect'){
+        toast('أدخل سرعة التنزيل أو الرفع', 'error');
+        return;
+      }
+    }
+    appendPending(panel, data);
+    clearAddCard(panel);
+    toast('تمت إضافة القاعدة، وستحفظ مع النموذج', 'ok');
+  }, true);
+})();
+</script>
 
 {# Expand / collapse a rule's detail panel — idempotent via guard
    so the macro is safe to render multiple times. #}

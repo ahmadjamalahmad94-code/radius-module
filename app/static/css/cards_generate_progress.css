@@ -1,0 +1,106 @@
+.card-generate-progress[hidden] {
+  display: none;
+}
+
+.card-generate-progress {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.card-generate-progress__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(7px);
+}
+
+.card-generate-progress__panel {
+  position: relative;
+  width: min(460px, 100%);
+  border: 1px solid rgba(20, 184, 166, .28);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(20, 184, 166, .16), transparent 34%),
+    linear-gradient(135deg, #fff, #f8f6ff 58%, #ecfeff);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .28);
+  padding: 24px;
+  text-align: center;
+  color: #172033;
+}
+
+.card-generate-progress__icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, #0f8f7f, #15b8a6);
+  box-shadow: 0 14px 32px rgba(15, 143, 127, .25);
+}
+
+.card-generate-progress__panel h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.card-generate-progress__panel p {
+  min-height: 24px;
+  margin: 8px 0 16px;
+  color: #53617b;
+  font-weight: 850;
+}
+
+.card-generate-progress__bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7edf6;
+}
+
+.card-generate-progress__bar span {
+  display: block;
+  width: 8%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0f8f7f, #6d4dfc);
+  transition: width .28s ease;
+}
+
+.card-generate-progress__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.card-generate-progress__meta strong {
+  color: #172033;
+}
+
+.card-generate-progress__panel small {
+  display: block;
+  margin-top: 14px;
+  color: #8a97ad;
+  font-weight: 800;
+}
+
+.card-generate-progress.is-error .card-generate-progress__icon,
+.card-generate-progress.is-error .card-generate-progress__bar span {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+
+.batch-btn.is-loading,
+.hub-btn.is-loading {
+  cursor: wait;
+  opacity: .8;
+}

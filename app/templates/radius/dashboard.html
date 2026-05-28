@@ -1,353 +1,1097 @@
-{# ═══════════════════════════════════════════════════════════════════════
-   Dashboard — REBUILT (Night N3, 2026-05-21)
-
-   Full rebuild from scratch using the unified hub-v2 design system
-   (app/static/css/hub_v2.css + app/templates/_partials/hub.html).
-   No backend change — consumes the same `snap` + `metrics` dicts the
-   existing dashboard route already provides.
-
-   Layout:
-     1. Page hero
-     2. Top alerts (system-wide warnings)
-     3. KPI strip (4 main cards)
-     4. Quick actions (6 tiles)
-     5. Subscribers section (6 tiles + progress)
-     6. Cards + recent batches (tiles + list)
-     7. Plans section (tiles + top plan)
-     8. Bottom: top-plans table + recent activity (2-col grid)
-     9. System health (VPS/runtime details)
-   ═══════════════════════════════════════════════════════════════════════ #}
-
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}لوحة التحكم — Hobe Hub{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
-{% block page_title %}لوحة التحكم{% endblock %}
-{% block page_sub %}<span class="sub">نظرة شاملة على النظام</span>{% endblock %}
+{% block title %}مركز إدارة الشبكة - Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
+{% block page_title %}مركز إدارة الشبكة{% endblock %}
+{% block page_sub %}<span class="sub">ملخص تشغيلي</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-/* Page-local tweaks — auto-refresh badge */
-.dash-refresh{
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:11.5px; color:var(--hub-text-mute);
-  padding:5px 11px;
-  background:var(--hub-bg-soft);
-  border:1px solid var(--hub-border-soft);
-  border-radius:999px;
-  font-weight:600;
-}
-.dash-refresh i{ font-size:10px; color:var(--hub-green); animation:dash-pulse 2s ease infinite; }
-@keyframes dash-pulse{ 0%,100%{opacity:.4}50%{opacity:1} }
-
-/* Recent activity row */
-.dash-act{
-  display:flex; align-items:center; gap:10px;
-  padding:9px 12px;
-  font-size:12.5px;
-  border-bottom:1px solid var(--hub-border-soft);
-  transition:background var(--hub-anim-fast) var(--hub-ease);
-}
-.dash-act:last-child{ border-bottom:none; }
-.dash-act:hover{ background:var(--hub-bg-soft); }
-.dash-act-actor{ font-weight:700; color:var(--hub-text); }
-.dash-act-target{ color:var(--hub-text-mute); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dash-act-time{ font-family:var(--hub-mono); font-size:11.5px; color:var(--hub-text-mute); }
-
-/* Alert callouts */
-.dash-alert{
-  display:flex; align-items:center; gap:10px;
-  padding:11px 16px;
-  font-size:13px; font-weight:700;
-  border-radius:var(--hub-r-lg);
-  border:1px solid transparent;
-  margin-bottom:8px;
-}
-.dash-alert i{ font-size:14px; }
-.dash-alert .msg{ flex:1; }
-.dash-alert a{ font-weight:800; text-decoration:underline; opacity:.85; color:inherit; }
-.dash-alert--danger{ background:var(--hub-red-soft); color:var(--hub-red-ink); border-color:#fca5a5; }
-.dash-alert--warn  { background:var(--hub-amber-soft); color:var(--hub-amber-ink); border-color:#fcd34d; }
-.dash-alert--info  { background:var(--hub-blue-soft); color:var(--hub-blue-ink); border-color:#bfdbfe; }
-
-/* Batch row inside Cards section */
-.dash-batch{
-  display:flex; align-items:center; gap:10px;
-  padding:8px 12px;
-  background:var(--hub-bg-soft);
-  border:1px solid var(--hub-border-soft);
-  border-radius:var(--hub-r-md);
-  font-size:12.5px;
-}
-.dash-batch .code{ font-family:var(--hub-mono); font-weight:800; color:var(--hub-brand-ink); }
-.dash-batch .name{ flex:1; color:var(--hub-text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dash-batch .cnt{ font-family:var(--hub-mono); color:var(--hub-text-mute); font-size:11.5px; }
-.dash-batches{ display:flex; flex-direction:column; gap:6px; }
-
-/* Top plan bar */
-.dash-bar{
-  position:relative;
-  height:8px;
-  border-radius:999px;
-  background:var(--hub-border-soft);
-  overflow:hidden;
-  flex:1;
-}
-.dash-bar > span{
-  position:absolute; inset-block:0;
-  inset-inline-start:0;
-  background:linear-gradient(90deg, var(--hub-brand), var(--hub-brand-ink));
-  transition:width var(--hub-anim-med) var(--hub-ease);
-}
+  .ops-board{
+    --ink:#111b31;
+    --muted:#73819a;
+    --line:#dfe7f3;
+    --surface:#ffffff;
+    --soft:#f6f9fe;
+    --blue:#2563eb;
+    --cyan:#0891b2;
+    --teal:#14b8a6;
+    --green:#16a34a;
+    --violet:#7c3aed;
+    --amber:#f59e0b;
+    --rose:#ef4444;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    color:var(--ink);
+  }
+  .ops-board *{box-sizing:border-box}
+  .ops-top{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:18px;
+    padding:18px 20px;
+    border:1px solid rgba(204,215,232,.88);
+    border-radius:18px;
+    background:
+      linear-gradient(135deg,rgba(255,255,255,.98),rgba(246,250,255,.94)),
+      radial-gradient(circle at 10% 0%,rgba(20,184,166,.12),transparent 28%);
+    box-shadow:0 16px 42px rgba(28,43,76,.08);
+  }
+  .ops-title{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    min-width:0;
+  }
+  .ops-mark{
+    position:relative;
+    display:grid;
+    place-items:center;
+    flex:0 0 58px;
+    width:58px;
+    height:58px;
+    border-radius:17px;
+    color:#fff;
+    background:linear-gradient(135deg,#0f766e,#2563eb);
+    box-shadow:0 16px 32px rgba(37,99,235,.18);
+  }
+  .ops-mark:after{
+    content:"";
+    position:absolute;
+    inset:-7px;
+    border-radius:22px;
+    border:1px solid rgba(37,99,235,.22);
+    animation:ops-pulse 2.7s ease-in-out infinite;
+  }
+  .ops-mark i{font-size:25px}
+  @keyframes ops-pulse{
+    0%,100%{transform:scale(.96);opacity:.45}
+    50%{transform:scale(1.04);opacity:1}
+  }
+  .ops-title h1{
+    margin:0;
+    font-size:30px;
+    line-height:1.2;
+    font-weight:950;
+    letter-spacing:0;
+  }
+  .ops-title p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-size:13.5px;
+    line-height:1.8;
+    font-weight:800;
+  }
+  .ops-actions{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:9px;
+  }
+  .ops-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:40px;
+    padding:0 14px;
+    border:1px solid #dbe5f1;
+    border-radius:10px;
+    background:#fff;
+    color:#15223b;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:950;
+    box-shadow:0 8px 18px rgba(15,23,42,.05);
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+  }
+  .ops-btn:hover{
+    transform:translateY(-1px);
+    border-color:#b9c8dc;
+    box-shadow:0 12px 26px rgba(15,23,42,.08);
+  }
+  .ops-btn--main{
+    color:#fff;
+    border-color:transparent;
+    background:linear-gradient(135deg,#14b8a6,#0f8f82);
+  }
+  .ops-btn--second{
+    color:#fff;
+    border-color:transparent;
+    background:linear-gradient(135deg,#8b5cf6,#5b4bd8);
+  }
+  .ops-pulse-strip{
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:minmax(290px,330px) minmax(260px,420px) minmax(360px,1fr);
+    gap:16px;
+    align-items:center;
+    padding:16px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 14px 34px rgba(30,41,59,.06);
+  }
+  .ops-strip-title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .ops-strip-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:48px;
+    height:48px;
+    border-radius:16px;
+    background:#ecfeff;
+    color:var(--cyan);
+    font-size:22px;
+    line-height:1;
+    flex:0 0 48px;
+  }
+  .ops-strip-icon i{
+    display:block;
+    line-height:1;
+  }
+  .ops-strip-title strong{
+    display:block;
+    font-size:17px;
+    font-weight:950;
+  }
+  .ops-strip-title > div > span{
+    display:block;
+    max-width:240px;
+    margin-top:5px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.7;
+    font-weight:850;
+  }
+  .ops-wave{
+    position:relative;
+    width:100%;
+    max-width:420px;
+    height:76px;
+    justify-self:center;
+    border:1px solid #e4ebf6;
+    border-radius:14px;
+    background:
+      linear-gradient(90deg,rgba(20,184,166,.10),rgba(37,99,235,.08),rgba(124,58,237,.09)),
+      repeating-linear-gradient(90deg,transparent 0 42px,rgba(148,163,184,.16) 43px 44px);
+  }
+  .ops-wave:before{
+    content:"";
+    position:absolute;
+    left:16px;
+    right:16px;
+    top:50%;
+    height:3px;
+    border-radius:999px;
+    background:linear-gradient(90deg,#14b8a6,#2563eb,#7c3aed);
+    box-shadow:0 0 18px rgba(37,99,235,.18);
+  }
+  .ops-wave:after{
+    content:"";
+    position:absolute;
+    top:50%;
+    right:calc(18% + 10px);
+    width:16px;
+    height:16px;
+    margin-top:-7px;
+    border-radius:50%;
+    background:#fff;
+    border:4px solid var(--blue);
+    box-shadow:0 0 0 8px rgba(37,99,235,.13);
+    animation:ops-dot 3.3s ease-in-out infinite;
+  }
+  @keyframes ops-dot{
+    0%,100%{transform:translateX(0)}
+    50%{transform:translateX(-150px)}
+  }
+  .ops-health{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .ops-health span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:34px;
+    padding:0 10px;
+    border-radius:11px;
+    background:var(--tone-soft,#f1f5f9);
+    color:var(--tone,#475569);
+    font-size:12px;
+    font-weight:950;
+  }
+  .ops-health i{font-size:12px}
+  .ops-vps-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    padding:14px;
+    border:1px solid rgba(226,232,240,.78);
+    border-radius:20px;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(124,58,237,.10), transparent 30%),
+      radial-gradient(circle at 92% 12%, rgba(37,99,235,.10), transparent 28%),
+      linear-gradient(135deg, rgba(255,255,255,.86), rgba(245,247,255,.74));
+    box-shadow:0 18px 54px rgba(65,73,118,.10);
+    backdrop-filter:blur(18px);
+  }
+  .ops-vps-card{
+    --vps-accent:#6B5AED;
+    --vps-soft:rgba(107,90,237,.12);
+    --vps-progress:0%;
+    position:relative;
+    overflow:hidden;
+    min-height:138px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 15px 18px;
+    border:1px solid rgba(226,232,240,.82);
+    border-radius:18px;
+    background:
+      linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.86)),
+      radial-gradient(circle at 16% 12%, var(--vps-soft), transparent 38%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.9),
+      0 14px 34px rgba(38,51,90,.075);
+    transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+    animation:ops-rise .42s ease both;
+  }
+  .ops-vps-card:nth-child(2){animation-delay:.03s}
+  .ops-vps-card:nth-child(3){animation-delay:.06s}
+  .ops-vps-card:nth-child(4){animation-delay:.09s}
+  .ops-vps-card:nth-child(5){animation-delay:.12s}
+  .ops-vps-card:nth-child(6){animation-delay:.15s}
+  .ops-vps-card:nth-child(7){animation-delay:.18s}
+  .ops-vps-card:nth-child(8){animation-delay:.21s}
+  .ops-vps-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(148,163,184,.82);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.96),
+      0 26px 58px rgba(38,51,90,.13);
+  }
+  .ops-vps-card:before{
+    content:"";
+    position:absolute;
+    inset:auto 15px 11px 15px;
+    height:4px;
+    border-radius:999px;
+    background:rgba(226,232,240,.82);
+  }
+  .ops-vps-card:after{
+    content:"";
+    position:absolute;
+    inset:auto 15px 11px auto;
+    width:var(--vps-progress);
+    max-width:calc(100% - 30px);
+    height:4px;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--vps-accent),#8B5CF6);
+    box-shadow:0 0 20px var(--vps-soft);
+    transition:width .35s ease;
+  }
+  .ops-vps-head{
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .ops-vps-icon{
+    width:40px;
+    height:40px;
+    border-radius:13px;
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--vps-accent);
+    font-size:16px;
+    background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(245,243,255,.82));
+    border:1px solid rgba(255,255,255,.96);
+    box-shadow:0 12px 26px var(--vps-soft);
+  }
+  .ops-vps-label{
+    margin-top:1px;
+    color:#111B31;
+    font-size:13px;
+    line-height:1.45;
+    font-weight:950;
+  }
+  .ops-vps-status{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:20px;
+    margin-top:5px;
+    padding:0 9px;
+    border-radius:999px;
+    color:var(--vps-accent);
+    background:var(--vps-soft);
+    font-size:10px;
+    font-weight:950;
+    direction:ltr;
+  }
+  .ops-vps-body{
+    position:relative;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 50px;
+    gap:10px;
+    align-items:center;
+  }
+  .ops-vps-value{
+    color:#101B33;
+    font-size:23px;
+    font-weight:950;
+    line-height:1.12;
+    font-variant-numeric:tabular-nums;
+    direction:ltr;
+    word-break:normal;
+    overflow-wrap:anywhere;
+  }
+  .ops-vps-value--name{
+    font-size:21px;
+    line-height:1.18;
+    letter-spacing:0;
+  }
+  .ops-vps-value--rtl{
+    direction:rtl;
+    text-align:right;
+  }
+  .ops-vps-sub{
+    margin-top:5px;
+    color:#718096;
+    font-size:11px;
+    line-height:1.45;
+    font-weight:850;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+  }
+  .ops-vps-ring{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    color:var(--vps-accent);
+    background:
+      conic-gradient(var(--vps-accent) var(--vps-progress), rgba(226,232,240,.9) 0),
+      linear-gradient(#fff,#fff);
+    box-shadow:inset 0 0 0 6px #fff, 0 10px 20px var(--vps-soft);
+  }
+  .ops-vps-ring i{font-size:15px}
+  .ops-vps-wave{
+    position:absolute;
+    inset:auto -16px 30px 20px;
+    height:30px;
+    opacity:.18;
+    background:
+      radial-gradient(16px 15px at 15% 48%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%),
+      radial-gradient(20px 18px at 42% 48%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%),
+      radial-gradient(24px 20px at 72% 50%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%);
+    pointer-events:none;
+  }
+  .ops-vps--brand{--vps-accent:#6B5AED;--vps-soft:rgba(107,90,237,.14)}
+  .ops-vps--blue{--vps-accent:#2563EB;--vps-soft:rgba(37,99,235,.13)}
+  .ops-vps--green{--vps-accent:#10B981;--vps-soft:rgba(16,185,129,.13)}
+  .ops-vps--amber{--vps-accent:#F59E0B;--vps-soft:rgba(245,158,11,.15)}
+  .ops-vps--red{--vps-accent:#EF4444;--vps-soft:rgba(239,68,68,.13)}
+  .ops-vps--purple{--vps-accent:#8B5CF6;--vps-soft:rgba(139,92,246,.14)}
+  .ops-vps--grey{--vps-accent:#64748B;--vps-soft:rgba(100,116,139,.13)}
+  .ops-vps--teal{--vps-accent:#14B8A6;--vps-soft:rgba(20,184,166,.14)}
+  .ops-modules{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:14px;
+  }
+  .ops-module{
+    position:relative;
+    overflow:hidden;
+    min-height:260px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:18px;
+    padding:18px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:var(--surface);
+    box-shadow:0 15px 34px rgba(30,41,59,.065);
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+    animation:ops-rise .42s ease both;
+  }
+  .ops-module:nth-child(2){animation-delay:.04s}
+  .ops-module:nth-child(3){animation-delay:.08s}
+  .ops-module:nth-child(4){animation-delay:.12s}
+  .ops-module:nth-child(5){animation-delay:.16s}
+  .ops-module:nth-child(6){animation-delay:.20s}
+  @keyframes ops-rise{
+    from{opacity:0;transform:translateY(12px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  .ops-module:hover{
+    transform:translateY(-3px);
+    border-color:#c8d6ea;
+    box-shadow:0 22px 44px rgba(30,41,59,.10);
+  }
+  .ops-module:before{
+    content:"";
+    position:absolute;
+    inset:-70px auto auto -70px;
+    width:190px;
+    height:190px;
+    border-radius:50%;
+    background:var(--glow,rgba(37,99,235,.10));
+    pointer-events:none;
+  }
+  .ops-module-head{
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+  }
+  .ops-module h2{
+    margin:0;
+    font-size:20px;
+    line-height:1.25;
+    font-weight:950;
+  }
+  .ops-module p{
+    max-width:260px;
+    margin:7px 0 0;
+    color:var(--muted);
+    font-size:12.5px;
+    line-height:1.7;
+    font-weight:800;
+  }
+  .ops-big-icon{
+    display:grid;
+    place-items:center;
+    flex:0 0 64px;
+    width:64px;
+    height:64px;
+    border-radius:18px;
+    background:var(--soft-tone,#eff6ff);
+    color:var(--tone,#2563eb);
+    font-size:28px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);
+  }
+  .ops-primary-number{
+    position:relative;
+    display:flex;
+    align-items:end;
+    gap:10px;
+    margin-top:4px;
+  }
+  .ops-primary-number strong{
+    color:var(--ink);
+    font-size:38px;
+    line-height:1;
+    font-weight:950;
+    direction:ltr;
+  }
+  .ops-primary-number span{
+    padding-bottom:5px;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:900;
+  }
+  .ops-metrics{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .ops-metric{
+    min-height:58px;
+    padding:10px;
+    border:1px solid #e5edf7;
+    border-radius:13px;
+    background:linear-gradient(180deg,#fff,#fbfdff);
+    text-align:center;
+  }
+  .ops-metric span{
+    display:block;
+    color:#75839b;
+    font-size:11px;
+    font-weight:950;
+  }
+  .ops-metric strong{
+    display:block;
+    margin-top:6px;
+    color:#14213a;
+    font-size:18px;
+    line-height:1;
+    font-weight:950;
+    direction:ltr;
+  }
+  .ops-module-foot{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding-top:2px;
+  }
+  .ops-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:38px;
+    padding:0 12px;
+    border:1px solid #dce5f2;
+    border-radius:10px;
+    background:#fff;
+    color:#18233a;
+    text-decoration:none;
+    font-size:12.5px;
+    font-weight:950;
+  }
+  .ops-mini-bar{
+    flex:1;
+    max-width:150px;
+    height:8px;
+    overflow:hidden;
+    border-radius:999px;
+    background:#e9eef6;
+  }
+  .ops-mini-bar span{
+    display:block;
+    height:100%;
+    width:0;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--tone,#2563eb),#7c3aed);
+  }
+  .ops-secondary{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:14px;
+  }
+  .ops-list-card{
+    padding:16px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 12px 30px rgba(30,41,59,.06);
+  }
+  .ops-list-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .ops-list-head h3{
+    margin:0;
+    font-size:17px;
+    font-weight:950;
+  }
+  .ops-list-head i{
+    display:grid;
+    place-items:center;
+    width:36px;
+    height:36px;
+    border-radius:12px;
+    background:#f3e8ff;
+    color:var(--violet);
+  }
+  .ops-row{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    min-height:46px;
+    padding:9px 0;
+    border-top:1px solid #eef2f7;
+  }
+  .ops-row:first-of-type{border-top:0}
+  .ops-row-code{
+    display:grid;
+    place-items:center;
+    min-width:40px;
+    height:32px;
+    padding:0 8px;
+    border-radius:10px;
+    background:#f1f5ff;
+    color:#3354c7;
+    font-size:11px;
+    font-weight:950;
+    direction:ltr;
+  }
+  .ops-row-title{
+    min-width:0;
+    color:#17233a;
+    font-size:12.5px;
+    font-weight:950;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .ops-row-sub{
+    margin-top:2px;
+    color:#8592a7;
+    font-size:11px;
+    font-weight:800;
+  }
+  .ops-row-num{
+    color:#15213a;
+    font-size:12.5px;
+    font-weight:950;
+    direction:ltr;
+  }
+  .ops-alert{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:44px;
+    padding:10px 12px;
+    border-top:1px solid #eef2f7;
+    color:#334155;
+    font-size:12px;
+    font-weight:850;
+  }
+  .ops-alert i{
+    display:grid;
+    place-items:center;
+    flex:0 0 32px;
+    width:32px;
+    height:32px;
+    border-radius:11px;
+    color:var(--tone,#2563eb);
+    background:var(--tone-soft,#eff6ff);
+  }
+  @media (max-width:1240px){
+    .ops-pulse-strip{grid-template-columns:1fr}
+    .ops-vps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ops-modules{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ops-secondary{grid-template-columns:1fr}
+  }
+  @media (max-width:760px){
+    .ops-top{grid-template-columns:1fr;padding:15px}
+    .ops-actions{justify-content:flex-start}
+    .ops-title h1{font-size:24px}
+    .ops-vps-grid{grid-template-columns:1fr;padding:12px;border-radius:18px}
+    .ops-vps-card{min-height:156px}
+    .ops-modules{grid-template-columns:1fr}
+    .ops-module{min-height:238px}
+    .ops-health{grid-template-columns:1fr}
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set subs = metrics.subscribers or {} %}
+{% set cards = metrics.cards or {} %}
+{% set plans = metrics.plans or {} %}
+{% set nas = metrics.nas or {} %}
+{% set system = metrics.system or {} %}
+{% set finance = executive.finance if executive and executive.finance else {} %}
+{% set exec_cards = executive.cards if executive and executive.cards else {} %}
+{% set printed_cards = card_dashboard.printed if card_dashboard and card_dashboard.printed else {} %}
+{% set electronic_cards = card_dashboard.electronic if card_dashboard and card_dashboard.electronic else {} %}
+{% set alerts = metrics.alerts or [] %}
+{% set sub_total = (subs.total or snap.total_subscribers or 0)|int %}
+{% set sub_online = (subs.online or snap.online_now or 0)|int %}
+{% set sub_active = (subs.active or snap.enabled_subscribers or 0)|int %}
+{% set sub_pct = ((sub_active * 100 / sub_total) if sub_total else 0) %}
+{% set card_total = (cards.total or snap.total_cards or 0)|int %}
+{% set card_available = (cards.available or 0)|int %}
+{% set card_used = (cards.used or snap.used_cards or 0)|int %}
+{% set card_pct = ((card_used * 100 / card_total) if card_total else 0) %}
+{% set printed_total = (printed_cards.total or 0)|int %}
+{% set printed_available = (printed_cards.available or 0)|int %}
+{% set printed_batches = (printed_cards.batches or 0)|int %}
+{% set printed_connected = (printed_cards.connected or 0)|int %}
+{% set printed_sold_today = (printed_cards.sold_today or 0)|int %}
+{% set printed_pct = ((printed_sold_today * 100 / printed_total) if printed_total else 0) %}
+{% set electronic_total = (electronic_cards.total or 0)|int %}
+{% set electronic_available = (electronic_cards.available or 0)|int %}
+{% set electronic_batches = (electronic_cards.batches or 0)|int %}
+{% set electronic_connected = (electronic_cards.connected or 0)|int %}
+{% set electronic_sold_today = (electronic_cards.sold_today or 0)|int %}
+{% set electronic_pct = ((electronic_sold_today * 100 / electronic_total) if electronic_total else 0) %}
+{% set nas_total = (nas.total or snap.nas_total or 0)|int %}
+{% set nas_enabled = (nas.enabled or snap.nas_online or 0)|int %}
+{% set nas_pct = ((nas_enabled * 100 / nas_total) if nas_total else 0) %}
+{% set revenue_today = (finance.revenue_today or snap.revenue_today or 0)|float %}
+{% set revenue_month = (finance.revenue_month if finance.revenue_month is defined else snap.revenue_month)|float %}
+{% set revenue_year = (finance.revenue_year or 0)|float %}
+{% set db_ok = system.db_ok %}
+{% set radius_ok = system.radius_ok %}
+{% set vps_memory = system.memory if system.memory else {} %}
+{% set vps_disk = system.disk if system.disk else {} %}
+{% set vps_network = system.network if system.network else {} %}
+{% set vps_cpu_pct = system.cpu_pct if system.cpu_pct is not none else none %}
+{% set vps_ram_pct = system.ram_pct if system.ram_pct is not none else none %}
+{% set vps_disk_pct = system.disk_pct if system.disk_pct is not none else none %}
 
-{# ───── Page Hero ───────────────────────────────────────────── #}
-{{ hub.hero(
-  "لوحة التحكم",
-  subtitle="ملخّص النظام والأداء الحالي للراديوس",
-  icon="gauge-high",
-  actions_html='<span class="dash-refresh"><i class="fa-solid fa-circle"></i> تحديث تلقائي</span>'
-) }}
-
-{# ───── Top Alerts ──────────────────────────────────────────── #}
-{% if metrics and metrics.alerts %}
-<div style="margin-bottom:var(--hub-gap-section)">
-  {% for al in metrics.alerts[:6] %}
-  <div class="dash-alert dash-alert--{{ al.level or 'info' }}">
-    <i class="fa-solid {{ 'fa-circle-exclamation' if al.level == 'danger' else ('fa-triangle-exclamation' if al.level == 'warn' else 'fa-circle-info') }}"></i>
-    <span class="msg">{{ al.message }}</span>
-    {% if al.link_endpoint %}
-      <a href="{{ url_for(al.link_endpoint) }}">عرض ←</a>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{# ───── KPI Strip ───────────────────────────────────────────── #}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("متصلون الآن",       snap.online_now,        icon="wifi",     variant="brand") }}
-  {{ hub.kpi("إجمالي المشتركين",   snap.total_subscribers, icon="users",    variant="blue")  }}
-  {{ hub.kpi("البطاقات المُولَّدة", snap.total_cards,       icon="id-card",  variant="green") }}
-  {{ hub.kpi("إيراد الشهر",        "%.2f"|format(snap.revenue_month), icon="coins", variant="amber") }}
-</div>
-
-{# ───── Quick Actions ──────────────────────────────────────── #}
-{% call hub.section("إجراءات سريعة", icon="bolt") %}
-  <div class="hub-actions">
-    {{ hub.action_card("إضافة مشترك",  sub="مستخدم جديد",       icon="user-plus",            href=url_for('radius.users_new'),    variant="brand") }}
-    {{ hub.action_card("إنشاء كروت",   sub="دفعة جاهزة",        icon="wand-magic-sparkles",  href=url_for('radius.cards_generate'), variant="green") }}
-    {{ hub.action_card("إضافة عرض",    sub="باقة جديدة",        icon="circle-plus",          href=url_for('radius.plans_new'),    variant="amber") }}
-    {{ hub.action_card("المتصلون الآن", sub="رؤية حيّة",         icon="wifi",                 href=url_for('radius.online_list'), variant="blue") }}
-    {{ hub.action_card("أجهزة الشبكة", sub="إدارة أجهزة RADIUS", icon="server",               href=url_for('radius.devices_list'), variant="grey") }}
-    {{ hub.action_card("المدراء",      sub="والصلاحيات",         icon="user-shield",          href=url_for('radius.admins_list'), variant="grey") }}
-  </div>
-{% endcall %}
-
-{% if metrics %}
-  {% set subs = metrics.subscribers or {} %}
-  {% set cd   = metrics.cards or {} %}
-  {% set pl   = metrics.plans or {} %}
-  {% set sy   = metrics.system or {} %}
-  {% set ns   = metrics.nas or {} %}
-
-  {# ───── Subscribers section ────────────────────────────── #}
-  {% call hub.section("المشتركون والاتصال", icon="users", meta="إجمالي: "+(subs.total or 0)|string) %}
-    <div class="hub-tile-grid">
-      {{ hub.tile("نشطون",                subs.active or 0,        icon="circle-check",     variant="ok") }}
-      {{ hub.tile("متصلون الآن",         subs.online or 0,        icon="wifi",             variant="brand") }}
-      {{ hub.tile("ينتهون خلال 3 أيام", subs.expiring_soon or 0, icon="hourglass-end",   variant="warn") }}
-      {{ hub.tile("منتهية اشتراكاتهم",   subs.expired or 0,       icon="ban",              variant="danger") }}
-      {{ hub.tile("معطَّلون",              subs.disabled or 0,      icon="pause") }}
-      {{ hub.tile("موقوفون",              subs.suspended or 0,     icon="user-slash") }}
-    </div>
-  {% endcall %}
-
-  {# ───── Cards section ──────────────────────────────────── #}
-  {% call hub.section("الكروت والحزم", icon="id-card", meta=(cd.batches or 0)|string + " حزمة") %}
-    <div class="hub-grid-2">
+<div class="ops-board" data-dashboard-main>
+  <section class="ops-top">
+    <div class="ops-title">
+      <span class="ops-mark"><i class="fa-solid fa-tower-broadcast"></i></span>
       <div>
-        <div class="hub-tile-grid">
-          {{ hub.tile("الإجمالي",   cd.total or 0,     icon="layer-group", variant="brand") }}
-          {{ hub.tile("متاحة",     cd.available or 0, icon="box-open",    variant="ok") }}
-          {{ hub.tile("مُستخدَمة", cd.used or 0,      icon="handshake") }}
+        <h1>مركز إدارة الشبكة</h1>
+        <p>واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي يحتاج انتباهك اليوم.</p>
+      </div>
+    </div>
+    <div class="ops-actions">
+      <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> مشترك جديد</a>
+      <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء حزمة</a>
+      <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> تجهيز راوتر</a>
+    </div>
+  </section>
+
+  <section class="ops-pulse-strip" aria-label="نبض الشبكة">
+    <div class="ops-strip-title">
+      <span class="ops-strip-icon"><i class="fa-solid fa-wave-square"></i></span>
+      <div>
+        <strong>نبض الشبكة الآن</strong>
+        <span>{{ sub_online }} جلسة مفتوحة · {{ printed_available + electronic_available }} كرت متاح<br>{{ nas_enabled }} جهاز مفعل</span>
+      </div>
+    </div>
+    <div class="ops-wave" aria-hidden="true"></div>
+    <div class="ops-health">
+      <span style="--tone:{{ '#16a34a' if db_ok else '#ef4444' }};--tone-soft:{{ '#f0fdf4' if db_ok else '#fff1f2' }}"><i class="fa-solid fa-database"></i> قاعدة البيانات {{ "سليمة" if db_ok else "تحتاج فحص" }}</span>
+      <span style="--tone:{{ '#16a34a' if radius_ok else '#f59e0b' }};--tone-soft:{{ '#f0fdf4' if radius_ok else '#fffbeb' }}"><i class="fa-solid fa-circle-nodes"></i> RADIUS {{ "جاهز" if radius_ok else "غير جاهز" }}</span>
+      <span style="--tone:#2563eb;--tone-soft:#eff6ff"><i class="fa-solid fa-microchip"></i> CPU {{ "%.1f"|format(system.cpu_pct|float) ~ "%" if system.cpu_pct is not none else "--" }}</span>
+      <span style="--tone:#7c3aed;--tone-soft:#f3e8ff"><i class="fa-solid fa-memory"></i> RAM {{ "%.1f"|format(system.ram_pct|float) ~ "%" if system.ram_pct is not none else "--" }}</span>
+    </div>
+  </section>
+
+  <section class="ops-modules" aria-label="ملخص أقسام الراديوس">
+    <article class="ops-module" style="--tone:#2563eb;--soft-tone:#eff6ff;--glow:rgba(37,99,235,.10)">
+      <div class="ops-module-head">
+        <div>
+          <h2>المشتركون</h2>
+          <p>من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك.</p>
         </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-users"></i></span>
       </div>
       <div>
-        <div class="hub-tile-label" style="margin-bottom:8px">
-          <i class="fa-solid fa-clock"></i> آخر الحزم
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(sub_total) }}</strong><span>مشترك</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>متصلون الآن</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
+          <div class="ops-metric"><span>نشطون</span><strong>{{ "{:,}".format(sub_active) }}</strong></div>
+          <div class="ops-metric"><span>منتهي اشتراكهم</span><strong>{{ "{:,}".format((subs.expired or snap.expired_subscribers or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>ينتهي خلال 3 أيام</span><strong>{{ "{:,}".format((subs.expiring_soon or 0)|int) }}</strong></div>
         </div>
-        {% if metrics.recent_batches %}
-          <div class="dash-batches">
-          {% for b in metrics.recent_batches %}
-            <div class="dash-batch">
-              <span class="code">{{ b.batch_code or '—' }}</span>
-              <span class="name">{{ b.package_name or '(بدون اسم)' }}</span>
-              <span class="cnt">{{ b.used or 0 }}/{{ b.count or 0 }}</span>
-            </div>
-          {% endfor %}
-          </div>
-        {% else %}
-          {{ hub.empty("لا توجد حزم بعد", icon="layer-group") }}
-        {% endif %}
       </div>
-    </div>
-  {% endcall %}
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> إدارة المشتركين</a>
+        <div class="ops-mini-bar"><span style="width:{{ sub_pct }}%"></span></div>
+      </div>
+    </article>
 
-  {# ───── Plans section ──────────────────────────────────── #}
-  {% call hub.section("العروض والخطط", icon="tags", meta="إجمالي: "+(pl.total or 0)|string) %}
-    <div class="hub-tile-grid">
-      {{ hub.tile("مفعَّلة",  pl.enabled or 0,  icon="toggle-on",  variant="ok") }}
-      {{ hub.tile("معطَّلة",  pl.disabled or 0, icon="toggle-off") }}
-      {% if pl.top %}
-        <div class="hub-tile hub-tile--brand" style="grid-column:span 2">
-          <div class="hub-tile-label"><i class="fa-solid fa-trophy"></i> الأكثر استخدامًا</div>
-          <div class="hub-tile-value" style="font-size:15px">{{ pl.top.name }}</div>
-          <div class="hub-tile-sub">{{ pl.top.subs }} مشترك</div>
+    <article class="ops-module" style="--tone:#7c3aed;--soft-tone:#f3e8ff;--glow:rgba(124,58,237,.11)">
+      <div class="ops-module-head">
+        <div>
+          <h2>البطاقات والحزم</h2>
+          <p>مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.</p>
         </div>
-      {% endif %}
-    </div>
-  {% endcall %}
-
-{% endif %}
-
-{# ───── Bottom Grid: Top Plans + Recent Activity ────────── #}
-<div class="hub-grid-2">
-  {# Top plans table #}
-  {% call hub.section("أكثر الباقات استخدامًا", icon="chart-pie", meta="أعلى 5", flush=True) %}
-    {% if snap.top_plans %}
-      {% set top_total = snap.top_plans|map(attribute=1)|sum %}
-      <div class="hub-table-wrap" style="border:none">
-        <table class="hub-table">
-          <thead>
-            <tr>
-              <th>الباقة</th>
-              <th class="num" style="width:120px">عدد المشتركين</th>
-              <th style="width:180px">النسبة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for name, cnt in snap.top_plans %}
-            <tr>
-              <td><strong>{{ name }}</strong></td>
-              <td class="num">{{ cnt }}</td>
-              <td>
-                <div class="hub-flex-row" style="gap:8px">
-                  <div class="dash-bar"><span style="width: {{ (cnt/top_total*100) if top_total else 0 }}%"></span></div>
-                  <span class="hub-text-mute" style="font-size:11.5px;min-width:36px">{{ '%.0f%%' % ((cnt/top_total*100) if top_total else 0) }}</span>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <span class="ops-big-icon"><i class="fa-solid fa-layer-group"></i></span>
       </div>
-    {% else %}
-      <div style="padding:18px">{{ hub.empty("لا بيانات بعد", icon="chart-pie") }}</div>
-    {% endif %}
-  {% endcall %}
+      <div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(printed_total) }}</strong><span>كرت مطبوع</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>متاح</span><strong>{{ "{:,}".format(printed_available) }}</strong></div>
+          <div class="ops-metric"><span>الحزم</span><strong>{{ "{:,}".format(printed_batches) }}</strong></div>
+          <div class="ops-metric"><span>متصل</span><strong>{{ "{:,}".format(printed_connected) }}</strong></div>
+          <div class="ops-metric"><span>مباع اليوم</span><strong>{{ "{:,}".format(printed_sold_today) }}</strong></div>
+        </div>
+      </div>
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> حزم البطاقات</a>
+        <div class="ops-mini-bar"><span style="width:{{ printed_pct }}%"></span></div>
+      </div>
+    </article>
 
-  {# Recent activity #}
-  {% call hub.section("آخر النشاطات", icon="clock-rotate-left", flush=True) %}
-    {% if snap.recent_actions %}
-      <div class="hub-list">
-        {% for e in snap.recent_actions %}
-          <div class="dash-act">
-            {{ hub.pill(e.action, variant="brand", dot=False) }}
-            <span class="dash-act-actor">{{ e.actor }}</span>
-            <span class="dash-act-target">{{ e.target_type }} · {{ e.target_id }}</span>
-            <span class="dash-act-time">{{ e.created_at.strftime('%H:%M') if e.created_at else '' }}</span>
+    <article class="ops-module" style="--tone:#14b8a6;--soft-tone:#ecfeff;--glow:rgba(20,184,166,.12)">
+      <div class="ops-module-head">
+        <div>
+          <h2>البطاقات الإلكترونية</h2>
+          <p>حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة.</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-wallet"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(electronic_total) }}</strong><span>كرت إلكتروني</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>متاح</span><strong>{{ "{:,}".format(electronic_available) }}</strong></div>
+          <div class="ops-metric"><span>الحزم</span><strong>{{ "{:,}".format(electronic_batches) }}</strong></div>
+          <div class="ops-metric"><span>متصل</span><strong>{{ "{:,}".format(electronic_connected) }}</strong></div>
+          <div class="ops-metric"><span>مباع اليوم</span><strong>{{ "{:,}".format(electronic_sold_today) }}</strong></div>
+        </div>
+      </div>
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> حزم البيع</a>
+        <a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> المستخدمون</a>
+        <div class="ops-mini-bar"><span style="width:{{ electronic_pct }}%"></span></div>
+      </div>
+    </article>
+
+    <article class="ops-module" style="--tone:#0891b2;--soft-tone:#ecfeff;--glow:rgba(8,145,178,.12)">
+      <div class="ops-module-head">
+        <div>
+          <h2>الشبكة</h2>
+          <p>أجهزة NAS والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة.</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-network-wired"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(nas_total) }}</strong><span>جهاز</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>مفعلة</span><strong>{{ "{:,}".format(nas_enabled) }}</strong></div>
+          <div class="ops-metric"><span>متصلون</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
+        </div>
+      </div>
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> الأجهزة</a>
+        <div class="ops-mini-bar"><span style="width:{{ nas_pct }}%"></span></div>
+      </div>
+    </article>
+
+    <article class="ops-module" style="--tone:#f59e0b;--soft-tone:#fffbeb;--glow:rgba(245,158,11,.14)">
+      <div class="ops-module-head">
+        <div>
+          <h2>العروض</h2>
+          <p>باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت.</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-tags"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format((plans.total or snap.plans_total or 0)|int) }}</strong><span>عرض</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>مفعلة</span><strong>{{ "{:,}".format((plans.enabled or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>معطلة</span><strong>{{ "{:,}".format((plans.disabled or 0)|int) }}</strong></div>
+        </div>
+      </div>
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> إدارة العروض</a>
+        <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> عرض جديد</a>
+      </div>
+    </article>
+
+    <article class="ops-module" style="--tone:#fb923c;--soft-tone:#fff7ed;--glow:rgba(251,146,60,.14)">
+      <div class="ops-module-head">
+        <div>
+          <h2>المالية</h2>
+          <p>إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء.</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-chart-line"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong>{{ "%.2f"|format(revenue_month) }}</strong><span>₪ هذا الشهر</span></div>
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>اليوم</span><strong>{{ "%.2f"|format(revenue_today) }} ₪</strong></div>
+          <div class="ops-metric"><span>السنة</span><strong>{{ "%.2f"|format(revenue_year) }} ₪</strong></div>
+        </div>
+      </div>
+      <div class="ops-module-foot">
+        <a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> المالية</a>
+        <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> التقارير</a>
+      </div>
+    </article>
+  </section>
+
+  <section class="ops-secondary">
+    <article class="ops-list-card">
+      <div class="ops-list-head">
+        <h3>آخر الحزم</h3>
+        <i class="fa-solid fa-clock-rotate-left"></i>
+      </div>
+      {% for batch in metrics.recent_batches[:4] %}
+        <div class="ops-row">
+          <span class="ops-row-code">#{{ batch.id }}</span>
+          <div>
+            <div class="ops-row-title">{{ batch.package_name or batch.batch_code or "حزمة بدون اسم" }}</div>
+            <div class="ops-row-sub">{{ batch.batch_code or "بدون كود" }}</div>
           </div>
-        {% endfor %}
+          <span class="ops-row-num">{{ batch.used or 0 }} / {{ batch.count or batch.generated or 0 }}</span>
+        </div>
+      {% else %}
+        <div class="ops-row">
+          <span class="ops-row-code">--</span>
+          <div>
+            <div class="ops-row-title">لا توجد حزم بعد</div>
+            <div class="ops-row-sub">ستظهر أحدث الحزم هنا</div>
+          </div>
+          <span class="ops-row-num">0</span>
+        </div>
+      {% endfor %}
+    </article>
+
+    <article class="ops-list-card">
+      <div class="ops-list-head">
+        <h3>ما يحتاج انتباه</h3>
+        <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
-    {% else %}
-      <div style="padding:18px">{{ hub.empty("لا نشاطات بعد", icon="clock-rotate-left") }}</div>
-    {% endif %}
-  {% endcall %}
+      {% for alert in alerts[:4] %}
+        <div class="ops-alert" style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
+          <i class="fa-solid {{ 'fa-circle-exclamation' if alert.level == 'danger' else ('fa-triangle-exclamation' if alert.level == 'warn' else 'fa-circle-info') }}"></i>
+          <span>{{ alert.message }}</span>
+        </div>
+      {% else %}
+        <div class="ops-alert" style="--tone:#16a34a;--tone-soft:#f0fdf4">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>لا توجد ملاحظات تشغيلية مهمة الآن.</span>
+        </div>
+      {% endfor %}
+    </article>
+  </section>
+  <section class="ops-vps-grid" aria-label="ملخص VPS">
+    <article class="ops-vps-card ops-vps--brand">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-server"></i></span>
+        <div>
+          <div class="ops-vps-label">الخادم</div>
+          <span class="ops-vps-status">VPS</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value ops-vps-value--name">{{ system.hostname or "—" }}</div>
+          <div class="ops-vps-sub">{{ (system.platform or "نظام التشغيل")|replace("-", " ")|truncate(34, True) }}</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-cloud"></i></span>
+      </div>
+      <span class="ops-vps-wave" aria-hidden="true"></span>
+    </article>
+
+    <article class="ops-vps-card ops-vps--blue">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+        <div>
+          <div class="ops-vps-label">مدة تشغيل VPS</div>
+          <span class="ops-vps-status">Uptime</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value ops-vps-value--rtl">{{ system.system_uptime or "—" }}</div>
+          <div class="ops-vps-sub">تشغيل الخادم</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card ops-vps--grey">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-code"></i></span>
+        <div>
+          <div class="ops-vps-label">مدة تشغيل التطبيق</div>
+          <span class="ops-vps-status">Process</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value ops-vps-value--rtl">{{ system.process_uptime or "—" }}</div>
+          <div class="ops-vps-sub">عملية HobeRadius</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-terminal"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card ops-vps--amber" style="--vps-progress:{{ 100 if vps_network.ping_ok else 0 }}%">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-signal"></i></span>
+        <div>
+          <div class="ops-vps-label">فحص الشبكة</div>
+          <span class="ops-vps-status">{{ "Ping OK" if vps_network.ping_ok else "Ping" }}</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value">{{ "%.1f ms"|format(vps_network.ping_ms|float) if vps_network.ping_ms is not none else "—" }}</div>
+          <div class="ops-vps-sub">{{ vps_network.ping_host or "8.8.8.8" }}</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-wave-square"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card {{ 'ops-vps--green' if vps_network.dns_ok else 'ops-vps--red' }}" style="--vps-progress:{{ 100 if vps_network.dns_ok else 0 }}%">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-globe"></i></span>
+        <div>
+          <div class="ops-vps-label">DNS</div>
+          <span class="ops-vps-status">{{ "سليم" if vps_network.dns_ok else "فحص" }}</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value">{{ vps_network.dns_ip or "—" }}</div>
+          <div class="ops-vps-sub">{{ vps_network.dns_host or "google.com" }}</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-earth-americas"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card ops-vps--purple" style="--vps-progress:{{ vps_cpu_pct|float if vps_cpu_pct is not none else 0 }}%">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-microchip"></i></span>
+        <div>
+          <div class="ops-vps-label">استخدام المعالج</div>
+          <span class="ops-vps-status">CPU</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value">{{ "%.1f"|format(vps_cpu_pct|float) ~ "%" if vps_cpu_pct is not none else "—" }}</div>
+          <div class="ops-vps-sub">{{ system.cpu_count or 0 }} نواة</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-gauge-high"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card ops-vps--green" style="--vps-progress:{{ vps_ram_pct|float if vps_ram_pct is not none else 0 }}%">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-memory"></i></span>
+        <div>
+          <div class="ops-vps-label">استهلاك الذاكرة</div>
+          <span class="ops-vps-status">RAM</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value">{{ "%.1f"|format(vps_ram_pct|float) ~ "%" if vps_ram_pct is not none else "—" }}</div>
+          <div class="ops-vps-sub">{{ vps_memory.available_human or "—" }} متاح</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-memory"></i></span>
+      </div>
+    </article>
+
+    <article class="ops-vps-card ops-vps--teal" style="--vps-progress:{{ vps_disk_pct|float if vps_disk_pct is not none else 0 }}%">
+      <div class="ops-vps-head">
+        <span class="ops-vps-icon"><i class="fa-solid fa-hard-drive"></i></span>
+        <div>
+          <div class="ops-vps-label">استخدام القرص</div>
+          <span class="ops-vps-status">Disk</span>
+        </div>
+      </div>
+      <div class="ops-vps-body">
+        <div>
+          <div class="ops-vps-value">{{ "%.1f"|format(vps_disk_pct|float) ~ "%" if vps_disk_pct is not none else "—" }}</div>
+          <div class="ops-vps-sub">{{ vps_disk.free_human or "—" }} متاح</div>
+        </div>
+        <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
+      </div>
+    </article>
+  </section>
+
 </div>
-
-{% if metrics %}
-  {% set sy = metrics.system or {} %}
-  {% set ns = metrics.nas or {} %}
-  {# ───── Bottom System Health ───────────────────────────── #}
-  {% call hub.section("صحة النظام", icon="heart-pulse", meta="بيانات مباشرة من VPS") %}
-    <div class="hub-tile-grid">
-      <div class="hub-tile">
-        <div class="hub-tile-label"><i class="fa-solid fa-database"></i> قاعدة البيانات</div>
-        <div style="margin-top:4px">
-          {% if sy.db_ok %}{{ hub.pill("سليم", variant="green") }}
-          {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
-        </div>
-      </div>
-      <div class="hub-tile">
-        <div class="hub-tile-label"><i class="fa-solid fa-tower-broadcast"></i> موصِّل RADIUS</div>
-        <div style="margin-top:4px">
-          {% if sy.radius_ok %}{{ hub.pill("جاهز", variant="green") }}
-          {% else %}{{ hub.pill("غير جاهز", variant="red") }}{% endif %}
-        </div>
-      </div>
-      {{ hub.tile("أجهزة الشبكة", (ns.enabled or 0)|string+" / "+(ns.total or 0)|string, icon="network-wired", sub="مفعَّلة من الإجمالي") }}
-      {{ hub.tile("المضيف", sy.hostname or "—", icon="server", sub=sy.platform or "") }}
-      {{ hub.tile("تشغيل التطبيق", sy.process_uptime or "—", icon="stopwatch", sub="منذ آخر restart للخدمة") }}
-      {{ hub.tile("تشغيل النظام", sy.system_uptime or "—", icon="power-off", sub="Uptime للـ VPS") }}
-
-      {% if sy.cpu_pct is not none %}
-        {% set cpu = sy.cpu_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if cpu >= 90 else ('hub-tile--warn' if cpu >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-microchip"></i> المعالج</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % cpu }}</div>
-          <div style="margin-top:6px">{{ hub.progress(cpu) }}</div>
-          <div class="hub-tile-sub">الأنوية: {{ sy.cpu_count or "—" }}</div>
-        </div>
-      {% endif %}
-      {% if sy.ram_pct is not none %}
-        {% set ram = sy.ram_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if ram >= 90 else ('hub-tile--warn' if ram >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-memory"></i> الذاكرة</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % ram }}</div>
-          <div style="margin-top:6px">{{ hub.progress(ram) }}</div>
-          {% if sy.memory %}
-            <div class="hub-tile-sub">المستخدم: {{ sy.memory.used_human or "—" }} · المتاح: {{ sy.memory.available_human or "—" }}</div>
-          {% endif %}
-        </div>
-      {% endif %}
-      {% if sy.disk_pct is not none %}
-        {% set dsk = sy.disk_pct|float %}
-        <div class="hub-tile {{ 'hub-tile--danger' if dsk >= 90 else ('hub-tile--warn' if dsk >= 75 else 'hub-tile--ok') }}">
-          <div class="hub-tile-label"><i class="fa-solid fa-hard-drive"></i> التخزين</div>
-          <div class="hub-tile-value">{{ '%.1f%%' % dsk }}</div>
-          <div style="margin-top:6px">{{ hub.progress(dsk) }}</div>
-          {% if sy.disk %}
-            <div class="hub-tile-sub">المتاح: {{ sy.disk.free_human or "—" }} · {{ sy.disk.path or "" }}</div>
-          {% endif %}
-        </div>
-      {% endif %}
-      {% if sy.load %}
-        {{ hub.tile("حمل النظام", (sy.load.one if sy.load.one is not none else "—")|string, icon="gauge-high", sub=("5د: " ~ sy.load.five ~ " / 15د: " ~ sy.load.fifteen) if sy.load.five is not none else "") }}
-      {% endif %}
-      {% if sy.network %}
-        <div class="hub-tile">
-          <div class="hub-tile-label"><i class="fa-solid fa-earth-americas"></i> الاتصال الخارجي</div>
-          <div style="margin-top:4px">
-            {% if sy.network.ping_ok %}{{ hub.pill("Ping Google سليم", variant="green") }}
-            {% else %}{{ hub.pill("Ping Google فشل", variant="red") }}{% endif %}
-            {% if sy.network.dns_ok %}{{ hub.pill("DNS سليم", variant="green") }}
-            {% else %}{{ hub.pill("DNS فشل", variant="red") }}{% endif %}
-          </div>
-          <div class="hub-tile-sub" style="margin-top:6px">
-            {{ sy.network.ping_host or "8.8.8.8" }}
-            {% if sy.network.ping_ms is not none %} · {{ sy.network.ping_ms }}ms{% endif %}
-            {% if sy.network.dns_ip %} · DNS IP: {{ sy.network.dns_ip }}{% endif %}
-          </div>
-        </div>
-      {% endif %}
-    </div>
-  {% endcall %}
-{% endif %}
-
 {% endblock %}

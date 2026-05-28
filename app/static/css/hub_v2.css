@@ -336,15 +336,17 @@
   font-size: 12px;
   border-bottom: 2px solid var(--hub-border-strong);
   z-index: 1;
+  text-align: center;
 }
-.hub-table thead th.num{ text-align:end; }
+.hub-table thead th.num{ text-align:center; }
 .hub-table tbody td{
   padding: 11px 14px;
   border-bottom: 1px solid var(--hub-border-soft);
   color: var(--hub-text);
   vertical-align: middle;
+  text-align: center;
 }
-.hub-table tbody td.num{ text-align:end; font-variant-numeric: tabular-nums; }
+.hub-table tbody td.num{ text-align:center; font-variant-numeric: tabular-nums; }
 .hub-table tbody td.mono{ font-family: var(--hub-mono); font-size:12px; }
 .hub-table tbody td.small{ font-size:12px; }
 .hub-table tbody tr:hover{ background: #fafbff; }

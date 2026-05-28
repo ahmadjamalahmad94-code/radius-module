@@ -46,7 +46,7 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
     expected = {
         "المشتركون": "/admin/radius/subscribers",
         "البطاقات": "/admin/radius/cards/overview",
-        "فحص البطاقات V2": "/admin/radius/cards/checker/v2",
+        "فحص بطاقة": "/admin/radius/cards/checker",
         "المال والتحصيل": "/admin/radius/finance",
         "المركز المالي": "/admin/radius/finance",
         "المحافظ": "/admin/radius/finance/wallets",
@@ -57,7 +57,6 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "المشتركين 360": "/admin/radius/subscribers",
         "مستخدمو البطاقات": "/admin/radius/card-users",
         "سوق البطاقات": "/admin/radius/card-marketplace",
-        "تسعير البطاقات": "/admin/radius/card-pricing",
         "المدراء والموزعون": "/admin/radius/business-operators",
         "التواصل والحملات": "/admin/radius/communications",
         "قوالب الرسائل": "/admin/radius/communications/templates",
@@ -85,9 +84,6 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "طلبات الدفع": "/admin/radius/payments/requests",
         "مراجعة الدفعات": "/admin/radius/payments/review-queue",
         "مطابقة التحصيل": "/admin/radius/payments/reconciliation",
-        "الوصول البعيد": "/admin/radius/network-policy/remote-access/",
-        "المواقع المفتوحة": "/admin/radius/network-policy/walled-garden/",
-        "حجب المواقع": "/admin/radius/network-policy/web-block/",
         "إعدادات النظام": "/admin/radius/settings",
         "المزامنة": "/admin/radius/sync",
         "المستأجرون": "/admin/radius/tenants",
@@ -95,6 +91,8 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
     for label, href in expected.items():
         assert label in sidebar
         assert href in sidebar
+
+    assert "/admin/radius/card-pricing" not in sidebar
 
     for forbidden in ("/api/v1/", "/reports/archive/create", "/apply/", "/rollback/"):
         assert forbidden not in sidebar
@@ -107,7 +105,7 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
     ):
         assert sidebar.count(f'href="{href}"') == 1
 
-    for tone in ("violet", "sky", "indigo", "amber", "emerald", "green", "rose", "slate", "cyan", "orange", "blue"):
+    for tone in ("sky", "indigo", "amber", "emerald", "green", "rose", "slate", "cyan", "orange", "blue"):
         assert f'data-hb-tone="{tone}"' in sidebar
 
 
@@ -131,10 +129,9 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/finance/loans",
         "/admin/radius/finance/ledger",
         "/admin/radius/subscribers",
-        "/admin/radius/cards/checker/v2",
+        "/admin/radius/cards/checker",
         "/admin/radius/card-users",
         "/admin/radius/card-marketplace",
-        "/admin/radius/card-pricing",
         "/admin/radius/business-operators",
         "/admin/radius/communications",
         "/admin/radius/communications/templates",
@@ -162,9 +159,6 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/payments/requests",
         "/admin/radius/payments/review-queue",
         "/admin/radius/payments/reconciliation",
-        "/admin/radius/network-policy/remote-access/",
-        "/admin/radius/network-policy/walled-garden/",
-        "/admin/radius/network-policy/web-block/",
         "/admin/radius/settings",
         "/admin/radius/sync",
         "/admin/radius/tenants",

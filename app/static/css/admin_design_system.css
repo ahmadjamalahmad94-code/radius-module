@@ -252,6 +252,17 @@
 .hr-data-table td {
   padding: 12px 14px;
   vertical-align: middle;
+  text-align: center;
+}
+
+.hub-table th.num,
+.hub-table td.num,
+.mt-iface-table th.num,
+.mt-iface-table td.num,
+.hr-data-table th.num,
+.hr-data-table td.num {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .hub-table tbody tr,

@@ -7,16 +7,22 @@ from __future__ import annotations
 
 import csv
 import io
+import threading
+import time
+import uuid
+from datetime import date, datetime, timedelta
 
-from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
-from ..db.repos import operations_repo
+from ..db.connection import db
+from ..db.helpers import json_dump
+from ..db.repos import admins_repo, operations_repo
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
-from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
+from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 
 
 def register_cards_routes(bp: Blueprint) -> None:
@@ -39,22 +45,563 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches/export.pdf", "cards_batches_export_pdf", cards_batches_export_pdf, methods=["GET"])
     bp.add_url_rule("/cards/batches/import", "cards_batches_import", cards_batches_import, methods=["GET", "POST"])
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
+    bp.add_url_rule("/cards/generate/progress", "cards_generate_progress_start", cards_generate_progress_start, methods=["POST"])
+    bp.add_url_rule("/cards/generate/progress/<job_id>", "cards_generate_progress_status", cards_generate_progress_status, methods=["GET"])
     bp.add_url_rule("/cards", "cards_list", cards_list, methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke", cards_revoke, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/edit", "cards_batch_edit", cards_batch_edit, methods=["GET", "POST"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>/cards/actions", "cards_batch_cards_actions", cards_batch_cards_actions, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
 
 
 def cards_overview():
-    """Stats overview للبطاقات — يستخدم helpers الموجودة من RM-H2."""
-    from ..services.dashboard_metrics import (
-        get_card_counts, get_recent_batches, get_plan_counts
-    )
-    cards = get_card_counts()
-    recent = get_recent_batches(limit=10)
-    plans = get_plan_counts()
-    return render_template("radius/cards_overview.html",
-                            cards=cards, recent=recent, plans=plans)
+    """Lightweight cards overview: fast read-only snapshot."""
+    overview = _cards_overview_snapshot(_tid())
+    return render_template("radius/cards_overview.html", **overview)
+
+
+def _row_dict(row) -> dict:
+    return dict(row) if row else {}
+
+
+def _cards_overview_snapshot(tenant_id: int) -> dict:
+    from ..db.repos import cards_repo
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    month = datetime.utcnow().strftime("%Y-%m")
+    last_week = [
+        (datetime.utcnow() - timedelta(days=offset)).strftime("%Y-%m-%d")
+        for offset in range(6, -1, -1)
+    ]
+
+    counts = _row_dict(db().execute(
+        """
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(CASE WHEN revoked = 0 AND used = 0
+             AND (expire_at IS NULL OR expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available,
+          COALESCE(SUM(CASE WHEN used = 1 THEN 1 ELSE 0 END), 0) AS used,
+          COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked,
+          COALESCE(SUM(CASE WHEN revoked = 0 AND expire_at IS NOT NULL
+             AND expire_at < datetime('now') THEN 1 ELSE 0 END), 0) AS expired
+        FROM cards
+        WHERE tenant_id = ?
+          AND deleted_at IS NULL
+        """,
+        (tenant_id,),
+    ).fetchone())
+    batch_count = int(db().execute(
+        "SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id=? AND deleted_at IS NULL",
+        (tenant_id,),
+    ).fetchone()["c"] or 0)
+
+    totals = cards_repo.batch_operations_totals(tenant_id)
+    recent_batches = cards_repo.list_batch_operations(tenant_id, limit=5)
+
+    trend_rows = db().execute(
+        """
+        SELECT SUBSTR(COALESCE(first_used_at, ''), 1, 10) AS day,
+               COUNT(*) AS used_count
+        FROM cards
+        WHERE tenant_id = ?
+          AND used = 1
+          AND first_used_at IS NOT NULL
+          AND SUBSTR(first_used_at, 1, 10) >= ?
+        GROUP BY day
+        """,
+        (tenant_id, last_week[0]),
+    ).fetchall()
+    trend_map = {row["day"]: int(row["used_count"] or 0) for row in trend_rows}
+    trend = [
+        {
+            "day": day,
+            "label": day[5:],
+            "used": trend_map.get(day, 0),
+        }
+        for day in last_week
+    ]
+    trend_max = max([item["used"] for item in trend] or [0])
+
+    printed_stock_packages = [
+        dict(row)
+        for row in db().execute(
+            """
+            WITH purchased_cards AS (
+              SELECT tenant_id, card_id
+              FROM card_user_purchases
+              WHERE status = 'completed'
+              GROUP BY tenant_id, card_id
+            ),
+            online_cards AS (
+              SELECT tenant_id, username,
+                     COUNT(*) AS online_sessions
+              FROM radacct
+              WHERE acctstoptime IS NULL
+              GROUP BY tenant_id, username
+            )
+            SELECT b.id AS batch_id,
+                   b.batch_code,
+                   COALESCE(NULLIF(b.package_name, ''), p.name, b.batch_code, 'بدون حزمة') AS package_name,
+                   COUNT(c.id) AS total_cards,
+                   COALESCE(SUM(CASE WHEN c.revoked = 0 AND c.used = 0
+                      AND (c.expire_at IS NULL OR c.expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0
+                       AND c.expire_at IS NOT NULL AND c.expire_at < datetime('now')
+                       THEN 1 ELSE 0 END), 0) AS expired_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0 AND c.used = 1
+                       AND (c.expire_at IS NULL OR c.expire_at >= datetime('now'))
+                       AND COALESCE(oc.online_sessions, 0) = 0 THEN 1 ELSE 0 END), 0) AS used_offline_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0
+                       AND COALESCE(oc.online_sessions, 0) > 0 THEN 1 ELSE 0 END), 0) AS online_cards
+            FROM card_batches b
+            LEFT JOIN cards c
+              ON c.tenant_id = b.tenant_id AND c.batch_id = b.id AND c.deleted_at IS NULL
+            LEFT JOIN purchased_cards cup
+              ON cup.tenant_id = c.tenant_id AND cup.card_id = c.id
+            LEFT JOIN online_cards oc
+              ON oc.tenant_id = c.tenant_id AND oc.username = c.username
+            LEFT JOIN access_plans p
+              ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
+            WHERE b.tenant_id = ?
+              AND b.deleted_at IS NULL
+              AND COALESCE(b.created_by, '') != 'card_marketplace'
+              AND cup.card_id IS NULL
+            GROUP BY b.id
+            HAVING total_cards > 0
+            ORDER BY b.created_at DESC, b.id DESC
+            LIMIT 8
+            """,
+            (tenant_id,),
+        ).fetchall()
+    ]
+
+    electronic_stock_packages = [
+        dict(row)
+        for row in db().execute(
+            """
+            WITH online_cards AS (
+              SELECT tenant_id, username,
+                     COUNT(*) AS online_sessions
+              FROM radacct
+              WHERE acctstoptime IS NULL
+              GROUP BY tenant_id, username
+            )
+            SELECT pkg.id AS package_id,
+                   pkg.name AS package_name,
+                   COUNT(c.id) AS total_cards,
+                   0 AS available_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0
+                       AND c.expire_at IS NOT NULL AND c.expire_at < datetime('now')
+                       THEN 1 ELSE 0 END), 0) AS expired_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0 AND c.used = 1
+                       AND (c.expire_at IS NULL OR c.expire_at >= datetime('now'))
+                       AND COALESCE(oc.online_sessions, 0) = 0 THEN 1 ELSE 0 END), 0) AS used_offline_cards,
+                   COALESCE(SUM(CASE
+                      WHEN c.revoked = 0
+                       AND COALESCE(oc.online_sessions, 0) > 0 THEN 1 ELSE 0 END), 0) AS online_cards
+            FROM card_marketplace_packages pkg
+            LEFT JOIN card_user_purchases cup
+              ON cup.tenant_id = pkg.tenant_id
+             AND cup.package_id = pkg.id
+             AND cup.status = 'completed'
+            LEFT JOIN cards c
+              ON c.tenant_id = cup.tenant_id
+             AND c.id = cup.card_id
+             AND c.deleted_at IS NULL
+            LEFT JOIN online_cards oc
+              ON oc.tenant_id = c.tenant_id AND oc.username = c.username
+            WHERE pkg.tenant_id = ?
+            GROUP BY pkg.id
+            ORDER BY pkg.active DESC, pkg.id DESC
+            LIMIT 8
+            """,
+            (tenant_id,),
+        ).fetchall()
+    ]
+
+    last_used = _row_dict(db().execute(
+        """
+        SELECT c.username, c.first_used_at, b.batch_code, COALESCE(p.name, b.package_name, '') AS plan_name
+        FROM cards c
+        LEFT JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+        LEFT JOIN access_plans p ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+        WHERE c.tenant_id = ?
+          AND c.used = 1
+          AND c.first_used_at IS NOT NULL
+        ORDER BY c.first_used_at DESC
+        LIMIT 1
+        """,
+        (tenant_id,),
+    ).fetchone())
+    last_batch = _row_dict(db().execute(
+        """
+        SELECT batch_code, package_name, created_at, generated
+        FROM card_batches
+        WHERE tenant_id = ?
+          AND deleted_at IS NULL
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (tenant_id,),
+    ).fetchone())
+    online_cards = int(db().execute(
+        """
+        SELECT COUNT(DISTINCT r.username) AS c
+        FROM radacct r
+        JOIN cards c ON c.tenant_id = r.tenant_id AND c.username = r.username
+        WHERE r.tenant_id = ?
+          AND r.acctstoptime IS NULL
+        """,
+        (tenant_id,),
+    ).fetchone()["c"] or 0)
+    sales = _cards_sales_snapshot(tenant_id)
+    created_today = int(db().execute(
+        """
+        SELECT COUNT(*) AS c
+        FROM card_batches
+        WHERE tenant_id = ?
+          AND deleted_at IS NULL
+          AND SUBSTR(COALESCE(created_at, ''), 1, 10) = ?
+        """,
+        (tenant_id, today),
+    ).fetchone()["c"] or 0)
+
+    available = int(counts.get("available") or 0)
+    total = int(counts.get("total") or 0)
+    used = int(counts.get("used") or 0)
+    expired = int(counts.get("expired") or 0)
+    revoked = int(counts.get("revoked") or 0)
+    used_today = int(totals.get("used_today") or 0)
+    alerts = []
+    if total and available == 0:
+        alerts.append({"level": "red", "text": "لا يوجد مخزون كروت متاح حاليًا."})
+    elif 0 < available <= 10:
+        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {available} كرت فقط."})
+    for package in printed_stock_packages:
+        package_total = int(package.get("total_cards") or 0)
+        package_available = int(package.get("available_cards") or 0)
+        if package_total and package_available <= max(3, int(package_total * 0.1)):
+            alerts.append({
+                "level": "amber",
+                "text": f"{package.get('package_name')} قريب من النفاد: {package_available} متاح.",
+            })
+            break
+    if expired:
+        alerts.append({"level": "red", "text": f"{expired} كرت منتهي يحتاج مراجعة."})
+    if revoked:
+        alerts.append({"level": "grey", "text": f"{revoked} كرت محظور ضمن المخزون."})
+    if not alerts:
+        alerts.append({"level": "green", "text": "وضع الكروت مستقر ولا توجد ملاحظات عاجلة."})
+
+    time_minutes = _form_int("time_limit_minutes")
+    time_value = _form_int("time_value")
+    time_unit = _form_str("time_unit") or "days"
+    if time_minutes > 0:
+        if time_minutes % 1440 == 0:
+            time_value = time_minutes // 1440
+            time_unit = "days"
+        elif time_minutes % 60 == 0:
+            time_value = time_minutes // 60
+            time_unit = "hours"
+        else:
+            time_value = time_minutes
+            time_unit = "minutes"
+
+    return {
+        "cards": {
+            "total": total,
+            "available": available,
+            "used": used,
+            "expired": expired,
+            "revoked": revoked,
+            "batches": batch_count,
+        },
+        "money": {
+            "today": float(totals.get("value_today") or 0),
+            "month": float(totals.get("value_month") or 0),
+            "configured": float(totals.get("configured_value") or 0),
+        },
+        "activity": {
+            "used_today": used_today,
+            "used_month": int(totals.get("used_month") or 0),
+            "online_cards": online_cards,
+            "created_today": created_today,
+            "last_used": last_used,
+            "last_batch": last_batch,
+        },
+        "recent_batches": recent_batches,
+        "sales": sales,
+        "trend": trend,
+        "trend_max": trend_max,
+        "stock_packages": {
+            "printed": printed_stock_packages,
+            "electronic": electronic_stock_packages,
+        },
+        "alerts": alerts[:4],
+    }
+
+
+def _parse_day(value: str, fallback: date) -> date:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _parse_month(value: str, fallback: date) -> str:
+    try:
+        datetime.strptime(value, "%Y-%m")
+        return value
+    except (TypeError, ValueError):
+        return fallback.strftime("%Y-%m")
+
+
+def _parse_year(value: str, fallback: date) -> str:
+    text = str(value or "").strip()
+    if text.isdigit() and 2000 <= int(text) <= 2100:
+        return text
+    return str(fallback.year)
+
+
+def _saturday_week_start(value: date) -> date:
+    return value - timedelta(days=(value.weekday() + 2) % 7)
+
+
+def _saturday_week_one(year: int) -> date:
+    return _saturday_week_start(date(year, 1, 1))
+
+
+def _saturday_week_value(start: date) -> str:
+    year = start.year
+    if start < _saturday_week_one(year):
+        year -= 1
+    week = ((start - _saturday_week_one(year)).days // 7) + 1
+    return f"{year}-W{week:02d}"
+
+
+def _parse_week(value: str, fallback: date) -> tuple[str, date]:
+    fallback_start = _saturday_week_start(fallback)
+    fallback_value = _saturday_week_value(fallback_start)
+    text = str(value or "").strip()
+    try:
+        year_text, week_text = text.split("-W", 1)
+        start = _saturday_week_one(int(year_text)) + timedelta(days=(int(week_text) - 1) * 7)
+        return _saturday_week_value(start), start
+    except (TypeError, ValueError):
+        return fallback_value, fallback_start
+
+
+def _sales_period_filters() -> dict:
+    today = datetime.utcnow().date()
+    daily = _parse_day(request.args.get("sales_day") or "", today)
+    week_value, week_start = _parse_week(request.args.get("sales_week") or "", today)
+    month_value = _parse_month(request.args.get("sales_month") or "", today)
+    year_value = _parse_year(request.args.get("sales_year") or "", today)
+    return {
+        "inputs": {
+            "daily": daily.isoformat(),
+            "weekly": week_value,
+            "monthly": month_value,
+            "yearly": year_value,
+        },
+        "daily": {"value": daily.isoformat(), "label": daily.isoformat()},
+        "weekly": {
+            "value": week_start.isoformat(),
+            "end": (week_start + timedelta(days=7)).isoformat(),
+            "label": f"{week_start.strftime('%Y-%m-%d')} - {(week_start + timedelta(days=6)).strftime('%Y-%m-%d')}",
+        },
+        "monthly": {"value": month_value, "label": month_value},
+        "yearly": {"value": year_value, "label": year_value},
+    }
+
+
+def _period_condition(column: str, period: str, filters: dict) -> tuple[str, tuple[object, ...]]:
+    if period == "daily":
+        return f"SUBSTR(COALESCE({column}, ''), 1, 10) = ?", (filters["daily"]["value"],)
+    if period == "weekly":
+        return (
+            f"SUBSTR(COALESCE({column}, ''), 1, 10) >= ? AND SUBSTR(COALESCE({column}, ''), 1, 10) < ?",
+            (filters["weekly"]["value"], filters["weekly"]["end"]),
+        )
+    if period == "monthly":
+        return f"SUBSTR(COALESCE({column}, ''), 1, 7) = ?", (filters["monthly"]["value"],)
+    return f"SUBSTR(COALESCE({column}, ''), 1, 4) = ?", (filters["yearly"]["value"],)
+
+
+def _printed_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
+    where, values = _period_condition("c.first_used_at", period, filters)
+    row = db().execute(
+        f"""
+        SELECT COUNT(c.id) AS count,
+               COALESCE(SUM(CASE
+                 WHEN b.price_per_card > 0 THEN b.price_per_card
+                 WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                 ELSE 0
+               END), 0) AS amount
+        FROM cards c
+        JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+        LEFT JOIN card_user_purchases p
+          ON p.tenant_id = c.tenant_id AND p.card_id = c.id AND p.status = 'completed'
+        WHERE c.tenant_id = ?
+          AND c.deleted_at IS NULL
+          AND c.used = 1
+          AND p.id IS NULL
+          AND {where}
+        """,
+        (tenant_id, *values),
+    ).fetchone()
+    return {"count": int(row["count"] or 0), "amount": float(row["amount"] or 0)}
+
+
+def _electronic_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
+    where, values = _period_condition("p.created_at", period, filters)
+    row = db().execute(
+        f"""
+        SELECT COUNT(p.id) AS count,
+               COALESCE(SUM(p.amount_minor), 0) AS amount_minor
+        FROM card_user_purchases p
+        WHERE p.tenant_id = ?
+          AND p.status = 'completed'
+          AND {where}
+        """,
+        (tenant_id, *values),
+    ).fetchone()
+    return {
+        "count": int(row["count"] or 0),
+        "amount": float(row["amount_minor"] or 0) / 100.0,
+    }
+
+
+def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = None, filters: dict | None = None) -> list[dict]:
+    period_sql = ""
+    params: list[object] = [tenant_id]
+    if period:
+        where, values = _period_condition("c.first_used_at", period, filters or _sales_period_filters())
+        period_sql = f"AND {where}"
+        params.extend(values)
+    params.append(int(limit))
+    return [
+        dict(row)
+        for row in db().execute(
+            f"""
+            SELECT 'printed' AS sale_type,
+                   c.id AS card_id,
+                   c.username,
+                   c.password,
+                   c.first_used_at AS sold_at,
+                   b.batch_code,
+                   COALESCE(p.name, b.package_name, '') AS plan_name,
+                   CASE
+                     WHEN b.price_per_card > 0 THEN b.price_per_card
+                     WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                     ELSE 0
+                   END AS amount,
+                   COALESCE(p.currency, 'JOD') AS currency,
+                   '' AS buyer_name
+            FROM cards c
+            JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+            LEFT JOIN access_plans p ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+            LEFT JOIN card_user_purchases cup
+              ON cup.tenant_id = c.tenant_id AND cup.card_id = c.id AND cup.status = 'completed'
+            WHERE c.tenant_id = ?
+              AND c.deleted_at IS NULL
+              AND c.used = 1
+              AND c.first_used_at IS NOT NULL
+              AND cup.id IS NULL
+              {period_sql}
+            ORDER BY c.first_used_at DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    ]
+
+
+def _recent_electronic_sales(tenant_id: int, limit: int = 8, period: str | None = None, filters: dict | None = None) -> list[dict]:
+    period_sql = ""
+    params: list[object] = [tenant_id]
+    if period:
+        where, values = _period_condition("p.created_at", period, filters or _sales_period_filters())
+        period_sql = f"AND {where}"
+        params.extend(values)
+    params.append(int(limit))
+    return [
+        dict(row)
+        for row in db().execute(
+            f"""
+            SELECT 'electronic' AS sale_type,
+                   c.id AS card_id,
+                   c.username,
+                   c.password,
+                   p.created_at AS sold_at,
+                   b.batch_code,
+                   COALESCE(pkg.name, ap.name, b.package_name, '') AS plan_name,
+                   p.amount_minor / 100.0 AS amount,
+                   p.currency,
+                   cu.display_name AS buyer_name
+            FROM card_user_purchases p
+            LEFT JOIN cards c ON c.tenant_id = p.tenant_id AND c.id = p.card_id
+            LEFT JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+            LEFT JOIN card_marketplace_packages pkg
+              ON pkg.tenant_id = p.tenant_id AND pkg.id = p.package_id
+            LEFT JOIN access_plans ap ON ap.tenant_id = c.tenant_id AND ap.id = c.plan_id
+            LEFT JOIN card_users cu ON cu.tenant_id = p.tenant_id AND cu.id = p.card_user_id
+            WHERE p.tenant_id = ?
+              AND p.status = 'completed'
+              {period_sql}
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    ]
+
+
+def _cards_sales_snapshot(tenant_id: int) -> dict:
+    periods = ("daily", "weekly", "monthly", "yearly")
+    filters = _sales_period_filters()
+    currency_row = db().execute(
+        "SELECT currency FROM tenants WHERE id = ?",
+        (tenant_id,),
+    ).fetchone()
+    currency = str((currency_row and currency_row["currency"]) or "ILS").upper()
+    printed = {period: _printed_sales_total(tenant_id, period, filters) for period in periods}
+    electronic = {period: _electronic_sales_total(tenant_id, period, filters) for period in periods}
+    total = {
+        period: {
+            "count": printed[period]["count"] + electronic[period]["count"],
+            "amount": printed[period]["amount"] + electronic[period]["amount"],
+        }
+        for period in periods
+    }
+    details = {}
+    for period in periods:
+        period_rows = _recent_printed_sales(tenant_id, 40, period, filters) + _recent_electronic_sales(tenant_id, 40, period, filters)
+        period_rows.sort(key=lambda item: str(item.get("sold_at") or ""), reverse=True)
+        details[period] = period_rows[:60]
+    period_labels = {
+        "daily": "اليوم",
+        "weekly": "الأسبوع",
+        "monthly": "الشهر",
+        "yearly": "السنة",
+    }
+    return {
+        "printed": printed,
+        "electronic": electronic,
+        "total": total,
+        "details": details,
+        "currency": currency,
+        "filters": filters["inputs"],
+        "periods": [
+            {"key": period, "label": period_labels[period], "range": filters[period]["label"]}
+            for period in periods
+        ],
+    }
 
 
 def _actor() -> str:
@@ -81,6 +628,32 @@ def _form_bool(name: str) -> bool:
 
 def _form_str(name: str) -> str:
     return (request.form.get(name) or "").strip()
+
+
+_GENERATE_JOBS: dict[str, dict] = {}
+_GENERATE_JOBS_LOCK = threading.Lock()
+
+
+def _set_generate_job(job_id: str, **changes) -> dict:
+    with _GENERATE_JOBS_LOCK:
+        job = _GENERATE_JOBS.setdefault(job_id, {})
+        job.update(changes)
+        job["updated_at"] = time.time()
+        return dict(job)
+
+
+def _get_generate_job(job_id: str) -> dict | None:
+    with _GENERATE_JOBS_LOCK:
+        job = _GENERATE_JOBS.get(job_id)
+        return dict(job) if job else None
+
+
+def _cleanup_generate_jobs() -> None:
+    cutoff = time.time() - 3600
+    with _GENERATE_JOBS_LOCK:
+        for key, job in list(_GENERATE_JOBS.items()):
+            if float(job.get("updated_at") or job.get("created_at") or 0) < cutoff:
+                _GENERATE_JOBS.pop(key, None)
 
 
 def _query_int(name: str) -> int | None:
@@ -157,6 +730,32 @@ def _import_form_context() -> dict:
 
 def _collect_batch_options() -> dict:
     """جمع كل خيارات AdvRadius من POST. dict جاهز للتمرير لـ generate_batch."""
+    batch_type = _form_str("batch_type") or "printed"
+    if batch_type not in {"printed", "electronic"}:
+        batch_type = "printed"
+    quota_value = _form_int("quick_quota_value")
+    quota_unit = (_form_str("quick_quota_unit") or "mb").lower()
+    total_quota_mb = _form_int("total_quota_mb")
+    if quota_value > 0:
+        total_quota_mb = quota_value * 1024 if quota_unit == "gb" else quota_value
+    validity_value = _form_int("quick_validity_value")
+    validity_unit = (_form_str("quick_validity_unit") or "days").lower()
+    count_by_seconds = _form_bool("count_by_seconds")
+    validity_after_first_login_days = _form_int("validity_after_first_login_days")
+    if validity_value > 0:
+        validity_minutes = validity_value
+        if validity_unit == "hours":
+            validity_minutes = validity_value * 60
+        elif validity_unit == "days":
+            validity_minutes = validity_value * 1440
+        validity_after_first_login_days = max(1, (validity_minutes + 1439) // 1440)
+    if count_by_seconds and validity_after_first_login_days <= 0:
+        raise RadiusValidationError("عند اختيار المحاسبة بالثانية يجب تحديد صلاحية البطاقة بعد أول اتصال.")
+    metadata = {
+        "batch_type": batch_type,
+        "quota": {"value": quota_value, "unit": quota_unit} if quota_value > 0 else None,
+        "seconds_validity": {"value": validity_value, "unit": validity_unit} if validity_value > 0 else None,
+    }
     return {
         # توليد
         "username_prefix":           _form_str("username_prefix"),
@@ -170,12 +769,12 @@ def _collect_batch_options() -> dict:
         "prefix_or_suffix_value":    _form_str("prefix_or_suffix_value"),
         "random_generation_enabled": _form_bool("random_generation_enabled") or True,
         # وقت
-        "time_value":                _form_int("time_value"),
-        "time_unit":                 _form_str("time_unit") or "days",
+        "time_value":                time_value,
+        "time_unit":                 time_unit,
         "device_count":              max(1, _form_int("device_count", 1)),
         "duration_mode":             _form_str("duration_mode") or "time_unit",
-        "validity_after_first_login_days": _form_int("validity_after_first_login_days"),
-        "count_by_seconds":          _form_bool("count_by_seconds"),
+        "validity_after_first_login_days": validity_after_first_login_days,
+        "count_by_seconds":          count_by_seconds,
         "count_from_first_connect":  _form_bool("count_from_first_connect"),
         # السلوك عند انتهاء الكوتا + خيارات
         "on_quota_exhaust":          _form_str("on_quota_exhaust") or "stop",
@@ -190,12 +789,73 @@ def _collect_batch_options() -> dict:
         "price_per_card":            _form_float("price_per_card"),
         "price_bulk":                _form_float("price_bulk"),
         "total_price":               _form_float("total_price"),
-        "total_quota_mb":            _form_int("total_quota_mb"),
+        "total_quota_mb":            total_quota_mb,
         "package_name":              _form_str("package_name"),
         "service_name":              _form_str("service_name"),
         "manager_id":                _form_int("manager_id"),
+        "distributor_id":            _form_int("distributor_id") or None,
+        "source_type":               "generated",
+        "metadata":                  json_dump(metadata),
         "notes":                     _form_str("notes"),
     }
+
+
+def _pending_batch_speed_rule_requested(form) -> bool:
+    fields = (
+        "sr_name",
+        "sr_starts_at_time",
+        "sr_ends_at_time",
+        "sr_speed_down_kbps",
+        "sr_speed_up_kbps",
+        "sr_source_schedule_id",
+    )
+    if any((form.get(name) or "").strip() for name in fields):
+        return True
+    try:
+        return bool(form.getlist("sr_days"))
+    except AttributeError:
+        return bool((form.get("sr_days") or "").strip())
+
+
+def _apply_pending_batch_speed_rule(batch, form, *, tenant_id: int | None = None, actor: str | None = None) -> None:
+    """Create the optional advanced speed rule after a new batch gets an id."""
+    created = create_staged_speed_rules(
+        tenant_id=tenant_id if tenant_id is not None else _tid(),
+        actor=actor or _actor(),
+        form=form,
+        target_type="card_batch",
+        plan_id=batch.plan_id,
+        card_batch_id=batch.id,
+        metadata={"created_with_card_batch": True},
+    )
+    if created:
+        return
+    if not _pending_batch_speed_rule_requested(form):
+        return
+    speed_form = form.copy()
+    if not (speed_form.get("_speed_rule_action") or "").strip():
+        manual_fields = (
+            "sr_name",
+            "sr_starts_at_time",
+            "sr_ends_at_time",
+            "sr_speed_down_kbps",
+            "sr_speed_up_kbps",
+        )
+        has_manual_values = any((speed_form.get(name) or "").strip() for name in manual_fields)
+        try:
+            has_manual_values = has_manual_values or bool(speed_form.getlist("sr_days"))
+        except AttributeError:
+            has_manual_values = has_manual_values or bool((speed_form.get("sr_days") or "").strip())
+        has_source = bool((speed_form.get("sr_source_schedule_id") or "").strip())
+        speed_form["_speed_rule_action"] = "copy" if has_source and not has_manual_values else "manual"
+    handle_embedded_speed_rule(
+        tenant_id=tenant_id if tenant_id is not None else _tid(),
+        actor=actor or _actor(),
+        form=speed_form,
+        target_type="card_batch",
+        plan_id=batch.plan_id,
+        card_batch_id=batch.id,
+    )
 
 
 def _batch_form_data(batch) -> dict:
@@ -254,6 +914,7 @@ def cards_batches():
     )
     totals = svc.batch_operations_totals(**filters)
     plans_list = list(get_plans_service().list(limit=500))
+    managers = admins_repo.list_admins()
     distributors = operations_repo.list_distributors(_tid(), limit=500)
     operations_service = get_operations_service()
     print_templates = operations_service.list_print_templates(tenant_id=_tid(), limit=500)
@@ -262,6 +923,7 @@ def cards_batches():
         "radius/cards_batches.html",
         batches=batches,
         plans=plans_list,
+        managers=managers,
         distributors=distributors,
         print_templates=print_templates,
         default_print_template_id=default_print_template_id,
@@ -838,44 +1500,12 @@ def cards_checker():
 # طبيعية (`result.exists = false`)، لا خطأ.
 # ─────────────────────────────────────────────────────────────────────────────
 def cards_checker_v2():
-    """R13.A.2: GET /admin/radius/cards/checker/v2
-
-    Preview of the new operations-room layout. Side-by-side with v1
-    until A.4 swaps the default. Renders the same `result` payload as
-    v1 — no POST handling here; the v2 template's operation forms
-    submit back to the v1 route (proven path).
-    """
+    """Silent compatibility alias for old /cards/checker/v2 bookmarks."""
     query = (request.args.get("query") or request.args.get("q") or "").strip()
-    result = None
-    error = ""
+    args = {}
     if query:
-        if len(query) > 128:
-            error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
-        else:
-            try:
-                result = check_card(_tid(), query)
-            except Exception as exc:  # noqa: BLE001
-                # Never let an internal exception bubble as a bare HTTP 500
-                # — log the full traceback so we can find the cause, and
-                # show the operator a friendly message so they don't think
-                # the whole system is dead.
-                import logging
-                logging.getLogger(__name__).exception(
-                    "cards_checker: check_card raised for query=%r tenant=%s",
-                    query, _tid(),
-                )
-                error = (
-                    "حدث خطأ داخلي أثناء فحص البطاقة. تم تسجيل تفاصيل "
-                    "الخطأ في سجل الخادم — راجع `docker compose logs "
-                    f"hoberadius` للتفاصيل. ({type(exc).__name__})"
-                )
-                result = None
-    return render_template(
-        "radius/cards_checker_v2.html",
-        query=query,
-        result=result,
-        error=error,
-    )
+        args["query"] = query
+    return redirect(url_for("radius.cards_checker", **args), code=302)
 
 
 def cards_checker_api_lookup():
@@ -983,13 +1613,108 @@ def cards_generate():
                 actor=_actor(), plan_id=plan_id, count=count, **opts,
             )
             flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
+            _apply_pending_batch_speed_rule(batch, request.form)
             return redirect(url_for("radius.cards_of_batch", batch_id=batch.id))
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
         except RadiusError as e:
             flash(e.message, "error")
     plans = list(get_plans_service().list(limit=500))
-    return render_template("radius/cards_generate.html", plans=plans, form=request.form)
+    managers = admins_repo.list_admins()
+    distributors = operations_repo.list_distributors(_tid(), limit=500)
+    return render_template(
+        "radius/cards_generate.html",
+        plans=plans,
+        managers=managers,
+        distributors=distributors,
+        form=request.form,
+        speed_rules_panel=speed_rules_panel(
+            tenant_id=_tid(),
+            target_type="card_batch",
+            return_to=request.path,
+            title="قواعد سرعة مجدولة للبطاقات",
+            help_text="أضف قاعدة سرعة مبدئية تنحفظ على الحزمة فور إنشائها وتطبّق على بطاقاتها.",
+        ),
+    )
+
+
+def cards_generate_progress_start():
+    _cleanup_generate_jobs()
+    try:
+        plan_id = _form_int("plan_id")
+        count = _form_int("count")
+        opts = _collect_batch_options()
+        speed_form = request.form.copy()
+    except RadiusError as e:
+        return jsonify({"ok": False, "error": e.message}), 422
+    except (TypeError, ValueError) as e:
+        return jsonify({"ok": False, "error": f"قيم غير صحيحة: {e}"}), 422
+
+    app = current_app._get_current_object()
+    actor = _actor()
+    tenant_id = _tid()
+    redirect_template = url_for("radius.cards_of_batch", batch_id=0)
+    job_id = uuid.uuid4().hex
+    _set_generate_job(
+        job_id,
+        ok=True,
+        status="queued",
+        phase="queued",
+        current=0,
+        total=count,
+        message="تم استلام طلب إنشاء الحزمة",
+        created_at=time.time(),
+    )
+
+    def run_job() -> None:
+        with app.app_context():
+            g.tenant_id = tenant_id
+
+            def progress(update: dict) -> None:
+                _set_generate_job(
+                    job_id,
+                    status="running",
+                    phase=update.get("phase") or "running",
+                    current=int(update.get("current") or 0),
+                    total=int(update.get("total") or count),
+                    message=update.get("message") or "",
+                )
+
+            try:
+                batch, cards = get_cards_service().generate_batch(
+                    actor=actor,
+                    plan_id=plan_id,
+                    count=count,
+                    progress_callback=progress,
+                    **opts,
+                )
+                _apply_pending_batch_speed_rule(batch, speed_form, tenant_id=tenant_id, actor=actor)
+                _set_generate_job(
+                    job_id,
+                    status="done",
+                    phase="done",
+                    current=len(cards),
+                    total=len(cards),
+                    generated=len(cards),
+                    batch_id=batch.id,
+                    batch_code=batch.batch_code,
+                    message=f"تم إنشاء {len(cards)} بطاقة بدون تكرار.",
+                    redirect_url=redirect_template.replace("/0/", f"/{batch.id}/"),
+                )
+            except RadiusError as e:
+                _set_generate_job(job_id, ok=False, status="error", phase="error", message=e.message)
+            except Exception as e:
+                _set_generate_job(job_id, ok=False, status="error", phase="error", message=str(e))
+
+    threading.Thread(target=run_job, name=f"cards-generate-{job_id[:8]}", daemon=True).start()
+    return jsonify({"ok": True, "job_id": job_id})
+
+
+def cards_generate_progress_status(job_id: str):
+    job = _get_generate_job(job_id)
+    if not job:
+        return jsonify({"ok": False, "status": "missing", "message": "طلب التوليد غير موجود أو انتهت صلاحيته."}), 404
+    return jsonify(job)
 
 
 def cards_batch_edit(batch_id: int):
@@ -1119,14 +1844,356 @@ def cards_list():
     )
 
 
-def cards_of_batch(batch_id: int):
+def _parse_card_dt(value) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    text = str(value or "").strip()
+    if not text:
+        return None
+    text = text.replace("Z", "+00:00")
+    for candidate in (text, text.replace("T", " ")):
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            if parsed.tzinfo is not None:
+                parsed = parsed.replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            pass
+    return None
+
+
+def _format_card_dt(value) -> str:
+    dt = _parse_card_dt(value)
+    if not dt:
+        return "—"
+    return dt.strftime("%Y-%m-%d %H:%M")
+
+
+def _format_card_seconds(seconds: int | float | None) -> str:
+    total = max(0, int(seconds or 0))
+    if total <= 0:
+        return "—"
+    days, rem = divmod(total, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes = rem // 60
+    if days:
+        return f"{days} يوم {hours} ساعة"
+    if hours:
+        return f"{hours} ساعة {minutes} دقيقة"
+    return f"{minutes} دقيقة"
+
+
+def _format_card_bytes(value: int | float | None) -> str:
+    size = float(value or 0)
+    units = ("B", "KB", "MB", "GB", "TB")
+    idx = 0
+    while size >= 1024 and idx < len(units) - 1:
+        size /= 1024.0
+        idx += 1
+    if idx == 0:
+        return f"{int(size)} {units[idx]}"
+    return f"{size:.1f} {units[idx]}"
+
+
+def _card_status_meta(row: dict, now: datetime) -> dict:
+    online = int(row.get("online_sessions") or 0) > 0
+    expire_at = _parse_card_dt(row.get("expire_at"))
+    expired = bool(expire_at and expire_at < now)
+    if row.get("deleted_at"):
+        return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
+    if row.get("revoked"):
+        return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
+    if expired:
+        return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
+    if online:
+        return {"key": "online", "label": "متصل", "tone": "green", "rank": 0}
+    if row.get("used"):
+        return {"key": "used_offline", "label": "مستخدم", "tone": "blue", "rank": 2}
+    return {"key": "ready", "label": "متاح", "tone": "violet", "rank": 1}
+
+
+def _card_remaining_meta(row: dict, now: datetime) -> dict:
+    expire_at = _parse_card_dt(row.get("expire_at"))
+    if row.get("revoked") and int(row.get("frozen_remaining_seconds") or 0) > 0:
+        seconds = int(row.get("frozen_remaining_seconds") or 0)
+        return {
+            "label": f"مجمد: {_format_card_seconds(seconds)}",
+            "seconds": seconds,
+            "state": "frozen",
+        }
+    if not expire_at:
+        return {"label": "لم تبدأ", "seconds": 0, "state": "pending"}
+    seconds = int((expire_at - now).total_seconds())
+    if seconds <= 0:
+        return {"label": "منتهي", "seconds": 0, "state": "expired"}
+    return {"label": _format_card_seconds(seconds), "seconds": seconds, "state": "active"}
+
+
+def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
+    rows = db().execute(
+        """
+        WITH acct AS (
+          SELECT tenant_id,
+                 username,
+                 COUNT(*) AS sessions_count,
+                 COUNT(DISTINCT NULLIF(callingstationid, '')) AS unique_macs,
+                 SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions,
+                 COALESCE(SUM(acctsessiontime), 0) AS total_session_seconds,
+                 COALESCE(SUM(acctinputoctets), 0) AS total_upload_bytes,
+                 COALESCE(SUM(acctoutputoctets), 0) AS total_download_bytes,
+                 MIN(acctstarttime) AS first_session_at,
+                 MAX(acctstarttime) AS last_connect_at,
+                 MAX(acctstoptime) AS last_disconnect_at,
+                 MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_seen_at
+            FROM radacct
+           WHERE tenant_id = ?
+           GROUP BY tenant_id, username
+        ),
+        latest AS (
+          SELECT *
+            FROM (
+              SELECT tenant_id,
+                     username,
+                     acctsessionid,
+                     acctstarttime,
+                     acctupdatetime,
+                     acctstoptime,
+                     acctsessiontime,
+                     acctinputoctets,
+                     acctoutputoctets,
+                     nasipaddress,
+                     callingstationid,
+                     framedipaddress,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY tenant_id, username
+                       ORDER BY COALESCE(acctupdatetime, acctstoptime, acctstarttime, '') DESC,
+                                radacctid DESC
+                     ) AS rn
+                FROM radacct
+               WHERE tenant_id = ?
+            )
+           WHERE rn = 1
+        )
+        SELECT c.id,
+               c.batch_id,
+               c.username,
+               c.password,
+               c.plan_id,
+               c.used,
+               c.first_used_at,
+               c.used_by_mac,
+               c.used_by_subscriber_id,
+               c.expire_at,
+               c.revoked,
+               c.locked_mac,
+               c.disabled_reason,
+               c.disabled_at,
+               c.disabled_by,
+               c.created_at,
+               c.card_speed_down_kbps,
+               c.card_speed_up_kbps,
+               c.frozen_remaining_seconds,
+               c.deleted_at,
+               COALESCE(p.name, '') AS plan_name,
+               COALESCE(p.currency, 'ILS') AS currency,
+               COALESCE(a.sessions_count, 0) AS sessions_count,
+               COALESCE(a.unique_macs, 0) AS unique_macs,
+               COALESCE(a.online_sessions, 0) AS online_sessions,
+               COALESCE(a.total_session_seconds, 0) AS total_session_seconds,
+               COALESCE(a.total_upload_bytes, 0) AS total_upload_bytes,
+               COALESCE(a.total_download_bytes, 0) AS total_download_bytes,
+               a.first_session_at,
+               a.last_connect_at,
+               a.last_disconnect_at,
+               a.last_seen_at,
+               l.acctsessionid AS latest_session_id,
+               l.acctstarttime AS latest_start_at,
+               l.acctupdatetime AS latest_update_at,
+               l.acctstoptime AS latest_stop_at,
+               COALESCE(l.acctsessiontime, 0) AS latest_session_seconds,
+               COALESCE(l.acctinputoctets, 0) AS latest_upload_bytes,
+               COALESCE(l.acctoutputoctets, 0) AS latest_download_bytes,
+               COALESCE(l.nasipaddress, '') AS latest_nas_ip,
+               COALESCE(l.callingstationid, '') AS latest_mac,
+               COALESCE(l.framedipaddress, '') AS latest_framed_ip
+          FROM cards c
+          LEFT JOIN access_plans p
+            ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+          LEFT JOIN acct a
+            ON a.tenant_id = c.tenant_id AND a.username = c.username
+          LEFT JOIN latest l
+            ON l.tenant_id = c.tenant_id AND l.username = c.username
+         WHERE c.tenant_id = ?
+           AND c.batch_id = ?
+           AND c.deleted_at IS NULL
+         ORDER BY c.id DESC
+        """,
+        (tenant_id, tenant_id, tenant_id, batch_id),
+    ).fetchall()
+    now = datetime.utcnow()
+    out: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        status = _card_status_meta(item, now)
+        remaining = _card_remaining_meta(item, now)
+        item.update({
+            "status_key": status["key"],
+            "status_label": status["label"],
+            "status_tone": status["tone"],
+            "status_rank": status["rank"],
+            "remaining_label": remaining["label"],
+            "remaining_seconds": remaining["seconds"],
+            "remaining_state": remaining["state"],
+            "is_online": int(item.get("online_sessions") or 0) > 0,
+            "first_used_label": _format_card_dt(item.get("first_used_at")),
+            "created_label": _format_card_dt(item.get("created_at")),
+            "expire_label": _format_card_dt(item.get("expire_at")),
+            "last_connect_label": _format_card_dt(item.get("last_connect_at") or item.get("latest_start_at")),
+            "last_disconnect_label": _format_card_dt(item.get("last_disconnect_at") or item.get("latest_stop_at")),
+            "last_seen_label": _format_card_dt(item.get("last_seen_at") or item.get("latest_update_at")),
+            "total_time_label": _format_card_seconds(item.get("total_session_seconds")),
+            "latest_time_label": _format_card_seconds(item.get("latest_session_seconds")),
+            "total_upload_label": _format_card_bytes(item.get("total_upload_bytes")),
+            "total_download_label": _format_card_bytes(item.get("total_download_bytes")),
+            "latest_upload_label": _format_card_bytes(item.get("latest_upload_bytes")),
+            "latest_download_label": _format_card_bytes(item.get("latest_download_bytes")),
+            "speed_label": (
+                f"{int(item.get('card_speed_down_kbps') or 0)} / {int(item.get('card_speed_up_kbps') or 0)} Kbps"
+                if int(item.get("card_speed_down_kbps") or 0) or int(item.get("card_speed_up_kbps") or 0)
+                else "سرعة الحزمة"
+            ),
+        })
+        out.append(item)
+    return out
+
+
+def _batch_cards_summary(items: list[dict]) -> dict:
+    return {
+        "total": len(items),
+        "online": sum(1 for item in items if item["status_key"] == "online"),
+        "ready": sum(1 for item in items if item["status_key"] == "ready"),
+        "used_offline": sum(1 for item in items if item["status_key"] == "used_offline"),
+        "expired": sum(1 for item in items if item["status_key"] == "expired"),
+        "revoked": sum(1 for item in items if item["status_key"] == "revoked"),
+        "sessions": sum(int(item.get("sessions_count") or 0) for item in items),
+        "upload_label": _format_card_bytes(sum(int(item.get("total_upload_bytes") or 0) for item in items)),
+        "download_label": _format_card_bytes(sum(int(item.get("total_download_bytes") or 0) for item in items)),
+    }
+
+
+def _selected_card_ids() -> list[int]:
+    ids: list[int] = []
+    for raw in request.form.getlist("card_ids"):
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            ids.append(value)
+    return sorted(set(ids))
+
+
+def cards_batch_cards_actions(batch_id: int):
+    from ..db.repos import cards_repo
+
     svc = get_cards_service()
-    items = svc.list_cards(batch_id=batch_id, limit=2000)
-    batch = next((b for b in svc.list_batches(limit=500) if b.id == batch_id), None)
+    tenant_id = _tid()
+    action = _form_str("bulk_action")
+    card_ids = _selected_card_ids()
+    return_to = request.form.get("return_to") or url_for("radius.cards_of_batch", batch_id=batch_id)
+    if not card_ids:
+        flash("اختَر كرت واحد على الأقل لتنفيذ الإجراء.", "error")
+        return redirect(return_to)
+
+    unit_map = {"minutes": 60, "hours": 3600, "days": 86400}
+    amount = _form_int("time_amount")
+    unit = (_form_str("time_unit") or "minutes").strip().lower()
+    reason = _form_str("reason")
+    changed = 0
+    skipped = 0
+    errors: list[str] = []
+
+    for card_id in card_ids:
+        card = cards_repo.get_card(tenant_id, card_id)
+        if not card or card.batch_id != batch_id:
+            skipped += 1
+            continue
+        try:
+            if action == "enable":
+                svc.enable_card(actor=_actor(), card_id=card_id)
+            elif action == "disable":
+                svc.disable_card(actor=_actor(), card_id=card_id, reason=reason)
+            elif action == "soft_delete":
+                svc.soft_delete_card(actor=_actor(), card_id=card_id, reason=reason or "حذف من جدول كروت الحزمة")
+            elif action == "reset_usage":
+                svc.reset_card_usage(actor=_actor(), card_id=card_id)
+            elif action == "disconnect":
+                svc.disconnect_card(actor=_actor(), username=card.username)
+            elif action in {"add_time", "subtract_time"}:
+                if amount <= 0 or unit not in unit_map:
+                    raise RadiusValidationError("حدد مدة صحيحة لتعديل وقت البطاقة.")
+                delta = amount * unit_map[unit] * (-1 if action == "subtract_time" else 1)
+                svc.adjust_card_time(
+                    actor=_actor(),
+                    card_id=card_id,
+                    delta_seconds=delta,
+                    username=card.username,
+                )
+            elif action == "set_speed":
+                svc.set_card_speed(
+                    actor=_actor(),
+                    card_id=card_id,
+                    down_kbps=_form_int("speed_down_kbps"),
+                    up_kbps=_form_int("speed_up_kbps"),
+                    username=card.username,
+                )
+            elif action == "lock_mac":
+                svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
+            elif action == "unlock_mac":
+                svc.unlock_card_mac(actor=_actor(), card_id=card_id)
+            else:
+                flash("إجراء غير معروف.", "error")
+                return redirect(return_to)
+            changed += 1
+        except RadiusError as exc:
+            errors.append(f"{card.username}: {exc.message}")
+
+    labels = {
+        "enable": "تفعيل",
+        "disable": "إيقاف",
+        "soft_delete": "حذف",
+        "reset_usage": "تصفير الاستخدام",
+        "disconnect": "قطع الاتصال",
+        "add_time": "إضافة وقت",
+        "subtract_time": "خصم وقت",
+        "set_speed": "تعديل السرعة",
+        "lock_mac": "تثبيت MAC",
+        "unlock_mac": "فك MAC",
+    }
+    if changed:
+        flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+    if skipped:
+        flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
+    if errors:
+        flash("لم تكتمل بعض الكروت: " + " | ".join(errors[:3]), "error")
+    return redirect(return_to)
+
+
+def cards_of_batch(batch_id: int):
+    from ..db.repos import cards_repo, plans_repo
+
+    batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
     plan = None
     if batch:
-        plan = next((p for p in get_plans_service().list(limit=500) if p.id == batch.plan_id), None)
-    return render_template("radius/cards_of_batch.html", items=items, batch=batch, plan=plan)
+        plan = plans_repo.get_plan(_tid(), batch.plan_id)
+    items = _batch_cards_details(_tid(), batch_id) if batch else []
+    return render_template(
+        "radius/cards_of_batch.html",
+        items=items,
+        batch=batch,
+        plan=plan,
+        summary=_batch_cards_summary(items),
+    )
 
 
 def cards_revoke(card_id: int):

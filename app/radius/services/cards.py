@@ -116,15 +116,29 @@ class CardsService:
         package_name: str = "",
         service_name: str = "",
         manager_id: int = 0,
+        distributor_id: int | None = None,
+        source_type: str = "generated",
         notes: str = "",
         metadata: str = "{}",
+        progress_callback=None,
     ) -> tuple[CardBatch, list[Card]]:
+        def progress(phase: str, current: int = 0, total: int | None = None, message: str = "") -> None:
+            if progress_callback:
+                progress_callback({
+                    "phase": phase,
+                    "current": int(current or 0),
+                    "total": int(total if total is not None else count),
+                    "message": message,
+                })
+
+        progress("validating", 0, count, "فحص الإعدادات ومنع التكرار")
         if count <= 0 or count > 2000:
             raise RadiusValidationError("count بين 1 و 2000")
         if not plan_id:
             raise RadiusValidationError("plan_id مطلوب")
 
         plan = self._adapter.get_profile(plan_id)
+        progress("preparing", 0, count, "تجهيز الحزمة وربط العرض")
         expire = None
         # حساب الـ expire: time_value/time_unit يتقدم على plan.validity_days لو مُحدَّد
         if time_value and time_unit and duration_mode == "time_unit":
@@ -181,25 +195,34 @@ class CardsService:
             close_user_session_on_disconnect=close_user_session_on_disconnect,
             allow_entry_by_previous_card_palestine=allow_entry_by_previous_card_palestine,
             total_price=total_price, metadata=metadata,
+            source_type=source_type or "generated",
+            distributor_id=distributor_id,
         ))
+        progress("batch", 0, count, f"تم إنشاء الحزمة {batch.batch_code}")
         cards = self._store.generate_cards_for_batch(
             batch_id=batch.id, plan_id=plan_id, count_to_make=count,
             username_prefix=username_prefix, username_suffix=username_suffix,
             username_length=username_length,
-            password_length=password_length, expire_at=expire,
+            password_length=password_length, password_charset=password_charset,
+            expire_at=expire,
+            progress_callback=lambda made, total: progress("generating", made, total, f"تم توليد {made} من {total} بطاقة"),
         )
         # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card)
-        for c in cards:
+        progress("syncing", 0, len(cards), "تجهيز حسابات RADIUS")
+        for idx, c in enumerate(cards, start=1):
             self._adapter.upsert_account(Subscriber(
                 id=None, username=c.username, password=c.password,
                 user_type=USER_TYPE_CARD, plan_id=plan_id,
                 expire_at=c.expire_at, card_batch_id=batch.id, created_by=actor,
             ))
+            if idx == len(cards) or idx % 25 == 0:
+                progress("syncing", idx, len(cards), f"تم تجهيز {idx} من {len(cards)} حساب")
         self._audit.record(
             actor=actor, action=AUDIT_ACTION_BATCH_GENERATE,
             target_type="card_batch", target_id=str(batch.id),
             payload={"plan_id": plan_id, "count": count, "batch_code": batch.batch_code},
         )
+        progress("done", len(cards), len(cards), "اكتمل إنشاء الحزمة")
         return self._store.get_batch(batch.id), cards
 
     def import_batch(

@@ -1,75 +1,751 @@
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}Card Pricing — Hobe Hub{% endblock %}
+{% block title %}تسعير البطاقات - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
-{% block page_title %}تسعير الكروت والدفعات{% endblock %}
-{% block page_sub %}<span class="sub">لقطات أسعار، تكلفة مدير/موزع، وملخص مالي بدون حذف أو تطبيق مباشر على RADIUS</span>{% endblock %}
+{% block page_title %}تسعير البطاقات{% endblock %}
+{% block page_sub %}<span class="sub">سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء</span>{% endblock %}
+
+{% macro num(value) -%}
+  {{ "{:,}".format((value or 0)|int) }}
+{%- endmacro %}
+
+{% macro money(value, currency="ILS") -%}
+  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
+  {{ "%.2f"|format((value or 0)|float) }} <span>{{ cur }}</span>
+{%- endmacro %}
+
+{% macro money_text(value, currency="ILS") -%}
+  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
+  {{ value or "0.00" }} <span>{{ cur }}</span>
+{%- endmacro %}
+
+{% macro date_label(value) -%}
+  {{ (value|string)[:16].replace("T", " ") if value else "لا يوجد" }}
+{%- endmacro %}
 
 {% block content %}
-{{ hub.hero(
-  "تسعير الكروت والدفعات",
-  subtitle="هذه الصفحة تضيف طبقة مالية فوق الكروت والدفعات الموجودة، مع لقطات أسعار غير قابلة للتغيير.",
-  icon="tags",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.cards_batches') ~ '"><i class="fa-solid fa-layer-group"></i> دفعات الكروت</a>'
-) }}
+<style>
+  .pricing-page {
+    --cp-ink: #172033;
+    --cp-muted: #71809a;
+    --cp-line: #dfe7f3;
+    --cp-blue: #2087e6;
+    --cp-teal: #10a58f;
+    --cp-amber: #f5a11a;
+    --cp-violet: #7057f4;
+    direction: rtl;
+    color: var(--cp-ink);
+  }
 
-<div class="hub-kpi-grid" data-testid="card-pricing-summary">
-  {{ hub.kpi("إجمالي الكروت", summary.total_cards, icon="ticket") }}
-  {{ hub.kpi("غير مستخدمة", summary.unused_cards, icon="box-open", variant="blue") }}
-  {{ hub.kpi("مباعة/مستخدمة", summary.sold_cards, icon="cash-register", variant="green") }}
-  {{ hub.kpi("الإيراد", summary.revenue_total, icon="sack-dollar", variant="amber") }}
-</div>
+  .cp-hero,
+  .cp-panel,
+  .cp-card,
+  .cp-cost-box {
+    background: rgba(255, 255, 255, .91);
+    border: 1px solid var(--cp-line);
+    box-shadow: 0 18px 38px rgba(31, 41, 55, .07);
+  }
 
-{% call hub.section("الباقات والأسعار", icon="boxes-stacked", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="card-pricing-packages">
-      <thead><tr><th>الباقة</th><th>Retail</th><th>Wholesale</th><th>الحد الأدنى</th><th>تحديث</th></tr></thead>
-      <tbody>
-        {% for package in packages %}
-          <tr>
-            <td>{{ package.name }}</td>
-            <td>{{ package.retail_price }} {{ package.currency }}</td>
-            <td>{{ package.wholesale_price }} {{ package.currency }}</td>
-            <td>{{ package.min_price }} {{ package.currency }}</td>
-            <td>
-              <form method="post" action="{{ url_for('radius.card_pricing_update_package', package_id=package.id) }}" class="hub-inline-form">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <input name="retail_price" type="number" step="0.01" value="{{ package.retail_price }}">
-                <input name="wholesale_price" type="number" step="0.01" value="{{ package.wholesale_price }}">
-                <input name="min_price" type="number" step="0.01" value="{{ package.min_price }}">
-                <input name="max_discount" type="number" step="0.01" value="{{ package.max_discount }}">
-                <input name="allowed_manager_ids" placeholder="مدراء مسموحون">
-                <button class="hub-btn hub-btn--secondary" type="submit">حفظ</button>
-              </form>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="5">أنشئ باقة من Card Marketplace أولًا.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  .cp-hero {
+    border-radius: 26px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: minmax(520px, 1.55fr) minmax(340px, .95fr);
+    gap: 16px;
+    background:
+      radial-gradient(circle at 8% 16%, rgba(16, 165, 143, .14), transparent 28%),
+      radial-gradient(circle at 92% 18%, rgba(245, 161, 26, .13), transparent 24%),
+      linear-gradient(135deg, rgba(255,255,255,.96), rgba(243,248,255,.9));
+  }
+
+  .cp-title h1 {
+    margin: 0;
+    font-size: clamp(30px, 3vw, 44px);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .cp-title p {
+    max-width: 800px;
+    margin: 10px 0 0;
+    color: var(--cp-muted);
+    font-weight: 850;
+    line-height: 1.85;
+  }
+
+  .cp-metrics {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .cp-metric {
+    min-height: 106px;
+    border-radius: 20px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid rgba(223, 231, 243, .9);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cp-metric::after {
+    content: "";
+    width: 66px;
+    height: 66px;
+    border-radius: 24px;
+    background: var(--metric, var(--cp-blue));
+    opacity: .13;
+    position: absolute;
+    inset-inline-end: -18px;
+    bottom: -18px;
+  }
+
+  .cp-metric i {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--metric, var(--cp-blue));
+    z-index: 1;
+  }
+
+  .cp-metric span {
+    display: block;
+    color: var(--cp-muted);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .cp-metric strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 25px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cp-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .cp-btn {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--cp-line);
+    background: #fff;
+    color: var(--cp-ink);
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 950;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .cp-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(112, 87, 244, .38);
+    box-shadow: 0 12px 24px rgba(31, 41, 55, .08);
+  }
+
+  .cp-btn--primary {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cp-teal), #18bfa7);
+    box-shadow: 0 14px 28px rgba(16, 165, 143, .18);
+  }
+
+  .cp-btn--violet {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cp-violet), #7c5dff);
+  }
+
+  .cp-guide {
+    border-radius: 22px;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--cp-line);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cp-guide h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 20px;
+  }
+
+  .cp-guide-step {
+    border-radius: 16px;
+    border: 1px solid #e8eef7;
+    background: #f8fbff;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .cp-guide-step i {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--step, var(--cp-blue));
+  }
+
+  .cp-guide-step strong,
+  .cp-guide-step span {
+    display: block;
+  }
+
+  .cp-guide-step span {
+    color: var(--cp-muted);
+    font-weight: 850;
+    margin-top: 2px;
+  }
+
+  .cp-layout {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(330px, .95fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .cp-panel {
+    border-radius: 26px;
+    overflow: hidden;
+  }
+
+  .cp-panel-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--cp-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .cp-panel-head h2 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .cp-panel-head span {
+    color: var(--cp-muted);
+    font-weight: 900;
+  }
+
+  .cp-chip {
+    min-height: 34px;
+    border-radius: 999px;
+    border: 1px solid #e4ebf6;
+    background: #f7faff;
+    color: #52617b;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 950;
+  }
+
+  .cp-package-grid {
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 14px;
+  }
+
+  .cp-card {
+    border-radius: 22px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .cp-card-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .cp-card h3 {
+    margin: 0 0 7px;
+    text-align: center;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .cp-code {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--cp-muted);
+    font-weight: 900;
+    font-size: 13px;
+  }
+
+  .cp-card-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--cp-amber), var(--cp-violet));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 14px 24px rgba(245, 161, 26, .16);
+  }
+
+  .cp-price-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cp-price {
+    min-height: 78px;
+    border-radius: 16px;
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    background: var(--price-bg, #f8fbff);
+    border: 1px solid var(--price-line, #e8eef7);
+  }
+
+  .cp-price small {
+    color: #60708c;
+    font-weight: 950;
+  }
+
+  .cp-price strong {
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cp-edit {
+    border-radius: 16px;
+    border: 1px solid #e8eef7;
+    background: #fbfcff;
+    overflow: hidden;
+  }
+
+  .cp-edit summary {
+    min-height: 46px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--cp-ink);
+    font-weight: 950;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .cp-edit summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cp-edit-form,
+  .cp-cost-form {
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .cp-field {
+    display: grid;
+    gap: 7px;
+    color: #52617b;
+    font-weight: 950;
+  }
+
+  .cp-input {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--cp-line);
+    background: #fff;
+    padding: 0 13px;
+    color: var(--cp-ink);
+    font-weight: 850;
+    outline: none;
+  }
+
+  .cp-input:focus {
+    border-color: rgba(16, 165, 143, .55);
+    box-shadow: 0 0 0 4px rgba(16, 165, 143, .1);
+  }
+
+  .cp-input-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .cp-cost-box {
+    border-radius: 26px;
+    padding: 16px;
+    position: sticky;
+    top: 18px;
+  }
+
+  .cp-cost-box h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .cp-cost-box p {
+    margin: 0 0 14px;
+    color: var(--cp-muted);
+    font-weight: 850;
+    line-height: 1.7;
+    text-align: center;
+  }
+
+  .cp-records {
+    margin-top: 18px;
+    border-top: 1px solid var(--cp-line);
+    padding-top: 14px;
+  }
+
+  .cp-record-list {
+    display: grid;
+    gap: 9px;
+  }
+
+  .cp-record {
+    border-radius: 15px;
+    border: 1px solid #e8eef7;
+    background: #fbfcff;
+    padding: 11px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .cp-record strong,
+  .cp-record span {
+    display: block;
+  }
+
+  .cp-record span {
+    color: var(--cp-muted);
+    font-weight: 850;
+    margin-top: 3px;
+  }
+
+  .cp-empty {
+    padding: 40px 18px;
+    text-align: center;
+    color: var(--cp-muted);
+    font-weight: 900;
+  }
+
+  @media (max-width: 1180px) {
+    .cp-hero,
+    .cp-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .cp-cost-box {
+      position: static;
+    }
+
+    .cp-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .cp-hero,
+    .cp-panel,
+    .cp-cost-box {
+      border-radius: 20px;
+    }
+
+    .cp-metrics,
+    .cp-package-grid,
+    .cp-price-grid,
+    .cp-input-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="pricing-page" data-card-pricing-page>
+  <section class="cp-hero">
+    <div>
+      <div class="cp-title">
+        <h1>مركز تسعير البطاقات</h1>
+        <p>هذا القسم مخصص لضبط سياسة سعر البيع والجملة وحدود الخصم للباقات، ثم تسجيل تكلفة الحزمة عند تحميلها على مدير. هنا لا يتم توليد الكروت نفسها ولا يتم تطبيق شيء مباشر على RADIUS.</p>
+      </div>
+
+      <div class="cp-metrics" data-testid="card-pricing-summary">
+        <article class="cp-metric" style="--metric:#2087e6">
+          <div><span>باقات مسعرة</span><strong>{{ num(pricing_overview.priced_packages) }}</strong></div>
+          <i class="fa-solid fa-tags"></i>
+        </article>
+        <article class="cp-metric" style="--metric:#f5a11a">
+          <div><span>متوسط هامش البطاقة</span><strong>{{ money(pricing_overview.avg_margin) }}</strong></div>
+          <i class="fa-solid fa-chart-line"></i>
+        </article>
+        <article class="cp-metric" style="--metric:#10a58f">
+          <div><span>كروت غير مستخدمة</span><strong>{{ num(pricing_overview.unused_cards) }}</strong></div>
+          <i class="fa-solid fa-box-open"></i>
+        </article>
+        <article class="cp-metric" style="--metric:#7057f4">
+          <div><span>إيراد مسجل</span><strong>{{ money_text(pricing_overview.revenue_total) }}</strong></div>
+          <i class="fa-solid fa-sack-dollar"></i>
+        </article>
+      </div>
+
+      <div class="cp-actions">
+        <a class="cp-btn cp-btn--primary" href="{{ url_for('radius.cards_generate') }}">
+          <i class="fa-solid fa-plus"></i>
+          إنشاء حزمة
+        </a>
+        <a class="cp-btn" href="{{ url_for('radius.cards_batches') }}">
+          <i class="fa-solid fa-layer-group"></i>
+          حزم البطاقات
+        </a>
+        <a class="cp-btn" href="{{ url_for('radius.card_marketplace') }}">
+          <i class="fa-solid fa-store"></i>
+          سوق البطاقات
+        </a>
+      </div>
+    </div>
+
+    <aside class="cp-guide">
+      <h2>وظيفة الصفحة</h2>
+      <div class="cp-guide-step" style="--step:#2087e6">
+        <i class="fa-solid fa-tag"></i>
+        <div><strong>سياسة السعر</strong><span>سعر بيع، جملة، حد أدنى، وخصم مسموح.</span></div>
+      </div>
+      <div class="cp-guide-step" style="--step:#10a58f">
+        <i class="fa-solid fa-wallet"></i>
+        <div><strong>تكلفة المدير</strong><span>تحميل تكلفة الجملة على محفظة المدير المسؤول.</span></div>
+      </div>
+      <div class="cp-guide-step" style="--step:#7057f4">
+        <i class="fa-solid fa-camera-retro"></i>
+        <div><strong>لقطة غير قابلة للتغيير</strong><span>كل حزمة تحتفظ بسعرها وقت الإنشاء حتى لو تغيرت السياسة لاحقا.</span></div>
+      </div>
+    </aside>
+  </section>
+
+  <div class="cp-layout">
+    <section class="cp-panel">
+      <header class="cp-panel-head">
+        <div>
+          <h2>سياسات تسعير الباقات</h2>
+          <span>{{ num(packages|length + priced_batches|length) }} عنصر تسعير ظاهر</span>
+        </div>
+        <span class="cp-chip"><i class="fa-solid fa-scale-balanced"></i> بيع وجملة وهامش</span>
+      </header>
+
+      {% if packages or priced_batches %}
+        <div class="cp-package-grid" data-testid="card-pricing-packages">
+          {% for package in packages %}
+            {% set retail = (package.retail_price or 0)|float %}
+            {% set wholesale = (package.wholesale_price or 0)|float %}
+            {% set margin = retail - wholesale if retail > wholesale else 0 %}
+            <article class="cp-card">
+              <header class="cp-card-top">
+                <div>
+                  <h3>{{ package.name }}</h3>
+                  <div class="cp-code">
+                    <span>Package #{{ package.id }}</span>
+                    <span>Plan #{{ package.plan_id }}</span>
+                  </div>
+                </div>
+                <span class="cp-card-icon"><i class="fa-solid fa-tags"></i></span>
+              </header>
+
+              <div class="cp-price-grid">
+                <div class="cp-price" style="--price-bg:#f2fbf8;--price-line:#bdeee0">
+                  <small>سعر البيع</small>
+                  <strong>{{ money(package.retail_price, package.currency) }}</strong>
+                </div>
+                <div class="cp-price" style="--price-bg:#fff8e9;--price-line:#ffe0a3">
+                  <small>سعر الجملة</small>
+                  <strong>{{ money(package.wholesale_price, package.currency) }}</strong>
+                </div>
+                <div class="cp-price" style="--price-bg:#f5f2ff;--price-line:#ded5ff">
+                  <small>الهامش</small>
+                  <strong>{{ money(margin, package.currency) }}</strong>
+                </div>
+              </div>
+
+              <details class="cp-edit">
+                <summary>
+                  <span><i class="fa-solid fa-sliders"></i> تعديل سياسة السعر</span>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </summary>
+                <form method="post" action="{{ url_for('radius.card_pricing_update_package', package_id=package.id) }}" class="cp-edit-form">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <div class="cp-input-row">
+                    <label class="cp-field">سعر البيع
+                      <input class="cp-input" name="retail_price" type="number" min="0" step="0.01" value="{{ package.retail_price }}">
+                    </label>
+                    <label class="cp-field">سعر الجملة
+                      <input class="cp-input" name="wholesale_price" type="number" min="0" step="0.01" value="{{ package.wholesale_price }}">
+                    </label>
+                  </div>
+                  <div class="cp-input-row">
+                    <label class="cp-field">الحد الأدنى
+                      <input class="cp-input" name="min_price" type="number" min="0" step="0.01" value="{{ package.min_price }}">
+                    </label>
+                    <label class="cp-field">أقصى خصم
+                      <input class="cp-input" name="max_discount" type="number" min="0" step="0.01" value="{{ package.max_discount }}">
+                    </label>
+                  </div>
+                  <label class="cp-field">مدراء مسموحون
+                    <input class="cp-input" name="allowed_manager_ids" placeholder="مثال: 1, 4, 9">
+                  </label>
+                  <label class="cp-field">موزعون مسموحون
+                    <input class="cp-input" name="allowed_distributor_ids" placeholder="اختياري">
+                  </label>
+                  <button class="cp-btn cp-btn--primary" type="submit">
+                    <i class="fa-solid fa-check"></i>
+                    حفظ السياسة
+                  </button>
+                </form>
+              </details>
+            </article>
+          {% endfor %}
+
+          {% for batch in priced_batches %}
+            <article class="cp-card">
+              <header class="cp-card-top">
+                <div>
+                  <h3>{{ batch.display_name }}</h3>
+                  <div class="cp-code">
+                    <span>{{ batch.batch_code }}</span>
+                    <span>{{ num(batch.cards_count) }} كرت</span>
+                  </div>
+                </div>
+                <span class="cp-card-icon" style="background:linear-gradient(135deg,#10a58f,#2087e6)"><i class="fa-solid fa-layer-group"></i></span>
+              </header>
+
+              <div class="cp-price-grid">
+                <div class="cp-price" style="--price-bg:#f2fbf8;--price-line:#bdeee0">
+                  <small>سعر البيع</small>
+                  <strong>{{ money(batch.unit_price, batch.currency) }}</strong>
+                </div>
+                <div class="cp-price" style="--price-bg:#fff8e9;--price-line:#ffe0a3">
+                  <small>سعر الجملة</small>
+                  <strong>{{ money(batch.wholesale_price, batch.currency) }}</strong>
+                </div>
+                <div class="cp-price" style="--price-bg:#f5f2ff;--price-line:#ded5ff">
+                  <small>الهامش</small>
+                  <strong>{{ money(batch.margin, batch.currency) }}</strong>
+                </div>
+              </div>
+
+              <div class="cp-guide-step" style="--step:#10a58f">
+                <i class="fa-solid fa-circle-info"></i>
+                <div>
+                  <strong>سعر مسجل على الحزمة نفسها</strong>
+                  <span>تعديل هذه الأسعار يتم من صفحة تعديل الحزمة حتى لا نخلطها مع سياسات الباقات المالية.</span>
+                </div>
+              </div>
+
+              <a class="cp-btn cp-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+                <i class="fa-solid fa-pen"></i>
+                تعديل أسعار الحزمة
+              </a>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="cp-empty">لا توجد أسعار مسجلة بعد. أضف سعر البيع وسعر الجملة عند إنشاء حزمة البطاقات أو من تعديل الحزمة.</div>
+      {% endif %}
+    </section>
+
+    <aside class="cp-cost-box">
+      <h2>تحميل تكلفة حزمة</h2>
+      <p>هذا الإجراء يسجل تكلفة مالية فقط: يخصم الجملة من محفظة المدير، يثبت لقطة السعر، ويكتب قيد مالي للحزمة.</p>
+
+      <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="cp-cost-form" data-testid="costed-batch-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <label class="cp-field">الباقة
+          <select class="cp-input" name="package_id" required>
+            {% for package in packages %}
+              <option value="{{ package.id }}">{{ package.name }} - جملة {{ package.wholesale_price }} {{ package.currency }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="cp-field">المدير المسؤول
+          <select class="cp-input" name="responsible_manager_id" required>
+            {% for manager in managers %}
+              <option value="{{ manager.id }}">{{ manager.display_name }} - رصيد {{ manager.balance }} {{ manager.currency }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="cp-field">عدد الكروت
+          <input class="cp-input" name="count" type="number" min="1" value="10" required>
+        </label>
+        <button class="cp-btn cp-btn--violet" type="submit">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          تسجيل تكلفة الحزمة
+        </button>
+      </form>
+
+      <div class="cp-records">
+        <div class="cp-panel-head" style="padding:0 0 12px;border:0">
+          <h2 style="font-size:18px">آخر سجلات التكلفة</h2>
+          <span class="cp-chip">{{ num(costed_batches|length) }}</span>
+        </div>
+        <div class="cp-record-list">
+          {% for item in costed_batches %}
+            <a class="cp-record" href="{{ url_for('radius.card_pricing_batch_detail', batch_id=item.batch_id) }}">
+              <div>
+                <strong>{{ item.package_name or item.batch_code or ("حزمة #" ~ item.batch_id) }}</strong>
+                <span>{{ item.manager_name }} - {{ num(item.count) }} كرت</span>
+              </div>
+              <strong>{{ money_text(item.wholesale_total) }}</strong>
+            </a>
+          {% else %}
+            <div class="cp-record">
+              <div>
+                <strong>لا توجد سجلات بعد</strong>
+                <span>ستظهر هنا الحزم التي تم تحميل تكلفتها على مدير.</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
   </div>
-{% endcall %}
-
-{% call hub.section("إنشاء دفعة بتكلفة مدير", icon="calculator") %}
-  <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="hub-form-grid" data-testid="costed-batch-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>الباقة
-      <select name="package_id" required>
-        {% for package in packages %}
-          <option value="{{ package.id }}">{{ package.name }} — wholesale {{ package.wholesale_price }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>العدد
-      <input name="count" type="number" min="1" value="10" required>
-    </label>
-    <label>مدير مسؤول
-      <input name="responsible_manager_id" type="number" min="1" required>
-    </label>
-    <button class="hub-btn hub-btn--primary" type="submit">إنشاء سجل التكلفة</button>
-    <p class="hub-muted">يتم خصم تكلفة الجملة من محفظة المدير وكتابة قيد وحدث مالي. توليد الكروت الفعلي يبقى في مسار الكروت الحالي.</p>
-  </form>
-{% endcall %}
+</div>
 {% endblock %}

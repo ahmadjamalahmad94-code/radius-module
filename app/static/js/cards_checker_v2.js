@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const PAGE_URL = '/admin/radius/cards/checker/v2';
+  const PAGE_URL = '/admin/radius/cards/checker';
   const API_URL = '/admin/radius/cards/checker/api/lookup';
   const LIVE_POLL_MS = 10000;
   const FADE_IN_MS = 220;

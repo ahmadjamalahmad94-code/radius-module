@@ -179,15 +179,13 @@ def test_manager_allowlist_and_insufficient_balance_are_enforced(app):
             service.create_costed_batch(package_id=package["id"], count=1, responsible_manager_id=77)
 
 
-def test_card_pricing_summary_route_renders(app):
+def test_card_pricing_admin_page_is_retired(app):
     package = _package(app)
     with app.test_client() as client:
         _auth_session(client)
         page = client.get("/admin/radius/card-pricing")
         summary = client.get("/admin/radius/card-pricing/summary.json")
 
-    assert page.status_code == 200
-    assert "card-pricing-summary" in page.get_data(as_text=True)
-    assert package["name"] in page.get_data(as_text=True)
-    assert summary.status_code == 200
-    assert "total_cards" in summary.get_json()["summary"]
+    assert package["name"]
+    assert page.status_code == 404
+    assert summary.status_code == 404

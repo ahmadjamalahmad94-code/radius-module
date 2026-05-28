@@ -13,7 +13,9 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 {% endblock %}
 
 {% macro money(value) -%}{{ "%.2f"|format(value or 0) }}{%- endmacro %}
@@ -60,6 +62,34 @@
   </div>
 {%- endmacro %}
 
+{% macro short_date(value) -%}
+  {{ (value|string)[:10] if value else '—' }}
+{%- endmacro %}
+
+{% macro quota_label(b) -%}
+  {%- set q = b.total_quota_mb or b.plan_quota_total_mb or 0 -%}
+  {%- if q and q >= 1024 -%}{{ "%.1f"|format(q / 1024) }} GB
+  {%- elif q -%}{{ num(q) }} MB
+  {%- else -%}بدون كوتة
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro accounting_label(b) -%}
+  {%- if b.count_by_seconds -%}بالثانية
+  {%- else -%}بالمدة
+  {%- endif -%}
+  {%- if b.count_from_first_connect -%} / من أول اتصال{%- endif -%}
+{%- endmacro %}
+
+{% macro quota_exhaust_label(value) -%}
+  {%- set action = value or 'stop' -%}
+  {%- if action == 'stop' -%}إيقاف
+  {%- elif action == 'reduce_speed' -%}تخفيض السرعة
+  {%- elif action == 'notify' -%}تنبيه فقط
+  {%- else -%}{{ action }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 
 {% set current_export = url_for('radius.cards_batches_export_csv', q=filters.q, status=filters.status,
@@ -72,63 +102,74 @@
                                     plan_id=filters.plan_id or '', manager=filters.manager,
                                     distributor_id=filters.distributor_id or '') %}
 
-{% set ns = namespace(total_cards=0, active_batches=0, ready_cards=0, expired_cards=0) %}
+{% set ns = namespace(total_cards=0, ended_batches=0, expired_cards=0, active_cards=0) %}
 {% for b in batches %}
   {% set total_cards = b.total_cards or b.original_count or b.count or b.generated or 0 %}
+  {% set unused_cards = b.operational_remaining_count or b.remaining_count or b.available_count or b.ready_count or 0 %}
   {% set ns.total_cards = ns.total_cards + total_cards %}
-  {% if (b.operational_status or 'active') == 'active' %}{% set ns.active_batches = ns.active_batches + 1 %}{% endif %}
-  {% set ns.ready_cards = ns.ready_cards + (b.available_count or b.ready_count or 0) %}
+  {% if total_cards and unused_cards <= 0 %}{% set ns.ended_batches = ns.ended_batches + 1 %}{% endif %}
   {% set ns.expired_cards = ns.expired_cards + (b.expired_count or 0) %}
+  {% set ns.active_cards = ns.active_cards + (b.online_sessions or b.active_now_count or b.active_count or 0) %}
 {% endfor %}
 
 <section class="batches-ops" data-cards-batches-page data-view-mode="cards">
+  <div class="batches-command">
   <div class="batches-hero">
-    <div>
-      <p class="batches-hero__eyebrow">مركز تشغيل البطاقات</p>
+    <div class="batches-hero__copy">
       <h1>إدارة البطاقات والحزم</h1>
-      <p>مركز التحكم في بطاقات الإنترنت المؤقتة ومتابعة حالة الاستخدام والتفعيل والطباعة.</p>
     </div>
     <div class="batches-hero__actions">
-      <a class="batch-btn batch-btn--primary" href="{{ url_for('radius.cards_generate') }}">
+      <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>
         <i class="fa-solid fa-plus"></i> حزمة جديدة
-      </a>
+      </button>
       <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">
         <i class="fa-solid fa-file-import"></i> استيراد من ملف
       </a>
+      <div class="view-toggle view-toggle--hero" role="group" aria-label="طريقة العرض">
+        <button type="button" data-view-toggle="table" aria-pressed="false">
+          <i class="fa-solid fa-table"></i> جدول
+        </button>
+        <button type="button" data-view-toggle="cards" aria-pressed="true">
+          <i class="fa-solid fa-grip"></i> بطاقات
+        </button>
+      </div>
     </div>
   </div>
 
   <div class="batches-kpis" aria-label="ملخص حزم البطاقات">
-    <article class="batches-kpi batches-kpi--purple">
-      <span class="batches-kpi__icon"><i class="fa-solid fa-ticket"></i></span>
-      <div>
-        <span>إجمالي البطاقات</span>
-        <strong>{{ num(ns.total_cards) }}</strong>
-        <small>ضمن النتائج الحالية</small>
-      </div>
-    </article>
-    <article class="batches-kpi batches-kpi--green">
+    <article class="batches-kpi batches-kpi--blue">
       <span class="batches-kpi__icon"><i class="fa-solid fa-layer-group"></i></span>
       <div>
-        <span>الحزم النشطة</span>
-        <strong>{{ num(ns.active_batches) }}</strong>
-        <small>جاهزة للتشغيل</small>
-      </div>
-    </article>
-    <article class="batches-kpi batches-kpi--amber">
-      <span class="batches-kpi__icon"><i class="fa-solid fa-bolt"></i></span>
-      <div>
-        <span>الجاهزة للتفعيل</span>
-        <strong>{{ num(ns.ready_cards) }}</strong>
-        <small>بطاقات غير مستخدمة</small>
+        <span>إجمالي الحزم</span>
+        <strong>{{ num(total) }}</strong>
       </div>
     </article>
     <article class="batches-kpi batches-kpi--red">
+      <span class="batches-kpi__icon"><i class="fa-solid fa-box-archive"></i></span>
+      <div>
+        <span>حزم منتهية</span>
+        <strong>{{ num(ns.ended_batches) }}</strong>
+      </div>
+    </article>
+    <article class="batches-kpi batches-kpi--purple">
+      <span class="batches-kpi__icon"><i class="fa-solid fa-ticket"></i></span>
+      <div>
+        <span>إجمالي الكروت</span>
+        <strong>{{ num(ns.total_cards) }}</strong>
+      </div>
+    </article>
+    <article class="batches-kpi batches-kpi--amber">
       <span class="batches-kpi__icon"><i class="fa-solid fa-hourglass-end"></i></span>
       <div>
-        <span>المنتهية</span>
+        <span>كروت منتهية</span>
         <strong>{{ num(ns.expired_cards) }}</strong>
-        <small>بحسب بيانات الحزم</small>
+      </div>
+    </article>
+    <article class="batches-kpi batches-kpi--green">
+      <span class="batches-kpi__icon"><i class="fa-solid fa-signal"></i></span>
+      <div>
+        <span>كروت فعالة</span>
+        <strong>{{ num(ns.active_cards) }}</strong>
       </div>
     </article>
   </div>
@@ -164,22 +205,29 @@
     <button class="batch-btn batch-btn--primary" type="submit">
       <i class="fa-solid fa-filter"></i> تطبيق
     </button>
-    <div class="batches-toolbar__spacer"></div>
-    <a class="batch-btn batch-btn--soft" href="{{ current_export }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
-    <a class="batch-btn batch-btn--soft" href="{{ current_export_xlsx }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
-    <a class="batch-btn batch-btn--soft" href="{{ current_export_pdf }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-    <div class="view-toggle" role="group" aria-label="طريقة العرض">
-      <button type="button" data-view-toggle="table" aria-pressed="false">
-        <i class="fa-solid fa-table"></i> جدول
-      </button>
-      <button type="button" data-view-toggle="cards" aria-pressed="true">
-        <i class="fa-solid fa-grip"></i> بطاقات
-      </button>
+    <div class="batches-bulk-exports" aria-label="تصدير الحزم">
+      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_xlsx }}" title="تحميل Excel" aria-label="تحميل Excel"><i class="fa-solid fa-file-excel"></i> Excel</a>
+      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export }}" title="تحميل CSV" aria-label="تحميل CSV"><i class="fa-solid fa-file-csv"></i> CSV</a>
+      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_pdf }}" title="تحميل PDF" aria-label="تحميل PDF"><i class="fa-solid fa-file-pdf"></i> PDF</a>
     </div>
-    <a class="batch-btn batch-btn--primary" href="{{ url_for('radius.cards_generate') }}">
-      <i class="fa-solid fa-plus"></i> إضافة بطاقة جديدة
-    </a>
   </form>
+
+  <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" class="batches-bulk-bar" data-bulk-bar>
+    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+    <div data-bulk-selected-inputs></div>
+    <strong><span data-bulk-count>0</span> محددة</strong>
+    <select name="bulk_action" required aria-label="إجراء على الحزم المحددة">
+      <option value="">اختر إجراء</option>
+      <option value="refresh">تحديث الإحصاءات</option>
+      <option value="archive">حذف / أرشفة آمنة</option>
+      <option value="restore">استعادة المؤرشف</option>
+    </select>
+    <input name="reason" placeholder="ملاحظة اختيارية">
+    <button class="batch-btn batch-btn--primary" type="submit" disabled data-bulk-submit>
+      <i class="fa-solid fa-check"></i> تنفيذ
+    </button>
+  </form>
+  </div>
 
   <section class="batches-cards-view" data-cards-view>
     {% if batches %}
@@ -199,6 +247,10 @@
           {% set is_featured = loop.first and (b.operational_status or 'active') == 'active' %}
           <article class="batch-card {% if is_featured %}batch-card--featured{% endif %}" data-batch-card>
             <header class="batch-card__header">
+              <label class="batch-select" title="تحديد الحزمة">
+                <input class="batch-check batch-check--card" type="checkbox" value="{{ b.id }}" aria-label="تحديد الحزمة">
+                <span><i class="fa-solid fa-check"></i></span>
+              </label>
               <div>
                 <div class="batch-card__title-row">
                   <h2>{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}</h2>
@@ -222,11 +274,9 @@
 
             <div class="batch-card__stats">
               {{ metric("العدد", num(total_cards), "ticket") }}
-              {{ metric("جاهزة", num(ready_count), "bolt") }}
               {{ metric("نشطة الآن", num(active_now), "signal") }}
               {{ metric("منتهية", num(expired_count), "hourglass-end") }}
               {{ metric("مستخدمة", num(used_count), "check") }}
-              {{ metric("متبقية", num(remaining_count), "box-open") }}
             </div>
 
             <div class="batch-card__progress">
@@ -240,8 +290,9 @@
             </div>
 
             <dl class="batch-card__meta">
-              <div><dt>المدير/الموزع</dt><dd>{{ b.distributor_display_name or b.distributor_name or b.assigned_to or b.created_by or '—' }}</dd></div>
-              <div><dt>السعر</dt><dd>{{ money(unit_price) }} <small>إجمالي ≈ {{ money(configured_value) }}</small></dd></div>
+              <div><dt>المدير</dt><dd>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</dd></div>
+              <div><dt>الموزع</dt><dd>{{ b.distributor_display_name or b.distributor_name or '—' }}</dd></div>
+              <div><dt>الأسعار</dt><dd class="batch-price-pair"><span>بيع {{ money(unit_price) }}</span><small>جملة {{ money(b.price_bulk or 0) }}</small></dd></div>
               <div><dt>تاريخ الإنشاء</dt><dd>{{ (b.created_at|string)[:16].replace('T',' ') if b.created_at else '—' }}</dd></div>
             </dl>
 
@@ -259,9 +310,6 @@
                       data-batch-total="{{ total_cards }}">
                 <i class="fa-solid fa-print"></i> طباعة
               </button>
-              <a class="batch-action" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}#speed-rules">
-                <i class="fa-solid fa-gauge-high"></i> السرعة
-              </a>
               {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
                 <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                   <input type="hidden" name="return_to" value="{{ request.full_path }}">
@@ -282,13 +330,37 @@
           </article>
         {% endfor %}
       </div>
+      {% if pages_count > 1 %}
+      <nav class="batch-pagination batch-pagination--cards" aria-label="تنقل الصفحات">
+        {% set base_args_cards = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
+                                  'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
+                                  'per_page': per_page} %}
+        {% macro card_pglink(p, label, disabled=false) -%}
+          {% if disabled %}
+            <span class="batch-page batch-page--disabled">{{ label }}</span>
+          {% else %}
+            {% set qs = base_args_cards.copy() %}{% set _ = qs.update({'page': p}) %}
+            <a class="batch-page" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label }}</a>
+          {% endif %}
+        {%- endmacro %}
+        {{ card_pglink(1, '«', disabled=(page == 1)) }}
+        {{ card_pglink(page - 1, '‹', disabled=(page == 1)) }}
+        {% set lo = [page - 2, 1] | max %}
+        {% set hi = [page + 2, pages_count] | min %}
+        {% for p in range(lo, hi + 1) %}
+          {% if p == page %}<span class="batch-page batch-page--active">{{ p }}</span>{% else %}{{ card_pglink(p, p) }}{% endif %}
+        {% endfor %}
+        {{ card_pglink(page + 1, '›', disabled=(page == pages_count)) }}
+        {{ card_pglink(pages_count, '»', disabled=(page == pages_count)) }}
+      </nav>
+      {% endif %}
     {% else %}
       <div class="batch-empty">
         <i class="fa-solid fa-box-open"></i>
         <h2>إنشاء أو استيراد حزمة جديدة</h2>
         <p>أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.</p>
         <div>
-          <a class="batch-btn batch-btn--primary" href="{{ url_for('radius.cards_generate') }}">إنشاء حزمة جديدة</a>
+          <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>إنشاء حزمة جديدة</button>
           <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">استيراد من ملف</a>
         </div>
       </div>
@@ -296,49 +368,51 @@
   </section>
 
   <section class="batches-table-view" data-table-view>
-    <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
-      <input type="hidden" name="return_to" value="{{ request.full_path }}">
-
-      {% call hub.section("إجراء جماعي على المحدد", icon="check-double") %}
-        <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center">
-          <select class="hub-select" name="bulk_action" required style="min-width:200px">
-            <option value="">— اختر إجراءً —</option>
-            <option value="refresh">تحديث الإحصاءات</option>
-            <option value="archive">أرشفة آمنة</option>
-            <option value="restore">استعادة المؤرشف</option>
-          </select>
-          <input class="hub-input grow" name="reason" placeholder="سبب الأرشفة أو ملاحظة الإجراء">
-          {{ hub.btn("اعتماد", icon="check", variant="primary", type="submit", size="sm") }}
-          <span class="hub-text-mute" style="font-size:11.5px;font-weight:600">
-            الأرشفة آمنة — البطاقات لا تُحذف من قاعدة البيانات.
-          </span>
-        </div>
-      {% endcall %}
-
       {% if batches %}
-      {% call hub.section("قائمة الحزم", icon="table-list", meta=total|string + " حزمة", flush=True) %}
+      <section class="hub-section bops-section">
+        <header class="hub-section-head bops-section-head">
+          <div class="bops-section-title">
+            <span class="hub-section-head-icon"><i class="fa-solid fa-table-list"></i></span>
+            <span class="hub-section-head-title">قائمة الحزم</span>
+            <span class="hub-section-head-meta">{{ total }} حزمة</span>
+          </div>
+          <div class="bops-section-actions">
+            <span class="bops-sort-hint" title="اضغط على رأس العمود للترتيب">
+              <i class="fa-solid fa-arrow-up-wide-short"></i>
+            </span>
+            <div class="bops-column-menu" data-column-menu>
+              <button type="button" class="batch-btn batch-btn--soft bops-column-menu__trigger" data-column-menu-toggle aria-expanded="false">
+                <i class="fa-solid fa-table-columns"></i>
+                الأعمدة
+              </button>
+              <div class="bops-column-menu__panel" data-column-menu-panel hidden></div>
+            </div>
+          </div>
+        </header>
+        <div class="hub-section-body hub-section-body--flush">
         <div class="hub-table-wrap" style="border:none;border-radius:0">
-          <table class="hub-table bops-table">
+          <table class="hub-table bops-table" data-smart-table data-table-key="cards-batches">
             <thead>
               <tr>
-                <th style="width:34px"><input id="select-all-batches" type="checkbox" aria-label="تحديد الكل"></th>
-                <th class="num" style="width:60px">#</th>
-                <th>الحزمة</th>
-                <th>الباقة</th>
-                <th class="num">العدد</th>
-                <th class="num">جاهزة</th>
-                <th class="num">نشطة</th>
-                <th class="num">منتهية</th>
-                <th class="num">ملغاة</th>
-                <th class="num">جلسات</th>
-                <th class="num">MAC</th>
-                <th>المدة/الأجهزة</th>
-                <th>السعر</th>
-                <th>قواعد السرعة</th>
-                <th>المدير/الموزع</th>
-                <th>الحالة</th>
-                <th style="width:160px">التقدم</th>
-                <th style="width:140px">إجراءات</th>
+                <th style="width:38px" data-column-key="select" data-column-label="تحديد" data-sort-disabled><input id="select-all-batches" type="checkbox" aria-label="تحديد الكل"></th>
+                <th style="width:72px" data-column-key="id" data-column-label="#" data-sort-type="number">#</th>
+                <th data-column-key="batch" data-column-label="الحزمة">الحزمة</th>
+                <th data-column-key="plan" data-column-label="الأجهزة" data-sort-type="number">الأجهزة</th>
+                <th data-column-key="duration" data-column-label="مدة البطاقة" data-sort-type="number">مدة البطاقة</th>
+                <th data-column-key="cards" data-column-label="الكروت" data-sort-type="number">الكروت</th>
+                <th data-column-key="usage" data-column-label="الاستخدام" data-column-optional data-sort-type="number">الاستخدام</th>
+                <th data-column-key="created" data-column-label="تاريخ الإنشاء" data-column-optional data-sort-type="date">تاريخ الإنشاء</th>
+                <th data-column-key="validity_after_first_login" data-column-label="صلاحية بعد أول اتصال" data-column-optional data-sort-type="number">صلاحية بعد أول اتصال</th>
+                <th data-column-key="batch_expire" data-column-label="نهاية الحزمة" data-column-optional data-sort-type="date">نهاية الحزمة</th>
+                <th data-column-key="service_name" data-column-label="Service" data-column-optional>Service</th>
+                <th data-column-key="quota" data-column-label="الكوتة" data-column-optional data-sort-type="number">الكوتة</th>
+                <th data-column-key="accounting" data-column-label="المحاسبة" data-column-optional>المحاسبة</th>
+                <th data-column-key="quota_exhaust" data-column-label="عند انتهاء الكوتة" data-column-optional>انتهاء الكوتة</th>
+                <th data-column-key="price" data-column-label="الأسعار" data-sort-type="number">الأسعار</th>
+                <th data-column-key="manager" data-column-label="المدير">المدير</th>
+                <th data-column-key="distributor" data-column-label="الموزع">الموزع</th>
+                <th data-column-key="status" data-column-label="الحالة">الحالة</th>
+                <th style="width:132px" data-column-key="actions" data-column-label="إجراءات" data-sort-disabled>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -350,52 +424,58 @@
               {% set unit_price = b.estimated_unit_price or 0 %}
               {% set configured_value = b.total_price if (b.total_price and b.total_price > 0) else unit_price * (b.generated or 0) %}
               <tr>
-                <td><input class="batch-check" type="checkbox" name="batch_ids" value="{{ b.id }}" aria-label="تحديد الحزمة"></td>
-                <td class="num mono">{{ b.id }}</td>
-                <td>
-                  <div style="display:flex;flex-direction:column;gap:2px">
-                    <a class="mono" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                       style="color:var(--hub-brand-ink);text-decoration:none;font-weight:800">
+                <td data-column-key="select"><input class="batch-check" type="checkbox" name="batch_ids" value="{{ b.id }}" aria-label="تحديد الحزمة"></td>
+                <td class="mono" data-column-key="id" data-sort-value="{{ b.id }}">#{{ b.id }}</td>
+                <td data-column-key="batch" data-sort-value="{{ (b.batch_code or '') ~ ' ' ~ (b.package_name or b.service_name or '') }}">
+                  <div class="bops-main-cell">
+                    <a class="mono bops-code" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
                       {{ b.batch_code }}
                     </a>
-                    <span class="hub-text-mute" style="font-size:11px">{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</span>
+                    <span>{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</span>
                   </div>
                 </td>
-                <td>{{ b.plan_name or '—' }}</td>
-                <td class="num mono">{{ num(b.count) }}<div class="hub-text-mute" style="font-size:11px">الأصلي {{ num(b.original_count or b.count) }}</div></td>
-                <td class="num mono">{{ num(b.available_count) }}</td>
-                <td class="num mono">{{ num(b.active_count) }}</td>
-                <td class="num mono">{{ num(b.expired_count) }}</td>
-                <td class="num mono">{{ num(b.revoked_count) }}</td>
-                <td class="num mono">{{ num(b.sessions_count) }}<div class="hub-text-mute" style="font-size:11px">متصل {{ num(b.online_sessions) }}</div></td>
-                <td class="num mono">{{ num(b.unique_macs) }}</td>
-                <td>
-                  <div class="hub-flex-row" style="gap:4px;flex-wrap:wrap">
-                    {{ hub.pill(duration_label(b), variant="grey", dot=False) }}
+                <td data-column-key="plan" data-sort-value="{{ b.device_count or 1 }}">
+                  <div class="bops-stack">
                     {{ hub.pill((b.device_count or 1)|string + ' جهاز', variant="grey", dot=False) }}
                   </div>
                 </td>
-                <td><strong>{{ money(unit_price) }}</strong><div class="hub-text-mute" style="font-size:11px">إجمالي ≈ {{ money(configured_value) }}</div></td>
-                <td>
-                  {% if b.active_speed_rules %}
-                    {{ hub.pill(b.active_speed_rules|string + ' مفعّلة', variant="blue", dot=False) }}
-                  {% elif b.speed_rules_count %}
-                    {{ hub.pill(b.speed_rules_count|string + ' محفوظة', variant="grey", dot=False) }}
-                  {% else %}
-                    {{ hub.pill("لا توجد", variant="grey", dot=False) }}
-                  {% endif %}
+                <td data-column-key="duration" data-sort-value="{{ b.duration_minutes or b.validity_minutes or 0 }}">
+                  {{ duration_label(b) }}
                 </td>
-                <td>
-                  <strong>{{ b.created_by or b.manager_id or '—' }}</strong>
-                  <div class="hub-text-mute" style="font-size:11px">{{ b.distributor_display_name or b.distributor_name or b.assigned_to or 'بدون موزع' }}</div>
+                <td data-column-key="cards" data-sort-value="{{ total_cards }}">
+                  <div class="bops-metrics">
+                    <span><b>{{ num(total_cards) }}</b><small>العدد</small></span>
+                    <span><b>{{ num(b.active_count) }}</b><small>نشطة</small></span>
+                    <span><b>{{ num(b.expired_count) }}</b><small>منتهية</small></span>
+                    <span><b>{{ num(used_cards) }}</b><small>مستخدمة</small></span>
+                  </div>
                 </td>
-                <td>{{ status_badge(st) }}<div class="hub-text-mute" style="font-size:10.5px;margin-top:3px">{{ (b.created_at|string)[:16].replace('T',' ') if b.created_at else '—' }}</div></td>
-                <td>
-                  {{ hub.progress(pct) }}
-                  <div class="hub-text-mute" style="font-size:11px;margin-top:3px">{{ "%.0f"|format(pct) }}% مستخدم</div>
+                <td data-column-key="usage" data-sort-value="{{ pct }}">
+                  <div class="bops-progress">
+                    {{ hub.progress(pct) }}
+                    <span>{{ "%.0f"|format(pct) }}% مستخدم</span>
+                  </div>
                 </td>
-                <td>
-                  <div class="hub-flex-row" style="gap:4px;flex-wrap:wrap">
+                <td data-column-key="created" data-sort-value="{{ b.created_at or '' }}">{{ short_date(b.created_at) }}</td>
+                <td data-column-key="validity_after_first_login" data-sort-value="{{ b.validity_after_first_login_days or 0 }}">{% if b.validity_after_first_login_days %}{{ num(b.validity_after_first_login_days) }} يوم{% else %}—{% endif %}</td>
+                <td data-column-key="batch_expire" data-sort-value="{{ b.expire_at or '' }}">{{ short_date(b.expire_at) }}</td>
+                <td data-column-key="service_name" data-sort-value="{{ b.service_name or '' }}">{{ b.service_name or '—' }}</td>
+                <td data-column-key="quota" data-sort-value="{{ b.total_quota_mb or b.plan_quota_total_mb or 0 }}">{{ quota_label(b) }}</td>
+                <td data-column-key="accounting" data-sort-value="{{ accounting_label(b) }}">{{ accounting_label(b) }}</td>
+                <td data-column-key="quota_exhaust" data-sort-value="{{ quota_exhaust_label(b.on_quota_exhaust) }}">{{ quota_exhaust_label(b.on_quota_exhaust) }}</td>
+                <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>بيع {{ money(unit_price) }}</strong><span class="bops-muted">جملة {{ money(b.price_bulk or 0) }}</span></td>
+                <td data-column-key="manager" data-sort-value="{{ b.manager_display_name or b.created_by or b.manager_id or '' }}">
+                  <strong>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</strong>
+                </td>
+                <td data-column-key="distributor" data-sort-value="{{ b.distributor_display_name or b.distributor_name or '' }}">
+                  <strong>{{ b.distributor_display_name or b.distributor_name or '—' }}</strong>
+                </td>
+                <td data-column-key="status" data-sort-value="{{ st or '' }}">
+                  {{ status_badge(st) }}
+                  <span class="bops-muted">{{ short_date(b.created_at) }}</span>
+                </td>
+                <td data-column-key="actions">
+                  <div class="bops-actions">
                     <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض البطاقات" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"><i class="fa-solid fa-eye"></i></a>
                     <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل الحزمة" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>
                     <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="طباعة الحزمة" data-print-batch
@@ -403,7 +483,22 @@
                             data-batch-code="{{ (b.batch_code or '')|e }}"
                             data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
                             data-batch-total="{{ total_cards }}"><i class="fa-solid fa-print"></i></button>
-                    <a class="hub-btn hub-btn--ghost hub-btn--icon" title="قواعد السرعة" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}#speed-rules"><i class="fa-solid fa-gauge-high"></i></a>
+                    {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
+                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
+                        <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                        <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                        <input type="hidden" name="bulk_action" value="restore">
+                        <button class="hub-btn hub-btn--ghost hub-btn--icon" title="تفعيل الحزمة" type="submit"><i class="fa-solid fa-rotate-left"></i></button>
+                      </form>
+                    {% else %}
+                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
+                        <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                        <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                        <input type="hidden" name="bulk_action" value="archive">
+                        <input type="hidden" name="reason" value="أرشفة من جدول الحزم">
+                        <button class="hub-btn hub-btn--ghost hub-btn--icon bops-delete-btn" title="حذف الحزمة" type="submit"><i class="fa-solid fa-trash-can"></i></button>
+                      </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -436,13 +531,173 @@
           {{ pglink(pages_count, '»', disabled=(page == pages_count)) }}
         </nav>
         {% endif %}
-      {% endcall %}
+        </div>
+      </section>
       {% else %}
         {{ hub.empty("لا توجد حزم مطابقة للفلاتر الحالية", sub="جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.", icon="layer-group") }}
       {% endif %}
-    </form>
   </section>
 </section>
+
+<div class="quick-batch-modal" data-quick-batch-modal hidden>
+  <div class="quick-batch-modal__backdrop" data-quick-batch-close></div>
+  <section class="quick-batch-modal__panel" role="dialog" aria-modal="true" aria-labelledby="quickBatchTitle">
+    <header class="quick-batch-modal__header">
+      <div>
+        <h2 id="quickBatchTitle">إضافة حزمة سريعة</h2>
+        <p>الأساسيات فقط. للإعدادات الكاملة استخدم الوضع المتقدم.</p>
+      </div>
+      <button type="button" class="quick-batch-modal__close" data-quick-batch-close aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+    <form method="post" action="{{ url_for('radius.cards_generate') }}" class="quick-batch-form"
+          data-card-generate-form
+          data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
+          data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
+      <input type="hidden" name="random_generation_enabled" value="1">
+      <input type="hidden" name="count_from_first_connect" value="1" data-quick-count-from-first>
+      <input type="hidden" name="count_by_seconds" value="" data-quick-count-by-seconds>
+      <input type="hidden" name="total_quota_mb" value="0" data-quick-quota-mb>
+      <input type="hidden" name="validity_after_first_login_days" value="" data-quick-validity-days>
+      <div class="quick-batch-type">
+        <label>
+          <input type="radio" name="batch_type" value="printed" checked>
+          <span><i class="fa-solid fa-print"></i> مطبوعة</span>
+        </label>
+        <label>
+          <input type="radio" name="batch_type" value="electronic">
+          <span><i class="fa-solid fa-wallet"></i> إلكترونية</span>
+        </label>
+      </div>
+      <div class="quick-batch-grid">
+        <label>
+          <span>اسم الحزمة</span>
+          <input class="hub-input" name="package_name" placeholder="مثال: حزمة ساعة">
+        </label>
+        <label>
+          <span>العرض</span>
+          <select class="hub-select" name="plan_id" required>
+            <option value="">اختر العرض</option>
+            {% for p in plans %}
+              <option value="{{ p.id }}">{{ p.name }} · {{ "%.2f"|format(p.price) }} {{ p.currency }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="quick-batch-grid quick-batch-grid--three">
+        <label>
+          <span>مدة الاستخدام</span>
+          <input class="hub-input" type="number" name="time_value" min="0" value="0">
+        </label>
+        <label>
+          <span>وحدة الاستخدام</span>
+          <select class="hub-select" name="time_unit">
+            <option value="minutes">دقيقة</option>
+            <option value="hours">ساعة</option>
+            <option value="days" selected>يوم</option>
+          </select>
+        </label>
+        <label>
+          <span>نوع المحاسبة</span>
+          <select class="hub-select" name="quick_accounting_mode" data-quick-accounting-mode>
+            <option value="first_connect" selected>من أول اتصال</option>
+            <option value="seconds">بالثانية</option>
+          </select>
+        </label>
+      </div>
+      <label class="quick-validity-field" data-quick-validity-field hidden>
+        <span>صلاحية البطاقة بعد أول اتصال <small>مطلوبة عند المحاسبة بالثانية</small></span>
+        <div class="quick-unit-control">
+          <input class="hub-input" type="number" min="1" name="quick_validity_value" value="" placeholder="مثال: 1" data-quick-validity-value disabled>
+          <select class="hub-select" name="quick_validity_unit" data-quick-validity-unit disabled>
+            <option value="minutes">دقيقة</option>
+            <option value="hours">ساعة</option>
+            <option value="days" selected>يوم</option>
+          </select>
+        </div>
+      </label>
+      <div class="quick-batch-grid quick-batch-grid--five">
+        <label>
+          <span>الكمية</span>
+          <input class="hub-input" type="number" name="count" min="1" max="2000" value="20" required>
+        </label>
+        <label>
+          <span>سعر البيع</span>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="0">
+        </label>
+        <label>
+          <span>سعر الجملة</span>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="0">
+        </label>
+        <label>
+          <span>الكوتة</span>
+          <div class="quick-unit-control">
+            <input class="hub-input" type="number" min="0" name="quick_quota_value" value="0" data-quick-quota-value>
+            <select class="hub-select" name="quick_quota_unit" data-quick-quota-unit>
+              <option value="mb" selected>ميجا</option>
+              <option value="gb">جيجا</option>
+            </select>
+          </div>
+        </label>
+        <label>
+          <span>عدد الأجهزة</span>
+          <input class="hub-input" type="number" name="device_count" min="1" max="50" value="1">
+        </label>
+      </div>
+      <div class="quick-batch-grid quick-batch-grid--three">
+        <label>
+          <span>طول اسم المستخدم</span>
+          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="8">
+        </label>
+        <label>
+          <span>طول كلمة المرور</span>
+          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="6">
+        </label>
+        <label>
+          <span>إضافة بداية أو نهاية</span>
+          <select class="hub-select" name="starts_with_or_ends_with">
+            <option value="">بدون إضافة</option>
+            <option value="prefix">بداية الاسم</option>
+            <option value="suffix">نهاية الاسم</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        <span>النص المضاف</span>
+        <input class="hub-input" name="prefix_or_suffix_value" placeholder="مثال: VIP-">
+      </label>
+      <div class="quick-batch-grid">
+        <label>
+          <span>المدير</span>
+          <select class="hub-select" name="manager_id">
+            <option value="">اختر المدير</option>
+            {% for m in managers %}
+              <option value="{{ m.id }}">{{ m.full_name or m.username }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>الموزع</span>
+          <select class="hub-select" name="distributor_id">
+            <option value="">بدون موزع</option>
+            {% for d in distributors %}
+              <option value="{{ d.id }}">{{ d.display_name or d.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <footer class="quick-batch-modal__actions">
+        <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_generate') }}">
+          <i class="fa-solid fa-sliders"></i> متقدم
+        </a>
+        <button class="batch-btn batch-btn--primary" type="submit">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء الآن
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>
 
 <div class="batch-print-modal" data-batch-print-modal hidden>
   <div class="batch-print-modal__backdrop" data-print-modal-close></div>

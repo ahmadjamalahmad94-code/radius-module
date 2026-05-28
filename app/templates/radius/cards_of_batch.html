@@ -1,86 +1,1008 @@
-{# Cards of a single batch — REBUILT N7 (hub-v2). Backend data: items, batch, plan. #}
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}دفعة {{ batch.batch_code if batch else '' }}{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
-{% block page_title %}دفعة {{ batch.batch_code if batch else '—' }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} بطاقة</span>{% endblock %}
+{% block title %}كروت الحزمة {{ batch.batch_code if batch else '' }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
+{% block page_title %}كروت الحزمة{% endblock %}
+{% block page_sub %}<span class="sub">{{ summary.total if summary else 0 }} كرت</span>{% endblock %}
 
 {% block content %}
+<style>
+  .batch-cards-page {
+    --bc-ink: #111827;
+    --bc-muted: #66758d;
+    --bc-border: #dce5f2;
+    --bc-soft: #f7faff;
+    --bc-violet: #7657f4;
+    --bc-teal: #12877a;
+    --bc-blue: #1d69d8;
+    --bc-rose: #e94b5f;
+    --bc-amber: #f6a609;
+    direction: rtl;
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .bc-hero,
+  .bc-panel {
+    background: rgba(255, 255, 255, .95);
+    border: 1px solid var(--bc-border);
+    border-radius: 20px;
+    box-shadow: 0 18px 42px rgba(47, 55, 91, .08);
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .bc-hero {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 18px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bc-hero::before {
+    content: "";
+    position: absolute;
+    inset-inline-end: -120px;
+    top: -180px;
+    width: 430px;
+    height: 430px;
+    background:
+      radial-gradient(circle, rgba(18, 135, 122, .16), transparent 58%),
+      radial-gradient(circle at 25% 60%, rgba(118, 87, 244, .12), transparent 44%);
+    pointer-events: none;
+  }
+
+  .bc-title {
+    position: relative;
+    display: grid;
+    gap: 8px;
+  }
+
+  .bc-title h1 {
+    margin: 0;
+    color: var(--bc-ink);
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .bc-title p {
+    margin: 0;
+    color: var(--bc-muted);
+    font-weight: 800;
+    line-height: 1.7;
+  }
+
+  .bc-actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .bc-btn {
+    min-height: 42px;
+    border: 1px solid #d8e2ef;
+    background: #fff;
+    color: #172238;
+    border-radius: 13px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    white-space: nowrap;
+  }
+
+  .bc-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(17, 24, 39, .08);
+  }
+
+  .bc-btn--primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, #14a997, #7657f4);
+    color: #fff;
+  }
+
+  .bc-btn--danger {
+    border-color: #ffc9d0;
+    color: #dc2438;
+    background: #fff7f8;
+  }
+
+  .bc-btn:disabled,
+  .bc-btn.is-disabled {
+    opacity: .48;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .bc-stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .bc-stat {
+    min-height: 76px;
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid var(--bc-border);
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    gap: 4px;
+    padding: 12px;
+  }
+
+  .bc-stat span {
+    color: var(--bc-muted);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .bc-stat strong {
+    color: var(--bc-ink);
+    font-size: 22px;
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bc-stat--green { border-color: rgba(18, 135, 122, .25); background: #f1fffb; }
+  .bc-stat--blue { border-color: rgba(29, 105, 216, .22); background: #f4f8ff; }
+  .bc-stat--rose { border-color: rgba(233, 75, 95, .22); background: #fff6f7; }
+  .bc-stat--violet { border-color: rgba(118, 87, 244, .22); background: #f8f6ff; }
+
+  .bc-panel-head {
+    min-height: 68px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--bc-border);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .bc-panel-head h2 {
+    margin: 0;
+    color: var(--bc-ink);
+    font-size: 19px;
+    font-weight: 950;
+  }
+
+  .bc-tools,
+  .bc-bulk-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    max-width: 100%;
+  }
+
+  .bc-search {
+    flex: 1 1 280px;
+    min-width: min(280px, 100%);
+    height: 42px;
+    border: 1px solid #d8e2ef;
+    border-radius: 13px;
+    padding: 0 14px;
+    font-weight: 800;
+    color: var(--bc-ink);
+    outline: none;
+    background: #fff;
+  }
+
+  .bc-search:focus {
+    border-color: rgba(20, 169, 151, .6);
+    box-shadow: 0 0 0 4px rgba(20, 169, 151, .12);
+  }
+
+  .bc-columns {
+    position: relative;
+  }
+
+  .bc-columns-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    z-index: 30;
+    min-width: 260px;
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--bc-border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 20px 45px rgba(17, 24, 39, .16);
+  }
+
+  .bc-columns.is-open .bc-columns-menu {
+    display: grid;
+  }
+
+  .bc-columns-menu label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+    color: #25344c;
+    font-size: 13px;
+    font-weight: 850;
+    padding: 8px 9px;
+    border-radius: 10px;
+  }
+
+  .bc-columns-menu label:hover {
+    background: #f4f7ff;
+  }
+
+  .bc-bulk {
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--bc-border);
+    background: linear-gradient(135deg, rgba(20, 169, 151, .08), rgba(118, 87, 244, .08));
+  }
+
+  .bc-bulk.is-active {
+    display: grid;
+  }
+
+  .bc-bulk strong {
+    color: var(--bc-ink);
+    font-weight: 950;
+  }
+
+  .bc-bulk input,
+  .bc-bulk select {
+    height: 42px;
+    border: 1px solid #d8e2ef;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--bc-ink);
+    padding: 0 10px;
+    font-weight: 850;
+    min-width: 96px;
+  }
+
+  .bc-bulk form {
+    display: contents;
+  }
+
+  .bc-selected-inputs {
+    display: none;
+  }
+
+  .bc-table-wrap {
+    overflow: auto;
+    max-height: 70vh;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .bc-table {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--bc-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bc-table th,
+  .bc-table td {
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #e8edf5;
+    padding: 7px 5px;
+  }
+
+  .bc-table th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f8fbff;
+    color: #172238;
+    font-size: 12px;
+    font-weight: 950;
+    white-space: nowrap;
+    border-bottom: 2px solid #cfc1ff;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .bc-table th[data-sort-key]::after {
+    content: "↕";
+    display: inline-flex;
+    margin-inline-start: 6px;
+    color: #8b7cf6;
+    font-size: 12px;
+  }
+
+  .bc-table th.is-sorted-asc::after { content: "↑"; }
+  .bc-table th.is-sorted-desc::after { content: "↓"; }
+
+  .bc-table tbody tr {
+    transition: background .16s ease, transform .16s ease;
+  }
+
+  .bc-table tbody tr:nth-child(odd) {
+    background: #fff;
+  }
+
+  .bc-table tbody tr:nth-child(even) {
+    background: #fbfdff;
+  }
+
+  .bc-table tbody tr:hover {
+    background: #f4fbff;
+  }
+
+  .bc-check {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--bc-teal);
+  }
+
+  .bc-card-name {
+    display: grid;
+    gap: 3px;
+    justify-items: center;
+    min-width: 118px;
+  }
+
+  .bc-card-name strong {
+    font-size: 14px;
+    font-weight: 950;
+    direction: ltr;
+  }
+
+  .bc-card-name small {
+    color: var(--bc-muted);
+    font-size: 11px;
+    font-weight: 850;
+    direction: ltr;
+  }
+
+  .bc-name--online strong { color: var(--bc-teal); }
+  .bc-name--ready strong { color: var(--bc-violet); }
+  .bc-name--used_offline strong { color: var(--bc-blue); }
+  .bc-name--expired strong,
+  .bc-name--revoked strong { color: var(--bc-rose); }
+
+  .bc-pill {
+    min-width: 88px;
+    min-height: 26px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 950;
+    white-space: nowrap;
+  }
+
+  .bc-pill--green { color: #08745d; background: #e8fff7; border: 1px solid #9df0d4; }
+  .bc-pill--blue { color: #1755b3; background: #eef5ff; border: 1px solid #bfd7ff; }
+  .bc-pill--violet { color: #5b43d6; background: #f3f0ff; border: 1px solid #d9d0ff; }
+  .bc-pill--rose,
+  .bc-pill--red { color: #cb2539; background: #fff0f2; border: 1px solid #ffc4cc; }
+  .bc-pill--slate { color: #475569; background: #f1f5f9; border: 1px solid #dbe4ee; }
+
+  .bc-mono {
+    direction: ltr;
+    font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    font-weight: 850;
+  }
+
+  .bc-muted {
+    color: var(--bc-muted);
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .bc-flow {
+    display: grid;
+    gap: 2px;
+    justify-items: center;
+  }
+
+  .bc-flow strong {
+    direction: ltr;
+    font-size: 12px;
+  }
+
+  .bc-row-actions {
+    display: inline-flex;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .bc-icon-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d8e2ef;
+    background: #fff;
+    color: #172238;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform .16s ease, background .16s ease;
+  }
+
+  .bc-icon-btn:hover {
+    transform: translateY(-1px);
+    background: #f5f8ff;
+  }
+
+  .bc-icon-btn--danger {
+    border-color: #ffc9d0;
+    color: #db273a;
+    background: #fff7f8;
+  }
+
+  .bc-table [data-col].is-hidden {
+    display: none;
+  }
+
+  .bc-table th[data-col="select"],
+  .bc-table td[data-col="select"] {
+    position: sticky;
+    right: 0;
+    z-index: 8;
+    background: inherit;
+    box-shadow: -1px 0 0 #e6edf6;
+  }
+
+  .bc-table th[data-col="actions"],
+  .bc-table td[data-col="actions"] {
+    position: sticky;
+    right: 52px;
+    z-index: 8;
+    background: inherit;
+    box-shadow: 1px 0 0 #e6edf6;
+  }
+
+  .bc-table th[data-col="select"],
+  .bc-table th[data-col="actions"] {
+    z-index: 12;
+    background: #f8fbff;
+  }
+
+  .bc-edit-dialog {
+    width: min(720px, calc(100vw - 26px));
+    border: 1px solid var(--bc-border);
+    border-radius: 22px;
+    padding: 0;
+    direction: rtl;
+    box-shadow: 0 30px 80px rgba(17, 24, 39, .28);
+  }
+
+  .bc-edit-dialog::backdrop {
+    background: rgba(15, 23, 42, .38);
+    backdrop-filter: blur(6px);
+  }
+
+  .bc-dialog-body {
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .bc-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--bc-border);
+    padding-bottom: 14px;
+  }
+
+  .bc-dialog-head h3 {
+    margin: 0;
+    color: var(--bc-ink);
+    font-size: 20px;
+    font-weight: 950;
+  }
+
+  .bc-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .bc-field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .bc-field label {
+    color: #53627a;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .bc-field input,
+  .bc-field select {
+    height: 42px;
+    border: 1px solid #d8e2ef;
+    border-radius: 12px;
+    padding: 0 10px;
+    font-weight: 850;
+  }
+
+  .bc-empty {
+    padding: 34px;
+    text-align: center;
+    color: var(--bc-muted);
+    font-weight: 850;
+  }
+
+  @media (max-width: 1100px) {
+    .bc-hero,
+    .bc-panel-head {
+      grid-template-columns: 1fr;
+    }
+    .bc-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .bc-form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="batch-cards-page" data-batch-cards-page>
+  {% if batch %}
+    <section class="bc-hero">
+      <div class="bc-title">
+        <h1>كروت الحزمة {{ batch.batch_code }}</h1>
+        <p>
+          {{ plan.name if plan else (batch.package_name or 'بدون عرض') }}
+          · أنشئت {{ batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else '—' }}
+          · {{ batch.created_by or 'بدون مدير' }}
+        </p>
+      </div>
+      <div class="bc-actions">
+        <a class="bc-btn bc-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+          <i class="fa-solid fa-pen"></i> تعديل الحزمة
+        </a>
+        <a class="bc-btn" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> الفحص
+        </a>
+        <a class="bc-btn" href="{{ url_for('radius.cards_batches') }}">
+          <i class="fa-solid fa-table-cells-large"></i> كل الحزم
+        </a>
+      </div>
+    </section>
+
+    <section class="bc-stats" aria-label="ملخص كروت الحزمة">
+      <div class="bc-stat bc-stat--violet"><span>إجمالي الكروت</span><strong>{{ summary.total }}</strong></div>
+      <div class="bc-stat bc-stat--green"><span>متصل</span><strong>{{ summary.online }}</strong></div>
+      <div class="bc-stat bc-stat--blue"><span>متاحة</span><strong>{{ summary.ready }}</strong></div>
+      <div class="bc-stat"><span>مستخدمة غير متصلة</span><strong>{{ summary.used_offline }}</strong></div>
+      <div class="bc-stat bc-stat--rose"><span>منتهية / موقوفة</span><strong>{{ summary.expired + summary.revoked }}</strong></div>
+      <div class="bc-stat bc-stat--green"><span>تحميل / رفع</span><strong>{{ summary.download_label }} / {{ summary.upload_label }}</strong></div>
+    </section>
+
+    <section class="bc-panel">
+      <div class="bc-panel-head">
+        <div>
+          <h2>جدول الكروت</h2>
+          <span class="bc-muted">اضغط على اسم أي عمود للترتيب، وافتح الأعمدة لعرض التفاصيل الإضافية.</span>
+        </div>
+        <div class="bc-tools">
+          <input class="bc-search" type="search" placeholder="بحث باسم الكرت أو MAC أو IP..." data-card-search>
+          <div class="bc-columns" data-columns-menu>
+            <button class="bc-btn" type="button" data-columns-toggle>
+              <i class="fa-solid fa-sliders"></i> الأعمدة
+            </button>
+            <div class="bc-columns-menu" data-columns-list></div>
+          </div>
+          <button class="bc-btn" type="button" data-export-visible>
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="bc-bulk" data-bulk-bar>
+        <strong><span data-selected-count>0</span> كرت محدد</strong>
+        <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <input type="hidden" name="return_to" value="{{ request.full_path }}">
+          <div class="bc-selected-inputs" data-selected-inputs></div>
+          <div class="bc-bulk-tools">
+            <button class="bc-btn" name="bulk_action" value="disconnect" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> قطع الاتصال</button>
+            <button class="bc-btn" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
+            <button class="bc-btn" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
+            <button class="bc-btn" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير</button>
+            <input name="time_amount" type="number" min="1" placeholder="المدة">
+            <select name="time_unit" aria-label="وحدة الوقت">
+              <option value="minutes">دقائق</option>
+              <option value="hours">ساعات</option>
+              <option value="days">أيام</option>
+            </select>
+            <button class="bc-btn" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
+            <button class="bc-btn" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
+            <input name="reason" type="text" placeholder="سبب الإجراء">
+            <button class="bc-btn bc-btn--danger" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> حذف</button>
+          </div>
+        </form>
+      </div>
+
+      {% if items %}
+      <div class="bc-table-wrap">
+        <table class="bc-table" data-cards-table data-storage-key="batch-cards-columns-v2-{{ batch.id }}">
+          <thead>
+            <tr>
+              <th data-col="select" data-lock-column><input class="bc-check" type="checkbox" data-select-all aria-label="تحديد الكل"></th>
+              <th data-col="actions" data-label="إجراءات" data-lock-column>إجراءات</th>
+              <th data-col="card" data-label="الكرت" data-sort-key="username" data-sort-type="text">الكرت</th>
+              <th data-col="password" data-label="كلمة المرور" data-sort-key="password" data-sort-type="text" data-default-hidden>كلمة المرور</th>
+              <th data-col="status" data-label="الحالة" data-sort-key="status" data-sort-type="number">الحالة</th>
+              <th data-col="remaining" data-label="المتبقي" data-sort-key="remaining" data-sort-type="number">المتبقي</th>
+              <th data-col="connect" data-label="آخر اتصال" data-sort-key="last_connect" data-sort-type="date">آخر اتصال</th>
+              <th data-col="disconnect" data-label="آخر فصل" data-sort-key="last_disconnect" data-sort-type="date">آخر فصل</th>
+              <th data-col="download" data-label="تحميل" data-sort-key="download" data-sort-type="number">تحميل</th>
+              <th data-col="upload" data-label="رفع" data-sort-key="upload" data-sort-type="number">رفع</th>
+              <th data-col="sessions" data-label="الجلسات" data-sort-key="sessions" data-sort-type="number">الجلسات</th>
+              <th data-col="mac" data-label="MAC" data-sort-key="mac" data-sort-type="text" data-default-hidden>MAC</th>
+              <th data-col="ip" data-label="IP / NAS" data-sort-key="ip" data-sort-type="text" data-default-hidden>IP / NAS</th>
+              <th data-col="speed" data-label="السرعة" data-sort-key="speed" data-sort-type="text" data-default-hidden>السرعة</th>
+              <th data-col="first" data-label="أول استخدام" data-sort-key="first_used" data-sort-type="date" data-default-hidden>أول استخدام</th>
+              <th data-col="expire" data-label="ينتهي" data-sort-key="expire" data-sort-type="date" data-default-hidden>ينتهي</th>
+              <th data-col="created" data-label="الإنشاء" data-sort-key="created" data-sort-type="date" data-default-hidden>الإنشاء</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in items %}
+            <tr
+              data-row
+              data-search="{{ c.username }} {{ c.password }} {{ c.latest_mac }} {{ c.used_by_mac }} {{ c.latest_framed_ip }} {{ c.latest_nas_ip }} {{ c.status_label }}"
+              data-username="{{ c.username }}"
+              data-password="{{ c.password }}"
+              data-card-id="{{ c.id }}"
+              data-sort-username="{{ c.username }}"
+              data-sort-password="{{ c.password }}"
+              data-sort-status="{{ c.status_rank }}"
+              data-sort-online="{{ c.online_sessions }}"
+              data-sort-remaining="{{ c.remaining_seconds }}"
+              data-sort-last_connect="{{ c.last_connect_at or c.latest_start_at or '' }}"
+              data-sort-last_disconnect="{{ c.last_disconnect_at or c.latest_stop_at or '' }}"
+              data-sort-download="{{ c.total_download_bytes }}"
+              data-sort-upload="{{ c.total_upload_bytes }}"
+              data-sort-sessions="{{ c.sessions_count }}"
+              data-sort-mac="{{ c.latest_mac or c.used_by_mac or '' }}"
+              data-sort-ip="{{ c.latest_framed_ip or c.latest_nas_ip or '' }}"
+              data-sort-speed="{{ c.card_speed_down_kbps }}-{{ c.card_speed_up_kbps }}"
+              data-sort-first_used="{{ c.first_used_at or '' }}"
+              data-sort-expire="{{ c.expire_at or '' }}"
+              data-sort-created="{{ c.created_at or '' }}"
+            >
+              <td data-col="select"><input class="bc-check" type="checkbox" name="card_ids" value="{{ c.id }}" data-row-select aria-label="تحديد {{ c.username }}"></td>
+              <td data-col="actions">
+                <div class="bc-row-actions">
+                  <button class="bc-icon-btn" type="button" title="تعديل سريع" data-edit-card><i class="fa-solid fa-pen"></i></button>
+                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                    <input type="hidden" name="card_ids" value="{{ c.id }}">
+                    <button class="bc-icon-btn" name="bulk_action" value="disconnect" title="قطع الاتصال" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+                  </form>
+                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                    <input type="hidden" name="card_ids" value="{{ c.id }}">
+                    <button class="bc-icon-btn bc-icon-btn--danger" name="bulk_action" value="soft_delete" title="حذف" type="submit"><i class="fa-solid fa-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+              <td data-col="card">
+                <span class="bc-card-name bc-name--{{ c.status_key }}">
+                  <strong>{{ c.username }}</strong>
+                  <small>#{{ c.id }}</small>
+                </span>
+              </td>
+              <td data-col="password"><span class="bc-mono">{{ c.password }}</span></td>
+              <td data-col="status"><span class="bc-pill bc-pill--{{ c.status_tone }}">{{ c.status_label }}</span></td>
+              <td data-col="remaining">
+                <div class="bc-flow">
+                  <strong>{{ c.remaining_label }}</strong>
+                  <span class="bc-muted">{{ c.total_time_label }} استخدام</span>
+                </div>
+              </td>
+              <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label }}</strong><span class="bc-muted">آخر مشاهدة {{ c.last_seen_label }}</span></div></td>
+              <td data-col="disconnect"><strong class="bc-mono">{{ c.last_disconnect_label }}</strong></td>
+              <td data-col="download"><div class="bc-flow"><strong>{{ c.total_download_label }}</strong><span class="bc-muted">آخر {{ c.latest_download_label }}</span></div></td>
+              <td data-col="upload"><div class="bc-flow"><strong>{{ c.total_upload_label }}</strong><span class="bc-muted">آخر {{ c.latest_upload_label }}</span></div></td>
+              <td data-col="sessions"><div class="bc-flow"><strong>{{ c.sessions_count }}</strong><span class="bc-muted">{{ c.unique_macs }} MAC</span></div></td>
+              <td data-col="mac"><div class="bc-flow"><strong class="bc-mono">{{ c.latest_mac or c.used_by_mac or '—' }}</strong><span class="bc-muted">{{ c.locked_mac or 'بدون تثبيت' }}</span></div></td>
+              <td data-col="ip"><div class="bc-flow"><strong class="bc-mono">{{ c.latest_framed_ip or '—' }}</strong><span class="bc-muted">{{ c.latest_nas_ip or '—' }}</span></div></td>
+              <td data-col="speed"><strong>{{ c.speed_label }}</strong></td>
+              <td data-col="first"><strong class="bc-mono">{{ c.first_used_label }}</strong></td>
+              <td data-col="expire"><strong class="bc-mono">{{ c.expire_label }}</strong></td>
+              <td data-col="created"><strong class="bc-mono">{{ c.created_label }}</strong></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="bc-empty">لا توجد كروت داخل هذه الحزمة.</div>
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="bc-panel">
+      <div class="bc-empty">الحزمة المطلوبة غير موجودة.</div>
+    </section>
+  {% endif %}
+</div>
 
 {% if batch %}
-{% set pct_used = ((batch.used / batch.generated * 100) if batch.generated else 0) %}
-{{ hub.hero(
-  "دفعة " + batch.batch_code,
-  subtitle=(plan.name if plan else "بدون باقة") + " · أنشأها " + (batch.created_by or '—')
-            + " · " + (batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else ''),
-  icon="layer-group",
-  actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_batch_edit', batch_id=batch.id) + '">
-      <i class="fa-solid fa-pen"></i> تعديل الحزمة
-    </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-arrow-right-from-bracket"></i> كل الحزم
-    </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.bandwidth_schedules') + '">
-      <i class="fa-solid fa-gauge-high"></i> سرعات متعددة
-    </a>
-  '
-) }}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("مُولَّد",   batch.generated or 0, icon="layer-group", variant="brand") }}
-  {{ hub.kpi("مستخدَم",  batch.used or 0,      icon="handshake",   variant="amber") }}
-  {{ hub.kpi("نسبة الاستخدام", "%.0f%%"|format(pct_used), icon="chart-pie", variant="blue") }}
-  {{ hub.kpi("سعر البطاقة",
-            ("%.2f"|format(plan.price) + ' ' + (plan.currency or '')) if plan else '—',
-            icon="coins", variant="green") }}
-</div>
-{% else %}
-{{ hub.hero("دفعة غير موجودة", subtitle="لم نتمكّن من العثور على الدفعة المطلوبة.", icon="circle-exclamation") }}
-{% endif %}
-
-{# ───── Cards table ────────────────────────────────────────── #}
-{% if items %}
-{% call hub.section("بطاقات الدفعة", icon="id-card", meta=items|length|string + " بطاقة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="50" data-persist-key="batch-cards">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>اليوزر</th>
-          <th>الباسورد</th>
-          <th>الحالة</th>
-          <th>أول استخدام</th>
-          <th>MAC</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in items %}
-        <tr>
-          <td class="num mono">{{ c.id }}</td>
-          <td class="mono"><strong>{{ c.username }}</strong></td>
-          <td class="mono">{{ c.password }}</td>
-          <td>
-            {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
-            {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
-            {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
-          </td>
-          <td class="mono small">{{ c.first_used_at.strftime('%Y-%m-%d %H:%M') if c.first_used_at else '—' }}</td>
-          <td class="mono small">{{ c.used_by_mac or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<dialog class="bc-edit-dialog" data-edit-dialog>
+  <div class="bc-dialog-body">
+    <div class="bc-dialog-head">
+      <h3>تعديل سريع للكرت <span data-dialog-card-title></span></h3>
+      <button class="bc-icon-btn" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-dialog-form>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <input type="hidden" name="return_to" value="{{ request.full_path }}">
+      <input type="hidden" name="card_ids" data-dialog-card-id>
+      <div class="bc-form-grid">
+        <div class="bc-field">
+          <label>المدة</label>
+          <input name="time_amount" type="number" min="1" placeholder="مثال: 30">
+        </div>
+        <div class="bc-field">
+          <label>وحدة الوقت</label>
+          <select name="time_unit">
+            <option value="minutes">دقائق</option>
+            <option value="hours">ساعات</option>
+            <option value="days">أيام</option>
+          </select>
+        </div>
+        <div class="bc-field">
+          <label>MAC</label>
+          <input name="mac" type="text" placeholder="AA:BB:CC:DD:EE:FF">
+        </div>
+        <div class="bc-field">
+          <label>تنزيل Kbps</label>
+          <input name="speed_down_kbps" type="number" min="0" placeholder="0 لإلغاء">
+        </div>
+        <div class="bc-field">
+          <label>رفع Kbps</label>
+          <input name="speed_up_kbps" type="number" min="0" placeholder="0 لإلغاء">
+        </div>
+        <div class="bc-field">
+          <label>سبب الإجراء</label>
+          <input name="reason" type="text" placeholder="اختياري">
+        </div>
+      </div>
+      <div class="bc-bulk-tools" style="margin-top:14px">
+        <button class="bc-btn" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
+        <button class="bc-btn" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
+        <button class="bc-btn" name="bulk_action" value="set_speed" type="submit"><i class="fa-solid fa-gauge-high"></i> حفظ السرعة</button>
+        <button class="bc-btn" name="bulk_action" value="lock_mac" type="submit"><i class="fa-solid fa-lock"></i> تثبيت MAC</button>
+        <button class="bc-btn" name="bulk_action" value="unlock_mac" type="submit"><i class="fa-solid fa-lock-open"></i> فك MAC</button>
+        <button class="bc-btn" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
+        <button class="bc-btn" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
+      </div>
+    </form>
   </div>
-{% endcall %}
-{% else %}
-{{ hub.empty(
-  "لا بطاقات في هذه الدفعة",
-  sub="قد تكون الدفعة جديدة أو لم يبدأ توليد البطاقات بعد.",
-  icon="id-card"
-) }}
+</dialog>
 {% endif %}
 
+<script>
+(function () {
+  const page = document.querySelector('[data-batch-cards-page]');
+  if (!page) return;
+
+  const table = page.querySelector('[data-cards-table]');
+  const search = page.querySelector('[data-card-search]');
+  const selectAll = page.querySelector('[data-select-all]');
+  const bulkBar = page.querySelector('[data-bulk-bar]');
+  const selectedCount = page.querySelector('[data-selected-count]');
+  const selectedInputs = page.querySelector('[data-selected-inputs]');
+  const columnsBox = page.querySelector('[data-columns-menu]');
+  const columnsToggle = page.querySelector('[data-columns-toggle]');
+  const columnsList = page.querySelector('[data-columns-list]');
+  const exportBtn = page.querySelector('[data-export-visible]');
+  const storageKey = table ? table.dataset.storageKey : 'batch-cards-columns-v2';
+
+  function rows() {
+    return table ? Array.from(table.querySelectorAll('tbody tr[data-row]')) : [];
+  }
+
+  function selectedRows() {
+    return rows().filter(row => row.querySelector('[data-row-select]')?.checked);
+  }
+
+  function refreshBulk() {
+    const selected = selectedRows();
+    if (selectedCount) selectedCount.textContent = String(selected.length);
+    if (bulkBar) bulkBar.classList.toggle('is-active', selected.length > 0);
+    if (selectedInputs) {
+      selectedInputs.innerHTML = selected.map(row => {
+        return `<input type="hidden" name="card_ids" value="${row.dataset.cardId || ''}">`;
+      }).join('');
+    }
+    if (selectAll) {
+      const visibleRows = rows().filter(row => row.style.display !== 'none');
+      const checked = visibleRows.filter(row => row.querySelector('[data-row-select]')?.checked);
+      selectAll.checked = visibleRows.length > 0 && checked.length === visibleRows.length;
+      selectAll.indeterminate = checked.length > 0 && checked.length < visibleRows.length;
+    }
+  }
+
+  function applySearch() {
+    const q = (search?.value || '').trim().toLowerCase();
+    rows().forEach(row => {
+      const haystack = (row.dataset.search || '').toLowerCase();
+      row.style.display = !q || haystack.includes(q) ? '' : 'none';
+    });
+    refreshBulk();
+  }
+
+  function sortValue(row, key, type) {
+    const raw = row.getAttribute(`data-sort-${key}`) || '';
+    if (type === 'number') return Number(raw || 0);
+    if (type === 'date') return raw ? Date.parse(raw) || 0 : 0;
+    return raw.toString().toLowerCase();
+  }
+
+  function sortByHeader(th) {
+    const key = th.dataset.sortKey;
+    if (!key || !table) return;
+    const type = th.dataset.sortType || 'text';
+    const wasAsc = th.classList.contains('is-sorted-asc');
+    table.querySelectorAll('th').forEach(node => node.classList.remove('is-sorted-asc', 'is-sorted-desc'));
+    th.classList.add(wasAsc ? 'is-sorted-desc' : 'is-sorted-asc');
+    const direction = wasAsc ? -1 : 1;
+    const tbody = table.querySelector('tbody');
+    rows().sort((a, b) => {
+      const av = sortValue(a, key, type);
+      const bv = sortValue(b, key, type);
+      if (av < bv) return -1 * direction;
+      if (av > bv) return 1 * direction;
+      return 0;
+    }).forEach(row => tbody.appendChild(row));
+  }
+
+  function setColumnHidden(key, hidden) {
+    table.querySelectorAll(`[data-col="${CSS.escape(key)}"]`).forEach(cell => {
+      cell.classList.toggle('is-hidden', hidden);
+    });
+  }
+
+  function readColumnState() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeColumnState(state) {
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }
+
+  function buildColumns() {
+    if (!table || !columnsList) return;
+    const state = readColumnState();
+    const heads = Array.from(table.querySelectorAll('thead th[data-col]'));
+    columnsList.innerHTML = '';
+    heads.forEach(th => {
+      const key = th.dataset.col;
+      if (th.hasAttribute('data-lock-column')) return;
+      const label = th.dataset.label || th.textContent.trim();
+      const defaultHidden = th.hasAttribute('data-default-hidden');
+      const hidden = Object.prototype.hasOwnProperty.call(state, key) ? !!state[key] : defaultHidden;
+      setColumnHidden(key, hidden);
+      const item = document.createElement('label');
+      item.innerHTML = `<span>${label}</span><input type="checkbox" ${hidden ? '' : 'checked'}>`;
+      const checkbox = item.querySelector('input');
+      checkbox.addEventListener('change', () => {
+        const nextState = readColumnState();
+        nextState[key] = !checkbox.checked;
+        writeColumnState(nextState);
+        setColumnHidden(key, !checkbox.checked);
+      });
+      columnsList.appendChild(item);
+    });
+  }
+
+  function exportVisible() {
+    if (!table) return;
+    const visibleHeads = Array.from(table.querySelectorAll('thead th[data-col]'))
+      .filter(th => !th.classList.contains('is-hidden') && th.dataset.col !== 'select' && th.dataset.col !== 'actions');
+    const visibleRows = rows().filter(row => row.style.display !== 'none');
+    const lines = [visibleHeads.map(th => `"${(th.dataset.label || th.textContent.trim()).replaceAll('"', '""')}"`).join(',')];
+    visibleRows.forEach(row => {
+      lines.push(visibleHeads.map(th => {
+        const cell = row.querySelector(`[data-col="${CSS.escape(th.dataset.col)}"]`);
+        const value = (cell?.innerText || '').replace(/\s+/g, ' ').trim().replaceAll('"', '""');
+        return `"${value}"`;
+      }).join(','));
+    });
+    const blob = new Blob(["\ufeff" + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'batch-cards.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  table?.addEventListener('click', event => {
+    const th = event.target.closest('th[data-sort-key]');
+    if (th && !event.target.matches('input,button')) sortByHeader(th);
+  });
+
+  table?.addEventListener('change', event => {
+    if (event.target.matches('[data-row-select]')) refreshBulk();
+  });
+
+  selectAll?.addEventListener('change', () => {
+    rows().forEach(row => {
+      if (row.style.display === 'none') return;
+      const cb = row.querySelector('[data-row-select]');
+      if (cb) cb.checked = selectAll.checked;
+    });
+    refreshBulk();
+  });
+
+  search?.addEventListener('input', applySearch);
+
+  columnsToggle?.addEventListener('click', () => {
+    columnsBox?.classList.toggle('is-open');
+  });
+
+  document.addEventListener('click', event => {
+    if (columnsBox && !columnsBox.contains(event.target)) columnsBox.classList.remove('is-open');
+  });
+
+  exportBtn?.addEventListener('click', exportVisible);
+
+  const dialog = document.querySelector('[data-edit-dialog]');
+  const dialogTitle = document.querySelector('[data-dialog-card-title]');
+  const dialogCardId = document.querySelector('[data-dialog-card-id]');
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-edit-card]');
+    if (button) {
+      const row = button.closest('tr[data-row]');
+      if (dialogTitle) dialogTitle.textContent = row?.dataset.username || '';
+      if (dialogCardId) dialogCardId.value = row?.dataset.cardId || '';
+      if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+    }
+    if (event.target.closest('[data-dialog-close]')) dialog?.close();
+  });
+
+  buildColumns();
+  applySearch();
+})();
+</script>
 {% endblock %}

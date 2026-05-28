@@ -1,67 +1,664 @@
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}Card Users — Hobe Hub{% endblock %}
+{% block title %}مستخدمو البطاقات - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
-{% block page_title %}مستخدمو الكروت{% endblock %}
-{% block page_sub %}<span class="sub">ملفات شخصية ومحافظ وكروت مملوكة بدون تحويلهم إلى مشتركين ثابتين</span>{% endblock %}
+{% block page_title %}مستخدمو البطاقات{% endblock %}
+{% block page_sub %}<span class="sub">محافظ مستقلة لبيع وشراء البطاقات الإلكترونية بدون تحويلهم إلى مشتركين ثابتين</span>{% endblock %}
+
+{% macro num(value) -%}
+  {{ "{:,}".format((value or 0)|int) }}
+{%- endmacro %}
+
+{% macro money(value, currency="ILS") -%}
+  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
+  {{ "%.2f"|format(value or 0) }} <span>{{ cur }}</span>
+{%- endmacro %}
+
+{% macro date_label(value) -%}
+  {{ (value|string)[:16].replace("T", " ") if value else "لا يوجد" }}
+{%- endmacro %}
+
+{% macro status_label(value) -%}
+  {% if value == "disabled" %}موقوف{% elif value == "archived" %}مؤرشف{% else %}نشط{% endif %}
+{%- endmacro %}
 
 {% block content %}
-{{ hub.hero(
-  "مستخدمو الكروت",
-  subtitle="قسم خفيف للأشخاص الذين يشترون كروت من المحفظة ويحتاجون سجلًا ماليًا وتشغيليًا.",
-  icon="id-card",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-store"></i> Marketplace</a>'
-) }}
+<style>
+  .card-users-page {
+    --cu-ink: #172033;
+    --cu-muted: #72809a;
+    --cu-line: #dfe7f3;
+    --cu-blue: #2087e6;
+    --cu-teal: #10a58f;
+    --cu-amber: #f5a11a;
+    --cu-violet: #7057f4;
+    direction: rtl;
+    color: var(--cu-ink);
+  }
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("إضافة مستخدم كروت", icon="user-plus") %}
-    <form method="post" action="{{ url_for('radius.card_users_create') }}" class="hub-form-grid" data-testid="card-user-create-form">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>الاسم
-        <input name="display_name" required>
-      </label>
-      <label>الموبايل
-        <input name="mobile">
-      </label>
-      <label>البريد
-        <input name="email" type="email">
-      </label>
-      <button class="hub-btn hub-btn--primary" type="submit">إنشاء محفظة وملف</button>
-    </form>
-  {% endcall %}
+  .cu-hero,
+  .cu-panel,
+  .cu-card {
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid var(--cu-line);
+    box-shadow: 0 18px 38px rgba(31, 41, 55, .07);
+  }
 
-  {% call hub.section("Marketplace مختصر", icon="store") %}
-    <div class="hub-list">
-      {% for package in packages %}
-        <div class="hub-list-row">
-          <strong>{{ package.name }}</strong>
-          <span>{{ package.price }} {{ package.currency }} · {{ package.duration_minutes }} دقيقة</span>
-        </div>
-      {% else %}
-        <div class="hub-empty">لا توجد باقات Marketplace بعد.</div>
-      {% endfor %}
+  .cu-hero {
+    border-radius: 26px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: minmax(520px, 1.6fr) minmax(330px, .9fr);
+    gap: 16px;
+    background:
+      radial-gradient(circle at 10% 15%, rgba(32, 135, 230, .13), transparent 30%),
+      radial-gradient(circle at 92% 12%, rgba(16, 165, 143, .12), transparent 25%),
+      linear-gradient(135deg, rgba(255,255,255,.96), rgba(244,248,255,.9));
+  }
+
+  .cu-hero-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .cu-title h1 {
+    margin: 0;
+    font-size: clamp(30px, 3vw, 44px);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .cu-title p {
+    max-width: 760px;
+    margin: 10px 0 0;
+    color: var(--cu-muted);
+    font-weight: 850;
+    line-height: 1.8;
+  }
+
+  .cu-actions,
+  .cu-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .cu-btn {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--cu-line);
+    background: #fff;
+    color: var(--cu-ink);
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 950;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .cu-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(112, 87, 244, .38);
+    box-shadow: 0 12px 24px rgba(31, 41, 55, .08);
+  }
+
+  .cu-btn--primary {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cu-teal), #18bfa7);
+    box-shadow: 0 14px 28px rgba(16, 165, 143, .18);
+  }
+
+  .cu-btn--violet {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cu-violet), #7c5dff);
+  }
+
+  .cu-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .cu-metric {
+    min-height: 104px;
+    border-radius: 20px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid rgba(223, 231, 243, .9);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cu-metric::after {
+    content: "";
+    width: 66px;
+    height: 66px;
+    border-radius: 24px;
+    background: var(--metric, var(--cu-blue));
+    opacity: .13;
+    position: absolute;
+    inset-inline-end: -18px;
+    bottom: -18px;
+  }
+
+  .cu-metric i {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--metric, var(--cu-blue));
+    z-index: 1;
+  }
+
+  .cu-metric span {
+    display: block;
+    color: var(--cu-muted);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .cu-metric strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 25px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cu-create {
+    border-radius: 22px;
+    padding: 16px;
+    background: rgba(255,255,255,.96);
+    border: 1px solid var(--cu-line);
+  }
+
+  .cu-create h2 {
+    margin: 0 0 14px;
+    font-size: 20px;
+    text-align: center;
+  }
+
+  .cu-form {
+    display: grid;
+    gap: 10px;
+  }
+
+  .cu-field {
+    display: grid;
+    gap: 7px;
+    color: #52617b;
+    font-weight: 950;
+  }
+
+  .cu-input {
+    min-height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--cu-line);
+    background: #fff;
+    padding: 0 14px;
+    color: var(--cu-ink);
+    font-weight: 850;
+    outline: none;
+  }
+
+  .cu-input:focus {
+    border-color: rgba(16, 165, 143, .55);
+    box-shadow: 0 0 0 4px rgba(16, 165, 143, .1);
+  }
+
+  .cu-toolbar {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 22px;
+    background: rgba(255,255,255,.86);
+    border: 1px solid var(--cu-line);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .cu-search {
+    min-height: 46px;
+    border-radius: 15px;
+    border: 1px solid var(--cu-line);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .cu-search input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--cu-ink);
+    font-weight: 850;
+  }
+
+  .cu-chip {
+    min-height: 34px;
+    border-radius: 999px;
+    border: 1px solid #e4ebf6;
+    background: #f7faff;
+    color: #52617b;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 950;
+  }
+
+  .cu-panel {
+    margin-top: 18px;
+    border-radius: 26px;
+    overflow: hidden;
+  }
+
+  .cu-panel-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--cu-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .cu-panel-head h2 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .cu-panel-head span {
+    color: var(--cu-muted);
+    font-weight: 900;
+  }
+
+  .cu-grid {
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 14px;
+  }
+
+  .cu-card {
+    border-radius: 22px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .cu-card-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .cu-card h3 {
+    margin: 0 0 7px;
+    text-align: center;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .cu-contact {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--cu-muted);
+    font-weight: 900;
+    font-size: 13px;
+  }
+
+  .cu-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--cu-violet), var(--cu-blue));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 950;
+    box-shadow: 0 14px 24px rgba(32, 135, 230, .16);
+  }
+
+  .cu-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cu-stat {
+    min-height: 76px;
+    border-radius: 16px;
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    background: var(--stat-bg, #f8fbff);
+    border: 1px solid var(--stat-line, #e8eef7);
+  }
+
+  .cu-stat small {
+    color: #60708c;
+    font-weight: 950;
+  }
+
+  .cu-stat strong {
+    font-size: 23px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cu-meta {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cu-meta div {
+    border-radius: 15px;
+    border: 1px solid #e9eef6;
+    background: #fbfcff;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .cu-meta dt {
+    color: var(--cu-muted);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .cu-meta dd {
+    margin: 5px 0 0;
+    color: var(--cu-ink);
+    font-weight: 950;
+    word-break: break-word;
+  }
+
+  .cu-card-actions {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .cu-empty {
+    padding: 48px 18px;
+    text-align: center;
+  }
+
+  .cu-empty i {
+    width: 70px;
+    height: 70px;
+    border-radius: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cu-teal);
+    background: rgba(16, 165, 143, .1);
+    font-size: 28px;
+    margin-bottom: 14px;
+  }
+
+  .cu-empty h2 {
+    margin: 0 0 8px;
+  }
+
+  .cu-empty p {
+    margin: 0 auto 18px;
+    max-width: 560px;
+    color: var(--cu-muted);
+    font-weight: 850;
+    line-height: 1.8;
+  }
+
+  .cu-market-strip {
+    margin-top: 18px;
+    border-radius: 22px;
+    border: 1px solid var(--cu-line);
+    background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(245,250,255,.9));
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .cu-market-strip strong {
+    display: block;
+    font-size: 18px;
+  }
+
+  .cu-market-strip span {
+    color: var(--cu-muted);
+    font-weight: 850;
+  }
+
+  @media (max-width: 1180px) {
+    .cu-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .cu-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    .cu-hero,
+    .cu-panel {
+      border-radius: 20px;
+    }
+
+    .cu-metrics,
+    .cu-grid,
+    .cu-card-stats,
+    .cu-meta,
+    .cu-toolbar,
+    .cu-market-strip,
+    .cu-card-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="card-users-page" data-card-users-page>
+  <section class="cu-hero">
+    <div class="cu-hero-main">
+      <div class="cu-title">
+        <h1>مركز مستخدمي البطاقات</h1>
+        <p>إدارة الأشخاص الذين يشترون بطاقات إلكترونية من المحفظة، مع متابعة الرصيد والمشتريات والكروت المرتبطة بكل مستخدم.</p>
+      </div>
+
+      <div class="cu-metrics" aria-label="ملخص مستخدمي البطاقات">
+        <article class="cu-metric" style="--metric:#2087e6">
+          <div><span>مستخدمون</span><strong>{{ num(users_summary.users) }}</strong></div>
+          <i class="fa-solid fa-users"></i>
+        </article>
+        <article class="cu-metric" style="--metric:#10a58f">
+          <div><span>نشطون</span><strong>{{ num(users_summary.active) }}</strong></div>
+          <i class="fa-solid fa-user-check"></i>
+        </article>
+        <article class="cu-metric" style="--metric:#7057f4">
+          <div><span>كروت مملوكة</span><strong>{{ num(users_summary.cards) }}</strong></div>
+          <i class="fa-solid fa-ticket"></i>
+        </article>
+        <article class="cu-metric" style="--metric:#f5a11a">
+          <div><span>عمليات شراء</span><strong>{{ num(users_summary.purchases) }}</strong></div>
+          <i class="fa-solid fa-cart-shopping"></i>
+        </article>
+        <article class="cu-metric" style="--metric:#475569">
+          <div><span>رصيد المحافظ</span><strong>{{ money(users_summary.balance, users_summary.currency) }}</strong></div>
+          <i class="fa-solid fa-wallet"></i>
+        </article>
+      </div>
+
+      <div class="cu-actions">
+        <a class="cu-btn cu-btn--primary" href="{{ url_for('radius.card_marketplace') }}">
+          <i class="fa-solid fa-store"></i>
+          سوق البطاقات الإلكتروني
+        </a>
+        <a class="cu-btn" href="{{ url_for('radius.cards_batches') }}">
+          <i class="fa-solid fa-layer-group"></i>
+          حزم البطاقات
+        </a>
+      </div>
     </div>
-  {% endcall %}
+
+    <aside class="cu-create">
+      <h2>إضافة مستخدم بطاقة</h2>
+      <form method="post" action="{{ url_for('radius.card_users_create') }}" class="cu-form" data-testid="card-user-create-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <label class="cu-field">الاسم
+          <input class="cu-input" name="display_name" placeholder="مثال: أحمد علي" required>
+        </label>
+        <label class="cu-field">الموبايل
+          <input class="cu-input" name="mobile" placeholder="05xxxxxxxx">
+        </label>
+        <label class="cu-field">البريد
+          <input class="cu-input" name="email" type="email" placeholder="name@example.com">
+        </label>
+        <button class="cu-btn cu-btn--primary" type="submit">
+          <i class="fa-solid fa-plus"></i>
+          إنشاء محفظة ومستخدم
+        </button>
+      </form>
+    </aside>
+  </section>
+
+  <section class="cu-toolbar" aria-label="أدوات مستخدمي البطاقات">
+    <label class="cu-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" placeholder="ابحث بالاسم أو الموبايل أو البريد..." data-card-user-search>
+    </label>
+    <div class="cu-tools">
+      <span class="cu-chip"><i class="fa-solid fa-store"></i> {{ num(market_summary.available) }} كرت متاح للبيع</span>
+      <span class="cu-chip"><i class="fa-solid fa-boxes-stacked"></i> {{ num(market_summary.batches) }} حزم إلكترونية</span>
+    </div>
+  </section>
+
+  <section class="cu-panel">
+    <header class="cu-panel-head">
+      <div>
+        <h2>قائمة المستخدمين</h2>
+        <span>{{ num(card_users|length) }} مستخدم ظاهر</span>
+      </div>
+      <span class="cu-chip"><i class="fa-solid fa-wallet"></i> محافظ تشغيلية</span>
+    </header>
+
+    {% if card_users %}
+      <div class="cu-grid">
+        {% for user in card_users %}
+          {% set initials = (user.display_name or user.mobile or "U")[:2] %}
+          <article class="cu-card" data-card-user-card data-search-text="{{ (user.display_name ~ ' ' ~ user.mobile ~ ' ' ~ user.email ~ ' ' ~ user.status)|lower }}">
+            <header class="cu-card-top">
+              <div>
+                <h3>{{ user.display_name }}</h3>
+                <div class="cu-contact">
+                  <span>{{ user.mobile or "بدون موبايل" }}</span>
+                  {% if user.email %}<span>{{ user.email }}</span>{% endif %}
+                </div>
+              </div>
+              <span class="cu-avatar">{{ initials }}</span>
+            </header>
+
+            <div class="cu-card-stats">
+              <div class="cu-stat" style="--stat-bg:#f2fbf8;--stat-line:#bdeee0">
+                <small>الرصيد</small>
+                <strong>{{ money(user.balance, user.wallet_currency) }}</strong>
+              </div>
+              <div class="cu-stat" style="--stat-bg:#fff8e9;--stat-line:#ffe0a3">
+                <small>مشتريات</small>
+                <strong>{{ num(user.purchase_count) }}</strong>
+              </div>
+              <div class="cu-stat" style="--stat-bg:#f5f2ff;--stat-line:#ded5ff">
+                <small>كروت</small>
+                <strong>{{ num(user.owned_cards_count) }}</strong>
+              </div>
+            </div>
+
+            <dl class="cu-meta">
+              <div><dt>الحالة</dt><dd>{{ status_label(user.status) }}</dd></div>
+              <div><dt>المحفظة</dt><dd>#{{ user.wallet_id or "جديدة" }}</dd></div>
+              <div><dt>إجمالي مشتريات</dt><dd>{{ money(user.spent, user.wallet_currency) }}</dd></div>
+              <div><dt>آخر شراء</dt><dd>{{ date_label(user.last_purchase_at) }}</dd></div>
+            </dl>
+
+            <footer class="cu-card-actions">
+              <a class="cu-btn cu-btn--primary" href="{{ url_for('radius.card_user_360', card_user_id=user.id) }}">
+                <i class="fa-solid fa-eye"></i>
+                عرض 360
+              </a>
+              <a class="cu-btn" href="{{ url_for('radius.card_marketplace') }}">
+                <i class="fa-solid fa-cart-plus"></i>
+                شراء كرت
+              </a>
+            </footer>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="cu-empty">
+        <i class="fa-solid fa-user-plus"></i>
+        <h2>لا يوجد مستخدمو بطاقات بعد</h2>
+        <p>أنشئ أول مستخدم بطاقة حتى يتم فتح محفظة تشغيلية له وربط مشترياته وكروته في ملف 360.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="cu-market-strip">
+    <div>
+      <strong>البيع الإلكتروني يعتمد على الحزم الإلكترونية</strong>
+      <span>أي حزمة بطاقة إلكترونية جاهزة للبيع تظهر في سوق البطاقات، والمستخدم يشتري منها عبر المحفظة.</span>
+    </div>
+    <a class="cu-btn cu-btn--violet" href="{{ url_for('radius.card_marketplace') }}">
+      <i class="fa-solid fa-arrow-left"></i>
+      فتح السوق
+    </a>
+  </section>
 </div>
 
-{% call hub.section("القائمة", icon="table-list", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="card-users-table">
-      <thead><tr><th>الاسم</th><th>الموبايل</th><th>الحالة</th><th>الملف</th></tr></thead>
-      <tbody>
-        {% for user in card_users %}
-          <tr>
-            <td>{{ user.display_name }}</td>
-            <td>{{ user.mobile or "—" }}</td>
-            <td>{{ user.status }}</td>
-            <td><a href="{{ url_for('radius.card_user_360', card_user_id=user.id) }}">360</a></td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4">لا يوجد مستخدمو كروت بعد.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
+<script>
+  (() => {
+    const root = document.querySelector('[data-card-users-page]');
+    if (!root) return;
+    const search = root.querySelector('[data-card-user-search]');
+    const cards = Array.from(root.querySelectorAll('[data-card-user-card]'));
+    search?.addEventListener('input', () => {
+      const query = search.value.trim().toLowerCase();
+      cards.forEach((card) => {
+        const text = card.dataset.searchText || '';
+        card.hidden = query && !text.includes(query);
+      });
+    });
+  })();
+</script>
 {% endblock %}

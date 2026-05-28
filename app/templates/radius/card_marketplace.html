@@ -1,78 +1,664 @@
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}Card Marketplace — Hobe Hub{% endblock %}
+{% block title %}سوق البطاقات الإلكتروني - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
-{% block page_title %}Card Marketplace{% endblock %}
-{% block page_sub %}<span class="sub">باقات كروت قابلة للشراء من محفظة مستخدم الكروت</span>{% endblock %}
+{% block page_title %}سوق البطاقات الإلكتروني{% endblock %}
+{% block page_sub %}<span class="sub">حزم إلكترونية جاهزة للبيع</span>{% endblock %}
+
+{% macro num(value) -%}
+  {{ "{:,}".format((value or 0)|int) }}
+{%- endmacro %}
+
+{% macro money(value, currency="ILS") -%}
+  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
+  {{ "%.2f"|format(value or 0) }} <span>{{ cur }}</span>
+{%- endmacro %}
+
+{% macro duration_label(batch) -%}
+  {% set value = batch.duration_value or batch.validity_after_first_login_days or batch.plan_duration_minutes or 0 %}
+  {% set unit = batch.duration_unit or "" %}
+  {% if value %}
+    {% if unit in ["minutes", "minute", "mins", "Mins"] %}
+      {{ value }} دقيقة
+    {% elif unit in ["hours", "hour"] %}
+      {{ value }} ساعة
+    {% elif unit in ["days", "day"] %}
+      {{ value }} يوم
+    {% else %}
+      {{ value }} {{ unit }}
+    {% endif %}
+  {% else %}
+    غير محددة
+  {% endif %}
+{%- endmacro %}
+
+{% macro date_label(value) -%}
+  {{ (value|string)[:16].replace("T", " ") if value else "بدون تاريخ" }}
+{%- endmacro %}
 
 {% block content %}
-{{ hub.hero(
-  "Card Marketplace",
-  subtitle="الباقات هنا لا تطبق أي تغيير مباشر على RADIUS. الشراء يولد كرتًا محليًا ويكتب قيدًا وحدثًا ماليًا.",
-  icon="store",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_users_list') ~ '"><i class="fa-solid fa-id-card"></i> مستخدمو الكروت</a>'
-) }}
+<style>
+  .market-page {
+    --market-ink: #162033;
+    --market-muted: #72809a;
+    --market-line: #dfe7f3;
+    --market-soft: rgba(255, 255, 255, .76);
+    --market-blue: #1e88e5;
+    --market-teal: #10a58f;
+    --market-amber: #f59f18;
+    --market-violet: #6f55f2;
+    direction: rtl;
+    color: var(--market-ink);
+  }
 
-{% call hub.section("إضافة باقة", icon="plus") %}
-  <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" class="hub-form-grid" data-testid="marketplace-package-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>اسم الباقة
-      <input name="name" placeholder="8 hours / 2 Mbps" required>
-    </label>
-    <label>Plan ID
-      <input name="plan_id" type="number" min="1" required>
-    </label>
-    <label>السعر
-      <input name="price" type="number" step="0.01" min="0.01" required>
-    </label>
-    <label>الدقائق
-      <input name="duration_minutes" type="number" min="0">
-    </label>
-    <label>Download Kbps
-      <input name="speed_down_kbps" type="number" min="0">
-    </label>
-    <label>Upload Kbps
-      <input name="speed_up_kbps" type="number" min="0">
-    </label>
-    <button class="hub-btn hub-btn--primary" type="submit">حفظ الباقة</button>
-  </form>
-{% endcall %}
+  .market-hero,
+  .market-panel,
+  .market-card {
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid var(--market-line);
+    box-shadow: 0 18px 38px rgba(31, 41, 55, .07);
+  }
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("الباقات", icon="boxes-stacked", flush=True) %}
-    <div class="hub-table-wrap">
-      <table class="hub-table" data-testid="marketplace-packages-table">
-        <thead><tr><th>الباقة</th><th>المدة</th><th>السرعة</th><th>السعر</th></tr></thead>
-        <tbody>
-          {% for package in packages %}
-            <tr>
-              <td>{{ package.name }}</td>
-              <td>{{ package.duration_minutes }} دقيقة</td>
-              <td>{{ package.speed_down_kbps }}/{{ package.speed_up_kbps }} Kbps</td>
-              <td>{{ package.price }} {{ package.currency }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="4">لا توجد باقات بعد.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  .market-hero {
+    border-radius: 22px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: minmax(220px, .9fr) minmax(520px, 2fr);
+    gap: 12px;
+    align-items: center;
+    background:
+      radial-gradient(circle at 12% 15%, rgba(16, 165, 143, .14), transparent 30%),
+      linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(240, 247, 255, .9));
+  }
+
+  .market-hero__copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .market-kicker {
+    color: var(--market-teal);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .market-hero h1 {
+    margin: 0;
+    font-size: clamp(23px, 2.2vw, 32px);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .market-hero p {
+    display: none;
+    margin: 0;
+    color: var(--market-muted);
+    font-weight: 800;
+    line-height: 1.8;
+  }
+
+  .market-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .market-btn {
+    min-height: 40px;
+    border-radius: 14px;
+    border: 1px solid var(--market-line);
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 950;
+    color: var(--market-ink);
+    background: #fff;
+    text-decoration: none;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .market-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(111, 85, 242, .35);
+    box-shadow: 0 12px 24px rgba(31, 41, 55, .08);
+  }
+
+  .market-btn--primary {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--market-teal), #17b9a2);
+    box-shadow: 0 14px 28px rgba(16, 165, 143, .18);
+  }
+
+  .market-btn--violet {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--market-violet), #7b5cff);
+  }
+
+  .market-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    align-self: center;
+  }
+
+  .market-metric {
+    min-height: 82px;
+    border-radius: 16px;
+    padding: 11px 12px;
+    background: #fff;
+    border: 1px solid rgba(223, 231, 243, .9);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .market-metric::after {
+    content: "";
+    width: 54px;
+    height: 54px;
+    border-radius: 20px;
+    background: var(--metric-color, var(--market-blue));
+    opacity: .14;
+    position: absolute;
+    inset-inline-end: -18px;
+    bottom: -18px;
+  }
+
+  .market-metric i {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--metric-color, var(--market-blue));
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--metric-color, var(--market-blue)) 25%, transparent);
+    z-index: 1;
+  }
+
+  .market-metric span {
+    display: block;
+    color: var(--market-muted);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .market-metric strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--market-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .market-panel {
+    margin-top: 18px;
+    border-radius: 26px;
+    overflow: hidden;
+  }
+
+  .market-panel__head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--market-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .market-panel__head h2 {
+    margin: 0;
+    font-size: 19px;
+  }
+
+  .market-panel__head span {
+    color: var(--market-muted);
+    font-weight: 900;
+  }
+
+  .market-batches {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .market-card {
+    border-radius: 18px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-height: 100%;
+  }
+
+  .market-card__top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .market-card h3 {
+    margin: 0 0 5px;
+    font-size: 17px;
+    text-align: center;
+  }
+
+  .market-code {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--market-muted);
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .market-badge {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(135deg, var(--market-teal), #18c0a7);
+    box-shadow: 0 14px 22px rgba(16, 165, 143, .14);
+  }
+
+  .market-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .market-chip {
+    min-height: 28px;
+    border-radius: 999px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #42516c;
+    background: #f5f8fc;
+    border: 1px solid #e8eef7;
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  .market-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .market-stat {
+    min-height: 58px;
+    border-radius: 13px;
+    padding: 7px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--stat-line, #e8eef7);
+    background: var(--stat-bg, #f8fbff);
+  }
+
+  .market-stat small {
+    color: #60708c;
+    font-weight: 950;
+  }
+
+  .market-stat strong {
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .market-progress {
+    border-radius: 14px;
+    padding: 9px;
+    background: #f8fafc;
+    border: 1px solid #e8eef7;
+  }
+
+  .market-progress__labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #56657f;
+    font-weight: 900;
+    margin-bottom: 7px;
+    font-size: 12px;
+  }
+
+  .market-progress__bar {
+    height: 9px;
+    border-radius: 999px;
+    background: #e9eef5;
+    overflow: hidden;
+  }
+
+  .market-progress__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--market-teal), var(--market-violet));
+  }
+
+  .market-card__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+  }
+
+  .market-card__meta div {
+    border-radius: 12px;
+    background: #fbfcff;
+    border: 1px solid #e9eef6;
+    padding: 7px;
+    text-align: center;
+  }
+
+  .market-card__meta dt {
+    color: var(--market-muted);
+    font-weight: 900;
+    font-size: 11px;
+  }
+
+  .market-card__meta dd {
+    margin: 4px 0 0;
+    font-weight: 950;
+    color: var(--market-ink);
+    word-break: break-word;
+  }
+
+  .market-card__foot {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .market-card__foot .market-btn {
+    min-height: 36px;
+    border-radius: 12px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  .market-table-wrap {
+    overflow-x: auto;
+  }
+
+  .market-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+  }
+
+  .market-table th,
+  .market-table td {
+    padding: 15px 12px;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #e8eef7;
+    font-weight: 850;
+  }
+
+  .market-table th {
+    color: var(--market-ink);
+    background: #f8f7ff;
+    font-weight: 950;
+  }
+
+  .market-table td {
+    color: #2b364a;
+  }
+
+  .market-empty {
+    padding: 48px 18px;
+    text-align: center;
+  }
+
+  .market-empty i {
+    width: 70px;
+    height: 70px;
+    border-radius: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--market-teal);
+    background: rgba(16, 165, 143, .1);
+    font-size: 28px;
+    margin-bottom: 14px;
+  }
+
+  .market-empty h2 {
+    margin: 0 0 8px;
+  }
+
+  .market-empty p {
+    margin: 0 auto 18px;
+    max-width: 560px;
+    color: var(--market-muted);
+    font-weight: 850;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 1100px) {
+    .market-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .market-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .market-batches {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 680px) {
+    .market-hero,
+    .market-panel {
+      border-radius: 20px;
+    }
+
+    .market-card__foot {
+      grid-template-columns: 1fr;
+    }
+
+    .market-metrics,
+    .market-batches,
+    .market-card__stats,
+    .market-card__meta {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="market-page" data-card-marketplace>
+  <section class="market-hero">
+    <div class="market-hero__copy">
+      <span class="market-kicker">واجهة البيع الإلكتروني</span>
+      <h1>حزم بطاقات إلكترونية جاهزة للبيع</h1>
+      <div class="market-actions">
+        <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_generate') }}">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          إنشاء حزمة إلكترونية
+        </a>
+      </div>
     </div>
-  {% endcall %}
 
-  {% call hub.section("آخر المشتريات", icon="receipt", flush=True) %}
-    <div class="hub-table-wrap">
-      <table class="hub-table" data-testid="marketplace-purchases-table">
-        <thead><tr><th>المستخدم</th><th>الكرت</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+    <div class="market-metrics" aria-label="ملخص السوق الإلكتروني">
+      <article class="market-metric" style="--metric-color:#1e88e5">
+        <div><span>حزم إلكترونية</span><strong>{{ num(market_summary.batches) }}</strong></div>
+        <i class="fa-solid fa-boxes-stacked"></i>
+      </article>
+      <article class="market-metric" style="--metric-color:#10a58f">
+        <div><span>كروت متاحة للبيع</span><strong>{{ num(market_summary.available) }}</strong></div>
+        <i class="fa-solid fa-ticket"></i>
+      </article>
+      <article class="market-metric" style="--metric-color:#f59f18">
+        <div><span>كروت مباعة</span><strong>{{ num(market_summary.sold) }}</strong></div>
+        <i class="fa-solid fa-cart-shopping"></i>
+      </article>
+      <article class="market-metric" style="--metric-color:#6f55f2">
+        <div><span>إيراد إلكتروني</span><strong>{{ money(market_summary.revenue, market_summary.currency) }}</strong></div>
+        <i class="fa-solid fa-coins"></i>
+      </article>
+    </div>
+  </section>
+
+  <section class="market-panel">
+    <header class="market-panel__head">
+      <div>
+        <h2>حزم البيع الإلكتروني</h2>
+        <span>{{ num(electronic_batches|length) }} حزم</span>
+      </div>
+    </header>
+
+    {% if electronic_batches %}
+      <div class="market-batches">
+        {% for batch in electronic_batches %}
+          {% set total = batch.total_cards or 0 %}
+          {% set sold = batch.sold_count or 0 %}
+          {% set available = batch.available_count or 0 %}
+          {% set progress = (sold / total * 100) if total else 0 %}
+          <article class="market-card" data-market-batch-card data-search-text="{{ (batch.display_name ~ ' ' ~ batch.batch_code ~ ' ' ~ batch.plan_name ~ ' ' ~ batch.manager_display_name ~ ' ' ~ batch.distributor_display_name)|lower }}">
+            <header class="market-card__top">
+              <div>
+                <h3>{{ batch.display_name }}</h3>
+                <div class="market-code">
+                  <span>{{ batch.batch_code or "بدون كود" }}</span>
+                  <span>#{{ batch.id }}</span>
+                </div>
+              </div>
+              <span class="market-badge" title="حزمة إلكترونية"><i class="fa-solid fa-wallet"></i></span>
+            </header>
+
+            <div class="market-chips">
+              <span class="market-chip"><i class="fa-regular fa-clock"></i> {{ duration_label(batch) }}</span>
+              <span class="market-chip"><i class="fa-solid fa-mobile-screen"></i> {{ batch.device_count or 1 }} جهاز</span>
+              {% if batch.quota_mb %}
+                <span class="market-chip"><i class="fa-solid fa-database"></i> {{ num(batch.quota_mb) }} MB</span>
+              {% endif %}
+            </div>
+
+            <div class="market-card__stats">
+              <div class="market-stat" style="--stat-bg:#f2fbf8;--stat-line:#bdeee0">
+                <small>متاح للبيع</small>
+                <strong>{{ num(available) }}</strong>
+              </div>
+              <div class="market-stat" style="--stat-bg:#fff8e9;--stat-line:#ffe0a3">
+                <small>مباع</small>
+                <strong>{{ num(sold) }}</strong>
+              </div>
+              <div class="market-stat" style="--stat-bg:#f5f2ff;--stat-line:#ded5ff">
+                <small>إجمالي الكروت</small>
+                <strong>{{ num(total) }}</strong>
+              </div>
+            </div>
+
+            <div class="market-progress">
+              <div class="market-progress__labels">
+                <span>{{ "%.0f"|format(progress) }}% مباعة</span>
+                <span>متبقي {{ num(available) }}</span>
+              </div>
+              <div class="market-progress__bar"><span style="width:{{ [progress, 100]|min }}%"></span></div>
+            </div>
+
+            <dl class="market-card__meta">
+              <div><dt>سعر البيع</dt><dd>{{ money(batch.unit_price, batch.currency) }}</dd></div>
+              <div><dt>سعر الجملة</dt><dd>{{ money(batch.wholesale_price, batch.currency) }}</dd></div>
+              <div><dt>المدير</dt><dd>{{ batch.manager_display_name or "بدون مدير" }}</dd></div>
+              <div><dt>الموزع</dt><dd>{{ batch.distributor_display_name or "بدون موزع" }}</dd></div>
+              <div><dt>الخطة</dt><dd>{{ batch.plan_name or "بدون خطة" }}</dd></div>
+              <div><dt>الإنشاء</dt><dd>{{ date_label(batch.created_at) }}</dd></div>
+            </dl>
+
+            <footer class="market-card__foot">
+              <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">
+                <i class="fa-solid fa-eye"></i>
+                عرض الكروت
+              </a>
+              <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+                <i class="fa-solid fa-pen"></i>
+                تعديل الحزمة
+              </a>
+            </footer>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="market-empty">
+        <i class="fa-solid fa-store-slash"></i>
+        <h2>لا توجد حزم إلكترونية جاهزة للبيع</h2>
+        <p>أنشئ حزمة إلكترونية حتى تظهر هنا.</p>
+        <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_generate') }}">
+          <i class="fa-solid fa-plus"></i>
+          إنشاء حزمة إلكترونية
+        </a>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="market-panel">
+    <header class="market-panel__head">
+      <div>
+        <h2>آخر عمليات الشراء</h2>
+      </div>
+      <span class="market-chip"><i class="fa-solid fa-receipt"></i> {{ num(purchases|length) }} عملية</span>
+    </header>
+    <div class="market-table-wrap">
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th>المستخدم</th>
+            <th>الحزمة</th>
+            <th>الكرت</th>
+            <th>المبلغ</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
         <tbody>
           {% for purchase in purchases %}
-            <tr><td>#{{ purchase.card_user_id }}</td><td>#{{ purchase.card_id }}</td><td>{{ purchase.amount }} {{ purchase.currency }}</td><td>{{ purchase.status }}</td></tr>
+            <tr>
+              <td>{{ purchase.card_user_name or ("#" ~ purchase.card_user_id) }}</td>
+              <td>{{ purchase.package_name or purchase.batch_code or "حزمة إلكترونية" }}</td>
+              <td>{{ purchase.card_username or ("#" ~ purchase.card_id) }}</td>
+              <td>{{ money(purchase.amount, purchase.currency) }}</td>
+              <td>{{ "مكتملة" if purchase.status == "completed" else purchase.status }}</td>
+              <td>{{ date_label(purchase.created_at) }}</td>
+            </tr>
           {% else %}
-            <tr><td colspan="4">لا توجد مشتريات بعد.</td></tr>
+            <tr>
+              <td colspan="6">لا توجد عمليات شراء إلكترونية بعد.</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  {% endcall %}
+  </section>
 </div>
+
 {% endblock %}
+    font-size: 11px;

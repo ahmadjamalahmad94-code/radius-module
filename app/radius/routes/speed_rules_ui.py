@@ -57,6 +57,81 @@ def speed_rules_panel(
     }
 
 
+def _as_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def create_staged_speed_rules(
+    *,
+    tenant_id: int,
+    actor: str,
+    form,
+    target_type: str,
+    plan_id: int | None = None,
+    subscriber_username: str = "",
+    card_batch_id: int | None = None,
+    subscriber_group_id: int | None = None,
+    metadata: dict | None = None,
+) -> int:
+    """Persist every sr_new_<n>_* rule staged by the embedded panel."""
+    indices: set[int] = set()
+    for key in form.keys():
+        if not key.startswith("sr_new_"):
+            continue
+        rest = key[len("sr_new_"):]
+        idx_part = rest.split("_", 1)[0]
+        try:
+            indices.add(int(idx_part))
+        except ValueError:
+            continue
+
+    if not indices:
+        return 0
+
+    svc = get_operations_service()
+    created = 0
+    base_meta = {
+        "embedded_target": target_type,
+        "added_via": "speed_rules_panel_defer",
+        **(metadata or {}),
+    }
+    for idx in sorted(indices):
+        suffix = str(idx)
+        starts = (form.get(f"sr_new_{suffix}_starts_at_time") or "").strip()
+        ends = (form.get(f"sr_new_{suffix}_ends_at_time") or "").strip()
+        if not starts or not ends:
+            continue
+        svc.create_bandwidth_schedule(
+            tenant_id=tenant_id,
+            actor=actor,
+            data={
+                "target_type": target_type,
+                "plan_id": plan_id,
+                "subscriber_username": subscriber_username,
+                "card_batch_id": card_batch_id,
+                "subscriber_group_id": subscriber_group_id,
+                "name": (form.get(f"sr_new_{suffix}_name") or "").strip() or "قاعدة سرعة",
+                "starts_at_time": starts,
+                "ends_at_time": ends,
+                "days_csv": form.get(f"sr_new_{suffix}_days_csv") or "",
+                "speed_down_kbps": _as_int(form.get(f"sr_new_{suffix}_speed_down_kbps"), 0),
+                "speed_up_kbps": _as_int(form.get(f"sr_new_{suffix}_speed_up_kbps"), 0),
+                "cir_down_kbps": _as_int(form.get(f"sr_new_{suffix}_cir_down_kbps"), 0),
+                "cir_up_kbps": _as_int(form.get(f"sr_new_{suffix}_cir_up_kbps"), 0),
+                "restore_mode": form.get(f"sr_new_{suffix}_restore_mode") or "profile_default",
+                "priority": _as_int(form.get(f"sr_new_{suffix}_priority"), 5),
+                "enabled": (form.get(f"sr_new_{suffix}_enabled") or "1").lower() in {"1", "true", "on", "yes"},
+                "notes": form.get(f"sr_new_{suffix}_notes") or "",
+                "metadata": base_meta,
+            },
+        )
+        created += 1
+    return created
+
+
 def handle_embedded_speed_rule(
     *,
     tenant_id: int,

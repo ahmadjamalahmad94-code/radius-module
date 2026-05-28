@@ -134,7 +134,6 @@
 {%- set m_subscribers_360 = (path == url_for('radius.subscribers_list')) -%}
 {%- set m_card_users = (path == url_for('radius.card_users_list')) -%}
 {%- set m_card_marketplace = (path == url_for('radius.card_marketplace')) -%}
-{%- set m_card_pricing = (path == url_for('radius.card_pricing')) -%}
 {%- set m_business_operators = (path == url_for('radius.business_operators')) -%}
 {%- set m_communications = ('/communications' in path) -%}
 {%- set m_communications_templates = (path == url_for('radius.communications_templates')) -%}
@@ -167,8 +166,8 @@
 
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 -%}
-{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates
-                                or m_card_users or m_card_marketplace or m_card_pricing -%}
+{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates -%}
+{%- set sec_e_cards_active  = m_card_users or m_card_marketplace -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched or m_operations_speed -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
@@ -258,11 +257,23 @@
         {{ sub_item('radius.cards_checker',  'فحص بطاقة',       m_cards_checker) }}
         {{ sub_item('radius.cards_batches',  'حزم البطاقات',    m_cards_batches) }}
         {{ sub_item('radius.cards_generate', 'إضافة حزمة',      m_cards_generate) }}
-        {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
-        {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
-        {{ sub_item('radius.card_pricing', 'تسعير البطاقات', m_card_pricing) }}
-        {{ sub_item('radius.online_list',    'البطاقات المتصلة', m_cards_online, {'type':'card'}) }}
+        {{ sub_item('radius.online_list', 'البطاقات المتصلة', m_cards_online, {'type':'card'}) }}
         {{ sub_item('radius.print_templates','قوالب الطباعة',   m_print_templates) }}
+      </div></div>
+    </div>
+
+    {# ───────── البطاقات الإلكترونية ───────── #}
+    <div class="hb-side-section{% if sec_e_cards_active %} is-open has-active{% endif %}"
+         data-hb-section="electronic-cards" data-hb-tone="cyan">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="البطاقات الإلكترونية">
+        <span class="hb-side-icon"><i class="fa-solid fa-wallet"></i></span>
+        <span class="hb-side-text">البطاقات الإلكترونية</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
+        {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
       </div></div>
     </div>
 

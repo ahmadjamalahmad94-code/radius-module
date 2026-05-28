@@ -4,6 +4,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% block title %}إنشاء كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
@@ -11,8 +12,80 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
+<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 <style>
-  .cg-form{ max-width: 1180px; margin: 0 auto; }
+  .cg-form{
+    max-width: 1180px;
+    margin: 0 auto;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 224px;
+    gap:var(--hub-gap-section);
+    align-items:start;
+  }
+  .cg-page-head{ grid-column:1 / -1; }
+  .cg-form > form{ grid-column:1; grid-row:2; min-width:0; }
+  .cg-side{
+    grid-column:2;
+    grid-row:2;
+    position:sticky;
+    top:84px;
+    background:var(--hub-bg-card);
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-card);
+    padding:14px 12px;
+    box-shadow:var(--hub-sh-sm);
+  }
+  .cg-side-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+    padding-inline-start:2px;
+    color:var(--hub-text);
+    font-size:12.5px;
+    font-weight:800;
+  }
+  .cg-side-title i{color:var(--hub-brand-ink);font-size:12px}
+  .cg-side-list{display:flex;flex-direction:column;gap:3px}
+  .cg-side-list a{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 10px;
+    border-radius:var(--hub-r-md);
+    color:var(--hub-text-soft);
+    font-size:12.5px;
+    font-weight:700;
+    text-decoration:none;
+    transition:all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-side-list a:hover{background:var(--hub-brand-soft);color:var(--hub-brand-ink)}
+  .cg-side-list i{width:14px;text-align:center;font-size:11px;opacity:.75}
+  .cg-side-note{
+    margin-top:14px;
+    padding:12px;
+    border:1px dashed var(--hub-brand-line);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-brand-soft);
+    color:var(--hub-brand-ink);
+    font-size:11.5px;
+    font-weight:700;
+    line-height:1.7;
+  }
+  @media (max-width:980px){
+    .cg-form{display:block}
+    .cg-side{position:static;margin-bottom:var(--hub-gap-section)}
+  }
+  .cg-page-head{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    margin-bottom:16px; padding:16px 18px;
+    border:1px solid var(--hub-border); border-radius:var(--hub-r-card);
+    background:linear-gradient(135deg,#fff,#f8f6ff 62%,#ecfeff);
+    box-shadow:var(--hub-sh-card);
+  }
+  .cg-page-head h1{margin:0;font-size:25px;font-weight:950;color:var(--hub-text)}
+  .cg-page-head p{margin:5px 0 0;color:var(--hub-text-soft);font-weight:750;font-size:13px}
   .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
   @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
@@ -21,13 +94,38 @@
   .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
   .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
   .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+  .cg-form .hub-input,
+  .cg-form .hub-select,
+  .cg-form .hub-textarea{
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-bg-card);
+    color:var(--hub-text);
+    font-size:13.5px;
+    box-shadow:none;
+    transition:border-color var(--hub-anim-fast) var(--hub-ease),
+               box-shadow var(--hub-anim-fast) var(--hub-ease),
+               background var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-form .hub-input,
+  .cg-form .hub-select{ min-height:45px; padding:9px 12px; }
+  .cg-form .hub-textarea{ min-height:86px; padding:10px 12px; }
+  .cg-form .hub-input:focus,
+  .cg-form .hub-select:focus,
+  .cg-form .hub-textarea:focus{
+    border-color:var(--hub-brand-line);
+    box-shadow:0 0 0 3px rgba(107,90,237,.13);
+    background:#fff;
+    outline:none;
+  }
   .cg-chk{
     display:flex; align-items:center; gap:8px;
     padding:9px 12px;
+    min-height:45px;
     background:var(--hub-bg-soft);
     border:1px solid var(--hub-border-soft);
     border-radius:var(--hub-r-md);
-    font-size:12.5px; font-weight:700;
+    font-size:12.5px; font-weight:700; color:var(--hub-text);
   }
   .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
 
@@ -54,7 +152,7 @@
     font-size: 13px;
     flex-shrink: 0;
   }
-  .cg-section-title{ flex:1; font-size: 14px; font-weight: 800; }
+  .cg-section-title{ flex:1; font-size: 14px; font-weight: 800; color: var(--hub-text); }
   .cg-section-toggle{
     color: var(--hub-text-mute);
     transition: transform var(--hub-anim-fast) var(--hub-ease);
@@ -69,35 +167,126 @@
   .cg-section--gen    .cg-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
   .cg-section--time   { border-inline-start: 3px solid var(--hub-amber); }
   .cg-section--time   .cg-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .cg-section--speed  { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--speed  .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
   .cg-section--behave { border-inline-start: 3px solid #8B5CF6; }
   .cg-section--behave .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+  .cg-speed-note{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+    padding:10px 12px;
+    border:1px dashed var(--hub-brand-line);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-brand-soft);
+    color:var(--hub-brand-ink);
+    font-size:12px;
+    font-weight:800;
+    line-height:1.6;
+  }
+  .cg-type-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .cg-type-choice input{position:absolute;opacity:0;pointer-events:none}
+  .cg-type-choice label > span{
+    min-height:68px;
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr);
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    text-align:start;
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-lg);
+    background:var(--hub-bg-card);
+    font-weight:900;
+    color:var(--hub-text);
+    cursor:pointer;
+    transition:all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-type-choice label > span:hover{ border-color:var(--hub-brand-line); }
+  .cg-type-choice label > span > i{
+    width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:10px;background:var(--hub-brand-soft);color:var(--hub-brand-ink);
+    font-size:16px;
+  }
+  .cg-type-choice .cg-type-body{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  .cg-type-choice strong{
+    font-size:14px;
+    font-weight:900;
+    color:var(--hub-text);
+  }
+  .cg-type-choice small{
+    display:block;
+    font-size:11.5px;
+    color:var(--hub-text-mute);
+    font-weight:700;
+    line-height:1.45;
+  }
+  .cg-type-choice input:checked + span{
+    border-color:var(--hub-brand);
+    background:linear-gradient(135deg,var(--hub-brand-soft),#fff);
+    box-shadow:0 2px 8px rgba(107,90,237,.15);
+  }
+  @media (max-width:560px){ .cg-type-choice{ grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
-  "إنشاء حزمة بطاقات",
-  subtitle="حدّد الباقة، العدد، خيارات التوليد، ومدة الصلاحية — ثم ولّد الدفعة",
-  icon="wand-magic-sparkles",
-  actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة للحزم
-    </a>
-  '
-) }}
-
 <div class="cg-form">
-<form method="post" action="{{ url_for('radius.cards_generate') }}">
+<div class="cg-page-head">
+  <div>
+    <h1>إنشاء حزمة بطاقات</h1>
+    <p>الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.</p>
+  </div>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
+    <i class="fa-solid fa-arrow-right"></i> العودة للحزم
+  </a>
+</div>
+<aside class="cg-side" aria-label="أقسام النموذج">
+  <div class="cg-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
+  <nav class="cg-side-list">
+    <a href="#cg-batch"><i class="fa-solid fa-box"></i> بيانات الحزمة</a>
+    <a href="#cg-generation"><i class="fa-solid fa-dice"></i> التوليد</a>
+    <a href="#cg-time"><i class="fa-solid fa-clock"></i> الصلاحية والوقت</a>
+    <a href="#cg-speed"><i class="fa-solid fa-gauge-high"></i> السرعة المجدولة</a>
+    <a href="#cg-behavior"><i class="fa-solid fa-sliders"></i> خيارات متقدمة</a>
+  </nav>
+  <div class="cg-side-note">
+    ابدأ ببيانات الحزمة والعرض. افتح الأقسام المتقدمة فقط عند الحاجة لتخصيص الوقت والسرعة وسلوك الكرت.
+  </div>
+</aside>
+<form method="post" action="{{ url_for('radius.cards_generate') }}"
+      data-card-generate-form
+      data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
+      data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
 
   {# ── 1. Batch info ─────────────────────────── #}
-  <section class="cg-section cg-section--batch">
+  <section class="cg-section cg-section--batch" id="cg-batch">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-box"></i></span>
       <span class="cg-section-title">بيانات الحزمة</span>
     </header>
     <div class="cg-section-body">
       <div class="cg-grid">
+        <div class="cg-field full"><label>نوع الحزمة <span class="req">*</span></label>
+          {% set bt = form.get('batch_type') or 'printed' %}
+          <div class="cg-type-choice">
+            <label>
+              <input type="radio" name="batch_type" value="printed" {% if bt == 'printed' %}checked{% endif %}>
+              <span><i class="fa-solid fa-print"></i><span class="cg-type-body"><strong>مطبوعة</strong><small>حزمة للطباعة ونقاط البيع</small></span></span>
+            </label>
+            <label>
+              <input type="radio" name="batch_type" value="electronic" {% if bt == 'electronic' %}checked{% endif %}>
+              <span><i class="fa-solid fa-wallet"></i><span class="cg-type-body"><strong>إلكترونية</strong><small>حزمة للبيع الإلكتروني</small></span></span>
+            </label>
+          </div>
+        </div>
         <div class="cg-field"><label>اسم الحزمة</label>
           <input class="hub-input" type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25"></div>
         <div class="cg-field"><label>الباقة المرتبطة <span class="req">*</span></label>
@@ -113,15 +302,34 @@
         <div class="cg-field"><label>عدد البطاقات <span class="req">*</span></label>
           <input class="hub-input" type="number" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
           <div class="help">حد أقصى 2000 لكل دفعة.</div></div>
-        <div class="cg-field"><label>المدير المسؤول</label>
-          <input class="hub-input" type="number" name="manager_id" value="{{ form.get('manager_id') or '' }}" placeholder="—"></div>
-        <div class="cg-field"><label>سعر البطاقة (مرجعي)</label>
+        <div class="cg-field"><label>المدير / صاحب الشبكة</label>
+          <select class="hub-select" name="manager_id">
+            <option value="">— اختر المدير —</option>
+            {% for m in managers %}
+              <option value="{{ m.id }}" {% if form.get('manager_id')|string == m.id|string %}selected{% endif %}>
+                {{ m.full_name or m.username }}
+              </option>
+            {% endfor %}
+          </select></div>
+        <div class="cg-field"><label>الموزع / نقطة البيع</label>
+          <select class="hub-select" name="distributor_id">
+            <option value="">— بدون موزع —</option>
+            {% for d in distributors %}
+              <option value="{{ d.id }}" {% if form.get('distributor_id')|string == d.id|string %}selected{% endif %}>
+                {{ d.display_name or d.name }}
+              </option>
+            {% endfor %}
+          </select></div>
+        <div class="cg-field"><label>سعر البيع (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}"></div>
+        <div class="cg-field"><label>سعر الجملة (مرجعي)</label>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}"></div>
         <div class="cg-field"><label>السعر الإجمالي (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
           <div class="help">حقول مرجعية فقط.</div></div>
-        <div class="cg-field"><label>الكوتا الكلية (MB)</label>
-          <input class="hub-input" type="number" min="0" name="total_quota_mb" value="{{ form.get('total_quota_mb') or 0 }}"></div>
+        <div class="cg-field"><label>الكوتا الكلية</label>
+          {{ unit_input_picker(name="total_quota_mb", value=form.get('total_quota_mb') or 0, kind="quota", units=["MB","GB"]) }}
+          <div class="help">0 = بلا كوتا خاصة.</div></div>
         <div class="cg-field"><label>اسم الخدمة</label>
           <input class="hub-input" type="text" name="service_name" value="{{ form.get('service_name') or '' }}"></div>
       </div>
@@ -129,7 +337,7 @@
   </section>
 
   {# ── 2. Generation pattern ──────────────────── #}
-  <section class="cg-section cg-section--gen">
+  <section class="cg-section cg-section--gen" id="cg-generation">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-dice"></i></span>
       <span class="cg-section-title">توليد البطاقات</span>
@@ -173,7 +381,7 @@
   </section>
 
   {# ── 3. Validity & time ─────────────────────── #}
-  <section class="cg-section cg-section--time is-collapsible" data-sec="time">
+  <section class="cg-section cg-section--time is-collapsible" data-sec="time" id="cg-time">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-clock"></i></span>
       <span class="cg-section-title">الصلاحية والوقت</span>
@@ -181,16 +389,12 @@
     </header>
     <div class="cg-section-body">
       <div class="cg-grid">
-        <div class="cg-field"><label>قيمة الوقت</label>
-          <input class="hub-input" type="number" min="0" name="time_value" value="{{ form.get('time_value') or 0 }}">
-          <div class="help">0 = استخدم صلاحية الباقة.</div></div>
-        <div class="cg-field"><label>وحدة الوقت</label>
+        <div class="cg-field"><label>مدة البطاقة</label>
+          {% set tv = form.get('time_value') or 0 %}
           {% set tu = form.get('time_unit') or 'days' %}
-          <select class="hub-select" name="time_unit">
-            <option value="days"    {% if tu == 'days' %}selected{% endif %}>أيام</option>
-            <option value="hours"   {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
-            <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
-          </select></div>
+          {% set time_minutes = form.get('time_limit_minutes') or ((tv|int) * 1440 if tu == 'days' else ((tv|int) * 60 if tu == 'hours' else (tv|int))) %}
+          {{ unit_input_picker(name="time_limit_minutes", value=time_minutes, kind="time", units=["min","hr","day"]) }}
+          <div class="help">0 = استخدم صلاحية الباقة.</div></div>
         <div class="cg-field"><label>عدد الأجهزة</label>
           <input class="hub-input" type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
           <div class="help">عدد الجلسات المتزامنة المسموحة.</div></div>
@@ -215,7 +419,22 @@
   </section>
 
   {# ── 4. Behaviour ──────────────────────────── #}
-  <section class="cg-section cg-section--behave is-collapsible" data-sec="behave">
+  <section class="cg-section cg-section--speed is-collapsible is-collapsed" data-sec="speed" id="cg-speed">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
+      <span class="cg-section-title">السرعة المجدولة</span>
+      <i class="fa-solid fa-chevron-down cg-section-toggle"></i>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-speed-note">
+        <i class="fa-solid fa-circle-info"></i>
+        هذه القاعدة تُحفظ على الحزمة بعد إنشائها مباشرة، وتستخدم نفس محرر السرعة الموجود في إضافة المشترك.
+      </div>
+      {% include "radius/_speed_rules_panel.html" %}
+    </div>
+  </section>
+
+  <section class="cg-section cg-section--behave is-collapsible" data-sec="behave" id="cg-behavior">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-sliders"></i></span>
       <span class="cg-section-title">سلوك انتهاء الكوتا وخيارات إضافية</span>

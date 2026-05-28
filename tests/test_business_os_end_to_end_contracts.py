@@ -56,7 +56,6 @@ def test_business_os_ui_routes_render_without_missing_templates_or_route_drift(a
         "/admin/radius/finance/loans",
         "/admin/radius/card-users",
         "/admin/radius/card-marketplace",
-        "/admin/radius/card-pricing",
         "/admin/radius/business-operators",
         "/admin/radius/communications",
         "/admin/radius/communications/templates",

@@ -53,12 +53,14 @@ class CardsStore:
     def generate_cards_for_batch(self, *, batch_id: int, plan_id: int, count_to_make: int,
                                    username_prefix: str = "", username_suffix: str = "",
                                    username_length: int = 8,
-                                   password_length: int = 6, expire_at=None) -> list[Card]:
+                                   password_length: int = 6, password_charset: str = "digits",
+                                   expire_at=None, progress_callback=None) -> list[Card]:
         return cards_repo.generate_cards(
             tenant_id=_tid(), batch_id=batch_id, plan_id=plan_id, count=count_to_make,
             username_prefix=username_prefix, username_suffix=username_suffix,
             username_length=username_length,
-            password_length=password_length, expire_at=expire_at,
+            password_length=password_length, password_charset=password_charset,
+            expire_at=expire_at, progress_callback=progress_callback,
         )
 
     def list_cards(self, **kw) -> list[Card]:

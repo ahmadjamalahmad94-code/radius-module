@@ -18,7 +18,7 @@ from ..core.errors import RadiusError
 from ..core.types import Subscriber
 from ..services.plans import get_plans_service
 from ..services.users import get_users_service
-from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
+from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 
 
 # ════════════════════════════════════════════════════════════════
@@ -474,7 +474,23 @@ def users_create():
     # filled, create it now that the subscriber row exists. We bypass
     # handle_embedded_speed_rule because it requires _speed_rule_action
     # — here the operator clicked the main «حفظ» button, not a panel one.
-    if (request.form.get("sr_starts_at_time") or "").strip():
+    created_rules = 0
+    try:
+        created_rules = create_staged_speed_rules(
+            tenant_id=_tid(),
+            actor=_actor(),
+            form=request.form,
+            target_type="subscriber",
+            plan_id=saved.plan_id,
+            subscriber_username=saved.username,
+            metadata={"created_with_subscriber": True},
+        )
+    except RadiusError as e:
+        flash(
+            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {e.message}",
+            "warning",
+        )
+    if not created_rules and (request.form.get("sr_starts_at_time") or "").strip():
         try:
             from ..services.operations import get_operations_service
             from .speed_rules_ui import _days_from_form

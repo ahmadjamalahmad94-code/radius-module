@@ -269,6 +269,7 @@ def list_batch_operations(
             p.speed_up_kbps AS plan_speed_up_kbps,
             p.quota_total_mb AS plan_quota_total_mb,
             p.duration_minutes AS plan_duration_minutes,
+            COALESCE(NULLIF(mo.full_name, ''), mo.username, NULLIF(b.created_by, ''), CAST(NULLIF(b.manager_id, 0) AS TEXT)) AS manager_display_name,
             d.display_name AS distributor_display_name,
             d.name AS distributor_name,
             COALESCE(cs.total_cards, 0) AS total_cards,
@@ -294,6 +295,8 @@ def list_batch_operations(
         FROM card_batches b
         LEFT JOIN access_plans p
           ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
+        LEFT JOIN admins mo
+          ON mo.id = b.manager_id
         LEFT JOIN distributors d
           ON d.tenant_id = b.tenant_id AND d.id = b.distributor_id
         LEFT JOIN card_stats cs ON cs.batch_id = b.id
@@ -465,13 +468,16 @@ def create_batch(b: CardBatch) -> CardBatch:
         conn.execute(
             """
             UPDATE card_batches
-            SET source_type = ?, original_count = ?, settlement_count = ?
+            SET source_type = ?, original_count = ?, settlement_count = ?,
+                distributor_id = ?, assigned_to = ?
             WHERE tenant_id = ? AND id = ?
             """,
             (
                 getattr(b, "source_type", "") or "generated",
                 original_count,
                 settlement_count,
+                getattr(b, "distributor_id", None),
+                str(getattr(b, "distributor_id", "") or ""),
                 b.tenant_id,
                 new_id,
             ),
@@ -1318,7 +1324,8 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
                    username_prefix: str = "", username_suffix: str = "",
                    username_length: int = 8,
                    password_length: int = 6, password_charset: str = "digits",
-                   expire_at: Optional[datetime] = None) -> list[Card]:
+                   expire_at: Optional[datetime] = None,
+                   progress_callback=None) -> list[Card]:
     if count <= 0:
         return []
     now = now_iso()
@@ -1339,16 +1346,28 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
                 seen.add(uname)
                 break
         else:
-            uname = (username_prefix + _random_str(12, charset="mixed") + username_suffix).lower()
-            seen.add(uname)
+            for _try in range(200):
+                uname = (username_prefix + _random_str(12, charset="mixed") + username_suffix).lower()
+                if uname not in seen:
+                    seen.add(uname)
+                    break
+            else:
+                raise RuntimeError("Unable to generate unique card usernames")
         pwd = _random_str(password_length, charset=password_charset)
         rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
 
+    chunk_size = 100
+    inserted = 0
     with transaction() as conn:
-        conn.executemany("""
-            INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
-            VALUES(?,?,?,?,?,?,?,?,?)
-        """, rows)
+        for idx in range(0, len(rows), chunk_size):
+            chunk = rows[idx:idx + chunk_size]
+            conn.executemany("""
+                INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
+                VALUES(?,?,?,?,?,?,?,?,?)
+            """, chunk)
+            inserted += len(chunk)
+            if progress_callback:
+                progress_callback(inserted, count)
     update_batch_counters(tenant_id, batch_id, generated_delta=count)
     # نُرجع الكروت الجديدة
     cur = db().execute(
