@@ -1475,6 +1475,106 @@
       if (timer != null) { clearInterval(timer); timer = null; }
     }
 
+    // ─── Live-bridge (SSE) — optional, button-gated ──────────────
+    //
+    // When the operator toggles «تفعيل البث الحي», we open an
+    // EventSource to /api/v1/mikrotik/<id>/interfaces/stream and
+    // patch each row's RX/TX bps cells in-place every ~1 s.
+    // The polled `load()` loop above keeps running underneath so
+    // any non-bps cell (status, MAC, MTU, totals) still refreshes
+    // on the 5 s cadence. If the EventSource errors out we silently
+    // close it and let polling continue — never break the table.
+    //
+    // Operator's brief: «شغل دقيق جدا جدا بدون اخطاااء».
+    const liveBtn = root.querySelector("[data-mt-live-bridge-toggle]");
+    const liveLbl = liveBtn
+      ? liveBtn.querySelector("[data-mt-live-bridge-label]")
+      : null;
+    let liveSrc = null;
+
+    function liveSetState(state) {
+      if (!liveBtn) return;
+      liveBtn.classList.remove("is-active", "is-error");
+      if (state === "on") {
+        liveBtn.classList.add("is-active");
+        liveBtn.setAttribute("aria-pressed", "true");
+        if (liveLbl) liveLbl.textContent = "إيقاف البث";
+        liveBtn.title = "البث الحي مُفعَّل — يُحدِّث كل ~ ثانية";
+      } else if (state === "error") {
+        liveBtn.classList.add("is-error");
+        liveBtn.setAttribute("aria-pressed", "false");
+        if (liveLbl) liveLbl.textContent = "إعادة المحاولة";
+        liveBtn.title = "فشل البث الحي — اضغط لإعادة المحاولة";
+      } else {
+        liveBtn.setAttribute("aria-pressed", "false");
+        if (liveLbl) liveLbl.textContent = "تفعيل البث الحي";
+        liveBtn.title = "بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ";
+      }
+    }
+
+    function liveOnTraffic(data) {
+      if (!data || !data.iface) return;
+      // Update only the bps cells — leave totals + status to the
+      // polled refresh so we don't fight it.
+      const row = rows.querySelector(
+        '[data-mt-iface-row="' +
+        String(data.iface).replace(/"/g, '\\"') + '"]');
+      if (!row) return;
+      const rxCell = row.querySelector(".mt-iface-bps--rx");
+      const txCell = row.querySelector(".mt-iface-bps--tx");
+      if (rxCell) rxCell.textContent = bpsHuman(data.rx_bps);
+      if (txCell) txCell.textContent = bpsHuman(data.tx_bps);
+    }
+
+    function liveStart() {
+      if (liveSrc) return;
+      if (typeof EventSource === "undefined") {
+        liveSetState("error");
+        return;
+      }
+      try {
+        liveSrc = new EventSource(
+          "/api/v1/mikrotik/" + CFG.routerId + "/interfaces/stream");
+      } catch (e) {
+        liveSetState("error");
+        return;
+      }
+      // Optimistic — flip to "on" until we hear back.
+      liveSetState("on");
+      liveSrc.addEventListener("hello", () => {
+        liveSetState("on");
+      });
+      liveSrc.addEventListener("traffic", (e) => {
+        try { liveOnTraffic(JSON.parse(e.data)); }
+        catch (_) { /* ignore malformed frame */ }
+      });
+      liveSrc.addEventListener("status", (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          liveSetState(payload && payload.connected ? "on" : "error");
+        } catch (_) { /* ignore */ }
+      });
+      liveSrc.addEventListener("error", () => {
+        // Native EventSource auto-reconnects with backoff; flip
+        // the button to "error" so the operator can see the
+        // connection is degraded.
+        liveSetState("error");
+      });
+    }
+    function liveStop() {
+      if (liveSrc) {
+        try { liveSrc.close(); } catch (_) { /* ignore */ }
+        liveSrc = null;
+      }
+      liveSetState("off");
+    }
+    if (liveBtn) {
+      liveBtn.addEventListener("click", () => {
+        if (liveSrc) liveStop(); else liveStart();
+      });
+      window.addEventListener("beforeunload", () => liveStop());
+    }
+
     root.addEventListener("mt:tab-change", (e) => {
       if (e.detail && e.detail.slug === "interfaces") start();
       else stop();

@@ -1399,15 +1399,29 @@
   <section class="mt-tab-panel" data-mt-tab-panel="interfaces"
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
-              <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-ethernet"></i> الواجهات
-        </span>
-        <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
-        <p>
-          كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
-          وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
-        </p>
-      
+      <span class="mt-page-hero-kicker">
+        <i class="fa-solid fa-ethernet"></i> الواجهات
+      </span>
+      <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
+      <p>
+        كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
+        وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
+      </p>
+      {# Live-bridge toggle. OFF by default — the polled 5 s
+         refresh handles the common case. When ON, the dashboard
+         opens an EventSource to /interfaces/stream and patches
+         each row's RX/TX cells in-place every ~1 s. Falls back
+         to polling on any error. Operator:
+         «زر بهيرو الجدول تفعيل وضع البث الحي … اضافة مش اساسي». #}
+      <button type="button"
+              class="mt-live-bridge-toggle"
+              data-mt-live-bridge-toggle
+              aria-pressed="false"
+              title="بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ">
+        <span class="mt-live-bridge-dot" aria-hidden="true"></span>
+        <i class="fa-solid fa-broadcast-tower"></i>
+        <span data-mt-live-bridge-label>تفعيل البث الحي</span>
+      </button>
     </div>
     {# Stats strip — mirrors data-mt-interfaces-count into a
        prominent pill so the total is visible above the table. #}

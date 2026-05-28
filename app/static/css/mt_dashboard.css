@@ -650,6 +650,68 @@
   border-radius: 8px;
   border: 1px solid #E2E8F0;
 }
+/* Live-bridge toggle in the interfaces hero. OFF state is calm
+   (grey dot), ON state is glowing (green pulsing dot). The
+   pulse animation runs only when the EventSource is healthy
+   (.is-active is set + cleared by JS). */
+.mt-live-bridge-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 58, 237, 0.20);
+  background: rgba(255, 255, 255, 0.78);
+  color: #4A3F8A;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  backdrop-filter: blur(8px);
+}
+.mt-live-bridge-toggle i { font-size: 12px; color: #6D28D9; }
+.mt-live-bridge-toggle:hover {
+  background: #fff;
+  border-color: rgba(124, 58, 237, 0.36);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+.mt-live-bridge-toggle.is-active {
+  background: linear-gradient(135deg, #10B981, #047857);
+  border-color: #047857;
+  color: #fff;
+}
+.mt-live-bridge-toggle.is-active i { color: #fff; }
+.mt-live-bridge-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #94A3B8;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.mt-live-bridge-toggle.is-active .mt-live-bridge-dot {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+  animation: mt-live-bridge-pulse 1.4s ease-in-out infinite;
+}
+.mt-live-bridge-toggle.is-error {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #B91C1C;
+}
+.mt-live-bridge-toggle.is-error .mt-live-bridge-dot {
+  background: #EF4444;
+  animation: none;
+}
+@keyframes mt-live-bridge-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-live-bridge-toggle.is-active .mt-live-bridge-dot { animation: none; }
+}
+
 .mt-iface-table {
   width: 100%;
   border-collapse: collapse;

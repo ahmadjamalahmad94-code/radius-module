@@ -180,11 +180,21 @@ class _RouterStream:
         We swallow every exception inside this method so a transient
         router hiccup never kills the worker. Failures are surfaced
         to subscribers as a `status` event.
+
+        Critical: we call `_safe_dial` directly so the wire fetch
+        BYPASSES the 15-second TTL cache that the polled
+        `interface_list()` uses. Without this, every tick after the
+        first would just serve cached data and the dashboard would
+        see flat 0 bps until the cache expires.
         """
         try:
-            result = mac.interface_list(self.nas)
+            result = mac._safe_dial(
+                nas=self.nas,
+                operation="interface/list:stream",
+                work=lambda c: list(c.print_("/interface/print")),
+            )
         except Exception as exc:  # noqa: BLE001
-            _LOG.exception("[mt-stream %d] interface_list raised",
+            _LOG.exception("[mt-stream %d] _safe_dial raised",
                            self.router_id)
             self._set_status("down", error=str(exc))
             return
