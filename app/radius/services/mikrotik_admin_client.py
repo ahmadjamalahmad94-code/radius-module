@@ -365,12 +365,49 @@ def system_identity(nas: Mapping[str, Any]) -> MtResult:
 
 
 def system_clock(nas: Mapping[str, Any]) -> MtResult:
-    # Time changes every second; serve from short cache only.
+    """Fetch /system/clock/print and normalise the row so the UI
+    always sees the same two keys regardless of RouterOS version.
+
+    RouterOS 7 returns: time, date, time-zone-name, gmt-offset, …
+    Some 6.x flavours used current-time / current-date. A few
+    builds attach the time fields directly to the response prop
+    list (no separate row). We flatten all of those into a single
+    {time, date, timezone} row so the frontend can stop guessing.
+
+    Time changes every second; short cache only.
+    """
+    def _work(c):
+        rows = list(c.print_("/system/clock/print"))
+        if not rows:
+            return rows
+        row = rows[0] or {}
+        # Accept either field shape, fall through to whatever's present.
+        time_val = (row.get("time")
+                    or row.get("current-time")
+                    or row.get("currentTime")
+                    or "")
+        date_val = (row.get("date")
+                    or row.get("current-date")
+                    or row.get("currentDate")
+                    or "")
+        tz_val = (row.get("time-zone-name")
+                  or row.get("timeZoneName")
+                  or row.get("time-zone")
+                  or "")
+        # Return BOTH the canonical normalised keys AND the original
+        # row keys, so future debug or downstream consumers can read
+        # the raw values if they need them.
+        normalised = dict(row)
+        normalised["time"] = str(time_val)
+        normalised["date"] = str(date_val)
+        normalised["timezone"] = str(tz_val)
+        return [normalised]
+
     return fetch_cached(
         nas=nas,
         operation="system/clock",
         ttl_sec=5.0,
-        work=lambda c: list(c.print_("/system/clock/print")),
+        work=_work,
     )
 
 

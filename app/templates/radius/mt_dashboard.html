@@ -57,152 +57,122 @@
   box-shadow:0 14px 44px rgba(65,73,118,.08);
   backdrop-filter:blur(18px);
 }
-/* Compact KPI cards — operator: «قلل ارتفاع البطاقات 30 %».
-   Was min-height: 176px (+ 17px padding + 27px value + 45px icon).
-   Now ~123px target — every dimension scaled to match. */
+/* Clean KPI card — operator's redesign brief:
+   «عيد تصميمهم لانه مش مرتبين خالص». Simple 3-row stack:
+     1. Header (icon + title + status chip)
+     2. Big value (LTR-isolated)
+     3. Sub caption
+   Progress bar at the bottom kept as a slim accent. */
 .rh-overview .hub-kpi{
   --kpi-accent:#6B5AED;
   --kpi-soft:rgba(107,90,237,.12);
   --kpi-progress:0%;
   position:relative;
   overflow:hidden;
-  min-height:124px;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px 14px;
+  min-height:120px;
+  display:block;
+  padding:12px 14px 16px;
   border:1px solid rgba(226,232,240,.82);
-  border-radius:16px;
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.86)),
-    radial-gradient(circle at 16% 12%, var(--kpi-soft), transparent 38%);
+  border-radius:14px;
+  background:linear-gradient(145deg, #FFFFFF, #FAFAFE);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.9),
-    0 10px 28px rgba(38,51,90,.06);
+    0 4px 12px rgba(38,51,90,.04);
   transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
 }
 .rh-overview .hub-kpi:hover{
-  transform:translateY(-3px);
-  border-color:rgba(148,163,184,.82);
+  transform:translateY(-2px);
+  border-color:var(--kpi-accent);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.96),
-    0 26px 58px rgba(38,51,90,.13);
+    0 8px 22px rgba(38,51,90,.08);
 }
+/* Slim accent bar at the bottom — full width when no progress
+   is set, fills to var(--kpi-progress) when JS hands a percent. */
 .rh-overview .hub-kpi::before{
   content:"";
   position:absolute;
-  inset:auto 12px 10px 12px;
-  height:4px;
-  border-radius:999px;
-  background:rgba(226,232,240,.82);
+  left:0;right:0;bottom:0;
+  height:3px;
+  background:rgba(226,232,240,.6);
 }
 .rh-overview .hub-kpi::after{
   content:"";
   position:absolute;
-  inset:auto 12px 10px auto;
-  width:var(--kpi-progress);
-  max-width:calc(100% - 24px);
-  height:4px;
-  border-radius:999px;
-  background:linear-gradient(90deg,var(--kpi-accent),#8B5CF6);
-  box-shadow:0 0 16px var(--kpi-soft);
+  inset-inline-start:0;
+  bottom:0;
+  width:var(--kpi-progress, 0%);
+  height:3px;
+  background:linear-gradient(90deg,var(--kpi-accent),color-mix(in srgb, var(--kpi-accent) 70%, #FFF 30%));
   transition:width .35s ease;
 }
+/* Card layout — clean 3-row stack (header / value / sub).
+   No more ring/wave decoration competing with the value, no
+   nested copy wrapper. Each row is plain block flow so RTL +
+   LTR mix correctly. */
 .rh-overview .hub-kpi-head{
-  position:relative;
   display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
+  align-items:center;
   gap:10px;
+  margin:0 0 8px;
 }
 .rh-overview .hub-kpi-icon{
-  width:32px;
-  height:32px;
-  border-radius:10px;
+  width:34px;height:34px;border-radius:10px;
   flex-shrink:0;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--kpi-accent);
-  font-size:13px;
-  background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(245,243,255,.82));
-  border:1px solid rgba(255,255,255,.96);
-  box-shadow:0 6px 16px var(--kpi-soft);
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;
+  font-size:14px;
+  background:linear-gradient(135deg,var(--kpi-accent),color-mix(in srgb,var(--kpi-accent) 70%, #000 14%));
+  box-shadow:0 6px 14px var(--kpi-soft);
+}
+.rh-overview .hub-kpi-titles{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+  flex:1;
 }
 .rh-overview .hub-kpi-label{
-  margin-top:2px;
-  color:#111B31;
-  font-size:11.5px;
-  line-height:1.35;
-  font-weight:900;
+  color:#1F2937;
+  font-size:12px;
+  line-height:1.25;
+  font-weight:800;
   letter-spacing:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .rh-overview .hub-kpi-status{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:18px;
-  padding:0 7px;
+  align-self:flex-start;
+  padding:1px 8px;
   border-radius:999px;
   color:var(--kpi-accent);
   background:var(--kpi-soft);
   font-size:9.5px;
-  font-weight:900;
-}
-.rh-overview .hub-kpi-body{
-  position:relative;
-  min-width:0;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:8px;
-  align-items:center;
-}
-.rh-overview .hub-kpi-copy{
-  min-width:0;
+  font-weight:800;
+  letter-spacing:.03em;
+  line-height:1.55;
 }
 .rh-overview .hub-kpi-value{
-  color:#101B33;
-  font-size:19px;
-  font-weight:950;
-  line-height:1.15;
+  /* dir="ltr" on the element ensures "643.1 MB / 1.0 GB" renders
+     left-to-right (numbers + units in the correct order) instead
+     of being chunk-reordered by the RTL parent.
+     `unicode-bidi: isolate` adds a belt-and-braces guarantee. */
+  unicode-bidi:isolate;
+  color:#0F172A;
+  font-size:21px;
+  font-weight:900;
+  line-height:1.2;
   font-variant-numeric:tabular-nums;
+  margin:0 0 3px;
   word-break:break-word;
+  /* Visually flush with the title (right edge in RTL). */
+  text-align:start;
 }
 .rh-overview .hub-kpi-sub{
-  margin-top:3px;
-  color:#718096;
-  font-size:10.5px;
-  line-height:1.45;
-  font-weight:700;
-}
-.rh-overview .hub-kpi-ring{
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  display:grid;
-  place-items:center;
-  color:var(--kpi-accent);
-  background:
-    conic-gradient(var(--kpi-accent) var(--kpi-progress), rgba(226,232,240,.9) 0),
-    linear-gradient(#fff,#fff);
-  box-shadow:inset 0 0 0 4.5px #fff, 0 6px 14px var(--kpi-soft);
-}
-.rh-overview .hub-kpi-ring i{
-  position:relative;
-  z-index:1;
+  color:#64748B;
   font-size:11px;
-}
-.rh-overview .hub-kpi-wave{
-  position:absolute;
-  inset:auto -20px 34px 22px;
-  height:38px;
-  opacity:.23;
-  background:
-    radial-gradient(16px 15px at 15% 48%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%),
-    radial-gradient(20px 18px at 42% 48%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%),
-    radial-gradient(24px 20px at 72% 50%, transparent 52%, var(--kpi-accent) 55% 60%, transparent 62%);
-  pointer-events:none;
+  line-height:1.45;
+  font-weight:600;
+  text-align:start;
 }
 .rh-overview .hub-kpi--brand{--kpi-accent:#6B5AED;--kpi-soft:rgba(107,90,237,.14)}
 .rh-overview .hub-kpi--blue{--kpi-accent:#2563EB;--kpi-soft:rgba(37,99,235,.13)}
@@ -764,134 +734,92 @@
      never reads as 'CPU=0%' when in fact we haven't fetched yet. #}
   <div class="hub-kpi-grid" data-mt-kpi-strip>
     <div class="hub-kpi hub-kpi--brand" data-mt-kpi="uptime">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-        <div>
-          <div class="hub-kpi-label">مدة تشغيل النظام</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">مدة تشغيل النظام</span>
           <span class="hub-kpi-status">زمن التشغيل</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-power-off"></i></span>
-      </div>
-      <span class="hub-kpi-wave" aria-hidden="true"></span>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="cpu">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
-        <div>
-          <div class="hub-kpi-label">استخدام المعالج</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">استخدام المعالج</span>
           <span class="hub-kpi-status">CPU</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>الحمل اللحظي</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-gauge-high"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>الحمل اللحظي</div>
     </div>
     <div class="hub-kpi hub-kpi--green" data-mt-kpi="memory">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
-        <div>
-          <div class="hub-kpi-label">استهلاك الذاكرة</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">استهلاك الذاكرة</span>
           <span class="hub-kpi-status">RAM</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-memory"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
     </div>
     <div class="hub-kpi hub-kpi--teal" data-mt-kpi="disk">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-hard-drive"></i></span>
-        <div>
-          <div class="hub-kpi-label">استخدام القرص</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">استخدام القرص</span>
           <span class="hub-kpi-status">Storage</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>مستخدم / إجمالي</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>مستخدم / إجمالي</div>
     </div>
     <div class="hub-kpi hub-kpi--amber" data-mt-kpi="temperature">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
-        <div>
-          <div class="hub-kpi-label">حرارة المعالج</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">حرارة المعالج</span>
           <span class="hub-kpi-status">Health</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-temperature-half"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="clock">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
-        <div>
-          <div class="hub-kpi-label">الوقت داخل النظام</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">الوقت داخل النظام</span>
           <span class="hub-kpi-status">Clock</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub>وقت الراوتر الحالي</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>وقت الراوتر الحالي</div>
     </div>
     <div class="hub-kpi hub-kpi--purple" data-mt-kpi="version">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-award"></i></span>
-        <div>
-          <div class="hub-kpi-label">إصدار النظام</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">إصدار النظام</span>
           <span class="hub-kpi-status">RouterOS</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>—</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-code-branch"></i></span>
-      </div>
-      <span class="hub-kpi-wave" aria-hidden="true"></span>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-board>—</div>
     </div>
     <div class="hub-kpi hub-kpi--grey" data-mt-kpi="dialed">
-      <div class="hub-kpi-head">
+      <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <div>
-          <div class="hub-kpi-label">العنوان المتصل به</div>
+        <div class="hub-kpi-titles">
+          <span class="hub-kpi-label">العنوان المتصل به</span>
           <span class="hub-kpi-status">Link</span>
         </div>
-      </div>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-copy">
-          <div class="hub-kpi-value" data-mt-kpi-value>—</div>
-          <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
-        </div>
-        <span class="hub-kpi-ring" aria-hidden="true"><i class="fa-solid fa-circle-nodes"></i></span>
-      </div>
+      </header>
+      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
     </div>
   </div>
 
