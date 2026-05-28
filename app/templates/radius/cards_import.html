@@ -21,6 +21,56 @@
     border-radius:var(--hub-r-md);background:var(--hub-bg-soft);
     color:var(--hub-text-soft);font-size:12px;line-height:1.9
   }
+
+  /* Smart import card --------------------------------------------- */
+  .ci-smart{
+    border:1px dashed #94a3b8;background:linear-gradient(180deg,#f8fafc,#fff);
+    border-radius:14px;padding:18px 22px;margin-bottom:18px;
+  }
+  .ci-smart-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .ci-smart-head h3{margin:0;font-size:14.5px;font-weight:800;color:#0f172a}
+  .ci-smart-head .badge{
+    background:#ede9fe;color:#5b21b6;font-size:10.5px;font-weight:800;
+    padding:3px 8px;border-radius:999px;letter-spacing:.4px;
+  }
+  .ci-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+  @media (max-width:760px){.ci-smart-body{grid-template-columns:1fr}}
+  .ci-smart input[type=file]{
+    width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;
+    background:#fff;font-size:13px;cursor:pointer;
+  }
+  .ci-smart-btn{
+    background:#6d28d9;color:#fff;border:0;border-radius:10px;
+    padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  }
+  .ci-smart-btn[disabled]{opacity:.6;cursor:wait}
+  .ci-smart-btn:hover:not([disabled]){background:#5b21b6}
+
+  .ci-smart-status{margin-top:12px;font-size:12.5px;line-height:1.8;min-height:1.5em}
+  .ci-smart-status.ok{color:#065f46}
+  .ci-smart-status.warn{color:#92400e}
+  .ci-smart-status.err{color:#991b1b}
+
+  .ci-smart-detected{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:8px;margin-top:10px;font-size:12px;
+  }
+  .ci-smart-detected .pill{
+    background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+    padding:8px 12px;color:#1e293b;
+  }
+  .ci-smart-detected .pill strong{color:#0f172a;font-weight:800}
+  .ci-smart-preview{
+    margin-top:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+    overflow:hidden;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;
+  }
+  .ci-smart-preview table{width:100%;border-collapse:collapse;direction:ltr}
+  .ci-smart-preview th,.ci-smart-preview td{
+    padding:5px 10px;border-bottom:1px solid #f1f5f9;text-align:left;
+  }
+  .ci-smart-preview th{background:#f8fafc;color:#475569;font-weight:700}
+
   @media (max-width:900px){.ci-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -100,12 +150,35 @@
     {% endcall %}
 
     {% call hub.section("محتوى الملف", icon="file-lines") %}
+      <div class="ci-smart" id="ci-smart">
+        <div class="ci-smart-head">
+          <i class="fa-solid fa-wand-magic-sparkles" style="color:#6d28d9;font-size:16px"></i>
+          <h3>محرّك الاستيراد الذكي</h3>
+          <span class="badge">جديد</span>
+        </div>
+        <div class="ci-help" style="margin-bottom:10px">
+          ارفع ملف CSV أو XLSX أو PDF — بأيّ ترتيب أعمدة، عربيًّا أو إنجليزيًّا — والمحرّك سيكتشف
+          عمود اسم المستخدم وعمود كلمة المرور تلقائيًّا ويعبّئ مربّع النص بالأسفل.
+        </div>
+        <div class="ci-smart-body">
+          <input type="file" id="ci-smart-file"
+                 accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <button type="button" id="ci-smart-btn" class="ci-smart-btn">
+            <i class="fa-solid fa-bolt"></i> تحليل الملف
+          </button>
+        </div>
+        <div class="ci-smart-status" id="ci-smart-status" aria-live="polite"></div>
+        <div id="ci-smart-detected" class="ci-smart-detected" hidden></div>
+        <div id="ci-smart-preview" class="ci-smart-preview" hidden></div>
+      </div>
+
       <div class="ci-field">
         <label for="csv_text">الكروت</label>
         <textarea class="hub-input ci-textarea" id="csv_text" name="csv_text" required
           placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
         <div class="ci-help">
-          الصيغ المقبولة: سطر لكل كرت، أو CSV يحتوي الأعمدة username,password. يمكن ترك كلمة المرور فارغة، ولن تظهر كلمات المرور بعد الاستيراد.
+          يمكنك أيضًا اللصق المباشر هنا: سطر لكل كرت، أو CSV/TSV يحتوي الأعمدة username,password.
+          يمكن ترك كلمة المرور فارغة، ولن تظهر كلمات المرور بعد الاستيراد.
         </div>
       </div>
     {% endcall %}
@@ -122,4 +195,117 @@
     {% endcall %}
   </form>
 </div>
+
+<script>
+(function () {
+  const fileInput = document.getElementById('ci-smart-file');
+  const btn       = document.getElementById('ci-smart-btn');
+  const status    = document.getElementById('ci-smart-status');
+  const detected  = document.getElementById('ci-smart-detected');
+  const preview   = document.getElementById('ci-smart-preview');
+  const textarea  = document.getElementById('csv_text');
+  if (!fileInput || !btn || !textarea) return;
+
+  const PREVIEW_URL = "{{ url_for('radius.cards_batches_import_preview') }}";
+
+  const STRATEGY_LABEL = {
+    'header':        'كشف عبر صف الترويسة',
+    'shape-score':   'كشف عبر تحليل الأعمدة',
+    'single-column': 'عمود واحد فقط (بدون كلمات مرور)',
+    'pair-token':    'كشف عبر أسطر User/Pass',
+    'unknown':       'غير محدّد',
+  };
+
+  function setStatus(message, kind) {
+    status.className = 'ci-smart-status' + (kind ? ' ' + kind : '');
+    status.textContent = message || '';
+  }
+
+  function renderDetected(data) {
+    detected.hidden = false;
+    const items = [];
+    items.push(`<div class="pill"><strong>الصيغة:</strong> ${data.fmt || '—'}</div>`);
+    items.push(`<div class="pill"><strong>عدد الكروت:</strong> ${data.count}</div>`);
+    items.push(`<div class="pill"><strong>طريقة الكشف:</strong> ${STRATEGY_LABEL[data.strategy] || data.strategy}</div>`);
+    if (data.username_index !== null && data.username_index !== undefined) {
+      items.push(`<div class="pill"><strong>عمود المستخدم:</strong> #${data.username_index + 1}</div>`);
+    }
+    if (data.password_index !== null && data.password_index !== undefined) {
+      items.push(`<div class="pill"><strong>عمود الباس:</strong> #${data.password_index + 1}</div>`);
+    } else {
+      items.push(`<div class="pill"><strong>عمود الباس:</strong> غير موجود</div>`);
+    }
+    if (data.rows_skipped) {
+      items.push(`<div class="pill"><strong>صفوف متجاهلة:</strong> ${data.rows_skipped}</div>`);
+    }
+    if (data.sheet_names && data.sheet_names.length) {
+      items.push(`<div class="pill"><strong>الأوراق:</strong> ${data.sheet_names.join('، ')}</div>`);
+    }
+    detected.innerHTML = items.join('');
+  }
+
+  function renderPreview(rows) {
+    if (!rows || rows.length === 0) { preview.hidden = true; return; }
+    preview.hidden = false;
+    const header = '<tr><th>#</th><th>username</th><th>password</th></tr>';
+    const body = rows.map((r, i) => {
+      const u = (r.username || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      const p = (r.password || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      return `<tr><td>${i+1}</td><td>${u}</td><td>${p}</td></tr>`;
+    }).join('');
+    preview.innerHTML = '<table><thead>' + header + '</thead><tbody>' + body + '</tbody></table>';
+  }
+
+  async function analyze() {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) { setStatus('اختر ملفًا أوّلًا.', 'warn'); return; }
+    setStatus('جارٍ التحليل…', '');
+    detected.hidden = true;
+    preview.hidden = true;
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+      const res = await fetch(PREVIEW_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+
+      if (!data) {
+        setStatus('رد فارغ من الخادم.', 'err');
+        return;
+      }
+      if (data.error) {
+        setStatus(data.error, 'err');
+        return;
+      }
+      if (!data.count) {
+        const msg = (data.warnings && data.warnings[0]) || 'لم يُعثر على كروت قابلة للاستخراج.';
+        setStatus(msg, 'err');
+        return;
+      }
+
+      // Success.
+      textarea.value = data.csv_text || '';
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      renderDetected(data);
+      renderPreview(data.preview || []);
+      const warn = (data.warnings && data.warnings.length) ? ` (${data.warnings[0]})` : '';
+      setStatus(`تم استخراج ${data.count} بطاقة وتعبئتها في مربّع النص.${warn}`,
+                data.warnings && data.warnings.length ? 'warn' : 'ok');
+    } catch (e) {
+      setStatus('فشل الاتصال بالخادم: ' + (e && e.message ? e.message : e), 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  btn.addEventListener('click', analyze);
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) {
+      setStatus('جاهز للتحليل: ' + fileInput.files[0].name, '');
+    }
+  });
+})();
+</script>
 {% endblock %}

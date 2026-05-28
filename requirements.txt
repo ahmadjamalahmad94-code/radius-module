@@ -9,3 +9,8 @@ python-bidi>=0.6,<1.0
 # Standard library doesn't ship Curve25519 primitives; cryptography
 # does (and is heavily audited).
 cryptography>=42.0,<46.0
+# Hotspot card import engine — reads tabular PDFs (the most common
+# delivery format). The engine falls back to pypdf and then to a
+# clear error if neither is installed, so the dependency is "strongly
+# recommended" not strictly required.
+pdfplumber>=0.11,<1.0

@@ -20,6 +20,7 @@ from ..db.helpers import json_dump
 from ..db.repos import admins_repo, operations_repo
 from ..services.card_checker import check_card
 from ..services.cards import get_cards_service
+from ..services import cards_import_engine
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
@@ -44,6 +45,16 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches/export.xlsx", "cards_batches_export_xlsx", cards_batches_export_xlsx, methods=["GET"])
     bp.add_url_rule("/cards/batches/export.pdf", "cards_batches_export_pdf", cards_batches_export_pdf, methods=["GET"])
     bp.add_url_rule("/cards/batches/import", "cards_batches_import", cards_batches_import, methods=["GET", "POST"])
+    # Intelligent multi-format preview — accepts an uploaded
+    # CSV/XLSX/PDF and returns parsed cards as canonical
+    # username,password CSV so the existing import flow can consume
+    # the result unchanged.
+    bp.add_url_rule(
+        "/cards/batches/import/preview",
+        "cards_batches_import_preview",
+        cards_batches_import_preview,
+        methods=["POST"],
+    )
     bp.add_url_rule("/cards/generate", "cards_generate", cards_generate, methods=["GET", "POST"])
     bp.add_url_rule("/cards/generate/progress", "cards_generate_progress_start", cards_generate_progress_start, methods=["POST"])
     bp.add_url_rule("/cards/generate/progress/<job_id>", "cards_generate_progress_status", cards_generate_progress_status, methods=["GET"])
@@ -998,6 +1009,56 @@ def cards_batches_import():
         "success",
     )
     return redirect(url_for("radius.cards_batches", q=batch.batch_code, status="all"))
+
+
+# Cap the upload payload at 12 MB. Anything beyond this is almost
+# certainly the wrong file — cards files in any reasonable format
+# (CSV/XLSX/PDF) for ≤ 5000 cards land well under 2 MB.
+_IMPORT_MAX_BYTES = 12 * 1024 * 1024
+
+
+def cards_batches_import_preview():
+    """Receive an uploaded file, run the intelligent parser, and return
+    the extracted (username, password) pairs as JSON.
+
+    Front-end consumes the response to populate the existing textarea —
+    so the final commit still goes through ``cards_batches_import``
+    unchanged.
+    """
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify({"ok": False, "error": "اختر ملفًا قبل الرفع."}), 400
+
+    raw = upload.read(_IMPORT_MAX_BYTES + 1)
+    if not raw:
+        return jsonify({"ok": False, "error": "الملف فارغ أو غير قابل للقراءة."}), 400
+    if len(raw) > _IMPORT_MAX_BYTES:
+        return jsonify({
+            "ok": False,
+            "error": "حجم الملف يتجاوز 12MB — قسّمه إلى دفعات أصغر.",
+        }), 413
+
+    result = cards_import_engine.parse(raw, upload.filename or "")
+    payload = {
+        "ok": bool(result.cards) or not result.warnings,
+        "fmt": result.fmt,
+        "count": len(result.cards),
+        "strategy": result.detected.strategy,
+        "username_index": result.detected.username_index,
+        "password_index": result.detected.password_index,
+        "header_row_present": result.detected.header_row_present,
+        "rows_seen": result.rows_seen,
+        "rows_skipped": result.rows_skipped,
+        "sheet_names": result.sheet_names,
+        "warnings": result.warnings,
+        "csv_text": cards_import_engine.cards_to_csv(result.cards),
+        "preview": [
+            {"username": c.username, "password": c.password}
+            for c in result.cards[:5]
+        ],
+    }
+    status = 200 if result.cards else 422
+    return jsonify(payload), status
 
 
 def _selected_batch_ids() -> list[int]:
