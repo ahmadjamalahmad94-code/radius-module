@@ -959,7 +959,16 @@ def cards_batches():
 
 def cards_batches_import():
     if request.method == "GET":
-        return render_template("radius/cards_import.html", **_import_form_context())
+        # No-store: keeps the CSRF token rendered in the page in lock
+        # step with the server-side session. A stale cached copy would
+        # send an old token and trip the CSRF guard on the smart-import
+        # POST.
+        from flask import make_response
+        html = render_template("radius/cards_import.html", **_import_form_context())
+        resp = make_response(html)
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
 
     plan_id = _form_int("plan_id")
     source_type = (_form_str("source_type") or "external").lower()

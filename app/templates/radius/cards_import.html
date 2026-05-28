@@ -252,7 +252,9 @@
     {% endcall %}
 
     {% call hub.section("محتوى الملف", icon="file-lines") %}
-      <div class="ci-smart" id="ci-smart">
+      <div class="ci-smart" id="ci-smart"
+           data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+           data-preview-url="{{ url_for('radius.cards_batches_import_preview') }}">
         <div class="ci-smart-head">
           <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
           <h3>محرّك الاستيراد الذكي</h3>
@@ -329,7 +331,18 @@
   const textarea  = document.getElementById('csv_text');
   if (!fileInput || !btn || !textarea) return;
 
-  const PREVIEW_URL = "{{ url_for('radius.cards_batches_import_preview') }}";
+  // Read the URL + CSRF token straight from the data-attributes on the
+  // smart-import card. We render them server-side via the same Jinja
+  // helpers the rest of the form uses, so they are always in sync with
+  // the session the cookie points at.
+  const SMART_ROOT  = document.getElementById('ci-smart');
+  const PREVIEW_URL = (SMART_ROOT && SMART_ROOT.dataset.previewUrl)
+                    || "{{ url_for('radius.cards_batches_import_preview') }}";
+  function readCsrfToken() {
+    if (SMART_ROOT && SMART_ROOT.dataset.csrf) return SMART_ROOT.dataset.csrf;
+    const input = document.querySelector('input[name="_csrf_token"]');
+    return input ? input.value : '';
+  }
 
   const STRATEGY_LABEL = {
     'header':        'كشف عبر صف الترويسة',
@@ -455,10 +468,16 @@
     btn.disabled = true;
 
     // App-wide CSRF middleware needs either _csrf_token (form field)
-    // or X-CSRFToken (header). Pull the value the main form already
-    // rendered via csrf_token_input() and pass both ways for safety.
-    const csrfInput = document.querySelector('input[name="_csrf_token"]');
-    const csrfTok = csrfInput ? csrfInput.value : '';
+    // or X-CSRFToken (header). The token is rendered server-side into
+    // a data-attribute on the smart-import card by Jinja, so it's
+    // always in sync with the session even if the form rendering
+    // path changes.
+    const csrfTok = readCsrfToken();
+    if (!csrfTok) {
+      console.warn('cards-import: CSRF token not found on page — POST will be rejected.');
+    } else {
+      console.debug('cards-import: using CSRF token of length', csrfTok.length);
+    }
 
     const fd = new FormData();
     fd.append('file', file);
