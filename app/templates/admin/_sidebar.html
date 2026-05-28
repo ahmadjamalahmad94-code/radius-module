@@ -18,26 +18,42 @@
    ══════════════════════════════════════════════════════════════════════ #}
 
 {%- macro nav_item(endpoint, icon, label, match) -%}
-{%- set href = url_for(endpoint) -%}
-{%- set is_active = match -%}
+{#- Same defensive endpoint check as `sub_item` — skip the
+    link entirely if the route isn't registered yet (partial
+    rollout, server restart pending, etc.) instead of taking
+    the whole sidebar down with a BuildError. -#}
+{%- if endpoint in current_app.view_functions -%}
+  {%- set href = url_for(endpoint) -%}
+  {%- set is_active = match -%}
 <a class="hb-side-item{% if is_active %} is-active{% endif %}"
    href="{{ href }}"
    data-hb-label="{{ label }}">
   <span class="hb-side-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
   <span class="hb-side-text">{{ label }}</span>
 </a>
+{%- endif -%}
 {%- endmacro -%}
 
 {%- macro sub_item(endpoint, label, match, args={}) -%}
-{%- if args -%}
-  {%- set href = url_for(endpoint, **args) -%}
-{%- else -%}
-  {%- set href = url_for(endpoint) -%}
-{%- endif -%}
+{#- Resolve the endpoint URL but TOLERATE a missing endpoint
+    silently — happens during partial rollouts (new sidebar
+    entry ships before the route is wired in, or when running
+    an older blueprint version). Without this guard, ONE
+    missing endpoint takes down every admin page that includes
+    the sidebar. The check against `current_app.view_functions`
+    is O(1) and exact — `url_for` is only called when we know
+    the endpoint exists. -#}
+{%- if endpoint in current_app.view_functions -%}
+  {%- if args -%}
+    {%- set _href = url_for(endpoint, **args) -%}
+  {%- else -%}
+    {%- set _href = url_for(endpoint) -%}
+  {%- endif -%}
 <a class="hb-side-subitem{% if match %} is-active{% endif %}"
-   href="{{ href }}">
+   href="{{ _href }}">
   <span class="hb-side-text">{{ label }}</span>
 </a>
+{%- endif -%}
 {%- endmacro -%}
 
 {# ───── ACTIVE-STATE DETECTION HELPERS ─────
