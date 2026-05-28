@@ -24,6 +24,8 @@ docs/*
 !docs/radius/*.md
 !docs/network_policy_center/
 !docs/network_policy_center/*.md
+!docs/network_operations/
+!docs/network_operations/*.md
 !docs/admin_ui/
 !docs/admin_ui/*.md
 !docs/setup_wizard/
