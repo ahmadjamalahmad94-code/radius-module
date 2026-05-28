@@ -4,6 +4,11 @@ Accepts CSV / Excel (.xlsx) / PDF and returns a list of
 ``(username, password)`` pairs without forcing the operator to declare
 which column is which or in what order they appear.
 
+**Version policy:** bump ENGINE_VERSION on every committed change to
+detection logic. The UI surfaces this in a build-marker chip so the
+operator can visually confirm the running container has the latest
+code (no more "deployed?" guesswork).
+
 Pipeline
 --------
 1. ``sniff_format(file_bytes, filename)`` — magic-byte + extension sniff.
@@ -26,6 +31,15 @@ import io
 import re
 from dataclasses import dataclass, field
 from typing import Iterable
+
+
+# ─── Engine version — bump on every detection-logic change. ─────────
+#
+# Visible to operators via a chip on the smart-import card and via
+# the /preview JSON response. Lets us tell at a glance whether the
+# running container actually has the latest code.
+ENGINE_VERSION = "1.3"
+ENGINE_BUILD_NOTE = "grid-pair + labelled-grid"
 
 
 # ─── Public types ────────────────────────────────────────────────────

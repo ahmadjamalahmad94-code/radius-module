@@ -61,6 +61,20 @@
     background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;
     padding:3px 8px;
   }
+  /* Build chip — visible proof the latest engine code is running. */
+  .ci-build-chip{
+    margin-inline-start:auto;font-size:11px;color:#fff;font-weight:800;
+    background:linear-gradient(135deg,#10b981,#059669);
+    padding:4px 10px;border-radius:8px;letter-spacing:.3px;
+    display:inline-flex;align-items:center;gap:5px;
+    box-shadow:0 2px 6px rgba(16,185,129,.3);
+    font-family:ui-monospace,Consolas,monospace;
+  }
+  .ci-build-chip i{font-size:10px;opacity:.9}
+  .ci-build-chip small{font-family:inherit;font-weight:700}
+  /* When the operator hovers, expand slightly — confirms it's clickable
+     metadata and not just decoration. */
+  .ci-build-chip:hover{filter:brightness(1.05);transform:translateY(-1px);transition:.15s}
 
   .ci-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-top:10px}
   @media (max-width:760px){.ci-smart-body{grid-template-columns:1fr}}
@@ -254,11 +268,23 @@
     {% call hub.section("محتوى الملف", icon="file-lines") %}
       <div class="ci-smart" id="ci-smart"
            data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
-           data-preview-url="{{ url_for('radius.cards_batches_import_preview') }}">
+           data-preview-url="{{ url_for('radius.cards_batches_import_preview') }}"
+           data-engine-version="{{ engine_version or '?' }}">
         <div class="ci-smart-head">
           <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
           <h3>محرّك الاستيراد الذكي</h3>
           <span class="badge">جديد</span>
+          {# ── Engine build chip — proves which version of the parser
+             the running container has. Change the number on every
+             detection-logic update and you can verify your deploy
+             at a glance. ── #}
+          {% if engine_version %}
+          <span class="ci-build-chip" title="نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub">
+            <i class="fa-solid fa-microchip"></i>
+            engine v{{ engine_version }}
+            {% if engine_build_note %}<small style="opacity:.7;margin-inline-start:6px">({{ engine_build_note }})</small>{% endif %}
+          </span>
+          {% endif %}
           <span class="ci-smart-tag" id="ci-smart-tag" hidden></span>
         </div>
         <div class="ci-help" style="margin-bottom:10px">

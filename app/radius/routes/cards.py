@@ -964,7 +964,21 @@ def cards_batches_import():
         # send an old token and trip the CSRF guard on the smart-import
         # POST.
         from flask import make_response
-        html = render_template("radius/cards_import.html", **_import_form_context())
+        ctx = _import_form_context()
+        # Expose the engine version + build note + module mtime so the
+        # operator can visually confirm the running container has the
+        # latest code (no more "did the deploy actually take?").
+        import os
+        try:
+            engine_mtime = os.path.getmtime(cards_import_engine.__file__)
+        except OSError:
+            engine_mtime = 0
+        ctx.update({
+            "engine_version":    cards_import_engine.ENGINE_VERSION,
+            "engine_build_note": cards_import_engine.ENGINE_BUILD_NOTE,
+            "engine_mtime":      engine_mtime,
+        })
+        html = render_template("radius/cards_import.html", **ctx)
         resp = make_response(html)
         resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         resp.headers["Pragma"] = "no-cache"
@@ -1050,6 +1064,8 @@ def cards_batches_import_preview():
     result = cards_import_engine.parse(raw, upload.filename or "")
     payload = {
         "ok": bool(result.cards) or not result.warnings,
+        "engine_version": cards_import_engine.ENGINE_VERSION,
+        "engine_build_note": cards_import_engine.ENGINE_BUILD_NOTE,
         "fmt": result.fmt,
         "count": len(result.cards),
         "strategy": result.detected.strategy,
