@@ -2119,14 +2119,15 @@
    الصفحات». Same shell as rh-inv-hero / rh-bk-hero but colour-
    variant-driven via .mt-page-hero--<color>. */
 .mt-page-hero{
+  /* Plain block — earlier `display:flex; align-items:center` combo
+     stretched the hero to fill the parent's height and floated the
+     text in the middle. dashboard_premium.css controls everything
+     else (padding, bg, border, shadow); the inline rule below only
+     supplies a slightly thicker border + softer purple shadow on
+     top of that. */
   position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:16px;flex-wrap:wrap;
-  margin:0 0 22px;padding:22px 26px;
+  margin:0 0 22px;
   border-radius:24px;
-  background:
-    radial-gradient(circle at 90% -10%, rgba(99,102,241,.16), transparent 38%),
-    linear-gradient(135deg,#FAFAFF 0%,#F5F3FF 50%,#EFF6FF 100%);
   border:1px solid rgba(99,102,241,.18);
   box-shadow:0 18px 48px rgba(99,102,241,.08), 0 2px 6px rgba(15,23,42,.04);
 }
