@@ -29,9 +29,21 @@
 <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;margin:18px 0;font-size:12.5px;color:#92400E;line-height:1.7">
   <i class="fa-solid fa-shield-halved"></i>
   <strong>تنويه أمني:</strong>
-  المنفذ الخارجي يفتح فقط من واجهة <code>hr-wg</code> (الـ VPS) — مش من الإنترنت العام.
-  بعد انتهاء المدّة (TTL) الـ NAT rule يُحذف تلقائيًا من الراوتر.
+  الجلسة تفتح TCP-proxy على VPS فقط أثناء المدّة المختارة، ويُغلَق
+  بالكامل (LISTENER + NAT على الراوتر) عند انتهاء المدّة أو الضغط
+  على «إغلاق الآن». مسار الاتصال:
+  <code dir="ltr">المتصفّح → VPS:port → [hr-wg] → الراوتر → الجهاز</code>.
 </div>
+
+{% if not vps_public_host %}
+<div style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:10px;padding:12px 16px;margin:18px 0;font-size:12.5px;color:#991B1B;line-height:1.7">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <strong>تحذير إعداد:</strong>
+  المتغيّر <code>HOBERADIUS_VPS_PUBLIC_IP</code> غير محدّد على الخادم —
+  الجلسات ستفتح لكن لن تعرض رابط الوصول بشكل صحيح. اضبط المتغيّر في
+  <code>deploy/.env</code> وأعد تشغيل الـ container.
+</div>
+{% endif %}
 
 {# ── Device summary ── #}
 <section style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px;padding:16px 22px;margin-bottom:18px">
@@ -156,9 +168,26 @@
         </td>
         <td><code style="font-size:12px">{{ s.protocol }}</code></td>
         <td>
-          <code dir="ltr" style="font-size:12px">
-            {{ nas.address }}:{{ s.external_port }}
-          </code>
+          {% if vps_public_host %}
+            {%- set proto = 'https' if s.protocol == 'https' else 'http' -%}
+            {% if s.status == 'active' and s.protocol in ('http', 'https') %}
+              <a href="{{ proto }}://{{ vps_public_host }}:{{ s.external_port }}/"
+                 target="_blank" rel="noopener"
+                 dir="ltr"
+                 style="font-family:monospace;font-size:12px;color:#1D4ED8;text-decoration:underline">
+                {{ vps_public_host }}:{{ s.external_port }}
+                <i class="fa-solid fa-up-right-from-square" style="font-size:9px"></i>
+              </a>
+            {% else %}
+              <code dir="ltr" style="font-size:12px">
+                {{ vps_public_host }}:{{ s.external_port }}
+              </code>
+            {% endif %}
+          {% else %}
+            <code dir="ltr" style="font-size:12px;color:#9CA3AF">
+              :{{ s.external_port }} <small>(اضبط VPS public IP)</small>
+            </code>
+          {% endif %}
         </td>
         <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.created_at[:19] }}</td>
         <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.expires_at[:19] }}</td>

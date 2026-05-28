@@ -76,11 +76,13 @@ def remote_device_access_form(device_id: int):
     sessions = remote_access_sessions_repo.list_for_device(
         _tid(), device_id, limit=15,
     )
+    from ..services.remote_device_access import vps_public_host
     return render_template(
         "radius/remote_device_access.html",
         device=device,
         nas=nas,
         sessions=sessions,
+        vps_public_host=vps_public_host(),
     )
 
 

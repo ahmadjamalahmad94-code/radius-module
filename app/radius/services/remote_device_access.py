@@ -1,42 +1,70 @@
-"""Remote Device Access — Sprint 5.
+"""Remote Device Access — Sprint 5 + VPS-proxy amend.
 
-Opens / closes / expires TTL-gated NAT forwards so the
-operator can reach a device behind a HobeRadius-managed
-MikroTik for a limited time, without leaving a permanent
-port-forward on the customer's network.
+Opens / closes / expires TTL-gated TCP forwards so the operator
+can reach a device behind a HobeRadius-managed MikroTik for a
+limited time, without leaving a permanent port-forward on the
+customer's network.
+
+Two-layer relay (the operator's browser CAN'T reach the
+customer router directly — only the VPS can, via hr-wg):
+
+  Operator browser
+        │
+        │  TCP
+        ▼
+  VPS_PUBLIC_IP:external_port
+        │
+        │  vps_port_proxy thread (this module starts it)
+        ▼
+  ROUTER_WG_IP:external_port           (hr-wg tunnel)
+        │
+        │  /ip firewall nat dst-nat   (added by this module)
+        ▼
+  DEVICE_INTERNAL_IP:device_port
 
 Flow on `open_session`:
   1. Pick a free external port (deterministic + collision-
      avoiding — see repo.next_free_external_port).
-  2. Add a /ip firewall nat dst-nat rule on the router:
-        in-interface = hr-wg
-        dst-port     = <external_port>
-        protocol     = tcp
-        action       = dst-nat
-        to-addresses = <device internal ip>
-        to-ports     = <device protocol port>
-        comment      = HOBE_REMOTE_ACCESS:<session_id>:dst-nat
-  3. Insert the session row with status='active' +
-     expires_at = now + TTL.
+  2. Insert the session row → so we have an id.
+  3. Add a /ip firewall nat dst-nat rule on the router
+     listening on hr-wg, comment tag HOBE_REMOTE_ACCESS:<id>:.
+  4. Spawn a VPS-side TCP proxy that listens on
+     0.0.0.0:external_port and relays to nas.address:external_port
+     over the WG tunnel.
 
-Flow on `close_session` (manual or cron-driven):
-  1. Find every /ip firewall nat rule tagged
-     HOBE_REMOTE_ACCESS:<session_id>: and remove by .id.
-  2. UPDATE the session row to status='closed' (or
-     'expired' when called by cron).
+Flow on `close_session`:
+  1. Tell the VPS proxy to stop (closes listener + drops
+     in-flight conns when either end hangs up).
+  2. Find every /ip firewall nat rule tagged
+     HOBE_REMOTE_ACCESS:<session_id>: on the router and
+     remove by .id.
+  3. UPDATE the session row to status='closed' (or 'expired'
+     when called by cron).
 
-The cron sweep that auto-expires is wired into
-network_device_monitor.tick() — same worker, same minute.
+Cron sweep is wired into network_device_monitor.tick() —
+same worker, same minute.
 """
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Mapping
 
 from . import mikrotik_admin_client as mac
+from . import vps_port_proxy
 from ..db.repos import remote_access_sessions_repo
 
 _LOG = logging.getLogger(__name__)
+
+
+def vps_public_host() -> str:
+    """The host the operator's browser will hit. Pulled from env
+    so the same value lives in one place (also feeds the Sprint-6
+    netwatch webhook URL). Falls back to empty string — callers
+    must surface the configuration gap to the operator."""
+    return (os.environ.get("HOBERADIUS_VPS_PUBLIC_IP")
+            or os.environ.get("HOBERADIUS_PUBLIC_HOST")
+            or "").strip()
 
 
 def _comment(session_id: int, role: str) -> str:
@@ -88,7 +116,7 @@ def open_session(
         notes=notes,
     )
 
-    # Push the NAT rule
+    # ── 1) Push the NAT rule on the customer router ──────────
     def _work(client):
         client.run(
             "/ip/firewall/nat/add",
@@ -114,6 +142,34 @@ def open_session(
         )
         return False, f"فشل إنشاء NAT على الراوتر: {result.error}", None
 
+    # ── 2) Start the VPS-side TCP proxy ───────────────────────
+    # Listens on 0.0.0.0:ext_port and relays each connection to
+    # the router's WG IP (nas.address). The customer-side NAT
+    # rule we just added picks it up there and DNATs to the
+    # device.
+    router_wg_host = (nas.get("address") or "").strip()
+    if router_wg_host:
+        ok, err = vps_port_proxy.start_proxy(
+            session_id=session_id,
+            listen_port=ext_port,
+            upstream_host=router_wg_host,
+            upstream_port=ext_port,
+        )
+        if not ok:
+            _LOG.warning(
+                "[remote_access %d] vps proxy start failed: %s — "
+                "router-side NAT exists but operator can't reach it",
+                session_id, err,
+            )
+            # Don't fail the session — the operator may have a
+            # different way to reach hr-wg (e.g., they're SSH'd
+            # into the VPS). Surface the warning via the result.
+    else:
+        _LOG.warning(
+            "[remote_access %d] nas.address is empty; "
+            "vps proxy not started", session_id,
+        )
+
     session = remote_access_sessions_repo.get(
         int(device["tenant_id"]), session_id,
     )
@@ -136,6 +192,12 @@ def close_session(
     session_id = int(session["id"])
     prefix = _comment(session_id, "")
 
+    # ── 1) Stop the VPS-side proxy first — fast + always
+    # succeeds (idempotent). Closes the listener so no new
+    # connections land while we tear down the router rule.
+    vps_port_proxy.stop_proxy(session_id)
+
+    # ── 2) Remove the router-side NAT rule(s).
     def _work(client):
         removed = 0
         try:
