@@ -407,6 +407,7 @@
   // ── K9.2 — active users ─────────────────────────────────────────
 
   const ACTIVE_POLL_MS = 10_000;
+  const activeTotalEl  = root.querySelector("[data-mt-active-users-total]");
   const hotspotCountEl = root.querySelector("[data-mt-hotspot-count]");
   const pppCountEl     = root.querySelector("[data-mt-ppp-count]");
   const usersEmpty     = root.querySelector("[data-mt-active-users-empty]");
@@ -468,6 +469,10 @@
     if (b.res.ok && b.body && b.body.ok && b.body.data) {
       const env = b.body.data;
       if (env.ok) { ppp = env.data || []; pppCount = ppp.length; }
+    }
+    if (activeTotalEl) {
+      activeTotalEl.textContent = (Number.isFinite(hotCount) ? hotCount : 0)
+        + (Number.isFinite(pppCount) ? pppCount : 0);
     }
     if (hotspotCountEl) hotspotCountEl.textContent = hotCount;
     if (pppCountEl)     pppCountEl.textContent = pppCount;

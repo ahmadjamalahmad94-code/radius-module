@@ -1176,53 +1176,82 @@
      K9.1, and so the visual layout doesn't jump as later commits
      populate them. #}
   <div class="mt-grid">
-    <section class="mt-card" data-mt-live-traffic>
+    <section class="mt-card mt-live-card mt-live-card--traffic" data-mt-live-traffic>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-chart-line"></i> حركة الواجهات</h3>
-        <span class="mt-card-meta">
-          <label class="mt-iface-label">الواجهة
+        <div class="mt-live-title">
+          <span class="mt-live-icon"><i class="fa-solid fa-chart-line"></i></span>
+          <div>
+            <h3>حركة الواجهات</h3>
+            <span class="mt-live-sub">قراءة حية لمعدل الرفع والتنزيل</span>
+          </div>
+        </div>
+        <span class="mt-card-meta mt-live-select">
+          <label class="mt-iface-label">الواجهة</label>
             <select class="mt-iface-select" data-mt-interface-select>
               <option value="">— اختر الواجهة —</option>
             </select>
-          </label>
         </span>
       </header>
       <div class="mt-card-body" data-mt-live-traffic-body>
         <div class="mt-traffic-readout">
-          <div class="mt-traffic-stat">
+          <div class="mt-traffic-stat mt-traffic-stat--rx">
             <span class="mt-traffic-stat-label">RX</span>
-            <span class="mt-traffic-stat-value" data-mt-traffic-rx>—</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-rx dir="ltr">—</span>
           </div>
-          <div class="mt-traffic-stat">
+          <div class="mt-traffic-stat mt-traffic-stat--tx">
             <span class="mt-traffic-stat-label">TX</span>
-            <span class="mt-traffic-stat-value" data-mt-traffic-tx>—</span>
+            <span class="mt-traffic-stat-value" data-mt-traffic-tx dir="ltr">—</span>
           </div>
         </div>
-        <svg class="mt-spark" viewBox="0 0 300 80" preserveAspectRatio="none"
-             data-mt-spark aria-hidden="true">
-          <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
-          <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
-        </svg>
-        <p class="mt-empty" data-mt-traffic-msg>اختر واجهة لعرض الحركة الحيّة.</p>
+        <div class="mt-live-graph">
+          <svg class="mt-spark" viewBox="0 0 300 80" preserveAspectRatio="none"
+               data-mt-spark aria-hidden="true">
+            <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
+            <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
+          </svg>
+          <p class="mt-empty" data-mt-traffic-msg>اختر واجهة لعرض الحركة الحية.</p>
+        </div>
       </div>
     </section>
 
-    <section class="mt-card" data-mt-active-users>
+    <section class="mt-card mt-live-card mt-live-card--users" data-mt-active-users>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-users"></i> المتصلون الآن</h3>
-        <span class="mt-card-meta">
-          <span data-mt-hotspot-count>—</span> hotspot ·
-          <span data-mt-ppp-count>—</span> ppp
-        </span>
+        <div class="mt-live-title">
+          <span class="mt-live-icon"><i class="fa-solid fa-users"></i></span>
+          <div>
+            <h3>المتصلون الآن</h3>
+            <span class="mt-live-sub">جلسات Hotspot و PPP الفعالة</span>
+          </div>
+        </div>
+        <span class="mt-card-meta">تحديث تلقائي كل 10 ثواني</span>
       </header>
       <div class="mt-card-body" data-mt-active-users-body>
-        <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
-        <table class="mt-users-table" data-mt-active-users-table hidden>
-          <thead>
-            <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
-          </thead>
-          <tbody data-mt-active-users-rows></tbody>
-        </table>
+        <div class="mt-users-summary">
+          <div class="mt-users-total">
+            <span class="mt-users-total-icon"><i class="fa-solid fa-signal"></i></span>
+            <div>
+              <small>إجمالي الجلسات</small>
+              <strong data-mt-active-users-total>—</strong>
+            </div>
+          </div>
+          <div class="mt-users-pill mt-users-pill--hotspot">
+            <span>Hotspot</span>
+            <strong data-mt-hotspot-count>—</strong>
+          </div>
+          <div class="mt-users-pill mt-users-pill--ppp">
+            <span>PPP</span>
+            <strong data-mt-ppp-count>—</strong>
+          </div>
+        </div>
+        <div class="mt-users-list">
+          <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
+          <table class="mt-users-table" data-mt-active-users-table hidden>
+            <thead>
+              <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
+            </thead>
+            <tbody data-mt-active-users-rows></tbody>
+          </table>
+        </div>
       </div>
     </section>
   </div>
