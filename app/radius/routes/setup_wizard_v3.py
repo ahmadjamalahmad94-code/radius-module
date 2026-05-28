@@ -1817,30 +1817,40 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
         except Exception:  # noqa: BLE001
             pass
         if iface_name:
+            # Exact mirror of setup_wizard_hotspot_planner.py
+            # cleanup block — uses the SAME naming convention the
+            # install script uses, so every row added at install
+            # time is matched here at delete time.
+            #
+            # Planner names (lines 193-196 of the planner):
+            #   pool_name        = "pool-hotspot-<iface>"
+            #   dhcp_server_name = "dhcp-hotspot-<iface>"
+            #   profile_name     = "hsprof-<iface>"
+            #   server_name      = "hotspot-<iface>"
+            # Comment tag on every related row: HOBE_HOTSPOT_<iface>
             comment_tag = f"HOBE_HOTSPOT_{iface_name}"
-            # Cleanup mirror of setup_wizard_hotspot_planner — every
-            # planner-emitted row is keyed by either the interface
-            # name (hotspot / dhcp-server bind) or the comment tag
-            # (nat, address, dhcp-network).
+            pool_name   = f"pool-hotspot-{iface_name}"
+            dhcp_name   = f"dhcp-hotspot-{iface_name}"
+            profile_nm  = f"hsprof-{iface_name}"
+            server_nm   = f"hotspot-{iface_name}"
             script = (
-                # Firewall NAT rules tagged with this hotspot.
+                # NAT rules tagged with HOBE_HOTSPOT_<iface>.
                 f'/ip firewall nat remove [find where comment~"{comment_tag}"]\n'
-                # Hotspot server — by interface, then by .id as
-                # belt-and-braces.
-                f'/ip hotspot remove [find where interface="{iface_name}"]\n'
+                # Hotspot server — by name, by .id, and by
+                # interface (belt-and-braces; only one will match).
+                f'/ip hotspot remove [find where name="{server_nm}"]\n'
                 f'/ip hotspot remove [find where .id="{target}"]\n'
-                # Hotspot profile — planner names it hobe-hotspot-
-                # profile-<iface>, but be defensive and also delete
-                # any profile whose name carries the tag.
-                f'/ip hotspot profile remove [find where name="hobe-hotspot-profile-{iface_name}"]\n'
-                # DHCP server — by interface (the planner's
-                # hobe-hotspot-<iface> name is implied by the
-                # interface binding).
+                f'/ip hotspot remove [find where interface="{iface_name}"]\n'
+                # Hotspot profile — matches the planner's hsprof-
+                # <iface> name.
+                f'/ip hotspot profile remove [find where name="{profile_nm}"]\n'
+                # DHCP server — by name AND by interface.
+                f'/ip dhcp-server remove [find where name="{dhcp_name}"]\n'
                 f'/ip dhcp-server remove [find where interface="{iface_name}"]\n'
                 # DHCP server networks tagged for this hotspot.
                 f'/ip dhcp-server network remove [find where comment~"{comment_tag}"]\n'
-                # Address pool — named by convention.
-                f'/ip pool remove [find where name="hobe-hotspot-pool-{iface_name}"]\n'
+                # IP pool named pool-hotspot-<iface>.
+                f'/ip pool remove [find where name="{pool_name}"]\n'
                 # IP addresses tagged for this hotspot.
                 f'/ip address remove [find where comment~"{comment_tag}"]\n'
             )
