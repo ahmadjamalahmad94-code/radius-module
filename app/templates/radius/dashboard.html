@@ -245,26 +245,28 @@
     box-shadow:0 18px 54px rgba(65,73,118,.10);
     backdrop-filter:blur(18px);
   }
+  /* VPS health card — clean 3-row stack (header → value → sub).
+     Matches the router-dashboard KPI redesign: icon + label sit
+     in a tight header row, the big value sits flush to the start
+     edge with dir="ltr" (numbers + units in the right order
+     inside the RTL page), and a slim accent bar at the bottom
+     fills to var(--vps-progress). No more ring/wave decoration
+     competing with the actual value. */
   .ops-vps-card{
     --vps-accent:#6B5AED;
     --vps-soft:rgba(107,90,237,.12);
     --vps-progress:0%;
     position:relative;
     overflow:hidden;
-    min-height:138px;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    gap:10px;
-    padding:14px 15px 18px;
+    display:block;
+    min-height:120px;
+    padding:12px 14px 16px;
     border:1px solid rgba(226,232,240,.82);
-    border-radius:18px;
-    background:
-      linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.86)),
-      radial-gradient(circle at 16% 12%, var(--vps-soft), transparent 38%);
+    border-radius:14px;
+    background:linear-gradient(145deg, #FFFFFF, #FAFAFE);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.9),
-      0 14px 34px rgba(38,51,90,.075);
+      0 4px 12px rgba(38,51,90,.04);
     transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
     animation:ops-rise .42s ease both;
   }
@@ -276,94 +278,103 @@
   .ops-vps-card:nth-child(7){animation-delay:.18s}
   .ops-vps-card:nth-child(8){animation-delay:.21s}
   .ops-vps-card:hover{
-    transform:translateY(-3px);
-    border-color:rgba(148,163,184,.82);
+    transform:translateY(-2px);
+    border-color:var(--vps-accent);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.96),
-      0 26px 58px rgba(38,51,90,.13);
+      0 8px 22px rgba(38,51,90,.08);
   }
+  /* Slim accent bar at the bottom — full width track + progress fill. */
   .ops-vps-card:before{
     content:"";
     position:absolute;
-    inset:auto 15px 11px 15px;
-    height:4px;
-    border-radius:999px;
-    background:rgba(226,232,240,.82);
+    left:0; right:0; bottom:0;
+    height:3px;
+    background:rgba(226,232,240,.6);
   }
   .ops-vps-card:after{
     content:"";
     position:absolute;
-    inset:auto 15px 11px auto;
-    width:var(--vps-progress);
-    max-width:calc(100% - 30px);
-    height:4px;
-    border-radius:999px;
-    background:linear-gradient(90deg,var(--vps-accent),#8B5CF6);
-    box-shadow:0 0 20px var(--vps-soft);
+    inset-inline-start:0;
+    bottom:0;
+    width:var(--vps-progress, 0%);
+    height:3px;
+    background:linear-gradient(90deg,var(--vps-accent),color-mix(in srgb, var(--vps-accent) 70%, #FFF 30%));
     transition:width .35s ease;
   }
   .ops-vps-head{
-    position:relative;
     display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
+    align-items:center;
     gap:10px;
+    margin:0 0 8px;
   }
   .ops-vps-icon{
-    width:40px;
-    height:40px;
-    border-radius:13px;
+    width:34px;
+    height:34px;
+    border-radius:10px;
     flex-shrink:0;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    color:var(--vps-accent);
-    font-size:16px;
-    background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(245,243,255,.82));
-    border:1px solid rgba(255,255,255,.96);
-    box-shadow:0 12px 26px var(--vps-soft);
+    color:#fff;
+    font-size:14px;
+    background:linear-gradient(135deg,var(--vps-accent),color-mix(in srgb,var(--vps-accent) 70%, #000 14%));
+    box-shadow:0 6px 14px var(--vps-soft);
+  }
+  .ops-vps-head > div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:0;
+    flex:1;
   }
   .ops-vps-label{
-    margin-top:1px;
-    color:#111B31;
-    font-size:13px;
-    line-height:1.45;
-    font-weight:950;
+    color:#1F2937;
+    font-size:12px;
+    line-height:1.25;
+    font-weight:800;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
   .ops-vps-status{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:20px;
-    margin-top:5px;
-    padding:0 9px;
+    align-self:flex-start;
+    padding:1px 8px;
     border-radius:999px;
     color:var(--vps-accent);
     background:var(--vps-soft);
-    font-size:10px;
-    font-weight:950;
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.03em;
+    line-height:1.55;
     direction:ltr;
   }
+  /* Body row — value on the start edge (right in RTL); ring is
+     optional and pushed to the end edge. Most cards only need the
+     value, so we don't reserve column space when no ring is present. */
   .ops-vps-body{
-    position:relative;
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 50px;
-    gap:10px;
+    display:flex;
     align-items:center;
+    justify-content:space-between;
+    gap:8px;
   }
+  .ops-vps-body > div{ min-width:0; flex:1; }
   .ops-vps-value{
-    color:#101B33;
-    font-size:23px;
-    font-weight:950;
-    line-height:1.12;
+    unicode-bidi:isolate;
+    color:#0F172A;
+    font-size:21px;
+    font-weight:900;
+    line-height:1.2;
     font-variant-numeric:tabular-nums;
     direction:ltr;
+    margin:0 0 3px;
     word-break:normal;
     overflow-wrap:anywhere;
+    text-align:start;
   }
   .ops-vps-value--name{
-    font-size:21px;
-    line-height:1.18;
+    font-size:15px;
+    line-height:1.25;
     letter-spacing:0;
   }
   .ops-vps-value--rtl{
@@ -371,40 +382,20 @@
     text-align:right;
   }
   .ops-vps-sub{
-    margin-top:5px;
-    color:#718096;
+    color:#64748B;
     font-size:11px;
     line-height:1.45;
-    font-weight:850;
+    font-weight:600;
     overflow:hidden;
     display:-webkit-box;
     -webkit-line-clamp:2;
     -webkit-box-orient:vertical;
+    text-align:start;
   }
-  .ops-vps-ring{
-    width:50px;
-    height:50px;
-    border-radius:50%;
-    display:grid;
-    place-items:center;
-    color:var(--vps-accent);
-    background:
-      conic-gradient(var(--vps-accent) var(--vps-progress), rgba(226,232,240,.9) 0),
-      linear-gradient(#fff,#fff);
-    box-shadow:inset 0 0 0 6px #fff, 0 10px 20px var(--vps-soft);
-  }
-  .ops-vps-ring i{font-size:15px}
-  .ops-vps-wave{
-    position:absolute;
-    inset:auto -16px 30px 20px;
-    height:30px;
-    opacity:.18;
-    background:
-      radial-gradient(16px 15px at 15% 48%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%),
-      radial-gradient(20px 18px at 42% 48%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%),
-      radial-gradient(24px 20px at 72% 50%, transparent 52%, var(--vps-accent) 55% 60%, transparent 62%);
-    pointer-events:none;
-  }
+  /* Decorative ring/wave kept for backwards-compat but now hidden —
+     the slim bottom bar carries the progress hint and the value
+     no longer fights for visual weight. */
+  .ops-vps-ring, .ops-vps-wave{ display:none; }
   .ops-vps--brand{--vps-accent:#6B5AED;--vps-soft:rgba(107,90,237,.14)}
   .ops-vps--blue{--vps-accent:#2563EB;--vps-soft:rgba(37,99,235,.13)}
   .ops-vps--green{--vps-accent:#10B981;--vps-soft:rgba(16,185,129,.13)}
@@ -686,8 +677,8 @@
     .ops-top{grid-template-columns:1fr;padding:15px}
     .ops-actions{justify-content:flex-start}
     .ops-title h1{font-size:24px}
-    .ops-vps-grid{grid-template-columns:1fr;padding:12px;border-radius:18px}
-    .ops-vps-card{min-height:156px}
+    .ops-vps-grid{grid-template-columns:1fr;padding:10px;border-radius:14px}
+    .ops-vps-card{min-height:110px}
     .ops-modules{grid-template-columns:1fr}
     .ops-module{min-height:238px}
     .ops-health{grid-template-columns:1fr}

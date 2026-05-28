@@ -195,28 +195,37 @@ def _network_probe() -> dict:
 
 
 def _ping(host: str) -> dict:
+    """Latency check used by the dashboard's «فحص الشبكة» card.
+
+    Originally a `ping` subprocess, but ICMP needs `cap_net_raw`
+    inside a container and the official Python image doesn't even
+    ship iputils-ping — so the ping always failed silently and the
+    card showed «—». Switched to a TCP-connect probe against the
+    host's port 53 (DNS), which is open on every public DNS
+    resolver (8.8.8.8, 1.1.1.1, etc.) and works inside every
+    container without extra capabilities.
+
+    For port-only hosts (e.g., a router's API port) the operator
+    can override the port via `HOBERADIUS_HEALTH_PING_PORT`.
+    """
     timeout = float(os.environ.get("HOBERADIUS_HEALTH_PING_TIMEOUT", "1.5"))
-    if os.name == "nt":
-        cmd = ["ping", "-n", "1", "-w", str(int(timeout * 1000)), host]
-    else:
-        cmd = ["ping", "-c", "1", "-W", str(max(int(timeout), 1)), host]
+    port = int(os.environ.get("HOBERADIUS_HEALTH_PING_PORT", "53"))
+    started = time.perf_counter()
+    sock: socket.socket | None = None
     try:
-        completed = subprocess.run(
-            cmd,
-            capture_output=True,
-            check=False,
-            text=True,
-            timeout=timeout + 0.5,
-        )
-        text = f"{completed.stdout}\n{completed.stderr}"
-        match = re.search(r"time[=<]\s*([0-9.]+)\s*ms", text, re.IGNORECASE)
+        sock = socket.create_connection((host, port), timeout=timeout)
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
         return {
-            "ok": completed.returncode == 0,
-            "ms": round(float(match.group(1)), 1) if match else None,
-            "error": "" if completed.returncode == 0 else _short(text),
+            "ok": True,
+            "ms": round(elapsed_ms, 1),
+            "error": "",
         }
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "ms": None, "error": str(exc)}
+    except (socket.timeout, OSError) as exc:
+        return {"ok": False, "ms": None, "error": _short(str(exc))}
+    finally:
+        if sock is not None:
+            try: sock.close()
+            except OSError: pass
 
 
 def _dns(host: str) -> dict:
