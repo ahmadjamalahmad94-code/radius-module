@@ -24,7 +24,7 @@
     with a BuildError. `endpoint_exists` is injected by the
     app's context processor in app/__init__.py — O(1) lookup
     against `app.view_functions`. -#}
-{%- if endpoint_exists(endpoint) -%}
+{%- if endpoint_exists is not defined or endpoint_exists(endpoint) -%}
   {%- set href = url_for(endpoint) -%}
   {%- set is_active = match -%}
 <a class="hb-side-item{% if is_active %} is-active{% endif %}"
@@ -45,7 +45,7 @@
     `endpoint_exists` is injected by the app context processor
     in app/__init__.py — O(1) lookup; `url_for` is only called
     when the route is confirmed present. -#}
-{%- if endpoint_exists(endpoint) -%}
+{%- if endpoint_exists is not defined or endpoint_exists(endpoint) -%}
   {%- if args -%}
     {%- set _href = url_for(endpoint, **args) -%}
   {%- else -%}
@@ -346,6 +346,7 @@
         {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
         {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   m_mt) }}
         {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }}
+        {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }}
         {{ sub_item('radius.mt_topology',      'خريطة الشبكة',         m_topology) }}
         {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',         m_problems) }}
         {{ sub_item('radius.diagnostics',      'تشخيص الراوترات',     m_diag) }}

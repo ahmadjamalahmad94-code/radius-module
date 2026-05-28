@@ -380,6 +380,20 @@ def _install_stubs(app: Flask) -> None:
         response.set_data(_FORM_RE.sub(r"\1" + field, html))
         return response
 
+    # Network Device Monitor — Sprint 2 background worker. Polls
+    # every device with watch_enabled=1, fires Telegram alerts on
+    # state flips. Daemon thread; dies with the process. Disabled
+    # in test runs (PYTEST_CURRENT_TEST set) so a unit test can't
+    # accidentally fire real probes against production routers.
+    import os as _os
+    if not _os.environ.get("PYTEST_CURRENT_TEST"):
+        try:
+            from app.radius.services import network_device_monitor
+            network_device_monitor.start(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception(
+                "[net-monitor] start failed — alerts inactive")
+
 
 # ─────────────── radius blueprint ───────────────
 
