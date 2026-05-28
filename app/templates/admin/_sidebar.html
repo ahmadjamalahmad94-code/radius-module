@@ -310,11 +310,15 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {# Setup / wizard entries — moved here from the former
-           "الإعداد والتشغيل" section. #}
+        {# Setup / wizard entries.
+           v2 + engineering view hidden 2026-05-28 per operator —
+           «اخفيهم مبدأيا من السايد بار … قداما لحد ما نخلص منهم
+           ونمسحهم». Routes stay registered (no 404 for old
+           bookmarks) — just dropped from the nav so v3 is the
+           only entry point. #}
         {{ sub_item('radius.setup_wizard_v3_page',    '🚀 معالج الإعداد v3',  m_setup_wizard_v2) }}
-        {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد (v2)',   m_setup_wizard_v2) }}
-        {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
+        {# {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد (v2)',   m_setup_wizard_v2) }} #}
+        {# {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }} #}
         {{ sub_item('radius.mt_setup_form',           'معالج إضافة راوتر',    m_mt) }}
 
         {# Inventory + operational view — mt_operations is now THE
