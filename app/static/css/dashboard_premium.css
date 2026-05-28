@@ -232,8 +232,20 @@
   box-shadow: var(--np-sh-2) !important;
   padding: 16px 24px !important;
   margin-bottom: 16px !important;
-  align-items: center !important;
-  gap: 14px !important;
+  /* Force a plain block layout — earlier passes accidentally
+     turned the hero into display:flex with align-items:center,
+     which stretched it to a 500-700px tall card with the text
+     floating in the middle/bottom. Operator: «الهيرو فلت
+     مقاسه / زادت سوء المشكلة». These overrides nail the
+     layout regardless of what other (now-dead but still
+     cached) rules try to do. */
+  display: block !important;
+  flex-wrap: initial !important;
+  align-items: initial !important;
+  justify-content: initial !important;
+  min-height: 0 !important;
+  height: auto !important;
+  gap: 0 !important;
 }
 .mt-dashboard .mt-page-hero::before {
   content: "";
