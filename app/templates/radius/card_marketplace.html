@@ -228,6 +228,13 @@
     font-weight: 900;
   }
 
+  .market-package-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: flex-end;
+  }
+
   .market-batches {
     padding: 14px;
     display: grid;
@@ -533,6 +540,13 @@
         <h2>حزم البيع الإلكتروني</h2>
         <span>{{ num(electronic_batches|length) }} حزم</span>
       </div>
+      {% if packages %}
+        <div class="market-package-strip" aria-label="تعريفات البيع الإلكتروني">
+          {% for package in packages[:4] %}
+            <span class="market-chip">{{ package.name }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
     </header>
 
     {% if electronic_batches %}

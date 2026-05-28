@@ -1,162 +1,156 @@
-{# S5.2+S5.3 — Network topology map.
-
-   Simple card-grid view. Each card is a router; click goes
-   to the per-router dashboard. Filter strip at the top.
-#}
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
 {% block title %}خريطة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}خريطة الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">VPS ← روتراتك ← الجيران</span>{% endblock %}
+{% block page_sub %}<span class="sub">VPS، الراوترات، وحالة الربط من قاعدة البيانات والـ health overlay</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
 {% endblock %}
 
 {% block content %}
-
-<section class="mt-dashboard" data-mt-topology-page>
-
-  {{ hub.hero(
-    "خريطة الشبكة",
-    subtitle="نظرة عُلوية على VPS وعلاقتها بكل راوتر — بدون استهلاك رحلات شبكة على الراوترات.",
-    icon="diagram-project",
-  ) }}
-
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
-      <span class="mt-card-meta">
-        <span data-mt-topology-filtered-count>{{ filtered_count }}</span>
-        من <span data-mt-topology-total-count>{{ total_count }}</span>
-      </span>
-    </header>
-    <div class="mt-card-body">
-      <form method="get" class="mt-program-form"
-            data-mt-topology-filters>
-        <div class="mt-program-grid">
-          <label class="mt-program-field">
-            <span>عرض</span>
-            <select name="show" data-mt-topology-show>
-              <option value="all"      {% if show == 'all'      %}selected{% endif %}>الكل</option>
-              <option value="offline"  {% if show == 'offline'  %}selected{% endif %}>غير المتصلين فقط</option>
-              <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>التي تحتاج انتباه</option>
-              <option value="vpn"      {% if show == 'vpn'      %}selected{% endif %}>VPN فقط</option>
-            </select>
-          </label>
-          <label class="mt-program-field">
-            <span>الصحة</span>
-            <select name="health" data-mt-topology-health>
-              <option value="all"       {% if health == 'all'       %}selected{% endif %}>الكل</option>
-              <option value="healthy"   {% if health == 'healthy'   %}selected{% endif %}>سليم</option>
-              <option value="attention" {% if health == 'attention' %}selected{% endif %}>يحتاج انتباه</option>
-              <option value="risky"     {% if health == 'risky'     %}selected{% endif %}>خطر</option>
-              <option value="offline"   {% if health == 'offline'   %}selected{% endif %}>غير متصل</option>
-              <option value="unknown"   {% if health == 'unknown'   %}selected{% endif %}>غير معروف</option>
-            </select>
-          </label>
-          <label class="mt-program-field">
-            <span>بحث</span>
-            <input type="text" name="q"
-                   value="{{ q }}"
-                   placeholder="اسم الراوتر أو العنوان"
-                   data-mt-topology-search>
-          </label>
-        </div>
-        <div class="mt-program-actions">
-          <button type="submit" class="mt-action-btn"
-                  data-mt-topology-submit>
-            <i class="fa-solid fa-magnifying-glass"></i> طبّق
-          </button>
-          <a class="mt-mini-btn"
-             href="{{ url_for('radius.mt_topology') }}"
-             data-mt-topology-clear>
-            <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
-          </a>
-        </div>
-      </form>
+<section class="opsx" data-mt-topology-page>
+  <header class="opsx-hero">
+    <div>
+      <h2>خريطة الشبكة</h2>
+      <p>عرض تشغيلي للـ VPS والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.</p>
     </div>
-  </section>
+    <span class="opsx-hero-icon"><i class="fa-solid fa-network-wired"></i></span>
+  </header>
 
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-server"></i> العقد</h3>
-    </header>
-    <div class="mt-card-body">
+  <div class="opsx-layout">
+    <aside class="opsx-guide" aria-label="شرح خريطة الشبكة">
+      <div class="opsx-guide-title"><i class="fa-solid fa-route"></i> قراءة الخريطة</div>
+      <p>الخريطة لا تتصل بالراوترات مباشرة؛ هي تقرأ آخر snapshot وصحة الراوتر حتى تبقى سريعة وآمنة.</p>
+      <ul class="opsx-guide-list">
+        <li><i class="fa-solid fa-server"></i><span>الـ VPS هو مركز الربط ومرجع كل علاقة.</span></li>
+        <li><i class="fa-solid fa-shield-halved"></i><span>WireGuard يعني أن الراوتر يدار عبر النفق.</span></li>
+        <li><i class="fa-solid fa-gauge-high"></i><span>خط الصحة داخل البطاقة يمثل score الراوتر.</span></li>
+      </ul>
+    </aside>
 
-      {# Server card sits at the top — visual anchor. #}
-      <div class="mt-router-quicknav" data-mt-topology-server>
-        <div class="mt-router-quicknav-link" style="cursor:default">
-          <i class="fa-solid fa-server"></i>
-          <span class="mt-router-quicknav-label">{{ server.label }}</span>
-          <span class="mt-router-quicknav-sub">قلب الشبكة — VPS</span>
+    <main class="opsx-main">
+      <section class="opsx-stats">
+        <div class="opsx-stat"><span>كل الراوترات</span><strong data-mt-topology-total-count>{{ total_count }}</strong></div>
+        <div class="opsx-stat opsx-stat--ok"><span>المعروض</span><strong data-mt-topology-filtered-count>{{ filtered_count }}</strong></div>
+        <div class="opsx-stat"><span>طريقة العرض</span><strong style="font-size:18px">{{ show }}</strong></div>
+        <div class="opsx-stat"><span>الصحة</span><strong style="font-size:18px">{{ health }}</strong></div>
+      </section>
+
+      <section class="opsx-panel">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title"><i class="fa-solid fa-sliders"></i> فلاتر الخريطة</div>
+        </header>
+        <div class="opsx-panel-body">
+          <form method="get" class="opsx-filter" data-mt-topology-filters>
+            <label class="opsx-field">
+              <span>عرض</span>
+              <select name="show" data-mt-topology-show>
+                <option value="all" {% if show == 'all' %}selected{% endif %}>الكل</option>
+                <option value="offline" {% if show == 'offline' %}selected{% endif %}>غير المتصلين فقط</option>
+                <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>تحتاج انتباه</option>
+                <option value="vpn" {% if show == 'vpn' %}selected{% endif %}>VPN فقط</option>
+              </select>
+            </label>
+            <label class="opsx-field">
+              <span>الصحة</span>
+              <select name="health" data-mt-topology-health>
+                <option value="all" {% if health == 'all' %}selected{% endif %}>الكل</option>
+                <option value="healthy" {% if health == 'healthy' %}selected{% endif %}>سليم</option>
+                <option value="attention" {% if health == 'attention' %}selected{% endif %}>يحتاج انتباه</option>
+                <option value="risky" {% if health == 'risky' %}selected{% endif %}>خطر</option>
+                <option value="offline" {% if health == 'offline' %}selected{% endif %}>غير متصل</option>
+                <option value="unknown" {% if health == 'unknown' %}selected{% endif %}>غير معروف</option>
+              </select>
+            </label>
+            <label class="opsx-field">
+              <span>بحث</span>
+              <input type="text" name="q" value="{{ q }}" placeholder="اسم الراوتر أو العنوان" data-mt-topology-search>
+            </label>
+            <div class="opsx-actions">
+              <button type="submit" class="opsx-btn opsx-btn--primary" data-mt-topology-submit>
+                <i class="fa-solid fa-magnifying-glass"></i> تطبيق
+              </button>
+              <a class="opsx-btn" href="{{ url_for('radius.mt_topology') }}" data-mt-topology-clear>
+                <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+              </a>
+            </div>
+          </form>
         </div>
-      </div>
+      </section>
 
-      {% if not routers %}
-      <p class="mt-empty" data-mt-topology-empty>
-        لا يوجد راوتر يطابق هذه الفلاتر.
-      </p>
-      {% else %}
-      <div class="mt-router-quicknav" data-mt-topology-routers>
-        {% for r in routers %}
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
-           data-mt-topology-node="{{ r.id }}"
-           data-mt-topology-status="{{ r.status }}"
-           data-mt-topology-mode="{{ r.connection_mode }}"
-           data-mt-topology-health="{{ r.health_state or 'unknown' }}"
-           data-mt-topology-health-score="{{ r.health_score }}">
-          {% if r.connection_mode == 'vpn' %}
-          <i class="fa-solid fa-shield-halved"></i>
+      <section class="opsx-panel">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title"><i class="fa-solid fa-server"></i> العقد النشطة</div>
+          <span class="opsx-chip opsx-chip--blue">{{ filtered_count }} / {{ total_count }}</span>
+        </header>
+        <div class="opsx-panel-body">
+          <div class="opsx-router opsx-router--server" data-mt-topology-server style="margin-bottom:13px">
+            <div class="opsx-router-top">
+              <span class="opsx-router-icon"><i class="fa-solid fa-server"></i></span>
+              <div>
+                <span class="opsx-router-name">{{ server.label }}</span>
+                <span class="opsx-router-sub">قلب الشبكة - VPS</span>
+              </div>
+            </div>
+            <div class="opsx-router-line"><span style="--score:100%"></span></div>
+          </div>
+
+          {% if not routers %}
+          <p class="opsx-empty" data-mt-topology-empty>لا يوجد راوتر يطابق هذه الفلاتر.</p>
           {% else %}
-          <i class="fa-solid fa-router"></i>
+          <div class="opsx-router-grid" data-mt-topology-routers>
+            {% for r in routers %}
+            <a class="opsx-router"
+               href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
+               data-mt-topology-node="{{ r.id }}"
+               data-mt-topology-status="{{ r.status }}"
+               data-mt-topology-mode="{{ r.connection_mode }}"
+               data-mt-topology-health="{{ r.health_state or 'unknown' }}"
+               data-mt-topology-health-score="{{ r.health_score }}">
+              <div class="opsx-router-top">
+                <span class="opsx-router-icon">
+                  {% if r.connection_mode == 'vpn' %}
+                  <i class="fa-solid fa-shield-halved"></i>
+                  {% else %}
+                  <i class="fa-solid fa-router"></i>
+                  {% endif %}
+                </span>
+                <div>
+                  <span class="opsx-router-name">{{ r.label }}</span>
+                  <span class="opsx-router-sub">{% if r.address %}{{ r.address }}{% else %}بدون عنوان{% endif %}</span>
+                </div>
+              </div>
+              <div class="opsx-row-meta">
+                {% if r.status == 'online' %}
+                <span class="opsx-chip opsx-chip--ok">متصل</span>
+                {% elif r.status == 'offline' %}
+                <span class="opsx-chip opsx-chip--bad">غير متصل</span>
+                {% elif r.status == 'disabled' %}
+                <span class="opsx-chip">معطل</span>
+                {% else %}
+                <span class="opsx-chip opsx-chip--warn">غير معروف</span>
+                {% endif %}
+                {% if r.connection_mode == 'vpn' %}
+                <span class="opsx-chip opsx-chip--blue">WireGuard</span>
+                {% elif r.connection_mode == 'direct' %}
+                <span class="opsx-chip">مباشر</span>
+                {% endif %}
+                {% if r.health_state %}
+                <span class="opsx-chip {% if r.health_state == 'healthy' %}opsx-chip--ok{% elif r.health_state in ['risky','offline'] %}opsx-chip--bad{% else %}opsx-chip--warn{% endif %}"
+                      data-mt-topology-health-chip>{{ r.health_state }}</span>
+                {% endif %}
+              </div>
+              <div class="opsx-router-line"><span style="--score:{{ r.health_score or 0 }}%"></span></div>
+            </a>
+            {% endfor %}
+          </div>
           {% endif %}
-          <span class="mt-router-quicknav-label">{{ r.label }}</span>
-          <span class="mt-router-quicknav-sub">
-            {% if r.status == 'online' %}
-              <span class="mt-iface-state mt-iface-state--up">متصل</span>
-            {% elif r.status == 'offline' %}
-              <span class="mt-iface-state mt-iface-state--off">غير متصل</span>
-            {% elif r.status == 'disabled' %}
-              <span class="mt-iface-state mt-iface-state--off">معطّل</span>
-            {% else %}
-              <span class="mt-iface-state mt-iface-state--down">غير معروف</span>
-            {% endif %}
-            ·
-            {% if r.connection_mode == 'vpn' %}WireGuard
-            {% elif r.connection_mode == 'direct' %}اتصال مباشر
-            {% else %}—{% endif %}
-            {% if r.address %} · <code>{{ r.address }}</code>{% endif %}
-            {% if r.health_state %}
-              ·
-              {% if r.health_state == 'healthy' %}
-                <span class="mt-iface-state mt-iface-state--up"
-                      data-mt-topology-health-chip>سليم</span>
-              {% elif r.health_state == 'attention' %}
-                <span class="mt-iface-state mt-iface-state--down"
-                      data-mt-topology-health-chip>يحتاج انتباه</span>
-              {% elif r.health_state == 'risky' %}
-                <span class="mt-iface-state mt-iface-state--off"
-                      data-mt-topology-health-chip>خطر</span>
-              {% elif r.health_state == 'offline' %}
-                <span class="mt-iface-state mt-iface-state--off"
-                      data-mt-topology-health-chip>غير متصل</span>
-              {% else %}
-                <span class="mt-iface-state mt-iface-state--down"
-                      data-mt-topology-health-chip>غير معروف</span>
-              {% endif %}
-            {% endif %}
-          </span>
-        </a>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-  </section>
-
+        </div>
+      </section>
+    </main>
+  </div>
 </section>
-
 {% endblock %}

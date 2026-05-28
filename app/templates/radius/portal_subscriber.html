@@ -41,7 +41,6 @@
   </section>
   <section class="card">
     <h2>طلب تجديد</h2>
-    <p class="muted">{{ dashboard.payments_placeholder.message }}</p>
     <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}" data-testid="subscriber-renewal-request-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>ملاحظة <textarea name="reason"></textarea></label>

@@ -1,113 +1,122 @@
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
 {% block title %}التنبيهات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}التنبيهات الذكيّة{% endblock %}
-{% block page_sub %}<span class="sub">إشارات يجب أن تنتبه لها — قبل أن يتعطّل شيء</span>{% endblock %}
+{% block page_title %}التنبيهات الذكية{% endblock %}
+{% block page_sub %}<span class="sub">مركز إشارات حقيقي مبني على قواعد التنبيه المحفوظة</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
 {% endblock %}
 
 {% block content %}
+{% set critical_count = rows|selectattr('severity', 'equalto', 'critical')|list|length %}
+{% set warning_count = rows|selectattr('severity', 'equalto', 'warning')|list|length %}
+{% set info_count = rows|length - critical_count - warning_count %}
 
-<section class="mt-dashboard" data-mt-alerts-page>
-
-  {{ hub.hero(
-    "التنبيهات الذكيّة",
-    subtitle="الراوترات غير المتصلة، فشل تسجيل الدخول المتكرر، انتفاضات الترافيك — كلها تجتمع هنا.",
-    icon="triangle-exclamation",
-  ) }}
-
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-filter"></i> الفلاتر</h3>
-      <span class="mt-card-meta">
-        <span data-mt-alerts-count>{{ rows|length }}</span> صف
-      </span>
-    </header>
-    <div class="mt-card-body">
-      <form method="get" class="mt-program-form"
-            data-mt-alerts-filters>
-        <div class="mt-program-grid">
-          <label class="mt-program-field">
-            <span>الحالة</span>
-            <select name="status" data-mt-alerts-status>
-              <option value="open"     {% if filters.status == 'open'     %}selected{% endif %}>المفتوحة</option>
-              <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المُغلَقة</option>
-            </select>
-          </label>
-          <label class="mt-program-field">
-            <span>الشدة</span>
-            <select name="severity" data-mt-alerts-severity>
-              <option value="">— الكل —</option>
-              {% for s in severities %}
-              <option value="{{ s }}"
-                {% if filters.severity == s %}selected{% endif %}>
-                {{ s }}
-              </option>
-              {% endfor %}
-            </select>
-          </label>
-          <label class="mt-program-field">
-            <span>الراوتر</span>
-            <input type="text" name="router_id"
-                   value="{{ filters.router_id or '' }}"
-                   placeholder="مثلاً 42"
-                   data-mt-alerts-router>
-          </label>
-        </div>
-        <div class="mt-program-actions">
-          <button type="submit" class="mt-action-btn">
-            <i class="fa-solid fa-magnifying-glass"></i> طبّق
-          </button>
-        </div>
-      </form>
+<section class="opsx" data-mt-alerts-page>
+  <header class="opsx-hero">
+    <div>
+      <h2>التنبيهات الذكية</h2>
+      <p>كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.</p>
     </div>
-  </section>
+    <span class="opsx-hero-icon"><i class="fa-solid fa-bell"></i></span>
+  </header>
 
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list"></i> النتائج</h3>
-    </header>
-    <div class="mt-card-body">
-      {% if not rows %}
-      <p class="mt-empty" data-mt-alerts-empty>
-        لا توجد تنبيهات تطابق هذه الفلاتر — بشرى سارّة على الأرجح.
-      </p>
-      {% else %}
-      <ul class="mt-health-list" data-mt-alerts-rows>
-        {% for a in rows %}
-        <li class="mt-health-row mt-health-row--{{ a.severity }}"
-            data-mt-alert-row="{{ a.id }}">
-          <div class="mt-health-row-head">
-            {% if a.severity == 'critical' %}
-            <span class="mt-iface-state mt-iface-state--off">حرجة</span>
-            {% elif a.severity == 'warning' %}
-            <span class="mt-iface-state mt-iface-state--down">تحذير</span>
-            {% else %}
-            <span class="mt-iface-state mt-iface-state--up">معلومة</span>
-            {% endif %}
-            <span class="mt-health-row-msg">{{ a.title_ar }}</span>
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#475569">
-            {% if a.router_id %}<span>راوتر #{{ a.router_id }}</span>{% endif %}
-            <span>القاعدة: <code>{{ a.rule }}</code></span>
-            <span>آخر رصد: <code>{{ a.last_seen }}</code></span>
-            <a class="mt-mini-btn"
-               href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
-               data-mt-alert-detail="{{ a.id }}">
-              <i class="fa-solid fa-eye"></i> تفاصيل
-            </a>
-          </div>
-        </li>
-        {% endfor %}
+  <div class="opsx-layout">
+    <aside class="opsx-guide" aria-label="شرح صفحة التنبيهات">
+      <div class="opsx-guide-title"><i class="fa-solid fa-compass"></i> كيف تقرأ الصفحة؟</div>
+      <p>ابدأ بالحرجة، ثم التحذيرات. التنبيه المغلق يظهر فقط عند اختيار الحالة المغلقة من الفلاتر.</p>
+      <ul class="opsx-guide-list">
+        <li><i class="fa-solid fa-circle-dot"></i><span>الشدة تحدد أولوية التدخل، وليست مجرد لون.</span></li>
+        <li><i class="fa-solid fa-router"></i><span>فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق.</span></li>
+        <li><i class="fa-solid fa-eye"></i><span>زر التفاصيل يفتح الدليل الكامل لنفس التنبيه.</span></li>
       </ul>
-      {% endif %}
-    </div>
-  </section>
+    </aside>
 
+    <main class="opsx-main">
+      <section class="opsx-stats" aria-label="ملخص التنبيهات">
+        <div class="opsx-stat opsx-stat--bad"><span>حرجة</span><strong>{{ critical_count }}</strong></div>
+        <div class="opsx-stat opsx-stat--warn"><span>تحذيرات</span><strong>{{ warning_count }}</strong></div>
+        <div class="opsx-stat opsx-stat--ok"><span>معلومات</span><strong>{{ info_count }}</strong></div>
+        <div class="opsx-stat"><span>المعروض</span><strong data-mt-alerts-count>{{ rows|length }}</strong></div>
+      </section>
+
+      <section class="opsx-panel">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title"><i class="fa-solid fa-filter"></i> تصفية التنبيهات</div>
+        </header>
+        <div class="opsx-panel-body">
+          <form method="get" class="opsx-filter" data-mt-alerts-filters>
+            <label class="opsx-field">
+              <span>الحالة</span>
+              <select name="status" data-mt-alerts-status>
+                <option value="open" {% if filters.status == 'open' %}selected{% endif %}>المفتوحة</option>
+                <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المغلقة</option>
+              </select>
+            </label>
+            <label class="opsx-field">
+              <span>الشدة</span>
+              <select name="severity" data-mt-alerts-severity>
+                <option value="">كل الشدات</option>
+                {% for s in severities %}
+                <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="opsx-field">
+              <span>الراوتر</span>
+              <input type="text" name="router_id" value="{{ filters.router_id or '' }}"
+                     placeholder="مثلا 42" data-mt-alerts-router>
+            </label>
+            <div class="opsx-actions">
+              <button type="submit" class="opsx-btn opsx-btn--primary">
+                <i class="fa-solid fa-magnifying-glass"></i> تطبيق
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="opsx-panel">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title"><i class="fa-solid fa-list-check"></i> النتائج</div>
+          <span class="opsx-chip opsx-chip--blue">{{ filters.status }}</span>
+        </header>
+        <div class="opsx-panel-body">
+          {% if not rows %}
+          <p class="opsx-empty" data-mt-alerts-empty>لا توجد تنبيهات تطابق هذه الفلاتر.</p>
+          {% else %}
+          <ul class="opsx-list" data-mt-alerts-rows>
+            {% for a in rows %}
+            <li class="opsx-row" data-mt-alert-row="{{ a.id }}">
+              <div class="opsx-row-head">
+                <span class="opsx-row-title">{{ a.title_ar }}</span>
+                {% if a.severity == 'critical' %}
+                <span class="opsx-chip opsx-chip--critical">حرجة</span>
+                {% elif a.severity == 'warning' %}
+                <span class="opsx-chip opsx-chip--warning">تحذير</span>
+                {% else %}
+                <span class="opsx-chip opsx-chip--info">معلومة</span>
+                {% endif %}
+              </div>
+              <div class="opsx-row-meta">
+                {% if a.router_id %}<span>راوتر #{{ a.router_id }}</span>{% endif %}
+                <span>القاعدة <code>{{ a.rule }}</code></span>
+                <span>آخر رصد <code>{{ a.last_seen }}</code></span>
+                <a class="opsx-btn" href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+                   data-mt-alert-detail="{{ a.id }}">
+                  <i class="fa-solid fa-eye"></i> التفاصيل
+                </a>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+  </div>
 </section>
-
 {% endblock %}

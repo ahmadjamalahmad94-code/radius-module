@@ -275,7 +275,7 @@
   <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
     <i class="fa-solid fa-pen-to-square"></i> تعديل
   </a>
-  <form method="post" action="#" data-online-sms-form style="display:inline">
+  <form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
     <input type="hidden" name="message" value="">
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-paper-plane"></i> إرسال رسالة
@@ -531,7 +531,8 @@
     }
     if (smsForm) {
       var smsBtn = smsForm.querySelector('button');
-      smsForm.action = '/admin/radius/users/' + encodeURIComponent(username) + '/sms';
+      var smsTemplate = smsForm.getAttribute('data-action-template') || '/admin/radius/users/__username__/sms';
+      smsForm.action = smsTemplate.replace('__username__', encodeURIComponent(username));
       smsForm.onsubmit = function(){
         if (userType === 'card') {
           alert('إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.');

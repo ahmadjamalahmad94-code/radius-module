@@ -4,8 +4,8 @@
  * "📋 نسخ" + collapsible details only when generated. */
 
 .swz {
-  --c-primary:  #2563eb;
-  --c-primary-d:#1d4ed8;
+  --c-primary:  #7657f4;
+  --c-primary-d:#5b42df;
   --c-success:  #10b981;
   --c-success-d:#059669;
   --c-warn:     #f59e0b;
@@ -13,28 +13,138 @@
   --c-text:     #0f172a;
   --c-muted:    #64748b;
   --c-border:   #e2e8f0;
-  --c-bg:       #f8fafc;
-  --c-card:     #ffffff;
-  --r-md: 12px;
-  --r-lg: 18px;
+  --c-bg:       rgba(248,250,255,.80);
+  --c-card:     rgba(255,255,255,.92);
+  --r-md: 14px;
+  --r-lg: 22px;
 
   color: var(--c-text);
-  max-width: 920px;
-  margin: 24px auto 80px;
+  max-width: 1260px;
+  margin: 18px auto 80px;
   padding: 0 16px;
 }
+
+.swz-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid rgba(203,213,225,.78);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(118,87,244,.12), transparent 30%),
+    radial-gradient(circle at 94% 18%, rgba(20,184,166,.10), transparent 30%),
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.84));
+  box-shadow: 0 18px 46px rgba(49,58,115,.10), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.swz-hero h2 {
+  margin: 0;
+  color: var(--c-text);
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 950;
+}
+.swz-hero p {
+  margin: 8px 0 0;
+  max-width: 760px;
+  color: var(--c-muted);
+  font-size: 13.5px;
+  line-height: 1.8;
+  font-weight: 700;
+}
+.swz-hero-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  background: linear-gradient(135deg, #7657f4, #4f46e5);
+  box-shadow: 0 18px 34px rgba(118,87,244,.28);
+}
+
+.swz-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  direction: ltr;
+}
+.swz-guide {
+  position: sticky;
+  top: 18px;
+  border: 1px solid rgba(203,213,225,.78);
+  border-radius: 22px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(118,87,244,.10), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.84));
+  box-shadow: 0 16px 38px rgba(49,58,115,.08), inset 0 1px 0 rgba(255,255,255,.88);
+  direction: rtl;
+}
+.swz-guide-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--c-text);
+  font-weight: 950;
+}
+.swz-guide-title i {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-primary);
+  background: rgba(118,87,244,.10);
+}
+.swz-guide p {
+  margin: 12px 0;
+  color: var(--c-muted);
+  font-size: 12.5px;
+  line-height: 1.75;
+  font-weight: 700;
+}
+.swz-guide ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.swz-guide li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(226,232,240,.86);
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: 750;
+}
+.swz-guide li i { color: #14b8a6; margin-top: 3px; }
+.swz-stage { min-width: 0; direction: rtl; }
 
 /* ─── Progress rail ──────────────────────────────────── */
 
 .swz-rail {
   align-items: center;
-  background: var(--c-card);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.82));
+  border: 1px solid rgba(203,213,225,.78);
+  border-radius: 22px;
   display: flex;
   justify-content: space-between;
   list-style: none;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   padding: 16px 12px;
   position: relative;
   gap: 4px;
@@ -115,11 +225,14 @@
 /* ─── Step container ─────────────────────────────────── */
 
 .swz-step {
-  background: var(--c-card);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(118,87,244,.08), transparent 30%),
+    linear-gradient(145deg, rgba(255,255,255,.96), rgba(248,250,255,.88));
+  border: 1px solid rgba(203,213,225,.78);
+  border-radius: 24px;
   display: none;
-  padding: 28px;
+  padding: 24px;
+  box-shadow: 0 18px 42px rgba(49,58,115,.08), inset 0 1px 0 rgba(255,255,255,.9);
 }
 
 .swz-step.is-active {
@@ -221,13 +334,18 @@
 }
 
 .swz-radio-card {
-  background: var(--c-bg);
-  border: 2px solid var(--c-border);
-  border-radius: var(--r-md);
+  background: rgba(255,255,255,.76);
+  border: 1px solid rgba(203,213,225,.86);
+  border-radius: 18px;
   cursor: pointer;
   display: block;
-  padding: 14px 16px;
-  transition: border-color 0.15s, background 0.15s;
+  padding: 15px 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  transition: border-color 0.15s, background 0.15s, transform .15s, box-shadow .15s;
+}
+.swz-radio-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(49,58,115,.08);
 }
 
 .swz-radio-card strong {
@@ -699,10 +817,11 @@
 }
 
 .swz-service-card {
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
+  background: rgba(255,255,255,.76);
+  border: 1px solid rgba(203,213,225,.86);
+  border-radius: 20px;
   padding: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.86);
 }
 
 .swz-service-card > header {
@@ -724,9 +843,11 @@
 /* ─── Step 4: verify ─────────────────────────────────── */
 
 .swz-verify-status {
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(118,87,244,.12), transparent 38%),
+    rgba(255,255,255,.76);
+  border: 1px solid rgba(203,213,225,.86);
+  border-radius: 22px;
   padding: 32px;
   text-align: center;
 }
@@ -804,7 +925,23 @@
 
 /* ─── Mobile ────────────────────────────────────────── */
 
+@media (max-width: 1050px) {
+  .swz-hero,
+  .swz-shell {
+    grid-template-columns: 1fr;
+  }
+  .swz-shell {
+    direction: rtl;
+  }
+  .swz-guide {
+    position: static;
+  }
+}
+
 @media (max-width: 720px) {
+  .swz {
+    padding: 0 10px;
+  }
   .swz-rail {
     overflow-x: auto;
     padding: 12px 10px;

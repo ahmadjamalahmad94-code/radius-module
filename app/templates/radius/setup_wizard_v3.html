@@ -27,7 +27,7 @@ Steps:
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260526t">
+        href="{{ url_for('static', filename='css/setup_wizard_v3.css') }}?v=20260528a">
 {% endblock %}
 
 {% block content %}
@@ -36,6 +36,28 @@ Steps:
        value="{{ csrf_token() if csrf_token else '' }}">
 
 <div class="swz" data-swz dir="rtl">
+
+  <header class="swz-hero">
+    <div>
+      <h2>معالج الإعداد الذكي</h2>
+      <p>مسار واحد لإضافة الراوتر وربطه بالإنترنت وWireGuard وRADIUS، مع إبقاء السكربتات والتفاصيل التقنية خلف خطوات واضحة.</p>
+    </div>
+    <span class="swz-hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+  </header>
+
+  <div class="swz-shell">
+    <aside class="swz-guide" aria-label="شرح معالج الإعداد">
+      <div class="swz-guide-title"><i class="fa-solid fa-route"></i> مسار التنفيذ</div>
+      <p>اتبع الخطوات بالترتيب. المعالج يحفظ run واحد، ويستخدم نفس الـ endpoints الحالية بدون تغيير في منطق السيرفر.</p>
+      <ul>
+        <li><i class="fa-solid fa-router"></i><span>ابدأ باسم الراوتر ونوع الخدمة.</span></li>
+        <li><i class="fa-solid fa-globe"></i><span>حدد مصدر الإنترنت ثم ولّد السكربت.</span></li>
+        <li><i class="fa-solid fa-shield-halved"></i><span>اربط الراوتر بالخادم عبر WireGuard وRADIUS.</span></li>
+        <li><i class="fa-solid fa-check-double"></i><span>تحقق، ثم سجل الراوتر نهائياً.</span></li>
+      </ul>
+    </aside>
+
+    <main class="swz-stage">
 
   {# ─── Progress rail ──────────────────────────────── #}
   <ol class="swz-rail" data-swz-rail>
@@ -803,6 +825,9 @@ ads.example"></textarea>
       </a>
     </footer>
   </section>
+
+    </main>
+  </div>
 
 </div>
 

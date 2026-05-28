@@ -65,10 +65,6 @@ class CustomerPortalService:
             "notifications": self._events("subscriber", int(subscriber["id"])),
             "cards": self._subscriber_cards(int(subscriber["id"]), subscriber["username"]),
             "loan_policy": self.loan_policy(subscriber_id),
-            "payments_placeholder": {
-                "status": "placeholder",
-                "message": "Online recharge gateway is not connected in this portal slice.",
-            },
             "walled_garden_note": "Allow this portal URL in MikroTik walled garden so expired users can reach it.",
         }
 

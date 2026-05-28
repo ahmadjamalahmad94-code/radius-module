@@ -1,298 +1,179 @@
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
+
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    اختبار حيّ لكل MikroTik مُعرَّف على هذا الـ tenant — TCP، API login، identity.
-  </span>
-{% endblock %}
+{% block page_sub %}<span class="sub">TCP، API login، identity، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
 
 {% block head_extra %}
-<style>
-  .mtd-summary{
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:10px;margin-bottom:16px;
-  }
-  .mtd-summary-card{
-    background:#fff;border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-lg);padding:14px 16px;
-    box-shadow:var(--hub-sh-sm);
-  }
-  .mtd-summary-card .lbl{font-size:11.5px;color:var(--hub-text-mute);
-    text-transform:uppercase;letter-spacing:.7px;font-weight:800}
-  .mtd-summary-card .val{font-size:24px;font-weight:800;margin-top:3px}
-  .mtd-summary-card.ok .val{color:#16a34a}
-  .mtd-summary-card.bad .val{color:#dc2626}
-  .mtd-summary-card.warn .val{color:#d97706}
-
-  .mtd-router-card{
-    background:#fff;border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-lg);box-shadow:var(--hub-sh-sm);
-    margin-bottom:14px;overflow:hidden;
-  }
-  .mtd-router-head{
-    display:flex;align-items:center;gap:10px;
-    padding:12px 16px;border-bottom:1px solid var(--hub-border-soft);
-    background:linear-gradient(180deg,#fafbff,#fff);
-  }
-  .mtd-router-head .title{font-weight:800;font-size:15px;color:var(--hub-text)}
-  .mtd-router-head .host{font-family:var(--hub-mono);font-size:12px;
-    color:var(--hub-text-mute);direction:ltr}
-  .mtd-router-head .source-tag{
-    margin-inline-start:auto;
-    padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;
-    background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;
-  }
-  .mtd-status-pill{
-    display:inline-flex;align-items:center;gap:5px;
-    padding:3px 10px;border-radius:6px;font-size:11.5px;font-weight:800;
-  }
-  .mtd-status-pill.ok        {background:#dcfce7;color:#15803d;border:1px solid #86efac}
-  .mtd-status-pill.tcp_failed{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
-  .mtd-status-pill.api_failed{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
-  .mtd-status-pill.disabled  {background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1}
-
-  .mtd-tests{
-    padding:14px 16px;
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:10px;
-  }
-  .mtd-test{
-    border:1px solid var(--hub-border-soft);
-    border-radius:8px;padding:10px 12px;background:#fafbff;
-  }
-  .mtd-test .lbl{font-size:11px;color:var(--hub-text-mute);
-    font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-  .mtd-test .val{font-size:13px;font-weight:700;margin-top:3px}
-  .mtd-test .val.ok{color:#15803d}
-  .mtd-test .val.bad{color:#b91c1c}
-  .mtd-test .latency{font-family:var(--hub-mono);font-size:11px;
-    color:var(--hub-text-mute);margin-top:2px}
-
-  .mtd-verdict{
-    margin:0 16px 12px;padding:10px 14px;
-    border-radius:8px;font-size:13px;font-weight:600;
-  }
-  .mtd-verdict.ok  {background:#f0fdf4;color:#15803d;border:1px solid #86efac}
-  .mtd-verdict.bad {background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
-  .mtd-verdict.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d}
-  .mtd-verdict .hint{
-    display:block;margin-top:6px;font-size:12px;font-weight:500;
-    color:inherit;opacity:.9;
-  }
-
-  .mtd-fix{
-    margin:0 16px 16px;padding:12px 14px;
-    background:#0f172a;color:#e2e8f0;
-    border-radius:8px;
-  }
-  .mtd-fix .fix-title{
-    font-size:11.5px;color:#94a3b8;font-weight:700;
-    text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;
-  }
-  .mtd-fix pre{
-    margin:0;font-family:var(--hub-mono);font-size:12px;
-    line-height:1.6;color:#bfdbfe;direction:ltr;
-    white-space:pre-wrap;word-break:break-all;
-  }
-  .mtd-fix .copy-btn{
-    float:inline-end;
-    background:#1e293b;color:#94a3b8;border:1px solid #334155;
-    padding:3px 10px;border-radius:6px;font-size:11px;
-    cursor:pointer;font-weight:700;
-  }
-  .mtd-fix .copy-btn:hover{color:#fff;background:#334155}
-
-  .mtd-no-routers{
-    background:#fffbeb;border:1px solid #fcd34d;color:#92400e;
-    padding:18px 22px;border-radius:var(--hub-r-lg);
-    font-size:14px;text-align:center;
-  }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
 {% endblock %}
 
 {% block content %}
-
-{{ hub.hero(
-  "تشخيص اتصال الراوترات",
-  subtitle="تشخيص اتصال الراوترات وأحدث الأخطاء",
-  icon="stethoscope"
-) }}
-
-{# ─────────── Top summary cards ─────────── #}
-<div class="mtd-summary">
-  <div class="mtd-summary-card {% if report.summary.ok > 0 %}ok{% endif %}">
-    <div class="lbl">يعمل</div>
-    <div class="val">{{ report.summary.ok }}</div>
-  </div>
-  <div class="mtd-summary-card {% if report.summary.tcp_failed > 0 %}bad{% endif %}">
-    <div class="lbl">TCP فاشل</div>
-    <div class="val">{{ report.summary.tcp_failed }}</div>
-  </div>
-  <div class="mtd-summary-card {% if report.summary.api_failed > 0 %}warn{% endif %}">
-    <div class="lbl">API فاشل</div>
-    <div class="val">{{ report.summary.api_failed }}</div>
-  </div>
-  <div class="mtd-summary-card">
-    <div class="lbl">معطّل</div>
-    <div class="val">{{ report.summary.disabled }}</div>
-  </div>
-  <div class="mtd-summary-card">
-    <div class="lbl">المجموع</div>
-    <div class="val">{{ report.summary.total }}</div>
-  </div>
-</div>
-
-<div style="margin-bottom:16px">
-  <button type="button" class="btn btn-secondary btn-sm"
-          onclick="location.reload()">
-    <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
-  </button>
-  <span style="color:var(--hub-text-mute);font-size:12px;margin-inline-start:10px">
-    IP الـ VPS كما رآه الخادم: <code style="direction:ltr">{{ vps_ip }}</code>
-  </span>
-</div>
-
-{# ─────────── No routers ─────────── #}
-{% if not report.routers %}
-<div class="mtd-no-routers">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  لا يوجد أي راوتر معرَّف على هذا الـ tenant.
-  أضف راوتر من
-  <a href="{{ url_for('radius.mt_list') }}">إعدادات MikroTik</a>
-  أو من <a href="{{ url_for('radius.devices_list') }}">أجهزة الـ NAS</a> (مع تعبئة api_user).
-</div>
-{% endif %}
-
-{# ─────────── Per-router cards ─────────── #}
-{% for r in report.routers %}
-<section class="mtd-router-card" data-router-host="{{ r.host }}">
-  <header class="mtd-router-head">
-    <span class="title">{{ r.name }}</span>
-    <span class="host">{{ r.host }}:{{ r.port }}</span>
-    {# O5 — connection-mode badge so the operator sees instantly
-       whether this router is dialed directly or via WireGuard. #}
-    {% if r.connection_mode == 'vpn' %}
-      <span class="source-tag"
-            style="background:#f5f3ff;color:#6b21a8;border-color:#d8b4fe"
-            data-mt-conn-mode="vpn">
-        <i class="fa-solid fa-shield-halved"></i> WireGuard
-      </span>
-    {% else %}
-      <span class="source-tag" data-mt-conn-mode="direct">
-        <i class="fa-solid fa-network-wired"></i> اتصال مباشر
-      </span>
-    {% endif %}
-    <span class="mtd-status-pill {{ r.status }}" style="margin-inline-start:auto">
-      {% if r.status == 'ok' %}<i class="fa-solid fa-check"></i> يعمل
-      {% elif r.status == 'tcp_failed' %}<i class="fa-solid fa-plug-circle-xmark"></i> TCP فاشل
-      {% elif r.status == 'api_failed' %}<i class="fa-solid fa-key"></i> API فاشل
-      {% elif r.status == 'disabled' %}<i class="fa-solid fa-pause"></i> معطّل
-      {% else %}{{ r.status }}{% endif %}
-    </span>
+<section class="opsx" data-mt-diagnostics-page>
+  <header class="opsx-hero">
+    <div>
+      <h2>تشخيص اتصال الراوترات</h2>
+      <p>فحص حي لكل MikroTik معرف: هل المنفذ مفتوح؟ هل تسجيل API ينجح؟ وما الإصلاح المقترح عند الفشل.</p>
+    </div>
+    <span class="opsx-hero-icon"><i class="fa-solid fa-wave-square"></i></span>
   </header>
 
-  {# ─── Tests grid ─── #}
-  <div class="mtd-tests">
-    {# TCP test #}
-    {% if r.tcp %}
-    <div class="mtd-test">
-      <div class="lbl">TCP probe</div>
-      <div class="val {{ 'ok' if r.tcp.ok else 'bad' }}">
-        {% if r.tcp.ok %}متاح
-        {% else %}{{ r.tcp.error or 'فشل' }}{% endif %}
-      </div>
-      {% if r.tcp.latency_ms is not none %}
-        <div class="latency">{{ r.tcp.latency_ms }} ms</div>
+  <div class="opsx-layout">
+    <aside class="opsx-guide" aria-label="شرح التشخيص">
+      <div class="opsx-guide-title"><i class="fa-solid fa-clipboard-check"></i> دليل القراءة</div>
+      <p>هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير Firewall أو WireGuard أو API user.</p>
+      <ul class="opsx-guide-list">
+        <li><i class="fa-solid fa-plug"></i><span>TCP فاشل يعني أن الطريق للمنفذ غير مفتوح.</span></li>
+        <li><i class="fa-solid fa-key"></i><span>API فاشل يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.</span></li>
+        <li><i class="fa-solid fa-copy"></i><span>أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.</span></li>
+      </ul>
+    </aside>
+
+    <main class="opsx-main">
+      <section class="opsx-stats">
+        <div class="opsx-stat opsx-stat--ok"><span>يعمل</span><strong>{{ report.summary.ok }}</strong></div>
+        <div class="opsx-stat opsx-stat--bad"><span>TCP فاشل</span><strong>{{ report.summary.tcp_failed }}</strong></div>
+        <div class="opsx-stat opsx-stat--warn"><span>API فاشل</span><strong>{{ report.summary.api_failed }}</strong></div>
+        <div class="opsx-stat"><span>معطل</span><strong>{{ report.summary.disabled }}</strong></div>
+        <div class="opsx-stat"><span>المجموع</span><strong>{{ report.summary.total }}</strong></div>
+      </section>
+
+      <section class="opsx-panel">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title"><i class="fa-solid fa-rotate"></i> الفحص الحالي</div>
+          <div class="opsx-actions">
+            <button type="button" class="opsx-btn opsx-btn--primary" onclick="location.reload()">
+              <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
+            </button>
+          </div>
+        </header>
+        <div class="opsx-panel-body">
+          <div class="opsx-row-meta">
+            <span>IP الخادم كما ظهر للطلب <code>{{ vps_ip }}</code></span>
+          </div>
+        </div>
+      </section>
+
+      {% if not report.routers %}
+      <section class="opsx-panel">
+        <div class="opsx-panel-body">
+          <p class="opsx-empty">
+            لا يوجد أي راوتر معرف على هذا الـ tenant.
+            أضف راوتر من <a href="{{ url_for('radius.mt_list') }}">إعدادات MikroTik</a>
+            أو من <a href="{{ url_for('radius.devices_list') }}">أجهزة NAS</a>.
+          </p>
+        </div>
+      </section>
       {% endif %}
-    </div>
-    {% endif %}
 
-    {# API test #}
-    {% if r.api %}
-    <div class="mtd-test">
-      <div class="lbl">API login</div>
-      <div class="val {{ 'ok' if r.api.ok else 'bad' }}">
-        {% if r.api.ok %}تسجيل دخول ناجح
-        {% else %}{{ r.api.error or 'فشل' }}{% endif %}
-      </div>
-      {% if r.api.latency_ms is not none %}
-        <div class="latency">{{ r.api.latency_ms }} ms</div>
-      {% endif %}
-    </div>
-    {% endif %}
+      {% for r in report.routers %}
+      <section class="opsx-panel" data-router-host="{{ r.host }}">
+        <header class="opsx-panel-head">
+          <div class="opsx-panel-title">
+            <i class="fa-solid fa-router"></i>
+            {{ r.name }}
+          </div>
+          {% if r.status == 'ok' %}
+          <span class="opsx-chip opsx-chip--ok">يعمل</span>
+          {% elif r.status == 'tcp_failed' %}
+          <span class="opsx-chip opsx-chip--bad">TCP فاشل</span>
+          {% elif r.status == 'api_failed' %}
+          <span class="opsx-chip opsx-chip--warn">API فاشل</span>
+          {% elif r.status == 'disabled' %}
+          <span class="opsx-chip">معطل</span>
+          {% else %}
+          <span class="opsx-chip">{{ r.status }}</span>
+          {% endif %}
+        </header>
+        <div class="opsx-panel-body">
+          <div class="opsx-router-top" style="margin-bottom:14px">
+            <span class="opsx-router-icon">
+              {% if r.connection_mode == 'vpn' %}<i class="fa-solid fa-shield-halved"></i>{% else %}<i class="fa-solid fa-network-wired"></i>{% endif %}
+            </span>
+            <div>
+              <span class="opsx-router-name">{{ r.host }}:{{ r.port }}</span>
+              <span class="opsx-router-sub" data-mt-conn-mode="{{ r.connection_mode }}">
+                {% if r.connection_mode == 'vpn' %}WireGuard{% else %}اتصال مباشر{% endif %}
+              </span>
+            </div>
+          </div>
 
-    {# Identity (only on success) #}
-    {% if r.api and r.api.ok %}
-    <div class="mtd-test">
-      <div class="lbl">/system/identity</div>
-      <div class="val ok">{{ r.api.identity or '—' }}</div>
-    </div>
-    {% endif %}
+          <div class="opsx-stats" style="margin-bottom:14px">
+            {% if r.tcp %}
+            <div class="opsx-stat {% if r.tcp.ok %}opsx-stat--ok{% else %}opsx-stat--bad{% endif %}">
+              <span>TCP probe</span>
+              <strong style="font-size:18px">{% if r.tcp.ok %}متاح{% else %}فشل{% endif %}</strong>
+              {% if r.tcp.latency_ms is not none %}<span>{{ r.tcp.latency_ms }} ms</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if r.api %}
+            <div class="opsx-stat {% if r.api.ok %}opsx-stat--ok{% else %}opsx-stat--warn{% endif %}">
+              <span>API login</span>
+              <strong style="font-size:18px">{% if r.api.ok %}ناجح{% else %}فشل{% endif %}</strong>
+              {% if r.api.latency_ms is not none %}<span>{{ r.api.latency_ms }} ms</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if r.api and r.api.ok %}
+            <div class="opsx-stat opsx-stat--ok">
+              <span>identity</span>
+              <strong style="font-size:18px">{{ r.api.identity or '—' }}</strong>
+            </div>
+            {% endif %}
+            <div class="opsx-stat">
+              <span>المنفذ</span>
+              <strong style="font-size:18px">{{ r.port }}</strong>
+              <span>timeout 20s</span>
+            </div>
+          </div>
 
-    {# Static config #}
-    <div class="mtd-test">
-      <div class="lbl">المنفذ</div>
-      <div class="val">{{ r.port }}</div>
-      <div class="latency">timeout = 20s</div>
-    </div>
-  </div>
+          <div class="opsx-row {% if r.status == 'ok' %}opsx-row--ok{% endif %}">
+            <div class="opsx-row-head"><span class="opsx-row-title">{{ r.verdict }}</span></div>
+            {% if r.hint %}<p class="opsx-row-text">{{ r.hint }}</p>{% endif %}
+          </div>
 
-  {# ─── Verdict ─── #}
-  <div class="mtd-verdict {{ 'ok' if r.status == 'ok' else ('warn' if r.status == 'disabled' else 'bad') }}">
-    {{ r.verdict }}
-    {% if r.hint %}<span class="hint">{{ r.hint }}</span>{% endif %}
-  </div>
-
-  {# ─── Fix commands (only on failure) ─── #}
-  {% if r.status == 'tcp_failed' %}
-  {# O5 — repair script is connection-mode aware. VPN-mode rows
-     get a WG-subnet rule (so HobeRadius reaches the router via
-     10.10.0.1 inside the tunnel); direct-mode rows get the
-     public-IP rule. Mixing them up was the root cause of the
-     EOF/'unknown client' incident documented as #9 in the
-     postmortem. #}
-  {% if r.connection_mode == 'vpn' %}
-    {% set repair_address = wg_subnet %}
-    {% set repair_src     = wg_subnet %}
-    {% set repair_label   = "على MikroTik (VPN) — افتح API للـ WireGuard subnet" %}
-  {% else %}
-    {% set repair_address = vps_ip ~ '/32' %}
-    {% set repair_src     = vps_ip %}
-    {% set repair_label   = "على MikroTik (مباشر) — افتح API لـ public IP الخادم" %}
-  {% endif %}
-  <div class="mtd-fix" data-mt-repair-mode="{{ r.connection_mode }}">
-    <button class="copy-btn" type="button"
-            onclick="navigator.clipboard.writeText(this.nextElementSibling.nextElementSibling.textContent); this.textContent='منسوخ ✓'">نسخ</button>
-    <div class="fix-title">{{ repair_label }}</div>
+          {% if r.status == 'tcp_failed' %}
+            {% if r.connection_mode == 'vpn' %}
+              {% set repair_address = wg_subnet %}
+              {% set repair_src = wg_subnet %}
+              {% set repair_label = "على MikroTik عبر WireGuard VPN" %}
+            {% else %}
+              {% set repair_address = vps_ip ~ '/32' %}
+              {% set repair_src = vps_ip %}
+              {% set repair_label = "على MikroTik عبر public IP" %}
+            {% endif %}
+          <div class="opsx-fix" data-mt-repair-mode="{{ r.connection_mode }}">
+            <button class="opsx-btn" type="button"
+                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('pre').textContent); this.textContent='منسوخ ✓'">
+              <i class="fa-solid fa-copy"></i> نسخ
+            </button>
+            <strong>{{ repair_label }}</strong>
 <pre>/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
 
 /ip firewall filter add chain=input src-address={{ repair_src }} \
     protocol=tcp dst-port={{ r.port }} action=accept \
     place-before=0 comment="HobeRadius API"
 
-# تأكد أن الـ port مفتوح على أي router أعلى (NAT/ISP)
 /ip firewall filter print where dst-port={{ r.port }}</pre>
-  </div>
-  {% elif r.status == 'api_failed' %}
-  <div class="mtd-fix">
-    <button class="copy-btn" type="button"
-            onclick="navigator.clipboard.writeText(this.nextElementSibling.nextElementSibling.textContent); this.textContent='منسوخ ✓'">نسخ</button>
-    <div class="fix-title">على MikroTik — تأكد من حساب API</div>
-<pre># 1. تحقق من الحساب الحالي
-/user print where name=USERNAME_HERE
-
-# 2. لو الـ group غلط، عيّن full أو group مخصّص يحتوي 'api':
+          </div>
+          {% elif r.status == 'api_failed' %}
+          <div class="opsx-fix">
+            <button class="opsx-btn" type="button"
+                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('pre').textContent); this.textContent='منسوخ ✓'">
+              <i class="fa-solid fa-copy"></i> نسخ
+            </button>
+            <strong>تحقق من حساب API على MikroTik</strong>
+<pre>/user print where name=USERNAME_HERE
 /user group add name=api-only policy=api,read,write,test
-/user set USERNAME_HERE group=full   # أو api-only
-
-# 3. لو نسيت كلمة المرور:
+/user set USERNAME_HERE group=full
 /user set USERNAME_HERE password=NEW_STRONG_PASSWORD</pre>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      {% endfor %}
+    </main>
   </div>
-  {% endif %}
 </section>
-{% endfor %}
-
 {% endblock %}
