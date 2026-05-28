@@ -129,13 +129,31 @@
     while (val >= 1024 && idx < units.length - 1) { val /= 1024; idx++; }
     return val.toFixed(1) + " " + units[idx];
   }
-  function setKpi(kind, value, sub) {
+  function clampPercent(v) {
+    const n = asNumber(v);
+    if (n == null) return 0;
+    return Math.max(0, Math.min(100, n));
+  }
+  function pctFromUsed(total, free) {
+    const totalN = asNumber(total);
+    const freeN = asNumber(free);
+    if (!totalN || freeN == null || totalN <= 0) return null;
+    return clampPercent(((totalN - freeN) / totalN) * 100);
+  }
+  function pctLabel(v) {
+    const n = clampPercent(v);
+    return (Math.round(n * 10) / 10).toString().replace(/\.0$/, "") + "%";
+  }
+  function setKpi(kind, value, sub, opts) {
     const card = root.querySelector(`[data-mt-kpi="${kind}"]`);
     if (!card) return;
     const valueEl = card.querySelector("[data-mt-kpi-value]");
     const subEl = card.querySelector("[data-mt-kpi-sub]");
     if (valueEl) valueEl.textContent = value != null ? value : "—";
     if (subEl && sub != null) subEl.textContent = sub;
+    if (opts && opts.progress != null) {
+      card.style.setProperty("--kpi-progress", clampPercent(opts.progress) + "%");
+    }
   }
 
   function renderOverview(payload) {
@@ -143,23 +161,54 @@
     const resource = (sections.resource && sections.resource.data) || [];
     const health   = (sections.health   && sections.health.data)   || [];
     const router_b = (sections.routerboard && sections.routerboard.data) || [];
+    const clock    = (sections.clock && sections.clock.data) || [];
 
     const resourceRow = resource[0] || {};
     const healthRow   = health[0]   || {};
     const boardRow    = router_b[0] || {};
+    const clockRow    = clock[0] || {};
 
     setKpi("uptime", resourceRow["uptime"] || "—",
            resourceRow["build-time"] ? "بُني " + resourceRow["build-time"] : null);
 
     const cpu = resourceRow["cpu-load"];
+    if (cpu != null) {
+      setKpi("cpu", cpu + "%", resourceRow["cpu"] ? resourceRow["cpu"] : null, { progress: cpu });
+    }
     setKpi("cpu", cpu != null ? cpu + "%" : "—",
            resourceRow["cpu"] ? resourceRow["cpu"] : null);
 
-    const free = bytesHuman(resourceRow["free-memory"]);
-    const total = bytesHuman(resourceRow["total-memory"]);
+    const memFreeRaw = resourceRow["free-memory"];
+    const memTotalRaw = resourceRow["total-memory"];
+    const free = bytesHuman(memFreeRaw);
+    const total = bytesHuman(memTotalRaw);
+    const memUsedPct = pctFromUsed(memTotalRaw, memFreeRaw);
     setKpi("memory",
-           (free && total) ? (free + " / " + total) : "—",
-           "متاح / إجمالي");
+           memUsedPct != null ? pctLabel(memUsedPct) : "\u2014",
+           (free && total) ? (free + " \u0645\u062a\u0627\u062d \u0645\u0646 " + total) : "\u0645\u062a\u0627\u062d / \u0625\u062c\u0645\u0627\u0644\u064a",
+           { progress: memUsedPct });
+
+    // Disk \u2014 try every name RouterOS uses across versions / boards.
+    // CCR / RB devices that boot off NAND expose `free-hdd-space`;
+    // some flavours rename it to `free-storage` or omit it entirely
+    // and expose flash-only counters.
+    const diskFreeRaw = resourceRow["free-hdd-space"]
+                     || resourceRow["free-hdd"]
+                     || resourceRow["free-storage"];
+    const diskTotalRaw = resourceRow["total-hdd-space"]
+                      || resourceRow["total-hdd"]
+                      || resourceRow["total-storage"];
+    const diskFree = bytesHuman(diskFreeRaw);
+    const diskTotal = bytesHuman(diskTotalRaw);
+    const diskUsedPct = pctFromUsed(diskTotalRaw, diskFreeRaw);
+    setKpi("disk",
+           diskUsedPct != null ? pctLabel(diskUsedPct) : "\u2014",
+           (diskFree && diskTotal) ? (diskFree + " \u0645\u062a\u0627\u062d \u0645\u0646 " + diskTotal) : "\u0645\u0633\u062a\u062e\u062f\u0645 / \u0625\u062c\u0645\u0627\u0644\u064a",
+           { progress: diskUsedPct });
+    if (window.console && diskUsedPct == null) {
+      console.log("[overview] disk: no HDD fields in /system/resource \u2014 keys:",
+                  Object.keys(resourceRow).join(", "));
+    }
 
     // Health rows may not exist on every RouterOS variant.
     let temp = null;
@@ -172,6 +221,18 @@
     }
     setKpi("temperature", temp != null ? temp + "°C" : "—",
            "من /system/health");
+
+    // Clock — RouterOS 7 exposes `time` + `date` from
+    // /system/clock/print; older versions sometimes use
+    // `current-time` / `current-date`. Try both shapes.
+    const ctime = clockRow.time || clockRow["current-time"];
+    const cdate = clockRow.date || clockRow["current-date"];
+    setKpi("clock", ctime || "—", cdate || "وقت الراوتر الحالي");
+    if (window.console && !ctime) {
+      console.log("[overview] clock: no time field — section.clock =",
+                  sections.clock,
+                  " row keys:", Object.keys(clockRow).join(", "));
+    }
 
     setKpi("version", resourceRow["version"] || "—",
            boardRow["board-name"] || boardRow["model"] || "—");
