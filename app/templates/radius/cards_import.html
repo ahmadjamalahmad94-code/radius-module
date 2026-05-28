@@ -264,11 +264,23 @@
     preview.hidden = true;
     btn.disabled = true;
 
+    // App-wide CSRF middleware needs either _csrf_token (form field)
+    // or X-CSRFToken (header). Pull the value the main form already
+    // rendered via csrf_token_input() and pass both ways for safety.
+    const csrfInput = document.querySelector('input[name="_csrf_token"]');
+    const csrfTok = csrfInput ? csrfInput.value : '';
+
     const fd = new FormData();
     fd.append('file', file);
+    if (csrfTok) fd.append('_csrf_token', csrfTok);
 
     try {
-      const res = await fetch(PREVIEW_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
+      const res = await fetch(PREVIEW_URL, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: csrfTok ? { 'X-CSRFToken': csrfTok } : {},
+      });
       const rawText = await res.text();
       let data = null;
       try { data = JSON.parse(rawText); }
