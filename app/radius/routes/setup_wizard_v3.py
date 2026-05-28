@@ -1709,12 +1709,25 @@ def setup_wizard_v3_router_inventory(router_id: int):
 
 
 def setup_wizard_v3_router_inventory_remove(router_id: int):
-    """Delete one specific service entry by its RouterOS .id. The
-    cleanup is precise — we remove exactly the row the operator
-    confirmed, no cascading wipes. Pools / DHCP / IP addresses
-    that the planner co-created stay behind so the operator can
-    inspect them if they want; the «إيقاف الخدمة» button on each
-    service flow still does the broader sweep.
+    """Delete a service entry from the router.
+
+    Per-service-type cleanup scope:
+      • hotspot      → full sweep on the bound interface
+                       (hotspot + profile + dhcp-server +
+                       dhcp-server network + ip pool + ip address
+                       + firewall nat — every row the install-time
+                       planner emitted carrying the
+                       HOBE_HOTSPOT_<iface> comment tag).
+      • remote-access → 3-step sweep (filter + user + scheduler)
+                       keyed by the HOBERADIUS_TECH:<token> tag.
+      • everything else → surgical single-row delete by .id.
+
+    Why hotspot is special: the operator complained on 2026-05-28
+    that the row-only delete left pool / dhcp / address rows
+    behind («ما مسح من كل الاماكن»), forcing a manual cleanup
+    via Winbox before they could re-add the service on the same
+    interface. The broader sweep mirrors the planner's cleanup
+    block (setup_wizard_hotspot_planner.py).
 
     Body: { service_type: "hotspot"|"broadband"|..., target: ".id" }
     """
@@ -1784,6 +1797,58 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
             # so the operator at least gets the rule gone.
             script = (
                 f'/ip firewall filter remove [find where .id="{target}"]\n'
+            )
+    elif service_type == "hotspot":
+        # Operator: «ما مسح من كل الاماكن — الاي بي بول والادرس
+        # والدي اتش سي بي ما انحذفو». The original "single-row delete"
+        # design left pool / dhcp / address rows behind. We now do the
+        # same broad sweep the install-time planner emits in reverse:
+        #   1. Look up the hotspot row by .id → grab its interface name.
+        #   2. Wipe everything bound to that interface OR carrying the
+        #      HOBE_HOTSPOT_<iface> comment tag.
+        iface_name = ""
+        try:
+            from ..integration.mikrotik import MikrotikClient
+            with MikrotikClient(**_mt_client_for(nas)) as mt:
+                for r in mt.print_("/ip/hotspot/print"):
+                    if str(r.get(".id", "")) == target:
+                        iface_name = str(r.get("interface", "") or "")
+                        break
+        except Exception:  # noqa: BLE001
+            pass
+        if iface_name:
+            comment_tag = f"HOBE_HOTSPOT_{iface_name}"
+            # Cleanup mirror of setup_wizard_hotspot_planner — every
+            # planner-emitted row is keyed by either the interface
+            # name (hotspot / dhcp-server bind) or the comment tag
+            # (nat, address, dhcp-network).
+            script = (
+                # Firewall NAT rules tagged with this hotspot.
+                f'/ip firewall nat remove [find where comment~"{comment_tag}"]\n'
+                # Hotspot server — by interface, then by .id as
+                # belt-and-braces.
+                f'/ip hotspot remove [find where interface="{iface_name}"]\n'
+                f'/ip hotspot remove [find where .id="{target}"]\n'
+                # Hotspot profile — planner names it hobe-hotspot-
+                # profile-<iface>, but be defensive and also delete
+                # any profile whose name carries the tag.
+                f'/ip hotspot profile remove [find where name="hobe-hotspot-profile-{iface_name}"]\n'
+                # DHCP server — by interface (the planner's
+                # hobe-hotspot-<iface> name is implied by the
+                # interface binding).
+                f'/ip dhcp-server remove [find where interface="{iface_name}"]\n'
+                # DHCP server networks tagged for this hotspot.
+                f'/ip dhcp-server network remove [find where comment~"{comment_tag}"]\n'
+                # Address pool — named by convention.
+                f'/ip pool remove [find where name="hobe-hotspot-pool-{iface_name}"]\n'
+                # IP addresses tagged for this hotspot.
+                f'/ip address remove [find where comment~"{comment_tag}"]\n'
+            )
+        else:
+            # No interface recovered — fall back to single-row delete
+            # so at least the hotspot entry goes away.
+            script = (
+                f'/ip hotspot remove [find where .id="{target}"]\n'
             )
     else:
         # The script removes a single row by its .id value (RouterOS
