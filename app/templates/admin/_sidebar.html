@@ -24,7 +24,7 @@
     with a BuildError. `endpoint_exists` is injected by the
     app's context processor in app/__init__.py — O(1) lookup
     against `app.view_functions`. -#}
-{%- if endpoint_exists is not defined or endpoint_exists(endpoint) -%}
+{%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
   {%- set href = url_for(endpoint) -%}
   {%- set is_active = match -%}
 <a class="hb-side-item{% if is_active %} is-active{% endif %}"
@@ -45,7 +45,7 @@
     `endpoint_exists` is injected by the app context processor
     in app/__init__.py — O(1) lookup; `url_for` is only called
     when the route is confirmed present. -#}
-{%- if endpoint_exists is not defined or endpoint_exists(endpoint) -%}
+{%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
   {%- if args -%}
     {%- set _href = url_for(endpoint, **args) -%}
   {%- else -%}

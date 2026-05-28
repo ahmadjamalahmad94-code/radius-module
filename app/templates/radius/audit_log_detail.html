@@ -1,112 +1,151 @@
-{# S2.2 — Single audit-log entry detail page.
-
-   Shows the full picture for one operation. Secrets in
-   payload/before/after are already "***" by repo-time
-   redaction; the template just renders them as JSON.
-#}
+{# S2.2 — Single audit-log entry detail page. #}
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
 {% block title %}عملية #{{ entry.id }} — {{ entry.action }}{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-clipboard-list"></i>{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
 {% block page_title %}عملية #{{ entry.id }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ entry.action }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ entry.action_label }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/audit_log_redesign.css') }}">
 {% endblock %}
 
 {% block content %}
 
-<section class="mt-dashboard" data-audit-detail-page
+<section class="mt-dashboard audit-shell audit-detail-shell"
+         data-audit-detail-page
          data-audit-id="{{ entry.id }}">
 
-  {{ hub.hero(
-    "عملية #" ~ entry.id,
-    subtitle=entry.action ~ " · " ~ entry.created_at,
-    icon="clipboard-list",
-  ) }}
-
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-circle-info"></i> ملخّص</h3>
-      <span class="mt-card-meta">
-        {% if entry.severity == "critical" %}
-        <span class="mt-iface-state mt-iface-state--off">{{ entry.severity }}</span>
-        {% elif entry.severity == "warning" %}
-        <span class="mt-iface-state mt-iface-state--down">{{ entry.severity }}</span>
-        {% else %}
-        <span class="mt-iface-state mt-iface-state--up">{{ entry.severity }}</span>
-        {% endif %}
+  <section class="audit-detail-hero audit-event--{{ entry.severity_tone }}">
+    <a class="audit-btn audit-btn--ghost"
+       href="{{ url_for('radius.audit_log_index') }}">
+      <i class="fa-solid fa-arrow-right"></i>
+      الرجوع للسجل
+    </a>
+    <div class="audit-detail-hero__main">
+      <span class="audit-kicker">
+        <i class="fa-solid fa-fingerprint"></i>
+        عملية موثقة
       </span>
-    </header>
-    <div class="mt-card-body">
-      <ul class="mt-program-summary" data-audit-detail-meta>
-        <li>الفاعل: <strong>{{ entry.actor }}</strong></li>
-        <li>الإجراء: <code>{{ entry.action }}</code></li>
-        <li>الهدف: <code>{{ entry.target_type }}#{{ entry.target_id }}</code></li>
-        {% if entry.router_id %}
-        <li>الراوتر: <code>{{ entry.router_id }}</code></li>
-        {% endif %}
-        <li>الحالة: <strong>{{ entry.result_status or '—' }}</strong></li>
-        <li>الوقت: <code>{{ entry.created_at }}</code></li>
-        {% if entry.ip_address %}<li>IP: <code>{{ entry.ip_address }}</code></li>{% endif %}
-        {% if entry.user_agent %}<li>متصفّح: <code>{{ entry.user_agent }}</code></li>{% endif %}
-      </ul>
-
-      {% if entry.error_message %}
-      <div class="mt-program-banner mt-program-banner--risk"
-           data-audit-detail-error>
-        <li><i class="fa-solid fa-circle-exclamation"></i>
-          {{ entry.error_message }}</li>
-      </div>
-      {% endif %}
+      <h2>{{ entry.action_label }}</h2>
+      <code dir="ltr">{{ entry.action }}</code>
+    </div>
+    <div class="audit-detail-hero__state">
+      <span class="audit-badge audit-badge--{{ entry.severity_tone }}">
+        {{ entry.severity_label }}
+      </span>
+      <span class="audit-badge audit-badge--{{ entry.result_tone }}">
+        {{ entry.result_label }}
+      </span>
     </div>
   </section>
+
+  <section class="audit-detail-grid">
+    <article class="audit-detail-card audit-detail-card--wide">
+      <header class="audit-section-head">
+        <div>
+          <span class="audit-section-eyebrow">ملخص سريع</span>
+          <h3>هوية العملية</h3>
+        </div>
+        <span class="audit-count">#{{ entry.id }}</span>
+      </header>
+
+      <dl class="audit-facts" data-audit-detail-meta>
+        <div>
+          <dt>الفاعل</dt>
+          <dd>{{ entry.actor or "غير محدد" }}</dd>
+        </div>
+        <div>
+          <dt>الهدف</dt>
+          <dd><code dir="ltr">{{ entry.target_label }}</code></dd>
+        </div>
+        <div>
+          <dt>الراوتر</dt>
+          <dd>{% if entry.router_id %}<code>{{ entry.router_id }}</code>{% else %}—{% endif %}</dd>
+        </div>
+        <div>
+          <dt>الوقت</dt>
+          <dd><code dir="ltr">{{ entry.created_at }}</code></dd>
+        </div>
+        {% if entry.ip_address %}
+        <div>
+          <dt>عنوان IP</dt>
+          <dd><code dir="ltr">{{ entry.ip_address }}</code></dd>
+        </div>
+        {% endif %}
+        {% if entry.user_agent %}
+        <div class="audit-facts__full">
+          <dt>المتصفح</dt>
+          <dd><code dir="ltr">{{ entry.user_agent }}</code></dd>
+        </div>
+        {% endif %}
+      </dl>
+    </article>
+
+    <aside class="audit-detail-card audit-help-card">
+      <div class="audit-guide__icon">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h3>الأسرار مخفية</h3>
+      <p>
+        كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ
+        <code>***</code>، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.
+      </p>
+    </aside>
+  </section>
+
+  {% if entry.error_message %}
+  <section class="audit-error-card" data-audit-detail-error>
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <div>
+      <strong>رسالة الخطأ</strong>
+      <p>{{ entry.error_message }}</p>
+    </div>
+  </section>
+  {% endif %}
 
   {% if entry.payload %}
-  <section class="mt-card" data-audit-detail-payload>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-database"></i> بيانات العملية (payload)</h3>
+  <section class="audit-json-card" data-audit-detail-payload>
+    <header class="audit-section-head">
+      <div>
+        <span class="audit-section-eyebrow">بيانات التنفيذ</span>
+        <h3>Payload</h3>
+      </div>
+      <i class="fa-solid fa-database"></i>
     </header>
-    <div class="mt-card-body">
-      <p class="mt-tab-hint">
-        المفاتيح الحساسة (كلمة المرور، السرّ، المفتاح الخاص...)
-        تظهر هنا كـ <code>***</code> بفعل آلية الإخفاء عند الكتابة.
-      </p>
-      <pre class="mt-logs-output">{{ entry.payload | tojson(indent=2) }}</pre>
-    </div>
+    <pre class="audit-json-output">{{ entry.payload | tojson(indent=2) }}</pre>
   </section>
   {% endif %}
 
-  {% if entry.before %}
-  <section class="mt-card" data-audit-detail-before>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-clock-rotate-left"></i> قبل التغيير</h3>
-    </header>
-    <div class="mt-card-body">
-      <pre class="mt-logs-output">{{ entry.before | tojson(indent=2) }}</pre>
-    </div>
-  </section>
-  {% endif %}
+  <section class="audit-diff-grid">
+    {% if entry.before %}
+    <article class="audit-json-card" data-audit-detail-before>
+      <header class="audit-section-head">
+        <div>
+          <span class="audit-section-eyebrow">قبل التنفيذ</span>
+          <h3>قبل التغيير</h3>
+        </div>
+        <i class="fa-solid fa-clock-rotate-left"></i>
+      </header>
+      <pre class="audit-json-output">{{ entry.before | tojson(indent=2) }}</pre>
+    </article>
+    {% endif %}
 
-  {% if entry.after %}
-  <section class="mt-card" data-audit-detail-after>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-arrow-right-long"></i> بعد التغيير</h3>
-    </header>
-    <div class="mt-card-body">
-      <pre class="mt-logs-output">{{ entry.after | tojson(indent=2) }}</pre>
-    </div>
+    {% if entry.after %}
+    <article class="audit-json-card" data-audit-detail-after>
+      <header class="audit-section-head">
+        <div>
+          <span class="audit-section-eyebrow">بعد التنفيذ</span>
+          <h3>بعد التغيير</h3>
+        </div>
+        <i class="fa-solid fa-arrow-right-long"></i>
+      </header>
+      <pre class="audit-json-output">{{ entry.after | tojson(indent=2) }}</pre>
+    </article>
+    {% endif %}
   </section>
-  {% endif %}
 
-  <div class="mt-program-actions">
-    <a class="mt-mini-btn"
-       href="{{ url_for('radius.audit_log_index') }}">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
-    </a>
-  </div>
 </section>
 
 {% endblock %}

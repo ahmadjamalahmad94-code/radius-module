@@ -3,7 +3,7 @@
  * No JSON inputs. No raw code fields. Each step is a clean
  * form; the JS collects values, calls the appropriate backend
  * endpoint, and shows the generated script with a one-click
- * copy button. Step 5 is optional per-service cards.
+ * copy button. The final step registers the router.
  *
  * Backend endpoints used:
  *   POST /admin/radius/setup-wizard-v3/runs
@@ -67,21 +67,30 @@
 
   function showStep(n) {
     state.currentStep = n;
+    const rail = root.querySelector("[data-swz-rail]");
+    const railSteps = Array.from(root.querySelectorAll("[data-swz-rail-step]"));
     root.querySelectorAll("[data-swz-step]").forEach((sec) => {
       sec.classList.toggle(
         "is-active",
         Number(sec.dataset.swzStep) === n,
       );
     });
-    root.querySelectorAll("[data-swz-rail-step]").forEach((li) => {
+    railSteps.forEach((li) => {
       const step = Number(li.dataset.swzRailStep);
       li.classList.toggle("is-current", step === n);
       li.classList.toggle("is-done", step < n);
     });
-    // On Step 6, auto-fill the API user/password from the
+    if (rail && railSteps.length > 1) {
+      const progress = ((n - 1) / (railSteps.length - 1)) * 100;
+      const clampedProgress = Math.max(0, Math.min(100, progress));
+      rail.style.setProperty("--swz-progress", `${clampedProgress}%`);
+      rail.style.setProperty("--swz-progress-ratio", `${clampedProgress / 100}`);
+    }
+    // On the retired manual register step, auto-fill the API
+    // user/password from the
     // credentials the unified script baked into the router.
     // Operator just presses 'register'.
-    if (n === 6 && state.apiUser) {
+    if (n === 98 && state.apiUser) {
       const u = root.querySelector("[data-swz-api-user]");
       const p = root.querySelector("[data-swz-api-pass]");
       if (u) u.value = state.apiUser;
@@ -497,11 +506,11 @@
                 خلال ${data.latency_ms} ms.
               </p>
               <p style="color:#10b981;font-weight:700;margin-top:8px">
-                ⏭️ ننتقل للخطوة التالية تلقائياً...
+                ⏭️ نسجّل الراوتر ونفتح خدماته تلقائياً...
               </p>
             `;
           }
-          setTimeout(() => showStep(5), 1500);
+          setTimeout(() => registerRouter(null), 900);
         } else {
           // Update the spinner card with live elapsed time +
           // hint about what's likely blocking.
@@ -535,7 +544,7 @@
       );
       if (handshakePoll) clearInterval(handshakePoll);
       toast("✅ تم تأكيد الاتصال يدوياً.", "ok");
-      showStep(5);
+      await registerRouter(null);
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {
@@ -900,8 +909,8 @@
         "POST",
         `/runs/${state.runId}/register`,
         {
-          api_user: getValue("[data-swz-api-user]") || "admin",
-          api_password: getValue("[data-swz-api-pass]"),
+          api_user: state.apiUser || getValue("[data-swz-api-user]") || "admin",
+          api_password: state.apiPassword || getValue("[data-swz-api-pass]"),
         },
       );
       // Backend may return HTTP 200 with run.v3_state=BLOCKED
@@ -927,8 +936,13 @@
         );
         return;
       }
-      toast("🎉 تم تسجيل الراوتر بنجاح!", "ok");
-      showStep(7);
+      toast("🎉 تم تسجيل الراوتر بنجاح! جاري فتح خدمات الراوتر...", "ok");
+      const nasId = Number(run.nas_device_id || run.nas_id || run.router_id || 0);
+      if (nasId > 0) {
+        window.location.assign(`/admin/radius/mt/${nasId}/dashboard#tab-my-services`);
+        return;
+      }
+      toast("تم التسجيل لكن لم يرجع رقم الراوتر لفتح لوحة الخدمات.", "error");
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {

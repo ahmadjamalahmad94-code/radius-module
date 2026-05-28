@@ -60,30 +60,22 @@ Steps:
     <main class="swz-stage">
 
   {# ─── Progress rail ──────────────────────────────── #}
-  <ol class="swz-rail" data-swz-rail>
+  <ol class="swz-rail" data-swz-rail style="--swz-progress-ratio: 0;">
     <li data-swz-rail-step="1" class="is-current">
-      <span class="swz-rail-dot">١</span>
+      <span class="swz-rail-dot"><i class="fa-solid fa-server" aria-hidden="true"></i><b>1</b></span>
       <span class="swz-rail-label">الراوتر</span>
     </li>
     <li data-swz-rail-step="2">
-      <span class="swz-rail-dot">٢</span>
+      <span class="swz-rail-dot"><i class="fa-solid fa-globe" aria-hidden="true"></i><b>2</b></span>
       <span class="swz-rail-label">الإنترنت</span>
     </li>
     <li data-swz-rail-step="3">
-      <span class="swz-rail-dot">٣</span>
+      <span class="swz-rail-dot"><i class="fa-solid fa-link" aria-hidden="true"></i><b>3</b></span>
       <span class="swz-rail-label">الربط بالخادم</span>
     </li>
     <li data-swz-rail-step="4">
-      <span class="swz-rail-dot">٤</span>
+      <span class="swz-rail-dot"><i class="fa-solid fa-shield" aria-hidden="true"></i><b>4</b></span>
       <span class="swz-rail-label">التحقّق</span>
-    </li>
-    <li data-swz-rail-step="5">
-      <span class="swz-rail-dot">٥</span>
-      <span class="swz-rail-label">خدمات إضافيّة</span>
-    </li>
-    <li data-swz-rail-step="6">
-      <span class="swz-rail-dot">٦</span>
-      <span class="swz-rail-label">إنهاء</span>
     </li>
   </ol>
 
@@ -458,8 +450,8 @@ Steps:
     </footer>
   </section>
 
-  {# ─── Step 5: Optional services ────────────────── #}
-  <section class="swz-step" data-swz-step="5">
+  {# ─── Retired: optional services moved out of the wizard flow ───────── #}
+  <section class="swz-step" data-swz-step="99" hidden>
     <header>
       <h2>خدمات إضافيّة (اختياري)</h2>
       <p>فعّل ما تريده وستجد سكربتاً جاهزاً للنسخ لكل خدمة.
@@ -777,8 +769,8 @@ ads.example"></textarea>
     </footer>
   </section>
 
-  {# ─── Step 6: Register ──────────────────────────── #}
-  <section class="swz-step" data-swz-step="6">
+  {# ─── Retired manual register step: registration is automatic after VPN verify ─── #}
+  <section class="swz-step" data-swz-step="98" hidden>
     <header>
       <h2>تسجيل الراوتر في القائمة</h2>
       <p>تم توليد مستخدم API مخصّص للراوتر في سكربت الخطوة 3.
@@ -802,7 +794,7 @@ ads.example"></textarea>
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="6">→ السابق</button>
+              data-swz-back="5">→ السابق</button>
       <button type="button" class="swz-btn swz-btn-success"
               data-swz-action="register">
         ✅ تسجيل وإنهاء

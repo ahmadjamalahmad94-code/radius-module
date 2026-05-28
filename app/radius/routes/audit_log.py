@@ -21,6 +21,29 @@ from ..services.mt_permissions import (
     PERM_AUDIT_VIEW, requires_perm,
 )
 
+_SEVERITY_LABELS = {
+    "info": "معلومة",
+    "warning": "تحذير",
+    "critical": "حرجة",
+}
+
+_RESULT_LABELS = {
+    "success": "نجحت",
+    "failed": "فشلت",
+    "partial": "جزئية",
+    "cancelled": "ملغاة",
+}
+
+_ACTION_LABELS = {
+    "mt.programming.hotspot.apply": "تطبيق إعدادات Hotspot",
+    "mt.programming.ppp.apply": "تطبيق إعدادات PPPoE",
+    "mt.programming.interface.apply": "تعديل واجهة",
+    "mt.backup.create": "إنشاء نسخة احتياطية",
+    "mt.deploy": "نشر إعدادات",
+    "mt.apply": "تطبيق إعداد",
+    "mt.toggle": "تبديل حالة",
+}
+
 
 def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
@@ -54,6 +77,57 @@ def _str_arg(name: str) -> str | None:
     return raw or None
 
 
+def _tone_for_severity(value: str | None) -> str:
+    if value == "critical":
+        return "danger"
+    if value == "warning":
+        return "warning"
+    return "info"
+
+
+def _tone_for_result(value: str | None) -> str:
+    if value == "success":
+        return "success"
+    if value in {"failed", "cancelled"}:
+        return "danger"
+    if value == "partial":
+        return "warning"
+    return "muted"
+
+
+def _action_label(action: str | None) -> str:
+    raw = action or ""
+    if raw in _ACTION_LABELS:
+        return _ACTION_LABELS[raw]
+    tail = raw.split(".")[-1].replace("_", " ").replace("-", " ").strip()
+    return tail or "عملية"
+
+
+def _decorate_row(row: dict) -> dict:
+    try:
+        payload = json.loads(row.get("payload_json") or "{}")
+    except (TypeError, ValueError):
+        payload = {}
+    preview_keys = [k for k in payload.keys() if k not in ("ok",)][:4]
+    severity = row.get("severity") or "info"
+    result_status = row.get("result_status") or ""
+    return {
+        **row,
+        "payload": payload,
+        "preview_keys": preview_keys,
+        "action_label": _action_label(row.get("action")),
+        "severity_label": _SEVERITY_LABELS.get(severity, severity),
+        "severity_tone": _tone_for_severity(severity),
+        "result_label": _RESULT_LABELS.get(
+            result_status, result_status or "غير محددة"),
+        "result_tone": _tone_for_result(result_status),
+        "target_label": (
+            f"{row.get('target_type') or 'target'}"
+            f"#{row.get('target_id') or '—'}"
+        ),
+    }
+
+
 def audit_log_index():
     filters = {
         "router_id": _int_arg("router_id"),
@@ -63,28 +137,31 @@ def audit_log_index():
         "search": _str_arg("q"),
     }
     rows = audit_repo.recent(_tid(), limit=200, **filters)
-    # Parse JSON columns once on the server so the template can
-    # iterate cleanly. Pre-clip preview to ≤120 chars to keep
-    # the row compact; the detail page shows the full picture.
-    decorated = []
-    for r in rows:
-        try:
-            payload = json.loads(r.get("payload_json") or "{}")
-        except (TypeError, ValueError):
-            payload = {}
-        preview_keys = [k for k in payload.keys() if k not in ("ok",)][:4]
-        decorated.append({
-            **r,
-            "payload": payload,
-            "preview_keys": preview_keys,
-        })
+    decorated = [_decorate_row(r) for r in rows]
+    summary = {
+        "total": len(decorated),
+        "critical": sum(
+            1 for r in decorated if r.get("severity") == "critical"),
+        "warnings": sum(1 for r in decorated if r.get("severity") == "warning"),
+        "failed": sum(
+            1 for r in decorated if r.get("result_status") == "failed"),
+        "success": sum(
+            1 for r in decorated if r.get("result_status") == "success"),
+        "routers": len({
+            r.get("router_id") for r in decorated if r.get("router_id")
+        }),
+        "active_filters": sum(1 for v in filters.values() if v not in (None, "")),
+    }
     return render_template(
         "radius/audit_log_index.html",
         rows=decorated,
         filters=filters,
+        summary=summary,
         # Surface the values the UI dropdowns need.
         severities=["info", "warning", "critical"],
         result_statuses=["success", "failed", "partial", "cancelled"],
+        severity_labels=_SEVERITY_LABELS,
+        result_labels=_RESULT_LABELS,
     )
 
 
@@ -99,5 +176,6 @@ def audit_log_detail(audit_id: int):
                 json.loads(row.get(col) or "{}")
         except (TypeError, ValueError):
             row[col.replace("_json", "")] = {}
+    row = _decorate_row(row)
     return render_template("radius/audit_log_detail.html",
                            entry=row)

@@ -320,6 +320,8 @@ def _install_stubs(app: Flask) -> None:
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
     app.jinja_env.filters.setdefault("arabize", lambda s: s)
     app.jinja_env.filters.setdefault("arabize_audit", lambda s: s)
+    app.jinja_env.globals.setdefault(
+        "endpoint_exists", lambda name: name in app.view_functions)
 
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {

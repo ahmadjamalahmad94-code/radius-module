@@ -1,158 +1,552 @@
-{# O11 — Permission review matrix.
-
-   Read-only audit view. Each row is an admin, each column a
-   MikroTik permission. Cells are check / dash chips, never
-   editable controls. Operators change roles in the existing
-   admins page; this view only surfaces current state.
-#}
 {% extends "admin/_admin_layout.html" %}
-{% import "_partials/hub.html" as hub %}
 
-{% block title %}مصفوفة الصلاحيات{% endblock %}
+{% block title %}مركز الصلاحيات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
-{% block page_title %}مصفوفة الصلاحيات{% endblock %}
-{% block page_sub %}<span class="sub">من يستطيع فعل ماذا على MikroTik</span>{% endblock %}
+{% block page_title %}مركز الصلاحيات{% endblock %}
+{% block page_sub %}<span class="sub">{{ total_admins }} مدير · {{ matrix.permissions|length }} صلاحية تشغيلية</span>{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{{ super() }}
 <style>
-  .mt-perm-matrix { width: 100%; border-collapse: collapse; }
-  .mt-perm-matrix th, .mt-perm-matrix td {
-    padding: 8px 10px; text-align: center; font-size: 13px;
-    border-bottom: 1px solid var(--hub-border, #e6e9ee);
+  .permx {
+    --pm-text:#101828;
+    --pm-muted:#667085;
+    --pm-line:#dfe7f3;
+    --pm-soft:#f6f8ff;
+    --pm-purple:#7657f4;
+    --pm-blue:#2864f0;
+    --pm-teal:#16b8a6;
+    --pm-amber:#f59e0b;
+    --pm-red:#ef4444;
+    display:grid;
+    gap:16px;
   }
-  .mt-perm-matrix th { background: var(--hub-surface-2, #f7f8fa); }
-  .mt-perm-matrix tbody tr:hover { background: rgba(43,170,204,0.04); }
-  .mt-perm-cell--admin { text-align: start; font-weight: 600; }
-  .mt-perm-cell-role { color: var(--hub-text-muted, #717b8a);
-                       font-size: 12px; font-weight: 400; }
-  .mt-perm-chip {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--hub-surface-2, #eef2f6);
-    color: var(--hub-text-muted, #99a0aa);
+  .permx-hero,
+  .permx-panel,
+  .permx-guide {
+    border:1px solid rgba(203,213,225,.78);
+    border-radius:24px;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(118,87,244,.12), transparent 30%),
+      radial-gradient(circle at 94% 12%, rgba(20,184,166,.10), transparent 28%),
+      linear-gradient(145deg, rgba(255,255,255,.96), rgba(248,250,255,.88));
+    box-shadow:0 18px 46px rgba(49,58,115,.09), inset 0 1px 0 rgba(255,255,255,.9);
   }
-  .mt-perm-chip--yes { background: rgba(43,170,204,0.14);
-                       color: #208ba6; }
-  .mt-perm-chip--super { background: rgba(255,193,7,0.18);
-                          color: #b87f00; }
-  .mt-perm-chip--admin { background: rgba(102,16,242,0.13);
-                          color: #6610f2; }
+  .permx-hero {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:18px;
+    align-items:center;
+    padding:22px;
+    overflow:hidden;
+  }
+  .permx-hero h2 {
+    margin:0;
+    font-size:30px;
+    line-height:1.22;
+    font-weight:950;
+    color:var(--pm-text);
+  }
+  .permx-hero p {
+    margin:8px 0 0;
+    max-width:760px;
+    color:var(--pm-muted);
+    font-size:13.5px;
+    line-height:1.8;
+    font-weight:750;
+  }
+  .permx-hero-icon {
+    width:68px;
+    height:68px;
+    border-radius:22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-size:26px;
+    background:linear-gradient(135deg, #7657f4, #1e88e5);
+    box-shadow:0 18px 34px rgba(118,87,244,.26);
+  }
+  .permx-actions {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:flex-start;
+    margin-top:14px;
+  }
+  .permx-btn {
+    min-height:40px;
+    border:1px solid rgba(203,213,225,.92);
+    border-radius:14px;
+    padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:rgba(255,255,255,.82);
+    color:#182033;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:900;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .permx-btn--primary {
+    border-color:transparent;
+    color:#fff;
+    background:linear-gradient(135deg, #7657f4, #4f46e5);
+    box-shadow:0 14px 28px rgba(118,87,244,.22);
+  }
+  .permx-metrics {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+  .permx-metric {
+    min-height:104px;
+    border:1px solid rgba(203,213,225,.78);
+    border-radius:22px;
+    padding:16px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 48px;
+    align-items:center;
+    gap:12px;
+    background:rgba(255,255,255,.86);
+    box-shadow:0 14px 34px rgba(49,58,115,.07), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .permx-metric span {
+    display:block;
+    color:#667085;
+    font-size:12px;
+    font-weight:900;
+  }
+  .permx-metric strong {
+    display:block;
+    margin-top:5px;
+    color:#111827;
+    font-size:28px;
+    line-height:1;
+    font-weight:950;
+  }
+  .permx-metric i {
+    width:48px;
+    height:48px;
+    border-radius:17px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--tone, var(--pm-purple));
+    background:color-mix(in srgb, var(--tone, var(--pm-purple)) 12%, white);
+  }
+  .permx-shell {
+    display:grid;
+    grid-template-columns:285px minmax(0,1fr);
+    gap:16px;
+    align-items:start;
+    direction:ltr;
+  }
+  .permx-guide {
+    position:sticky;
+    top:18px;
+    padding:18px;
+    direction:rtl;
+  }
+  .permx-guide h3,
+  .permx-panel h3 {
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:#111827;
+    font-size:16px;
+    font-weight:950;
+  }
+  .permx-guide p {
+    margin:10px 0 14px;
+    color:var(--pm-muted);
+    font-size:12.5px;
+    line-height:1.75;
+    font-weight:750;
+  }
+  .permx-legend {
+    display:grid;
+    gap:8px;
+  }
+  .permx-legend-item {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px;
+    border:1px solid rgba(226,232,240,.88);
+    border-radius:14px;
+    background:rgba(255,255,255,.76);
+    color:#475569;
+    font-size:12px;
+    font-weight:800;
+  }
+  .permx-main {
+    min-width:0;
+    display:grid;
+    gap:16px;
+    direction:rtl;
+  }
+  .permx-groups {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+  .permx-group {
+    border:1px solid rgba(203,213,225,.78);
+    border-radius:20px;
+    padding:15px;
+    background:rgba(255,255,255,.86);
+    box-shadow:0 14px 34px rgba(49,58,115,.07);
+  }
+  .permx-group-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .permx-group h3 {
+    font-size:15px;
+  }
+  .permx-group i {
+    width:40px;
+    height:40px;
+    border-radius:14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#7657f4;
+    background:rgba(118,87,244,.10);
+  }
+  .permx-group p {
+    min-height:36px;
+    margin:8px 0 12px;
+    color:var(--pm-muted);
+    font-size:12px;
+    line-height:1.55;
+    font-weight:800;
+  }
+  .permx-group-stats {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .permx-group-stats div {
+    border-radius:14px;
+    padding:10px;
+    text-align:center;
+    background:#f6f8ff;
+  }
+  .permx-group-stats span {
+    display:block;
+    color:#667085;
+    font-size:11px;
+    font-weight:900;
+  }
+  .permx-group-stats strong {
+    display:block;
+    color:#111827;
+    font-size:20px;
+    font-weight:950;
+  }
+  .permx-panel {
+    overflow:hidden;
+  }
+  .permx-panel-head {
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid rgba(226,232,240,.82);
+  }
+  .permx-chip {
+    min-height:28px;
+    border-radius:999px;
+    padding:0 10px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    color:#475569;
+    background:#f2f6fb;
+    font-size:11.5px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+  .permx-table-wrap {
+    overflow:auto;
+    max-height:68vh;
+    background:rgba(255,255,255,.62);
+  }
+  .permx-table {
+    min-width:1280px;
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+  }
+  .permx-table th,
+  .permx-table td {
+    padding:11px 10px;
+    border-bottom:1px solid #e8edf5;
+    text-align:center;
+    vertical-align:middle;
+    font-size:12.5px;
+  }
+  .permx-table thead th {
+    position:sticky;
+    top:0;
+    z-index:3;
+    color:#344054;
+    background:#f8faff;
+    font-weight:950;
+    box-shadow:0 1px 0 #d9e2ee;
+  }
+  .permx-table tfoot th {
+    color:#475569;
+    background:#f8faff;
+    font-size:11.5px;
+    font-weight:950;
+  }
+  .permx-admin-cell {
+    position:sticky;
+    right:0;
+    z-index:2;
+    min-width:230px;
+    text-align:right !important;
+    background:#fff;
+    box-shadow:-1px 0 0 #e8edf5;
+  }
+  thead .permx-admin-cell {
+    z-index:4;
+    background:#f8faff;
+  }
+  .permx-admin-name {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:950;
+    color:#111827;
+  }
+  .permx-avatar {
+    width:34px;
+    height:34px;
+    border-radius:13px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#7657f4;
+    background:rgba(118,87,244,.10);
+  }
+  .permx-role {
+    margin-top:4px;
+    color:#667085;
+    font-size:11.5px;
+    font-weight:800;
+  }
+  .permx-code {
+    display:block;
+    margin-top:3px;
+    color:#98a2b3;
+    font-family:Consolas, Monaco, monospace;
+    font-size:10.5px;
+    font-weight:800;
+  }
+  .permx-perm-head {
+    min-width:104px;
+  }
+  .permx-perm-head.is-risky {
+    color:#b42318;
+    background:#fff7f7;
+  }
+  .permx-mark {
+    width:26px;
+    height:26px;
+    border-radius:11px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#98a2b3;
+    background:#eef2f7;
+  }
+  .permx-mark--yes {
+    color:#087f5b;
+    background:#dff8ec;
+  }
+  .permx-mark--super {
+    color:#936300;
+    background:#fff2cc;
+  }
+  .permx-mark--admin {
+    color:#5b42df;
+    background:#ece7ff;
+  }
+  .permx-count {
+    font-size:18px;
+    font-weight:950;
+    color:#111827;
+  }
+  .permx-empty {
+    margin:0;
+    padding:46px 18px;
+    text-align:center;
+    color:#667085;
+    font-weight:900;
+  }
+  @media (max-width:1180px) {
+    .permx-metrics,
+    .permx-groups { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width:980px) {
+    .permx-shell { grid-template-columns:1fr; direction:rtl; }
+    .permx-guide { position:static; }
+  }
+  @media (max-width:720px) {
+    .permx-hero { grid-template-columns:1fr; }
+    .permx-metrics,
+    .permx-groups { grid-template-columns:1fr; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<section class="mt-dashboard" data-mt-permission-matrix>
-
-  {{ hub.hero(
-    "مصفوفة الصلاحيات",
-    subtitle="نظرة للقراءة فقط على صلاحيات الأدمنز على MikroTik. للتعديل: من صفحة الأدمنز.",
-    icon="user-shield",
-  ) }}
-
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list-check"></i> الأدمنز والصلاحيات</h3>
-      <span class="mt-card-meta">
-        <span data-mt-perm-total-admins>{{ total_admins }}</span>
-        أدمن نشط
-      </span>
-    </header>
-    <div class="mt-card-body">
-
-      {% if not matrix.rows %}
-      <p class="mt-empty" data-mt-perm-empty>
-        لا يوجد أدمنز نشطون.
-      </p>
-      {% else %}
-
-      <div style="overflow-x:auto;">
-      <table class="mt-perm-matrix" data-mt-perm-table>
-        <thead>
-          <tr>
-            <th class="mt-perm-cell--admin">الأدمن</th>
-            {% for p in matrix.permissions %}
-            <th data-mt-perm-col="{{ p }}" title="{{ p }}">
-              {{ perm_labels.get(p, p) }}
-            </th>
-            {% endfor %}
-            <th>إجمالي</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in matrix.rows %}
-          <tr data-mt-perm-row="{{ r.admin_id }}"
-              data-mt-perm-super="{{ '1' if r.is_super_admin else '0' }}"
-              data-mt-perm-via-admin="{{ '1' if r.via_admin else '0' }}">
-            <td class="mt-perm-cell--admin">
-              {{ r.username }}
-              {% if r.full_name %}
-                <div class="mt-perm-cell-role">{{ r.full_name }}
-                  {% if r.role_name %} · {{ r.role_name }}{% endif %}
-                </div>
-              {% elif r.role_name %}
-                <div class="mt-perm-cell-role">{{ r.role_name }}</div>
-              {% endif %}
-            </td>
-            {% for p in matrix.permissions %}
-            {% set granted = r.granted.get(p, False) %}
-            <td data-mt-perm-cell="{{ p }}"
-                data-mt-perm-granted="{{ '1' if granted else '0' }}">
-              {% if granted and r.is_super_admin %}
-                <span class="mt-perm-chip mt-perm-chip--super"
-                      title="super_admin">
-                  <i class="fa-solid fa-crown"></i>
-                </span>
-              {% elif granted and r.via_admin %}
-                <span class="mt-perm-chip mt-perm-chip--admin"
-                      title="mikrotik.admin">
-                  <i class="fa-solid fa-check"></i>
-                </span>
-              {% elif granted %}
-                <span class="mt-perm-chip mt-perm-chip--yes">
-                  <i class="fa-solid fa-check"></i>
-                </span>
-              {% else %}
-                <span class="mt-perm-chip">
-                  <i class="fa-solid fa-minus"></i>
-                </span>
-              {% endif %}
-            </td>
-            {% endfor %}
-            <td data-mt-perm-count>{{ r.granted_count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th class="mt-perm-cell--admin">الإجمالي</th>
-            {% for p in matrix.permissions %}
-            <th data-mt-perm-col-count="{{ p }}">
-              {{ grant_counts.get(p, 0) }} / {{ total_admins }}
-            </th>
-            {% endfor %}
-            <th></th>
-          </tr>
-        </tfoot>
-      </table>
+<section class="permx" data-mt-permission-matrix>
+  <header class="permx-hero">
+    <div>
+      <h2>حوكمة صلاحيات الراوتر</h2>
+      <p>قراءة واحدة واضحة لكل مدير وما يملكه فعليا من صلاحيات الراوتر والخروج عبر الخادم وسياسات الشبكة. الصفحة للرقابة فقط، والتعديل يبقى من الأدوار والمدراء حتى لا تتحول الصلاحيات إلى أزرار خطرة.</p>
+      <div class="permx-actions">
+        <a class="permx-btn permx-btn--primary" href="{{ url_for('radius.roles_list') }}">
+          <i class="fa-solid fa-key"></i> تعديل الأدوار
+        </a>
+        <a class="permx-btn" href="{{ url_for('radius.admins_list') }}">
+          <i class="fa-solid fa-user-shield"></i> إدارة المدراء
+        </a>
       </div>
-
-      <p class="mt-empty" style="margin-top:12px; text-align:start;
-                                  color:var(--hub-text-muted,#717b8a);">
-        <i class="fa-solid fa-info-circle"></i>
-        <strong>التاج</strong> = super_admin (يمتلك كل شيء)،
-        <strong>الدائرة البنفسجية</strong> = صلاحية mikrotik.admin
-        (تشمل الباقي ضمنيًا)، <strong>الدائرة الفيروزية</strong> =
-        صلاحية مضافة مباشرةً للدور.
-        لتعديل الصلاحيات افتح
-        <a href="{{ url_for('radius.admins_list') }}">صفحة الأدمنز</a>.
-      </p>
-
-      {% endif %}
     </div>
+    <span class="permx-hero-icon"><i class="fa-solid fa-shield-halved"></i></span>
+  </header>
+
+  <section class="permx-metrics" aria-label="ملخص الصلاحيات">
+    <article class="permx-metric" style="--tone:var(--pm-blue)">
+      <div><span>مدراء نشطون</span><strong data-mt-perm-total-admins>{{ total_admins }}</strong></div>
+      <i class="fa-solid fa-users-gear"></i>
+    </article>
+    <article class="permx-metric" style="--tone:var(--pm-purple)">
+      <div><span>صلاحيات معرفة</span><strong>{{ matrix.permissions|length }}</strong></div>
+      <i class="fa-solid fa-list-check"></i>
+    </article>
+    <article class="permx-metric" style="--tone:var(--pm-amber)">
+      <div><span>صلاحيات حساسة ممنوحة</span><strong>{{ summary.risky_grants }}</strong></div>
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </article>
+    <article class="permx-metric" style="--tone:var(--pm-teal)">
+      <div><span>صلاحية كاملة</span><strong>{{ summary.super_admins }}</strong></div>
+      <i class="fa-solid fa-crown"></i>
+    </article>
   </section>
 
-</section>
+  <div class="permx-shell">
+    <aside class="permx-guide" aria-label="شرح قراءة مصفوفة الصلاحيات">
+      <h3><i class="fa-solid fa-compass"></i> طريقة القراءة</h3>
+      <p>ابدأ من الملخص ثم راقب الأعمدة الحمراء. أي صلاحية Apply أو Restore أو Admin تعتبر حساسة وتحتاج مراجعة دور صاحبها.</p>
+      <div class="permx-legend">
+        <div class="permx-legend-item"><span class="permx-mark permx-mark--super"><i class="fa-solid fa-crown"></i></span> يمتلك كل الصلاحيات بسبب Super Admin</div>
+        <div class="permx-legend-item"><span class="permx-mark permx-mark--admin"><i class="fa-solid fa-check"></i></span> ممنوحة ضمنيا من صلاحية التحكم الكامل</div>
+        <div class="permx-legend-item"><span class="permx-mark permx-mark--yes"><i class="fa-solid fa-check"></i></span> صلاحية موجودة في الدور</div>
+        <div class="permx-legend-item"><span class="permx-mark"><i class="fa-solid fa-minus"></i></span> غير ممنوحة</div>
+      </div>
+    </aside>
 
+    <main class="permx-main">
+      <section class="permx-groups" aria-label="مجموعات الصلاحيات">
+        {% for group in group_cards %}
+        <article class="permx-group">
+          <div class="permx-group-head">
+            <h3>{{ group.title }}</h3>
+            <i class="fa-solid fa-{{ group.icon }}"></i>
+          </div>
+          <p>{{ group.description }}</p>
+          <div class="permx-group-stats">
+            <div><span>صلاحيات</span><strong>{{ group.permission_count }}</strong></div>
+            <div><span>منح فعلي</span><strong>{{ group.grant_count }}</strong></div>
+          </div>
+        </article>
+        {% endfor %}
+      </section>
+
+      <section class="permx-panel">
+        <header class="permx-panel-head">
+          <h3><i class="fa-solid fa-table-cells-large"></i> مصفوفة المدراء والصلاحيات</h3>
+          <span class="permx-chip"><i class="fa-solid fa-eye"></i> قراءة فقط</span>
+        </header>
+        {% if not matrix.rows %}
+          <p class="permx-empty" data-mt-perm-empty>لا يوجد مدراء نشطون.</p>
+        {% else %}
+        <div class="permx-table-wrap">
+          <table class="permx-table" data-mt-perm-table>
+            <thead>
+              <tr>
+                <th class="permx-admin-cell">المدير</th>
+                {% for p in matrix.permissions %}
+                <th class="permx-perm-head{% if p in risky_perms %} is-risky{% endif %}" data-mt-perm-col="{{ p }}" title="{{ p }}">
+                  {{ perm_labels.get(p, p) }}
+                  <span class="permx-code">{{ p }}</span>
+                </th>
+                {% endfor %}
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in matrix.rows %}
+              <tr data-mt-perm-row="{{ r.admin_id }}"
+                  data-mt-perm-super="{{ '1' if r.is_super_admin else '0' }}"
+                  data-mt-perm-via-admin="{{ '1' if r.via_admin else '0' }}">
+                <td class="permx-admin-cell">
+                  <div class="permx-admin-name">
+                    <span class="permx-avatar"><i class="fa-solid fa-user-shield"></i></span>
+                    <span>{{ r.username }}</span>
+                  </div>
+                  <div class="permx-role">
+                    {% if r.full_name %}{{ r.full_name }}{% endif %}
+                    {% if r.full_name and r.role_name %} · {% endif %}
+                    {% if r.role_name %}{{ r.role_name }}{% else %}بدون دور{% endif %}
+                  </div>
+                </td>
+                {% for p in matrix.permissions %}
+                {% set granted = r.granted.get(p, False) %}
+                <td data-mt-perm-cell="{{ p }}" data-mt-perm-granted="{{ '1' if granted else '0' }}">
+                  {% if granted and r.is_super_admin %}
+                    <span class="permx-mark permx-mark--super" title="super_admin"><i class="fa-solid fa-crown"></i></span>
+                  {% elif granted and r.via_admin %}
+                    <span class="permx-mark permx-mark--admin" title="mikrotik.admin"><i class="fa-solid fa-check"></i></span>
+                  {% elif granted %}
+                    <span class="permx-mark permx-mark--yes"><i class="fa-solid fa-check"></i></span>
+                  {% else %}
+                    <span class="permx-mark"><i class="fa-solid fa-minus"></i></span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+                <td><span class="permx-count" data-mt-perm-count>{{ r.granted_count }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th class="permx-admin-cell">الإجمالي</th>
+                {% for p in matrix.permissions %}
+                <th data-mt-perm-col-count="{{ p }}">{{ grant_counts.get(p, 0) }} / {{ total_admins }}</th>
+                {% endfor %}
+                <th></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% endif %}
+      </section>
+    </main>
+  </div>
+</section>
 {% endblock %}
