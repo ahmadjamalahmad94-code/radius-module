@@ -22,54 +22,156 @@
     color:var(--hub-text-soft);font-size:12px;line-height:1.9
   }
 
-  /* Smart import card --------------------------------------------- */
+  /* Smart import card ============================================= */
+  /* hidden attribute must beat the explicit display rules below. */
+  [hidden]{display:none !important}
+
   .ci-smart{
-    border:1px dashed #94a3b8;background:linear-gradient(180deg,#f8fafc,#fff);
-    border-radius:14px;padding:18px 22px;margin-bottom:18px;
+    position:relative;overflow:hidden;
+    border:1px solid #ddd6fe;
+    background:
+      radial-gradient(120% 200% at 100% 0%, #f5f3ff 0%, transparent 50%),
+      linear-gradient(180deg, #fafaff 0%, #ffffff 100%);
+    border-radius:16px;padding:20px 24px;margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(109,40,217,.04), 0 8px 24px rgba(109,40,217,.04);
   }
-  .ci-smart-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .ci-smart-head h3{margin:0;font-size:14.5px;font-weight:800;color:#0f172a}
+  .ci-smart::before{
+    /* subtle stripe across the top edge */
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#a78bfa,#6d28d9,#7c3aed,#a78bfa);
+    background-size:300% 100%;animation:ci-stripe 6s linear infinite;
+  }
+  @keyframes ci-stripe{
+    0%{background-position:0% 50%} 100%{background-position:300% 50%}
+  }
+
+  .ci-smart-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .ci-smart-head .icon{
+    width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:14px;
+    box-shadow:0 4px 12px rgba(109,40,217,.32);
+  }
+  .ci-smart-head h3{margin:0;font-size:15px;font-weight:800;color:#0f172a}
   .ci-smart-head .badge{
     background:#ede9fe;color:#5b21b6;font-size:10.5px;font-weight:800;
     padding:3px 8px;border-radius:999px;letter-spacing:.4px;
   }
-  .ci-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+  .ci-smart-tag{
+    margin-inline-start:auto;font-size:11px;color:#64748b;font-weight:700;
+    background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;
+    padding:3px 8px;
+  }
+
+  .ci-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-top:10px}
   @media (max-width:760px){.ci-smart-body{grid-template-columns:1fr}}
   .ci-smart input[type=file]{
-    width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;
-    background:#fff;font-size:13px;cursor:pointer;
+    width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;
+    background:#fff;font-size:13px;cursor:pointer;transition:border-color .2s;
   }
+  .ci-smart input[type=file]:hover{border-color:#a78bfa}
   .ci-smart-btn{
-    background:#6d28d9;color:#fff;border:0;border-radius:10px;
-    padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer;
-    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:0;
+    border-radius:10px;padding:11px 20px;font-weight:800;font-size:13px;
+    cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+    box-shadow:0 6px 14px rgba(124,58,237,.32);transition:transform .15s, box-shadow .2s;
   }
   .ci-smart-btn[disabled]{opacity:.6;cursor:wait}
-  .ci-smart-btn:hover:not([disabled]){background:#5b21b6}
+  .ci-smart-btn:hover:not([disabled]){transform:translateY(-1px);box-shadow:0 10px 22px rgba(124,58,237,.4)}
+  .ci-smart-btn:active:not([disabled]){transform:translateY(0)}
+  .ci-smart-btn .spin{display:none;animation:ci-spin 1s linear infinite}
+  .ci-smart-btn.is-busy .spin{display:inline-block}
+  .ci-smart-btn.is-busy .static{display:none}
+  @keyframes ci-spin{to{transform:rotate(360deg)}}
 
-  .ci-smart-status{margin-top:12px;font-size:12.5px;line-height:1.8;min-height:1.5em}
-  .ci-smart-status.ok{color:#065f46}
-  .ci-smart-status.warn{color:#92400e}
-  .ci-smart-status.err{color:#991b1b}
+  /* Stage strip ---------------------------------------------------- */
+  .ci-stages{
+    display:flex;gap:8px;margin-top:14px;padding:0;list-style:none;
+    flex-wrap:wrap;
+  }
+  .ci-stages li{
+    flex:1 1 140px;min-width:0;
+    display:flex;align-items:center;gap:8px;
+    background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+    padding:8px 12px;font-size:12px;color:#475569;font-weight:700;
+    transition:background .25s, border-color .25s, color .25s;
+    position:relative;
+  }
+  .ci-stages li .dot{
+    width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    background:#f1f5f9;color:#94a3b8;font-size:11px;font-weight:800;flex-shrink:0;
+    transition:background .25s, color .25s;
+  }
+  .ci-stages li[data-state="active"]{
+    background:linear-gradient(180deg,#faf5ff,#fff);border-color:#c4b5fd;color:#5b21b6;
+  }
+  .ci-stages li[data-state="active"] .dot{
+    background:#7c3aed;color:#fff;
+    box-shadow:0 0 0 0 rgba(124,58,237,.6);
+    animation:ci-pulse 1.2s ease-out infinite;
+  }
+  @keyframes ci-pulse{
+    0%{box-shadow:0 0 0 0 rgba(124,58,237,.55)}
+    70%{box-shadow:0 0 0 8px rgba(124,58,237,0)}
+    100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}
+  }
+  .ci-stages li[data-state="ok"]{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+  .ci-stages li[data-state="ok"] .dot{background:#16a34a;color:#fff}
+  .ci-stages li[data-state="fail"]{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+  .ci-stages li[data-state="fail"] .dot{background:#dc2626;color:#fff}
+  .ci-stages li[data-state="warn"]{background:#fffbeb;border-color:#fde68a;color:#92400e}
+  .ci-stages li[data-state="warn"] .dot{background:#d97706;color:#fff}
+
+  /* Status line + counter ----------------------------------------- */
+  .ci-smart-status{
+    margin-top:12px;font-size:12.5px;line-height:1.8;min-height:1.5em;
+    padding:9px 12px;border-radius:10px;background:transparent;
+    transition:background .2s;
+  }
+  .ci-smart-status.ok  {color:#065f46;background:#f0fdf4;border:1px solid #bbf7d0}
+  .ci-smart-status.warn{color:#92400e;background:#fffbeb;border:1px solid #fde68a}
+  .ci-smart-status.err {color:#991b1b;background:#fef2f2;border:1px solid #fecaca}
+
+  .ci-counter{
+    margin-top:12px;display:flex;align-items:baseline;gap:10px;
+    padding:14px 18px;border-radius:14px;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;
+    box-shadow:0 8px 24px rgba(109,40,217,.25);
+    animation:ci-slide-in .4s ease-out;
+  }
+  .ci-counter .num{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;
+                   font-variant-numeric:tabular-nums}
+  .ci-counter .lbl{font-size:13px;opacity:.9;font-weight:700}
+  @keyframes ci-slide-in{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:translateY(0)}
+  }
 
   .ci-smart-detected{
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-    gap:8px;margin-top:10px;font-size:12px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:8px;margin-top:12px;font-size:12px;
+    animation:ci-slide-in .5s ease-out;
   }
   .ci-smart-detected .pill{
     background:#fff;border:1px solid #e2e8f0;border-radius:10px;
-    padding:8px 12px;color:#1e293b;
+    padding:9px 12px;color:#1e293b;display:flex;flex-direction:column;gap:2px;
+    transition:border-color .2s, transform .15s;
   }
-  .ci-smart-detected .pill strong{color:#0f172a;font-weight:800}
+  .ci-smart-detected .pill:hover{border-color:#c4b5fd;transform:translateY(-1px)}
+  .ci-smart-detected .pill .k{color:#64748b;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase}
+  .ci-smart-detected .pill .v{color:#0f172a;font-weight:800;font-size:13px}
+
   .ci-smart-preview{
-    margin-top:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+    margin-top:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;
     overflow:hidden;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;
+    animation:ci-slide-in .6s ease-out;
   }
   .ci-smart-preview table{width:100%;border-collapse:collapse;direction:ltr}
   .ci-smart-preview th,.ci-smart-preview td{
-    padding:5px 10px;border-bottom:1px solid #f1f5f9;text-align:left;
+    padding:7px 12px;border-bottom:1px solid #f1f5f9;text-align:left;
   }
-  .ci-smart-preview th{background:#f8fafc;color:#475569;font-weight:700}
+  .ci-smart-preview th{background:#faf5ff;color:#5b21b6;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+  .ci-smart-preview tbody tr:hover{background:#fafafa}
+  .ci-smart-preview tbody tr:last-child td{border-bottom:0}
 
   @media (max-width:900px){.ci-grid{grid-template-columns:1fr}}
 </style>
@@ -152,9 +254,10 @@
     {% call hub.section("محتوى الملف", icon="file-lines") %}
       <div class="ci-smart" id="ci-smart">
         <div class="ci-smart-head">
-          <i class="fa-solid fa-wand-magic-sparkles" style="color:#6d28d9;font-size:16px"></i>
+          <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
           <h3>محرّك الاستيراد الذكي</h3>
           <span class="badge">جديد</span>
+          <span class="ci-smart-tag" id="ci-smart-tag" hidden></span>
         </div>
         <div class="ci-help" style="margin-bottom:10px">
           ارفع ملف CSV أو XLSX أو PDF — بأيّ ترتيب أعمدة، عربيًّا أو إنجليزيًّا — والمحرّك سيكتشف
@@ -164,10 +267,26 @@
           <input type="file" id="ci-smart-file"
                  accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           <button type="button" id="ci-smart-btn" class="ci-smart-btn">
-            <i class="fa-solid fa-bolt"></i> تحليل الملف
+            <i class="fa-solid fa-bolt static"></i>
+            <i class="fa-solid fa-circle-notch spin"></i>
+            <span>تحليل الملف</span>
           </button>
         </div>
-        <div class="ci-smart-status" id="ci-smart-status" aria-live="polite"></div>
+
+        {# ── Stage tracker: receive → sniff → extract → detect → build ── #}
+        <ol class="ci-stages" id="ci-stages" hidden>
+          <li data-stage="receive">  <span class="dot">1</span><span class="lbl">استلام الملف</span></li>
+          <li data-stage="sniff">    <span class="dot">2</span><span class="lbl">كشف الصيغة</span></li>
+          <li data-stage="extract">  <span class="dot">3</span><span class="lbl">استخراج الجدول</span></li>
+          <li data-stage="detect">   <span class="dot">4</span><span class="lbl">كشف الأعمدة</span></li>
+          <li data-stage="build">    <span class="dot">5</span><span class="lbl">بناء الكروت</span></li>
+        </ol>
+
+        <div class="ci-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
+        <div class="ci-counter" id="ci-counter" hidden>
+          <span class="num" id="ci-counter-num">0</span>
+          <span class="lbl">بطاقة جاهزة للاستيراد</span>
+        </div>
         <div id="ci-smart-detected" class="ci-smart-detected" hidden></div>
         <div id="ci-smart-preview" class="ci-smart-preview" hidden></div>
       </div>
@@ -203,6 +322,10 @@
   const status    = document.getElementById('ci-smart-status');
   const detected  = document.getElementById('ci-smart-detected');
   const preview   = document.getElementById('ci-smart-preview');
+  const stagesEl  = document.getElementById('ci-stages');
+  const counter   = document.getElementById('ci-counter');
+  const counterN  = document.getElementById('ci-counter-num');
+  const tag       = document.getElementById('ci-smart-tag');
   const textarea  = document.getElementById('csv_text');
   if (!fileInput || !btn || !textarea) return;
 
@@ -216,30 +339,95 @@
     'unknown':       'غير محدّد',
   };
 
+  const FMT_LABEL = {
+    'csv':         'CSV',
+    'xlsx':        'Excel',
+    'pdf':         'PDF',
+    'xls-legacy':  '.xls (قديم)',
+    'unknown':     'غير معروف',
+  };
+
+  const STAGES = ['receive', 'sniff', 'extract', 'detect', 'build'];
+
+  function $stage(name) {
+    return stagesEl.querySelector(`li[data-stage="${name}"]`);
+  }
+  function setStageState(name, state) {
+    const el = $stage(name);
+    if (el) el.setAttribute('data-state', state);
+  }
+  function resetStages() {
+    STAGES.forEach(s => $stage(s).removeAttribute('data-state'));
+  }
+  function showStages() {
+    stagesEl.hidden = false;
+    resetStages();
+  }
+
   function setStatus(message, kind) {
+    if (!message) { status.hidden = true; status.textContent=''; return; }
+    status.hidden = false;
     status.className = 'ci-smart-status' + (kind ? ' ' + kind : '');
-    status.textContent = message || '';
+    status.textContent = message;
+  }
+
+  function setTag(text, kind) {
+    if (!text) { tag.hidden = true; return; }
+    tag.hidden = false;
+    tag.textContent = text;
+    tag.style.background = kind === 'ok'   ? '#dcfce7'
+                         : kind === 'err'  ? '#fee2e2'
+                         : kind === 'warn' ? '#fef3c7' : '#f1f5f9';
+    tag.style.color      = kind === 'ok'   ? '#166534'
+                         : kind === 'err'  ? '#991b1b'
+                         : kind === 'warn' ? '#92400e' : '#475569';
+  }
+
+  function resetView() {
+    detected.hidden = true;  detected.innerHTML = '';
+    preview.hidden  = true;  preview.innerHTML  = '';
+    counter.hidden  = true;  counterN.textContent = '0';
+    setStatus('', '');
+    setTag('', '');
+    resetStages();
+  }
+
+  function animateCounter(target) {
+    counter.hidden = false;
+    const duration = Math.min(900, 200 + target * 1.6);
+    const start = performance.now();
+    function tick(t) {
+      const k = Math.min(1, (t - start) / duration);
+      // ease-out cubic
+      const v = Math.floor(target * (1 - Math.pow(1 - k, 3)));
+      counterN.textContent = v.toLocaleString('ar-EG');
+      if (k < 1) requestAnimationFrame(tick);
+      else      counterN.textContent = target.toLocaleString('ar-EG');
+    }
+    requestAnimationFrame(tick);
   }
 
   function renderDetected(data) {
     detected.hidden = false;
     const items = [];
-    items.push(`<div class="pill"><strong>الصيغة:</strong> ${data.fmt || '—'}</div>`);
-    items.push(`<div class="pill"><strong>عدد الكروت:</strong> ${data.count}</div>`);
-    items.push(`<div class="pill"><strong>طريقة الكشف:</strong> ${STRATEGY_LABEL[data.strategy] || data.strategy}</div>`);
+    const push = (k, v) => items.push(
+      `<div class="pill"><span class="k">${k}</span><span class="v">${v}</span></div>`
+    );
+    push('الصيغة', FMT_LABEL[data.fmt] || data.fmt || '—');
+    push('عدد الكروت', String(data.count));
+    push('طريقة الكشف', STRATEGY_LABEL[data.strategy] || data.strategy);
     if (data.username_index !== null && data.username_index !== undefined) {
-      items.push(`<div class="pill"><strong>عمود المستخدم:</strong> #${data.username_index + 1}</div>`);
+      push('عمود المستخدم', '#' + (data.username_index + 1));
     }
     if (data.password_index !== null && data.password_index !== undefined) {
-      items.push(`<div class="pill"><strong>عمود الباس:</strong> #${data.password_index + 1}</div>`);
+      push('عمود الباس', '#' + (data.password_index + 1));
     } else {
-      items.push(`<div class="pill"><strong>عمود الباس:</strong> غير موجود</div>`);
+      push('عمود الباس', '— غير موجود');
     }
-    if (data.rows_skipped) {
-      items.push(`<div class="pill"><strong>صفوف متجاهلة:</strong> ${data.rows_skipped}</div>`);
-    }
+    if (data.rows_seen) push('صفوف مقروءة', String(data.rows_seen));
+    if (data.rows_skipped) push('صفوف متجاهلة', String(data.rows_skipped));
     if (data.sheet_names && data.sheet_names.length) {
-      items.push(`<div class="pill"><strong>الأوراق:</strong> ${data.sheet_names.join('، ')}</div>`);
+      push('الأوراق', data.sheet_names.join('، '));
     }
     detected.innerHTML = items.join('');
   }
@@ -248,20 +436,22 @@
     if (!rows || rows.length === 0) { preview.hidden = true; return; }
     preview.hidden = false;
     const header = '<tr><th>#</th><th>username</th><th>password</th></tr>';
-    const body = rows.map((r, i) => {
-      const u = (r.username || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-      const p = (r.password || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-      return `<tr><td>${i+1}</td><td>${u}</td><td>${p}</td></tr>`;
-    }).join('');
+    const esc = s => (s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const body = rows.map((r, i) =>
+      `<tr><td>${i+1}</td><td>${esc(r.username)}</td><td>${esc(r.password)}</td></tr>`
+    ).join('');
     preview.innerHTML = '<table><thead>' + header + '</thead><tbody>' + body + '</tbody></table>';
   }
+
+  function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   async function analyze() {
     const file = fileInput.files && fileInput.files[0];
     if (!file) { setStatus('اختر ملفًا أوّلًا.', 'warn'); return; }
-    setStatus('جارٍ التحليل…', '');
-    detected.hidden = true;
-    preview.hidden = true;
+
+    resetView();
+    showStages();
+    btn.classList.add('is-busy');
     btn.disabled = true;
 
     // App-wide CSRF middleware needs either _csrf_token (form field)
@@ -273,6 +463,12 @@
     const fd = new FormData();
     fd.append('file', file);
     if (csrfTok) fd.append('_csrf_token', csrfTok);
+
+    // Stage 1 — file received in the browser.
+    setStageState('receive', 'active');
+    await pause(120);
+    setStageState('receive', 'ok');
+    setStageState('sniff', 'active');
 
     try {
       const res = await fetch(PREVIEW_URL, {
@@ -286,13 +482,14 @@
       try { data = JSON.parse(rawText); }
       catch (_e) { data = null; }
 
-      // Surface HTTP-level failures clearly. A 404 means the route
-      // isn't registered (server needs restart). A 5xx usually means
-      // an unhandled exception inside the engine.
+      // ── HTTP-level failure: kill all remaining stages. ───────────
       if (!res.ok && !data) {
+        ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         const snippet = (rawText || '').slice(0, 140).replace(/\s+/g, ' ').trim();
         if (res.status === 404) {
           setStatus('المسار غير مسجَّل على الخادم (HTTP 404). أعد تشغيل الـ container بعد سحب آخر تحديث.', 'err');
+        } else if (res.status === 400 && snippet.includes('CSRF')) {
+          setStatus('CSRF failed — حدّث الصفحة (F5) وحاول مرة أخرى.', 'err');
         } else {
           setStatus(`فشل الخادم (HTTP ${res.status}). ${snippet}`, 'err');
         }
@@ -300,38 +497,74 @@
         return;
       }
       if (!data) {
+        ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         setStatus('رد غير مفهوم من الخادم — تحقّق من السجل.', 'err');
-        console.warn('cards-import preview non-JSON response:', rawText);
-        return;
-      }
-      if (data.error) {
-        setStatus(data.error, 'err');
-        return;
-      }
-      if (!data.count) {
-        const warnList = (data.warnings && data.warnings.length)
-          ? data.warnings.join(' / ')
-          : 'لم يُعثر على كروت قابلة للاستخراج — تحقّق من محتوى الملف.';
-        // Always surface the detected format + sheet info so the
-        // operator can tell whether the file was read at all.
-        const meta = `[${data.fmt || '?'}${data.rows_seen ? ' · صفوف مقروءة ' + data.rows_seen : ''}]`;
-        setStatus(`${warnList} ${meta}`, 'err');
-        console.warn('cards-import preview empty result:', data);
         return;
       }
 
-      // Success.
+      // ── Stage 2: format sniff. ────────────────────────────────────
+      const fmtKnown = data.fmt && data.fmt !== 'unknown';
+      setStageState('sniff', fmtKnown ? 'ok' : 'fail');
+      setTag(FMT_LABEL[data.fmt] || data.fmt || '—',
+             fmtKnown ? 'ok' : 'err');
+      await pause(120);
+
+      // ── Stage 3: table extraction. ────────────────────────────────
+      const tableExtracted = (data.rows_seen || 0) > 0 || (data.count || 0) > 0;
+      setStageState('extract', 'active');
+      await pause(120);
+      if (!tableExtracted) {
+        setStageState('extract', 'fail');
+        ['detect','build'].forEach(s => setStageState(s, 'fail'));
+        const warn = (data.warnings && data.warnings[0]) || 'تعذّر استخراج محتوى الملف.';
+        setStatus(warn, 'err');
+        console.warn('cards-import preview empty extract:', data);
+        return;
+      }
+      setStageState('extract', 'ok');
+
+      // ── Stage 4: column detection. ────────────────────────────────
+      setStageState('detect', 'active');
+      await pause(120);
+      const colsKnown = data.username_index !== null && data.username_index !== undefined;
+      if (!colsKnown) {
+        setStageState('detect', 'fail');
+        setStageState('build', 'fail');
+        const warn = (data.warnings && data.warnings[0]) || 'تعذّر تحديد عمود المستخدم.';
+        setStatus(warn, 'err');
+        return;
+      }
+      const detectKind = (data.strategy === 'single-column') ? 'warn' : 'ok';
+      setStageState('detect', detectKind);
+
+      // ── Stage 5: cards built. ─────────────────────────────────────
+      setStageState('build', 'active');
+      await pause(120);
+      if (!data.count) {
+        setStageState('build', 'fail');
+        const warn = (data.warnings && data.warnings[0]) || 'لم يُبنَ أيّ كرت.';
+        setStatus(warn, 'err');
+        return;
+      }
+      setStageState('build', 'ok');
+
+      // ── Success: fill textarea, animate counter, render detail. ──
       textarea.value = data.csv_text || '';
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      animateCounter(data.count);
       renderDetected(data);
       renderPreview(data.preview || []);
-      const warn = (data.warnings && data.warnings.length) ? ` (${data.warnings[0]})` : '';
-      setStatus(`تم استخراج ${data.count} بطاقة وتعبئتها في مربّع النص.${warn}`,
-                data.warnings && data.warnings.length ? 'warn' : 'ok');
+      if (data.warnings && data.warnings.length) {
+        setStatus('تم بنجاح مع ملاحظات: ' + data.warnings.join(' • '), 'warn');
+      } else {
+        setStatus(`تم استخراج ${data.count.toLocaleString('ar-EG')} بطاقة وتعبئتها في مربّع النص بالأسفل.`, 'ok');
+      }
     } catch (e) {
+      ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
       setStatus('فشل الاتصال بالخادم: ' + (e && e.message ? e.message : e), 'err');
       console.error('cards-import preview fetch error:', e);
     } finally {
+      btn.classList.remove('is-busy');
       btn.disabled = false;
     }
   }
@@ -339,7 +572,12 @@
   btn.addEventListener('click', analyze);
   fileInput.addEventListener('change', () => {
     if (fileInput.files && fileInput.files[0]) {
-      setStatus('جاهز للتحليل: ' + fileInput.files[0].name, '');
+      const f = fileInput.files[0];
+      const sizeKB = Math.round(f.size / 1024);
+      setTag(`${f.name} · ${sizeKB} KB`, '');
+      setStatus('جاهز للتحليل — اضغط «تحليل الملف» للبدء.', '');
+      // Reset prior stages so the strip doesn't lie about a fresh file.
+      stagesEl.hidden = true;
     }
   });
 })();
