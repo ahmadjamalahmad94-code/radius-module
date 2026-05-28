@@ -195,7 +195,9 @@
 .rh-overview .mt-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
   gap:16px;margin:0 0 22px;
-  align-items:stretch;
+  align-items:start !important;
+  align-content:start !important;
+  place-items:start stretch !important;
 }
 
 /* ─── Cards (Traffic, Users, Actions) ─── */
@@ -237,6 +239,10 @@
   display:flex !important;
   flex-direction:column !important;
   overflow:hidden !important;
+  align-self:start !important;
+  margin-block-start:0 !important;
+  margin-block-end:0 !important;
+  transform:none;
 }
 .rh-overview .mt-grid > .mt-card > .mt-card-head{
   flex:0 0 auto;
