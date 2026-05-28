@@ -1,0 +1,170 @@
+{# Network Devices — Sprint 1 (Device Registry foundation).
+   Backend data:
+     devices       — list of dicts from network_devices_repo.list_for_tenant
+     routers       — [{id, name, address}, …]
+     router_names  — {id: name} for the per-row router label
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تابع أجهزة الشبكة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
+{% block page_title %}تابع أجهزة الشبكة{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    {{ devices|length }} جهاز
+  </span>
+{% endblock %}
+
+{% block content %}
+<div class="hr-page-shell" data-admin-rhythm>
+
+{{ hub.hero(
+  "تابع أجهزة الشبكة",
+  subtitle="أضف الراوترات والأكسس بوينتات والسويتشات والكاميرات التي تريد مراقبتها. "
+           "الجهاز المهم سيرسل تنبيهًا عند الانقطاع أو ارتفاع البنج (قريبًا).",
+  icon="wifi",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.network_devices_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة جهاز
+    </a>
+  '
+) }}
+
+{% if devices %}
+  {% set _up        = devices|selectattr('last_status','equalto','up')|list|length %}
+  {% set _down      = devices|selectattr('last_status','equalto','down')|list|length %}
+  {% set _watched   = devices|selectattr('watch_enabled')|list|length %}
+  {% set _critical  = devices|selectattr('is_critical')|list|length %}
+<div class="hub-kpi-grid hr-stat-grid">
+  {{ hub.kpi("الإجمالي",     devices|length, icon="wifi",          variant="brand") }}
+  {{ hub.kpi("متّصل",        _up,            icon="circle-check",  variant="green") }}
+  {{ hub.kpi("غير متّصل",    _down,          icon="circle-xmark",  variant="red") }}
+  {{ hub.kpi("تحت المراقبة", _watched,       icon="eye",           variant="blue") }}
+</div>
+{% endif %}
+
+{% call hub.section(
+  "قائمة الأجهزة",
+  icon="table-list",
+  meta=devices|length|string + " جهاز",
+  flush=True
+) %}
+  {% if not devices %}
+    <div class="hr-empty-state" style="padding:48px 24px;text-align:center">
+      <i class="fa-solid fa-wifi" style="font-size:42px;color:#CBD5E1;margin-bottom:14px"></i>
+      <h3 style="margin:0 0 6px;color:#1F2937;font-size:18px">لا توجد أجهزة مسجَّلة</h3>
+      <p style="margin:0 0 18px;color:#64748B;font-size:13px;line-height:1.7;max-width:520px;margin-inline:auto">
+        ابدأ بإضافة جهاز (راوتر فرعي، أكسس بوينت، سويتش، كاميرا، NVR...). كل جهاز تضيفه
+        يصبح متاحًا للمراقبة والإدارة من هنا.
+      </p>
+      <a class="hub-btn hub-btn--primary"
+         href="{{ url_for('radius.network_devices_new') }}">
+        <i class="fa-solid fa-plus"></i> أضف أول جهاز
+      </a>
+    </div>
+  {% else %}
+  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
+    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20"
+           data-persist-key="network-devices">
+      <thead>
+        <tr>
+          <th class="num" style="width:50px">#</th>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th>IP</th>
+          <th>الراوتر</th>
+          <th>الموقع</th>
+          <th>الحالة</th>
+          <th>آخر فحص</th>
+          <th style="width:280px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices %}
+        <tr>
+          <td class="num">{{ d.id }}</td>
+          <td>
+            <strong>{{ d.name }}</strong>
+            {% if d.is_critical %}
+              <span class="hr-chip" style="background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;margin-inline-start:4px">
+                مهم
+              </span>
+            {% endif %}
+          </td>
+          <td>
+            {% set type_labels = {
+              'ap': 'أكسس بوينت',
+              'router': 'راوتر',
+              'switch': 'سويتش',
+              'camera': 'كاميرا',
+              'nvr': 'NVR',
+              'server': 'سيرفر',
+              'other': 'أخرى'
+            } %}
+            {{ type_labels.get(d.device_type, d.device_type) }}
+          </td>
+          <td><code style="font-size:12px;color:#475569">{{ d.ip_address or '—' }}</code></td>
+          <td>{{ router_names.get(d.router_id, '#' ~ d.router_id) }}</td>
+          <td>{{ d.location or '—' }}</td>
+          <td>
+            {% if d.last_status == 'up' %}
+              <span class="hr-chip" style="background:#DCFCE7;color:#166534;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
+                <i class="fa-solid fa-circle-check" style="font-size:9px"></i>
+                متّصل
+                {% if d.last_latency_ms is not none %}
+                  <span dir="ltr" style="margin-inline-start:4px;font-family:monospace">
+                    ({{ "%.1f"|format(d.last_latency_ms) }} ms)
+                  </span>
+                {% endif %}
+              </span>
+            {% elif d.last_status == 'down' %}
+              <span class="hr-chip" style="background:#FEE2E2;color:#991B1B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
+                <i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> غير متّصل
+              </span>
+            {% else %}
+              <span class="hr-chip" style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
+                <i class="fa-solid fa-circle-question" style="font-size:9px"></i> غير مفحوص
+              </span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">
+            {{ d.last_checked_at[:19] if d.last_checked_at else '—' }}
+          </td>
+          <td>
+            <form action="{{ url_for('radius.network_devices_check', device_id=d.id) }}"
+                  method="post" style="display:inline">
+              {{ csrf_token_input() | safe }}
+              <button type="submit"
+                      class="hub-btn hub-btn--ghost"
+                      style="padding:4px 10px;font-size:11.5px"
+                      title="فحص الاتصال الآن">
+                <i class="fa-solid fa-stethoscope"></i> فحص
+              </button>
+            </form>
+            <a class="hub-btn hub-btn--ghost"
+               href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
+               style="padding:4px 10px;font-size:11.5px">
+              <i class="fa-solid fa-pen-to-square"></i> تعديل
+            </a>
+            <form action="{{ url_for('radius.network_devices_delete', device_id=d.id) }}"
+                  method="post" style="display:inline"
+                  onsubmit="return confirm('هل تريد حذف الجهاز «{{ d.name|e }}»؟');">
+              {{ csrf_token_input() | safe }}
+              <button type="submit"
+                      class="hub-btn hub-btn--danger"
+                      style="padding:4px 10px;font-size:11.5px">
+                <i class="fa-solid fa-trash"></i> حذف
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+{% endcall %}
+
+</div>
+{% endblock %}

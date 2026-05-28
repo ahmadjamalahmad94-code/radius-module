@@ -1,0 +1,206 @@
+{# Network Device — add/edit form (Sprint 1).
+   Backend data:
+     device  — None for create, dict for edit
+     routers — [{id, name, address}, …]
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set is_edit = device is not none %}
+
+{% block title %}{{ "تعديل جهاز" if is_edit else "إضافة جهاز" }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
+{% block page_title %}
+  {{ "تعديل جهاز" if is_edit else "إضافة جهاز شبكة" }}
+{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    <a href="{{ url_for('radius.network_devices_list') }}"
+       style="color:#6D28D9;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  </span>
+{% endblock %}
+
+{% block content %}
+<div class="hr-page-shell" data-admin-rhythm>
+
+{{ hub.hero(
+  ("تعديل جهاز: " + device.name) if is_edit else "إضافة جهاز شبكة",
+  subtitle=("حدّث بيانات الجهاز أو أعد ربطه بـ راوتر آخر."
+            if is_edit else
+            "سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) "
+            "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."),
+  icon="wifi"
+) }}
+
+<form method="post"
+      action="{{ url_for('radius.network_devices_update', device_id=device.id)
+                 if is_edit else
+                 url_for('radius.network_devices_create') }}"
+      class="hr-form-card"
+      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px;margin-top:18px">
+
+  {{ csrf_token_input() | safe }}
+
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px">
+
+    {# ── الراوتر ── #}
+    <div class="hr-field">
+      <label for="router_id" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        الراوتر <span style="color:#DC2626">*</span>
+      </label>
+      <select name="router_id" id="router_id" required
+              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+        <option value="">-- اختر الراوتر الذي يتبع له هذا الجهاز --</option>
+        {% for r in routers %}
+          <option value="{{ r.id }}"
+                  {% if device and device.router_id == r.id %}selected{% endif %}>
+            {{ r.name }} ({{ r.address }})
+          </option>
+        {% endfor %}
+      </select>
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
+        الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).
+      </small>
+    </div>
+
+    {# ── الاسم ── #}
+    <div class="hr-field">
+      <label for="name" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        الاسم <span style="color:#DC2626">*</span>
+      </label>
+      <input type="text" name="name" id="name" required
+             value="{{ device.name if device else '' }}"
+             placeholder="مثل: AP الطابق الأول"
+             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
+        اسم وصفي يساعدك على تمييز الجهاز.
+      </small>
+    </div>
+
+    {# ── النوع ── #}
+    <div class="hr-field">
+      <label for="device_type" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        النوع
+      </label>
+      {% set _t = device.device_type if device else 'ap' %}
+      <select name="device_type" id="device_type"
+              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+        <option value="ap"     {% if _t=='ap'     %}selected{% endif %}>أكسس بوينت</option>
+        <option value="router" {% if _t=='router' %}selected{% endif %}>راوتر</option>
+        <option value="switch" {% if _t=='switch' %}selected{% endif %}>سويتش</option>
+        <option value="camera" {% if _t=='camera' %}selected{% endif %}>كاميرا</option>
+        <option value="nvr"    {% if _t=='nvr'    %}selected{% endif %}>NVR</option>
+        <option value="server" {% if _t=='server' %}selected{% endif %}>سيرفر</option>
+        <option value="other"  {% if _t=='other'  %}selected{% endif %}>أخرى</option>
+      </select>
+    </div>
+
+    {# ── IP ── #}
+    <div class="hr-field">
+      <label for="ip_address" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        IP الجهاز
+      </label>
+      <input type="text" name="ip_address" id="ip_address"
+             value="{{ device.ip_address if device else '' }}"
+             placeholder="192.168.1.10"
+             dir="ltr"
+             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
+        العنوان الداخلي في الشبكة. اتركه فارغًا إن لم يكن مثبّتًا بعد.
+      </small>
+    </div>
+
+    {# ── MAC ── #}
+    <div class="hr-field">
+      <label for="mac_address" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        MAC (اختياري)
+      </label>
+      <input type="text" name="mac_address" id="mac_address"
+             value="{{ device.mac_address if device else '' }}"
+             placeholder="AA:BB:CC:DD:EE:FF"
+             dir="ltr"
+             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
+        مطلوب لاحقًا لخدمة «تجهيز الجهاز للإدارة» (DHCP + IP Binding).
+      </small>
+    </div>
+
+    {# ── الموقع ── #}
+    <div class="hr-field">
+      <label for="location" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        الموقع
+      </label>
+      <input type="text" name="location" id="location"
+             value="{{ device.location if device else '' }}"
+             placeholder="السطح / المكتب الرئيسي / ..."
+             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+    </div>
+
+    {# ── منفذ الإدارة ── #}
+    <div class="hr-field">
+      <label for="management_port" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        منفذ الإدارة
+      </label>
+      <input type="number" name="management_port" id="management_port"
+             value="{{ device.management_port if device else 80 }}"
+             min="1" max="65535"
+             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
+        80 لـ WebFig / 443 لـ HTTPS / 8291 لـ WinBox. يُستخدم لاحقًا في «فتح جهاز عن بُعد».
+      </small>
+    </div>
+
+    {# ── ملاحظات ── #}
+    <div class="hr-field" style="grid-column:1 / -1">
+      <label for="notes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
+        ملاحظات
+      </label>
+      <textarea name="notes" id="notes" rows="2"
+                placeholder="أي ملاحظة تساعدك لاحقًا — اسم الزبون، رقم تيكت، ..."
+                style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;resize:vertical">{{ device.notes if device else '' }}</textarea>
+    </div>
+
+    {# ── Toggles ── #}
+    <div class="hr-field" style="grid-column:1 / -1">
+      <div style="display:flex;flex-wrap:wrap;gap:18px;padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB">
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
+          <input type="checkbox" name="is_critical" value="1"
+                 {% if device and device.is_critical %}checked{% endif %}>
+          <span><i class="fa-solid fa-star" style="color:#F59E0B;font-size:12px"></i> جهاز مهم</span>
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
+          <input type="checkbox" name="watch_enabled" value="1"
+                 {% if device and device.watch_enabled %}checked{% endif %}>
+          <span><i class="fa-solid fa-eye" style="color:#2563EB;font-size:12px"></i> فعِّل المراقبة الدوريّة</span>
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
+          <input type="checkbox" name="alert_enabled" value="1"
+                 {% if device and device.alert_enabled %}checked{% endif %}>
+          <span><i class="fa-solid fa-bell" style="color:#DC2626;font-size:12px"></i> ارسل تنبيه عند الانقطاع</span>
+        </label>
+      </div>
+      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:6px">
+        «المراقبة الدوريّة» و«التنبيهات» تصبح فعّالة في الـ Sprint القادم. اتركها مفعّلة من الآن لتعمل تلقائيًا عند إطلاق الخدمة.
+      </small>
+    </div>
+
+  </div>
+
+  {# ── Action buttons ── #}
+  <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #F3F4F6">
+    <button type="submit" class="hub-btn hub-btn--primary">
+      <i class="fa-solid fa-{{ 'save' if is_edit else 'plus' }}"></i>
+      {{ "حفظ التعديلات" if is_edit else "إضافة الجهاز" }}
+    </button>
+    <a href="{{ url_for('radius.network_devices_list') }}"
+       class="hub-btn hub-btn--ghost">
+      إلغاء
+    </a>
+  </div>
+
+</form>
+
+</div>
+{% endblock %}
