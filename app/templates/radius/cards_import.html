@@ -269,10 +269,27 @@
 
     try {
       const res = await fetch(PREVIEW_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
-      const data = await res.json().catch(() => ({}));
+      const rawText = await res.text();
+      let data = null;
+      try { data = JSON.parse(rawText); }
+      catch (_e) { data = null; }
 
+      // Surface HTTP-level failures clearly. A 404 means the route
+      // isn't registered (server needs restart). A 5xx usually means
+      // an unhandled exception inside the engine.
+      if (!res.ok && !data) {
+        const snippet = (rawText || '').slice(0, 140).replace(/\s+/g, ' ').trim();
+        if (res.status === 404) {
+          setStatus('المسار غير مسجَّل على الخادم (HTTP 404). أعد تشغيل الـ container بعد سحب آخر تحديث.', 'err');
+        } else {
+          setStatus(`فشل الخادم (HTTP ${res.status}). ${snippet}`, 'err');
+        }
+        console.warn('cards-import preview raw response:', res.status, snippet);
+        return;
+      }
       if (!data) {
-        setStatus('رد فارغ من الخادم.', 'err');
+        setStatus('رد غير مفهوم من الخادم — تحقّق من السجل.', 'err');
+        console.warn('cards-import preview non-JSON response:', rawText);
         return;
       }
       if (data.error) {
@@ -280,8 +297,14 @@
         return;
       }
       if (!data.count) {
-        const msg = (data.warnings && data.warnings[0]) || 'لم يُعثر على كروت قابلة للاستخراج.';
-        setStatus(msg, 'err');
+        const warnList = (data.warnings && data.warnings.length)
+          ? data.warnings.join(' / ')
+          : 'لم يُعثر على كروت قابلة للاستخراج — تحقّق من محتوى الملف.';
+        // Always surface the detected format + sheet info so the
+        // operator can tell whether the file was read at all.
+        const meta = `[${data.fmt || '?'}${data.rows_seen ? ' · صفوف مقروءة ' + data.rows_seen : ''}]`;
+        setStatus(`${warnList} ${meta}`, 'err');
+        console.warn('cards-import preview empty result:', data);
         return;
       }
 
@@ -295,6 +318,7 @@
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
     } catch (e) {
       setStatus('فشل الاتصال بالخادم: ' + (e && e.message ? e.message : e), 'err');
+      console.error('cards-import preview fetch error:', e);
     } finally {
       btn.disabled = false;
     }
