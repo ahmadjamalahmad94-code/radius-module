@@ -308,6 +308,13 @@ def _install_stubs(app: Flask) -> None:
             "csrf_token_input": csrf_token_input,
             "session": flask_session,
             "admin_page_guide": lambda *a, **k: {"title": "", "steps": [], "tips": [], "links": []},
+            # `endpoint_exists` lets sidebar / nav templates check
+            # whether an endpoint is registered before calling
+            # url_for — protects against BuildError when a new
+            # sidebar entry ships a release before its route does,
+            # or when a route is retired but the entry is still
+            # listed. O(1) lookup; never touches the URL builder.
+            "endpoint_exists": lambda name: name in app.view_functions,
         }
 
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
