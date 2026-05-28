@@ -380,13 +380,21 @@ def _install_stubs(app: Flask) -> None:
         response.set_data(_FORM_RE.sub(r"\1" + field, html))
         return response
 
-    # Network Device Monitor — Sprint 2 background worker. Polls
-    # every device with watch_enabled=1, fires Telegram alerts on
-    # state flips. Daemon thread; dies with the process. Disabled
-    # in test runs (PYTEST_CURRENT_TEST set) so a unit test can't
-    # accidentally fire real probes against production routers.
+    # Network Device Monitor — Sprint 2 background worker.
+    # GATED OFF by default (2026-05-28) because the whole Network
+    # Operations family is hidden until next release. The sidebar
+    # entries are commented out, but the routes stay registered;
+    # this gate stops the worker from polling routers in the
+    # background and burning CPU/Telegram quota while no one is
+    # actually using the feature.
+    #
+    # To re-enable: set HOBERADIUS_NETWORK_OPS_ENABLED=1 in the
+    # environment + uncomment the sidebar entries in
+    # app/templates/admin/_sidebar.html.
     import os as _os
-    if not _os.environ.get("PYTEST_CURRENT_TEST"):
+    _net_ops_on = (_os.environ.get("HOBERADIUS_NETWORK_OPS_ENABLED") or "").strip().lower() \
+                  in ("1", "true", "yes", "on")
+    if _net_ops_on and not _os.environ.get("PYTEST_CURRENT_TEST"):
         try:
             from app.radius.services import network_device_monitor
             network_device_monitor.start(app)

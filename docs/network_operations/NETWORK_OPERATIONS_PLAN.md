@@ -1,6 +1,10 @@
 # Network Operations Services — Plan + Contracts
 
-> **Status:** Phase 0 (contracts locked) — Sprint 1 starting.
+> **Status:** All 6 sprints shipped (2026-05-28). **SEALED** until
+> next release — sidebar entries commented out + background worker
+> gated by `HOBERADIUS_NETWORK_OPS_ENABLED`. Reason: operator wants
+> to focus on polishing existing services before exposing the new
+> family. Re-enable: see «How to re-enable» section at the bottom.
 > **Owner:** HobeRadius core.
 > **Last updated:** 2026-05-28.
 
@@ -253,3 +257,55 @@ app/templates/radius/
 ├── network_devices_form.html              ← sprint 1
 └── network_devices_scan.html              ← sprint 4
 ```
+
+---
+
+## How to re-enable (next release)
+
+The family is fully built and committed; only the entry points
+are hidden. Two surgical changes will bring it back:
+
+1. **Sidebar** — uncomment the three lines under the «Network
+   Operations family» comment block in
+   `app/templates/admin/_sidebar.html`:
+
+   ```jinja
+   {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }}
+   {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }}
+   {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }}
+   ```
+
+2. **Background worker** — set the env var in `deploy/.env`:
+
+   ```bash
+   HOBERADIUS_NETWORK_OPS_ENABLED=1
+   ```
+
+   Restart the container; `network_device_monitor.start(app)` will
+   resume polling.
+
+The routes stay registered while sealed — bookmarked URLs still
+load. Only the discoverability and the cron worker are gated.
+
+## What remains for next release
+
+Items that surfaced during the build but aren't blocking the
+seal:
+
+- **WG ↔ LAN routing prerequisite docs.** For the VPS-side ping
+  monitor and TCP proxy to reach the LAN, the customer's
+  MikroTik must allow `hr-wg` → LAN forwarding + the VPS must
+  have a route for the LAN subnet via the WG peer. Until this is
+  written up + automated via the setup wizard, operators will
+  hit the «device down» false-positive.
+- **UX polish on `network_devices_list.html`** — empty-state
+  page is fine, but the populated state could benefit from
+  inline filtering / sort and a sparkline of recent checks.
+- **SMS gateway integration** — schema in `tenant_telegram_settings`
+  could grow a `sms_provider` / `sms_credentials` column for a
+  Twilio / local-gateway sender. Deferred until a paying customer
+  asks.
+- **Multi-process worker guard** — gunicorn `-w N` would spin up
+  N copies of the monitor. Out of scope; needs a process-id /
+  file-lock check before bringing the feature back online for
+  prod loads.

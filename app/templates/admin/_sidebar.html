@@ -345,9 +345,20 @@
         {{ sub_item('radius.devices_list',     'NAS',                  m_devices) }}
         {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
         {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   m_mt) }}
-        {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }}
-        {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }}
-        {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }}
+        {# ────────────────────────────────────────────────────
+           Network Operations family (Sprints 1-6, 2026-05-28).
+           HIDDEN until next release — operator decision:
+           «نخفي كل الاقسام الجديدة ونعلمهم قيد التطوير …
+            ما يبقى الهم اثر حاليا، للنسخة القادمة».
+           Routes stay REGISTERED (no 404 for any bookmarks);
+           background monitor is gated by HOBERADIUS_NETWORK_OPS_ENABLED.
+           Re-enable: uncomment the 3 lines + flip the env var.
+           Status: قيد التطوير — sealed pending UX polish + WG-LAN
+           routing prerequisite docs.
+           ────────────────────────────────────────────────── #}
+        {# {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }} #}
+        {# {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }} #}
+        {# {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }} #}
         {{ sub_item('radius.mt_topology',      'خريطة الشبكة',         m_topology) }}
         {{ sub_item('radius.mt_problems_index', 'مركز المشاكل',         m_problems) }}
         {{ sub_item('radius.diagnostics',      'تشخيص الراوترات',     m_diag) }}
