@@ -2315,3 +2315,16 @@ body:has(.cc-hero) .page-head{display:none !important}
 
 /* Pagination hides rows by adding this class */
 .cc-sessions-table tr.is-paged-hidden{ display:none !important; }
+
+/* ============================================================================
+   PHASE 2b — cards-checker micro-polish (visual only, additive)
+
+   This page is already a carefully reference-matched surface, so the polish is
+   intentionally minimal: only a touch of breathing room around the metric tile
+   number so the value reads as the primary figure and the sub-line sits clearly
+   below it — matching the KPI-spacing principle applied site-wide. Uses this
+   file's own tokens; no new colors; no structural/!important/attribute-mode
+   rules touched. Appended last so it wins by cascade order without !important.
+   ============================================================================ */
+.cc-metric-value{ margin-block: 2px 4px; }
+.cc-metric-label{ margin-block-end: 2px; }
