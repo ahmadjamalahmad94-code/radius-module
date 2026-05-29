@@ -740,6 +740,25 @@
   .ops-board a:focus{ outline:none; }
   .ops-board a:focus-visible{ outline:2px solid #4f46e5; outline-offset:2px; border-radius:10px; }
 
+  /* ════════ Micro-polish v3 — KPI module cards: separation + breathing ════════
+     Applies to all six .ops-module cards (same structure, incl. "المشتركون").
+     CSS-only, additive (later-wins over earlier rules); content untouched. */
+  .ops-module{
+    padding:22px;
+    gap:20px;
+    background:#ffffff;
+    border-color:#e6ebf3;
+    box-shadow:0 1px 2px rgba(16,24,40,.05), 0 6px 16px rgba(28,43,76,.06);
+  }
+  .ops-module:before{ display:none; }      /* drop the faint tonal glow → clean white surface */
+  .ops-module p{ margin-top:9px; }         /* title → description */
+  .ops-primary-number{ margin-top:6px; }   /* description → primary KPI */
+  .ops-metrics{ margin-top:16px; }         /* primary KPI → stats grid (real breathing room) */
+  .ops-metric{                             /* clearer, calmer stat tiles vs the white card */
+    background:#f8fafc;
+    border-color:#e6ecf4;
+  }
+
   @media (prefers-reduced-motion: reduce){
     .ops-board *{animation:none !important;transition:none !important}
   }
