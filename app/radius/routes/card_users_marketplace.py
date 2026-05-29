@@ -26,6 +26,12 @@ def register_card_users_marketplace_routes(bp: Blueprint) -> None:
         card_user_purchase,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/card-users/<int:card_user_id>/password",
+        "card_user_password",
+        card_user_password,
+        methods=["POST"],
+    )
     bp.add_url_rule("/card-marketplace", "card_marketplace", card_marketplace, methods=["GET"])
     bp.add_url_rule("/card-marketplace/packages", "card_marketplace_package_create", card_marketplace_package_create, methods=["POST"])
 
@@ -195,6 +201,31 @@ def _market_summary(batches: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _marketplace_plans(tenant_id: int, *, limit: int = 300) -> list[dict[str, Any]]:
+    rows = db().execute(
+        """
+        SELECT
+            id, name, code, duration_minutes, speed_down_kbps, speed_up_kbps,
+            quota_total_mb, price_card, price, currency, enabled
+        FROM access_plans
+        WHERE tenant_id=? AND COALESCE(enabled, 1)=1
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (tenant_id, int(limit)),
+    ).fetchall()
+    plans = [row_to_dict(row) for row in rows]
+    for plan in plans:
+        plan["display_name"] = plan.get("name") or plan.get("code") or f"عرض #{plan.get('id')}"
+        plan["suggested_price"] = _money(plan.get("price_card") or plan.get("price") or 0)
+        plan["duration_minutes"] = int(plan.get("duration_minutes") or 0)
+        plan["speed_down_kbps"] = int(plan.get("speed_down_kbps") or 0)
+        plan["speed_up_kbps"] = int(plan.get("speed_up_kbps") or 0)
+        plan["quota_total_mb"] = int(plan.get("quota_total_mb") or 0)
+        plan["currency"] = plan.get("currency") or "ILS"
+    return plans
+
+
 def _card_user_rows(tenant_id: int, *, limit: int = 200) -> list[dict[str, Any]]:
     rows = db().execute(
         """
@@ -265,7 +296,7 @@ def card_users_create():
         card_user = _service().create_card_user(
             display_name=request.form.get("display_name") or "",
             mobile=request.form.get("mobile") or "",
-            email=request.form.get("email") or "",
+            password=request.form.get("password") or "",
         )
         flash("تم إنشاء مستخدم كروت مع محفظة تشغيلية.", "success")
         return redirect(url_for("radius.card_user_360", card_user_id=card_user["id"]))
@@ -299,6 +330,18 @@ def card_user_recharge(card_user_id: int):
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
 
 
+def card_user_password(card_user_id: int):
+    try:
+        _service().set_card_user_password(
+            card_user_id=card_user_id,
+            password=request.form.get("password") or "",
+        )
+        flash("تم تحديث كلمة مرور بوابة مستخدم البطاقة.", "success")
+    except CardMarketplaceError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
+
+
 def card_user_purchase(card_user_id: int):
     try:
         purchase = _service().purchase_package(
@@ -316,9 +359,11 @@ def card_marketplace():
     service = _service()
     all_electronic_batches = _electronic_batch_rows(_tid())
     electronic_batches = all_electronic_batches[:4]
+    marketplace_plans = _marketplace_plans(_tid())
     return render_template(
         "radius/card_marketplace.html",
         packages=service.list_packages(limit=200),
+        marketplace_plans=marketplace_plans,
         purchases=_recent_electronic_purchases(_tid()),
         electronic_batches=electronic_batches,
         market_summary=_market_summary(all_electronic_batches),
@@ -334,8 +379,12 @@ def card_marketplace_package_create():
             duration_minutes=int(request.form.get("duration_minutes") or 0),
             speed_down_kbps=int(request.form.get("speed_down_kbps") or 0),
             speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
+            card_color=request.form.get("card_color") or "#14b8a6",
+            metadata={
+                "sale_note": request.form.get("sale_note") or "",
+            },
         )
-        flash("تم إنشاء باقة Marketplace.", "success")
+        flash("تم إنشاء باقة بيع إلكترونية، وستظهر للمستخدمين للشراء.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_marketplace"))

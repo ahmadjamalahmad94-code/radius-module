@@ -1,716 +1,419 @@
+{# Customer card-user portal — standalone (does NOT extend admin layout).
+   Customer-facing: wallet balance hero + recharge form (code + PIN) +
+   purchases history + my cards. Clean, RTL, mobile-first.
+#}
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>بوابة البطاقات الإلكترونية - HobeRadius</title>
+  <meta name="theme-color" content="#0e7490">
+  <title>محفظتي · HobeRadius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
+    /* ── Tokens ─────────────────────────────────────── */
     :root{
-      --pc-bg:#eef3ff;
-      --pc-ink:#111827;
-      --pc-muted:#71809a;
-      --pc-line:#dbe4f3;
-      --pc-card:#ffffff;
-      --pc-soft:#f8fbff;
-      --pc-teal:#14b8a6;
-      --pc-teal-dark:#0f766e;
-      --pc-violet:#7657f4;
-      --pc-blue:#2563eb;
-      --pc-amber:#f59e0b;
-      --pc-danger:#ef4444;
-      --pc-shadow:0 22px 70px rgba(45, 63, 104, .14);
-      --pc-radius:26px;
+      --ink-1:#0f172a;
+      --ink-2:#475569;
+      --ink-3:#94a3b8;
+      --canvas:#f1f5f9;
+      --paper:#ffffff;
+      --hair:#cbd5e1;
+      --hair-soft:#e2e8f0;
+      --accent:#06b6d4;
+      --accent-2:#0e7490;
+      --accent-soft:#ecfeff;
+      --accent-ring:rgba(6,182,212,.32);
+      --success:#15803d;
+      --success-soft:#dcfce7;
+      --warn:#92400e;
+      --warn-soft:#fef3c7;
+      --err:#b91c1c;
+      --err-soft:#fee2e2;
     }
     *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
     body{
-      margin:0;
-      min-height:100vh;
-      font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif;
-      color:var(--pc-ink);
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
       background:
-        radial-gradient(circle at 12% 8%, rgba(20,184,166,.18), transparent 28%),
-        radial-gradient(circle at 88% 4%, rgba(118,87,244,.18), transparent 30%),
-        linear-gradient(135deg,#f8fbff 0%,#eef3ff 48%,#f7f3ff 100%);
+        radial-gradient(800px 600px at 90% -10%, rgba(6,182,212,.12) 0%, transparent 50%),
+        radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
+        var(--canvas);
+      color:var(--ink-1);
+      min-height:100dvh;
+      font-feature-settings:"ss01","tnum";
     }
-    body:before{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background-image:
-        linear-gradient(rgba(37,99,235,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37,99,235,.05) 1px, transparent 1px);
-      background-size:58px 58px;
-      mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent 82%);
+
+    /* ── Top bar ────────────────────────────────────── */
+    .nav{
+      display:flex;align-items:center;gap:14px;
+      padding:16px 24px;
+      background:rgba(255,255,255,.85);
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--hair-soft);
+      position:sticky;top:0;z-index:50;
     }
-    a{color:inherit;text-decoration:none}
-    button,input{font:inherit}
-    .portal{
-      position:relative;
-      width:min(1180px, calc(100% - 28px));
-      margin:0 auto;
-      padding:24px 0 44px;
+    .nav-brand{
+      display:flex;align-items:center;gap:10px;
+      font-weight:900;font-size:15px;color:var(--ink-1);
     }
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      margin-bottom:16px;
+    .nav-brand .logo{
+      width:36px;height:36px;border-radius:10px;
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+      color:#fff;display:grid;place-items:center;font-size:16px;
+      box-shadow:0 4px 12px rgba(6,182,212,.35);
     }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      min-width:0;
+    .nav-user{margin-inline-start:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+    .nav-logout{
+      background:transparent;border:1px solid var(--hair);color:var(--ink-2);
+      padding:8px 14px;border-radius:9px;font-size:12.5px;font-weight:800;
+      cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;gap:6px;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
     }
-    .brand-mark,.iconbox{
-      width:48px;
-      height:48px;
-      display:grid;
-      place-items:center;
-      border-radius:18px;
-      background:linear-gradient(145deg,#16c8b2,#7657f4);
-      color:white;
-      box-shadow:0 18px 42px rgba(118,87,244,.26);
-    }
-    .brand h1{
-      margin:0;
-      font-size:24px;
-      line-height:1.1;
-      letter-spacing:0;
-    }
-    .brand p{
-      margin:5px 0 0;
-      color:var(--pc-muted);
-      font-weight:800;
-      font-size:13px;
-    }
-    .logout{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:42px;
-      padding:0 16px;
-      border:1px solid rgba(118,87,244,.18);
-      border-radius:16px;
-      background:rgba(255,255,255,.72);
-      color:#4f46e5;
-      font-weight:900;
-      box-shadow:0 10px 24px rgba(45,63,104,.08);
-    }
-    .hero{
-      overflow:hidden;
-      position:relative;
-      display:grid;
-      grid-template-columns:1.05fr .95fr;
-      gap:18px;
-      padding:20px;
-      border:1px solid rgba(219,228,243,.9);
-      border-radius:32px;
-      background:rgba(255,255,255,.78);
-      backdrop-filter:blur(18px);
-      box-shadow:var(--pc-shadow);
-    }
-    .hero:after{
-      content:"";
-      position:absolute;
-      inset:auto -18% -44% -8%;
-      height:220px;
-      background:linear-gradient(90deg,rgba(20,184,166,.2),rgba(118,87,244,.18));
-      filter:blur(34px);
-      transform:rotate(-3deg);
-      pointer-events:none;
-    }
-    .wallet-panel{
-      position:relative;
-      z-index:1;
-      display:grid;
-      grid-template-columns:1fr auto;
-      gap:14px;
-      padding:20px;
-      border-radius:26px;
-      background:
-        linear-gradient(135deg,rgba(255,255,255,.9),rgba(248,251,255,.72)),
-        radial-gradient(circle at 0 20%, rgba(20,184,166,.12), transparent 35%);
-      border:1px solid rgba(219,228,243,.88);
-    }
-    .label{
-      color:var(--pc-muted);
-      font-weight:900;
-      font-size:13px;
-    }
-    .wallet-value{
-      margin-top:6px;
-      font-size:42px;
-      line-height:1;
-      font-weight:950;
-      direction:ltr;
-      text-align:right;
-    }
-    .wallet-value small{
-      font-size:14px;
-      color:var(--pc-muted);
-      font-weight:900;
-      margin-inline-start:7px;
-    }
-    .wallet-ring{
-      width:104px;
-      height:104px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      align-self:center;
-      background:
-        radial-gradient(circle at center,#fff 50%,transparent 51%),
-        conic-gradient(from 215deg,var(--pc-teal),var(--pc-violet),#e7eef8 0);
-      box-shadow:inset 0 0 0 11px rgba(255,255,255,.85),0 16px 36px rgba(20,184,166,.16);
-    }
-    .wallet-ring svg{color:var(--pc-teal-dark)}
-    .mini-stats{
-      grid-column:1 / -1;
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:10px;
-    }
-    .mini-stat{
-      min-height:72px;
-      padding:12px;
-      border-radius:18px;
-      border:1px solid rgba(219,228,243,.82);
-      background:rgba(255,255,255,.74);
-      text-align:center;
-    }
-    .mini-stat strong{
-      display:block;
-      margin-top:5px;
-      font-size:22px;
-      direction:ltr;
-    }
-    .recharge{
-      position:relative;
-      z-index:1;
-      padding:20px;
-      border-radius:26px;
-      background:linear-gradient(145deg,rgba(17,24,39,.94),rgba(45,36,116,.92));
-      color:white;
-      box-shadow:0 24px 55px rgba(17,24,39,.18);
-    }
-    .recharge-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      margin-bottom:16px;
-    }
-    .recharge h2{
-      margin:0;
-      font-size:24px;
-      line-height:1.2;
-    }
-    .recharge p{
-      margin:6px 0 0;
-      color:rgba(255,255,255,.68);
-      font-weight:800;
-      font-size:13px;
-    }
-    .spark{
-      width:78px;
-      height:42px;
-      border-radius:16px;
-      background:
-        linear-gradient(90deg,transparent 9px,rgba(255,255,255,.14) 10px,transparent 11px),
-        linear-gradient(135deg,rgba(20,184,166,.28),rgba(118,87,244,.22));
-      position:relative;
-      overflow:hidden;
-    }
-    .spark:after{
-      content:"";
-      position:absolute;
-      inset:20px -8px auto;
-      height:3px;
-      border-radius:999px;
-      background:linear-gradient(90deg,var(--pc-teal),#fff,var(--pc-violet));
-      animation:pulseLine 2.7s ease-in-out infinite;
-    }
-    @keyframes pulseLine{
-      0%,100%{transform:translateX(22px);opacity:.45}
-      50%{transform:translateX(-18px);opacity:1}
-    }
-    .recharge-form{
-      display:grid;
-      grid-template-columns:1fr auto;
-      gap:10px;
-      align-items:end;
-    }
-    .field span{
-      display:block;
-      margin-bottom:8px;
-      color:rgba(255,255,255,.72);
-      font-weight:900;
-      font-size:13px;
-    }
-    .field input{
-      width:100%;
-      min-height:54px;
-      border:1px solid rgba(255,255,255,.16);
-      outline:0;
-      border-radius:18px;
-      padding:0 16px;
-      background:rgba(255,255,255,.1);
-      color:white;
-      font-size:19px;
-      font-weight:950;
-      text-align:center;
-      direction:ltr;
-      letter-spacing:.02em;
-    }
-    .field input::placeholder{color:rgba(255,255,255,.42)}
-    .btn{
-      min-height:54px;
-      border:0;
-      border-radius:18px;
-      padding:0 18px;
-      color:white;
-      background:linear-gradient(135deg,var(--pc-teal),var(--pc-violet));
-      font-weight:950;
-      cursor:pointer;
-      box-shadow:0 16px 34px rgba(20,184,166,.22);
-      transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease;
-      white-space:nowrap;
-    }
-    .btn:hover{transform:translateY(-2px);box-shadow:0 20px 44px rgba(118,87,244,.26)}
-    .btn:active{transform:translateY(0)}
-    .btn--light{
-      background:white;
-      color:#0f766e;
-      box-shadow:0 14px 30px rgba(20,184,166,.14);
-    }
-    .flash-stack{
-      display:grid;
-      gap:10px;
-      margin:16px 0;
-    }
+    .nav-logout:hover{background:var(--err-soft);border-color:#fecaca;color:var(--err)}
+
+    /* ── Layout ─────────────────────────────────────── */
+    .shell{max-width:1180px;margin:0 auto;padding:24px}
+
+    /* ── Flash messages ─────────────────────────────── */
+    .flash-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
     .flash{
-      padding:13px 16px;
-      border-radius:18px;
-      border:1px solid rgba(219,228,243,.86);
-      background:rgba(255,255,255,.82);
-      color:var(--pc-ink);
-      font-weight:900;
-      box-shadow:0 10px 26px rgba(45,63,104,.08);
+      padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:700;
+      display:flex;align-items:center;gap:10px;
+      animation:slide-in .25s ease;
     }
-    .flash.success{border-color:rgba(20,184,166,.34);background:#ecfdf5;color:#047857}
-    .flash.error{border-color:rgba(239,68,68,.32);background:#fff1f2;color:#be123c}
-    .section{
-      margin-top:18px;
-      border:1px solid rgba(219,228,243,.88);
-      border-radius:32px;
-      background:rgba(255,255,255,.82);
-      box-shadow:0 20px 58px rgba(45,63,104,.1);
-      overflow:hidden;
-    }
-    .section-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      padding:18px 22px;
-      border-bottom:1px solid rgba(219,228,243,.8);
-    }
-    .section-head h2{
-      margin:0;
-      font-size:25px;
-      line-height:1.1;
-    }
-    .section-head p{
-      margin:6px 0 0;
-      color:var(--pc-muted);
-      font-weight:800;
-      font-size:13px;
-    }
-    .count-pill{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:36px;
-      padding:0 12px;
-      border-radius:999px;
-      background:#eff6ff;
-      color:#2563eb;
-      font-weight:950;
-      white-space:nowrap;
-    }
-    .offers{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:14px;
-      padding:18px;
-    }
-    .offer{
-      position:relative;
-      display:grid;
-      gap:14px;
-      min-height:258px;
-      padding:18px;
-      border:1px solid rgba(219,228,243,.9);
-      border-radius:26px;
+    @keyframes slide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .flash.success{background:var(--success-soft);color:var(--success);border:1px solid #bbf7d0}
+    .flash.error,.flash.danger{background:var(--err-soft);color:var(--err);border:1px solid #fecaca}
+    .flash.info{background:var(--accent-soft);color:var(--accent-2);border:1px solid #67e8f9}
+
+    /* ── Hero balance card ──────────────────────────── */
+    .balance-card{
+      position:relative;overflow:hidden;
+      border-radius:18px;padding:32px 36px;
       background:
-        radial-gradient(circle at 15% 15%, rgba(20,184,166,.14), transparent 34%),
-        linear-gradient(145deg,#fff,#f8fbff);
-      box-shadow:0 16px 40px rgba(45,63,104,.08);
-      transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+        radial-gradient(400px 200px at 100% 0%, rgba(255,255,255,.15) 0%, transparent 60%),
+        linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color:#fff;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.2) inset,
+        0 4px 12px rgba(14,116,144,.18),
+        0 24px 48px rgba(14,116,144,.18);
     }
-    .offer:hover{
-      transform:translateY(-4px);
-      border-color:rgba(118,87,244,.34);
-      box-shadow:0 24px 58px rgba(45,63,104,.14);
+    .balance-card::after{
+      content:"";position:absolute;
+      width:280px;height:280px;border-radius:50%;
+      background:rgba(255,255,255,.06);
+      inset-inline-end:-80px;top:-80px;
+      pointer-events:none;
     }
-    .offer-top{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
+    .balance-card .label{
+      font-size:12px;font-weight:800;letter-spacing:.14em;
+      text-transform:uppercase;opacity:.85;margin-bottom:8px;
     }
-    .offer h3{
-      margin:0;
-      font-size:21px;
-      line-height:1.25;
+    .balance-card .amount{
+      font-size:48px;font-weight:900;letter-spacing:-.02em;line-height:1;
+      font-variant-numeric:tabular-nums;direction:ltr;
+      display:inline-flex;align-items:baseline;gap:10px;
     }
-    .offer-code{
-      margin-top:6px;
-      color:var(--pc-muted);
-      font-size:12px;
-      font-weight:900;
+    .balance-card .amount .currency{
+      font-size:18px;font-weight:700;opacity:.85;
     }
-    .offer-icon{
-      width:52px;
-      height:52px;
-      display:grid;
-      place-items:center;
-      flex:0 0 auto;
-      border-radius:20px;
-      color:var(--pc-violet);
-      background:linear-gradient(145deg,#f1efff,#fff);
-      box-shadow:inset 0 0 0 1px rgba(118,87,244,.12),0 16px 32px rgba(118,87,244,.12);
+    .balance-card .greeting{
+      font-size:14px;opacity:.85;margin-top:14px;
     }
-    .offer-signature{
-      display:flex;
-      align-items:baseline;
-      gap:8px;
-      flex-wrap:wrap;
-      min-height:45px;
-      padding:12px 14px;
-      border-radius:20px;
-      background:linear-gradient(135deg,rgba(20,184,166,.12),rgba(118,87,244,.1));
-      color:#102033;
-      font-weight:950;
-      font-size:23px;
+    .balance-card .meta{
+      display:flex;gap:24px;flex-wrap:wrap;
+      margin-top:22px;padding-top:18px;
+      border-top:1px solid rgba(255,255,255,.18);
+      position:relative;z-index:1;
     }
-    .offer-signature small{
-      color:var(--pc-muted);
-      font-size:12px;
-      font-weight:900;
+    .balance-card .meta .item{display:flex;flex-direction:column;gap:2px}
+    .balance-card .meta .item .k{font-size:11px;opacity:.8;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+    .balance-card .meta .item .v{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+
+    /* ── Section grid ───────────────────────────────── */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+    @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+    .card{
+      background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:14px;
+      padding:22px 24px;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.8) inset,
+        0 1px 3px rgba(15,23,42,.05),
+        0 6px 14px rgba(15,23,42,.04);
     }
-    .specs{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:8px;
+    .card h2{
+      margin:0 0 4px;font-size:16px;font-weight:900;color:var(--ink-1);
+      display:flex;align-items:center;gap:10px;
     }
-    .spec{
-      min-height:64px;
-      padding:10px;
-      text-align:center;
-      border:1px solid rgba(219,228,243,.86);
-      border-radius:18px;
-      background:rgba(255,255,255,.72);
+    .card h2 .icon{
+      width:32px;height:32px;border-radius:9px;
+      background:var(--accent-soft);color:var(--accent-2);
+      display:grid;place-items:center;font-size:14px;
     }
-    .spec span{
-      display:block;
-      color:var(--pc-muted);
-      font-size:12px;
-      font-weight:900;
+    .card .sub{margin:0 0 18px;font-size:13px;color:var(--ink-2);line-height:1.7}
+
+    /* ── Recharge form ──────────────────────────────── */
+    .recharge-form{display:flex;flex-direction:column;gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{
+      font-size:12.5px;font-weight:800;color:var(--ink-2);
     }
-    .spec strong{
-      display:block;
-      margin-top:5px;
-      font-size:17px;
-      font-weight:950;
-      direction:ltr;
+    .field label .icon{color:var(--accent-2);margin-inline-end:6px}
+    .field input{
+      width:100%;padding:13px 14px;
+      border:1px solid var(--hair);border-radius:10px;
+      background:#fff;font-size:15px;font-weight:700;
+      color:var(--ink-1);direction:ltr;text-align:start;
+      font-variant-numeric:tabular-nums;letter-spacing:.05em;
+      font-family:inherit;
+      transition:border-color .15s ease, box-shadow .15s ease;
     }
-    .offer-bottom{
-      display:grid;
-      grid-template-columns:1fr auto;
+    .field input:focus{
+      outline:none;border-color:var(--accent);
+      box-shadow:0 0 0 4px var(--accent-ring);
+    }
+    .field input::placeholder{font-weight:600;opacity:.4}
+
+    .btn-primary{
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+      color:#fff;border:0;border-radius:11px;
+      padding:14px 22px;font-size:15px;font-weight:900;
+      cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      box-shadow:0 6px 16px rgba(6,182,212,.32);
+      transition:transform .12s ease, box-shadow .18s ease;
+      font-family:inherit;
+    }
+    .btn-primary:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px rgba(6,182,212,.42);
+    }
+    .btn-primary:active{transform:translateY(0)}
+    .btn-primary:focus-visible{
+      outline:3px solid var(--accent-ring);outline-offset:3px;
+    }
+
+    /* ── History list ───────────────────────────────── */
+    .history{display:flex;flex-direction:column;gap:8px}
+    .history-empty{
+      padding:24px;text-align:center;
+      color:var(--ink-3);font-size:13px;
+      border:1px dashed var(--hair);border-radius:10px;
+      background:var(--canvas);
+    }
+    .history-empty i{font-size:24px;color:var(--hair);margin-bottom:8px;display:block}
+    .history-item{
+      display:flex;align-items:center;gap:12px;
+      padding:12px 14px;border-radius:10px;
+      background:#fafbfc;border:1px solid var(--hair-soft);
+    }
+    .history-item .ico{
+      width:36px;height:36px;border-radius:9px;
+      background:var(--accent-soft);color:var(--accent-2);
+      display:grid;place-items:center;font-size:14px;flex-shrink:0;
+    }
+    .history-item .body{flex:1;min-width:0}
+    .history-item .title{font-size:13.5px;font-weight:800;color:var(--ink-1);line-height:1.3}
+    .history-item .sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;direction:ltr;text-align:start}
+    .history-item .amount{
+      font-size:14px;font-weight:900;color:var(--ink-1);
+      font-variant-numeric:tabular-nums;
+      flex-shrink:0;
+    }
+    .history-item.is-credit .amount{color:var(--success)}
+    .history-item.is-debit  .amount{color:var(--ink-2)}
+
+    /* ── Cards list ─────────────────────────────────── */
+    .cards-grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
       gap:10px;
-      align-items:center;
-      margin-top:auto;
     }
-    .price strong{
-      display:block;
-      font-size:25px;
-      direction:ltr;
-      text-align:right;
+    .card-chip{
+      padding:14px;border-radius:11px;
+      background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);
+      color:#fff;position:relative;overflow:hidden;
     }
-    .price span{
-      color:var(--pc-muted);
-      font-weight:900;
-      font-size:12px;
+    .card-chip::before{
+      content:"";position:absolute;width:80px;height:80px;border-radius:50%;
+      background:rgba(255,255,255,.1);
+      inset-inline-end:-20px;top:-20px;
     }
-    .empty{
-      grid-column:1 / -1;
-      display:grid;
-      place-items:center;
-      min-height:170px;
-      text-align:center;
-      padding:24px;
-      border:1px dashed rgba(118,87,244,.32);
-      border-radius:24px;
-      background:rgba(248,251,255,.72);
-      color:var(--pc-muted);
-      font-weight:900;
+    .card-chip .num{
+      font-family:ui-monospace,Consolas,monospace;
+      font-size:14px;font-weight:800;letter-spacing:.1em;direction:ltr;
+      margin-bottom:8px;position:relative;z-index:1;
     }
-    .cards-list{
-      display:grid;
-      gap:10px;
-      padding:18px;
+    .card-chip .pkg{font-size:12px;opacity:.85;position:relative;z-index:1}
+
+    /* ── Footer hint ────────────────────────────────── */
+    .foot{
+      text-align:center;margin-top:32px;
+      font-size:12px;color:var(--ink-3);
     }
-    .owned-card{
-      display:grid;
-      grid-template-columns:1fr auto;
-      gap:10px;
-      align-items:center;
-      padding:14px 16px;
-      border:1px solid rgba(219,228,243,.86);
-      border-radius:20px;
-      background:#fff;
-    }
-    .owned-card strong{
-      direction:ltr;
-      text-align:right;
-      font-size:18px;
-    }
-    .status{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:32px;
-      padding:0 10px;
-      border-radius:999px;
-      font-weight:950;
-      font-size:12px;
-      color:#047857;
-      background:#dcfce7;
-    }
-    .status.used{color:#92400e;background:#fef3c7}
-    .status.revoked{color:#be123c;background:#ffe4e6}
-    svg{width:22px;height:22px}
-    @media (max-width: 980px){
-      .hero{grid-template-columns:1fr}
-      .offers{grid-template-columns:repeat(2,minmax(0,1fr))}
-    }
-    @media (max-width: 680px){
-      .portal{width:min(100% - 18px, 1180px);padding-top:14px}
-      .topbar,.section-head{align-items:flex-start}
-      .brand h1{font-size:20px}
-      .hero,.section{border-radius:24px}
-      .wallet-panel{grid-template-columns:1fr}
-      .wallet-ring{display:none}
-      .wallet-value{font-size:34px}
-      .mini-stats{grid-template-columns:1fr}
-      .recharge-form{grid-template-columns:1fr}
-      .offers{grid-template-columns:1fr;padding:12px}
-      .offer{min-height:0}
-      .section-head{padding:16px}
-      .owned-card{grid-template-columns:1fr}
-    }
-    @media (prefers-reduced-motion: reduce){
-      *,*:before,*:after{animation:none!important;transition:none!important}
+
+    /* ── Responsive ─────────────────────────────────── */
+    @media (max-width:640px){
+      .shell{padding:16px}
+      .balance-card{padding:24px 22px}
+      .balance-card .amount{font-size:36px}
+      .nav{padding:14px 16px}
+      .card{padding:18px 20px}
     }
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/portal_card_polish.css', v='20260529') }}">
 </head>
 <body>
-{% macro duration_label(minutes) -%}
-  {%- set total = (minutes or 0)|int -%}
-  {%- if total <= 0 -%}
-    حسب العرض
-  {%- elif total >= 1440 and total % 1440 == 0 -%}
-    {{ total // 1440 }} يوم
-  {%- elif total >= 60 and total % 60 == 0 -%}
-    {{ total // 60 }} ساعات
-  {%- elif total >= 60 -%}
-    {{ (total / 60)|round(1)|string|replace('.0','') }} ساعة
-  {%- else -%}
-    {{ total }} دقيقة
-  {%- endif -%}
-{%- endmacro %}
 
-{% macro speed_label(kbps) -%}
-  {%- set value = (kbps or 0)|int -%}
-  {%- if value >= 1024 and value % 1024 == 0 -%}
-    {{ value // 1024 }} ميجا
-  {%- elif value >= 1024 -%}
-    {{ (value / 1024)|round(1)|string|replace('.0','') }} ميجا
-  {%- elif value > 0 -%}
-    {{ value }} كيلو
-  {%- else -%}
-    حسب العرض
-  {%- endif -%}
-{%- endmacro %}
+<nav class="nav">
+  <a href="#" class="nav-brand" style="text-decoration:none">
+    <span class="logo"><i class="fa-solid fa-wallet"></i></span>
+    <span>HobeRadius</span>
+  </a>
+  <div class="nav-user">
+    <i class="fa-regular fa-circle-user" style="font-size:18px;color:var(--ink-3)"></i>
+    <span>{{ dashboard.user.display_name or 'مستخدم' }}</span>
+  </div>
+  <a href="{{ url_for('radius.portal_card_logout') }}" class="nav-logout">
+    <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+    خروج
+  </a>
+</nav>
 
-{% macro money(value, currency) -%}
-  {{ value }} {{ currency or 'JOD' }}
-{%- endmacro %}
-
-<main class="portal" data-testid="card-portal-home">
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 8.5c0-1.4 1.1-2.5 2.5-2.5h11C18.9 6 20 7.1 20 8.5v7c0 1.4-1.1 2.5-2.5 2.5h-11C5.1 18 4 16.9 4 15.5v-7Z" stroke="currentColor" stroke-width="2"/><path d="M15.5 12h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="2"/></svg>
-      </span>
-      <div>
-        <h1>بوابة البطاقات الإلكترونية</h1>
-        <p>{{ dashboard.card_user.display_name }}، اشحن رصيدك واختر العرض المناسب.</p>
-      </div>
-    </div>
-    <a class="logout" href="{{ url_for('radius.portal_card_logout') }}">تسجيل الخروج</a>
-  </header>
+<main class="shell">
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="flash-stack">
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-      </div>
+    <div class="flash-stack">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">
+          {% if category == 'success' %}<i class="fa-solid fa-circle-check"></i>
+          {% elif category in ('error','danger') %}<i class="fa-solid fa-circle-exclamation"></i>
+          {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
     {% endif %}
   {% endwith %}
 
-  <section class="hero" aria-label="ملخص المحفظة والشحن">
-    <div class="wallet-panel">
-      <div>
-        <div class="label">رصيد المحفظة الحالي</div>
-        <div class="wallet-value"><small>{{ dashboard.wallet.currency or 'JOD' }}</small>{{ dashboard.wallet.balance }}</div>
+  {# ── Balance hero ───────────────────────────────── #}
+  <section class="balance-card" aria-label="رصيد المحفظة">
+    <div class="label">رصيد المحفظة</div>
+    <div class="amount">
+      <span class="currency">{{ dashboard.wallet.currency or 'ILS' }}</span>
+      <span>{{ "%.2f"|format(dashboard.wallet.balance or 0) }}</span>
+    </div>
+    <div class="greeting">
+      مرحباً، <strong>{{ dashboard.user.display_name or 'بك' }}</strong> · حسابك جاهز للاستخدام
+    </div>
+    <div class="meta">
+      <div class="item">
+        <span class="k">إجمالي الشحن</span>
+        <span class="v">{{ dashboard.cards|length if dashboard.cards else 0 }}</span>
       </div>
-      <div class="wallet-ring" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z" stroke="currentColor" stroke-width="2"/><path d="M17 13h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M6 8V6.8A2.8 2.8 0 0 1 8.8 4H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <div class="item">
+        <span class="k">عمليات الشراء</span>
+        <span class="v">{{ dashboard.purchases|length if dashboard.purchases else 0 }}</span>
       </div>
-      <div class="mini-stats">
-        <div class="mini-stat"><span class="label">العروض المتاحة</span><strong>{{ dashboard.marketplace|length }}</strong></div>
-        <div class="mini-stat"><span class="label">بطاقاتي</span><strong>{{ dashboard.cards|length }}</strong></div>
-        <div class="mini-stat"><span class="label">عمليات الشراء</span><strong>{{ dashboard.purchases|length }}</strong></div>
+      <div class="item">
+        <span class="k">العروض المتاحة</span>
+        <span class="v">{{ dashboard.marketplace|length if dashboard.marketplace else 0 }}</span>
       </div>
     </div>
+  </section>
 
-    <div class="recharge">
-      <div class="recharge-head">
-        <div>
-          <h2>شحن الرصيد برقم البطاقة</h2>
-          <p>أدخل رقم البطاقة المطبوعة أو الإلكترونية، وسيضاف رصيدها للمحفظة مباشرة.</p>
-        </div>
-        <div class="spark" aria-hidden="true"></div>
-      </div>
+  <div class="grid">
+
+    {# ── Recharge form ─────────────────────────────── #}
+    <section class="card">
+      <h2><span class="icon"><i class="fa-solid fa-bolt"></i></span>شحن الرصيد</h2>
+      <p class="sub">أدخل رقم البطاقة والرقم السري ليُضاف الرصيد لمحفظتك مباشرة.</p>
       <form method="post" action="{{ url_for('radius.portal_card_redeem') }}" class="recharge-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-        <label class="field">
-          <span>رقم البطاقة</span>
-          <input name="card_number"
+        <div class="field">
+          <label for="card_number">
+            <i class="fa-solid fa-id-card icon"></i>رقم البطاقة
+          </label>
+          <input id="card_number" name="card_number"
                  inputmode="numeric" pattern="[0-9]*"
                  placeholder="مثل: 1234567890"
+                 maxlength="14"
                  required autocomplete="off">
-        </label>
-        <label class="field">
-          <span>الرقم السري (PIN)</span>
-          <input name="card_password"
+        </div>
+        <div class="field">
+          <label for="card_password">
+            <i class="fa-solid fa-key icon"></i>الرقم السري (PIN)
+          </label>
+          <input id="card_password" name="card_password"
                  inputmode="numeric" pattern="[0-9]*"
                  placeholder="مثل: 12345"
+                 maxlength="8"
                  required autocomplete="off">
-        </label>
-        <button class="btn" type="submit">شحن الرصيد</button>
+        </div>
+        <button class="btn-primary" type="submit">
+          <i class="fa-solid fa-arrow-up-from-bracket"></i>
+          شحن الرصيد
+        </button>
       </form>
-    </div>
-  </section>
+    </section>
 
-  <section class="section" aria-label="عروض الشراء">
-    <div class="section-head">
-      <div>
-        <h2>عروض الشراء</h2>
-        <p>اختر الحزمة المناسبة، ويتم خصم السعر من رصيد المحفظة.</p>
+    {# ── Recent history ────────────────────────────── #}
+    <section class="card">
+      <h2><span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>آخر العمليات</h2>
+      <p class="sub">سجلّ آخر عمليات الشحن والشراء على محفظتك.</p>
+      <div class="history">
+        {% set recent = (dashboard.purchases or [])[:5] %}
+        {% if recent %}
+          {% for p in recent %}
+          <div class="history-item">
+            <span class="ico"><i class="fa-solid fa-cart-shopping"></i></span>
+            <div class="body">
+              <div class="title">{{ p.package_name or 'عملية شراء' }}</div>
+              <div class="sub">{{ (p.created_at or '')[:19] }}</div>
+            </div>
+            <div class="amount">−{{ "%.2f"|format(p.amount or 0) }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="history-empty">
+            <i class="fa-regular fa-clock"></i>
+            <div>لا توجد عمليات بعد — اشحن رصيدك لتبدأ.</div>
+          </div>
+        {% endif %}
       </div>
-      <span class="count-pill">{{ dashboard.marketplace|length }} عرض</span>
-    </div>
-    <div class="offers" data-testid="card-marketplace-packages">
-      {% for package in dashboard.marketplace %}
-        {% set duration = package.display_duration_minutes or package.duration_minutes or 0 %}
-        {% set down = package.display_speed_down_kbps or package.speed_down_kbps or 0 %}
-        {% set up = package.display_speed_up_kbps or package.speed_up_kbps or 0 %}
-        <form method="post" action="{{ url_for('radius.portal_card_purchase') }}" class="offer">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-          <input type="hidden" name="package_id" value="{{ package.id }}">
-          <div class="offer-top">
-            <div>
-              <h3>{{ package.name }}</h3>
-              <div class="offer-code">{{ package.plan_name or 'عرض بطاقات إلكترونية' }}</div>
-            </div>
-            <span class="offer-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2"/><path d="M7 5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 13h.01M12 13h.01M16 13h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-            </span>
-          </div>
-          <div class="offer-signature">
-            <span>{{ duration_label(duration) }}</span>
-            <small>/</small>
-            <span>{{ speed_label(down) }}</span>
-          </div>
-          <div class="specs">
-            <div class="spec"><span>مدة البطاقة</span><strong>{{ duration_label(duration) }}</strong></div>
-            <div class="spec"><span>سرعة التنزيل</span><strong>{{ speed_label(down) }}</strong></div>
-            <div class="spec"><span>سرعة الرفع</span><strong>{{ speed_label(up) }}</strong></div>
-            <div class="spec"><span>الكوتة</span><strong>{{ package.plan_quota_total_mb or 'بلا حد' }}{% if package.plan_quota_total_mb %} MB{% endif %}</strong></div>
-          </div>
-          <div class="offer-bottom">
-            <div class="price">
-              <span>سعر الشراء</span>
-              <strong>{{ money(package.price, package.currency) }}</strong>
-            </div>
-            <button class="btn btn--light" type="submit">شراء الآن</button>
-          </div>
-        </form>
-      {% else %}
-        <div class="empty">
-          لا توجد عروض شراء متاحة حاليا.
-        </div>
+    </section>
+
+  </div>
+
+  {# ── My cards ───────────────────────────────────── #}
+  {% if dashboard.cards %}
+  <section class="card" style="margin-top:18px">
+    <h2><span class="icon"><i class="fa-solid fa-credit-card"></i></span>بطاقاتي</h2>
+    <p class="sub">البطاقات التي اشتريتها من المتجر — يمكنك استخدامها للاتصال.</p>
+    <div class="cards-grid">
+      {% for c in dashboard.cards %}
+      <div class="card-chip">
+        <div class="num">{{ c.username }}</div>
+        <div class="pkg">{{ c.package_name or 'بطاقة' }}</div>
+      </div>
       {% endfor %}
     </div>
   </section>
+  {% endif %}
 
-  <section class="section" aria-label="بطاقاتي">
-    <div class="section-head">
-      <div>
-        <h2>بطاقاتي</h2>
-        <p>البطاقات التي تم شراؤها من حسابك.</p>
-      </div>
-      <span class="count-pill">{{ dashboard.cards|length }} بطاقة</span>
-    </div>
-    <div class="cards-list">
-      {% for card in dashboard.cards %}
-        <div class="owned-card">
-          <div>
-            <strong>{{ card.username }}</strong>
-            <div class="label">{{ card.created_at or card.first_used_at or 'بدون تاريخ' }}</div>
-          </div>
-          {% if card.revoked %}
-            <span class="status revoked">ملغاة</span>
-          {% elif card.used %}
-            <span class="status used">مستخدمة</span>
-          {% else %}
-            <span class="status">جاهزة</span>
-          {% endif %}
-        </div>
-      {% else %}
-        <div class="empty">لم تشتر أي بطاقة بعد.</div>
-      {% endfor %}
-    </div>
-  </section>
+  <div class="foot">
+    <i class="fa-solid fa-shield-halved"></i>
+    اتصالك آمن — HobeRadius · محفظتي
+  </div>
+
 </main>
+
 </body>
 </html>

@@ -1,664 +1,376 @@
+{# Card Users (مستخدمو البطاقات) — admin management page.
+   Rebuilt from scratch: clean hub.* macros, slate elevation, cyan
+   accent (matches the recharge family), no email field on the new
+   form per operator request.
+#}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
-{% block title %}مستخدمو البطاقات - Hobe Hub{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
+{% block title %}مستخدمو البطاقات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
 {% block page_title %}مستخدمو البطاقات{% endblock %}
-{% block page_sub %}<span class="sub">محافظ مستقلة لبيع وشراء البطاقات الإلكترونية بدون تحويلهم إلى مشتركين ثابتين</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ card_users|length }} مستخدم · {{ users_summary.users or 0 }} حساب نشط</span>{% endblock %}
 
-{% macro num(value) -%}
-  {{ "{:,}".format((value or 0)|int) }}
-{%- endmacro %}
+{% block head_extra %}
+{{ super() }}
+<style>
+  [hidden]{ display:none !important }
+  .hub-section{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 20px rgba(15,23,42,.06);
+    border-radius:14px;
+  }
+  .hub-section-head{
+    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
+    border-bottom:1px solid #cbd5e1;
+  }
+  .hub-section-head-title{color:#0f172a;font-weight:900}
+  .hub-section-head-meta{color:#475569;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
+  .hub-section-head-icon{background:#cffafe;color:#0e7490}
+  .hub-kpi{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 6px 14px rgba(15,23,42,.05);
+    border-radius:12px;
+    transition:transform .15s ease, box-shadow .18s ease, border-color .15s ease;
+  }
+  .hub-kpi:hover{
+    transform:translateY(-2px);border-color:#94a3b8;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 6px 14px rgba(15,23,42,.08),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+  .hub-hero{
+    border:1px solid #cbd5e1;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 2px 6px rgba(15,23,42,.06),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+  .hub-table thead th{background:#f1f5f9;color:#334155;border-bottom:1px solid #cbd5e1;font-weight:800}
+  .hub-table tbody tr{border-top:1px solid #e2e8f0}
+  .hub-table tbody tr:hover{background:#fafbfc}
 
-{% macro money(value, currency="ILS") -%}
-  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
-  {{ "%.2f"|format(value or 0) }} <span>{{ cur }}</span>
-{%- endmacro %}
+  /* ── Inline add-user form ─────────────────────── */
+  .cu-form{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:14px}
+  @media (max-width:900px){.cu-form{grid-template-columns:1fr 1fr}}
+  @media (max-width:560px){.cu-form{grid-template-columns:1fr}}
+  .cu-form .actions{
+    grid-column:1 / -1;
+    display:flex;gap:10px;flex-wrap:wrap;
+    padding-top:14px;margin-top:4px;
+    border-top:1px solid #f1f5f9;
+  }
+  .cu-form input{
+    width:100%;padding:10px 12px;
+    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
+    font-size:13.5px;color:#0f172a;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .cu-form input:focus{
+    outline:none;border-color:#06b6d4;
+    box-shadow:0 0 0 3px rgba(6,182,212,.18);
+  }
 
-{% macro date_label(value) -%}
-  {{ (value|string)[:16].replace("T", " ") if value else "لا يوجد" }}
-{%- endmacro %}
+  /* ── User chip grid ───────────────────────────── */
+  .cu-grid{
+    display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:14px;
+  }
+  @media (max-width:1180px){.cu-grid{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:900px) {.cu-grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:560px) {.cu-grid{grid-template-columns:1fr}}
 
-{% macro status_label(value) -%}
-  {% if value == "disabled" %}موقوف{% elif value == "archived" %}مؤرشف{% else %}نشط{% endif %}
-{%- endmacro %}
+  .cu-card{
+    position:relative;
+    display:flex;flex-direction:column;gap:12px;
+    padding:18px 20px 16px;
+    border:1px solid #cbd5e1;border-radius:12px;background:#fff;
+    color:inherit;text-decoration:none;overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 18px rgba(15,23,42,.06);
+    transition:border-color .15s ease, transform .12s ease, box-shadow .18s ease;
+  }
+  .cu-card::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#06b6d4 0%,#0e7490 100%);
+    border-radius:12px 12px 0 0;opacity:.9;
+  }
+  .cu-card:hover{
+    border-color:#94a3b8;transform:translateY(-3px);
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 8px 18px rgba(6,182,212,.14),
+               0 20px 40px rgba(15,23,42,.12);
+  }
+  .cu-card-head{display:flex;align-items:center;gap:10px}
+  .cu-avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);color:#fff;
+    display:grid;place-items:center;font-size:16px;font-weight:900;
+    flex-shrink:0;text-transform:uppercase;
+  }
+  .cu-card-name{
+    flex:1;min-width:0;font-size:14.5px;font-weight:900;color:#0f172a;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .cu-card-mobile{
+    font-size:11.5px;color:#94a3b8;direction:ltr;text-align:start;
+    font-family:ui-monospace,Consolas,monospace;margin-top:2px;
+  }
+
+  .cu-balance{
+    background:#ecfeff;border:1px solid #67e8f9;border-radius:10px;
+    padding:10px 12px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .cu-balance .lbl{font-size:11px;font-weight:800;color:#0e7490;letter-spacing:.06em;text-transform:uppercase}
+  .cu-balance .amt{
+    font-size:18px;font-weight:900;color:#0e7490;font-variant-numeric:tabular-nums;
+  }
+  .cu-balance .amt .ccy{font-size:12px;font-weight:700;opacity:.7;margin-inline-end:4px}
+
+  .cu-stats{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
+    padding-top:10px;border-top:1px solid #f1f5f9;
+  }
+  .cu-stat{text-align:start}
+  .cu-stat .k{font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase}
+  .cu-stat .v{font-size:14px;font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums}
+
+  /* ── Status pill ──────────────────────────────── */
+  .cu-status{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:3px 8px;border-radius:999px;
+    font-size:10.5px;font-weight:800;letter-spacing:.04em;
+    margin-inline-start:auto;
+  }
+  .cu-status--active{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+  .cu-status--suspended{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+  .cu-status--archived{background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1}
+
+  /* ── Toolbar ─────────────────────────────────── */
+  .cu-toolbar{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .cu-switch{
+    position:relative;display:inline-flex;padding:3px;
+    background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;
+  }
+  .cu-switch button{
+    position:relative;z-index:1;
+    background:transparent;border:0;padding:6px 12px;cursor:pointer;
+    font-size:12px;font-weight:800;color:#64748b;
+    border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+  }
+  .cu-switch button.is-active{color:#0f172a}
+  .cu-switch .pill{
+    position:absolute;top:3px;bottom:3px;
+    background:#fff;border:1px solid #cbd5e1;border-radius:6px;
+    box-shadow:0 1px 2px rgba(15,23,42,.05);
+    transition:inset-inline-start .22s cubic-bezier(.4,0,.2,1),
+               width .22s cubic-bezier(.4,0,.2,1);
+    z-index:0;
+  }
+  .cu-toolbar-meta{margin-inline-start:auto;font-size:12px;color:#64748b;display:inline-flex;align-items:center;gap:6px}
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-  .card-users-page {
-    --cu-ink: #172033;
-    --cu-muted: #72809a;
-    --cu-line: #dfe7f3;
-    --cu-blue: #2087e6;
-    --cu-teal: #10a58f;
-    --cu-amber: #f5a11a;
-    --cu-violet: #7057f4;
-    direction: rtl;
-    color: var(--cu-ink);
-  }
 
-  .cu-hero,
-  .cu-panel,
-  .cu-card {
-    background: rgba(255, 255, 255, .9);
-    border: 1px solid var(--cu-line);
-    box-shadow: 0 18px 38px rgba(31, 41, 55, .07);
-  }
+{{ hub.hero(
+  "مستخدمو البطاقات",
+  subtitle="الزبائن الذين يشترون البطاقات ويشحنون محافظهم. كل حساب يربط محفظة إلكترونية يستعملها لشراء البطاقات أو الباقات.",
+  icon="users-rectangle",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-store"></i> سوق البطاقات</a>'
+) }}
 
-  .cu-hero {
-    border-radius: 26px;
-    padding: 20px;
-    display: grid;
-    grid-template-columns: minmax(520px, 1.6fr) minmax(330px, .9fr);
-    gap: 16px;
-    background:
-      radial-gradient(circle at 10% 15%, rgba(32, 135, 230, .13), transparent 30%),
-      radial-gradient(circle at 92% 12%, rgba(16, 165, 143, .12), transparent 25%),
-      linear-gradient(135deg, rgba(255,255,255,.96), rgba(244,248,255,.9));
-  }
+{% call hub.section("نظرة سريعة", icon="chart-column") %}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("إجمالي المستخدمين", users_summary.users or 0,
+               icon="users-rectangle", variant="brand", sub="حساب نشط") }}
+    {{ hub.kpi("إجمالي الرصيد",
+               "%.2f"|format(users_summary.balance or 0),
+               icon="wallet", variant="green", sub="مجموع المحافظ") }}
+    {{ hub.kpi("إجمالي المشتريات",
+               users_summary.purchases or 0,
+               icon="cart-shopping", variant="blue", sub="عملية شراء") }}
+    {{ hub.kpi("إجمالي المبيعات",
+               "%.2f"|format(users_summary.spent or 0),
+               icon="coins", variant="amber", sub="من المحافظ") }}
+  </div>
+{% endcall %}
 
-  .cu-hero-main {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    justify-content: space-between;
-  }
-
-  .cu-title h1 {
-    margin: 0;
-    font-size: clamp(30px, 3vw, 44px);
-    line-height: 1.2;
-    letter-spacing: 0;
-  }
-
-  .cu-title p {
-    max-width: 760px;
-    margin: 10px 0 0;
-    color: var(--cu-muted);
-    font-weight: 850;
-    line-height: 1.8;
-  }
-
-  .cu-actions,
-  .cu-tools {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .cu-btn {
-    min-height: 44px;
-    border-radius: 14px;
-    border: 1px solid var(--cu-line);
-    background: #fff;
-    color: var(--cu-ink);
-    padding: 0 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    font-weight: 950;
-    text-decoration: none;
-    cursor: pointer;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-  }
-
-  .cu-btn:hover {
-    transform: translateY(-1px);
-    border-color: rgba(112, 87, 244, .38);
-    box-shadow: 0 12px 24px rgba(31, 41, 55, .08);
-  }
-
-  .cu-btn--primary {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--cu-teal), #18bfa7);
-    box-shadow: 0 14px 28px rgba(16, 165, 143, .18);
-  }
-
-  .cu-btn--violet {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--cu-violet), #7c5dff);
-  }
-
-  .cu-metrics {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .cu-metric {
-    min-height: 104px;
-    border-radius: 20px;
-    padding: 14px;
-    background: #fff;
-    border: 1px solid rgba(223, 231, 243, .9);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 10px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .cu-metric::after {
-    content: "";
-    width: 66px;
-    height: 66px;
-    border-radius: 24px;
-    background: var(--metric, var(--cu-blue));
-    opacity: .13;
-    position: absolute;
-    inset-inline-end: -18px;
-    bottom: -18px;
-  }
-
-  .cu-metric i {
-    width: 44px;
-    height: 44px;
-    border-radius: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: var(--metric, var(--cu-blue));
-    z-index: 1;
-  }
-
-  .cu-metric span {
-    display: block;
-    color: var(--cu-muted);
-    font-weight: 900;
-    font-size: 12px;
-  }
-
-  .cu-metric strong {
-    display: block;
-    margin-top: 6px;
-    font-size: 25px;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .cu-create {
-    border-radius: 22px;
-    padding: 16px;
-    background: rgba(255,255,255,.96);
-    border: 1px solid var(--cu-line);
-  }
-
-  .cu-create h2 {
-    margin: 0 0 14px;
-    font-size: 20px;
-    text-align: center;
-  }
-
-  .cu-form {
-    display: grid;
-    gap: 10px;
-  }
-
-  .cu-field {
-    display: grid;
-    gap: 7px;
-    color: #52617b;
-    font-weight: 950;
-  }
-
-  .cu-input {
-    min-height: 46px;
-    border-radius: 14px;
-    border: 1px solid var(--cu-line);
-    background: #fff;
-    padding: 0 14px;
-    color: var(--cu-ink);
-    font-weight: 850;
-    outline: none;
-  }
-
-  .cu-input:focus {
-    border-color: rgba(16, 165, 143, .55);
-    box-shadow: 0 0 0 4px rgba(16, 165, 143, .1);
-  }
-
-  .cu-toolbar {
-    margin-top: 18px;
-    padding: 14px;
-    border-radius: 22px;
-    background: rgba(255,255,255,.86);
-    border: 1px solid var(--cu-line);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .cu-search {
-    min-height: 46px;
-    border-radius: 15px;
-    border: 1px solid var(--cu-line);
-    background: #fff;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 14px;
-  }
-
-  .cu-search input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--cu-ink);
-    font-weight: 850;
-  }
-
-  .cu-chip {
-    min-height: 34px;
-    border-radius: 999px;
-    border: 1px solid #e4ebf6;
-    background: #f7faff;
-    color: #52617b;
-    padding: 0 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    font-size: 13px;
-    font-weight: 950;
-  }
-
-  .cu-panel {
-    margin-top: 18px;
-    border-radius: 26px;
-    overflow: hidden;
-  }
-
-  .cu-panel-head {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--cu-line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .cu-panel-head h2 {
-    margin: 0;
-    font-size: 22px;
-  }
-
-  .cu-panel-head span {
-    color: var(--cu-muted);
-    font-weight: 900;
-  }
-
-  .cu-grid {
-    padding: 18px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-    gap: 14px;
-  }
-
-  .cu-card {
-    border-radius: 22px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 13px;
-  }
-
-  .cu-card-top {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: start;
-  }
-
-  .cu-card h3 {
-    margin: 0 0 7px;
-    text-align: center;
-    font-size: 22px;
-    line-height: 1.3;
-  }
-
-  .cu-contact {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    color: var(--cu-muted);
-    font-weight: 900;
-    font-size: 13px;
-  }
-
-  .cu-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 18px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--cu-violet), var(--cu-blue));
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 950;
-    box-shadow: 0 14px 24px rgba(32, 135, 230, .16);
-  }
-
-  .cu-card-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .cu-stat {
-    min-height: 76px;
-    border-radius: 16px;
-    padding: 10px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    background: var(--stat-bg, #f8fbff);
-    border: 1px solid var(--stat-line, #e8eef7);
-  }
-
-  .cu-stat small {
-    color: #60708c;
-    font-weight: 950;
-  }
-
-  .cu-stat strong {
-    font-size: 23px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .cu-meta {
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .cu-meta div {
-    border-radius: 15px;
-    border: 1px solid #e9eef6;
-    background: #fbfcff;
-    padding: 10px;
-    text-align: center;
-  }
-
-  .cu-meta dt {
-    color: var(--cu-muted);
-    font-weight: 900;
-    font-size: 12px;
-  }
-
-  .cu-meta dd {
-    margin: 5px 0 0;
-    color: var(--cu-ink);
-    font-weight: 950;
-    word-break: break-word;
-  }
-
-  .cu-card-actions {
-    margin-top: auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
-  }
-
-  .cu-empty {
-    padding: 48px 18px;
-    text-align: center;
-  }
-
-  .cu-empty i {
-    width: 70px;
-    height: 70px;
-    border-radius: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--cu-teal);
-    background: rgba(16, 165, 143, .1);
-    font-size: 28px;
-    margin-bottom: 14px;
-  }
-
-  .cu-empty h2 {
-    margin: 0 0 8px;
-  }
-
-  .cu-empty p {
-    margin: 0 auto 18px;
-    max-width: 560px;
-    color: var(--cu-muted);
-    font-weight: 850;
-    line-height: 1.8;
-  }
-
-  .cu-market-strip {
-    margin-top: 18px;
-    border-radius: 22px;
-    border: 1px solid var(--cu-line);
-    background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(245,250,255,.9));
-    padding: 14px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .cu-market-strip strong {
-    display: block;
-    font-size: 18px;
-  }
-
-  .cu-market-strip span {
-    color: var(--cu-muted);
-    font-weight: 850;
-  }
-
-  @media (max-width: 1180px) {
-    .cu-hero {
-      grid-template-columns: 1fr;
-    }
-
-    .cu-metrics {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 760px) {
-    .cu-hero,
-    .cu-panel {
-      border-radius: 20px;
-    }
-
-    .cu-metrics,
-    .cu-grid,
-    .cu-card-stats,
-    .cu-meta,
-    .cu-toolbar,
-    .cu-market-strip,
-    .cu-card-actions {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
-
-<div class="card-users-page" data-card-users-page>
-  <section class="cu-hero">
-    <div class="cu-hero-main">
-      <div class="cu-title">
-        <h1>مركز مستخدمي البطاقات</h1>
-        <p>إدارة الأشخاص الذين يشترون بطاقات إلكترونية من المحفظة، مع متابعة الرصيد والمشتريات والكروت المرتبطة بكل مستخدم.</p>
-      </div>
-
-      <div class="cu-metrics" aria-label="ملخص مستخدمي البطاقات">
-        <article class="cu-metric" style="--metric:#2087e6">
-          <div><span>مستخدمون</span><strong>{{ num(users_summary.users) }}</strong></div>
-          <i class="fa-solid fa-users"></i>
-        </article>
-        <article class="cu-metric" style="--metric:#10a58f">
-          <div><span>نشطون</span><strong>{{ num(users_summary.active) }}</strong></div>
-          <i class="fa-solid fa-user-check"></i>
-        </article>
-        <article class="cu-metric" style="--metric:#7057f4">
-          <div><span>كروت مملوكة</span><strong>{{ num(users_summary.cards) }}</strong></div>
-          <i class="fa-solid fa-ticket"></i>
-        </article>
-        <article class="cu-metric" style="--metric:#f5a11a">
-          <div><span>عمليات شراء</span><strong>{{ num(users_summary.purchases) }}</strong></div>
-          <i class="fa-solid fa-cart-shopping"></i>
-        </article>
-        <article class="cu-metric" style="--metric:#475569">
-          <div><span>رصيد المحافظ</span><strong>{{ money(users_summary.balance, users_summary.currency) }}</strong></div>
-          <i class="fa-solid fa-wallet"></i>
-        </article>
-      </div>
-
-      <div class="cu-actions">
-        <a class="cu-btn cu-btn--primary" href="{{ url_for('radius.card_marketplace') }}">
-          <i class="fa-solid fa-store"></i>
-          سوق البطاقات الإلكتروني
-        </a>
-        <a class="cu-btn" href="{{ url_for('radius.cards_batches') }}">
-          <i class="fa-solid fa-layer-group"></i>
-          حزم البطاقات
-        </a>
-      </div>
+{% call hub.section("إضافة مستخدم جديد", icon="user-plus") %}
+  <form method="post" action="{{ url_for('radius.card_users_create') }}" class="cu-form">
+    {{ csrf_token_input() | safe }}
+    <div class="hub-field">
+      <label class="hub-field-label" for="cu-display_name">الاسم الكامل <span class="req">*</span></label>
+      <input id="cu-display_name" name="display_name" required maxlength="120"
+             placeholder="مثل: أحمد محمد">
     </div>
-
-    <aside class="cu-create">
-      <h2>إضافة مستخدم بطاقة</h2>
-      <form method="post" action="{{ url_for('radius.card_users_create') }}" class="cu-form" data-testid="card-user-create-form">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-        <label class="cu-field">الاسم
-          <input class="cu-input" name="display_name" placeholder="مثال: أحمد علي" required>
-        </label>
-        <label class="cu-field">الموبايل
-          <input class="cu-input" name="mobile" placeholder="05xxxxxxxx">
-        </label>
-        <label class="cu-field">البريد
-          <input class="cu-input" name="email" type="email" placeholder="name@example.com">
-        </label>
-        <button class="cu-btn cu-btn--primary" type="submit">
-          <i class="fa-solid fa-plus"></i>
-          إنشاء محفظة ومستخدم
-        </button>
-      </form>
-    </aside>
-  </section>
-
-  <section class="cu-toolbar" aria-label="أدوات مستخدمي البطاقات">
-    <label class="cu-search">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="search" placeholder="ابحث بالاسم أو الموبايل أو البريد..." data-card-user-search>
-    </label>
-    <div class="cu-tools">
-      <span class="cu-chip"><i class="fa-solid fa-store"></i> {{ num(market_summary.available) }} كرت متاح للبيع</span>
-      <span class="cu-chip"><i class="fa-solid fa-boxes-stacked"></i> {{ num(market_summary.batches) }} حزم إلكترونية</span>
+    <div class="hub-field">
+      <label class="hub-field-label" for="cu-mobile">رقم الجوال</label>
+      <input id="cu-mobile" name="mobile" maxlength="20"
+             inputmode="tel" pattern="[0-9+\-\s]*"
+             placeholder="مثل: 0599123456"
+             style="direction:ltr;text-align:start">
     </div>
-  </section>
-
-  <section class="cu-panel">
-    <header class="cu-panel-head">
-      <div>
-        <h2>قائمة المستخدمين</h2>
-        <span>{{ num(card_users|length) }} مستخدم ظاهر</span>
-      </div>
-      <span class="cu-chip"><i class="fa-solid fa-wallet"></i> محافظ تشغيلية</span>
-    </header>
-
-    {% if card_users %}
-      <div class="cu-grid">
-        {% for user in card_users %}
-          {% set initials = (user.display_name or user.mobile or "U")[:2] %}
-          <article class="cu-card" data-card-user-card data-search-text="{{ (user.display_name ~ ' ' ~ user.mobile ~ ' ' ~ user.email ~ ' ' ~ user.status)|lower }}">
-            <header class="cu-card-top">
-              <div>
-                <h3>{{ user.display_name }}</h3>
-                <div class="cu-contact">
-                  <span>{{ user.mobile or "بدون موبايل" }}</span>
-                  {% if user.email %}<span>{{ user.email }}</span>{% endif %}
-                </div>
-              </div>
-              <span class="cu-avatar">{{ initials }}</span>
-            </header>
-
-            <div class="cu-card-stats">
-              <div class="cu-stat" style="--stat-bg:#f2fbf8;--stat-line:#bdeee0">
-                <small>الرصيد</small>
-                <strong>{{ money(user.balance, user.wallet_currency) }}</strong>
-              </div>
-              <div class="cu-stat" style="--stat-bg:#fff8e9;--stat-line:#ffe0a3">
-                <small>مشتريات</small>
-                <strong>{{ num(user.purchase_count) }}</strong>
-              </div>
-              <div class="cu-stat" style="--stat-bg:#f5f2ff;--stat-line:#ded5ff">
-                <small>كروت</small>
-                <strong>{{ num(user.owned_cards_count) }}</strong>
-              </div>
-            </div>
-
-            <dl class="cu-meta">
-              <div><dt>الحالة</dt><dd>{{ status_label(user.status) }}</dd></div>
-              <div><dt>المحفظة</dt><dd>#{{ user.wallet_id or "جديدة" }}</dd></div>
-              <div><dt>إجمالي مشتريات</dt><dd>{{ money(user.spent, user.wallet_currency) }}</dd></div>
-              <div><dt>آخر شراء</dt><dd>{{ date_label(user.last_purchase_at) }}</dd></div>
-            </dl>
-
-            <footer class="cu-card-actions">
-              <a class="cu-btn cu-btn--primary" href="{{ url_for('radius.card_user_360', card_user_id=user.id) }}">
-                <i class="fa-solid fa-eye"></i>
-                عرض 360
-              </a>
-              <a class="cu-btn" href="{{ url_for('radius.card_marketplace') }}">
-                <i class="fa-solid fa-cart-plus"></i>
-                شراء كرت
-              </a>
-            </footer>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="cu-empty">
-        <i class="fa-solid fa-user-plus"></i>
-        <h2>لا يوجد مستخدمو بطاقات بعد</h2>
-        <p>أنشئ أول مستخدم بطاقة حتى يتم فتح محفظة تشغيلية له وربط مشترياته وكروته في ملف 360.</p>
-      </div>
-    {% endif %}
-  </section>
-
-  <section class="cu-market-strip">
-    <div>
-      <strong>البيع الإلكتروني يعتمد على الحزم الإلكترونية</strong>
-      <span>أي حزمة بطاقة إلكترونية جاهزة للبيع تظهر في سوق البطاقات، والمستخدم يشتري منها عبر المحفظة.</span>
+    <div class="hub-field">
+      <label class="hub-field-label" for="cu-password">كلمة المرور <span class="req">*</span></label>
+      <input id="cu-password" name="password" type="password" required minlength="4" maxlength="64"
+             placeholder="على الأقل 4 أحرف"
+             autocomplete="new-password">
     </div>
-    <a class="cu-btn cu-btn--violet" href="{{ url_for('radius.card_marketplace') }}">
-      <i class="fa-solid fa-arrow-left"></i>
-      فتح السوق
+    <div class="actions">
+      {{ hub.btn("إنشاء الحساب + المحفظة", icon="user-plus", type="submit", variant="primary") }}
+      <span style="font-size:12px;color:#64748b;align-self:center">
+        <i class="fa-solid fa-circle-info" style="color:#94a3b8"></i>
+        تُنشَأ محفظة إلكترونية تلقائياً مع الحساب.
+      </span>
+    </div>
+  </form>
+{% endcall %}
+
+{% call hub.section("الحسابات", icon="users-rectangle", meta=card_users|length ~ " حساب") %}
+
+  {% if not card_users %}
+    {{ hub.empty("لا يوجد مستخدمو بطاقات بعد",
+                 sub="أنشئ حساباً جديداً بالأعلى — الزبون يستخدمه للدخول إلى /portal/card وشحن محفظته.",
+                 icon="users-rectangle") }}
+  {% else %}
+
+  <div class="cu-toolbar">
+    <div class="cu-switch" id="cu-view-switcher" role="tablist" aria-label="عرض المستخدمين">
+      <span class="pill" aria-hidden="true"></span>
+      <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
+        <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
+      </button>
+      <button type="button" data-view="table" role="tab" aria-selected="false">
+        <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
+      </button>
+    </div>
+    <div class="cu-toolbar-meta">
+      <i class="fa-solid fa-circle-info" style="color:#94a3b8" aria-hidden="true"></i>
+      اضغط أي حساب لفتح ملفه الكامل
+    </div>
+  </div>
+
+  <div class="cu-grid" data-view-panel="chips">
+    {% for u in card_users %}
+    <a href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}" class="cu-card">
+      <div class="cu-card-head">
+        <span class="cu-avatar">{{ (u.display_name or '?')[:1] }}</span>
+        <div style="flex:1;min-width:0">
+          <div class="cu-card-name">{{ u.display_name or 'بدون اسم' }}</div>
+          {% if u.mobile %}<div class="cu-card-mobile">{{ u.mobile }}</div>{% endif %}
+        </div>
+        {% set st = (u.status or 'active')|lower %}
+        <span class="cu-status cu-status--{{ 'active' if st == 'active' else ('suspended' if st == 'suspended' else 'archived') }}">
+          {% if st == 'active' %}<i class="fa-solid fa-circle" style="font-size:6px"></i> نشط
+          {% elif st == 'suspended' %}<i class="fa-solid fa-pause"></i> موقوف
+          {% else %}<i class="fa-regular fa-folder"></i> مؤرشف{% endif %}
+        </span>
+      </div>
+
+      <div class="cu-balance">
+        <span class="lbl">رصيد المحفظة</span>
+        <span class="amt">
+          <span class="ccy">{{ u.wallet_currency or 'ILS' }}</span>
+          {{ "%.2f"|format(u.balance or 0) }}
+        </span>
+      </div>
+
+      <div class="cu-stats">
+        <div class="cu-stat"><div class="k">مشتريات</div><div class="v">{{ u.purchase_count or 0 }}</div></div>
+        <div class="cu-stat"><div class="k">بطاقاتي</div><div class="v">{{ u.owned_cards_count or 0 }}</div></div>
+      </div>
     </a>
-  </section>
-</div>
+    {% endfor %}
+  </div>
+
+  <div data-view-panel="table" hidden style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>الاسم</th>
+          <th style="width:140px">الجوال</th>
+          <th style="width:130px">الرصيد</th>
+          <th style="width:100px">المشتريات</th>
+          <th style="width:100px">البطاقات</th>
+          <th style="width:90px">الحالة</th>
+          <th style="width:80px;text-align:end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in card_users %}
+        <tr>
+          <td><strong style="color:#0f172a">#{{ u.id }}</strong></td>
+          <td><strong style="color:#0f172a">{{ u.display_name or '—' }}</strong></td>
+          <td style="direction:ltr;text-align:start;font-size:12.5px;color:#475569">{{ u.mobile or '—' }}</td>
+          <td style="font-variant-numeric:tabular-nums">
+            <strong style="color:#0e7490">{{ "%.2f"|format(u.balance or 0) }}</strong>
+            <small style="color:#94a3b8;margin-inline-start:4px">{{ u.wallet_currency or 'ILS' }}</small>
+          </td>
+          <td style="font-variant-numeric:tabular-nums">{{ u.purchase_count or 0 }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ u.owned_cards_count or 0 }}</td>
+          <td>
+            {% set st = (u.status or 'active')|lower %}
+            <span class="cu-status cu-status--{{ 'active' if st == 'active' else ('suspended' if st == 'suspended' else 'archived') }}">
+              {% if st == 'active' %}نشط{% elif st == 'suspended' %}موقوف{% else %}مؤرشف{% endif %}
+            </span>
+          </td>
+          <td style="text-align:end">
+            {{ hub.btn("فتح", icon="arrow-up-right-from-square",
+                       href=url_for('radius.card_user_360', card_user_id=u.id),
+                       variant="secondary", size="sm") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}
+{% endcall %}
 
 <script>
-  (() => {
-    const root = document.querySelector('[data-card-users-page]');
-    if (!root) return;
-    const search = root.querySelector('[data-card-user-search]');
-    const cards = Array.from(root.querySelectorAll('[data-card-user-card]'));
-    search?.addEventListener('input', () => {
-      const query = search.value.trim().toLowerCase();
-      cards.forEach((card) => {
-        const text = card.dataset.searchText || '';
-        card.hidden = query && !text.includes(query);
-      });
+(function(){
+  const sw = document.getElementById('cu-view-switcher');
+  if (!sw) return;
+  const pill = sw.querySelector('.pill');
+  const buttons = sw.querySelectorAll('button[data-view]');
+  const isRTL = getComputedStyle(document.documentElement).direction === 'rtl';
+  function setPill(activeBtn){
+    if (!pill || !activeBtn) return;
+    const sR = sw.getBoundingClientRect();
+    const bR = activeBtn.getBoundingClientRect();
+    pill.style.insetInlineStart = (isRTL ? (sR.right - bR.right) : (bR.left - sR.left)) + 'px';
+    pill.style.width = bR.width + 'px';
+  }
+  sw.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    buttons.forEach(b => {
+      const on = b === btn;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
-  })();
+    document.querySelectorAll('[data-view-panel]').forEach(p => {
+      p.hidden = (p.dataset.viewPanel !== btn.dataset.view);
+    });
+    setPill(btn);
+    try{ localStorage.setItem('cu:view', btn.dataset.view); }catch(_){}
+  });
+  let saved = null;
+  try{ saved = localStorage.getItem('cu:view'); }catch(_){}
+  if (saved){
+    const target = sw.querySelector(`button[data-view="${saved}"]`);
+    if (target && !target.classList.contains('is-active')) target.click();
+    else requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
+  } else requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
+  window.addEventListener('resize', () => setPill(sw.querySelector('button.is-active')));
+})();
 </script>
 {% endblock %}
