@@ -224,19 +224,60 @@
 
   /* ── Timeline ──────────────────────────────────── */
   .u360-timeline{display:flex;flex-direction:column;gap:8px}
-  .u360-timeline .item{
+  .u360-timeline .tl-item{
     display:flex;gap:12px;align-items:flex-start;
     padding:12px 14px;border-radius:10px;
     background:#fafbfc;border:1px solid #e2e8f0;
   }
   .u360-timeline .ico{
-    width:32px;height:32px;border-radius:9px;
-    background:#f5f3ff;color:#5b21b6;
+    width:36px;height:36px;border-radius:9px;
     display:grid;place-items:center;font-size:13px;flex-shrink:0;
   }
+  .u360-timeline .ico--purchase{background:#dcfce7;color:#15803d}
+  .u360-timeline .ico--credit  {background:#dbeafe;color:#1d4ed8}
+  .u360-timeline .ico--debit   {background:#fef3c7;color:#92400e}
+  .u360-timeline .ico--event   {background:#f5f3ff;color:#5b21b6}
   .u360-timeline .body{flex:1;min-width:0}
-  .u360-timeline .title{font-size:13px;font-weight:800;color:#0f172a}
-  .u360-timeline .when{font-size:11px;color:#94a3b8;margin-top:2px;direction:ltr;text-align:start}
+  .u360-timeline .title{
+    font-size:13.5px;font-weight:800;color:#0f172a;
+    line-height:1.4;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .u360-timeline .title .amt{
+    font-family:ui-monospace,Consolas,monospace;
+    font-variant-numeric:tabular-nums;color:#5b21b6;
+  }
+  .u360-timeline .desc{
+    font-size:12px;color:#475569;margin-top:3px;line-height:1.5;
+  }
+  .u360-timeline .when{
+    font-size:11px;color:#94a3b8;margin-top:4px;
+    direction:ltr;text-align:start;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* Pager */
+  .u360-pager{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;
+  }
+  .u360-pager button{
+    min-width:34px;height:34px;padding:0 12px;
+    background:#fff;border:1px solid #e2e8f0;border-radius:8px;
+    color:#475569;font-size:12.5px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    font-family:inherit;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .u360-pager button:hover:not([disabled]){
+    background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6;
+  }
+  .u360-pager button[disabled]{background:#f8fafc;color:#cbd5e1;cursor:not-allowed}
+  .u360-pager .info{
+    font-size:12px;color:#64748b;margin:0 12px;
+    font-variant-numeric:tabular-nums;
+  }
+  .u360-pager .info strong{color:#0f172a}
   .u360-empty{
     padding:24px;text-align:center;color:#94a3b8;font-size:13px;
   }
@@ -470,27 +511,120 @@
 {% endcall %}
 </div>
 
-{# ── Activity timeline ──────────────────────────── #}
+{# ── Activity timeline (paginated, 10/page) ───────── #}
 {% if card360.timeline %}
 <div style="margin-top:18px">
 {% call hub.section("سجل الأحداث", icon="timeline",
                    meta=card360.timeline|length ~ " حدث") %}
-  <div class="u360-timeline">
-    {% for item in card360.timeline[:10] %}
-    <div class="item">
-      <span class="ico"><i class="fa-solid fa-circle-dot"></i></span>
-      <div class="body">
-        <div class="title">{{ item.title or item.label or item.kind or 'حدث' }}</div>
-        {% if item.subtitle or item.description %}
-          <div style="font-size:12px;color:#475569;margin-top:2px">{{ item.subtitle or item.description }}</div>
-        {% endif %}
-        <div class="when">{{ (item.when or item.created_at or item.at or '')[:19] }}</div>
-      </div>
-    </div>
+
+  {# Each entry is wrapped as {"created_at":..., "item":<original>}.
+     Classify by the inner record's shape and render meaningful text. #}
+  <div class="u360-timeline" id="u360-timeline">
+    {% for t in card360.timeline %}
+      {% set row = t.item or t %}
+      {% set when = (t.created_at or row.created_at or '')[:19] %}
+
+      {# ── Purchase: package_name + amount_minor + status ── #}
+      {% if row.package_name and row.amount_minor is defined %}
+        {% set amount = (row.amount_minor or 0) / 100 %}
+        {% set ccy = row.currency or 'ILS' %}
+        <div class="tl-item" data-tl>
+          <span class="ico ico--purchase"><i class="fa-solid fa-cart-shopping"></i></span>
+          <div class="body">
+            <div class="title">
+              <span>شراء «{{ row.package_name }}»</span>
+              <span class="amt" dir="ltr">−{{ "%.2f"|format(amount) }} {{ ccy }}</span>
+            </div>
+            {% if row.status %}
+              <div class="desc">
+                الحالة:
+                {% set ps = (row.status or '')|lower %}
+                {% if ps == 'completed' %}مكتملة
+                {% elif ps == 'pending' %}قيد المعالجة
+                {% elif ps == 'failed' %}فشلت
+                {% else %}{{ row.status }}{% endif %}
+              </div>
+            {% endif %}
+            <div class="when">{{ when }}</div>
+          </div>
+        </div>
+
+      {# ── Ledger: amount_minor + direction ── #}
+      {% elif row.amount_minor is defined and (row.direction or row.entry_type) %}
+        {% set amount = (row.amount_minor or 0) / 100 %}
+        {% set dir = (row.direction or row.entry_type or '')|lower %}
+        {% set is_credit = dir in ('credit','in','deposit','top-up','topup') %}
+        <div class="tl-item" data-tl>
+          <span class="ico {{ 'ico--credit' if is_credit else 'ico--debit' }}">
+            <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
+          </span>
+          <div class="body">
+            <div class="title">
+              <span>{{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}</span>
+              <span class="amt" dir="ltr">
+                {{ '+' if is_credit else '−' }}{{ "%.2f"|format(amount) }}
+                {{ row.currency or 'ILS' }}
+              </span>
+            </div>
+            {% if row.description or row.notes or row.memo %}
+              <div class="desc">{{ row.description or row.notes or row.memo }}</div>
+            {% endif %}
+            <div class="when">{{ when }}</div>
+          </div>
+        </div>
+
+      {# ── Business event: event_type + payload ── #}
+      {% else %}
+        {% set et = row.event_type or row.kind or row.action or 'حدث' %}
+        <div class="tl-item" data-tl>
+          <span class="ico ico--event"><i class="fa-solid fa-bell"></i></span>
+          <div class="body">
+            <div class="title">{{ et|replace('_', ' ')|replace('.', ' ') }}</div>
+            {% if row.description or row.notes or row.summary %}
+              <div class="desc">{{ row.description or row.notes or row.summary }}</div>
+            {% endif %}
+            <div class="when">{{ when }}</div>
+          </div>
+        </div>
+      {% endif %}
+
     {% endfor %}
   </div>
+
+  <div class="u360-pager" id="u360-tl-pager">
+    <button type="button" id="tl-prev"><i class="fa-solid fa-chevron-right"></i> السابق</button>
+    <span class="info">صفحة <strong id="tl-page">1</strong> من <strong id="tl-total">1</strong></span>
+    <button type="button" id="tl-next">التالي <i class="fa-solid fa-chevron-left"></i></button>
+  </div>
+
 {% endcall %}
 </div>
+
+<script>
+(function(){
+  const list = document.getElementById('u360-timeline');
+  if (!list) return;
+  const items = Array.from(list.querySelectorAll('[data-tl]'));
+  const PER = 10;
+  let page = 1;
+  const total = Math.max(1, Math.ceil(items.length / PER));
+  const pageEl  = document.getElementById('tl-page');
+  const totalEl = document.getElementById('tl-total');
+  const prevBtn = document.getElementById('tl-prev');
+  const nextBtn = document.getElementById('tl-next');
+  totalEl.textContent = total;
+  function render(){
+    const lo = (page - 1) * PER, hi = lo + PER;
+    items.forEach((el, i) => { el.style.display = (i >= lo && i < hi) ? '' : 'none'; });
+    pageEl.textContent = page;
+    prevBtn.disabled = (page <= 1);
+    nextBtn.disabled = (page >= total);
+  }
+  prevBtn.addEventListener('click', () => { if (page > 1)     { page--; render(); } });
+  nextBtn.addEventListener('click', () => { if (page < total) { page++; render(); } });
+  render();
+})();
+</script>
 {% endif %}
 
 <script>
