@@ -1,0 +1,20 @@
+/* ============================================================================
+   card_marketplace_polish.css — recolor layer for /admin/radius/card-marketplace
+   Loaded ONCE after the page inline <style>; every rule scoped under
+   [data-card-marketplace]. Appearance only. Re-points the page's own accent
+   token (--violet) to the site indigo; teal stays (already on-identity). The
+   teal->violet hero / primary-button / progress gradients become teal->indigo.
+   RTL-safe.
+   ============================================================================ */
+[data-card-marketplace]{
+  --violet: #6B5AED;   /* was #7657f4 → site indigo */
+  --blue:   #2BAACC;   /* was #2563eb royal → site cyan */
+}
+[data-card-marketplace] .market-panel,
+[data-card-marketplace] .market-card,
+[data-card-marketplace] .market-metric,
+[data-card-marketplace] .package-card{ border-color:#e7e9f2; }
+@media (prefers-reduced-motion: reduce){
+  [data-card-marketplace] .market-card,
+  [data-card-marketplace] .package-card{ transition:none; }
+}

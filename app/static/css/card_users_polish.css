@@ -1,0 +1,18 @@
+/* ============================================================================
+   card_users_polish.css - recolor layer for /admin/radius/card-users
+   Loaded ONCE after the page inline <style>; every rule scoped under
+   [data-card-users-page]. Appearance only. Re-points the page's own accent
+   token to the site indigo. teal/amber kept. RTL-safe.
+   ============================================================================ */
+[data-card-users-page]{
+  --cu-violet: #6B5AED;   /* was #7057f4 -> site indigo */
+  --cu-blue:   #2BAACC;   /* was #2087e6 royal -> site cyan */
+}
+[data-card-users-page] .cu-card,
+[data-card-users-page] .cu-panel,
+[data-card-users-page] .cu-stat,
+[data-card-users-page] .cu-metric{ border-color:#e7e9f2; }
+@media (prefers-reduced-motion: reduce){
+  [data-card-users-page] .cu-card,
+  [data-card-users-page] .cu-stat{ transition:none; }
+}

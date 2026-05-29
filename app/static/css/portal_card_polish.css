@@ -1,0 +1,17 @@
+/* ============================================================================
+   portal_card_polish.css — recolor layer for /admin/radius/portal/card
+
+   This is a STANDALONE customer-portal page (its own <!doctype>, not the admin
+   layout). It keeps its own identity, but we align its secondary accent to the
+   site indigo so it reads as part of the same product. Loaded ONCE in <head>
+   after the page inline <style>; every rule scoped under .portal. Appearance
+   only. teal (already a site color) stays as the primary portal accent.
+   RTL-safe.
+   ============================================================================ */
+.portal{
+  --pc-violet: #6B5AED;   /* was #7657f4 → site indigo */
+  --pc-blue:   #2BAACC;   /* was #2563eb royal → site cyan */
+}
+@media (prefers-reduced-motion: reduce){
+  .portal [class*="card"]{ transition:none; }
+}
