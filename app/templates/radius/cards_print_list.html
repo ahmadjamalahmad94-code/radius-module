@@ -72,9 +72,82 @@
   }
   .pc-act:hover{ transform:translateY(-1px) }
   .pc-act--preview:hover{ background:#eff6ff; border-color:#93c5fd; color:#1d4ed8 }
-  .pc-act--print:hover  { background:#fffbeb; border-color:#fcd34d; color:#92400e }
+  .pc-act--print:hover  { background:#eef2ff; border-color:#a5b4fc; color:#4338ca }
   .pc-act--delete:hover { background:#fef2f2; border-color:#fecaca; color:#b91c1c }
   .pc-act:focus-visible{ outline:3px solid rgba(99,102,241,.28); outline-offset:2px }
+
+  /* ── Custom confirm modal — replaces the native confirm() ── */
+  .pc-confirm{
+    position:fixed; inset:0;
+    background:rgba(15,23,42,.55);
+    backdrop-filter:blur(3px);
+    display:grid; place-items:center;
+    z-index:1500; padding:24px;
+    animation:pc-fade .15s ease;
+  }
+  @keyframes pc-fade{ from{opacity:0} to{opacity:1} }
+  .pc-confirm[hidden]{ display:none }
+  .pc-confirm-panel{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    padding:24px 26px;
+    max-width:440px; width:100%;
+    box-shadow:0 24px 60px rgba(15,23,42,.22);
+    animation:pc-pop .22s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes pc-pop{
+    from{ transform:scale(.96); opacity:0 }
+    to  { transform:scale(1);   opacity:1 }
+  }
+  .pc-confirm-head{
+    display:flex; align-items:flex-start; gap:14px;
+    margin-bottom:14px;
+  }
+  .pc-confirm-icon{
+    width:44px; height:44px; border-radius:12px;
+    background:#fef2f2; color:#dc2626;
+    border:1px solid #fecaca;
+    display:grid; place-items:center;
+    font-size:18px; flex-shrink:0;
+  }
+  .pc-confirm-title{
+    margin:0; font-size:15.5px; font-weight:900; color:#0f172a;
+    line-height:1.4;
+  }
+  .pc-confirm-msg{
+    margin:6px 0 0; font-size:13px; color:#475569; line-height:1.6;
+  }
+  .pc-confirm-actions{
+    display:flex; justify-content:flex-end; gap:8px;
+    margin-top:18px; padding-top:16px;
+    border-top:1px solid #f1f5f9;
+  }
+  .pc-confirm-btn{
+    padding:9px 18px; border-radius:9px;
+    font-size:13px; font-weight:800; cursor:pointer;
+    transition:background .15s ease, border-color .15s ease,
+               transform .12s ease, box-shadow .15s ease;
+  }
+  .pc-confirm-btn:hover{ transform:translateY(-1px) }
+  .pc-confirm-btn--cancel{
+    background:#f8fafc; color:#475569;
+    border:1px solid #e2e8f0;
+  }
+  .pc-confirm-btn--cancel:hover{
+    background:#f1f5f9; border-color:#cbd5e1; color:#0f172a;
+  }
+  .pc-confirm-btn--danger{
+    background:#dc2626; color:#fff; border:1px solid #dc2626;
+    box-shadow:0 4px 10px rgba(220,38,38,.2);
+  }
+  .pc-confirm-btn--danger:hover{
+    background:#b91c1c; border-color:#b91c1c;
+    box-shadow:0 8px 18px rgba(220,38,38,.3);
+  }
+  .pc-confirm-btn:focus-visible{
+    outline:3px solid rgba(220,38,38,.28); outline-offset:2px;
+  }
   .pc-card-head{ display:flex; align-items:flex-start; gap:10px }
   .pc-card-title{
     flex:1; min-width:0;
@@ -150,6 +223,10 @@
 {% endblock %}
 
 {% block content %}
+{# data-cards-batches-page activates cards_batches_view.js (the IIFE
+   bails out early without this attribute). Required for the
+   floating print modal to wire up the data-print-batch buttons. #}
+<div data-cards-batches-page>
 
 {{ hub.hero(
   "بطاقات الطباعة",
@@ -162,7 +239,7 @@
 {% call hub.section("نظرة سريعة", icon="chart-column") %}
   <div class="hub-kpi-grid">
     {{ hub.kpi("إجمالي الحزم",     total,            icon="layer-group", variant="brand",  sub="حزمة طباعة محفوظة") }}
-    {{ hub.kpi("معروضة في الصفحة", batches|length,   icon="boxes-stacked", variant="amber", sub="جاهزة للطباعة") }}
+    {{ hub.kpi("معروضة في الصفحة", batches|length,   icon="boxes-stacked", variant="blue",  sub="جاهزة للطباعة") }}
     {{ hub.kpi("حالة النظام",      "متصل",          icon="circle-check", variant="green", sub="المحرّك وقوالب الطباعة جاهزة") }}
   </div>
 {% endcall %}
@@ -209,7 +286,7 @@
             <span class="pc-card-num">#{{ b.id }}</span>
             <div class="pc-card-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
           </div>
-          {{ hub.pill("طباعة", variant="amber", dot=False) }}
+          {{ hub.pill("طباعة", variant="blue", dot=False) }}
         </div>
         <div class="pc-card-stats">
           <div class="pc-stat"><div class="k">عدد</div><div class="v">{{ b.card_count or 0 }}</div></div>
@@ -240,7 +317,10 @@
         <form method="post"
               action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
               style="display:inline-flex;margin:0"
-              onsubmit="return confirm('حذف حزمة الطباعة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ لا يمكن التراجع.');">
+              data-confirm-form
+              data-confirm-title="حذف حزمة الطباعة"
+              data-confirm-msg="هل تريد حذف الحزمة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
+              data-confirm-ok="نعم، احذف">
           {{ csrf_token_input() | safe }}
           <button type="submit" class="pc-act pc-act--delete" title="حذف"
                   aria-label="حذف الحزمة">
@@ -296,7 +376,10 @@
               <form method="post"
                     action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
                     style="display:inline-flex;margin:0"
-                    onsubmit="return confirm('حذف الحزمة؟ لا يمكن التراجع.');">
+                    data-confirm-form
+              data-confirm-title="حذف حزمة الطباعة"
+              data-confirm-msg="سيتم حذف الحزمة وكل بطاقاتها. هذا الإجراء لا يمكن التراجع عنه."
+              data-confirm-ok="نعم، احذف">
                 {{ csrf_token_input() | safe }}
                 <button type="submit" class="pc-act pc-act--delete" title="حذف"
                         aria-label="حذف الحزمة">
@@ -466,5 +549,82 @@
   }
   window.addEventListener('resize', () => setPill(sw.querySelector('button.is-active')));
 })();
+
+/* ── Custom confirm modal — intercepts any <form data-confirm-form>
+   submit and pops a styled dialog instead of the native confirm(). ── */
+(function(){
+  const dlg     = document.getElementById('pc-confirm');
+  const title   = document.getElementById('pc-confirm-title');
+  const msg     = document.getElementById('pc-confirm-msg');
+  const okBtn   = document.getElementById('pc-confirm-ok');
+  const cancel  = document.getElementById('pc-confirm-cancel');
+  if (!dlg) return;
+
+  let pendingForm = null;
+  let lastFocus   = null;
+
+  function close(){
+    dlg.hidden = true;
+    pendingForm = null;
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  function open(form){
+    pendingForm = form;
+    lastFocus = document.activeElement;
+    title.textContent = form.dataset.confirmTitle || 'تأكيد العملية';
+    msg.textContent   = form.dataset.confirmMsg   || 'هل أنت متأكد؟';
+    okBtn.textContent = form.dataset.confirmOk    || 'نعم';
+    dlg.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => cancel.focus(), 50);
+  }
+
+  document.addEventListener('submit', e => {
+    const form = e.target.closest('form[data-confirm-form]');
+    if (!form) return;
+    if (form.dataset._confirmed === '1') return;  // already confirmed, let it pass
+    e.preventDefault();
+    open(form);
+  }, true);
+
+  okBtn.addEventListener('click', () => {
+    if (!pendingForm) { close(); return; }
+    pendingForm.dataset._confirmed = '1';
+    pendingForm.submit();
+  });
+  cancel.addEventListener('click', close);
+  dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !dlg.hidden) close();
+  });
+})();
 </script>
+
+{# ── Custom confirm dialog (replaces native confirm()) ── #}
+<div class="pc-confirm" id="pc-confirm" hidden role="dialog"
+     aria-modal="true" aria-labelledby="pc-confirm-title">
+  <div class="pc-confirm-panel">
+    <div class="pc-confirm-head">
+      <span class="pc-confirm-icon" aria-hidden="true">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </span>
+      <div>
+        <h3 class="pc-confirm-title" id="pc-confirm-title">تأكيد العملية</h3>
+        <p class="pc-confirm-msg" id="pc-confirm-msg">هل أنت متأكد؟</p>
+      </div>
+    </div>
+    <div class="pc-confirm-actions">
+      <button type="button" class="pc-confirm-btn pc-confirm-btn--cancel" id="pc-confirm-cancel">
+        إلغاء
+      </button>
+      <button type="button" class="pc-confirm-btn pc-confirm-btn--danger" id="pc-confirm-ok">
+        نعم، احذف
+      </button>
+    </div>
+  </div>
+</div>
+
+</div>{# /data-cards-batches-page #}
 {% endblock %}
