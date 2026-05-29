@@ -23,6 +23,60 @@
 <style>
   [hidden]{ display:none !important }
 
+  /* ── Visual layers — sections + KPIs + hero raised off the page
+     so the operator can read the hierarchy at a glance. ── */
+  .hub-section{
+    border:1px solid #d8dee8;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.6) inset,
+      0 1px 2px rgba(15,23,42,.04),
+      0 6px 14px rgba(15,23,42,.04);
+    border-radius:14px;
+  }
+  .hub-section-head{
+    background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom:1px solid #e2e8f0;
+  }
+  .hub-section-head-title{ color:#0f172a; font-weight:900 }
+  .hub-section-head-meta{
+    color:#64748b; font-weight:700; font-size:12px;
+    font-variant-numeric:tabular-nums;
+  }
+  .hub-section-head-icon{ background:#eef2ff; color:#4f46e5 }
+  .hub-kpi{
+    border:1px solid #d8dee8;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.6) inset,
+      0 1px 2px rgba(15,23,42,.04);
+    border-radius:12px;
+    transition:transform .15s ease, box-shadow .18s ease;
+  }
+  .hub-kpi:hover{
+    transform:translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.6) inset,
+      0 4px 12px rgba(15,23,42,.06);
+  }
+  .hub-hero{
+    border:1px solid #d8dee8;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.6) inset,
+      0 2px 4px rgba(15,23,42,.04),
+      0 8px 18px rgba(15,23,42,.04);
+  }
+  /* Table — distinct band over the section so rows have a real
+     surface to land on. */
+  .hub-table thead th{
+    background:#f8fafc;
+    color:#475569;
+    border-bottom:1px solid #e2e8f0;
+    font-weight:800;
+  }
+  .hub-table tbody tr{
+    border-top:1px solid #f1f5f9;
+  }
+  .hub-table tbody tr:hover{ background:#fafbfc }
+
   /* ── Cards table — print-credentials need monospace + LTR ── */
   .pc-cards-table td,
   .pc-cards-table th{ direction:ltr; text-align:start }
