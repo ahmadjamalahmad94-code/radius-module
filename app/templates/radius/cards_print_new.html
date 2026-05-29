@@ -142,39 +142,60 @@
     font-family:inherit; color:#475569;
   }
 
-  .pc-dz-filled{ display:flex; align-items:center; gap:12px }
-  .pc-dz-file-icon{
-    width:38px; height:38px; border-radius:8px;
-    background:#fef3c7; color:#92400e;
-    display:grid; place-items:center;
-    font-size:14px; flex-shrink:0;
+  .pc-dz-filled{
+    display:flex; align-items:center; gap:14px;
+    width:100%; max-width:520px;
   }
+  /* File-type icon — soft green to match the filled-state surround.
+     Each format gets its own subtle accent via the data attribute. */
+  .pc-dz-file-icon{
+    width:42px; height:42px; border-radius:10px;
+    background:#fff; border:1px solid #bbf7d0;
+    color:#15803d;
+    display:grid; place-items:center;
+    font-size:16px; flex-shrink:0;
+  }
+  .pc-dz-file-icon[data-ext="xlsx"]{ color:#15803d; border-color:#bbf7d0 }
+  .pc-dz-file-icon[data-ext="csv"], .pc-dz-file-icon[data-ext="tsv"]{
+    color:#1d4ed8; border-color:#bfdbfe;
+  }
+  .pc-dz-file-icon[data-ext="pdf"]{ color:#b91c1c; border-color:#fecaca }
+  .pc-dz-file-icon[data-ext="txt"]{ color:#475569; border-color:#cbd5e1 }
+
   .pc-dz-file-info{ flex:1; min-width:0 }
   .pc-dz-file-name{
     display:block;
-    font-size:13px; font-weight:800; color:#0f172a;
+    font-size:13.5px; font-weight:800; color:#0f172a;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     direction:ltr; text-align:start;
+    unicode-bidi:isolate;
   }
   .pc-dz-file-meta{
-    display:flex; align-items:center; gap:8px; margin-top:2px;
-    font-size:11px; color:#94a3b8;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    display:inline-flex; align-items:center; gap:8px; margin-top:3px;
+    font-size:11.5px; color:#64748b; font-weight:700;
+    direction:ltr;
+    unicode-bidi:isolate;
   }
   .pc-dz-file-meta .dot{
     width:3px; height:3px; border-radius:50%; background:#cbd5e1;
   }
+  .pc-dz-file-meta .num{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric:tabular-nums;
+  }
   .pc-dz-remove{
-    background:transparent; border:1px solid #e2e8f0;
+    background:#fff; border:1px solid #e2e8f0;
     color:#64748b;
-    width:30px; height:30px; border-radius:8px;
+    width:34px; height:34px; border-radius:9px;
     cursor:pointer;
-    display:grid; place-items:center; font-size:11px;
-    transition:background .15s ease, border-color .15s ease, color .15s ease;
+    display:grid; place-items:center; font-size:12px;
+    transition:background .15s ease, border-color .15s ease,
+               color .15s ease, transform .12s ease;
     flex-shrink:0;
   }
   .pc-dz-remove:hover{
     background:#fef2f2; border-color:#fecaca; color:#b91c1c;
+    transform:scale(1.05);
   }
 
   .pc-smart-actions{
@@ -390,15 +411,15 @@
         </div>
 
         <div class="pc-dz-filled" id="pc-dz-filled" hidden>
-          <div class="pc-dz-file-icon" id="pc-dz-file-icon" aria-hidden="true">
+          <div class="pc-dz-file-icon" id="pc-dz-file-icon" data-ext="" aria-hidden="true">
             <i class="fa-solid fa-file-lines"></i>
           </div>
           <div class="pc-dz-file-info">
             <span class="pc-dz-file-name" id="pc-dz-file-name">filename.xlsx</span>
             <span class="pc-dz-file-meta">
-              <span id="pc-dz-file-size">0 KB</span>
-              <span class="dot" aria-hidden="true"></span>
               <span id="pc-dz-file-type">CSV</span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="num" id="pc-dz-file-size">0 KB</span>
             </span>
           </div>
           <button type="button" class="pc-dz-remove" id="pc-dz-remove"
@@ -645,10 +666,14 @@
   }
 
   function showFile(f){
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
     dzName.textContent = f.name;
     dzSize.textContent = formatBytes(f.size);
     dzType.textContent = fileTypeLabel(f.name);
-    if (dzIcon) dzIcon.innerHTML = '<i class="fa-solid ' + fileTypeIcon(f.name) + '"></i>';
+    if (dzIcon) {
+      dzIcon.innerHTML = '<i class="fa-solid ' + fileTypeIcon(f.name) + '"></i>';
+      dzIcon.setAttribute('data-ext', ext);
+    }
     dz.classList.add('is-filled');
     dzEmpty.hidden = true;
     dzFilled.hidden = false;
