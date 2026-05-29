@@ -1,17 +1,18 @@
-{# Print-Only Cards — new batch (import form). Minimal: 3 fields plus
-   the smart-import box, amber-themed to match the rest of the section.
+{# Print-Only Cards — import form.
+   Direction: Editorial Print Studio — numbered chapters (01/02/03),
+   2-column form layout, hairline separators, amber accent on the
+   submit + the section eyebrows only.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}استيراد بطاقات للطباعة{% endblock %}
+{% block title %}دفعة طباعة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
-{% block page_title %}استيراد بطاقات للطباعة{% endblock %}
+{% block page_title %}دفعة طباعة جديدة{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}"
-       style="color:#b45309;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    <a href="{{ url_for('radius.cards_print_list') }}" style="color:var(--ink-2,#5C564D);text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة إلى الاستوديو
     </a>
   </span>
 {% endblock %}
@@ -19,226 +20,373 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  :root{
-    --print-primary:#f59e0b;
-    --print-primary-dark:#b45309;
-    --print-soft:#fffbeb;
-    --print-border:#fcd34d;
-    --print-text:#78350f;
-  }
-  .pi-shell{max-width:1080px;margin:0 auto}
-  .pi-form{
-    background:#fff;border:1px solid var(--print-border);border-radius:14px;
-    padding:22px 26px;margin-bottom:18px;
-    box-shadow:0 1px 2px rgba(245,158,11,.05);
-  }
-  .pi-section-head{
-    display:flex;align-items:center;gap:10px;margin:0 0 14px;padding-bottom:10px;
-    border-bottom:1px dashed #fde68a;
-  }
-  .pi-section-head h3{margin:0;font-size:14px;font-weight:800;color:var(--print-text)}
-  .pi-section-head .num{
-    width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:12px;font-weight:800;
-  }
-  .pi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-  @media (max-width:760px){.pi-grid{grid-template-columns:1fr}}
-  .pi-field{display:flex;flex-direction:column;gap:6px}
-  .pi-field label{font-size:12.5px;font-weight:800;color:var(--print-text)}
-  .pi-field input{
-    width:100%;padding:10px 12px;border:1px solid #fde68a;border-radius:10px;
-    background:#fffbeb;font-size:13px;color:#1e293b;
-    transition:border-color .15s, background .15s;
-  }
-  .pi-field input:focus{
-    background:#fff;border-color:var(--print-primary);outline:none;
-    box-shadow:0 0 0 3px rgba(245,158,11,.18);
-  }
-  .pi-field .req{color:#dc2626}
-  .pi-help{font-size:11.5px;color:#92400e;line-height:1.8}
+  .ps-root{
+    --ink-1:#1C1A17;
+    --ink-2:#5C564D;
+    --ink-3:#8A8377;
+    --canvas:#FAF7F2;
+    --paper:#FFFFFF;
+    --hair-1:#E8E1D4;
+    --hair-2:#D6CDBC;
+    --inset:rgba(255,255,255,.7);
+    --amber:#C8801F;
+    --amber-deep:#B06F15;
+    --amber-tint:#FBEFD8;
+    --amber-on-tint:#6B4109;
+    --selection:rgba(200,128,31,.10);
+    --focus-ring:rgba(200,128,31,.32);
+    --success-ink:#3F6B3A;
+    --success-tint:#E8F0E2;
+    --danger-ink:#A33A2A;
+    --danger-tint:#F5E2DC;
 
-  /* Smart-import card — same shape as cards_import.html but amber. */
+    background:var(--canvas);
+    color:var(--ink-2);
+    max-width:1080px;margin:0 auto;padding:8px 0 56px;
+    font-feature-settings:"ss01","tnum";
+  }
   [hidden]{display:none !important}
-  .pi-smart{
-    position:relative;overflow:hidden;
-    border:1px solid #fde68a;
-    background:radial-gradient(120% 200% at 100% 0%, #fef3c7 0%, transparent 50%),
-               linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
-    border-radius:14px;padding:18px 22px;margin-bottom:18px;
+
+  /* ── Section eyebrow ── */
+  .ps-eyebrow{
+    display:flex;align-items:center;gap:10px;
+    font-size:11.5px;font-weight:800;letter-spacing:.16em;
+    color:var(--amber-deep);text-transform:uppercase;
+    margin:0 0 14px;
   }
-  .pi-smart::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:3px;
-    background:linear-gradient(90deg,#fbbf24,#f59e0b,#b45309,#fbbf24);
-    background-size:300% 100%;animation:pi-stripe 6s linear infinite;
+  .ps-eyebrow .num{
+    font-size:13px;font-weight:900;letter-spacing:0;color:var(--ink-1);
+    font-variant-numeric:tabular-nums;
   }
-  @keyframes pi-stripe{0%{background-position:0% 50%}100%{background-position:300% 50%}}
-  .pi-smart-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-  .pi-smart-head .icon{
-    width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:14px;
-    box-shadow:0 4px 12px rgba(245,158,11,.32);
+  .ps-eyebrow .rule{flex:1;height:1px;background:var(--hair-1)}
+
+  /* ── Chapter card — paper surface, hairline border, inset top ── */
+  .ps-chapter{
+    background:var(--paper);
+    border:1px solid var(--hair-1);border-radius:14px;
+    padding:28px 32px;margin-bottom:24px;
+    position:relative;
   }
-  .pi-smart-head h3{margin:0;font-size:15px;font-weight:800;color:var(--print-text)}
-  .pi-build-chip{
-    margin-inline-start:auto;font-size:11px;color:#fff;font-weight:800;
-    background:linear-gradient(135deg,#10b981,#059669);
-    padding:4px 10px;border-radius:8px;letter-spacing:.3px;
-    display:inline-flex;align-items:center;gap:5px;
+  .ps-chapter::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:var(--inset);border-radius:14px 14px 0 0;
+  }
+  .ps-chapter h2{
+    margin:0 0 6px;font-size:20px;font-weight:900;color:var(--ink-1);
+    letter-spacing:-.01em;line-height:1.3;
+  }
+  .ps-chapter .ps-lede{
+    margin:0 0 22px;font-size:13.5px;line-height:1.7;color:var(--ink-2);
+    max-width:62ch;
+  }
+
+  /* ── Form layout — labeled rows, 2-column on desktop ── */
+  .ps-field{
+    display:grid;grid-template-columns:240px 1fr;gap:24px;
+    padding:18px 0;border-bottom:1px solid var(--hair-1);
+    align-items:flex-start;
+  }
+  .ps-field:last-of-type{border-bottom:0;padding-bottom:0}
+  .ps-field:first-of-type{padding-top:0}
+  .ps-field-label{padding-top:8px}
+  .ps-field-label .name{
+    display:block;font-size:13.5px;font-weight:800;color:var(--ink-1);
+    line-height:1.4;
+  }
+  .ps-field-label .req{color:var(--amber-deep);margin-inline-start:3px}
+  .ps-field-label .hint{
+    display:block;font-size:12px;color:var(--ink-3);
+    line-height:1.6;margin-top:4px;
+  }
+  .ps-field-control input,
+  .ps-field-control textarea{
+    width:100%;padding:11px 14px;
+    border:1px solid var(--hair-1);border-radius:9px;
+    background:var(--paper);color:var(--ink-1);
+    font-size:14px;line-height:1.5;
+    font-family:inherit;
+    transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .ps-field-control input:hover,
+  .ps-field-control textarea:hover{border-color:var(--hair-2)}
+  .ps-field-control input:focus,
+  .ps-field-control textarea:focus{
+    outline:none;border-color:var(--amber);
+    box-shadow:0 0 0 3px var(--focus-ring);
+  }
+  .ps-field-control textarea{
+    min-height:200px;direction:ltr;text-align:left;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13px;line-height:1.6;
+  }
+
+  /* ── Smart import — editorial card ── */
+  .ps-smart{
+    background:linear-gradient(180deg,#FFFCF6 0%,#fff 50%);
+    border:1px solid var(--hair-1);border-radius:12px;
+    padding:20px 22px;position:relative;overflow:hidden;
+  }
+  .ps-smart::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:1px;background:var(--inset);
+    border-radius:12px 12px 0 0;
+  }
+  .ps-smart-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .ps-smart-head h3{
+    margin:0;font-size:14.5px;font-weight:800;color:var(--ink-1);
+    letter-spacing:-.005em;
+  }
+  .ps-smart-head .marker-num{
+    width:26px;height:26px;border-radius:8px;
+    background:var(--ink-1);color:#fff;
+    display:grid;place-items:center;
+    font-size:11.5px;font-weight:900;font-variant-numeric:tabular-nums;
+  }
+  .ps-smart .build-chip{
+    margin-inline-start:auto;font-size:10.5px;font-weight:800;
+    color:var(--success-ink);background:var(--success-tint);
+    padding:4px 9px;border-radius:6px;letter-spacing:.04em;
     font-family:ui-monospace,Consolas,monospace;
-    box-shadow:0 2px 6px rgba(16,185,129,.3);
+    display:inline-flex;align-items:center;gap:5px;
   }
-  .pi-smart-tag{
-    margin-inline-start:auto;font-size:11px;color:#92400e;font-weight:700;
-    background:#fef3c7;border:1px solid var(--print-border);border-radius:8px;
-    padding:3px 8px;
+  .ps-smart .file-tag{
+    margin-inline-start:auto;font-size:11px;font-weight:700;
+    color:var(--amber-on-tint);background:var(--amber-tint);
+    padding:4px 10px;border-radius:6px;
   }
-  .pi-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-top:10px}
-  @media (max-width:760px){.pi-smart-body{grid-template-columns:1fr}}
-  .pi-smart input[type=file]{
-    width:100%;padding:10px 12px;border:1px solid #fcd34d;border-radius:10px;
-    background:#fff;font-size:13px;cursor:pointer;
+  .ps-smart-help{
+    font-size:12.5px;color:var(--ink-3);line-height:1.7;margin-bottom:14px;
   }
-  .pi-smart-btn{
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border:0;
-    border-radius:10px;padding:11px 20px;font-weight:800;font-size:13px;cursor:pointer;
+  .ps-smart-row{
+    display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+  }
+  @media (max-width:680px){.ps-smart-row{grid-template-columns:1fr}}
+  .ps-smart-row input[type=file]{
+    width:100%;padding:10px 14px;border:1px solid var(--hair-1);
+    border-radius:9px;background:var(--paper);font-size:13px;cursor:pointer;
+    color:var(--ink-2);
+  }
+  .ps-smart-btn{
+    background:var(--ink-1);color:#fff;border:0;border-radius:9px;
+    padding:11px 22px;font-size:13px;font-weight:800;cursor:pointer;
     display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
-    box-shadow:0 6px 14px rgba(245,158,11,.4);
+    transition:background .15s ease, transform .12s ease;
   }
-  .pi-smart-btn[disabled]{opacity:.6;cursor:wait}
-  .pi-smart-btn:hover:not([disabled]){filter:brightness(1.05);transform:translateY(-1px);transition:.15s}
-  .pi-smart-btn .spin{display:none;animation:pi-spin 1s linear infinite}
-  .pi-smart-btn.is-busy .spin{display:inline-block}
-  .pi-smart-btn.is-busy .static{display:none}
-  @keyframes pi-spin{to{transform:rotate(360deg)}}
+  .ps-smart-btn:hover:not([disabled]){background:#0d0c0a;transform:translateY(-1px)}
+  .ps-smart-btn[disabled]{opacity:.55;cursor:wait}
+  .ps-smart-btn .spin{display:none;animation:ps-spin 1s linear infinite}
+  .ps-smart-btn.is-busy .spin{display:inline-block}
+  .ps-smart-btn.is-busy .static{display:none}
+  @keyframes ps-spin{to{transform:rotate(360deg)}}
 
-  .pi-smart-status{
-    margin-top:12px;font-size:12.5px;line-height:1.8;min-height:1.5em;
-    padding:9px 12px;border-radius:10px;
+  .ps-smart-status{
+    margin-top:14px;font-size:12.5px;line-height:1.7;
+    padding:11px 14px;border-radius:9px;
+    border:1px solid transparent;
   }
-  .pi-smart-status.ok  {color:#065f46;background:#f0fdf4;border:1px solid #bbf7d0}
-  .pi-smart-status.warn{color:#92400e;background:#fffbeb;border:1px solid #fde68a}
-  .pi-smart-status.err {color:#991b1b;background:#fef2f2;border:1px solid #fecaca}
+  .ps-smart-status.ok{
+    color:var(--success-ink);background:var(--success-tint);
+    border-color:#C9DCBE;
+  }
+  .ps-smart-status.warn{
+    color:var(--amber-on-tint);background:var(--amber-tint);
+    border-color:#F0DDB0;
+  }
+  .ps-smart-status.err{
+    color:var(--danger-ink);background:var(--danger-tint);
+    border-color:#E5CABE;
+  }
 
-  .pi-counter{
-    margin-top:12px;display:flex;align-items:baseline;gap:10px;
-    padding:14px 18px;border-radius:14px;
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
-    box-shadow:0 8px 24px rgba(245,158,11,.25);
+  .ps-counter{
+    margin-top:14px;display:flex;align-items:baseline;gap:12px;
+    padding:16px 20px;border-radius:10px;
+    background:var(--ink-1);color:#fff;
   }
-  .pi-counter .num{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;
-                   font-variant-numeric:tabular-nums}
-  .pi-counter .lbl{font-size:13px;opacity:.9;font-weight:700}
+  .ps-counter .num{
+    font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .ps-counter .lbl{font-size:13px;font-weight:600;opacity:.9}
 
-  .pi-textarea{
-    min-height:200px;font-family:ui-monospace,Consolas,monospace;
-    direction:ltr;text-align:left;
-    width:100%;padding:10px 12px;border:1px solid #fde68a;border-radius:10px;
-    background:#fffbeb;font-size:13px;
+  /* ── Submit row ── */
+  .ps-actions{
+    display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;
+    padding-top:24px;border-top:1px solid var(--hair-1);
   }
-  .pi-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
-  .pi-submit{
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border:0;
-    border-radius:10px;padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;
+  .ps-submit{
+    background:var(--amber);color:#fff;border:0;
+    padding:13px 28px;border-radius:10px;
+    font-size:14px;font-weight:800;letter-spacing:.005em;
+    cursor:pointer;display:inline-flex;align-items:center;gap:9px;
+    transition:background .15s ease, transform .12s ease;
+  }
+  .ps-submit:hover{background:var(--amber-deep);transform:translateY(-1px)}
+  .ps-submit:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+  .ps-cancel{
+    background:transparent;color:var(--ink-2);
+    border:1px solid var(--hair-1);
+    padding:13px 22px;border-radius:10px;
+    font-size:14px;font-weight:700;text-decoration:none;
     display:inline-flex;align-items:center;gap:8px;
-    box-shadow:0 6px 14px rgba(245,158,11,.4);
+    transition:background .15s ease, border-color .15s ease;
   }
-  .pi-submit:hover{filter:brightness(1.05);transform:translateY(-1px);transition:.15s}
-  .pi-cancel{
-    background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:10px;
-    padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;
-    text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  .ps-cancel:hover{background:var(--paper);border-color:var(--hair-2);color:var(--ink-1)}
+
+  @media (max-width:760px){
+    .ps-root{padding:6px 0 36px}
+    .ps-chapter{padding:22px 18px}
+    .ps-field{grid-template-columns:1fr;gap:8px}
+    .ps-field-label{padding-top:0}
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="pi-shell">
+<div class="ps-root">
 
-  <form method="post" action="{{ url_for('radius.cards_print_new') }}" class="pi-form">
+  <form method="post" action="{{ url_for('radius.cards_print_new') }}">
     {{ csrf_token_input() | safe }}
 
-    {# ── Step 1: Batch metadata ── #}
-    <div class="pi-section-head">
-      <span class="num">1</span>
-      <h3>بيانات الحزمة</h3>
-    </div>
-    <div class="pi-grid">
-      <div class="pi-field">
-        <label for="package_name">اسم الحزمة <span class="req">*</span></label>
-        <input id="package_name" name="package_name" required maxlength="120"
-               placeholder="مثال: بطاقات شهر ٧ — للطباعة"
-               value="{{ form.get('package_name') or '' }}">
-      </div>
-      <div class="pi-field">
-        <label for="price_per_card">سعر البيع للبطاقة الواحدة</label>
-        <input id="price_per_card" name="price_per_card" type="number" step="0.01" min="0"
-               placeholder="0.00"
-               value="{{ form.get('price_per_card') or '' }}">
-      </div>
-      <div class="pi-field">
-        <label for="price_bulk">سعر الجملة (إجمالي)</label>
-        <input id="price_bulk" name="price_bulk" type="number" step="0.01" min="0"
-               placeholder="0.00"
-               value="{{ form.get('price_bulk') or '' }}">
-      </div>
-    </div>
-    <div class="pi-help" style="margin-top:10px">
-      السعر اختياري — تستخدمه للتسعير وإعداد التقارير. البطاقات هذي للطباعة فقط
-      ولن تظهر في FreeRADIUS أو تسمح بتسجيل الدخول.
-    </div>
+    {# ────────── 01 — Package metadata ────────── #}
+    <p class="ps-eyebrow">
+      <span class="num">01</span>
+      <span>بيانات الحزمة</span>
+      <span class="rule"></span>
+    </p>
 
-    {# ── Step 2: Smart import engine ── #}
-    <div class="pi-section-head" style="margin-top:22px">
-      <span class="num">2</span>
-      <h3>محتوى البطاقات</h3>
-    </div>
+    <section class="ps-chapter">
+      <h2>عرّف الحزمة</h2>
+      <p class="ps-lede">
+        اختر اسماً واضحاً للحزمة وأدخل سعر البيع والجملة. الأسعار اختيارية —
+        تساعدك على التسعير والتقارير لاحقاً، ولا تؤثر على البطاقات نفسها.
+      </p>
 
-    <div class="pi-smart" id="ci-smart"
-         data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
-         data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
-      <div class="pi-smart-head">
-        <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-        <h3>المحرّك الذكي — Excel / CSV / PDF</h3>
-        {% if engine_version %}
-        <span class="pi-build-chip" title="نسخة المحرّك — تأكّد التحديث ركّب">
-          <i class="fa-solid fa-microchip"></i> engine v{{ engine_version }}
-        </span>
-        {% endif %}
-        <span class="pi-smart-tag" id="ci-smart-tag" hidden></span>
+      <div class="ps-field">
+        <div class="ps-field-label">
+          <span class="name">اسم الحزمة <span class="req">*</span></span>
+          <span class="hint">يظهر في القائمة وعلى ملف الطباعة. مثل: «دفعة شهر ٧ — للطباعة».</span>
+        </div>
+        <div class="ps-field-control">
+          <input id="package_name" name="package_name" required maxlength="120"
+                 placeholder="مثل: دفعة شهر ٧ — للطباعة"
+                 value="{{ form.get('package_name') or '' }}">
+        </div>
       </div>
-      <div class="pi-help" style="margin-bottom:10px">
-        ارفع الملف — المحرّك يستخرج اليوزرنيمات وكلمات المرور ويعبّئها بالأسفل.
+
+      <div class="ps-field">
+        <div class="ps-field-label">
+          <span class="name">سعر البيع للبطاقة</span>
+          <span class="hint">السعر الذي تبيع به البطاقة الواحدة للزبون النهائي.</span>
+        </div>
+        <div class="ps-field-control">
+          <input id="price_per_card" name="price_per_card" type="number" step="0.01" min="0"
+                 placeholder="0.00"
+                 value="{{ form.get('price_per_card') or '' }}">
+        </div>
       </div>
-      <div class="pi-smart-body">
-        <input type="file" id="ci-smart-file"
-               accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        <button type="button" id="ci-smart-btn" class="pi-smart-btn">
-          <i class="fa-solid fa-bolt static"></i>
-          <i class="fa-solid fa-circle-notch spin"></i>
-          <span>تحليل الملف</span>
+
+      <div class="ps-field">
+        <div class="ps-field-label">
+          <span class="name">سعر الجملة (إجمالي)</span>
+          <span class="hint">التكلفة الكلية لاستلام الدفعة من المورّد، أو المجموع الإجمالي للبيع بالجملة.</span>
+        </div>
+        <div class="ps-field-control">
+          <input id="price_bulk" name="price_bulk" type="number" step="0.01" min="0"
+                 placeholder="0.00"
+                 value="{{ form.get('price_bulk') or '' }}">
+        </div>
+      </div>
+    </section>
+
+    {# ────────── 02 — Smart engine ────────── #}
+    <p class="ps-eyebrow">
+      <span class="num">02</span>
+      <span>المحرّك الذكي</span>
+      <span class="rule"></span>
+    </p>
+
+    <section class="ps-chapter">
+      <h2>ارفع ملف الكروت</h2>
+      <p class="ps-lede">
+        المحرّك يكتشف بنية الملف تلقائياً — Excel، CSV، أو PDF بأي ترتيب أعمدة،
+        عربياً أو إنجليزياً. الناتج يُعبَّأ في صندوق النص أسفل، ويمكنك مراجعته
+        قبل الحفظ.
+      </p>
+
+      <div class="ps-smart" id="ci-smart"
+           data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+           data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
+        <div class="ps-smart-head">
+          <span class="marker-num">★</span>
+          <h3>تحليل ملف</h3>
+          {% if engine_version %}
+          <span class="build-chip" title="نسخة محرّك الاستيراد">
+            <i class="fa-solid fa-microchip" aria-hidden="true"></i> engine v{{ engine_version }}
+          </span>
+          {% endif %}
+          <span class="file-tag" id="ci-smart-tag" hidden></span>
+        </div>
+        <p class="ps-smart-help">
+          ادعم: <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">CSV</code>
+          ·
+          <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">XLSX</code>
+          ·
+          <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">PDF</code>
+          — حد أقصى 12MB.
+        </p>
+        <div class="ps-smart-row">
+          <input type="file" id="ci-smart-file"
+                 accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <button type="button" id="ci-smart-btn" class="ps-smart-btn">
+            <i class="fa-solid fa-bolt static" aria-hidden="true"></i>
+            <i class="fa-solid fa-circle-notch spin" aria-hidden="true"></i>
+            <span>حلّل الملف</span>
+          </button>
+        </div>
+        <div class="ps-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
+        <div class="ps-counter" id="ci-counter" hidden>
+          <span class="num" id="ci-counter-num">0</span>
+          <span class="lbl">بطاقة جاهزة للحفظ</span>
+        </div>
+      </div>
+    </section>
+
+    {# ────────── 03 — Review + save ────────── #}
+    <p class="ps-eyebrow">
+      <span class="num">03</span>
+      <span>المراجعة والحفظ</span>
+      <span class="rule"></span>
+    </p>
+
+    <section class="ps-chapter">
+      <h2>راجع البطاقات قبل الحفظ</h2>
+      <p class="ps-lede">
+        يمكنك أيضاً اللصق المباشر هنا. الصيغة: سطر لكل بطاقة، أو CSV/TSV يحتوي
+        الأعمدة <code>username,password</code>. كلمة المرور اختيارية، ولن تظهر
+        بعد الحفظ.
+      </p>
+
+      <div class="ps-field">
+        <div class="ps-field-label">
+          <span class="name">نص الكروت <span class="req">*</span></span>
+          <span class="hint">إذا استخدمت المحرّك الذكي بالأعلى، هذا الحقل يتعبّأ تلقائياً.</span>
+        </div>
+        <div class="ps-field-control">
+          <textarea id="csv_text" name="csv_text" required
+                    placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
+        </div>
+      </div>
+
+      <div class="ps-actions">
+        <button type="submit" class="ps-submit">
+          <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+          احفظ دفعة الطباعة
         </button>
+        <a href="{{ url_for('radius.cards_print_list') }}" class="ps-cancel">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          إلغاء
+        </a>
       </div>
-      <div class="pi-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
-      <div class="pi-counter" id="ci-counter" hidden>
-        <span class="num" id="ci-counter-num">0</span>
-        <span class="lbl">بطاقة طباعة جاهزة</span>
-      </div>
-    </div>
-
-    <div class="pi-field" style="margin-top:14px">
-      <label for="csv_text">النص (يتعبّأ تلقائيّاً من المحرّك أو الصق يدويّاً) <span class="req">*</span></label>
-      <textarea class="pi-textarea" id="csv_text" name="csv_text" required
-                placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
-    </div>
-
-    <div class="pi-actions">
-      <button type="submit" class="pi-submit">
-        <i class="fa-solid fa-file-import"></i> استيراد بطاقات الطباعة
-      </button>
-      <a href="{{ url_for('radius.cards_print_list') }}" class="pi-cancel">
-        <i class="fa-solid fa-xmark"></i> إلغاء
-      </a>
-    </div>
+    </section>
   </form>
 </div>
 
@@ -260,7 +408,7 @@
   function setStatus(m, k) {
     if (!m) { stat.hidden = true; stat.textContent=''; return; }
     stat.hidden = false;
-    stat.className = 'pi-smart-status' + (k ? ' ' + k : '');
+    stat.className = 'ps-smart-status' + (k ? ' ' + k : '');
     stat.textContent = m;
   }
   function setTag(t) {
@@ -282,7 +430,7 @@
 
   async function analyze() {
     const f = file.files && file.files[0];
-    if (!f) { setStatus('اختر ملفًا أوّلًا.', 'warn'); return; }
+    if (!f) { setStatus('اختر ملفاً أولاً.', 'warn'); return; }
     setStatus('جارٍ التحليل…', '');
     cnt.hidden = true;
     btn.classList.add('is-busy'); btn.disabled = true;
@@ -303,22 +451,22 @@
 
       if (!res.ok && !data) {
         if (res.status === 404) setStatus('المسار غير مسجَّل (HTTP 404). أعد التشغيل.', 'err');
-        else if (res.status === 400 && txt.includes('CSRF')) setStatus('CSRF failed — حدّث الصفحة.', 'err');
-        else setStatus(`فشل الخادم (HTTP ${res.status}).`, 'err');
+        else if (res.status === 400 && txt.includes('CSRF')) setStatus('فشل CSRF — حدّث الصفحة (F5).', 'err');
+        else setStatus('فشل الخادم (HTTP ' + res.status + ').', 'err');
         return;
       }
-      if (!data) { setStatus('رد غير مفهوم.', 'err'); return; }
+      if (!data) { setStatus('رد غير مفهوم من الخادم.', 'err'); return; }
       if (!data.count) {
-        const w = (data.warnings && data.warnings[0]) || 'لم يُعثر على بطاقات.';
-        setStatus(`${w} [${data.fmt || '?'} · ${data.rows_seen || 0}]`, 'err');
+        const w = (data.warnings && data.warnings[0]) || 'لم يُعثر على بطاقات في الملف.';
+        setStatus(w + ' [' + (data.fmt || '?') + ' · صفوف ' + (data.rows_seen || 0) + ']', 'err');
         return;
       }
 
       ta.value = data.csv_text || '';
       ta.dispatchEvent(new Event('input', {bubbles:true}));
       animateCounter(data.count);
-      const warn = (data.warnings && data.warnings.length) ? ' (' + data.warnings[0] + ')' : '';
-      setStatus(`تم استخراج ${data.count.toLocaleString('ar-EG')} بطاقة — راجع النص أدناه ثم اضغط استيراد.${warn}`,
+      const warn = (data.warnings && data.warnings.length) ? ' — ملاحظة: ' + data.warnings[0] : '';
+      setStatus('تم استخراج ' + data.count.toLocaleString('ar-EG') + ' بطاقة. راجعها بالأسفل ثم احفظ.' + warn,
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
     } catch (e) {
       setStatus('فشل الاتصال: ' + e.message, 'err');

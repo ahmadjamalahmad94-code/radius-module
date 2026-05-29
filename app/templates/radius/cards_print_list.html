@@ -1,6 +1,8 @@
-{# Print-Only Cards — batches list. Amber theme distinguishes it from
-   the regular cards section so the operator knows at a glance they're
-   in a different service area.
+{# Print-Only Cards — batches list.
+   Direction: Editorial Print Studio — warm paper canvas, hairline
+   borders instead of shadows, restrained amber accent used only on
+   the primary CTA + the section eyebrow marker. Hierarchy comes from
+   type scale + weight + spacing, not color.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -9,250 +11,487 @@
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
 {% block page_title %}بطاقات الطباعة{% endblock %}
 {% block page_sub %}
-  <span class="sub">قسم مستقلّ — بطاقات للطباعة فقط، لا تسمح بتسجيل الدخول • {{ total }} حزمة</span>
+  <span class="sub">استوديو طباعة الكروت — {{ total }} حزمة</span>
 {% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  /* ── Amber service theme ──
-     Distinct from purple (regular cards) and green (network ops) —
-     instantly tells the operator they're in the print-cards service.
-  */
-  :root{
-    --print-primary:#f59e0b;
-    --print-primary-dark:#b45309;
-    --print-soft:#fffbeb;
-    --print-soft-2:#fef3c7;
-    --print-border:#fcd34d;
-    --print-text:#78350f;
-  }
-  .print-shell{max-width:1200px;margin:0 auto}
+  /* ── Editorial Print Studio — design tokens (declared per-file so
+     the 3 print templates stay self-contained but share the same
+     visual language). ── */
+  .ps-root{
+    --ink-1:#1C1A17;        /* primary ink — headlines, hero numerals */
+    --ink-2:#5C564D;        /* body ink */
+    --ink-3:#8A8377;        /* muted ink — captions */
+    --canvas:#FAF7F2;       /* warm paper page background */
+    --paper:#FFFFFF;        /* card / table surface */
+    --hair-1:#E8E1D4;       /* hairline — default 1px border */
+    --hair-2:#D6CDBC;       /* hairline — emphasised */
+    --inset:rgba(255,255,255,.7);
+    --amber:#C8801F;
+    --amber-deep:#B06F15;
+    --amber-tint:#FBEFD8;
+    --amber-on-tint:#6B4109;
+    --selection:rgba(200,128,31,.10);
+    --focus-ring:rgba(200,128,31,.32);
+    --success-ink:#3F6B3A;
+    --success-tint:#E8F0E2;
 
-  /* Service-marker stripe at the page top — like the engine card
-     but at page scope, so "you are in a different section" is the
-     first visual signal. */
-  .print-marker{
-    background:linear-gradient(135deg,var(--print-soft),#fef3c7);
-    border:1px solid var(--print-border);
-    border-radius:14px;padding:14px 20px;margin-bottom:18px;
-    display:flex;align-items:center;gap:14px;
-    box-shadow:0 1px 2px rgba(245,158,11,.05);
+    background:var(--canvas);
+    color:var(--ink-2);
+    max-width:1240px;margin:0 auto;padding:8px 0 56px;
+    font-feature-settings:"ss01","tnum";
   }
-  .print-marker .marker-icon{
-    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:18px;
-    box-shadow:0 6px 14px rgba(245,158,11,.32);flex-shrink:0;
-  }
-  .print-marker h2{margin:0;font-size:15.5px;font-weight:800;color:var(--print-text)}
-  .print-marker p{margin:3px 0 0;font-size:12.5px;color:#92400e;line-height:1.7}
-  .print-marker .marker-cta{margin-inline-start:auto}
-  .print-cta-btn{
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
-    border:0;border-radius:10px;padding:10px 18px;
-    font-weight:800;font-size:13px;cursor:pointer;
-    display:inline-flex;align-items:center;gap:8px;text-decoration:none;
-    box-shadow:0 6px 14px rgba(245,158,11,.4);
-    transition:transform .15s, box-shadow .2s;
-  }
-  .print-cta-btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(245,158,11,.5);color:#fff}
 
-  /* ── Chip grid (mirrors cards_batches.html "cards" view) ── */
-  .print-chips{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:14px;margin:18px 0;
+  /* Section eyebrow — uppercase tracked label that anchors each
+     editorial section. Carries the chapter number. */
+  .ps-eyebrow{
+    display:flex;align-items:center;gap:10px;
+    font-size:11.5px;font-weight:800;letter-spacing:.16em;
+    color:var(--amber-deep);text-transform:uppercase;
+    margin:0 0 14px;
   }
-  .print-chip{
-    background:linear-gradient(180deg,#fffbeb,#ffffff);
-    border:1px solid var(--print-border);border-radius:14px;
-    padding:16px 18px;display:flex;flex-direction:column;gap:8px;
+  .ps-eyebrow .num{
+    font-size:13px;font-weight:900;letter-spacing:0;color:var(--ink-1);
+    font-variant-numeric:tabular-nums;
+  }
+  .ps-eyebrow .rule{
+    flex:1;height:1px;background:var(--hair-1);
+  }
+
+  /* ── Hero block — chapter opener feel. No shadow, no gradient.
+     Title is set big and confident. ── */
+  .ps-hero{
+    background:linear-gradient(180deg,var(--amber-tint) 0%, var(--canvas) 80%);
+    border:1px solid var(--hair-1);border-radius:18px;
+    padding:34px 38px 30px;margin-bottom:28px;
+    position:relative;overflow:hidden;
+  }
+  .ps-hero::before{
+    /* Inset highlight along the top edge — replaces drop shadows.
+       Pure paper-feel depth. */
+    content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:var(--inset);
+  }
+  .ps-hero h1{
+    margin:0;font-size:34px;font-weight:900;letter-spacing:-.02em;
+    color:var(--ink-1);line-height:1.15;
+  }
+  .ps-hero .lede{
+    margin:10px 0 0;font-size:15px;line-height:1.7;color:var(--ink-2);
+    max-width:62ch;
+  }
+  .ps-hero-row{
+    display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;
+    margin-top:22px;
+  }
+  .ps-hero-cta{margin-inline-start:auto}
+
+  /* ── Editorial KPI strip — 3 numbers, no bordered cards.
+     Type does the hierarchy. ── */
+  .ps-stats{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:0;border-top:1px solid var(--hair-1);
+    margin-top:24px;padding-top:18px;
+  }
+  .ps-stat{
+    padding:0 18px;
+    border-inline-end:1px solid var(--hair-1);
+  }
+  .ps-stat:last-child{border-inline-end:0}
+  .ps-stat:first-child{padding-inline-start:0}
+  .ps-stat:last-child{padding-inline-end:0}
+  .ps-stat .lbl{
+    font-size:11px;font-weight:700;letter-spacing:.12em;
+    color:var(--ink-3);text-transform:uppercase;
+  }
+  .ps-stat .val{
+    font-size:30px;font-weight:900;letter-spacing:-.02em;
+    color:var(--ink-1);line-height:1;margin-top:6px;
+    font-variant-numeric:tabular-nums;
+  }
+  .ps-stat .sub{
+    font-size:12px;color:var(--ink-3);margin-top:4px;
+  }
+
+  /* ── Primary action — single quiet amber button. Used ONCE per
+     screen (max). ── */
+  .ps-cta{
+    background:var(--ink-1);color:#fff;border:0;
+    padding:12px 22px;border-radius:10px;
+    font-size:13.5px;font-weight:800;letter-spacing:.01em;
+    cursor:pointer;text-decoration:none;
+    display:inline-flex;align-items:center;gap:9px;
+    transition:transform .12s ease, background .15s ease;
+  }
+  .ps-cta:hover{background:#0d0c0a;color:#fff;transform:translateY(-1px)}
+  .ps-cta:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+  .ps-cta--amber{
+    background:var(--amber);
+  }
+  .ps-cta--amber:hover{background:var(--amber-deep)}
+
+  /* ── Toolbar / view-switcher — flat, hairline, with sliding pill. ── */
+  .ps-toolbar{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .ps-switch{
+    display:inline-flex;background:var(--paper);
+    border:1px solid var(--hair-1);border-radius:10px;
+    padding:3px;position:relative;
+  }
+  .ps-switch button{
+    background:transparent;border:0;padding:7px 14px;cursor:pointer;
+    font-size:12.5px;font-weight:700;color:var(--ink-3);
+    border-radius:7px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .18s ease;
+    position:relative;z-index:1;
+  }
+  .ps-switch button.is-active{color:var(--ink-1)}
+  .ps-switch button:hover:not(.is-active){color:var(--ink-2)}
+  .ps-switch .pill{
+    position:absolute;top:3px;bottom:3px;
+    background:var(--amber-tint);border-radius:7px;
+    transition:inset-inline-start .22s cubic-bezier(.4,.0,.2,1),
+               width .22s cubic-bezier(.4,.0,.2,1);
+    z-index:0;
+  }
+  .ps-toolbar-meta{
+    margin-inline-start:auto;font-size:12.5px;color:var(--ink-3);
+    display:inline-flex;align-items:center;gap:8px;
+  }
+
+  /* ── Chip grid — paper-cards on canvas. Inset highlight on top
+     edge. Hairline border. No shadow. ── */
+  .ps-chips{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+    gap:16px;
+  }
+  .ps-chip{
+    background:var(--paper);
+    border:1px solid var(--hair-1);
+    border-radius:14px;padding:20px 22px 18px;
+    display:flex;flex-direction:column;gap:14px;
     text-decoration:none;color:inherit;
-    transition:border-color .15s, transform .15s, box-shadow .2s;
+    position:relative;
+    transition:border-color .18s ease, transform .18s ease;
   }
-  .print-chip:hover{
-    border-color:var(--print-primary);transform:translateY(-2px);
-    box-shadow:0 12px 28px rgba(245,158,11,.18);
+  .ps-chip::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:var(--inset);border-radius:14px 14px 0 0;
   }
-  .print-chip-head{display:flex;align-items:center;gap:10px}
-  .print-chip-head .chip-icon{
-    width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
-    background:#fef3c7;color:var(--print-primary-dark);font-size:14px;
+  .ps-chip:hover{
+    border-color:var(--hair-2);transform:translateY(-1px);
   }
-  .print-chip-head h4{
-    margin:0;font-size:14px;font-weight:800;color:#1e293b;
-    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .print-chip-body{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11.5px;color:#64748b;font-weight:700}
-  .print-chip-body .stat{display:flex;flex-direction:column;gap:2px}
-  .print-chip-body .stat .v{color:#0f172a;font-size:13px;font-weight:800}
-  .print-chip-body .stat .k{font-size:10px;color:#92400e;text-transform:uppercase;letter-spacing:.4px}
-  .print-chip-foot{
-    display:flex;align-items:center;gap:8px;
-    border-top:1px dashed #fde68a;padding-top:8px;margin-top:4px;
-    font-size:11px;color:#92400e;
-  }
+  .ps-chip:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
 
-  /* ── Table view (mirrors regular cards_batches table) ── */
-  .print-table{
-    width:100%;background:#fff;border:1px solid var(--print-border);
-    border-radius:14px;overflow:hidden;border-collapse:collapse;margin-top:8px;
+  .ps-chip-head{display:flex;align-items:flex-start;gap:12px}
+  .ps-chip-num{
+    font-size:11px;font-weight:800;letter-spacing:.12em;
+    color:var(--ink-3);text-transform:uppercase;
+    font-variant-numeric:tabular-nums;
   }
-  .print-table thead{background:linear-gradient(180deg,#fef3c7,#fffbeb)}
-  .print-table th{
-    padding:11px 14px;font-size:11.5px;font-weight:800;color:var(--print-text);
-    text-align:start;letter-spacing:.3px;text-transform:uppercase;
-    border-bottom:1px solid var(--print-border);
+  .ps-chip-title{
+    margin:2px 0 0;font-size:16px;font-weight:800;color:var(--ink-1);
+    line-height:1.35;letter-spacing:-.005em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .print-table td{
-    padding:12px 14px;font-size:13px;color:#1e293b;
-    border-bottom:1px solid #fef3c7;
-  }
-  .print-table tbody tr:hover{background:#fffbeb}
-  .print-table tbody tr:last-child td{border-bottom:0}
-  .print-table .row-actions{display:flex;gap:6px}
-  .print-row-btn{
-    background:#fff;border:1px solid var(--print-border);
-    color:var(--print-primary-dark);font-weight:800;font-size:11.5px;
-    padding:5px 10px;border-radius:8px;cursor:pointer;text-decoration:none;
+  .ps-chip-tag{
     display:inline-flex;align-items:center;gap:5px;
+    font-size:10.5px;font-weight:700;letter-spacing:.05em;
+    color:var(--amber-on-tint);background:var(--amber-tint);
+    padding:3px 9px;border-radius:999px;
+    margin-inline-start:auto;flex-shrink:0;
   }
-  .print-row-btn:hover{background:var(--print-soft);color:var(--print-primary-dark)}
-  .print-row-btn--primary{
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border-color:transparent;
-  }
-  .print-row-btn--primary:hover{filter:brightness(1.05);color:#fff}
 
-  /* ── Empty state ── */
-  .print-empty{
-    text-align:center;padding:60px 20px;background:#fff;
-    border:1px dashed var(--print-border);border-radius:14px;color:#92400e;
+  .ps-chip-stats{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:0;border-top:1px solid var(--hair-1);padding-top:12px;
   }
-  .print-empty i{font-size:42px;color:#fcd34d;margin-bottom:12px}
+  .ps-chip-stat{padding:0 8px;border-inline-end:1px solid var(--hair-1)}
+  .ps-chip-stat:last-child{border-inline-end:0}
+  .ps-chip-stat:first-child{padding-inline-start:0}
+  .ps-chip-stat:last-child{padding-inline-end:0}
+  .ps-chip-stat .lbl{
+    font-size:10px;font-weight:700;letter-spacing:.1em;
+    color:var(--ink-3);text-transform:uppercase;
+  }
+  .ps-chip-stat .val{
+    font-size:18px;font-weight:900;letter-spacing:-.01em;
+    color:var(--ink-1);font-variant-numeric:tabular-nums;
+    margin-top:3px;
+  }
 
-  /* ── View switcher ── */
-  .view-switcher{
-    display:inline-flex;background:#fff;border:1px solid var(--print-border);
-    border-radius:10px;padding:3px;margin-bottom:14px;
+  .ps-chip-foot{
+    display:flex;align-items:center;gap:8px;
+    border-top:1px solid var(--hair-1);padding-top:10px;
+    font-size:11.5px;color:var(--ink-3);
+    font-variant-numeric:tabular-nums;
   }
-  .view-switcher button{
-    background:transparent;border:0;padding:6px 14px;
-    font-weight:800;font-size:12px;color:#92400e;cursor:pointer;border-radius:7px;
-    display:inline-flex;align-items:center;gap:6px;
+  .ps-chip-foot .dot{
+    width:5px;height:5px;border-radius:50%;background:var(--amber);
+    flex-shrink:0;
   }
-  .view-switcher button.is-active{
-    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
+  .ps-chip-foot .arrow{margin-inline-start:auto;color:var(--ink-3);font-size:11px}
+
+  /* ── Table — hairline grid, tabular numerics, generous padding. ── */
+  .ps-table-wrap{
+    background:var(--paper);
+    border:1px solid var(--hair-1);border-radius:14px;
+    overflow:hidden;
+  }
+  .ps-table{width:100%;border-collapse:collapse}
+  .ps-table thead th{
+    background:transparent;
+    padding:14px 18px;text-align:start;
+    font-size:11px;font-weight:800;color:var(--ink-3);
+    letter-spacing:.12em;text-transform:uppercase;
+    border-bottom:1px solid var(--hair-1);
+  }
+  .ps-table tbody td{
+    padding:14px 18px;font-size:13.5px;color:var(--ink-2);
+    border-bottom:1px solid var(--hair-1);
+    font-variant-numeric:tabular-nums;
+  }
+  .ps-table tbody tr:last-child td{border-bottom:0}
+  .ps-table tbody tr:hover{background:var(--amber-tint)}
+  .ps-table .ps-row-title{
+    font-size:14px;font-weight:800;color:var(--ink-1);
+    letter-spacing:-.005em;
+  }
+  .ps-table .ps-row-sub{
+    font-size:11.5px;color:var(--ink-3);margin-top:2px;
+  }
+  .ps-row-actions{display:flex;gap:6px;justify-content:flex-end}
+  .ps-row-btn{
+    background:transparent;color:var(--ink-2);text-decoration:none;
+    font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;
+    border:1px solid var(--hair-1);
+    display:inline-flex;align-items:center;gap:5px;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .ps-row-btn:hover{background:var(--amber-tint);border-color:var(--amber);color:var(--ink-1)}
+  .ps-row-btn--primary{
+    background:var(--ink-1);color:#fff;border-color:var(--ink-1);
+  }
+  .ps-row-btn--primary:hover{background:var(--amber-deep);border-color:var(--amber-deep);color:#fff}
+
+  /* ── Empty state — editorial chapter opener. ── */
+  .ps-empty{
+    background:var(--paper);border:1px solid var(--hair-1);
+    border-radius:14px;padding:60px 32px;text-align:center;
+  }
+  .ps-empty .marker{
+    font-size:11px;font-weight:800;letter-spacing:.16em;
+    color:var(--amber-deep);text-transform:uppercase;margin-bottom:14px;
+  }
+  .ps-empty h2{
+    margin:0 0 10px;font-size:24px;font-weight:900;color:var(--ink-1);
+    letter-spacing:-.015em;
+  }
+  .ps-empty .lede{
+    margin:0 auto 26px;font-size:14.5px;line-height:1.7;
+    color:var(--ink-2);max-width:46ch;
+  }
+  .ps-empty-steps{
+    display:flex;justify-content:center;gap:18px;flex-wrap:wrap;
+    margin-bottom:26px;font-size:12.5px;color:var(--ink-3);
+  }
+  .ps-empty-step{display:inline-flex;align-items:center;gap:6px}
+  .ps-empty-step .n{
+    width:20px;height:20px;border-radius:50%;background:var(--ink-1);
+    color:#fff;font-size:10.5px;font-weight:900;
+    display:grid;place-items:center;font-variant-numeric:tabular-nums;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width:760px){
+    .ps-root{padding:6px 0 36px}
+    .ps-hero{padding:24px 20px}
+    .ps-hero h1{font-size:26px}
+    .ps-stats{grid-template-columns:1fr;gap:14px;padding-top:14px}
+    .ps-stat{border-inline-end:0;padding:0}
+    .ps-chip-stats{gap:8px}
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="print-shell">
+<div class="ps-root">
 
-  {# ── Service marker — distinct visual frame ── #}
-  <div class="print-marker">
-    <span class="marker-icon"><i class="fa-solid fa-print"></i></span>
-    <div>
-      <h2>قسم بطاقات الطباعة</h2>
-      <p>
-        البطاقات هنا تُستورَد لغرض الطباعة فقط — لا تُرحَّل إلى FreeRADIUS ولا تسمح
-        بتسجيل الدخول. مناسبة كخدمة مستقلّة لمن يريد فقط تجهيز كروت قابلة للطباعة.
-      </p>
+  {# ────────── 01 — Hero / chapter opener ────────── #}
+  <p class="ps-eyebrow">
+    <span class="num">01</span>
+    <span>استوديو الطباعة</span>
+    <span class="rule"></span>
+  </p>
+
+  <section class="ps-hero">
+    <div class="ps-hero-row">
+      <div style="flex:1;min-width:260px">
+        <h1>بطاقات للطباعة فقط</h1>
+        <p class="lede">
+          استورد ملفات الكروت الجاهزة — Excel، CSV، أو PDF — وحوّلها إلى ملفات
+          طباعة احترافية بسرعة. هذه البطاقات لا تُرحَّل إلى FreeRADIUS ولا تسمح
+          بتسجيل الدخول، فهي آمنة بطبيعتها.
+        </p>
+      </div>
+      <div class="ps-hero-cta">
+        <a href="{{ url_for('radius.cards_print_new') }}" class="ps-cta ps-cta--amber">
+          <i class="fa-solid fa-file-import"></i>
+          استيراد دفعة جديدة
+        </a>
+      </div>
     </div>
-    <div class="marker-cta">
-      <a href="{{ url_for('radius.cards_print_new') }}" class="print-cta-btn">
-        <i class="fa-solid fa-file-import"></i> استيراد بطاقات للطباعة
-      </a>
+
+    <div class="ps-stats">
+      <div class="ps-stat">
+        <div class="lbl">إجمالي الحزم</div>
+        <div class="val">{{ total }}</div>
+        <div class="sub">حزمة طباعة محفوظة</div>
+      </div>
+      <div class="ps-stat">
+        <div class="lbl">جاهزة للطباعة</div>
+        <div class="val">{{ batches|length }}</div>
+        <div class="sub">معروضة في هذه الصفحة</div>
+      </div>
+      <div class="ps-stat">
+        <div class="lbl">حالة النظام</div>
+        <div class="val" style="font-size:14px;font-weight:700;color:var(--success-ink);letter-spacing:0">
+          <i class="fa-solid fa-circle-check"></i> متصل
+        </div>
+        <div class="sub">المحرّك الذكي وقوالب الطباعة جاهزة</div>
+      </div>
+    </div>
+  </section>
+
+  {% if batches %}
+  {# ────────── 02 — Toolbar ────────── #}
+  <p class="ps-eyebrow">
+    <span class="num">02</span>
+    <span>الحزم المحفوظة</span>
+    <span class="rule"></span>
+  </p>
+
+  <div class="ps-toolbar">
+    <div class="ps-switch" id="ci-view-switcher" role="tablist" aria-label="عرض الحزم">
+      <span class="pill" aria-hidden="true"></span>
+      <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
+        <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
+      </button>
+      <button type="button" data-view="table" role="tab" aria-selected="false">
+        <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
+      </button>
+    </div>
+    <div class="ps-toolbar-meta">
+      <i class="fa-solid fa-circle-info" style="opacity:.6" aria-hidden="true"></i>
+      اضغط أي حزمة لفتح بطاقاتها وتجهيز ملف الطباعة
     </div>
   </div>
 
-  {# ── View switcher ── #}
-  <div class="view-switcher" id="ci-view-switcher">
-    <button type="button" data-view="chips" class="is-active">
-      <i class="fa-solid fa-th-large"></i> بطاقات
-    </button>
-    <button type="button" data-view="table">
-      <i class="fa-solid fa-table"></i> جدول
-    </button>
-  </div>
-
-  {% if not batches %}
-  <div class="print-empty">
-    <i class="fa-solid fa-print"></i>
-    <h3 style="margin:8px 0;color:#78350f">لا توجد حزم طباعة بعد</h3>
-    <p style="margin:4px 0 12px;font-size:13px">
-      ابدأ باستيراد ملفك الأول — Excel أو PDF أو CSV — والمحرّك يستخرج الكروت تلقائياً.
-    </p>
-    <a href="{{ url_for('radius.cards_print_new') }}" class="print-cta-btn">
-      <i class="fa-solid fa-bolt"></i> أنشئ أوّل حزمة
-    </a>
-  </div>
-
-  {% else %}
-
-  {# ── Chip view ── #}
-  <div class="print-chips" data-view-panel="chips">
+  {# Chip view — paper cards #}
+  <div class="ps-chips" data-view-panel="chips">
     {% for b in batches %}
-    <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="print-chip">
-      <div class="print-chip-head">
-        <span class="chip-icon"><i class="fa-solid fa-layer-group"></i></span>
-        <h4>{{ b.package_name or b.batch_code or ('حزمة #' ~ b.id) }}</h4>
+    <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="ps-chip">
+      <div class="ps-chip-head">
+        <div>
+          <div class="ps-chip-num">حزمة #{{ b.id }}</div>
+          <h3 class="ps-chip-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</h3>
+        </div>
+        <span class="ps-chip-tag">
+          <i class="fa-solid fa-print" aria-hidden="true"></i> طباعة
+        </span>
       </div>
-      <div class="print-chip-body">
-        <div class="stat"><span class="k">عدد</span><span class="v">{{ b.card_count or 0 }}</span></div>
-        <div class="stat"><span class="k">بيع</span><span class="v">{{ "%.2f"|format(b.price_per_card or 0) }}</span></div>
-        <div class="stat"><span class="k">جملة</span><span class="v">{{ "%.2f"|format(b.price_bulk or 0) }}</span></div>
+
+      <div class="ps-chip-stats">
+        <div class="ps-chip-stat">
+          <div class="lbl">عدد</div>
+          <div class="val">{{ b.card_count or 0 }}</div>
+        </div>
+        <div class="ps-chip-stat">
+          <div class="lbl">بيع</div>
+          <div class="val">{{ "%.2f"|format(b.price_per_card or 0) }}</div>
+        </div>
+        <div class="ps-chip-stat">
+          <div class="lbl">جملة</div>
+          <div class="val">{{ "%.2f"|format(b.price_bulk or 0) }}</div>
+        </div>
       </div>
-      <div class="print-chip-foot">
-        <i class="fa-solid fa-print"></i>
-        <span>{{ (b.created_at or '')[:10] }} • للطباعة فقط</span>
+
+      <div class="ps-chip-foot">
+        <span class="dot" aria-hidden="true"></span>
+        <span>{{ (b.created_at or '')[:10] }}</span>
+        <span class="arrow"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></span>
       </div>
     </a>
     {% endfor %}
   </div>
 
-  {# ── Table view ── #}
-  <table class="print-table" data-view-panel="table" hidden>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>اسم الحزمة</th>
-        <th>عدد البطاقات</th>
-        <th>سعر البيع</th>
-        <th>سعر الجملة</th>
-        <th>التاريخ</th>
-        <th style="width:160px">الإجراءات</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for b in batches %}
-      <tr>
-        <td><strong>#{{ b.id }}</strong></td>
-        <td>
-          <strong style="color:#78350f">{{ b.package_name or b.batch_code or '—' }}</strong>
-          {% if b.notes %}<br><small style="color:#92400e">{{ b.notes[:60] }}</small>{% endif %}
-        </td>
-        <td><strong>{{ b.card_count or 0 }}</strong> بطاقة</td>
-        <td><code dir="ltr">{{ "%.2f"|format(b.price_per_card or 0) }}</code></td>
-        <td><code dir="ltr">{{ "%.2f"|format(b.price_bulk or 0) }}</code></td>
-        <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">
-          {{ (b.created_at or '')[:19] }}
-        </td>
-        <td>
-          <div class="row-actions">
-            <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="print-row-btn">
-              <i class="fa-solid fa-eye"></i> فتح
-            </a>
-            <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}#print"
-               class="print-row-btn print-row-btn--primary">
-              <i class="fa-solid fa-print"></i> طباعة
-            </a>
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {# Table view — hairline grid #}
+  <div class="ps-table-wrap" data-view-panel="table" hidden>
+    <table class="ps-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>اسم الحزمة</th>
+          <th style="width:120px">العدد</th>
+          <th style="width:120px">سعر البيع</th>
+          <th style="width:120px">سعر الجملة</th>
+          <th style="width:160px">التاريخ</th>
+          <th style="width:170px;text-align:end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td><strong style="color:var(--ink-1)">#{{ b.id }}</strong></td>
+          <td>
+            <div class="ps-row-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
+            {% if b.notes %}<div class="ps-row-sub">{{ b.notes[:60] }}</div>{% endif %}
+          </td>
+          <td><strong style="color:var(--ink-1)">{{ b.card_count or 0 }}</strong></td>
+          <td>{{ "%.2f"|format(b.price_per_card or 0) }}</td>
+          <td>{{ "%.2f"|format(b.price_bulk or 0) }}</td>
+          <td style="font-size:12px;color:var(--ink-3);direction:ltr;text-align:start">
+            {{ (b.created_at or '')[:19] }}
+          </td>
+          <td>
+            <div class="ps-row-actions">
+              <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="ps-row-btn">
+                <i class="fa-solid fa-eye" aria-hidden="true"></i> فتح
+              </a>
+              <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}#print"
+                 class="ps-row-btn ps-row-btn--primary">
+                <i class="fa-solid fa-print" aria-hidden="true"></i> طباعة
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
+  {% else %}
+  {# ────────── Empty state — editorial chapter opener ────────── #}
+  <div class="ps-empty">
+    <div class="marker">ابدأ هنا</div>
+    <h2>لا توجد حزم طباعة بعد</h2>
+    <p class="lede">
+      ارفع ملفك الأول وسيستخرج المحرّك الذكي البطاقات تلقائياً.
+      ثم اختر قالباً للطباعة وحمّل ملف PDF جاهز للتوزيع.
+    </p>
+    <div class="ps-empty-steps">
+      <span class="ps-empty-step"><span class="n">1</span> ارفع الملف</span>
+      <span class="ps-empty-step"><span class="n">2</span> راجع البطاقات</span>
+      <span class="ps-empty-step"><span class="n">3</span> اطبع</span>
+    </div>
+    <a href="{{ url_for('radius.cards_print_new') }}" class="ps-cta ps-cta--amber">
+      <i class="fa-solid fa-bolt"></i> أنشئ أوّل حزمة
+    </a>
+  </div>
   {% endif %}
 </div>
 
@@ -260,14 +499,59 @@
 (function(){
   const sw = document.getElementById('ci-view-switcher');
   if (!sw) return;
+  const pill = sw.querySelector('.pill');
+  const buttons = sw.querySelectorAll('button[data-view]');
+
+  function positionPill(activeBtn) {
+    if (!pill || !activeBtn) return;
+    const swRect = sw.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    pill.style.insetInlineStart = (btnRect.left - swRect.left - 3 +
+                                   (document.documentElement.dir === 'rtl' ?
+                                    (swRect.right - btnRect.right - 3) - (btnRect.left - swRect.left - 3) : 0)) + 'px';
+    pill.style.width = btnRect.width + 'px';
+  }
+  // Use a simpler approach — measure from the actual button.
+  function setPill(activeBtn) {
+    if (!pill || !activeBtn) return;
+    const swRect = sw.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    pill.style.width = btnRect.width + 'px';
+    // For RTL, position via right; for LTR, via left. Using inline-start.
+    const startOffset = (document.dir === 'rtl' || getComputedStyle(document.documentElement).direction === 'rtl')
+      ? (swRect.right - btnRect.right)
+      : (btnRect.left - swRect.left);
+    pill.style.insetInlineStart = (startOffset) + 'px';
+  }
+
   sw.addEventListener('click', e => {
     const btn = e.target.closest('button[data-view]');
     if (!btn) return;
     const view = btn.dataset.view;
-    sw.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+    buttons.forEach(b => {
+      const active = b === btn;
+      b.classList.toggle('is-active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
     document.querySelectorAll('[data-view-panel]').forEach(p => {
       p.hidden = (p.dataset.viewPanel !== view);
     });
+    setPill(btn);
+    try { localStorage.setItem('ps:view', view); } catch(_) {}
+  });
+
+  // Restore preference + initialise pill.
+  let saved = null;
+  try { saved = localStorage.getItem('ps:view'); } catch(_) {}
+  if (saved) {
+    const target = sw.querySelector(`button[data-view="${saved}"]`);
+    if (target) target.click();
+  } else {
+    // Position on the default active button.
+    requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
+  }
+  window.addEventListener('resize', () => {
+    setPill(sw.querySelector('button.is-active'));
   });
 })();
 </script>
