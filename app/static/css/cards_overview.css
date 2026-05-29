@@ -1,0 +1,156 @@
+/* ============================================================================
+   cards_overview.css — visual recolor/redesign layer for
+   /admin/radius/cards/overview
+
+   Loaded ONCE on this page only, via a <link> placed AFTER the page's inline
+   <style> block in head_extra. Because it loads later and every selector is
+   prefixed with the page wrapper `.cards-overview` (specificity 0,2,0+), it
+   reliably overrides the inline single-class rules WITHOUT !important — and it
+   affects no other page.
+
+   Scope of change: APPEARANCE ONLY. Every element, number, link, macro call,
+   the sales date-picker JS, the modals, the tables, and all Jinja bindings are
+   left exactly as the template defines them. This file only re-skins the page
+   onto the site's own color identity (indigo / teal / cyan / slate), softens
+   shadows, unifies borders & radius, and keeps the meaningful status colors.
+
+   Identity tokens (mirrors hub_v2 / admin_layout):
+     indigo brand  #6B5AED   (brand-ink #2E1F8C, brand-deep #4A36C9)
+     teal          #0D9488   (printed channel — already on the site palette)
+     cyan          #2BAACC   (admin shell accent)
+     slate border  #E7E9F2 · line #EEF0F6 · ink #1F2A37 · mute #94A0AE
+   RTL-safe (logical properties). No glow, no noisy gradients.
+   ============================================================================ */
+
+.cards-overview{
+  --co-indigo:   #6B5AED;
+  --co-indigo-d: #4A36C9;
+  --co-indigo-ink:#2E1F8C;
+  --co-teal:     #0D9488;
+  --co-cyan:     #2BAACC;
+  --co-amber:    #B45309;   /* electronic / revenue channel (kept, on-site) */
+  --co-surface:  #ffffff;
+  --co-soft:     #f6f7fb;
+  --co-border:   #e7e9f2;
+  --co-line:     #eef0f6;
+  --co-ink:      #1f2a37;
+  --co-mute:     #7c879b;
+  --co-shadow:   0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(28,43,76,.06);
+  --co-radius:   14px;
+}
+
+/* ── Short alert chips: calmer borders, keep semantic level colors ───────── */
+.cards-overview .co-alert{
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* ── Stock tables ────────────────────────────────────────────────────────── */
+.cards-overview .co-stock-table-card{
+  border: 1px solid var(--co-border);
+  border-radius: var(--co-radius);
+  box-shadow: var(--co-shadow);
+}
+.cards-overview .co-stock-table-head{
+  border-block-end: 1px solid var(--co-line);
+  background: var(--co-soft);
+}
+.cards-overview .co-stock-table-title i{          /* printed channel → teal */
+  background: color-mix(in srgb, var(--co-teal) 13%, #fff);
+  color: var(--co-teal);
+}
+.cards-overview .co-stock-table-card--electronic .co-stock-table-title i{
+  background: color-mix(in srgb, var(--co-cyan) 16%, #fff);
+  color: #0F627A;                                  /* electronic channel → cyan */
+}
+
+/* ── Sales board ─────────────────────────────────────────────────────────── */
+.cards-overview .co-sales-board{
+  border: 1px solid var(--co-border);
+  border-radius: var(--co-radius);
+  /* drop the heavy 34px shadow + grid-line background for a clean surface */
+  background: linear-gradient(180deg, #ffffff, #fbfcfe);
+  box-shadow: var(--co-shadow);
+}
+.cards-overview .co-sales-board-head,
+.cards-overview .co-sales-summary,
+.cards-overview .co-sales-summary-item{
+  border-color: var(--co-line);
+}
+.cards-overview .co-sales-kicker i,
+.cards-overview .co-sales-title{ color: var(--co-ink); }
+.cards-overview .co-sales-kicker i{ color: var(--co-indigo); }
+
+/* summary metric icons → site palette (generic blue → indigo) */
+.cards-overview .co-sales-summary-icon{
+  background: color-mix(in srgb, var(--co-indigo) 12%, #fff);
+  color: var(--co-indigo);
+}
+.cards-overview .co-sales-summary-item--print .co-sales-summary-icon{
+  background: color-mix(in srgb, var(--co-teal) 13%, #fff);
+  color: var(--co-teal);
+}
+.cards-overview .co-sales-summary-item--wallet .co-sales-summary-icon,
+.cards-overview .co-sales-summary-item--money .co-sales-summary-icon{
+  background: color-mix(in srgb, var(--co-amber) 14%, #fff);
+  color: var(--co-amber);
+}
+
+/* performance header: off-palette navy → on-brand indigo-ink */
+.cards-overview .co-sales-performance-head{
+  background: linear-gradient(135deg, var(--co-indigo-ink), var(--co-indigo-d));
+}
+.cards-overview .co-sales-performance-head i{ color: #dbeafe; }
+
+/* period lanes: accent rail teal→amber becomes indigo→teal; calmer dividers */
+.cards-overview .co-sales-lane{ border-inline-start-color: var(--co-line); }
+.cards-overview .co-sales-lane::before{
+  background: linear-gradient(180deg, var(--co-indigo), var(--co-teal));
+}
+.cards-overview .co-sales-picker{
+  background: color-mix(in srgb, var(--co-teal) 12%, #fff);
+  color: var(--co-teal);
+}
+.cards-overview .co-sales-picker:hover{
+  background: color-mix(in srgb, var(--co-teal) 20%, #fff);
+  color: #0b6e5b;
+}
+.cards-overview .co-sales-picker.is-open{ background: var(--co-teal); color: #fff; }
+
+/* split track keeps print=teal / electronic=amber, just aligned to tokens */
+.cards-overview .co-sales-split-print{ background: var(--co-teal); }
+.cards-overview .co-sales-split-electronic{ background: #f59e0b; }
+.cards-overview .co-sales-meta i.fa-print{ color: var(--co-teal); }
+.cards-overview .co-sales-meta i.fa-wallet{ color: var(--co-amber); }
+.cards-overview .co-sales-link:hover{ border-color: var(--co-indigo); color: var(--co-indigo); }
+
+/* date-picker popover: align selected/hover accents to teal identity */
+.cards-overview .co-sales-agenda-day.is-selected,
+.cards-overview .co-sales-agenda-choice.is-selected{
+  background: var(--co-teal);
+  border-color: var(--co-teal);
+}
+.cards-overview .co-sales-agenda-nav button:hover,
+.cards-overview .co-sales-agenda-action:hover{
+  border-color: var(--co-teal);
+  color: var(--co-teal);
+}
+
+/* ── Type pills inside the period detail modals ──────────────────────────── */
+.cards-overview .co-type-pill--printed{
+  background: color-mix(in srgb, var(--co-cyan) 14%, #fff);
+  color: #155e75;
+  border-color: color-mix(in srgb, var(--co-cyan) 34%, #fff);
+}
+.cards-overview .co-type-pill--electronic{          /* purple → indigo */
+  background: color-mix(in srgb, var(--co-indigo) 12%, #fff);
+  color: var(--co-indigo-ink);
+  border-color: color-mix(in srgb, var(--co-indigo) 26%, #fff);
+}
+
+/* ── Reduced motion safety for the page's picker hover transitions ────────── */
+@media (prefers-reduced-motion: reduce){
+  .cards-overview .co-sales-picker,
+  .cards-overview .co-sales-agenda-day,
+  .cards-overview .co-sales-agenda-choice{ transition: none; }
+}
