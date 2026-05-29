@@ -20,6 +20,19 @@
 {% block head_extra %}
 {{ super() }}
 <style>
+  /* ── Form row — 3 fields side-by-side on desktop ── */
+  .pc-row{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:14px;
+  }
+  @media (max-width:900px){
+    .pc-row{ grid-template-columns:repeat(2, 1fr) }
+  }
+  @media (max-width:600px){
+    .pc-row{ grid-template-columns:1fr }
+  }
+
   /* ── Smart-import drop-zone (print-specific) ── */
   [hidden]{ display:none !important }
 
@@ -249,7 +262,7 @@
   {# ── 1. Package metadata ── #}
   {% call hub.section("بيانات الحزمة", icon="box-archive") %}
     {% call hub.fieldset("التعريف والتسعير", icon="tag") %}
-      <div class="hub-grid hub-grid--3">
+      <div class="pc-row">
         {{ hub.field("اسم الحزمة", "package_name",
                      value=form.get('package_name') or '',
                      required=True,
