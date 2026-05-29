@@ -278,7 +278,7 @@
   </a>
   <div class="nav-user">
     <i class="fa-regular fa-circle-user" style="font-size:18px;color:var(--ink-3)"></i>
-    <span>{{ dashboard.user.display_name or 'مستخدم' }}</span>
+    <span>{{ dashboard.card_user.display_name or 'مستخدم' }}</span>
   </div>
   <a href="{{ url_for('radius.portal_card_logout') }}" class="nav-logout">
     <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
@@ -303,19 +303,25 @@
     {% endif %}
   {% endwith %}
 
+  {# Compute the live values once at the top — the service returns
+     wallet balances in minor units (1/100), and purchases the same. #}
+  {% set wallet_balance = (dashboard.wallet.balance_minor or 0) / 100 %}
+  {% set wallet_currency = dashboard.wallet.currency or 'ILS' %}
+  {% set user_name = dashboard.card_user.display_name or 'مستخدم' %}
+
   {# ── Balance hero ───────────────────────────────── #}
   <section class="balance-card" aria-label="رصيد المحفظة">
     <div class="label">رصيد المحفظة</div>
     <div class="amount">
-      <span class="currency">{{ dashboard.wallet.currency or 'ILS' }}</span>
-      <span>{{ "%.2f"|format(dashboard.wallet.balance or 0) }}</span>
+      <span class="currency">{{ wallet_currency }}</span>
+      <span>{{ "%.2f"|format(wallet_balance) }}</span>
     </div>
     <div class="greeting">
-      مرحباً، <strong>{{ dashboard.user.display_name or 'بك' }}</strong> · حسابك جاهز للاستخدام
+      مرحباً، <strong>{{ user_name }}</strong> · حسابك جاهز للاستخدام
     </div>
     <div class="meta">
       <div class="item">
-        <span class="k">إجمالي الشحن</span>
+        <span class="k">بطاقاتي</span>
         <span class="v">{{ dashboard.cards|length if dashboard.cards else 0 }}</span>
       </div>
       <div class="item">
@@ -378,7 +384,7 @@
               <div class="title">{{ p.package_name or 'عملية شراء' }}</div>
               <div class="sub">{{ (p.created_at or '')[:19] }}</div>
             </div>
-            <div class="amount">−{{ "%.2f"|format(p.amount or 0) }}</div>
+            <div class="amount">−{{ "%.2f"|format((p.amount_minor or 0) / 100) }}</div>
           </div>
           {% endfor %}
         {% else %}
