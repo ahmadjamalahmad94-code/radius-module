@@ -1,0 +1,164 @@
+/* ============================================================================
+   admin_visual_polish.css — Phase 1 global visual-polish layer (visual only)
+
+   Loaded ONCE from app/templates/admin/_admin_layout.html, immediately AFTER
+   the base stylesheets (admin_layout / sidebar_v2 / hub_v2 / admin_design_system)
+   and BEFORE {% block head_extra %}. Two consequences, both deliberate:
+
+     • It loads AFTER the base component CSS, so it refines the shared
+       .hub-* / .hr-* components by load order — no !important needed.
+     • It loads BEFORE every page-specific sheet (which arrive via head_extra:
+       subscribers_polish.css, cards_checker_v2.css, the dashboard's inline
+       <style>, etc.). Those therefore win automatically on the pages they own,
+       so this global layer NEVER fights them. To keep that guarantee, every
+       selector here is kept at LOW specificity (single class where possible).
+
+   Scope notes:
+     • Selectors target shared classes only (.hub-*, .hr-data-table, .mt-iface-
+       table). No bare element selectors (a/button/input/table) — zero reset risk.
+     • The dashboard (/admin/radius/) is built from .ops-* classes, not .hub-*,
+       so it is untouched by this file.
+     • cards-checker / batches (.cc-*) use !important + later load order, so they
+       win regardless.
+     • login.html does not extend the admin layout, so it never loads this file.
+
+   Visual direction: calm Premium-SaaS — clean near-white surfaces, soft slate
+   borders, very subtle 2-layer shadows (no glow / no noisy gradient), breathing
+   room under KPI numbers, stat boxes recessed and distinct, readable tables,
+   consistent inputs/buttons, :focus-visible only. RTL-safe (logical properties).
+   ============================================================================ */
+
+:root{
+  --vp-surface:       #ffffff;   /* raised card surface */
+  --vp-surface-soft:  #fbfbfe;   /* recessed inner panel / stat box */
+  --vp-border:        #e8e9f1;   /* slate-tinted soft border for cards */
+  --vp-border-soft:   #eef0f6;   /* lighter border for inner boxes */
+  --vp-line:          #edeef4;   /* hairline row/header separators */
+  --vp-ink-soft:      #475569;   /* slate-600 — primary-ish labels */
+  --vp-ink-mute:      #7c879b;   /* slate-500 — secondary / helper text */
+  --vp-shadow:        0 1px 1px rgba(15,23,42,.03), 0 2px 6px rgba(15,23,42,.05);
+  --vp-shadow-sm:     0 1px 1px rgba(15,23,42,.03), 0 1px 3px rgba(15,23,42,.04);
+  --vp-shadow-hover:  0 1px 2px rgba(15,23,42,.04), 0 6px 16px rgba(15,23,42,.07);
+  --vp-focus:         0 0 0 3px rgba(99,102,180,.28);   /* calm neutral ring */
+}
+
+/* ── Cards / sections: clean surface, soft border, subtle 2-layer shadow ──── */
+.hub-section,
+.hub-card{
+  background: var(--vp-surface);
+  border: 1px solid var(--vp-border);
+  box-shadow: var(--vp-shadow);
+}
+.hr-section,
+.hr-panel,
+.hr-card,
+.hr-kpi-card{
+  border-color: var(--vp-border);
+  box-shadow: var(--vp-shadow);
+}
+.hub-section-body{ padding-block: 18px; }      /* gentle vertical rhythm */
+.hub-card-head{ border-block-end: 1px solid var(--vp-line); }
+
+/* ── KPI: the number is the hero, with breathing room below ──────────────── */
+.hub-kpi{
+  border: 1px solid var(--vp-border);
+  box-shadow: var(--vp-shadow-sm);
+  padding-block: 18px;
+}
+.hub-kpi:hover{ box-shadow: var(--vp-shadow-hover); }
+.hub-kpi-label{ color: var(--vp-ink-mute); margin-block-end: 6px; }
+.hub-kpi-value{ letter-spacing: -0.01em; margin-block-end: 4px; }
+.hub-kpi-sub{ margin-block-start: 4px; }
+
+/* ── Stat boxes / tiles: recessed, distinct from the parent card ─────────── */
+.hub-tile{
+  background: var(--vp-surface-soft);
+  border: 1px solid var(--vp-border-soft);
+  border-radius: 12px;
+  padding-block: 14px;
+}
+.hub-tile-value{ margin-block-start: 2px; letter-spacing: -0.01em; }
+.hub-stat-card{
+  background: var(--vp-surface-soft);
+  border: 1px solid var(--vp-border-soft);
+  box-shadow: var(--vp-shadow-sm);
+}
+
+/* ── Tables: readable rows, calm separators, header contrast, soft hover ─── */
+.hub-table-wrap{
+  border: 1px solid var(--vp-border);
+  border-radius: 12px;
+  box-shadow: var(--vp-shadow-sm);
+}
+.hub-table thead th{
+  background: var(--vp-surface-soft);
+  color: var(--vp-ink-soft);
+  border-block-end: 1px solid var(--vp-border);
+}
+.hub-table tbody td{
+  border-block-end: 1px solid var(--vp-line);
+  padding-block: 12px;
+}
+.hub-table tbody tr:hover{ background: var(--vp-surface-soft); }
+.hr-data-table tbody td,
+.mt-iface-table tbody td{ border-block-end: 1px solid var(--vp-line); }
+
+/* ── Forms / inputs: consistent radius, border, spacing, secondary helper ── */
+.hub-input,
+.hub-select,
+.hub-textarea{
+  border: 1px solid var(--vp-border);
+  border-radius: 9px;
+  padding-block: 10px;
+}
+.hub-field{ gap: 6px; }
+.hub-field-label{ color: var(--vp-ink-soft); }
+.hub-field-hint{ color: var(--vp-ink-mute); line-height: 1.7; }
+.hub-fieldset{ border: 1px solid var(--vp-border); }
+
+/* ── Buttons: keep brand intent; calm secondary + consistent radius/lift ─── */
+.hub-btn{ border-radius: 9px; }
+.hub-btn--secondary{
+  background: var(--vp-surface);
+  border-color: var(--vp-border);
+  color: var(--vp-ink-soft);
+}
+.hub-btn--secondary:hover:not(:disabled){
+  background: var(--vp-surface-soft);
+  border-color: var(--vp-border);
+}
+.hub-btn--primary:hover:not(:disabled){ box-shadow: var(--vp-shadow-sm); }
+
+/* ── Action cards: align relief with the rest ───────────────────────────── */
+.hub-action{ border: 1px solid var(--vp-border); box-shadow: var(--vp-shadow-sm); }
+.hub-action:hover:not(:disabled){ box-shadow: var(--vp-shadow-hover); }
+
+/* ── Flash / toast (closest floating surface): card-consistent ──────────── */
+.hub-flash{
+  border: 1px solid var(--vp-border);
+  border-radius: 12px;
+  box-shadow: var(--vp-shadow-hover);
+}
+
+/* ── Empty states: let them breathe ─────────────────────────────────────── */
+.hub-empty{ padding-block: 48px; border-color: var(--vp-border); }
+.hub-empty-sub{ margin-block-start: 6px; }
+
+/* ── Filter bar: calmer surface ─────────────────────────────────────────── */
+.hub-filterbar{ background: var(--vp-surface); border: 1px solid var(--vp-border); }
+
+/* ── Focus: keyboard-only ring; ADD a visible ring, never hide focus ─────── */
+.hub-btn:focus-visible,
+.hub-action:focus-visible,
+.hub-input:focus-visible,
+.hub-select:focus-visible,
+.hub-textarea:focus-visible{
+  outline: none;
+  box-shadow: var(--vp-focus);
+}
+
+/* ── Reduced motion: respect preference for any added transitions ────────── */
+@media (prefers-reduced-motion: reduce){
+  .hub-kpi,
+  .hub-action{ transition: none; }
+}
