@@ -40,6 +40,19 @@
   --vp-shadow-sm:     0 1px 1px rgba(15,23,42,.03), 0 1px 3px rgba(15,23,42,.04);
   --vp-shadow-hover:  0 1px 2px rgba(15,23,42,.04), 0 6px 16px rgba(15,23,42,.07);
   --vp-focus:         0 0 0 3px rgba(99,102,180,.28);   /* calm neutral ring */
+
+  /* ── Page canvas unifier (Phase 2c) ───────────────────────────────────────
+     Two page-bg systems existed: admin_layout.css --hr-bg #F4F1E8 (cream) and
+     hub --hb-bg-page #EFEDF5 (lavender). In practice sidebar_v2.css already
+     forces `html{ background: var(--hb-bg-page) !important }`, so the whole
+     admin shell renders lavender and the cream is dead. We unify by re-pointing
+     BOTH tokens here (this file loads after admin_layout.css and hub_tokens.css,
+     and the html rule reads the live --hb-bg-page value) to one calm cool
+     near-white. No html/body rule, no !important added — only token values
+     change, so the existing consumers pick it up. White cards keep clear
+     contrast above it. */
+  --hb-bg-page: #F5F6FA;
+  --hr-bg:      #F5F6FA;
 }
 
 /* ── Cards / sections: clean surface, soft border, subtle 2-layer shadow ──── */
