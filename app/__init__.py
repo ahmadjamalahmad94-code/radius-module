@@ -163,6 +163,7 @@ def _start_workers(app: Flask) -> None:
         app.logger.exception("webhook worker start failed")
     try:
         from app.workers import (start_accounting_puller,
+                                  start_admin_bridge_sync_worker,
                                   start_device_fingerprint_worker,
                                   start_lifecycle_worker,
                                   start_mt_reconciler,
@@ -173,6 +174,7 @@ def _start_workers(app: Flask) -> None:
         start_stale_session_reaper()
         start_device_fingerprint_worker()
         start_lifecycle_worker()
+        start_admin_bridge_sync_worker()
         start_mt_reconciler()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
@@ -411,6 +413,12 @@ def _install_stubs(app: Flask) -> None:
 def _register_radius(app: Flask) -> None:
     from app.radius.routes import get_radius_blueprint
     app.register_blueprint(get_radius_blueprint())
+    # Customer-facing portal at the URL root (no /admin/radius prefix).
+    # Reuses the same view functions so behaviour stays in sync; the
+    # admin-prefixed routes remain registered for backward-compat with
+    # any links / bookmarks already in the wild.
+    from app.radius.routes.customer_portals import build_customer_portal_root_blueprint
+    app.register_blueprint(build_customer_portal_root_blueprint())
 
 
 def _register_api(app: Flask) -> None:

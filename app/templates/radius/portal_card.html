@@ -485,7 +485,7 @@
     <i class="fa-regular fa-circle-user" style="font-size:18px;color:var(--ink-3)"></i>
     <span>{{ dashboard.card_user.display_name or 'مستخدم' }}</span>
   </div>
-  <a href="{{ url_for('radius.portal_card_logout') }}" class="nav-logout">
+  <a href="{{ url_for('portal.card_logout') }}" class="nav-logout">
     <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
     خروج
   </a>
@@ -548,7 +548,7 @@
     <section class="card">
       <h2><span class="icon"><i class="fa-solid fa-bolt"></i></span>شحن الرصيد</h2>
       <p class="sub">أدخل رقم البطاقة والرقم السري ليُضاف الرصيد لمحفظتك مباشرة.</p>
-      <form method="post" action="{{ url_for('radius.portal_card_redeem') }}" class="recharge-form">
+      <form method="post" action="{{ url_for('portal.card_redeem') }}" class="recharge-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="field">
           <label for="card_number">
@@ -745,7 +745,7 @@
         <p class="modal-msg" id="buy-msg">سيتم خصم القيمة من رصيد محفظتك.</p>
       </div>
     </div>
-    <form method="post" action="{{ url_for('radius.portal_card_purchase') }}" id="buy-form">
+    <form method="post" action="{{ url_for('portal.card_purchase') }}" id="buy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="package_id" id="buy-package-id" value="">
       <div class="modal-actions">
