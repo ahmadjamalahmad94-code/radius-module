@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0e7490">
+  <meta name="theme-color" content="#5b21b6">
   <title>محفظتي · HobeRadius</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,10 +23,10 @@
       --paper:#ffffff;
       --hair:#cbd5e1;
       --hair-soft:#e2e8f0;
-      --accent:#06b6d4;
-      --accent-2:#0e7490;
-      --accent-soft:#ecfeff;
-      --accent-ring:rgba(6,182,212,.32);
+      --accent:#7c3aed;
+      --accent-2:#5b21b6;
+      --accent-soft:#f5f3ff;
+      --accent-ring:rgba(124,58,237,.32);
       --success:#15803d;
       --success-soft:#dcfce7;
       --warn:#92400e;
@@ -39,7 +39,7 @@
     body{
       font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
       background:
-        radial-gradient(800px 600px at 90% -10%, rgba(6,182,212,.12) 0%, transparent 50%),
+        radial-gradient(800px 600px at 90% -10%, rgba(124,58,237,.12) 0%, transparent 50%),
         radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
         var(--canvas);
       color:var(--ink-1);
@@ -64,7 +64,7 @@
       width:36px;height:36px;border-radius:10px;
       background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
       color:#fff;display:grid;place-items:center;font-size:16px;
-      box-shadow:0 4px 12px rgba(6,182,212,.35);
+      box-shadow:0 4px 12px rgba(124,58,237,.35);
     }
     .nav-user{margin-inline-start:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
     .nav-logout{
@@ -89,7 +89,7 @@
     @keyframes slide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
     .flash.success{background:var(--success-soft);color:var(--success);border:1px solid #bbf7d0}
     .flash.error,.flash.danger{background:var(--err-soft);color:var(--err);border:1px solid #fecaca}
-    .flash.info{background:var(--accent-soft);color:var(--accent-2);border:1px solid #67e8f9}
+    .flash.info{background:var(--accent-soft);color:var(--accent-2);border:1px solid #c4b5fd}
 
     /* ── Hero balance card ──────────────────────────── */
     .balance-card{
@@ -101,8 +101,8 @@
       color:#fff;
       box-shadow:
         0 1px 0 rgba(255,255,255,.2) inset,
-        0 4px 12px rgba(14,116,144,.18),
-        0 24px 48px rgba(14,116,144,.18);
+        0 4px 12px rgba(91,33,182,.18),
+        0 24px 48px rgba(91,33,182,.18);
     }
     .balance-card::after{
       content:"";position:absolute;
@@ -188,13 +188,13 @@
       padding:14px 22px;font-size:15px;font-weight:900;
       cursor:pointer;
       display:inline-flex;align-items:center;justify-content:center;gap:10px;
-      box-shadow:0 6px 16px rgba(6,182,212,.32);
+      box-shadow:0 6px 16px rgba(124,58,237,.32);
       transition:transform .12s ease, box-shadow .18s ease;
       font-family:inherit;
     }
     .btn-primary:hover{
       transform:translateY(-1px);
-      box-shadow:0 10px 22px rgba(6,182,212,.42);
+      box-shadow:0 10px 22px rgba(124,58,237,.42);
     }
     .btn-primary:active{transform:translateY(0)}
     .btn-primary:focus-visible{
@@ -238,7 +238,7 @@
     }
     .card-chip{
       padding:14px;border-radius:11px;
-      background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
       color:#fff;position:relative;overflow:hidden;
     }
     .card-chip::before{

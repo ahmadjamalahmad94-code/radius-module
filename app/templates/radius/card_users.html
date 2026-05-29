@@ -23,12 +23,12 @@
     border-radius:14px;
   }
   .hub-section-head{
-    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
+    background:linear-gradient(180deg,#f5f3ff 0%,#f8fafc 100%);
     border-bottom:1px solid #cbd5e1;
   }
   .hub-section-head-title{color:#0f172a;font-weight:900}
   .hub-section-head-meta{color:#475569;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
-  .hub-section-head-icon{background:#cffafe;color:#0e7490}
+  .hub-section-head-icon{background:#ede9fe;color:#5b21b6}
   .hub-kpi{
     border:1px solid #cbd5e1;background:#fff;
     box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
@@ -70,8 +70,8 @@
     transition:border-color .15s ease, box-shadow .15s ease;
   }
   .cu-form input:focus{
-    outline:none;border-color:#06b6d4;
-    box-shadow:0 0 0 3px rgba(6,182,212,.18);
+    outline:none;border-color:#7c3aed;
+    box-shadow:0 0 0 3px rgba(124,58,237,.18);
   }
 
   /* ── User chip grid ───────────────────────────── */
@@ -95,19 +95,19 @@
   }
   .cu-card::before{
     content:"";position:absolute;inset:0 0 auto 0;height:3px;
-    background:linear-gradient(90deg,#06b6d4 0%,#0e7490 100%);
+    background:linear-gradient(90deg,#7c3aed 0%,#5b21b6 100%);
     border-radius:12px 12px 0 0;opacity:.9;
   }
   .cu-card:hover{
     border-color:#94a3b8;transform:translateY(-3px);
     box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 8px 18px rgba(6,182,212,.14),
+               0 8px 18px rgba(124,58,237,.14),
                0 20px 40px rgba(15,23,42,.12);
   }
   .cu-card-head{display:flex;align-items:center;gap:10px}
   .cu-avatar{
     width:42px;height:42px;border-radius:50%;
-    background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);color:#fff;
+    background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);color:#fff;
     display:grid;place-items:center;font-size:16px;font-weight:900;
     flex-shrink:0;text-transform:uppercase;
   }
@@ -121,12 +121,12 @@
   }
 
   .cu-balance{
-    background:#ecfeff;border:1px solid #67e8f9;border-radius:10px;
+    background:#f5f3ff;border:1px solid #c4b5fd;border-radius:10px;
     padding:10px 12px;display:flex;align-items:center;justify-content:space-between;
   }
-  .cu-balance .lbl{font-size:11px;font-weight:800;color:#0e7490;letter-spacing:.06em;text-transform:uppercase}
+  .cu-balance .lbl{font-size:11px;font-weight:800;color:#5b21b6;letter-spacing:.06em;text-transform:uppercase}
   .cu-balance .amt{
-    font-size:18px;font-weight:900;color:#0e7490;font-variant-numeric:tabular-nums;
+    font-size:18px;font-weight:900;color:#5b21b6;font-variant-numeric:tabular-nums;
   }
   .cu-balance .amt .ccy{font-size:12px;font-weight:700;opacity:.7;margin-inline-end:4px}
 
@@ -310,7 +310,7 @@
           <td><strong style="color:#0f172a">{{ u.display_name or '—' }}</strong></td>
           <td style="direction:ltr;text-align:start;font-size:12.5px;color:#475569">{{ u.mobile or '—' }}</td>
           <td style="font-variant-numeric:tabular-nums">
-            <strong style="color:#0e7490">{{ "%.2f"|format(u.balance or 0) }}</strong>
+            <strong style="color:#5b21b6">{{ "%.2f"|format(u.balance or 0) }}</strong>
             <small style="color:#94a3b8;margin-inline-start:4px">{{ u.wallet_currency or 'ILS' }}</small>
           </td>
           <td style="font-variant-numeric:tabular-nums">{{ u.purchase_count or 0 }}</td>
