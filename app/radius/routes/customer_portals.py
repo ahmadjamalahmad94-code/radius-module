@@ -120,7 +120,20 @@ def card_home():
     if not card_user_id:
         return redirect(url_for("radius.portal_card_login"))
     dashboard = _svc().card_user_dashboard(int(card_user_id))
-    return render_template("radius/portal_card.html", dashboard=dashboard)
+    # MikroTik captive portals expose /login on the gateway. Most
+    # default configurations DNS-rewrite "hotspot" to the gateway
+    # IP so http://hotspot/login Just Works while connected, and
+    # operators can override via env var when the IP differs.
+    import os
+    hotspot_login_url = (
+        os.environ.get("HOBERADIUS_HOTSPOT_LOGIN_URL")
+        or "http://hotspot/login"
+    )
+    return render_template(
+        "radius/portal_card.html",
+        dashboard=dashboard,
+        hotspot_login_url=hotspot_login_url,
+    )
 
 
 def card_purchase():
