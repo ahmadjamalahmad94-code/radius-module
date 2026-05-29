@@ -108,6 +108,7 @@ def _register_all(bp: Blueprint) -> None:
     from .users import register_users_routes
     from .subscriber_groups import register_subscriber_groups_routes
     from .cards import register_cards_routes
+    from .cards_print import register_cards_print_routes
     from .admins import register_admins_routes
     from .distributors import register_distributors_routes
     from .accounting import register_accounting_routes
@@ -143,6 +144,7 @@ def _register_all(bp: Blueprint) -> None:
     register_users_routes(bp)
     register_subscriber_groups_routes(bp)
     register_cards_routes(bp)
+    register_cards_print_routes(bp)
     register_admins_routes(bp)
     register_distributors_routes(bp)
     register_accounting_routes(bp)

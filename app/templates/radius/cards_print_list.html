@@ -1,0 +1,274 @@
+{# Print-Only Cards — batches list. Amber theme distinguishes it from
+   the regular cards section so the operator knows at a glance they're
+   in a different service area.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}بطاقات الطباعة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
+{% block page_title %}بطاقات الطباعة{% endblock %}
+{% block page_sub %}
+  <span class="sub">قسم مستقلّ — بطاقات للطباعة فقط، لا تسمح بتسجيل الدخول • {{ total }} حزمة</span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── Amber service theme ──
+     Distinct from purple (regular cards) and green (network ops) —
+     instantly tells the operator they're in the print-cards service.
+  */
+  :root{
+    --print-primary:#f59e0b;
+    --print-primary-dark:#b45309;
+    --print-soft:#fffbeb;
+    --print-soft-2:#fef3c7;
+    --print-border:#fcd34d;
+    --print-text:#78350f;
+  }
+  .print-shell{max-width:1200px;margin:0 auto}
+
+  /* Service-marker stripe at the page top — like the engine card
+     but at page scope, so "you are in a different section" is the
+     first visual signal. */
+  .print-marker{
+    background:linear-gradient(135deg,var(--print-soft),#fef3c7);
+    border:1px solid var(--print-border);
+    border-radius:14px;padding:14px 20px;margin-bottom:18px;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:0 1px 2px rgba(245,158,11,.05);
+  }
+  .print-marker .marker-icon{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:18px;
+    box-shadow:0 6px 14px rgba(245,158,11,.32);flex-shrink:0;
+  }
+  .print-marker h2{margin:0;font-size:15.5px;font-weight:800;color:var(--print-text)}
+  .print-marker p{margin:3px 0 0;font-size:12.5px;color:#92400e;line-height:1.7}
+  .print-marker .marker-cta{margin-inline-start:auto}
+  .print-cta-btn{
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
+    border:0;border-radius:10px;padding:10px 18px;
+    font-weight:800;font-size:13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+    box-shadow:0 6px 14px rgba(245,158,11,.4);
+    transition:transform .15s, box-shadow .2s;
+  }
+  .print-cta-btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(245,158,11,.5);color:#fff}
+
+  /* ── Chip grid (mirrors cards_batches.html "cards" view) ── */
+  .print-chips{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:14px;margin:18px 0;
+  }
+  .print-chip{
+    background:linear-gradient(180deg,#fffbeb,#ffffff);
+    border:1px solid var(--print-border);border-radius:14px;
+    padding:16px 18px;display:flex;flex-direction:column;gap:8px;
+    text-decoration:none;color:inherit;
+    transition:border-color .15s, transform .15s, box-shadow .2s;
+  }
+  .print-chip:hover{
+    border-color:var(--print-primary);transform:translateY(-2px);
+    box-shadow:0 12px 28px rgba(245,158,11,.18);
+  }
+  .print-chip-head{display:flex;align-items:center;gap:10px}
+  .print-chip-head .chip-icon{
+    width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+    background:#fef3c7;color:var(--print-primary-dark);font-size:14px;
+  }
+  .print-chip-head h4{
+    margin:0;font-size:14px;font-weight:800;color:#1e293b;
+    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .print-chip-body{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11.5px;color:#64748b;font-weight:700}
+  .print-chip-body .stat{display:flex;flex-direction:column;gap:2px}
+  .print-chip-body .stat .v{color:#0f172a;font-size:13px;font-weight:800}
+  .print-chip-body .stat .k{font-size:10px;color:#92400e;text-transform:uppercase;letter-spacing:.4px}
+  .print-chip-foot{
+    display:flex;align-items:center;gap:8px;
+    border-top:1px dashed #fde68a;padding-top:8px;margin-top:4px;
+    font-size:11px;color:#92400e;
+  }
+
+  /* ── Table view (mirrors regular cards_batches table) ── */
+  .print-table{
+    width:100%;background:#fff;border:1px solid var(--print-border);
+    border-radius:14px;overflow:hidden;border-collapse:collapse;margin-top:8px;
+  }
+  .print-table thead{background:linear-gradient(180deg,#fef3c7,#fffbeb)}
+  .print-table th{
+    padding:11px 14px;font-size:11.5px;font-weight:800;color:var(--print-text);
+    text-align:start;letter-spacing:.3px;text-transform:uppercase;
+    border-bottom:1px solid var(--print-border);
+  }
+  .print-table td{
+    padding:12px 14px;font-size:13px;color:#1e293b;
+    border-bottom:1px solid #fef3c7;
+  }
+  .print-table tbody tr:hover{background:#fffbeb}
+  .print-table tbody tr:last-child td{border-bottom:0}
+  .print-table .row-actions{display:flex;gap:6px}
+  .print-row-btn{
+    background:#fff;border:1px solid var(--print-border);
+    color:var(--print-primary-dark);font-weight:800;font-size:11.5px;
+    padding:5px 10px;border-radius:8px;cursor:pointer;text-decoration:none;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .print-row-btn:hover{background:var(--print-soft);color:var(--print-primary-dark)}
+  .print-row-btn--primary{
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border-color:transparent;
+  }
+  .print-row-btn--primary:hover{filter:brightness(1.05);color:#fff}
+
+  /* ── Empty state ── */
+  .print-empty{
+    text-align:center;padding:60px 20px;background:#fff;
+    border:1px dashed var(--print-border);border-radius:14px;color:#92400e;
+  }
+  .print-empty i{font-size:42px;color:#fcd34d;margin-bottom:12px}
+
+  /* ── View switcher ── */
+  .view-switcher{
+    display:inline-flex;background:#fff;border:1px solid var(--print-border);
+    border-radius:10px;padding:3px;margin-bottom:14px;
+  }
+  .view-switcher button{
+    background:transparent;border:0;padding:6px 14px;
+    font-weight:800;font-size:12px;color:#92400e;cursor:pointer;border-radius:7px;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .view-switcher button.is-active{
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="print-shell">
+
+  {# ── Service marker — distinct visual frame ── #}
+  <div class="print-marker">
+    <span class="marker-icon"><i class="fa-solid fa-print"></i></span>
+    <div>
+      <h2>قسم بطاقات الطباعة</h2>
+      <p>
+        البطاقات هنا تُستورَد لغرض الطباعة فقط — لا تُرحَّل إلى FreeRADIUS ولا تسمح
+        بتسجيل الدخول. مناسبة كخدمة مستقلّة لمن يريد فقط تجهيز كروت قابلة للطباعة.
+      </p>
+    </div>
+    <div class="marker-cta">
+      <a href="{{ url_for('radius.cards_print_new') }}" class="print-cta-btn">
+        <i class="fa-solid fa-file-import"></i> استيراد بطاقات للطباعة
+      </a>
+    </div>
+  </div>
+
+  {# ── View switcher ── #}
+  <div class="view-switcher" id="ci-view-switcher">
+    <button type="button" data-view="chips" class="is-active">
+      <i class="fa-solid fa-th-large"></i> بطاقات
+    </button>
+    <button type="button" data-view="table">
+      <i class="fa-solid fa-table"></i> جدول
+    </button>
+  </div>
+
+  {% if not batches %}
+  <div class="print-empty">
+    <i class="fa-solid fa-print"></i>
+    <h3 style="margin:8px 0;color:#78350f">لا توجد حزم طباعة بعد</h3>
+    <p style="margin:4px 0 12px;font-size:13px">
+      ابدأ باستيراد ملفك الأول — Excel أو PDF أو CSV — والمحرّك يستخرج الكروت تلقائياً.
+    </p>
+    <a href="{{ url_for('radius.cards_print_new') }}" class="print-cta-btn">
+      <i class="fa-solid fa-bolt"></i> أنشئ أوّل حزمة
+    </a>
+  </div>
+
+  {% else %}
+
+  {# ── Chip view ── #}
+  <div class="print-chips" data-view-panel="chips">
+    {% for b in batches %}
+    <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="print-chip">
+      <div class="print-chip-head">
+        <span class="chip-icon"><i class="fa-solid fa-layer-group"></i></span>
+        <h4>{{ b.package_name or b.batch_code or ('حزمة #' ~ b.id) }}</h4>
+      </div>
+      <div class="print-chip-body">
+        <div class="stat"><span class="k">عدد</span><span class="v">{{ b.card_count or 0 }}</span></div>
+        <div class="stat"><span class="k">بيع</span><span class="v">{{ "%.2f"|format(b.price_per_card or 0) }}</span></div>
+        <div class="stat"><span class="k">جملة</span><span class="v">{{ "%.2f"|format(b.price_bulk or 0) }}</span></div>
+      </div>
+      <div class="print-chip-foot">
+        <i class="fa-solid fa-print"></i>
+        <span>{{ (b.created_at or '')[:10] }} • للطباعة فقط</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {# ── Table view ── #}
+  <table class="print-table" data-view-panel="table" hidden>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>اسم الحزمة</th>
+        <th>عدد البطاقات</th>
+        <th>سعر البيع</th>
+        <th>سعر الجملة</th>
+        <th>التاريخ</th>
+        <th style="width:160px">الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in batches %}
+      <tr>
+        <td><strong>#{{ b.id }}</strong></td>
+        <td>
+          <strong style="color:#78350f">{{ b.package_name or b.batch_code or '—' }}</strong>
+          {% if b.notes %}<br><small style="color:#92400e">{{ b.notes[:60] }}</small>{% endif %}
+        </td>
+        <td><strong>{{ b.card_count or 0 }}</strong> بطاقة</td>
+        <td><code dir="ltr">{{ "%.2f"|format(b.price_per_card or 0) }}</code></td>
+        <td><code dir="ltr">{{ "%.2f"|format(b.price_bulk or 0) }}</code></td>
+        <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">
+          {{ (b.created_at or '')[:19] }}
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="print-row-btn">
+              <i class="fa-solid fa-eye"></i> فتح
+            </a>
+            <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}#print"
+               class="print-row-btn print-row-btn--primary">
+              <i class="fa-solid fa-print"></i> طباعة
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  const sw = document.getElementById('ci-view-switcher');
+  if (!sw) return;
+  sw.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    const view = btn.dataset.view;
+    sw.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+    document.querySelectorAll('[data-view-panel]').forEach(p => {
+      p.hidden = (p.dataset.viewPanel !== view);
+    });
+  });
+})();
+</script>
+{% endblock %}

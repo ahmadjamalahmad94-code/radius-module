@@ -1,0 +1,336 @@
+{# Print-Only Cards — new batch (import form). Minimal: 3 fields plus
+   the smart-import box, amber-themed to match the rest of the section.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}استيراد بطاقات للطباعة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
+{% block page_title %}استيراد بطاقات للطباعة{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    <a href="{{ url_for('radius.cards_print_list') }}"
+       style="color:#b45309;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    </a>
+  </span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  :root{
+    --print-primary:#f59e0b;
+    --print-primary-dark:#b45309;
+    --print-soft:#fffbeb;
+    --print-border:#fcd34d;
+    --print-text:#78350f;
+  }
+  .pi-shell{max-width:1080px;margin:0 auto}
+  .pi-form{
+    background:#fff;border:1px solid var(--print-border);border-radius:14px;
+    padding:22px 26px;margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(245,158,11,.05);
+  }
+  .pi-section-head{
+    display:flex;align-items:center;gap:10px;margin:0 0 14px;padding-bottom:10px;
+    border-bottom:1px dashed #fde68a;
+  }
+  .pi-section-head h3{margin:0;font-size:14px;font-weight:800;color:var(--print-text)}
+  .pi-section-head .num{
+    width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:12px;font-weight:800;
+  }
+  .pi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  @media (max-width:760px){.pi-grid{grid-template-columns:1fr}}
+  .pi-field{display:flex;flex-direction:column;gap:6px}
+  .pi-field label{font-size:12.5px;font-weight:800;color:var(--print-text)}
+  .pi-field input{
+    width:100%;padding:10px 12px;border:1px solid #fde68a;border-radius:10px;
+    background:#fffbeb;font-size:13px;color:#1e293b;
+    transition:border-color .15s, background .15s;
+  }
+  .pi-field input:focus{
+    background:#fff;border-color:var(--print-primary);outline:none;
+    box-shadow:0 0 0 3px rgba(245,158,11,.18);
+  }
+  .pi-field .req{color:#dc2626}
+  .pi-help{font-size:11.5px;color:#92400e;line-height:1.8}
+
+  /* Smart-import card — same shape as cards_import.html but amber. */
+  [hidden]{display:none !important}
+  .pi-smart{
+    position:relative;overflow:hidden;
+    border:1px solid #fde68a;
+    background:radial-gradient(120% 200% at 100% 0%, #fef3c7 0%, transparent 50%),
+               linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+    border-radius:14px;padding:18px 22px;margin-bottom:18px;
+  }
+  .pi-smart::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#fbbf24,#f59e0b,#b45309,#fbbf24);
+    background-size:300% 100%;animation:pi-stripe 6s linear infinite;
+  }
+  @keyframes pi-stripe{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+  .pi-smart-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .pi-smart-head .icon{
+    width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-size:14px;
+    box-shadow:0 4px 12px rgba(245,158,11,.32);
+  }
+  .pi-smart-head h3{margin:0;font-size:15px;font-weight:800;color:var(--print-text)}
+  .pi-build-chip{
+    margin-inline-start:auto;font-size:11px;color:#fff;font-weight:800;
+    background:linear-gradient(135deg,#10b981,#059669);
+    padding:4px 10px;border-radius:8px;letter-spacing:.3px;
+    display:inline-flex;align-items:center;gap:5px;
+    font-family:ui-monospace,Consolas,monospace;
+    box-shadow:0 2px 6px rgba(16,185,129,.3);
+  }
+  .pi-smart-tag{
+    margin-inline-start:auto;font-size:11px;color:#92400e;font-weight:700;
+    background:#fef3c7;border:1px solid var(--print-border);border-radius:8px;
+    padding:3px 8px;
+  }
+  .pi-smart-body{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-top:10px}
+  @media (max-width:760px){.pi-smart-body{grid-template-columns:1fr}}
+  .pi-smart input[type=file]{
+    width:100%;padding:10px 12px;border:1px solid #fcd34d;border-radius:10px;
+    background:#fff;font-size:13px;cursor:pointer;
+  }
+  .pi-smart-btn{
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border:0;
+    border-radius:10px;padding:11px 20px;font-weight:800;font-size:13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+    box-shadow:0 6px 14px rgba(245,158,11,.4);
+  }
+  .pi-smart-btn[disabled]{opacity:.6;cursor:wait}
+  .pi-smart-btn:hover:not([disabled]){filter:brightness(1.05);transform:translateY(-1px);transition:.15s}
+  .pi-smart-btn .spin{display:none;animation:pi-spin 1s linear infinite}
+  .pi-smart-btn.is-busy .spin{display:inline-block}
+  .pi-smart-btn.is-busy .static{display:none}
+  @keyframes pi-spin{to{transform:rotate(360deg)}}
+
+  .pi-smart-status{
+    margin-top:12px;font-size:12.5px;line-height:1.8;min-height:1.5em;
+    padding:9px 12px;border-radius:10px;
+  }
+  .pi-smart-status.ok  {color:#065f46;background:#f0fdf4;border:1px solid #bbf7d0}
+  .pi-smart-status.warn{color:#92400e;background:#fffbeb;border:1px solid #fde68a}
+  .pi-smart-status.err {color:#991b1b;background:#fef2f2;border:1px solid #fecaca}
+
+  .pi-counter{
+    margin-top:12px;display:flex;align-items:baseline;gap:10px;
+    padding:14px 18px;border-radius:14px;
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;
+    box-shadow:0 8px 24px rgba(245,158,11,.25);
+  }
+  .pi-counter .num{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;
+                   font-variant-numeric:tabular-nums}
+  .pi-counter .lbl{font-size:13px;opacity:.9;font-weight:700}
+
+  .pi-textarea{
+    min-height:200px;font-family:ui-monospace,Consolas,monospace;
+    direction:ltr;text-align:left;
+    width:100%;padding:10px 12px;border:1px solid #fde68a;border-radius:10px;
+    background:#fffbeb;font-size:13px;
+  }
+  .pi-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .pi-submit{
+    background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border:0;
+    border-radius:10px;padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;
+    box-shadow:0 6px 14px rgba(245,158,11,.4);
+  }
+  .pi-submit:hover{filter:brightness(1.05);transform:translateY(-1px);transition:.15s}
+  .pi-cancel{
+    background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:10px;
+    padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;
+    text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pi-shell">
+
+  <form method="post" action="{{ url_for('radius.cards_print_new') }}" class="pi-form">
+    {{ csrf_token_input() | safe }}
+
+    {# ── Step 1: Batch metadata ── #}
+    <div class="pi-section-head">
+      <span class="num">1</span>
+      <h3>بيانات الحزمة</h3>
+    </div>
+    <div class="pi-grid">
+      <div class="pi-field">
+        <label for="package_name">اسم الحزمة <span class="req">*</span></label>
+        <input id="package_name" name="package_name" required maxlength="120"
+               placeholder="مثال: بطاقات شهر ٧ — للطباعة"
+               value="{{ form.get('package_name') or '' }}">
+      </div>
+      <div class="pi-field">
+        <label for="price_per_card">سعر البيع للبطاقة الواحدة</label>
+        <input id="price_per_card" name="price_per_card" type="number" step="0.01" min="0"
+               placeholder="0.00"
+               value="{{ form.get('price_per_card') or '' }}">
+      </div>
+      <div class="pi-field">
+        <label for="price_bulk">سعر الجملة (إجمالي)</label>
+        <input id="price_bulk" name="price_bulk" type="number" step="0.01" min="0"
+               placeholder="0.00"
+               value="{{ form.get('price_bulk') or '' }}">
+      </div>
+    </div>
+    <div class="pi-help" style="margin-top:10px">
+      السعر اختياري — تستخدمه للتسعير وإعداد التقارير. البطاقات هذي للطباعة فقط
+      ولن تظهر في FreeRADIUS أو تسمح بتسجيل الدخول.
+    </div>
+
+    {# ── Step 2: Smart import engine ── #}
+    <div class="pi-section-head" style="margin-top:22px">
+      <span class="num">2</span>
+      <h3>محتوى البطاقات</h3>
+    </div>
+
+    <div class="pi-smart" id="ci-smart"
+         data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+         data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
+      <div class="pi-smart-head">
+        <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+        <h3>المحرّك الذكي — Excel / CSV / PDF</h3>
+        {% if engine_version %}
+        <span class="pi-build-chip" title="نسخة المحرّك — تأكّد التحديث ركّب">
+          <i class="fa-solid fa-microchip"></i> engine v{{ engine_version }}
+        </span>
+        {% endif %}
+        <span class="pi-smart-tag" id="ci-smart-tag" hidden></span>
+      </div>
+      <div class="pi-help" style="margin-bottom:10px">
+        ارفع الملف — المحرّك يستخرج اليوزرنيمات وكلمات المرور ويعبّئها بالأسفل.
+      </div>
+      <div class="pi-smart-body">
+        <input type="file" id="ci-smart-file"
+               accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button type="button" id="ci-smart-btn" class="pi-smart-btn">
+          <i class="fa-solid fa-bolt static"></i>
+          <i class="fa-solid fa-circle-notch spin"></i>
+          <span>تحليل الملف</span>
+        </button>
+      </div>
+      <div class="pi-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
+      <div class="pi-counter" id="ci-counter" hidden>
+        <span class="num" id="ci-counter-num">0</span>
+        <span class="lbl">بطاقة طباعة جاهزة</span>
+      </div>
+    </div>
+
+    <div class="pi-field" style="margin-top:14px">
+      <label for="csv_text">النص (يتعبّأ تلقائيّاً من المحرّك أو الصق يدويّاً) <span class="req">*</span></label>
+      <textarea class="pi-textarea" id="csv_text" name="csv_text" required
+                placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
+    </div>
+
+    <div class="pi-actions">
+      <button type="submit" class="pi-submit">
+        <i class="fa-solid fa-file-import"></i> استيراد بطاقات الطباعة
+      </button>
+      <a href="{{ url_for('radius.cards_print_list') }}" class="pi-cancel">
+        <i class="fa-solid fa-xmark"></i> إلغاء
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  const SMART = document.getElementById('ci-smart');
+  const file  = document.getElementById('ci-smart-file');
+  const btn   = document.getElementById('ci-smart-btn');
+  const stat  = document.getElementById('ci-smart-status');
+  const cnt   = document.getElementById('ci-counter');
+  const cntN  = document.getElementById('ci-counter-num');
+  const tag   = document.getElementById('ci-smart-tag');
+  const ta    = document.getElementById('csv_text');
+  if (!SMART || !btn) return;
+
+  const URL = SMART.dataset.previewUrl;
+  function csrf() { return SMART.dataset.csrf || ''; }
+
+  function setStatus(m, k) {
+    if (!m) { stat.hidden = true; stat.textContent=''; return; }
+    stat.hidden = false;
+    stat.className = 'pi-smart-status' + (k ? ' ' + k : '');
+    stat.textContent = m;
+  }
+  function setTag(t) {
+    if (!t) { tag.hidden = true; return; }
+    tag.hidden = false; tag.textContent = t;
+  }
+  function animateCounter(target) {
+    cnt.hidden = false;
+    const d = Math.min(900, 200 + target * 1.6);
+    const start = performance.now();
+    function tick(t) {
+      const k = Math.min(1, (t - start) / d);
+      cntN.textContent = Math.floor(target * (1 - Math.pow(1-k, 3))).toLocaleString('ar-EG');
+      if (k < 1) requestAnimationFrame(tick);
+      else cntN.textContent = target.toLocaleString('ar-EG');
+    }
+    requestAnimationFrame(tick);
+  }
+
+  async function analyze() {
+    const f = file.files && file.files[0];
+    if (!f) { setStatus('اختر ملفًا أوّلًا.', 'warn'); return; }
+    setStatus('جارٍ التحليل…', '');
+    cnt.hidden = true;
+    btn.classList.add('is-busy'); btn.disabled = true;
+
+    const tok = csrf();
+    const fd = new FormData();
+    fd.append('file', f);
+    if (tok) fd.append('_csrf_token', tok);
+
+    try {
+      const res = await fetch(URL, {
+        method:'POST', body:fd, credentials:'same-origin',
+        headers: tok ? {'X-CSRFToken':tok} : {},
+      });
+      const txt = await res.text();
+      let data = null;
+      try { data = JSON.parse(txt); } catch(_) { data = null; }
+
+      if (!res.ok && !data) {
+        if (res.status === 404) setStatus('المسار غير مسجَّل (HTTP 404). أعد التشغيل.', 'err');
+        else if (res.status === 400 && txt.includes('CSRF')) setStatus('CSRF failed — حدّث الصفحة.', 'err');
+        else setStatus(`فشل الخادم (HTTP ${res.status}).`, 'err');
+        return;
+      }
+      if (!data) { setStatus('رد غير مفهوم.', 'err'); return; }
+      if (!data.count) {
+        const w = (data.warnings && data.warnings[0]) || 'لم يُعثر على بطاقات.';
+        setStatus(`${w} [${data.fmt || '?'} · ${data.rows_seen || 0}]`, 'err');
+        return;
+      }
+
+      ta.value = data.csv_text || '';
+      ta.dispatchEvent(new Event('input', {bubbles:true}));
+      animateCounter(data.count);
+      const warn = (data.warnings && data.warnings.length) ? ' (' + data.warnings[0] + ')' : '';
+      setStatus(`تم استخراج ${data.count.toLocaleString('ar-EG')} بطاقة — راجع النص أدناه ثم اضغط استيراد.${warn}`,
+                data.warnings && data.warnings.length ? 'warn' : 'ok');
+    } catch (e) {
+      setStatus('فشل الاتصال: ' + e.message, 'err');
+    } finally {
+      btn.classList.remove('is-busy'); btn.disabled = false;
+    }
+  }
+  btn.addEventListener('click', analyze);
+  file.addEventListener('change', () => {
+    const f = file.files && file.files[0];
+    if (f) setTag(f.name + ' · ' + Math.round(f.size/1024) + ' KB');
+  });
+})();
+</script>
+{% endblock %}

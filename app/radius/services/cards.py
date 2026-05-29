@@ -320,6 +320,153 @@ class CardsService:
             "radius_sync_enabled": should_sync,
         }
 
+    # ─── Print-Only Cards ─────────────────────────────────────────
+    #
+    # These batches exist purely as a printable label source. The
+    # cards never reach FreeRADIUS, never auth, never grant network
+    # access. The flag print_only=1 is the single source of truth
+    # and lives on both the batch and the individual cards as
+    # defence-in-depth.
+
+    def import_print_only_batch(
+        self,
+        *,
+        actor: str,
+        package_name: str,
+        cards: list[dict[str, str]],
+        price_per_card: float = 0.0,
+        price_bulk: float = 0.0,
+        notes: str = "",
+        plan_id: int | None = None,
+    ) -> dict:
+        """Import explicit card credentials as a print-only batch.
+
+        Same parsing pipeline as ``import_batch`` but:
+          * Forces ``source_type='external'`` so no sync ever happens.
+          * Marks the resulting batch + cards with print_only=1.
+          * Picks the tenant's first plan as a metadata anchor when
+            no plan is supplied — the plan is irrelevant because the
+            cards never auth, but the schema requires one.
+        """
+        if not cards:
+            raise RadiusValidationError("لا توجد كروت للاستيراد.")
+        if len(cards) > 5000:
+            raise RadiusValidationError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+
+        effective_plan_id = plan_id or self._first_plan_id_for_tenant()
+        if not effective_plan_id:
+            raise RadiusValidationError(
+                "لا يوجد plan في النظام — أنشئ باقة واحدة على الأقل قبل استيراد بطاقات الطباعة."
+            )
+
+        result = self.import_batch(
+            actor=actor,
+            plan_id=effective_plan_id,
+            cards=cards,
+            source_type="external",
+            package_name=package_name or "بطاقات طباعة",
+            notes=notes,
+            price_per_card=price_per_card,
+            sync_to_radius=False,
+        )
+
+        batch = result["batch"]
+        self._mark_batch_print_only(int(batch.id), price_bulk=price_bulk)
+        # Re-fetch so the caller sees the updated row.
+        result["batch"] = self._store.get_batch(int(batch.id))
+        return result
+
+    def _first_plan_id_for_tenant(self) -> int | None:
+        """Return the tenant's first plan id, or None if none exist."""
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT id FROM plans WHERE tenant_id = ? "
+            "AND COALESCE(deleted_at, '') = '' "
+            "ORDER BY id LIMIT 1",
+            (self._store_tenant_id(),),
+        ).fetchone()
+        return int(row["id"]) if row else None
+
+    def _mark_batch_print_only(self, batch_id: int, *, price_bulk: float = 0.0) -> None:
+        """Flip print_only=1 on the batch row + every card it owns,
+        and stash the wholesale price on the batch."""
+        from ..db.connection import db
+        conn = db()
+        tenant_id = self._store_tenant_id()
+        conn.execute(
+            "UPDATE card_batches SET print_only = 1, price_bulk = ? "
+            "WHERE id = ? AND tenant_id = ?",
+            (float(price_bulk or 0.0), batch_id, tenant_id),
+        )
+        conn.execute(
+            "UPDATE cards SET print_only = 1 "
+            "WHERE batch_id = ? AND tenant_id = ?",
+            (batch_id, tenant_id),
+        )
+        conn.commit()
+
+    def list_print_only_batches(self, *, limit: int = 100, offset: int = 0) -> list[dict]:
+        """Return print-only batches for the current tenant, formatted
+        the same way the existing list_batch_operations does so the
+        template can use the same chip + table macros."""
+        from ..db.connection import db
+        rows = db().execute(
+            """
+            SELECT b.*,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id = b.id AND c.tenant_id = b.tenant_id) AS card_count
+            FROM card_batches b
+            WHERE b.tenant_id = ?
+              AND b.print_only = 1
+              AND COALESCE(b.deleted_at, '') = ''
+            ORDER BY b.id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (self._store_tenant_id(), int(limit), int(offset)),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def count_print_only_batches(self) -> int:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS c FROM card_batches "
+            "WHERE tenant_id = ? AND print_only = 1 "
+            "AND COALESCE(deleted_at, '') = ''",
+            (self._store_tenant_id(),),
+        ).fetchone()
+        return int(row["c"] or 0)
+
+    def list_print_only_cards(self, batch_id: int, *, limit: int = 5000) -> list[dict]:
+        """Return raw rows for the print modal. Includes the password
+        column because the print template needs to render it onto
+        labels — this is the whole point of the section."""
+        from ..db.connection import db
+        rows = db().execute(
+            """
+            SELECT id, username, password, batch_id, created_at
+            FROM cards
+            WHERE tenant_id = ? AND batch_id = ? AND print_only = 1
+            ORDER BY id
+            LIMIT ?
+            """,
+            (self._store_tenant_id(), int(batch_id), int(limit)),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_print_only_batch(self, batch_id: int) -> dict | None:
+        from ..db.connection import db
+        row = db().execute(
+            """
+            SELECT b.*,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id = b.id AND c.tenant_id = b.tenant_id) AS card_count
+            FROM card_batches b
+            WHERE b.id = ? AND b.tenant_id = ? AND b.print_only = 1
+            """,
+            (int(batch_id), self._store_tenant_id()),
+        ).fetchone()
+        return dict(row) if row else None
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:

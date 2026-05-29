@@ -72,6 +72,7 @@
 
 {# Cards #}
 {%- set m_cards_overview   = '/cards/overview' in path -%}
+{%- set m_cards_print      = '/cards/print' in path -%}
 {%- set m_cards_checker    = '/cards/checker' in path -%}
 {%- set m_cards_batches    = '/cards/batches' in path -%}
 {%- set m_cards_generate   = '/cards/generate' in path -%}
@@ -184,7 +185,7 @@
 
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 -%}
-{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates -%}
+{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
 {%- set sec_e_cards_active  = m_card_users or m_card_marketplace -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched or m_operations_speed -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
@@ -275,6 +276,7 @@
         {{ sub_item('radius.cards_checker',  'فحص بطاقة',       m_cards_checker) }}
         {{ sub_item('radius.cards_batches',  'حزم البطاقات',    m_cards_batches) }}
         {{ sub_item('radius.cards_generate', 'إضافة حزمة',      m_cards_generate) }}
+        {{ sub_item('radius.cards_print_list', '🖨️ بطاقات الطباعة', m_cards_print) }}
         {{ sub_item('radius.online_list', 'البطاقات المتصلة', m_cards_online, {'type':'card'}) }}
         {{ sub_item('radius.print_templates','قوالب الطباعة',   m_print_templates) }}
       </div></div>
