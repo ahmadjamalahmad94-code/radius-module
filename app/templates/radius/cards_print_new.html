@@ -44,15 +44,27 @@
     margin:0 0 12px;
   }
 
+  /* The smart-import block sits inside hub.section's body. Hub
+     may apply grid/flex layout at that level, so wrap our pieces
+     in a known column layout to avoid stray positioning. */
+  .pc-smart-body{
+    display:flex; flex-direction:column; gap:12px;
+  }
+
   .pc-dz{
+    /* Force the <label> out of its inline default so the dashed
+       border renders as a single box around all child blocks. */
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
     position:relative;
     border:1.5px dashed #cbd5e1;
     border-radius:10px;
     background:#f8fafc;
-    padding:22px 18px;
+    padding:26px 18px;
     cursor:pointer;
     transition:border-color .15s ease, background .15s ease;
-    min-height:96px;
+    min-height:140px;
+    box-sizing:border-box;
   }
   .pc-dz:hover{ border-color:#f59e0b; background:#fffbeb }
   .pc-dz:focus-within{
@@ -233,7 +245,7 @@
 
   {# ── 2. Smart engine ── #}
   {% call hub.section("المحرّك الذكي — تحليل ملف الكروت", icon="wand-magic-sparkles") %}
-    <div id="pc-smart"
+    <div id="pc-smart" class="pc-smart-body"
          data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
          data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
 
@@ -245,14 +257,6 @@
         </span>
         {% endif %}
       </div>
-
-      <p class="pc-smart-help">
-        الصيغ المدعومة:
-        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">CSV</kbd> ·
-        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">XLSX</kbd> ·
-        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">PDF</kbd>
-        — حتى 12MB.
-      </p>
 
       <label class="pc-dz" id="pc-dropzone" for="ci-smart-file">
         <input type="file" id="ci-smart-file" class="pc-dz-input"
