@@ -310,11 +310,26 @@
       font-size:13px;font-weight:700;opacity:.9;margin-top:4px;
     }
     .my-card-meta{
-      display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:12px;
-      font-size:11px;opacity:.85;
+      display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin-top:14px;
     }
-    .my-card-meta .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;font-weight:700;margin-bottom:1px}
-    .my-card-meta .v{font-weight:800;font-variant-numeric:tabular-nums;direction:ltr;text-align:start}
+    .my-card-meta .cell{
+      display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;
+    }
+    .my-card-meta .k{
+      font-size:10px;font-weight:700;letter-spacing:.06em;
+      text-transform:uppercase;opacity:.78;
+      white-space:nowrap;
+    }
+    .my-card-meta .v{
+      font-size:13px;font-weight:800;
+      font-variant-numeric:tabular-nums;
+      line-height:1.2;
+      /* LTR for the digit sequence (2026-05-29) but cell start-aligned */
+      direction:ltr;unicode-bidi:isolate;
+      align-self:flex-start;
+    }
+    /* On a card, .v lives inside an RTL parent so "start" reads as
+       right-edge — same side as the label. */
     .my-card-foot{
       display:flex;gap:6px;
       padding:10px 14px;
@@ -663,24 +678,24 @@
           <div class="my-card-num">{{ c.username }}</div>
           {% if c.package_name %}<div class="my-card-pkg">{{ c.package_name }}</div>{% endif %}
           <div class="my-card-meta">
-            <div>
-              <div class="k">تاريخ الشراء</div>
-              <div class="v">{{ (c.created_at or '—')[:10] }}</div>
+            <div class="cell">
+              <span class="k">تاريخ الشراء</span>
+              <span class="v">{{ (c.created_at or '—')[:10] }}</span>
             </div>
-            <div>
-              <div class="k">أول استخدام</div>
-              <div class="v">{{ (c.first_used_at or '—')[:10] if c.first_used_at else '—' }}</div>
+            <div class="cell">
+              <span class="k">أول استخدام</span>
+              <span class="v">{{ (c.first_used_at or '')[:10] or '—' }}</span>
             </div>
             {% if c.expire_at %}
-            <div>
-              <div class="k">تنتهي</div>
-              <div class="v">{{ c.expire_at[:10] }}</div>
+            <div class="cell">
+              <span class="k">تنتهي</span>
+              <span class="v">{{ c.expire_at[:10] }}</span>
             </div>
             {% endif %}
             {% if c.total_seconds is defined and c.total_seconds %}
-            <div>
-              <div class="k">الاستخدام</div>
-              <div class="v">{{ (c.total_seconds // 60) }} دقيقة</div>
+            <div class="cell">
+              <span class="k">الاستخدام</span>
+              <span class="v">{{ (c.total_seconds // 60) }} دقيقة</span>
             </div>
             {% endif %}
           </div>
