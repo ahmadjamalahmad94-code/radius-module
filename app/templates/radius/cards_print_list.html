@@ -19,55 +19,60 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 <style>
-  /* ── Visual layers — give the page real elevation hierarchy.
-     Page < section card < KPI tile < hovered chip. Without these
-     the entire surface reads as one flat plane. ── */
+  /* ── Visual layers — strong elevation hierarchy.
+     The admin layout paints a faint purple wash across the page,
+     so cards need real borders + real shadows to stand off it. ── */
   [data-cards-batches-page] .hub-section{
-    border:1px solid #d8dee8;
+    border:1px solid #cbd5e1;
+    background:#fff;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 1px 2px rgba(15,23,42,.04),
-      0 6px 14px rgba(15,23,42,.04);
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 1px 2px rgba(15,23,42,.06),
+      0 8px 20px rgba(15,23,42,.06);
     border-radius:14px;
   }
   [data-cards-batches-page] .hub-section-head{
-    background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-    border-bottom:1px solid #e2e8f0;
+    background:linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
+    border-bottom:1px solid #cbd5e1;
   }
   [data-cards-batches-page] .hub-section-head-title{
     color:#0f172a; font-weight:900;
   }
   [data-cards-batches-page] .hub-section-head-meta{
-    color:#64748b; font-weight:700; font-size:12px;
+    color:#475569; font-weight:700; font-size:12px;
     font-variant-numeric:tabular-nums;
   }
   [data-cards-batches-page] .hub-section-head-icon{
     background:#eef2ff; color:#4f46e5;
   }
 
-  /* KPI tiles — soft surface, subtle lift */
+  /* KPI tiles — clearly delimited surfaces, indigo top-accent on hover */
   [data-cards-batches-page] .hub-kpi{
-    border:1px solid #d8dee8;
+    border:1px solid #cbd5e1;
+    background:#fff;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 1px 2px rgba(15,23,42,.04);
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 1px 3px rgba(15,23,42,.06),
+      0 6px 14px rgba(15,23,42,.05);
     border-radius:12px;
-    transition:transform .15s ease, box-shadow .18s ease;
+    transition:transform .15s ease, box-shadow .18s ease, border-color .15s ease;
   }
   [data-cards-batches-page] .hub-kpi:hover{
-    transform:translateY(-1px);
+    transform:translateY(-2px);
+    border-color:#94a3b8;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 4px 12px rgba(15,23,42,.06);
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 6px 14px rgba(15,23,42,.08),
+      0 14px 32px rgba(15,23,42,.08);
   }
 
-  /* Hero strip — clearer separation from page */
+  /* Hero strip — the most-elevated surface on the page */
   [data-cards-batches-page] .hub-hero{
-    border:1px solid #d8dee8;
+    border:1px solid #cbd5e1;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 2px 4px rgba(15,23,42,.04),
-      0 8px 18px rgba(15,23,42,.04);
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 2px 6px rgba(15,23,42,.06),
+      0 14px 32px rgba(15,23,42,.08);
   }
 </style>
 <style>
@@ -80,28 +85,42 @@
   @media (max-width:760px){ .pc-grid{ grid-template-columns:1fr } }
 
   .pc-card{
+    position:relative;
     display:flex;
     flex-direction:column;
     gap:12px;
-    padding:16px 18px;
-    border:1px solid #d8dee8;
+    padding:18px 20px 16px;
+    border:1px solid #cbd5e1;
     border-radius:12px;
     background:#fff;
     color:inherit;
+    overflow:hidden;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 1px 2px rgba(15,23,42,.04),
-      0 3px 8px rgba(15,23,42,.03);
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 1px 3px rgba(15,23,42,.06),
+      0 8px 18px rgba(15,23,42,.06);
     transition:border-color .15s ease, transform .12s ease, box-shadow .18s ease;
   }
-  .pc-card:hover{
-    border-color:#6366f1;
-    transform:translateY(-2px);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.6) inset,
-      0 4px 10px rgba(79,70,229,.08),
-      0 12px 28px rgba(15,23,42,.08);
+  /* 3px top accent strip — visually anchors the chip against the
+     purple page wash and signals service identity. */
+  .pc-card::before{
+    content:"";
+    position:absolute; inset:0 0 auto 0;
+    height:3px;
+    background:linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius:12px 12px 0 0;
+    opacity:.85;
+    transition:opacity .18s ease, height .18s ease;
   }
+  .pc-card:hover{
+    border-color:#94a3b8;
+    transform:translateY(-3px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 8px 18px rgba(79,70,229,.12),
+      0 20px 40px rgba(15,23,42,.12);
+  }
+  .pc-card:hover::before{ opacity:1; height:4px }
   .pc-card-title{ color:#0f172a !important }
   /* The card's main info area is the clickable surface; the action
      row below sits outside the link so the buttons don't bubble
