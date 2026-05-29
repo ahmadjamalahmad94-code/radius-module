@@ -1,7 +1,7 @@
 {# Print-Only Cards — single batch view.
-   Direction: Editorial Print Studio — editorial KPI strip, hairline
-   table, redesigned print modal with preset chips + grouped
-   fieldsets + simplified layout.
+   Uses hub.hero + hub.kpi + hub.section + .hub-table + hub.btn so
+   the chrome matches every other admin page. Only the print modal
+   has bespoke CSS.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -11,395 +11,241 @@
 {% block page_title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}" style="color:var(--ink-2,#475569);text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة إلى الاستوديو
+    <a href="{{ url_for('radius.cards_print_list') }}" style="color:#475569;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
     </a>
-    &nbsp;•&nbsp; {{ cards|length }} بطاقة
+    &nbsp;·&nbsp; {{ cards|length }} بطاقة طباعة
   </span>
 {% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  .ps-root{
-    --ink-1:#0f172a;
-    --ink-2:#475569;
-    --ink-3:#94a3b8;
-    --canvas:#f8fafc;
-    --paper:#ffffff;
-    --hair-1:#e2e8f0;
-    --hair-2:#cbd5e1;
-    --inset:rgba(255,255,255,.85);
-    --amber:#f59e0b;
-    --amber-deep:#d97706;
-    --amber-darker:#b45309;
-    --amber-tint:#fef3c7;
-    --amber-tint-2:#fffbeb;
-    --amber-on-tint:#92400e;
-    --focus-ring:rgba(245,158,11,.35);
-    --success-ink:#15803d;
-    --success-tint:#dcfce7;
+  [hidden]{ display:none !important }
 
-    background:transparent;
-    color:var(--ink-2);
-    max-width:1280px;margin:0 auto;
-    padding:8px 28px 56px;
-    font-feature-settings:"ss01","tnum";
-  }
-  @media (max-width:760px){
-    .ps-root{padding:6px 16px 36px}
-  }
-  [hidden]{display:none !important}
-
-  /* ── Section eyebrow ── */
-  .ps-eyebrow{
-    display:flex;align-items:center;gap:10px;
-    font-size:11.5px;font-weight:800;letter-spacing:.16em;
-    color:var(--amber-deep);text-transform:uppercase;
-    margin:0 0 14px;
-  }
-  .ps-eyebrow .num{
-    font-size:13px;font-weight:900;letter-spacing:0;color:var(--ink-1);
+  /* ── Cards table — print-credentials need monospace + LTR ── */
+  .pc-cards-table td,
+  .pc-cards-table th{ direction:ltr; text-align:start }
+  .pc-cards-table .mono{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-variant-numeric:tabular-nums;
   }
-  .ps-eyebrow .rule{flex:1;height:1px;background:var(--hair-1)}
+  .pc-cards-table .row-num{
+    color:#94a3b8; font-weight:700; font-size:12px;
+  }
+  .pc-cards-table .user{ color:#0f172a; font-weight:800 }
 
-  /* ── Hero stats — borderless editorial strip ── */
-  .ps-hero{
-    background:linear-gradient(180deg,var(--amber-tint) 0%, var(--canvas) 100%);
-    border:1px solid var(--hair-1);border-radius:18px;
-    padding:30px 36px 26px;margin-bottom:24px;
-    position:relative;overflow:hidden;
+  /* ── Print modal — slate chrome to match the rest of the admin ── */
+  .pc-modal{
+    position:fixed; inset:0;
+    display:grid; place-items:center;
+    background:rgba(15,23,42,.55);
+    backdrop-filter:blur(3px);
+    z-index:1000;
+    padding:24px;
+    animation:pc-fade .18s ease;
   }
-  .ps-hero::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;background:var(--inset);
+  @keyframes pc-fade{ from{opacity:0} to{opacity:1} }
+  .pc-modal-panel{
+    background:#fff;
+    border:1px solid #e2e8f0; border-radius:14px;
+    padding:24px;
+    width:100%; max-width:620px;
+    max-height:90vh; overflow:auto;
+    animation:pc-pop .22s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 24px 60px rgba(15,23,42,.18);
   }
-  .ps-hero-head{
-    display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px;
+  @keyframes pc-pop{
+    from{ transform:scale(.97); opacity:0 }
+    to  { transform:scale(1);   opacity:1 }
   }
-  .ps-hero-head h1{
-    margin:0;font-size:26px;font-weight:900;color:var(--ink-1);
-    letter-spacing:-.015em;line-height:1.25;
+  .pc-modal-head{
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px solid #f1f5f9;
   }
-  .ps-hero-head .marker{
-    font-size:10.5px;font-weight:800;letter-spacing:.14em;
-    color:var(--amber-deep);text-transform:uppercase;margin-bottom:6px;
+  .pc-modal-head .icon-block{
+    width:38px; height:38px; border-radius:9px;
+    background:#fef3c7; color:#92400e;
+    display:grid; place-items:center;
+    font-size:15px;
   }
-  .ps-hero-actions{margin-inline-start:auto;display:flex;gap:10px;flex-wrap:wrap}
-
-  .ps-stats{
-    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:0;border-top:1px solid var(--hair-1);padding-top:18px;
+  .pc-modal-head h3{
+    margin:0;
+    font-size:15px; font-weight:900; color:#0f172a;
   }
-  .ps-stat{padding:0 18px;border-inline-end:1px solid var(--hair-1)}
-  .ps-stat:last-child{border-inline-end:0}
-  .ps-stat:first-child{padding-inline-start:0}
-  .ps-stat:last-child{padding-inline-end:0}
-  .ps-stat .lbl{
-    font-size:11px;font-weight:700;letter-spacing:.12em;
-    color:var(--ink-3);text-transform:uppercase;
-  }
-  .ps-stat .val{
-    font-size:28px;font-weight:900;letter-spacing:-.02em;
-    color:var(--ink-1);line-height:1;margin-top:6px;
-    font-variant-numeric:tabular-nums;
-  }
-  .ps-stat .sub{
-    font-size:11.5px;color:var(--ink-3);margin-top:4px;
-  }
-
-  /* ── Action buttons ── */
-  .ps-cta{
-    background:var(--ink-1);color:#fff;border:0;cursor:pointer;
-    padding:11px 22px;border-radius:10px;
-    font-size:13px;font-weight:800;letter-spacing:.005em;
-    display:inline-flex;align-items:center;gap:8px;text-decoration:none;
-    transition:background .15s ease, transform .12s ease;
-  }
-  .ps-cta:hover{background:#0d0c0a;color:#fff;transform:translateY(-1px)}
-  .ps-cta:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
-  .ps-cta--amber{background:var(--amber)}
-  .ps-cta--amber:hover{background:var(--amber-deep)}
-  .ps-cta--ghost{
-    background:transparent;color:var(--ink-2);
-    border:1px solid var(--hair-1);
-  }
-  .ps-cta--ghost:hover{background:var(--paper);border-color:var(--hair-2);color:var(--ink-1)}
-
-  /* ── Safety notice — quiet inline label ── */
-  .ps-notice{
-    display:inline-flex;align-items:center;gap:7px;
-    font-size:12px;color:var(--ink-3);font-weight:600;
-  }
-  .ps-notice i{color:var(--success-ink)}
-
-  /* ── Table ── */
-  .ps-table-wrap{
-    background:var(--paper);
-    border:1px solid var(--hair-1);border-radius:14px;
-    overflow:hidden;
-  }
-  .ps-table{width:100%;border-collapse:collapse}
-  .ps-table thead th{
-    padding:14px 18px;text-align:start;
-    font-size:11px;font-weight:800;color:var(--ink-3);
-    letter-spacing:.12em;text-transform:uppercase;
-    border-bottom:1px solid var(--hair-1);
-  }
-  .ps-table tbody td{
-    padding:13px 18px;font-size:13.5px;color:var(--ink-2);
-    border-bottom:1px solid var(--hair-1);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-variant-numeric:tabular-nums;
-    direction:ltr;text-align:start;
-  }
-  .ps-table tbody tr:last-child td{border-bottom:0}
-  .ps-table tbody tr:hover{background:var(--amber-tint)}
-  .ps-table .ps-row-num{
-    font-family:inherit;color:var(--ink-3);font-weight:700;
-    font-size:12px;direction:ltr;
-  }
-  .ps-table .ps-row-user{color:var(--ink-1);font-weight:700}
-
-  /* ── Modal ── */
-  .ps-modal{
-    position:fixed;inset:0;display:grid;place-items:center;
-    background:rgba(28,26,23,.55);backdrop-filter:blur(3px);
-    z-index:1000;padding:24px;
-    animation:ps-fade-in .18s ease;
-  }
-  @keyframes ps-fade-in{from{opacity:0}to{opacity:1}}
-  .ps-modal-panel{
-    background:var(--paper);
-    border:1px solid var(--hair-1);border-radius:18px;
-    padding:28px;max-width:680px;width:100%;
-    max-height:90vh;overflow:auto;
-    position:relative;
-    animation:ps-pop .22s cubic-bezier(.4,.0,.2,1);
-  }
-  @keyframes ps-pop{from{transform:scale(.97);opacity:0}to{transform:scale(1);opacity:1}}
-  .ps-modal-panel::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;
-    background:var(--inset);border-radius:18px 18px 0 0;
-  }
-  .ps-modal-head{
-    display:flex;align-items:flex-start;gap:14px;
-    margin-bottom:6px;padding-bottom:14px;border-bottom:1px solid var(--hair-1);
-  }
-  .ps-modal-head .marker{
-    font-size:10.5px;font-weight:800;letter-spacing:.14em;
-    color:var(--amber-deep);text-transform:uppercase;
-  }
-  .ps-modal-head h3{
-    margin:2px 0 0;font-size:20px;font-weight:900;color:var(--ink-1);
-    letter-spacing:-.01em;
-  }
-  .ps-modal-head .x{
-    margin-inline-start:auto;background:transparent;border:0;
-    width:36px;height:36px;border-radius:9px;
-    color:var(--ink-3);cursor:pointer;
-    display:grid;place-items:center;font-size:14px;
+  .pc-modal-head .x{
+    margin-inline-start:auto;
+    background:transparent; border:0;
+    width:32px; height:32px; border-radius:8px;
+    color:#64748b; cursor:pointer;
+    display:grid; place-items:center; font-size:13px;
     transition:background .15s ease, color .15s ease;
   }
-  .ps-modal-head .x:hover{background:var(--canvas);color:var(--ink-1)}
+  .pc-modal-head .x:hover{ background:#f1f5f9; color:#0f172a }
 
-  .ps-modal-section{margin-top:20px}
-  .ps-modal-section-title{
-    font-size:11px;font-weight:800;letter-spacing:.14em;
-    color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;
+  .pc-modal-section-title{
+    font-size:11px; font-weight:800;
+    color:#64748b; letter-spacing:.08em; text-transform:uppercase;
+    margin:0 0 10px;
   }
-  .ps-templates{display:grid;grid-template-columns:1fr;gap:8px}
-  .ps-template-card{
-    display:flex;align-items:center;gap:14px;
-    padding:14px 16px;
-    border:1px solid var(--hair-1);border-radius:11px;
-    text-decoration:none;color:var(--ink-2);
+  .pc-template-card{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px;
+    border:1px solid #e2e8f0; border-radius:10px;
+    text-decoration:none; color:#0f172a;
+    margin-bottom:8px;
     transition:border-color .15s ease, background .15s ease, transform .12s ease;
   }
-  .ps-template-card:hover{
-    border-color:var(--amber);background:var(--amber-tint);
-    color:var(--ink-1);transform:translateY(-1px);
+  .pc-template-card:hover{
+    border-color:#f59e0b;
+    background:#fffbeb;
+    color:#0f172a;
+    transform:translateY(-1px);
   }
-  .ps-template-card .picon{
-    width:38px;height:38px;border-radius:9px;
-    background:var(--canvas);color:var(--ink-1);
-    display:grid;place-items:center;font-size:14px;flex-shrink:0;
-    border:1px solid var(--hair-1);
+  .pc-template-card:last-child{ margin-bottom:0 }
+  .pc-template-card .picon{
+    width:36px; height:36px; border-radius:9px;
+    background:#f8fafc; color:#0f172a;
+    border:1px solid #e2e8f0;
+    display:grid; place-items:center;
+    font-size:14px; flex-shrink:0;
   }
-  .ps-template-card.is-default{border-color:var(--hair-2);background:var(--amber-tint)}
-  .ps-template-card.is-default .picon{background:var(--ink-1);color:#fff;border-color:var(--ink-1)}
-  .ps-template-card strong{
-    display:block;font-size:14px;font-weight:800;color:var(--ink-1);
-    letter-spacing:-.005em;
+  .pc-template-card.is-default{
+    border-color:#fde68a; background:#fffbeb;
   }
-  .ps-template-card small{
-    display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;
+  .pc-template-card.is-default .picon{
+    background:#0f172a; color:#fff; border-color:#0f172a;
   }
-  .ps-template-card .arrow{
-    margin-inline-start:auto;color:var(--ink-3);font-size:11px;
+  .pc-template-card strong{
+    display:block;
+    font-size:13px; font-weight:800; color:#0f172a;
   }
-  .ps-template-card .ribbon{
-    font-size:10px;font-weight:800;letter-spacing:.08em;
-    color:var(--success-ink);background:var(--success-tint);
-    padding:2px 7px;border-radius:5px;margin-inline-start:auto;
+  .pc-template-card small{
+    display:block;
+    font-size:11px; color:#64748b; margin-top:2px;
+  }
+  .pc-template-card .ribbon{
+    margin-inline-start:auto;
+    font-size:10px; font-weight:800;
+    color:#15803d; background:#dcfce7;
+    padding:2px 7px; border-radius:5px;
+    letter-spacing:.05em;
+  }
+  .pc-template-card .arrow{
+    margin-inline-start:auto; color:#94a3b8; font-size:11px;
   }
 
-  .ps-no-templates{
-    padding:22px;text-align:center;border-radius:11px;
-    background:var(--canvas);border:1px dashed var(--hair-2);
-    color:var(--ink-2);font-size:13px;
+  .pc-no-templates{
+    padding:20px; text-align:center;
+    background:#f8fafc; border:1px dashed #cbd5e1;
+    border-radius:10px;
+    color:#475569; font-size:13px;
   }
 
-  .ps-modal-hint{
-    margin-top:18px;padding:11px 14px;border-radius:9px;
-    background:var(--canvas);border:1px solid var(--hair-1);
-    font-size:12px;color:var(--ink-3);line-height:1.7;
-    display:flex;align-items:flex-start;gap:8px;
+  .pc-modal-hint{
+    margin-top:16px;
+    padding:10px 12px; border-radius:8px;
+    background:#f8fafc; border:1px solid #e2e8f0;
+    font-size:12px; color:#64748b; line-height:1.7;
+    display:flex; gap:8px;
   }
-  .ps-modal-hint i{color:var(--amber-deep);margin-top:2px}
-
-  @media (max-width:760px){
-    .ps-hero{padding:22px 18px}
-    .ps-hero-head h1{font-size:22px}
-    .ps-stats{grid-template-columns:repeat(2,1fr);gap:14px;padding-top:14px}
-    .ps-stat{border-inline-end:0;padding:0 0 12px}
-  }
+  .pc-modal-hint i{ color:#d97706; margin-top:2px }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ps-root">
 
-  {# ────────── 01 — Batch summary ────────── #}
-  <p class="ps-eyebrow">
-    <span class="num">01</span>
-    <span>ملخّص الحزمة</span>
-    <span class="rule"></span>
-  </p>
+{{ hub.hero(
+  batch.package_name or batch.batch_code or 'حزمة بلا اسم',
+  subtitle="حزمة بطاقات للطباعة فقط — لا تُرحَّل إلى FreeRADIUS ولا تسمح بتسجيل الدخول.",
+  icon="layer-group",
+  actions_html=(
+    hub.btn("اطبع هذه الحزمة", icon="print", variant="primary", attrs='id="pb-print-open"')
+    ~ hub.btn("الرجوع", icon="arrow-right", href=url_for('radius.cards_print_list'), variant="secondary")
+  )
+) }}
 
-  <section class="ps-hero">
-    <div class="ps-hero-head">
-      <div>
-        <div class="marker">حزمة طباعة</div>
-        <h1>{{ batch.package_name or batch.batch_code or 'حزمة بلا اسم' }}</h1>
-      </div>
-      <div class="ps-hero-actions">
-        <button type="button" class="ps-cta ps-cta--amber" id="pb-print-open">
-          <i class="fa-solid fa-print" aria-hidden="true"></i>
-          اطبع هذه الحزمة
-        </button>
-        <a href="{{ url_for('radius.cards_print_list') }}" class="ps-cta ps-cta--ghost">
-          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-          الرجوع
-        </a>
-      </div>
-    </div>
+{# ── Summary KPIs ── #}
+{% call hub.section("ملخّص الحزمة", icon="chart-column") %}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("عدد البطاقات",  batch.card_count or cards|length,
+               icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
+    {{ hub.kpi("سعر البطاقة",   "%.2f"|format(batch.price_per_card or 0),
+               icon="tag", variant="amber", sub="سعر البيع للقطعة") }}
+    {{ hub.kpi("سعر الجملة",    "%.2f"|format(batch.price_bulk or 0),
+               icon="coins", variant="purple", sub="إجمالي الدفعة") }}
+    {{ hub.kpi("أُنشئت في",    (batch.created_at or '—')[:10],
+               icon="calendar", variant="green", sub="تاريخ الاستيراد") }}
+  </div>
+{% endcall %}
 
-    <div class="ps-stats">
-      <div class="ps-stat">
-        <div class="lbl">عدد البطاقات</div>
-        <div class="val">{{ batch.card_count or cards|length }}</div>
-        <div class="sub">بطاقة محفوظة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="lbl">سعر البطاقة</div>
-        <div class="val">{{ "%.2f"|format(batch.price_per_card or 0) }}</div>
-        <div class="sub">سعر البيع للقطعة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="lbl">سعر الجملة</div>
-        <div class="val">{{ "%.2f"|format(batch.price_bulk or 0) }}</div>
-        <div class="sub">إجمالي الدفعة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="lbl">أُنشئت في</div>
-        <div class="val" style="font-size:14px;font-weight:700;letter-spacing:0;direction:ltr;text-align:start">{{ (batch.created_at or '—')[:19] }}</div>
-        <div class="sub">
-          <span class="ps-notice">
-            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-            للطباعة فقط — لا تسجيل دخول
-          </span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {# ────────── 02 — Cards table ────────── #}
-  <p class="ps-eyebrow">
-    <span class="num">02</span>
-    <span>البطاقات</span>
-    <span class="rule"></span>
-  </p>
-
-  <div class="ps-table-wrap">
-    <table class="ps-table">
+{# ── Cards table ── #}
+{% call hub.section("بطاقات الحزمة", icon="id-card", meta=cards|length ~ " بطاقة") %}
+  <div style="overflow-x:auto">
+    <table class="hub-table pc-cards-table">
       <thead>
         <tr>
           <th style="width:60px">#</th>
           <th>Username</th>
           <th>Password</th>
-          <th style="width:180px">أُنشئت</th>
+          <th style="width:170px">أُنشئت</th>
         </tr>
       </thead>
       <tbody>
         {% for c in cards %}
         <tr>
-          <td><span class="ps-row-num">{{ loop.index }}</span></td>
-          <td><span class="ps-row-user">{{ c.username }}</span></td>
-          <td>{{ c.password or '—' }}</td>
-          <td style="color:var(--ink-3);font-size:11.5px">{{ (c.created_at or '')[:19] }}</td>
+          <td><span class="row-num">{{ loop.index }}</span></td>
+          <td class="mono user">{{ c.username }}</td>
+          <td class="mono">{{ c.password or '—' }}</td>
+          <td style="font-size:11.5px;color:#64748b">{{ (c.created_at or '')[:19] }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div>
+{% endcall %}
 
-{# ────────── Print modal ────────── #}
-<div class="ps-modal" id="pb-print-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pb-modal-title">
-  <div class="ps-modal-panel">
-    <div class="ps-modal-head">
-      <div>
-        <div class="marker">جهّز الطباعة</div>
-        <h3 id="pb-modal-title">اختر قالب الطباعة</h3>
-      </div>
+{# ── Print modal ── #}
+<div class="pc-modal" id="pb-print-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pb-modal-title">
+  <div class="pc-modal-panel">
+    <div class="pc-modal-head">
+      <span class="icon-block" aria-hidden="true"><i class="fa-solid fa-print"></i></span>
+      <h3 id="pb-modal-title">جهّز ملف الطباعة</h3>
       <button type="button" class="x" id="pb-print-close" aria-label="إغلاق">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
     </div>
 
-    <div class="ps-modal-section">
-      <div class="ps-modal-section-title">القوالب المحفوظة</div>
+    <p class="pc-modal-section-title">اختر قالباً محفوظاً</p>
 
-      {% if print_templates %}
-      <div class="ps-templates">
-        {% for t in print_templates %}
-        <a href="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}?batch_id={{ batch.id }}"
-           class="ps-template-card {% if t.id == default_print_template_id %}is-default{% endif %}"
-           target="_blank" rel="noopener">
-          <span class="picon"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></span>
-          <div>
-            <strong>{{ t.name or 'قالب غير مُسمّى' }}</strong>
-            <small>{{ t.preset or 'قالب محفوظ' }}</small>
-          </div>
-          {% if t.id == default_print_template_id %}
+    {% if print_templates %}
+      {% for t in print_templates %}
+      <a href="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}?batch_id={{ batch.id }}"
+         class="pc-template-card {% if t.id == default_print_template_id %}is-default{% endif %}"
+         target="_blank" rel="noopener">
+        <span class="picon" aria-hidden="true"><i class="fa-solid fa-file-pdf"></i></span>
+        <div style="flex:1;min-width:0">
+          <strong>{{ t.name or 'قالب غير مُسمّى' }}</strong>
+          <small>{{ t.preset or 'قالب محفوظ' }}</small>
+        </div>
+        {% if t.id == default_print_template_id %}
           <span class="ribbon">الافتراضي</span>
-          {% else %}
+        {% else %}
           <span class="arrow"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></span>
-          {% endif %}
-        </a>
-        {% endfor %}
+        {% endif %}
+      </a>
+      {% endfor %}
+    {% else %}
+      <div class="pc-no-templates">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#d97706" aria-hidden="true"></i>
+        لا توجد قوالب طباعة محفوظة بعد —
+        أنشئ قالباً من قسم <strong>قوالب الطباعة</strong> ثم عُد إلى هنا.
       </div>
-      {% else %}
-      <div class="ps-no-templates">
-        <i class="fa-solid fa-triangle-exclamation" style="color:var(--amber-deep)" aria-hidden="true"></i>
-        لا توجد قوالب طباعة محفوظة بعد.
-        ابدأ بإنشاء قالب من <strong>قسم قوالب الطباعة</strong> ثم عُد إلى هنا.
-      </div>
-      {% endif %}
-    </div>
+    {% endif %}
 
-    <div class="ps-modal-hint">
+    <div class="pc-modal-hint">
       <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
       <div>
         اضغط القالب لتفتح نافذة جديدة تبدأ تجهيز ملف PDF لكل البطاقات في
@@ -422,7 +268,6 @@
     lastFocus = document.activeElement;
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
-    // Focus the first interactive element inside the modal.
     setTimeout(() => {
       const focusable = modal.querySelector('a, button, [tabindex]:not([tabindex="-1"])');
       if (focusable) focusable.focus();

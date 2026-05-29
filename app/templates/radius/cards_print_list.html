@@ -1,8 +1,7 @@
 {# Print-Only Cards — batches list.
-   Direction: Editorial Print Studio — warm paper canvas, hairline
-   borders instead of shadows, restrained amber accent used only on
-   the primary CTA + the section eyebrow marker. Hierarchy comes from
-   type scale + weight + spacing, not color.
+   Uses the established hub.* macros so this section matches every
+   other admin page in the codebase. Only truly print-specific
+   pieces (chip grid, view switcher) get bespoke CSS.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -10,387 +9,145 @@
 {% block title %}بطاقات الطباعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
 {% block page_title %}بطاقات الطباعة{% endblock %}
-{% block page_sub %}
-  <span class="sub">استوديو طباعة الكروت — {{ total }} حزمة</span>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} حزمة طباعة · لا تسمح بتسجيل الدخول</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  /* ── Editorial Print Studio — design tokens (declared per-file so
-     the 3 print templates stay self-contained but share the same
-     visual language). ── */
-  .ps-root{
-    /* Tokens — tuned to feel from the same Tailwind palette family
-       as the rest of the admin (purple #6d28d9). Amber-500/600/100
-       gives a vibrant SaaS-2026 accent that reads as a sibling to
-       the purple, not a different brand. */
-    --ink-1:#0f172a;        /* slate-900 — primary ink */
-    --ink-2:#475569;        /* slate-600 — body */
-    --ink-3:#94a3b8;        /* slate-400 — muted */
-    --canvas:#f8fafc;       /* slate-50 — page background */
-    --paper:#ffffff;
-    --hair-1:#e2e8f0;       /* slate-200 — default hairline */
-    --hair-2:#cbd5e1;       /* slate-300 — emphasised */
-    --inset:rgba(255,255,255,.85);
-    --amber:#f59e0b;        /* amber-500 — primary accent */
-    --amber-deep:#d97706;   /* amber-600 — pressed/hover */
-    --amber-darker:#b45309; /* amber-700 — text on amber-tint */
-    --amber-tint:#fef3c7;   /* amber-100 — soft wash */
-    --amber-tint-2:#fffbeb; /* amber-50 — softer wash */
-    --amber-on-tint:#92400e;/* amber-800 — high-contrast on tint */
-    --selection:rgba(245,158,11,.10);
-    --focus-ring:rgba(245,158,11,.35);
-    --success-ink:#15803d;  /* green-700 */
-    --success-tint:#dcfce7; /* green-100 */
-
-    background:transparent;
-    color:var(--ink-2);
-    max-width:1240px;margin:0 auto;
-    padding:8px 28px 56px;
-    font-feature-settings:"ss01","tnum";
-  }
-  @media (max-width:760px){
-    .ps-root{padding:6px 16px 36px}
-  }
-
-  /* Section eyebrow — uppercase tracked label that anchors each
-     editorial section. Carries the chapter number. */
-  .ps-eyebrow{
-    display:flex;align-items:center;gap:10px;
-    font-size:11.5px;font-weight:800;letter-spacing:.16em;
-    color:var(--amber-deep);text-transform:uppercase;
-    margin:0 0 14px;
-  }
-  .ps-eyebrow .num{
-    font-size:13px;font-weight:900;letter-spacing:0;color:var(--ink-1);
-    font-variant-numeric:tabular-nums;
-  }
-  .ps-eyebrow .rule{
-    flex:1;height:1px;background:var(--hair-1);
-  }
-
-  /* ── Hero block — chapter opener feel. No shadow, no gradient.
-     Title is set big and confident. ── */
-  .ps-hero{
-    background:linear-gradient(180deg,var(--amber-tint) 0%, var(--canvas) 80%);
-    border:1px solid var(--hair-1);border-radius:18px;
-    padding:34px 38px 30px;margin-bottom:28px;
-    position:relative;overflow:hidden;
-  }
-  .ps-hero::before{
-    /* Inset highlight along the top edge — replaces drop shadows.
-       Pure paper-feel depth. */
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;
-    background:var(--inset);
-  }
-  .ps-hero h1{
-    margin:0;font-size:34px;font-weight:900;letter-spacing:-.02em;
-    color:var(--ink-1);line-height:1.15;
-  }
-  .ps-hero .lede{
-    margin:10px 0 0;font-size:15px;line-height:1.7;color:var(--ink-2);
-    max-width:62ch;
-  }
-  .ps-hero-row{
-    display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;
-    margin-top:22px;
-  }
-  .ps-hero-cta{margin-inline-start:auto}
-
-  /* ── Editorial KPI strip — 3 numbers, no bordered cards.
-     Type does the hierarchy. ── */
-  .ps-stats{
-    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:0;border-top:1px solid var(--hair-1);
-    margin-top:24px;padding-top:18px;
-  }
-  .ps-stat{
-    padding:0 18px;
-    border-inline-end:1px solid var(--hair-1);
-  }
-  .ps-stat:last-child{border-inline-end:0}
-  .ps-stat:first-child{padding-inline-start:0}
-  .ps-stat:last-child{padding-inline-end:0}
-  .ps-stat .lbl{
-    font-size:11px;font-weight:700;letter-spacing:.12em;
-    color:var(--ink-3);text-transform:uppercase;
-  }
-  .ps-stat .val{
-    font-size:30px;font-weight:900;letter-spacing:-.02em;
-    color:var(--ink-1);line-height:1;margin-top:6px;
-    font-variant-numeric:tabular-nums;
-  }
-  .ps-stat .sub{
-    font-size:12px;color:var(--ink-3);margin-top:4px;
-  }
-
-  /* ── Primary action — single quiet amber button. Used ONCE per
-     screen (max). ── */
-  .ps-cta{
-    background:var(--ink-1);color:#fff;border:0;
-    padding:12px 22px;border-radius:10px;
-    font-size:13.5px;font-weight:800;letter-spacing:.01em;
-    cursor:pointer;text-decoration:none;
-    display:inline-flex;align-items:center;gap:9px;
-    transition:transform .12s ease, background .15s ease;
-  }
-  .ps-cta:hover{background:#0d0c0a;color:#fff;transform:translateY(-1px)}
-  .ps-cta:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
-  .ps-cta--amber{
-    background:var(--amber);
-  }
-  .ps-cta--amber:hover{background:var(--amber-deep)}
-
-  /* ── Toolbar / view-switcher — flat, hairline, with sliding pill. ── */
-  .ps-toolbar{
-    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
-    margin-bottom:18px;
-  }
-  .ps-switch{
-    display:inline-flex;background:var(--paper);
-    border:1px solid var(--hair-1);border-radius:10px;
-    padding:3px;position:relative;
-  }
-  .ps-switch button{
-    background:transparent;border:0;padding:7px 14px;cursor:pointer;
-    font-size:12.5px;font-weight:700;color:var(--ink-3);
-    border-radius:7px;display:inline-flex;align-items:center;gap:6px;
-    transition:color .18s ease;
-    position:relative;z-index:1;
-  }
-  .ps-switch button.is-active{color:var(--ink-1)}
-  .ps-switch button:hover:not(.is-active){color:var(--ink-2)}
-  .ps-switch .pill{
-    position:absolute;top:3px;bottom:3px;
-    background:var(--amber-tint);border-radius:7px;
-    transition:inset-inline-start .22s cubic-bezier(.4,.0,.2,1),
-               width .22s cubic-bezier(.4,.0,.2,1);
-    z-index:0;
-  }
-  .ps-toolbar-meta{
-    margin-inline-start:auto;font-size:12.5px;color:var(--ink-3);
-    display:inline-flex;align-items:center;gap:8px;
-  }
-
-  /* ── Chip grid — paper-cards on canvas. Inset highlight on top
-     edge. Hairline border. No shadow. ── */
-  .ps-chips{
+  .pc-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(300px,360px));
-    gap:16px;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 340px));
+    gap:14px;
     justify-content:start;
   }
-  @media (max-width:760px){
-    .ps-chips{grid-template-columns:1fr}
-  }
-  .ps-chip{
-    background:var(--paper);
-    border:1px solid var(--hair-1);
-    border-radius:14px;padding:20px 22px 18px;
-    display:flex;flex-direction:column;gap:14px;
-    text-decoration:none;color:inherit;
-    position:relative;
-    transition:border-color .18s ease, transform .18s ease;
-  }
-  .ps-chip::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;
-    background:var(--inset);border-radius:14px 14px 0 0;
-  }
-  .ps-chip:hover{
-    border-color:var(--hair-2);transform:translateY(-1px);
-  }
-  .ps-chip:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+  @media (max-width:760px){ .pc-grid{ grid-template-columns:1fr } }
 
-  .ps-chip-head{display:flex;align-items:flex-start;gap:12px}
-  .ps-chip-num{
-    font-size:11px;font-weight:800;letter-spacing:.12em;
-    color:var(--ink-3);text-transform:uppercase;
+  .pc-card{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    padding:16px 18px;
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    background:#fff;
+    color:inherit;
+    text-decoration:none;
+    transition:border-color .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+  .pc-card:hover{
+    border-color:#cbd5e1;
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(15,23,42,.06);
+  }
+  .pc-card-head{ display:flex; align-items:flex-start; gap:10px }
+  .pc-card-title{
+    flex:1; min-width:0;
+    font-size:14px; font-weight:900; color:#0f172a;
+    line-height:1.4;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .pc-card-num{
+    display:block; font-size:11px; font-weight:800;
+    color:#94a3b8; letter-spacing:.04em; margin-bottom:2px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .pc-card-stats{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+    padding-top:10px; border-top:1px dashed #e2e8f0;
+  }
+  .pc-card-stats .pc-stat{ text-align:start }
+  .pc-card-stats .pc-stat .k{
+    font-size:10.5px; font-weight:800; color:#94a3b8;
+    letter-spacing:.06em; text-transform:uppercase;
+  }
+  .pc-card-stats .pc-stat .v{
+    font-size:16px; font-weight:900; color:#0f172a;
     font-variant-numeric:tabular-nums;
   }
-  .ps-chip-title{
-    margin:2px 0 0;font-size:16px;font-weight:800;color:var(--ink-1);
-    line-height:1.35;letter-spacing:-.005em;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .ps-chip-tag{
-    display:inline-flex;align-items:center;gap:5px;
-    font-size:10.5px;font-weight:700;letter-spacing:.05em;
-    color:var(--amber-on-tint);background:var(--amber-tint);
-    padding:3px 9px;border-radius:999px;
-    margin-inline-start:auto;flex-shrink:0;
-  }
-
-  .ps-chip-stats{
-    display:grid;grid-template-columns:repeat(3,1fr);
-    gap:0;border-top:1px solid var(--hair-1);padding-top:12px;
-  }
-  .ps-chip-stat{padding:0 8px;border-inline-end:1px solid var(--hair-1)}
-  .ps-chip-stat:last-child{border-inline-end:0}
-  .ps-chip-stat:first-child{padding-inline-start:0}
-  .ps-chip-stat:last-child{padding-inline-end:0}
-  .ps-chip-stat .lbl{
-    font-size:10px;font-weight:700;letter-spacing:.1em;
-    color:var(--ink-3);text-transform:uppercase;
-  }
-  .ps-chip-stat .val{
-    font-size:18px;font-weight:900;letter-spacing:-.01em;
-    color:var(--ink-1);font-variant-numeric:tabular-nums;
-    margin-top:3px;
-  }
-
-  .ps-chip-foot{
-    display:flex;align-items:center;gap:8px;
-    border-top:1px solid var(--hair-1);padding-top:10px;
-    font-size:11.5px;color:var(--ink-3);
+  .pc-card-foot{
+    display:flex; align-items:center; gap:8px;
+    padding-top:8px; border-top:1px solid #f1f5f9;
+    font-size:11.5px; color:#64748b;
     font-variant-numeric:tabular-nums;
   }
-  .ps-chip-foot .dot{
-    width:5px;height:5px;border-radius:50%;background:var(--amber);
-    flex-shrink:0;
-  }
-  .ps-chip-foot .arrow{margin-inline-start:auto;color:var(--ink-3);font-size:11px}
+  .pc-card-foot .arrow{ margin-inline-start:auto; color:#94a3b8 }
 
-  /* ── Table — hairline grid, tabular numerics, generous padding. ── */
-  .ps-table-wrap{
-    background:var(--paper);
-    border:1px solid var(--hair-1);border-radius:14px;
-    overflow:hidden;
+  /* View switcher — slate, animated pill, matches the rest of the
+     admin's interaction language */
+  .pc-switch{
+    position:relative; display:inline-flex;
+    padding:3px;
+    background:#f8fafc; border:1px solid #e2e8f0;
+    border-radius:9px;
   }
-  .ps-table{width:100%;border-collapse:collapse}
-  .ps-table thead th{
-    background:transparent;
-    padding:14px 18px;text-align:start;
-    font-size:11px;font-weight:800;color:var(--ink-3);
-    letter-spacing:.12em;text-transform:uppercase;
-    border-bottom:1px solid var(--hair-1);
+  .pc-switch button{
+    position:relative; z-index:1;
+    background:transparent; border:0;
+    padding:6px 12px;
+    font-size:12px; font-weight:800; color:#64748b;
+    border-radius:6px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:color .15s ease;
   }
-  .ps-table tbody td{
-    padding:14px 18px;font-size:13.5px;color:var(--ink-2);
-    border-bottom:1px solid var(--hair-1);
-    font-variant-numeric:tabular-nums;
-  }
-  .ps-table tbody tr:last-child td{border-bottom:0}
-  .ps-table tbody tr:hover{background:var(--amber-tint)}
-  .ps-table .ps-row-title{
-    font-size:14px;font-weight:800;color:var(--ink-1);
-    letter-spacing:-.005em;
-  }
-  .ps-table .ps-row-sub{
-    font-size:11.5px;color:var(--ink-3);margin-top:2px;
-  }
-  .ps-row-actions{display:flex;gap:6px;justify-content:flex-end}
-  .ps-row-btn{
-    background:transparent;color:var(--ink-2);text-decoration:none;
-    font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;
-    border:1px solid var(--hair-1);
-    display:inline-flex;align-items:center;gap:5px;
-    transition:background .15s ease, border-color .15s ease;
-  }
-  .ps-row-btn:hover{background:var(--amber-tint);border-color:var(--amber);color:var(--ink-1)}
-  .ps-row-btn--primary{
-    background:var(--ink-1);color:#fff;border-color:var(--ink-1);
-  }
-  .ps-row-btn--primary:hover{background:var(--amber-deep);border-color:var(--amber-deep);color:#fff}
-
-  /* ── Empty state — editorial chapter opener. ── */
-  .ps-empty{
-    background:var(--paper);border:1px solid var(--hair-1);
-    border-radius:14px;padding:60px 32px;text-align:center;
-  }
-  .ps-empty .marker{
-    font-size:11px;font-weight:800;letter-spacing:.16em;
-    color:var(--amber-deep);text-transform:uppercase;margin-bottom:14px;
-  }
-  .ps-empty h2{
-    margin:0 0 10px;font-size:24px;font-weight:900;color:var(--ink-1);
-    letter-spacing:-.015em;
-  }
-  .ps-empty .lede{
-    margin:0 auto 26px;font-size:14.5px;line-height:1.7;
-    color:var(--ink-2);max-width:46ch;
-  }
-  .ps-empty-steps{
-    display:flex;justify-content:center;gap:18px;flex-wrap:wrap;
-    margin-bottom:26px;font-size:12.5px;color:var(--ink-3);
-  }
-  .ps-empty-step{display:inline-flex;align-items:center;gap:6px}
-  .ps-empty-step .n{
-    width:20px;height:20px;border-radius:50%;background:var(--ink-1);
-    color:#fff;font-size:10.5px;font-weight:900;
-    display:grid;place-items:center;font-variant-numeric:tabular-nums;
+  .pc-switch button.is-active{ color:#0f172a }
+  .pc-switch button:not(.is-active):hover{ color:#334155 }
+  .pc-switch .pill{
+    position:absolute; top:3px; bottom:3px;
+    background:#fff; border:1px solid #cbd5e1;
+    border-radius:6px;
+    box-shadow:0 1px 2px rgba(15,23,42,.05);
+    transition:inset-inline-start .22s cubic-bezier(.4,0,.2,1),
+               width .22s cubic-bezier(.4,0,.2,1);
+    z-index:0;
   }
 
-  /* ── Responsive ── */
-  @media (max-width:760px){
-    .ps-hero{padding:24px 20px}
-    .ps-hero h1{font-size:26px}
-    .ps-stats{grid-template-columns:1fr;gap:14px;padding-top:14px}
-    .ps-stat{border-inline-end:0;padding:0}
-    .ps-chip-stats{gap:8px}
+  .pc-toolbar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .pc-toolbar-hint{
+    margin-inline-start:auto;
+    font-size:12px; color:#64748b;
+    display:inline-flex; align-items:center; gap:6px;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ps-root">
 
-  {# ────────── 01 — Hero / chapter opener ────────── #}
-  <p class="ps-eyebrow">
-    <span class="num">01</span>
-    <span>استوديو الطباعة</span>
-    <span class="rule"></span>
-  </p>
+{{ hub.hero(
+  "بطاقات الطباعة",
+  subtitle="استورد ملفات الكروت الجاهزة (Excel · CSV · PDF) وحوّلها إلى ملفات طباعة احترافية. هذه البطاقات لا تُرحَّل إلى FreeRADIUS ولا تسمح بتسجيل الدخول.",
+  icon="print",
+  actions_html=hub.btn("استيراد دفعة جديدة", icon="file-import", href=url_for('radius.cards_print_new'), variant="primary")
+) }}
 
-  <section class="ps-hero">
-    <div class="ps-hero-row">
-      <div style="flex:1;min-width:260px">
-        <h1>بطاقات للطباعة فقط</h1>
-        <p class="lede">
-          استورد ملفات الكروت الجاهزة — Excel، CSV، أو PDF — وحوّلها إلى ملفات
-          طباعة احترافية بسرعة. هذه البطاقات لا تُرحَّل إلى FreeRADIUS ولا تسمح
-          بتسجيل الدخول، فهي آمنة بطبيعتها.
-        </p>
-      </div>
-      <div class="ps-hero-cta">
-        <a href="{{ url_for('radius.cards_print_new') }}" class="ps-cta ps-cta--amber">
-          <i class="fa-solid fa-file-import"></i>
-          استيراد دفعة جديدة
-        </a>
-      </div>
+{# ── Stats ────────────────────────────────────────────── #}
+{% call hub.section("نظرة سريعة", icon="chart-column") %}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("إجمالي الحزم",     total,            icon="layer-group", variant="brand",  sub="حزمة طباعة محفوظة") }}
+    {{ hub.kpi("معروضة في الصفحة", batches|length,   icon="boxes-stacked", variant="amber", sub="جاهزة للطباعة") }}
+    {{ hub.kpi("حالة النظام",      "متصل",          icon="circle-check", variant="green", sub="المحرّك وقوالب الطباعة جاهزة") }}
+  </div>
+{% endcall %}
+
+{# ── Batches ─────────────────────────────────────────── #}
+{% call hub.section("الحزم المحفوظة", icon="layer-group", meta=batches|length ~ " حزمة") %}
+
+  {% if not batches %}
+    {{ hub.empty(
+      "لا توجد حزم طباعة بعد",
+      sub="ارفع ملفك الأول وسيستخرج المحرّك الذكي البطاقات تلقائياً، ثم اختر قالباً للطباعة.",
+      icon="print"
+    ) }}
+    <div style="text-align:center;margin-top:12px">
+      {{ hub.btn("أنشئ أوّل حزمة", icon="bolt", href=url_for('radius.cards_print_new'), variant="primary") }}
     </div>
 
-    <div class="ps-stats">
-      <div class="ps-stat">
-        <div class="lbl">إجمالي الحزم</div>
-        <div class="val">{{ total }}</div>
-        <div class="sub">حزمة طباعة محفوظة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="lbl">جاهزة للطباعة</div>
-        <div class="val">{{ batches|length }}</div>
-        <div class="sub">معروضة في هذه الصفحة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="lbl">حالة النظام</div>
-        <div class="val" style="font-size:14px;font-weight:700;color:var(--success-ink);letter-spacing:0">
-          <i class="fa-solid fa-circle-check"></i> متصل
-        </div>
-        <div class="sub">المحرّك الذكي وقوالب الطباعة جاهزة</div>
-      </div>
-    </div>
-  </section>
+  {% else %}
 
-  {% if batches %}
-  {# ────────── 02 — Toolbar ────────── #}
-  <p class="ps-eyebrow">
-    <span class="num">02</span>
-    <span>الحزم المحفوظة</span>
-    <span class="rule"></span>
-  </p>
-
-  <div class="ps-toolbar">
-    <div class="ps-switch" id="ci-view-switcher" role="tablist" aria-label="عرض الحزم">
+  <div class="pc-toolbar">
+    <div class="pc-switch" id="pc-view-switcher" role="tablist" aria-label="عرض الحزم">
       <span class="pill" aria-hidden="true"></span>
       <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
         <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
@@ -399,43 +156,30 @@
         <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
       </button>
     </div>
-    <div class="ps-toolbar-meta">
-      <i class="fa-solid fa-circle-info" style="opacity:.6" aria-hidden="true"></i>
+    <div class="pc-toolbar-hint">
+      <i class="fa-solid fa-circle-info" aria-hidden="true" style="color:#94a3b8"></i>
       اضغط أي حزمة لفتح بطاقاتها وتجهيز ملف الطباعة
     </div>
   </div>
 
-  {# Chip view — paper cards #}
-  <div class="ps-chips" data-view-panel="chips">
+  {# Chip view #}
+  <div class="pc-grid" data-view-panel="chips">
     {% for b in batches %}
-    <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="ps-chip">
-      <div class="ps-chip-head">
-        <div>
-          <div class="ps-chip-num">حزمة #{{ b.id }}</div>
-          <h3 class="ps-chip-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</h3>
+    <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="pc-card">
+      <div class="pc-card-head">
+        <div style="flex:1;min-width:0">
+          <span class="pc-card-num">#{{ b.id }}</span>
+          <div class="pc-card-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
         </div>
-        <span class="ps-chip-tag">
-          <i class="fa-solid fa-print" aria-hidden="true"></i> طباعة
-        </span>
+        {{ hub.pill("طباعة", variant="amber", dot=False) }}
       </div>
-
-      <div class="ps-chip-stats">
-        <div class="ps-chip-stat">
-          <div class="lbl">عدد</div>
-          <div class="val">{{ b.card_count or 0 }}</div>
-        </div>
-        <div class="ps-chip-stat">
-          <div class="lbl">بيع</div>
-          <div class="val">{{ "%.2f"|format(b.price_per_card or 0) }}</div>
-        </div>
-        <div class="ps-chip-stat">
-          <div class="lbl">جملة</div>
-          <div class="val">{{ "%.2f"|format(b.price_bulk or 0) }}</div>
-        </div>
+      <div class="pc-card-stats">
+        <div class="pc-stat"><div class="k">عدد</div><div class="v">{{ b.card_count or 0 }}</div></div>
+        <div class="pc-stat"><div class="k">بيع</div><div class="v">{{ "%.2f"|format(b.price_per_card or 0) }}</div></div>
+        <div class="pc-stat"><div class="k">جملة</div><div class="v">{{ "%.2f"|format(b.price_bulk or 0) }}</div></div>
       </div>
-
-      <div class="ps-chip-foot">
-        <span class="dot" aria-hidden="true"></span>
+      <div class="pc-card-foot">
+        <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
         <span>{{ (b.created_at or '')[:10] }}</span>
         <span class="arrow"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></span>
       </div>
@@ -443,43 +187,36 @@
     {% endfor %}
   </div>
 
-  {# Table view — hairline grid #}
-  <div class="ps-table-wrap" data-view-panel="table" hidden>
-    <table class="ps-table">
+  {# Table view — uses the existing .hub-table class #}
+  <div data-view-panel="table" hidden style="overflow-x:auto">
+    <table class="hub-table">
       <thead>
         <tr>
           <th style="width:60px">#</th>
           <th>اسم الحزمة</th>
-          <th style="width:120px">العدد</th>
-          <th style="width:120px">سعر البيع</th>
-          <th style="width:120px">سعر الجملة</th>
-          <th style="width:160px">التاريخ</th>
+          <th style="width:100px">العدد</th>
+          <th style="width:110px">سعر البيع</th>
+          <th style="width:110px">سعر الجملة</th>
+          <th style="width:170px">التاريخ</th>
           <th style="width:170px;text-align:end">إجراءات</th>
         </tr>
       </thead>
       <tbody>
         {% for b in batches %}
         <tr>
-          <td><strong style="color:var(--ink-1)">#{{ b.id }}</strong></td>
+          <td><strong style="color:#0f172a">#{{ b.id }}</strong></td>
           <td>
-            <div class="ps-row-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
-            {% if b.notes %}<div class="ps-row-sub">{{ b.notes[:60] }}</div>{% endif %}
+            <strong style="color:#0f172a">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</strong>
+            {% if b.notes %}<br><small style="color:#64748b">{{ b.notes[:60] }}</small>{% endif %}
           </td>
-          <td><strong style="color:var(--ink-1)">{{ b.card_count or 0 }}</strong></td>
-          <td>{{ "%.2f"|format(b.price_per_card or 0) }}</td>
-          <td>{{ "%.2f"|format(b.price_bulk or 0) }}</td>
-          <td style="font-size:12px;color:var(--ink-3);direction:ltr;text-align:start">
-            {{ (b.created_at or '')[:19] }}
-          </td>
+          <td style="font-variant-numeric:tabular-nums"><strong>{{ b.card_count or 0 }}</strong></td>
+          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_per_card or 0) }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_bulk or 0) }}</td>
+          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ (b.created_at or '')[:19] }}</td>
           <td>
-            <div class="ps-row-actions">
-              <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="ps-row-btn">
-                <i class="fa-solid fa-eye" aria-hidden="true"></i> فتح
-              </a>
-              <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}#print"
-                 class="ps-row-btn ps-row-btn--primary">
-                <i class="fa-solid fa-print" aria-hidden="true"></i> طباعة
-              </a>
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              {{ hub.btn("فتح",    icon="eye",   href=url_for('radius.cards_print_batch', batch_id=b.id), variant="secondary", size="sm") }}
+              {{ hub.btn("طباعة",  icon="print", href=url_for('radius.cards_print_batch', batch_id=b.id) ~ '#print', variant="primary", size="sm") }}
             </div>
           </td>
         </tr>
@@ -488,85 +225,53 @@
     </table>
   </div>
 
-  {% else %}
-  {# ────────── Empty state — editorial chapter opener ────────── #}
-  <div class="ps-empty">
-    <div class="marker">ابدأ هنا</div>
-    <h2>لا توجد حزم طباعة بعد</h2>
-    <p class="lede">
-      ارفع ملفك الأول وسيستخرج المحرّك الذكي البطاقات تلقائياً.
-      ثم اختر قالباً للطباعة وحمّل ملف PDF جاهز للتوزيع.
-    </p>
-    <div class="ps-empty-steps">
-      <span class="ps-empty-step"><span class="n">1</span> ارفع الملف</span>
-      <span class="ps-empty-step"><span class="n">2</span> راجع البطاقات</span>
-      <span class="ps-empty-step"><span class="n">3</span> اطبع</span>
-    </div>
-    <a href="{{ url_for('radius.cards_print_new') }}" class="ps-cta ps-cta--amber">
-      <i class="fa-solid fa-bolt"></i> أنشئ أوّل حزمة
-    </a>
-  </div>
   {% endif %}
-</div>
+{% endcall %}
 
 <script>
 (function(){
-  const sw = document.getElementById('ci-view-switcher');
+  const sw = document.getElementById('pc-view-switcher');
   if (!sw) return;
   const pill = sw.querySelector('.pill');
   const buttons = sw.querySelectorAll('button[data-view]');
+  const isRTL = getComputedStyle(document.documentElement).direction === 'rtl';
 
-  function positionPill(activeBtn) {
+  function setPill(activeBtn){
     if (!pill || !activeBtn) return;
     const swRect = sw.getBoundingClientRect();
     const btnRect = activeBtn.getBoundingClientRect();
-    pill.style.insetInlineStart = (btnRect.left - swRect.left - 3 +
-                                   (document.documentElement.dir === 'rtl' ?
-                                    (swRect.right - btnRect.right - 3) - (btnRect.left - swRect.left - 3) : 0)) + 'px';
-    pill.style.width = btnRect.width + 'px';
-  }
-  // Use a simpler approach — measure from the actual button.
-  function setPill(activeBtn) {
-    if (!pill || !activeBtn) return;
-    const swRect = sw.getBoundingClientRect();
-    const btnRect = activeBtn.getBoundingClientRect();
-    pill.style.width = btnRect.width + 'px';
-    // For RTL, position via right; for LTR, via left. Using inline-start.
-    const startOffset = (document.dir === 'rtl' || getComputedStyle(document.documentElement).direction === 'rtl')
+    const startOffset = isRTL
       ? (swRect.right - btnRect.right)
       : (btnRect.left - swRect.left);
-    pill.style.insetInlineStart = (startOffset) + 'px';
+    pill.style.insetInlineStart = startOffset + 'px';
+    pill.style.width = btnRect.width + 'px';
   }
 
   sw.addEventListener('click', e => {
     const btn = e.target.closest('button[data-view]');
     if (!btn) return;
-    const view = btn.dataset.view;
     buttons.forEach(b => {
-      const active = b === btn;
-      b.classList.toggle('is-active', active);
-      b.setAttribute('aria-selected', active ? 'true' : 'false');
+      const on = b === btn;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     document.querySelectorAll('[data-view-panel]').forEach(p => {
-      p.hidden = (p.dataset.viewPanel !== view);
+      p.hidden = (p.dataset.viewPanel !== btn.dataset.view);
     });
     setPill(btn);
-    try { localStorage.setItem('ps:view', view); } catch(_) {}
+    try { localStorage.setItem('pc:view', btn.dataset.view); } catch(_){}
   });
 
-  // Restore preference + initialise pill.
   let saved = null;
-  try { saved = localStorage.getItem('ps:view'); } catch(_) {}
+  try { saved = localStorage.getItem('pc:view'); } catch(_){}
   if (saved) {
     const target = sw.querySelector(`button[data-view="${saved}"]`);
-    if (target) target.click();
+    if (target && !target.classList.contains('is-active')) target.click();
+    else requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
   } else {
-    // Position on the default active button.
     requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
   }
-  window.addEventListener('resize', () => {
-    setPill(sw.querySelector('button.is-active'));
-  });
+  window.addEventListener('resize', () => setPill(sw.querySelector('button.is-active')));
 })();
 </script>
 {% endblock %}

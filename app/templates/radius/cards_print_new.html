@@ -1,7 +1,7 @@
 {# Print-Only Cards — import form.
-   Direction: Editorial Print Studio — numbered chapters (01/02/03),
-   2-column form layout, hairline separators, amber accent on the
-   submit + the section eyebrows only.
+   Uses hub.section / hub.field / hub.btn so the form chrome matches
+   the rest of the admin. Only the smart-import drop-zone has bespoke
+   CSS because it's print-specific.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -11,8 +11,8 @@
 {% block page_title %}دفعة طباعة جديدة{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}" style="color:var(--ink-2,#475569);text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة إلى الاستوديو
+    <a href="{{ url_for('radius.cards_print_list') }}" style="color:#475569;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
     </a>
   </span>
 {% endblock %}
@@ -20,546 +20,336 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .ps-root{
-    --ink-1:#0f172a;
-    --ink-2:#475569;
-    --ink-3:#94a3b8;
-    --canvas:#f8fafc;
-    --paper:#ffffff;
-    --hair-1:#e2e8f0;
-    --hair-2:#cbd5e1;
-    --inset:rgba(255,255,255,.85);
-    --amber:#f59e0b;
-    --amber-deep:#d97706;
-    --amber-darker:#b45309;
-    --amber-tint:#fef3c7;
-    --amber-tint-2:#fffbeb;
-    --amber-on-tint:#92400e;
-    --selection:rgba(245,158,11,.10);
-    --focus-ring:rgba(245,158,11,.35);
-    --success-ink:#15803d;
-    --success-tint:#dcfce7;
-    --danger-ink:#b91c1c;
-    --danger-tint:#fee2e2;
+  /* ── Smart-import drop-zone (print-specific) ── */
+  [hidden]{ display:none !important }
 
-    background:transparent;
-    color:var(--ink-2);
-    max-width:1080px;margin:0 auto;
-    padding:8px 28px 56px;
-    font-feature-settings:"ss01","tnum";
+  .pc-smart-head{
+    display:flex; align-items:center; gap:10px; margin-bottom:6px;
   }
-  @media (max-width:760px){
-    .ps-root{padding:6px 16px 36px}
+  .pc-smart-head .title{
+    font-size:13.5px; font-weight:900; color:#0f172a;
   }
-  [hidden]{display:none !important}
+  .pc-smart-head .build-chip{
+    margin-inline-start:auto;
+    font-size:10.5px; font-weight:800;
+    color:#15803d; background:#dcfce7;
+    border:1px solid #bbf7d0;
+    padding:3px 9px; border-radius:6px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing:.03em;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .pc-smart-help{
+    font-size:12px; color:#64748b; line-height:1.7;
+    margin:0 0 12px;
+  }
 
-  /* ── Section eyebrow ── */
-  .ps-eyebrow{
-    display:flex;align-items:center;gap:10px;
-    font-size:11.5px;font-weight:800;letter-spacing:.16em;
-    color:var(--amber-deep);text-transform:uppercase;
-    margin:0 0 14px;
-  }
-  .ps-eyebrow .num{
-    font-size:13px;font-weight:900;letter-spacing:0;color:var(--ink-1);
-    font-variant-numeric:tabular-nums;
-  }
-  .ps-eyebrow .rule{flex:1;height:1px;background:var(--hair-1)}
-
-  /* ── Chapter card — paper surface, hairline border, inset top ── */
-  .ps-chapter{
-    background:var(--paper);
-    border:1px solid var(--hair-1);border-radius:14px;
-    padding:28px 32px;margin-bottom:24px;
+  .pc-dz{
     position:relative;
-  }
-  .ps-chapter::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;
-    background:var(--inset);border-radius:14px 14px 0 0;
-  }
-  .ps-chapter h2{
-    margin:0 0 6px;font-size:20px;font-weight:900;color:var(--ink-1);
-    letter-spacing:-.01em;line-height:1.3;
-  }
-  .ps-chapter .ps-lede{
-    margin:0 0 22px;font-size:13.5px;line-height:1.7;color:var(--ink-2);
-    max-width:62ch;
-  }
-
-  /* ── Form layout — labeled rows, 2-column on desktop ── */
-  .ps-field{
-    display:grid;grid-template-columns:240px 1fr;gap:24px;
-    padding:18px 0;border-bottom:1px solid var(--hair-1);
-    align-items:flex-start;
-  }
-  .ps-field:last-of-type{border-bottom:0;padding-bottom:0}
-  .ps-field:first-of-type{padding-top:0}
-  .ps-field-label{padding-top:8px}
-  .ps-field-label .name{
-    display:block;font-size:13.5px;font-weight:800;color:var(--ink-1);
-    line-height:1.4;
-  }
-  .ps-field-label .req{color:var(--amber-deep);margin-inline-start:3px}
-  .ps-field-label .hint{
-    display:block;font-size:12px;color:var(--ink-3);
-    line-height:1.6;margin-top:4px;
-  }
-  .ps-field-control input,
-  .ps-field-control textarea{
-    width:100%;padding:11px 14px;
-    border:1px solid var(--hair-1);border-radius:9px;
-    background:var(--paper);color:var(--ink-1);
-    font-size:14px;line-height:1.5;
-    font-family:inherit;
-    transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
-  }
-  .ps-field-control input:hover,
-  .ps-field-control textarea:hover{border-color:var(--hair-2)}
-  .ps-field-control input:focus,
-  .ps-field-control textarea:focus{
-    outline:none;border-color:var(--amber);
-    box-shadow:0 0 0 3px var(--focus-ring);
-  }
-  .ps-field-control textarea{
-    min-height:200px;direction:ltr;text-align:left;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size:13px;line-height:1.6;
-  }
-
-  /* ── Smart import — editorial card ── */
-  .ps-smart{
-    background:linear-gradient(180deg,#FFFCF6 0%,#fff 50%);
-    border:1px solid var(--hair-1);border-radius:12px;
-    padding:20px 22px;position:relative;overflow:hidden;
-  }
-  .ps-smart::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:1px;background:var(--inset);
-    border-radius:12px 12px 0 0;
-  }
-  .ps-smart-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-  .ps-smart-head h3{
-    margin:0;font-size:14.5px;font-weight:800;color:var(--ink-1);
-    letter-spacing:-.005em;
-  }
-  .ps-smart-head .marker-num{
-    width:26px;height:26px;border-radius:8px;
-    background:var(--ink-1);color:#fff;
-    display:grid;place-items:center;
-    font-size:11.5px;font-weight:900;font-variant-numeric:tabular-nums;
-  }
-  .ps-smart .build-chip{
-    margin-inline-start:auto;font-size:10.5px;font-weight:800;
-    color:var(--success-ink);background:var(--success-tint);
-    padding:4px 9px;border-radius:6px;letter-spacing:.04em;
-    font-family:ui-monospace,Consolas,monospace;
-    display:inline-flex;align-items:center;gap:5px;
-  }
-  .ps-smart .file-tag{
-    margin-inline-start:auto;font-size:11px;font-weight:700;
-    color:var(--amber-on-tint);background:var(--amber-tint);
-    padding:4px 10px;border-radius:6px;
-  }
-  .ps-smart-help{
-    font-size:12.5px;color:var(--ink-3);line-height:1.7;margin-bottom:14px;
-  }
-  .ps-smart-row{
-    display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
-  }
-  @media (max-width:680px){.ps-smart-row{grid-template-columns:1fr}}
-
-  /* ── Drop-zone — replaces the ugly native file input. Native
-     <input type="file"> stays in the DOM for keyboard a11y +
-     screen readers, just visually hidden inside the zone. ── */
-  .ps-dz{
-    position:relative;
-    border:1.5px dashed var(--hair-2);
-    border-radius:11px;
-    background:var(--canvas);
-    padding:22px 20px;
+    border:1.5px dashed #cbd5e1;
+    border-radius:10px;
+    background:#f8fafc;
+    padding:22px 18px;
     cursor:pointer;
-    transition:border-color .18s ease, background .18s ease, transform .15s ease;
-    min-height:108px;
+    transition:border-color .15s ease, background .15s ease;
+    min-height:96px;
   }
-  .ps-dz:hover{
-    border-color:var(--amber);
-    background:var(--amber-tint);
+  .pc-dz:hover{ border-color:#f59e0b; background:#fffbeb }
+  .pc-dz:focus-within{
+    border-color:#f59e0b; background:#fffbeb;
+    outline:3px solid rgba(245,158,11,.32); outline-offset:2px;
   }
-  .ps-dz:focus-within{
-    border-color:var(--amber);
-    background:var(--amber-tint);
-    outline:3px solid var(--focus-ring);outline-offset:2px;
+  .pc-dz.is-drag{
+    border-color:#d97706; background:#fef3c7;
   }
-  .ps-dz.is-drag{
-    border-color:var(--amber-deep);
-    background:var(--amber-tint);
-    transform:scale(1.005);
+  .pc-dz.is-filled{
+    border-style:solid; border-color:#e2e8f0;
+    background:#fff; cursor:default;
   }
-  .ps-dz.is-filled{
-    border-style:solid;border-color:var(--hair-1);
-    background:var(--paper);cursor:default;
+  .pc-dz.is-filled:hover{ background:#fff }
+  .pc-dz-input{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    opacity:0; cursor:pointer;
   }
-  .ps-dz.is-filled:hover{background:var(--paper)}
-  .ps-dz-input{
-    position:absolute;inset:0;width:100%;height:100%;
-    opacity:0;cursor:pointer;
-  }
-  .ps-dz.is-filled .ps-dz-input{pointer-events:none}
+  .pc-dz.is-filled .pc-dz-input{ pointer-events:none }
 
-  .ps-dz-empty{
-    display:flex;flex-direction:column;align-items:center;
-    text-align:center;gap:8px;pointer-events:none;
+  .pc-dz-empty{
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center; gap:6px;
+    pointer-events:none;
   }
-  .ps-dz-icon{
-    width:46px;height:46px;border-radius:11px;
-    background:var(--paper);border:1px solid var(--hair-1);
-    color:var(--amber-deep);
-    display:grid;place-items:center;font-size:18px;
-    margin-bottom:4px;
+  .pc-dz-icon{
+    width:44px; height:44px; border-radius:10px;
+    background:#fff; border:1px solid #e2e8f0;
+    color:#d97706;
+    display:grid; place-items:center;
+    font-size:17px; margin-bottom:4px;
   }
-  .ps-dz.is-drag .ps-dz-icon,
-  .ps-dz:hover .ps-dz-icon{
-    border-color:var(--amber);color:var(--amber-deep);
+  .pc-dz:hover .pc-dz-icon,
+  .pc-dz.is-drag .pc-dz-icon{ border-color:#fcd34d }
+  .pc-dz-title{
+    margin:0; font-size:13.5px; font-weight:800; color:#0f172a;
   }
-  .ps-dz-title{
-    margin:0;font-size:14px;font-weight:800;color:var(--ink-1);
-    letter-spacing:-.005em;
+  .pc-dz-sub{
+    margin:0; font-size:11.5px; color:#64748b;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
-  .ps-dz-sub{
-    margin:0;font-size:11.5px;color:var(--ink-3);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    letter-spacing:.04em;
-  }
-  .ps-dz-sub kbd{
-    background:var(--paper);border:1px solid var(--hair-1);
-    border-radius:4px;padding:1px 6px;font-size:10.5px;
-    font-family:inherit;color:var(--ink-2);
+  .pc-dz-sub kbd{
+    background:#fff; border:1px solid #e2e8f0; border-radius:4px;
+    padding:1px 6px; font-size:10.5px;
+    font-family:inherit; color:#475569;
   }
 
-  .ps-dz-filled{
-    display:flex;align-items:center;gap:14px;pointer-events:auto;
+  .pc-dz-filled{ display:flex; align-items:center; gap:12px }
+  .pc-dz-file-icon{
+    width:38px; height:38px; border-radius:8px;
+    background:#fef3c7; color:#92400e;
+    display:grid; place-items:center;
+    font-size:14px; flex-shrink:0;
   }
-  .ps-dz-file-icon{
-    width:42px;height:42px;border-radius:10px;
-    background:var(--amber-tint);color:var(--amber-on-tint);
-    display:grid;place-items:center;font-size:15px;
-    flex-shrink:0;
+  .pc-dz-file-info{ flex:1; min-width:0 }
+  .pc-dz-file-name{
+    display:block;
+    font-size:13px; font-weight:800; color:#0f172a;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    direction:ltr; text-align:start;
   }
-  .ps-dz-file-info{flex:1;min-width:0}
-  .ps-dz-file-name{
-    display:block;font-size:13.5px;font-weight:800;color:var(--ink-1);
-    letter-spacing:-.005em;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    direction:ltr;text-align:start;
+  .pc-dz-file-meta{
+    display:flex; align-items:center; gap:8px; margin-top:2px;
+    font-size:11px; color:#94a3b8;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
-  .ps-dz-file-meta{
-    display:flex;align-items:center;gap:8px;margin-top:2px;
-    font-size:11.5px;color:var(--ink-3);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  .pc-dz-file-meta .dot{
+    width:3px; height:3px; border-radius:50%; background:#cbd5e1;
   }
-  .ps-dz-file-meta .dot{
-    width:3px;height:3px;border-radius:50%;background:var(--ink-3);
-  }
-  .ps-dz-remove{
-    background:transparent;border:1px solid var(--hair-1);
-    color:var(--ink-3);
-    width:34px;height:34px;border-radius:9px;cursor:pointer;
-    display:grid;place-items:center;font-size:12px;
+  .pc-dz-remove{
+    background:transparent; border:1px solid #e2e8f0;
+    color:#64748b;
+    width:30px; height:30px; border-radius:8px;
+    cursor:pointer;
+    display:grid; place-items:center; font-size:11px;
     transition:background .15s ease, border-color .15s ease, color .15s ease;
     flex-shrink:0;
   }
-  .ps-dz-remove:hover{
-    background:var(--danger-tint);border-color:var(--danger-ink);
-    color:var(--danger-ink);
+  .pc-dz-remove:hover{
+    background:#fef2f2; border-color:#fecaca; color:#b91c1c;
   }
-  .ps-dz-remove:focus-visible{
-    outline:3px solid var(--focus-ring);outline-offset:2px;
+
+  .pc-smart-actions{
+    display:flex; gap:10px; align-items:center;
+    margin-top:12px;
   }
-  .ps-smart-btn{
-    background:var(--ink-1);color:#fff;border:0;border-radius:9px;
-    padding:11px 22px;font-size:13px;font-weight:800;cursor:pointer;
-    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  .pc-smart-btn{
+    background:#0f172a; color:#fff; border:0; border-radius:8px;
+    padding:9px 18px;
+    font-size:13px; font-weight:800; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
     transition:background .15s ease, transform .12s ease;
   }
-  .ps-smart-btn:hover:not([disabled]){background:#0d0c0a;transform:translateY(-1px)}
-  .ps-smart-btn[disabled]{opacity:.55;cursor:wait}
-  .ps-smart-btn .spin{display:none;animation:ps-spin 1s linear infinite}
-  .ps-smart-btn.is-busy .spin{display:inline-block}
-  .ps-smart-btn.is-busy .static{display:none}
-  @keyframes ps-spin{to{transform:rotate(360deg)}}
+  .pc-smart-btn:hover:not([disabled]){ background:#1e293b; transform:translateY(-1px) }
+  .pc-smart-btn[disabled]{ opacity:.55; cursor:wait }
+  .pc-smart-btn .spin{ display:none; animation:pc-spin 1s linear infinite }
+  .pc-smart-btn.is-busy .spin{ display:inline-block }
+  .pc-smart-btn.is-busy .static{ display:none }
+  @keyframes pc-spin{ to{ transform:rotate(360deg) } }
 
-  .ps-smart-status{
-    margin-top:14px;font-size:12.5px;line-height:1.7;
-    padding:11px 14px;border-radius:9px;
+  .pc-smart-status{
+    flex:1; font-size:12.5px; line-height:1.6;
+    padding:8px 12px; border-radius:8px;
     border:1px solid transparent;
   }
-  .ps-smart-status.ok{
-    color:var(--success-ink);background:var(--success-tint);
-    border-color:#C9DCBE;
-  }
-  .ps-smart-status.warn{
-    color:var(--amber-on-tint);background:var(--amber-tint);
-    border-color:#F0DDB0;
-  }
-  .ps-smart-status.err{
-    color:var(--danger-ink);background:var(--danger-tint);
-    border-color:#E5CABE;
-  }
+  .pc-smart-status.ok  { color:#15803d; background:#dcfce7; border-color:#bbf7d0 }
+  .pc-smart-status.warn{ color:#92400e; background:#fef3c7; border-color:#fcd34d }
+  .pc-smart-status.err { color:#b91c1c; background:#fee2e2; border-color:#fecaca }
 
-  .ps-counter{
-    margin-top:14px;display:flex;align-items:baseline;gap:12px;
-    padding:16px 20px;border-radius:10px;
-    background:var(--ink-1);color:#fff;
+  .pc-counter{
+    margin-top:12px; display:flex; align-items:baseline; gap:10px;
+    padding:14px 18px; border-radius:10px;
+    background:#0f172a; color:#fff;
   }
-  .ps-counter .num{
-    font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1;
+  .pc-counter .num{
+    font-size:30px; font-weight:900; letter-spacing:-.02em; line-height:1;
     font-variant-numeric:tabular-nums;
   }
-  .ps-counter .lbl{font-size:13px;font-weight:600;opacity:.9}
+  .pc-counter .lbl{ font-size:13px; font-weight:700; opacity:.9 }
 
-  /* ── Submit row ── */
-  .ps-actions{
-    display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;
-    padding-top:24px;border-top:1px solid var(--hair-1);
+  .pc-textarea{
+    width:100%; min-height:200px;
+    padding:10px 12px;
+    border:1px solid #e2e8f0; border-radius:8px;
+    background:#fff;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:13px; line-height:1.55;
+    direction:ltr; text-align:left;
+    color:#0f172a;
   }
-  .ps-submit{
-    background:var(--amber);color:#fff;border:0;
-    padding:13px 28px;border-radius:10px;
-    font-size:14px;font-weight:800;letter-spacing:.005em;
-    cursor:pointer;display:inline-flex;align-items:center;gap:9px;
-    transition:background .15s ease, transform .12s ease;
-  }
-  .ps-submit:hover{background:var(--amber-deep);transform:translateY(-1px)}
-  .ps-submit:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
-  .ps-cancel{
-    background:transparent;color:var(--ink-2);
-    border:1px solid var(--hair-1);
-    padding:13px 22px;border-radius:10px;
-    font-size:14px;font-weight:700;text-decoration:none;
-    display:inline-flex;align-items:center;gap:8px;
-    transition:background .15s ease, border-color .15s ease;
-  }
-  .ps-cancel:hover{background:var(--paper);border-color:var(--hair-2);color:var(--ink-1)}
-
-  @media (max-width:760px){
-    .ps-chapter{padding:22px 18px}
-    .ps-field{grid-template-columns:1fr;gap:8px}
-    .ps-field-label{padding-top:0}
+  .pc-textarea:focus{
+    outline:none;
+    border-color:#f59e0b;
+    box-shadow:0 0 0 3px rgba(245,158,11,.18);
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ps-root">
 
-  <form method="post" action="{{ url_for('radius.cards_print_new') }}">
-    {{ csrf_token_input() | safe }}
+{{ hub.hero(
+  "استيراد دفعة طباعة",
+  subtitle="ارفع ملف الكروت — Excel، CSV، أو PDF بأي ترتيب أعمدة. المحرّك يكتشف اليوزرات والباسوردات تلقائياً.",
+  icon="file-import"
+) }}
 
-    {# ────────── 01 — Package metadata ────────── #}
-    <p class="ps-eyebrow">
-      <span class="num">01</span>
-      <span>بيانات الحزمة</span>
-      <span class="rule"></span>
-    </p>
+<form method="post" action="{{ url_for('radius.cards_print_new') }}">
+  {{ csrf_token_input() | safe }}
 
-    <section class="ps-chapter">
-      <h2>عرّف الحزمة</h2>
-      <p class="ps-lede">
-        اختر اسماً واضحاً للحزمة وأدخل سعر البيع والجملة. الأسعار اختيارية —
-        تساعدك على التسعير والتقارير لاحقاً، ولا تؤثر على البطاقات نفسها.
+  {# ── 1. Package metadata ── #}
+  {% call hub.section("بيانات الحزمة", icon="box-archive") %}
+    {% call hub.fieldset("التعريف والتسعير", icon="tag") %}
+      <div class="hub-grid hub-grid--3">
+        {{ hub.field("اسم الحزمة", "package_name",
+                     value=form.get('package_name') or '',
+                     required=True,
+                     placeholder="مثل: دفعة شهر ٧ — للطباعة",
+                     hint="يظهر في القائمة وعلى ملف الطباعة") }}
+        {{ hub.field("سعر البيع للبطاقة", "price_per_card",
+                     type="number",
+                     value=form.get('price_per_card') or '',
+                     placeholder="0.00",
+                     hint="السعر للقطعة الواحدة") }}
+        {{ hub.field("سعر الجملة (إجمالي)", "price_bulk",
+                     type="number",
+                     value=form.get('price_bulk') or '',
+                     placeholder="0.00",
+                     hint="التكلفة الكلية للدفعة") }}
+      </div>
+    {% endcall %}
+
+    <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.7">
+      <i class="fa-solid fa-shield-halved" style="color:#15803d"></i>
+      الأسعار اختيارية. البطاقات هذي للطباعة فقط ولن تظهر في FreeRADIUS أو تسمح بتسجيل الدخول.
+    </div>
+  {% endcall %}
+
+  {# ── 2. Smart engine ── #}
+  {% call hub.section("المحرّك الذكي — تحليل ملف الكروت", icon="wand-magic-sparkles") %}
+    <div id="pc-smart"
+         data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+         data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
+
+      <div class="pc-smart-head">
+        <span class="title">ارفع الملف ثم اضغط «حلّل»</span>
+        {% if engine_version %}
+        <span class="build-chip" title="نسخة المحرّك">
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i> engine v{{ engine_version }}
+        </span>
+        {% endif %}
+      </div>
+
+      <p class="pc-smart-help">
+        الصيغ المدعومة:
+        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">CSV</kbd> ·
+        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">XLSX</kbd> ·
+        <kbd style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;font-family:ui-monospace;font-size:11px">PDF</kbd>
+        — حتى 12MB.
       </p>
 
-      <div class="ps-field">
-        <div class="ps-field-label">
-          <span class="name">اسم الحزمة <span class="req">*</span></span>
-          <span class="hint">يظهر في القائمة وعلى ملف الطباعة. مثل: «دفعة شهر ٧ — للطباعة».</span>
+      <label class="pc-dz" id="pc-dropzone" for="ci-smart-file">
+        <input type="file" id="ci-smart-file" class="pc-dz-input"
+               accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+               aria-label="اختر ملف الكروت">
+
+        <div class="pc-dz-empty" id="pc-dz-empty">
+          <div class="pc-dz-icon" aria-hidden="true">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
+          <p class="pc-dz-title">اسحب الملف هنا أو اضغط للاختيار</p>
+          <p class="pc-dz-sub">
+            <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> &nbsp;حتى 12MB
+          </p>
         </div>
-        <div class="ps-field-control">
-          <input id="package_name" name="package_name" required maxlength="120"
-                 placeholder="مثل: دفعة شهر ٧ — للطباعة"
-                 value="{{ form.get('package_name') or '' }}">
-        </div>
-      </div>
 
-      <div class="ps-field">
-        <div class="ps-field-label">
-          <span class="name">سعر البيع للبطاقة</span>
-          <span class="hint">السعر الذي تبيع به البطاقة الواحدة للزبون النهائي.</span>
-        </div>
-        <div class="ps-field-control">
-          <input id="price_per_card" name="price_per_card" type="number" step="0.01" min="0"
-                 placeholder="0.00"
-                 value="{{ form.get('price_per_card') or '' }}">
-        </div>
-      </div>
-
-      <div class="ps-field">
-        <div class="ps-field-label">
-          <span class="name">سعر الجملة (إجمالي)</span>
-          <span class="hint">التكلفة الكلية لاستلام الدفعة من المورّد، أو المجموع الإجمالي للبيع بالجملة.</span>
-        </div>
-        <div class="ps-field-control">
-          <input id="price_bulk" name="price_bulk" type="number" step="0.01" min="0"
-                 placeholder="0.00"
-                 value="{{ form.get('price_bulk') or '' }}">
-        </div>
-      </div>
-    </section>
-
-    {# ────────── 02 — Smart engine ────────── #}
-    <p class="ps-eyebrow">
-      <span class="num">02</span>
-      <span>المحرّك الذكي</span>
-      <span class="rule"></span>
-    </p>
-
-    <section class="ps-chapter">
-      <h2>ارفع ملف الكروت</h2>
-      <p class="ps-lede">
-        المحرّك يكتشف بنية الملف تلقائياً — Excel، CSV، أو PDF بأي ترتيب أعمدة،
-        عربياً أو إنجليزياً. الناتج يُعبَّأ في صندوق النص أسفل، ويمكنك مراجعته
-        قبل الحفظ.
-      </p>
-
-      <div class="ps-smart" id="ci-smart"
-           data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
-           data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
-        <div class="ps-smart-head">
-          <span class="marker-num">★</span>
-          <h3>تحليل ملف</h3>
-          {% if engine_version %}
-          <span class="build-chip" title="نسخة محرّك الاستيراد">
-            <i class="fa-solid fa-microchip" aria-hidden="true"></i> engine v{{ engine_version }}
-          </span>
-          {% endif %}
-          <span class="file-tag" id="ci-smart-tag" hidden></span>
-        </div>
-        <p class="ps-smart-help">
-          ادعم: <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">CSV</code>
-          ·
-          <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">XLSX</code>
-          ·
-          <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid var(--hair-1)">PDF</code>
-          — حد أقصى 12MB.
-        </p>
-        <div class="ps-smart-row">
-          <label class="ps-dz" id="ci-dropzone" for="ci-smart-file">
-            <input type="file" id="ci-smart-file" class="ps-dz-input"
-                   accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                   aria-label="اختر ملف الكروت">
-
-            <div class="ps-dz-empty" id="ci-dz-empty">
-              <div class="ps-dz-icon" aria-hidden="true">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-              </div>
-              <p class="ps-dz-title">اسحب الملف هنا أو اضغط للاختيار</p>
-              <p class="ps-dz-sub">
-                <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> &nbsp;حتى 12MB
-              </p>
-            </div>
-
-            <div class="ps-dz-filled" id="ci-dz-filled" hidden>
-              <div class="ps-dz-file-icon" id="ci-dz-file-icon" aria-hidden="true">
-                <i class="fa-solid fa-file-lines"></i>
-              </div>
-              <div class="ps-dz-file-info">
-                <span class="ps-dz-file-name" id="ci-dz-file-name">filename.xlsx</span>
-                <span class="ps-dz-file-meta">
-                  <span id="ci-dz-file-size">0 KB</span>
-                  <span class="dot" aria-hidden="true"></span>
-                  <span id="ci-dz-file-type">CSV</span>
-                </span>
-              </div>
-              <button type="button" class="ps-dz-remove" id="ci-dz-remove"
-                      aria-label="إزالة الملف">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-            </div>
-          </label>
-
-          <button type="button" id="ci-smart-btn" class="ps-smart-btn">
-            <i class="fa-solid fa-bolt static" aria-hidden="true"></i>
-            <i class="fa-solid fa-circle-notch spin" aria-hidden="true"></i>
-            <span>حلّل الملف</span>
+        <div class="pc-dz-filled" id="pc-dz-filled" hidden>
+          <div class="pc-dz-file-icon" id="pc-dz-file-icon" aria-hidden="true">
+            <i class="fa-solid fa-file-lines"></i>
+          </div>
+          <div class="pc-dz-file-info">
+            <span class="pc-dz-file-name" id="pc-dz-file-name">filename.xlsx</span>
+            <span class="pc-dz-file-meta">
+              <span id="pc-dz-file-size">0 KB</span>
+              <span class="dot" aria-hidden="true"></span>
+              <span id="pc-dz-file-type">CSV</span>
+            </span>
+          </div>
+          <button type="button" class="pc-dz-remove" id="pc-dz-remove"
+                  aria-label="إزالة الملف">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
-        <div class="ps-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
-        <div class="ps-counter" id="ci-counter" hidden>
-          <span class="num" id="ci-counter-num">0</span>
-          <span class="lbl">بطاقة جاهزة للحفظ</span>
-        </div>
-      </div>
-    </section>
+      </label>
 
-    {# ────────── 03 — Review + save ────────── #}
-    <p class="ps-eyebrow">
-      <span class="num">03</span>
-      <span>المراجعة والحفظ</span>
-      <span class="rule"></span>
-    </p>
-
-    <section class="ps-chapter">
-      <h2>راجع البطاقات قبل الحفظ</h2>
-      <p class="ps-lede">
-        يمكنك أيضاً اللصق المباشر هنا. الصيغة: سطر لكل بطاقة، أو CSV/TSV يحتوي
-        الأعمدة <code>username,password</code>. كلمة المرور اختيارية، ولن تظهر
-        بعد الحفظ.
-      </p>
-
-      <div class="ps-field">
-        <div class="ps-field-label">
-          <span class="name">نص الكروت <span class="req">*</span></span>
-          <span class="hint">إذا استخدمت المحرّك الذكي بالأعلى، هذا الحقل يتعبّأ تلقائياً.</span>
-        </div>
-        <div class="ps-field-control">
-          <textarea id="csv_text" name="csv_text" required
-                    placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
-        </div>
-      </div>
-
-      <div class="ps-actions">
-        <button type="submit" class="ps-submit">
-          <i class="fa-solid fa-file-import" aria-hidden="true"></i>
-          احفظ دفعة الطباعة
+      <div class="pc-smart-actions">
+        <button type="button" id="ci-smart-btn" class="pc-smart-btn">
+          <i class="fa-solid fa-bolt static" aria-hidden="true"></i>
+          <i class="fa-solid fa-circle-notch spin" aria-hidden="true"></i>
+          <span>حلّل الملف</span>
         </button>
-        <a href="{{ url_for('radius.cards_print_list') }}" class="ps-cancel">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-          إلغاء
-        </a>
+        <div class="pc-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
       </div>
-    </section>
-  </form>
-</div>
+
+      <div class="pc-counter" id="ci-counter" hidden>
+        <span class="num" id="ci-counter-num">0</span>
+        <span class="lbl">بطاقة جاهزة للحفظ</span>
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── 3. Review and save ── #}
+  {% call hub.section("راجع البطاقات قبل الحفظ", icon="list-check") %}
+    <div class="hub-field">
+      <label class="hub-field-label" for="csv_text">
+        نص الكروت <span class="req">*</span>
+      </label>
+      <textarea class="pc-textarea" id="csv_text" name="csv_text" required
+                placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
+      <div class="hub-field-hint">
+        إذا استخدمت المحرّك بالأعلى، هذا الحقل يتعبّأ تلقائياً — يمكنك تعديله قبل الحفظ.
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9">
+      {{ hub.btn("احفظ دفعة الطباعة", icon="file-import", type="submit", variant="primary") }}
+      {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_print_list'), variant="secondary") }}
+    </div>
+  {% endcall %}
+
+</form>
 
 <script>
 (function () {
-  const SMART = document.getElementById('ci-smart');
+  const SMART = document.getElementById('pc-smart');
   const file  = document.getElementById('ci-smart-file');
   const btn   = document.getElementById('ci-smart-btn');
   const stat  = document.getElementById('ci-smart-status');
   const cnt   = document.getElementById('ci-counter');
   const cntN  = document.getElementById('ci-counter-num');
-  const tag   = document.getElementById('ci-smart-tag');
   const ta    = document.getElementById('csv_text');
   if (!SMART || !btn) return;
 
   const URL = SMART.dataset.previewUrl;
   function csrf() { return SMART.dataset.csrf || ''; }
 
-  function setStatus(m, k) {
+  function setStatus(m, k){
     if (!m) { stat.hidden = true; stat.textContent=''; return; }
     stat.hidden = false;
-    stat.className = 'ps-smart-status' + (k ? ' ' + k : '');
+    stat.className = 'pc-smart-status' + (k ? ' ' + k : '');
     stat.textContent = m;
   }
-  function setTag(t) {
-    if (!t) { tag.hidden = true; return; }
-    tag.hidden = false; tag.textContent = t;
-  }
-  function animateCounter(target) {
+  function animateCounter(target){
     cnt.hidden = false;
     const d = Math.min(900, 200 + target * 1.6);
     const start = performance.now();
-    function tick(t) {
+    function tick(t){
       const k = Math.min(1, (t - start) / d);
       cntN.textContent = Math.floor(target * (1 - Math.pow(1-k, 3))).toLocaleString('ar-EG');
       if (k < 1) requestAnimationFrame(tick);
@@ -568,7 +358,7 @@
     requestAnimationFrame(tick);
   }
 
-  async function analyze() {
+  async function analyze(){
     const f = file.files && file.files[0];
     if (!f) { setStatus('اختر ملفاً أولاً.', 'warn'); return; }
     setStatus('جارٍ التحليل…', '');
@@ -587,16 +377,16 @@
       });
       const txt = await res.text();
       let data = null;
-      try { data = JSON.parse(txt); } catch(_) { data = null; }
+      try { data = JSON.parse(txt); } catch(_){ data = null; }
 
-      if (!res.ok && !data) {
+      if (!res.ok && !data){
         if (res.status === 404) setStatus('المسار غير مسجَّل (HTTP 404). أعد التشغيل.', 'err');
         else if (res.status === 400 && txt.includes('CSRF')) setStatus('فشل CSRF — حدّث الصفحة (F5).', 'err');
         else setStatus('فشل الخادم (HTTP ' + res.status + ').', 'err');
         return;
       }
-      if (!data) { setStatus('رد غير مفهوم من الخادم.', 'err'); return; }
-      if (!data.count) {
+      if (!data){ setStatus('رد غير مفهوم من الخادم.', 'err'); return; }
+      if (!data.count){
         const w = (data.warnings && data.warnings[0]) || 'لم يُعثر على بطاقات في الملف.';
         setStatus(w + ' [' + (data.fmt || '?') + ' · صفوف ' + (data.rows_seen || 0) + ']', 'err');
         return;
@@ -608,7 +398,7 @@
       const warn = (data.warnings && data.warnings.length) ? ' — ملاحظة: ' + data.warnings[0] : '';
       setStatus('تم استخراج ' + data.count.toLocaleString('ar-EG') + ' بطاقة. راجعها بالأسفل ثم احفظ.' + warn,
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
-    } catch (e) {
+    } catch (e){
       setStatus('فشل الاتصال: ' + e.message, 'err');
     } finally {
       btn.classList.remove('is-busy'); btn.disabled = false;
@@ -616,62 +406,42 @@
   }
   btn.addEventListener('click', analyze);
 
-  // ── Drop-zone wiring ──────────────────────────────────────
-  const dz       = document.getElementById('ci-dropzone');
-  const dzEmpty  = document.getElementById('ci-dz-empty');
-  const dzFilled = document.getElementById('ci-dz-filled');
-  const dzName   = document.getElementById('ci-dz-file-name');
-  const dzSize   = document.getElementById('ci-dz-file-size');
-  const dzType   = document.getElementById('ci-dz-file-type');
-  const dzIcon   = document.getElementById('ci-dz-file-icon');
-  const dzRemove = document.getElementById('ci-dz-remove');
+  // Drop-zone wiring
+  const dz       = document.getElementById('pc-dropzone');
+  const dzEmpty  = document.getElementById('pc-dz-empty');
+  const dzFilled = document.getElementById('pc-dz-filled');
+  const dzName   = document.getElementById('pc-dz-file-name');
+  const dzSize   = document.getElementById('pc-dz-file-size');
+  const dzType   = document.getElementById('pc-dz-file-type');
+  const dzIcon   = document.getElementById('pc-dz-file-icon');
+  const dzRemove = document.getElementById('pc-dz-remove');
 
-  function formatBytes(b) {
+  function formatBytes(b){
     if (b < 1024)        return b + ' B';
     if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
     return (b / 1024 / 1024).toFixed(2) + ' MB';
   }
-  function fileTypeLabel(name) {
+  function fileTypeLabel(name){
     const ext = (name.split('.').pop() || '').toLowerCase();
-    return ({
-      csv:  'CSV',
-      tsv:  'TSV',
-      txt:  'TEXT',
-      xlsx: 'EXCEL',
-      pdf:  'PDF',
-    })[ext] || ext.toUpperCase() || 'FILE';
+    return ({csv:'CSV',tsv:'TSV',txt:'TEXT',xlsx:'EXCEL',pdf:'PDF'})[ext] || ext.toUpperCase() || 'FILE';
   }
-  function fileTypeIcon(name) {
+  function fileTypeIcon(name){
     const ext = (name.split('.').pop() || '').toLowerCase();
-    return ({
-      csv:  'fa-file-csv',
-      tsv:  'fa-file-csv',
-      txt:  'fa-file-lines',
-      xlsx: 'fa-file-excel',
-      pdf:  'fa-file-pdf',
-    })[ext] || 'fa-file-lines';
+    return ({csv:'fa-file-csv',tsv:'fa-file-csv',txt:'fa-file-lines',xlsx:'fa-file-excel',pdf:'fa-file-pdf'})[ext] || 'fa-file-lines';
   }
 
-  function showFile(f) {
+  function showFile(f){
     dzName.textContent = f.name;
     dzSize.textContent = formatBytes(f.size);
     dzType.textContent = fileTypeLabel(f.name);
-    if (dzIcon) {
-      dzIcon.innerHTML = '<i class="fa-solid ' + fileTypeIcon(f.name) + '"></i>';
-    }
+    if (dzIcon) dzIcon.innerHTML = '<i class="fa-solid ' + fileTypeIcon(f.name) + '"></i>';
     dz.classList.add('is-filled');
     dzEmpty.hidden = true;
     dzFilled.hidden = false;
-    setTag('');  // hide top-tag — info already in drop-zone
   }
-  function clearFile() {
-    // Re-assign the input's files to an empty FileList via DataTransfer.
-    try {
-      const dt = new DataTransfer();
-      file.files = dt.files;
-    } catch (_) {
-      file.value = '';
-    }
+  function clearFile(){
+    try { const dt = new DataTransfer(); file.files = dt.files; }
+    catch(_) { file.value = ''; }
     dz.classList.remove('is-filled');
     dzFilled.hidden = true;
     dzEmpty.hidden = false;
@@ -681,45 +451,24 @@
     const f = file.files && file.files[0];
     if (f) showFile(f);
   });
-
-  if (dzRemove) {
-    dzRemove.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      clearFile();
-    });
-  }
-
-  // Drag & drop
-  if (dz) {
-    ['dragenter', 'dragover'].forEach(evt =>
-      dz.addEventListener(evt, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        dz.classList.add('is-drag');
-      })
+  if (dzRemove) dzRemove.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    clearFile();
+  });
+  if (dz){
+    ['dragenter','dragover'].forEach(evt =>
+      dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.add('is-drag'); })
     );
-    ['dragleave', 'dragend'].forEach(evt =>
-      dz.addEventListener(evt, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.target === dz) dz.classList.remove('is-drag');
-      })
+    ['dragleave','dragend'].forEach(evt =>
+      dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); if (e.target === dz) dz.classList.remove('is-drag'); })
     );
     dz.addEventListener('drop', e => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       dz.classList.remove('is-drag');
       const files = e.dataTransfer && e.dataTransfer.files;
-      if (files && files[0]) {
-        try {
-          const dt = new DataTransfer();
-          dt.items.add(files[0]);
-          file.files = dt.files;
-        } catch (_) {
-          // FileList is read-only on older browsers — fall back to
-          // dispatching change so the analyse path can read directly.
-        }
+      if (files && files[0]){
+        try { const dt = new DataTransfer(); dt.items.add(files[0]); file.files = dt.files; }
+        catch(_){}
         showFile(files[0]);
       }
     });
