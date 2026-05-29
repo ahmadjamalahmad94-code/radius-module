@@ -678,6 +678,68 @@
     .ops-module{min-height:238px}
     .ops-health{grid-template-columns:1fr}
   }
+  /* ════════════════════════════════════════════════════════════════
+     Premium polish v2 — additive, CSS-only follow-up to commit 2575a86.
+     All rules below override earlier ones via the cascade (later wins);
+     module color tokens use !important to beat the per-card inline
+     style="--tone:…". The content block is untouched.
+     ════════════════════════════════════════════════════════════════ */
+
+  /* (6) Sidebar active state — page-scoped (only loaded on this page).
+     Clearer text contrast (deeper teal) + calmer fill; keeps the rail. */
+  :root{
+    --sb-active-text:#0b5f59;
+    --sb-active-icon:#0b5f59;
+    --sb-active-bg:rgba(13,148,136,.10);
+    --sb-active-bg-soft:rgba(13,148,136,.08);
+    --sb-active-border:#0d9488;
+  }
+
+  /* (2) Hero — premium "console header" cue without enlarging anything:
+     a slim indigo top accent + crisper hairline border + brand mark. */
+  .ops-top{
+    border-color:rgba(15,23,42,.07);
+    box-shadow:inset 0 2px 0 #4f46e5, 0 1px 2px rgba(16,24,40,.04), 0 6px 18px rgba(28,43,76,.06);
+  }
+  .ops-mark{ background:linear-gradient(135deg,#4f46e5,#0d9488); }
+  .ops-title h1{ letter-spacing:-.01em; }
+
+  /* (1)(3) Unify the six module cards to a calm indigo / teal / slate
+     system (kills the purple/orange/cyan spread). Status meaning stays
+     in the alerts section + VPS green/amber/red below. */
+  .ops-modules .ops-module:nth-child(1){--tone:#4f46e5 !important;--soft-tone:#eef2ff !important;--glow:rgba(79,70,229,.06) !important}
+  .ops-modules .ops-module:nth-child(2){--tone:#0d9488 !important;--soft-tone:#f0fdfa !important;--glow:rgba(13,148,136,.06) !important}
+  .ops-modules .ops-module:nth-child(3){--tone:#4f46e5 !important;--soft-tone:#eef2ff !important;--glow:rgba(79,70,229,.06) !important}
+  .ops-modules .ops-module:nth-child(4){--tone:#475569 !important;--soft-tone:#f1f5f9 !important;--glow:rgba(71,85,105,.06) !important}
+  .ops-modules .ops-module:nth-child(5){--tone:#0d9488 !important;--soft-tone:#f0fdfa !important;--glow:rgba(13,148,136,.06) !important}
+  .ops-modules .ops-module:nth-child(6){--tone:#4f46e5 !important;--soft-tone:#eef2ff !important;--glow:rgba(79,70,229,.06) !important}
+
+  /* recent-batches / alerts head icon was violet — bring it into palette */
+  .ops-list-head i{ background:#eef2ff; color:#4f46e5; }
+
+  /* (4)(8) Business modules: a little more presence + breathing room */
+  .ops-module{ padding:20px; }
+  .ops-module:hover{ border-color:#c7cdf2; }
+  .ops-metric{ padding:11px 10px; }
+  .ops-list-card{ padding:18px; }
+
+  /* (5) VPS = secondary system-health strip: lighter, smaller, quieter,
+     so it stops competing with the primary business cards. */
+  .ops-vps-grid{ background:#fafbfd; border-color:rgba(226,232,240,.9); }
+  .ops-vps-card{ min-height:104px; padding:11px 13px 13px; border-color:rgba(226,232,240,.9); }
+  .ops-vps-icon{ width:30px; height:30px; font-size:13px; }
+  .ops-vps-value{ font-size:19px; }
+  .ops-vps-value--name{ font-size:14px; }
+  /* mute decorative VPS accents to slate; keep green/amber/red = real status */
+  .ops-vps--brand,.ops-vps--blue,.ops-vps--grey,.ops-vps--purple,.ops-vps--teal{
+    --vps-accent:#64748b; --vps-soft:rgba(100,116,139,.12);
+  }
+
+  /* (7) No persistent outline on click; show a focus ring only for
+     keyboard navigation via :focus-visible. */
+  .ops-board a:focus{ outline:none; }
+  .ops-board a:focus-visible{ outline:2px solid #4f46e5; outline-offset:2px; border-radius:10px; }
+
   @media (prefers-reduced-motion: reduce){
     .ops-board *{animation:none !important;transition:none !important}
   }
