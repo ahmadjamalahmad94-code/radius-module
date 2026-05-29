@@ -348,7 +348,8 @@
 
     <div class="u360-pack-grid">
       {% for pack in packages[:12] %}
-      <button type="button" class="u360-pack" data-pack="{{ pack.id }}" data-price="{{ pack.suggested_price or pack.price or 0 }}">
+      {% set _pp = (pack.suggested_price or pack.price or 0)|float %}
+      <button type="button" class="u360-pack" data-pack="{{ pack.id }}" data-price="{{ _pp }}">
         <div class="u360-pack-name">{{ pack.display_name or pack.name or 'عرض' }}</div>
         <div class="u360-pack-meta">
           {% if pack.duration_minutes %}
@@ -370,7 +371,7 @@
           {% endif %}
         </div>
         <div class="u360-pack-price">
-          <span class="val">{{ "%.2f"|format(pack.suggested_price or pack.price or 0) }}</span>
+          <span class="val">{{ "%.2f"|format(_pp) }}</span>
           <span class="ccy">{{ pack.currency or currency }}</span>
         </div>
       </button>
