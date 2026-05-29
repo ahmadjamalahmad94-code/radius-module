@@ -26,6 +26,13 @@ _MIGRATION_ALIASES = {
     "027_lifecycle_retention.sql": (
         "028_lifecycle_retention.sql",
     ),
+    # This migration was briefly created with the occupied 059 prefix during
+    # local verification, then renamed to 085. Treat the old recorded name as
+    # covering the final file so dev DBs do not try to add the same columns
+    # twice.
+    "059_card_user_portal_passwords.sql": (
+        "085_card_user_portal_passwords.sql",
+    ),
 }
 
 
