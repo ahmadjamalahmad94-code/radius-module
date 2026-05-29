@@ -222,39 +222,61 @@
   .u360-status--revoked {background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
   .u360-status--neutral {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
 
-  /* ── Timeline ──────────────────────────────────── */
-  .u360-timeline{display:flex;flex-direction:column;gap:8px}
-  .u360-timeline .tl-item{
-    display:flex;gap:12px;align-items:flex-start;
-    padding:12px 14px;border-radius:10px;
-    background:#fafbfc;border:1px solid #e2e8f0;
+  /* ── Timeline table ─────────────────────────────── */
+  .u360-tl-table{
+    width:100%;border-collapse:separate;border-spacing:0;
   }
-  .u360-timeline .ico{
-    width:36px;height:36px;border-radius:9px;
-    display:grid;place-items:center;font-size:13px;flex-shrink:0;
+  .u360-tl-table thead th{
+    background:#f1f5f9;color:#334155;
+    border-bottom:1px solid #cbd5e1;
+    font-weight:800;font-size:11.5px;
+    padding:11px 12px;text-align:center;
+    letter-spacing:.04em;
   }
-  .u360-timeline .ico--purchase{background:#dcfce7;color:#15803d}
-  .u360-timeline .ico--credit  {background:#dbeafe;color:#1d4ed8}
-  .u360-timeline .ico--debit   {background:#fef3c7;color:#92400e}
-  .u360-timeline .ico--event   {background:#f5f3ff;color:#5b21b6}
-  .u360-timeline .body{flex:1;min-width:0}
-  .u360-timeline .title{
-    font-size:13.5px;font-weight:800;color:#0f172a;
-    line-height:1.4;
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  .u360-tl-table tbody td{
+    border-bottom:1px solid #e2e8f0;
+    padding:11px 12px;font-size:13px;color:#334155;
+    text-align:center;vertical-align:middle;
   }
-  .u360-timeline .title .amt{
-    font-family:ui-monospace,Consolas,monospace;
-    font-variant-numeric:tabular-nums;color:#5b21b6;
-  }
-  .u360-timeline .desc{
-    font-size:12px;color:#475569;margin-top:3px;line-height:1.5;
-  }
-  .u360-timeline .when{
-    font-size:11px;color:#94a3b8;margin-top:4px;
-    direction:ltr;text-align:start;
+  .u360-tl-table tbody tr:last-child td{border-bottom:0}
+  .u360-tl-table tbody tr:hover{background:#fafbfc}
+
+  /* Column-specific alignment */
+  .u360-tl-table td.tl-idx{
+    color:#94a3b8;font-weight:700;font-size:12px;
     font-variant-numeric:tabular-nums;
+    width:50px;
   }
+  .u360-tl-table td.tl-type{width:120px}
+  .u360-tl-table td.tl-desc{text-align:start;color:#334155;line-height:1.5}
+  .u360-tl-table td.tl-amt{
+    width:130px;font-family:ui-monospace,Consolas,monospace;
+    font-variant-numeric:tabular-nums;font-weight:800;
+    direction:ltr;
+  }
+  .u360-tl-table td.tl-date{
+    width:170px;font-size:11.5px;color:#64748b;
+    font-variant-numeric:tabular-nums;direction:ltr;
+  }
+
+  /* Type pill — icon + label, fits inside the table cell. */
+  .u360-tl-type{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:999px;
+    font-size:11.5px;font-weight:800;letter-spacing:.02em;
+  }
+  .u360-tl-type i{font-size:10px}
+  .u360-tl-type--purchase{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+  .u360-tl-type--credit  {background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+  .u360-tl-type--debit   {background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+  .u360-tl-type--event   {background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd}
+  .u360-tl-type--system  {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+  .u360-tl-type--warning {background:#fff7ed;color:#c2410c;border:1px solid #fdba74}
+  .u360-tl-type--error   {background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
+
+  .u360-tl-amt--credit{color:#15803d}
+  .u360-tl-amt--debit {color:#b91c1c}
+  .u360-tl-amt--purchase{color:#5b21b6}
 
   /* Pager */
   .u360-pager{
@@ -518,77 +540,123 @@
                    meta=card360.timeline|length ~ " حدث") %}
 
   {# Each entry is wrapped as {"created_at":..., "item":<original>}.
-     Classify by the inner record's shape and render meaningful text. #}
-  <div class="u360-timeline" id="u360-timeline">
+     Render as a proper table with classified rows. #}
+  {# Arabic labels for common business_events categories. #}
+  {% set CAT_LABEL = {
+    'manager':'إدارة','subscriber':'مشترك','card':'بطاقة',
+    'financial':'مالية','system':'نظام','security':'أمان',
+    'radius':'RADIUS','notification':'إشعار'
+  } %}
+
+  <div style="overflow-x:auto">
+  <table class="u360-tl-table" id="u360-timeline">
+    <thead>
+      <tr>
+        <th style="width:50px">#</th>
+        <th style="width:130px">النوع</th>
+        <th>الوصف</th>
+        <th style="width:130px">المبلغ</th>
+        <th style="width:170px">التاريخ</th>
+      </tr>
+    </thead>
+    <tbody>
     {% for t in card360.timeline %}
       {% set row = t.item or t %}
       {% set when = (t.created_at or row.created_at or '')[:19] %}
 
-      {# ── Purchase: package_name + amount_minor + status ── #}
+      {# ── Purchase: has package_name + amount_minor + status ── #}
       {% if row.package_name and row.amount_minor is defined %}
         {% set amount = (row.amount_minor or 0) / 100 %}
         {% set ccy = row.currency or 'ILS' %}
-        <div class="tl-item" data-tl>
-          <span class="ico ico--purchase"><i class="fa-solid fa-cart-shopping"></i></span>
-          <div class="body">
-            <div class="title">
-              <span>شراء «{{ row.package_name }}»</span>
-              <span class="amt" dir="ltr">−{{ "%.2f"|format(amount) }} {{ ccy }}</span>
-            </div>
-            {% if row.status %}
-              <div class="desc">
-                الحالة:
-                {% set ps = (row.status or '')|lower %}
-                {% if ps == 'completed' %}مكتملة
-                {% elif ps == 'pending' %}قيد المعالجة
-                {% elif ps == 'failed' %}فشلت
-                {% else %}{{ row.status }}{% endif %}
-              </div>
-            {% endif %}
-            <div class="when">{{ when }}</div>
-          </div>
-        </div>
+        {% set ps = (row.status or '')|lower %}
+        {% set status_ar =
+            ('مكتملة' if ps == 'completed'
+             else ('قيد المعالجة' if ps == 'pending'
+                   else ('فشلت' if ps == 'failed' else (row.status or '—')))) %}
+        <tr data-tl>
+          <td class="tl-idx">{{ loop.index }}</td>
+          <td class="tl-type">
+            <span class="u360-tl-type u360-tl-type--purchase">
+              <i class="fa-solid fa-cart-shopping"></i> شراء
+            </span>
+          </td>
+          <td class="tl-desc">
+            شراء «{{ row.package_name }}» —
+            <small style="color:#64748b">{{ status_ar }}</small>
+          </td>
+          <td class="tl-amt"><span class="u360-tl-amt--purchase">−{{ "%.2f"|format(amount) }}</span> <small style="color:#94a3b8">{{ ccy }}</small></td>
+          <td class="tl-date">{{ when }}</td>
+        </tr>
 
-      {# ── Ledger: amount_minor + direction ── #}
+      {# ── Ledger: has amount_minor + direction/entry_type ── #}
       {% elif row.amount_minor is defined and (row.direction or row.entry_type) %}
         {% set amount = (row.amount_minor or 0) / 100 %}
         {% set dir = (row.direction or row.entry_type or '')|lower %}
         {% set is_credit = dir in ('credit','in','deposit','top-up','topup') %}
-        <div class="tl-item" data-tl>
-          <span class="ico {{ 'ico--credit' if is_credit else 'ico--debit' }}">
-            <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
-          </span>
-          <div class="body">
-            <div class="title">
-              <span>{{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}</span>
-              <span class="amt" dir="ltr">
-                {{ '+' if is_credit else '−' }}{{ "%.2f"|format(amount) }}
-                {{ row.currency or 'ILS' }}
-              </span>
-            </div>
+        <tr data-tl>
+          <td class="tl-idx">{{ loop.index }}</td>
+          <td class="tl-type">
+            <span class="u360-tl-type u360-tl-type--{{ 'credit' if is_credit else 'debit' }}">
+              <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
+              {{ 'إيداع' if is_credit else 'خصم' }}
+            </span>
+          </td>
+          <td class="tl-desc">
+            {{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}
             {% if row.description or row.notes or row.memo %}
-              <div class="desc">{{ row.description or row.notes or row.memo }}</div>
+              — <small style="color:#64748b">{{ row.description or row.notes or row.memo }}</small>
             {% endif %}
-            <div class="when">{{ when }}</div>
-          </div>
-        </div>
+          </td>
+          <td class="tl-amt">
+            <span class="u360-tl-amt--{{ 'credit' if is_credit else 'debit' }}">
+              {{ '+' if is_credit else '−' }}{{ "%.2f"|format(amount) }}
+            </span>
+            <small style="color:#94a3b8">{{ row.currency or 'ILS' }}</small>
+          </td>
+          <td class="tl-date">{{ when }}</td>
+        </tr>
 
-      {# ── Business event: event_type + payload ── #}
+      {# ── Business event (event_key + message + category) ── #}
       {% else %}
-        {% set et = row.event_type or row.kind or row.action or 'حدث' %}
-        <div class="tl-item" data-tl>
-          <span class="ico ico--event"><i class="fa-solid fa-bell"></i></span>
-          <div class="body">
-            <div class="title">{{ et|replace('_', ' ')|replace('.', ' ') }}</div>
-            {% if row.description or row.notes or row.summary %}
-              <div class="desc">{{ row.description or row.notes or row.summary }}</div>
+        {% set ekey = row.event_key or row.event_type or row.kind or row.action or '' %}
+        {% set msg = row.message or row.description or row.summary or '' %}
+        {% set sev = (row.severity or 'info')|lower %}
+        {% set cat = (row.category or '')|lower %}
+        {% set cat_ar = CAT_LABEL.get(cat, cat or 'حدث') %}
+        {% set type_cls = ('error' if sev in ('error','critical') else
+                          ('warning' if sev == 'warning' else
+                          ('system' if cat in ('system','radius','security') else 'event'))) %}
+        {% set ico = ('triangle-exclamation' if sev in ('error','critical') else
+                     ('circle-exclamation' if sev == 'warning' else
+                     ('gear' if cat == 'system' else
+                     ('coins' if cat == 'financial' else
+                     ('id-card' if cat == 'card' else
+                     ('shield-halved' if cat == 'security' else 'bell')))))) %}
+        <tr data-tl>
+          <td class="tl-idx">{{ loop.index }}</td>
+          <td class="tl-type">
+            <span class="u360-tl-type u360-tl-type--{{ type_cls }}">
+              <i class="fa-solid fa-{{ ico }}"></i> {{ cat_ar }}
+            </span>
+          </td>
+          <td class="tl-desc">
+            {% if ekey %}
+              <strong style="color:#0f172a">{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>
             {% endif %}
-            <div class="when">{{ when }}</div>
-          </div>
-        </div>
+            {% if msg %}
+              {% if ekey %} — {% endif %}<small style="color:#64748b">{{ msg }}</small>
+            {% elif not ekey %}
+              <small style="color:#94a3b8">حدث بلا تفاصيل</small>
+            {% endif %}
+          </td>
+          <td class="tl-amt"><small style="color:#cbd5e1">—</small></td>
+          <td class="tl-date">{{ when }}</td>
+        </tr>
       {% endif %}
 
     {% endfor %}
+    </tbody>
+  </table>
   </div>
 
   <div class="u360-pager" id="u360-tl-pager">
@@ -602,12 +670,12 @@
 
 <script>
 (function(){
-  const list = document.getElementById('u360-timeline');
-  if (!list) return;
-  const items = Array.from(list.querySelectorAll('[data-tl]'));
+  const table = document.getElementById('u360-timeline');
+  if (!table) return;
+  const rows = Array.from(table.querySelectorAll('tbody tr[data-tl]'));
   const PER = 10;
   let page = 1;
-  const total = Math.max(1, Math.ceil(items.length / PER));
+  const total = Math.max(1, Math.ceil(rows.length / PER));
   const pageEl  = document.getElementById('tl-page');
   const totalEl = document.getElementById('tl-total');
   const prevBtn = document.getElementById('tl-prev');
@@ -615,7 +683,7 @@
   totalEl.textContent = total;
   function render(){
     const lo = (page - 1) * PER, hi = lo + PER;
-    items.forEach((el, i) => { el.style.display = (i >= lo && i < hi) ? '' : 'none'; });
+    rows.forEach((tr, i) => { tr.style.display = (i >= lo && i < hi) ? '' : 'none'; });
     pageEl.textContent = page;
     prevBtn.disabled = (page <= 1);
     nextBtn.disabled = (page >= total);
