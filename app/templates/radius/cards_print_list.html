@@ -21,27 +21,37 @@
      the 3 print templates stay self-contained but share the same
      visual language). ── */
   .ps-root{
-    --ink-1:#1C1A17;        /* primary ink — headlines, hero numerals */
-    --ink-2:#5C564D;        /* body ink */
-    --ink-3:#8A8377;        /* muted ink — captions */
-    --canvas:#FAF7F2;       /* warm paper page background */
-    --paper:#FFFFFF;        /* card / table surface */
-    --hair-1:#E8E1D4;       /* hairline — default 1px border */
-    --hair-2:#D6CDBC;       /* hairline — emphasised */
-    --inset:rgba(255,255,255,.7);
-    --amber:#C8801F;
-    --amber-deep:#B06F15;
-    --amber-tint:#FBEFD8;
-    --amber-on-tint:#6B4109;
-    --selection:rgba(200,128,31,.10);
-    --focus-ring:rgba(200,128,31,.32);
-    --success-ink:#3F6B3A;
-    --success-tint:#E8F0E2;
+    /* Tokens — tuned to feel from the same Tailwind palette family
+       as the rest of the admin (purple #6d28d9). Amber-500/600/100
+       gives a vibrant SaaS-2026 accent that reads as a sibling to
+       the purple, not a different brand. */
+    --ink-1:#0f172a;        /* slate-900 — primary ink */
+    --ink-2:#475569;        /* slate-600 — body */
+    --ink-3:#94a3b8;        /* slate-400 — muted */
+    --canvas:#f8fafc;       /* slate-50 — page background */
+    --paper:#ffffff;
+    --hair-1:#e2e8f0;       /* slate-200 — default hairline */
+    --hair-2:#cbd5e1;       /* slate-300 — emphasised */
+    --inset:rgba(255,255,255,.85);
+    --amber:#f59e0b;        /* amber-500 — primary accent */
+    --amber-deep:#d97706;   /* amber-600 — pressed/hover */
+    --amber-darker:#b45309; /* amber-700 — text on amber-tint */
+    --amber-tint:#fef3c7;   /* amber-100 — soft wash */
+    --amber-tint-2:#fffbeb; /* amber-50 — softer wash */
+    --amber-on-tint:#92400e;/* amber-800 — high-contrast on tint */
+    --selection:rgba(245,158,11,.10);
+    --focus-ring:rgba(245,158,11,.35);
+    --success-ink:#15803d;  /* green-700 */
+    --success-tint:#dcfce7; /* green-100 */
 
-    background:var(--canvas);
+    background:transparent;
     color:var(--ink-2);
-    max-width:1240px;margin:0 auto;padding:8px 0 56px;
+    max-width:1240px;margin:0 auto;
+    padding:8px 28px 56px;
     font-feature-settings:"ss01","tnum";
+  }
+  @media (max-width:760px){
+    .ps-root{padding:6px 16px 36px}
   }
 
   /* Section eyebrow — uppercase tracked label that anchors each
@@ -166,8 +176,13 @@
   /* ── Chip grid — paper-cards on canvas. Inset highlight on top
      edge. Hairline border. No shadow. ── */
   .ps-chips{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,360px));
     gap:16px;
+    justify-content:start;
+  }
+  @media (max-width:760px){
+    .ps-chips{grid-template-columns:1fr}
   }
   .ps-chip{
     background:var(--paper);
@@ -308,7 +323,6 @@
 
   /* ── Responsive ── */
   @media (max-width:760px){
-    .ps-root{padding:6px 0 36px}
     .ps-hero{padding:24px 20px}
     .ps-hero h1{font-size:26px}
     .ps-stats{grid-template-columns:1fr;gap:14px;padding-top:14px}

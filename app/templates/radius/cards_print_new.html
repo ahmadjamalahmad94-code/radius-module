@@ -11,7 +11,7 @@
 {% block page_title %}دفعة طباعة جديدة{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}" style="color:var(--ink-2,#5C564D);text-decoration:none">
+    <a href="{{ url_for('radius.cards_print_list') }}" style="color:var(--ink-2,#475569);text-decoration:none">
       <i class="fa-solid fa-arrow-right"></i> العودة إلى الاستوديو
     </a>
   </span>
@@ -21,29 +21,35 @@
 {{ super() }}
 <style>
   .ps-root{
-    --ink-1:#1C1A17;
-    --ink-2:#5C564D;
-    --ink-3:#8A8377;
-    --canvas:#FAF7F2;
-    --paper:#FFFFFF;
-    --hair-1:#E8E1D4;
-    --hair-2:#D6CDBC;
-    --inset:rgba(255,255,255,.7);
-    --amber:#C8801F;
-    --amber-deep:#B06F15;
-    --amber-tint:#FBEFD8;
-    --amber-on-tint:#6B4109;
-    --selection:rgba(200,128,31,.10);
-    --focus-ring:rgba(200,128,31,.32);
-    --success-ink:#3F6B3A;
-    --success-tint:#E8F0E2;
-    --danger-ink:#A33A2A;
-    --danger-tint:#F5E2DC;
+    --ink-1:#0f172a;
+    --ink-2:#475569;
+    --ink-3:#94a3b8;
+    --canvas:#f8fafc;
+    --paper:#ffffff;
+    --hair-1:#e2e8f0;
+    --hair-2:#cbd5e1;
+    --inset:rgba(255,255,255,.85);
+    --amber:#f59e0b;
+    --amber-deep:#d97706;
+    --amber-darker:#b45309;
+    --amber-tint:#fef3c7;
+    --amber-tint-2:#fffbeb;
+    --amber-on-tint:#92400e;
+    --selection:rgba(245,158,11,.10);
+    --focus-ring:rgba(245,158,11,.35);
+    --success-ink:#15803d;
+    --success-tint:#dcfce7;
+    --danger-ink:#b91c1c;
+    --danger-tint:#fee2e2;
 
-    background:var(--canvas);
+    background:transparent;
     color:var(--ink-2);
-    max-width:1080px;margin:0 auto;padding:8px 0 56px;
+    max-width:1080px;margin:0 auto;
+    padding:8px 28px 56px;
     font-feature-settings:"ss01","tnum";
+  }
+  @media (max-width:760px){
+    .ps-root{padding:6px 16px 36px}
   }
   [hidden]{display:none !important}
 
@@ -335,7 +341,6 @@
   .ps-cancel:hover{background:var(--paper);border-color:var(--hair-2);color:var(--ink-1)}
 
   @media (max-width:760px){
-    .ps-root{padding:6px 0 36px}
     .ps-chapter{padding:22px 18px}
     .ps-field{grid-template-columns:1fr;gap:8px}
     .ps-field-label{padding-top:0}
