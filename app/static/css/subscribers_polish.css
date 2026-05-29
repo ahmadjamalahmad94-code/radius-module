@@ -1,0 +1,89 @@
+/* ============================================================================
+   subscribers_polish.css — scoped visual micro-polish for the Subscribers area.
+
+   LOADED ONLY on Subscribers-section templates, via a single per-page <link>
+   placed in {% block head_extra %} AFTER the shared hub CSS. Because the file
+   is loaded only on subscriber pages, every rule below applies to subscriber
+   pages ONLY and never leaks into other admin pages (plans, cards, finance,
+   network, ops, dashboard). It also loads last, so equal-specificity rules win
+   over the shared hub defaults without needing !important.
+
+   CSS ONLY. No markup/text/number/order/Jinja-binding/url_for/backend changes.
+   RTL-safe (logical properties only). No glow, no heavy shadow, no noisy
+   gradients.
+
+   Page canvas behind cards is --hb-bg-page (#EFEDF5). These rules lift the
+   cards cleanly off it, add breathing room under the primary KPI number, and
+   make inner stat boxes read as recessed (distinct from the raised card).
+   ============================================================================ */
+
+:root{
+  --sub-surface:        #ffffff;   /* raised card surface */
+  --sub-tile:           #f6f7fb;   /* recessed inner stat-box fill (distinct) */
+  --sub-border:         #e7e9f2;   /* very subtle cool border for cards */
+  --sub-border-strong:  #dfe2ee;   /* slightly stronger border for stat boxes */
+  --sub-shadow:         0 1px 2px rgba(31,42,55,.05), 0 6px 16px rgba(31,42,55,.06);
+  --sub-ink:            #1f2a37;   /* primary text / KPI value */
+  --sub-muted:          #7a8699;   /* secondary text / labels */
+  --sub-indigo:         #5a56d6;   /* calm accent for focus rings */
+}
+
+/* (2) Card / section surfaces stand clearly above the page canvas ----------- */
+.hub-section,
+.hub-card{
+  background: var(--sub-surface);
+  border: 1px solid var(--sub-border);
+  box-shadow: var(--sub-shadow);
+}
+
+/* (1)(4)(5) KPI cards: breathing room + clearer hierarchy ------------------- */
+.hub-kpi-grid{ gap: 16px; }
+
+.hub-kpi{
+  background: var(--sub-surface);
+  border: 1px solid var(--sub-border);
+  box-shadow: var(--sub-shadow);
+  padding: 18px;
+  gap: 6px;
+}
+
+.hub-kpi-label{
+  color: var(--sub-muted);
+  letter-spacing: .03em;
+}
+
+/* the primary number is the strongest element + real space below it */
+.hub-kpi-value{
+  color: var(--sub-ink);
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.hub-kpi-sub{ color: var(--sub-muted); }
+
+/* (3) Inner stat boxes read as recessed, distinct from the raised card ------ */
+.hub-tile-grid,
+.hub-stat-grid{ gap: 14px; }
+
+.hub-tile,
+.hub-stat-card{
+  background: var(--sub-tile);
+  border: 1px solid var(--sub-border-strong);
+  box-shadow: none;            /* recessed, not raised — separates from the card */
+}
+
+.hub-tile-value,
+.hub-stat-value{ color: var(--sub-ink); }
+
+.hub-tile-label,
+.hub-stat-label{ color: var(--sub-muted); }
+
+/* (8) Focus only on keyboard navigation; never a permanent outline ---------- */
+.hub-action:focus:not(:focus-visible),
+.hub-btn:focus:not(:focus-visible){ outline: none; }
+
+.hub-action:focus-visible,
+.hub-btn:focus-visible{
+  outline: 2px solid var(--sub-indigo);
+  outline-offset: 2px;
+}

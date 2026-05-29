@@ -5,6 +5,7 @@
 {% block title %}نظرة عامة — المشتركين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
 {% block page_title %}نظرة عامة — المشتركين{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 
 {% block content %}
 

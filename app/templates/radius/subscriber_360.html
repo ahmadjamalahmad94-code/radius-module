@@ -8,6 +8,7 @@
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}Subscriber 360{% endblock %}
 {% block page_sub %}<span class="sub">ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على RADIUS</span>{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 
 {% block content %}
 {{ hub.hero(
