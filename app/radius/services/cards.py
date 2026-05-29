@@ -645,11 +645,11 @@ class CardsService:
                               (tenant_id, batch_id, plan_id, username, password,
                                wallet_value, recharge_only,
                                expire_at, used, revoked,
-                               created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, 1, NULL, 0, 0, ?, ?)
+                               created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, 1, NULL, 0, 0, ?)
                             """,
                             (tenant_id, batch_id, plan_id, code, pin,
-                             value, now, now),
+                             value, now),
                         )
                         inserted += 1
                         break
