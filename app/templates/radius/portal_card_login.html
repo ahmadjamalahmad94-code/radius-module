@@ -1,24 +1,386 @@
+{# Customer card portal — login page.
+   Split layout: brand side (gradient violet, value props, floating
+   chips) + form side (clean white, icon-prefixed fields, password
+   reveal toggle). Matches portal_card.html visual language:
+   Cairo, violet tokens, slate canvas with radial glows, soft
+   elevation.
+#}
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>بوابة مستخدم البطاقة - HobeRadius</title>
+  <meta name="theme-color" content="#5b21b6">
+  <title>تسجيل الدخول — محفظتي · HobeRadius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}.portal{max-width:460px;margin:8vh auto;padding:32px;background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.08)}
-    label{display:block;margin:14px 0;font-weight:700}input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:12px}button{width:100%;padding:13px;border:0;border-radius:12px;background:#4f46e5;color:white;font-weight:800}.note{color:#64748b;font-size:14px;line-height:1.6}
+    :root{
+      --ink-1:#0f172a;
+      --ink-2:#475569;
+      --ink-3:#94a3b8;
+      --canvas:#f1f5f9;
+      --paper:#ffffff;
+      --hair:#cbd5e1;
+      --hair-soft:#e2e8f0;
+      --accent:#7c3aed;
+      --accent-2:#5b21b6;
+      --accent-soft:#f5f3ff;
+      --accent-ring:rgba(124,58,237,.28);
+      --success:#15803d;
+      --err:#b91c1c;
+      --err-soft:#fee2e2;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:
+        radial-gradient(800px 600px at 90% -10%, rgba(124,58,237,.10) 0%, transparent 50%),
+        radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
+        var(--canvas);
+      color:var(--ink-1);
+      min-height:100dvh;
+      display:grid;place-items:center;
+      padding:24px;
+      font-feature-settings:"ss01","tnum";
+    }
+
+    /* ── Card shell — 2-column split ────────────────── */
+    .login-card{
+      width:100%;max-width:980px;
+      display:grid;grid-template-columns:1.05fr 1fr;
+      background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:22px;
+      overflow:hidden;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.8) inset,
+        0 4px 12px rgba(15,23,42,.06),
+        0 24px 60px rgba(15,23,42,.12);
+    }
+    @media (max-width:840px){
+      .login-card{grid-template-columns:1fr;max-width:480px}
+    }
+
+    /* ── Brand side ─────────────────────────────────── */
+    .brand-side{
+      position:relative;overflow:hidden;
+      padding:42px 40px;color:#fff;
+      background:
+        radial-gradient(420px 240px at 100% 0%, rgba(255,255,255,.18) 0%, transparent 60%),
+        radial-gradient(360px 200px at 0% 100%, rgba(255,255,255,.10) 0%, transparent 60%),
+        linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      display:flex;flex-direction:column;
+    }
+    .brand-side::before, .brand-side::after{
+      content:"";position:absolute;border-radius:50%;
+      background:rgba(255,255,255,.06);pointer-events:none;
+    }
+    .brand-side::before{width:280px;height:280px;inset-inline-end:-90px;top:-90px}
+    .brand-side::after {width:200px;height:200px;inset-inline-start:-50px;bottom:-60px}
+    @media (max-width:840px){.brand-side{padding:28px 26px}}
+
+    .brand-mark{
+      display:flex;align-items:center;gap:12px;
+      position:relative;z-index:1;
+    }
+    .brand-mark .logo{
+      width:46px;height:46px;border-radius:13px;
+      background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.22);
+      backdrop-filter:blur(8px);
+      display:grid;place-items:center;font-size:20px;
+      box-shadow:0 6px 14px rgba(0,0,0,.10);
+    }
+    .brand-mark .name{font-size:16px;font-weight:900;letter-spacing:-.005em}
+
+    .brand-title{
+      margin:28px 0 14px;position:relative;z-index:1;
+      font-size:30px;font-weight:900;letter-spacing:-.01em;line-height:1.25;
+    }
+    .brand-sub{
+      margin:0;font-size:14px;line-height:1.8;opacity:.92;
+      position:relative;z-index:1;max-width:34ch;
+    }
+
+    .brand-features{
+      list-style:none;padding:0;margin:24px 0 0;
+      display:flex;flex-direction:column;gap:12px;
+      position:relative;z-index:1;
+    }
+    .brand-features li{
+      display:flex;align-items:center;gap:11px;
+      font-size:13px;font-weight:700;opacity:.95;
+    }
+    .brand-features li .ico{
+      width:30px;height:30px;border-radius:9px;
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.22);
+      display:grid;place-items:center;font-size:12px;flex-shrink:0;
+    }
+
+    .brand-chips{
+      margin-top:auto;display:flex;gap:10px;flex-wrap:wrap;
+      position:relative;z-index:1;
+    }
+    .brand-chip{
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      font-size:11.5px;font-weight:800;letter-spacing:.04em;
+      display:inline-flex;align-items:center;gap:6px;
+      backdrop-filter:blur(6px);
+    }
+    .brand-chip i{font-size:10px}
+
+    /* ── Form side ──────────────────────────────────── */
+    .form-side{
+      padding:42px 44px;
+      display:flex;flex-direction:column;
+      background:var(--paper);
+    }
+    @media (max-width:840px){.form-side{padding:28px 26px}}
+
+    .form-head{margin-bottom:24px}
+    .form-eyebrow{
+      font-size:11px;font-weight:800;letter-spacing:.14em;
+      color:var(--accent-2);text-transform:uppercase;
+      display:inline-flex;align-items:center;gap:6px;
+    }
+    .form-eyebrow i{font-size:9px}
+    .form-title{
+      margin:6px 0 4px;font-size:22px;font-weight:900;color:var(--ink-1);
+      letter-spacing:-.005em;
+    }
+    .form-sub{margin:0;font-size:13px;color:var(--ink-2);line-height:1.7}
+
+    /* Flash */
+    .flash-stack{margin-bottom:14px;display:flex;flex-direction:column;gap:8px}
+    .flash{
+      padding:11px 14px;border-radius:10px;font-size:12.5px;font-weight:700;
+      display:flex;align-items:center;gap:9px;animation:slide-in .25s ease;
+    }
+    @keyframes slide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .flash.success{background:#dcfce7;color:var(--success);border:1px solid #bbf7d0}
+    .flash.error,.flash.danger{background:var(--err-soft);color:var(--err);border:1px solid #fecaca}
+    .flash.info{background:var(--accent-soft);color:var(--accent-2);border:1px solid #c4b5fd}
+
+    /* Form fields */
+    .field-group{display:flex;flex-direction:column;gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{
+      font-size:12.5px;font-weight:800;color:var(--ink-2);
+      display:flex;align-items:center;gap:7px;
+    }
+    .field label i{color:var(--accent-2);font-size:11px}
+    .field .input-wrap{position:relative}
+    .field input{
+      width:100%;padding:13px 16px;
+      border:1px solid var(--hair);border-radius:11px;
+      background:#fff;font-size:14.5px;font-weight:700;color:var(--ink-1);
+      font-family:inherit;letter-spacing:.03em;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .field input:hover{border-color:#a78bfa}
+    .field input:focus{
+      outline:none;border-color:var(--accent);
+      box-shadow:0 0 0 4px var(--accent-ring);
+    }
+    .field input::placeholder{font-weight:600;opacity:.42}
+    .field input[type=password]{padding-inline-end:46px;letter-spacing:.2em}
+
+    .pwd-toggle{
+      position:absolute;
+      inset-inline-end:8px;top:50%;transform:translateY(-50%);
+      background:transparent;border:0;
+      width:32px;height:32px;border-radius:8px;
+      color:var(--ink-3);cursor:pointer;font-size:13px;
+      display:grid;place-items:center;
+      transition:background .15s ease, color .15s ease;
+    }
+    .pwd-toggle:hover{background:var(--accent-soft);color:var(--accent-2)}
+
+    .field-row{
+      display:flex;align-items:center;justify-content:space-between;
+      font-size:12.5px;color:var(--ink-2);
+    }
+    .check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-weight:700}
+    .check input{accent-color:var(--accent);width:14px;height:14px}
+
+    .btn-primary{
+      margin-top:6px;
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+      color:#fff;border:0;border-radius:12px;
+      padding:14px 22px;font-size:15px;font-weight:900;
+      cursor:pointer;font-family:inherit;
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      box-shadow:0 8px 18px rgba(124,58,237,.32);
+      transition:transform .12s ease, box-shadow .18s ease;
+    }
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(124,58,237,.42)}
+    .btn-primary:active{transform:translateY(0)}
+    .btn-primary:focus-visible{outline:3px solid var(--accent-ring);outline-offset:3px}
+
+    .form-foot{
+      margin-top:18px;padding-top:16px;
+      border-top:1px solid var(--hair-soft);
+      display:flex;align-items:center;justify-content:space-between;
+      font-size:12px;color:var(--ink-3);
+    }
+    .form-foot a{color:var(--accent-2);text-decoration:none;font-weight:800}
+    .form-foot a:hover{text-decoration:underline}
+
+    @media (prefers-reduced-motion:reduce){
+      .flash{animation:none}
+      .btn-primary{transition:none}
+    }
   </style>
 </head>
 <body>
-  <main class="portal" data-testid="card-portal-login">
-    <h1>بوابة مستخدم البطاقة</h1>
-    <p class="note">Sign in with a purchased card to view wallet, marketplace, active card, usage, and notifications.</p>
-    <form method="post">
+
+<main class="login-card" data-testid="card-portal-login">
+
+  {# ── Brand panel ─────────────────────────────── #}
+  <aside class="brand-side" aria-hidden="true">
+    <div class="brand-mark">
+      <span class="logo"><i class="fa-solid fa-wallet"></i></span>
+      <span class="name">HobeRadius</span>
+    </div>
+
+    <h2 class="brand-title">محفظتك للإنترنت بين يديك</h2>
+    <p class="brand-sub">
+      ادخل بحسابك لتشحن الرصيد، تشتري الباقات، وتدير بطاقاتك من
+      مكان واحد — سريع وآمن.
+    </p>
+
+    <ul class="brand-features">
+      <li>
+        <span class="ico"><i class="fa-solid fa-bolt"></i></span>
+        شحن فوري بقيمة البطاقة
+      </li>
+      <li>
+        <span class="ico"><i class="fa-solid fa-store"></i></span>
+        تسوّق الباقات بكل سهولة
+      </li>
+      <li>
+        <span class="ico"><i class="fa-solid fa-shield-halved"></i></span>
+        اتصال آمن مشفّر
+      </li>
+    </ul>
+
+    <div class="brand-chips">
+      <span class="brand-chip"><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
+      <span class="brand-chip"><i class="fa-solid fa-credit-card"></i> رصيد</span>
+      <span class="brand-chip"><i class="fa-solid fa-clock-rotate-left"></i> سجل كامل</span>
+    </div>
+  </aside>
+
+  {# ── Form panel ──────────────────────────────── #}
+  <section class="form-side">
+    <header class="form-head">
+      <div class="form-eyebrow">
+        <i class="fa-solid fa-circle"></i> بوابة الزبون
+      </div>
+      <h1 class="form-title">تسجيل الدخول</h1>
+      <p class="form-sub">ادخل برقم الجوال وكلمة المرور للوصول إلى محفظتك.</p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">
+          {% if category == 'success' %}<i class="fa-solid fa-circle-check"></i>
+          {% elif category in ('error','danger') %}<i class="fa-solid fa-circle-exclamation"></i>
+          {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" autocomplete="on">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>Card username <input name="card_username" required></label>
-      <label>Card password <input name="card_password" type="password" required></label>
-      <button type="submit">فتح البوابة</button>
+
+      <div class="field-group">
+        <div class="field">
+          <label for="f-mobile">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            رقم الجوال
+          </label>
+          <div class="input-wrap">
+            <input id="f-mobile" name="mobile"
+                   inputmode="tel" pattern="[0-9+\-\s]*"
+                   placeholder="مثل: 0599123456"
+                   autocomplete="tel"
+                   style="direction:ltr;text-align:start"
+                   required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-password">
+            <i class="fa-solid fa-key"></i>
+            كلمة المرور
+          </label>
+          <div class="input-wrap">
+            <input id="f-password" name="password" type="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password"
+                   required>
+            <button type="button" class="pwd-toggle" id="pwd-toggle"
+                    aria-label="إظهار / إخفاء كلمة المرور">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="check">
+            <input type="checkbox" name="remember" value="1">
+            تذكّرني
+          </label>
+          <a href="#" tabindex="-1" style="color:var(--ink-3);font-size:12px;text-decoration:none">
+            تواصل مع الدعم
+          </a>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-arrow-left-to-bracket"></i>
+          فتح البوابة
+        </button>
+      </div>
     </form>
-  </main>
+
+    <div class="form-foot">
+      <span>
+        <i class="fa-solid fa-shield-halved" style="color:var(--accent-2)"></i>
+        اتصال آمن
+      </span>
+      <span>HobeRadius © 2026</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  const toggle = document.getElementById('pwd-toggle');
+  const input  = document.getElementById('f-password');
+  if (!toggle || !input) return;
+  toggle.addEventListener('click', () => {
+    const isPwd = input.type === 'password';
+    input.type = isPwd ? 'text' : 'password';
+    toggle.innerHTML = isPwd
+      ? '<i class="fa-regular fa-eye-slash"></i>'
+      : '<i class="fa-regular fa-eye"></i>';
+    input.focus();
+  });
+})();
+</script>
+
 </body>
 </html>
