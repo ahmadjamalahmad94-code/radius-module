@@ -16,6 +16,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 <style>
+  /* Required — the chip grid uses display:grid which overrides
+     the default behaviour of [hidden]. Without this, switching
+     to the table view leaves the chips grid still rendered. */
+  [hidden]{ display:none !important }
+</style>
+<style>
   /* ── Strong elevation — match the rest of the cards section. ── */
   [data-cards-batches-page] .hub-section{
     border:1px solid #cbd5e1;background:#fff;
