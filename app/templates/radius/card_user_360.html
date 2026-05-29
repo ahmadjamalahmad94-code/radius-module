@@ -398,87 +398,76 @@
 {% endcall %}
 </div>
 
-{# ── 2-col: cards owned + recent purchases ──────── #}
-<div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px">
-  <style>@media (max-width:960px){.u360-2col{grid-template-columns:1fr !important}}</style>
+{# ── Unified cards + purchases table (each card = one purchase) ── #}
+{# Build a quick lookup so each card row can pull its purchase amount. #}
+{% set purchase_by_card = {} %}
+{% for p in card360.purchases %}
+  {% if p.card_id %}
+    {%- set _ = purchase_by_card.update({p.card_id|int: p}) -%}
+  {% endif %}
+{% endfor %}
 
-  {% call hub.section("البطاقات المملوكة", icon="id-card",
-                     meta=card360.cards|length ~ " بطاقة") %}
-    {% if card360.cards %}
-    <div style="overflow-x:auto">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>الرمز</th>
-            <th style="width:110px">الحالة</th>
-            <th style="width:170px">أُنشئت</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in card360.cards %}
-          <tr>
-            <td class="u360-mono" style="font-size:13.5px;font-weight:800;color:#0f172a">{{ c.username }}</td>
-            <td>
-              {% if c.revoked %}
-                <span class="u360-status u360-status--revoked">ملغاة</span>
-              {% elif c.used %}
-                <span class="u360-status u360-status--used">مستخدمة</span>
-              {% else %}
-                <span class="u360-status u360-status--fresh">جاهزة</span>
-              {% endif %}
-            </td>
-            <td style="font-size:11.5px;color:#64748b">{{ (c.created_at or '')[:19] or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-      <div class="u360-empty">
-        <i class="fa-regular fa-credit-card"></i>
-        لا توجد بطاقات مملوكة بعد
-      </div>
-    {% endif %}
-  {% endcall %}
-
-  {% call hub.section("المشتريات", icon="receipt",
-                     meta=card360.purchases|length ~ " عملية") %}
-    {% if card360.purchases %}
-    <div style="overflow-x:auto">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>المبلغ</th>
-            <th style="width:90px">الحالة</th>
-            <th style="width:170px">التاريخ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in card360.purchases[:20] %}
-          <tr>
-            <td class="u360-mono" style="font-size:13.5px;font-weight:800;color:#5b21b6">
-              {{ "%.2f"|format((p.amount_minor or 0) / 100) }}
-              <small style="color:#94a3b8;font-family:inherit;font-weight:700;margin-inline-start:4px">{{ p.currency or currency }}</small>
-            </td>
-            <td>
-              {% set ps = (p.status or 'pending')|lower %}
-              <span class="u360-status u360-status--{{ 'used' if ps == 'completed' else 'neutral' }}">
-                {{ 'مكتملة' if ps == 'completed' else (p.status or '—') }}
+<div style="margin-top:18px">
+{% call hub.section("بطاقات العميل والمشتريات", icon="id-card",
+                   meta=card360.cards|length ~ " بطاقة") %}
+  {% if card360.cards %}
+  <div style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th style="width:50px">#</th>
+          <th>الرمز</th>
+          <th>الباقة</th>
+          <th style="width:120px">المبلغ</th>
+          <th style="width:100px">الحالة</th>
+          <th style="width:140px">تاريخ الشراء</th>
+          <th style="width:140px">أول استخدام</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in card360.cards %}
+        {% set pur = purchase_by_card.get(c.id|int) %}
+        <tr>
+          <td><span style="color:#94a3b8;font-weight:700;font-size:12px">{{ loop.index }}</span></td>
+          <td class="u360-mono" style="font-size:13.5px;font-weight:800;color:#0f172a">{{ c.username }}</td>
+          <td style="font-size:13px;color:#475569">{{ c.package_name or '—' }}</td>
+          <td>
+            {% if pur %}
+              <span class="u360-mono" style="font-size:13px;font-weight:800;color:#5b21b6">
+                {{ "%.2f"|format((pur.amount_minor or 0) / 100) }}
               </span>
-            </td>
-            <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">{{ (p.created_at or '')[:19] or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <small style="color:#94a3b8;margin-inline-start:4px;font-weight:700">{{ pur.currency or currency }}</small>
+            {% else %}
+              <span style="color:#cbd5e1">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.revoked %}
+              <span class="u360-status u360-status--revoked">ملغاة</span>
+            {% elif c.used %}
+              <span class="u360-status u360-status--used">مستخدمة</span>
+            {% else %}
+              <span class="u360-status u360-status--fresh">جاهزة</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
+            {{ (c.created_at or '')[:10] or '—' }}
+          </td>
+          <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
+            {{ (c.first_used_at or '')[:10] or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="u360-empty">
+      <i class="fa-regular fa-credit-card"></i>
+      لا توجد بطاقات مملوكة بعد — استعمل قسم «شراء بطاقة من السوق» بالأعلى.
     </div>
-    {% else %}
-      <div class="u360-empty">
-        <i class="fa-regular fa-folder-open"></i>
-        لا توجد مشتريات بعد
-      </div>
-    {% endif %}
-  {% endcall %}
+  {% endif %}
+{% endcall %}
 </div>
 
 {# ── Activity timeline ──────────────────────────── #}
