@@ -162,3 +162,56 @@
   .hub-kpi,
   .hub-action{ transition: none; }
 }
+
+
+/* ============================================================================
+   PHASE 2a — legacy admin-shell widgets (admin_layout.css namespace)
+
+   Older admin pages use a separate, generic class namespace (.card, .sec-card,
+   .kpi, .table, .badge, .pill, .empty, .actions-bar) defined in admin_layout.css.
+   Phase 1 only refined the .hub-*/.hr-* system, so those legacy widgets still
+   look heavier/flatter. This block brings them onto the same calm --vp-* surface.
+
+   SAFETY: every selector is scoped under `.main` (the content shell), so the
+   topbar, sidebar, tenant/user menus (which live OUTSIDE .main) are never
+   touched. `.main .x` (specificity 0,2,0) loads after admin_layout.css's bare
+   `.x` (0,1,0), so it wins cleanly without !important. Brand colors (cyan
+   primary button, status badges) are preserved — only surfaces/borders/shadows/
+   spacing are calmed. RTL-safe (logical properties).
+   ============================================================================ */
+
+/* Cards / section cards / kpi panels: calm surface + soft border + 2-layer shadow */
+.main .card,
+.main .sec-card,
+.main .kpi{
+  border: 1px solid var(--vp-border);
+  box-shadow: var(--vp-shadow);
+}
+
+/* Page header: a little more separation from the content below it */
+.main .page-head{ margin-block-end: 20px; }
+
+/* Tables: harmonize header tint, hairline row separators, calm hover */
+.main .table th{
+  background: var(--vp-surface-soft);
+  color: var(--vp-ink-soft);
+  border-block-end: 1px solid var(--vp-border);
+}
+.main .table td{
+  border-block-end: 1px solid var(--vp-line);
+  padding-block: 12px;
+}
+.main .table tbody tr:hover{ background: var(--vp-surface-soft); }
+
+/* Badges / pills: a hairline border so flat tints read as contained chips */
+.main .badge,
+.main .pill{ border: 1px solid var(--vp-border-soft); }
+
+/* Empty states: let them breathe */
+.main .empty{ padding-block: 48px; }
+
+/* Secondary buttons: align the quiet border with the rest (brand primary kept) */
+.main .btn-secondary{ border-color: var(--vp-border); }
+
+/* Keyboard-only focus ring for legacy controls (adds; removes nothing) */
+.main .btn:focus-visible{ outline: none; box-shadow: var(--vp-focus); }
