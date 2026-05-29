@@ -1,0 +1,72 @@
+/* ============================================================================
+   cards_batches_polish.css — recolor + light surface polish for
+   /admin/radius/cards/batches
+
+   Loaded ONCE on this page, AFTER cards_batches_view.css (and after
+   cards_generate_progress.css), so it overrides by cascade order. Almost all
+   recoloring is achieved by re-pointing the page's OWN design tokens
+   (--batch-purple / --batch-blue) that cards_batches_view.css already threads
+   through ~25 rules — so a couple of variable values shift the whole page onto
+   the site identity with near-zero risk. A few hard-coded gradients that don't
+   read the tokens are nudged explicitly, each scoped under the page wrapper
+   [data-cards-batches-page] so nothing else is affected.
+
+   APPEARANCE ONLY: no markup/number/Jinja/url_for/JS/layout/structure changes.
+   The page's view-toggle, filters, bulk bar, print modals, and pagination keep
+   their exact behavior. RTL-safe.
+
+   Site identity: indigo #6B5AED (deep #4A36C9 · ink #2E1F8C) · teal #0D9488 ·
+   cyan #2BAACC · slate borders. Status colors (green/red/amber) are preserved.
+   ============================================================================ */
+
+/* ── 1. Re-point the page's own tokens → instant, low-risk global recolor ──── */
+[data-cards-batches-page]{
+  --batch-purple:      #6B5AED;   /* was #6d4dfc — now the site indigo  */
+  --batch-purple-dark: #2E1F8C;   /* was #24165f — site indigo-ink      */
+  --batch-blue:        #2BAACC;   /* was #0ea5e9 sky — now site cyan     */
+}
+
+/* ── 2. KPI icon tiles → site palette (these gradients are hard-coded) ────── */
+[data-cards-batches-page] .batches-kpi--purple .batches-kpi__icon{
+  background: linear-gradient(135deg, #6B5AED, #8B7BF8);
+}
+[data-cards-batches-page] .batches-kpi--blue .batches-kpi__icon{
+  background: linear-gradient(135deg, #2BAACC, #56C7E0);   /* cyan, not royal blue */
+}
+/* green / amber / red KPI icons stay — they carry real status meaning */
+
+/* ── 3. Primary buttons + selected card accent: violet pair → indigo pair ── */
+[data-cards-batches-page] .batch-btn--primary{
+  background: linear-gradient(135deg, #6B5AED, #4A36C9);
+}
+[data-cards-batches-page] .batch-card:has(.batch-check:checked){
+  background: linear-gradient(135deg, #6B5AED, #4A36C9);
+}
+
+/* Note: the voucher-card usage progress fill (view.css:1190,
+   green→var(--batch-purple)) is recolored automatically by the token swap in
+   §1 — green→indigo — so no extra rule is needed here. */
+
+/* ── 4. Soft surface polish — calmer borders + lighter elevation ──────────── */
+[data-cards-batches-page] .batches-kpi,
+[data-cards-batches-page] .batch-card,
+[data-cards-batches-page] .bops-table-wrap,
+[data-cards-batches-page] .batches-toolbar{
+  border-color: #e7e9f2;
+}
+
+/* metric chips inside voucher cards: the violet-tinted first chip → indigo tint */
+[data-cards-batches-page] .bops-metrics span:nth-child(1){
+  background: color-mix(in srgb, #6B5AED 8%, #fff);
+  border-color: color-mix(in srgb, #6B5AED 22%, #fff);
+}
+[data-cards-batches-page] .bops-column-option:hover{
+  background: color-mix(in srgb, #6B5AED 7%, #fff);
+  border-color: color-mix(in srgb, #6B5AED 26%, #fff);
+}
+
+/* ── 5. Reduced motion safety for any added hovers ────────────────────────── */
+@media (prefers-reduced-motion: reduce){
+  [data-cards-batches-page] .batch-card,
+  [data-cards-batches-page] .batches-kpi{ transition: none; }
+}
