@@ -186,7 +186,8 @@
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
-{%- set sec_e_cards_active  = m_card_users or m_card_marketplace -%}
+{%- set m_cards_recharge    = '/cards/recharge' in path -%}
+{%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge -%}
 {%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched or m_operations_speed -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
@@ -294,6 +295,7 @@
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
         {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
+        {{ sub_item('radius.cards_recharge_list', '⚡ بطاقات الشحن المسبق', m_cards_recharge) }}
       </div></div>
     </div>
 

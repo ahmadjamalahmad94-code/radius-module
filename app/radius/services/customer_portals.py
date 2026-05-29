@@ -5,8 +5,10 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from werkzeug.security import check_password_hash
+
 from ..core.errors import RadiusValidationError
-from ..db.connection import db
+from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .accounting import AccountingService
 from .business_os_finance import WalletService
@@ -33,21 +35,24 @@ class CustomerPortalService:
             raise PortalAuthError("invalid subscriber credentials")
         return self._subscriber_row(row_to_dict(row))
 
-    def authenticate_card_user(self, *, card_username: str, card_password: str) -> dict[str, Any]:
-        row = db().execute(
+    def authenticate_card_user(self, *, mobile: str, password: str) -> dict[str, Any]:
+        phone = str(mobile or "").strip()
+        rows = db().execute(
             """
-            SELECT cu.*
-            FROM card_user_purchases p
-            JOIN cards c ON c.tenant_id=p.tenant_id AND c.id=p.card_id
-            JOIN card_users cu ON cu.tenant_id=p.tenant_id AND cu.id=p.card_user_id
-            WHERE p.tenant_id=? AND c.username=? AND c.password=? AND cu.status='active'
-            ORDER BY p.id DESC LIMIT 1
+            SELECT *
+            FROM card_users
+            WHERE tenant_id=? AND mobile=? AND status='active'
+            ORDER BY id DESC
             """,
-            (self.tenant_id, str(card_username or "").strip(), str(card_password or "")),
-        ).fetchone()
-        if not row:
-            raise PortalAuthError("invalid card credentials")
-        return row_to_dict(row)
+            (self.tenant_id, phone),
+        ).fetchall()
+        for row in rows:
+            user = row_to_dict(row)
+            password_hash = str(user.get("password_hash") or "")
+            if password_hash and check_password_hash(password_hash, str(password or "")):
+                user.pop("password_hash", None)
+                return user
+        raise PortalAuthError("invalid card-user credentials")
 
     def subscriber_dashboard(self, subscriber_id: int) -> dict[str, Any]:
         subscriber = self.get_subscriber(subscriber_id)
@@ -76,6 +81,75 @@ class CustomerPortalService:
         data["notifications"] = self._events("card_user", int(card_user_id))
         data["walled_garden_note"] = "Allow the card portal URL in MikroTik walled garden when selling cards through captive networks."
         return data
+
+    def redeem_card_to_wallet(self, *, card_user_id: int, card_number: str) -> dict[str, Any]:
+        number = str(card_number or "").strip()
+        if not number:
+            raise RadiusValidationError("card number is required")
+        row = db().execute(
+            """
+            SELECT c.*, b.price_per_card, b.price_bulk, b.count, b.package_name
+            FROM cards c
+            JOIN card_batches b ON b.tenant_id=c.tenant_id AND b.id=c.batch_id
+            WHERE c.tenant_id=? AND c.username=?
+            LIMIT 1
+            """,
+            (self.tenant_id, number),
+        ).fetchone()
+        if not row:
+            raise RadiusValidationError("card number was not found")
+        card = row_to_dict(row)
+        if int(card.get("revoked") or 0):
+            raise RadiusValidationError("card is revoked")
+        if int(card.get("used") or 0):
+            raise RadiusValidationError("card was already redeemed")
+        # Prefer per-card wallet_value (recharge batches set this per
+        # denomination); fall back to the batch's price_per_card, then
+        # to (price_bulk / count) for legacy import batches.
+        price = float(card.get("wallet_value") or 0)
+        if price <= 0:
+            price = float(card.get("price_per_card") or 0)
+        if price <= 0:
+            count = int(card.get("count") or 0)
+            bulk = float(card.get("price_bulk") or 0)
+            price = (bulk / count) if count > 0 and bulk > 0 else 0
+        if price <= 0:
+            raise RadiusValidationError("card has no wallet value")
+
+        wallet = CardUsersMarketplaceService(tenant_id=self.tenant_id)._wallet_for_card_user(card_user_id)
+        credit = WalletService().credit(
+            tenant_id=self.tenant_id,
+            wallet_id=int(wallet["id"]),
+            amount=price,
+            actor_type="card_user",
+            actor_id=int(card_user_id),
+            reference_type="card_portal_redeem",
+            reference_id=int(card["id"]),
+            notes=f"Card portal wallet top-up from card {number}",
+            metadata={
+                "card_id": int(card["id"]),
+                "card_username": number,
+                "batch_id": int(card["batch_id"]),
+            },
+        )
+        now = now_iso()
+        with transaction() as conn:
+            cur = conn.execute(
+                """
+                UPDATE cards
+                SET used=1, first_used_at=?
+                WHERE tenant_id=? AND id=? AND used=0 AND revoked=0
+                """,
+                (now, self.tenant_id, int(card["id"])),
+            )
+            if cur.rowcount <= 0:
+                raise RadiusValidationError("card was already redeemed")
+        return {
+            "card": card,
+            "wallet": credit["wallet"],
+            "transaction": credit["transaction"],
+            "amount": price,
+        }
 
     def get_subscriber(self, subscriber_id: int) -> dict[str, Any]:
         row = db().execute(

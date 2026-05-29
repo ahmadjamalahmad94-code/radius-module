@@ -1,0 +1,228 @@
+{# Recharge Cards — single batch view with pagination. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
+{% block page_title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    <a href="{{ url_for('radius.cards_recharge_list') }}" style="color:#475569;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    </a>
+    &nbsp;·&nbsp; {{ total_cards }} بطاقة شحن
+  </span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .hub-section{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 20px rgba(15,23,42,.06);
+    border-radius:14px;
+  }
+  .hub-section-head{
+    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
+    border-bottom:1px solid #cbd5e1;
+  }
+  .hub-section-head-title{color:#0f172a;font-weight:900}
+  .hub-section-head-icon{background:#cffafe;color:#0e7490}
+  .hub-kpi{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 6px 14px rgba(15,23,42,.05);
+    border-radius:12px;
+    transition:transform .15s ease, box-shadow .18s ease, border-color .15s ease;
+  }
+  .hub-kpi:hover{transform:translateY(-2px);border-color:#94a3b8}
+  .hub-hero{
+    border:1px solid #cbd5e1;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 2px 6px rgba(15,23,42,.06),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+  .hub-table thead th{
+    background:#f1f5f9;color:#334155;
+    border-bottom:1px solid #cbd5e1;font-weight:800;
+  }
+  .hub-table tbody tr{border-top:1px solid #e2e8f0}
+  .hub-table tbody tr:hover{background:#fafbfc}
+
+  .rc-table td,.rc-table th{direction:ltr;text-align:start}
+  .rc-table .mono{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+  .rc-table .code{color:#0f172a;font-weight:800;letter-spacing:.04em}
+  .rc-table .pin{color:#475569}
+  .rc-table .value{
+    color:#0e7490;font-weight:900;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+  .rc-table .row-num{color:#94a3b8;font-weight:700;font-size:12px}
+  .rc-status-used  { color:#15803d;background:#dcfce7;border:1px solid #bbf7d0;
+                     padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800 }
+  .rc-status-fresh { color:#0e7490;background:#cffafe;border:1px solid #67e8f9;
+                     padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800 }
+
+  /* Pager */
+  .rc-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .rc-toolbar .info{font-size:12.5px;color:#64748b;font-variant-numeric:tabular-nums}
+  .rc-toolbar .info strong{color:#0f172a;font-weight:800}
+  .rc-toolbar .per-page{
+    margin-inline-start:auto;display:inline-flex;align-items:center;gap:8px;
+    font-size:12.5px;color:#475569;
+  }
+  .rc-toolbar .per-page select{
+    padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;
+    background:#fff;font-size:12.5px;color:#0f172a;font-weight:700;cursor:pointer;
+  }
+  .rc-pager{
+    display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+    margin-top:18px;padding-top:16px;border-top:1px solid #f1f5f9;
+  }
+  .rc-pager a,.rc-pager span{
+    min-width:34px;height:34px;padding:0 12px;
+    display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#475569;
+    font-size:12.5px;font-weight:700;text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
+    font-variant-numeric:tabular-nums;
+  }
+  .rc-pager a:hover{background:#ecfeff;border-color:#67e8f9;color:#0e7490;transform:translateY(-1px)}
+  .rc-pager .is-active{
+    background:#0e7490;border-color:#0e7490;color:#fff;
+    box-shadow:0 4px 10px rgba(14,116,144,.22);
+  }
+  .rc-pager .is-disabled{background:#f8fafc;color:#cbd5e1;cursor:not-allowed}
+
+  .rc-denom-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .rc-denom-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 10px;border-radius:999px;
+    background:#ecfeff;border:1px solid #67e8f9;color:#0e7490;
+    font-size:11.5px;font-weight:800;
+  }
+  .rc-denom-chip strong{font-variant-numeric:tabular-nums}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  batch.package_name or batch.batch_code or 'حزمة بلا اسم',
+  subtitle="حزمة شحن مسبق — يدخل العميل الرمز في بوابته فيُضاف لرصيد محفظته.",
+  icon="layer-group",
+  actions_html=hub.btn("الرجوع", icon="arrow-right", href=url_for('radius.cards_recharge_list'), variant="secondary")
+) }}
+
+{% call hub.section("ملخّص الحزمة", icon="chart-column") %}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("إجمالي البطاقات", batch.card_count or total_cards,
+               icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
+    {{ hub.kpi("المستخدمة", batch.used_count or 0,
+               icon="circle-check", variant="green", sub="رُدّت في محافظ العملاء") }}
+    {{ hub.kpi("القيمة الكلية", "%.2f"|format(batch.total_value or batch.price_bulk or 0),
+               icon="coins", variant="amber", sub="مجموع قيم البطاقات") }}
+    {{ hub.kpi("أُنشئت في", (batch.created_at or '—')[:10],
+               icon="calendar", variant="purple", sub="تاريخ التوليد") }}
+  </div>
+
+  {% if denominations %}
+  <div class="rc-denom-chips">
+    {% for d in denominations %}
+      <span class="rc-denom-chip">
+        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        <strong>{{ d.count|int }}</strong> × <strong>{{ "%.0f"|format(d.value) }}</strong>
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endcall %}
+
+{% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة") %}
+
+  {% set range_lo = (page - 1) * per_page + 1 %}
+  {% set range_hi = [page * per_page, total_cards] | min %}
+
+  <div class="rc-toolbar">
+    <div class="info">
+      عرض <strong>{{ range_lo }}–{{ range_hi }}</strong> من <strong>{{ total_cards }}</strong>
+      ·  صفحة <strong>{{ page }}</strong> من <strong>{{ pages_count }}</strong>
+    </div>
+    <form method="get" class="per-page">
+      <label for="pp">عدد الصفوف:</label>
+      <select id="pp" name="per_page" onchange="this.form.submit()">
+        {% for n in [10, 20, 50, 100] %}
+          <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="page" value="1">
+    </form>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table class="hub-table rc-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>الرمز</th>
+          <th>الـ PIN</th>
+          <th style="width:100px">القيمة</th>
+          <th style="width:90px">الحالة</th>
+          <th style="width:170px">استُخدمت</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cards %}
+        <tr>
+          <td><span class="row-num">{{ range_lo + loop.index0 }}</span></td>
+          <td class="mono code">{{ c.username }}</td>
+          <td class="mono pin">{{ c.password or '—' }}</td>
+          <td class="mono value">{{ "%.2f"|format(c.wallet_value or 0) }}</td>
+          <td>
+            {% if c.used %}
+              <span class="rc-status-used">مستخدمة</span>
+            {% else %}
+              <span class="rc-status-fresh">جاهزة</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11.5px;color:#64748b;direction:ltr">{{ (c.first_used_at or '')[:19] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages_count > 1 %}
+    {% macro pglink(p, label, disabled=false, active=false) -%}
+      {%- if disabled -%}
+        <span class="is-disabled" aria-hidden="true">{{ label }}</span>
+      {%- elif active -%}
+        <span class="is-active" aria-current="page">{{ label }}</span>
+      {%- else -%}
+        <a href="{{ url_for('radius.cards_recharge_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
+      {%- endif -%}
+    {%- endmacro %}
+
+    <nav class="rc-pager" aria-label="تنقل الصفحات">
+      {{ pglink(1, '«', disabled=(page == 1)) }}
+      {{ pglink(page - 1, '‹', disabled=(page == 1)) }}
+      {% set lo = [page - 2, 1] | max %}
+      {% set hi = [page + 2, pages_count] | min %}
+      {% if lo > 1 %}{{ pglink(1, 1) }}{% if lo > 2 %}<span class="is-disabled">…</span>{% endif %}{% endif %}
+      {% for p in range(lo, hi + 1) %}{{ pglink(p, p, active=(p == page)) }}{% endfor %}
+      {% if hi < pages_count %}{% if hi < pages_count - 1 %}<span class="is-disabled">…</span>{% endif %}{{ pglink(pages_count, pages_count) }}{% endif %}
+      {{ pglink(page + 1, '›', disabled=(page == pages_count)) }}
+      {{ pglink(pages_count, '»', disabled=(page == pages_count)) }}
+    </nav>
+  {% endif %}
+
+{% endcall %}
+
+{% endblock %}

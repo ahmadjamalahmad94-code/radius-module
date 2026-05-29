@@ -517,6 +517,283 @@ class CardsService:
         )
         return True
 
+    # ─── Recharge Cards (بطاقات الشحن المسبق) ──────────────────
+    #
+    # Prepaid wallet top-up vouchers. Each card carries its own
+    # monetary value (cards.wallet_value) so a single batch can
+    # mix denominations. The customer portal /portal/card/redeem
+    # path consumes these directly via redeem_card_to_wallet.
+
+    def generate_recharge_batch(
+        self,
+        *,
+        actor: str,
+        package_name: str,
+        denominations: list[dict],
+        username_length: int = 12,
+        password_length: int = 6,
+        notes: str = "",
+    ) -> dict:
+        """Generate a multi-denomination recharge batch.
+
+        denominations: a list of {"value": float, "count": int}
+        entries — e.g. [{"value":5,"count":100},{"value":10,"count":50}].
+        Each card row gets its own wallet_value from the matching
+        entry; the batch row carries the denominations JSON in its
+        metadata so the operator UI can render the breakdown.
+        """
+        import json
+        import secrets
+        import string
+        from datetime import datetime as _dt
+
+        # Validate inputs.
+        if not package_name:
+            raise RadiusValidationError("اسم الحزمة مطلوب.")
+        if not denominations:
+            raise RadiusValidationError("لا توجد فئات للتوليد.")
+        cleaned: list[dict] = []
+        for d in denominations:
+            try:
+                value = float(d.get("value") or 0)
+                count = int(d.get("count") or 0)
+            except (TypeError, ValueError) as exc:
+                raise RadiusValidationError(
+                    f"قيمة أو عدد غير صالح: {d}"
+                ) from exc
+            if value <= 0 or count <= 0:
+                continue
+            cleaned.append({"value": value, "count": count})
+        if not cleaned:
+            raise RadiusValidationError(
+                "كل الفئات قيمتها صفر — أدخل فئة واحدة على الأقل."
+            )
+        total_cards = sum(int(d["count"]) for d in cleaned)
+        if total_cards > 5000:
+            raise RadiusValidationError("الحد الأقصى 5000 بطاقة في الدفعة.")
+        total_value = sum(d["value"] * d["count"] for d in cleaned)
+
+        tenant_id = self._store_tenant_id()
+        from ..db.connection import db
+        conn = db()
+
+        # ── Create the batch row. We reuse the existing CardBatch
+        #    plumbing — source_type=external so no FreeRADIUS sync —
+        #    then flip recharge_only after the fact.
+        plan_id = self._first_plan_id_for_tenant()
+        if not plan_id:
+            raise RadiusValidationError(
+                "لا يوجد plan في النظام — أنشئ باقة واحدة قبل توليد بطاقات الشحن."
+            )
+
+        # ── Generate unique card codes. Avoid look-alike chars
+        #    (0/O, 1/I/l) so end-users can transcribe them safely.
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        def _new_code(length: int) -> str:
+            return "".join(secrets.choice(alphabet) for _ in range(length))
+
+        # ── Create the batch first so we have a real id to attach
+        #    cards to. Use the existing store to get the auto code.
+        from ..core.types import CardBatch
+        batch = self._store.create_batch(CardBatch(
+            id=None,
+            batch_code="",
+            plan_id=plan_id,
+            count=total_cards,
+            package_name=package_name,
+            service_name="",
+            notes=notes,
+            created_by=actor,
+            price_per_card=0.0,
+            total_price=total_value,
+            source_type="external",
+            original_count=total_cards,
+            settlement_count=total_cards,
+            metadata=json.dumps({
+                "recharge_only": True,
+                "denominations": cleaned,
+            }),
+        ))
+        batch_id = int(batch.id)
+
+        # ── Mark the batch as recharge_only + stamp total_value.
+        conn.execute(
+            "UPDATE card_batches "
+            "SET recharge_only=1, price_bulk=? "
+            "WHERE id=? AND tenant_id=?",
+            (float(total_value), batch_id, tenant_id),
+        )
+
+        # ── Insert the cards row-by-row. Codes are unique inside
+        #    the batch via the existing UNIQUE(tenant_id,username)
+        #    index. Retry on collision (rare with 12-char codes
+        #    over a 32-symbol alphabet — collisions << 1 in 10^17).
+        now = _dt.utcnow().isoformat(timespec="seconds")
+        inserted = 0
+        for slot in cleaned:
+            value = float(slot["value"])
+            for _ in range(int(slot["count"])):
+                tries = 0
+                while True:
+                    tries += 1
+                    code = _new_code(username_length)
+                    pin  = _new_code(password_length)
+                    try:
+                        conn.execute(
+                            """
+                            INSERT INTO cards
+                              (tenant_id, batch_id, plan_id, username, password,
+                               wallet_value, recharge_only,
+                               expire_at, used, revoked,
+                               created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, 1, NULL, 0, 0, ?, ?)
+                            """,
+                            (tenant_id, batch_id, plan_id, code, pin,
+                             value, now, now),
+                        )
+                        inserted += 1
+                        break
+                    except Exception:  # noqa: BLE001
+                        if tries > 6:
+                            raise
+                        continue
+        conn.commit()
+
+        self._audit.record(
+            actor=actor,
+            action=AUDIT_ACTION_BATCH_GENERATE,
+            target_type="card_batch",
+            target_id=str(batch_id),
+            payload={
+                "recharge_only": True,
+                "denominations": cleaned,
+                "total_cards": total_cards,
+                "total_value": total_value,
+            },
+        )
+
+        return {
+            "batch": self._store.get_batch(batch_id),
+            "inserted_count": inserted,
+            "total_value": total_value,
+        }
+
+    def list_recharge_batches(self, *, limit: int = 100, offset: int = 0) -> list[dict]:
+        """Return recharge-only batches for the current tenant."""
+        from ..db.connection import db
+        rows = db().execute(
+            """
+            SELECT b.*,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id=b.id AND c.tenant_id=b.tenant_id) AS card_count,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id=b.id AND c.tenant_id=b.tenant_id
+                        AND c.used=1) AS used_count
+            FROM card_batches b
+            WHERE b.tenant_id=?
+              AND b.recharge_only=1
+              AND COALESCE(b.deleted_at,'')=''
+            ORDER BY b.id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (self._store_tenant_id(), int(limit), int(offset)),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def count_recharge_batches(self) -> int:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS c FROM card_batches "
+            "WHERE tenant_id=? AND recharge_only=1 "
+            "AND COALESCE(deleted_at,'')=''",
+            (self._store_tenant_id(),),
+        ).fetchone()
+        return int(row["c"] or 0)
+
+    def get_recharge_batch(self, batch_id: int) -> dict | None:
+        from ..db.connection import db
+        row = db().execute(
+            """
+            SELECT b.*,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id=b.id AND c.tenant_id=b.tenant_id) AS card_count,
+                   (SELECT COUNT(*) FROM cards c
+                      WHERE c.batch_id=b.id AND c.tenant_id=b.tenant_id
+                        AND c.used=1) AS used_count,
+                   (SELECT COALESCE(SUM(c.wallet_value), 0) FROM cards c
+                      WHERE c.batch_id=b.id AND c.tenant_id=b.tenant_id) AS total_value
+            FROM card_batches b
+            WHERE b.id=? AND b.tenant_id=? AND b.recharge_only=1
+            """,
+            (int(batch_id), self._store_tenant_id()),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def list_recharge_cards(
+        self,
+        batch_id: int,
+        *,
+        limit: int = 5000,
+        offset: int = 0,
+    ) -> list[dict]:
+        from ..db.connection import db
+        rows = db().execute(
+            """
+            SELECT id, username, password, wallet_value,
+                   used, first_used_at, created_at, batch_id
+            FROM cards
+            WHERE tenant_id=? AND batch_id=? AND recharge_only=1
+            ORDER BY id
+            LIMIT ? OFFSET ?
+            """,
+            (self._store_tenant_id(), int(batch_id), int(limit), int(offset)),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def count_recharge_cards(self, batch_id: int) -> int:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS c FROM cards "
+            "WHERE tenant_id=? AND batch_id=? AND recharge_only=1",
+            (self._store_tenant_id(), int(batch_id)),
+        ).fetchone()
+        return int(row["c"] or 0)
+
+    def delete_recharge_batch(self, *, actor: str, batch_id: int) -> bool:
+        """Soft-delete a recharge batch. Refuses non-recharge batches."""
+        from ..db.connection import db
+        tenant_id = self._store_tenant_id()
+        conn = db()
+        row = conn.execute(
+            "SELECT id FROM card_batches "
+            "WHERE id=? AND tenant_id=? AND recharge_only=1 "
+            "AND COALESCE(deleted_at,'')=''",
+            (int(batch_id), tenant_id),
+        ).fetchone()
+        if not row:
+            return False
+        now = datetime.utcnow().isoformat(timespec='seconds')
+        conn.execute(
+            "UPDATE card_batches SET deleted_at=?, deleted_by=?, "
+            "delete_reason='operator deleted from recharge section' "
+            "WHERE id=? AND tenant_id=?",
+            (now, actor or 'anonymous', int(batch_id), tenant_id),
+        )
+        conn.execute(
+            "UPDATE cards SET deleted_at=? "
+            "WHERE batch_id=? AND tenant_id=?",
+            (now, int(batch_id), tenant_id),
+        )
+        conn.commit()
+        self._audit.record(
+            actor=actor or 'anonymous',
+            action=AUDIT_ACTION_BATCH_ARCHIVE,
+            target_type="card_batch",
+            target_id=str(batch_id),
+            payload={"recharge_only": True, "soft_delete": True},
+        )
+        return True
+
     def get_print_only_batch(self, batch_id: int) -> dict | None:
         from ..db.connection import db
         row = db().execute(

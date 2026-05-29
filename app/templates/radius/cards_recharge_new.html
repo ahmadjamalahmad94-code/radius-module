@@ -1,0 +1,288 @@
+{# Recharge Cards — generate form. Multi-denomination input with
+   add/remove rows. Cyan accent matches the section. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دفعة شحن جديدة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
+{% block page_title %}دفعة شحن جديدة{% endblock %}
+{% block page_sub %}
+  <span class="sub">
+    <a href="{{ url_for('radius.cards_recharge_list') }}" style="color:#475569;text-decoration:none">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    </a>
+  </span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .hub-section{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 20px rgba(15,23,42,.06);
+    border-radius:14px;
+  }
+  .hub-section-head{
+    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
+    border-bottom:1px solid #cbd5e1;
+  }
+  .hub-section-head-title{color:#0f172a;font-weight:900}
+  .hub-section-head-icon{background:#cffafe;color:#0e7490}
+  .hub-hero{
+    border:1px solid #cbd5e1;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 2px 6px rgba(15,23,42,.06),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+
+  /* Denomination rows */
+  .rc-denoms{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .rc-denom-row{
+    display:grid;grid-template-columns:120px 1fr 1fr 44px;gap:10px;
+    align-items:center;padding:12px;
+    border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;
+  }
+  @media (max-width:760px){.rc-denom-row{grid-template-columns:1fr 1fr 44px}}
+  .rc-denom-row label{font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;display:block}
+  .rc-denom-row input{
+    width:100%;padding:9px 12px;
+    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
+    font-size:13.5px;font-variant-numeric:tabular-nums;color:#0f172a;
+  }
+  .rc-denom-row input:focus{
+    outline:none;border-color:#06b6d4;
+    box-shadow:0 0 0 3px rgba(6,182,212,.18);
+  }
+  .rc-denom-quick{display:flex;gap:4px;flex-wrap:wrap}
+  .rc-denom-quick button{
+    background:#fff;border:1px solid #cbd5e1;border-radius:6px;
+    padding:5px 10px;font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .rc-denom-quick button:hover{background:#ecfeff;border-color:#67e8f9;color:#0e7490}
+  .rc-denom-remove{
+    background:#fff;border:1px solid #fecaca;color:#b91c1c;
+    width:36px;height:36px;border-radius:8px;cursor:pointer;
+    display:grid;place-items:center;font-size:13px;
+    transition:background .15s ease;
+  }
+  .rc-denom-remove:hover{background:#fef2f2}
+
+  .rc-add-denom{
+    background:#fff;border:1px dashed #cbd5e1;border-radius:10px;
+    padding:14px;width:100%;cursor:pointer;
+    font-size:13px;font-weight:800;color:#0e7490;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .rc-add-denom:hover{background:#ecfeff;border-color:#06b6d4}
+
+  .rc-summary{
+    margin-top:18px;padding:14px 18px;border-radius:12px;
+    background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);color:#fff;
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    box-shadow:0 6px 18px rgba(6,182,212,.22);
+  }
+  .rc-summary .item{display:flex;flex-direction:column;gap:2px}
+  .rc-summary .item .k{font-size:11px;opacity:.85;letter-spacing:.05em;text-transform:uppercase;font-weight:700}
+  .rc-summary .item .v{font-size:22px;font-weight:900;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+
+  .hub-field input{
+    width:100%;padding:10px 12px;
+    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
+    font-size:13.5px;color:#0f172a;
+  }
+  .hub-field input:focus{
+    outline:none;border-color:#06b6d4;
+    box-shadow:0 0 0 3px rgba(6,182,212,.18);
+  }
+
+  .rc-actions{
+    display:flex;gap:10px;flex-wrap:wrap;
+    margin-top:20px;padding-top:18px;border-top:1px solid #f1f5f9;
+  }
+  .rc-cta{
+    background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);
+    color:#fff;border:0;border-radius:10px;
+    padding:11px 22px;font-size:14px;font-weight:800;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;
+    box-shadow:0 6px 14px rgba(6,182,212,.28);
+    transition:transform .12s ease, box-shadow .15s ease;
+  }
+  .rc-cta:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(6,182,212,.38)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "توليد دفعة شحن",
+  subtitle="حدّد فئة (قيمة) وعدد بطاقاتها. يمكنك إضافة فئات متعدّدة في نفس الدفعة. عند الحفظ تُولَّد رموز فريدة جاهزة للبيع.",
+  icon="bolt"
+) }}
+
+<form method="post" action="{{ url_for('radius.cards_recharge_new') }}">
+  {{ csrf_token_input() | safe }}
+
+  {% call hub.section("بيانات الحزمة", icon="box-archive") %}
+    <div class="hub-field">
+      <label class="hub-field-label" for="package_name">اسم الحزمة <span class="req">*</span></label>
+      <input id="package_name" name="package_name" required maxlength="120"
+             placeholder="مثل: دفعة شحن شهر ٨"
+             value="{{ form.get('package_name') or '' }}">
+      <div class="hub-field-hint">يظهر في القائمة وعلى تقارير المبيعات.</div>
+    </div>
+
+    <div class="hub-field" style="margin-top:14px">
+      <label class="hub-field-label" for="notes">ملاحظات (اختياري)</label>
+      <input id="notes" name="notes" maxlength="500"
+             placeholder="مثل: للموزّع أحمد — منطقة الشمال"
+             value="{{ form.get('notes') or '' }}">
+    </div>
+  {% endcall %}
+
+  {% call hub.section("الفئات والكميات", icon="layer-group", meta="اختر الفئات وعدد البطاقات") %}
+    <p style="margin:0 0 8px;font-size:13px;color:#475569;line-height:1.7">
+      كل صف يمثّل فئة من بطاقات الشحن. مثلاً: <strong>100 × 5</strong> +
+      <strong>50 × 10</strong> + <strong>20 × 20</strong> = 170 بطاقة بإجمالي قيمة <strong>1,100</strong>.
+    </p>
+
+    <div class="rc-denoms" id="rc-denoms">
+      {# First row pre-populated as a starter #}
+      <div class="rc-denom-row" data-row>
+        <div>
+          <label>القيمة</label>
+          <input type="number" name="denom_value" min="1" step="0.5" placeholder="5"
+                 data-denom-value>
+          <div class="rc-denom-quick" style="margin-top:6px">
+            {% for v in default_denoms %}
+              <button type="button" data-quick="{{ v }}">{{ v }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        <div>
+          <label>عدد البطاقات</label>
+          <input type="number" name="denom_count" min="1" max="5000" placeholder="100"
+                 data-denom-count>
+        </div>
+        <div>
+          <label>الإجمالي</label>
+          <input type="text" disabled placeholder="0.00" data-denom-total
+                 style="background:#f8fafc;color:#0f172a;font-weight:800">
+        </div>
+        <div>
+          <label style="visibility:hidden">.</label>
+          <button type="button" class="rc-denom-remove" aria-label="حذف الصف" data-remove>
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="rc-add-denom" id="rc-add-denom">
+      <i class="fa-solid fa-plus"></i> أضف فئة جديدة
+    </button>
+
+    <div class="rc-summary">
+      <div class="item"><span class="k">إجمالي البطاقات</span><span class="v" id="sum-cards">0</span></div>
+      <div class="item"><span class="k">القيمة الكلية</span><span class="v" id="sum-value">0</span></div>
+      <div class="item"><span class="k">عدد الفئات</span><span class="v" id="sum-tiers">1</span></div>
+    </div>
+
+    <div class="rc-actions">
+      <button type="submit" class="rc-cta">
+        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+        ولّد البطاقات
+      </button>
+      {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}
+    </div>
+  {% endcall %}
+</form>
+
+<script>
+(function(){
+  const list = document.getElementById('rc-denoms');
+  const addBtn = document.getElementById('rc-add-denom');
+  const sumCards = document.getElementById('sum-cards');
+  const sumValue = document.getElementById('sum-value');
+  const sumTiers = document.getElementById('sum-tiers');
+  if (!list) return;
+
+  const DENOMS = {{ default_denoms|tojson }};
+
+  function recalc(){
+    const rows = list.querySelectorAll('[data-row]');
+    let cards = 0, value = 0, tiers = 0;
+    rows.forEach(row => {
+      const v = parseFloat(row.querySelector('[data-denom-value]').value || 0);
+      const c = parseInt(row.querySelector('[data-denom-count]').value || 0, 10);
+      const total = (v > 0 && c > 0) ? v * c : 0;
+      row.querySelector('[data-denom-total]').value = total ? total.toLocaleString('ar-EG') : '';
+      if (v > 0 && c > 0){ cards += c; value += total; tiers += 1; }
+    });
+    sumCards.textContent = cards.toLocaleString('ar-EG');
+    sumValue.textContent = value ? value.toLocaleString('ar-EG') : '0';
+    sumTiers.textContent = Math.max(1, tiers).toLocaleString('ar-EG');
+  }
+
+  function makeRow(){
+    const row = document.createElement('div');
+    row.className = 'rc-denom-row';
+    row.setAttribute('data-row', '');
+    row.innerHTML = `
+      <div>
+        <label>القيمة</label>
+        <input type="number" name="denom_value" min="1" step="0.5" placeholder="5" data-denom-value>
+        <div class="rc-denom-quick" style="margin-top:6px">
+          ${DENOMS.map(v => `<button type="button" data-quick="${v}">${v}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <label>عدد البطاقات</label>
+        <input type="number" name="denom_count" min="1" max="5000" placeholder="100" data-denom-count>
+      </div>
+      <div>
+        <label>الإجمالي</label>
+        <input type="text" disabled placeholder="0.00" data-denom-total
+               style="background:#f8fafc;color:#0f172a;font-weight:800">
+      </div>
+      <div>
+        <label style="visibility:hidden">.</label>
+        <button type="button" class="rc-denom-remove" aria-label="حذف الصف" data-remove>
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    `;
+    list.appendChild(row);
+    recalc();
+  }
+
+  addBtn.addEventListener('click', makeRow);
+
+  list.addEventListener('input', recalc);
+  list.addEventListener('click', e => {
+    const removeBtn = e.target.closest('[data-remove]');
+    if (removeBtn){
+      const row = removeBtn.closest('[data-row]');
+      const rows = list.querySelectorAll('[data-row]');
+      if (rows.length > 1) row.remove();
+      else {
+        row.querySelectorAll('input').forEach(i => i.value = '');
+      }
+      recalc();
+      return;
+    }
+    const quick = e.target.closest('[data-quick]');
+    if (quick){
+      const row = quick.closest('[data-row]');
+      row.querySelector('[data-denom-value]').value = quick.dataset.quick;
+      recalc();
+    }
+  });
+
+  recalc();
+})();
+</script>
+{% endblock %}

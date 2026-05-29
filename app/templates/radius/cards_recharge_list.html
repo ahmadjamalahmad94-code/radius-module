@@ -1,0 +1,537 @@
+{# Recharge Cards — batches list.
+   Cyan/teal accent (distinct from purple regular cards + amber
+   print-only). Uses hub.* macros + the standard elevation pass.
+#}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}بطاقات الشحن المسبق{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
+{% block page_title %}بطاقات الشحن المسبق{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} حزمة شحن · تُستخدم لشحن المحفظة من بوابة العميل</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+{# Reuse the floating print modal from cards_batches_view. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
+<style>
+  /* ── Strong elevation — match the rest of the cards section. ── */
+  [data-cards-batches-page] .hub-section{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 20px rgba(15,23,42,.06);
+    border-radius:14px;
+  }
+  [data-cards-batches-page] .hub-section-head{
+    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
+    border-bottom:1px solid #cbd5e1;
+  }
+  [data-cards-batches-page] .hub-section-head-title{color:#0f172a;font-weight:900}
+  [data-cards-batches-page] .hub-section-head-meta{
+    color:#475569;font-weight:700;font-size:12px;
+    font-variant-numeric:tabular-nums;
+  }
+  [data-cards-batches-page] .hub-section-head-icon{background:#cffafe;color:#0e7490}
+  [data-cards-batches-page] .hub-kpi{
+    border:1px solid #cbd5e1;background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 6px 14px rgba(15,23,42,.05);
+    border-radius:12px;
+    transition:transform .15s ease, box-shadow .18s ease, border-color .15s ease;
+  }
+  [data-cards-batches-page] .hub-kpi:hover{
+    transform:translateY(-2px);border-color:#94a3b8;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 6px 14px rgba(15,23,42,.08),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+  [data-cards-batches-page] .hub-hero{
+    border:1px solid #cbd5e1;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 2px 6px rgba(15,23,42,.06),
+               0 14px 32px rgba(15,23,42,.08);
+  }
+
+  /* ── Chip grid ── */
+  .rc-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(290px,360px));
+    gap:14px;justify-content:start;
+  }
+  @media (max-width:760px){.rc-grid{grid-template-columns:1fr}}
+
+  .rc-card{
+    position:relative;
+    display:flex;flex-direction:column;gap:12px;
+    padding:18px 20px 16px;
+    border:1px solid #cbd5e1;border-radius:12px;background:#fff;
+    color:inherit;overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 1px 3px rgba(15,23,42,.06),
+               0 8px 18px rgba(15,23,42,.06);
+    transition:border-color .15s ease, transform .12s ease, box-shadow .18s ease;
+  }
+  /* Cyan→teal top accent — service identity. */
+  .rc-card::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#06b6d4 0%,#0e7490 100%);
+    border-radius:12px 12px 0 0;opacity:.9;
+    transition:opacity .18s ease, height .18s ease;
+  }
+  .rc-card:hover{
+    border-color:#94a3b8;transform:translateY(-3px);
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
+               0 8px 18px rgba(6,182,212,.14),
+               0 20px 40px rgba(15,23,42,.12);
+  }
+  .rc-card:hover::before{opacity:1;height:4px}
+
+  .rc-card-link{display:flex;flex-direction:column;gap:12px;color:inherit;text-decoration:none}
+  .rc-card-head{display:flex;align-items:flex-start;gap:10px}
+  .rc-card-num{
+    display:block;font-size:11px;font-weight:800;color:#94a3b8;
+    letter-spacing:.04em;margin-bottom:2px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .rc-card-title{
+    flex:1;min-width:0;
+    font-size:14px;font-weight:900;color:#0f172a;line-height:1.4;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .rc-card-stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    padding-top:10px;border-top:1px dashed #e2e8f0;
+  }
+  .rc-card-stats .stat{text-align:start}
+  .rc-card-stats .stat .k{
+    font-size:10.5px;font-weight:800;color:#94a3b8;
+    letter-spacing:.06em;text-transform:uppercase;
+  }
+  .rc-card-stats .stat .v{
+    font-size:16px;font-weight:900;color:#0f172a;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .rc-card-actions{
+    display:flex;align-items:center;gap:6px;
+    padding-top:10px;border-top:1px solid #f1f5f9;
+  }
+  .rc-card-actions .meta{
+    margin-inline-end:auto;font-size:11px;color:#94a3b8;
+    font-variant-numeric:tabular-nums;
+  }
+  .rc-act{
+    background:#fff;border:1px solid #e2e8f0;color:#475569;
+    width:32px;height:32px;border-radius:8px;cursor:pointer;
+    display:grid;place-items:center;font-size:12px;
+    text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
+  }
+  .rc-act:hover{transform:translateY(-1px)}
+  .rc-act--preview:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+  .rc-act--print:hover  {background:#ecfeff;border-color:#67e8f9;color:#0e7490}
+  .rc-act--delete:hover {background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+
+  /* View switcher */
+  .rc-switch{
+    position:relative;display:inline-flex;
+    padding:3px;background:#f8fafc;border:1px solid #e2e8f0;
+    border-radius:9px;
+  }
+  .rc-switch button{
+    position:relative;z-index:1;
+    background:transparent;border:0;padding:6px 12px;cursor:pointer;
+    font-size:12px;font-weight:800;color:#64748b;
+    border-radius:6px;display:inline-flex;align-items:center;gap:6px;
+    transition:color .15s ease;
+  }
+  .rc-switch button.is-active{color:#0f172a}
+  .rc-switch .pill{
+    position:absolute;top:3px;bottom:3px;
+    background:#fff;border:1px solid #cbd5e1;border-radius:6px;
+    box-shadow:0 1px 2px rgba(15,23,42,.05);
+    transition:inset-inline-start .22s cubic-bezier(.4,0,.2,1),
+               width .22s cubic-bezier(.4,0,.2,1);
+    z-index:0;
+  }
+  .rc-toolbar{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .rc-toolbar-hint{
+    margin-inline-start:auto;font-size:12px;color:#64748b;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+
+  /* Confirm modal — same as print section */
+  .rc-confirm{
+    position:fixed;inset:0;background:rgba(15,23,42,.55);
+    backdrop-filter:blur(3px);display:grid;place-items:center;
+    z-index:1500;padding:24px;animation:rc-fade .15s ease;
+  }
+  @keyframes rc-fade{from{opacity:0}to{opacity:1}}
+  .rc-confirm[hidden]{display:none}
+  .rc-confirm-panel{
+    background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+    padding:24px 26px;max-width:440px;width:100%;
+    box-shadow:0 24px 60px rgba(15,23,42,.22);
+    animation:rc-pop .22s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes rc-pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  .rc-confirm-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+  .rc-confirm-icon{
+    width:44px;height:44px;border-radius:12px;
+    background:#fef2f2;color:#dc2626;border:1px solid #fecaca;
+    display:grid;place-items:center;font-size:18px;flex-shrink:0;
+  }
+  .rc-confirm-title{margin:0;font-size:15.5px;font-weight:900;color:#0f172a;line-height:1.4}
+  .rc-confirm-msg{margin:6px 0 0;font-size:13px;color:#475569;line-height:1.6}
+  .rc-confirm-actions{
+    display:flex;justify-content:flex-end;gap:8px;
+    margin-top:18px;padding-top:16px;border-top:1px solid #f1f5f9;
+  }
+  .rc-confirm-btn{
+    padding:9px 18px;border-radius:9px;
+    font-size:13px;font-weight:800;cursor:pointer;
+    transition:background .15s ease, border-color .15s ease, transform .12s ease;
+  }
+  .rc-confirm-btn:hover{transform:translateY(-1px)}
+  .rc-confirm-btn--cancel{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+  .rc-confirm-btn--cancel:hover{background:#f1f5f9;border-color:#cbd5e1;color:#0f172a}
+  .rc-confirm-btn--danger{
+    background:#dc2626;color:#fff;border:1px solid #dc2626;
+    box-shadow:0 4px 10px rgba(220,38,38,.2);
+  }
+  .rc-confirm-btn--danger:hover{
+    background:#b91c1c;border-color:#b91c1c;
+    box-shadow:0 8px 18px rgba(220,38,38,.3);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div data-cards-batches-page>
+
+{{ hub.hero(
+  "بطاقات الشحن المسبق",
+  subtitle="ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) فتُضاف قيمتها إلى رصيد محفظته.",
+  icon="wallet",
+  actions_html=hub.btn("توليد دفعة جديدة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary")
+) }}
+
+{% call hub.section("نظرة سريعة", icon="chart-column") %}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("إجمالي الحزم", total, icon="layer-group", variant="brand", sub="حزمة شحن محفوظة") }}
+    {{ hub.kpi("معروضة", batches|length, icon="boxes-stacked", variant="blue", sub="في هذه الصفحة") }}
+    {{ hub.kpi("نوع الخدمة", "بوابة عميل", icon="wallet", variant="green", sub="تشحن محفظة الزبون") }}
+  </div>
+{% endcall %}
+
+{% call hub.section("الحزم المحفوظة", icon="layer-group", meta=batches|length ~ " حزمة") %}
+
+  {% if not batches %}
+    {{ hub.empty("لا توجد حزم شحن بعد",
+                 sub="ولّد دفعة بفئات متعدّدة لتبدأ بيع بطاقات الشحن لعملائك.",
+                 icon="wallet") }}
+    <div style="text-align:center;margin-top:12px">
+      {{ hub.btn("أنشئ أوّل دفعة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}
+    </div>
+
+  {% else %}
+
+  <div class="rc-toolbar">
+    <div class="rc-switch" id="rc-view-switcher" role="tablist" aria-label="عرض الحزم">
+      <span class="pill" aria-hidden="true"></span>
+      <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
+        <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
+      </button>
+      <button type="button" data-view="table" role="tab" aria-selected="false">
+        <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
+      </button>
+    </div>
+    <div class="rc-toolbar-hint">
+      <i class="fa-solid fa-circle-info" style="color:#94a3b8" aria-hidden="true"></i>
+      اضغط أي حزمة لعرض البطاقات وقيمتها
+    </div>
+  </div>
+
+  <div class="rc-grid" data-view-panel="chips">
+    {% for b in batches %}
+    <div class="rc-card">
+      <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}" class="rc-card-link">
+        <div class="rc-card-head">
+          <div style="flex:1;min-width:0">
+            <span class="rc-card-num">#{{ b.id }}</span>
+            <div class="rc-card-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
+          </div>
+          {{ hub.pill("شحن", variant="cyan", dot=False) }}
+        </div>
+        <div class="rc-card-stats">
+          <div class="stat"><div class="k">بطاقات</div><div class="v">{{ b.card_count or 0 }}</div></div>
+          <div class="stat"><div class="k">مستخدمة</div><div class="v">{{ b.used_count or 0 }}</div></div>
+          <div class="stat"><div class="k">القيمة</div><div class="v">{{ "%.0f"|format(b.price_bulk or 0) }}</div></div>
+        </div>
+      </a>
+      <div class="rc-card-actions">
+        <span class="meta">{{ (b.created_at or '')[:10] }}</span>
+        <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
+           class="rc-act rc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
+          <i class="fa-solid fa-eye" aria-hidden="true"></i>
+        </a>
+        <button type="button" class="rc-act rc-act--print" title="طباعة"
+                aria-label="طباعة الحزمة"
+                data-print-batch
+                data-batch-id="{{ b.id }}"
+                data-batch-code="{{ b.batch_code or '' }}"
+                data-batch-name="{{ (b.package_name or b.batch_code or ('حزمة #' ~ b.id))|e }}"
+                data-batch-total="{{ b.card_count or 0 }}">
+          <i class="fa-solid fa-print" aria-hidden="true"></i>
+        </button>
+        <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
+              style="display:inline-flex;margin:0"
+              data-confirm-form
+              data-confirm-title="حذف حزمة الشحن"
+              data-confirm-msg="هل تريد حذف الحزمة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
+              data-confirm-ok="نعم، احذف">
+          {{ csrf_token_input() | safe }}
+          <button type="submit" class="rc-act rc-act--delete" title="حذف" aria-label="حذف الحزمة">
+            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div data-view-panel="table" hidden style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>اسم الحزمة</th>
+          <th style="width:100px">العدد</th>
+          <th style="width:100px">المستخدمة</th>
+          <th style="width:120px">القيمة الكلية</th>
+          <th style="width:170px">التاريخ</th>
+          <th style="width:170px;text-align:end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td><strong style="color:#0f172a">#{{ b.id }}</strong></td>
+          <td>
+            <strong style="color:#0f172a">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</strong>
+            {% if b.notes %}<br><small style="color:#64748b">{{ b.notes[:60] }}</small>{% endif %}
+          </td>
+          <td style="font-variant-numeric:tabular-nums"><strong>{{ b.card_count or 0 }}</strong></td>
+          <td style="font-variant-numeric:tabular-nums">{{ b.used_count or 0 }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_bulk or 0) }}</td>
+          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ (b.created_at or '')[:19] }}</td>
+          <td>
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
+                 class="rc-act rc-act--preview" title="معاينة" aria-label="معاينة">
+                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+              </a>
+              <button type="button" class="rc-act rc-act--print" title="طباعة" aria-label="طباعة"
+                      data-print-batch data-batch-id="{{ b.id }}"
+                      data-batch-code="{{ b.batch_code or '' }}"
+                      data-batch-name="{{ (b.package_name or ('حزمة #' ~ b.id))|e }}"
+                      data-batch-total="{{ b.card_count or 0 }}">
+                <i class="fa-solid fa-print" aria-hidden="true"></i>
+              </button>
+              <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
+                    style="display:inline-flex;margin:0"
+                    data-confirm-form
+                    data-confirm-title="حذف حزمة الشحن"
+                    data-confirm-msg="سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
+                    data-confirm-ok="نعم، احذف">
+                {{ csrf_token_input() | safe }}
+                <button type="submit" class="rc-act rc-act--delete" title="حذف" aria-label="حذف">
+                  <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}
+{% endcall %}
+
+{# Floating print modal — same markup the print/regular sections use. #}
+<div class="batch-print-modal" data-batch-print-modal hidden>
+  <div class="batch-print-modal__backdrop" data-print-modal-close></div>
+  <section class="batch-print-modal__panel" role="dialog" aria-modal="true" aria-labelledby="batchPrintTitle">
+    <header class="batch-print-modal__header">
+      <div>
+        <p>طباعة مباشرة للحزمة</p>
+        <h2 id="batchPrintTitle">تجهيز ملف البطاقات</h2>
+        <span data-print-batch-summary>اختر قالباً ثم ابدأ التصدير.</span>
+      </div>
+      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+    <div class="batch-print-modal__body">
+      <div class="batch-print-modal__templates">
+        <h3>اختيار قالب محفوظ</h3>
+        {% if print_templates %}
+          <div class="batch-template-picker" data-print-template-picker>
+            {% for t in print_templates %}
+              <button type="button" class="batch-template-option"
+                      data-template-id="{{ t.id }}"
+                      data-template-name="{{ (t.name or 'قالب')|e }}"
+                      data-job-url="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}"
+                      {% if t.id == default_print_template_id %}data-default-template="1"{% endif %}>
+                <span class="batch-template-option__thumb"></span>
+                <strong>{{ t.name or 'قالب بدون اسم' }}</strong>
+                <small>{{ t.preset or 'قالب محفوظ' }}</small>
+              </button>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="batch-print-warning">لا توجد قوالب محفوظة بعد.</div>
+        {% endif %}
+      </div>
+      <form class="batch-print-form" data-batch-print-form>
+        <input type="hidden" name="batch_id" data-print-batch-id>
+        <h3>إعدادات الطباعة</h3>
+        <div class="batch-print-grid">
+          <label>مقاس الورقة<select name="print_page_size"><option value="A4">A4</option><option value="Letter">Letter</option></select></label>
+          <label>اتجاه الورقة<select name="print_orientation"><option value="portrait">طولي</option><option value="landscape">أفقي</option></select></label>
+          <label>عدد الأعمدة<input type="number" name="print_columns" min="1" max="8" value="3"></label>
+          <label>عدد الصفوف<input type="number" name="print_rows" min="1" max="12" value="5"></label>
+          <label>المسافة بين الأعمدة <span dir="ltr">(mm)</span><input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3"></label>
+          <label>المسافة بين الصفوف <span dir="ltr">(mm)</span><input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3"></label>
+          <label>الهامش العلوي <span dir="ltr">(mm)</span><input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>الهامش الأيمن <span dir="ltr">(mm)</span><input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>الهامش السفلي <span dir="ltr">(mm)</span><input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>الهامش الأيسر <span dir="ltr">(mm)</span><input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8"></label>
+        </div>
+        <button class="batch-btn batch-btn--primary batch-print-submit" type="submit" {% if not print_templates %}disabled{% endif %}>
+          <i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF
+        </button>
+      </form>
+      <div class="batch-print-progress" data-print-progress hidden>
+        <div class="batch-print-progress__top"><strong data-print-progress-title>بدء تجهيز ملف PDF...</strong><span data-print-progress-percent>0%</span></div>
+        <div class="batch-print-progress__bar"><span data-print-progress-bar></span></div>
+        <ol>
+          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> إنشاء مهمة التصدير</li>
+          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> رسم البطاقات بالقالب المختار</li>
+          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> ترتيب الصفحات والهوامش</li>
+          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+        </ol>
+        <a class="batch-btn batch-btn--soft" data-print-download hidden href="#"><i class="fa-solid fa-download"></i> تحميل الملف</a>
+        <p data-print-error class="batch-print-error" hidden></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# Confirm modal #}
+<div class="rc-confirm" id="rc-confirm" hidden role="dialog" aria-modal="true" aria-labelledby="rc-confirm-title">
+  <div class="rc-confirm-panel">
+    <div class="rc-confirm-head">
+      <span class="rc-confirm-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div>
+        <h3 class="rc-confirm-title" id="rc-confirm-title">تأكيد العملية</h3>
+        <p class="rc-confirm-msg" id="rc-confirm-msg">هل أنت متأكد؟</p>
+      </div>
+    </div>
+    <div class="rc-confirm-actions">
+      <button type="button" class="rc-confirm-btn rc-confirm-btn--cancel" id="rc-confirm-cancel">إلغاء</button>
+      <button type="button" class="rc-confirm-btn rc-confirm-btn--danger" id="rc-confirm-ok">نعم، احذف</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* View switcher + sliding pill */
+(function(){
+  const sw = document.getElementById('rc-view-switcher');
+  if (!sw) return;
+  const pill = sw.querySelector('.pill');
+  const buttons = sw.querySelectorAll('button[data-view]');
+  const isRTL = getComputedStyle(document.documentElement).direction === 'rtl';
+  function setPill(activeBtn){
+    if (!pill || !activeBtn) return;
+    const sR = sw.getBoundingClientRect();
+    const bR = activeBtn.getBoundingClientRect();
+    pill.style.insetInlineStart = (isRTL ? (sR.right - bR.right) : (bR.left - sR.left)) + 'px';
+    pill.style.width = bR.width + 'px';
+  }
+  sw.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    buttons.forEach(b => {
+      const on = b === btn;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-view-panel]').forEach(p => {
+      p.hidden = (p.dataset.viewPanel !== btn.dataset.view);
+    });
+    setPill(btn);
+    try{ localStorage.setItem('rc:view', btn.dataset.view); }catch(_){}
+  });
+  let saved = null;
+  try{ saved = localStorage.getItem('rc:view'); }catch(_){}
+  if (saved){
+    const target = sw.querySelector(`button[data-view="${saved}"]`);
+    if (target && !target.classList.contains('is-active')) target.click();
+    else requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
+  } else requestAnimationFrame(() => setPill(sw.querySelector('button.is-active')));
+  window.addEventListener('resize', () => setPill(sw.querySelector('button.is-active')));
+})();
+
+/* Confirm modal */
+(function(){
+  const dlg = document.getElementById('rc-confirm');
+  const title = document.getElementById('rc-confirm-title');
+  const msg = document.getElementById('rc-confirm-msg');
+  const okBtn = document.getElementById('rc-confirm-ok');
+  const cancel = document.getElementById('rc-confirm-cancel');
+  if (!dlg) return;
+  let pendingForm = null, lastFocus = null;
+  function close(){
+    dlg.hidden = true; pendingForm = null;
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function open(form){
+    pendingForm = form; lastFocus = document.activeElement;
+    title.textContent = form.dataset.confirmTitle || 'تأكيد العملية';
+    msg.textContent = form.dataset.confirmMsg || 'هل أنت متأكد؟';
+    okBtn.textContent = form.dataset.confirmOk || 'نعم';
+    dlg.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => cancel.focus(), 50);
+  }
+  document.addEventListener('submit', e => {
+    const form = e.target.closest('form[data-confirm-form]');
+    if (!form) return;
+    if (form.dataset._confirmed === '1') return;
+    e.preventDefault();
+    open(form);
+  }, true);
+  okBtn.addEventListener('click', () => {
+    if (!pendingForm){ close(); return; }
+    pendingForm.dataset._confirmed = '1';
+    pendingForm.submit();
+  });
+  cancel.addEventListener('click', close);
+  dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !dlg.hidden) close(); });
+})();
+</script>
+
+</div>
+{% endblock %}
