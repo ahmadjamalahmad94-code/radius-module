@@ -49,6 +49,11 @@ def register_cards_print_routes(bp: Blueprint) -> None:
         "cards_print_batch",
         cards_print_batch, methods=["GET"],
     )
+    bp.add_url_rule(
+        "/cards/print/<int:batch_id>/delete",
+        "cards_print_batch_delete",
+        cards_print_batch_delete, methods=["POST"],
+    )
 
 
 # ─── Helpers ─────────────────────────────────────────────────────
@@ -86,10 +91,22 @@ def cards_print_list():
     svc = get_cards_service()
     batches = svc.list_print_only_batches(limit=200)
     total = svc.count_print_only_batches()
+    # Print modal needs the same template catalog the regular
+    # batches page uses — we render the modal on every list view
+    # so the per-chip print button can fire it without a round-trip.
+    operations_service = get_operations_service()
+    print_templates = operations_service.list_print_templates(
+        tenant_id=_tid(), limit=500,
+    )
+    default_print_template_id = operations_service.get_default_print_template_id(
+        tenant_id=_tid(),
+    )
     return render_template(
         "radius/cards_print_list.html",
         batches=batches,
         total=total,
+        print_templates=print_templates,
+        default_print_template_id=default_print_template_id,
     )
 
 
@@ -209,6 +226,21 @@ def _render_new_form():
 
 
 # ─── Batch detail + print modal ────────────────────────────────
+
+def cards_print_batch_delete(batch_id: int):
+    """Soft-delete a print-only batch. Confirmed on the client; the
+    server also checks that the batch is actually print_only=1 to
+    refuse cross-section misuse.
+    """
+    ok = get_cards_service().delete_print_only_batch(
+        actor=_actor(), batch_id=batch_id,
+    )
+    if ok:
+        flash("تم حذف حزمة الطباعة.", "success")
+    else:
+        flash("الحزمة غير موجودة أو غير قابلة للحذف.", "error")
+    return redirect(url_for("radius.cards_print_list"))
+
 
 def cards_print_batch(batch_id: int):
     svc = get_cards_service()

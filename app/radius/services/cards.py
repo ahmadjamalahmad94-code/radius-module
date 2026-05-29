@@ -457,6 +457,49 @@ class CardsService:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def delete_print_only_batch(self, *, actor: str, batch_id: int) -> bool:
+        """Soft-delete a print-only batch + every card under it.
+
+        Sets deleted_at on the batch row and on every card. The
+        batch must already be print_only=1; we never accept a
+        non-print-only batch through this entrypoint (defence in
+        depth — a normal batch should never be deleted via this
+        section's UI).
+        """
+        from ..db.connection import db
+        tenant_id = self._store_tenant_id()
+        conn = db()
+        # Verify the batch is print-only before touching it.
+        row = conn.execute(
+            "SELECT id FROM card_batches "
+            "WHERE id = ? AND tenant_id = ? AND print_only = 1 "
+            "AND COALESCE(deleted_at, '') = ''",
+            (int(batch_id), tenant_id),
+        ).fetchone()
+        if not row:
+            return False
+        now = datetime.utcnow().isoformat(timespec='seconds')
+        conn.execute(
+            "UPDATE card_batches SET deleted_at = ?, deleted_by = ?, "
+            "delete_reason = 'operator deleted from print section' "
+            "WHERE id = ? AND tenant_id = ?",
+            (now, actor or 'anonymous', int(batch_id), tenant_id),
+        )
+        conn.execute(
+            "UPDATE cards SET deleted_at = ? "
+            "WHERE batch_id = ? AND tenant_id = ?",
+            (now, int(batch_id), tenant_id),
+        )
+        conn.commit()
+        self._audit.record(
+            actor=actor or 'anonymous',
+            action=AUDIT_ACTION_BATCH_ARCHIVE,
+            target_type="card_batch",
+            target_id=str(batch_id),
+            payload={"print_only": True, "soft_delete": True},
+        )
+        return True
+
     def get_print_only_batch(self, batch_id: int) -> dict | None:
         from ..db.connection import db
         row = db().execute(
