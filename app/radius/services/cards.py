@@ -377,10 +377,14 @@ class CardsService:
         return result
 
     def _first_plan_id_for_tenant(self) -> int | None:
-        """Return the tenant's first plan id, or None if none exist."""
+        """Return the tenant's first plan id, or None if none exist.
+
+        Uses the access_plans table directly (the underlying name in
+        002_radius_core.sql) and only takes non-deleted rows.
+        """
         from ..db.connection import db
         row = db().execute(
-            "SELECT id FROM plans WHERE tenant_id = ? "
+            "SELECT id FROM access_plans WHERE tenant_id = ? "
             "AND COALESCE(deleted_at, '') = '' "
             "ORDER BY id LIMIT 1",
             (self._store_tenant_id(),),
