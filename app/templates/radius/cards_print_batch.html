@@ -14,7 +14,7 @@
     <a href="{{ url_for('radius.cards_print_list') }}" style="color:#475569;text-decoration:none">
       <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
     </a>
-    &nbsp;·&nbsp; {{ cards|length }} بطاقة طباعة
+    &nbsp;·&nbsp; {{ total_cards }} بطاقة طباعة
   </span>
 {% endblock %}
 
@@ -34,6 +34,61 @@
     color:#94a3b8; font-weight:700; font-size:12px;
   }
   .pc-cards-table .user{ color:#0f172a; font-weight:800 }
+
+  /* ── Pagination toolbar + page links ── */
+  .pc-pager-toolbar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .pc-pager-toolbar .info{
+    font-size:12.5px; color:#64748b;
+    font-variant-numeric:tabular-nums;
+  }
+  .pc-pager-toolbar .info strong{ color:#0f172a; font-weight:800 }
+  .pc-pager-toolbar .per-page{
+    margin-inline-start:auto;
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12.5px; color:#475569;
+  }
+  .pc-pager-toolbar .per-page select{
+    padding:7px 10px;
+    border:1px solid #e2e8f0; border-radius:8px;
+    background:#fff; font-size:12.5px;
+    color:#0f172a; font-weight:700; cursor:pointer;
+  }
+  .pc-pager-toolbar .per-page select:focus{
+    outline:none; border-color:#6366f1;
+    box-shadow:0 0 0 3px rgba(99,102,241,.18);
+  }
+
+  .pc-pager{
+    display:flex; align-items:center; justify-content:center;
+    gap:6px; flex-wrap:wrap;
+    margin-top:18px; padding-top:16px;
+    border-top:1px solid #f1f5f9;
+  }
+  .pc-pager a, .pc-pager span{
+    min-width:34px; height:34px; padding:0 12px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid #e2e8f0; border-radius:8px;
+    background:#fff; color:#475569;
+    font-size:12.5px; font-weight:700;
+    text-decoration:none;
+    transition:background .15s ease, border-color .15s ease,
+               color .15s ease, transform .12s ease;
+    font-variant-numeric:tabular-nums;
+  }
+  .pc-pager a:hover{
+    background:#eef2ff; border-color:#a5b4fc; color:#3730a3;
+    transform:translateY(-1px);
+  }
+  .pc-pager .is-active{
+    background:#4f46e5; border-color:#4f46e5; color:#fff;
+    box-shadow:0 4px 10px rgba(79,70,229,.22);
+  }
+  .pc-pager .is-disabled{
+    background:#f8fafc; color:#cbd5e1; cursor:not-allowed;
+  }
 
   /* ── Print modal — slate chrome to match the rest of the admin ── */
   .pc-modal{
@@ -170,7 +225,7 @@
 {# ── Summary KPIs ── #}
 {% call hub.section("ملخّص الحزمة", icon="chart-column") %}
   <div class="hub-kpi-grid">
-    {{ hub.kpi("عدد البطاقات",  batch.card_count or cards|length,
+    {{ hub.kpi("عدد البطاقات",  batch.card_count or total_cards,
                icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
     {{ hub.kpi("سعر البطاقة",   "%.2f"|format(batch.price_per_card or 0),
                icon="tag", variant="amber", sub="سعر البيع للقطعة") }}
@@ -182,7 +237,29 @@
 {% endcall %}
 
 {# ── Cards table ── #}
-{% call hub.section("بطاقات الحزمة", icon="id-card", meta=cards|length ~ " بطاقة") %}
+{% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة") %}
+
+  {# Toolbar — row range + per-page selector #}
+  {% set range_lo = (page - 1) * per_page + 1 %}
+  {% set range_hi = [page * per_page, total_cards] | min %}
+
+  <div class="pc-pager-toolbar">
+    <div class="info">
+      عرض <strong>{{ range_lo }}–{{ range_hi }}</strong>
+      من <strong>{{ total_cards }}</strong>
+      ·  صفحة <strong>{{ page }}</strong> من <strong>{{ pages_count }}</strong>
+    </div>
+    <form method="get" class="per-page">
+      <label for="pp">عدد الصفوف:</label>
+      <select id="pp" name="per_page" onchange="this.form.submit()">
+        {% for n in [10, 20, 50, 100] %}
+          <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="page" value="1">
+    </form>
+  </div>
+
   <div style="overflow-x:auto">
     <table class="hub-table pc-cards-table">
       <thead>
@@ -196,7 +273,7 @@
       <tbody>
         {% for c in cards %}
         <tr>
-          <td><span class="row-num">{{ loop.index }}</span></td>
+          <td><span class="row-num">{{ range_lo + loop.index0 }}</span></td>
           <td class="mono user">{{ c.username }}</td>
           <td class="mono">{{ c.password or '—' }}</td>
           <td style="font-size:11.5px;color:#64748b">{{ (c.created_at or '')[:19] }}</td>
@@ -205,6 +282,33 @@
       </tbody>
     </table>
   </div>
+
+  {% if pages_count > 1 %}
+    {% macro pglink(p, label, disabled=false, active=false) -%}
+      {%- if disabled -%}
+        <span class="is-disabled" aria-hidden="true">{{ label }}</span>
+      {%- elif active -%}
+        <span class="is-active" aria-current="page">{{ label }}</span>
+      {%- else -%}
+        <a href="{{ url_for('radius.cards_print_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
+      {%- endif -%}
+    {%- endmacro %}
+
+    <nav class="pc-pager" aria-label="تنقل الصفحات">
+      {{ pglink(1, '«', disabled=(page == 1)) }}
+      {{ pglink(page - 1, '‹', disabled=(page == 1)) }}
+      {% set lo = [page - 2, 1] | max %}
+      {% set hi = [page + 2, pages_count] | min %}
+      {% if lo > 1 %}{{ pglink(1, 1) }}{% if lo > 2 %}<span class="is-disabled">…</span>{% endif %}{% endif %}
+      {% for p in range(lo, hi + 1) %}
+        {{ pglink(p, p, active=(p == page)) }}
+      {% endfor %}
+      {% if hi < pages_count %}{% if hi < pages_count - 1 %}<span class="is-disabled">…</span>{% endif %}{{ pglink(pages_count, pages_count) }}{% endif %}
+      {{ pglink(page + 1, '›', disabled=(page == pages_count)) }}
+      {{ pglink(pages_count, '»', disabled=(page == pages_count)) }}
+    </nav>
+  {% endif %}
+
 {% endcall %}
 
 {# ── Print modal ── #}

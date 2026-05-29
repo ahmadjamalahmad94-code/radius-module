@@ -440,7 +440,13 @@ class CardsService:
         ).fetchone()
         return int(row["c"] or 0)
 
-    def list_print_only_cards(self, batch_id: int, *, limit: int = 5000) -> list[dict]:
+    def list_print_only_cards(
+        self,
+        batch_id: int,
+        *,
+        limit: int = 5000,
+        offset: int = 0,
+    ) -> list[dict]:
         """Return raw rows for the print modal. Includes the password
         column because the print template needs to render it onto
         labels — this is the whole point of the section."""
@@ -451,11 +457,22 @@ class CardsService:
             FROM cards
             WHERE tenant_id = ? AND batch_id = ? AND print_only = 1
             ORDER BY id
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
-            (self._store_tenant_id(), int(batch_id), int(limit)),
+            (self._store_tenant_id(), int(batch_id), int(limit), int(offset)),
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def count_print_only_cards(self, batch_id: int) -> int:
+        """Total count of cards in a print-only batch — used for
+        pagination on the batch detail page."""
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS c FROM cards "
+            "WHERE tenant_id = ? AND batch_id = ? AND print_only = 1",
+            (self._store_tenant_id(), int(batch_id)),
+        ).fetchone()
+        return int(row["c"] or 0)
 
     def delete_print_only_batch(self, *, actor: str, batch_id: int) -> bool:
         """Soft-delete a print-only batch + every card under it.

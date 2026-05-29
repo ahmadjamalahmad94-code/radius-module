@@ -247,7 +247,29 @@ def cards_print_batch(batch_id: int):
     batch = svc.get_print_only_batch(batch_id)
     if not batch:
         abort(404)
-    cards = svc.list_print_only_cards(batch_id)
+
+    # Pagination — same option ladder the rest of the admin uses
+    # (10/20/50/100). The page query param caps to the actual
+    # page count so a bookmark like ?page=99 doesn't 404.
+    try:
+        per_page = int(request.args.get("per_page") or "20")
+    except ValueError:
+        per_page = 20
+    if per_page not in (10, 20, 50, 100):
+        per_page = 20
+    try:
+        page = max(1, int(request.args.get("page") or "1"))
+    except ValueError:
+        page = 1
+
+    total = svc.count_print_only_cards(batch_id)
+    pages_count = max(1, (total + per_page - 1) // per_page)
+    if page > pages_count:
+        page = pages_count
+    offset = (page - 1) * per_page
+    cards = svc.list_print_only_cards(
+        batch_id, limit=per_page, offset=offset,
+    )
 
     # Reuse the same print-template catalog the regular cards-of-batch
     # screen uses, so an operator can pick a familiar layout.
@@ -263,6 +285,10 @@ def cards_print_batch(batch_id: int):
         "radius/cards_print_batch.html",
         batch=batch,
         cards=cards,
+        total_cards=total,
+        page=page,
+        per_page=per_page,
+        pages_count=pages_count,
         print_templates=print_templates,
         default_print_template_id=default_print_template_id,
     )
