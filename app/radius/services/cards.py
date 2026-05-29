@@ -530,8 +530,8 @@ class CardsService:
         actor: str,
         package_name: str,
         denominations: list[dict],
-        username_length: int = 12,
-        password_length: int = 6,
+        username_length: int = 10,
+        password_length: int = 5,
         notes: str = "",
     ) -> dict:
         """Generate a multi-denomination recharge batch.
@@ -586,11 +586,12 @@ class CardsService:
                 "لا يوجد plan في النظام — أنشئ باقة واحدة قبل توليد بطاقات الشحن."
             )
 
-        # ── Generate unique card codes. Avoid look-alike chars
-        #    (0/O, 1/I/l) so end-users can transcribe them safely.
-        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        # ── Generate unique card codes. Digits only so the operator
+        #    can write them with a number pad and the customer can
+        #    enter them on any keyboard.
+        digits = "0123456789"
         def _new_code(length: int) -> str:
-            return "".join(secrets.choice(alphabet) for _ in range(length))
+            return "".join(secrets.choice(digits) for _ in range(length))
 
         # ── Create the batch first so we have a real id to attach
         #    cards to. Use the existing store to get the auto code.

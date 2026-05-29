@@ -82,10 +82,17 @@ class CustomerPortalService:
         data["walled_garden_note"] = "Allow the card portal URL in MikroTik walled garden when selling cards through captive networks."
         return data
 
-    def redeem_card_to_wallet(self, *, card_user_id: int, card_number: str) -> dict[str, Any]:
+    def redeem_card_to_wallet(
+        self,
+        *,
+        card_user_id: int,
+        card_number: str,
+        card_password: str = "",
+    ) -> dict[str, Any]:
         number = str(card_number or "").strip()
+        password = str(card_password or "").strip()
         if not number:
-            raise RadiusValidationError("card number is required")
+            raise RadiusValidationError("رقم البطاقة مطلوب.")
         row = db().execute(
             """
             SELECT c.*, b.price_per_card, b.price_bulk, b.count, b.package_name
@@ -97,12 +104,22 @@ class CustomerPortalService:
             (self.tenant_id, number),
         ).fetchone()
         if not row:
-            raise RadiusValidationError("card number was not found")
+            raise RadiusValidationError("رقم البطاقة غير موجود.")
         card = row_to_dict(row)
         if int(card.get("revoked") or 0):
-            raise RadiusValidationError("card is revoked")
+            raise RadiusValidationError("البطاقة ملغاة.")
         if int(card.get("used") or 0):
-            raise RadiusValidationError("card was already redeemed")
+            raise RadiusValidationError("البطاقة استُخدمت من قبل.")
+        # Recharge cards require both code + PIN. Legacy import
+        # batches (where the password may be empty) accept the
+        # code alone.
+        stored_pin = str(card.get("password") or "").strip()
+        recharge_only = int(card.get("recharge_only") or 0)
+        if recharge_only or stored_pin:
+            if not password:
+                raise RadiusValidationError("الرقم السري مطلوب.")
+            if password != stored_pin:
+                raise RadiusValidationError("الرقم السري غير صحيح.")
         # Prefer per-card wallet_value (recharge batches set this per
         # denomination); fall back to the batch's price_per_card, then
         # to (price_bulk / count) for legacy import batches.

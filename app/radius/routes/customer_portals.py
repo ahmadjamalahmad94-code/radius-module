@@ -18,6 +18,7 @@ def register_customer_portal_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/portal/card/logout", "portal_card_logout", card_logout, methods=["GET", "POST"])
     bp.add_url_rule("/portal/card", "portal_card_home", card_home, methods=["GET"])
     bp.add_url_rule("/portal/card/purchase", "portal_card_purchase", card_purchase, methods=["POST"])
+    bp.add_url_rule("/portal/card/redeem", "portal_card_redeem", card_redeem, methods=["POST"])
 
 
 def _tenant_id() -> int:
@@ -95,11 +96,11 @@ def card_login():
     if request.method == "POST":
         try:
             card_user = CustomerPortalService(tenant_id=1).authenticate_card_user(
-                card_username=request.form.get("card_username") or "",
-                card_password=request.form.get("card_password") or "",
+                mobile=request.form.get("mobile") or "",
+                password=request.form.get("password") or "",
             )
         except PortalAuthError:
-            flash("Card credentials are not valid.", "error")
+            flash("رقم الجوال أو كلمة المرور غير صحيحة.", "error")
             return render_template("radius/portal_card_login.html"), 401
         session["portal_tenant_id"] = 1
         session["portal_card_user_id"] = int(card_user["id"])
@@ -132,6 +133,22 @@ def card_purchase():
             package_id=int(request.form.get("package_id") or 0),
         )
         flash(f"Card purchased: #{purchase['id']}", "success")
+    except (ValueError, RadiusValidationError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.portal_card_home"))
+
+
+def card_redeem():
+    card_user_id = session.get("portal_card_user_id")
+    if not card_user_id:
+        return redirect(url_for("radius.portal_card_login"))
+    try:
+        result = _svc().redeem_card_to_wallet(
+            card_user_id=int(card_user_id),
+            card_number=request.form.get("card_number") or "",
+            card_password=request.form.get("card_password") or "",
+        )
+        flash(f"تم شحن الرصيد بقيمة {result['amount']:.2f}.", "success")
     except (ValueError, RadiusValidationError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.portal_card_home"))

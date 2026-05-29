@@ -61,13 +61,15 @@
                0 14px 32px rgba(15,23,42,.08);
   }
 
-  /* ── Chip grid ── */
+  /* ── Chip grid — 4 per row on desktop, fewer as the width shrinks ── */
   .rc-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(290px,360px));
-    gap:14px;justify-content:start;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:14px;
   }
-  @media (max-width:760px){.rc-grid{grid-template-columns:1fr}}
+  @media (max-width:1180px){.rc-grid{grid-template-columns:repeat(3, minmax(0,1fr))}}
+  @media (max-width:900px) {.rc-grid{grid-template-columns:repeat(2, minmax(0,1fr))}}
+  @media (max-width:560px) {.rc-grid{grid-template-columns:1fr}}
 
   .rc-card{
     position:relative;
