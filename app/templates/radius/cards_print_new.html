@@ -160,10 +160,113 @@
     display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
   }
   @media (max-width:680px){.ps-smart-row{grid-template-columns:1fr}}
-  .ps-smart-row input[type=file]{
-    width:100%;padding:10px 14px;border:1px solid var(--hair-1);
-    border-radius:9px;background:var(--paper);font-size:13px;cursor:pointer;
-    color:var(--ink-2);
+
+  /* ── Drop-zone — replaces the ugly native file input. Native
+     <input type="file"> stays in the DOM for keyboard a11y +
+     screen readers, just visually hidden inside the zone. ── */
+  .ps-dz{
+    position:relative;
+    border:1.5px dashed var(--hair-2);
+    border-radius:11px;
+    background:var(--canvas);
+    padding:22px 20px;
+    cursor:pointer;
+    transition:border-color .18s ease, background .18s ease, transform .15s ease;
+    min-height:108px;
+  }
+  .ps-dz:hover{
+    border-color:var(--amber);
+    background:var(--amber-tint);
+  }
+  .ps-dz:focus-within{
+    border-color:var(--amber);
+    background:var(--amber-tint);
+    outline:3px solid var(--focus-ring);outline-offset:2px;
+  }
+  .ps-dz.is-drag{
+    border-color:var(--amber-deep);
+    background:var(--amber-tint);
+    transform:scale(1.005);
+  }
+  .ps-dz.is-filled{
+    border-style:solid;border-color:var(--hair-1);
+    background:var(--paper);cursor:default;
+  }
+  .ps-dz.is-filled:hover{background:var(--paper)}
+  .ps-dz-input{
+    position:absolute;inset:0;width:100%;height:100%;
+    opacity:0;cursor:pointer;
+  }
+  .ps-dz.is-filled .ps-dz-input{pointer-events:none}
+
+  .ps-dz-empty{
+    display:flex;flex-direction:column;align-items:center;
+    text-align:center;gap:8px;pointer-events:none;
+  }
+  .ps-dz-icon{
+    width:46px;height:46px;border-radius:11px;
+    background:var(--paper);border:1px solid var(--hair-1);
+    color:var(--amber-deep);
+    display:grid;place-items:center;font-size:18px;
+    margin-bottom:4px;
+  }
+  .ps-dz.is-drag .ps-dz-icon,
+  .ps-dz:hover .ps-dz-icon{
+    border-color:var(--amber);color:var(--amber-deep);
+  }
+  .ps-dz-title{
+    margin:0;font-size:14px;font-weight:800;color:var(--ink-1);
+    letter-spacing:-.005em;
+  }
+  .ps-dz-sub{
+    margin:0;font-size:11.5px;color:var(--ink-3);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    letter-spacing:.04em;
+  }
+  .ps-dz-sub kbd{
+    background:var(--paper);border:1px solid var(--hair-1);
+    border-radius:4px;padding:1px 6px;font-size:10.5px;
+    font-family:inherit;color:var(--ink-2);
+  }
+
+  .ps-dz-filled{
+    display:flex;align-items:center;gap:14px;pointer-events:auto;
+  }
+  .ps-dz-file-icon{
+    width:42px;height:42px;border-radius:10px;
+    background:var(--amber-tint);color:var(--amber-on-tint);
+    display:grid;place-items:center;font-size:15px;
+    flex-shrink:0;
+  }
+  .ps-dz-file-info{flex:1;min-width:0}
+  .ps-dz-file-name{
+    display:block;font-size:13.5px;font-weight:800;color:var(--ink-1);
+    letter-spacing:-.005em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    direction:ltr;text-align:start;
+  }
+  .ps-dz-file-meta{
+    display:flex;align-items:center;gap:8px;margin-top:2px;
+    font-size:11.5px;color:var(--ink-3);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .ps-dz-file-meta .dot{
+    width:3px;height:3px;border-radius:50%;background:var(--ink-3);
+  }
+  .ps-dz-remove{
+    background:transparent;border:1px solid var(--hair-1);
+    color:var(--ink-3);
+    width:34px;height:34px;border-radius:9px;cursor:pointer;
+    display:grid;place-items:center;font-size:12px;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+    flex-shrink:0;
+  }
+  .ps-dz-remove:hover{
+    background:var(--danger-tint);border-color:var(--danger-ink);
+    color:var(--danger-ink);
+  }
+  .ps-dz-remove:focus-visible{
+    outline:3px solid var(--focus-ring);outline-offset:2px;
   }
   .ps-smart-btn{
     background:var(--ink-1);color:#fff;border:0;border-radius:9px;
@@ -334,8 +437,40 @@
           — حد أقصى 12MB.
         </p>
         <div class="ps-smart-row">
-          <input type="file" id="ci-smart-file"
-                 accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <label class="ps-dz" id="ci-dropzone" for="ci-smart-file">
+            <input type="file" id="ci-smart-file" class="ps-dz-input"
+                   accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                   aria-label="اختر ملف الكروت">
+
+            <div class="ps-dz-empty" id="ci-dz-empty">
+              <div class="ps-dz-icon" aria-hidden="true">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <p class="ps-dz-title">اسحب الملف هنا أو اضغط للاختيار</p>
+              <p class="ps-dz-sub">
+                <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> &nbsp;حتى 12MB
+              </p>
+            </div>
+
+            <div class="ps-dz-filled" id="ci-dz-filled" hidden>
+              <div class="ps-dz-file-icon" id="ci-dz-file-icon" aria-hidden="true">
+                <i class="fa-solid fa-file-lines"></i>
+              </div>
+              <div class="ps-dz-file-info">
+                <span class="ps-dz-file-name" id="ci-dz-file-name">filename.xlsx</span>
+                <span class="ps-dz-file-meta">
+                  <span id="ci-dz-file-size">0 KB</span>
+                  <span class="dot" aria-hidden="true"></span>
+                  <span id="ci-dz-file-type">CSV</span>
+                </span>
+              </div>
+              <button type="button" class="ps-dz-remove" id="ci-dz-remove"
+                      aria-label="إزالة الملف">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </div>
+          </label>
+
           <button type="button" id="ci-smart-btn" class="ps-smart-btn">
             <i class="fa-solid fa-bolt static" aria-hidden="true"></i>
             <i class="fa-solid fa-circle-notch spin" aria-hidden="true"></i>
@@ -475,10 +610,115 @@
     }
   }
   btn.addEventListener('click', analyze);
+
+  // ── Drop-zone wiring ──────────────────────────────────────
+  const dz       = document.getElementById('ci-dropzone');
+  const dzEmpty  = document.getElementById('ci-dz-empty');
+  const dzFilled = document.getElementById('ci-dz-filled');
+  const dzName   = document.getElementById('ci-dz-file-name');
+  const dzSize   = document.getElementById('ci-dz-file-size');
+  const dzType   = document.getElementById('ci-dz-file-type');
+  const dzIcon   = document.getElementById('ci-dz-file-icon');
+  const dzRemove = document.getElementById('ci-dz-remove');
+
+  function formatBytes(b) {
+    if (b < 1024)        return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+  function fileTypeLabel(name) {
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    return ({
+      csv:  'CSV',
+      tsv:  'TSV',
+      txt:  'TEXT',
+      xlsx: 'EXCEL',
+      pdf:  'PDF',
+    })[ext] || ext.toUpperCase() || 'FILE';
+  }
+  function fileTypeIcon(name) {
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    return ({
+      csv:  'fa-file-csv',
+      tsv:  'fa-file-csv',
+      txt:  'fa-file-lines',
+      xlsx: 'fa-file-excel',
+      pdf:  'fa-file-pdf',
+    })[ext] || 'fa-file-lines';
+  }
+
+  function showFile(f) {
+    dzName.textContent = f.name;
+    dzSize.textContent = formatBytes(f.size);
+    dzType.textContent = fileTypeLabel(f.name);
+    if (dzIcon) {
+      dzIcon.innerHTML = '<i class="fa-solid ' + fileTypeIcon(f.name) + '"></i>';
+    }
+    dz.classList.add('is-filled');
+    dzEmpty.hidden = true;
+    dzFilled.hidden = false;
+    setTag('');  // hide top-tag — info already in drop-zone
+  }
+  function clearFile() {
+    // Re-assign the input's files to an empty FileList via DataTransfer.
+    try {
+      const dt = new DataTransfer();
+      file.files = dt.files;
+    } catch (_) {
+      file.value = '';
+    }
+    dz.classList.remove('is-filled');
+    dzFilled.hidden = true;
+    dzEmpty.hidden = false;
+  }
+
   file.addEventListener('change', () => {
     const f = file.files && file.files[0];
-    if (f) setTag(f.name + ' · ' + Math.round(f.size/1024) + ' KB');
+    if (f) showFile(f);
   });
+
+  if (dzRemove) {
+    dzRemove.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearFile();
+    });
+  }
+
+  // Drag & drop
+  if (dz) {
+    ['dragenter', 'dragover'].forEach(evt =>
+      dz.addEventListener(evt, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('is-drag');
+      })
+    );
+    ['dragleave', 'dragend'].forEach(evt =>
+      dz.addEventListener(evt, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.target === dz) dz.classList.remove('is-drag');
+      })
+    );
+    dz.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove('is-drag');
+      const files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files[0]) {
+        try {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          file.files = dt.files;
+        } catch (_) {
+          // FileList is read-only on older browsers — fall back to
+          // dispatching change so the analyse path can read directly.
+        }
+        showFile(files[0]);
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}
