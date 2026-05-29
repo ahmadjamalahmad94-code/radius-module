@@ -75,27 +75,32 @@
     align-items:center; justify-content:center;
     position:relative;
     border:1.5px dashed #cbd5e1;
-    border-radius:10px;
+    border-radius:12px;
     background:#f8fafc;
-    padding:26px 18px;
+    padding:28px 18px;
     cursor:pointer;
-    transition:border-color .15s ease, background .15s ease;
-    min-height:140px;
+    transition:border-color .18s ease, background .18s ease;
+    min-height:150px;
     box-sizing:border-box;
   }
-  .pc-dz:hover{ border-color:#f59e0b; background:#fffbeb }
+  .pc-dz:hover{
+    border-color:#94a3b8;
+    background:#f1f5f9;
+  }
   .pc-dz:focus-within{
-    border-color:#f59e0b; background:#fffbeb;
-    outline:3px solid rgba(245,158,11,.32); outline-offset:2px;
+    border-color:#6366f1;
+    background:#eef2ff;
+    outline:3px solid rgba(99,102,241,.18);
+    outline-offset:2px;
   }
   .pc-dz.is-drag{
-    border-color:#d97706; background:#fef3c7;
+    border-color:#4f46e5; background:#eef2ff;
   }
   .pc-dz.is-filled{
-    border-style:solid; border-color:#e2e8f0;
-    background:#fff; cursor:default;
+    border-style:solid; border-color:#bbf7d0;
+    background:#f0fdf4; cursor:default;
   }
-  .pc-dz.is-filled:hover{ background:#fff }
+  .pc-dz.is-filled:hover{ background:#f0fdf4 }
   .pc-dz-input{
     position:absolute; inset:0;
     width:100%; height:100%;
@@ -109,14 +114,21 @@
     pointer-events:none;
   }
   .pc-dz-icon{
-    width:44px; height:44px; border-radius:10px;
+    width:48px; height:48px; border-radius:12px;
     background:#fff; border:1px solid #e2e8f0;
-    color:#d97706;
+    color:#475569;
     display:grid; place-items:center;
-    font-size:17px; margin-bottom:4px;
+    font-size:18px; margin-bottom:6px;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+    transition:color .18s ease, border-color .18s ease, transform .15s ease;
   }
-  .pc-dz:hover .pc-dz-icon,
-  .pc-dz.is-drag .pc-dz-icon{ border-color:#fcd34d }
+  .pc-dz:hover .pc-dz-icon{
+    color:#334155; border-color:#cbd5e1;
+  }
+  .pc-dz.is-drag .pc-dz-icon{
+    color:#4f46e5; border-color:#a5b4fc;
+    transform:scale(1.05);
+  }
   .pc-dz-title{
     margin:0; font-size:13.5px; font-weight:800; color:#0f172a;
   }
@@ -166,49 +178,109 @@
   }
 
   .pc-smart-actions{
-    display:flex; gap:10px; align-items:center;
-    margin-top:12px;
+    display:flex; justify-content:center; align-items:center;
+    gap:12px; margin-top:14px; flex-wrap:wrap;
   }
-  /* Soft amber button — matches the section's accent (dropzone
-     hover, modal-template ribbon) without the heavy black slab. */
+  /* Indigo soft-fill button — matches the dropzone drag/focus
+     accent and stays distinct from the page CTAs. */
   .pc-smart-btn{
-    background:#fffbeb;
-    color:#92400e;
-    border:1px solid #fde68a;
-    border-radius:9px;
-    padding:9px 18px;
+    background:#eef2ff;
+    color:#3730a3;
+    border:1px solid #c7d2fe;
+    border-radius:10px;
+    padding:10px 22px;
     font-size:13px; font-weight:800;
     cursor:pointer;
     display:inline-flex; align-items:center; gap:8px;
-    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 1px 2px rgba(180,83,9,.05);
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset;
     transition:background .18s ease, border-color .18s ease,
                color .18s ease, transform .12s ease, box-shadow .18s ease;
   }
   .pc-smart-btn:hover:not([disabled]){
-    background:#fef3c7;
-    border-color:#fcd34d;
-    color:#78350f;
+    background:#e0e7ff;
+    border-color:#a5b4fc;
+    color:#312e81;
     transform:translateY(-1px);
-    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 6px 14px rgba(245,158,11,.18);
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 6px 14px rgba(79,70,229,.15);
   }
   .pc-smart-btn:active:not([disabled]){
     transform:translateY(0);
-    background:#fde68a;
+    background:#c7d2fe;
   }
   .pc-smart-btn:focus-visible{
-    outline:3px solid rgba(245,158,11,.32);
+    outline:3px solid rgba(79,70,229,.28);
     outline-offset:2px;
   }
   .pc-smart-btn[disabled]{ opacity:.55; cursor:wait }
   .pc-smart-btn .icon-leading{
-    color:#d97706;
+    color:#4f46e5;
     transition:color .18s ease;
   }
-  .pc-smart-btn:hover:not([disabled]) .icon-leading{ color:#b45309 }
+  .pc-smart-btn:hover:not([disabled]) .icon-leading{ color:#3730a3 }
   .pc-smart-btn .spin{ display:none; animation:pc-spin 1s linear infinite }
   .pc-smart-btn.is-busy .spin{ display:inline-block }
   .pc-smart-btn.is-busy .static{ display:none }
   @keyframes pc-spin{ to{ transform:rotate(360deg) } }
+
+  /* ── Progress strip — 5 stages with rail + active dot pulse ── */
+  .pc-progress{
+    margin-top:6px;
+    padding:16px 18px;
+    border:1px solid #e2e8f0;
+    background:#fff;
+    border-radius:12px;
+  }
+  .pc-progress-bar{
+    position:relative;
+    height:6px; border-radius:999px;
+    background:#f1f5f9;
+    overflow:hidden;
+    margin-bottom:14px;
+  }
+  .pc-progress-bar span{
+    display:block; height:100%;
+    background:linear-gradient(90deg,#4f46e5,#6366f1);
+    width:0%;
+    transition:width .4s cubic-bezier(.4,0,.2,1);
+    border-radius:999px;
+  }
+  .pc-stages{
+    display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;
+    list-style:none; margin:0; padding:0;
+  }
+  .pc-stages li{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    font-size:11px; font-weight:700; color:#94a3b8;
+    text-align:center; line-height:1.4;
+    position:relative;
+  }
+  .pc-stages li .dot{
+    width:24px; height:24px; border-radius:50%;
+    background:#f1f5f9; color:#94a3b8;
+    border:1.5px solid #e2e8f0;
+    display:grid; place-items:center;
+    font-size:11px; font-weight:800;
+    transition:background .25s ease, border-color .25s ease, color .25s ease;
+  }
+  .pc-stages li[data-state="active"]{ color:#4338ca }
+  .pc-stages li[data-state="active"] .dot{
+    background:#4f46e5; color:#fff; border-color:#4f46e5;
+    box-shadow:0 0 0 0 rgba(79,70,229,.55);
+    animation:pc-pulse 1.3s ease-out infinite;
+  }
+  @keyframes pc-pulse{
+    0%   { box-shadow:0 0 0 0 rgba(79,70,229,.45) }
+    70%  { box-shadow:0 0 0 9px rgba(79,70,229,0) }
+    100% { box-shadow:0 0 0 0 rgba(79,70,229,0) }
+  }
+  .pc-stages li[data-state="ok"]{ color:#15803d }
+  .pc-stages li[data-state="ok"] .dot{
+    background:#16a34a; color:#fff; border-color:#16a34a;
+  }
+  .pc-stages li[data-state="fail"]{ color:#b91c1c }
+  .pc-stages li[data-state="fail"] .dot{
+    background:#dc2626; color:#fff; border-color:#dc2626;
+  }
 
   .pc-smart-status{
     flex:1; font-size:12.5px; line-height:1.6;
@@ -342,8 +414,23 @@
           <i class="fa-solid fa-circle-notch spin icon-leading" aria-hidden="true"></i>
           <span>حلّل الملف</span>
         </button>
-        <div class="pc-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
       </div>
+
+      <div class="pc-progress" id="pc-progress" hidden aria-live="polite">
+        <div class="pc-progress-bar" role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="pc-progress-fill"></span>
+        </div>
+        <ol class="pc-stages" id="pc-stages">
+          <li data-stage="receive"><span class="dot">1</span><span>استلام الملف</span></li>
+          <li data-stage="sniff">  <span class="dot">2</span><span>كشف الصيغة</span></li>
+          <li data-stage="extract"><span class="dot">3</span><span>استخراج الجدول</span></li>
+          <li data-stage="detect"> <span class="dot">4</span><span>تحليل الأعمدة</span></li>
+          <li data-stage="build">  <span class="dot">5</span><span>اكتمال</span></li>
+        </ol>
+      </div>
+
+      <div class="pc-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
 
       <div class="pc-counter" id="ci-counter" hidden>
         <span class="num" id="ci-counter-num">0</span>
@@ -387,6 +474,28 @@
   const URL = SMART.dataset.previewUrl;
   function csrf() { return SMART.dataset.csrf || ''; }
 
+  // ── Progress strip wiring ──────────────────────────────
+  const progress  = document.getElementById('pc-progress');
+  const fillBar   = document.getElementById('pc-progress-fill');
+  const stagesEl  = document.getElementById('pc-stages');
+  const STAGE_ORDER = ['receive','sniff','extract','detect','build'];
+
+  function $stage(name){ return stagesEl.querySelector('li[data-stage="' + name + '"]'); }
+  function setStageState(name, state){
+    const el = $stage(name);
+    if (el) el.setAttribute('data-state', state);
+  }
+  function setFill(pct){
+    fillBar.style.width = pct + '%';
+    progress.querySelector('.pc-progress-bar').setAttribute('aria-valuenow', String(pct));
+  }
+  function resetStages(){
+    progress.hidden = false;
+    setFill(0);
+    STAGE_ORDER.forEach(s => $stage(s).removeAttribute('data-state'));
+  }
+  function pause(ms){ return new Promise(r => setTimeout(r, ms)); }
+
   function setStatus(m, k){
     if (!m) { stat.hidden = true; stat.textContent=''; return; }
     stat.hidden = false;
@@ -409,9 +518,17 @@
   async function analyze(){
     const f = file.files && file.files[0];
     if (!f) { setStatus('اختر ملفاً أولاً.', 'warn'); return; }
-    setStatus('جارٍ التحليل…', '');
+
+    resetStages();
     cnt.hidden = true;
+    setStatus('', '');
     btn.classList.add('is-busy'); btn.disabled = true;
+
+    // Stage 1 — file received in browser
+    setStageState('receive', 'active'); setFill(15);
+    await pause(150);
+    setStageState('receive', 'ok'); setFill(22);
+    setStageState('sniff', 'active');
 
     const tok = csrf();
     const fd = new FormData();
@@ -427,18 +544,65 @@
       let data = null;
       try { data = JSON.parse(txt); } catch(_){ data = null; }
 
+      // ── HTTP failure ──
       if (!res.ok && !data){
+        ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
+        setFill(100);
         if (res.status === 404) setStatus('المسار غير مسجَّل (HTTP 404). أعد التشغيل.', 'err');
         else if (res.status === 400 && txt.includes('CSRF')) setStatus('فشل CSRF — حدّث الصفحة (F5).', 'err');
         else setStatus('فشل الخادم (HTTP ' + res.status + ').', 'err');
         return;
       }
-      if (!data){ setStatus('رد غير مفهوم من الخادم.', 'err'); return; }
-      if (!data.count){
-        const w = (data.warnings && data.warnings[0]) || 'لم يُعثر على بطاقات في الملف.';
-        setStatus(w + ' [' + (data.fmt || '?') + ' · صفوف ' + (data.rows_seen || 0) + ']', 'err');
+      if (!data){
+        ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
+        setFill(100);
+        setStatus('رد غير مفهوم من الخادم.', 'err');
         return;
       }
+
+      // Stage 2 — format sniff
+      const fmtKnown = data.fmt && data.fmt !== 'unknown';
+      setStageState('sniff', fmtKnown ? 'ok' : 'fail'); setFill(40);
+      await pause(120);
+
+      // Stage 3 — table extraction
+      setStageState('extract', 'active'); setFill(52);
+      await pause(120);
+      const extracted = (data.rows_seen || 0) > 0 || (data.count || 0) > 0;
+      if (!extracted){
+        setStageState('extract', 'fail');
+        ['detect','build'].forEach(s => setStageState(s, 'fail'));
+        setFill(100);
+        const w = (data.warnings && data.warnings[0]) || 'تعذّر استخراج محتوى الملف.';
+        setStatus(w, 'err');
+        return;
+      }
+      setStageState('extract', 'ok'); setFill(70);
+
+      // Stage 4 — column detection
+      setStageState('detect', 'active');
+      await pause(120);
+      const colsKnown = data.username_index !== null && data.username_index !== undefined;
+      if (!colsKnown){
+        setStageState('detect', 'fail');
+        setStageState('build', 'fail');
+        setFill(100);
+        const w = (data.warnings && data.warnings[0]) || 'تعذّر تحديد عمود المستخدم.';
+        setStatus(w, 'err');
+        return;
+      }
+      setStageState('detect', (data.strategy === 'single-column') ? 'ok' : 'ok'); setFill(85);
+
+      // Stage 5 — done
+      setStageState('build', 'active');
+      await pause(120);
+      if (!data.count){
+        setStageState('build', 'fail');
+        setFill(100);
+        setStatus((data.warnings && data.warnings[0]) || 'لم يُبنَ أيّ كرت.', 'err');
+        return;
+      }
+      setStageState('build', 'ok'); setFill(100);
 
       ta.value = data.csv_text || '';
       ta.dispatchEvent(new Event('input', {bubbles:true}));
@@ -447,6 +611,8 @@
       setStatus('تم استخراج ' + data.count.toLocaleString('ar-EG') + ' بطاقة. راجعها بالأسفل ثم احفظ.' + warn,
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
     } catch (e){
+      ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
+      setFill(100);
       setStatus('فشل الاتصال: ' + e.message, 'err');
     } finally {
       btn.classList.remove('is-busy'); btn.disabled = false;
