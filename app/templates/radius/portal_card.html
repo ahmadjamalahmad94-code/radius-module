@@ -346,15 +346,35 @@
     }
     .market-card{
       display:flex;flex-direction:column;gap:8px;
-      padding:16px 18px;
-      border:1px solid var(--hair-soft);border-radius:12px;background:#fff;
-      position:relative;
-      transition:border-color .15s ease, transform .12s ease, box-shadow .18s ease;
+      padding:18px 18px 16px;
+      border:1px solid var(--hair);border-radius:12px;
+      background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);
+      position:relative;overflow:hidden;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.7) inset,
+        0 1px 2px rgba(15,23,42,.04);
+      transition:border-color .15s ease, background .15s ease,
+                 transform .12s ease, box-shadow .18s ease;
+    }
+    /* Top accent strip — service-identity tint visible against the
+       section's white background. */
+    .market-card::before{
+      content:"";position:absolute;inset:0 0 auto 0;height:3px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent-2) 100%);
+      border-radius:12px 12px 0 0;
+      opacity:.85;
+      transition:opacity .18s ease, height .18s ease;
     }
     .market-card:hover{
-      border-color:var(--accent);transform:translateY(-2px);
-      box-shadow:0 8px 18px rgba(124,58,237,.10);
+      border-color:var(--accent);
+      background:#fff;
+      transform:translateY(-3px);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.8) inset,
+        0 8px 18px rgba(124,58,237,.14),
+        0 18px 36px rgba(15,23,42,.10);
     }
+    .market-card:hover::before{opacity:1;height:4px}
     .market-name{font-size:14.5px;font-weight:900;color:var(--ink-1)}
     .market-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink-2);font-weight:700}
     .market-meta .item{display:inline-flex;align-items:center;gap:4px}
