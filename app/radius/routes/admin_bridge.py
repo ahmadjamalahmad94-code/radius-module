@@ -6,6 +6,9 @@ from typing import Any, Callable
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 
+LICENSE_PANEL_BASE_URL = "https://hoberadius.com"
+
+
 def register_admin_bridge_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/admin-bridge", "admin_bridge", admin_bridge, methods=["GET"])
     bp.add_url_rule("/license-file", "license_file", license_file, methods=["GET"])
@@ -148,11 +151,12 @@ def license_file():
         "worker_enabled": _bridge_flag("HOBERADIUS_ADMIN_BRIDGE_WORKER", "license_admin_bridge.worker_enabled"),
         "sync_interval_seconds": bridge_setting("license_admin_bridge.sync_interval_seconds", "300"),
     })
+    panel_base_url = (config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     return render_template(
         "radius/license_file.html",
         config_view=config_view,
         config_form={
-            "base_url": config.base_url or "https://hoberadius.com",
+            "base_url": panel_base_url,
             "has_license_key": bool(config.license_key),
             "has_shared_secret": bool(config.shared_secret),
         },
@@ -168,17 +172,17 @@ def license_file_config():
     from ..services.admin_panel_client import AdminBridgeConfig
 
     config = AdminBridgeConfig.from_env()
-    base_url = (request.form.get("base_url") or "").strip().rstrip("/")
+    base_url = (request.form.get("base_url") or config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     license_key = (request.form.get("license_key") or "").strip()
     shared_secret = (request.form.get("shared_secret") or "").strip()
     worker_enabled = bool(request.form.get("worker_enabled"))
     raw_interval = (request.form.get("sync_interval_seconds") or "300").strip()
 
     if base_url and not base_url.lower().startswith(("http://", "https://")):
-        flash("رابط لوحة التراخيص يجب أن يبدأ بـ http:// أو https://.", "error")
+        flash("رابط لوحة التراخيص يجب أن يبدأ باتصال ويب صحيح.", "error")
         return redirect(url_for("radius.license_file"))
     if base_url.lower().startswith("http://") and request.form.get("identity_sync_enabled"):
-        flash("مزامنة الهوية وكلمات المرور تحتاج رابط HTTPS للوحة التراخيص.", "error")
+        flash("مزامنة الهوية وكلمات المرور تحتاج رابطًا آمنًا للوحة التراخيص.", "error")
         return redirect(url_for("radius.license_file"))
     try:
         sync_interval_seconds = max(60, min(86400, int(raw_interval or 300)))
@@ -268,12 +272,22 @@ def license_file_sync():
         from ..services.license_admin_runtime_sync import LicenseAdminRuntimeSyncService
 
         result = LicenseAdminRuntimeSyncService().sync_once(tenant_id=tenant_id)
-        flash("تمت مزامنة عقد التشغيل." if result.get("ok") else f"تعذرت مزامنة عقد التشغيل: {result.get('status')}", "success" if result.get("ok") else "error")
+        flash(
+            "تمت مزامنة عقد التشغيل."
+            if result.get("ok")
+            else f"تعذرت مزامنة عقد التشغيل: {_sync_status_label(result.get('status'))}",
+            "success" if result.get("ok") else "error",
+        )
     if action in {"identity", "both"}:
         from ..services.license_admin_identity_sync import LicenseAdminIdentitySyncService
 
         result = LicenseAdminIdentitySyncService().sync_once(tenant_id=tenant_id)
-        flash("تمت مزامنة الهوية." if result.get("ok") else f"تعذرت مزامنة الهوية: {result.get('status')}", "success" if result.get("ok") else "error")
+        flash(
+            "تمت مزامنة الهوية."
+            if result.get("ok")
+            else f"تعذرت مزامنة الهوية: {_sync_status_label(result.get('status'))}",
+            "success" if result.get("ok") else "error",
+        )
     return redirect(url_for("radius.license_file"))
 
 
@@ -281,3 +295,23 @@ def _bridge_flag(env_name: str, setting_key: str) -> bool:
     from ..services.admin_panel_client import bridge_flag
 
     return bridge_flag(env_name, setting_key)
+
+
+def _sync_status_label(status: Any) -> str:
+    labels = {
+        "config_missing": "إعدادات الربط غير مكتملة",
+        "disabled": "الجسر غير مفعّل",
+        "denied": "فشل التحقق من سر الربط أو التوقيع",
+        "expired": "الترخيص منتهي",
+        "https_required": "الاتصال الآمن مطلوب",
+        "inactive": "الترخيص غير نشط",
+        "invalid_payload": "رد لوحة التراخيص غير مكتمل",
+        "invalid_request": "طلب المزامنة غير مكتمل",
+        "not_found": "لم يتم العثور على الترخيص",
+        "revoked": "الترخيص ملغي",
+        "suspended": "الترخيص موقوف",
+        "timeout": "انتهت مهلة الاتصال",
+        "unavailable": "لوحة التراخيص غير متاحة الآن",
+        "unknown": "حالة غير معروفة",
+    }
+    return labels.get(str(status or "unknown").strip().lower(), "حالة غير معروفة")

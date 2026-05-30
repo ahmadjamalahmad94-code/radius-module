@@ -96,6 +96,8 @@ def test_license_file_page_masks_bridge_secrets(app):
 
     assert response.status_code == 200
     assert "/admin/radius/license-file/sync" in html
+    assert "رابط لوحة التراخيص الثابت" in html
+    assert 'value="https://hoberadius.com" readonly' in html
     assert "super-secret-test-value" not in html
     assert "license-secret-test-value" not in html
 

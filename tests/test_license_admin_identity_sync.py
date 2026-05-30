@@ -211,6 +211,19 @@ def test_identity_sync_requires_https_before_password_hash_transfer(app_db):
     assert transport.calls == []
 
 
+def test_identity_sync_remote_rejection_is_not_treated_as_payload_bug(app_db):
+    from app.radius.services.admin_panel_client import AdminPanelClient
+
+    transport = MockTransport(response={"ok": False, "status": "denied", "message": "signature rejected"})
+
+    result = AdminPanelClient(config=_config(), transport=transport).fetch_identity_sync(tenant_id=1)
+
+    assert result["ok"] is False
+    assert result["status"] == "denied"
+    assert result["error"]["status"] == "denied"
+    assert result["status"] != "invalid_payload"
+
+
 def test_runtime_password_change_requires_https_client_side(app_db):
     from app.radius.db.repos import admins_repo
     from app.radius.services.admin_panel_client import AdminBridgeConfig, AdminPanelClient

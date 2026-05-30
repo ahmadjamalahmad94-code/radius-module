@@ -505,6 +505,11 @@
     </p>
     <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
       {{ csrf_token_input() }}
+      <div class="hub-field full">
+        <label>رابط لوحة التراخيص الثابت</label>
+        <input class="hub-input ltr" name="base_url" value="{{ config_form.base_url }}" readonly>
+        <div class="hub-field-hint">هذا هو عنوان لوحة التراخيص التي يستلم منها الريدياس الترخيص والصلاحيات. الحقل مقفول حتى لا يتغير بالغلط.</div>
+      </div>
       <div class="hub-field">
         <label>مفتاح الترخيص من صفحة العميل</label>
         <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'الصق مفتاح الترخيص هنا' }}">

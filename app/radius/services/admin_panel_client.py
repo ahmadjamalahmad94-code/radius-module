@@ -434,6 +434,22 @@ class AdminPanelClient:
             )
             return {"ok": False, "status": "invalid_payload", "error": snapshot["error_json"], "snapshot": snapshot}
         normalized = _normalize_status(response)
+        if response.get("ok") is not True:
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status=normalized,
+                source_url=source_url,
+                payload=response,
+                error=sanitize_bridge_payload(response),
+                stale_after_seconds=_stale_after(response),
+            )
+            return {
+                "ok": False,
+                "status": normalized,
+                "error": snapshot["error_json"],
+                "snapshot": snapshot,
+            }
         snapshot = self.store.save(
             tenant_id=tenant_id,
             snapshot_type=SNAPSHOT_IDENTITY,
@@ -840,7 +856,11 @@ def _validate_runtime_contract_payload(payload: dict[str, Any]) -> list[str]:
 def _validate_identity_payload(payload: dict[str, Any]) -> list[str]:
     problems: list[str] = []
     if payload.get("ok") is not True:
-        problems.append("ok must be true")
+        if not isinstance(payload.get("status"), str) or not payload.get("status", "").strip():
+            problems.append("status is required when identity sync is not ok")
+        if "users" in payload and not isinstance(payload["users"], list):
+            problems.append("users must be a list when present")
+        return problems
     if not isinstance(payload.get("users"), list):
         problems.append("users must be a list")
         return problems
