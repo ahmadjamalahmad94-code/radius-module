@@ -16,6 +16,23 @@ def register_admin_bridge_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/license-file/config", "license_file_config", license_file_config, methods=["POST"])
     bp.add_url_rule("/license-file/sync", "license_file_sync", license_file_sync, methods=["POST"])
     bp.add_url_rule("/license-file/service-request", "license_file_service_request", license_file_service_request, methods=["POST"])
+    bp.add_url_rule("/license-file/portal-sso", "license_file_portal_sso", license_file_portal_sso, methods=["GET"])
+
+
+def license_file_portal_sso():
+    """Open the customer portal on the license panel via one-click SSO."""
+    from ..services.admin_panel_client import AdminPanelClient
+
+    result = AdminPanelClient().request_portal_sso()
+    if result.get("ok"):
+        url = (result.get("response") or {}).get("sso_url") or ""
+        if url:
+            return redirect(url)
+        flash("لم يصل رابط الدخول من لوحة التراخيص.", "error")
+    else:
+        status = _sync_status_label(result.get("status"))
+        flash(f"تعذّر فتح بوابة العميل: {status}.", "error")
+    return redirect(url_for("radius.license_file"))
 
 
 def _tid() -> int:

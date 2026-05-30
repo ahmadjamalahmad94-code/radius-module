@@ -36,6 +36,7 @@ CUSTOMER_USER_PASSWORD_CHANGE_PATH = "/api/integration/hoberadius/customer-users
 CUSTOMER_SERVICE_REQUEST_PATH = "/api/integration/hoberadius/service-requests"
 INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
+PORTAL_SSO_PATH = "/api/integration/hoberadius/portal-sso"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
@@ -617,6 +618,14 @@ class AdminPanelClient:
             "status": _normalize_status(response),
             "response": sanitize_bridge_payload(response),
         }
+
+    def request_portal_sso(self) -> dict[str, Any]:
+        """Ask the panel for a short-lived SSO link into the customer portal."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required",
+                    "error": {"code": "https_required", "message": "الدخول الموحّد يتطلب رابط لوحة آمن HTTPS."}}
+        payload = self._license_check_payload()
+        return self._post_bridge_payload(path=PORTAL_SSO_PATH, payload=payload)
 
     def poll_restore_requests(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         return self._post_bridge_payload(path=RESTORE_POLL_PATH, payload=payload)
