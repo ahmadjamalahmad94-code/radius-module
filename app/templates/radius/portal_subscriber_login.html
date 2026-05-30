@@ -1,27 +1,255 @@
+{# Subscriber portal — login page.
+   Professional split-card layout matching portal_card_login: brand side
+   (violet gradient + value props) + form side (icon-prefixed fields,
+   password reveal). Backend unchanged: POST to the same route with
+   username/password + _csrf_token. #}
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>بوابة المشترك - HobeRadius</title>
+  <meta name="theme-color" content="#5b21b6">
+  <title>تسجيل الدخول — بوابة المشترك · HobeRadius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}
-    .portal{max-width:460px;margin:8vh auto;padding:32px;background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.08)}
-    label{display:block;margin:14px 0;font-weight:700} input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:12px}
-    button{width:100%;padding:13px;border:0;border-radius:12px;background:#4f46e5;color:white;font-weight:800}
-    .note{color:#64748b;font-size:14px;line-height:1.6}
+    :root{
+      --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+      --canvas:#f1f5f9; --paper:#fff;
+      --hair:#cbd5e1; --hair-soft:#e2e8f0;
+      --accent:#7c3aed; --accent-2:#5b21b6;
+      --accent-soft:#f5f3ff; --accent-ring:rgba(124,58,237,.28);
+      --success:#15803d; --success-soft:#dcfce7;
+      --warn:#b45309; --warn-soft:#fef3c7;
+      --err:#b91c1c; --err-soft:#fee2e2;
+      --info:#1e40af; --info-soft:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:
+        radial-gradient(800px 600px at 90% -10%, rgba(124,58,237,.10) 0%, transparent 50%),
+        radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
+        var(--canvas);
+      color:var(--ink-1);
+      min-height:100dvh;
+      display:grid;place-items:center;
+      padding:24px;
+      font-feature-settings:"ss01","tnum";
+    }
+
+    /* ── Card shell — 2-column split ────────────────── */
+    .login-card{
+      width:100%;max-width:960px;
+      display:grid;grid-template-columns:1.05fr 1fr;
+      background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:22px;
+      overflow:hidden;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.8) inset,
+        0 4px 12px rgba(15,23,42,.06),
+        0 24px 60px rgba(15,23,42,.12);
+    }
+    @media (max-width:840px){
+      .login-card{grid-template-columns:1fr;max-width:480px}
+    }
+
+    /* ── Brand side ─────────────────────────────────── */
+    .brand-side{
+      position:relative;overflow:hidden;
+      padding:42px 40px;color:#fff;
+      background:
+        radial-gradient(420px 240px at 100% 0%, rgba(255,255,255,.18) 0%, transparent 60%),
+        radial-gradient(360px 200px at 0% 100%, rgba(255,255,255,.10) 0%, transparent 60%),
+        linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      display:flex;flex-direction:column;
+    }
+    .brand-side::before, .brand-side::after{
+      content:"";position:absolute;border-radius:50%;
+      background:rgba(255,255,255,.07);pointer-events:none;filter:blur(8px);
+    }
+    .brand-side::before{width:280px;height:280px;top:-90px;inset-inline-end:-80px}
+    .brand-side::after{width:200px;height:200px;bottom:-70px;inset-inline-start:-40px}
+    @media (max-width:840px){ .brand-side{padding:28px 24px} }
+    .brand-mark{
+      position:relative;z-index:1;
+      width:56px;height:56px;border-radius:16px;
+      background:rgba(255,255,255,.18);
+      backdrop-filter:blur(4px);
+      display:grid;place-items:center;
+      font-weight:900;font-size:18px;letter-spacing:.5px;
+      border:1px solid rgba(255,255,255,.24);
+    }
+    .brand-head{ position:relative;z-index:1; margin:18px 0 22px; }
+    .brand-head h1{ margin:0;font-size:24px;font-weight:900;line-height:1.4; }
+    .brand-head p{ margin:7px 0 0;color:rgba(255,255,255,.86);font-size:13.5px;line-height:1.85; }
+    .brand-list{
+      position:relative;z-index:1;
+      list-style:none;padding:0;margin:auto 0 0;display:grid;gap:10px;
+    }
+    .brand-list li{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 12px;border-radius:12px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      font-size:13px;font-weight:700;
+    }
+    .brand-list li i{
+      width:22px;height:22px;border-radius:7px;
+      background:rgba(255,255,255,.20);
+      display:grid;place-items:center;font-size:10.5px;flex:0 0 auto;
+    }
+
+    /* ── Form side ─────────────────────────────────── */
+    .form-side{
+      padding:42px 40px;
+      display:flex;flex-direction:column;justify-content:center;gap:18px;
+    }
+    @media (max-width:840px){ .form-side{padding:28px 24px} }
+    .form-head h2{ margin:0;font-size:21px;font-weight:900;color:var(--ink-1); }
+    .form-head p{ margin:6px 0 0;color:var(--ink-2);font-size:13.5px;line-height:1.8; }
+
+    /* ── Flash messages ────────────────────────────── */
+    .flash-stack{display:grid;gap:8px}
+    .flash{
+      display:flex;align-items:flex-start;gap:10px;
+      padding:11px 13px;border-radius:12px;
+      font-size:13px;font-weight:700;line-height:1.6;border:1px solid;
+    }
+    .flash i{font-size:13.5px;margin-top:2px}
+    .flash-error,.flash-danger{background:var(--err-soft);color:var(--err);border-color:#fecaca}
+    .flash-warning{background:var(--warn-soft);color:var(--warn);border-color:#fde68a}
+    .flash-success{background:var(--success-soft);color:var(--success);border-color:#bbf7d0}
+    .flash-info{background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
+
+    /* ── Fields ─────────────────────────────────────── */
+    .field{display:grid;gap:6px}
+    .field label{font-size:12.5px;color:var(--ink-2);font-weight:800;}
+    .field-wrap{
+      position:relative;display:flex;align-items:center;
+      background:var(--paper);border:1px solid var(--hair);
+      border-radius:12px;transition:border-color .15s,box-shadow .15s;
+    }
+    .field-wrap:focus-within{ border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring); }
+    .field-wrap > i.fa-solid:first-child{
+      flex:0 0 auto;width:42px;height:46px;
+      display:grid;place-items:center;color:var(--ink-3);font-size:14px;
+    }
+    .field-wrap input{
+      flex:1;min-width:0;border:0;outline:0;background:transparent;
+      padding:0 12px 0 4px;height:46px;
+      font:inherit;font-size:14px;color:var(--ink-1);
+    }
+    .field-wrap input::placeholder{color:var(--ink-3)}
+    .pwd-toggle{
+      flex:0 0 auto;width:42px;height:46px;
+      display:grid;place-items:center;border:0;background:transparent;cursor:pointer;
+      color:var(--ink-3);transition:color .15s;
+    }
+    .pwd-toggle:hover{color:var(--accent-2)}
+
+    /* ── Submit ─────────────────────────────────────── */
+    .submit-btn{
+      width:100%;height:48px;border:0;border-radius:12px;cursor:pointer;
+      color:#fff;font:inherit;font-size:14.5px;font-weight:900;
+      background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      box-shadow:0 4px 12px rgba(124,58,237,.32);
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      transition:transform .05s, box-shadow .15s, filter .15s;
+    }
+    .submit-btn:hover{filter:brightness(1.05)}
+    .submit-btn:active{transform:translateY(1px)}
+
+    /* ── Foot ───────────────────────────────────────── */
+    .form-foot{
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      font-size:11.5px;color:var(--ink-3);padding-top:6px;flex-wrap:wrap;
+    }
+    .form-foot span{display:inline-flex;align-items:center;gap:6px}
+    .form-foot i{color:var(--accent-2)}
   </style>
 </head>
 <body>
-  <main class="portal" data-testid="subscriber-portal-login">
-    <h1>بوابة المشترك</h1>
-    <p class="note">View subscription status, usage, loans, payments, and support requests. If your network allows this portal URL, expired subscribers can still sign in.</p>
-    <form method="post">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>Username <input name="username" autocomplete="username" required></label>
-      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
-      <button type="submit">فتح البوابة</button>
-    </form>
+
+  <main class="login-card" data-testid="subscriber-portal-login">
+
+    <aside class="brand-side">
+      <div class="brand-mark">HR</div>
+      <div class="brand-head">
+        <h1>بوابة المشترك</h1>
+        <p>تابع حالة اشتراكك واستهلاكك وطلبات السلف والتجديد والدعم من مكان واحد. حتى المنتهي اشتراكه يمكنه الدخول إذا سمحت الشبكة بهذا الرابط.</p>
+      </div>
+      <ul class="brand-list">
+        <li><i class="fa-solid fa-gauge-high"></i> حالة الاشتراك والاستهلاك</li>
+        <li><i class="fa-solid fa-hand-holding-dollar"></i> طلب سلفة وقت أو تجديد</li>
+        <li><i class="fa-solid fa-clock-rotate-left"></i> سجل الجلسات والدفعات</li>
+        <li><i class="fa-solid fa-headset"></i> تواصل مع الدعم</li>
+      </ul>
+    </aside>
+
+    <section class="form-side">
+      <div class="form-head">
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بيانات حسابك للوصول إلى بوابتك.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for cat, msg in messages %}
+              <div class="flash flash-{{ cat }}">
+                <i class="fa-solid fa-{% if cat in ['error','danger'] %}circle-exclamation
+                            {%- elif cat == 'success' %}circle-check
+                            {%- elif cat == 'warning' %}triangle-exclamation
+                            {%- else %}circle-info{% endif %}"></i>
+                <span>{{ msg }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" style="display:grid;gap:14px">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+        <div class="field">
+          <label for="sp-user">اسم المستخدم</label>
+          <div class="field-wrap">
+            <i class="fa-solid fa-user"></i>
+            <input id="sp-user" type="text" name="username" required autofocus
+                   autocomplete="username" placeholder="اسم المستخدم">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sp-pwd">كلمة المرور</label>
+          <div class="field-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input id="sp-pwd" type="password" name="password" required
+                   autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="pwd-toggle" aria-label="إظهار كلمة المرور"
+                    onclick="(function(b){var i=document.getElementById('sp-pwd');var on=i.type==='password';i.type=on?'text':'password';var ico=b.querySelector('i');if(ico){ico.classList.toggle('fa-eye',on);ico.classList.toggle('fa-eye-slash',!on);}})(this)">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button class="submit-btn" type="submit">
+          <i class="fa-solid fa-arrow-left-to-bracket"></i>
+          <span>فتح البوابة</span>
+        </button>
+
+        <div class="form-foot">
+          <span><i class="fa-solid fa-shield-halved"></i> اتصال آمن</span>
+          <span>HobeRadius © 2026</span>
+        </div>
+      </form>
+    </section>
+
   </main>
+
 </body>
 </html>
