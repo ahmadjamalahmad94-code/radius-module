@@ -3,60 +3,135 @@
 {% block title %}النسخ الاحتياطي{% endblock %}
 {% block page_title %}النسخ الاحتياطي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
-{% block page_sub %}<span class="sub">نسخة محلية آمنة الآن، وGoogle Drive لاحقًا</span>{% endblock %}
+{% block page_sub %}<span class="sub">نسخة محلية + نسخة في ملف العميل بلوحة التراخيص + استعادة</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .bk-page{ display:grid; gap:16px; }
+  .bk-modal{ position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.55); backdrop-filter:blur(3px); }
+  .bk-modal.is-open{ display:flex; }
+  .bk-dialog{ width:100%; max-width:480px; background:#fff; border:1px solid #e2e8f0; border-radius:18px; box-shadow:0 24px 60px rgba(15,23,42,.28); overflow:hidden; }
+  .bk-dlg-head{ display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid #e2e8f0; background:linear-gradient(180deg,#fff7f7,#fff); }
+  .bk-dlg-ico{ width:42px; height:42px; border-radius:11px; background:#fef2f2; color:#dc2626; display:grid; place-items:center; font-size:17px; flex:0 0 auto; }
+  .bk-dlg-title{ font-weight:800; color:#0f172a; }
+  .bk-dlg-body{ padding:18px 20px; display:grid; gap:12px; }
+  .bk-dlg-body p{ margin:0; font-size:13px; line-height:1.8; color:#475569; }
+  .bk-dlg-target{ font-family:ui-monospace,Consolas,monospace; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12.5px; direction:ltr; unicode-bidi:isolate; word-break:break-all; }
+  .bk-dlg-foot{ padding:14px 20px; border-top:1px solid #e2e8f0; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .bk-conf-input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:14px; text-align:center; letter-spacing:2px; }
+  .bk-conf-input:focus{ outline:0; border-color:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,.18); }
+</style>
+{% endblock %}
 
 {% block content %}
-{{ hub.hero(
-  "النسخ الاحتياطي",
-  subtitle="إنشاء واستعادة نسخ احتياطية محلية لقاعدة البيانات.",
-  icon="database"
-) }}
-
 {% set job = status.get('job') or {} %}
 {% set runs = status.get('recent_runs') or [] %}
 
-<div class="hub-flash hub-flash--info" style="margin-bottom:14px">
-  <i class="fa-solid fa-circle-info"></i>
-  النسخ الحالي محلي داخل مجلد قاعدة البيانات. زر Google Drive غير مفعّل عمدًا
-  في هذه المرحلة حتى لا نعطي إحساسًا وهميًا بأن الربط السحابي جاهز.
-</div>
+<div class="bk-page">
+
+{{ hub.hero(
+  "النسخ الاحتياطي",
+  subtitle="أنشئ نسخة محلية، ارفعها إلى ملف عميلك في لوحة التراخيص، نزّلها، أو استعد منها.",
+  icon="database"
+) }}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("الحالة الأخيرة", job.get('last_status') or 'never_run', icon="circle-info", variant="brand",
+  {{ hub.kpi("الحالة الأخيرة", job.get('last_status') or 'لم تُشغّل بعد', icon="circle-info", variant="brand",
              sub=(job.get('last_message') or 'لم يتم تشغيل نسخة بعد.')) }}
   {{ hub.kpi("آخر تشغيل", job.get('last_run_at') or '—', icon="clock-rotate-left", variant="blue",
              sub="تحقق من النسخة خارج التطبيق قبل الاعتماد عليها إنتاجيًا.") }}
-  {{ hub.kpi("Google Drive", "غير مفعل", icon="cloud-arrow-up", variant="grey",
-             sub="جاهز كعقد API لاحقًا، لكنه لا ينفذ OAuth أو رفعًا سحابيًا الآن.") }}
+  {{ hub.kpi("النسخ المحلية", local_files|length, icon="hard-drive", variant="grey",
+             sub="ملفات SQLite محفوظة بجانب قاعدة البيانات.") }}
 </div>
 
-{% call hub.section("تشغيل نسخة محلية الآن", icon="download") %}
+{# ── Actions: local backup + upload to panel ── #}
+{% call hub.section("إنشاء ورفع النسخة", icon="cloud-arrow-up") %}
   <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.8">
-    هذا الإجراء ينسخ ملف SQLite الحالي إلى مجلد <span class="mono">backups</span> ويتحقق أن
-    الملف الناتج موجود وحجمه أكبر من صفر. لا يغير قاعدة البيانات ولا ينفذ <span class="mono">restore</span>.
+    «تشغيل نسخة محلية» ينسخ ملف قاعدة البيانات الحالي إلى مجلد <span class="mono">backups</span> ويتحقق منه.
+    «رفع إلى لوحة التراخيص» يأخذ آخر نسخة محلية ناجحة ويخزّنها في ملف عميلك داخل لوحة التراخيص (يتطلب ربط الجسر).
   </p>
-  <form method="post" action="{{ url_for('radius.backups_run') }}" style="margin:0">
-    <div class="hub-flex-row">
+  <div class="hub-flex-row" style="gap:10px; flex-wrap:wrap">
+    <form method="post" action="{{ url_for('radius.backups_run') }}" style="margin:0">
       {{ hub.btn("تشغيل نسخة محلية", icon="download", variant="primary", type="submit") }}
-      <button class="hub-btn hub-btn--secondary" type="button" disabled
-              title="غير مفعل في هذه المرحلة">
-        <i class="fa-brands fa-google-drive"></i> ربط Google Drive لاحقًا
-      </button>
-    </div>
-  </form>
+    </form>
+    <form method="post" action="{{ url_for('radius.backups_upload_panel') }}" style="margin:0">
+      {{ hub.btn("رفع إلى لوحة التراخيص", icon="cloud-arrow-up", variant="secondary", type="submit") }}
+    </form>
+  </div>
 {% endcall %}
 
+{# ── Local backup files: download / restore ── #}
+{% call hub.section("النسخ المحلية المتوفرة", icon="hard-drive", meta=(local_files|length ~ ' ملف') if local_files else '') %}
+  {% if not restore_enabled %}
+    <div class="hub-flash hub-flash--warning" style="margin-bottom:14px">
+      <i class="fa-solid fa-lock"></i>
+      الاستعادة داخل التطبيق <strong>معطّلة لأسباب أمان</strong>. لتفعيلها مؤقتًا اضبط متغيّر البيئة
+      <span class="mono">HOBERADIUS_LOCAL_RESTORE_ENABLED=1</span> ثم أعد التشغيل. التنزيل متاح دائمًا.
+    </div>
+  {% else %}
+    <div class="hub-flash hub-flash--info" style="margin-bottom:14px">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      الاستعادة <strong>تستبدل قاعدة البيانات الحالية بالكامل</strong>. سيتم أخذ نسخة احترازية تلقائيًا قبلها،
+      ولن تُنفّذ إلا بعد تأكيد صريح.
+    </div>
+  {% endif %}
+
+  {% if local_files %}
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الملف</th>
+            <th>النوع</th>
+            <th class="num">الحجم</th>
+            <th>آخر تعديل</th>
+            <th style="width:1%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in local_files %}
+            <tr>
+              <td class="mono" style="font-size:12.5px">{{ f.name }}</td>
+              <td>
+                {% if f.is_snapshot %}
+                  <span class="hub-pill hub-pill--amber"><span class="dot"></span>نسخة احترازية</span>
+                {% else %}
+                  <span class="hub-pill hub-pill--blue"><span class="dot"></span>نسخة</span>
+                {% endif %}
+              </td>
+              <td class="num">{{ f.size_mb }} MB</td>
+              <td class="mono" style="font-size:12px">{{ f.modified_at }}</td>
+              <td>
+                <div class="hub-flex-row" style="gap:6px; flex-wrap:nowrap; justify-content:flex-end">
+                  <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.backups_download', name=f.name) }}">
+                    <i class="fa-solid fa-download"></i> تنزيل
+                  </a>
+                  {% if restore_enabled %}
+                    <button type="button" class="hub-btn hub-btn--danger hub-btn--sm"
+                            data-bk-restore data-name="{{ f.name }}">
+                      <i class="fa-solid fa-rotate-left"></i> استعادة
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ hub.empty("لا توجد نسخ محلية بعد.", sub="شغّل «نسخة محلية» لإنشاء أول نسخة.", icon="database") }}
+  {% endif %}
+{% endcall %}
+
+{# ── Recent backup attempts ── #}
 {% call hub.section("آخر محاولات النسخ", icon="clock-rotate-left", meta=(runs|length ~ ' محاولة') if runs else '', flush=True) %}
   {% if runs %}
     <div class="hub-table-wrap" style="border:none">
       <table class="hub-table">
         <thead>
-          <tr>
-            <th>الحالة</th>
-            <th>المسار</th>
-            <th>الرسالة</th>
-            <th>الوقت</th>
-          </tr>
+          <tr><th>الحالة</th><th>المسار</th><th>الرسالة</th><th>الوقت</th></tr>
         </thead>
         <tbody>
           {% for run in runs %}
@@ -71,9 +146,9 @@
                   <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ st or '—' }}</span>
                 {% endif %}
               </td>
-              <td class="mono">{{ run.get('path') or '—' }}</td>
+              <td class="mono" style="font-size:12px">{{ run.get('path') or '—' }}</td>
               <td>{{ run.get('message') or '—' }}</td>
-              <td class="mono">{{ run.get('created_at') or '—' }}</td>
+              <td class="mono" style="font-size:12px">{{ run.get('created_at') or '—' }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -83,4 +158,49 @@
     {{ hub.empty("لا توجد محاولات نسخ بعد.", icon="database") }}
   {% endif %}
 {% endcall %}
+
+</div>
+
+{# ── Restore confirm modal ── #}
+{% if restore_enabled %}
+<div class="bk-modal" id="bk-modal" role="dialog" aria-modal="true">
+  <div class="bk-dialog">
+    <form method="post" action="{{ url_for('radius.backups_restore') }}">
+      <div class="bk-dlg-head">
+        <span class="bk-dlg-ico"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <div class="bk-dlg-title">تأكيد استعادة النسخة</div>
+      </div>
+      <div class="bk-dlg-body">
+        <p>سيتم <strong>استبدال قاعدة البيانات الحالية بالكامل</strong> بمحتوى هذه النسخة. تُؤخذ نسخة احترازية تلقائيًا قبل التنفيذ، وتُسجّل العملية في سجل التدقيق.</p>
+        <div class="bk-dlg-target" id="bk-target">—</div>
+        <p>اكتب <strong>RESTORE</strong> للتأكيد:</p>
+        <input type="hidden" name="name" id="bk-name" value="">
+        <input class="bk-conf-input" type="text" name="confirm" autocomplete="off" placeholder="RESTORE">
+      </div>
+      <div class="bk-dlg-foot">
+        <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-bk-close>إلغاء</button>
+        <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm">
+          <i class="fa-solid fa-rotate-left"></i> تنفيذ الاستعادة
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  var modal = document.getElementById('bk-modal');
+  var nameField = document.getElementById('bk-name');
+  var target = document.getElementById('bk-target');
+  function open(name){ if(!modal) return; nameField.value = name; target.textContent = name; modal.classList.add('is-open'); }
+  function close(){ if(modal) modal.classList.remove('is-open'); }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-bk-restore]');
+    if(b){ open(b.getAttribute('data-name') || ''); return; }
+    if(e.target.closest('[data-bk-close]')){ close(); return; }
+    if(e.target === modal){ close(); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
+})();
+</script>
+{% endif %}
 {% endblock %}

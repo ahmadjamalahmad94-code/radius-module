@@ -1678,6 +1678,104 @@ class OperationsService:
         )
         return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
 
+    # ── Local backup files: listing / download / restore ──────────────
+    def _backup_dir(self) -> Path:
+        backup_dir = Path(db_path()).parent / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        return backup_dir
+
+    def list_local_backups(self, *, tenant_id: int = 1) -> list[dict]:
+        """Return the local backup files (newest first) for the UI."""
+        from datetime import datetime
+
+        backup_dir = self._backup_dir()
+        items: list[dict] = []
+        for path in backup_dir.glob("*.sqlite3"):
+            if not path.is_file():
+                continue
+            stat = path.stat()
+            items.append({
+                "name": path.name,
+                "size": int(stat.st_size),
+                "size_mb": round(stat.st_size / 1048576, 2),
+                "modified_at": datetime.utcfromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                "is_snapshot": path.name.startswith("pre-restore-"),
+            })
+        items.sort(key=lambda x: x["modified_at"], reverse=True)
+        return items
+
+    def resolve_local_backup_path(self, *, name: str) -> Path | None:
+        """Validate a backup file name and resolve it inside the backups dir."""
+        cleaned = os.path.basename(str(name or "").strip())
+        if not cleaned.endswith(".sqlite3"):
+            return None
+        base = self._backup_dir().resolve()
+        path = (base / cleaned).resolve()
+        if base not in path.parents or not path.exists() or not path.is_file():
+            return None
+        return path
+
+    def restore_local_backup(self, *, tenant_id: int, actor: str, name: str) -> dict:
+        """Restore the live DB from a local backup file. Heavily gated.
+
+        Safety: requires HOBERADIUS_LOCAL_RESTORE_ENABLED, always takes a
+        pre-restore snapshot of the current DB first, validates the file, and
+        audits every step. Never runs automatically — only on explicit POST.
+        """
+        from datetime import datetime
+
+        if str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_ENABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}:
+            return {"ok": False, "code": "restore_disabled",
+                    "message": "الاستعادة داخل التطبيق معطّلة. فعّل HOBERADIUS_LOCAL_RESTORE_ENABLED أولاً."}
+
+        source = self.resolve_local_backup_path(name=name)
+        if not source:
+            return {"ok": False, "code": "not_found", "message": "ملف النسخة غير موجود أو غير صالح."}
+
+        # 1) Pre-restore snapshot of the CURRENT database (rollback safety net).
+        snapshot_dir = self._backup_dir()
+        snapshot = snapshot_dir / f"pre-restore-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.sqlite3"
+        try:
+            with sqlite3.connect(str(snapshot)) as dest:
+                db().backup(dest)
+            snapshot_ok = snapshot.exists() and snapshot.stat().st_size > 0
+        except sqlite3.Error as exc:
+            self._audit.record(
+                actor=actor, action="backup.restore_aborted", target_type="backup_file",
+                target_id=name, severity="error", result_status="failed",
+                error_message=f"snapshot failed: {exc}",
+            )
+            return {"ok": False, "code": "snapshot_failed",
+                    "message": f"تعذّر أخذ نسخة احترازية قبل الاستعادة: {exc}"}
+        if not snapshot_ok:
+            return {"ok": False, "code": "snapshot_failed",
+                    "message": "تعذّر أخذ نسخة احترازية قبل الاستعادة."}
+
+        # 2) Restore: copy the chosen backup INTO the live database.
+        try:
+            src_conn = sqlite3.connect(str(source))
+            try:
+                src_conn.backup(db())
+            finally:
+                src_conn.close()
+        except sqlite3.Error as exc:
+            self._audit.record(
+                actor=actor, action="backup.restore_failed", target_type="backup_file",
+                target_id=name, severity="critical", result_status="failed",
+                error_message=str(exc),
+                payload={"snapshot": snapshot.name},
+            )
+            return {"ok": False, "code": "restore_failed",
+                    "message": f"فشلت الاستعادة. النسخة الاحترازية محفوظة: {snapshot.name}. الخطأ: {exc}"}
+
+        self._audit.record(
+            actor=actor, action="backup.restore_applied", target_type="backup_file",
+            target_id=name, severity="critical", result_status="success",
+            payload={"restored_from": name, "pre_restore_snapshot": snapshot.name},
+        )
+        return {"ok": True, "restored_from": name, "snapshot": snapshot.name,
+                "message": f"تمت الاستعادة من «{name}». تم حفظ نسخة احترازية: {snapshot.name}."}
+
 
 def get_operations_service() -> OperationsService:
     from .audit import get_audit_service

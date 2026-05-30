@@ -1,7 +1,13 @@
-"""Web UI for operational backup status and manual local backup."""
+"""Web UI for operational backups: local backup, upload to the license panel,
+download, and a heavily-gated in-app restore."""
 from __future__ import annotations
 
-from flask import Blueprint, flash, g, redirect, render_template, session, url_for
+import os
+
+from flask import (
+    Blueprint, flash, g, redirect, render_template, request, send_file,
+    session, url_for,
+)
 
 from ..services.operations import get_operations_service
 
@@ -9,6 +15,9 @@ from ..services.operations import get_operations_service
 def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups", "backups", backups, methods=["GET"])
     bp.add_url_rule("/backups/run", "backups_run", backups_run, methods=["POST"])
+    bp.add_url_rule("/backups/upload-panel", "backups_upload_panel", backups_upload_panel, methods=["POST"])
+    bp.add_url_rule("/backups/download/<path:name>", "backups_download", backups_download, methods=["GET"])
+    bp.add_url_rule("/backups/restore", "backups_restore", backups_restore, methods=["POST"])
 
 
 def _tid() -> int:
@@ -19,9 +28,20 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _restore_enabled() -> bool:
+    return str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_ENABLED", "")).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def backups():
-    status = get_operations_service().backup_status(tenant_id=_tid())
-    return render_template("radius/backups.html", status=status)
+    svc = get_operations_service()
+    status = svc.backup_status(tenant_id=_tid())
+    local_files = svc.list_local_backups(tenant_id=_tid())
+    return render_template(
+        "radius/backups.html",
+        status=status,
+        local_files=local_files,
+        restore_enabled=_restore_enabled(),
+    )
 
 
 def backups_run():
@@ -31,4 +51,57 @@ def backups_run():
     else:
         message = result.get("run", {}).get("message") or "تعذر التحقق من النسخة الاحتياطية."
         flash(message, "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_upload_panel():
+    """Upload the latest local backup (with content) to the license panel."""
+    from ..services.license_admin_backup_upload import BackupUploadService
+
+    result = BackupUploadService().upload_latest_backup(
+        tenant_id=_tid(),
+        dry_run=False,
+        include_content=True,
+    )
+    if result.get("ok") and not result.get("dry_run"):
+        content_included = bool((result.get("payload") or {}).get("content_included"))
+        if content_included:
+            flash("تم رفع النسخة الاحتياطية (بالمحتوى) إلى لوحة التراخيص وتخزينها في ملف العميل.", "success")
+        else:
+            flash(
+                "تم تسجيل النسخة في ملف العميل بلوحة التراخيص (بيانات وصفية فقط). "
+                "لرفع الملف نفسه فعّل HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_ENABLED=1 على خادم الريدياس.",
+                "warning",
+            )
+    elif result.get("status") == "no_backup_found":
+        flash("لا توجد نسخة محلية ناجحة لرفعها. شغّل نسخة محلية أولاً.", "error")
+    elif result.get("status") in {"disabled", "config_missing"}:
+        flash("جسر لوحة التراخيص غير مُعدّ. راجع صفحة «ملف التراخيص» لإكمال الربط.", "error")
+    else:
+        err = (result.get("error") or {}).get("message") or result.get("status") or "تعذر الرفع."
+        flash(f"تعذّر رفع النسخة إلى لوحة التراخيص: {err}", "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_download(name: str):
+    path = get_operations_service().resolve_local_backup_path(name=name)
+    if not path:
+        flash("ملف النسخة غير موجود.", "error")
+        return redirect(url_for("radius.backups"))
+    return send_file(str(path), as_attachment=True, download_name=path.name)
+
+
+def backups_restore():
+    if not _restore_enabled():
+        flash("الاستعادة داخل التطبيق معطّلة. فعّل HOBERADIUS_LOCAL_RESTORE_ENABLED أولاً.", "error")
+        return redirect(url_for("radius.backups"))
+    if (request.form.get("confirm") or "").strip().upper() != "RESTORE":
+        flash("لإتمام الاستعادة يجب كتابة كلمة التأكيد بشكل صحيح.", "error")
+        return redirect(url_for("radius.backups"))
+    name = (request.form.get("name") or "").strip()
+    result = get_operations_service().restore_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
+    if result.get("ok"):
+        flash(result.get("message") or "تمت الاستعادة بنجاح.", "success")
+    else:
+        flash(result.get("message") or "تعذّرت الاستعادة.", "error")
     return redirect(url_for("radius.backups"))
