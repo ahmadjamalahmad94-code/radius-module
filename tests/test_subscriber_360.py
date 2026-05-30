@@ -187,6 +187,30 @@ def test_subscriber_360_routes_render_and_existing_profile_still_works(app):
     assert "renewal-preview-form" in html
 
 
+def test_subscriber_360_api_returns_safe_json(app):
+    with app.app_context():
+        sub = _seed_subscriber()
+        db().execute(
+            "INSERT INTO radpostauth(tenant_id, username, pass, reply, authdate, class, nas) VALUES(?,?,?,?,?,?,?)",
+            (1, sub.username, "secret-from-radius", "Access-Accept", "2026-01-01", "", "nas-1"),
+        )
+
+    with app.test_client() as client:
+        response = client.get(
+            f"/api/v1/accounts/{sub.username}/360",
+            headers={"Authorization": "Bearer dev-token-please-change"},
+        )
+
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    assert body["ok"] is True
+    data = body["data"]
+    assert data["subscriber"]["username"] == sub.username
+    assert "password" not in data["subscriber"]
+    assert "pass" not in data["login_events"][0]
+    assert "secret-from-radius" not in str(body)
+
+
 def test_renewal_preview_records_event_without_radius_apply(app):
     with app.app_context():
         sub = _seed_subscriber()

@@ -222,6 +222,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(accounts_enable), methods=["POST"])
     bp.add_url_rule("/accounts/<username>/usage", "accounts_usage",
                     require_api_token(accounts_usage), methods=["GET"])
+    bp.add_url_rule("/accounts/<username>/360", "accounts_360",
+                    require_api_token(accounts_360), methods=["GET"])
 
 
 def _svc():
@@ -374,3 +376,37 @@ def accounts_usage(username: str):
         "last_seen_at": sub.last_seen_at.isoformat() + "Z" if sub.last_seen_at else None,
         "expire_at": sub.expire_at.isoformat() + "Z" if sub.expire_at else None,
     })
+
+
+def accounts_360(username: str):
+    from ...radius.services.subscriber_360 import Subscriber360Service
+
+    try:
+        payload = Subscriber360Service(tenant_id=_tid()).get_by_username(username)
+    except KeyError:
+        return fail("not_found", "account not found", status=404)
+    return ok(_safe_360_payload(payload))
+
+
+_SENSITIVE_360_KEYS = {
+    "password",
+    "pass",
+    "password_hash",
+    "secret",
+    "shared_secret",
+    "radius_secret",
+    "private_key",
+}
+
+
+def _safe_360_payload(value):
+    if isinstance(value, dict):
+        safe = {}
+        for key, item in value.items():
+            if str(key).lower() in _SENSITIVE_360_KEYS:
+                continue
+            safe[key] = _safe_360_payload(item)
+        return safe
+    if isinstance(value, list):
+        return [_safe_360_payload(item) for item in value]
+    return value
