@@ -129,7 +129,7 @@
       <form method="get" class="ops-search">
         <input type="text" name="query" value="{{ query or '' }}" maxlength="128"
                placeholder="رقم البطاقة أو اسم الدخول" autocomplete="off" autofocus>
-        <button class="btn btn-primary" type="submit">
+        <button class="hub-btn hub-btn--primary" type="submit">
           <i class="fa-solid fa-magnifying-glass"></i> فحص البطاقة
         </button>
       </form>
@@ -223,12 +223,12 @@
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="lock_mac">
                 <input class="mono" type="text" name="mac" value="{{ card.locked_mac or card.mac_address or (macs[0].mac if macs else '') }}" placeholder="AA:BB:CC:DD:EE:FF">
-                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-lock"></i> تثبيت</button>
+                <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> تثبيت</button>
               </form>
               <form method="post" class="ops-inline" style="margin-top:8px">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="unlock_mac">
-                <button class="btn" type="submit"><i class="fa-solid fa-lock-open"></i> فك التثبيت</button>
+                <button class="hub-btn hub-btn--ghost" type="submit"><i class="fa-solid fa-lock-open"></i> فك التثبيت</button>
                 <span class="ops-muted">الحالي: <span class="mono">{{ card.locked_mac or 'غير مثبتة' }}</span></span>
               </form>
             </div>
@@ -243,7 +243,7 @@
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="disconnect">
                   <input type="hidden" name="session_id" value="{{ session.session_id }}">
-                  <button class="btn btn-warning" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> طرد جلسة {{ session.session_id or session.id }}</button>
+                  <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> طرد جلسة {{ session.session_id or session.id }}</button>
                   <span class="ops-muted mono">{{ session.mac_address or 'MAC غير معروف' }} · {{ session.ip_address or 'IP غير معروف' }}</span>
                 </form>
               {% endfor %}
@@ -258,7 +258,7 @@
               <form method="post" class="ops-inline">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="reset_usage">
-                <button class="btn btn-warning" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير الاستخدام</button>
+                <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير الاستخدام</button>
               </form>
             </div>
 
@@ -269,7 +269,7 @@
                 <form method="post" class="ops-inline">
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="enable">
-                  <button class="btn btn-primary" type="submit"><i class="fa-solid fa-circle-check"></i> إعادة تفعيل</button>
+                  <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-circle-check"></i> إعادة تفعيل</button>
                   {% if card.disabled_reason %}<span class="ops-muted">سبب التعطيل: {{ card.disabled_reason }}</span>{% endif %}
                 </form>
               {% else %}
@@ -277,7 +277,7 @@
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="disable">
                   <input type="text" name="reason" placeholder="سبب التعطيل" maxlength="220">
-                  <button class="btn btn-danger" type="submit"><i class="fa-solid fa-ban"></i> تعطيل</button>
+                  <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-ban"></i> تعطيل</button>
                 </form>
               {% endif %}
             </div>
@@ -289,7 +289,7 @@
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="delete_permanent">
                 <input type="text" name="confirm_delete" placeholder="اكتب DELETE للتأكيد" maxlength="20">
-                <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> حذف نهائي</button>
+                <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-trash"></i> حذف نهائي</button>
               </form>
             </div>
           </div>
