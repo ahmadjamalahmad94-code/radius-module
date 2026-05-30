@@ -1,62 +1,343 @@
+{# Subscriber portal — rebuilt on the unified violet/slate hub language.
+   Same backend, same data, same form actions. Standalone (not extending
+   admin layout). Mirrors portal_card.html tokens + tone. #}
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>بوابة المشترك - HobeRadius</title>
+  <meta name="theme-color" content="#5b21b6">
+  <title>بوابة المشترك — HobeRadius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body{margin:0;font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}
-    .wrap{max-width:1100px;margin:0 auto;padding:28px}
-    .hero,.card{background:white;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 18px 55px rgba(15,23,42,.06);padding:22px;margin-bottom:18px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
-    .kpi{padding:16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0}
-    .kpi b{display:block;font-size:24px;margin-top:5px}
-    table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #e2e8f0;text-align:right}
-    input,textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px}button{padding:11px 14px;border:0;border-radius:10px;background:#4f46e5;color:white;font-weight:800}
-    .muted{color:#64748b}.danger{color:#be123c}.ok{color:#047857}
+    :root{
+      --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+      --canvas:#f1f5f9; --paper:#fff;
+      --hair:#cbd5e1; --hair-soft:#e2e8f0;
+      --accent:#7c3aed; --accent-2:#5b21b6;
+      --accent-soft:#f5f3ff; --accent-ring:rgba(124,58,237,.28);
+      --success:#15803d; --success-soft:#dcfce7;
+      --warn:#b45309; --warn-soft:#fef3c7;
+      --err:#b91c1c; --err-soft:#fee2e2;
+      --info:#1e40af; --info-soft:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:
+        radial-gradient(800px 600px at 90% -10%, rgba(124,58,237,.10) 0%, transparent 50%),
+        radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
+        var(--canvas);
+      color:var(--ink-1);
+      min-height:100dvh;padding:24px;
+      font-feature-settings:"ss01","tnum";
+    }
+    .wrap{max-width:1140px;margin:0 auto;display:grid;gap:16px}
+
+    /* ── Topbar ── */
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:14px 18px;background:var(--paper);border:1px solid var(--hair-soft);
+      border-radius:16px;
+      box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 12px rgba(15,23,42,.05);
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-mark{
+      width:42px;height:42px;border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#fff;font-weight:900;display:grid;place-items:center;letter-spacing:.5px;
+      box-shadow:0 6px 14px rgba(124,58,237,.32);
+    }
+    .brand-title{font-weight:800;color:var(--ink-1)}
+    .brand-sub{font-size:12px;color:var(--ink-3)}
+    .logout-link{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:8px 14px;border-radius:10px;
+      background:var(--accent-soft);color:var(--accent-2);
+      text-decoration:none;font-weight:700;font-size:13px;
+      border:1px solid #ede9fe;transition:background .15s;
+    }
+    .logout-link:hover{background:#ede9fe}
+
+    /* ── Hero ── */
+    .hero{
+      position:relative;overflow:hidden;
+      padding:24px 26px;border-radius:18px;color:#fff;
+      background:
+        radial-gradient(420px 240px at 100% 0%, rgba(255,255,255,.18) 0%, transparent 60%),
+        linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:0 10px 30px rgba(124,58,237,.22);
+    }
+    .hero::before{content:"";position:absolute;width:240px;height:240px;border-radius:50%;
+                  background:rgba(255,255,255,.08);top:-80px;inset-inline-end:-70px}
+    .hero h1{margin:0;font-size:22px;font-weight:800}
+    .hero p{margin:6px 0 0;color:rgba(255,255,255,.86);font-size:13.5px;line-height:1.8}
+
+    /* ── KPI grid ── */
+    .kpi-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;
+    }
+    .kpi{
+      display:flex;align-items:center;gap:12px;
+      padding:14px 16px;background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:14px;
+      box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 12px rgba(15,23,42,.04);
+    }
+    .kpi .ico{
+      width:42px;height:42px;border-radius:12px;flex:0 0 auto;
+      display:grid;place-items:center;font-size:16px;
+      background:var(--accent-soft);color:var(--accent-2);
+    }
+    .kpi .ico.green{background:var(--success-soft);color:var(--success)}
+    .kpi .ico.amber{background:var(--warn-soft);color:var(--warn)}
+    .kpi .ico.red{background:var(--err-soft);color:var(--err)}
+    .kpi .lbl{font-size:12px;color:var(--ink-3);font-weight:700}
+    .kpi .val{font-size:18px;font-weight:800;color:var(--ink-1);margin-top:2px;
+              font-variant-numeric:tabular-nums}
+
+    /* ── Section card ── */
+    .card{
+      background:var(--paper);border:1px solid var(--hair-soft);border-radius:16px;
+      box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 12px rgba(15,23,42,.05);
+      overflow:hidden;
+    }
+    .card-head{
+      display:flex;align-items:center;gap:10px;
+      padding:14px 18px;background:linear-gradient(180deg,#fbfaff,#f8f7fc);
+      border-bottom:1px solid var(--hair-soft);
+    }
+    .card-head .icon{
+      width:32px;height:32px;border-radius:10px;
+      background:var(--accent-soft);color:var(--accent-2);
+      display:grid;place-items:center;font-size:13px;
+    }
+    .card-head h2{margin:0;font-size:15px;font-weight:800;color:var(--ink-1)}
+    .card-head .meta{margin-inline-start:auto;font-size:12px;color:var(--ink-3);font-weight:700}
+    .card-body{padding:18px}
+
+    /* ── Note pills inside body ── */
+    .note{
+      padding:10px 12px;border-radius:10px;border:1px solid;
+      font-size:13px;line-height:1.7;font-weight:600;display:flex;gap:8px;align-items:flex-start;
+    }
+    .note.ok{background:var(--success-soft);color:var(--success);border-color:#bbf7d0}
+    .note.warn{background:var(--err-soft);color:var(--err);border-color:#fecaca}
+    .note.info{background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
+
+    /* ── Forms ── */
+    .field{display:grid;gap:6px;margin-bottom:12px}
+    .field label{font-size:12.5px;color:var(--ink-2);font-weight:700}
+    .field input, .field textarea{
+      width:100%;padding:10px 12px;
+      border:1px solid var(--hair);border-radius:10px;
+      background:var(--paper);color:var(--ink-1);font:inherit;font-size:14px;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field textarea:focus{
+      outline:0;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring);
+    }
+    .field textarea{min-height:80px;resize:vertical}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:10px 16px;border-radius:10px;border:0;cursor:pointer;
+      font:inherit;font-size:13.5px;font-weight:800;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#fff;
+      box-shadow:0 4px 12px rgba(124,58,237,.32);
+      transition:filter .15s, transform .05s;
+    }
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+
+    /* ── Tables ── */
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+    thead th{
+      background:#f6f5fb;color:var(--ink-2);font-size:11.5px;font-weight:800;
+      text-transform:uppercase;letter-spacing:.3px;padding:11px 12px;
+      text-align:start;border-bottom:2px solid var(--hair);
+    }
+    tbody td{padding:12px;border-bottom:1px solid var(--hair-soft);color:var(--ink-1)}
+    tbody tr:last-child td{border-bottom:0}
+    tbody tr:hover{background:#fafbfc}
+    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+          direction:ltr;unicode-bidi:isolate;font-size:.92em}
+    .empty{padding:28px;text-align:center;color:var(--ink-3)}
+
+    /* ── Grid for forms side-by-side ── */
+    .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    @media (max-width:780px){.grid-2{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <main class="wrap" data-testid="subscriber-portal-home">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">HR</div>
+      <div>
+        <div class="brand-title">{{ dashboard.subscriber.username }}</div>
+        <div class="brand-sub">بوابة المشترك</div>
+      </div>
+    </div>
+    <a class="logout-link" href="{{ url_for('radius.portal_subscriber_logout') }}">
+      <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+    </a>
+  </header>
+
   <section class="hero">
-    <h1>مرحبًا {{ dashboard.subscriber.username }}</h1>
-    <p class="muted">{{ dashboard.walled_garden_note }}</p>
-    <a href="{{ url_for('radius.portal_subscriber_logout') }}">تسجيل الخروج</a>
+    <h1>مرحبًا، {{ dashboard.subscriber.username }}</h1>
+    <p>{{ dashboard.walled_garden_note }}</p>
   </section>
-  <section class="grid">
-    <div class="kpi">الحالة <b>{{ dashboard.subscription.status }}</b></div>
-    <div class="kpi">الأيام المتبقية <b>{{ dashboard.subscription.remaining_days if dashboard.subscription.remaining_days is not none else '-' }}</b></div>
-    <div class="kpi">الدين <b>{{ dashboard.debt }}</b></div>
-    <div class="kpi">Bytes التنزيل <b>{{ dashboard.usage.download_bytes }}</b></div>
+
+  <section class="kpi-grid">
+    <div class="kpi">
+      <div class="ico"><i class="fa-solid fa-circle-info"></i></div>
+      <div>
+        <div class="lbl">الحالة</div>
+        <div class="val">{{ dashboard.subscription.status }}</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="ico green"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div>
+        <div class="lbl">الأيام المتبقية</div>
+        <div class="val">{{ dashboard.subscription.remaining_days if dashboard.subscription.remaining_days is not none else '—' }}</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="ico amber"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+      <div>
+        <div class="lbl">الدين</div>
+        <div class="val">{{ dashboard.debt }}</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="ico"><i class="fa-solid fa-download"></i></div>
+      <div>
+        <div class="lbl">Bytes التنزيل</div>
+        <div class="val">{{ dashboard.usage.download_bytes }}</div>
+      </div>
+    </div>
   </section>
+
+  <div class="grid-2">
+
+    <section class="card">
+      <header class="card-head">
+        <span class="icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
+        <h2>طلب سلفة</h2>
+      </header>
+      <div class="card-body">
+        <div class="note {{ 'ok' if dashboard.loan_policy.enabled else 'warn' }}">
+          <i class="fa-solid fa-{{ 'circle-check' if dashboard.loan_policy.enabled else 'triangle-exclamation' }}"></i>
+          <span>{{ dashboard.loan_policy.reason or 'الموافقة التلقائية متاحة ضمن سياسة باقتك.' }}</span>
+        </div>
+        <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}"
+              data-testid="subscriber-loan-request-form"
+              style="margin-top:14px">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <div class="field">
+            <label>الدقائق المطلوبة</label>
+            <input name="requested_minutes" type="number" min="1"
+                   value="{{ dashboard.loan_policy.allowed_minutes or 1440 }}">
+          </div>
+          <div class="field">
+            <label>السبب</label>
+            <textarea name="reason"></textarea>
+          </div>
+          <button class="btn" type="submit">
+            <i class="fa-solid fa-paper-plane"></i> إرسال طلب السلفة
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <header class="card-head">
+        <span class="icon"><i class="fa-solid fa-rotate"></i></span>
+        <h2>طلب تجديد</h2>
+      </header>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
+              data-testid="subscriber-renewal-request-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <div class="field">
+            <label>ملاحظة</label>
+            <textarea name="reason"></textarea>
+          </div>
+          <button class="btn" type="submit">
+            <i class="fa-solid fa-paper-plane"></i> طلب التجديد
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </div>
+
   <section class="card">
-    <h2>طلب سلفة</h2>
-    <p class="{{ 'ok' if dashboard.loan_policy.enabled else 'danger' }}">{{ dashboard.loan_policy.reason or 'الموافقة التلقائية متاحة ضمن سياسة باقتك.' }}</p>
-    <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}" data-testid="subscriber-loan-request-form">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>الدقائق المطلوبة <input name="requested_minutes" type="number" min="1" value="{{ dashboard.loan_policy.allowed_minutes or 1440 }}"></label>
-      <label>السبب <textarea name="reason"></textarea></label>
-      <button type="submit">إرسال طلب السلفة</button>
-    </form>
+    <header class="card-head">
+      <span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+      <h2>الجلسات</h2>
+      <span class="meta">{{ dashboard.sessions|length }} جلسة</span>
+    </header>
+    <div class="table-wrap">
+      <table data-testid="subscriber-sessions-table">
+        <thead>
+          <tr>
+            <th>الجلسة</th>
+            <th>IP</th>
+            <th>بدأت</th>
+            <th>انتهت</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for item in dashboard.sessions %}
+          <tr>
+            <td class="mono">{{ item.acctsessionid }}</td>
+            <td class="mono">{{ item.framedipaddress }}</td>
+            <td class="mono">{{ item.acctstarttime }}</td>
+            <td class="mono">{{ item.acctstoptime or 'متصل' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">لا توجد جلسات بعد.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
+
   <section class="card">
-    <h2>طلب تجديد</h2>
-    <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}" data-testid="subscriber-renewal-request-form">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>ملاحظة <textarea name="reason"></textarea></label>
-      <button type="submit">طلب التجديد</button>
-    </form>
+    <header class="card-head">
+      <span class="icon"><i class="fa-solid fa-receipt"></i></span>
+      <h2>السلف والدفعات</h2>
+    </header>
+    <div class="card-body">
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="ico"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          <div><div class="lbl">السلف</div><div class="val">{{ dashboard.loans|length }}</div></div>
+        </div>
+        <div class="kpi">
+          <div class="ico green"><i class="fa-solid fa-credit-card"></i></div>
+          <div><div class="lbl">الدفعات</div><div class="val">{{ dashboard.payments|length }}</div></div>
+        </div>
+        <div class="kpi">
+          <div class="ico"><i class="fa-solid fa-id-card"></i></div>
+          <div><div class="lbl">البطاقات</div><div class="val">{{ dashboard.cards|length }}</div></div>
+        </div>
+        <div class="kpi">
+          <div class="ico amber"><i class="fa-solid fa-bell"></i></div>
+          <div><div class="lbl">التنبيهات</div><div class="val">{{ dashboard.notifications|length }}</div></div>
+        </div>
+      </div>
+    </div>
   </section>
-  <section class="card">
-    <h2>الجلسات</h2>
-    <table data-testid="subscriber-sessions-table"><thead><tr><th>الجلسة</th><th>IP</th><th>بدأت</th><th>انتهت</th></tr></thead><tbody>
-      {% for item in dashboard.sessions %}<tr><td>{{ item.acctsessionid }}</td><td>{{ item.framedipaddress }}</td><td>{{ item.acctstarttime }}</td><td>{{ item.acctstoptime or 'متصل' }}</td></tr>{% else %}<tr><td colspan="4">لا توجد جلسات بعد.</td></tr>{% endfor %}
-    </tbody></table>
-  </section>
-  <section class="card">
-    <h2>السلف والدفعات</h2>
-    <p>السلف: {{ dashboard.loans|length }} / الدفعات: {{ dashboard.payments|length }} / البطاقات: {{ dashboard.cards|length }} / التنبيهات: {{ dashboard.notifications|length }}</p>
-  </section>
+
 </main>
 </body>
 </html>
