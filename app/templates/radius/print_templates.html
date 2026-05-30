@@ -10,12 +10,20 @@
 {{ super() }}
 <style>
   .print-room{--pr-navy:#0f172a;--pr-cyan:#22a7bd;--pr-gold:#f59e0b;display:grid;gap:16px}
-  .pr-hero{position:relative;overflow:hidden;border-radius:18px;padding:22px;border:1px solid rgba(34,167,189,.25);background:
-    radial-gradient(circle at 10% 20%,rgba(34,167,189,.22),transparent 28%),
-    linear-gradient(135deg,#0f172a,#14324a 55%,#0b5f72);color:#fff;box-shadow:0 18px 48px rgba(15,23,42,.16)}
-  .pr-hero h2{margin:0 0 8px;font-size:clamp(24px,3vw,38px);font-weight:900;letter-spacing:0}
-  .pr-hero p{margin:0;max-width:880px;color:rgba(255,255,255,.78);line-height:1.8;font-weight:700}
-  .pr-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  /* ── Mega-hero: title + actions + KPI strip in ONE panel ── */
+  .pr-hero{position:relative;overflow:hidden;border-radius:18px;padding:18px 20px;
+    border:1px solid #cbd5e1;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg,#faf8ff 0%,#fff 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05)}
+  .pr-hero h2{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:0;color:#0f172a;
+    display:flex;align-items:center;gap:12px}
+  .pr-hero h2::before{content:"\f0d0";font-family:"Font Awesome 6 Free";font-weight:900;
+    width:46px;height:46px;flex:0 0 auto;border-radius:13px;display:inline-grid;place-items:center;font-size:18px;
+    color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);box-shadow:0 6px 16px rgba(124,58,237,.32)}
+  .pr-hero p{margin:0;max-width:880px;color:#475569;line-height:1.7;font-weight:600;font-size:13px}
+  .pr-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
   .pr-shell{display:grid;grid-template-columns:minmax(360px,1.05fr) minmax(460px,1.4fr);gap:14px;align-items:start}
   @media(max-width:1100px){.pr-shell{grid-template-columns:1fr}}
   .pr-panel{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;box-shadow:0 10px 28px rgba(15,23,42,.06);overflow:hidden}
@@ -285,10 +293,12 @@
   .pr-file-clear:hover{color:#b91c1c;border-color:#fecaca;background:#fee2e2}
   .pr-file-error{margin:0;color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800;line-height:1.5}
   .pr-file-hint{margin:0;color:var(--hub-text-mute);font-weight:700;font-size:11.5px;line-height:1.6}
-  .pr-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
-  @media(max-width:1000px){.pr-data{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .pr-kpi{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-card);padding:12px}
-  .pr-kpi small{display:block;color:var(--hub-text-mute);font-weight:900}.pr-kpi strong{font-size:24px;color:var(--hub-text)}
+  /* KPI strip lives inside the mega-hero, on a hairline divider */
+  .pr-data{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;
+    margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0}
+  .pr-kpi{border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:12px 14px}
+  .pr-kpi small{display:block;color:#64748b;font-weight:700;font-size:12px}
+  .pr-kpi strong{font-size:22px;color:#0f172a;font-weight:800;font-variant-numeric:tabular-nums}
   .pr-table-actions{display:flex;gap:7px;flex-wrap:wrap}
   .pr-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);font-weight:900;color:var(--hub-text-soft)}
   .pr-pager-buttons{display:flex;gap:8px;align-items:center}
@@ -424,14 +434,14 @@
         </button>
       </form>
     </div>
-  </section>
 
-  <div class="pr-data">
-    <div class="pr-kpi"><small>قوالب محفوظة</small><strong>{{ templates|length }}</strong></div>
-    <div class="pr-kpi"><small>حزم متاحة للتصدير</small><strong>{{ batches|length }}</strong></div>
-    <div class="pr-kpi"><small>عمليات تصدير أخيرة</small><strong>{{ jobs|length }}</strong></div>
-    <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
-  </div>
+    <div class="pr-data">
+      <div class="pr-kpi"><small>قوالب محفوظة</small><strong>{{ templates|length }}</strong></div>
+      <div class="pr-kpi"><small>حزم متاحة للتصدير</small><strong>{{ batches|length }}</strong></div>
+      <div class="pr-kpi"><small>عمليات تصدير أخيرة</small><strong>{{ jobs|length }}</strong></div>
+      <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
+    </div>
+  </section>
 
   {# Export room — primary surface. The template list opens in a modal
      picker so the export flow stays focused: choose batch, choose saved
