@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}جسر الإدارة V40 — Hobe Hub{% endblock %}
+{% block title %}جسر الإدارة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bridge"></i>{% endblock %}
-{% block page_title %}جسر الإدارة V40{% endblock %}
+{% block page_title %}جسر الإدارة{% endblock %}
 {% block page_sub %}<span class="sub">صفحة قراءة آمنة فقط لحالة الربط المحلي.</span>{% endblock %}
 
 {% block head_extra %}
@@ -64,24 +64,51 @@
     font-weight:800; font-size:13px;
   }
 
-  /* ── Read-only mode banner ──────────────────────────────────────── */
-  .ab-readonly-bar{
-    display:flex; align-items:center; gap:14px;
-    padding:12px 16px;
-    background:linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  /* ── Mega-hero: title + read-only badge + KPI strip in ONE panel ── */
+  .ab-hero{
+    position:relative;
+    display:grid; gap:16px;
+    padding:20px 22px;
+    border-radius:18px;
+    background:
+      radial-gradient(680px 340px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .ab-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .ab-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .ab-hero-icon{
+    width:46px; height:46px; flex:0 0 auto;
+    border-radius:13px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .ab-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .ab-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; max-width:620px; }
+  /* read-only pill on the end side of the title row */
+  .ab-readonly-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px; border-radius:999px;
+    background:#dcfce7; color:#14532d;
     border:1px solid #bbf7d0;
-    border-radius:14px;
-    color:#14532d;
+    font-size:12.5px; font-weight:800; white-space:nowrap;
   }
-  .ab-readonly-icon{
-    width:42px; height:42px; flex:0 0 auto;
-    border-radius:12px;
-    background:#dcfce7; color:#15803d;
-    display:grid; place-items:center; font-size:18px;
+  .ab-readonly-pill i{ color:#15803d; }
+  .ab-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
   }
-  .ab-readonly-text{ flex:1; min-width:0; }
-  .ab-readonly-title{ font-weight:800; color:#14532d; font-size:14px; }
-  .ab-readonly-sub{ font-size:12.5px; line-height:1.7; margin-top:2px; color:#166534; }
 
   /* ── Path cards (bridge_cards) ─────────────────────────────────── */
   .ab-paths{
@@ -149,36 +176,32 @@
 {% block content %}
 <div class="ab-page">
 
-  {# ───── Hero ──────────────────────────────────────────────── #}
-  {{ hub.hero(
-    "جسر الإدارة V40",
-    subtitle="هذه صفحة قراءة فقط. تعرض لك حالة المسارات المحلية للجسر بين الريدياس ولوحة التراخيص، بدون أي عملية كتابة أو رفع أو استعادة أو تفعيل خدمات من هنا.",
-    icon="bridge"
-  ) }}
-
-  {# ───── Read-only banner (replaces hub-badge that didn't exist) ── #}
-  <div class="ab-readonly-bar">
-    <span class="ab-readonly-icon"><i class="fa-solid fa-shield-halved"></i></span>
-    <div class="ab-readonly-text">
-      <div class="ab-readonly-title">وضع قراءة فقط</div>
-      <div class="ab-readonly-sub">
-        كل المسارات هنا تعرض حالة محلية. لا توجد أي روابط POST أو تفعيل أو تغيير على
-        RADIUS / MikroTik / CoA من هذه الصفحة.
+  {# ───── Unified mega-hero: title + read-only badge + KPI strip ── #}
+  <section class="ab-hero">
+    <div class="ab-hero-row">
+      <div class="ab-hero-id">
+        <span class="ab-hero-icon"><i class="fa-solid fa-bridge"></i></span>
+        <div>
+          <h1 class="ab-hero-title">جسر الإدارة</h1>
+          <div class="ab-hero-sub">صفحة قراءة فقط لحالة المسارات المحلية للجسر بين الريدياس ولوحة التراخيص — بلا أي كتابة أو رفع أو تفعيل من هنا.</div>
+        </div>
       </div>
+      <span class="ab-readonly-pill">
+        <i class="fa-solid fa-shield-halved"></i> وضع قراءة فقط
+      </span>
     </div>
-  </div>
 
-  {# ───── KPI strip ─────────────────────────────────────────── #}
-  <div class="hub-kpi-grid">
-    {{ hub.kpi("حالة عقد السعة", capacity.status or "غير معروف",
-               icon="gauge-high", variant="brand") }}
-    {{ hub.kpi("أحداث الجسر", events.total or 0,
-               icon="list-check", variant="blue") }}
-    {{ hub.kpi("الصحة المحلية", heartbeat.status or "غير معروف",
-               icon="heart-pulse", variant="green") }}
-    {{ hub.kpi("وضع التنفيذ", "قراءة فقط",
-               icon="shield-halved", variant="amber") }}
-  </div>
+    <div class="ab-hero-kpis">
+      {{ hub.kpi("حالة عقد السعة", capacity.status or "غير معروف",
+                 icon="gauge-high", variant="brand") }}
+      {{ hub.kpi("أحداث الجسر", events.total or 0,
+                 icon="list-check", variant="blue") }}
+      {{ hub.kpi("الصحة المحلية", heartbeat.status or "غير معروف",
+                 icon="heart-pulse", variant="green") }}
+      {{ hub.kpi("وضع التنفيذ", "قراءة فقط",
+                 icon="shield-halved", variant="amber") }}
+    </div>
+  </section>
 
   {# ───── Explanation card ──────────────────────────────────── #}
   {% call hub.section("ماذا تشاهد في هذه الصفحة؟", icon="circle-question") %}
