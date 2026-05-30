@@ -37,26 +37,50 @@
     font-weight:800; font-size:13px;
   }
 
-  /* ── Sync action bar (replaces the buggy actions_html in hero) ── */
-  .lf-sync-bar{
-    display:flex; align-items:center; gap:12px;
-    padding:14px 16px;
-    background:linear-gradient(135deg, #f5f3ff, #fff);
+  /* ── Mega-hero: title + sync actions + KPI strip in ONE panel ── */
+  .lf-hero{
+    position:relative;
+    display:grid; gap:16px;
+    padding:20px 22px;
+    border-radius:18px;
+    background:
+      radial-gradient(680px 340px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
     border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:14px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
   }
-  .lf-sync-bar-icon{
-    width:44px; height:44px; flex:0 0 auto;
-    border-radius:12px;
+  /* top row: identity (start) + sync buttons (end) */
+  .lf-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .lf-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .lf-hero-icon{
+    width:46px; height:46px; flex:0 0 auto;
+    border-radius:13px;
     background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
-    color:#fff; display:grid; place-items:center; font-size:18px;
-    box-shadow:0 6px 14px rgba(124,58,237,.32);
+    color:#fff; display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
   }
-  .lf-sync-bar-text{ flex:1; min-width:0; }
-  .lf-sync-bar-title{ font-weight:800; color:var(--hub-text); font-size:14.5px; }
-  .lf-sync-bar-sub{ font-size:12.5px; color:var(--hub-text-soft, #475569); margin-top:2px; }
-  .lf-sync-bar form{ margin:0; }
-  .lf-sync-form{ display:flex; flex-wrap:wrap; gap:8px; }
+  .lf-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .lf-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
+  .lf-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .lf-hero-actions form{ margin:0; display:flex; flex-wrap:wrap; gap:8px; }
+  /* divider before the KPI row */
+  .lf-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  @media (max-width: 760px){
+    .lf-hero-actions{ flex:1 1 100%; }
+    .lf-hero-actions form{ flex:1 1 100%; }
+  }
 
   /* ── Missing-env chips ──────────────────────────────────────────── */
   .lf-missing-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
@@ -106,6 +130,17 @@
     width:100%;
   }
   .lf-subhead i{ color:#5b21b6; font-size:13px; }
+
+  /* ── Services / Limits columns: equal height + centred empty-state ── */
+  .lf-grid-2 > div{
+    display:flex; flex-direction:column;
+    min-height:220px;
+  }
+  .lf-grid-2 > div > .hub-empty{
+    flex:1;
+    display:flex; flex-direction:column;
+    justify-content:center; align-items:center;
+  }
 
   /* ── Roomier detail-list rows (scoped to this page only) ───────── */
   .lf-page .hub-detail-list{
@@ -158,53 +193,51 @@
 {% block content %}
 <div class="lf-page">
 
-  {# ───── Hero (clean — sync trigger lives below as a dedicated bar) ── #}
-  {{ hub.hero(
-    "ملف التراخيص",
-    subtitle="يعرض اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل، آخر مزامنة هوية، والحدود التي يطبّقها runtime محليًا.",
-    icon="file-shield"
-  ) }}
-
-  {# ───── Sync action bar — three sync triggers in one panel ─── #}
-  <div class="lf-sync-bar">
-    <span class="lf-sync-bar-icon"><i class="fa-solid fa-rotate"></i></span>
-    <div class="lf-sync-bar-text">
-      <div class="lf-sync-bar-title">مزامنة الآن</div>
-      <div class="lf-sync-bar-sub">اختر نوع المزامنة — كل عملية تُسجَّل في سجل التدقيق.</div>
+  {# ───── Unified mega-hero: title + sync actions + KPI strip ── #}
+  <section class="lf-hero">
+    <div class="lf-hero-row">
+      <div class="lf-hero-id">
+        <span class="lf-hero-icon"><i class="fa-solid fa-file-shield"></i></span>
+        <div>
+          <h1 class="lf-hero-title">ملف التراخيص</h1>
+          <div class="lf-hero-sub">اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل ومزامنة هوية، والحدود التي يطبّقها runtime محليًا.</div>
+        </div>
+      </div>
+      <div class="lf-hero-actions">
+        <form method="post" action="{{ url_for('radius.license_file_sync') }}">
+          {{ csrf_token_input() }}
+          <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit">
+            <i class="fa-solid fa-arrows-rotate"></i> مزامنة الكل
+          </button>
+          <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit">
+            <i class="fa-solid fa-file-contract"></i> عقد التشغيل
+          </button>
+          <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit">
+            <i class="fa-solid fa-users-gear"></i> الهوية
+          </button>
+        </form>
+      </div>
     </div>
-    <form method="post" action="{{ url_for('radius.license_file_sync') }}" class="lf-sync-form">
-      {{ csrf_token_input() }}
-      <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit">
-        <i class="fa-solid fa-arrows-rotate"></i> الاثنين معًا
-      </button>
-      <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit">
-        <i class="fa-solid fa-file-contract"></i> عقد التشغيل
-      </button>
-      <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit">
-        <i class="fa-solid fa-users-gear"></i> الهوية
-      </button>
-    </form>
-  </div>
 
-  {# ───── KPI strip ──────────────────────────────────────────── #}
-  <div class="hub-kpi-grid">
-    {{ hub.kpi("حالة الجسر",
-               "مفعَّل" if config_view.enabled else "غير مفعَّل",
-               icon="plug-circle-bolt",
-               variant="blue") }}
-    {{ hub.kpi("عقد التشغيل",
-               "مفعَّل" if config_view.runtime_contract_sync else "غير مفعَّل",
-               icon="file-contract",
-               variant="green") }}
-    {{ hub.kpi("مزامنة الهوية",
-               "مفعَّلة" if config_view.identity_sync_enabled else "غير مفعَّلة",
-               icon="users-gear",
-               variant="amber") }}
-    {{ hub.kpi("حالة الحدود",
-               capacity.status or "غير معروف",
-               icon="gauge-high",
-               variant="brand") }}
-  </div>
+    <div class="lf-hero-kpis">
+      {{ hub.kpi("حالة الجسر",
+                 "مفعَّل" if config_view.enabled else "غير مفعَّل",
+                 icon="plug-circle-bolt",
+                 variant="blue") }}
+      {{ hub.kpi("عقد التشغيل",
+                 "مفعَّل" if config_view.runtime_contract_sync else "غير مفعَّل",
+                 icon="file-contract",
+                 variant="green") }}
+      {{ hub.kpi("مزامنة الهوية",
+                 "مفعَّلة" if config_view.identity_sync_enabled else "غير مفعَّلة",
+                 icon="users-gear",
+                 variant="amber") }}
+      {{ hub.kpi("حالة الحدود",
+                 capacity.status or "غير معروف",
+                 icon="gauge-high",
+                 variant="brand") }}
+    </div>
+  </section>
 
   {# ───── Explanation card ──────────────────────────────────── #}
   {% call hub.section("ماذا تعرض هذه الصفحة؟", icon="circle-question") %}
