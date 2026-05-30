@@ -125,7 +125,7 @@
     margin:0 0 12px;
     font-size:13.5px; font-weight:800;
     color:var(--hub-text);
-    display:inline-flex; align-items:center; gap:8px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
     padding-bottom:8px; border-bottom:1px dashed var(--hub-border-soft, #e2e8f0);
     width:100%;
   }
@@ -181,6 +181,15 @@
     border:1px solid var(--hub-border-soft, #e2e8f0);
     display:inline-block;
   }
+  .lf-page .checkline{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 14px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:10px;
+    background:var(--hub-bg-soft, #f8f7fc);
+    font-weight:800;
+  }
+  .lf-page .checkline input{ width:18px; height:18px; accent-color:var(--hub-brand, #7c3aed); }
   @media (max-width: 640px){
     .lf-page .hub-detail-list > div{
       grid-template-columns:1fr;
@@ -263,6 +272,61 @@
       </div>
     {% endcall %}
   {% endif %}
+
+  {% call hub.section("ربط الترخيص من صفحة العميل", icon="link") %}
+    <p style="margin:0 0 12px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
+      نعم، الريدياس يأخذ الترخيص والصلاحيات من لوحة التراخيص. افتح صفحة العميل في لوحة التراخيص،
+      ثم انسخ <strong>مفتاح الترخيص</strong> و<strong>سر الربط</strong> والصقهما هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل من API موقّع.
+      لا يتم قراءة صفحة HTML نفسها، بل يتم استخدام هذه القيم كتعريف أولي للعميل.
+    </p>
+    <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
+      {{ csrf_token_input() }}
+      <div class="hub-field full">
+        <label>رابط لوحة التراخيص</label>
+        <input class="hub-input ltr" name="base_url" value="{{ config_form.base_url }}" placeholder="https://hoberadius.com">
+        <div class="hub-field-hint">استخدم رابط لوحة التراخيص. مزامنة الهوية وكلمات المرور تحتاج HTTPS.</div>
+      </div>
+      <div class="hub-field">
+        <label>مفتاح الترخيص من صفحة العميل</label>
+        <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'HBR-2026-XXXX-XXXX-XXXX' }}">
+        <div class="hub-field-hint">اتركه فارغًا إذا كان محفوظًا بالفعل. لا نعرض المفتاح كاملًا بعد الحفظ.</div>
+      </div>
+      <div class="hub-field">
+        <label>سر الربط من صفحة العميل</label>
+        <input class="hub-input ltr" name="shared_secret" type="password" autocomplete="new-password" placeholder="{{ 'موجود ومحفوظ' if config_form.has_shared_secret else 'الصق سر الربط هنا' }}">
+        <div class="hub-field-hint">السر يوقّع الطلبات بين الريدياس ولوحة التراخيص ولا يظهر كاملًا في الصفحة.</div>
+      </div>
+      <div class="hub-field">
+        <label class="checkline">
+          <input type="checkbox" name="enabled" value="1" {{ 'checked' if config_view.enabled else '' }}>
+          تفعيل الجسر مع لوحة التراخيص
+        </label>
+      </div>
+      <div class="hub-field">
+        <label class="checkline">
+          <input type="checkbox" name="runtime_contract_sync" value="1" {{ 'checked' if config_view.runtime_contract_sync else '' }}>
+          استخدام عقد التشغيل الجديد
+        </label>
+      </div>
+      <div class="hub-field">
+        <label class="checkline">
+          <input type="checkbox" name="identity_sync_enabled" value="1" {{ 'checked' if config_view.identity_sync_enabled else '' }}>
+          تفعيل مزامنة الهوية عبر HTTPS
+        </label>
+      </div>
+      <div class="hub-field">
+        <label class="checkline">
+          <input type="checkbox" name="identity_sync_on_login" value="1" {{ 'checked' if config_view.identity_sync_on_login else '' }}>
+          مزامنة سريعة قبل تسجيل الدخول
+        </label>
+      </div>
+      <div class="hub-form-foot full" style="padding-top:4px">
+        <button class="hub-btn hub-btn--primary" type="submit">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الربط
+        </button>
+      </div>
+    </form>
+  {% endcall %}
 
   {# ───── Connection settings (single full-width panel) ─────── #}
   {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
