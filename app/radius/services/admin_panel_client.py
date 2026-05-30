@@ -879,26 +879,16 @@ def _validate_identity_payload(payload: dict[str, Any]) -> list[str]:
 
 
 def _normalize_status(payload: dict[str, Any]) -> str:
-    status = str(payload.get("status") or "unknown").strip().lower()
-    if status == "unknown" and payload.get("ok") is True:
-        return "ok"
-    if status in {"active", "valid", "healthy", "ok", "grace"}:
-        return status
-    if status in {
-        "inactive",
-        "expired",
-        "blocked",
-        "suspended",
-        "revoked",
-        "denied",
-        "disabled",
-        "not_found",
-        "invalid_request",
-        "fingerprint_denied",
-        "rate_limited",
-    }:
-        return status
-    return "unknown"
+    """Return a canonical status string from a panel response payload.
+
+    Always returns the raw status (lowercased, stripped) so callers receive
+    the exact value from the panel rather than losing it by mapping to "unknown".
+    The only special case is a missing/empty status on a success response.
+    """
+    status = str(payload.get("status") or "").strip().lower()
+    if not status:
+        return "ok" if payload.get("ok") is True else "unknown"
+    return status
 
 
 def canonical_admin_bridge_payload(body: dict[str, Any]) -> str:

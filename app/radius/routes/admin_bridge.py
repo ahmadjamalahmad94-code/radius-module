@@ -299,19 +299,34 @@ def _bridge_flag(env_name: str, setting_key: str) -> bool:
 
 def _sync_status_label(status: Any) -> str:
     labels = {
-        "config_missing": "إعدادات الربط غير مكتملة",
-        "disabled": "الجسر غير مفعّل",
-        "denied": "فشل التحقق من سر الربط أو التوقيع",
-        "expired": "الترخيص منتهي",
-        "https_required": "الاتصال الآمن مطلوب",
-        "inactive": "الترخيص غير نشط",
-        "invalid_payload": "رد لوحة التراخيص غير مكتمل",
-        "invalid_request": "طلب المزامنة غير مكتمل",
-        "not_found": "لم يتم العثور على الترخيص",
-        "revoked": "الترخيص ملغي",
-        "suspended": "الترخيص موقوف",
-        "timeout": "انتهت مهلة الاتصال",
-        "unavailable": "لوحة التراخيص غير متاحة الآن",
-        "unknown": "حالة غير معروفة",
+        # ── success statuses (shouldn't appear as errors, but handle defensively) ──
+        "ok":       "تمت المزامنة",
+        "active":   "الترخيص نشط",
+        "valid":    "الترخيص صالح",
+        "healthy":  "الجسر يعمل بشكل سليم",
+        "grace":    "الترخيص في فترة السماح — يُرجى التجديد قريبًا",
+        # ── error statuses ──
+        "blocked":             "الترخيص محظور",
+        "config_missing":      "إعدادات الربط غير مكتملة",
+        "disabled":            "الجسر غير مفعّل",
+        "denied":              "فشل التحقق من سر الربط أو التوقيع",
+        "expired":             "الترخيص منتهي",
+        "fingerprint_denied":  "بصمة الخادم غير مسموحة",
+        "https_required":      "الاتصال الآمن (HTTPS) مطلوب",
+        "inactive":            "الترخيص غير نشط",
+        "invalid_payload":     "رد لوحة التراخيص غير مكتمل أو تنسيقه غير متوقع",
+        "invalid_request":     "طلب المزامنة غير مكتمل",
+        "local_account":       "الحساب محلي ولا يُدار عبر لوحة التراخيص",
+        "not_found":           "لم يتم العثور على الترخيص",
+        "rate_limited":        "تم تجاوز عدد الطلبات المسموح — حاول لاحقًا",
+        "revoked":             "الترخيص ملغي",
+        "suspended":           "الترخيص موقوف",
+        "timeout":             "انتهت مهلة الاتصال بلوحة التراخيص",
+        "unavailable":         "لوحة التراخيص غير متاحة الآن",
+        "unknown":             "حالة غير معروفة",
     }
-    return labels.get(str(status or "unknown").strip().lower(), "حالة غير معروفة")
+    raw = str(status or "unknown").strip().lower()
+    if raw in labels:
+        return labels[raw]
+    # Fallback: show the raw status so the operator can diagnose it
+    return f"حالة: {raw}"
