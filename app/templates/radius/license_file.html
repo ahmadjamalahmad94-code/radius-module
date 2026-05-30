@@ -377,63 +377,133 @@
   'HOBERADIUS_ADMIN_SHARED_SECRET': 'سر الربط',
   'HOBERADIUS_ADMIN_BRIDGE_ENABLED': 'تفعيل الجسر'
 } %}
+{# ══════════════════════════════════════════════════════════════════
+   خدمات العقد — أسماء + أوصاف + أيقونات + تصنيفات (شاملة لجميع المفاتيح)
+   ══════════════════════════════════════════════════════════════════ #}
 {% set service_labels = {
-  'ip_change_vpn': 'خدمة تغيير عنوان الإنترنت / الشبكة الخاصة',
-  'cards': 'الكروت',
-  'cards_recharge': 'شحن الكروت',
-  'communications': 'الرسائل والتنبيهات',
-  'customer_portal': 'بوابة العميل',
-  'customer_support': 'دعم العملاء',
-  'distributors': 'الموزعون',
-  'finance_center': 'المركز المالي',
-  'integration_bridge': 'جسر الربط مع لوحة التراخيص',
-  'integration_tokens': 'رموز الربط الآمن',
-  'subscribers': 'المشتركون',
-  'nas': 'أجهزة الشبكة',
-  'admins': 'حسابات الإدارة',
-  'plans': 'الباقات',
-  'reports': 'التقارير'
+  'subscribers':'المشتركون', 'sessions':'جلسات الاتصال', 'accounting':'المحاسبة والاستخدام',
+  'invoices':'الفواتير', 'payment_collection':'تحصيل المدفوعات',
+  'radius_customer_portals':'بوابات المشتركين', 'subscriber_groups':'مجموعات المشتركين',
+  'nas':'أجهزة الشبكة (NAS)', 'routers':'الراوترات', 'profiles':'الباقات والبروفايلات',
+  'ip_change_vpn':'VPN وتغيير عنوان الإنترنت', 'public_ip_change':'تغيير الـ IP العام',
+  'setup_wizard':'معالج الإعداد', 'ip_pools':'تجمّعات عناوين الـ IP',
+  'network_policies':'سياسات الشبكة', 'router_diagnostics':'تشخيص الراوترات',
+  'bandwidth_control':'التحكم بعرض الحزمة', 'site_exit':'نقاط خروج الإنترنت',
+  'remote_access':'الوصول عن بعد',
+  'cards':'الكروت', 'cards_recharge':'شحن الكروت', 'card_marketplace':'سوق الكروت',
+  'card_users':'مستخدمو الكروت', 'vouchers':'بطاقات القسيمة',
+  'print_templates':'قوالب طباعة الكروت', 'distributors':'الموزعون',
+  'admins':'حسابات الإدارة', 'finance_center':'المركز المالي', 'reports':'التقارير',
+  'audit_logs':'سجلات التدقيق', 'backups':'النسخ الاحتياطي',
+  'lifecycle':'دورة حياة البيانات', 'multi_tenant':'التشغيل متعدد المستأجرين',
+  'recycle_bin':'سلة المحذوفات',
+  'customer_portal':'بوابة العميل', 'customer_support':'دعم العملاء',
+  'communications':'الرسائل والتنبيهات', 'operations_center':'مركز العمليات',
+  'risk_events':'الأحداث والمخاطر', 'remote_support':'الدعم الفني عن بعد',
+  'remote_health_fix':'الصيانة عن بعد',
+  'integration_bridge':'جسر الربط بلوحة التراخيص',
+  'integration_tokens':'رموز الربط الآمن',
+  'webhooks':'الإشعارات الآلية (Webhooks)',
 } %}
+
 {% set service_descriptions = {
-  'ip_change_vpn': 'تحدد هل خدمة تغيير العنوان تعمل، وما السرعة وعدد مستخدمي الشبكة الخاصة المسموح بها.',
-  'cards': 'تسمح بإدارة كروت الإنترنت وإنشاء الدفعات وبيعها للمشتركين.',
-  'cards_recharge': 'تسمح للمستخدم بشحن رصيد الكروت أو المحفظة من خلال بوابة العميل.',
-  'communications': 'تسمح بإرسال رسائل وتنبيهات للمشتركين ومستخدمي الكروت.',
-  'customer_portal': 'تفتح بوابة العميل لعرض الخدمات والرصيد والطلبات وتغيير كلمة المرور.',
-  'customer_support': 'تسمح بإنشاء ومتابعة طلبات الدعم من العميل.',
-  'distributors': 'تسمح بإدارة الموزعين ونطاقاتهم وصلاحيات البيع.',
-  'finance_center': 'تسمح بعرض العمليات المالية والمدفوعات والأرصدة.',
-  'integration_bridge': 'تسمح للريدياس باستلام الترخيص والحدود من لوحة التراخيص.',
-  'integration_tokens': 'تسمح باستخدام رموز الربط والتوقيع الآمن بين النظامين.',
-  'subscribers': 'تحدد صلاحيات وعدد المشتركين المسموح بإدارتهم.',
-  'nas': 'تحدد عدد أجهزة الشبكة أو الراوترات المسموح ربطها.',
-  'admins': 'تحدد عدد حسابات الإدارة المسموح بها.',
-  'plans': 'تحدد صلاحية إنشاء وتعديل باقات الإنترنت.',
-  'reports': 'تحدد صلاحية عرض التقارير التشغيلية والمالية.'
+  'subscribers':           'تحدد صلاحيات وعدد المشتركين المسموح بإدارتهم في النظام.',
+  'sessions':              'تتيح عرض جلسات الاتصال الحالية والسجل التفصيلي لكل جلسة.',
+  'accounting':            'تتيح عرض بيانات الاستخدام والمحاسبة المفصّلة لكل مشترك.',
+  'invoices':              'تتيح إنشاء وعرض فواتير الاشتراك ومتابعة حالة السداد.',
+  'payment_collection':    'تتيح استلام وتسجيل مدفوعات المشتركين ومعالجتها.',
+  'radius_customer_portals': 'تفتح بوابة الدخول الذاتي للمشتركين لعرض حساباتهم وإدارتها.',
+  'subscriber_groups':     'تتيح تنظيم المشتركين في مجموعات وتطبيق سياسات موحّدة عليهم.',
+  'nas':                   'تحدد عدد أجهزة الشبكة (NAS/BRAS) المسموح ربطها بالريدياس.',
+  'routers':               'تتيح إدارة الراوترات المربوطة ومتابعة حالتها ومعلوماتها.',
+  'profiles':              'تحدد صلاحية إنشاء وتعديل باقات الإنترنت وبروفايلات الكوتا.',
+  'ip_change_vpn':         'تحدد هل خدمة تغيير العنوان تعمل، وما السرعة وعدد مستخدمي الـ VPN.',
+  'public_ip_change':      'تتيح طلب تغيير عنوان الـ IP العام المخصص للسيرفر.',
+  'setup_wizard':          'تتيح استخدام معالج الإعداد لتهيئة الراوترات والخدمات تلقائياً.',
+  'ip_pools':              'تتيح إدارة تجمّعات عناوين الـ IP وتوزيعها على المشتركين.',
+  'network_policies':      'تتيح تعريف سياسات الشبكة وقواعد الجودة وتحديد الأولويات.',
+  'router_diagnostics':    'تتيح تشغيل أدوات التشخيص على الراوترات من لوحة التحكم.',
+  'bandwidth_control':     'تتيح التحكم التفصيلي بعرض الحزمة وجدولة السرعات.',
+  'site_exit':             'تتيح إدارة نقاط خروج حركة الإنترنت وتوجيهها.',
+  'remote_access':         'تتيح الوصول الآمن عن بعد إلى الراوترات وأجهزة الشبكة.',
+  'cards':                 'تسمح بإنشاء وطباعة وإدارة كروت الإنترنت ودفعاتها.',
+  'cards_recharge':        'تتيح شحن رصيد الكروت والمحافظ من خلال النظام.',
+  'card_marketplace':      'تفتح سوق الكروت لبيع وشراء الكروت بين الموزعين.',
+  'card_users':            'تحدد صلاحية إدارة مستخدمي الكروت وصلاحياتهم.',
+  'vouchers':              'تتيح إنشاء بطاقات القسيمة وتوزيعها على المشتركين.',
+  'print_templates':       'تتيح تخصيص وطباعة قوالب كروت الإنترنت بتصاميم مختلفة.',
+  'distributors':          'تسمح بإدارة الموزعين ونطاقاتهم وصلاحيات البيع.',
+  'admins':                'تحدد عدد حسابات الإدارة وصلاحياتهم في النظام.',
+  'finance_center':        'تعطي صلاحية عرض العمليات المالية والتقارير المحاسبية.',
+  'reports':               'تتيح الوصول إلى التقارير التشغيلية والمالية والإحصائية.',
+  'audit_logs':            'تتيح عرض سجلات التدقيق ومتابعة كل إجراء في النظام.',
+  'backups':               'تتيح إنشاء واستعادة النسخ الاحتياطية لقاعدة البيانات.',
+  'lifecycle':             'تتيح إدارة دورة حياة البيانات والأرشفة والحذف الدوري.',
+  'multi_tenant':          'تتيح تشغيل النظام بأكثر من مستأجر (tenant) مستقل.',
+  'recycle_bin':           'تتيح استعادة السجلات المحذوفة من سلة المحذوفات.',
+  'customer_portal':       'تفتح بوابة العميل لعرض الخدمات والرصيد والطلبات.',
+  'customer_support':      'تسمح بإنشاء ومتابعة طلبات الدعم الفني من العميل.',
+  'communications':        'تسمح بإرسال رسائل SMS وإشعارات للمشتركين.',
+  'operations_center':     'يتيح مركز العمليات متابعة الحوادث والإجراءات التشغيلية.',
+  'risk_events':           'تتيح رصد الأحداث غير الطبيعية والتنبيه عند اكتشاف مخاطر.',
+  'remote_support':        'تتيح لفريق الدعم الاتصال بالسيرفر عن بعد لحل المشكلات.',
+  'remote_health_fix':     'تتيح الصيانة التلقائية والإصلاح الآلي لمشكلات السيرفر.',
+  'integration_bridge':    'تسمح للريدياس باستلام الترخيص والعقد والحدود من لوحة التراخيص.',
+  'integration_tokens':    'تتيح إنشاء رموز الربط الآمن للتكامل مع الأنظمة الخارجية.',
+  'webhooks':              'تتيح إرسال إشعارات تلقائية لأنظمة خارجية عند وقوع أحداث.',
 } %}
-{% set limit_labels = {
-  'subscribers': 'عدد المشتركين',
-  'nas': 'أجهزة الشبكة',
-  'admins': 'حسابات الإدارة',
-  'cards': 'الكروت',
-  'card_batches': 'دفعات الكروت',
-  'plans': 'الباقات',
-  'routers': 'الراوترات',
-  'locations': 'المواقع',
-  'vpn_users': 'مستخدمي الشبكة الخاصة'
-} %}
+
 {% set service_icons = {
-  'ip_change_vpn': 'shield-halved', 'cards': 'id-card', 'cards_recharge': 'wallet',
-  'communications': 'paper-plane', 'customer_portal': 'circle-user', 'customer_support': 'headset',
-  'distributors': 'people-group', 'finance_center': 'coins', 'integration_bridge': 'link',
-  'integration_tokens': 'key', 'subscribers': 'users', 'nas': 'network-wired',
-  'admins': 'user-shield', 'plans': 'cubes', 'reports': 'chart-column'
+  'subscribers':'users', 'sessions':'signal', 'accounting':'chart-bar',
+  'invoices':'file-invoice', 'payment_collection':'money-bill-wave',
+  'radius_customer_portals':'door-open', 'subscriber_groups':'layer-group',
+  'nas':'server', 'routers':'wifi', 'profiles':'sliders',
+  'ip_change_vpn':'shield-halved', 'public_ip_change':'globe',
+  'setup_wizard':'wand-magic-sparkles', 'ip_pools':'list-ol',
+  'network_policies':'traffic-light', 'router_diagnostics':'stethoscope',
+  'bandwidth_control':'gauge-high', 'site_exit':'door-open', 'remote_access':'laptop-code',
+  'cards':'id-card', 'cards_recharge':'wallet', 'card_marketplace':'tags',
+  'card_users':'user-tag', 'vouchers':'ticket', 'print_templates':'print',
+  'distributors':'people-group',
+  'admins':'user-shield', 'finance_center':'coins', 'reports':'chart-column',
+  'audit_logs':'clipboard-list', 'backups':'database', 'lifecycle':'rotate',
+  'multi_tenant':'building', 'recycle_bin':'trash-can',
+  'customer_portal':'circle-user', 'customer_support':'headset',
+  'communications':'paper-plane', 'operations_center':'tower-observation',
+  'risk_events':'triangle-exclamation', 'remote_support':'screwdriver-wrench',
+  'remote_health_fix':'heart-pulse',
+  'integration_bridge':'link', 'integration_tokens':'key', 'webhooks':'webhook',
 } %}
+
+{% set limit_labels = {
+  'subscribers':'عدد المشتركين', 'nas':'أجهزة الشبكة', 'admins':'حسابات الإدارة',
+  'cards':'الكروت', 'card_batches':'دفعات الكروت', 'plans':'الباقات',
+  'routers':'الراوترات', 'locations':'المواقع', 'vpn_users':'مستخدمي الـ VPN',
+  'max_total':'الحد الأقصى', 'generate_per_batch':'كروت/دفعة', 'monthly_generated':'كروت/شهر',
+  'max_active':'العناصر الفعالة', 'max_sellers':'البائعون', 'max_wallets':'المحافظ'
+} %}
+
 {% set limit_icons = {
-  'subscribers': 'users', 'nas': 'network-wired', 'admins': 'user-shield',
-  'cards': 'id-card', 'card_batches': 'layer-group', 'plans': 'cubes',
-  'routers': 'wifi', 'locations': 'location-dot', 'vpn_users': 'shield-halved'
+  'subscribers':'users', 'nas':'network-wired', 'admins':'user-shield',
+  'cards':'id-card', 'card_batches':'layer-group', 'plans':'cubes',
+  'routers':'wifi', 'locations':'location-dot', 'vpn_users':'shield-halved'
 } %}
+
+{# ── تصنيفات الخدمات: قسم → (عنوان، أيقونة، [مفاتيح]) ── #}
+{% set service_category_groups = [
+  ('subscribers_group', 'خدمات المشتركين', 'users',
+    ['subscribers','sessions','accounting','invoices','payment_collection','radius_customer_portals','subscriber_groups']),
+  ('network_group', 'خدمات الشبكة والراوترات', 'network-wired',
+    ['nas','routers','profiles','ip_change_vpn','public_ip_change','setup_wizard','ip_pools','network_policies','router_diagnostics','bandwidth_control','site_exit','remote_access']),
+  ('cards_group', 'الكروت والمبيعات', 'id-card',
+    ['cards','cards_recharge','card_marketplace','card_users','vouchers','print_templates','distributors']),
+  ('admin_group', 'الإدارة والمالية', 'user-shield',
+    ['admins','finance_center','reports','audit_logs','backups','lifecycle','multi_tenant','recycle_bin']),
+  ('support_group', 'الدعم والتواصل', 'headset',
+    ['customer_portal','customer_support','communications','operations_center','risk_events','remote_support','remote_health_fix']),
+  ('integration_group', 'التكامل', 'plug',
+    ['integration_bridge','integration_tokens','webhooks']),
+] %}
 <div class="lf-page">
 
   {# ───── Unified mega-hero: title + sync actions + KPI strip ── #}
@@ -672,15 +742,31 @@
   {% set _svc = contract.services if contract.services is defined else {} %}
   {% set _lim = contract.limits   if contract.limits   is defined else {} %}
 
-  {# ── Services the contract activates ── #}
+  {# ── Services the contract activates — grouped by category ── #}
   {% call hub.section("الخدمات المفعّلة في عقدك", icon="shapes",
        meta=(_svc.values()|selectattr('status','equalto','active')|list|length ~ ' مفعّلة من ' ~ _svc|length) if _svc else '') %}
-    <p class="card-intro" style="margin:0 0 14px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
-      هذه قائمة بالخدمات التي يسمح بها ترخيصك. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها التفصيلية كما استلمها الريدياس من عقد التشغيل.
+    <p class="card-intro" style="margin:0 0 16px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
+      هذه قائمة بالخدمات مقسّمة حسب الفئة. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها كما استلمها الريدياس من عقد التشغيل.
     </p>
     {% if _svc %}
-      <div class="lf-svc-grid">
-        {% for key, val in _svc.items() %}
+      {# ── render each category group ── #}
+      {% for _cat_key, _cat_label, _cat_icon, _cat_keys in service_category_groups %}
+        {# collect keys that exist in the contract for this category #}
+        {% set ns_cat = namespace(has_any=false) %}
+        {% for _ck in _cat_keys %}{% if _ck in _svc %}{% set ns_cat.has_any = true %}{% endif %}{% endfor %}
+        {% if ns_cat.has_any %}
+          <div style="margin-bottom:18px">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--hub-bg-soft,#f8f7fc);border:1px solid var(--hub-border-soft,#e2e8f0);border-radius:10px;margin-bottom:10px">
+              <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:grid;place-items:center;font-size:11px;flex:0 0 auto"><i class="fa-solid fa-{{ _cat_icon }}"></i></span>
+              <span style="font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)">{{ _cat_label }}</span>
+              {# count active in this group #}
+              {% set ns_cnt = namespace(on=0, total=0) %}
+              {% for _ck in _cat_keys %}{% if _ck in _svc %}{% set ns_cnt.total = ns_cnt.total + 1 %}{% if _svc[_ck].status|default('') == 'active' %}{% set ns_cnt.on = ns_cnt.on + 1 %}{% endif %}{% endif %}{% endfor %}
+              <span style="margin-inline-start:auto;font-size:11.5px;font-weight:700;color:{% if ns_cnt.on > 0 %}#16a34a{% else %}#94a3b8{% endif %}">{{ ns_cnt.on }} / {{ ns_cnt.total }} مفعّلة</span>
+            </div>
+            <div class="lf-svc-grid">
+              {% for key in _cat_keys %}{% if key in _svc %}
+              {% set val = _svc[key] %}
           {% set _status = val.status|default('disabled') %}
           {% set _on = (_status == 'active') %}
           {% set _name = service_labels.get(key, 'خدمة مرخّصة') %}
@@ -755,8 +841,68 @@
               {% endif %}
             </div>
           </div>
+              {% endif %}{% endfor %}{# end _cat_keys loop #}
+            </div>{# end lf-svc-grid for this category #}
+          </div>{# end category block #}
+        {% endif %}{# end has_any #}
+      {% endfor %}{# end category groups loop #}
+
+      {# ── Services in contract but not in any category (catch-all) ── #}
+      {% set ns_extra = namespace(keys=[]) %}
+      {% for key in _svc %}
+        {% set ns_in_cat = namespace(found=false) %}
+        {% for _cat_key, _cat_label, _cat_icon, _cat_keys in service_category_groups %}
+          {% if key in _cat_keys %}{% set ns_in_cat.found = true %}{% endif %}
         {% endfor %}
-      </div>
+        {% if not ns_in_cat.found %}{% set ns_extra.keys = ns_extra.keys + [key] %}{% endif %}
+      {% endfor %}
+      {% if ns_extra.keys %}
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--hub-bg-soft,#f8f7fc);border:1px solid var(--hub-border-soft,#e2e8f0);border-radius:10px;margin-bottom:10px">
+            <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:grid;place-items:center;font-size:11px;flex:0 0 auto"><i class="fa-solid fa-cube"></i></span>
+            <span style="font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)">خدمات أخرى</span>
+          </div>
+          <div class="lf-svc-grid">
+            {% for key in ns_extra.keys %}{% set val = _svc[key] %}
+              {% set _status = val.status|default('disabled') %}
+              {% set _on = (_status == 'active') %}
+              {% set _name = service_labels.get(key, key|replace('_',' ')|title) %}
+              {% set _desc = service_descriptions.get(key, 'صلاحية ضمن عقد الترخيص.') %}
+              {% set _stlabel = ('مفعّلة' if _status == 'active' else ('موقوفة' if _status == 'suspended' else ('منتهية' if _status == 'expired' else status_labels.get(_status, 'معطَّلة')))) %}
+              {% set _ns = namespace(chips='') %}
+              {% set _max = (val.limits.max_total if val.limits is mapping and val.limits.max_total is defined else (val.max_total if val.max_total is defined else none)) %}
+              {% if _max is not none %}{% set _ns.chips = 'الحد الأعلى: ' ~ _max %}{% endif %}
+              <div class="lf-svc-card {{ '' if _on else 'is-off' }}">
+                <div class="lf-svc-top">
+                  <span class="lf-svc-ico"><i class="fa-solid fa-{{ service_icons.get(key, 'cube') }}"></i></span>
+                  <span class="lf-svc-name">{{ _name }}</span>
+                  {% if _status == 'active' %}<span class="hub-pill hub-pill--green"><span class="dot"></span>مفعّلة</span>
+                  {% elif _status == 'suspended' %}<span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
+                  {% elif _status == 'expired' %}<span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
+                  {% else %}<span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _stlabel }}</span>{% endif %}
+                </div>
+                <p class="lf-svc-desc">{{ _desc }}</p>
+                <div class="lf-svc-chips">
+                  <span class="lf-svc-chip"><i class="fa-solid fa-{{ 'circle-check' if _on else 'circle-minus' }}"></i> {{ 'متاحة بالكامل' if _on else 'غير متاحة' }}</span>
+                </div>
+                <div class="lf-svc-foot">
+                  <button type="button" class="lf-svc-btn" data-lf-more data-name="{{ _name }}" data-icon="{{ service_icons.get(key,'cube') }}" data-status="{{ _stlabel }}" data-status-kind="{{ 'green' if _on else 'grey' }}" data-desc="{{ _desc }}" data-limits="{{ _ns.chips }}">
+                    <i class="fa-solid fa-circle-info"></i> المزيد
+                  </button>
+                  {% if not _on %}
+                    <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
+                      {{ csrf_token_input() }}
+                      <input type="hidden" name="service_name" value="{{ _name }}">
+                      <button type="submit" class="lf-svc-btn is-req"><i class="fa-solid fa-paper-plane"></i> طلب تفعيل</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}{# end ns_extra.keys #}
+
     {% else %}
       {{ hub.empty("لم يصل عقد خدمات بعد.", sub="اضغط «مزامنة الكل» بالأعلى لتنزيل عقد التشغيل وعرض خدماتك.", icon="shapes") }}
     {% endif %}
