@@ -177,8 +177,9 @@
 {%- set m_reports_api_messages = (path == url_for('radius.rep_api_messages')) -%}
 {%- set m_customer_portals = (path == url_for('radius.customer_portals_admin')) -%}
 
-{# V40 Admin Bridge #}
+{# Admin Bridge #}
 {%- set m_admin_bridge = (path == url_for('radius.admin_bridge')) -%}
+{%- set m_license_file = (path == url_for('radius.license_file')) -%}
 {%- set m_settings = (path == url_for('radius.settings_page')) -%}
 {%- set m_sync = (path == url_for('radius.sync_list')) -%}
 {%- set m_tenants = (path == url_for('radius.tenants_list')) -%}
@@ -206,7 +207,7 @@
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
-{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge -%}
+{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file -%}
 {%- set sec_setup_ops_active = m_setup_wizard_v2 or m_setup_wizard_engineering -%}
 
 {# Standalone Dashboard #}
@@ -498,7 +499,8 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.admin_bridge', 'جسر الإدارة V40', m_admin_bridge) }}
+        {{ sub_item('radius.admin_bridge', 'جسر الإدارة', m_admin_bridge) }}
+        {{ sub_item('radius.license_file', 'ملف التراخيص', m_license_file) }}
         {{ sub_item('radius.wh_settings', 'إشعارات الربط',    m_webhooks) }}
         {{ sub_item('radius.tok_list',    'مفاتيح الواجهة',   m_tokens) }}
         <a class="hb-side-subitem" href="/api/docs" target="_blank">
