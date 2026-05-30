@@ -1,99 +1,392 @@
-{# API tokens list — REBUILT N11 (hub-v2). Backend untouched. #}
+{# API tokens — full rebuild on hub-v2.
+   - Single mega-hero merges title + KPI strip.
+   - One-shot "new token" reveal banner with copy button.
+   - Roomier create form.
+   - Table with built-in client-side pagination (10 rows / page),
+     numbered page links, prev/next, and a results summary.
+   No backend changes. #}
+
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}API Tokens{% endblock %}
+{% block title %}توكنات الواجهة البرمجية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
-{% block page_title %}API Tokens{% endblock %}
+{% block page_title %}توكنات الواجهة البرمجية{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} توكن</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  .tk-page{ display:grid; gap:16px; }
+
+  /* ── Mega-hero: title + KPI in one panel ──────────────────────── */
+  .tk-hero{
+    position:relative;
+    display:grid; gap:14px;
+    padding:18px 20px;
+    border-radius:18px;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .tk-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; flex-wrap:wrap;
+  }
+  .tk-hero-text{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .tk-hero-icon{
+    width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+    display:grid; place-items:center; font-size:18px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .tk-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .tk-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
+  .tk-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:10px;
+  }
+
+  /* ── One-shot new-token reveal ─────────────────────────────────── */
+  .tk-reveal{
+    display:grid; gap:12px;
+    padding:16px;
+    background:linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border:1px solid #bbf7d0;
+    border-radius:14px;
+    color:#14532d;
+  }
+  .tk-reveal-head{ display:flex; align-items:center; gap:10px; font-weight:800; }
+  .tk-reveal-head i{ font-size:16px; }
+  .tk-reveal-warn{ font-size:12.5px; color:#166534; line-height:1.7; }
+  .tk-reveal-token{
+    display:flex; align-items:center; gap:8px;
+    padding:11px 14px;
+    background:#fff;
+    border:1px solid #d1fae5;
+    border-radius:10px;
+    font-family:ui-monospace, Consolas, monospace;
+    font-size:13px; color:var(--hub-text);
+    word-break:break-all; direction:ltr; unicode-bidi:isolate;
+  }
+  .tk-reveal-token code{ flex:1; min-width:0; }
+  .tk-reveal-token button{
+    flex:0 0 auto;
+    border:0; cursor:pointer;
+    padding:6px 10px; border-radius:8px;
+    background:#dcfce7; color:#14532d; font-weight:700; font-size:12px;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .tk-reveal-token button:hover{ background:#bbf7d0; }
+
+  /* ── Create-token form panel ───────────────────────────────────── */
+  .tk-create{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:14px 16px;
+    background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:14px;
+  }
+  .tk-create-icon{
+    width:38px; height:38px; flex:0 0 auto;
+    border-radius:10px;
+    background:#ede9fe; color:#5b21b6;
+    display:grid; place-items:center; font-size:14px;
+  }
+  .tk-create input{
+    flex:1; min-width:200px;
+    padding:10px 12px;
+    border:1px solid var(--hub-border, #cbd5e1);
+    border-radius:10px;
+    font:inherit; font-size:14px;
+    background:#fff; color:var(--hub-text);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .tk-create input:focus{
+    outline:0; border-color:var(--hub-brand, #7c3aed);
+    box-shadow:0 0 0 3px rgba(124,58,237,.18);
+  }
+
+  /* ── Pager (prev / numbered / next + summary) ──────────────────── */
+  .tk-pager{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:12px; flex-wrap:wrap;
+    padding:14px 16px;
+    background:var(--hub-bg-soft, #f8f7fc);
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  .tk-pager-info{ font-size:12.5px; color:var(--hub-text-soft, #475569); font-weight:600; }
+  .tk-pager-info strong{ color:var(--hub-text); }
+  .tk-pager-list{
+    display:inline-flex; gap:4px; align-items:center;
+  }
+  .tk-pager-btn{
+    min-width:32px; height:32px;
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:0 10px; gap:4px;
+    border-radius:8px; cursor:pointer;
+    background:#fff; color:var(--hub-text-soft, #475569);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    font-weight:700; font-size:12.5px;
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  .tk-pager-btn:hover:not([disabled]):not(.is-active){
+    background:#ede9fe; color:#5b21b6; border-color:#ede9fe;
+  }
+  .tk-pager-btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  .tk-pager-btn.is-active{
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; border-color:transparent;
+    box-shadow:0 4px 10px rgba(124,58,237,.32);
+  }
+  .tk-pager-gap{ color:var(--hub-text-mute, #94a3b8); padding:0 4px; user-select:none; }
+
+  /* ── Empty body when filtered/paginated past the end ──────────── */
+  [data-tk-page] tbody tr.is-hidden{ display:none; }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="tk-page">
 
-{{ hub.hero(
-  "API Tokens",
-  subtitle="إدارة توكنات الوصول للواجهة البرمجية — إنشاء، إلغاء، ومراجعة آخر استخدام",
-  icon="key"
-) }}
+  {# ───── Mega-hero ──────────────────────────────────────────── #}
+  {% set _total   = items|length %}
+  {% set _active  = items|rejectattr('revoked')|list|length if items else 0 %}
+  {% set _revoked = items|selectattr('revoked')|list|length if items else 0 %}
 
-{% if new_plain %}
-<div style="margin-bottom:var(--hub-gap-section);padding:14px 16px;font-size:13px;
-            border-radius:var(--hub-r-lg);border:1px solid var(--hub-green);
-            background:var(--hub-green-soft);color:var(--hub-green-ink);line-height:1.7">
-  <div style="font-weight:800;margin-bottom:8px">
-    <i class="fa-solid fa-circle-check"></i> تم إنشاء التوكن — انسخه الآن، لن يُعرض مجددًا
-  </div>
-  <div class="mono" style="background:#fff;border:1px solid var(--hub-border);
-                            padding:11px 14px;border-radius:var(--hub-r-md);
-                            font-size:13px;word-break:break-all;color:var(--hub-text)">
-    {{ new_plain }}
-  </div>
+  <section class="tk-hero">
+    <header class="tk-hero-row">
+      <div class="tk-hero-text">
+        <span class="tk-hero-icon"><i class="fa-solid fa-key"></i></span>
+        <div>
+          <h1 class="tk-hero-title">توكنات الواجهة البرمجية</h1>
+          <div class="tk-hero-sub">إدارة توكنات الوصول للـ API: إنشاء، إلغاء، ومراجعة آخر استخدام.</div>
+        </div>
+      </div>
+    </header>
+    <div class="tk-hero-kpis">
+      {{ hub.kpi("الإجمالي", _total,   icon="key",          variant="brand") }}
+      {{ hub.kpi("نشطة",     _active,  icon="circle-check", variant="green") }}
+      {{ hub.kpi("ملغاة",    _revoked, icon="ban",          variant="red") }}
+    </div>
+  </section>
+
+  {# ───── One-shot new-token reveal ─────────────────────────── #}
+  {% if new_plain %}
+    <div class="tk-reveal">
+      <div class="tk-reveal-head">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>تم إنشاء التوكن — انسخه الآن، لن يُعرض مجددًا.</span>
+      </div>
+      <div class="tk-reveal-token">
+        <code id="tk-new">{{ new_plain }}</code>
+        <button type="button" id="tk-copy">
+          <i class="fa-solid fa-copy"></i> نسخ
+        </button>
+      </div>
+      <div class="tk-reveal-warn">
+        ضع التوكن في مكان آمن (مدير كلمات المرور / vault). إن فُقد، اطلب توكنًا جديدًا — لا توجد طريقة لاستعادته.
+      </div>
+    </div>
+  {% endif %}
+
+  {# ───── Create-token form ─────────────────────────────────── #}
+  <form method="post" class="tk-create">
+    <span class="tk-create-icon"><i class="fa-solid fa-plus"></i></span>
+    <input type="text" name="name" placeholder="اسم التوكن الجديد (مثال: integration-prod)" required>
+    {{ hub.btn("إنشاء توكن", icon="plus", variant="primary", type="submit") }}
+  </form>
+
+  {# ───── Tokens table ──────────────────────────────────────── #}
+  {% if items %}
+    {% call hub.section("التوكنات الموجودة", icon="table-list", meta=_total|string + " توكن", flush=True) %}
+      <div class="hub-table-wrap" style="border:none; border-radius:0" data-tk-page>
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th class="num" style="width:60px">#</th>
+              <th>الاسم</th>
+              <th>بصمة (آخر 12 خانة)</th>
+              <th>الحالة</th>
+              <th>آخر استخدام</th>
+              <th>تاريخ الإنشاء</th>
+              <th style="width:120px">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tk-tbody">
+            {% for t in items %}
+              <tr data-tk-row>
+                <td class="num mono">{{ t.id }}</td>
+                <td><strong>{{ t.name }}</strong></td>
+                <td class="mono small">…{{ t.token_hash[-12:] }}</td>
+                <td>
+                  {% if t.revoked %}
+                    {{ hub.pill("ملغى", variant="red") }}
+                  {% else %}
+                    {{ hub.pill("نشط", variant="green") }}
+                  {% endif %}
+                </td>
+                <td class="mono small">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
+                <td class="mono small">{{ t.created_at[:16] if t.created_at else '—' }}</td>
+                <td>
+                  {% if not t.revoked %}
+                    <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
+                          onsubmit="return confirm('إلغاء التوكن؟ لا يمكن استعادته.')"
+                          style="display:inline; margin:0">
+                      <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
+                        <i class="fa-solid fa-ban"></i> إلغاء
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="hub-text-mute" style="font-size:12px">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {# ───── Pager (only renders if more than 10 rows) ─── #}
+        <div class="tk-pager" id="tk-pager" hidden>
+          <div class="tk-pager-info">
+            <span>عرض</span>
+            <strong id="tk-from">1</strong>–<strong id="tk-to">10</strong>
+            <span>من</span>
+            <strong id="tk-total">{{ _total }}</strong>
+            <span>توكن</span>
+          </div>
+          <nav class="tk-pager-list" aria-label="ترقيم الصفحات">
+            <button type="button" class="tk-pager-btn" data-tk-prev aria-label="السابق">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <span id="tk-pages"></span>
+            <button type="button" class="tk-pager-btn" data-tk-next aria-label="التالي">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+          </nav>
+        </div>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty(
+      "لا توكنات بعد",
+      sub="أنشئ أول توكن من النموذج بالأعلى. التوكنات تستخدم لمصادقة طلبات الواجهة البرمجية.",
+      icon="key"
+    ) }}
+  {% endif %}
+
 </div>
-{% endif %}
 
-{% if items %}
-{% set _active  = items|rejectattr('revoked')|list|length %}
-{% set _revoked = items|selectattr('revoked')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي", items|length, icon="key",          variant="brand") }}
-  {{ hub.kpi("نشطة",     _active,      icon="circle-check", variant="green") }}
-  {{ hub.kpi("ملغاة",    _revoked,     icon="ban",          variant="red") }}
-</div>
-{% endif %}
+<script>
+(() => {
+  /* ── One-shot copy button for the freshly revealed token ── */
+  const copyBtn = document.getElementById("tk-copy");
+  const codeEl  = document.getElementById("tk-new");
+  if (copyBtn && codeEl) {
+    copyBtn.addEventListener("click", async () => {
+      const txt = codeEl.textContent.trim();
+      const old = copyBtn.innerHTML;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(txt);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); document.body.removeChild(ta);
+        }
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        setTimeout(() => { copyBtn.innerHTML = old; }, 1500);
+      } catch (_) {
+        copyBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> فشل';
+        setTimeout(() => { copyBtn.innerHTML = old; }, 1500);
+      }
+    });
+  }
 
-<form method="post" class="hub-filterbar">
-  <input class="hub-input" type="text" name="name" placeholder="اسم التوكن الجديد" required style="flex:1">
-  {{ hub.btn("إنشاء توكن", icon="plus", variant="primary", type="submit", size="sm") }}
-</form>
+  /* ── Client-side pagination: exactly 10 rows / page ── */
+  const PAGE_SIZE = 10;
+  const wrap = document.querySelector("[data-tk-page]");
+  if (!wrap) return;
+  const rows  = Array.from(wrap.querySelectorAll("tbody tr[data-tk-row]"));
+  const pager = document.getElementById("tk-pager");
+  if (!rows.length || !pager) return;
 
-{% if items %}
-{% call hub.section("التوكنات", icon="table-list", meta=items|length|string + " توكن", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="tokens-list">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>الاسم</th>
-          <th>Hash (آخر 12)</th>
-          <th>الحالة</th>
-          <th>آخر استخدام</th>
-          <th>أُنشئ</th>
-          <th style="width:110px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for t in items %}
-        <tr>
-          <td class="num mono">{{ t.id }}</td>
-          <td><strong>{{ t.name }}</strong></td>
-          <td class="mono small">…{{ t.token_hash[-12:] }}</td>
-          <td>
-            {% if t.revoked %}{{ hub.pill("ملغى", variant="red") }}
-            {% else %}{{ hub.pill("نشط", variant="green") }}{% endif %}
-          </td>
-          <td class="mono small">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
-          <td class="mono small">{{ t.created_at[:16] if t.created_at else '—' }}</td>
-          <td>
-            {% if not t.revoked %}
-            <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
-                  onsubmit="return confirm('إلغاء التوكن؟')" style="display:inline">
-              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
-                <i class="fa-solid fa-ban"></i> إلغاء
-              </button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
-{% else %}
-{{ hub.empty(
-  "لا توكنات بعد",
-  sub="أنشئ أول توكن من النموذج بالأعلى. التوكنات تستخدم لمصادقة طلبات الواجهة البرمجية.",
-  icon="key"
-) }}
-{% endif %}
+  const total      = rows.length;
+  const pageCount  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pagesEl    = document.getElementById("tk-pages");
+  const prevBtn    = pager.querySelector("[data-tk-prev]");
+  const nextBtn    = pager.querySelector("[data-tk-next]");
+  const fromEl     = document.getElementById("tk-from");
+  const toEl       = document.getElementById("tk-to");
+  let   currentPage = 1;
 
+  if (pageCount === 1) {
+    pager.hidden = true;
+    return;
+  }
+  pager.hidden = false;
+
+  function buildPageButtons() {
+    pagesEl.innerHTML = "";
+    // Build a compact window: 1 … (cur-1) cur (cur+1) … last
+    const showAround = 1;
+    const windowSet = new Set([1, pageCount, currentPage]);
+    for (let d = 1; d <= showAround; d++) {
+      windowSet.add(currentPage - d);
+      windowSet.add(currentPage + d);
+    }
+    const visible = Array.from(windowSet)
+      .filter(p => p >= 1 && p <= pageCount)
+      .sort((a, b) => a - b);
+
+    let prevPage = 0;
+    visible.forEach(p => {
+      if (prevPage && p - prevPage > 1) {
+        const gap = document.createElement("span");
+        gap.className = "tk-pager-gap";
+        gap.textContent = "…";
+        pagesEl.appendChild(gap);
+      }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tk-pager-btn" + (p === currentPage ? " is-active" : "");
+      b.textContent = String(p);
+      b.setAttribute("aria-label", "الصفحة " + p);
+      if (p === currentPage) b.setAttribute("aria-current", "page");
+      b.addEventListener("click", () => goTo(p));
+      pagesEl.appendChild(b);
+      prevPage = p;
+    });
+  }
+
+  function render() {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end   = start + PAGE_SIZE;
+    rows.forEach((r, i) => r.classList.toggle("is-hidden", i < start || i >= end));
+    if (fromEl) fromEl.textContent = String(start + 1);
+    if (toEl)   toEl.textContent   = String(Math.min(end, total));
+    if (prevBtn) prevBtn.disabled = currentPage === 1;
+    if (nextBtn) nextBtn.disabled = currentPage === pageCount;
+    buildPageButtons();
+  }
+
+  function goTo(p) {
+    currentPage = Math.min(pageCount, Math.max(1, p|0));
+    render();
+  }
+
+  prevBtn?.addEventListener("click", () => goTo(currentPage - 1));
+  nextBtn?.addEventListener("click", () => goTo(currentPage + 1));
+
+  render();
+})();
+</script>
 {% endblock %}
