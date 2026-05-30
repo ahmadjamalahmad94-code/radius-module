@@ -11,6 +11,7 @@ def register_admin_bridge_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/license-file", "license_file", license_file, methods=["GET"])
     bp.add_url_rule("/license-file/config", "license_file_config", license_file_config, methods=["POST"])
     bp.add_url_rule("/license-file/sync", "license_file_sync", license_file_sync, methods=["POST"])
+    bp.add_url_rule("/license-file/service-request", "license_file_service_request", license_file_service_request, methods=["POST"])
 
 
 def _tid() -> int:
@@ -122,6 +123,7 @@ def license_file():
         SNAPSHOT_LICENSE,
         AdminBridgeConfig,
         LicenseAdminSnapshotStore,
+        bridge_setting,
         sanitize_bridge_payload,
     )
     from ..services.license_admin_capacity import CapacityEnforcementService
@@ -144,6 +146,7 @@ def license_file():
         "identity_sync_enabled": _bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ENABLED", "license_admin_bridge.identity_sync_enabled"),
         "identity_sync_on_login": _bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN", "license_admin_bridge.identity_sync_on_login"),
         "worker_enabled": _bridge_flag("HOBERADIUS_ADMIN_BRIDGE_WORKER", "license_admin_bridge.worker_enabled"),
+        "sync_interval_seconds": bridge_setting("license_admin_bridge.sync_interval_seconds", "300"),
     })
     return render_template(
         "radius/license_file.html",
@@ -168,6 +171,8 @@ def license_file_config():
     base_url = (request.form.get("base_url") or "").strip().rstrip("/")
     license_key = (request.form.get("license_key") or "").strip()
     shared_secret = (request.form.get("shared_secret") or "").strip()
+    worker_enabled = bool(request.form.get("worker_enabled"))
+    raw_interval = (request.form.get("sync_interval_seconds") or "300").strip()
 
     if base_url and not base_url.lower().startswith(("http://", "https://")):
         flash("رابط لوحة التراخيص يجب أن يبدأ بـ http:// أو https://.", "error")
@@ -175,12 +180,19 @@ def license_file_config():
     if base_url.lower().startswith("http://") and request.form.get("identity_sync_enabled"):
         flash("مزامنة الهوية وكلمات المرور تحتاج رابط HTTPS للوحة التراخيص.", "error")
         return redirect(url_for("radius.license_file"))
+    try:
+        sync_interval_seconds = max(60, min(86400, int(raw_interval or 300)))
+    except ValueError:
+        flash("فاصل المزامنة يجب أن يكون رقمًا بالثواني، ولا يقل عن 60 ثانية.", "error")
+        return redirect(url_for("radius.license_file"))
 
     updates = {
         "license_admin_bridge.enabled": "1" if request.form.get("enabled") else "0",
         "license_admin_bridge.runtime_contract_sync": "1" if request.form.get("runtime_contract_sync") else "0",
         "license_admin_bridge.identity_sync_enabled": "1" if request.form.get("identity_sync_enabled") else "0",
         "license_admin_bridge.identity_sync_on_login": "1" if request.form.get("identity_sync_on_login") else "0",
+        "license_admin_bridge.worker_enabled": "1" if worker_enabled else "0",
+        "license_admin_bridge.sync_interval_seconds": str(sync_interval_seconds),
     }
     if base_url:
         updates["license_admin_bridge.base_url"] = base_url
@@ -214,6 +226,38 @@ def license_file_config():
         flash("تم حفظ بيانات الربط. شغّل المزامنة الآن ليأخذ الريدياس الترخيص والصلاحيات من لوحة التراخيص.", "success")
     else:
         flash("لا توجد تغييرات في بيانات الربط.", "info")
+    if worker_enabled:
+        try:
+            from app.workers.admin_bridge_sync_worker import start_admin_bridge_sync_worker
+
+            start_admin_bridge_sync_worker()
+        except Exception:  # noqa: BLE001
+            flash("تم الحفظ، لكن تعذّر تشغيل عامل المزامنة الآن. أعد تحميل الصفحة أو راجع حالة الخدمة.", "error")
+    return redirect(url_for("radius.license_file"))
+
+
+def license_file_service_request():
+    """Record an operator's request to activate a contract service and
+    notify the license-panel admin. Safe + self-contained: writes an
+    audit entry only — no engine or RADIUS mutation."""
+    tenant_id = _tid()
+    from ..db.repos import audit_repo
+
+    service_key = (request.form.get("service_key") or "").strip()[:80]
+    service_name = (request.form.get("service_name") or service_key or "خدمة").strip()[:160]
+    note = (request.form.get("note") or "").strip()[:500]
+    if not service_key:
+        flash("لم يتم تحديد الخدمة المطلوبة.", "error")
+        return redirect(url_for("radius.license_file"))
+    audit_repo.record(
+        tenant_id=tenant_id,
+        actor=session.get("admin_name") or session.get("admin_user") or "system",
+        action="license_service_activation_requested",
+        target_type="license_service",
+        target_id=service_key,
+        payload={"service_key": service_key, "service_name": service_name, "note": note},
+    )
+    flash(f"تم إرسال طلب تفعيل «{service_name}» إلى الإدارة. ستتم مراجعته وتحديث عقدك عند الموافقة.", "success")
     return redirect(url_for("radius.license_file"))
 
 
