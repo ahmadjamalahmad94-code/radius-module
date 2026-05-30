@@ -10,6 +10,8 @@ from app.radius.services.card_users_marketplace import (
     CardUsersMarketplaceService,
 )
 
+AUTH = {"Authorization": "Bearer dev-token-please-change"}
+
 
 @pytest.fixture
 def app(monkeypatch, tmp_path):
@@ -116,8 +118,87 @@ def test_route_smoke_for_card_users_and_marketplace(app):
     assert detail_res.status_code == 200
     assert market_res.status_code == 200
     assert "Walk-in Buyer" in users_res.get_data(as_text=True)
-    assert "Card User 360" in detail_res.get_data(as_text=True)
+    assert "Walk-in Buyer" in detail_res.get_data(as_text=True)
+    assert "card-user-purchase-form" in detail_res.get_data(as_text=True)
     assert package["name"] in market_res.get_data(as_text=True)
+
+
+def test_card_users_api_contract_hides_portal_password_hash(app):
+    with app.test_client() as client:
+        created = client.post(
+            "/api/v1/card-users",
+            json={
+                "display_name": "Mobile Buyer",
+                "mobile": "0591111111",
+                "email": "buyer@example.test",
+                "password": "1234",
+            },
+            headers=AUTH,
+        )
+        listed = client.get("/api/v1/card-users", headers=AUTH)
+
+    assert created.status_code == 201
+    payload = created.get_json()["data"]["card_user"]
+    assert payload["display_name"] == "Mobile Buyer"
+    assert payload["has_portal_password"] is True
+    assert "password_hash" not in payload
+
+    assert listed.status_code == 200
+    item = listed.get_json()["data"]["items"][0]
+    assert "password_hash" not in item
+    assert listed.get_json()["data"]["summary"]["users"] == 1
+
+
+def test_card_users_api_recharge_purchase_and_360(app):
+    with app.app_context():
+        plan_id = _plan_id()
+
+    with app.test_client() as client:
+        user_res = client.post(
+            "/api/v1/card-users",
+            json={"display_name": "Portal Buyer", "mobile": "0592222222"},
+            headers=AUTH,
+        )
+        package_res = client.post(
+            "/api/v1/card-marketplace/packages",
+            json={
+                "name": "باقة 8 ساعات",
+                "plan_id": plan_id,
+                "price": "5.00",
+                "duration_minutes": 480,
+                "speed_down_kbps": 2048,
+                "speed_up_kbps": 512,
+                "currency": "ILS",
+            },
+            headers=AUTH,
+        )
+        user_id = user_res.get_json()["data"]["card_user"]["id"]
+        package_id = package_res.get_json()["data"]["package"]["id"]
+
+        recharge = client.post(
+            f"/api/v1/card-users/{user_id}/recharge",
+            json={"amount": "5.00"},
+            headers=AUTH,
+        )
+        purchase = client.post(
+            f"/api/v1/card-users/{user_id}/purchase",
+            json={"package_id": package_id},
+            headers=AUTH,
+        )
+        profile = client.get(f"/api/v1/card-users/{user_id}/360", headers=AUTH)
+
+    assert user_res.status_code == 201
+    assert package_res.status_code == 201
+    assert recharge.status_code == 201
+    assert purchase.status_code == 201
+    assert profile.status_code == 200
+    data = profile.get_json()["data"]
+    assert data["card_user"]["display_name"] == "Portal Buyer"
+    assert "password_hash" not in data["card_user"]
+    assert data["wallet"]["balance"] == "0.00"
+    assert data["purchases"][0]["status"] == "completed"
+    assert data["cards"][0]["username"].startswith("mp")
+    assert data["messages"][0]["message"] == "لم يتم ربط مزود الرسائل بعد."
 
 
 def test_web_purchase_action_deducts_wallet(app):
@@ -136,10 +217,11 @@ def test_web_purchase_action_deducts_wallet(app):
             data={"_csrf_token": "card-csrf", "package_id": package["id"]},
             follow_redirects=True,
         )
-        html = res.get_data(as_text=True)
+    html = res.get_data(as_text=True)
 
     assert res.status_code == 200
-    assert "owned-cards-table" in html
+    assert "mp" in html
+    assert "u360-status--fresh" in html
     with app.app_context():
         wallet = CardUsersMarketplaceService(tenant_id=1).card_user_360(user["id"])["wallet"]
     assert wallet["balance"] == "0.00"
