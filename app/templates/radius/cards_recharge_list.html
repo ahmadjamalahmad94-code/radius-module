@@ -61,6 +61,34 @@
                0 14px 32px rgba(15,23,42,.08);
   }
 
+  /* ── Mega-hero: title + action + quick-stats in ONE panel ── */
+  .rc-hero{
+    position:relative; display:grid; gap:14px;
+    padding:18px 20px; margin-bottom:14px; border-radius:18px;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(8,145,178,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #f0fdff 0%, #fff 100%);
+    border:1px solid #cbd5e1;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 2px 6px rgba(15,23,42,.06), 0 14px 32px rgba(15,23,42,.08);
+    overflow:hidden;
+  }
+  .rc-hero-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .rc-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .rc-hero-icon{
+    width:46px; height:46px; flex:0 0 auto; border-radius:13px;
+    background:linear-gradient(135deg,#0891b2,#0e7490); color:#fff;
+    display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(8,145,178,.32);
+  }
+  .rc-hero-title{ margin:0; font-size:20px; font-weight:800; color:#0f172a; }
+  .rc-hero-sub{ margin-top:3px; font-size:13px; color:#475569; line-height:1.7; max-width:760px; }
+  .rc-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .rc-hero-kpis{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:10px;
+    padding-top:16px; border-top:1px solid #e2e8f0;
+  }
+  @media (max-width:760px){ .rc-hero-actions{ flex:1 1 100%; } }
+
   /* ── Chip grid — 4 per row on desktop, fewer as the width shrinks ── */
   .rc-grid{
     display:grid;
@@ -223,20 +251,27 @@
 {% block content %}
 <div data-cards-batches-page>
 
-{{ hub.hero(
-  "بطاقات الشحن المسبق",
-  subtitle="ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) فتُضاف قيمتها إلى رصيد محفظته.",
-  icon="wallet",
-  actions_html=hub.btn("توليد دفعة جديدة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary")
-) }}
-
-{% call hub.section("نظرة سريعة", icon="chart-column") %}
-  <div class="hub-kpi-grid">
-    {{ hub.kpi("إجمالي الحزم", total, icon="layer-group", variant="brand", sub="حزمة شحن محفوظة") }}
-    {{ hub.kpi("معروضة", batches|length, icon="boxes-stacked", variant="blue", sub="في هذه الصفحة") }}
-    {{ hub.kpi("نوع الخدمة", "بوابة عميل", icon="wallet", variant="green", sub="تشحن محفظة الزبون") }}
+{# ───── Unified mega-hero: title + action + quick-stats ── #}
+<section class="rc-hero">
+  <div class="rc-hero-row">
+    <div class="rc-hero-id">
+      <span class="rc-hero-icon"><i class="fa-solid fa-wallet"></i></span>
+      <div>
+        <h1 class="rc-hero-title">بطاقات الشحن المسبق</h1>
+        <div class="rc-hero-sub">ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) فتُضاف قيمتها إلى رصيد محفظته.</div>
+      </div>
+    </div>
+    <div class="rc-hero-actions">
+      {{ hub.btn("توليد دفعة جديدة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}
+    </div>
   </div>
-{% endcall %}
+
+  <div class="rc-hero-kpis">
+    {{ hub.kpi("إجمالي الحزم", total, icon="layer-group",   variant="brand", sub="حزمة شحن محفوظة") }}
+    {{ hub.kpi("معروضة",       batches|length, icon="boxes-stacked", variant="blue", sub="في هذه الصفحة") }}
+    {{ hub.kpi("نوع الخدمة",   "بوابة عميل", icon="wallet",   variant="green", sub="تشحن محفظة الزبون") }}
+  </div>
+</section>
 
 {% call hub.section("الحزم المحفوظة", icon="layer-group", meta=batches|length ~ " حزمة") %}
 
