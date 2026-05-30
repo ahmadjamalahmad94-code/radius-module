@@ -15,6 +15,27 @@
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
     gap:14px;
+    align-items:stretch;
+  }
+  /* Force both sections in the 2-col row to share the same height,
+     and let their body fill the leftover space so empty-states and
+     short content don't leave a stub column. */
+  .ab-grid-2 > .hub-section{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+  .ab-grid-2 > .hub-section > .hub-section-body{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+  }
+  /* When the body holds only an empty-state, centre it vertically. */
+  .ab-grid-2 > .hub-section > .hub-section-body > .hub-empty{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
   }
 
   /* ── Numbered "what does this page do" list ─────────────────────── */
