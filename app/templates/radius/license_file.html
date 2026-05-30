@@ -226,6 +226,53 @@
       row-gap:8px;
     }
   }
+
+  /* ── Services as clean cards (no tall narrow column) ───────────── */
+  .lf-svc-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:12px;
+  }
+  .lf-svc-card{
+    display:grid; gap:10px;
+    padding:14px 15px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:12px;
+    background:var(--hub-bg-card, #fff);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .lf-svc-card:hover{ border-color:#ede9fe; box-shadow:0 4px 12px rgba(124,58,237,.08); }
+  .lf-svc-card.is-off{ opacity:.72; background:var(--hub-bg-soft, #f8fafc); }
+  .lf-svc-top{ display:flex; align-items:center; gap:10px; }
+  .lf-svc-ico{
+    width:38px; height:38px; flex:0 0 auto; border-radius:10px;
+    background:#ede9fe; color:#5b21b6; display:grid; place-items:center; font-size:15px;
+  }
+  .lf-svc-card.is-off .lf-svc-ico{ background:#eef2f7; color:#94a3b8; }
+  .lf-svc-name{ flex:1; min-width:0; font-weight:900; color:var(--hub-text, #0f172a); font-size:14px; line-height:1.35; }
+  .lf-svc-desc{ color:var(--hub-text-soft, #475569); font-size:12.5px; line-height:1.7; margin:0; }
+  .lf-svc-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .lf-svc-chip{
+    display:inline-flex; align-items:center; gap:5px; padding:5px 9px; border-radius:999px;
+    background:var(--hub-bg-soft, #f8fafc); border:1px solid var(--hub-border-soft, #e2e8f0);
+    color:var(--hub-text, #0f172a); font-size:11.5px; font-weight:800;
+  }
+  .lf-svc-chip i{ color:#7c3aed; font-size:10px; }
+
+  /* ── Limits as compact stat tiles ──────────────────────────────── */
+  .lf-lim-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;
+  }
+  .lf-lim-tile{
+    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    border:1px solid var(--hub-border-soft, #e2e8f0); border-radius:12px; background:var(--hub-bg-card, #fff);
+  }
+  .lf-lim-tile .ico{
+    width:38px; height:38px; flex:0 0 auto; border-radius:10px;
+    background:#eff6ff; color:#2563eb; display:grid; place-items:center; font-size:15px;
+  }
+  .lf-lim-tile .lbl{ font-size:11.5px; color:var(--hub-text-mute, #94a3b8); font-weight:800 }
+  .lf-lim-tile .val{ font-size:19px; font-weight:900; color:var(--hub-text, #0f172a); font-variant-numeric:tabular-nums }
 </style>
 {% endblock %}
 
@@ -304,6 +351,18 @@
   'locations': 'المواقع',
   'vpn_users': 'مستخدمي الشبكة الخاصة'
 } %}
+{% set service_icons = {
+  'ip_change_vpn': 'shield-halved', 'cards': 'id-card', 'cards_recharge': 'wallet',
+  'communications': 'paper-plane', 'customer_portal': 'circle-user', 'customer_support': 'headset',
+  'distributors': 'people-group', 'finance_center': 'coins', 'integration_bridge': 'link',
+  'integration_tokens': 'key', 'subscribers': 'users', 'nas': 'network-wired',
+  'admins': 'user-shield', 'plans': 'cubes', 'reports': 'chart-column'
+} %}
+{% set limit_icons = {
+  'subscribers': 'users', 'nas': 'network-wired', 'admins': 'user-shield',
+  'cards': 'id-card', 'card_batches': 'layer-group', 'plans': 'cubes',
+  'routers': 'wifi', 'locations': 'location-dot', 'vpn_users': 'shield-halved'
+} %}
 <div class="lf-page">
 
   {# ───── Unified mega-hero: title + sync actions + KPI strip ── #}
@@ -355,7 +414,7 @@
   {# ───── Explanation card ──────────────────────────────────── #}
   {% call hub.section("ماذا تعرض هذه الصفحة؟", icon="circle-question") %}
     <ol class="lf-help">
-      <li><strong>الاتصال مع لوحة التراخيص.</strong> الرابط، مفتاح الترخيص، وسر التوقيع — تراها مختصرة هنا لحماية البيانات الحساسة.</li>
+      <li><strong>الاتصال مع لوحة التراخيص.</strong> مفتاح الترخيص وسر التوقيع محفوظان بأمان ولا يظهران كاملين. الربط يتم تلقائيًا بلوحة التراخيص الرسمية.</li>
       <li><strong>عقد التشغيل المستلم.</strong> آخر عقد تم تنزيله ويحدّد الخدمات المسموحة مثل الكروت وخدمة تغيير العنوان والحدود التي يطبّقها الريدياس.</li>
       <li><strong>مزامنة الهوية.</strong> تنقل مستخدمي اللوحة إلى نظام تسجيل دخول الريدياس عبر اتصال آمن فقط.</li>
       <li><strong>المزامنة اليدوية.</strong> أزرار آمنة لتشغيل المزامنة بشكل فردي أو مزدوج عند الحاجة.</li>
@@ -385,11 +444,6 @@
     </p>
     <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
       {{ csrf_token_input() }}
-      <div class="hub-field full">
-        <label>رابط لوحة التراخيص</label>
-        <input class="hub-input ltr" name="base_url" value="{{ config_form.base_url }}" placeholder="https://hoberadius.com">
-        <div class="hub-field-hint">استخدم رابط لوحة التراخيص. مزامنة الهوية وكلمات المرور تحتاج اتصالًا آمنًا.</div>
-      </div>
       <div class="hub-field">
         <label>مفتاح الترخيص من صفحة العميل</label>
         <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'الصق مفتاح الترخيص هنا' }}">
@@ -435,10 +489,6 @@
   {# ───── Connection settings (single full-width panel) ─────── #}
   {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
     <div class="hub-detail-list">
-      <div>
-        <span>رابط اللوحة</span>
-        <strong class="mono">{{ config_view.base_url or "—" }}</strong>
-      </div>
       <div>
         <span>مفتاح الترخيص</span>
         <strong class="mono">{{ config_view.license_key or "—" }}</strong>
@@ -523,76 +573,85 @@
   {% set _svc = contract.services if contract.services is defined else {} %}
   {% set _lim = contract.limits   if contract.limits   is defined else {} %}
 
-  {% call hub.section("الخدمات والحدود التي يطبّقها الريدياس", icon="list-check") %}
-    <div class="lf-grid-2">
+  {# ── Services the contract activates ── #}
+  {% call hub.section("الخدمات المفعّلة في عقدك", icon="shapes",
+       meta=(_svc.values()|selectattr('status','equalto','active')|list|length ~ ' مفعّلة من ' ~ _svc|length) if _svc else '') %}
+    <p class="card-intro" style="margin:0 0 14px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
+      هذه قائمة بالخدمات التي يسمح بها ترخيصك. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها التفصيلية كما استلمها الريدياس من عقد التشغيل.
+    </p>
+    {% if _svc %}
+      <div class="lf-svc-grid">
+        {% for key, val in _svc.items() %}
+          {% set _status = val.status|default('disabled') %}
+          {% set _on = (_status == 'active') %}
+          <div class="lf-svc-card {{ '' if _on else 'is-off' }}">
+            <div class="lf-svc-top">
+              <span class="lf-svc-ico"><i class="fa-solid fa-{{ service_icons.get(key, 'shapes') }}"></i></span>
+              <span class="lf-svc-name">{{ service_labels.get(key, key.replace('_',' ')|title) }}</span>
+              {% if _status == 'active' %}
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعّلة</span>
+              {% elif _status == 'suspended' %}
+                <span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
+              {% elif _status == 'expired' %}
+                <span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
+              {% else %}
+                <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ status_labels.get(_status, 'معطَّلة') }}</span>
+              {% endif %}
+            </div>
 
-      <div>
-        <div class="lf-subhead"><i class="fa-solid fa-shapes"></i> الخدمات</div>
-        {% if _svc %}
-          <div class="hub-detail-list">
-            {% for key, val in _svc.items() %}
-              {% set _status = val.status|default('—') %}
-              <div>
-                <span>
-                  <span class="lf-service-name">{{ service_labels.get(key, 'خدمة ضمن العقد') }}</span>
-                  <span class="lf-service-desc">{{ service_descriptions.get(key, 'صلاحية خدمية مستلمة من لوحة التراخيص ويطبّقها الريدياس حسب العقد.') }}</span>
-                  <span class="lf-service-meta">
-                    {% if key == 'ip_change_vpn' %}
-                      {% if val.download_mbps is defined %}<span class="lf-service-chip">سرعة التحميل: {{ val.download_mbps }} ميجابت/ثانية</span>{% endif %}
-                      {% if val.upload_mbps is defined %}<span class="lf-service-chip">سرعة الرفع: {{ val.upload_mbps }} ميجابت/ثانية</span>{% endif %}
-                      {% if val.max_vpn_users is defined %}<span class="lf-service-chip">مستخدمي الشبكة الخاصة: {{ val.max_vpn_users }}</span>{% endif %}
-                      {% if val.max_locations is defined %}<span class="lf-service-chip">المواقع: {{ val.max_locations }}</span>{% endif %}
-                    {% elif val.limits is mapping and val.limits.max_total is defined %}
-                      <span class="lf-service-chip">الحد الأعلى: {{ val.limits.max_total }}</span>
-                    {% elif val.max_total is defined %}
-                      <span class="lf-service-chip">الحد الأعلى: {{ val.max_total }}</span>
-                    {% endif %}
-                  </span>
-                </span>
-                <strong>
-                  {% if _status == 'active' %}
-                    <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
-                  {% elif _status == 'suspended' %}
-                    <span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
-                  {% elif _status == 'expired' %}
-                    <span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
-                  {% elif _status == 'disabled' %}
-                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>معطَّلة</span>
-                  {% else %}
-                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ status_labels.get(_status, 'غير معروفة') }}</span>
-                  {% endif %}
-                </strong>
+            {% if service_descriptions.get(key) %}
+              <p class="lf-svc-desc">{{ service_descriptions.get(key) }}</p>
+            {% endif %}
+
+            {# Detailed limits per service #}
+            {% set _chips = [] %}
+            {% if key == 'ip_change_vpn' %}
+              <div class="lf-svc-chips">
+                {% if val.download_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-download"></i> تحميل {{ val.download_mbps }} م.ب/ث</span>{% endif %}
+                {% if val.upload_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-upload"></i> رفع {{ val.upload_mbps }} م.ب/ث</span>{% endif %}
+                {% if val.max_vpn_users is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-users"></i> {{ val.max_vpn_users }} مستخدم</span>{% endif %}
+                {% if val.max_locations is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-location-dot"></i> {{ val.max_locations }} موقع</span>{% endif %}
               </div>
-            {% endfor %}
+            {% else %}
+              {% set _max = (val.limits.max_total if val.limits is mapping and val.limits.max_total is defined else (val.max_total if val.max_total is defined else none)) %}
+              {% if _max is not none %}
+                <div class="lf-svc-chips">
+                  <span class="lf-svc-chip"><i class="fa-solid fa-gauge-high"></i> الحد الأعلى: {{ _max }}</span>
+                </div>
+              {% else %}
+                <div class="lf-svc-chips">
+                  <span class="lf-svc-chip"><i class="fa-solid fa-{{ 'circle-check' if _on else 'circle-minus' }}"></i> {{ 'متاحة بالكامل' if _on else 'غير متاحة' }}</span>
+                </div>
+              {% endif %}
+            {% endif %}
           </div>
-        {% else %}
-          {{ hub.empty("لم يصل عقد خدمات بعد.", sub="شغّل مزامنة عقد التشغيل لرؤية الخدمات.", icon="shapes") }}
-        {% endif %}
+        {% endfor %}
       </div>
+    {% else %}
+      {{ hub.empty("لم يصل عقد خدمات بعد.", sub="اضغط «مزامنة الكل» بالأعلى لتنزيل عقد التشغيل وعرض خدماتك.", icon="shapes") }}
+    {% endif %}
+  {% endcall %}
 
-      <div>
-        <div class="lf-subhead"><i class="fa-solid fa-ruler-combined"></i> الحدود</div>
-        {% if _lim %}
-          <div class="hub-detail-list">
-            {% for key, val in _lim.items() %}
-              <div>
-                <span>{{ limit_labels.get(key, 'حد تشغيلي') }}</span>
-                <strong class="num mono">
-                  {% if val is mapping and val.max_total is defined %}
-                    {{ val.max_total }}
-                  {% else %}
-                    {{ val }}
-                  {% endif %}
-                </strong>
-              </div>
-            {% endfor %}
+  {# ── Limits the contract enforces ── #}
+  {% call hub.section("حدود الاستخدام المسموحة", icon="ruler-combined", meta=(_lim|length ~ ' حد') if _lim else '') %}
+    <p class="card-intro" style="margin:0 0 14px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
+      أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، كروت…). يطبّقها الريدياس تلقائيًا.
+    </p>
+    {% if _lim %}
+      <div class="lf-lim-grid">
+        {% for key, val in _lim.items() %}
+          <div class="lf-lim-tile">
+            <span class="ico"><i class="fa-solid fa-{{ limit_icons.get(key, 'ruler-combined') }}"></i></span>
+            <div>
+              <div class="lbl">{{ limit_labels.get(key, key.replace('_',' ')|title) }}</div>
+              <div class="val">{{ val.max_total if val is mapping and val.max_total is defined else val }}</div>
+            </div>
           </div>
-        {% else %}
-          {{ hub.empty("لم تصل حدود بعد.", sub="شغّل مزامنة عقد التشغيل لرؤية الحدود.", icon="ruler-combined") }}
-        {% endif %}
+        {% endfor %}
       </div>
-
-    </div>
+    {% else %}
+      {{ hub.empty("لم تصل حدود بعد.", sub="ستظهر هنا بعد مزامنة عقد التشغيل.", icon="ruler-combined") }}
+    {% endif %}
   {% endcall %}
 
 </div>
