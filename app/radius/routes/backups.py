@@ -29,7 +29,9 @@ def _actor() -> str:
 
 
 def _restore_enabled() -> bool:
-    return str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_ENABLED", "")).strip().lower() in {"1", "true", "yes", "on"}
+    # In-app restore is available by default (commercial deployments must not
+    # need terminal access). Set HOBERADIUS_LOCAL_RESTORE_DISABLED=1 to hard-off.
+    return str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}
 
 
 def backups():
@@ -93,10 +95,13 @@ def backups_download(name: str):
 
 def backups_restore():
     if not _restore_enabled():
-        flash("الاستعادة داخل التطبيق معطّلة. فعّل HOBERADIUS_LOCAL_RESTORE_ENABLED أولاً.", "error")
+        flash("الاستعادة داخل التطبيق معطّلة على هذا الخادم.", "error")
+        return redirect(url_for("radius.backups"))
+    if (request.form.get("ack") or "").strip() != "1":
+        flash("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية.", "error")
         return redirect(url_for("radius.backups"))
     if (request.form.get("confirm") or "").strip().upper() != "RESTORE":
-        flash("لإتمام الاستعادة يجب كتابة كلمة التأكيد بشكل صحيح.", "error")
+        flash("لإتمام الاستعادة يجب كتابة كلمة التأكيد RESTORE بشكل صحيح.", "error")
         return redirect(url_for("radius.backups"))
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().restore_local_backup(tenant_id=_tid(), actor=_actor(), name=name)

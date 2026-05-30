@@ -1724,9 +1724,9 @@ class OperationsService:
         """
         from datetime import datetime
 
-        if str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_ENABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}:
+        if str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() in {"1", "true", "yes", "on"}:
             return {"ok": False, "code": "restore_disabled",
-                    "message": "الاستعادة داخل التطبيق معطّلة. فعّل HOBERADIUS_LOCAL_RESTORE_ENABLED أولاً."}
+                    "message": "الاستعادة داخل التطبيق معطّلة على هذا الخادم."}
 
         source = self.resolve_local_backup_path(name=name)
         if not source:

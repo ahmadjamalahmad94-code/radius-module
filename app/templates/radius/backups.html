@@ -21,6 +21,9 @@
   .bk-dlg-foot{ padding:14px 20px; border-top:1px solid #e2e8f0; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
   .bk-conf-input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:14px; text-align:center; letter-spacing:2px; }
   .bk-conf-input:focus{ outline:0; border-color:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,.18); }
+  .bk-ack{ display:flex; align-items:flex-start; gap:9px; padding:11px 12px; border-radius:10px; background:#fef2f2; border:1px solid #fecaca; cursor:pointer; }
+  .bk-ack input{ width:17px; height:17px; margin-top:1px; flex:0 0 auto; accent-color:#dc2626; }
+  .bk-ack span{ font-size:12.5px; line-height:1.7; color:#991b1b; font-weight:700; }
 </style>
 {% endblock %}
 
@@ -66,8 +69,8 @@
   {% if not restore_enabled %}
     <div class="hub-flash hub-flash--warning" style="margin-bottom:14px">
       <i class="fa-solid fa-lock"></i>
-      الاستعادة داخل التطبيق <strong>معطّلة لأسباب أمان</strong>. لتفعيلها مؤقتًا اضبط متغيّر البيئة
-      <span class="mono">HOBERADIUS_LOCAL_RESTORE_ENABLED=1</span> ثم أعد التشغيل. التنزيل متاح دائمًا.
+      الاستعادة داخل التطبيق <strong>معطّلة على هذا الخادم</strong> (تم ضبط
+      <span class="mono">HOBERADIUS_LOCAL_RESTORE_DISABLED=1</span>). التنزيل متاح دائمًا.
     </div>
   {% else %}
     <div class="hub-flash hub-flash--info" style="margin-bottom:14px">
@@ -171,15 +174,19 @@
         <div class="bk-dlg-title">تأكيد استعادة النسخة</div>
       </div>
       <div class="bk-dlg-body">
-        <p>سيتم <strong>استبدال قاعدة البيانات الحالية بالكامل</strong> بمحتوى هذه النسخة. تُؤخذ نسخة احترازية تلقائيًا قبل التنفيذ، وتُسجّل العملية في سجل التدقيق.</p>
+        <p>سيتم <strong>استبدال قاعدة البيانات الحالية بالكامل</strong> بمحتوى هذه النسخة، وستفقد أي بيانات أُضيفت بعد تاريخ هذه النسخة. تُؤخذ نسخة احترازية تلقائيًا قبل التنفيذ، وتُسجّل العملية في سجل التدقيق.</p>
         <div class="bk-dlg-target" id="bk-target">—</div>
-        <p>اكتب <strong>RESTORE</strong> للتأكيد:</p>
+        <label class="bk-ack">
+          <input type="checkbox" name="ack" value="1" id="bk-ack">
+          <span>أُقرّ بأنني أفهم أن هذا الإجراء سيستبدل قاعدة البيانات الحالية ولا يمكن التراجع عنه إلا عبر النسخة الاحترازية.</span>
+        </label>
+        <p style="margin:4px 0 0">اكتب <strong>RESTORE</strong> للتأكيد النهائي:</p>
         <input type="hidden" name="name" id="bk-name" value="">
-        <input class="bk-conf-input" type="text" name="confirm" autocomplete="off" placeholder="RESTORE">
+        <input class="bk-conf-input" type="text" name="confirm" id="bk-confirm" autocomplete="off" placeholder="RESTORE">
       </div>
       <div class="bk-dlg-foot">
         <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-bk-close>إلغاء</button>
-        <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm">
+        <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" id="bk-submit" disabled style="opacity:.5;pointer-events:none">
           <i class="fa-solid fa-rotate-left"></i> تنفيذ الاستعادة
         </button>
       </div>
@@ -191,8 +198,24 @@
   var modal = document.getElementById('bk-modal');
   var nameField = document.getElementById('bk-name');
   var target = document.getElementById('bk-target');
-  function open(name){ if(!modal) return; nameField.value = name; target.textContent = name; modal.classList.add('is-open'); }
+  var ack = document.getElementById('bk-ack');
+  var confirmInput = document.getElementById('bk-confirm');
+  var submit = document.getElementById('bk-submit');
+  function refresh(){
+    var ok = ack && ack.checked && confirmInput && confirmInput.value.trim().toUpperCase() === 'RESTORE';
+    if(submit){ submit.disabled = !ok; submit.style.opacity = ok ? '1' : '.5'; submit.style.pointerEvents = ok ? 'auto' : 'none'; }
+  }
+  function open(name){
+    if(!modal) return;
+    nameField.value = name; target.textContent = name;
+    if(ack) ack.checked = false;
+    if(confirmInput) confirmInput.value = '';
+    refresh();
+    modal.classList.add('is-open');
+  }
   function close(){ if(modal) modal.classList.remove('is-open'); }
+  if(ack) ack.addEventListener('change', refresh);
+  if(confirmInput) confirmInput.addEventListener('input', refresh);
   document.addEventListener('click', function(e){
     var b = e.target.closest('[data-bk-restore]');
     if(b){ open(b.getAttribute('data-name') || ''); return; }
