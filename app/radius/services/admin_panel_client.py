@@ -4,7 +4,7 @@ The client is deliberately passive:
 - no calls during app startup
 - no entitlement enforcement
 - no RADIUS/auth/accounting mutation
-- no backup/restore/service activation behavior
+- no direct backup/restore/service activation mutation
 - all HTTP I/O is opt-in and mockable
 """
 from __future__ import annotations
@@ -33,6 +33,7 @@ IDENTITY_SYNC_PATH = "/api/integration/hoberadius/identity-sync"
 RUNTIME_CONTRACT_PATH = "/api/integration/hoberadius/runtime-contract"
 CAPACITY_CONTRACT_PATH = "/api/integration/hoberadius/capacity-contract"
 CUSTOMER_USER_PASSWORD_CHANGE_PATH = "/api/integration/hoberadius/customer-users/password-change"
+CUSTOMER_SERVICE_REQUEST_PATH = "/api/integration/hoberadius/service-requests"
 INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
@@ -493,6 +494,28 @@ class AdminPanelClient:
             "new_password": str(new_password or ""),
         })
         return self._post_bridge_payload(path=CUSTOMER_USER_PASSWORD_CHANGE_PATH, payload=payload)
+
+    def post_customer_service_request(
+        self,
+        *,
+        service_key: str,
+        request_type: str = "activation",
+        notes: str = "",
+        desired_limits: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {
+                "ok": False,
+                "status": "https_required",
+                "error": {"code": "https_required", "message": "طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS."},
+            }
+        payload = self._license_check_payload({
+            "service_key": str(service_key or "").strip(),
+            "request_type": str(request_type or "activation").strip(),
+            "notes": str(notes or "").strip(),
+            "desired_limits": desired_limits or {},
+        })
+        return self._post_bridge_payload(path=CUSTOMER_SERVICE_REQUEST_PATH, payload=payload)
 
     def post_instance_heartbeat(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         source_url = (

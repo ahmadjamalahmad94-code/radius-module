@@ -252,10 +252,11 @@ def license_file_config():
 
 def license_file_service_request():
     """Record an operator's request to activate a contract service and
-    notify the license-panel admin. Safe + self-contained: writes an
-    audit entry only — no engine or RADIUS mutation."""
+    notify the license-panel admin. Safe + self-contained: sends a signed
+    request to the license panel and never mutates local RADIUS runtime."""
     tenant_id = _tid()
     from ..db.repos import audit_repo
+    from ..services.admin_panel_client import AdminPanelClient
 
     service_name = (request.form.get("service_name") or "خدمة").strip()[:160]
     service_key = (request.form.get("service_key") or service_name).strip()[:80]
@@ -271,7 +272,20 @@ def license_file_service_request():
         target_id=service_key,
         payload={"service_key": service_key, "service_name": service_name, "note": note},
     )
-    flash(f"تم إرسال طلب تفعيل «{service_name}» إلى الإدارة. ستتم مراجعته وتحديث عقدك عند الموافقة.", "success")
+    result = AdminPanelClient().post_customer_service_request(
+        service_key=service_key,
+        request_type="activation",
+        notes=note or f"طلب تفعيل من صفحة ملف التراخيص في الريدياس: {service_name}",
+    )
+    if result.get("ok"):
+        response = result.get("response") or {}
+        service_request = response.get("service_request") if isinstance(response, dict) else {}
+        reference = service_request.get("reference") if isinstance(service_request, dict) else ""
+        suffix = f" رقم الطلب: {reference}" if reference else ""
+        flash(f"تم إرسال طلب تفعيل «{service_name}» إلى لوحة التراخيص.{suffix} ستتم مراجعته وتحديث عقدك عند الموافقة.", "success")
+    else:
+        status = _sync_status_label(result.get("status"))
+        flash(f"تعذر إرسال الطلب إلى لوحة التراخيص: {status}. تأكد من رابط HTTPS وسر الربط ثم أعد المحاولة.", "error")
     return redirect(url_for("radius.license_file"))
 
 

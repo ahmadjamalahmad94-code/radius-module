@@ -217,6 +217,32 @@ def test_missing_env_or_disabled_bridge_disables_remote_fetch_safely(app_db):
     assert transport.calls == []
 
 
+def test_post_customer_service_request_sends_signed_ticket_payload(app_db):
+    from app.radius.services.admin_panel_client import AdminPanelClient, sign_admin_bridge_payload
+
+    transport = MockTransport({
+        "ok": True,
+        "status": "pending",
+        "service_request": {"reference": "SR-ABC12345"},
+    })
+
+    result = AdminPanelClient(config=_enabled_config(), transport=transport).post_customer_service_request(
+        service_key="cards",
+        request_type="activation",
+        notes="طلب تفعيل من الريدياس",
+        desired_limits={"generate_per_batch": 100},
+    )
+
+    assert result["ok"] is True
+    assert result["status"] == "pending"
+    assert transport.calls[0]["url"] == "https://admin.example.test/api/integration/hoberadius/service-requests"
+    payload = transport.calls[0]["json_body"]
+    assert payload["service_key"] == "cards"
+    assert payload["request_type"] == "activation"
+    assert payload["desired_limits"]["generate_per_batch"] == 100
+    assert payload["signature"] == sign_admin_bridge_payload(payload, "shared-secret-value")
+
+
 def test_env_config_clamps_timeout_retry_and_prefers_hoberadius_license(monkeypatch):
     from app.radius.services.admin_panel_client import AdminBridgeConfig
 
