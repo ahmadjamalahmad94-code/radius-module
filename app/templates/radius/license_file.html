@@ -158,24 +158,30 @@
 {% block content %}
 <div class="lf-page">
 
-  {# ───── Hero (clean — no inline forms) ─────────────────────── #}
+  {# ───── Hero (clean — sync trigger lives below as a dedicated bar) ── #}
   {{ hub.hero(
     "ملف التراخيص",
     subtitle="يعرض اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل، آخر مزامنة هوية، والحدود التي يطبّقها runtime محليًا.",
     icon="file-shield"
   ) }}
 
-  {# ───── Sync action bar (replaces buggy actions_html) ─────── #}
+  {# ───── Sync action bar — three sync triggers in one panel ─── #}
   <div class="lf-sync-bar">
     <span class="lf-sync-bar-icon"><i class="fa-solid fa-rotate"></i></span>
     <div class="lf-sync-bar-text">
       <div class="lf-sync-bar-title">مزامنة الآن</div>
-      <div class="lf-sync-bar-sub">اسحب أحدث عقد تشغيل وأحدث مزامنة هوية من لوحة التراخيص دفعة واحدة.</div>
+      <div class="lf-sync-bar-sub">اختر نوع المزامنة — كل عملية تُسجَّل في سجل التدقيق.</div>
     </div>
-    <form method="post" action="{{ url_for('radius.license_file_sync') }}">
+    <form method="post" action="{{ url_for('radius.license_file_sync') }}" class="lf-sync-form">
       {{ csrf_token_input() }}
       <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit">
-        <i class="fa-solid fa-rotate"></i> مزامنة الاثنين الآن
+        <i class="fa-solid fa-arrows-rotate"></i> الاثنين معًا
+      </button>
+      <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit">
+        <i class="fa-solid fa-file-contract"></i> عقد التشغيل
+      </button>
+      <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit">
+        <i class="fa-solid fa-users-gear"></i> الهوية
       </button>
     </form>
   </div>
@@ -225,68 +231,46 @@
     {% endcall %}
   {% endif %}
 
-  {# ───── Connection settings + manual triggers ─────────────── #}
-  <div class="lf-grid-2">
-
-    {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
-      <div class="hub-detail-list">
-        <div>
-          <span>رابط اللوحة</span>
-          <strong class="mono">{{ config_view.base_url or "—" }}</strong>
-        </div>
-        <div>
-          <span>مفتاح الترخيص</span>
-          <strong class="mono">{{ config_view.license_key or "—" }}</strong>
-        </div>
-        <div>
-          <span>سر التوقيع</span>
-          <strong class="mono">{{ config_view.shared_secret or "—" }}</strong>
-        </div>
-        <div>
-          <span>المزامنة عند تسجيل الدخول</span>
-          <strong>
-            {% if config_view.identity_sync_on_login %}
-              <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
-            {% else %}
-              <span class="hub-pill hub-pill--grey"><span class="dot"></span>غير مفعَّلة</span>
-            {% endif %}
-          </strong>
-        </div>
-        <div>
-          <span>عامل المزامنة الخلفي</span>
-          <strong>
-            {% if config_view.worker_enabled %}
-              <span class="hub-pill hub-pill--green"><span class="dot"></span>يعمل</span>
-            {% else %}
-              <span class="hub-pill hub-pill--grey"><span class="dot"></span>متوقف</span>
-            {% endif %}
-          </strong>
-        </div>
+  {# ───── Connection settings (single full-width panel) ─────── #}
+  {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
+    <div class="hub-detail-list">
+      <div>
+        <span>رابط اللوحة</span>
+        <strong class="mono">{{ config_view.base_url or "—" }}</strong>
       </div>
-      <p class="hub-field-hint" style="margin-top:12px">
-        السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر HTTPS — لا يمكن استخدام HTTP عاديًا.
-      </p>
-    {% endcall %}
-
-    {% call hub.section("مزامنة يدوية تفصيلية", icon="rotate") %}
-      <p class="hub-field-hint">
-        اختر المزامنة المطلوبة. كل عملية تُسجَّل في سجل التدقيق.
-      </p>
-      <form method="post" action="{{ url_for('radius.license_file_sync') }}" class="lf-sync-form" style="margin-top:10px">
-        {{ csrf_token_input() }}
-        <button class="hub-btn hub-btn--primary" name="action" value="runtime" type="submit">
-          <i class="fa-solid fa-file-contract"></i> عقد التشغيل
-        </button>
-        <button class="hub-btn hub-btn--secondary" name="action" value="identity" type="submit">
-          <i class="fa-solid fa-users-gear"></i> الهوية
-        </button>
-        <button class="hub-btn hub-btn--ghost" name="action" value="both" type="submit">
-          <i class="fa-solid fa-arrows-rotate"></i> الاثنين
-        </button>
-      </form>
-    {% endcall %}
-
-  </div>
+      <div>
+        <span>مفتاح الترخيص</span>
+        <strong class="mono">{{ config_view.license_key or "—" }}</strong>
+      </div>
+      <div>
+        <span>سر التوقيع</span>
+        <strong class="mono">{{ config_view.shared_secret or "—" }}</strong>
+      </div>
+      <div>
+        <span>المزامنة عند تسجيل الدخول</span>
+        <strong>
+          {% if config_view.identity_sync_on_login %}
+            <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
+          {% else %}
+            <span class="hub-pill hub-pill--grey"><span class="dot"></span>غير مفعَّلة</span>
+          {% endif %}
+        </strong>
+      </div>
+      <div>
+        <span>عامل المزامنة الخلفي</span>
+        <strong>
+          {% if config_view.worker_enabled %}
+            <span class="hub-pill hub-pill--green"><span class="dot"></span>يعمل</span>
+          {% else %}
+            <span class="hub-pill hub-pill--grey"><span class="dot"></span>متوقف</span>
+          {% endif %}
+        </strong>
+      </div>
+    </div>
+    <p class="hub-field-hint" style="margin-top:12px">
+      السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر HTTPS — لا يمكن استخدام HTTP عاديًا.
+    </p>
+  {% endcall %}
 
   {# ───── Latest snapshots ──────────────────────────────────── #}
   {% call hub.section("آخر اللقطات المستلمة", icon="clock-rotate-left") %}
