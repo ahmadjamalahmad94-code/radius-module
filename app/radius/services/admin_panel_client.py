@@ -581,10 +581,15 @@ class AdminPanelClient:
                 "status": "config_missing",
                 "error": {"code": "config_missing", "missing": missing},
             }
-        # Carry the integration secret in the BODY too (not only the header),
-        # because reverse proxies often strip custom request headers. Over
-        # HTTPS this is equivalent in confidentiality to the header.
+        # The upload payload was built through sanitize_bridge_payload(), which
+        # MASKS sensitive keys including `license_key` — so the panel would
+        # receive a masked key and fail to resolve the license/secret (401).
+        # Restore the real license_key, and carry the integration secret in the
+        # BODY too (reverse proxies often strip custom request headers; over
+        # HTTPS the body is equivalent in confidentiality to the header).
         body = dict(payload)
+        if self.config.license_key:
+            body["license_key"] = self.config.license_key
         if self.config.shared_secret:
             body["admin_secret"] = self.config.shared_secret
         try:
