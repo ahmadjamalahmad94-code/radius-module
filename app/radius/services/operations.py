@@ -1676,13 +1676,45 @@ class OperationsService:
             target_id=str(job.get("id")),
             payload={"status": status, "verified": verified},
         )
+        try:
+            self.prune_local_backups()
+        except Exception:  # noqa: BLE001 — retention must never break a backup run
+            pass
         return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
 
-    # ── Local backup files: listing / download / restore ──────────────
+    # ── Local backup files: listing / retention / download / restore ──
+    LOCAL_BACKUP_RETENTION_DAYS = 30
+
     def _backup_dir(self) -> Path:
         backup_dir = Path(db_path()).parent / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         return backup_dir
+
+    def prune_local_backups(self, *, days: int | None = None) -> list[str]:
+        """Delete local backup files older than the retention window (default 30d).
+
+        Returns the names of the files that were removed. Safe/quiet on errors.
+        """
+        import time as _time
+
+        retention = int(days if days is not None else self.LOCAL_BACKUP_RETENTION_DAYS)
+        if retention <= 0:
+            return []
+        cutoff = _time.time() - retention * 86400
+        removed: list[str] = []
+        for path in self._backup_dir().glob("*.sqlite3"):
+            try:
+                if path.is_file() and path.stat().st_mtime < cutoff:
+                    path.unlink()
+                    removed.append(path.name)
+            except OSError:
+                continue
+        if removed:
+            self._audit.record(
+                actor="system", action="backup.local_pruned", target_type="backup_retention",
+                target_id=str(retention), payload={"removed": removed, "retention_days": retention},
+            )
+        return removed
 
     def list_local_backups(self, *, tenant_id: int = 1) -> list[dict]:
         """Return the local backup files (newest first) for the UI."""

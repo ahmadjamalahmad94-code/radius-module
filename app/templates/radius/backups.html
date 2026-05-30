@@ -48,20 +48,39 @@
              sub="ملفات SQLite محفوظة بجانب قاعدة البيانات.") }}
 </div>
 
-{# ── Actions: local backup + upload to panel ── #}
+{# ── Actions: local backup + upload to panel (paid) ── #}
 {% call hub.section("إنشاء ورفع النسخة", icon="cloud-arrow-up") %}
   <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.8">
     «تشغيل نسخة محلية» ينسخ ملف قاعدة البيانات الحالي إلى مجلد <span class="mono">backups</span> ويتحقق منه.
-    «رفع إلى لوحة التراخيص» يأخذ آخر نسخة محلية ناجحة ويخزّنها في ملف عميلك داخل لوحة التراخيص (يتطلب ربط الجسر).
+    «رفع إلى لوحة التراخيص» <strong>خدمة مدفوعة</strong> تأخذ آخر نسخة محلية ناجحة وتخزّنها في ملف عميلك داخل لوحة التراخيص.
+    تُحفظ النسخ المحلية ونسخ اللوحة لمدة <strong>{{ retention_days }} يومًا</strong> ثم تُحذف تلقائيًا.
   </p>
-  <div class="hub-flex-row" style="gap:10px; flex-wrap:wrap">
+  <div class="hub-flex-row" style="gap:10px; flex-wrap:wrap; align-items:center">
     <form method="post" action="{{ url_for('radius.backups_run') }}" style="margin:0">
       {{ hub.btn("تشغيل نسخة محلية", icon="download", variant="primary", type="submit") }}
     </form>
-    <form method="post" action="{{ url_for('radius.backups_upload_panel') }}" style="margin:0">
-      {{ hub.btn("رفع إلى لوحة التراخيص", icon="cloud-arrow-up", variant="secondary", type="submit") }}
-    </form>
+    {% if panel_backup.enabled %}
+      <form method="post" action="{{ url_for('radius.backups_upload_panel') }}" style="margin:0">
+        {{ hub.btn("رفع إلى لوحة التراخيص", icon="cloud-arrow-up", variant="secondary", type="submit") }}
+      </form>
+      <span class="hub-pill hub-pill--green"><span class="dot"></span> خدمة النسخ السحابي مفعّلة</span>
+    {% else %}
+      <form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:0">
+        {{ csrf_token_input() }}
+        <input type="hidden" name="service_key" value="backups">
+        <input type="hidden" name="service_name" value="النسخ الاحتياطي السحابي">
+        {{ hub.btn("طلب تفعيل (خدمة مدفوعة)", icon="paper-plane", variant="primary", type="submit") }}
+      </form>
+      <span class="hub-pill hub-pill--amber"><span class="dot"></span> النسخ على اللوحة غير مفعّلة — خدمة مدفوعة</span>
+    {% endif %}
   </div>
+  {% if not panel_backup.enabled %}
+    <p class="hub-text-soft" style="margin:12px 0 0;font-size:12.5px;line-height:1.8">
+      <i class="fa-solid fa-circle-info" style="color:#7c3aed"></i>
+      رفع النسخ إلى لوحة التراخيص ميزة مدفوعة. أرسل طلب التفعيل وستتولّى الإدارة تحديد الرسوم وتفعيل الخدمة،
+      وبعدها تقدر ترفع نسخك السحابية وربط حساب جوجل درايف الخاص بك.
+    </p>
+  {% endif %}
 {% endcall %}
 
 {# ── Local backup files: download / restore ── #}

@@ -34,8 +34,36 @@ def _restore_enabled() -> bool:
     return str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}
 
 
+def _backup_service_state(tid: int) -> dict:
+    """Read the paid «backups» service state from the latest runtime contract.
+
+    Panel-side backup upload is a paid service: only allowed when the
+    customer's `backups` service is active in the contract delivered by the
+    license panel. Returns {enabled, status, name}.
+    """
+    try:
+        from ..services.admin_panel_client import LicenseAdminSnapshotStore, SNAPSHOT_CAPACITY
+        snap = LicenseAdminSnapshotStore().latest(tenant_id=tid, snapshot_type=SNAPSHOT_CAPACITY)
+        services = {}
+        if snap and isinstance(snap.get("payload_json"), dict):
+            pj = snap["payload_json"]
+            services = (pj.get("contract") or {}).get("services") or pj.get("services") or {}
+        svc = services.get("backups") or {}
+        return {
+            "enabled": bool(svc.get("enabled")),
+            "status": str(svc.get("status") or "disabled"),
+            "name": "النسخ الاحتياطي السحابي",
+        }
+    except Exception:  # noqa: BLE001 — never break the page on contract read
+        return {"enabled": False, "status": "unknown", "name": "النسخ الاحتياطي السحابي"}
+
+
 def backups():
     svc = get_operations_service()
+    try:
+        svc.prune_local_backups()  # enforce 30-day retention on view
+    except Exception:  # noqa: BLE001
+        pass
     status = svc.backup_status(tenant_id=_tid())
     local_files = svc.list_local_backups(tenant_id=_tid())
     return render_template(
@@ -43,6 +71,8 @@ def backups():
         status=status,
         local_files=local_files,
         restore_enabled=_restore_enabled(),
+        panel_backup=_backup_service_state(_tid()),
+        retention_days=get_operations_service().LOCAL_BACKUP_RETENTION_DAYS,
     )
 
 
@@ -58,6 +88,9 @@ def backups_run():
 
 def backups_upload_panel():
     """Upload the latest local backup (with content) to the license panel."""
+    if not _backup_service_state(_tid()).get("enabled"):
+        flash("خدمة النسخ على لوحة التراخيص غير مفعّلة. أرسل «طلب تفعيل» أولاً (خدمة مدفوعة).", "error")
+        return redirect(url_for("radius.backups"))
     from ..services.license_admin_backup_upload import BackupUploadService
 
     result = BackupUploadService().upload_latest_backup(
