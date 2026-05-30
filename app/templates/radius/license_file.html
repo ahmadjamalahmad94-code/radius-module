@@ -190,6 +190,36 @@
     font-weight:800;
   }
   .lf-page .checkline input{ width:18px; height:18px; accent-color:var(--hub-brand, #7c3aed); }
+  .lf-service-name{
+    display:block;
+    font-weight:900;
+    color:var(--hub-text, #0f172a);
+  }
+  .lf-service-desc{
+    display:block;
+    margin-top:4px;
+    color:var(--hub-text-soft, #475569);
+    font-size:12.5px;
+    line-height:1.7;
+  }
+  .lf-service-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+  }
+  .lf-service-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 8px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    color:var(--hub-text-soft, #475569);
+    font-size:12px;
+    font-weight:800;
+  }
   @media (max-width: 640px){
     .lf-page .hub-detail-list > div{
       grid-template-columns:1fr;
@@ -200,6 +230,80 @@
 {% endblock %}
 
 {% block content %}
+{% set status_labels = {
+  'active': 'مفعّلة',
+  'enabled': 'مفعّلة',
+  'ok': 'سليم',
+  'success': 'ناجح',
+  'healthy': 'سليم',
+  'valid': 'صالح',
+  'suspended': 'موقوفة',
+  'expired': 'منتهية',
+  'disabled': 'معطّلة',
+  'denied': 'مرفوضة',
+  'failed': 'فشلت',
+  'error': 'خطأ',
+  'pending': 'قيد الانتظار',
+  'grace': 'ضمن المهلة',
+  'warning': 'تحذير',
+  'stale': 'قديمة',
+  'unknown': 'غير معروفة',
+  'unavailable': 'غير متاحة',
+  'limited': 'محدودة',
+  'locked': 'مقفلة حسب الخطة'
+} %}
+{% set missing_labels = {
+  'HOBERADIUS_ADMIN_BASE_URL': 'رابط لوحة التراخيص',
+  'HOBERADIUS_LICENSE_KEY': 'مفتاح الترخيص',
+  'INSTANCE_LICENSE_KEY': 'مفتاح الترخيص',
+  'HOBERADIUS_ADMIN_SHARED_SECRET': 'سر الربط',
+  'HOBERADIUS_ADMIN_BRIDGE_ENABLED': 'تفعيل الجسر'
+} %}
+{% set service_labels = {
+  'ip_change_vpn': 'خدمة تغيير عنوان الإنترنت / الشبكة الخاصة',
+  'cards': 'الكروت',
+  'cards_recharge': 'شحن الكروت',
+  'communications': 'الرسائل والتنبيهات',
+  'customer_portal': 'بوابة العميل',
+  'customer_support': 'دعم العملاء',
+  'distributors': 'الموزعون',
+  'finance_center': 'المركز المالي',
+  'integration_bridge': 'جسر الربط مع لوحة التراخيص',
+  'integration_tokens': 'رموز الربط الآمن',
+  'subscribers': 'المشتركون',
+  'nas': 'أجهزة الشبكة',
+  'admins': 'حسابات الإدارة',
+  'plans': 'الباقات',
+  'reports': 'التقارير'
+} %}
+{% set service_descriptions = {
+  'ip_change_vpn': 'تحدد هل خدمة تغيير العنوان تعمل، وما السرعة وعدد مستخدمي الشبكة الخاصة المسموح بها.',
+  'cards': 'تسمح بإدارة كروت الإنترنت وإنشاء الدفعات وبيعها للمشتركين.',
+  'cards_recharge': 'تسمح للمستخدم بشحن رصيد الكروت أو المحفظة من خلال بوابة العميل.',
+  'communications': 'تسمح بإرسال رسائل وتنبيهات للمشتركين ومستخدمي الكروت.',
+  'customer_portal': 'تفتح بوابة العميل لعرض الخدمات والرصيد والطلبات وتغيير كلمة المرور.',
+  'customer_support': 'تسمح بإنشاء ومتابعة طلبات الدعم من العميل.',
+  'distributors': 'تسمح بإدارة الموزعين ونطاقاتهم وصلاحيات البيع.',
+  'finance_center': 'تسمح بعرض العمليات المالية والمدفوعات والأرصدة.',
+  'integration_bridge': 'تسمح للريدياس باستلام الترخيص والحدود من لوحة التراخيص.',
+  'integration_tokens': 'تسمح باستخدام رموز الربط والتوقيع الآمن بين النظامين.',
+  'subscribers': 'تحدد صلاحيات وعدد المشتركين المسموح بإدارتهم.',
+  'nas': 'تحدد عدد أجهزة الشبكة أو الراوترات المسموح ربطها.',
+  'admins': 'تحدد عدد حسابات الإدارة المسموح بها.',
+  'plans': 'تحدد صلاحية إنشاء وتعديل باقات الإنترنت.',
+  'reports': 'تحدد صلاحية عرض التقارير التشغيلية والمالية.'
+} %}
+{% set limit_labels = {
+  'subscribers': 'عدد المشتركين',
+  'nas': 'أجهزة الشبكة',
+  'admins': 'حسابات الإدارة',
+  'cards': 'الكروت',
+  'card_batches': 'دفعات الكروت',
+  'plans': 'الباقات',
+  'routers': 'الراوترات',
+  'locations': 'المواقع',
+  'vpn_users': 'مستخدمي الشبكة الخاصة'
+} %}
 <div class="lf-page">
 
   {# ───── Unified mega-hero: title + sync actions + KPI strip ── #}
@@ -209,7 +313,7 @@
         <span class="lf-hero-icon"><i class="fa-solid fa-file-shield"></i></span>
         <div>
           <h1 class="lf-hero-title">ملف التراخيص</h1>
-          <div class="lf-hero-sub">اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل ومزامنة هوية، والحدود التي يطبّقها runtime محليًا.</div>
+          <div class="lf-hero-sub">اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل ومزامنة هوية، والحدود التي يطبّقها محليًا.</div>
         </div>
       </div>
       <div class="lf-hero-actions">
@@ -242,7 +346,7 @@
                  icon="users-gear",
                  variant="amber") }}
       {{ hub.kpi("حالة الحدود",
-                 capacity.status or "غير معروف",
+                 status_labels.get(capacity.status, "غير معروفة") if capacity.status else "غير معروفة",
                  icon="gauge-high",
                  variant="brand") }}
     </div>
@@ -252,8 +356,8 @@
   {% call hub.section("ماذا تعرض هذه الصفحة؟", icon="circle-question") %}
     <ol class="lf-help">
       <li><strong>الاتصال مع لوحة التراخيص.</strong> الرابط، مفتاح الترخيص، وسر التوقيع — تراها مختصرة هنا لحماية البيانات الحساسة.</li>
-      <li><strong>عقد التشغيل المستلم.</strong> آخر عقد تم تنزيله ويحدّد الخدمات المسموحة (الكروت، VPN، إلخ) والحدود التي يطبّقها runtime.</li>
-      <li><strong>مزامنة الهوية.</strong> تنقل مستخدمي اللوحة إلى نظام تسجيل دخول الريدياس عبر HTTPS فقط.</li>
+      <li><strong>عقد التشغيل المستلم.</strong> آخر عقد تم تنزيله ويحدّد الخدمات المسموحة مثل الكروت وخدمة تغيير العنوان والحدود التي يطبّقها الريدياس.</li>
+      <li><strong>مزامنة الهوية.</strong> تنقل مستخدمي اللوحة إلى نظام تسجيل دخول الريدياس عبر اتصال آمن فقط.</li>
       <li><strong>المزامنة اليدوية.</strong> أزرار آمنة لتشغيل المزامنة بشكل فردي أو مزدوج عند الحاجة.</li>
     </ol>
   {% endcall %}
@@ -262,12 +366,12 @@
   {% if missing %}
     {% call hub.section("إعدادات ناقصة", icon="triangle-exclamation") %}
       <p style="margin:0 0 6px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.7">
-        لم يكتمل ملف الربط بعد. أضف القيم التالية في ملف <span class="mono">.env</span>
+        لم يكتمل ملف الربط بعد. أضف القيم التالية من صفحة العميل أو من إعدادات السيرفر
         ثم أعد تشغيل خدمة الريدياس:
       </p>
       <div class="lf-missing-list">
         {% for item in missing %}
-          <span class="lf-missing-item">{{ item }}</span>
+          <span class="lf-missing-item">{{ missing_labels.get(item, 'إعداد مطلوب') }}</span>
         {% endfor %}
       </div>
     {% endcall %}
@@ -276,19 +380,19 @@
   {% call hub.section("ربط الترخيص من صفحة العميل", icon="link") %}
     <p style="margin:0 0 12px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
       نعم، الريدياس يأخذ الترخيص والصلاحيات من لوحة التراخيص. افتح صفحة العميل في لوحة التراخيص،
-      ثم انسخ <strong>مفتاح الترخيص</strong> و<strong>سر الربط</strong> والصقهما هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل من API موقّع.
-      لا يتم قراءة صفحة HTML نفسها، بل يتم استخدام هذه القيم كتعريف أولي للعميل.
+      ثم انسخ <strong>مفتاح الترخيص</strong> و<strong>سر الربط</strong> والصقهما هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل من واجهة ربط موقّعة.
+      لا يتم قراءة الصفحة المعروضة نفسها، بل يتم استخدام هذه القيم كتعريف أولي للعميل.
     </p>
     <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
       {{ csrf_token_input() }}
       <div class="hub-field full">
         <label>رابط لوحة التراخيص</label>
         <input class="hub-input ltr" name="base_url" value="{{ config_form.base_url }}" placeholder="https://hoberadius.com">
-        <div class="hub-field-hint">استخدم رابط لوحة التراخيص. مزامنة الهوية وكلمات المرور تحتاج HTTPS.</div>
+        <div class="hub-field-hint">استخدم رابط لوحة التراخيص. مزامنة الهوية وكلمات المرور تحتاج اتصالًا آمنًا.</div>
       </div>
       <div class="hub-field">
         <label>مفتاح الترخيص من صفحة العميل</label>
-        <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'HBR-2026-XXXX-XXXX-XXXX' }}">
+        <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'الصق مفتاح الترخيص هنا' }}">
         <div class="hub-field-hint">اتركه فارغًا إذا كان محفوظًا بالفعل. لا نعرض المفتاح كاملًا بعد الحفظ.</div>
       </div>
       <div class="hub-field">
@@ -311,7 +415,7 @@
       <div class="hub-field">
         <label class="checkline">
           <input type="checkbox" name="identity_sync_enabled" value="1" {{ 'checked' if config_view.identity_sync_enabled else '' }}>
-          تفعيل مزامنة الهوية عبر HTTPS
+          تفعيل مزامنة الهوية عبر اتصال آمن
         </label>
       </div>
       <div class="hub-field">
@@ -365,7 +469,7 @@
       </div>
     </div>
     <p class="hub-field-hint" style="margin-top:12px">
-      السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر HTTPS — لا يمكن استخدام HTTP عاديًا.
+      السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.
     </p>
   {% endcall %}
 
@@ -388,13 +492,13 @@
             {% set _ns = snap.normalized_status or '—' %}
             <div>
               {% if _ns in ['ok','active','success','enabled'] %}
-                <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _ns }}</span>
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ status_labels.get(_ns, 'سليم') }}</span>
               {% elif _ns in ['error','failed','denied','expired'] %}
-                <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _ns }}</span>
+                <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ status_labels.get(_ns, 'خطأ') }}</span>
               {% elif _ns in ['pending','grace','warning'] %}
-                <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _ns }}</span>
+                <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ status_labels.get(_ns, 'تنبيه') }}</span>
               {% else %}
-                <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _ns }}</span>
+                <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ status_labels.get(_ns, 'غير معروفة') }}</span>
               {% endif %}
             </div>
             <div class="lf-snap-meta">
@@ -429,7 +533,22 @@
             {% for key, val in _svc.items() %}
               {% set _status = val.status|default('—') %}
               <div>
-                <span>{{ key }}</span>
+                <span>
+                  <span class="lf-service-name">{{ service_labels.get(key, 'خدمة ضمن العقد') }}</span>
+                  <span class="lf-service-desc">{{ service_descriptions.get(key, 'صلاحية خدمية مستلمة من لوحة التراخيص ويطبّقها الريدياس حسب العقد.') }}</span>
+                  <span class="lf-service-meta">
+                    {% if key == 'ip_change_vpn' %}
+                      {% if val.download_mbps is defined %}<span class="lf-service-chip">سرعة التحميل: {{ val.download_mbps }} ميجابت/ثانية</span>{% endif %}
+                      {% if val.upload_mbps is defined %}<span class="lf-service-chip">سرعة الرفع: {{ val.upload_mbps }} ميجابت/ثانية</span>{% endif %}
+                      {% if val.max_vpn_users is defined %}<span class="lf-service-chip">مستخدمي الشبكة الخاصة: {{ val.max_vpn_users }}</span>{% endif %}
+                      {% if val.max_locations is defined %}<span class="lf-service-chip">المواقع: {{ val.max_locations }}</span>{% endif %}
+                    {% elif val.limits is mapping and val.limits.max_total is defined %}
+                      <span class="lf-service-chip">الحد الأعلى: {{ val.limits.max_total }}</span>
+                    {% elif val.max_total is defined %}
+                      <span class="lf-service-chip">الحد الأعلى: {{ val.max_total }}</span>
+                    {% endif %}
+                  </span>
+                </span>
                 <strong>
                   {% if _status == 'active' %}
                     <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
@@ -440,7 +559,7 @@
                   {% elif _status == 'disabled' %}
                     <span class="hub-pill hub-pill--grey"><span class="dot"></span>معطَّلة</span>
                   {% else %}
-                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _status }}</span>
+                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ status_labels.get(_status, 'غير معروفة') }}</span>
                   {% endif %}
                 </strong>
               </div>
@@ -457,7 +576,7 @@
           <div class="hub-detail-list">
             {% for key, val in _lim.items() %}
               <div>
-                <span>{{ key }}</span>
+                <span>{{ limit_labels.get(key, 'حد تشغيلي') }}</span>
                 <strong class="num mono">
                   {% if val is mapping and val.max_total is defined %}
                     {{ val.max_total }}

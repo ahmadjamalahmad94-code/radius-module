@@ -100,6 +100,56 @@ def test_license_file_page_masks_bridge_secrets(app):
     assert "license-secret-test-value" not in html
 
 
+def test_license_file_translates_service_contract_keys(app):
+    from app.radius.services.admin_panel_client import LicenseAdminSnapshotStore, SNAPSHOT_CAPACITY
+
+    with app.app_context():
+        LicenseAdminSnapshotStore().save(
+            tenant_id=1,
+            snapshot_type=SNAPSHOT_CAPACITY,
+            normalized_status="active",
+            source_url="mock://runtime-contract",
+            payload={
+                "contract": {
+                    "services": {
+                        "cards": {"enabled": True, "status": "active"},
+                        "cards_recharge": {"enabled": False, "status": "disabled"},
+                        "customer_portal": {"enabled": True, "status": "active"},
+                        "integration_bridge": {"enabled": True, "status": "active"},
+                        "ip_change_vpn": {
+                            "enabled": True,
+                            "status": "active",
+                            "download_mbps": 50,
+                            "upload_mbps": 50,
+                            "max_vpn_users": 100,
+                        },
+                    },
+                    "limits": {
+                        "subscribers": {"max_total": 250},
+                        "nas": {"max_total": 3},
+                    },
+                }
+            },
+        )
+
+    with app.test_client() as client:
+        _auth_session(client)
+        response = client.get("/admin/radius/license-file")
+        html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "الكروت" in html
+    assert "شحن الكروت" in html
+    assert "بوابة العميل" in html
+    assert "جسر الربط مع لوحة التراخيص" in html
+    assert "خدمة تغيير عنوان الإنترنت / الشبكة الخاصة" in html
+    assert "سرعة التحميل: 50 ميجابت/ثانية" in html
+    assert "عدد المشتركين" in html
+    assert "أجهزة الشبكة" in html
+    for raw_key in ("cards_recharge", "customer_portal", "integration_bridge", "ip_change_vpn"):
+        assert raw_key not in html
+
+
 def test_license_file_can_save_customer_portal_bridge_values(app, monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ADMIN_BRIDGE_ENABLED", raising=False)
     monkeypatch.delenv("HOBERADIUS_ADMIN_BASE_URL", raising=False)
