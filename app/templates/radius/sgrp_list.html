@@ -5,44 +5,81 @@
 {% block page_title %}مجموعات المشاركة (Share Groups){% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
 {% block head_buttons %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('radius.sgrp_new') }}">
+  <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.sgrp_new') }}">
     <i class="fa-solid fa-plus"></i> إضافة مجموعة
   </a>
 {% endblock %}
+
 {% block content %}
 {{ hub.hero(
-  "مجموعات المشاركة (Share Groups)",
-  subtitle="مجموعات لمشاركة الكروت/الباقات بين الموزّعين",
+  "مجموعات المشاركة",
+  subtitle="مجموعات لمشاركة الكروت والباقات بين الموزّعين.",
   icon="people-arrows"
 ) }}
 
-<div class="card"><div class="card-body card-body--flush">
+{% call hub.section("جميع المجموعات", icon="layer-group", meta=(items|length ~ ' مجموعة') if items else '', flush=True) %}
   {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>الاسم</th><th>الكوتا المشتركة</th><th>السرعة (تنزيل/رفع)</th>
-      <th>الأعضاء</th><th>حد الأعضاء</th><th>الحالة</th><th style="width:140px"></th>
-    </tr></thead>
-    <tbody>{% for g in items %}
-    <tr>
-      <td class="num">{{ g.id }}</td>
-      <td><strong>{{ g.name }}</strong>
-        {% if g.description %}<div class="hint">{{ g.description }}</div>{% endif %}</td>
-      <td class="mono">{% if g.shared_quota_mb %}{{ "%.1f"|format(g.shared_quota_mb/1024) }} GB{% else %}<span class="pill">غير محدود</span>{% endif %}</td>
-      <td class="mono">{{ g.shared_speed_down_kbps }} / {{ g.shared_speed_up_kbps }} Kbps</td>
-      <td class="num"><strong>{{ g.members }}</strong></td>
-      <td class="num">{{ g.max_members or '∞' }}</td>
-      <td>{% if g.enabled %}<span class="pill pill-success">مفعَّل</span>{% else %}<span class="pill pill-danger">معطَّل</span>{% endif %}</td>
-      <td><div class="cell-actions">
-        <a class="btn btn-primary btn-xs" href="{{ url_for('radius.sgrp_view', gid=g.id) }}"><i class="fa-solid fa-users"></i></a>
-        <a class="btn btn-secondary btn-xs" href="{{ url_for('radius.sgrp_edit', gid=g.id) }}"><i class="fa-solid fa-pen"></i></a>
-        <form method="post" action="{{ url_for('radius.sgrp_delete', gid=g.id) }}"
-              onsubmit="return confirm('حذف؟')" style="display:inline">
-          <button class="btn btn-danger btn-xs"><i class="fa-solid fa-trash"></i></button>
-        </form>
-      </div></td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-people-arrows"></i>لا مجموعات</div>{% endif %}
-</div></div>
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>الاسم</th>
+            <th>الكوتا المشتركة</th>
+            <th>السرعة (تنزيل/رفع)</th>
+            <th class="num">الأعضاء</th>
+            <th class="num">حد الأعضاء</th>
+            <th>الحالة</th>
+            <th style="width:160px"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for g in items %}
+          <tr>
+            <td class="num">{{ g.id }}</td>
+            <td>
+              <strong>{{ g.name }}</strong>
+              {% if g.description %}<div class="hub-text-mute" style="font-size:12px">{{ g.description }}</div>{% endif %}
+            </td>
+            <td class="mono">
+              {% if g.shared_quota_mb %}{{ "%.1f"|format(g.shared_quota_mb/1024) }} GB
+              {% else %}<span class="hub-pill hub-pill--grey">غير محدود</span>{% endif %}
+            </td>
+            <td class="mono">{{ g.shared_speed_down_kbps }} / {{ g.shared_speed_up_kbps }} Kbps</td>
+            <td class="num"><strong>{{ g.members }}</strong></td>
+            <td class="num">{{ g.max_members or '∞' }}</td>
+            <td>
+              {% if g.enabled %}
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّل</span>
+              {% else %}
+                <span class="hub-pill hub-pill--red"><span class="dot"></span>معطَّل</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="hub-flex-row" style="gap:6px">
+                <a class="hub-btn hub-btn--primary hub-btn--sm"
+                   href="{{ url_for('radius.sgrp_view', gid=g.id) }}" title="الأعضاء">
+                  <i class="fa-solid fa-users"></i>
+                </a>
+                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                   href="{{ url_for('radius.sgrp_edit', gid=g.id) }}" title="تعديل">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post" action="{{ url_for('radius.sgrp_delete', gid=g.id) }}"
+                      onsubmit="return confirm('حذف؟')" style="display:inline;margin:0">
+                  <button class="hub-btn hub-btn--danger hub-btn--sm" title="حذف">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ hub.empty("لا توجد مجموعات بعد.", icon="people-arrows") }}
+  {% endif %}
+{% endcall %}
 {% endblock %}

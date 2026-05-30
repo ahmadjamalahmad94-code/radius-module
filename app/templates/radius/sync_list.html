@@ -7,83 +7,101 @@
 {% block content %}
 {{ hub.hero(
   "طابور المزامنة إلى MikroTik",
-  subtitle="مراقبة طابور المزامنة إلى أجهزة MikroTik",
+  subtitle="مراقبة طابور المزامنة إلى أجهزة MikroTik والمحاولات الفاشلة.",
   icon="arrows-rotate"
 ) }}
 
-<div class="kpi-strip">
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">في الانتظار</div><div class="val">{{ stats.queued }}</div></div>
-    <div class="ico"><i class="fa-solid fa-hourglass-half"></i></div>
-  </div>
-  <div class="kpi-card kpi-orange">
-    <div class="right"><div class="lbl">يعاد المحاولة</div><div class="val">{{ stats.retrying }}</div></div>
-    <div class="ico"><i class="fa-solid fa-rotate-right"></i></div>
-  </div>
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">مكتمل</div><div class="val">{{ stats.done }}</div></div>
-    <div class="ico"><i class="fa-solid fa-check"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">فشل</div><div class="val">{{ stats.failed }}</div></div>
-    <div class="ico"><i class="fa-solid fa-xmark"></i></div>
-  </div>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("في الانتظار", stats.queued, icon="hourglass-half", variant="brand") }}
+  {{ hub.kpi("يعاد المحاولة", stats.retrying, icon="rotate-right", variant="amber") }}
+  {{ hub.kpi("مكتمل", stats.done, icon="check", variant="green") }}
+  {{ hub.kpi("فشل", stats.failed, icon="xmark", variant="red") }}
 </div>
 
-<form method="get" class="filter-bar" style="margin-top:8px">
-  <select name="status">
-    <option value="">كل الحالات</option>
-    {% for s in ['queued','retrying','done','failed','syncing'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>
-        {% if s == 'queued' %}في الانتظار{% elif s == 'retrying' %}يعاد المحاولة{% elif s == 'done' %}مكتمل{% elif s == 'failed' %}فشل{% elif s == 'syncing' %}جاري المزامنة{% else %}{{ s }}{% endif %}
-      </option>
-    {% endfor %}
-  </select>
-  <button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
-</form>
+{% call hub.section("تصفية حسب الحالة", icon="filter") %}
+  <form method="get" class="hub-filter-form">
+    <select class="hub-select" name="status">
+      <option value="">كل الحالات</option>
+      {% for s in ['queued','retrying','done','failed','syncing'] %}
+        <option value="{{ s }}" {% if status==s %}selected{% endif %}>
+          {% if s == 'queued' %}في الانتظار
+          {% elif s == 'retrying' %}يعاد المحاولة
+          {% elif s == 'done' %}مكتمل
+          {% elif s == 'failed' %}فشل
+          {% elif s == 'syncing' %}جاري المزامنة
+          {% else %}{{ s }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+    {{ hub.btn("تطبيق", icon="filter", variant="primary", size="sm", type="submit") }}
+  </form>
+{% endcall %}
 
-<div class="card"><div class="card-body card-body--flush">
+{% call hub.section("مهام المزامنة", icon="list-check", meta=(jobs|length ~ ' مهمة') if jobs else '', flush=True) %}
   {% if jobs %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>النوع</th><th>العنصر</th><th>الحالة</th>
-      <th>المحاولات</th><th>الموعد التالي</th><th>الخطأ</th><th style="width:140px"></th>
-    </tr></thead>
-    <tbody>{% for j in jobs %}
-    <tr>
-      <td class="num">{{ j.id }}</td>
-      <td><span class="pill pill-cyan">{{ j.kind }}</span></td>
-      <td class="mono">{{ j.entity_key or j.entity_id or '—' }}</td>
-      <td>
-        {% if j.status == 'done' %}<span class="pill pill-success">مكتمل</span>
-        {% elif j.status == 'queued' %}<span class="pill pill-info">في الانتظار</span>
-        {% elif j.status == 'syncing' %}<span class="pill pill-info">جاري المزامنة…</span>
-        {% elif j.status == 'retrying' %}<span class="pill pill-warn">يعاد المحاولة</span>
-        {% elif j.status == 'failed' %}<span class="pill pill-danger">فشل</span>
-        {% else %}<span class="pill">{{ j.status }}</span>{% endif %}
-      </td>
-      <td class="num">{{ j.attempts }}</td>
-      <td class="mono">{{ j.next_attempt_at[:16] if j.next_attempt_at else '—' }}</td>
-      <td class="mono" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        {{ j.last_error or '—' }}
-      </td>
-      <td>
-        {% if j.status in ['queued','retrying','failed'] %}
-        <div class="cell-actions">
-          <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}" style="display:inline">
-            <button class="btn btn-primary btn-xs" title="أعد فورًا"><i class="fa-solid fa-rotate"></i></button>
-          </form>
-          {% if j.status != 'failed' %}
-          <form method="post" action="{{ url_for('radius.sync_cancel', job_id=j.id) }}"
-                onsubmit="return confirm('إلغاء؟')" style="display:inline">
-            <button class="btn btn-danger btn-xs"><i class="fa-solid fa-ban"></i></button>
-          </form>
-          {% endif %}
-        </div>
-        {% endif %}
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-arrows-rotate"></i>لا توجد مهام بهذا الفلتر</div>{% endif %}
-</div></div>
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>النوع</th>
+            <th>العنصر</th>
+            <th>الحالة</th>
+            <th class="num">المحاولات</th>
+            <th>الموعد التالي</th>
+            <th>الخطأ</th>
+            <th style="width:140px"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for j in jobs %}
+          <tr>
+            <td class="num">{{ j.id }}</td>
+            <td><span class="hub-pill hub-pill--brand">{{ j.kind }}</span></td>
+            <td class="mono">{{ j.entity_key or j.entity_id or '—' }}</td>
+            <td>
+              {% if j.status == 'done' %}<span class="hub-pill hub-pill--green"><span class="dot"></span>مكتمل</span>
+              {% elif j.status == 'queued' %}<span class="hub-pill hub-pill--blue"><span class="dot"></span>في الانتظار</span>
+              {% elif j.status == 'syncing' %}<span class="hub-pill hub-pill--blue"><span class="dot"></span>جاري المزامنة…</span>
+              {% elif j.status == 'retrying' %}<span class="hub-pill hub-pill--amber"><span class="dot"></span>يعاد المحاولة</span>
+              {% elif j.status == 'failed' %}<span class="hub-pill hub-pill--red"><span class="dot"></span>فشل</span>
+              {% else %}<span class="hub-pill hub-pill--grey">{{ j.status }}</span>{% endif %}
+            </td>
+            <td class="num">{{ j.attempts }}</td>
+            <td class="mono">{{ j.next_attempt_at[:16] if j.next_attempt_at else '—' }}</td>
+            <td class="mono"
+                style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ j.last_error or '' }}">
+              {{ j.last_error or '—' }}
+            </td>
+            <td>
+              {% if j.status in ['queued','retrying','failed'] %}
+                <div class="hub-flex-row" style="gap:6px">
+                  <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}"
+                        style="display:inline;margin:0">
+                    <button class="hub-btn hub-btn--primary hub-btn--sm" title="أعد فورًا">
+                      <i class="fa-solid fa-rotate"></i>
+                    </button>
+                  </form>
+                  {% if j.status != 'failed' %}
+                    <form method="post" action="{{ url_for('radius.sync_cancel', job_id=j.id) }}"
+                          onsubmit="return confirm('إلغاء؟')"
+                          style="display:inline;margin:0">
+                      <button class="hub-btn hub-btn--danger hub-btn--sm" title="إلغاء">
+                        <i class="fa-solid fa-ban"></i>
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ hub.empty("لا توجد مهام بهذا الفلتر.", icon="arrows-rotate") }}
+  {% endif %}
+{% endcall %}
 {% endblock %}

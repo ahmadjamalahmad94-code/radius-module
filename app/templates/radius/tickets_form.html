@@ -3,36 +3,57 @@
 {% block title %}تذكرة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة جديدة{% endblock %}
+
 {% block content %}
 {{ hub.hero(
   "تذكرة جديدة",
-  subtitle="افتح تذكرة دعم جديدة",
+  subtitle="افتح تذكرة دعم جديدة لمشترك.",
   icon="headset"
 ) }}
 
 <form method="post">
-  <div class="card"><div class="card-header"><span class="title">المعلومات</span></div><div class="card-body">
-    <div class="form-row"><label>المشترك *</label>
-      <div class="field"><select name="subscriber_id" required>
-        <option value="">— اختر —</option>
-        {% for s in subs %}<option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
-      </select></div></div>
-    <div class="form-row"><label>الموضوع *</label>
-      <div class="field"><input type="text" name="subject" required></div></div>
-    <div class="form-row"><label>الفئة</label>
-      <div class="field"><select name="category">
-        {% for c in ['general','billing','connection','hardware','complaint'] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-      </select></div></div>
-    <div class="form-row"><label>الأولوية</label>
-      <div class="field"><select name="priority">
-        {% for p in ['low','normal','high','urgent'] %}<option value="{{ p }}" {% if p=='normal' %}selected{% endif %}>{{ p }}</option>{% endfor %}
-      </select></div></div>
-    <div class="form-row"><label>التفاصيل</label>
-      <div class="field"><textarea name="body" rows="6"></textarea></div></div>
-  </div></div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> إنشاء</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.tk_list') }}">إلغاء</a>
+
+  {% call hub.section("معلومات التذكرة", icon="circle-info") %}
+    <div class="hub-form-row">
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">المشترك <span style="color:#dc2626">*</span></label>
+        <select class="hub-select" name="subscriber_id" required>
+          <option value="">— اختر —</option>
+          {% for s in subs %}
+            <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">الموضوع <span style="color:#dc2626">*</span></label>
+        <input class="hub-input" type="text" name="subject" required>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الفئة</label>
+        <select class="hub-select" name="category">
+          {% for c in ['general','billing','connection','hardware','complaint'] %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الأولوية</label>
+        <select class="hub-select" name="priority">
+          {% for p in ['low','normal','high','urgent'] %}
+            <option value="{{ p }}" {% if p=='normal' %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">التفاصيل</label>
+        <textarea class="hub-textarea" name="body" rows="6"></textarea>
+      </div>
+    </div>
+  {% endcall %}
+
+  <div class="hub-flex-row" style="margin-top:16px">
+    {{ hub.btn("إنشاء", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}
   </div>
 </form>
 {% endblock %}

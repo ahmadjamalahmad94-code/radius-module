@@ -8,84 +8,86 @@
 {% block content %}
 {{ hub.hero(
   grp.name,
-  subtitle="تفاصيل المجموعة والأعضاء",
+  subtitle="تفاصيل المجموعة وقائمة الأعضاء.",
   icon="people-arrows"
 ) }}
 
-<div class="kpi-strip">
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">الأعضاء</div><div class="val">{{ members|length }}</div></div>
-    <div class="ico"><i class="fa-solid fa-users"></i></div>
-  </div>
-  <div class="kpi-card kpi-green">
-    <div class="right"><div class="lbl">الكوتا المشتركة</div><div class="val" style="font-size:16px">
-      {% if grp.shared_quota_mb %}{{ "%.1f"|format(grp.shared_quota_mb/1024) }} GB{% else %}∞{% endif %}
-    </div></div>
-    <div class="ico"><i class="fa-solid fa-database"></i></div>
-  </div>
-  <div class="kpi-card">
-    <div class="right"><div class="lbl">السرعة (تنزيل/رفع)</div><div class="val" style="font-size:14px">{{ grp.shared_speed_down_kbps }}/{{ grp.shared_speed_up_kbps }} Kbps</div></div>
-    <div class="ico"><i class="fa-solid fa-gauge"></i></div>
-  </div>
-  <div class="kpi-card kpi-dark">
-    <div class="right"><div class="lbl">حد الأعضاء</div><div class="val">{{ grp.max_members or '∞' }}</div></div>
-    <div class="ico"><i class="fa-solid fa-user-plus"></i></div>
-  </div>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الأعضاء", members|length, icon="users", variant="brand") }}
+  {{ hub.kpi("الكوتا المشتركة",
+             ("%.1f"|format(grp.shared_quota_mb/1024) ~ ' GB') if grp.shared_quota_mb else '∞',
+             icon="database", variant="green") }}
+  {{ hub.kpi("السرعة (تنزيل/رفع)",
+             (grp.shared_speed_down_kbps|string) ~ '/' ~ (grp.shared_speed_up_kbps|string) ~ ' Kbps',
+             icon="gauge", variant="blue") }}
+  {{ hub.kpi("حد الأعضاء", grp.max_members or '∞', icon="user-plus", variant="grey") }}
 </div>
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:8px">
-  <div class="card">
-    <div class="card-header"><span class="title">الأعضاء</span></div>
-    <div class="card-body card-body--flush">
-      {% if members %}
-      <table class="hr-table">
-        <thead><tr><th>#</th><th>اليوزر</th><th>الاسم</th><th>الحالة</th><th></th></tr></thead>
-        <tbody>{% for m in members %}
-        <tr>
-          <td class="num">{{ m.id }}</td>
-          <td class="mono"><strong>{{ m.username }}</strong></td>
-          <td>{{ m.full_name or '—' }}</td>
-          <td><span class="pill">{{ m.status }}</span></td>
-          <td>
-            <form method="post" action="{{ url_for('radius.sgrp_remove_member', gid=grp.id, sid=m.id) }}"
-                  onsubmit="return confirm('إزالة من المجموعة؟')" style="display:inline">
-              <button class="btn btn-danger btn-xs"><i class="fa-solid fa-user-minus"></i></button>
-            </form>
-          </td>
-        </tr>{% endfor %}</tbody>
-      </table>
-      {% else %}<div class="empty"><i class="fa-solid fa-user-slash"></i>لا أعضاء</div>{% endif %}
-    </div>
-  </div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px">
 
-  <div class="card">
-    <div class="card-header"><span class="title">إضافة عضو</span></div>
-    <div class="card-body">
-      <form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
-        <div class="form-row full">
-          <div class="field">
-            <select name="subscriber_id" required>
-              <option value="">— اختر مشتركًا —</option>
-              {% for s in candidates %}
-                <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '' }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm" type="submit">
-          <i class="fa-solid fa-user-plus"></i> أضف
-        </button>
-      </form>
-    </div>
-  </div>
+  {% call hub.section("الأعضاء", icon="users", flush=True) %}
+    {% if members %}
+      <div class="hub-table-wrap" style="border:none">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>اليوزر</th>
+              <th>الاسم</th>
+              <th>الحالة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for m in members %}
+            <tr>
+              <td class="num">{{ m.id }}</td>
+              <td class="mono"><strong>{{ m.username }}</strong></td>
+              <td>{{ m.full_name or '—' }}</td>
+              <td><span class="hub-pill hub-pill--grey">{{ m.status }}</span></td>
+              <td>
+                <form method="post"
+                      action="{{ url_for('radius.sgrp_remove_member', gid=grp.id, sid=m.id) }}"
+                      onsubmit="return confirm('إزالة من المجموعة؟')"
+                      style="display:inline;margin:0">
+                  <button class="hub-btn hub-btn--danger hub-btn--sm">
+                    <i class="fa-solid fa-user-minus"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا يوجد أعضاء بعد.", icon="user-slash") }}
+    {% endif %}
+  {% endcall %}
+
+  {% call hub.section("إضافة عضو", icon="user-plus") %}
+    <form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
+      <div class="hub-field">
+        <label class="hub-field-label">المشترك</label>
+        <select class="hub-select" name="subscriber_id" required>
+          <option value="">— اختر مشتركًا —</option>
+          {% for s in candidates %}
+            <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-top:12px">
+        {{ hub.btn("أضف", icon="user-plus", variant="primary", size="sm", type="submit") }}
+      </div>
+    </form>
+  {% endcall %}
+
 </div>
 
-<div class="actions-bar">
-  <a class="btn btn-secondary" href="{{ url_for('radius.sgrp_edit', gid=grp.id) }}">
-    <i class="fa-solid fa-pen"></i> تعديل المجموعة
-  </a>
-  <a class="btn btn-ghost" href="{{ url_for('radius.sgrp_list') }}">
-    <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
-  </a>
+<div class="hub-flex-row" style="margin-top:16px">
+  {{ hub.btn("تعديل المجموعة", icon="pen", variant="secondary",
+              href=url_for('radius.sgrp_edit', gid=grp.id)) }}
+  {{ hub.btn("العودة للقائمة", icon="arrow-right-long", variant="ghost",
+              href=url_for('radius.sgrp_list')) }}
 </div>
 {% endblock %}

@@ -8,28 +8,27 @@
 {% block content %}
 {{ hub.hero(
   "إعدادات النظام",
-  subtitle="إعدادات النظام العامة",
+  subtitle="القيم العامة التي يستخدمها النظام لكل جهة.",
   icon="gear"
 ) }}
 
 <form method="post">
-  <div class="card">
-    <div class="card-header"><span class="title">القيم العامة</span></div>
-    <div class="card-body">
+
+  {% call hub.section("القيم العامة", icon="sliders") %}
+    <div class="hub-form-row">
       {% for it in items %}
-      <div class="form-row">
-        <label>{{ it.label }}</label>
-        <div class="field">
-          <input type="text" name="{{ it.key }}" value="{{ it.value }}">
-          <div class="hint mono">{{ it.key }}</div>
+        <div class="hub-field">
+          <label class="hub-field-label">{{ it.label }}</label>
+          <input class="hub-input" type="text" name="{{ it.key }}" value="{{ it.value }}">
+          <div class="hub-field-hint mono">{{ it.key }}</div>
         </div>
-      </div>
       {% endfor %}
     </div>
-  </div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.dashboard') }}">إلغاء</a>
+  {% endcall %}
+
+  <div class="hub-flex-row" style="margin-top:16px">
+    {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.dashboard')) }}
   </div>
 </form>
 {% endblock %}

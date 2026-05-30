@@ -7,58 +7,78 @@
 {% block content %}
 {{ hub.hero(
   "تعديل سرعات الباقات (جماعي)",
-  subtitle="تعديل سرعة عدد من الباقات في عملية واحدة",
+  subtitle="تعديل سرعة عدد من الباقات في عملية واحدة عبر مضاعف أو قيمة ثابتة.",
   icon="gauge-high"
 ) }}
 
 <form method="post">
-  <div class="card">
-    <div class="card-header"><span class="title">اختر الباقات</span></div>
-    <div class="card-body card-body--flush">
-      <table class="hr-table">
-        <thead><tr>
-          <th style="width:36px"><input type="checkbox" onclick="document.querySelectorAll('input[name=plan_ids]').forEach(x=>x.checked=this.checked)"></th>
-          <th>#</th><th>الاسم</th><th>تنزيل حالي</th><th>رفع حالي</th><th>النوع</th>
-        </tr></thead>
-        <tbody>{% for p in plans %}
-        <tr>
-          <td><input type="checkbox" name="plan_ids" value="{{ p.id }}"></td>
-          <td class="num">{{ p.id }}</td>
-          <td><strong>{{ p.name }}</strong></td>
-          <td class="mono">{{ p.speed_down_kbps }} Kbps</td>
-          <td class="mono">{{ p.speed_up_kbps }} Kbps</td>
-          <td><span class="pill">{{ p.plan_type }}</span></td>
-        </tr>{% endfor %}</tbody>
+
+  {% call hub.section("اختر الباقات", icon="layer-group", meta=(plans|length ~ ' باقة') if plans else '', flush=True) %}
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th style="width:36px">
+              <input type="checkbox"
+                     onclick="document.querySelectorAll('input[name=plan_ids]').forEach(x=>x.checked=this.checked)">
+            </th>
+            <th class="num">#</th>
+            <th>الاسم</th>
+            <th>تنزيل حالي</th>
+            <th>رفع حالي</th>
+            <th>النوع</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for p in plans %}
+          <tr>
+            <td><input type="checkbox" name="plan_ids" value="{{ p.id }}"></td>
+            <td class="num">{{ p.id }}</td>
+            <td><strong>{{ p.name }}</strong></td>
+            <td class="mono">{{ p.speed_down_kbps }} Kbps</td>
+            <td class="mono">{{ p.speed_up_kbps }} Kbps</td>
+            <td><span class="hub-pill hub-pill--brand">{{ p.plan_type }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
       </table>
     </div>
-  </div>
+  {% endcall %}
 
-  <div class="card">
-    <div class="card-header"><span class="title">عمليّة التعديل</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>مضاعفة التنزيل ×</label>
-        <div class="field"><input type="number" step="0.1" name="mult_down" value="1.0">
-          <div class="hint">مثلاً 0.5 لتنصيف السرعة، 2 للمضاعفة</div></div></div>
-      <div class="form-row"><label>مضاعفة الرفع ×</label>
-        <div class="field"><input type="number" step="0.1" name="mult_up" value="1.0"></div></div>
-      <div class="form-row"><label>أو ضع قيمة تنزيل ثابتة (Kbps)</label>
-        <div class="field"><input type="number" name="set_down" min="0" value="0">
-          <div class="hint">إن وضعت قيمة هنا، تتجاوز المضاعف</div></div></div>
-      <div class="form-row"><label>أو قيمة رفع ثابتة (Kbps)</label>
-        <div class="field"><input type="number" name="set_up" min="0" value="0"></div></div>
+  <div style="height:14px"></div>
+
+  {% call hub.section("عمليّة التعديل", icon="sliders") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">مضاعفة التنزيل ×</label>
+        <input class="hub-input" type="number" step="0.1" name="mult_down" value="1.0">
+        <div class="hub-field-hint">مثلًا 0.5 لتنصيف السرعة، 2 للمضاعفة.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">مضاعفة الرفع ×</label>
+        <input class="hub-input" type="number" step="0.1" name="mult_up" value="1.0">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">أو ضع قيمة تنزيل ثابتة (Kbps)</label>
+        <input class="hub-input" type="number" name="set_down" min="0" value="0">
+        <div class="hub-field-hint">إن وضعت قيمة هنا، تتجاوز المضاعف.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">أو قيمة رفع ثابتة (Kbps)</label>
+        <input class="hub-input" type="number" name="set_up" min="0" value="0">
+      </div>
     </div>
-  </div>
+  {% endcall %}
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"
-            onclick="return confirm('تأكيد تعديل السرعات؟')">
-      <i class="fa-solid fa-bolt"></i> تطبيق
-    </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.plans_list') }}">إلغاء</a>
+  <div class="hub-flex-row" style="margin-top:16px">
+    {{ hub.btn("تطبيق", icon="bolt", variant="primary", type="submit",
+                attrs='onclick="return confirm(\'تأكيد تعديل السرعات؟\')"') }}
+    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.plans_list')) }}
   </div>
 </form>
 
-<div class="hint" style="margin-top:8px">
-  ⚠️ بعد الحفظ سيُدفع التغيير لكل MikroTik routers عبر sync_queue تلقائيًا.
+<div class="hub-flash hub-flash--warning" style="margin-top:16px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  بعد الحفظ سيُدفع التغيير لكل MikroTik routers عبر <span class="mono">sync_queue</span> تلقائيًا.
 </div>
 {% endblock %}

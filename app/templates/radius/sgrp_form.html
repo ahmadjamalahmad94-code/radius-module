@@ -9,42 +9,58 @@
 {% block content %}
 {{ hub.hero(
   ttl,
-  subtitle="تعريف مجموعة مشاركة بين الموزّعين",
+  subtitle="تعريف مجموعة مشاركة بين الموزّعين.",
   icon="people-arrows"
 ) }}
 
 <form method="post"
       action="{{ url_for('radius.sgrp_update', gid=item.id) if not is_new else url_for('radius.sgrp_create') }}">
-  <div class="card">
-    <div class="card-header"><span class="title">المعطيات</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>الاسم *</label>
-        <div class="field"><input type="text" name="name" required value="{{ item.name if item else '' }}"></div></div>
-      <div class="form-row"><label>الوصف</label>
-        <div class="field"><textarea name="description">{{ item.description if item else '' }}</textarea></div></div>
-      <div class="form-row"><label>الكوتا المشتركة (MB، 0=غير محدود)</label>
-        <div class="field"><input type="number" name="shared_quota_mb" min="0"
-          value="{{ item.shared_quota_mb if item else 0 }}"></div></div>
-      <div class="form-row"><label>سرعة تنزيل مشتركة (Kbps)</label>
-        <div class="field"><input type="number" name="shared_speed_down_kbps" min="0"
-          value="{{ item.shared_speed_down_kbps if item else 0 }}"></div></div>
-      <div class="form-row"><label>سرعة رفع مشتركة (Kbps)</label>
-        <div class="field"><input type="number" name="shared_speed_up_kbps" min="0"
-          value="{{ item.shared_speed_up_kbps if item else 0 }}"></div></div>
-      <div class="form-row"><label>حد الأعضاء (0=غير محدود)</label>
-        <div class="field"><input type="number" name="max_members" min="0"
-          value="{{ item.max_members if item else 0 }}"></div></div>
-      <div class="form-row"><label>الحالة</label>
-        <div class="field">{{ toggle_switch(name="enabled", checked=((not item) or item.enabled), value="1", on_label="نعم", off_label="لا") }}</div></div>
+
+  {% call hub.section("المعطيات", icon="sliders") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">الاسم <span style="color:#dc2626">*</span></label>
+        <input class="hub-input" type="text" name="name" required value="{{ item.name if item else '' }}">
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">الوصف</label>
+        <textarea class="hub-textarea" name="description">{{ item.description if item else '' }}</textarea>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الكوتا المشتركة (MB، 0=غير محدود)</label>
+        <input class="hub-input" type="number" name="shared_quota_mb" min="0"
+               value="{{ item.shared_quota_mb if item else 0 }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">حد الأعضاء (0=غير محدود)</label>
+        <input class="hub-input" type="number" name="max_members" min="0"
+               value="{{ item.max_members if item else 0 }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">سرعة تنزيل مشتركة (Kbps)</label>
+        <input class="hub-input" type="number" name="shared_speed_down_kbps" min="0"
+               value="{{ item.shared_speed_down_kbps if item else 0 }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">سرعة رفع مشتركة (Kbps)</label>
+        <input class="hub-input" type="number" name="shared_speed_up_kbps" min="0"
+               value="{{ item.shared_speed_up_kbps if item else 0 }}">
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">الحالة</label>
+        {{ toggle_switch(name="enabled", checked=((not item) or item.enabled), value="1", on_label="نعم", off_label="لا") }}
+      </div>
     </div>
-  </div>
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.sgrp_list') }}">إلغاء</a>
+  {% endcall %}
+
+  <div class="hub-flex-row" style="margin-top:16px">
+    {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.sgrp_list')) }}
   </div>
 </form>
 
-<div class="hint" style="margin-top:8px">
-  ملاحظة: مجموعات المشاركة محفوظة الآن في الواجهة، وسيتم تفعيلها بالكامل عند ربطها بمحرك RADIUS.
+<div class="hub-flash hub-flash--info" style="margin-top:12px">
+  <i class="fa-solid fa-circle-info"></i>
+  مجموعات المشاركة محفوظة الآن في الواجهة، وسيتم تفعيلها بالكامل عند ربطها بمحرك RADIUS.
 </div>
 {% endblock %}
