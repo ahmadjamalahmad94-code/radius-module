@@ -581,12 +581,18 @@ class AdminPanelClient:
                 "status": "config_missing",
                 "error": {"code": "config_missing", "missing": missing},
             }
+        # Carry the integration secret in the BODY too (not only the header),
+        # because reverse proxies often strip custom request headers. Over
+        # HTTPS this is equivalent in confidentiality to the header.
+        body = dict(payload)
+        if self.config.shared_secret:
+            body["admin_secret"] = self.config.shared_secret
         try:
             response = self.transport.request_json(
                 method="POST",
                 url=source_url,
                 headers=self._headers(),
-                json_body=payload,
+                json_body=body,
                 timeout_seconds=self.config.timeout_seconds,
             )
         except (TimeoutError, socket.timeout) as exc:
