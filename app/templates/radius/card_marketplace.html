@@ -1,9 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 
-{% block title %}سوق البطاقات الإلكتروني - Hobe Hub{% endblock %}
+{% block title %}سوق البطاقات الإلكترونية - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
-{% block page_title %}سوق البطاقات الإلكتروني{% endblock %}
-{% block page_sub %}<span class="sub">حزم إلكترونية جاهزة للبيع</span>{% endblock %}
+{% block page_title %}سوق البطاقات الإلكترونية{% endblock %}
+{% block page_sub %}<span class="sub">إعداد عروض الشراء التي تظهر لمستخدمي البطاقات في بوابة الزبون.</span>{% endblock %}
 
 {% macro num(value) -%}
   {{ "{:,}".format((value or 0)|int) }}
@@ -11,24 +12,47 @@
 
 {% macro money(value, currency="ILS") -%}
   {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
-  {{ "%.2f"|format(value or 0) }} <span>{{ cur }}</span>
+  {{ "%.2f"|format((value or 0)|float) }} <span>{{ cur }}</span>
 {%- endmacro %}
 
-{% macro duration_label(batch) -%}
-  {% set value = batch.duration_value or batch.validity_after_first_login_days or batch.plan_duration_minutes or 0 %}
-  {% set unit = batch.duration_unit or "" %}
-  {% if value %}
-    {% if unit in ["minutes", "minute", "mins", "Mins"] %}
-      {{ value }} دقيقة
-    {% elif unit in ["hours", "hour"] %}
-      {{ value }} ساعة
-    {% elif unit in ["days", "day"] %}
-      {{ value }} يوم
-    {% else %}
-      {{ value }} {{ unit }}
-    {% endif %}
+{% macro duration_minutes_label(minutes) -%}
+  {% set total = (minutes or 0)|int %}
+  {% if total <= 0 %}
+    حسب العرض
+  {% elif total >= 1440 and total % 1440 == 0 %}
+    {{ total // 1440 }} يوم
+  {% elif total >= 60 and total % 60 == 0 %}
+    {{ total // 60 }} ساعات
+  {% elif total >= 60 %}
+    {{ (total / 60)|round(1)|string|replace('.0','') }} ساعة
   {% else %}
-    غير محددة
+    {{ total }} دقيقة
+  {% endif %}
+{%- endmacro %}
+
+{% macro speed_label(kbps) -%}
+  {% set value = (kbps or 0)|int %}
+  {% if value >= 1024 and value % 1024 == 0 %}
+    {{ value // 1024 }} ميجا
+  {% elif value >= 1024 %}
+    {{ (value / 1024)|round(1)|string|replace('.0','') }} ميجا
+  {% elif value > 0 %}
+    {{ value }} كيلو
+  {% else %}
+    حسب العرض
+  {% endif %}
+{%- endmacro %}
+
+{% macro batch_duration_label(batch) -%}
+  {% set value = batch.duration_value or batch.validity_after_first_login_days or batch.plan_duration_minutes or 0 %}
+  {% if batch.duration_value and batch.duration_unit in ["hours", "hour"] %}
+    {{ value }} ساعة
+  {% elif batch.duration_value and batch.duration_unit in ["days", "day"] %}
+    {{ value }} يوم
+  {% elif batch.duration_value %}
+    {{ value }} دقيقة
+  {% else %}
+    {{ duration_minutes_label(value) }}
   {% endif %}
 {%- endmacro %}
 
@@ -38,608 +62,575 @@
 
 {% block content %}
 <style>
-  .market-page {
-    --market-ink: #162033;
-    --market-muted: #72809a;
-    --market-line: #dfe7f3;
-    --market-soft: rgba(255, 255, 255, .76);
-    --market-blue: #1e88e5;
-    --market-teal: #10a58f;
-    --market-amber: #f59f18;
-    --market-violet: #6f55f2;
-    direction: rtl;
-    color: var(--market-ink);
+  .market-page{
+    --ink:#0f172a;
+    --muted:#64748b;
+    --line:#cbd5e1;
+    --line-soft:#e2e8f0;
+    --soft:#f8fafc;
+    --violet:#7c3aed;
+    --violet-deep:#5b21b6;
+    --violet-soft:#f5f3ff;
+    --teal:#7c3aed;          /* alias kept so old refs stay violet */
+    --blue:#2563eb;
+    --amber:#d97706;
+    direction:rtl;
+    color:var(--ink);
+    display:grid;
+    gap:16px;
+  }
+  .market-page *{box-sizing:border-box}
+  .market-page button,.market-page input,.market-page select{font:inherit}
+  .market-card,.market-panel{
+    border:1px solid var(--line);
+    background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 1px 3px rgba(15,23,42,.06), 0 8px 20px rgba(15,23,42,.06);
   }
 
-  .market-hero,
-  .market-panel,
-  .market-card {
-    background: rgba(255, 255, 255, .9);
-    border: 1px solid var(--market-line);
-    box-shadow: 0 18px 38px rgba(31, 41, 55, .07);
-  }
-
-  .market-hero {
-    border-radius: 22px;
-    padding: 14px 16px;
-    display: grid;
-    grid-template-columns: minmax(220px, .9fr) minmax(520px, 2fr);
-    gap: 12px;
-    align-items: center;
+  /* ── Mega-hero: title + action + KPI strip in ONE panel ── */
+  .market-hero{
+    position:relative;
+    display:grid;
+    gap:14px;
+    padding:18px 20px;
+    border-radius:18px;
+    border:1px solid var(--line);
     background:
-      radial-gradient(circle at 12% 15%, rgba(16, 165, 143, .14), transparent 30%),
-      linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(240, 247, 255, .9));
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
   }
-
-  .market-hero__copy {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
+  .market-title{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    flex-wrap:wrap;
   }
-
-  .market-kicker {
-    color: var(--market-teal);
-    font-weight: 900;
-    font-size: 12px;
+  .market-icon{
+    width:46px;
+    height:46px;
+    display:grid;
+    place-items:center;
+    flex:0 0 auto;
+    border-radius:13px;
+    color:#fff;
+    background:linear-gradient(135deg,var(--violet),var(--violet-deep));
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
   }
-
-  .market-hero h1 {
-    margin: 0;
-    font-size: clamp(23px, 2.2vw, 32px);
-    line-height: 1.2;
-    letter-spacing: 0;
+  .market-title h1{
+    margin:0;
+    font-size:20px;
+    line-height:1.2;
+    font-weight:800;
   }
-
-  .market-hero p {
-    display: none;
-    margin: 0;
-    color: var(--market-muted);
-    font-weight: 800;
-    line-height: 1.8;
+  .market-title p{
+    margin:3px 0 0;
+    color:var(--muted);
+    font-weight:600;
+    font-size:13px;
+    line-height:1.65;
+    max-width:680px;
   }
-
-  .market-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+  .market-metrics{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--line-soft);
   }
-
-  .market-btn {
-    min-height: 40px;
-    border-radius: 14px;
-    border: 1px solid var(--market-line);
-    padding: 0 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    font-weight: 950;
-    color: var(--market-ink);
-    background: #fff;
-    text-decoration: none;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  .market-metric{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-align:start;
+    padding:14px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
   }
-
-  .market-btn:hover {
-    transform: translateY(-1px);
-    border-color: rgba(111, 85, 242, .35);
-    box-shadow: 0 12px 24px rgba(31, 41, 55, .08);
+  .market-metric i{
+    width:42px;
+    height:42px;
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    border-radius:11px;
+    color:var(--metric,#7c3aed);
+    background:color-mix(in srgb, var(--metric,#7c3aed) 12%, white);
+    font-size:17px;
   }
-
-  .market-btn--primary {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--market-teal), #17b9a2);
-    box-shadow: 0 14px 28px rgba(16, 165, 143, .18);
+  .market-metric .metric-body{ display:grid; gap:2px; min-width:0; }
+  .market-metric span{color:var(--muted);font-size:12px;font-weight:700}
+  .market-metric strong{font-size:22px;line-height:1.05;font-weight:800;direction:ltr;color:var(--ink)}
+  .market-panel{
+    overflow:hidden;
+    border-radius:16px;
   }
-
-  .market-btn--violet {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--market-violet), #7b5cff);
+  .market-create-panel{
+    position:relative;
+    overflow:hidden;
+    width:min(980px, calc(100vw - 28px));
+    max-height:calc(100vh - 52px);
+    overflow-y:auto;
+    border-radius:18px;
+    background:linear-gradient(180deg, #faf8ff 0%, #fff 22%);
   }
-
-  .market-metrics {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 9px;
-    align-self: center;
+  .market-modal{
+    position:fixed;
+    inset:0;
+    z-index:4000;
+    display:none;
+    place-items:center;
+    padding:26px 14px;
+    background:rgba(15,23,42,.55);
+    backdrop-filter:blur(4px);
   }
-
-  .market-metric {
-    min-height: 82px;
-    border-radius: 16px;
-    padding: 11px 12px;
-    background: #fff;
-    border: 1px solid rgba(223, 231, 243, .9);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 12px;
-    overflow: hidden;
-    position: relative;
+  .market-modal.is-open{display:grid}
+  .market-modal .market-create-panel{
+    animation:marketModalIn .22s ease-out both;
   }
-
-  .market-metric::after {
-    content: "";
-    width: 54px;
-    height: 54px;
-    border-radius: 20px;
-    background: var(--metric-color, var(--market-blue));
-    opacity: .14;
-    position: absolute;
-    inset-inline-end: -18px;
-    bottom: -18px;
+  @keyframes marketModalIn{
+    from{opacity:0;transform:translateY(16px) scale(.98)}
+    to{opacity:1;transform:translateY(0) scale(1)}
   }
-
-  .market-metric i {
-    width: 38px;
-    height: 38px;
-    border-radius: 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: var(--metric-color, var(--market-blue));
-    box-shadow: 0 14px 28px color-mix(in srgb, var(--metric-color, var(--market-blue)) 25%, transparent);
-    z-index: 1;
+  .market-close{
+    width:38px;
+    height:38px;
+    display:inline-grid;
+    place-items:center;
+    flex:0 0 auto;
+    border:1px solid var(--line-soft);
+    border-radius:10px;
+    background:#fff;
+    color:#64748b;
+    cursor:pointer;
+    font-weight:800;
   }
-
-  .market-metric span {
-    display: block;
-    color: var(--market-muted);
-    font-weight: 900;
-    font-size: 12px;
+  .market-close:hover{border-color:var(--line);color:var(--ink);background:var(--soft)}
+  .market-hero-actions{
+    margin-top:0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
   }
-
-  .market-metric strong {
-    display: block;
-    margin-top: 4px;
-    font-size: 22px;
-    line-height: 1;
-    color: var(--market-ink);
-    font-variant-numeric: tabular-nums;
+  .market-panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#f5f3ff 0%,#f8fafc 100%);
   }
-
-  .market-panel {
-    margin-top: 18px;
-    border-radius: 26px;
-    overflow: hidden;
+  .market-panel-head h2{margin:0;font-size:16px;font-weight:900;color:var(--ink)}
+  .market-panel-head p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:600}
+  .market-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:30px;
+    padding:0 12px;
+    border-radius:999px;
+    color:var(--violet-deep);
+    background:var(--violet-soft);
+    border:1px solid #ede9fe;
+    font-size:12px;
+    font-weight:800;
+    white-space:nowrap;
   }
-
-  .market-panel__head {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--market-line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  .market-form{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:1.1fr 1fr .8fr .8fr .72fr .64fr;
+    gap:12px;
+    align-items:end;
+    padding:16px 18px 18px;
   }
-
-  .market-panel__head h2 {
-    margin: 0;
-    font-size: 19px;
+  .market-form .market-field:nth-child(3),
+  .market-form .market-field:nth-child(4),
+  .market-form .market-field:nth-child(5){
+    min-width:0;
   }
-
-  .market-panel__head span {
-    color: var(--market-muted);
-    font-weight: 900;
+  .market-form-submit{
+    grid-column:1 / -1;
+    display:flex;
+    justify-content:flex-start;
+    gap:10px;
   }
-
-  .market-package-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    justify-content: flex-end;
+  .market-field span{
+    display:block;
+    margin-bottom:7px;
+    color:#475569;
+    font-size:12px;
+    font-weight:700;
   }
-
-  .market-batches {
-    padding: 14px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+  .market-field input,.market-field select{
+    width:100%;
+    min-height:44px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    padding:0 12px;
+    color:var(--ink);
+    font-weight:700;
+    outline:0;
   }
-
-  .market-card {
-    border-radius: 18px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    min-height: 100%;
+  .market-field input:focus,.market-field select:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+  .market-field input[type=number]{direction:ltr;text-align:center}
+  .market-field--color input{height:44px;padding:5px;cursor:pointer}
+  .market-field .ui-wrap{
+    min-height:44px;
+    border-color:var(--line);
+    border-radius:10px;
+    background:#fff;
   }
-
-  .market-card__top {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: start;
+  .market-field .ui-value{
+    min-height:42px;
+    padding:0 12px;
+    text-align:center;
+    font-weight:800;
+    color:var(--ink);
   }
-
-  .market-card h3 {
-    margin: 0 0 5px;
-    font-size: 17px;
-    text-align: center;
+  .market-field .ui-unit{
+    width:auto;
+    min-width:92px;
+    border-radius:0;
+    border-inline-start:1px solid var(--line);
+    color:var(--violet-deep);
+    font-weight:800;
   }
-
-  .market-code {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    color: var(--market-muted);
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
+  .market-btn{
+    min-height:44px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:0 15px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:#fff;
+    color:var(--ink);
+    text-decoration:none;
+    font-weight:800;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:transform .05s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
   }
-
-  .market-badge {
-    min-width: 34px;
-    height: 34px;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: linear-gradient(135deg, var(--market-teal), #18c0a7);
-    box-shadow: 0 14px 22px rgba(16, 165, 143, .14);
+  .market-btn:hover{border-color:#ede9fe;background:var(--violet-soft);color:var(--violet-deep)}
+  .market-btn:active{transform:translateY(1px)}
+  .market-btn--primary{background:linear-gradient(135deg,var(--violet),var(--violet-deep));border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(124,58,237,.28)}
+  .market-btn--primary:hover{color:#fff;box-shadow:0 8px 18px rgba(124,58,237,.36)}
+  .market-help{
+    position:relative;
+    z-index:1;
+    margin:0 18px 18px;
+    padding:12px 14px;
+    border:1px solid #c7f0ea;
+    border-radius:12px;
+    background:#f0fdfa;
+    color:#0f766e;
+    font-weight:600;
+    font-size:12.5px;
+    line-height:1.75;
   }
-
-  .market-chips {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
+  .package-grid,.batch-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    gap:12px;
+    padding:16px;
   }
-
-  .market-chip {
-    min-height: 28px;
-    border-radius: 999px;
-    padding: 0 9px;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    color: #42516c;
-    background: #f5f8fc;
-    border: 1px solid #e8eef7;
-    font-weight: 900;
-    font-size: 12px;
+  .market-package,.market-batch{
+    position:relative;
+    overflow:hidden;
+    display:grid;
+    gap:12px;
+    min-height:200px;
+    padding:16px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 1px 3px rgba(15,23,42,.06), 0 8px 18px rgba(15,23,42,.06);
+    transition:transform .12s ease, box-shadow .18s ease, border-color .15s ease;
   }
-
-  .market-card__stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+  .market-package:hover,.market-batch:hover{
+    transform:translateY(-3px); border-color:#94a3b8;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 8px 18px rgba(124,58,237,.12), 0 20px 40px rgba(15,23,42,.12);
   }
-
-  .market-stat {
-    min-height: 58px;
-    border-radius: 13px;
-    padding: 7px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    border: 1px solid var(--stat-line, #e8eef7);
-    background: var(--stat-bg, #f8fbff);
+  .market-package:before,.market-batch:before{
+    content:"";
+    position:absolute;
+    inset-inline:0;
+    top:0;
+    height:4px;
+    background:var(--card-color,#7c3aed);
   }
-
-  .market-stat small {
-    color: #60708c;
-    font-weight: 950;
+  .market-package h3,.market-batch h3{
+    margin:2px 0 0;
+    font-size:16px;
+    text-align:center;
+    line-height:1.3;
+    font-weight:900;
+    color:var(--ink);
   }
-
-  .market-stat strong {
-    font-size: 19px;
-    font-variant-numeric: tabular-nums;
+  .market-code{
+    color:var(--muted);
+    font-size:11.5px;
+    font-weight:700;
+    text-align:center;
+    direction:ltr;
   }
-
-  .market-progress {
-    border-radius: 14px;
-    padding: 9px;
-    background: #f8fafc;
-    border: 1px solid #e8eef7;
+  .market-signature{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:7px;
+    min-height:44px;
+    border-radius:12px;
+    background:color-mix(in srgb, var(--card-color,#7c3aed) 10%, white);
+    color:var(--ink);
+    font-size:17px;
+    font-weight:900;
   }
-
-  .market-progress__labels {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    color: #56657f;
-    font-weight: 900;
-    margin-bottom: 7px;
-    font-size: 12px;
+  .market-stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:7px;
   }
-
-  .market-progress__bar {
-    height: 9px;
-    border-radius: 999px;
-    background: #e9eef5;
-    overflow: hidden;
+  .market-stat{
+    min-height:54px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    border:1px solid var(--line-soft);
+    border-radius:10px;
+    background:var(--soft);
   }
-
-  .market-progress__bar span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--market-teal), var(--market-violet));
+  .market-stat small{color:var(--muted);font-size:11px;font-weight:700}
+  .market-stat strong{font-size:16px;font-weight:900;direction:ltr;color:var(--ink)}
+  .market-card-foot{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:auto;
   }
-
-  .market-card__meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    margin: 0;
+  .market-card-foot .market-btn{min-height:38px;font-size:12.5px}
+  .market-progress{
+    padding:9px;
+    border-radius:10px;
+    border:1px solid var(--line-soft);
+    background:var(--soft);
   }
-
-  .market-card__meta div {
-    border-radius: 12px;
-    background: #fbfcff;
-    border: 1px solid #e9eef6;
-    padding: 7px;
-    text-align: center;
+  .market-progress-labels{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:7px;
+    color:#56657f;
+    font-size:12px;
+    font-weight:700;
   }
-
-  .market-card__meta dt {
-    color: var(--market-muted);
-    font-weight: 900;
-    font-size: 11px;
+  .market-progress-bar{height:8px;border-radius:999px;background:#e9eef5;overflow:hidden}
+  .market-progress-bar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--violet),var(--violet-deep))}
+  .market-table-wrap{overflow:auto}
+  .market-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0}
+  .market-table th,.market-table td{
+    padding:14px 12px;
+    border-bottom:1px solid #e8eef7;
+    text-align:center;
+    vertical-align:middle;
+    font-weight:850;
   }
-
-  .market-card__meta dd {
-    margin: 4px 0 0;
-    font-weight: 950;
-    color: var(--market-ink);
-    word-break: break-word;
+  .market-table th{background:#f8f7ff;color:#526078;font-size:12px;font-weight:950}
+  .market-empty{
+    grid-column:1/-1;
+    display:grid;
+    place-items:center;
+    min-height:150px;
+    padding:24px;
+    color:var(--muted);
+    text-align:center;
+    font-weight:900;
   }
-
-  .market-card__foot {
-    margin-top: auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
+  @media(max-width:1250px){
+    .market-form{grid-template-columns:repeat(3,1fr)}
   }
-
-  .market-card__foot .market-btn {
-    min-height: 36px;
-    border-radius: 12px;
-    padding: 0 9px;
-    font-size: 12px;
+  @media(max-width:760px){
+    .market-hero-actions{flex:1 1 100%}
   }
-
-  .market-table-wrap {
-    overflow-x: auto;
-  }
-
-  .market-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 720px;
-  }
-
-  .market-table th,
-  .market-table td {
-    padding: 15px 12px;
-    text-align: center;
-    vertical-align: middle;
-    border-bottom: 1px solid #e8eef7;
-    font-weight: 850;
-  }
-
-  .market-table th {
-    color: var(--market-ink);
-    background: #f8f7ff;
-    font-weight: 950;
-  }
-
-  .market-table td {
-    color: #2b364a;
-  }
-
-  .market-empty {
-    padding: 48px 18px;
-    text-align: center;
-  }
-
-  .market-empty i {
-    width: 70px;
-    height: 70px;
-    border-radius: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--market-teal);
-    background: rgba(16, 165, 143, .1);
-    font-size: 28px;
-    margin-bottom: 14px;
-  }
-
-  .market-empty h2 {
-    margin: 0 0 8px;
-  }
-
-  .market-empty p {
-    margin: 0 auto 18px;
-    max-width: 560px;
-    color: var(--market-muted);
-    font-weight: 850;
-    line-height: 1.8;
-  }
-
-  @media (max-width: 1100px) {
-    .market-hero {
-      grid-template-columns: 1fr;
-    }
-
-    .market-metrics {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .market-batches {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 680px) {
-    .market-hero,
-    .market-panel {
-      border-radius: 20px;
-    }
-
-    .market-card__foot {
-      grid-template-columns: 1fr;
-    }
-
-    .market-metrics,
-    .market-batches,
-    .market-card__stats,
-    .market-card__meta {
-      grid-template-columns: 1fr;
-    }
+  @media(max-width:720px){
+    .market-create-panel{width:min(100vw - 18px, 980px);max-height:calc(100vh - 22px)}
+    .market-form,.market-stats,.market-card-foot{grid-template-columns:1fr}
   }
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/card_marketplace_polish.css') }}">
 
 <div class="market-page" data-card-marketplace>
   <section class="market-hero">
-    <div class="market-hero__copy">
-      <span class="market-kicker">واجهة البيع الإلكتروني</span>
-      <h1>حزم بطاقات إلكترونية جاهزة للبيع</h1>
-      <div class="market-actions">
-        <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_generate') }}">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          إنشاء حزمة إلكترونية
-        </a>
+    <div class="market-title">
+      <span class="market-icon"><i class="fa-solid fa-store"></i></span>
+      <div style="flex:1;min-width:0">
+        <h1>سوق البطاقات الإلكترونية</h1>
+        <p>أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، تخزينها داخل حزمة، وتسليم رقمها للزبون.</p>
       </div>
-    </div>
-
-    <div class="market-metrics" aria-label="ملخص السوق الإلكتروني">
-      <article class="market-metric" style="--metric-color:#1e88e5">
-        <div><span>حزم إلكترونية</span><strong>{{ num(market_summary.batches) }}</strong></div>
-        <i class="fa-solid fa-boxes-stacked"></i>
-      </article>
-      <article class="market-metric" style="--metric-color:#10a58f">
-        <div><span>كروت متاحة للبيع</span><strong>{{ num(market_summary.available) }}</strong></div>
-        <i class="fa-solid fa-ticket"></i>
-      </article>
-      <article class="market-metric" style="--metric-color:#f59f18">
-        <div><span>كروت مباعة</span><strong>{{ num(market_summary.sold) }}</strong></div>
-        <i class="fa-solid fa-cart-shopping"></i>
-      </article>
-      <article class="market-metric" style="--metric-color:#6f55f2">
-        <div><span>إيراد إلكتروني</span><strong>{{ money(market_summary.revenue, market_summary.currency) }}</strong></div>
-        <i class="fa-solid fa-coins"></i>
-      </article>
-    </div>
-  </section>
-
-  <section class="market-panel">
-    <header class="market-panel__head">
-      <div>
-        <h2>حزم البيع الإلكتروني</h2>
-        <span>{{ num(electronic_batches|length) }} حزم</span>
-      </div>
-      {% if packages %}
-        <div class="market-package-strip" aria-label="تعريفات البيع الإلكتروني">
-          {% for package in packages[:4] %}
-            <span class="market-chip">{{ package.name }}</span>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </header>
-
-    {% if electronic_batches %}
-      <div class="market-batches">
-        {% for batch in electronic_batches %}
-          {% set total = batch.total_cards or 0 %}
-          {% set sold = batch.sold_count or 0 %}
-          {% set available = batch.available_count or 0 %}
-          {% set progress = (sold / total * 100) if total else 0 %}
-          <article class="market-card" data-market-batch-card data-search-text="{{ (batch.display_name ~ ' ' ~ batch.batch_code ~ ' ' ~ batch.plan_name ~ ' ' ~ batch.manager_display_name ~ ' ' ~ batch.distributor_display_name)|lower }}">
-            <header class="market-card__top">
-              <div>
-                <h3>{{ batch.display_name }}</h3>
-                <div class="market-code">
-                  <span>{{ batch.batch_code or "بدون كود" }}</span>
-                  <span>#{{ batch.id }}</span>
-                </div>
-              </div>
-              <span class="market-badge" title="حزمة إلكترونية"><i class="fa-solid fa-wallet"></i></span>
-            </header>
-
-            <div class="market-chips">
-              <span class="market-chip"><i class="fa-regular fa-clock"></i> {{ duration_label(batch) }}</span>
-              <span class="market-chip"><i class="fa-solid fa-mobile-screen"></i> {{ batch.device_count or 1 }} جهاز</span>
-              {% if batch.quota_mb %}
-                <span class="market-chip"><i class="fa-solid fa-database"></i> {{ num(batch.quota_mb) }} MB</span>
-              {% endif %}
-            </div>
-
-            <div class="market-card__stats">
-              <div class="market-stat" style="--stat-bg:#f2fbf8;--stat-line:#bdeee0">
-                <small>متاح للبيع</small>
-                <strong>{{ num(available) }}</strong>
-              </div>
-              <div class="market-stat" style="--stat-bg:#fff8e9;--stat-line:#ffe0a3">
-                <small>مباع</small>
-                <strong>{{ num(sold) }}</strong>
-              </div>
-              <div class="market-stat" style="--stat-bg:#f5f2ff;--stat-line:#ded5ff">
-                <small>إجمالي الكروت</small>
-                <strong>{{ num(total) }}</strong>
-              </div>
-            </div>
-
-            <div class="market-progress">
-              <div class="market-progress__labels">
-                <span>{{ "%.0f"|format(progress) }}% مباعة</span>
-                <span>متبقي {{ num(available) }}</span>
-              </div>
-              <div class="market-progress__bar"><span style="width:{{ [progress, 100]|min }}%"></span></div>
-            </div>
-
-            <dl class="market-card__meta">
-              <div><dt>سعر البيع</dt><dd>{{ money(batch.unit_price, batch.currency) }}</dd></div>
-              <div><dt>سعر الجملة</dt><dd>{{ money(batch.wholesale_price, batch.currency) }}</dd></div>
-              <div><dt>المدير</dt><dd>{{ batch.manager_display_name or "بدون مدير" }}</dd></div>
-              <div><dt>الموزع</dt><dd>{{ batch.distributor_display_name or "بدون موزع" }}</dd></div>
-              <div><dt>الخطة</dt><dd>{{ batch.plan_name or "بدون خطة" }}</dd></div>
-              <div><dt>الإنشاء</dt><dd>{{ date_label(batch.created_at) }}</dd></div>
-            </dl>
-
-            <footer class="market-card__foot">
-              <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">
-                <i class="fa-solid fa-eye"></i>
-                عرض الكروت
-              </a>
-              <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
-                <i class="fa-solid fa-pen"></i>
-                تعديل الحزمة
-              </a>
-            </footer>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="market-empty">
-        <i class="fa-solid fa-store-slash"></i>
-        <h2>لا توجد حزم إلكترونية جاهزة للبيع</h2>
-        <p>أنشئ حزمة إلكترونية حتى تظهر هنا.</p>
-        <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_generate') }}">
+      <div class="market-hero-actions">
+        <button class="market-btn market-btn--primary" type="button" data-market-create-open>
           <i class="fa-solid fa-plus"></i>
-          إنشاء حزمة إلكترونية
-        </a>
+          إضافة باقة بيع
+        </button>
       </div>
-    {% endif %}
+    </div>
+    <div class="market-metrics">
+      <article class="market-metric" style="--metric:#2563eb"><i class="fa-solid fa-boxes-stacked"></i><div class="metric-body"><span>حزم إلكترونية</span><strong>{{ num(market_summary.batches) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#7c3aed"><i class="fa-solid fa-ticket"></i><div class="metric-body"><span>كروت متاحة</span><strong>{{ num(market_summary.available) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#d97706"><i class="fa-solid fa-cart-shopping"></i><div class="metric-body"><span>مباعة</span><strong>{{ num(market_summary.sold) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#5b21b6"><i class="fa-solid fa-coins"></i><div class="metric-body"><span>الإيراد</span><strong>{{ money(market_summary.revenue, market_summary.currency) }}</strong></div></article>
+    </div>
+  </section>
+
+  <div class="market-modal" data-market-create-modal hidden>
+  <section class="market-panel market-create-panel" id="market-package-create" role="dialog" aria-modal="true" aria-labelledby="market-create-title">
+    <header class="market-panel-head">
+      <div>
+        <h2 id="market-create-title">إضافة باقة بيع</h2>
+        <p>هذه الباقة هي التي تظهر للمستخدم للشراء داخل بوابة البطاقات.</p>
+      </div>
+      <button class="market-close" type="button" data-market-create-close aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+    <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" class="market-form" data-market-package-form>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label class="market-field">
+        <span>العرض الأساسي</span>
+        <select name="plan_id" required data-market-plan>
+          <option value="">اختر عرضا</option>
+          {% for plan in marketplace_plans %}
+            <option value="{{ plan.id }}"
+                    data-name="{{ plan.display_name }}"
+                    data-duration="{{ plan.duration_minutes }}"
+                    data-down="{{ plan.speed_down_kbps }}"
+                    data-up="{{ plan.speed_up_kbps }}"
+                    data-price="{{ plan.suggested_price }}"
+                    data-currency="{{ plan.currency }}">
+              {{ plan.display_name }} — {{ duration_minutes_label(plan.duration_minutes) }} / {{ speed_label(plan.speed_down_kbps) }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="market-field">
+        <span>اسم الباقة في السوق</span>
+        <input name="name" data-market-name placeholder="مثال: 8 ساعات / 2 ميجا" required>
+      </label>
+      <label class="market-field">
+        <span>مدة البطاقة</span>
+        {{ unit_input_picker(name="duration_minutes", value=0, kind="time", units=["min","hr","day"]) }}
+      </label>
+      <label class="market-field">
+        <span>سرعة التنزيل</span>
+        {{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+      </label>
+      <label class="market-field">
+        <span>سرعة الرفع</span>
+        {{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+      </label>
+      <label class="market-field market-field--color">
+        <span>لون البطاقة</span>
+        <input name="card_color" type="color" value="#14b8a6">
+      </label>
+      <label class="market-field">
+        <span>السعر</span>
+        <input name="price" data-market-price type="number" min="0.01" step="0.01" placeholder="5.00" required>
+      </label>
+      <div class="market-form-submit">
+        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة الباقة</button>
+        <span class="market-pill"><i class="fa-solid fa-eye"></i> تظهر مباشرة في بوابة الزبون</span>
+      </div>
+    </form>
+    <p class="market-help">
+      عند شراء هذه الباقة من بوابة الزبون يتم خصم السعر من المحفظة، توليد كرت جديد، إنشاء حزمة إلكترونية مرتبطة بعملية الشراء، ثم إظهار الكرت للزبون في “بطاقاتي”.
+    </p>
+  </section>
+  </div>
+
+  <section class="market-panel">
+    <header class="market-panel-head">
+      <div>
+        <h2>عروض الشراء الظاهرة للزبائن</h2>
+        <p>هذه هي الباقات التي تظهر في بوابة مستخدم البطاقة.</p>
+      </div>
+      <span class="market-pill">{{ num(packages|length) }} عرض</span>
+    </header>
+    <div class="package-grid">
+      {% for package in packages %}
+        {% set duration = package.display_duration_minutes or package.duration_minutes or 0 %}
+        {% set down = package.display_speed_down_kbps or package.speed_down_kbps or 0 %}
+        {% set up = package.display_speed_up_kbps or package.speed_up_kbps or 0 %}
+        <article class="market-package" style="--card-color:{{ package.card_color or '#14b8a6' }}">
+          <h3>{{ package.name }}</h3>
+          <div class="market-code">{{ package.plan_name or "عرض بطاقات إلكترونية" }}</div>
+          <div class="market-signature">{{ duration_minutes_label(duration) }} / {{ speed_label(down) }}</div>
+          <div class="market-stats">
+            <div class="market-stat"><small>السعر</small><strong>{{ money(package.price, package.currency) }}</strong></div>
+            <div class="market-stat"><small>رفع</small><strong>{{ speed_label(up) }}</strong></div>
+            <div class="market-stat"><small>الحالة</small><strong>{{ "فعال" if package.active else "متوقف" }}</strong></div>
+          </div>
+        </article>
+      {% else %}
+        <div class="market-empty">لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى.</div>
+      {% endfor %}
+    </div>
   </section>
 
   <section class="market-panel">
-    <header class="market-panel__head">
+    <header class="market-panel-head">
+      <div>
+        <h2>الحزم الإلكترونية المتولدة</h2>
+        <p>كل شراء يولد كرتا ويحفظه داخل حزمة إلكترونية قابلة للمراجعة.</p>
+      </div>
+      <span class="market-pill">{{ num(electronic_batches|length) }} حزمة</span>
+    </header>
+    <div class="batch-grid">
+      {% for batch in electronic_batches %}
+        {% set total = batch.total_cards or 0 %}
+        {% set sold = batch.sold_count or 0 %}
+        {% set available = batch.available_count or 0 %}
+        {% set progress = (sold / total * 100) if total else 0 %}
+        {% set progress_width = 100 if progress > 100 else progress %}
+        <article class="market-batch" style="--card-color:{{ batch.metadata.card_color if batch.metadata and batch.metadata.card_color else '#14b8a6' }}">
+          <h3>{{ batch.display_name }}</h3>
+          <div class="market-code">{{ batch.batch_code or "بدون كود" }} · #{{ batch.id }}</div>
+          <div class="market-signature">{{ batch_duration_label(batch) }}</div>
+          <div class="market-stats">
+            <div class="market-stat"><small>متاح</small><strong>{{ num(available) }}</strong></div>
+            <div class="market-stat"><small>مباع</small><strong>{{ num(sold) }}</strong></div>
+            <div class="market-stat"><small>إجمالي</small><strong>{{ num(total) }}</strong></div>
+          </div>
+          <div class="market-progress">
+            <div class="market-progress-labels"><span>{{ "%.0f"|format(progress) }}% مباع</span><span>متبقي {{ num(available) }}</span></div>
+            <div class="market-progress-bar"><span style="width:{{ progress_width }}%"></span></div>
+          </div>
+          <div class="market-card-foot">
+            <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}"><i class="fa-solid fa-eye"></i> عرض الكروت</a>
+            <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}"><i class="fa-solid fa-pen"></i> تعديل</a>
+          </div>
+        </article>
+      {% else %}
+        <div class="market-empty">لا توجد حزم متولدة من الشراء بعد.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="market-panel">
+    <header class="market-panel-head">
       <div>
         <h2>آخر عمليات الشراء</h2>
+        <p>تأكيد أن الشراء يولد بطاقة ويحفظ الحركة المالية.</p>
       </div>
-      <span class="market-chip"><i class="fa-solid fa-receipt"></i> {{ num(purchases|length) }} عملية</span>
+      <span class="market-pill">{{ num(purchases|length) }} عملية</span>
     </header>
     <div class="market-table-wrap">
       <table class="market-table">
@@ -664,9 +655,7 @@
               <td>{{ date_label(purchase.created_at) }}</td>
             </tr>
           {% else %}
-            <tr>
-              <td colspan="6">لا توجد عمليات شراء إلكترونية بعد.</td>
-            </tr>
+            <tr><td colspan="6">لا توجد عمليات شراء إلكترونية بعد.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -674,5 +663,94 @@
   </section>
 </div>
 
+<script>
+(function(){
+  const modal = document.querySelector('[data-market-create-modal]');
+  const openButtons = document.querySelectorAll('[data-market-create-open]');
+  const closeButtons = document.querySelectorAll('[data-market-create-close]');
+  function openModal(){
+    if (!modal) return;
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    const first = modal.querySelector('select, input, button');
+    if (first) first.focus();
+  }
+  function closeModal(){
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  }
+  openButtons.forEach(btn => btn.addEventListener('click', openModal));
+  closeButtons.forEach(btn => btn.addEventListener('click', closeModal));
+  if (modal) {
+    modal.addEventListener('click', function(event){
+      if (event.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', function(event){
+      if (event.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+    });
+  }
+  const form = document.querySelector('[data-market-package-form]');
+  if (!form) return;
+  const plan = form.querySelector('[data-market-plan]');
+  const name = form.querySelector('[data-market-name]');
+  const price = form.querySelector('[data-market-price]');
+  function setUnitInput(hiddenName, baseValue, preferredUnits){
+    const hidden = form.querySelector('input[type="hidden"][name="' + hiddenName + '"]');
+    if (!hidden) return;
+    const wrap = hidden.closest('.ui-wrap');
+    const valueInput = wrap ? wrap.querySelector('.ui-value') : null;
+    const unitSelect = wrap ? wrap.querySelector('.ui-unit') : null;
+    const base = parseInt(baseValue || '0', 10) || 0;
+    hidden.value = String(base);
+    if (!valueInput || !unitSelect) return;
+    const units = preferredUnits || [];
+    for (const item of units) {
+      if (base > 0 && base % item.ratio === 0) {
+        unitSelect.value = item.unit;
+        valueInput.value = String(base / item.ratio);
+        valueInput.dispatchEvent(new Event('input', { bubbles:true }));
+        return;
+      }
+    }
+    unitSelect.value = units[0] ? units[0].unit : unitSelect.value;
+    valueInput.value = String(base);
+    valueInput.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+  function setSpeedInput(hiddenName, kbps){
+    setUnitInput(hiddenName, kbps, [{unit:'Mbps', ratio:1024}, {unit:'kbps', ratio:1}]);
+  }
+  function setDurationInput(minutes){
+    setUnitInput('duration_minutes', minutes, [{unit:'day', ratio:1440}, {unit:'hr', ratio:60}, {unit:'min', ratio:1}]);
+  }
+  function speedLabel(kbps){
+    const value = parseInt(kbps || '0', 10) || 0;
+    if (value >= 1024 && value % 1024 === 0) return (value / 1024) + ' ميجا';
+    if (value >= 1024) return (value / 1024).toFixed(1).replace('.0','') + ' ميجا';
+    if (value > 0) return value + ' كيلو';
+    return 'حسب العرض';
+  }
+  function durationLabel(minutes){
+    const total = parseInt(minutes || '0', 10) || 0;
+    if (total >= 1440 && total % 1440 === 0) return (total / 1440) + ' يوم';
+    if (total >= 60 && total % 60 === 0) return (total / 60) + ' ساعات';
+    if (total >= 60) return (total / 60).toFixed(1).replace('.0','') + ' ساعة';
+    if (total > 0) return total + ' دقيقة';
+    return 'حسب العرض';
+  }
+  plan.addEventListener('change', function(){
+    const opt = plan.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    setDurationInput(opt.dataset.duration || '0');
+    setSpeedInput('speed_down_kbps', opt.dataset.down || '0');
+    setSpeedInput('speed_up_kbps', opt.dataset.up || '0');
+    price.value = opt.dataset.price || '';
+    if (!name.value.trim()) {
+      name.value = durationLabel(opt.dataset.duration || '0') + ' / ' + speedLabel(opt.dataset.down || '0');
+    }
+  });
+})();
+</script>
 {% endblock %}
-    font-size: 11px;
