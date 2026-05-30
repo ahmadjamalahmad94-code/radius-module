@@ -23,7 +23,8 @@ from app.radius.services.admin_panel_client import (
 )
 
 
-CONTENT_UPLOAD_FLAG = "HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_ENABLED"
+CONTENT_UPLOAD_FLAG = "HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_ENABLED"  # legacy, no longer required
+CONTENT_UPLOAD_DISABLED_FLAG = "HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_DISABLED"
 CONTENT_UPLOAD_MAX_BYTES = "HOBERADIUS_ADMIN_BACKUP_CONTENT_MAX_BYTES"
 
 
@@ -141,12 +142,17 @@ class BackupUploadService:
     ) -> dict[str, Any]:
         path = Path(str(artifact.get("path") or ""))
         size = int(artifact.get("size") or 0)
-        content_allowed = _truthy(os.environ.get(CONTENT_UPLOAD_FLAG))
+        # Content upload is ENABLED by default (commercial deployments must not
+        # need terminal/env access). It can be turned OFF by setting
+        # HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_DISABLED=1.
+        content_allowed = not _truthy(os.environ.get(CONTENT_UPLOAD_DISABLED_FLAG))
+        # Default cap 200 MB (matches the panel's stored-content cap); override
+        # via HOBERADIUS_ADMIN_BACKUP_CONTENT_MAX_BYTES if ever needed.
         max_bytes = _safe_int(
             os.environ.get(CONTENT_UPLOAD_MAX_BYTES),
-            5 * 1024 * 1024,
+            200 * 1024 * 1024,
             minimum=1,
-            maximum=100 * 1024 * 1024,
+            maximum=500 * 1024 * 1024,
         )
         content_included = bool(include_content and content_allowed and size <= max_bytes and path.exists())
         payload = {
@@ -162,11 +168,12 @@ class BackupUploadService:
             "content_included": content_included,
         }
         if include_content and not content_included:
-            payload["content_omitted_reason"] = (
-                "content_upload_disabled"
-                if not content_allowed
-                else "content_too_large_or_missing"
-            )
+            if not content_allowed:
+                payload["content_omitted_reason"] = "content_upload_disabled"
+            elif not path.exists():
+                payload["content_omitted_reason"] = "backup_file_missing"
+            else:
+                payload["content_omitted_reason"] = "content_too_large"
         if content_included:
             payload["content_base64"] = base64.b64encode(path.read_bytes()).decode("ascii")
         return sanitize_bridge_payload(payload)

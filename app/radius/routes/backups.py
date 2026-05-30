@@ -101,13 +101,16 @@ def backups_upload_panel():
     if result.get("ok") and not result.get("dry_run"):
         content_included = bool((result.get("payload") or {}).get("content_included"))
         if content_included:
-            flash("تم رفع النسخة الاحتياطية (بالمحتوى) إلى لوحة التراخيص وتخزينها في ملف العميل.", "success")
+            flash("تم رفع النسخة الاحتياطية (بالملف الكامل) إلى لوحة التراخيص وتخزينها في ملف العميل.", "success")
         else:
-            flash(
-                "تم تسجيل النسخة في ملف العميل بلوحة التراخيص (بيانات وصفية فقط). "
-                "لرفع الملف نفسه فعّل HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_ENABLED=1 على خادم الريدياس.",
-                "warning",
-            )
+            reason = (result.get("payload") or {}).get("content_omitted_reason") or ""
+            if reason == "content_too_large":
+                hint = "حجم النسخة يتجاوز الحد المسموح للرفع."
+            elif reason == "backup_file_missing":
+                hint = "تعذّر العثور على ملف النسخة محليًا."
+            else:
+                hint = "تم تسجيل البيانات الوصفية فقط."
+            flash(f"تم تسجيل النسخة في ملف العميل بلوحة التراخيص. {hint}", "warning")
     elif result.get("status") == "no_backup_found":
         flash("لا توجد نسخة محلية ناجحة لرفعها. شغّل نسخة محلية أولاً.", "error")
     elif result.get("status") in {"disabled", "config_missing"}:
