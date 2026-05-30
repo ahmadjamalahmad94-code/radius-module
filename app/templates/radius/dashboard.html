@@ -121,114 +121,6 @@
     border-color:transparent;
     background:linear-gradient(135deg,#8b5cf6,#5b4bd8);
   }
-  .ops-pulse-strip{
-    overflow:hidden;
-    display:grid;
-    grid-template-columns:minmax(290px,330px) minmax(260px,420px) minmax(360px,1fr);
-    gap:16px;
-    align-items:center;
-    padding:16px;
-    border:1px solid var(--line);
-    border-radius:18px;
-    background:#fff;
-    box-shadow:0 1px 2px rgba(16,24,40,.04), 0 4px 14px rgba(30,41,59,.05);
-  }
-  .ops-strip-title{
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .ops-strip-icon{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:48px;
-    height:48px;
-    border-radius:16px;
-    background:#ecfeff;
-    color:var(--cyan);
-    font-size:22px;
-    line-height:1;
-    flex:0 0 48px;
-  }
-  .ops-strip-icon i{
-    display:block;
-    line-height:1;
-  }
-  .ops-strip-title strong{
-    display:block;
-    font-size:17px;
-    font-weight:700;
-  }
-  .ops-strip-title > div > span{
-    display:block;
-    max-width:240px;
-    margin-top:5px;
-    color:var(--muted);
-    font-size:12px;
-    line-height:1.7;
-    font-weight:600;
-  }
-  .ops-wave{
-    position:relative;
-    width:100%;
-    max-width:420px;
-    height:76px;
-    justify-self:center;
-    border:1px solid #e4ebf6;
-    border-radius:14px;
-    background:
-      linear-gradient(90deg,rgba(20,184,166,.10),rgba(37,99,235,.08),rgba(124,58,237,.09)),
-      repeating-linear-gradient(90deg,transparent 0 42px,rgba(148,163,184,.16) 43px 44px);
-  }
-  .ops-wave:before{
-    content:"";
-    position:absolute;
-    left:16px;
-    right:16px;
-    top:50%;
-    height:3px;
-    border-radius:999px;
-    background:linear-gradient(90deg,#14b8a6,#2563eb,#7c3aed);
-    box-shadow:0 0 18px rgba(37,99,235,.18);
-  }
-  .ops-wave:after{
-    content:"";
-    position:absolute;
-    top:50%;
-    right:calc(18% + 10px);
-    width:16px;
-    height:16px;
-    margin-top:-7px;
-    border-radius:50%;
-    background:#fff;
-    border:4px solid var(--blue);
-    box-shadow:0 0 0 8px rgba(37,99,235,.13);
-    animation:none;
-  }
-  @keyframes ops-dot{
-    0%,100%{transform:translateX(0)}
-    50%{transform:translateX(-150px)}
-  }
-  .ops-health{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:8px;
-  }
-  .ops-health span{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:7px;
-    min-height:34px;
-    padding:0 10px;
-    border-radius:11px;
-    background:var(--tone-soft,#f1f5f9);
-    color:var(--tone,#475569);
-    font-size:12px;
-    font-weight:700;
-  }
-  .ops-health i{font-size:12px}
   .ops-vps-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
@@ -663,7 +555,6 @@
     background:var(--tone-soft,#eff6ff);
   }
   @media (max-width:1240px){
-    .ops-pulse-strip{grid-template-columns:1fr}
     .ops-vps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ops-modules{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ops-secondary{grid-template-columns:1fr}
@@ -676,7 +567,6 @@
     .ops-vps-card{min-height:110px}
     .ops-modules{grid-template-columns:1fr}
     .ops-module{min-height:238px}
-    .ops-health{grid-template-columns:1fr}
   }
   /* ════════════════════════════════════════════════════════════════
      Premium polish v2 — additive, CSS-only follow-up to commit 2575a86.
@@ -824,23 +714,6 @@
       <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> مشترك جديد</a>
       <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء حزمة</a>
       <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> تجهيز راوتر</a>
-    </div>
-  </section>
-
-  <section class="ops-pulse-strip" aria-label="نبض الشبكة">
-    <div class="ops-strip-title">
-      <span class="ops-strip-icon"><i class="fa-solid fa-wave-square"></i></span>
-      <div>
-        <strong>نبض الشبكة الآن</strong>
-        <span>{{ sub_online }} جلسة مفتوحة · {{ printed_available + electronic_available }} كرت متاح<br>{{ nas_enabled }} جهاز مفعل</span>
-      </div>
-    </div>
-    <div class="ops-wave" aria-hidden="true"></div>
-    <div class="ops-health">
-      <span style="--tone:{{ '#16a34a' if db_ok else '#ef4444' }};--tone-soft:{{ '#f0fdf4' if db_ok else '#fff1f2' }}"><i class="fa-solid fa-database"></i> قاعدة البيانات {{ "سليمة" if db_ok else "تحتاج فحص" }}</span>
-      <span style="--tone:{{ '#16a34a' if radius_ok else '#f59e0b' }};--tone-soft:{{ '#f0fdf4' if radius_ok else '#fffbeb' }}"><i class="fa-solid fa-circle-nodes"></i> RADIUS {{ "جاهز" if radius_ok else "غير جاهز" }}</span>
-      <span style="--tone:#2563eb;--tone-soft:#eff6ff"><i class="fa-solid fa-microchip"></i> CPU {{ "%.1f"|format(system.cpu_pct|float) ~ "%" if system.cpu_pct is not none else "--" }}</span>
-      <span style="--tone:#7c3aed;--tone-soft:#f3e8ff"><i class="fa-solid fa-memory"></i> RAM {{ "%.1f"|format(system.ram_pct|float) ~ "%" if system.ram_pct is not none else "--" }}</span>
     </div>
   </section>
 
