@@ -243,8 +243,8 @@ def license_file_service_request():
     tenant_id = _tid()
     from ..db.repos import audit_repo
 
-    service_key = (request.form.get("service_key") or "").strip()[:80]
-    service_name = (request.form.get("service_name") or service_key or "خدمة").strip()[:160]
+    service_name = (request.form.get("service_name") or "خدمة").strip()[:160]
+    service_key = (request.form.get("service_key") or service_name).strip()[:80]
     note = (request.form.get("note") or "").strip()[:500]
     if not service_key:
         flash("لم يتم تحديد الخدمة المطلوبة.", "error")

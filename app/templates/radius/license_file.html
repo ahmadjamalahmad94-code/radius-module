@@ -549,7 +549,20 @@
               <span class="lf-toggle-state">{{ 'مفعّل' if config_view.identity_sync_on_login else 'معطّل' }}</span>
             </span>
           </label>
+          <label class="lf-toggle">
+            <input type="checkbox" name="worker_enabled" value="1" {{ 'checked' if config_view.worker_enabled else '' }}>
+            <span class="lf-toggle-dot"></span>
+            <span class="lf-toggle-body">
+              <span class="lf-toggle-title">تشغيل عامل المزامنة الخلفي</span>
+              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.worker_enabled else 'معطّل' }}</span>
+            </span>
+          </label>
         </div>
+      </div>
+      <div class="hub-field">
+        <label>فاصل المزامنة التلقائية</label>
+        <input class="hub-input" name="sync_interval_seconds" type="number" min="60" max="86400" step="30" value="{{ config_view.sync_interval_seconds or 300 }}">
+        <div class="hub-field-hint">اكتب عدد الثواني بين كل مزامنة وأخرى. أقل قيمة مسموحة 60 ثانية.</div>
       </div>
       <div class="hub-form-foot full" style="padding-top:4px">
         <button class="hub-btn hub-btn--primary" type="submit">
@@ -589,6 +602,10 @@
             <span class="hub-pill hub-pill--grey"><span class="dot"></span>متوقف</span>
           {% endif %}
         </span>
+      </div>
+      <div class="lf-set-tile">
+        <span class="lbl">فاصل المزامنة التلقائية</span>
+        <span class="val mono">{{ config_view.sync_interval_seconds or 300 }} ثانية</span>
       </div>
     </div>
     <p class="hub-field-hint" style="margin-top:12px">
@@ -663,8 +680,8 @@
           {# Build a plain-text limits summary for the modal #}
           {% set _ns = namespace(chips='') %}
           {% if key == 'ip_change_vpn' %}
-            {% if val.download_mbps is defined %}{% set _ns.chips = _ns.chips ~ 'سرعة التحميل: ' ~ val.download_mbps ~ ' م.ب/ث · ' %}{% endif %}
-            {% if val.upload_mbps is defined %}{% set _ns.chips = _ns.chips ~ 'سرعة الرفع: ' ~ val.upload_mbps ~ ' م.ب/ث · ' %}{% endif %}
+            {% if val.download_mbps is defined %}{% set _ns.chips = _ns.chips ~ 'سرعة التحميل: ' ~ val.download_mbps ~ ' ميجابت/ثانية · ' %}{% endif %}
+            {% if val.upload_mbps is defined %}{% set _ns.chips = _ns.chips ~ 'سرعة الرفع: ' ~ val.upload_mbps ~ ' ميجابت/ثانية · ' %}{% endif %}
             {% if val.max_vpn_users is defined %}{% set _ns.chips = _ns.chips ~ 'المستخدمون: ' ~ val.max_vpn_users ~ ' · ' %}{% endif %}
             {% if val.max_locations is defined %}{% set _ns.chips = _ns.chips ~ 'المواقع: ' ~ val.max_locations %}{% endif %}
           {% else %}
@@ -691,8 +708,8 @@
             {# Detailed limits per service #}
             {% if key == 'ip_change_vpn' %}
               <div class="lf-svc-chips">
-                {% if val.download_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-download"></i> تحميل {{ val.download_mbps }} م.ب/ث</span>{% endif %}
-                {% if val.upload_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-upload"></i> رفع {{ val.upload_mbps }} م.ب/ث</span>{% endif %}
+                {% if val.download_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-download"></i> تحميل {{ val.download_mbps }} ميجابت/ثانية</span>{% endif %}
+                {% if val.upload_mbps is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-upload"></i> رفع {{ val.upload_mbps }} ميجابت/ثانية</span>{% endif %}
                 {% if val.max_vpn_users is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-users"></i> {{ val.max_vpn_users }} مستخدم</span>{% endif %}
                 {% if val.max_locations is defined %}<span class="lf-svc-chip"><i class="fa-solid fa-location-dot"></i> {{ val.max_locations }} موقع</span>{% endif %}
               </div>
@@ -721,7 +738,6 @@
               {% if not _on %}
                 <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
                   {{ csrf_token_input() }}
-                  <input type="hidden" name="service_key" value="{{ key }}">
                   <input type="hidden" name="service_name" value="{{ _name }}">
                   <button type="submit" class="lf-svc-btn is-req">
                     <i class="fa-solid fa-paper-plane"></i> طلب تفعيل

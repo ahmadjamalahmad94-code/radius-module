@@ -168,6 +168,8 @@ def test_license_file_can_save_customer_portal_bridge_values(app, monkeypatch):
             "runtime_contract_sync": "1",
             "identity_sync_enabled": "1",
             "identity_sync_on_login": "1",
+            "worker_enabled": "1",
+            "sync_interval_seconds": "120",
         }, follow_redirects=True)
         html = response.get_data(as_text=True)
 
@@ -182,6 +184,8 @@ def test_license_file_can_save_customer_portal_bridge_values(app, monkeypatch):
     assert tenants_repo.get_setting(1, "license_admin_bridge.base_url") == "https://hoberadius.com"
     assert tenants_repo.get_setting(1, "license_admin_bridge.license_key") == "HBR-2026-AAAA-BBBB-CCCC"
     assert tenants_repo.get_setting(1, "license_admin_bridge.shared_secret") == "shared-secret-from-customer-page"
+    assert tenants_repo.get_setting(1, "license_admin_bridge.worker_enabled") == "1"
+    assert tenants_repo.get_setting(1, "license_admin_bridge.sync_interval_seconds") == "120"
     config = AdminBridgeConfig.from_env()
     assert config.enabled is True
     assert config.base_url == "https://hoberadius.com"
