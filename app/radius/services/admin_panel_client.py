@@ -906,6 +906,18 @@ def sign_admin_bridge_payload(body: dict[str, Any], secret: str) -> str:
 
 
 def _server_fingerprint() -> str:
+    """Compute the server fingerprint sent to the license panel on every check.
+
+    Priority order (highest → lowest):
+    1. HOBERADIUS_SERVER_FINGERPRINT / HOBERADIUS_INSTANCE_FINGERPRINT env var
+    2. license_admin_bridge.server_fingerprint  DB setting  (set from the UI)
+    3. Stable hash of (INSTANCE_ID | hostname | DB_PATH)
+
+    Using option 1 or 2 guarantees the fingerprint never changes across
+    hostname changes, container restarts, or OS reinstalls — eliminating
+    the need for manual fingerprint resets in the license panel.
+    """
+    # 1 — explicit env var (highest priority, always wins)
     explicit = (
         os.environ.get("HOBERADIUS_SERVER_FINGERPRINT")
         or os.environ.get("HOBERADIUS_INSTANCE_FINGERPRINT")
@@ -913,6 +925,13 @@ def _server_fingerprint() -> str:
     ).strip()
     if explicit:
         return explicit[:255]
+
+    # 2 — DB setting written via the admin UI (no terminal needed)
+    db_fingerprint = bridge_setting("license_admin_bridge.server_fingerprint", "").strip()
+    if db_fingerprint:
+        return db_fingerprint[:255]
+
+    # 3 — auto-computed hash (changes when hostname/path changes — avoid for prod)
     seed = "|".join(
         part
         for part in (

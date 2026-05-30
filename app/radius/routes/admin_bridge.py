@@ -1,6 +1,7 @@
 """Read-only admin page for the local V40 bridge status surface."""
 from __future__ import annotations
 
+import os
 from typing import Any, Callable
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -138,6 +139,9 @@ def license_file():
         "runtime_contract": store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY),
         "identity_sync": store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_IDENTITY),
     }
+    from ..services.admin_panel_client import _server_fingerprint as _compute_fingerprint
+    current_fingerprint = _compute_fingerprint()
+    saved_fingerprint = bridge_setting("license_admin_bridge.server_fingerprint", "")
     config_view = sanitize_bridge_payload({
         "enabled": config.enabled,
         "base_url": config.base_url,
@@ -150,6 +154,9 @@ def license_file():
         "identity_sync_on_login": _bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN", "license_admin_bridge.identity_sync_on_login"),
         "worker_enabled": _bridge_flag("HOBERADIUS_ADMIN_BRIDGE_WORKER", "license_admin_bridge.worker_enabled"),
         "sync_interval_seconds": bridge_setting("license_admin_bridge.sync_interval_seconds", "300"),
+        "server_fingerprint_saved": saved_fingerprint,
+        "server_fingerprint_active": current_fingerprint,
+        "fingerprint_is_stable": bool(saved_fingerprint or os.environ.get("HOBERADIUS_SERVER_FINGERPRINT") or os.environ.get("HOBERADIUS_INSTANCE_FINGERPRINT")),
     })
     panel_base_url = (config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     return render_template(
@@ -175,6 +182,7 @@ def license_file_config():
     base_url = (request.form.get("base_url") or config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     license_key = (request.form.get("license_key") or "").strip()
     shared_secret = (request.form.get("shared_secret") or "").strip()
+    server_fingerprint = (request.form.get("server_fingerprint") or "").strip()[:255]
     worker_enabled = bool(request.form.get("worker_enabled"))
     raw_interval = (request.form.get("sync_interval_seconds") or "300").strip()
 
@@ -200,6 +208,8 @@ def license_file_config():
     }
     if base_url:
         updates["license_admin_bridge.base_url"] = base_url
+    # Server fingerprint: save even if empty (allows clearing back to auto-computed)
+    updates["license_admin_bridge.server_fingerprint"] = server_fingerprint
     if license_key:
         updates["license_admin_bridge.license_key"] = license_key
     elif not config.license_key:
