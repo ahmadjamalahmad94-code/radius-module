@@ -138,7 +138,7 @@ def communications_audience():
                 actor=_actor(),
             )
             preview = svc.preview_audience(filters)
-            flash("Audience segment saved.", "success")
+            flash("تم حفظ شريحة الجمهور.", "success")
         except NotificationCampaignError as exc:
             flash(str(exc), "error")
     return render_template(

@@ -327,7 +327,7 @@ class SetupWizardRecoveryService:
             return {
                 "status": "blocked",
                 "reason": "unsupported_regeneration_step",
-                "message_ar": "إعادة التوليد الآمنة مفعلة حاليًا لسكربت VPN/RADIUS فقط.",
+                "message_ar": "إعادة التوليد الآمنة مفعلة حاليًا لسكربت الربط والمصادقة فقط.",
             }
         before = self.registry.latest_for_run(tenant_id=tenant_id, wizard_run_id=run_id)
         payload = {

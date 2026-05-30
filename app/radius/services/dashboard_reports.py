@@ -89,13 +89,13 @@ class DashboardReportsService:
 
     def report_catalog(self) -> list[dict[str, str]]:
         return [
-            {"key": "financial", "title": "Financial reports", "url": "/admin/radius/reports/financial"},
-            {"key": "subscribers", "title": "Subscriber reports", "url": "/admin/radius/reports?section=subscribers"},
-            {"key": "cards", "title": "Cards reports", "url": "/admin/radius/reports/cards"},
-            {"key": "revenue", "title": "Revenue reports", "url": "/admin/radius/reports/financial?type=yearly"},
-            {"key": "distributors", "title": "Distributor reports", "url": "/admin/radius/reports/distributors"},
-            {"key": "usage", "title": "Usage reports", "url": "/admin/radius/reports/sessions"},
-            {"key": "audit", "title": "Audit reports", "url": "/admin/radius/events"},
+            {"key": "financial", "title": "التقارير المالية", "url": "/admin/radius/reports/financial"},
+            {"key": "subscribers", "title": "تقارير المشتركين", "url": "/admin/radius/reports?section=subscribers"},
+            {"key": "cards", "title": "تقارير الكروت", "url": "/admin/radius/reports/cards"},
+            {"key": "revenue", "title": "تقارير الإيرادات", "url": "/admin/radius/reports/financial?type=yearly"},
+            {"key": "distributors", "title": "تقارير الموزعين", "url": "/admin/radius/reports/distributors"},
+            {"key": "usage", "title": "تقارير الاستخدام", "url": "/admin/radius/reports/sessions"},
+            {"key": "audit", "title": "تقارير التدقيق", "url": "/admin/radius/events"},
         ]
 
     def report_data(self, report_type: str, *, date_from: str = "", date_to: str = "") -> dict[str, Any]:

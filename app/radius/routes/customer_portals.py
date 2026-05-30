@@ -75,7 +75,7 @@ def subscriber_login():
 
 def subscriber_logout():
     session.pop("portal_subscriber_id", None)
-    flash("Subscriber portal signed out.", "info")
+    flash("تم تسجيل الخروج من بوابة المشترك.", "info")
     return redirect(url_for("portal.subscriber_login"))
 
 
@@ -134,7 +134,7 @@ def card_login():
 
 def card_logout():
     session.pop("portal_card_user_id", None)
-    flash("Card portal signed out.", "info")
+    flash("تم تسجيل الخروج من بوابة الكروت.", "info")
     return redirect(url_for("portal.card_login"))
 
 

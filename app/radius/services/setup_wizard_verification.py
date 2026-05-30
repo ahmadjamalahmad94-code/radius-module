@@ -360,7 +360,7 @@ class SetupDiagnosticsService:
         },
         "router_vpn_ip_mismatch": {
             "arabic_title": "عنوان الراوتر في MikroTik غير مطابق للحجز",
-            "explanation_ar": "مخرجات MikroTik تعرض عنوان VPN مختلفًا عن العنوان المحجوز لهذا الراوتر في HobeRadius.",
+            "explanation_ar": "مخرجات MikroTik تعرض عنوان ربط خاص مختلفًا عن العنوان المحجوز لهذا الراوتر في HobeRadius.",
             "likely_causes": ["سكربت قديم تم نسخه", "إعداد WireGuard سابق لم يتم تحديثه"],
             "suggested_fixes": ["أعد توليد سكربت الربط من نفس الجولة", "راجع address على واجهة WireGuard"],
             "commands_to_inspect": ["/ip address print detail where interface=hr-wg"],
@@ -838,7 +838,7 @@ class SetupVerificationService:
             overall_status = VERIFY_STATUS_PARTIAL
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
-        next_action = "تم التحقق من الإنترنت بنجاح. يمكنك الانتقال لخطوة VPN/RADIUS." if gate_unlocked else "راجع التشخيص ثم أعد المحاولة أو استخدم وضع تحليل المخرجات."
+        next_action = "تم التحقق من الإنترنت بنجاح. يمكنك الانتقال لخطوة الربط والمصادقة." if gate_unlocked else "راجع التشخيص ثم أعد المحاولة أو استخدم وضع تحليل المخرجات."
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,
@@ -1053,7 +1053,7 @@ class SetupVerificationService:
         if server_allowed_mismatch:
             next_action = "تم اكتشاف اتصال WireGuard، لكن عنوان الراوتر على الخادم غير مطابق. اضغط إصلاح الربط على الخادم."
         else:
-            next_action = "تم تحقق VPN/RADIUS بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وHotspot/Broadband." if gate_unlocked else "راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق."
+            next_action = "تم تحقق الربط والمصادقة بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وخدمات الهوتسبوت أو البرودباند." if gate_unlocked else "راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق."
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,

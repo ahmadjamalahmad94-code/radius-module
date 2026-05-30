@@ -66,15 +66,15 @@ def reports_summary_json():
 
 
 def reports_financial():
-    return _report_page("financial", "Financial reports")
+    return _report_page("financial", "التقارير المالية")
 
 
 def reports_cards():
-    return _report_page("cards", "Cards reports")
+    return _report_page("cards", "تقارير الكروت")
 
 
 def reports_distributors():
-    return _report_page("distributors", "Distributor reports")
+    return _report_page("distributors", "تقارير الموزعين")
 
 
 def _report_page(report_type: str, title: str):
@@ -110,7 +110,7 @@ def reports_archive_create():
         actor=_actor(),
     )
     flash(
-        "Archive snapshot created." if archive.get("created") else "Archive snapshot already existed; immutable copy was preserved.",
+        "تم إنشاء نسخة أرشيف جديدة." if archive.get("created") else "نسخة الأرشيف موجودة مسبقًا، وتم الحفاظ عليها بدون تغيير.",
         "success",
     )
     return redirect(url_for("radius.reports_archive"))

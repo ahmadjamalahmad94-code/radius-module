@@ -217,7 +217,7 @@ class RouterRiskAnalyzer:
                 "code": "subnet_overlap",
                 "candidate": item["candidate"],
                 "existing": item["existing"],
-                "message_ar": "Candidate subnet overlaps an existing router subnet",
+                "message_ar": "الشبكة المرشحة تتداخل مع شبكة موجودة على الراوتر",
             })
         return {
             "wan_interface": wan,

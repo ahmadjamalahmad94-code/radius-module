@@ -85,7 +85,7 @@
       return "هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح WireGuard. إذا كان ping و handshake ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.";
     }
     if (lower.includes("duplicate wireguard allowed ip")) {
-      return "عنوان VPN هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.";
+      return "عنوان الربط الخاص هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.";
     }
     if (lower.includes("dry_run_required")) {
       return "يجب تجهيز خطة آمنة أولًا قبل محاولة الربط على الخادم.";
@@ -357,7 +357,7 @@
     const lifecycle = plan.provisioning_lifecycle || {};
     const peer = plan.prepared_wireguard_peer || lifecycle.prepared_wireguard_peer || {};
     if (vpnScript) {
-      vpnScript.textContent = plan.script_text || "-- no VPN/RADIUS script returned --";
+      vpnScript.textContent = plan.script_text || "-- لم يرجع سكربت الربط والمصادقة --";
     }
     if (vpnPlanJson) {
       vpnPlanJson.textContent = JSON.stringify(
@@ -402,7 +402,7 @@
       vpnPlanGenerated = true;
       renderVpnPlan(data.plan || {});
     } catch (error) {
-      setVpnScriptLoading(`فشل توليد سكربت VPN/RADIUS: ${error.message}`);
+      setVpnScriptLoading(`فشل توليد سكربت الربط والمصادقة: ${error.message}`);
       if (vpnScript) vpnScript.textContent = `-- ${error.message} --`;
     }
   }
@@ -650,7 +650,7 @@
 
   async function checkServerPeerHealth() {
     const output = page.querySelector("[data-swv2-server-peer-output]");
-    if (serverPeerHealthResult) serverPeerHealthResult.textContent = "Checking peer health...";
+    if (serverPeerHealthResult) serverPeerHealthResult.textContent = "جاري فحص صحة الربط...";
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/health`, {
@@ -735,7 +735,7 @@
     const lockNote = page.querySelector("[data-swv2-service-lock]");
     if (lockNote) {
       lockNote.textContent = locked
-        ? "مقفلة حتى ينجح تحقق VPN/RADIUS."
+        ? "مقفلة حتى ينجح تحقق الربط والمصادقة."
         : "تم فتح اختيار الخدمات. اختر المسار المناسب.";
       lockNote.classList.toggle("is-unlocked", !locked);
     }
@@ -786,7 +786,7 @@
       button.dataset.interfaceName = name;
       button.disabled = unsafe;
       const state = item.running === false ? "غير نشط" : "متصل";
-      const reason = unsafe ? (item.reason_ar || item.reason || "مستبعد لحماية WAN/VPN") : (item.reason_ar || item.reason || "واجهة LAN مرشحة للخدمة");
+      const reason = unsafe ? (item.reason_ar || item.reason || "مستبعد لحماية واجهة الإنترنت أو الربط الخاص") : (item.reason_ar || item.reason || "واجهة الشبكة الداخلية مرشحة للخدمة");
       button.innerHTML = `<strong>${name}</strong><span>${item.kind || "ether"} · ${state}</span><small>${reason}</small>`;
       container.appendChild(button);
     });
@@ -802,7 +802,7 @@
       excluded: idx === 0,
       reason_ar: idx === 0 ? "مستبعد عادة لأنه منفذ الإنترنت WAN" : "واجهة LAN مرشحة للخدمة",
     }));
-    rows.push({ name: "hr-wg", kind: "wireguard", running: true, safe: false, excluded: true, reason_ar: "مستبعد لأنه نفق الإدارة VPN" });
+    rows.push({ name: "hr-wg", kind: "wireguard", running: true, safe: false, excluded: true, reason_ar: "مستبعد لأنه نفق الإدارة للربط الخاص" });
     return rows;
   }
 

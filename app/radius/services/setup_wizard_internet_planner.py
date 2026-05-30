@@ -189,7 +189,7 @@ class InternetUplinkScriptPlanner:
             "راجع الواجهة الأب بعناية. اختيار واجهة الإدارة الحالية قد يسبب فقدان الوصول.",
             "احفظ نسخة احتياطية من الراوتر قبل تنفيذ أي سكربت uplink.",
         ]
-        lines = self._base_header(tag=tag, title="Internet Uplink Plan (VLAN)")
+        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (شبكة افتراضية)")
         lines += [
             "# Create VLAN interface (idempotent by name check)",
             f':if ([:len [/interface vlan find where name="{vlan_name}"]] = 0) do={{',
@@ -267,7 +267,7 @@ class InternetUplinkScriptPlanner:
         gateway = _validate_ipv4(payload.get("gateway"), "gateway")
         nat_enabled = _boolish(payload.get("nat_enabled"), False)
         dns_servers = _validate_dns_list(payload.get("dns_servers"))
-        lines = self._base_header(tag=tag, title="Internet Uplink Plan (Static IP)")
+        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (عنوان ثابت)")
         lines += [
             "# Static uplink address",
             f':if ([:len [/ip address find where interface="{interface}" and address="{address_cidr}"]] = 0) do={{',
@@ -318,7 +318,7 @@ class InternetUplinkScriptPlanner:
         add_default_route = _boolish(payload.get("add_default_route"), True)
         use_peer_dns = _boolish(payload.get("use_peer_dns"), True)
         nat_enabled = _boolish(payload.get("nat_enabled"), False)
-        lines = self._base_header(tag=tag, title="Internet Uplink Plan (Direct DHCP Client)")
+        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (عميل توزيع عناوين مباشر)")
         lines += [
             "# DHCP client directly on selected interface",
             f':if ([:len [/ip dhcp-client find where interface="{interface}"]] = 0) do={{',
@@ -369,7 +369,7 @@ class InternetUplinkScriptPlanner:
         if fixed_ip:
             _validate_ipv4(fixed_ip, "fixed_ip")
         ppp_name = _clean_name(payload.get("pppoe_client_name"), "pppoe_client_name", fallback=f"hr-pppoe-{interface}")
-        lines = self._base_header(tag=tag, title="Internet Uplink Plan (PPPoE)")
+        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (برودباند)")
         lines += [
             "# PPPoE client on selected interface",
             f':if ([:len [/interface pppoe-client find where name="{ppp_name}"]] = 0) do={{',

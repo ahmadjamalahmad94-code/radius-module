@@ -107,7 +107,7 @@ class BroadbandBootstrapPlanner:
         for iface in selected_interfaces:
             if iface in blocked_set:
                 raise SetupWizardValidationError(
-                    f"interface '{iface}' is blocked (WAN/VPN) and cannot be used for broadband"
+                    f"الواجهة '{iface}' مستبعدة للحماية ولا يمكن استخدامها للبرودباند"
                 )
 
         blocked_networks = [
@@ -123,7 +123,7 @@ class BroadbandBootstrapPlanner:
             local_address = _ip(payload.get("local_address"), "local_address")
             remote_pool_cidr = _network(payload.get("remote_pool_cidr"), "remote_pool_cidr")
             if any(remote_pool_cidr.overlaps(other) for other in blocked_networks):
-                raise SetupWizardValidationError("remote_pool_cidr conflicts with WAN/VPN/hotspot ranges")
+                raise SetupWizardValidationError("نطاق العناوين البعيد يتعارض مع واجهة الإنترنت أو الربط الخاص أو الهوتسبوت")
         else:
             remote_pool_cidr = _choose_smart_subnet(blocked_networks)
             local_address = str(list(remote_pool_cidr.hosts())[0])
@@ -208,7 +208,7 @@ class BroadbandBootstrapPlanner:
             ],
             warnings=[
                 "المخطط معاينة فقط ولا ينفذ تلقائياً.",
-                "تم استبعاد واجهات WAN/VPN من هذا المخطط.",
+                "تم استبعاد واجهات الإنترنت والربط الخاص من هذا المخطط.",
                 "تم تقييد NAT على نطاق broadband pool فقط.",
             ],
             generated_objects=[

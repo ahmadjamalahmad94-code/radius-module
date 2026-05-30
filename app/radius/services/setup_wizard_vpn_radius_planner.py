@@ -107,7 +107,7 @@ class VpnRadiusBootstrapPlanner:
 
         lines = [
             "# ================================================",
-            "# HobeRadius VPN/RADIUS bootstrap preview",
+            "# معاينة ربط HobeRadius والمصادقة",
             "# Preview only - no destructive commands",
             f"# Tags: {vpn_tag}, {radius_tag}, {api_tag}",
             f"# Router registry: {router_tag or 'not-reserved'}",

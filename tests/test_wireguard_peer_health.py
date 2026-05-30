@@ -138,7 +138,7 @@ def test_allowed_ip_mismatch_detected(app):
 
     assert result["status"] == "allowed_ip_mismatch"
     assert result["health_score"] == 15
-    assert "Allowed IP" in result["diagnostics"][0]["arabic_title"]
+    assert "عنوان السماح" in result["diagnostics"][0]["arabic_title"]
 
 
 def test_duplicate_peer_detected(app):

@@ -13,7 +13,7 @@
   <header class="sw-header">
     <div>
       <h1>معالج إعداد HobeRadius</h1>
-      <p>إعداد الإنترنت ثم VPN/RADIUS ثم الخدمات الاختيارية بخطوات واضحة وآمنة.</p>
+      <p>إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة.</p>
     </div>
     <div class="sw-header-actions">
       <button type="button" class="hub-btn hub-btn--primary" data-sw-action="create-run">بدء تشغيل جديد</button>
@@ -25,8 +25,8 @@
     <div class="sw-step">1. اختيار مصدر الإنترنت</div>
     <div class="sw-step">2. معاينة سكربت الإنترنت</div>
     <div class="sw-step">3. تحقق الإنترنت</div>
-    <div class="sw-step">4. معاينة VPN/RADIUS</div>
-    <div class="sw-step">5. تحقق VPN/RADIUS</div>
+    <div class="sw-step">4. معاينة الربط والمصادقة</div>
+    <div class="sw-step">5. تحقق الربط والمصادقة</div>
     <div class="sw-step">6. Hotspot/Broadband</div>
     <div class="sw-step">7. الملخص النهائي</div>
   </section>
@@ -89,11 +89,11 @@
           <textarea name="payload_json" rows="7" spellcheck="false">{"wg_interface_name":"hr-wg","peer_name":"vps-peer","router_vpn_ip":"10.10.0.3","vps_vpn_ip":"10.10.0.1","allowed_address":"10.10.0.1/32","vps_public_endpoint":"187.77.70.18","endpoint_port":51820,"radius_server_ip":"10.10.0.1","radius_secret":"CHANGE_ME","api_username":"hr_api_setup"}</textarea>
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">توليد سكربت VPN/RADIUS</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-vpn">تحليل تحقق VPN/RADIUS</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">توليد سكربت الربط والمصادقة</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-vpn">تحليل تحقق الربط والمصادقة</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق VPN/RADIUS</label>
+          <label>مخرجات تحقق الربط والمصادقة</label>
           <textarea name="verify_output" rows="5" spellcheck="false" placeholder="/interface wireguard peers print detail&#10;/radius print detail&#10;/tool ping 10.10.0.1 count=5"></textarea>
         </div>
       </form>
@@ -184,11 +184,11 @@
       </select>
       <button class="hub-btn" type="button" data-sw-action="dry-run">تجربة جافة</button>
       <button class="hub-btn" type="button" data-sw-action="list-operations">العمليات</button>
-      <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">Apply guarded</button>
-      <button class="hub-btn" type="button" data-sw-action="rollback-preview">Rollback preview</button>
+      <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">تطبيق محمي</button>
+      <button class="hub-btn" type="button" data-sw-action="rollback-preview">معاينة التراجع</button>
     </div>
     <div class="sw-field">
-      <label>Confirmation</label>
+      <label>عبارة التأكيد</label>
       <input data-sw-confirmation placeholder="APPLY SETUP WIZARD 1 internet">
     </div>
   </section>
@@ -196,31 +196,31 @@
   <section class="sw-panel" data-sw-lab-timeline-panel>
     <div class="sw-panel-head">
       <div>
-        <h2>Lab Execution Timeline</h2>
+        <h2>خط سير تنفيذ المختبر</h2>
         <p class="sw-muted">يعرض حالة التجربة الجافة والجرد والتطبيق والتراجع بشكل واضح للتجارب المخبرية فقط.</p>
       </div>
-      <button class="hub-btn" type="button" data-sw-action="lab-timeline">Refresh timeline</button>
+      <button class="hub-btn" type="button" data-sw-action="lab-timeline">تحديث الخط الزمني</button>
     </div>
     <ol class="sw-lab-timeline" data-sw-lab-timeline>
       <li>التجربة الجافة: معلقة</li>
-      <li>Inventory collected: pending</li>
-      <li>Apply attempted: blocked by default</li>
-      <li>Verification: pending</li>
-      <li>Rollback available: pending</li>
+      <li>الجرد: بانتظار التنفيذ</li>
+      <li>محاولة التطبيق: محظورة افتراضيًا</li>
+      <li>التحقق: بانتظار التنفيذ</li>
+      <li>التراجع: بانتظار التجهيز</li>
     </ol>
   </section>
 
   <section class="sw-panel">
-    <h2>Router inventory</h2>
+    <h2>جرد الراوتر</h2>
     <div class="sw-field">
-      <label>Paste RouterOS print outputs</label>
+      <label>ألصق مخرجات أوامر RouterOS</label>
       <textarea data-sw-inventory-output rows="6" spellcheck="false" placeholder="/interface print detail&#10;/ip address print detail&#10;/ip route print detail"></textarea>
     </div>
     <div class="sw-inline-actions">
       <button class="hub-btn" type="button" data-sw-action="save-inventory">حفظ لقطة الجرد</button>
-      <button class="hub-btn" type="button" data-sw-action="health">Health</button>
-      <button class="hub-btn" type="button" data-sw-action="support-bundle">Support bundle</button>
-      <button class="hub-btn" type="button" data-sw-action="added-catalog">Added services catalog</button>
+      <button class="hub-btn" type="button" data-sw-action="health">فحص الصحة</button>
+      <button class="hub-btn" type="button" data-sw-action="support-bundle">حزمة الدعم</button>
+      <button class="hub-btn" type="button" data-sw-action="added-catalog">كتالوج الخدمات المضافة</button>
     </div>
   </section>
 

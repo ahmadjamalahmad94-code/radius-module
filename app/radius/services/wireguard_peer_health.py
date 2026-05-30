@@ -330,7 +330,7 @@ class WireGuardPeerHealthService:
                 "راجع خطوة apply أو ألصق مخرجات wg show الصحيحة.",
             ),
             "allowed_ip_mismatch": (
-                "Allowed IP غير مطابق",
+                "عنوان السماح غير مطابق",
                 "تم العثور على peer أو IP لكن الربط لا يطابق الحجز.",
                 "افحص allowed IP وتأكد أنه يساوي عنوان الراوتر المحجوز /32.",
             ),

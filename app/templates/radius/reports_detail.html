@@ -18,21 +18,21 @@
   <form method="get" class="hub-form-grid" data-testid="report-date-filter">
     <label>من <input name="date_from" type="date" value="{{ request.args.get('date_from','') }}"></label>
     <label>إلى <input name="date_to" type="date" value="{{ request.args.get('date_to','') }}"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">Apply filter</button>
+    <button class="hub-btn hub-btn--primary" type="submit">تطبيق الفلتر</button>
   </form>
 {% endcall %}
 
-{% call hub.section("Report rows", icon="table", flush=True) %}
+{% call hub.section("صفوف التقرير", icon="table", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="report-detail-table">
-      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <thead><tr><th>الحقل</th><th>القيمة</th></tr></thead>
       <tbody>
         {% for item in data["items"] %}
           {% for key, value in item.items() %}
             <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
           {% endfor %}
         {% else %}
-          <tr><td colspan="2">No report rows for this filter.</td></tr>
+          <tr><td colspan="2">لا توجد بيانات ضمن هذا الفلتر.</td></tr>
         {% endfor %}
       </tbody>
     </table>

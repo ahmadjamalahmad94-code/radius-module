@@ -303,7 +303,7 @@ def test_ui_timeline_renders(app):
         res = client.get("/admin/radius/setup-wizard")
         html = res.get_data(as_text=True)
         assert res.status_code == 200
-        assert "Lab Execution Timeline" in html
+        assert "خط سير تنفيذ المختبر" in html
         assert "data-sw-action=\"lab-timeline\"" in html
 
 

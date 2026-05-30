@@ -458,7 +458,7 @@ _add(Diagnostic(
     ar_explanation=(
         "نطاق Hotspot يتعارض مع WAN أو VPN أو شبكة موجودة."
     ),
-    cause="hotspot CIDR overlaps WAN/VPN/existing pool",
+    cause="نطاق الهوتسبوت يتداخل مع واجهة الإنترنت أو الربط الخاص أو مجموعة عناوين موجودة",
     fix="pick a different CIDR; smart-mode auto-suggests safe ranges",
     severity=SEVERITY_ERROR,
 ))

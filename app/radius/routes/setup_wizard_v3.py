@@ -3499,7 +3499,7 @@ def setup_wizard_v3_discover_interfaces(run_id: int):
             if not run.router_vpn_ip:
                 return _err(
                     "أكمل الخطوة 3 أوّلاً — لم يُخصَّص "
-                    "عنوان VPN للراوتر بعد.",
+                    "عنوان الربط الخاص للراوتر بعد.",
                     status=409,
                     code="no_vpn_ip",
                 )

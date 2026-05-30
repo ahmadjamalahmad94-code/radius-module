@@ -4,7 +4,7 @@
 {% set batch = result.batch %}
 {% set cost = result.cost %}
 
-{% block title %}Batch Financial Detail — Hobe Hub{% endblock %}
+{% block title %}تفاصيل الدفعة المالية — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}تفاصيل تكلفة الدفعة{% endblock %}
 {% block page_sub %}<span class="sub">لقطة مالية للدفعة والكروت المرتبطة بها</span>{% endblock %}
@@ -19,17 +19,17 @@
 
 <div class="hub-kpi-grid" data-testid="batch-financial-summary">
   {{ hub.kpi("العدد", cost.count or batch.count, icon="ticket") }}
-  {{ hub.kpi("Retail Total", (cost.total_retail_minor or 0) / 100, icon="tag", variant="green") }}
-  {{ hub.kpi("Wholesale Total", (cost.total_wholesale_minor or 0) / 100, icon="calculator", variant="amber") }}
+  {{ hub.kpi("إجمالي البيع", (cost.total_retail_minor or 0) / 100, icon="tag", variant="green") }}
+  {{ hub.kpi("إجمالي التكلفة", (cost.total_wholesale_minor or 0) / 100, icon="calculator", variant="amber") }}
   {{ hub.kpi("الحالة", cost.status or batch.status, icon="signal", variant="blue") }}
 </div>
 
 {% call hub.section("سجل التكلفة", icon="book") %}
   <div class="hub-tile-grid">
     {{ hub.tile("حركة المحفظة", cost.wallet_transaction_id or "—", icon="wallet") }}
-    {{ hub.tile("Ledger", cost.ledger_entry_id or "—", icon="book") }}
-    {{ hub.tile("Revenue", cost.revenue_record_id or "—", icon="sack-dollar") }}
-    {{ hub.tile("Price Snapshot", cost.price_snapshot_id or "—", icon="camera") }}
+    {{ hub.tile("قيد المحاسبة", cost.ledger_entry_id or "—", icon="book") }}
+    {{ hub.tile("سجل الإيراد", cost.revenue_record_id or "—", icon="sack-dollar") }}
+    {{ hub.tile("لقطة السعر", cost.price_snapshot_id or "—", icon="camera") }}
   </div>
 {% endcall %}
 

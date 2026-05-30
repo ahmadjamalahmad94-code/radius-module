@@ -40,24 +40,24 @@ class SetupWizardLabPolicyEngine:
         warnings: list[dict[str, Any]] = []
 
         if normalized not in ALLOWED_LAB_STEPS:
-            blocking.append(_reason("multiple_steps_requested", "Only one explicit lab step may be applied."))
+            blocking.append(_reason("multiple_steps_requested", "يسمح بتطبيق خطوة مختبرية واحدة محددة فقط."))
         if not live_apply_enabled():
-            blocking.append(_reason("feature_flag_disabled", "HOBERADIUS_SETUP_WIZARD_LIVE_APPLY is disabled."))
+            blocking.append(_reason("feature_flag_disabled", "خيار التطبيق الفعلي في معالج الإعداد غير مفعّل."))
         if not lab_mode_enabled():
-            blocking.append(_reason("lab_mode_disabled", "HOBERADIUS_SETUP_WIZARD_LAB_MODE is disabled."))
+            blocking.append(_reason("lab_mode_disabled", "وضع المختبر في معالج الإعداد غير مفعّل."))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "Router inventory snapshot is required."))
+            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة."))
         elif _snapshot_is_stale(str(snapshot.get("created_at") or ""), self.snapshot_max_age_seconds):
-            blocking.append(_reason("stale_snapshot", "Router inventory snapshot is stale."))
+            blocking.append(_reason("stale_snapshot", "لقطة جرد الراوتر قديمة وتحتاج تحديثًا."))
 
         if not operations:
-            blocking.append(_reason("no_dry_run", "Dry-run operation queue is required."))
+            blocking.append(_reason("no_dry_run", "طابور التجربة الجافة مطلوب قبل التطبيق."))
         elif not all(op.get("status") == OP_STATUS_DRY_RUN_READY for op in operations):
-            blocking.append(_reason("no_dry_run", "All operations must be dry-run-ready before lab apply."))
+            blocking.append(_reason("no_dry_run", "كل العمليات يجب أن تكون جاهزة كتجربة جافة قبل تطبيق المختبر."))
 
         rollback_ops = [op for op in operations if str(op.get("rollback_command") or "").strip()]
         if require_rollback and not rollback_ops:
-            blocking.append(_reason("rollback_missing", "Rollback preview is required before lab apply."))
+            blocking.append(_reason("rollback_missing", "معاينة التراجع مطلوبة قبل تطبيق المختبر."))
 
         step_input = dict((script_step or {}).get("input_json") or {})
         if snapshot:
@@ -70,13 +70,13 @@ class SetupWizardLabPolicyEngine:
             selected = _selected_interfaces(step_input)
             excluded = set(risk.get("excluded_interfaces") or [])
             if selected & excluded:
-                blocking.append(_reason("wan_interface_risk", "Selected interface includes WAN/VPN."))
+                blocking.append(_reason("wan_interface_risk", "الواجهات المختارة تتضمن واجهة إنترنت أو ربط خاص."))
             if risk.get("subnet_overlaps"):
-                blocking.append(_reason("subnet_conflict", "Candidate subnet overlaps router inventory."))
+                blocking.append(_reason("subnet_conflict", "الشبكة المرشحة تتداخل مع جرد الراوتر."))
             if normalized in {"vpn", "hotspot", "broadband"} and "hr-wg" in excluded and normalized == "vpn":
-                warnings.append({"code": "vpn_conflict", "message_ar": "WireGuard interface already appears in inventory."})
+                warnings.append({"code": "vpn_conflict", "message_ar": "واجهة الربط الخاص موجودة مسبقًا في الجرد."})
             if int(risk.get("existing_nat_count") or 0) > 0:
-                warnings.append({"code": "duplicate_nat", "message_ar": "Existing NAT rules require manual review."})
+                warnings.append({"code": "duplicate_nat", "message_ar": "توجد قواعد ترجمة عناوين حالية وتحتاج مراجعة يدوية."})
 
         return {
             "allowed": not blocking,
@@ -104,21 +104,21 @@ class SetupWizardLabPolicyEngine:
         blocking: list[dict[str, str]] = []
         warnings: list[dict[str, Any]] = []
         if normalized not in ALLOWED_LAB_STEPS:
-            blocking.append(_reason("multiple_steps_requested", "Only one explicit lab step may be rolled back."))
+            blocking.append(_reason("multiple_steps_requested", "يسمح بالتراجع عن خطوة مختبرية واحدة محددة فقط."))
         if not live_apply_enabled():
-            blocking.append(_reason("feature_flag_disabled", "HOBERADIUS_SETUP_WIZARD_LIVE_APPLY is disabled."))
+            blocking.append(_reason("feature_flag_disabled", "خيار التطبيق الفعلي في معالج الإعداد غير مفعّل."))
         if not lab_mode_enabled():
-            blocking.append(_reason("lab_mode_disabled", "HOBERADIUS_SETUP_WIZARD_LAB_MODE is disabled."))
+            blocking.append(_reason("lab_mode_disabled", "وضع المختبر في معالج الإعداد غير مفعّل."))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "Router inventory snapshot is required."))
+            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة."))
         elif _snapshot_is_stale(str(snapshot.get("created_at") or ""), self.snapshot_max_age_seconds):
-            blocking.append(_reason("stale_snapshot", "Router inventory snapshot is stale."))
+            blocking.append(_reason("stale_snapshot", "لقطة جرد الراوتر قديمة وتحتاج تحديثًا."))
         applied_with_rollback = [
             op for op in operations
             if op.get("status") == "applied" and str(op.get("rollback_command") or "").strip()
         ]
         if not applied_with_rollback:
-            blocking.append(_reason("rollback_missing", "Rollback drill requires applied tagged operations."))
+            blocking.append(_reason("rollback_missing", "تدريب التراجع يحتاج عمليات مطبقة وموسومة."))
         if snapshot:
             risk = self.risk_analyzer.analyze(
                 snapshot=snapshot,

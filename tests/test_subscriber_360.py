@@ -181,9 +181,9 @@ def test_subscriber_360_routes_render_and_existing_profile_still_works(app):
     assert alias_res.status_code == 200
     assert profile_res.status_code == 200
     html = detail_res.get_data(as_text=True)
-    assert "Subscriber 360" in html
-    assert "Financial" in html
-    assert "Usage &amp; Sessions" in html
+    assert "ملف المشترك 360" in html
+    assert "المالية" in html
+    assert "الاستخدام والجلسات" in html
     assert "renewal-preview-form" in html
 
 

@@ -1,19 +1,19 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}Delivery Log — Hobe Hub{% endblock %}
+{% block title %}سجل الإرسال — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
-{% block page_title %}Delivery Log{% endblock %}
-{% block page_sub %}<span class="sub">Queued, sent, delivered, failed, retried, and read states where providers support them.</span>{% endblock %}
+{% block page_title %}سجل الإرسال{% endblock %}
+{% block page_sub %}<span class="sub">حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero("سجل الإرسال", subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط.", icon="truck-fast") }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("Deliveries", icon="truck-fast", flush=True) %}
+{% call hub.section("عمليات الإرسال", icon="truck-fast", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="delivery-log-table">
-      <thead><tr><th>ID</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
+      <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
       <tbody>
         {% for item in deliveries %}
           <tr>
@@ -25,7 +25,7 @@
             <td>{{ item.error_message }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="6">No deliveries yet.</td></tr>
+          <tr><td colspan="6">لا توجد عمليات إرسال بعد.</td></tr>
         {% endfor %}
       </tbody>
     </table>

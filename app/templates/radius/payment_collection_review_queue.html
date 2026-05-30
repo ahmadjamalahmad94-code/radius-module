@@ -3,12 +3,12 @@
 {% block title %}طابور مراجعة الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
 {% block page_title %}طابور مراجعة الدفعات{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} pending review</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} إثبات بانتظار المراجعة</span>{% endblock %}
 
 {% block content %}
 <div class="hub-card" style="padding:18px;margin-bottom:16px">
-  <strong>Manual review only.</strong>
-  <p class="small" style="margin:8px 0 0">Approving a proof marks the request paid and records a manual transaction. Ledger and service activation remain pending later slices.</p>
+  <strong>مراجعة يدوية فقط.</strong>
+  <p class="small" style="margin:8px 0 0">اعتماد إثبات الدفع يعلّم الطلب كمدفوع ويسجل حركة يدوية. قيود المحاسبة وتفعيل الخدمة تبقى حسب خطوة الاعتماد التالية.</p>
 </div>
 
 <div class="hub-table-wrap">
@@ -16,9 +16,9 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Reference</th>
-        <th>Purpose</th>
-        <th>Amount</th>
+        <th>المرجع</th>
+        <th>الغرض</th>
+        <th>المبلغ</th>
         <th>الحالة</th>
         <th></th>
       </tr>

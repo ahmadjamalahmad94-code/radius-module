@@ -58,7 +58,7 @@ def test_setup_wizard_v2_source_cards_render(app):
 
     assert "DHCP Client" in html
     assert "PPPoE" in html
-    assert "Static IP" in html
+    assert "عنوان ثابت" in html
     assert "VLAN" in html
     assert 'data-source-type="dhcp"' in html
     assert 'data-source-type="pppoe"' in html

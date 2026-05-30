@@ -1862,7 +1862,7 @@ class SetupWizardService:
         candidates: list[dict[str, Any]] = []
         for item in source:
             is_blocked = item.name in blocked
-            reason = "واجهة WAN/VPN مستبعدة للحماية" if is_blocked else "واجهة LAN مرشحة للخدمة"
+            reason = "واجهة الإنترنت أو الربط الخاص مستبعدة للحماية" if is_blocked else "واجهة الشبكة الداخلية مرشحة للخدمة"
             candidates.append(
                 {
                     "name": item.name,

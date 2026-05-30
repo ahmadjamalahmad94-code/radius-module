@@ -43,7 +43,7 @@
     </div>
     <div data-confidence-state="router_linked">
       <strong>تم ربط الراوتر</strong>
-      <span>VPN/RADIUS يصبحان جاهزين للتحقق.</span>
+      <span>الربط والمصادقة يصبحان جاهزين للتحقق.</span>
     </div>
     <div data-confidence-state="network_ready">
       <strong>الشبكة جاهزة</strong>
@@ -109,7 +109,7 @@
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-script">
       <span class="swv2-step-index">6</span>
-      <span>ربط VPN/RADIUS</span>
+      <span>الربط والمصادقة</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-verify">
       <span class="swv2-step-index">7</span>
@@ -180,7 +180,7 @@
           </button>
           <button type="button" class="swv2-source-card" data-source-type="static">
             <i class="fa-solid fa-location-crosshairs"></i>
-            <strong>Static IP</strong>
+            <strong>عنوان ثابت</strong>
             <span>عنوان ثابت، بوابة، و DNS معروف مسبقًا.</span>
             <small>مثال: 192.0.2.10/30 مع gateway</small>
           </button>
@@ -284,7 +284,7 @@
             <label>وضع العنوان
               <select name="vlan_mode">
                 <option value="dhcp">DHCP</option>
-                <option value="static">Static IP</option>
+                <option value="static">عنوان ثابت</option>
               </select>
             </label>
             <label>IP/CIDR عند اختيار Static
@@ -359,7 +359,7 @@
         <div class="swv2-success-state" hidden data-swv2-success="internet">
           <i class="fa-solid fa-circle-check"></i>
           <strong>تم الاتصال بالإنترنت بنجاح</strong>
-          <span>يمكنك الآن تجهيز ربط VPN/RADIUS.</span>
+          <span>يمكنك الآن تجهيز الربط والمصادقة.</span>
           <div class="swv2-success-card" data-swv2-success-card="internet">
             <b>ما الذي تحقق؟</b>
             <span>أثبت فحص الربط أن الراوتر وصل إلى الإنترنت. الخطوة التالية تربط الراوتر مع HobeRadius بأسماء وعناوين محجوزة.</span>
@@ -370,12 +370,12 @@
 
     <article class="swv2-step" data-swv2-step="vpn-script">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">VPN/RADIUS</span>
+        <span class="swv2-eyebrow">الربط والمصادقة</span>
         <div class="swv2-auto-summary">
           <i class="fa-solid fa-robot"></i>
           <div>
             <strong>سنجهز الربط تلقائيًا</strong>
-            <span>سيحجز المعالج عنوان VPN، واسم ربط، ومستخدم API، وسر RADIUS بدون أن تطلب من العميل مفاتيح أو أكواد.</span>
+            <span>سيحجز المعالج عنوان الربط الخاص واسم الربط ومستخدم الواجهة البرمجية وسر المصادقة بدون أن تطلب من العميل مفاتيح أو أكواد.</span>
           </div>
         </div>
         <div class="swv2-provisioning-grid swv2-provisioning-grid-primary" aria-label="ملخص بيانات الربط">
@@ -494,11 +494,11 @@
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
-            <strong>معاينة سكربت VPN/RADIUS</strong>
+            <strong>معاينة سكربت الربط والمصادقة</strong>
             <span data-swv2-vpn-script-status>السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.</span>
             <button type="button" class="swv2-copy-chip" data-copy-target="vpn-script-code">نسخ</button>
           </div>
-          <pre id="vpn-script-code">-- لم يتم توليد سكربت VPN/RADIUS بعد --</pre>
+          <pre id="vpn-script-code">-- لم يتم توليد سكربت الربط والمصادقة بعد --</pre>
         </div>
       </div>
     </article>
@@ -660,8 +660,8 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">اختيار الخدمات</span>
         <h2>اختر ما تريد برمجته</h2>
-        <p>بعد نجاح ربط VPN/RADIUS اختر خدمة واحدة أو جهز الاثنين بالتتابع. هذه المرحلة تولد سكربتات ومعاينات فقط ولا تطبق أي شيء على MikroTik.</p>
-        <div class="swv2-lock-note" data-swv2-service-lock>مقفلة حتى ينجح تحقق VPN/RADIUS.</div>
+        <p>بعد نجاح الربط والمصادقة اختر خدمة واحدة أو جهز الاثنين بالتتابع. هذه المرحلة تولد سكربتات ومعاينات فقط ولا تطبق أي شيء على MikroTik.</p>
+        <div class="swv2-lock-note" data-swv2-service-lock>مقفلة حتى ينجح تحقق الربط والمصادقة.</div>
         <div class="swv2-service-grid" data-swv2-service-path>
           <button type="button" class="swv2-service-card is-locked" data-service-path="hotspot" data-locked-until="vpn-radius">
             <i class="fa-solid fa-wifi"></i>
@@ -809,7 +809,7 @@
         </div>
         <div class="swv2-safe-proposal" data-swv2-broadband-proposal>
           <strong>مقترح آمن</strong>
-          <span>سيتم اختيار PPPoE profile و pool بعيد عن WAN/VPN/Hotspot.</span>
+          <span>سيتم اختيار ملف البرودباند ومجموعة العناوين بعيدًا عن واجهة الإنترنت والربط الخاص والهوتسبوت.</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="broadband">
           <label>واجهات الخدمة

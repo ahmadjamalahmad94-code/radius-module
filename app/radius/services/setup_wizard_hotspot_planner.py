@@ -148,7 +148,7 @@ class HotspotBootstrapPlanner:
         for iface in selected_interfaces:
             if iface in blocked_set:
                 raise SetupWizardValidationError(
-                    f"interface '{iface}' is blocked (WAN/VPN) and cannot be used for hotspot"
+                    f"الواجهة '{iface}' مستبعدة للحماية ولا يمكن استخدامها للهوتسبوت"
                 )
 
         blocked_networks = [
@@ -355,7 +355,7 @@ class HotspotBootstrapPlanner:
             validation_commands=validation_commands,
             warnings=[
                 "Preview only. Copy to MikroTik manually.",
-                "WAN/VPN interfaces remain blocked from selection.",
+                "واجهات الإنترنت والربط الخاص تبقى مستبعدة من الاختيار.",
                 "Each selected port receives its own Hotspot /24 network.",
             ],
             generated_objects=generated_objects,

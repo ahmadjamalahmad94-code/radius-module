@@ -60,15 +60,15 @@ class SetupWizardPilotDrillService:
         selected_step = step_index.get(SCRIPT_STEPS[normalized_step]) or {}
 
         if internet_step.get("status") != "generated":
-            blocking.append(_reason("internet_script_missing", "Internet script preview must be generated first."))
+            blocking.append(_reason("internet_script_missing", "يجب توليد معاينة سكربت الإنترنت أولًا."))
         if vpn_step.get("status") != "generated":
-            blocking.append(_reason("vpn_radius_script_missing", "VPN/RADIUS script preview must be generated first."))
+            blocking.append(_reason("vpn_radius_script_missing", "يجب توليد معاينة سكربت الربط والمصادقة أولًا."))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "Router inventory snapshot is required before pilot drill."))
+            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة قبل التدريب الداخلي."))
         if not operations:
-            blocking.append(_reason("dry_run_missing", "Dry-run operations are required for the selected step."))
+            blocking.append(_reason("dry_run_missing", "عمليات التجربة الجافة مطلوبة للخطوة المحددة."))
         elif not any(op.get("status") == OP_STATUS_DRY_RUN_READY for op in operations):
-            blocking.append(_reason("dry_run_not_ready", "The selected step does not have dry-run-ready operations."))
+            blocking.append(_reason("dry_run_not_ready", "الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة."))
 
         step_input = dict(selected_step.get("input_json") or {})
         if snapshot:
@@ -89,14 +89,14 @@ class SetupWizardPilotDrillService:
                 blocking.append(
                     _reason(
                         "subnet_overlap",
-                        f"Candidate subnet {overlap.get('candidate')} overlaps {overlap.get('existing')}.",
+                        f"الشبكة المرشحة {overlap.get('candidate')} تتداخل مع {overlap.get('existing')}.",
                     )
                 )
             if int(risk_report.get("existing_nat_count") or 0) > 0:
                 risks.append(
                     {
                         "code": "existing_nat_detected",
-                        "message_ar": "Existing NAT rules detected; review scoped NAT operations carefully.",
+                        "message_ar": "تم العثور على قواعد ترجمة عناوين حالية؛ راجع العمليات المحددة بعناية.",
                     }
                 )
 
@@ -120,11 +120,11 @@ class SetupWizardPilotDrillService:
             "failed_operation_count": len(failed_ops),
             "verification_commands": list(selected_step.get("validation_commands_json") or []),
             "required_manual_confirmations": [
-                "Router backup/export taken",
-                "Out-of-band access confirmed",
-                "WAN/interface verified",
-                "Rollback plan reviewed",
-                "Feature flag remains OFF unless this is a controlled lab apply",
+                "تم أخذ نسخة احتياطية وتصدير للراوتر",
+                "تم تأكيد وجود وصول خارجي للطوارئ",
+                "تم التحقق من واجهة الإنترنت",
+                "تمت مراجعة خطة التراجع",
+                "يبقى التطبيق الفعلي متوقفًا إلا داخل مختبر مضبوط",
             ],
             "live_apply_enabled": live_apply_enabled(),
             "next_safe_action_ar": (
@@ -172,7 +172,7 @@ def _append_interface_blocks(
         blocking.append(
             _reason(
                 "blocked_interface_selected",
-                f"Selected interface {iface} is excluded as WAN/VPN and must not be used.",
+                f"الواجهة {iface} مستثناة لأنها واجهة إنترنت أو ربط خاص ولا يجوز استخدامها.",
             )
         )
 
@@ -190,11 +190,11 @@ def _checklist(
     *, operation_count: int, rollback_available: bool, validation_commands: list[str]
 ) -> list[dict[str, Any]]:
     return [
-        {"key": "backup", "label_ar": "خذ backup/export للراوتر قبل أي تجربة.", "required": True},
-        {"key": "oob", "label_ar": "أكد وجود دخول خارجي أو console خارج مسار WAN.", "required": True},
-        {"key": "wan", "label_ar": "راجع واجهة WAN ولا تستخدمها في Hotspot/Broadband.", "required": True},
+        {"key": "backup", "label_ar": "خذ نسخة احتياطية وتصديرًا للراوتر قبل أي تجربة.", "required": True},
+        {"key": "oob", "label_ar": "أكد وجود دخول خارجي أو منفذ تحكم خارج مسار الإنترنت.", "required": True},
+        {"key": "wan", "label_ar": "راجع واجهة الإنترنت ولا تستخدمها لخدمات الهوتسبوت أو البرودباند.", "required": True},
         {"key": "ops", "label_ar": f"راجع عدد العمليات المتوقع: {operation_count}.", "required": True},
-        {"key": "rollback", "label_ar": "راجع خطة الرجوع والعمليات ذات tag فقط.", "required": True, "available": rollback_available},
+        {"key": "rollback", "label_ar": "راجع خطة الرجوع والعمليات الموسومة فقط.", "required": True, "available": rollback_available},
         {"key": "validation", "label_ar": "جهز أوامر التحقق بعد التنفيذ المخبري.", "required": True, "commands": validation_commands},
-        {"key": "flag", "label_ar": "اترك live apply مطفأ إلا في مختبر CHR مضبوط.", "required": True},
+        {"key": "flag", "label_ar": "اترك التطبيق الفعلي مطفأ إلا في مختبر راوتر افتراضي مضبوط.", "required": True},
     ]

@@ -25,7 +25,7 @@
       </select>
     </label>
     <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
-    <label>IDs <input name="ids" placeholder="1,2,3"></label>
+    <label>أرقام المستلمين <input name="ids" placeholder="1,2,3"></label>
     <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
     <button class="hub-btn hub-btn--primary" type="submit">حفظ ومعاينة</button>
   </form>
@@ -50,7 +50,7 @@
   {% call hub.section("المعاينة", icon="eye", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table">
-        <thead><tr><th>النوع</th><th>ID</th><th>الاسم</th></tr></thead>
+        <thead><tr><th>النوع</th><th>الرقم</th><th>الاسم</th></tr></thead>
         <tbody>
           {% for item in preview %}
             <tr><td>{{ item.recipient_type }}</td><td>#{{ item.recipient_id }}</td><td>{{ item.display_name }}</td></tr>

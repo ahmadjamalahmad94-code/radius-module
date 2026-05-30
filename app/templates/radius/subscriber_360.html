@@ -4,15 +4,15 @@
 {% set sub = s360.subscriber %}
 {% set financial = s360.financial %}
 
-{% block title %}Subscriber 360 — Hobe Hub{% endblock %}
+{% block title %}ملف المشترك 360 — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
-{% block page_title %}Subscriber 360{% endblock %}
-{% block page_sub %}<span class="sub">ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على RADIUS</span>{% endblock %}
+{% block page_title %}ملف المشترك 360{% endblock %}
+{% block page_sub %}<span class="sub">ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 
 {% block content %}
 {{ hub.hero(
-  "Subscriber 360",
+  "ملف المشترك 360",
   subtitle="نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.",
   icon="user-shield",
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> الرجوع للمشتركين</a>'
@@ -26,20 +26,20 @@
 </div>
 
 <div class="hub-tabs" data-testid="subscriber-360-tabs">
-  <a href="#overview">Overview</a>
-  <a href="#financial">Financial</a>
-  <a href="#usage">Usage & Sessions</a>
-  <a href="#services">Services</a>
-  <a href="#devices">Devices/MACs</a>
-  <a href="#timeline">Timeline</a>
-  <a href="#messages">Messages</a>
-  <a href="#notes">Notes</a>
-  <a href="#login-events">Login Events</a>
+  <a href="#overview">نظرة عامة</a>
+  <a href="#financial">المالية</a>
+  <a href="#usage">الاستخدام والجلسات</a>
+  <a href="#services">الخدمات</a>
+  <a href="#devices">الأجهزة والعناوين</a>
+  <a href="#timeline">الخط الزمني</a>
+  <a href="#messages">الرسائل</a>
+  <a href="#notes">الملاحظات</a>
+  <a href="#login-events">محاولات الدخول</a>
 </div>
 
 <div class="hub-grid hub-grid--2">
   <div id="overview"></div>
-  {% call hub.section("Overview", icon="circle-info") %}
+  {% call hub.section("نظرة عامة", icon="circle-info") %}
     <div class="hub-tile-grid">
       {{ hub.tile("الحالة", s360.overview.status or "—", icon="signal") }}
       {{ hub.tile("نوع الخدمة", s360.overview.service_type or "—", icon="network-wired") }}
@@ -64,13 +64,13 @@
         <input name="loan_days_to_settle" type="number" step="1" min="0" value="0">
       </label>
       <button class="hub-btn hub-btn--primary" type="submit">احسب التجديد</button>
-      <p class="hub-muted">هذه معاينة فقط. لا يتم تطبيق أي وقت على RADIUS من هذه الصفحة.</p>
+      <p class="hub-muted">هذه معاينة فقط. لا يتم تطبيق أي وقت على نظام المصادقة من هذه الصفحة.</p>
     </form>
   {% endcall %}
 </div>
 
 <div id="financial"></div>
-{% call hub.section("Financial", icon="coins") %}
+{% call hub.section("الملف المالي", icon="coins") %}
   <div class="hub-tile-grid">
     {{ hub.tile("مدفوعات", financial.payments|length, icon="receipt") }}
     {{ hub.tile("سلف", financial.loans|length, icon="hand-holding-dollar") }}
@@ -93,7 +93,7 @@
 
 <div class="hub-grid hub-grid--2">
   <div id="usage"></div>
-  {% call hub.section("Usage & Sessions", icon="chart-simple") %}
+  {% call hub.section("الاستخدام والجلسات", icon="chart-simple") %}
     <div class="hub-tile-grid">
       {{ hub.tile("إجمالي الثواني", s360.usage.total_seconds, icon="stopwatch") }}
       {{ hub.tile("تحميل", s360.usage.download_bytes, icon="download") }}
@@ -102,17 +102,17 @@
   {% endcall %}
 
   <div id="services"></div>
-  {% call hub.section("Services", icon="diagram-project") %}
+  {% call hub.section("الخدمات", icon="diagram-project") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("Pool", s360.services.pool or "—", icon="water") }}
-      {{ hub.tile("Static IP", s360.services.static_ip or "—", icon="location-dot") }}
+      {{ hub.tile("مجموعة العناوين", s360.services.pool or "—", icon="water") }}
+      {{ hub.tile("عنوان ثابت", s360.services.static_ip or "—", icon="location-dot") }}
     </div>
   {% endcall %}
 </div>
 
 <div class="hub-grid hub-grid--2">
   <div id="devices"></div>
-  {% call hub.section("Devices/MACs", icon="laptop-code") %}
+  {% call hub.section("الأجهزة والعناوين", icon="laptop-code") %}
     <div class="hub-list">
       {% for device in s360.devices %}
         <div class="hub-list-row"><strong>{{ device.mac }}</strong><span>{{ device.source }}</span></div>
@@ -123,7 +123,7 @@
   {% endcall %}
 
   <div id="login-events"></div>
-  {% call hub.section("Login Events", icon="right-to-bracket") %}
+  {% call hub.section("محاولات الدخول", icon="right-to-bracket") %}
     <div class="hub-list">
       {% for event in s360.login_events %}
         <div class="hub-list-row"><strong>{{ event.reply }}</strong><span>{{ event.authdate }} · {{ event.nas }}</span></div>
@@ -135,7 +135,7 @@
 </div>
 
 <div id="timeline"></div>
-{% call hub.section("Timeline", icon="timeline") %}
+{% call hub.section("الخط الزمني", icon="timeline") %}
   <div class="hub-list" data-testid="subscriber-timeline">
     {% for item in s360.timeline %}
       <div class="hub-list-row"><strong>{{ item.created_at or "—" }}</strong><span>{{ item.item.entry_type or item.item.event_key or item.item.reply or item.item.status }}</span></div>
@@ -147,12 +147,12 @@
 
 <div class="hub-grid hub-grid--2">
   <div id="messages"></div>
-  {% call hub.section("Messages", icon="message") %}
+  {% call hub.section("الرسائل", icon="message") %}
     <div class="hub-empty">لا توجد رسائل مرتبطة بهذا المشترك بعد.</div>
   {% endcall %}
 
   <div id="notes"></div>
-  {% call hub.section("Notes", icon="note-sticky") %}
+  {% call hub.section("الملاحظات", icon="note-sticky") %}
     <div class="hub-empty">{{ s360.notes or "لا توجد ملاحظات." }}</div>
   {% endcall %}
 </div>

@@ -40,7 +40,7 @@ class PublicIpChangeDryRunAdapter:
                 "dry_run": False,
                 "error": {
                     "code": LIVE_APPLY_CODE,
-                    "message": "Public IP change live apply is intentionally disabled in P10.",
+                    "message": "التطبيق الفعلي لتغيير عنوان الإنترنت العام معطّل عمدًا في هذه المرحلة.",
                 },
                 "warnings": validation["warnings"],
             }
@@ -104,7 +104,7 @@ def validate_public_ip_change_payload(payload: dict[str, Any]) -> dict[str, Any]
             if parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_multicast:
                 warnings.append("requested_public_ip is not globally routable")
         except ValueError:
-            errors["requested_public_ip"] = "requested_public_ip must be a valid IP address"
+            errors["requested_public_ip"] = "عنوان الإنترنت المطلوب يجب أن يكون عنوانًا صحيحًا"
 
     router_type = str(payload.get("router_type") or "mikrotik").strip().lower()
     if router_type not in {"mikrotik", "routeros"}:
@@ -116,7 +116,7 @@ def validate_public_ip_change_payload(payload: dict[str, Any]) -> dict[str, Any]
 
     method = str(payload.get("method") or "srcnat_to_addresses").strip().lower()
     if method not in {"srcnat_to_addresses", "site_exit_nat"}:
-        errors["method"] = "unsupported public IP change method"
+        errors["method"] = "طريقة تغيير عنوان الإنترنت غير مدعومة"
 
     normalized = {
         "router_id": router_id,

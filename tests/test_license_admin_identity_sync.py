@@ -282,7 +282,7 @@ def test_account_page_renders_for_managed_admin(client, app_db):
     assert res.status_code == 200
     body = res.get_data(as_text=True)
     assert "customer-admin" in body
-    assert "Bidirectional password change" in body
+    assert "تغيير كلمة المرور من الجهتين" in body
 
 
 def test_identity_sync_rejects_plaintext_password(app_db):

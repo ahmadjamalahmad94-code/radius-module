@@ -322,11 +322,11 @@
     const snapshot = summary.latest_router_snapshot || null;
     const rows = [
       `التجربة الجافة: ${hasDry ? "مكتملة" : "معلقة"}`,
-      `Inventory collected: ${snapshot ? "yes - " + (snapshot.created_at || "") : "pending"}`,
-      `Apply attempted: ${hasApplied ? "yes" : "blocked/not attempted"}`,
-      `Verification: ${(health.health && health.health.failed_verifications) ? "attention required" : "pending or clean"}`,
-      `Rollback available: ${hasRollback ? "yes" : "no"}`,
-      `Warnings/failed operations: ${hasFailed ? "review required" : "none in queue"}`,
+      `الجرد: ${snapshot ? "مكتمل - " + (snapshot.created_at || "") : "بانتظار التنفيذ"}`,
+      `محاولة التطبيق: ${hasApplied ? "تمت" : "محظورة أو لم تبدأ"}`,
+      `التحقق: ${(health.health && health.health.failed_verifications) ? "بحاجة إلى مراجعة" : "بانتظار التنفيذ أو سليم"}`,
+      `التراجع: ${hasRollback ? "متاح" : "غير متاح"}`,
+      `التحذيرات أو العمليات الفاشلة: ${hasFailed ? "بحاجة إلى مراجعة" : "لا يوجد شيء في الطابور"}`,
     ];
     if (labTimeline) {
       labTimeline.innerHTML = rows.map((row) => `<li>${row}</li>`).join("");

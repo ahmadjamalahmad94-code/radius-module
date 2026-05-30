@@ -17,8 +17,8 @@
       <div><span>الاسم</span><strong>{{ admin.full_name or "—" }}</strong></div>
       <div><span>البريد</span><strong class="mono">{{ admin.email or "—" }}</strong></div>
       <div><span>نوع الإدارة</span><strong>{{ "من لوحة التراخيص" if admin.managed_by_license_admin else "محلي" }}</strong></div>
-      <div><span>external_user_id</span><strong class="mono">{{ admin.external_subject or "—" }}</strong></div>
-      <div><span>password_version</span><strong class="mono">{{ admin.external_password_version or 0 }}</strong></div>
+      <div><span>معرّف المستخدم في لوحة التراخيص</span><strong class="mono">{{ admin.external_subject or "—" }}</strong></div>
+      <div><span>إصدار كلمة المرور</span><strong class="mono">{{ admin.external_password_version or 0 }}</strong></div>
     </div>
   {% endcall %}
 
@@ -32,7 +32,7 @@
       <div class="hub-field">
         <label>كلمة المرور الجديدة</label>
         <input class="hub-input" type="password" name="new_password" autocomplete="new-password" minlength="8" required>
-        <div class="hub-field-hint">إذا كان حسابك مدارًا من لوحة التراخيص، سيرسل الريدياس الطلب إلى اللوحة عبر API موقّع HTTPS ثم يسحب hash/version الجديد.</div>
+        <div class="hub-field-hint">إذا كان حسابك مدارًا من لوحة التراخيص، يرسل الريدياس الطلب عبر اتصال آمن وموقّع، ثم يحدّث نسخة كلمة المرور محليًا.</div>
       </div>
       <div class="hub-field">
         <label>تأكيد كلمة المرور الجديدة</label>
@@ -47,8 +47,8 @@
 
 {% call hub.section("قاعدة السلطة", icon="shield-halved") %}
   <div class="hub-empty" style="text-align:initial">
-    <div class="hub-empty-msg">Bidirectional password change with license panel authority</div>
-    <div class="hub-empty-sub">يمكن أن يبدأ الطلب من الريدياس، لكن لوحة التراخيص هي التي تحفظ hash النهائي وتزيد password_version. لا يتم إرسال password hash على HTTP في الإنتاج.</div>
+    <div class="hub-empty-msg">تغيير كلمة المرور من الجهتين مع بقاء لوحة التراخيص هي المرجع</div>
+    <div class="hub-empty-sub">يمكن أن يبدأ الطلب من الريدياس، لكن لوحة التراخيص هي التي تحفظ النسخة المشفرة النهائية وتزيد رقم الإصدار. لا يتم نقل بيانات كلمات المرور عبر اتصال غير آمن في الإنتاج.</div>
   </div>
 {% endcall %}
 {% endblock %}
