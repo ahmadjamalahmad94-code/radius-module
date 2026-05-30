@@ -60,6 +60,9 @@ class AdminsStore:
     def update_admin(self, admin_id: int, **changes) -> Optional[Admin]:
         return admins_repo.update_admin(admin_id, **changes)
 
+    def upsert_license_admin_user(self, **kwargs) -> Admin:
+        return admins_repo.upsert_license_admin_user(**kwargs)
+
     def delete_admin(self, admin_id: int) -> None:
         admins_repo.delete_admin(admin_id)
 

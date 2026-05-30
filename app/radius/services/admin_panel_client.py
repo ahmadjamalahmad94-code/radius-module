@@ -12,11 +12,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import hashlib
+import hmac
 import socket
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Protocol
@@ -26,7 +29,10 @@ from app.radius.db.connection import db
 LOG = logging.getLogger(__name__)
 
 LICENSE_CHECK_PATH = "/api/license/check"
+IDENTITY_SYNC_PATH = "/api/integration/hoberadius/identity-sync"
+RUNTIME_CONTRACT_PATH = "/api/integration/hoberadius/runtime-contract"
 CAPACITY_CONTRACT_PATH = "/api/integration/hoberadius/capacity-contract"
+CUSTOMER_USER_PASSWORD_CHANGE_PATH = "/api/integration/hoberadius/customer-users/password-change"
 INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
@@ -36,6 +42,7 @@ SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/service-a
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
+SNAPSHOT_IDENTITY = "identity_sync"
 
 SENSITIVE_KEYS = {
     "secret",
@@ -44,6 +51,9 @@ SENSITIVE_KEYS = {
     "api_token",
     "authorization",
     "password",
+    "new_password",
+    "current_password",
+    "password_hash",
     "private_key",
     "radius_secret",
     "license_key",
@@ -73,6 +83,32 @@ def _safe_float(value: str | None, default: float, *, minimum: float, maximum: f
     except (TypeError, ValueError):
         return default
     return max(minimum, min(maximum, parsed))
+
+
+def bridge_setting(key: str, default: str = "") -> str:
+    try:
+        from app.radius.core.tenant import DEFAULT_TENANT_ID
+        from app.radius.db.repos import tenants_repo
+
+        return str(tenants_repo.get_setting(DEFAULT_TENANT_ID, key, default) or "").strip()
+    except Exception:
+        return default
+
+
+def bridge_flag(env_name: str, setting_key: str, default: bool = False) -> bool:
+    raw_env = os.environ.get(env_name)
+    if raw_env is not None and raw_env.strip() != "":
+        return _truthy(raw_env)
+    raw_setting = bridge_setting(setting_key, "1" if default else "0")
+    return _truthy(raw_setting)
+
+
+def _env_or_bridge_setting(env_names: tuple[str, ...], setting_key: str, default: str = "") -> str:
+    for env_name in env_names:
+        raw = os.environ.get(env_name)
+        if raw is not None and raw.strip() != "":
+            return raw.strip()
+    return bridge_setting(setting_key, default)
 
 
 def _mask(value: Any) -> str:
@@ -107,23 +143,38 @@ class AdminBridgeConfig:
 
     @classmethod
     def from_env(cls) -> "AdminBridgeConfig":
+        timeout_value = _env_or_bridge_setting(
+            ("HOBERADIUS_ADMIN_TIMEOUT_SECONDS",),
+            "license_admin_bridge.timeout_seconds",
+            "3.0",
+        )
+        retry_value = _env_or_bridge_setting(
+            ("HOBERADIUS_ADMIN_RETRY_COUNT",),
+            "license_admin_bridge.retry_count",
+            "0",
+        )
         return cls(
-            enabled=_truthy(os.environ.get("HOBERADIUS_ADMIN_BRIDGE_ENABLED")),
-            base_url=(os.environ.get("HOBERADIUS_ADMIN_BASE_URL") or "").strip().rstrip("/"),
-            license_key=(
-                os.environ.get("HOBERADIUS_LICENSE_KEY")
-                or os.environ.get("INSTANCE_LICENSE_KEY")
-                or ""
-            ).strip(),
-            shared_secret=(os.environ.get("HOBERADIUS_ADMIN_SHARED_SECRET") or "").strip(),
+            enabled=bridge_flag("HOBERADIUS_ADMIN_BRIDGE_ENABLED", "license_admin_bridge.enabled"),
+            base_url=_env_or_bridge_setting(
+                ("HOBERADIUS_ADMIN_BASE_URL",),
+                "license_admin_bridge.base_url",
+            ).rstrip("/"),
+            license_key=_env_or_bridge_setting(
+                ("HOBERADIUS_LICENSE_KEY", "INSTANCE_LICENSE_KEY"),
+                "license_admin_bridge.license_key",
+            ),
+            shared_secret=_env_or_bridge_setting(
+                ("HOBERADIUS_ADMIN_SHARED_SECRET",),
+                "license_admin_bridge.shared_secret",
+            ),
             timeout_seconds=_safe_float(
-                os.environ.get("HOBERADIUS_ADMIN_TIMEOUT_SECONDS"),
+                timeout_value,
                 3.0,
                 minimum=0.5,
                 maximum=30.0,
             ),
             retry_count=_safe_int(
-                os.environ.get("HOBERADIUS_ADMIN_RETRY_COUNT"),
+                retry_value,
                 0,
                 minimum=0,
                 maximum=3,
@@ -237,7 +288,7 @@ class LicenseAdminSnapshotStore:
             """
             SELECT * FROM license_admin_bridge_snapshots
             WHERE tenant_id = ? AND snapshot_type = ?
-              AND normalized_status IN ('active', 'valid', 'healthy', 'ok')
+              AND normalized_status IN ('active', 'valid', 'healthy', 'ok', 'grace')
             ORDER BY id DESC
             LIMIT 1
             """,
@@ -294,7 +345,7 @@ class AdminPanelClient:
             tenant_id=tenant_id,
             snapshot_type=SNAPSHOT_LICENSE,
             path=LICENSE_CHECK_PATH,
-            request_payload={"license_key": self.config.license_key},
+            request_payload=self._license_check_payload(),
             validator=_validate_license_payload,
             fallback_state=lambda: get_current_license_state(tenant_id=tenant_id, store=self.store),
         )
@@ -304,10 +355,128 @@ class AdminPanelClient:
             tenant_id=tenant_id,
             snapshot_type=SNAPSHOT_CAPACITY,
             path=CAPACITY_CONTRACT_PATH,
-            request_payload={"license_key": self.config.license_key},
+            request_payload=self._license_check_payload(),
             validator=_validate_capacity_payload,
             fallback_state=lambda: get_current_capacity_contract(tenant_id=tenant_id, store=self.store),
         )
+
+    def fetch_runtime_contract(self, *, tenant_id: int = 1) -> dict[str, Any]:
+        return self._fetch_snapshot(
+            tenant_id=tenant_id,
+            snapshot_type=SNAPSHOT_CAPACITY,
+            path=RUNTIME_CONTRACT_PATH,
+            request_payload=self._license_check_payload(),
+            validator=_validate_runtime_contract_payload,
+            fallback_state=lambda: get_current_capacity_contract(tenant_id=tenant_id, store=self.store),
+        )
+
+    def fetch_identity_sync(self, *, tenant_id: int = 1) -> dict[str, Any]:
+        source_url = f"{self.config.base_url}{IDENTITY_SYNC_PATH}" if self.config.base_url else IDENTITY_SYNC_PATH
+        if not self.config.enabled:
+            return {"ok": False, "status": "disabled", "error": {"code": "bridge_disabled"}}
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status="https_required",
+                source_url=source_url,
+                error={"code": "https_required", "message": "identity sync requires HTTPS admin panel URL"},
+            )
+            return {"ok": False, "status": "https_required", "error": snapshot["error_json"], "snapshot": snapshot}
+        missing = self.config.missing_fields()
+        if self.config.shared_secret == "":
+            missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
+        if missing:
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status="config_missing",
+                source_url=source_url,
+                error={"code": "config_missing", "missing": missing},
+            )
+            return {"ok": False, "status": "config_missing", "error": snapshot["error_json"], "snapshot": snapshot}
+        try:
+            response = self.transport.request_json(
+                method="POST",
+                url=source_url,
+                headers=self._headers(),
+                json_body=self._license_check_payload(),
+                timeout_seconds=self.config.timeout_seconds,
+            )
+        except (TimeoutError, socket.timeout) as exc:
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status="timeout",
+                source_url=source_url,
+                error={"code": "admin_panel_timeout", "message": str(exc)},
+            )
+            return {"ok": False, "status": "timeout", "error": snapshot["error_json"], "snapshot": snapshot}
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status="unavailable",
+                source_url=source_url,
+                error={"code": "admin_panel_unavailable", "message": str(exc)},
+            )
+            return {"ok": False, "status": "unavailable", "error": snapshot["error_json"], "snapshot": snapshot}
+
+        problems = _validate_identity_payload(response)
+        if problems:
+            snapshot = self.store.save(
+                tenant_id=tenant_id,
+                snapshot_type=SNAPSHOT_IDENTITY,
+                normalized_status="invalid_payload",
+                source_url=source_url,
+                payload=response,
+                error={"code": "invalid_payload", "problems": problems},
+            )
+            return {"ok": False, "status": "invalid_payload", "error": snapshot["error_json"], "snapshot": snapshot}
+        normalized = _normalize_status(response)
+        snapshot = self.store.save(
+            tenant_id=tenant_id,
+            snapshot_type=SNAPSHOT_IDENTITY,
+            normalized_status=normalized,
+            source_url=source_url,
+            payload=response,
+            stale_after_seconds=_stale_after(response),
+        )
+        return {
+            "ok": True,
+            "status": normalized,
+            "payload": response,
+            "snapshot": snapshot,
+        }
+
+    def post_customer_user_password_change(
+        self,
+        *,
+        external_user_id: int | str,
+        username: str,
+        new_password: str,
+    ) -> dict[str, Any]:
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {
+                "ok": False,
+                "status": "https_required",
+                "error": {"code": "https_required", "message": "Password sync requires HTTPS admin panel URL."},
+            }
+        missing = self.config.missing_fields()
+        if self.config.shared_secret == "":
+            missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
+        if missing:
+            return {
+                "ok": False,
+                "status": "config_missing",
+                "error": {"code": "config_missing", "missing": missing},
+            }
+        payload = self._license_check_payload({
+            "external_user_id": str(external_user_id or "").strip(),
+            "username": str(username or "").strip(),
+            "new_password": str(new_password or ""),
+        })
+        return self._post_bridge_payload(path=CUSTOMER_USER_PASSWORD_CHANGE_PATH, payload=payload)
 
     def post_instance_heartbeat(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         source_url = (
@@ -585,6 +754,23 @@ class AdminPanelClient:
             headers["X-HobeRadius-Admin-Secret"] = self.config.shared_secret
         return headers
 
+    def _license_check_payload(self, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "license_key": self.config.license_key,
+            "server_fingerprint": _server_fingerprint(),
+            "hostname": _hostname(),
+            "version": _module_version(),
+            "install_id": _install_id(),
+            "domain": _public_domain(),
+        }
+        if extra:
+            payload.update(extra)
+        if self.config.shared_secret:
+            payload["timestamp"] = int(time.time())
+            payload["nonce"] = uuid.uuid4().hex
+            payload["signature"] = sign_admin_bridge_payload(payload, self.config.shared_secret)
+        return payload
+
 
 def get_current_license_state(
     *, tenant_id: int = 1, store: LicenseAdminSnapshotStore | None = None
@@ -614,6 +800,8 @@ def _validate_license_payload(payload: dict[str, Any]) -> list[str]:
         problems.append("valid must be boolean when present")
     if "limits" in payload and not isinstance(payload["limits"], dict):
         problems.append("limits must be an object when present")
+    if "services" in payload and not isinstance(payload["services"], dict):
+        problems.append("services must be an object when present")
     return problems
 
 
@@ -630,13 +818,138 @@ def _validate_capacity_payload(payload: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _validate_runtime_contract_payload(payload: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    if "ok" in payload and not isinstance(payload["ok"], bool):
+        problems.append("ok must be boolean when present")
+    if not isinstance(payload.get("status"), str) or not payload.get("status", "").strip():
+        problems.append("status is required")
+    contract = payload.get("contract")
+    if contract is not None and not isinstance(contract, dict):
+        problems.append("contract must be an object")
+    node = contract if isinstance(contract, dict) else payload
+    if "license" in node and not isinstance(node["license"], dict):
+        problems.append("license must be an object")
+    if "services" in node and not isinstance(node["services"], dict):
+        problems.append("services must be an object")
+    if "limits" in node and not isinstance(node["limits"], dict):
+        problems.append("limits must be an object")
+    return problems
+
+
+def _validate_identity_payload(payload: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    if payload.get("ok") is not True:
+        problems.append("ok must be true")
+    if not isinstance(payload.get("users"), list):
+        problems.append("users must be a list")
+        return problems
+    for idx, user in enumerate(payload["users"]):
+        if not isinstance(user, dict):
+            problems.append(f"users[{idx}] must be an object")
+            continue
+        if "password" in user or "plain_password" in user:
+            problems.append(f"users[{idx}] must not contain plaintext password")
+        for key in ("external_user_id", "username", "password_hash", "password_hash_scheme", "password_version"):
+            if key not in user:
+                problems.append(f"users[{idx}].{key} is required")
+        if str(user.get("password_hash_scheme") or "").lower() != "werkzeug":
+            problems.append(f"users[{idx}].password_hash_scheme is unsupported")
+    return problems
+
+
 def _normalize_status(payload: dict[str, Any]) -> str:
     status = str(payload.get("status") or "unknown").strip().lower()
-    if status in {"active", "valid", "healthy", "ok"}:
+    if status == "unknown" and payload.get("ok") is True:
+        return "ok"
+    if status in {"active", "valid", "healthy", "ok", "grace"}:
         return status
-    if status in {"inactive", "expired", "blocked", "suspended"}:
+    if status in {
+        "inactive",
+        "expired",
+        "blocked",
+        "suspended",
+        "revoked",
+        "denied",
+        "disabled",
+        "not_found",
+        "invalid_request",
+        "fingerprint_denied",
+        "rate_limited",
+    }:
         return status
     return "unknown"
+
+
+def canonical_admin_bridge_payload(body: dict[str, Any]) -> str:
+    payload = {
+        key: value
+        for key, value in body.items()
+        if key not in {"signature", "hmac_signature"}
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def sign_admin_bridge_payload(body: dict[str, Any], secret: str) -> str:
+    canonical = canonical_admin_bridge_payload(body)
+    return hmac.new(secret.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _server_fingerprint() -> str:
+    explicit = (
+        os.environ.get("HOBERADIUS_SERVER_FINGERPRINT")
+        or os.environ.get("HOBERADIUS_INSTANCE_FINGERPRINT")
+        or ""
+    ).strip()
+    if explicit:
+        return explicit[:255]
+    seed = "|".join(
+        part
+        for part in (
+            os.environ.get("HOBERADIUS_INSTANCE_ID", "").strip(),
+            _hostname(),
+            os.environ.get("HOBERADIUS_DB_PATH", "").strip(),
+        )
+        if part
+    )
+    if not seed:
+        seed = _hostname() or "hoberadius-local-instance"
+    return f"hr-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:32]}"
+
+
+def _hostname() -> str:
+    try:
+        return socket.gethostname()[:255]
+    except OSError:
+        return ""
+
+
+def _module_version() -> str:
+    return (
+        os.environ.get("HOBERADIUS_BUILD_SHA")
+        or os.environ.get("HOBERADIUS_VERSION")
+        or "radius-module"
+    )[:80]
+
+
+def _install_id() -> str:
+    return (
+        os.environ.get("HOBERADIUS_INSTANCE_ID")
+        or os.environ.get("HOBERADIUS_INSTALL_ID")
+        or _server_fingerprint()
+    )[:120]
+
+
+def _public_domain() -> str:
+    raw = (
+        os.environ.get("HOBERADIUS_PUBLIC_URL")
+        or os.environ.get("HOBERADIUS_DOMAIN")
+        or ""
+    ).strip()
+    if not raw:
+        return ""
+    parsed = urllib.parse.urlparse(raw if "://" in raw else f"//{raw}")
+    return (parsed.netloc or parsed.path or raw)[:255]
 
 
 def _stale_after(payload: dict[str, Any]) -> int:

@@ -96,6 +96,7 @@ def _register_tenants(bp: Blueprint) -> None:
 
 def _register_all(bp: Blueprint) -> None:
     from .dashboard import register_dashboard_routes
+    from .account import register_account_routes
     from .devices import register_devices_routes
     from .network_devices import register_network_devices_routes
     from .network_device_bypass import register_network_device_bypass_routes
@@ -133,6 +134,7 @@ def _register_all(bp: Blueprint) -> None:
     )
 
     register_dashboard_routes(bp)
+    register_account_routes(bp)
     register_devices_routes(bp)
     register_network_devices_routes(bp)
     register_network_device_bypass_routes(bp)

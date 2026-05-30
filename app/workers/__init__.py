@@ -1,6 +1,7 @@
 """Background workers — يتم بدؤها مرّة واحدة من app/__init__.py."""
 
 from .accounting_puller import start_accounting_puller  # noqa: F401
+from .admin_bridge_sync_worker import start_admin_bridge_sync_worker  # noqa: F401
 from .device_fingerprint_worker import start_device_fingerprint_worker  # noqa: F401
 from .lifecycle_worker import start_lifecycle_worker  # noqa: F401
 from .mt_reconciler import start_mt_reconciler  # noqa: F401

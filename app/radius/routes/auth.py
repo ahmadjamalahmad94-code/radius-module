@@ -20,6 +20,7 @@ def auth_login():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
+        _maybe_sync_license_admin_identity()
         svc = get_admins_service()
         admin = svc.authenticate(username, password)
         if not admin:
@@ -47,6 +48,21 @@ def auth_login():
     if session.get("admin_id"):
         return redirect(url_for("radius.dashboard"))
     return render_template("radius/login.html")
+
+
+def _maybe_sync_license_admin_identity() -> None:
+    from ..services.admin_panel_client import bridge_flag
+
+    if not bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN", "license_admin_bridge.identity_sync_on_login"):
+        return
+    try:
+        from ..services.license_admin_identity_sync import LicenseAdminIdentitySyncService
+
+        LicenseAdminIdentitySyncService().sync_once(tenant_id=DEFAULT_TENANT_ID)
+    except Exception:
+        # Login should keep using the last synced local hash if the panel is
+        # temporarily unavailable.
+        return
 
 
 def auth_logout():

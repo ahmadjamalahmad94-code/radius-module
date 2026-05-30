@@ -55,14 +55,6 @@
   .ol-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
   .ol-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
   .ol-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  /* filter row sits on a faint divider inside the hero */
-  .ol-hero-filters{
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-    padding-top:14px;
-    border-top:1px solid var(--hub-border-soft, #e2e8f0);
-    margin:0;
-  }
-  .ol-hero-filters .online-filter-fields{ flex:1; }
   .ol-hero-kpis{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
@@ -70,7 +62,49 @@
     padding-top:14px;
     border-top:1px solid var(--hub-border-soft, #e2e8f0);
   }
-  @media (max-width: 760px){ .ol-hero-actions{ flex:1 1 100%; } }
+
+  /* ── Filters: soft "chip" dropdowns under the stats (not a bar) ── */
+  .ol-hero-filters{
+    display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
+    padding-top:14px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    margin:0;
+  }
+  .ol-hero-filters .online-filter-fields{
+    flex:1; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+  }
+  /* each select becomes a labelled pill field */
+  .ol-filter{
+    display:grid; gap:5px; min-width:160px;
+  }
+  .ol-filter > label{
+    font-size:11.5px; font-weight:800; color:#64748b;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .ol-filter > label i{ color:var(--hub-brand, #7c3aed); font-size:11px; }
+  .ol-hero-filters select{
+    width:100%; min-width:160px; height:42px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:999px;
+    padding:0 16px;
+    background:#fff;
+    color:var(--hub-text, #0f172a);
+    font-weight:700; font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .ol-hero-filters select:hover{ background:#faf8ff; border-color:#ede9fe; }
+  .ol-hero-filters select:focus{
+    outline:0; border-color:var(--hub-brand, #7c3aed);
+    box-shadow:0 0 0 3px rgba(124,58,237,.18);
+  }
+  .ol-hero-filters .ol-filter-go{
+    height:42px; border-radius:999px; padding:0 22px;
+  }
+  @media (max-width: 760px){
+    .ol-hero-actions{ flex:1 1 100%; }
+    .ol-filter{ flex:1 1 100%; min-width:0; }
+  }
 
   .online-toolbar,
   .online-filters{
@@ -241,44 +275,56 @@
     </div>
   </div>
 
-  {# Filters row #}
-  <form class="ol-hero-filters" method="get" action="{{ url_for('radius.online_list') }}">
-    {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
-    <div class="online-filter-fields">
-      <select name="nas" aria-label="السيرفر">
-        <option value="">كل السيرفرات</option>
-        {% for nas in nas_options %}
-          <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
-        {% endfor %}
-      </select>
-      <select name="plan" aria-label="العرض">
-        <option value="">كل العروض</option>
-        {% for plan in plan_options %}
-          <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
-        {% endfor %}
-      </select>
-      <select name="group_id" aria-label="المجموعة">
-        <option value="">كل المجموعات</option>
-        {% for g in group_options or [] %}
-          <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
-        {% endfor %}
-      </select>
-      <select name="speed" aria-label="نوع السرعة">
-        <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
-        <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
-        <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
-        <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
-      </select>
-      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
-    </div>
-  </form>
-
-  {# KPI strip #}
+  {# KPI strip — comes right after the title #}
   <div class="ol-hero-kpis">
     {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
     {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
     {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
   </div>
+
+  {# Filters — labelled pill dropdowns, below the stats (not a bar) #}
+  <form class="ol-hero-filters" method="get" action="{{ url_for('radius.online_list') }}">
+    {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
+    <div class="online-filter-fields">
+      <div class="ol-filter">
+        <label for="ol-f-nas"><i class="fa-solid fa-server"></i> السيرفر</label>
+        <select id="ol-f-nas" name="nas">
+          <option value="">كل السيرفرات</option>
+          {% for nas in nas_options %}
+            <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-filter">
+        <label for="ol-f-plan"><i class="fa-solid fa-cubes"></i> العرض</label>
+        <select id="ol-f-plan" name="plan">
+          <option value="">كل العروض</option>
+          {% for plan in plan_options %}
+            <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-filter">
+        <label for="ol-f-group"><i class="fa-solid fa-people-group"></i> المجموعة</label>
+        <select id="ol-f-group" name="group_id">
+          <option value="">كل المجموعات</option>
+          {% for g in group_options or [] %}
+            <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-filter">
+        <label for="ol-f-speed"><i class="fa-solid fa-gauge-high"></i> نوع السرعة</label>
+        <select id="ol-f-speed" name="speed">
+          <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
+          <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
+          <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
+          <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
+        </select>
+      </div>
+    </div>
+    <button class="hub-btn hub-btn--primary ol-filter-go" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
+  </form>
 </section>
 
 {% if settings.mode == "manual" %}

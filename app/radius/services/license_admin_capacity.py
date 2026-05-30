@@ -13,7 +13,12 @@ from typing import Any
 from app.api.responses import fail
 from app.radius.services.admin_panel_client import (
     SNAPSHOT_CAPACITY,
+    SNAPSHOT_LICENSE,
     LicenseAdminSnapshotStore,
+)
+from app.radius.services.license_admin_runtime_sync import (
+    ACTIVE_LICENSE_STATUSES,
+    BLOCKING_LICENSE_STATUSES,
 )
 from app.radius.services.license_admin_usage_metering import UsageMeteringService
 
@@ -119,6 +124,10 @@ class CapacityEnforcementService:
         usage_metric: str,
         increment: int = 1,
     ) -> CapacityDecision:
+        license_decision = self._license_gate(tenant_id=tenant_id, feature_key=feature_key)
+        if license_decision is not None:
+            return license_decision
+
         state, payload, warnings = self._capacity_payload(tenant_id=tenant_id)
         if not payload:
             return CapacityDecision(
@@ -127,6 +136,10 @@ class CapacityEnforcementService:
                 warning_codes=warnings,
                 contract_status=str(state.get("status") or "unknown"),
             )
+
+        service_decision = self._service_gate(payload, feature_key, warnings, str(state.get("status") or "unknown"))
+        if service_decision is not None:
+            return service_decision
 
         feature_state = self._feature_state(payload, feature_key)
         if feature_state in FEATURE_BLOCK_CODES:
@@ -172,6 +185,10 @@ class CapacityEnforcementService:
         )
 
     def check_cards_generate(self, *, tenant_id: int, requested_count: int) -> CapacityDecision:
+        license_decision = self._license_gate(tenant_id=tenant_id, feature_key="cards")
+        if license_decision is not None:
+            return license_decision
+
         state, payload, warnings = self._capacity_payload(tenant_id=tenant_id)
         if not payload:
             return CapacityDecision(
@@ -180,6 +197,10 @@ class CapacityEnforcementService:
                 warning_codes=warnings,
                 contract_status=str(state.get("status") or "unknown"),
             )
+
+        service_decision = self._service_gate(payload, "cards", warnings, str(state.get("status") or "unknown"))
+        if service_decision is not None:
+            return service_decision
 
         feature_state = self._feature_state(payload, "cards")
         if feature_state in FEATURE_BLOCK_CODES:
@@ -230,6 +251,8 @@ class CapacityEnforcementService:
 
     def capacity_status(self, *, tenant_id: int) -> dict[str, Any]:
         state, payload, warnings = self._capacity_payload(tenant_id=tenant_id)
+        license_state, license_payload, license_warnings = self._license_payload(tenant_id=tenant_id)
+        warnings = [*warnings, *license_warnings]
         metrics = self.usage_service.collect_metrics(tenant_id=tenant_id)
         contract_status = str(state.get("status") or "unknown")
         status = contract_status
@@ -237,6 +260,9 @@ class CapacityEnforcementService:
             status = "degraded"
         elif state.get("stale"):
             status = "stale"
+        license_status = str(license_payload.get("status") or license_state.get("status") or "unknown")
+        if self._license_blocks(license_state=license_state, payload=license_payload):
+            status = "blocked"
 
         features: dict[str, Any] = {}
         for feature_key, spec in CAPACITY_FEATURES.items():
@@ -276,6 +302,25 @@ class CapacityEnforcementService:
             }
 
         snapshot = state.get("last_success") or {}
+        latest_capacity_snapshot = state.get("snapshot") or {}
+        latest_capacity_payload = (
+            latest_capacity_snapshot.get("payload_json")
+            if isinstance(latest_capacity_snapshot, dict)
+            else {}
+        )
+        latest_capacity_contract = (
+            latest_capacity_payload.get("contract")
+            if isinstance(latest_capacity_payload, dict)
+            else {}
+        )
+        license_snapshot = license_state.get("snapshot") or license_state.get("last_success") or {}
+        services = {}
+        if isinstance(payload, dict) and isinstance(payload.get("services"), dict):
+            services = payload.get("services") or {}
+        elif isinstance(latest_capacity_contract, dict) and isinstance(latest_capacity_contract.get("services"), dict):
+            services = latest_capacity_contract.get("services") or {}
+        elif isinstance(license_payload, dict) and isinstance(license_payload.get("services"), dict):
+            services = license_payload.get("services") or {}
         return {
             "status": status,
             "mode": "local_snapshot",
@@ -287,8 +332,16 @@ class CapacityEnforcementService:
                 "fetched_at": snapshot.get("fetched_at") if isinstance(snapshot, dict) else None,
                 "warnings": warnings,
             },
+            "license": {
+                "status": license_status,
+                "active": self._license_is_active_payload(license_payload),
+                "snapshot_id": license_snapshot.get("id") if isinstance(license_snapshot, dict) else None,
+                "fetched_at": license_snapshot.get("fetched_at") if isinstance(license_snapshot, dict) else None,
+                "warnings": license_warnings,
+            },
             "usage": metrics,
             "features": features,
+            "services": services,
             "warnings": warnings,
             "upgrade_intent": {
                 "available": True,
@@ -314,9 +367,63 @@ class CapacityEnforcementService:
         if isinstance(contract, dict) and (
             isinstance(contract.get("limits"), dict)
             or isinstance(contract.get("features"), dict)
+            or isinstance(contract.get("services"), dict)
         ):
             return state, contract, warnings
         return state, payload, warnings
+
+    def _license_payload(self, *, tenant_id: int) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+        state = self.store.state(tenant_id=tenant_id, snapshot_type=SNAPSHOT_LICENSE)
+        warnings: list[str] = []
+        snapshot = state.get("snapshot") or state.get("last_success") or {}
+        payload = snapshot.get("payload_json") if isinstance(snapshot, dict) else {}
+        if state.get("stale"):
+            warnings.append("stale_license")
+        if not isinstance(payload, dict):
+            payload = {}
+        return state, payload, warnings
+
+    def _license_gate(self, *, tenant_id: int, feature_key: str) -> CapacityDecision | None:
+        license_state, payload, warnings = self._license_payload(tenant_id=tenant_id)
+        if not payload:
+            return None
+        if not self._license_blocks(license_state=license_state, payload=payload):
+            return None
+        status = str(payload.get("status") or license_state.get("status") or "unknown")
+        return CapacityDecision(
+            allowed=False,
+            feature_key=feature_key,
+            code="license_not_active",
+            message_ar="النظام غير مفعّل من لوحة التراخيص أو الترخيص موقوف/منتهي.",
+            warning_codes=[*warnings, "license_not_active"],
+            contract_status=status,
+        )
+
+    def _license_blocks(self, *, license_state: dict[str, Any], payload: dict[str, Any]) -> bool:
+        if not payload:
+            return False
+        status = str(payload.get("status") or license_state.get("status") or "unknown").strip().lower()
+        if status in BLOCKING_LICENSE_STATUSES:
+            return True
+        if status in ACTIVE_LICENSE_STATUSES and self._license_is_active_payload(payload):
+            return False
+        if payload.get("active") is False or payload.get("valid") is False:
+            return True
+        return False
+
+    def _license_is_active_payload(self, payload: dict[str, Any]) -> bool | None:
+        if not isinstance(payload, dict) or not payload:
+            return None
+        status = str(payload.get("status") or "").strip().lower()
+        if status and status not in ACTIVE_LICENSE_STATUSES:
+            return False
+        if "active" in payload:
+            return payload.get("active") is True
+        if "valid" in payload:
+            return payload.get("valid") is True
+        if "ok" in payload:
+            return payload.get("ok") is True
+        return status in ACTIVE_LICENSE_STATUSES
 
     def _feature_state(self, payload: dict[str, Any], feature_key: str) -> str:
         features = payload.get("features")
@@ -328,6 +435,32 @@ class CapacityEnforcementService:
         if isinstance(raw, dict):
             return str(raw.get("state") or raw.get("status") or "enabled").strip().lower()
         return "enabled"
+
+    def _service_gate(
+        self,
+        payload: dict[str, Any],
+        feature_key: str,
+        warnings: list[str],
+        contract_status: str,
+    ) -> CapacityDecision | None:
+        services = payload.get("services")
+        if not isinstance(services, dict):
+            return None
+        service = services.get(feature_key)
+        if not isinstance(service, dict):
+            return None
+        status = str(service.get("status") or "disabled").strip().lower()
+        enabled = service.get("enabled") is True and status == "active"
+        if enabled:
+            return None
+        return CapacityDecision(
+            allowed=False,
+            feature_key=feature_key,
+            code="service_not_enabled",
+            message_ar="هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص.",
+            warning_codes=[*warnings, "service_not_enabled"],
+            contract_status=contract_status,
+        )
 
     def _limit(self, payload: dict[str, Any], dotted_path: str) -> int | None:
         node: Any = payload.get("limits")

@@ -8,6 +8,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from werkzeug.security import generate_password_hash
+
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import (
@@ -34,6 +36,12 @@ def _row(row) -> dict[str, Any]:
         out["price"] = minor_to_money(out["price_minor"])
     if "amount_minor" in out:
         out["amount"] = minor_to_money(out["amount_minor"])
+    if "metadata_json" in out:
+        try:
+            out["metadata"] = json.loads(out.get("metadata_json") or "{}")
+        except (TypeError, ValueError):
+            out["metadata"] = {}
+        out["card_color"] = out["metadata"].get("card_color") or out["metadata"].get("color") or "#14b8a6"
     return out
 
 
@@ -50,19 +58,26 @@ class CardUsersMarketplaceService:
         display_name: str,
         mobile: str = "",
         email: str = "",
+        password: str = "",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         name = str(display_name or "").strip()
         if not name:
             raise CardMarketplaceError("display_name is required")
         now = now_iso()
+        password_hash = ""
+        password_set_at = None
+        if str(password or "").strip():
+            password_hash = generate_password_hash(str(password))
+            password_set_at = now
         with transaction() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO card_users(
                     tenant_id, display_name, mobile, email, status,
-                    metadata_json, created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?)
+                    metadata_json, password_hash, password_set_at,
+                    created_at, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     self.tenant_id,
@@ -71,6 +86,8 @@ class CardUsersMarketplaceService:
                     str(email or ""),
                     "active",
                     _json(metadata),
+                    password_hash,
+                    password_set_at,
                     now,
                     now,
                 ),
@@ -88,6 +105,43 @@ class CardUsersMarketplaceService:
             message="Card user profile created",
             target_type="card_user",
             target_id=card_user_id,
+        )
+        return self.get_card_user(card_user_id)
+
+    def set_card_user_password(
+        self,
+        *,
+        card_user_id: int,
+        password: str,
+    ) -> dict[str, Any]:
+        raw = str(password or "").strip()
+        if len(raw) < 4:
+            raise CardMarketplaceError("password must be at least 4 characters")
+        now = now_iso()
+        with transaction() as conn:
+            cur = conn.execute(
+                """
+                UPDATE card_users
+                SET password_hash=?, password_set_at=?, updated_at=?
+                WHERE tenant_id=? AND id=?
+                """,
+                (
+                    generate_password_hash(raw),
+                    now,
+                    now,
+                    self.tenant_id,
+                    int(card_user_id),
+                ),
+            )
+            if cur.rowcount <= 0:
+                raise CardMarketplaceError("card user not found")
+        self.events.record_event(
+            tenant_id=self.tenant_id,
+            category="card",
+            event_key="card_user.password_updated",
+            message="Card user portal password updated",
+            target_type="card_user",
+            target_id=int(card_user_id),
         )
         return self.get_card_user(card_user_id)
 
@@ -120,6 +174,7 @@ class CardUsersMarketplaceService:
         speed_down_kbps: int = 0,
         speed_up_kbps: int = 0,
         currency: str = "JOD",
+        card_color: str = "#14b8a6",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
@@ -129,6 +184,11 @@ class CardUsersMarketplaceService:
             raise CardMarketplaceError("price must be positive")
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("plan not found")
+        meta = dict(metadata or {})
+        color = str(card_color or meta.get("card_color") or "#14b8a6").strip()
+        if not color.startswith("#") or len(color) not in {4, 7}:
+            color = "#14b8a6"
+        meta["card_color"] = color
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
@@ -149,7 +209,7 @@ class CardUsersMarketplaceService:
                     price_minor,
                     str(currency or "JOD").upper()[:8],
                     1,
-                    _json(metadata),
+                    _json(meta),
                     now,
                     now,
                 ),
@@ -157,17 +217,41 @@ class CardUsersMarketplaceService:
         return self.get_package(int(cur.lastrowid))
 
     def list_packages(self, *, active_only: bool = True, limit: int = 100) -> list[dict[str, Any]]:
-        sql = "SELECT * FROM card_marketplace_packages WHERE tenant_id=?"
+        sql = """
+            SELECT
+                p.*,
+                COALESCE(NULLIF(p.duration_minutes, 0), ap.duration_minutes, 0) AS display_duration_minutes,
+                COALESCE(NULLIF(p.speed_down_kbps, 0), ap.speed_down_kbps, 0) AS display_speed_down_kbps,
+                COALESCE(NULLIF(p.speed_up_kbps, 0), ap.speed_up_kbps, 0) AS display_speed_up_kbps,
+                ap.name AS plan_name,
+                ap.quota_total_mb AS plan_quota_total_mb
+            FROM card_marketplace_packages p
+            LEFT JOIN access_plans ap
+              ON ap.tenant_id=p.tenant_id AND ap.id=p.plan_id
+            WHERE p.tenant_id=?
+        """
         params: list[Any] = [self.tenant_id]
         if active_only:
-            sql += " AND active=1"
-        sql += " ORDER BY id DESC LIMIT ?"
+            sql += " AND p.active=1"
+        sql += " ORDER BY p.id DESC LIMIT ?"
         params.append(int(limit))
         return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
 
     def get_package(self, package_id: int) -> dict[str, Any]:
         row = db().execute(
-            "SELECT * FROM card_marketplace_packages WHERE tenant_id=? AND id=?",
+            """
+            SELECT
+                p.*,
+                COALESCE(NULLIF(p.duration_minutes, 0), ap.duration_minutes, 0) AS display_duration_minutes,
+                COALESCE(NULLIF(p.speed_down_kbps, 0), ap.speed_down_kbps, 0) AS display_speed_down_kbps,
+                COALESCE(NULLIF(p.speed_up_kbps, 0), ap.speed_up_kbps, 0) AS display_speed_up_kbps,
+                ap.name AS plan_name,
+                ap.quota_total_mb AS plan_quota_total_mb
+            FROM card_marketplace_packages p
+            LEFT JOIN access_plans ap
+              ON ap.tenant_id=p.tenant_id AND ap.id=p.plan_id
+            WHERE p.tenant_id=? AND p.id=?
+            """,
             (self.tenant_id, int(package_id)),
         ).fetchone()
         if not row:
@@ -345,8 +429,8 @@ class CardUsersMarketplaceService:
                 INSERT INTO card_batches(
                     tenant_id, batch_code, package_name, plan_id, count, generated,
                     price_per_card, price_bulk, username_prefix, password_length,
-                    password_charset, created_by, status, created_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    password_charset, created_by, status, metadata, created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     self.tenant_id,
@@ -362,6 +446,18 @@ class CardUsersMarketplaceService:
                     "digits",
                     "card_marketplace",
                     "active",
+                    _json(
+                        {
+                            "source": "card_marketplace",
+                            "electronic": True,
+                            "package_id": int(package["id"]),
+                            "card_user_id": int(card_user["id"]),
+                            "card_color": package.get("card_color") or "#14b8a6",
+                            "duration_minutes": int(package.get("display_duration_minutes") or package.get("duration_minutes") or 0),
+                            "speed_down_kbps": int(package.get("display_speed_down_kbps") or package.get("speed_down_kbps") or 0),
+                            "speed_up_kbps": int(package.get("display_speed_up_kbps") or package.get("speed_up_kbps") or 0),
+                        }
+                    ),
                     now,
                 ),
             )

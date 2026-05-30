@@ -89,6 +89,18 @@ def register(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/system/admin-bridge/license-sync",
+        "system_admin_bridge_license_sync",
+        require_api_token(system_admin_bridge_license_sync),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/system/admin-bridge/identity-sync",
+        "system_admin_bridge_identity_sync",
+        require_api_token(system_admin_bridge_identity_sync),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/system/admin-bridge/heartbeat",
         "system_admin_bridge_heartbeat",
         require_api_token(system_admin_bridge_heartbeat),
@@ -224,6 +236,34 @@ def system_admin_bridge_capacity_status():
     from ...radius.services.license_admin_capacity import CapacityEnforcementService
 
     return ok(CapacityEnforcementService().capacity_status(tenant_id=_tid()))
+
+
+def system_admin_bridge_license_sync():
+    """Pull the live license approval and derive local capacity/services state.
+
+    The sync reads the signed license-check contract from radius-module-admin.
+    It does not configure WireGuard, MikroTik, Linux tc, FreeRADIUS, or CoA.
+    """
+    from ...radius.services.license_admin_runtime_sync import LicenseAdminRuntimeSyncService
+
+    result = LicenseAdminRuntimeSyncService().sync_once(tenant_id=_tid())
+    return ok(result)
+
+
+def system_admin_bridge_identity_sync():
+    """Pull customer admin identities from radius-module-admin.
+
+    This applies only password hashes and managed metadata. Plaintext
+    passwords are rejected by the sync service.
+    """
+    from ...radius.services.license_admin_identity_sync import LicenseAdminIdentitySyncService
+
+    payload = request.get_json(silent=True) or {}
+    result = LicenseAdminIdentitySyncService().sync_once(
+        tenant_id=_tid(),
+        disable_missing=payload.get("disable_missing") is True,
+    )
+    return ok(result)
 
 
 def system_admin_bridge_heartbeat():

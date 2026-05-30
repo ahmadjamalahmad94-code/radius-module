@@ -51,6 +51,7 @@ def test_successful_license_snapshot_fetch(app_db):
     from app.radius.services.admin_panel_client import (
         AdminPanelClient,
         get_current_license_state,
+        sign_admin_bridge_payload,
     )
 
     transport = MockTransport(
@@ -73,12 +74,39 @@ def test_successful_license_snapshot_fetch(app_db):
     assert transport.calls[0]["url"] == "https://admin.example.test/api/license/check"
     assert transport.calls[0]["timeout_seconds"] == 1.0
     assert transport.calls[0]["headers"]["X-HobeRadius-Admin-Secret"] == "shared-secret-value"
-    assert transport.calls[0]["json_body"]["license_key"] == "lic_test_123456789"
+    request_body = transport.calls[0]["json_body"]
+    assert request_body["license_key"] == "lic_test_123456789"
+    assert request_body["server_fingerprint"]
+    assert request_body["timestamp"]
+    assert request_body["nonce"]
+    assert request_body["signature"] == sign_admin_bridge_payload(
+        request_body,
+        "shared-secret-value",
+    )
 
     state = get_current_license_state(tenant_id=7)
     assert state["ok"] is True
     assert state["status"] == "active"
     assert state["last_success"]["payload_json"]["license_key"] == "lic_...6789"
+
+
+def test_license_check_signature_uses_canonical_payload():
+    from app.radius.services.admin_panel_client import canonical_admin_bridge_payload, sign_admin_bridge_payload
+
+    payload = {
+        "server_fingerprint": "server-1",
+        "license_key": "lic_123",
+        "timestamp": 123,
+        "nonce": "abc",
+        "signature": "ignored",
+    }
+
+    assert canonical_admin_bridge_payload(payload) == (
+        '{"license_key":"lic_123","nonce":"abc","server_fingerprint":"server-1","timestamp":123}'
+    )
+    assert sign_admin_bridge_payload(payload, "secret") == (
+        "625036195da9947c81ec8471655673db7c5af8bf44b3ebb0ef5a65ca2f57f71a"
+    )
 
 
 def test_successful_capacity_contract_fetch(app_db):

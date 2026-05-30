@@ -47,6 +47,22 @@ def _capacity_contract(payload: dict, *, fetched_at: str | None = None) -> None:
     )
 
 
+def _license_snapshot(payload: dict, *, status: str = "active") -> None:
+    from app.radius.services.admin_panel_client import (
+        SNAPSHOT_LICENSE,
+        LicenseAdminSnapshotStore,
+    )
+
+    LicenseAdminSnapshotStore().save(
+        tenant_id=1,
+        snapshot_type=SNAPSHOT_LICENSE,
+        normalized_status=status,
+        source_url="mock://license-check",
+        payload={"status": status, **payload},
+        stale_after_seconds=60,
+    )
+
+
 def _insert_plan(name: str = "Plan A") -> int:
     cur = db().execute(
         """
@@ -183,3 +199,20 @@ def test_stale_contract_is_still_enforced_with_warning(client):
     details = res.get_json()["error"]["details"]
     assert details["contract_status"] == "stale"
     assert "stale_contract" in details["warnings"]
+
+
+def test_authoritative_suspended_license_blocks_create_even_with_capacity(client):
+    _capacity_contract({"limits": {"subscribers": {"max_total": 100}}})
+    _license_snapshot({"active": False}, status="suspended")
+
+    res = client.post(
+        "/api/v1/accounts",
+        json={"username": "blocked-by-license", "password": "pw"},
+        headers=AUTH,
+    )
+
+    assert res.status_code == 403
+    body = res.get_json()
+    assert body["error"]["code"] == "license_not_active"
+    assert body["error"]["details"]["feature_key"] == "subscribers"
+    assert body["error"]["details"]["contract_status"] == "suspended"

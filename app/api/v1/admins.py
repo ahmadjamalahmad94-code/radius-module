@@ -186,7 +186,10 @@ def admins_patch(admin_id: int):
             return fail("validation_error", e.message, status=422)
     if "password" in body and (body["password"] or "").strip():
         changes["password"] = str(body["password"])
-    admin = admins_repo.update_admin(admin_id, **changes)
+    try:
+        admin = admins_repo.update_admin(admin_id, **changes)
+    except ValueError as exc:
+        return fail("password_managed_by_license_admin", str(exc), status=409)
     if not admin:
         return fail("not_found", "admin not found", status=404)
     _audit("update", "admin", str(admin_id), {"fields": list(changes.keys())})

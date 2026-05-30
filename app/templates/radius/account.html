@@ -1,0 +1,54 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}حسابي — Hobe Hub{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "حسابي",
+  subtitle="إدارة حساب الدخول الحالي. إذا كان الحساب مدارًا من لوحة التراخيص، فاللوحة تبقى المرجع النهائي لكلمة المرور والإصدار.",
+  icon="user-shield"
+) }}
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("بيانات الحساب", icon="id-card") %}
+    <div class="hub-detail-list">
+      <div><span>اسم المستخدم</span><strong class="mono">{{ admin.username }}</strong></div>
+      <div><span>الاسم</span><strong>{{ admin.full_name or "—" }}</strong></div>
+      <div><span>البريد</span><strong class="mono">{{ admin.email or "—" }}</strong></div>
+      <div><span>نوع الإدارة</span><strong>{{ "من لوحة التراخيص" if admin.managed_by_license_admin else "محلي" }}</strong></div>
+      <div><span>external_user_id</span><strong class="mono">{{ admin.external_subject or "—" }}</strong></div>
+      <div><span>password_version</span><strong class="mono">{{ admin.external_password_version or 0 }}</strong></div>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("تغيير كلمة المرور", icon="key") %}
+    <form method="post" action="{{ url_for('radius.account_password') }}" class="hub-form">
+      {{ csrf_token_input() | safe }}
+      <div class="hub-field">
+        <label>كلمة المرور الحالية</label>
+        <input class="hub-input" type="password" name="current_password" autocomplete="current-password" required>
+      </div>
+      <div class="hub-field">
+        <label>كلمة المرور الجديدة</label>
+        <input class="hub-input" type="password" name="new_password" autocomplete="new-password" minlength="8" required>
+        <div class="hub-field-hint">إذا كان حسابك مدارًا من لوحة التراخيص، سيرسل الريدياس الطلب إلى اللوحة عبر API موقّع HTTPS ثم يسحب hash/version الجديد.</div>
+      </div>
+      <div class="hub-field">
+        <label>تأكيد كلمة المرور الجديدة</label>
+        <input class="hub-input" type="password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-floppy-disk"></i> تحديث كلمة المرور
+      </button>
+    </form>
+  {% endcall %}
+</div>
+
+{% call hub.section("قاعدة السلطة", icon="shield-halved") %}
+  <div class="hub-empty" style="text-align:initial">
+    <div class="hub-empty-msg">Bidirectional password change with license panel authority</div>
+    <div class="hub-empty-sub">يمكن أن يبدأ الطلب من الريدياس، لكن لوحة التراخيص هي التي تحفظ hash النهائي وتزيد password_version. لا يتم إرسال password hash على HTTP في الإنتاج.</div>
+  </div>
+{% endcall %}
+{% endblock %}

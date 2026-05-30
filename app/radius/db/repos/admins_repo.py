@@ -5,7 +5,9 @@ import hashlib
 import secrets
 from typing import Any, Optional
 
-from ...core.constants import DEFAULT_ROLE_PERMISSIONS, ROLE_SUPER_ADMIN
+from werkzeug.security import check_password_hash as werkzeug_check_password_hash
+
+from ...core.constants import DEFAULT_ROLE_PERMISSIONS, ROLE_BILLING, ROLE_OPERATOR, ROLE_SUPER_ADMIN, ROLE_SUPPORT, ROLE_VIEWER
 from ...core.types import Admin, Role
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
@@ -32,6 +34,11 @@ def hash_password(plain: str) -> str:
 
 
 def verify_password(plain: str, stored: str) -> bool:
+    if _looks_like_werkzeug_hash(stored):
+        try:
+            return werkzeug_check_password_hash(stored, plain)
+        except (TypeError, ValueError):
+            return False
     try:
         salt_hex, key_hex = stored.split("$", 1)
         salt = bytes.fromhex(salt_hex)
@@ -40,6 +47,11 @@ def verify_password(plain: str, stored: str) -> bool:
         return False
     actual = hashlib.scrypt(plain.encode("utf-8"), salt=salt, n=16384, r=8, p=1, dklen=32)
     return secrets.compare_digest(expected, actual)
+
+
+def _looks_like_werkzeug_hash(value: str) -> bool:
+    text = str(value or "")
+    return text.startswith(("scrypt:", "pbkdf2:", "argon2:"))
 
 
 # ─────────────── Roles ───────────────
@@ -128,6 +140,12 @@ def _row_to_admin(row) -> Admin:
         avatar_url=_g(row, "avatar_url", "") or "",
         tags=_g(row, "tags", "") or "",
         metadata=_g(row, "metadata", "{}") or "{}",
+        external_identity_provider=_g(row, "external_identity_provider", "") or "",
+        external_subject=_g(row, "external_subject", "") or "",
+        external_password_hash_scheme=_g(row, "external_password_hash_scheme", "") or "",
+        external_password_version=int(_g(row, "external_password_version", 0) or 0),
+        managed_by_license_admin=bool(_g(row, "managed_by_license_admin", 0)),
+        external_updated_at=_g(row, "external_updated_at", "") or "",
         deleted_at=parse_dt(_g(row, "deleted_at", None)),
         deleted_by=_g(row, "deleted_by", "") or "",
         delete_reason=_g(row, "delete_reason", "") or "",
@@ -190,11 +208,18 @@ def create_admin(*, username: str, password: str, full_name: str = "",
 
 def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     if "password" in changes:
-        changes["password_hash"] = hash_password(changes.pop("password"))
+        password = changes.pop("password")
+        if password:
+            if is_managed_by_license_admin(admin_id):
+                raise ValueError("كلمة المرور تدار من لوحة التراخيص")
+            changes["password_hash"] = hash_password(str(password))
     # RM-H6: add profile fields to allowed set
     allowed = ("password_hash", "full_name", "email", "mobile", "role_id",
                "is_super_admin", "enabled",
-               "phone", "profile_notes", "avatar_url", "tags")
+               "phone", "profile_notes", "avatar_url", "tags",
+               "external_identity_provider", "external_subject",
+               "external_password_hash_scheme", "external_password_version",
+               "managed_by_license_admin", "external_updated_at")
     sets, vals = [], []
     for k, v in changes.items():
         if k in allowed:
@@ -208,6 +233,154 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     with transaction() as conn:
         conn.execute(f"UPDATE admins SET {', '.join(sets)} WHERE id = ?", vals)
     return get_admin(admin_id)
+
+
+def is_managed_by_license_admin(admin_id: int) -> bool:
+    row = db().execute(
+        "SELECT managed_by_license_admin FROM admins WHERE id = ?",
+        (int(admin_id),),
+    ).fetchone()
+    return bool(row and _g(row, "managed_by_license_admin", 0))
+
+
+def upsert_license_admin_user(
+    *,
+    external_user_id: int | str,
+    username: str,
+    password_hash: str,
+    password_hash_scheme: str = "werkzeug",
+    password_version: int = 0,
+    full_name: str = "",
+    email: str = "",
+    role_key: str = "owner",
+    active: bool = True,
+    updated_at: str = "",
+) -> Admin:
+    subject = str(external_user_id).strip()
+    if not subject:
+        raise ValueError("external_user_id is required")
+    username = str(username or "").strip()
+    if not username:
+        raise ValueError("username is required")
+    scheme = str(password_hash_scheme or "").strip().lower()
+    if scheme != "werkzeug" or not _looks_like_werkzeug_hash(password_hash):
+        raise ValueError("unsupported password_hash_scheme")
+    role_name = _role_name_for_customer_role(role_key)
+    role = get_role_by_name(role_name) or get_role_by_name(ROLE_SUPER_ADMIN)
+    is_owner = str(role_key or "").strip().lower() == "owner"
+    now = now_iso()
+    existing = _get_by_external_subject(subject) or get_by_username(username, include_deleted=True)
+    with transaction() as conn:
+        if existing:
+            conn.execute(
+                """
+                UPDATE admins
+                SET username = ?, password_hash = ?, full_name = ?, email = ?,
+                    role_id = ?, is_super_admin = ?, enabled = ?,
+                    external_identity_provider = 'license_admin',
+                    external_subject = ?,
+                    external_password_hash_scheme = ?,
+                    external_password_version = ?,
+                    managed_by_license_admin = 1,
+                    external_updated_at = ?,
+                    deleted_at = NULL, deleted_by = '', delete_reason = '',
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    username,
+                    password_hash,
+                    full_name or "",
+                    email or "",
+                    role.id if role else None,
+                    1 if is_owner else 0,
+                    1 if active else 0,
+                    subject,
+                    scheme,
+                    int(password_version or 0),
+                    updated_at or now,
+                    now,
+                    existing.id,
+                ),
+            )
+            admin_id = existing.id
+        else:
+            cur = conn.execute(
+                """
+                INSERT INTO admins(
+                    username, password_hash, full_name, email, mobile, role_id,
+                    is_super_admin, enabled, phone, profile_notes, avatar_url, tags,
+                    external_identity_provider, external_subject,
+                    external_password_hash_scheme, external_password_version,
+                    managed_by_license_admin, external_updated_at,
+                    created_at, updated_at
+                )
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    username,
+                    password_hash,
+                    full_name or "",
+                    email or "",
+                    "",
+                    role.id if role else None,
+                    1 if is_owner else 0,
+                    1 if active else 0,
+                    "",
+                    "Managed by license admin",
+                    "",
+                    "",
+                    "license_admin",
+                    subject,
+                    scheme,
+                    int(password_version or 0),
+                    1,
+                    updated_at or now,
+                    now,
+                    now,
+                ),
+            )
+            admin_id = cur.lastrowid
+    return get_admin(admin_id)
+
+
+def disable_missing_license_admin_users(active_external_ids: set[str]) -> int:
+    placeholders = ",".join("?" for _ in active_external_ids)
+    params: list[Any] = []
+    where = "managed_by_license_admin = 1 AND external_identity_provider = 'license_admin'"
+    if active_external_ids:
+        where += f" AND external_subject NOT IN ({placeholders})"
+        params.extend(sorted(active_external_ids))
+    with transaction() as conn:
+        cur = conn.execute(
+            f"UPDATE admins SET enabled = 0, updated_at = ? WHERE {where}",
+            [now_iso(), *params],
+        )
+        return int(cur.rowcount or 0)
+
+
+def _get_by_external_subject(subject: str) -> Optional[Admin]:
+    row = db().execute(
+        """
+        SELECT * FROM admins
+        WHERE external_identity_provider = 'license_admin'
+          AND external_subject = ?
+        ORDER BY id
+        LIMIT 1
+        """,
+        (str(subject),),
+    ).fetchone()
+    return _row_to_admin(row) if row else None
+
+
+def _role_name_for_customer_role(role_key: str) -> str:
+    return {
+        "owner": ROLE_SUPER_ADMIN,
+        "admin": ROLE_OPERATOR,
+        "support": ROLE_SUPPORT,
+        "billing": ROLE_BILLING,
+        "viewer": ROLE_VIEWER,
+    }.get(str(role_key or "").strip().lower(), ROLE_VIEWER)
 
 
 def delete_admin(admin_id: int) -> None:

@@ -89,6 +89,14 @@ def test_valid_contract_returns_usage_limits_and_features(client):
                 "subscribers": {"state": "limited"},
                 "cards": "enabled",
             },
+            "services": {
+                "ip_change_vpn": {
+                    "enabled": True,
+                    "status": "active",
+                    "download_mbps": 50,
+                    "upload_mbps": 50,
+                }
+            },
         }
     )
 
@@ -102,6 +110,8 @@ def test_valid_contract_returns_usage_limits_and_features(client):
     assert data["features"]["subscribers"]["limits"]["max_total"] == 5
     assert data["features"]["subscribers"]["remaining"] == 4
     assert data["features"]["cards"]["limits"]["generate_per_batch"] == 50
+    assert data["services"]["ip_change_vpn"]["enabled"] is True
+    assert data["services"]["ip_change_vpn"]["download_mbps"] == 50
 
 
 def test_stale_contract_returns_warning(client):
@@ -162,8 +172,10 @@ def test_capacity_status_endpoint_is_json_only(client):
     assert set(body["data"].keys()) >= {
         "status",
         "contract",
+        "license",
         "usage",
         "features",
+        "services",
         "warnings",
         "upgrade_intent",
     }

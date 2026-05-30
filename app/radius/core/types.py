@@ -43,6 +43,12 @@ class NasDevice:
     ssh_port: int = 22
     tags: str = ""                           # CSV
     metadata: str = "{}"
+    external_identity_provider: str = ""
+    external_subject: str = ""
+    external_password_hash_scheme: str = ""
+    external_password_version: int = 0
+    managed_by_license_admin: bool = False
+    external_updated_at: str = ""
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""
@@ -441,6 +447,12 @@ class Admin:
     avatar_url: str = ""
     tags: str = ""                           # CSV
     metadata: str = "{}"
+    external_identity_provider: str = ""
+    external_subject: str = ""
+    external_password_hash_scheme: str = ""
+    external_password_version: int = 0
+    managed_by_license_admin: bool = False
+    external_updated_at: str = ""
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""
