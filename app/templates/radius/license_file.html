@@ -1,0 +1,353 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}ملف التراخيص — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-shield"></i>{% endblock %}
+{% block page_title %}ملف التراخيص{% endblock %}
+{% block page_sub %}<span class="sub">اتصال الريدياس بلوحة التراخيص والعقود المستلمة</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── Page rhythm: every direct child of .lf-page sits on the same vertical grid ── */
+  .lf-page{ display:grid; gap:16px; }
+  .lf-grid-2{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+    gap:14px;
+  }
+
+  /* ── Numbered "what does this page do" list ─────────────────────── */
+  .lf-help{ margin:0; padding:0; counter-reset:lf-step; display:grid; gap:10px; }
+  .lf-help li{
+    list-style:none; position:relative;
+    padding:11px 52px 11px 14px;
+    background:var(--hub-bg-soft, #f8f7fc);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:12px;
+    line-height:1.7; font-size:13.5px; color:var(--hub-text, #0f172a);
+  }
+  .lf-help li::before{
+    counter-increment:lf-step; content:counter(lf-step);
+    position:absolute; inset-inline-end:14px; top:50%;
+    transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center;
+    font-weight:800; font-size:13px;
+  }
+
+  /* ── Sync action bar (replaces the buggy actions_html in hero) ── */
+  .lf-sync-bar{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px;
+    background:linear-gradient(135deg, #f5f3ff, #fff);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:14px;
+  }
+  .lf-sync-bar-icon{
+    width:44px; height:44px; flex:0 0 auto;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center; font-size:18px;
+    box-shadow:0 6px 14px rgba(124,58,237,.32);
+  }
+  .lf-sync-bar-text{ flex:1; min-width:0; }
+  .lf-sync-bar-title{ font-weight:800; color:var(--hub-text); font-size:14.5px; }
+  .lf-sync-bar-sub{ font-size:12.5px; color:var(--hub-text-soft, #475569); margin-top:2px; }
+  .lf-sync-bar form{ margin:0; }
+  .lf-sync-form{ display:flex; flex-wrap:wrap; gap:8px; }
+
+  /* ── Missing-env chips ──────────────────────────────────────────── */
+  .lf-missing-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .lf-missing-item{
+    display:inline-block; padding:6px 12px;
+    background:#fef3c7; color:#92400e;
+    border:1px solid #fde68a; border-radius:8px;
+    font-family:ui-monospace, Consolas, monospace;
+    font-size:12.5px; direction:ltr; unicode-bidi:isolate;
+  }
+
+  /* ── Snapshot cards (نسخة آخر اتصال / عقد / هوية) ──────────────── */
+  .lf-snap-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:12px;
+  }
+  .lf-snap{
+    display:grid; gap:8px;
+    padding:14px;
+    background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:12px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .lf-snap:hover{
+    border-color:#ede9fe;
+    box-shadow:0 4px 12px rgba(124,58,237,.08);
+  }
+  .lf-snap-head{ display:flex; align-items:center; gap:10px; }
+  .lf-snap-ico{
+    width:36px; height:36px; flex:0 0 auto;
+    border-radius:10px;
+    background:#ede9fe; color:#5b21b6;
+    display:grid; place-items:center; font-size:14px;
+  }
+  .lf-snap-title{ font-weight:800; color:var(--hub-text); font-size:13.5px; }
+  .lf-snap-meta{ font-size:12px; color:var(--hub-text-mute, #94a3b8); line-height:1.6; }
+
+  /* ── Sub-section heads in the contract table ───────────────────── */
+  .lf-subhead{
+    margin:0 0 12px;
+    font-size:13.5px; font-weight:800;
+    color:var(--hub-text);
+    display:inline-flex; align-items:center; gap:8px;
+    padding-bottom:8px; border-bottom:1px dashed var(--hub-border-soft, #e2e8f0);
+    width:100%;
+  }
+  .lf-subhead i{ color:#5b21b6; font-size:13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lf-page">
+
+  {# ───── Hero (clean — no inline forms) ─────────────────────── #}
+  {{ hub.hero(
+    "ملف التراخيص",
+    subtitle="يعرض اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل، آخر مزامنة هوية، والحدود التي يطبّقها runtime محليًا.",
+    icon="file-shield"
+  ) }}
+
+  {# ───── Sync action bar (replaces buggy actions_html) ─────── #}
+  <div class="lf-sync-bar">
+    <span class="lf-sync-bar-icon"><i class="fa-solid fa-rotate"></i></span>
+    <div class="lf-sync-bar-text">
+      <div class="lf-sync-bar-title">مزامنة الآن</div>
+      <div class="lf-sync-bar-sub">اسحب أحدث عقد تشغيل وأحدث مزامنة هوية من لوحة التراخيص دفعة واحدة.</div>
+    </div>
+    <form method="post" action="{{ url_for('radius.license_file_sync') }}">
+      {{ csrf_token_input() }}
+      <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit">
+        <i class="fa-solid fa-rotate"></i> مزامنة الاثنين الآن
+      </button>
+    </form>
+  </div>
+
+  {# ───── KPI strip ──────────────────────────────────────────── #}
+  <div class="hub-kpi-grid">
+    {{ hub.kpi("حالة الجسر",
+               "مفعَّل" if config_view.enabled else "غير مفعَّل",
+               icon="plug-circle-bolt",
+               variant="blue") }}
+    {{ hub.kpi("عقد التشغيل",
+               "مفعَّل" if config_view.runtime_contract_sync else "غير مفعَّل",
+               icon="file-contract",
+               variant="green") }}
+    {{ hub.kpi("مزامنة الهوية",
+               "مفعَّلة" if config_view.identity_sync_enabled else "غير مفعَّلة",
+               icon="users-gear",
+               variant="amber") }}
+    {{ hub.kpi("حالة الحدود",
+               capacity.status or "غير معروف",
+               icon="gauge-high",
+               variant="brand") }}
+  </div>
+
+  {# ───── Explanation card ──────────────────────────────────── #}
+  {% call hub.section("ماذا تعرض هذه الصفحة؟", icon="circle-question") %}
+    <ol class="lf-help">
+      <li><strong>الاتصال مع لوحة التراخيص.</strong> الرابط، مفتاح الترخيص، وسر التوقيع — تراها مختصرة هنا لحماية البيانات الحساسة.</li>
+      <li><strong>عقد التشغيل المستلم.</strong> آخر عقد تم تنزيله ويحدّد الخدمات المسموحة (الكروت، VPN، إلخ) والحدود التي يطبّقها runtime.</li>
+      <li><strong>مزامنة الهوية.</strong> تنقل مستخدمي اللوحة إلى نظام تسجيل دخول الريدياس عبر HTTPS فقط.</li>
+      <li><strong>المزامنة اليدوية.</strong> أزرار آمنة لتشغيل المزامنة بشكل فردي أو مزدوج عند الحاجة.</li>
+    </ol>
+  {% endcall %}
+
+  {# ───── Missing env vars warning ──────────────────────────── #}
+  {% if missing %}
+    {% call hub.section("إعدادات ناقصة", icon="triangle-exclamation") %}
+      <p style="margin:0 0 6px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.7">
+        لم يكتمل ملف الربط بعد. أضف القيم التالية في ملف <span class="mono">.env</span>
+        ثم أعد تشغيل خدمة الريدياس:
+      </p>
+      <div class="lf-missing-list">
+        {% for item in missing %}
+          <span class="lf-missing-item">{{ item }}</span>
+        {% endfor %}
+      </div>
+    {% endcall %}
+  {% endif %}
+
+  {# ───── Connection settings + manual triggers ─────────────── #}
+  <div class="lf-grid-2">
+
+    {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
+      <div class="hub-detail-list">
+        <div>
+          <span>رابط اللوحة</span>
+          <strong class="mono">{{ config_view.base_url or "—" }}</strong>
+        </div>
+        <div>
+          <span>مفتاح الترخيص</span>
+          <strong class="mono">{{ config_view.license_key or "—" }}</strong>
+        </div>
+        <div>
+          <span>سر التوقيع</span>
+          <strong class="mono">{{ config_view.shared_secret or "—" }}</strong>
+        </div>
+        <div>
+          <span>المزامنة عند تسجيل الدخول</span>
+          <strong>
+            {% if config_view.identity_sync_on_login %}
+              <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
+            {% else %}
+              <span class="hub-pill hub-pill--grey"><span class="dot"></span>غير مفعَّلة</span>
+            {% endif %}
+          </strong>
+        </div>
+        <div>
+          <span>عامل المزامنة الخلفي</span>
+          <strong>
+            {% if config_view.worker_enabled %}
+              <span class="hub-pill hub-pill--green"><span class="dot"></span>يعمل</span>
+            {% else %}
+              <span class="hub-pill hub-pill--grey"><span class="dot"></span>متوقف</span>
+            {% endif %}
+          </strong>
+        </div>
+      </div>
+      <p class="hub-field-hint" style="margin-top:12px">
+        السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر HTTPS — لا يمكن استخدام HTTP عاديًا.
+      </p>
+    {% endcall %}
+
+    {% call hub.section("مزامنة يدوية تفصيلية", icon="rotate") %}
+      <p class="hub-field-hint">
+        اختر المزامنة المطلوبة. كل عملية تُسجَّل في سجل التدقيق.
+      </p>
+      <form method="post" action="{{ url_for('radius.license_file_sync') }}" class="lf-sync-form" style="margin-top:10px">
+        {{ csrf_token_input() }}
+        <button class="hub-btn hub-btn--primary" name="action" value="runtime" type="submit">
+          <i class="fa-solid fa-file-contract"></i> عقد التشغيل
+        </button>
+        <button class="hub-btn hub-btn--secondary" name="action" value="identity" type="submit">
+          <i class="fa-solid fa-users-gear"></i> الهوية
+        </button>
+        <button class="hub-btn hub-btn--ghost" name="action" value="both" type="submit">
+          <i class="fa-solid fa-arrows-rotate"></i> الاثنين
+        </button>
+      </form>
+    {% endcall %}
+
+  </div>
+
+  {# ───── Latest snapshots ──────────────────────────────────── #}
+  {% call hub.section("آخر اللقطات المستلمة", icon="clock-rotate-left") %}
+    <div class="lf-snap-grid">
+
+      {% set snaps = [
+        ("فحص الترخيص", latest.license, "shield-halved"),
+        ("عقد التشغيل", latest.runtime_contract, "file-contract"),
+        ("مزامنة الهوية", latest.identity_sync, "users-gear"),
+      ] %}
+      {% for snap_title, snap, snap_icon in snaps %}
+        <div class="lf-snap">
+          <div class="lf-snap-head">
+            <span class="lf-snap-ico"><i class="fa-solid fa-{{ snap_icon }}"></i></span>
+            <span class="lf-snap-title">{{ snap_title }}</span>
+          </div>
+          {% if snap %}
+            {% set _ns = snap.normalized_status or '—' %}
+            <div>
+              {% if _ns in ['ok','active','success','enabled'] %}
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _ns }}</span>
+              {% elif _ns in ['error','failed','denied','expired'] %}
+                <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _ns }}</span>
+              {% elif _ns in ['pending','grace','warning'] %}
+                <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _ns }}</span>
+              {% else %}
+                <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _ns }}</span>
+              {% endif %}
+            </div>
+            <div class="lf-snap-meta">
+              آخر تحديث: <span class="mono">{{ snap.fetched_at or snap.created_at or "—" }}</span>
+            </div>
+          {% else %}
+            <div>
+              <span class="hub-pill hub-pill--grey"><span class="dot"></span>لا توجد لقطة بعد</span>
+            </div>
+            <div class="lf-snap-meta">شغّل المزامنة بعد إكمال إعدادات الربط.</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+    </div>
+  {% endcall %}
+
+  {# ───── Services & Limits — pretty key/value display (no raw JSON) ─── #}
+  {% set contract = latest.runtime_contract.payload_json.contract
+                    if latest.runtime_contract and latest.runtime_contract.payload_json.contract is defined
+                    else {} %}
+  {% set _svc = contract.services if contract.services is defined else {} %}
+  {% set _lim = contract.limits   if contract.limits   is defined else {} %}
+
+  {% call hub.section("الخدمات والحدود التي يطبّقها الريدياس", icon="list-check") %}
+    <div class="lf-grid-2">
+
+      <div>
+        <div class="lf-subhead"><i class="fa-solid fa-shapes"></i> الخدمات</div>
+        {% if _svc %}
+          <div class="hub-detail-list">
+            {% for key, val in _svc.items() %}
+              {% set _status = val.status|default('—') %}
+              <div>
+                <span>{{ key }}</span>
+                <strong>
+                  {% if _status == 'active' %}
+                    <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
+                  {% elif _status == 'suspended' %}
+                    <span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
+                  {% elif _status == 'expired' %}
+                    <span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
+                  {% elif _status == 'disabled' %}
+                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>معطَّلة</span>
+                  {% else %}
+                    <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _status }}</span>
+                  {% endif %}
+                </strong>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ hub.empty("لم يصل عقد خدمات بعد.", sub="شغّل مزامنة عقد التشغيل لرؤية الخدمات.", icon="shapes") }}
+        {% endif %}
+      </div>
+
+      <div>
+        <div class="lf-subhead"><i class="fa-solid fa-ruler-combined"></i> الحدود</div>
+        {% if _lim %}
+          <div class="hub-detail-list">
+            {% for key, val in _lim.items() %}
+              <div>
+                <span>{{ key }}</span>
+                <strong class="num mono">
+                  {% if val is mapping and val.max_total is defined %}
+                    {{ val.max_total }}
+                  {% else %}
+                    {{ val }}
+                  {% endif %}
+                </strong>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ hub.empty("لم تصل حدود بعد.", sub="شغّل مزامنة عقد التشغيل لرؤية الحدود.", icon="ruler-combined") }}
+        {% endif %}
+      </div>
+
+    </div>
+  {% endcall %}
+
+</div>
+{% endblock %}
