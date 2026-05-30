@@ -52,6 +52,7 @@ def test_system_routes_registered(client):
         "/api/v1/system/sync/<int:job_id>/retry",
         "/api/v1/system/sync/<int:job_id>/cancel",
         "/api/v1/system/reconcile",
+        "/api/v1/system/license-file",
     }.issubset(routes)
 
 
@@ -165,3 +166,74 @@ def test_system_reconcile_returns_structured_result(client, monkeypatch):
     res = client.post("/api/v1/system/reconcile", headers=AUTH)
     assert res.status_code == 200, res.get_json()
     assert res.get_json()["data"]["stats"]["closed"] == 0
+
+
+def test_system_license_file_requires_auth(client):
+    res = client.get("/api/v1/system/license-file")
+
+    assert res.status_code == 401
+    assert res.get_json()["error"]["code"] == "unauthorized"
+
+
+def test_system_license_file_returns_safe_bridge_state(client):
+    from app.radius.db.repos import tenants_repo
+    from app.radius.services.admin_panel_client import (
+        SNAPSHOT_CAPACITY,
+        SNAPSHOT_LICENSE,
+        LicenseAdminSnapshotStore,
+    )
+
+    tenants_repo.set_setting(1, "license_admin_bridge.enabled", "1")
+    tenants_repo.set_setting(1, "license_admin_bridge.base_url", "https://hoberadius.com")
+    tenants_repo.set_setting(1, "license_admin_bridge.license_key", "HBR-SECRET-LICENSE-123456")
+    tenants_repo.set_setting(1, "license_admin_bridge.shared_secret", "super-secret-link")
+    tenants_repo.set_setting(1, "license_admin_bridge.runtime_contract_sync", "1")
+    tenants_repo.set_setting(1, "license_admin_bridge.identity_sync_enabled", "1")
+    tenants_repo.set_setting(1, "license_admin_bridge.sync_interval_seconds", "180")
+
+    store = LicenseAdminSnapshotStore()
+    store.save(
+        tenant_id=1,
+        snapshot_type=SNAPSHOT_LICENSE,
+        normalized_status="active",
+        source_url="https://hoberadius.com/api/license/check",
+        payload={"status": "active", "license_key": "HBR-SECRET-LICENSE-123456"},
+    )
+    store.save(
+        tenant_id=1,
+        snapshot_type=SNAPSHOT_CAPACITY,
+        normalized_status="active",
+        source_url="https://hoberadius.com/api/integration/hoberadius/runtime-contract",
+        payload={
+            "contract": {
+                "license": {"active": True, "status": "active"},
+                "services": {
+                    "ip_change_vpn": {
+                        "enabled": True,
+                        "status": "active",
+                        "download_mbps": 50,
+                        "shared_secret": "nested-secret",
+                    }
+                },
+                "limits": {"subscribers": {"max_total": 100}},
+                "features": {"cards": {"state": "enabled"}},
+            }
+        },
+    )
+
+    res = client.get("/api/v1/system/license-file", headers=AUTH)
+
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["config"]["enabled"] is True
+    assert data["config"]["base_url"] == "https://hoberadius.com"
+    assert data["config"]["license_key_configured"] is True
+    assert data["config"]["shared_secret_configured"] is True
+    assert data["config"]["sync_interval_seconds"] == "180"
+    assert data["snapshots"]["license"]["status"] == "active"
+    assert data["snapshots"]["runtime_contract"]["status"] == "active"
+    assert data["contract"]["services"]["ip_change_vpn"]["download_mbps"] == 50
+    raw = str(res.get_json())
+    assert "HBR-SECRET-LICENSE-123456" not in raw
+    assert "super-secret-link" not in raw
+    assert "nested-secret" not in raw

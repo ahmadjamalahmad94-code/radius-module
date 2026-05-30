@@ -77,6 +77,12 @@ def register(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/system/license-file",
+        "system_license_file",
+        require_api_token(system_license_file),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/system/admin-bridge/usage-report",
         "system_admin_bridge_usage_report",
         require_api_token(system_admin_bridge_usage_report),
@@ -206,6 +212,125 @@ def system_reconcile():
     except Exception as exc:  # noqa: BLE001
         return fail("reconcile_failed", str(exc), status=500)
     return ok({"stats": stats})
+
+
+def system_license_file():
+    """Read-only license bridge state for native clients.
+
+    This mirrors the web "license file" page without exposing bridge secrets.
+    Manual sync/actions remain in the dedicated bridge endpoints below.
+    """
+    from ...radius.services.admin_panel_client import (
+        SNAPSHOT_CAPACITY,
+        SNAPSHOT_IDENTITY,
+        SNAPSHOT_LICENSE,
+        AdminBridgeConfig,
+        LicenseAdminSnapshotStore,
+        bridge_flag,
+        bridge_setting,
+        sanitize_bridge_payload,
+    )
+    from ...radius.services.admin_panel_client import _server_fingerprint
+    from ...radius.services.license_admin_capacity import CapacityEnforcementService
+
+    tenant_id = _tid()
+    config = AdminBridgeConfig.from_env()
+    store = LicenseAdminSnapshotStore()
+    runtime_sync = bridge_flag(
+        "HOBERADIUS_ADMIN_RUNTIME_CONTRACT_SYNC",
+        "license_admin_bridge.runtime_contract_sync",
+    )
+    identity_sync = bridge_flag(
+        "HOBERADIUS_ADMIN_IDENTITY_SYNC_ENABLED",
+        "license_admin_bridge.identity_sync_enabled",
+    )
+    identity_on_login = bridge_flag(
+        "HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN",
+        "license_admin_bridge.identity_sync_on_login",
+    )
+    worker_enabled = bridge_flag(
+        "HOBERADIUS_ADMIN_BRIDGE_WORKER",
+        "license_admin_bridge.worker_enabled",
+    )
+    saved_fingerprint = bridge_setting("license_admin_bridge.server_fingerprint", "")
+    latest_license = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_LICENSE)
+    latest_contract = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY)
+    latest_identity = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_IDENTITY)
+    contract_payload = {}
+    if latest_contract:
+        payload = latest_contract.get("payload_json")
+        if isinstance(payload, dict):
+            contract_payload = payload.get("contract") if isinstance(payload.get("contract"), dict) else payload
+
+    missing = config.missing_fields()
+    if not config.shared_secret:
+        missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
+
+    return ok(
+        {
+            "config": {
+                "enabled": config.enabled,
+                "base_url": config.base_url,
+                "https_ready": str(config.base_url or "").lower().startswith("https://"),
+                "license_key_configured": bool(config.license_key),
+                "license_key_masked": sanitize_bridge_payload({"license_key": config.license_key}).get("license_key"),
+                "shared_secret_configured": bool(config.shared_secret),
+                "timeout_seconds": config.timeout_seconds,
+                "retry_count": config.retry_count,
+                "runtime_contract_sync": runtime_sync,
+                "identity_sync_enabled": identity_sync,
+                "identity_sync_on_login": identity_on_login,
+                "worker_enabled": worker_enabled,
+                "sync_interval_seconds": bridge_setting(
+                    "license_admin_bridge.sync_interval_seconds",
+                    "300",
+                ),
+                "server_fingerprint": {
+                    "saved": saved_fingerprint,
+                    "active": _server_fingerprint(),
+                    "stable": bool(saved_fingerprint),
+                },
+            },
+            "missing": missing,
+            "snapshots": {
+                "license": _snapshot_summary(latest_license),
+                "runtime_contract": _snapshot_summary(latest_contract),
+                "identity_sync": _snapshot_summary(latest_identity),
+            },
+            "contract": sanitize_bridge_payload(
+                {
+                    "license": contract_payload.get("license", {}),
+                    "services": contract_payload.get("services", {}),
+                    "limits": contract_payload.get("limits", {}),
+                    "features": contract_payload.get("features", {}),
+                }
+            ),
+            "capacity": sanitize_bridge_payload(
+                CapacityEnforcementService().capacity_status(tenant_id=tenant_id)
+            ),
+        }
+    )
+
+
+def _snapshot_summary(snapshot: dict | None) -> dict:
+    if not snapshot:
+        return {
+            "available": False,
+            "status": "missing",
+            "fetched_at": "",
+            "stale_after_seconds": 0,
+            "source_url": "",
+            "error": {},
+        }
+    return {
+        "available": True,
+        "status": snapshot.get("normalized_status") or "unknown",
+        "fetched_at": snapshot.get("fetched_at") or "",
+        "created_at": snapshot.get("created_at") or "",
+        "stale_after_seconds": int(snapshot.get("stale_after_seconds") or 0),
+        "source_url": snapshot.get("source_url") or "",
+        "error": snapshot.get("error_json") or {},
+    }
 
 
 def system_admin_bridge_usage_report():
