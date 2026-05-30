@@ -90,28 +90,98 @@
     .usq-actions{ justify-content:flex-start; }
     .usq-form-grid, .usq-current{ grid-template-columns:1fr; }
   }
+
+  /* ── Mega-hero: title row + KPI strip in one unified panel ── */
+  .users-mega-hero{
+    position:relative;
+    display:grid; gap:14px;
+    padding:18px 20px;
+    margin-bottom:var(--hub-gap-section, 14px);
+    border-radius:var(--hub-r-xl, 18px);
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #ffffff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .users-mega-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; flex-wrap:wrap;
+  }
+  .users-mega-hero-text{
+    display:flex; align-items:center; gap:12px; min-width:0;
+  }
+  .users-mega-hero-text .hub-hero-icon{
+    width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+    display:grid; place-items:center; font-size:18px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .users-mega-hero-title{
+    margin:0; font-size:20px; font-weight:800;
+    color:var(--hub-text, #0f172a);
+  }
+  .users-mega-hero-sub{
+    margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569);
+    line-height:1.6;
+  }
+  .users-mega-hero-actions{
+    display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .users-mega-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+    gap:10px;
+  }
+  @media (max-width: 780px){
+    .users-mega-hero{ padding:14px; }
+    .users-mega-hero-text{ flex:1 1 100%; }
+    .users-mega-hero-actions{ flex:1 1 100%; justify-content:flex-start; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm data-users-page>
 
-{# ───── Hero ───────────────────────────────────────────────── #}
-{{ hub.hero(
-  "المشتركون",
-  subtitle="إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة",
-  icon="users",
-  actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.users_new') + '">
-      <i class="fa-solid fa-user-plus"></i> إضافة مشترك
-    </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.online_list') + '">
-      <i class="fa-solid fa-wifi"></i> المتصلون الآن
-    </a>
-  '
-) }}
+{% set _total   = items|length %}
+{% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
+{% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
+{% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
 
-{# ───── Filter Bar ─────────────────────────────────────────── #}
+{# ───── Unified Hero (title + actions + KPI strip) ─────────── #}
+<section class="users-mega-hero">
+  <header class="users-mega-hero-row">
+    <div class="users-mega-hero-text">
+      <span class="hub-hero-icon"><i class="fa-solid fa-users"></i></span>
+      <div>
+        <h1 class="users-mega-hero-title">المشتركون</h1>
+        <div class="users-mega-hero-sub">إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة</div>
+      </div>
+    </div>
+    <div class="users-mega-hero-actions">
+      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}">
+        <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+      </a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.online_list') }}">
+        <i class="fa-solid fa-wifi"></i> المتصلون الآن
+      </a>
+    </div>
+  </header>
+
+  <div class="users-mega-hero-kpis">
+    {{ hub.kpi("في النتائج", _total,  icon="list",         variant="brand") }}
+    {{ hub.kpi("نشطون",       _active, icon="circle-check", variant="green") }}
+    {{ hub.kpi("منتهون",      _expird, icon="hourglass-end", variant="amber") }}
+    {{ hub.kpi("معطَّلون",     _disab,  icon="pause",        variant="red")   }}
+  </div>
+</section>
+
+{# ───── Filter Bar (under the mega-hero) ──────────────────── #}
 <form method="get" class="hub-filterbar hr-toolbar">
   <input class="hub-input grow" type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
   <select class="hub-select" name="status">
@@ -137,18 +207,6 @@
   {{ hub.btn("CSV",    icon="file-csv",   variant="secondary", size="sm") }}
   {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm") }}
 </form>
-
-{# ───── Quick Stats ────────────────────────────────────────── #}
-{% set _total   = items|length %}
-{% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
-{% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
-{% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
-<div class="hub-kpi-grid hr-stat-grid">
-  {{ hub.kpi("في النتائج", _total,  icon="list",        variant="brand") }}
-  {{ hub.kpi("نشطون",      _active, icon="circle-check", variant="green") }}
-  {{ hub.kpi("منتهون",     _expird, icon="hourglass-end", variant="amber") }}
-  {{ hub.kpi("معطَّلون",    _disab,  icon="pause",       variant="red")   }}
-</div>
 
 <div class="usq-panel" data-users-quick-panel hidden>
   <div class="usq-picked">
