@@ -581,6 +581,10 @@
   {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
     <div class="lf-set-grid">
       <div class="lf-set-tile">
+        <span class="lbl">رابط لوحة التراخيص</span>
+        <span class="val mono ltr">{{ config_form.base_url or "—" }}</span>
+      </div>
+      <div class="lf-set-tile">
         <span class="lbl">مفتاح الترخيص</span>
         <span class="val mono">{{ config_view.license_key or "—" }}</span>
       </div>
