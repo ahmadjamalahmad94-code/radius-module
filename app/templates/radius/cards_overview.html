@@ -13,6 +13,42 @@
     display:grid;
     gap:14px;
   }
+  /* ── Mega-hero: title + actions + KPI strip in ONE panel ── */
+  .co-hero{
+    position:relative;
+    display:grid; gap:14px;
+    padding:18px 20px;
+    border-radius:18px;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .co-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .co-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .co-hero-icon{
+    width:46px; height:46px; flex:0 0 auto;
+    border-radius:13px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .co-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .co-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
+  .co-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .co-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  @media (max-width: 760px){ .co-hero-actions{ flex:1 1 100%; } }
   .cards-overview-grid{
     display:grid;
     grid-template-columns:minmax(0, 1.05fr) minmax(300px, .95fr);
@@ -621,27 +657,34 @@
 {% set sales_currency = "₪" if (sales.currency or "ILS")|upper in ["ILS", "NIS"] else (sales.currency or "₪") %}
 <div class="hr-page-shell cards-overview">
 
-{{ hub.hero(
-  "نظرة سريعة - الكروت",
-  subtitle="مختصر المخزون والاستخدام بدون تفاصيل تشغيلية.",
-  icon="id-card",
-  actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> الدفعات
-    </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker') + '">
-      <i class="fa-solid fa-magnifying-glass"></i> فحص كرت
-    </a>
-  '
-) }}
+{# ───── Unified mega-hero: title + actions + KPI strip ── #}
+<section class="co-hero">
+  <div class="co-hero-row">
+    <div class="co-hero-id">
+      <span class="co-hero-icon"><i class="fa-solid fa-id-card"></i></span>
+      <div>
+        <h1 class="co-hero-title">نظرة سريعة — الكروت</h1>
+        <div class="co-hero-sub">مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية.</div>
+      </div>
+    </div>
+    <div class="co-hero-actions">
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
+        <i class="fa-solid fa-layer-group"></i> الدفعات
+      </a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker') }}">
+        <i class="fa-solid fa-magnifying-glass"></i> فحص كرت
+      </a>
+    </div>
+  </div>
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الكروت", cards.total or 0, icon="id-card", variant="brand") }}
-  {{ hub.kpi("متاح", cards.available or 0, icon="box-open", variant="green") }}
-  {{ hub.kpi("مستخدم", cards.used or 0, icon="circle-check", variant="blue") }}
-  {{ hub.kpi("منتهي / محظور", ((cards.expired or 0)|string) ~ " / " ~ ((cards.revoked or 0)|string), icon="triangle-exclamation", variant="amber") }}
-  {{ hub.kpi("إيراد الشهر", money_value(money.month), icon="coins", variant="brand", sub="تقديري من الكروت المستخدمة") }}
-</div>
+  <div class="co-hero-kpis">
+    {{ hub.kpi("إجمالي الكروت", cards.total or 0, icon="id-card", variant="brand") }}
+    {{ hub.kpi("متاح", cards.available or 0, icon="box-open", variant="green") }}
+    {{ hub.kpi("مستخدم", cards.used or 0, icon="circle-check", variant="blue") }}
+    {{ hub.kpi("منتهي / محظور", ((cards.expired or 0)|string) ~ " / " ~ ((cards.revoked or 0)|string), icon="triangle-exclamation", variant="amber") }}
+    {{ hub.kpi("إيراد الشهر", money_value(money.month), icon="coins", variant="brand", sub="تقديري من الكروت المستخدمة") }}
+  </div>
+</section>
 
 <div id="co-sales-section">
 {% call hub.section("مبيعات الكروت", icon="receipt", meta="مطبوعة + إلكترونية") %}

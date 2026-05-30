@@ -26,6 +26,52 @@
 {% block head_extra %}
 {{ super() }}
 <style>
+  /* ── Mega-hero: title + view toggle + filters + KPI in ONE panel ── */
+  .ol-hero{
+    position:relative;
+    display:grid; gap:14px;
+    padding:18px 20px;
+    margin-bottom:14px;
+    border-radius:18px;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .ol-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .ol-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .ol-hero-icon{
+    width:46px; height:46px; flex:0 0 auto;
+    border-radius:13px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .ol-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .ol-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
+  .ol-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  /* filter row sits on a faint divider inside the hero */
+  .ol-hero-filters{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    padding-top:14px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    margin:0;
+  }
+  .ol-hero-filters .online-filter-fields{ flex:1; }
+  .ol-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+    gap:10px;
+    padding-top:14px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  @media (max-width: 760px){ .ol-hero-actions{ flex:1 1 100%; } }
+
   .online-toolbar,
   .online-filters{
     display:flex;
@@ -172,19 +218,68 @@
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm data-online-sessions-page>
 
-{{ hub.hero(
-  "المتصلون الآن",
-  subtitle="الجلسات الحيّة على الشبكة — " + ("كروت" if filter_type == "card" else "مشتركون") + " — وضع التشغيل: " + mode_label,
-  icon="wifi",
-  actions_html='
-    <a class="hub-btn hub-btn--' + ('primary' if filter_type != 'card' else 'secondary') + '" href="' + url_for('radius.online_list') + '">
-      <i class="fa-solid fa-users"></i> المشتركون
-    </a>
-    <a class="hub-btn hub-btn--' + ('primary' if filter_type == 'card' else 'secondary') + '" href="' + url_for('radius.online_list', type='card') + '">
-      <i class="fa-solid fa-id-card"></i> الكروت
-    </a>
-  '
-) }}
+{% set _total_in  = (items|sum(attribute='bytes_in') or 0) if items else 0 %}
+{% set _total_out = (items|sum(attribute='bytes_out') or 0) if items else 0 %}
+
+{# ───── Unified mega-hero: title + view toggle + filters + KPIs ── #}
+<section class="ol-hero">
+  <div class="ol-hero-row">
+    <div class="ol-hero-id">
+      <span class="ol-hero-icon"><i class="fa-solid fa-wifi"></i></span>
+      <div>
+        <h1 class="ol-hero-title">المتصلون الآن</h1>
+        <div class="ol-hero-sub">الجلسات الحيّة على الشبكة — {{ "كروت" if filter_type == "card" else "مشتركون" }} — وضع التشغيل: {{ mode_label }}</div>
+      </div>
+    </div>
+    <div class="ol-hero-actions">
+      <a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
+        <i class="fa-solid fa-users"></i> المشتركون
+      </a>
+      <a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
+        <i class="fa-solid fa-id-card"></i> الكروت
+      </a>
+    </div>
+  </div>
+
+  {# Filters row #}
+  <form class="ol-hero-filters" method="get" action="{{ url_for('radius.online_list') }}">
+    {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
+    <div class="online-filter-fields">
+      <select name="nas" aria-label="السيرفر">
+        <option value="">كل السيرفرات</option>
+        {% for nas in nas_options %}
+          <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
+        {% endfor %}
+      </select>
+      <select name="plan" aria-label="العرض">
+        <option value="">كل العروض</option>
+        {% for plan in plan_options %}
+          <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
+        {% endfor %}
+      </select>
+      <select name="group_id" aria-label="المجموعة">
+        <option value="">كل المجموعات</option>
+        {% for g in group_options or [] %}
+          <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="speed" aria-label="نوع السرعة">
+        <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
+        <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
+        <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
+        <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
+      </select>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
+    </div>
+  </form>
+
+  {# KPI strip #}
+  <div class="ol-hero-kpis">
+    {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
+    {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
+    {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
+  </div>
+</section>
 
 {% if settings.mode == "manual" %}
 <div class="hub-section" style="margin-bottom:14px;border-color:var(--hub-amber-soft)">
@@ -204,45 +299,7 @@
 </div>
 {% endif %}
 
-<form class="online-filters" method="get" action="{{ url_for('radius.online_list') }}">
-  {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
-  <div class="online-filter-fields">
-    <select name="nas" aria-label="السيرفر">
-      <option value="">كل السيرفرات</option>
-      {% for nas in nas_options %}
-        <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
-      {% endfor %}
-    </select>
-    <select name="plan" aria-label="العرض">
-      <option value="">كل العروض</option>
-      {% for plan in plan_options %}
-        <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
-      {% endfor %}
-    </select>
-    <select name="group_id" aria-label="المجموعة">
-      <option value="">كل المجموعات</option>
-      {% for g in group_options or [] %}
-        <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
-      {% endfor %}
-    </select>
-    <select name="speed" aria-label="نوع السرعة">
-      <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
-      <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
-      <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
-      <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
-    </select>
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
-  </div>
-</form>
-
 {% if items %}
-{% set _total_in  = items|sum(attribute='bytes_in') or 0 %}
-{% set _total_out = items|sum(attribute='bytes_out') or 0 %}
-<div class="hub-kpi-grid hr-stat-grid">
-  {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
-  {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
-  {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
-</div>
 
 <div class="online-toolbar" data-online-actions>
   <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
