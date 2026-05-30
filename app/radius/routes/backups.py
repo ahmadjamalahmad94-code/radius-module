@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, send_file,
+    Blueprint, flash, g, jsonify, redirect, render_template, request, send_file,
     session, url_for,
 )
 
@@ -18,6 +18,10 @@ def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups/upload-panel", "backups_upload_panel", backups_upload_panel, methods=["POST"])
     bp.add_url_rule("/backups/download/<path:name>", "backups_download", backups_download, methods=["GET"])
     bp.add_url_rule("/backups/restore", "backups_restore", backups_restore, methods=["POST"])
+    bp.add_url_rule("/backups/gdrive/save", "backups_gdrive_save", backups_gdrive_save, methods=["POST"])
+    bp.add_url_rule("/backups/gdrive/start", "backups_gdrive_start", backups_gdrive_start, methods=["POST"])
+    bp.add_url_rule("/backups/gdrive/poll", "backups_gdrive_poll", backups_gdrive_poll, methods=["GET"])
+    bp.add_url_rule("/backups/gdrive/disconnect", "backups_gdrive_disconnect", backups_gdrive_disconnect, methods=["POST"])
 
 
 def _tid() -> int:
@@ -73,7 +77,16 @@ def backups():
         restore_enabled=_restore_enabled(),
         panel_backup=_backup_service_state(_tid()),
         retention_days=get_operations_service().LOCAL_BACKUP_RETENTION_DAYS,
+        gdrive=_gdrive_status(_tid()),
     )
+
+
+def _gdrive_status(tid: int) -> dict:
+    try:
+        from ..services import google_drive as gd
+        return gd.status(tid)
+    except Exception:  # noqa: BLE001
+        return {"configured": False, "connected": False, "email": "", "pending": False, "last_error": "", "last_upload_at": ""}
 
 
 def backups_run():
@@ -118,6 +131,57 @@ def backups_upload_panel():
     else:
         err = (result.get("error") or {}).get("message") or result.get("status") or "تعذر الرفع."
         flash(f"تعذّر رفع النسخة إلى لوحة التراخيص: {err}", "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_gdrive_save():
+    """Save the Google OAuth client (device-type) id/secret for Drive."""
+    from ..services import google_drive as gd
+    gd.save_client(_tid(), request.form.get("client_id") or "", request.form.get("client_secret") or "")
+    flash("تم حفظ بيانات Google. اضغط «ربط Google Drive» للبدء.", "success")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_gdrive_start():
+    """Begin the device flow — returns a code + google.com/device link."""
+    from ..services import google_drive as gd
+    result = gd.start_device_flow(_tid())
+    if not result.get("ok"):
+        if result.get("error") == "not_configured":
+            flash("أدخل Client ID و Client Secret من Google أولاً.", "error")
+        else:
+            flash(f"تعذّر بدء الربط مع Google: {result.get('error')} {result.get('detail','')}", "error")
+        return redirect(url_for("radius.backups"))
+    # show the pairing instructions on the backups page
+    flash(
+        f"افتح {result['verification_url']} وأدخل الرمز: {result['user_code']} ثم اضغط «تحقّقت، أكمل الربط».",
+        "info",
+    )
+    session["gdrive_pairing"] = {"user_code": result["user_code"], "url": result["verification_url"]}
+    return redirect(url_for("radius.backups"))
+
+
+def backups_gdrive_poll():
+    """Polled (by JS or button) to complete the device flow once authorised."""
+    from ..services import google_drive as gd
+    result = gd.poll_device_flow(_tid())
+    if request.args.get("ajax"):
+        return jsonify(result)
+    if result.get("ok"):
+        session.pop("gdrive_pairing", None)
+        flash(f"تم ربط Google Drive بنجاح ({result.get('email') or ''}). ستُرفع نسخك إلى درايفك تلقائيًا.", "success")
+    elif result.get("pending"):
+        flash("لم يكتمل التفويض بعد. أكمل الموافقة على google.com/device ثم أعد المحاولة.", "warning")
+    else:
+        flash(f"تعذّر إكمال الربط: {result.get('error')} {result.get('detail','')}", "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_gdrive_disconnect():
+    from ..services import google_drive as gd
+    gd.disconnect(_tid())
+    session.pop("gdrive_pairing", None)
+    flash("تم فصل Google Drive.", "info")
     return redirect(url_for("radius.backups"))
 
 

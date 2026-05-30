@@ -83,6 +83,64 @@
   {% endif %}
 {% endcall %}
 
+{# ── Google Drive (device flow — fully inside the radius) ── #}
+{% call hub.section("النسخ إلى Google Drive", icon="cloud", meta=('● متصل' if gdrive.connected else '○ غير متصل')) %}
+  {% if not gdrive.configured %}
+    <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
+      للربط مع Google Drive أنشئ في <span class="mono">Google Cloud Console</span> معرّف OAuth من نوع
+      <strong>«TVs and Limited Input devices»</strong>، ثم الصق المعرّف والسرّ هنا. لا حاجة لدومين أو HTTPS على الريدياس.
+    </p>
+    <form method="post" action="{{ url_for('radius.backups_gdrive_save') }}" class="hub-form-grid">
+      {{ csrf_token_input() }}
+      <div class="hub-field">
+        <label>Google OAuth Client ID</label>
+        <input class="hub-input ltr" name="client_id" autocomplete="off" placeholder="xxxxxx.apps.googleusercontent.com">
+      </div>
+      <div class="hub-field">
+        <label>Google OAuth Client Secret</label>
+        <input class="hub-input ltr" name="client_secret" type="password" autocomplete="new-password" placeholder="الصق السرّ">
+      </div>
+      <div class="hub-form-foot full">
+        {{ hub.btn("حفظ بيانات Google", icon="floppy-disk", variant="secondary", type="submit") }}
+      </div>
+    </form>
+  {% elif gdrive.connected %}
+    <div class="hub-detail-list" style="margin-bottom:14px">
+      <div><span>الحساب المربوط</span><strong class="ltr">{{ gdrive.email or '—' }}</strong></div>
+      <div><span>مجلد النسخ</span><strong>{{ gdrive.folder_name }}</strong></div>
+      <div><span>آخر رفع</span><strong>{{ gdrive.last_upload_at or 'لم يتم بعد' }}</strong></div>
+      {% if gdrive.last_error %}<div><span>آخر خطأ</span><strong style="color:#dc2626;font-size:12px">{{ gdrive.last_error[:140] }}</strong></div>{% endif %}
+    </div>
+    <p class="hub-text-soft" style="margin:0 0 12px;font-size:12.5px">تُرفع كل نسخة محلية تلقائيًا إلى مجلد مخصّص داخل درايفك (صلاحية محدودة <span class="mono">drive.file</span>).</p>
+    <form method="post" action="{{ url_for('radius.backups_gdrive_disconnect') }}" style="margin:0">
+      {{ csrf_token_input() }}
+      {{ hub.btn("فصل Google Drive", icon="link-slash", variant="secondary", type="submit") }}
+    </form>
+  {% else %}
+    {% set pairing = session.get('gdrive_pairing') if session is defined else None %}
+    {% if gdrive.pending and pairing %}
+      <div class="hub-flash hub-flash--info" style="margin-bottom:14px;line-height:2">
+        <i class="fa-solid fa-mobile-screen"></i>
+        افتح <a href="{{ pairing.url }}" target="_blank" rel="noopener" class="mono">{{ pairing.url }}</a>
+        وأدخل الرمز: <strong class="mono" style="font-size:18px;letter-spacing:2px">{{ pairing.user_code }}</strong>
+        ثم وافق على الصلاحية، وبعدها اضغط الزر بالأسفل.
+      </div>
+      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.backups_gdrive_poll') }}">
+        <i class="fa-solid fa-circle-check"></i> تحقّقت، أكمل الربط
+      </a>
+    {% else %}
+      <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
+        اربط حساب Google Drive الخاص بك لرفع نسخك الاحتياطية تلقائيًا إلى درايفك.
+        ستظهر رسالة فيها رمز ورابط <span class="mono">google.com/device</span> تُكمل التفويض من جوالك.
+      </p>
+      <form method="post" action="{{ url_for('radius.backups_gdrive_start') }}" style="margin:0">
+        {{ csrf_token_input() }}
+        {{ hub.btn("ربط Google Drive", icon="cloud-arrow-up", variant="primary", type="submit") }}
+      </form>
+    {% endif %}
+  {% endif %}
+{% endcall %}
+
 {# ── Local backup files: download / restore ── #}
 {% call hub.section("النسخ المحلية المتوفرة", icon="hard-drive", meta=(local_files|length ~ ' ملف') if local_files else '') %}
   {% if not restore_enabled %}

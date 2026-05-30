@@ -1680,6 +1680,14 @@ class OperationsService:
             self.prune_local_backups()
         except Exception:  # noqa: BLE001 — retention must never break a backup run
             pass
+        # Best-effort: push to the operator's Google Drive if connected.
+        if verified:
+            try:
+                from . import google_drive as gd
+                if gd.status(tenant_id).get("connected"):
+                    gd.upload_backup(tenant_id, str(target), target.name)
+            except Exception:  # noqa: BLE001 — Drive push must never break a backup
+                pass
         return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
 
     # ── Local backup files: listing / retention / download / restore ──
