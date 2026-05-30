@@ -6,58 +6,60 @@
 
 {% block content %}
 {{ hub.hero(
-  "عمليات جماعية على المستخدمين",
-  subtitle="عمليات جماعية على المشتركين",
+  "عمليات جماعية على المشتركين",
+  subtitle="تعطيل أو تفعيل أو تمديد أو إعادة تعيين كلمة المرور لقائمة مستخدمين دفعة واحدة.",
   icon="layer-group"
 ) }}
 
 <form method="post">
-  <div class="card">
-    <div class="card-header"><span class="title">قائمة المستخدمين</span></div>
-    <div class="card-body">
-      <div class="form-row full"><label>أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)</label>
-        <div class="field"><textarea name="usernames" rows="8"
-          placeholder="user1&#10;user2&#10;user3"></textarea>
-          <div class="hint">قم بلصق القائمة هنا.</div></div></div>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="card-header"><span class="title">العملية</span></div>
-    <div class="card-body">
-      <div class="form-row"><label>الإجراء</label>
-        <div class="field"><select name="action" id="action" onchange="
-          var v=this.value;
-          document.getElementById('row-minutes').style.display = (v==='extend')?'grid':'none';
-          document.getElementById('row-password').style.display = (v==='reset_password')?'grid':'none';
-        ">
+  {% call hub.section("قائمة المستخدمين", icon="users") %}
+    <div class="hub-field">
+      <label class="hub-field-label">أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)</label>
+      <textarea class="hub-textarea mono"
+                name="usernames" rows="8"
+                placeholder="user1&#10;user2&#10;user3"></textarea>
+      <div class="hub-field-hint">قم بلصق القائمة هنا.</div>
+    </div>
+  {% endcall %}
+
+  <div style="height:14px"></div>
+
+  {% call hub.section("العملية", icon="bolt") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">الإجراء</label>
+        <select class="hub-select" name="action" id="action" onchange="
+            var v=this.value;
+            document.getElementById('row-minutes').style.display = (v==='extend')?'grid':'none';
+            document.getElementById('row-password').style.display = (v==='reset_password')?'grid':'none';
+          ">
           <option value="disable">تعطيل</option>
           <option value="enable">تفعيل</option>
           <option value="extend">تمديد بالدقائق</option>
           <option value="reset_password">إعادة تعيين كلمة المرور</option>
-        </select></div></div>
-
-      <div class="form-row" id="row-minutes" style="display:none">
-        <label>عدد الدقائق</label>
-        <div class="field"><input type="number" name="minutes" min="1" value="60"></div>
+        </select>
       </div>
-      <div class="form-row" id="row-password" style="display:none">
-        <label>كلمة المرور الجديدة</label>
-        <div class="field"><input type="text" name="new_password" placeholder="كلمة مرور جديدة..."></div>
+      <div class="hub-field" id="row-minutes" style="display:none">
+        <label class="hub-field-label">عدد الدقائق</label>
+        <input class="hub-input" type="number" name="minutes" min="1" value="60">
+      </div>
+      <div class="hub-field" id="row-password" style="display:none">
+        <label class="hub-field-label">كلمة المرور الجديدة</label>
+        <input class="hub-input" type="text" name="new_password" placeholder="كلمة مرور جديدة...">
       </div>
     </div>
-  </div>
+  {% endcall %}
 
-  <div class="actions-bar">
-    <button class="btn btn-primary" type="submit"
-            onclick="return confirm('تأكيد التطبيق على القائمة؟')">
-      <i class="fa-solid fa-bolt"></i> نفّذ
-    </button>
-    <a class="btn btn-secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
+  <div class="hub-flex-row" style="margin-top:16px">
+    {{ hub.btn("نفّذ", icon="bolt", variant="primary", type="submit",
+                attrs='onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"') }}
+    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}
   </div>
 </form>
 
-<div class="hint" style="margin-top:8px">
-  ⚠️ كل عملية تُسجَّل في audit وتُدفع لـ MT تلقائيًا.
+<div class="hub-flash hub-flash--warning" style="margin-top:16px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  كل عملية تُسجَّل في سجل التدقيق وتُدفع لـ MikroTik تلقائيًا.
 </div>
 {% endblock %}

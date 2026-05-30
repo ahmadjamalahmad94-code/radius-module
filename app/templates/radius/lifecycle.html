@@ -2,180 +2,156 @@
 {% import "_partials/hub.html" as hub %}
 {% block title %}الأرشفة التلقائية{% endblock %}
 {% block page_title %}الأرشفة التلقائية{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-clock-rotate-left"></i>{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_sub %}<span class="sub">سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
   "الأرشفة التلقائية والاحتفاظ",
-  subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة",
-  icon="clock-rotate-left"
+  subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة.",
+  icon="box-archive"
 ) }}
-
-<style>
-  .lc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
-  .lc-card{background:#fff;border:1px solid #e8deca;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(32,44,64,.06)}
-  .lc-card h3{margin:0 0 10px;color:#263244;font-size:16px}
-  .lc-value{font-size:28px;font-weight:900;color:#263244}
-  .lc-muted{color:#657386;font-size:13px;line-height:1.8}
-  .lc-note{margin-bottom:14px;padding:12px 14px;border:1px dashed #d8c8a9;border-radius:10px;background:#fffaf1;color:#5d6b7d;line-height:1.9}
-  .lc-table{width:100%;border-collapse:collapse}
-  .lc-table th,.lc-table td{border-bottom:1px solid #eee3d0;padding:10px;text-align:right;vertical-align:top}
-  .lc-table th{font-size:12px;color:#657386;background:#fffaf1}
-  .lc-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
-  .lc-form label{display:block;font-size:12px;color:#657386;margin-bottom:6px}
-  .lc-form input,.lc-form select{width:100%;border:1px solid #e2d7c3;border-radius:10px;padding:10px;background:#fff;color:#263244}
-  .lc-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
-  .lc-badge.on{background:#e8fff3;color:#126d43}
-  .lc-badge.off{background:#f1f5f9;color:#64748b}
-  .lc-actions{display:flex;gap:8px;flex-wrap:wrap}
-</style>
 
 {% set totals = preview.get('totals') or {} %}
 
-<div class="lc-note">
-  هذه الصفحة لا تحذف بيانات نهائيًا. أي عملية هنا تعني <strong>أرشفة آمنة</strong> إلى سلة المحذوفات، مع تسجيل الحدث والسياسة والاحتفاظ بالعدد الأصلي للحزمة للمحاسبة.
+<div class="hub-flash hub-flash--info" style="margin-bottom:14px">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه الصفحة لا تحذف بيانات نهائيًا. أي عملية هنا تعني <strong>أرشفة آمنة</strong>
+  إلى سلة المحذوفات، مع تسجيل الحدث والسياسة والاحتفاظ بالعدد الأصلي للحزمة للمحاسبة.
 </div>
 
-<div class="lc-grid">
-  <section class="lc-card">
-    <h3>كروت جاهزة للأرشفة</h3>
-    <div class="lc-value">{{ totals.get('cards', 0) }}</div>
-    <div class="lc-muted">حسب السياسات المفعّلة للكروت المنتهية.</div>
-  </section>
-  <section class="lc-card">
-    <h3>مشتركين جاهزين للأرشفة</h3>
-    <div class="lc-value">{{ totals.get('subscribers', 0) }}</div>
-    <div class="lc-muted">حسب سياسات انتهاء الاشتراك وعدم التجديد.</div>
-  </section>
-  <section class="lc-card">
-    <h3>حزم متأثرة</h3>
-    <div class="lc-value">{{ totals.get('batches_impacted', 0) }}</div>
-    <div class="lc-muted">الأرشفة لا تغيّر العدد الأصلي للحزمة.</div>
-  </section>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("كروت جاهزة للأرشفة", totals.get('cards', 0), icon="id-card", variant="brand",
+             sub="حسب السياسات المفعّلة للكروت المنتهية.") }}
+  {{ hub.kpi("مشتركين جاهزين للأرشفة", totals.get('subscribers', 0), icon="users", variant="blue",
+             sub="حسب سياسات انتهاء الاشتراك وعدم التجديد.") }}
+  {{ hub.kpi("حزم متأثرة", totals.get('batches_impacted', 0), icon="boxes-stacked", variant="amber",
+             sub="الأرشفة لا تغيّر العدد الأصلي للحزمة.") }}
 </div>
 
-<section class="lc-card">
-  <h3>إضافة سياسة أرشفة</h3>
-  <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}" class="lc-form">
-    <div>
-      <label>نوع العنصر</label>
-      <select name="entity_type">
-        {% for value,label in entity_options %}
-        <option value="{{ value }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label>الشرط</label>
-      <select name="trigger_type">
-        <option value="expired_at">بعد الانتهاء</option>
-      </select>
-    </div>
-    <div>
-      <label>بعد مدة</label>
-      <input name="delay_value" type="number" min="0" value="2">
-    </div>
-    <div>
-      <label>وحدة المدة</label>
-      <select name="delay_unit">
-        {% for value,label in unit_options %}
-        <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label>الاحتفاظ في السلة</label>
-      <input name="retention_value" type="number" min="0" value="90">
-    </div>
-    <div>
-      <label>وحدة الاحتفاظ</label>
-      <select name="retention_unit">
-        {% for value,label in unit_options %}
-        <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+{% call hub.section("إضافة سياسة أرشفة", icon="circle-plus") %}
+  <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">نوع العنصر</label>
+        <select class="hub-select" name="entity_type">
+          {% for value,label in entity_options %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الشرط</label>
+        <select class="hub-select" name="trigger_type">
+          <option value="expired_at">بعد الانتهاء</option>
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">بعد مدة</label>
+        <input class="hub-input" name="delay_value" type="number" min="0" value="2">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">وحدة المدة</label>
+        <select class="hub-select" name="delay_unit">
+          {% for value,label in unit_options %}
+            <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الاحتفاظ في السلة</label>
+        <input class="hub-input" name="retention_value" type="number" min="0" value="90">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">وحدة الاحتفاظ</label>
+        <select class="hub-select" name="retention_unit">
+          {% for value,label in unit_options %}
+            <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
     <input type="hidden" name="enabled" value="1">
-    <button class="btn btn-primary" type="submit">
-      <i class="fa-solid fa-plus"></i> حفظ السياسة
-    </button>
+    <div class="hub-flex-row" style="margin-top:14px">
+      {{ hub.btn("حفظ السياسة", icon="floppy-disk", variant="primary", type="submit") }}
+    </div>
   </form>
-</section>
+{% endcall %}
 
-<section class="lc-card" style="margin-top:14px">
-  <div class="lc-actions" style="justify-content:space-between;align-items:center">
-    <h3>معاينة التنفيذ</h3>
-    <form method="post" action="{{ url_for('radius.lifecycle_run') }}"
-          onsubmit="return confirm('سيتم نقل العناصر المؤهلة إلى سلة المحذوفات فقط. هل تريد المتابعة؟')">
-      <button class="btn btn-primary" type="submit">
-        <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
-      </button>
-    </form>
-  </div>
+{% call hub.section("معاينة التنفيذ", icon="eye",
+   meta='<form method="post" action="' ~ url_for('radius.lifecycle_run') ~ '"
+                onsubmit="return confirm(\'سيتم نقل العناصر المؤهلة إلى سلة المحذوفات فقط. هل تريد المتابعة؟\')"
+                style="margin:0">
+           <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
+             <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
+           </button>
+         </form>') %}
   {% for item in preview.get('policies') or [] %}
     {% set policy = item.get('policy') or {} %}
-    <div class="lc-note" style="margin-top:10px;margin-bottom:10px">
+    <div class="hub-flash hub-flash--info" style="margin-bottom:10px">
       <strong>سياسة #{{ policy.get('id') }}</strong>:
       {{ policy.get('entity_type') }} بعد {{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}
-      |
-      كروت: {{ item.get('cards_count', 0) }}
-      |
-      مشتركين: {{ item.get('subscribers_count', 0) }}
+      &nbsp;·&nbsp; كروت: <strong>{{ item.get('cards_count', 0) }}</strong>
+      &nbsp;·&nbsp; مشتركين: <strong>{{ item.get('subscribers_count', 0) }}</strong>
       {% if not item.get('supported') %}
-      <span class="lc-badge off">محفوظة كسياسة، التنفيذ الآلي لاحقًا</span>
+        <span class="hub-pill hub-pill--grey" style="margin-inline-start:8px">
+          محفوظة كسياسة، التنفيذ الآلي لاحقًا
+        </span>
       {% endif %}
     </div>
   {% else %}
-    <div class="empty"><i class="fa-solid fa-clock"></i> لا توجد سياسات بعد.</div>
+    {{ hub.empty("لا توجد سياسات بعد.", icon="clock") }}
   {% endfor %}
-</section>
+{% endcall %}
 
-<section class="lc-card" style="margin-top:14px">
-  <h3>السياسات الحالية</h3>
+{% call hub.section("السياسات الحالية", icon="list", meta=(policies|length ~ ' سياسة') if policies else '', flush=True) %}
   {% if policies %}
-  <table class="lc-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>العنصر</th>
-        <th>الشرط</th>
-        <th>التأخير</th>
-        <th>الاحتفاظ</th>
-        <th>الحالة</th>
-        <th>إجراء</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for policy in policies %}
-      <tr>
-        <td>{{ policy.get('id') }}</td>
-        <td>{{ policy.get('entity_type') }}</td>
-        <td>{{ policy.get('trigger_type') }}</td>
-        <td>{{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}</td>
-        <td>{{ policy.get('retention_value') }} {{ policy.get('retention_unit') }}</td>
-        <td>
-          {% if policy.get('enabled') %}
-          <span class="lc-badge on">مفعلة</span>
-          {% else %}
-          <span class="lc-badge off">معطلة</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if policy.get('enabled') %}
-          <form method="post" action="{{ url_for('radius.lifecycle_policy_disable', policy_id=policy.get('id')) }}">
-            <button class="btn btn-secondary" type="submit">تعطيل</button>
-          </form>
-          {% else %}
-          —
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>العنصر</th>
+            <th>الشرط</th>
+            <th>التأخير</th>
+            <th>الاحتفاظ</th>
+            <th>الحالة</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for policy in policies %}
+          <tr>
+            <td class="num">{{ policy.get('id') }}</td>
+            <td>{{ policy.get('entity_type') }}</td>
+            <td>{{ policy.get('trigger_type') }}</td>
+            <td>{{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}</td>
+            <td>{{ policy.get('retention_value') }} {{ policy.get('retention_unit') }}</td>
+            <td>
+              {% if policy.get('enabled') %}
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعلة</span>
+              {% else %}
+                <span class="hub-pill hub-pill--grey"><span class="dot"></span>معطلة</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if policy.get('enabled') %}
+                <form method="post"
+                      action="{{ url_for('radius.lifecycle_policy_disable', policy_id=policy.get('id')) }}"
+                      style="margin:0">
+                  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                    <i class="fa-solid fa-pause"></i> تعطيل
+                  </button>
+                </form>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-  <div class="empty"><i class="fa-solid fa-clock"></i> لا توجد سياسات أرشفة محفوظة.</div>
+    {{ hub.empty("لا توجد سياسات أرشفة محفوظة.", icon="clock") }}
   {% endif %}
-</section>
+{% endcall %}
 {% endblock %}

@@ -1,38 +1,55 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% block title %}Audit Log{% endblock %}
+{% block title %}سجل التدقيق{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock-rotate-left"></i>{% endblock %}
-{% block page_title %}Audit Log{% endblock %}
+{% block page_title %}سجل التدقيق{% endblock %}
 {% block page_sub %}<span class="sub">(آخر 300 عملية)</span>{% endblock %}
 
 {% block content %}
 {{ hub.hero(
-  "Audit Log",
-  subtitle="سجلّ كامل لكل أحداث النظام",
+  "سجل التدقيق",
+  subtitle="سجلّ كامل لكل أحداث النظام — يساعدك في تتبع من فعل ماذا ومتى.",
   icon="clock-rotate-left"
 ) }}
 
-<div class="card"><div class="card-body card-body--flush">
+{% call hub.section("الأحداث الأخيرة", icon="list-check", meta=(items|length ~ ' حدث') if items else '', flush=True) %}
   {% if items %}
-  <table class="hr-table">
-    <thead><tr>
-      <th>#</th><th>المنفّذ</th><th>الفعل</th><th>الكيان</th><th>المعرّف</th>
-      <th>IP</th><th>الوقت</th><th>التفاصيل</th>
-    </tr></thead>
-    <tbody>{% for r in items %}
-    <tr>
-      <td class="num">{{ r.id }}</td>
-      <td><strong>{{ r.actor }}</strong></td>
-      <td><span class="pill pill-cyan">{{ r.action }}</span></td>
-      <td class="mono">{{ r.target_type }}</td>
-      <td class="mono">{{ r.target_id }}</td>
-      <td class="mono">{{ r.ip_address or '—' }}</td>
-      <td class="mono">{{ r.created_at[:16] if r.created_at else '—' }}</td>
-      <td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        {{ r.payload_json }}
-      </td>
-    </tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i>لا سجلات</div>{% endif %}
-</div></div>
+    <div class="hub-table-wrap" style="border:none">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>المنفّذ</th>
+            <th>الفعل</th>
+            <th>الكيان</th>
+            <th>المعرّف</th>
+            <th>IP</th>
+            <th>الوقت</th>
+            <th>التفاصيل</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td><strong>{{ r.actor }}</strong></td>
+            <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action }}</span></td>
+            <td class="mono">{{ r.target_type }}</td>
+            <td class="mono">{{ r.target_id }}</td>
+            <td class="mono">{{ r.ip_address or '—' }}</td>
+            <td class="mono">{{ r.created_at[:16] if r.created_at else '—' }}</td>
+            <td class="mono"
+                style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ r.payload_json }}">
+              {{ r.payload_json }}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ hub.empty("لا توجد سجلات بعد.", icon="clock-rotate-left") }}
+  {% endif %}
+{% endcall %}
 {% endblock %}
