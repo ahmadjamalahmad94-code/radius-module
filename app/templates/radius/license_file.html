@@ -106,6 +106,52 @@
     width:100%;
   }
   .lf-subhead i{ color:#5b21b6; font-size:13px; }
+
+  /* ── Roomier detail-list rows (scoped to this page only) ───────── */
+  .lf-page .hub-detail-list{
+    display:grid; gap:14px;
+  }
+  .lf-page .hub-detail-list > div{
+    display:grid;
+    grid-template-columns:minmax(140px, 35%) 1fr;
+    column-gap:18px; row-gap:6px;
+    align-items:center;
+    padding:12px 14px;
+    background:var(--hub-bg-soft, #f8f7fc);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:10px;
+    transition:border-color .15s, background .15s;
+  }
+  .lf-page .hub-detail-list > div:hover{
+    background:#fff;
+    border-color:#ede9fe;
+  }
+  .lf-page .hub-detail-list > div > span{
+    color:var(--hub-text-soft, #475569);
+    font-size:13px;
+    font-weight:700;
+  }
+  .lf-page .hub-detail-list > div > strong{
+    color:var(--hub-text, #0f172a);
+    font-weight:700;
+    text-align:start;
+    word-break:break-word;
+  }
+  .lf-page .hub-detail-list > div > strong .mono,
+  .lf-page .hub-detail-list > div > strong.mono{
+    font-size:13px;
+    background:#fff;
+    padding:4px 10px;
+    border-radius:8px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    display:inline-block;
+  }
+  @media (max-width: 640px){
+    .lf-page .hub-detail-list > div{
+      grid-template-columns:1fr;
+      row-gap:8px;
+    }
+  }
 </style>
 {% endblock %}
 
