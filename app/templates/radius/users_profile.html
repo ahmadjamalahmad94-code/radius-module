@@ -744,8 +744,8 @@
         <div class="row"><span class="k">كوتا التنزيل</span><span class="v">{{ fmt_bytes_mb(sub.download_quota_mb) if sub.download_quota_mb else "—" }}</span></div>
         <div class="row"><span class="k">كوتا الرفع</span><span class="v">{{ fmt_bytes_mb(sub.upload_quota_mb) if sub.upload_quota_mb else "—" }}</span></div>
         <div class="row"><span class="k">كوتا مدمجة</span><span class="v">{{ fmt_bytes_mb(sub.combined_quota_mb) if sub.combined_quota_mb else "—" }}</span></div>
-        <div class="row"><span class="k">إجمالي وقت الاتصال (دقائق)</span><span class="v">{{ sub.total_connection_time_min or "—" }}</span></div>
-        <div class="row"><span class="k">حد الاتصال اليومي (دقائق)</span><span class="v">{{ sub.daily_connection_time_min or "—" }}</span></div>
+        <div class="row"><span class="k">إجمالي وقت الاتصال</span><span class="v">{{ fmt_minutes(sub.total_connection_time_min) }}</span></div>
+        <div class="row"><span class="k">حد الاتصال اليومي</span><span class="v">{{ fmt_minutes(sub.daily_connection_time_min) }}</span></div>
         <div class="row"><span class="k">أيام العمل</span><span class="v">{{ sub.working_days or "—" }}</span></div>
         <div class="row"><span class="k">MACs المسموحة</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
         <div class="row"><span class="k">الرصيد</span><span class="v">{{ "%.2f"|format(sub.balance|float) }}</span></div>

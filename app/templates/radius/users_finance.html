@@ -187,7 +187,7 @@
         {% for loan in loans %}
         <tr>
           <td class="num mono">{{ loan.id }}</td>
-          <td>{{ loan.duration_minutes }} دقيقة</td>
+          <td>{{ fmt_minutes(loan.duration_minutes) }}</td>
           <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
