@@ -23,6 +23,7 @@ def _t_row(r) -> Ticket:
 
 def list_tickets(tenant_id: int, *, status: Optional[str] = None,
                   subscriber_id: Optional[int] = None,
+                  category: Optional[str] = None,
                   limit: int = 200, offset: int = 0) -> list[Ticket]:
     sql = "SELECT * FROM tickets WHERE tenant_id = ?"
     vals: list = [tenant_id]
@@ -30,6 +31,8 @@ def list_tickets(tenant_id: int, *, status: Optional[str] = None,
         sql += " AND status = ?"; vals.append(status)
     if subscriber_id is not None:
         sql += " AND subscriber_id = ?"; vals.append(subscriber_id)
+    if category:
+        sql += " AND category = ?"; vals.append(category)
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals += [limit, offset]
     return [_t_row(r) for r in db().execute(sql, vals).fetchall()]

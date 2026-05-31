@@ -54,6 +54,13 @@ REQUEST_TYPES = {
     "support": "مراجعة فنية",
 }
 
+DECISIONS = {
+    "approve": "موافقة مبدئية",
+    "reject": "رفض الطلب",
+    "request_payment": "طلب دفع",
+    "trial": "فتح تجريبي",
+}
+
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_:-]{0,63}$")
 
 
@@ -204,13 +211,89 @@ def _service_body(*, service_label: str, request_label: str, subscriber, notes: 
     return "\n".join(lines)
 
 
+def _create_payment_request(subscriber_id: int, payment_context: dict[str, Any]) -> dict[str, Any]:
+    settings = payment_context["settings"]
+    return PaymentRequestRepository().create(
+        tenant_id=_tid(),
+        payer_type="subscriber",
+        payer_id=subscriber_id,
+        purpose=payment_context["purpose"],
+        amount=payment_context["amount"],
+        currency=payment_context["currency"],
+        provider=settings.provider,
+        receiver_wallet=settings.wallet_number,
+        created_by=_admin_id() or None,
+        ttl_minutes=settings.payment_request_ttl_minutes,
+    )
+
+
+def _decision_reply(decision: str, note: str, payment_request: dict[str, Any] | None = None) -> str:
+    lines = [f"قرار الإدارة: {DECISIONS[decision]}"]
+    if decision == "approve":
+        lines.append("تمت الموافقة المبدئية على طلب الخدمة. التنفيذ النهائي يبقى حسب الدفع والصلاحيات.")
+    elif decision == "reject":
+        lines.append("تم رفض طلب الخدمة وإغلاق التذكرة.")
+    elif decision == "trial":
+        lines.append("تمت الموافقة على فتح تجربة مؤقتة. لا يوجد تفعيل آلي من التطبيق.")
+    elif decision == "request_payment" and payment_request:
+        lines.append(
+            f"تم فتح طلب دفع: {payment_request['reference_code']} "
+            f"بقيمة {payment_request['amount']} {payment_request['currency']}."
+        )
+    if note:
+        lines.extend(["", "ملاحظة الإدارة:", note])
+    return "\n".join(lines)
+
+
+def _service_ticket_or_error(ticket_id: int):
+    ticket = tickets_repo.get_ticket(_tid(), ticket_id)
+    if not ticket or ticket.category != "service_request":
+        return None, fail("not_found", "طلب الخدمة غير موجود.", status=404)
+    if not subscriber_in_scope(subscriber_id=ticket.subscriber_id):
+        return None, deny_out_of_scope()
+    return ticket, None
+
+
 def register(bp: Blueprint) -> None:
+    bp.add_url_rule(
+        "/service-requests",
+        "service_requests_list",
+        require_api_token(list_service_requests),
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/service-requests",
         "service_requests_create",
         require_api_token(create_service_request),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/service-requests/<int:ticket_id>/decision",
+        "service_requests_decision",
+        require_api_token(service_request_decision),
+        methods=["POST"],
+    )
+
+
+def list_service_requests():
+    status = str(request.args.get("status") or "").strip() or None
+    try:
+        limit = min(max(1, int(request.args.get("limit") or 100)), 500)
+        offset = max(0, int(request.args.get("offset") or 0))
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة الترقيم غير صحيحة.", status=422)
+    items = [
+        _ticket_payload(ticket)
+        for ticket in tickets_repo.list_tickets(
+            _tid(),
+            status=status,
+            category="service_request",
+            limit=limit,
+            offset=offset,
+        )
+        if subscriber_in_scope(subscriber_id=ticket.subscriber_id)
+    ]
+    return ok({"items": items, "count": len(items)})
 
 
 def create_service_request():
@@ -267,19 +350,7 @@ def create_service_request():
 
     payment_request = None
     if payment_context:
-        settings = payment_context["settings"]
-        payment_request = PaymentRequestRepository().create(
-            tenant_id=_tid(),
-            payer_type="subscriber",
-            payer_id=subscriber_id,
-            purpose=payment_context["purpose"],
-            amount=payment_context["amount"],
-            currency=payment_context["currency"],
-            provider=settings.provider,
-            receiver_wallet=settings.wallet_number,
-            created_by=_admin_id() or None,
-            ttl_minutes=settings.payment_request_ttl_minutes,
-        )
+        payment_request = _create_payment_request(subscriber_id, payment_context)
         tickets_repo.add_reply(TicketReply(
             id=None,
             tenant_id=_tid(),
@@ -306,3 +377,54 @@ def create_service_request():
         "ticket": _ticket_payload(ticket),
         "payment_request": _payment_request_payload(payment_request) if payment_request else None,
     }, status=201)
+
+
+def service_request_decision(ticket_id: int):
+    ticket, error = _service_ticket_or_error(ticket_id)
+    if error:
+        return error
+    body = request.get_json(silent=True) or {}
+    decision = str(body.get("decision") or "").strip()
+    if decision not in DECISIONS:
+        return fail("validation_error", "قرار الطلب غير صحيح.", status=422)
+    note = str(body.get("note") or "").strip()[:1000]
+
+    payment_request = None
+    next_status = ticket.status
+    if decision == "approve":
+        next_status = "in_progress"
+    elif decision == "trial":
+        next_status = "in_progress"
+    elif decision == "reject":
+        next_status = "closed"
+    elif decision == "request_payment":
+        payment_context, validation_error = _validated_payment(body.get("payment"))
+        if validation_error:
+            return validation_error
+        if not payment_context:
+            return fail("validation_error", "أدخل مبلغ طلب الدفع.", status=422)
+        payment_request = _create_payment_request(ticket.subscriber_id, payment_context)
+        next_status = "pending"
+
+    updated = tickets_repo.update_ticket(_tid(), ticket.id or ticket_id, status=next_status)
+    tickets_repo.add_reply(TicketReply(
+        id=None,
+        tenant_id=_tid(),
+        ticket_id=ticket.id or ticket_id,
+        author_type="admin",
+        author_id=_admin_id(),
+        body=_decision_reply(decision, note, payment_request),
+    ))
+    updated = tickets_repo.get_ticket(_tid(), ticket.id or ticket_id) or updated
+    return ok({
+        "service_request": {
+            "reference": f"SR-{ticket.id}",
+            "ticket_id": ticket.id,
+            "payment_request_id": payment_request["id"] if payment_request else None,
+            "status": updated.status if updated else next_status,
+            "decision": decision,
+            "decision_label": DECISIONS[decision],
+        },
+        "ticket": _ticket_payload(updated or ticket),
+        "payment_request": _payment_request_payload(payment_request) if payment_request else None,
+    })

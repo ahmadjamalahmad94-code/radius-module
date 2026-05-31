@@ -594,13 +594,22 @@ class AdminPanelClient:
             body["license_key"] = self.config.license_key
         if self.config.shared_secret:
             body["admin_secret"] = self.config.shared_secret
+        # Backup uploads carry the full DB content (many MB) and the panel may
+        # spend time storing + forwarding it, so the tiny default bridge
+        # timeout (≈3s) is far too short. Use a dedicated, generous timeout.
+        backup_timeout = _safe_float(
+            os.environ.get("HOBERADIUS_ADMIN_BACKUP_TIMEOUT_SECONDS"),
+            180.0,
+            minimum=30.0,
+            maximum=900.0,
+        )
         try:
             response = self.transport.request_json(
                 method="POST",
                 url=source_url,
                 headers=self._headers(),
                 json_body=body,
-                timeout_seconds=self.config.timeout_seconds,
+                timeout_seconds=max(self.config.timeout_seconds, backup_timeout),
             )
         except (TimeoutError, socket.timeout) as exc:
             return {

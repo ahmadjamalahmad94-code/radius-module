@@ -72,6 +72,21 @@ def _enable_payment_settings(client):
     )
 
 
+def _create_service_request(client, subscriber_id: int) -> dict:
+    response = client.post(
+        "/api/v1/service-requests",
+        json={
+            "subscriber_id": subscriber_id,
+            "service_key": "customer_portal",
+            "request_type": "activation",
+            "notes": "طلب مراجعة من العميل",
+        },
+        headers=_auth(),
+    )
+    assert response.status_code == 201
+    return response.get_json()["data"]
+
+
 def test_service_request_creates_support_ticket_without_payment(client):
     subscriber_id = _create_subscriber()
 
@@ -180,3 +195,103 @@ def test_service_request_rejects_invalid_payload(client):
         headers=_auth(),
     )
     assert missing.status_code == 422
+
+
+def test_service_requests_list_returns_service_tickets_only(client):
+    subscriber_id = _create_subscriber("customer-5")
+    created = _create_service_request(client, subscriber_id)
+    regular = client.post(
+        "/api/v1/tickets",
+        json={
+            "subscriber_id": subscriber_id,
+            "subject": "تذكرة عامة",
+            "category": "general",
+            "priority": "normal",
+            "body": "سؤال عام",
+        },
+        headers=_auth(),
+    )
+    assert regular.status_code == 201
+
+    listed = client.get("/api/v1/service-requests", headers=_auth())
+
+    assert listed.status_code == 200
+    items = listed.get_json()["data"]["items"]
+    assert [item["id"] for item in items] == [created["service_request"]["ticket_id"]]
+    assert items[0]["category"] == "service_request"
+
+
+def test_service_request_decision_can_approve_and_reject(client):
+    subscriber_id = _create_subscriber("customer-6")
+    created = _create_service_request(client, subscriber_id)
+    ticket_id = created["service_request"]["ticket_id"]
+
+    approved = client.post(
+        f"/api/v1/service-requests/{ticket_id}/decision",
+        json={"decision": "approve", "note": "تمت الموافقة حسب الاتفاق"},
+        headers=_auth(),
+    )
+    assert approved.status_code == 200
+    assert approved.get_json()["data"]["ticket"]["status"] == "in_progress"
+
+    rejected = client.post(
+        f"/api/v1/service-requests/{ticket_id}/decision",
+        json={"decision": "reject", "note": "لم يكتمل الدفع"},
+        headers=_auth(),
+    )
+    assert rejected.status_code == 200
+    assert rejected.get_json()["data"]["ticket"]["status"] == "closed"
+
+    detail = client.get(f"/api/v1/tickets/{ticket_id}", headers=_auth()).get_json()["data"]
+    bodies = "\n".join(reply["body"] for reply in detail["replies"])
+    assert "موافقة مبدئية" in bodies
+    assert "رفض الطلب" in bodies
+
+
+def test_service_request_decision_can_request_payment(client):
+    subscriber_id = _create_subscriber("customer-7")
+    created = _create_service_request(client, subscriber_id)
+    ticket_id = created["service_request"]["ticket_id"]
+    assert _enable_payment_settings(client).status_code == 200
+
+    response = client.post(
+        f"/api/v1/service-requests/{ticket_id}/decision",
+        json={
+            "decision": "request_payment",
+            "note": "يرجى إرسال الإثبات بعد التحويل",
+            "payment": {"amount": 45, "currency": "ILS"},
+        },
+        headers=_auth(),
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    assert data["ticket"]["status"] == "pending"
+    assert data["service_request"]["payment_request_id"] == data["payment_request"]["id"]
+    assert data["payment_request"]["amount"] == 45.0
+
+    detail = client.get(f"/api/v1/tickets/{ticket_id}", headers=_auth()).get_json()["data"]
+    assert any(data["payment_request"]["reference_code"] in reply["body"] for reply in detail["replies"])
+
+
+def test_service_request_decision_rejects_general_ticket(client):
+    subscriber_id = _create_subscriber("customer-8")
+    regular = client.post(
+        "/api/v1/tickets",
+        json={
+            "subscriber_id": subscriber_id,
+            "subject": "تذكرة عامة",
+            "category": "general",
+            "priority": "normal",
+            "body": "سؤال عام",
+        },
+        headers=_auth(),
+    ).get_json()["data"]
+
+    response = client.post(
+        f"/api/v1/service-requests/{regular['id']}/decision",
+        json={"decision": "approve"},
+        headers=_auth(),
+    )
+
+    assert response.status_code == 404
