@@ -23,7 +23,7 @@
     <option value="{{ p }}" {% if purpose == p %}selected{% endif %}>{{ p }}</option>
     {% endfor %}
   </select>
-  <input class="hub-input" name="payer_type" placeholder="payer_type" value="{{ payer_type }}">
+  <input class="hub-input" name="payer_type" placeholder="نوع الدافع" value="{{ payer_type }}">
   <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> فلترة</button>
   <span class="hub-spacer"></span>
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_review_queue_web') }}"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
