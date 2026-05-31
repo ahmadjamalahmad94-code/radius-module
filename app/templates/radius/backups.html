@@ -158,34 +158,14 @@
   </form>
 {% endcall %}
 
-{# ── Retention cap: dictated by the license panel (edition/fees) ── #}
+{# ── Retention cap: read-only notice — controlled only from the license panel ── #}
 {% call hub.section("حدّ الاحتفاظ بالنسخ", icon="sliders", meta=(backup_max_count ~ ' نسخة')) %}
-  {% if backup_max_from_panel %}
-    <div class="bk-kv" style="margin-bottom:0">
-      <div class="row">
-        <span class="k">أقصى عدد للنسخ المحفوظة (حسب باقتك)</span>
-        <span class="v">{{ backup_max_count }} نسخة</span>
-      </div>
-    </div>
-    <p class="hub-text-soft" style="margin:12px 0 0;font-size:12.5px;line-height:1.8">
-      <i class="fa-solid fa-lock" style="color:#7c3aed"></i>
-      هذا الحد <strong>محدَّد من لوحة التراخيص حسب إصدارك ورسومك</strong>. عند تجاوزه يُحذف الأقدم تلقائيًا
-      لتوفير المساحة (النسخ الاحترازية قبل الاستعادة لا تُحذف). لرفع الحد تواصل مع مزوّد الخدمة.
-    </p>
-  {% else %}
-    <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
-      أقصى عدد للنسخ المحلية؛ عند تجاوزه يُحذف <strong>الأقدم تلقائيًا</strong>. (يُضبط عادةً من لوحة التراخيص حسب باقتك.)
-    </p>
-    <form method="post" action="{{ url_for('radius.backups_settings') }}"
-          class="hub-flex-row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0">
-      <label style="display:grid;gap:6px">
-        <span style="font-size:12.5px;font-weight:700;color:#475569">أقصى عدد للنسخ</span>
-        <input type="number" name="max_count" min="1" max="1000" value="{{ backup_max_count }}" required
-               style="width:150px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px">
-      </label>
-      {{ hub.btn("حفظ الحد", icon="floppy-disk", variant="primary", type="submit") }}
-    </form>
-  {% endif %}
+  <div class="hub-flash hub-flash--info" style="margin:0">
+    <i class="fa-solid fa-circle-info"></i>
+    العدد المسموح من النسخ في باقتك هو <strong>{{ backup_max_count }} نسخة</strong>،
+    ويُطبَّق على نسخ الريدياس وعلى نسخ ملفك في لوحة التراخيص. عند تجاوزه يُحذف الأقدم تلقائيًا.
+    هذا الحد <strong>محدَّد من لوحة التراخيص حسب إصدارك ورسومك</strong> — لرفعه تواصل مع مزوّد الخدمة.
+  </div>
 {% endcall %}
 
 {# ── Google Drive — status mirrored from the panel (one-click via SSO) ── #}
