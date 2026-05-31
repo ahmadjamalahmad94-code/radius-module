@@ -898,7 +898,7 @@
             {% for key in ns_extra.keys %}{% set val = _svc[key] %}
               {% set _status = val.status|default('disabled') %}
               {% set _on = (_status == 'active') %}
-              {% set _name = service_labels.get(key, key|replace('_',' ')|title) %}
+              {% set _name = service_labels.get(key, 'خدمة مرخّصة إضافية') %}
               {% set _desc = service_descriptions.get(key, 'صلاحية ضمن عقد الترخيص.') %}
               {% set _stlabel = ('مفعّلة' if _status == 'active' else ('موقوفة' if _status == 'suspended' else ('منتهية' if _status == 'expired' else status_labels.get(_status, 'معطَّلة')))) %}
               {% set _ns = namespace(chips='') %}

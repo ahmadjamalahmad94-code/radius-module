@@ -118,6 +118,7 @@ def test_license_file_translates_service_contract_keys(app):
                         "cards_recharge": {"enabled": False, "status": "disabled"},
                         "customer_portal": {"enabled": True, "status": "active"},
                         "integration_bridge": {"enabled": True, "status": "active"},
+                        "unknown_future_service": {"enabled": True, "status": "active"},
                         "ip_change_vpn": {
                             "enabled": True,
                             "status": "active",
@@ -143,12 +144,19 @@ def test_license_file_translates_service_contract_keys(app):
     assert "الكروت" in html
     assert "شحن الكروت" in html
     assert "بوابة العميل" in html
-    assert "جسر الربط مع لوحة التراخيص" in html
-    assert "خدمة تغيير عنوان الإنترنت / الشبكة الخاصة" in html
+    assert "جسر الربط بلوحة التراخيص" in html
+    assert "خدمة مرخّصة إضافية" in html
+    assert "VPN وتغيير عنوان الإنترنت" in html
     assert "سرعة التحميل: 50 ميجابت/ثانية" in html
     assert "عدد المشتركين" in html
     assert "أجهزة الشبكة" in html
-    for raw_key in ("cards_recharge", "customer_portal", "integration_bridge", "ip_change_vpn"):
+    for raw_key in (
+        "cards_recharge",
+        "customer_portal",
+        "integration_bridge",
+        "ip_change_vpn",
+        "unknown_future_service",
+    ):
         assert raw_key not in html
 
 
