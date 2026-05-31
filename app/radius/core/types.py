@@ -194,6 +194,8 @@ class Subscriber:
     account_type: str = "Personal"            # Personal/Business
     # رصيد + تجديد
     balance: float = 0.0
+    # سعر مخصّص لهذا المشترك يتجاوز سعر الباقة. 0.0 = استخدم سعر الباقة.
+    custom_price: float = 0.0
     auto_renewal: bool = True
     # حالة
     status: str = "enabled"                   # enabled/disabled/expired/suspended/pending/banned

@@ -213,6 +213,9 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         return request.form.get(n, "") in ("1", "on", "true", "yes")
     def _s(n):
         return (request.form.get(n) or "").strip()
+    def _f(n, d=0.0):
+        try: return float(request.form.get(n) or d)
+        except (TypeError, ValueError): return d
 
     plan_id = request.form.get("plan_id")
     manager_id = request.form.get("manager_id")
@@ -273,6 +276,8 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         pool=_s("pool"),
         status=_s("status") or "enabled",
         auto_renewal=_b("auto_renewal"),
+        # سعر مخصّص يتجاوز سعر الباقة (فارغ/0 = استخدم سعر الباقة)
+        custom_price=_f("custom_price"),
         # PPPoE
         pppoe_username=_s("pppoe_username"),
         pppoe_password=_s("pppoe_password"),

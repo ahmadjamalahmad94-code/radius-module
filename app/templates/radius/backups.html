@@ -67,6 +67,79 @@
   .bk-prog-summary{ font-size:13px; font-weight:800; color:#0f172a; }
   .bk-prog-close{ display:none; }
   .bk-prog.is-done .bk-prog-close{ display:inline-flex; }
+
+  /* ════ Redesigned backups page (dense, two-column) ════ */
+  .bkx{ display:grid; gap:14px; }
+  .bkx-bar{ position:relative; overflow:hidden; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border-radius:18px; padding:18px 22px;
+    box-shadow:0 16px 38px rgba(91,33,182,.28); }
+  .bkx-bar::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(120% 130% at 90% 0,rgba(255,255,255,.18),transparent 55%); }
+  .bkx-bar > *{ position:relative; z-index:1; }
+  .bkx-bar h1{ margin:0; font-size:19px; font-weight:800; display:flex; align-items:center; gap:9px; }
+  .bkx-bar .sub{ font-size:12px; opacity:.9; margin-top:4px; }
+  .bkx-chips{ display:flex; gap:8px; flex-wrap:wrap; margin-inline-start:auto; }
+  .bkx-chip{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25);
+    backdrop-filter:blur(8px); border-radius:13px; padding:8px 13px; }
+  .bkx-chip .v{ font-size:13.5px; font-weight:800; line-height:1.1; }
+  .bkx-chip .l{ font-size:10px; opacity:.85; margin-top:2px; }
+  .bkx-chip .dot{ width:8px;height:8px;border-radius:50%;flex:none; }
+  .bkx-cta{ background:#fff; color:#5b21b6; border:0; border-radius:13px; padding:12px 20px; font:inherit; font-size:13.5px;
+    font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:9px; box-shadow:0 8px 18px rgba(0,0,0,.18); transition:.15s; }
+  .bkx-cta:hover{ background:#f5f3ff; transform:translateY(-1px); }
+  .bkx-grid{ display:grid; grid-template-columns:1.75fr 1fr; gap:14px; align-items:start; }
+  @media (max-width:1024px){ .bkx-grid{ grid-template-columns:1fr; } }
+  .bkx-card{ background:#fff; border:1px solid #e8edf3; border-radius:16px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05),0 8px 22px rgba(15,23,42,.05); overflow:hidden; }
+  .bkx-card-h{ display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid #eef2f7;
+    background:linear-gradient(135deg,#faf9ff,#fbfdff); }
+  .bkx-card-h .ic{ width:30px;height:30px;border-radius:9px;background:#ede9fe;color:#5b21b6;display:grid;place-items:center;font-size:13px;flex:none; }
+  .bkx-card-h h2{ margin:0; font-size:14px; font-weight:800; }
+  .bkx-card-h .meta{ margin-inline-start:auto; font-size:11px; color:#94a3b8; font-weight:700; }
+  .bkx-card-b{ padding:14px 16px; }
+  .bkx-rail{ display:grid; gap:14px; }
+  .bkx-soft{ font-size:12.5px; color:#64748b; line-height:1.8; margin:0 0 12px; }
+  .bkx-note{ display:flex; gap:9px; align-items:flex-start; font-size:12px; line-height:1.7; border-radius:11px; padding:10px 12px; margin-bottom:12px; }
+  .bkx-note.warn{ background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+  .bkx-note.info{ background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  /* backup rows (cards, not a file-browser table) */
+  .bkx-list{ display:grid; gap:9px; }
+  .bkx-item{ border:1px solid #e8edf3; border-radius:13px; padding:11px 13px; transition:border-color .16s, box-shadow .16s; }
+  .bkx-item:hover{ border-color:#c4b5fd; box-shadow:0 6px 16px rgba(124,58,237,.08); }
+  .bkx-item-row{ display:flex; align-items:center; gap:12px; }
+  .bkx-fic{ width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;background:#f5f3ff;color:#5b21b6;font-size:15px; }
+  .bkx-fic.snap{ background:#fef3c7;color:#b45309; }
+  .bkx-fmain{ min-width:0; flex:1; }
+  .bkx-fname{ font-family:ui-monospace,Consolas,monospace; font-size:11.5px; color:#0f172a; font-weight:700; word-break:break-all; direction:ltr; unicode-bidi:isolate; }
+  .bkx-fmeta{ font-size:11px; color:#94a3b8; margin-top:4px; display:flex; gap:5px 14px; flex-wrap:wrap; }
+  .bkx-acts{ display:flex; gap:6px; margin-inline-start:auto; flex:none; }
+  .bkx-act{ width:34px;height:34px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;
+    display:grid;place-items:center;font-size:13px; transition:.15s; text-decoration:none; }
+  .bkx-act:hover{ background:#f5f3ff;color:#5b21b6;border-color:#c4b5fd; }
+  .bkx-act.danger:hover{ background:#fef2f2;color:#dc2626;border-color:#fecaca; }
+  .bkx-sum{ display:none; margin-top:11px; padding-top:11px; border-top:1px dashed #e2e8f0; }
+  /* rail key/value + inline controls */
+  .bkx-kv{ display:grid; gap:7px; margin-bottom:12px; }
+  .bkx-kv .row{ display:flex; justify-content:space-between; gap:12px; align-items:center; font-size:12.5px; }
+  .bkx-kv .row .k{ color:#64748b; font-weight:600; } .bkx-kv .row .v{ font-weight:800; color:#0f172a; }
+  .bkx-kv .row .v.ltr{ direction:ltr; unicode-bidi:isolate; }
+  .bkx-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:10px 15px; font:inherit;
+    font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; transition:.15s; }
+  .bkx-btn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; box-shadow:0 8px 18px rgba(124,58,237,.28); }
+  .bkx-btn.primary:hover{ box-shadow:0 10px 22px rgba(124,58,237,.36); }
+  .bkx-btn.ghost{ background:#fff; color:#475569; border:1px solid #cbd5e1; }
+  .bkx-btn.ghost:hover{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+  .bkx-link{ font-size:12.5px; font-weight:800; color:#5b21b6; text-decoration:none; }
+  .bkx-link:hover{ text-decoration:underline; }
+  .bkx-input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; }
+  .bkx-input:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 4px rgba(124,58,237,.18); }
+  .bkx-switch{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:700; color:#0f172a; cursor:pointer; margin-bottom:11px; }
+  .bkx-switch input{ width:17px;height:17px;accent-color:#7c3aed; }
+  .bkx-runs{ display:grid; gap:6px; }
+  .bkx-run{ display:flex; align-items:center; gap:10px; font-size:11.5px; padding:8px 11px; border:1px solid #eef2f7; border-radius:10px; }
+  .bkx-run .rs{ width:8px;height:8px;border-radius:50%;flex:none; }
+  .bkx-run .rp{ font-family:ui-monospace,monospace; color:#64748b; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; }
+  .bkx-run .rt{ font-family:ui-monospace,monospace; color:#94a3b8; flex:none; }
 </style>
 {% endblock %}
 
@@ -74,244 +147,177 @@
 {% set job = status.get('job') or {} %}
 {% set runs = status.get('recent_runs') or [] %}
 
-<div class="bk-page">
+{% set _last = job.get('last_status') %}
+{% set _ok = _last in ['success','ok'] %}
+<div class="bkx">
 
-{{ hub.hero(
-  "النسخ الاحتياطي",
-  subtitle="أنشئ نسخة محلية، ارفعها إلى ملف عميلك في لوحة التراخيص، نزّلها، أو استعد منها.",
-  icon="database"
-) }}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الحالة الأخيرة", st_ar(job.get('last_status')) if job.get('last_status') else 'لم تُشغّل بعد', icon="circle-info", variant="brand",
-             sub=(job.get('last_message') or 'لم يتم تشغيل نسخة بعد.')) }}
-  {{ hub.kpi("آخر تشغيل", fmt_dt(job.get('last_run_at')) if job.get('last_run_at') else '—', icon="clock-rotate-left", variant="blue",
-             sub="تحقق من النسخة خارج التطبيق قبل الاعتماد عليها إنتاجيًا.") }}
-  {{ hub.kpi("النسخ المحلية", local_files|length, icon="hard-drive", variant="grey",
-             sub="ملفات SQLite محفوظة بجانب قاعدة البيانات.") }}
-</div>
-
-{# ── Unified backup action: one button does local → panel → Drive ── #}
-{% call hub.section("نسخة احتياطية الآن", icon="cloud-arrow-up") %}
-  <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.8">
-    زر واحد ينفّذ كل خطوات النسخ المتاحة دفعةً واحدة: <strong>نسخة محلية</strong> ثم
-    <strong>رفع إلى ملفك في لوحة التراخيص</strong> (إن كانت الخدمة مفعّلة) ثم
-    <strong>Google Drive</strong> (إن كان مربوطًا) — مع شريط تقدّم يوضّح ما تمّ وما فشل.
-    تُحفظ النسخ {{ retention_days }} يومًا ثم تُحذف، أو حسب حدّ العدد المضبوط أدناه.
-  </p>
-  <div class="hub-flex-row" style="gap:10px; flex-wrap:wrap; align-items:center">
-    {{ hub.btn("نسخة كاملة الآن", icon="bolt", variant="primary",
-               attrs='data-bk-runall data-url="' ~ url_for('radius.backups_run_all') ~ '"') }}
-    {% if panel_backup.enabled %}
-      <span class="hub-pill hub-pill--green"><span class="dot"></span> خدمة النسخ على اللوحة مفعّلة</span>
-    {% else %}
-      <form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:0">
-        {{ csrf_token_input() }}
-        <input type="hidden" name="service_key" value="backups">
-        <input type="hidden" name="service_name" value="النسخ الاحتياطي السحابي">
-        {{ hub.btn("طلب تفعيل النسخ على اللوحة (مدفوعة)", icon="paper-plane", variant="secondary", type="submit") }}
-      </form>
-      <span class="hub-pill hub-pill--amber"><span class="dot"></span> النسخ على اللوحة غير مفعّلة</span>
-    {% endif %}
+  {# ════ command bar ════ #}
+  <div class="bkx-bar">
+    <div>
+      <h1><i class="fa-solid fa-database"></i> النسخ الاحتياطي</h1>
+      <div class="sub">نسخة محلية + ملف العميل بلوحة التراخيص + Google Drive + استعادة آمنة</div>
+    </div>
+    <div class="bkx-chips">
+      <div class="bkx-chip"><span class="dot" style="background:{{ '#86efac' if _ok else ('#cbd5e1' if not _last else '#fcd34d') }}"></span>
+        <div><div class="v">{{ st_ar(_last) if _last else 'لم تُشغّل' }}</div><div class="l">الحالة الأخيرة</div></div></div>
+      <div class="bkx-chip"><div><div class="v" style="font-size:12px">{{ fmt_dt(job.get('last_run_at')) if job.get('last_run_at') else '—' }}</div><div class="l">آخر تشغيل</div></div></div>
+      <div class="bkx-chip"><div><div class="v">{{ local_files|length }} <span style="opacity:.7;font-weight:600">/ {{ backup_max_count }}</span></div><div class="l">النسخ المحفوظة</div></div></div>
+      <div class="bkx-chip"><span class="dot" style="background:{{ '#86efac' if gdrive.connected else '#cbd5e1' }}"></span>
+        <div><div class="v">{{ 'متصل' if gdrive.connected else 'غير مربوط' }}</div><div class="l">Google Drive</div></div></div>
+    </div>
+    <button type="button" class="bkx-cta" data-bk-runall data-url="{{ url_for('radius.backups_run_all') }}">
+      <i class="fa-solid fa-bolt"></i> نسخة كاملة الآن
+    </button>
   </div>
-{% endcall %}
 
-{# ── Upload a backup from the user's computer ── #}
-{% call hub.section("رفع نسخة من جهازك", icon="upload") %}
-  <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.8">
-    اختر ملف نسخة بصيغة <span class="mono">.sqlite3</span> من جهازك ليُحفظ ضمن النسخ المحلية،
-    ويمكنك بعدها تنزيله أو الاستعادة منه. (يُتحقّق أنه ملف SQLite صالح.)
-  </p>
-  <form method="post" action="{{ url_for('radius.backups_upload_computer') }}" enctype="multipart/form-data"
-        class="hub-flex-row" style="gap:12px;align-items:center;flex-wrap:wrap;margin:0">
-    {{ csrf_token_input() }}
-    <input type="file" name="backup_file" accept=".sqlite3" required
-           style="font:inherit;font-size:13px;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;background:#fff">
-    {{ hub.btn("رفع الملف", icon="upload", variant="secondary", type="submit") }}
-  </form>
-{% endcall %}
+  {# ════ two-column grid ════ #}
+  <div class="bkx-grid">
 
-{# ── Automatic backup schedule ── #}
-{% call hub.section("الجدولة التلقائية", icon="clock", meta=('● مفعّلة' if backup_schedule.enabled else 'متوقفة')) %}
-  <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.8">
-    فعّل النسخ التلقائي ليأخذ النظام نسخة كاملة (محلية + لوحة + درايف) دوريًا دون تدخّل.
-  </p>
-  <form method="post" action="{{ url_for('radius.backups_schedule') }}"
-        class="hub-flex-row" style="gap:14px;align-items:flex-end;flex-wrap:wrap;margin:0">
-    <label class="bk-ack" style="background:#f8fafc;border-color:#e2e8f0;cursor:pointer">
-      <input type="checkbox" name="enabled" value="1" {{ 'checked' if backup_schedule.enabled else '' }} style="accent-color:#7c3aed">
-      <span style="color:#0f172a">تفعيل الجدولة التلقائية</span>
-    </label>
-    <label style="display:grid;gap:6px">
-      <span style="font-size:12.5px;font-weight:700;color:#475569">التكرار</span>
-      <select name="interval" style="border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;background:#fff">
-        <option value="6h" {{ 'selected' if backup_schedule.interval == '6h' else '' }}>كل 6 ساعات</option>
-        <option value="12h" {{ 'selected' if backup_schedule.interval == '12h' else '' }}>كل 12 ساعة</option>
-        <option value="daily" {{ 'selected' if backup_schedule.interval == 'daily' else '' }}>يوميًا</option>
-        <option value="weekly" {{ 'selected' if backup_schedule.interval == 'weekly' else '' }}>أسبوعيًا</option>
-      </select>
-    </label>
-    {{ hub.btn("حفظ الجدولة", icon="floppy-disk", variant="primary", type="submit") }}
-    {% if backup_schedule.last_run %}
-      <span class="hub-text-soft" style="font-size:12px">آخر تشغيل مجدول: <strong>{{ fmt_dt(backup_schedule.last_run) }}</strong></span>
-    {% endif %}
-  </form>
-{% endcall %}
-
-{# ── Retention cap: read-only notice — controlled only from the license panel ── #}
-{% call hub.section("حدّ الاحتفاظ بالنسخ", icon="sliders", meta=(backup_max_count ~ ' نسخة')) %}
-  <div class="hub-flash hub-flash--info" style="margin:0">
-    <i class="fa-solid fa-circle-info"></i>
-    العدد المسموح من النسخ في باقتك هو <strong>{{ backup_max_count }} نسخة</strong>،
-    ويُطبَّق على نسخ الريدياس وعلى نسخ ملفك في لوحة التراخيص. عند تجاوزه يُحذف الأقدم تلقائيًا.
-    هذا الحد <strong>محدَّد من لوحة التراخيص حسب إصدارك ورسومك</strong> — لرفعه تواصل مع مزوّد الخدمة.
-  </div>
-{% endcall %}
-
-{# ── Google Drive — status mirrored from the panel (one-click via SSO) ── #}
-{% call hub.section("النسخ إلى Google Drive", icon="cloud", meta=('● متصل' if gdrive.connected else 'بضغطة واحدة')) %}
-  {% if gdrive.connected %}
-    <div class="bk-kv">
-      <div class="row"><span class="k">الحساب المربوط</span><span class="v ltr">{{ gdrive.email or '—' }}</span></div>
-      <div class="row"><span class="k">مجلد النسخ</span><span class="v">{{ gdrive.folder_name or 'HobeRadius Backups' }}</span></div>
-      <div class="row"><span class="k">آخر رفع</span><span class="v ltr">{{ gdrive.last_upload_at or 'لم يتم بعد' }}</span></div>
-    </div>
-    <p class="hub-text-soft" style="margin:0 0 12px;font-size:12.5px;line-height:1.8">
-      <i class="fa-solid fa-circle-check" style="color:#16a34a"></i>
-      مربوط. كل نسخة تُرفع إلى لوحة التراخيص تُحفظ تلقائيًا في درايفك.
-      لإدارته أو فصله، افتح بوابة عميلك.
-    </p>
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
-      <i class="fa-solid fa-arrow-up-right-from-square"></i> إدارة الربط من بوابة العميل
-    </a>
-  {% else %}
-    <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.9">
-      اربط حساب Google Drive الخاص بك <strong>بضغطة واحدة</strong> — بدون أي إعدادات تقنية أو رموز.
-      تفتح بوابة عميلك تلقائيًا، تضغط «ربط Google Drive»، توافق من حساب Google، وتنتهي.
-    </p>
-    <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
-      <i class="fa-brands fa-google-drive"></i> ربط Google Drive (يفتح بوابة عميلك)
-    </a>
-    <p class="hub-text-soft" style="margin:12px 0 0;font-size:12px">
-      <i class="fa-solid fa-shield-halved" style="color:#7c3aed"></i>
-      صلاحية محدودة (<span class="mono">drive.file</span>) — لا نطّلع على بقية ملفاتك.
-    </p>
-  {% endif %}
-{% endcall %}
-
-{# ── Local backup files: download / restore ── #}
-{% call hub.section("النسخ المحلية المتوفرة", icon="hard-drive", meta=(local_files|length ~ ' ملف') if local_files else '') %}
-  {% if not restore_enabled %}
-    <div class="hub-flash hub-flash--warning" style="margin-bottom:14px">
-      <i class="fa-solid fa-lock"></i>
-      الاستعادة داخل التطبيق <strong>معطّلة على هذا الخادم</strong> (تم ضبط
-      <span class="mono">HOBERADIUS_LOCAL_RESTORE_DISABLED=1</span>). التنزيل متاح دائمًا.
-    </div>
-  {% else %}
-    <div class="hub-flash hub-flash--info" style="margin-bottom:14px">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      الاستعادة <strong>تستبدل قاعدة البيانات الحالية بالكامل</strong>. سيتم أخذ نسخة احترازية تلقائيًا قبلها،
-      ولن تُنفّذ إلا بعد تأكيد صريح.
-    </div>
-  {% endif %}
-
-  {% if local_files %}
-    <div class="hub-table-wrap" style="border:none">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>الملف</th>
-            <th>النوع</th>
-            <th class="num">الحجم</th>
-            <th>آخر تعديل</th>
-            <th style="width:1%"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for f in local_files %}
-            <tr>
-              <td class="mono" style="font-size:12.5px">{{ f.name }}</td>
-              <td>
-                {% if f.is_snapshot %}
-                  <span class="hub-pill hub-pill--amber"><span class="dot"></span>نسخة احترازية</span>
-                {% else %}
-                  <span class="hub-pill hub-pill--blue"><span class="dot"></span>نسخة</span>
-                {% endif %}
-              </td>
-              <td class="num">{{ f.size_mb }} م.ب</td>
-              <td class="mono" style="font-size:12px">{{ fmt_dt(f.modified_at) }}</td>
-              <td>
-                <div class="hub-flex-row" style="gap:6px; flex-wrap:nowrap; justify-content:flex-end">
-                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
-                          data-bk-content data-name="{{ f.name }}" data-target="bk-sum-{{ loop.index0 }}">
-                    <i class="fa-solid fa-list-ul"></i> المحتوى
-                  </button>
-                  <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.backups_download', name=f.name) }}">
-                    <i class="fa-solid fa-download"></i> تنزيل
-                  </a>
-                  {% if restore_enabled %}
-                    <button type="button" class="hub-btn hub-btn--danger hub-btn--sm"
-                            data-bk-restore data-name="{{ f.name }}">
-                      <i class="fa-solid fa-rotate-left"></i> استعادة
-                    </button>
-                  {% endif %}
-                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
-                          data-bk-delete data-name="{{ f.name }}" style="color:#dc2626">
-                    <i class="fa-solid fa-trash-can"></i> حذف
-                  </button>
+    {# ─── LEFT: saved backups ─── #}
+    <div class="bkx-card">
+      <div class="bkx-card-h">
+        <span class="ic"><i class="fa-solid fa-box-archive"></i></span>
+        <h2>النسخ المحفوظة</h2>
+        <span class="meta">{{ local_files|length }} نسخة · الحدّ {{ backup_max_count }}</span>
+      </div>
+      <div class="bkx-card-b">
+        {% if not restore_enabled %}
+          <div class="bkx-note warn"><i class="fa-solid fa-lock"></i><div>الاستعادة داخل التطبيق معطّلة على هذا الخادم. التنزيل متاح دائمًا.</div></div>
+        {% endif %}
+        {% if local_files %}
+          <div class="bkx-list">
+            {% for f in local_files %}
+              <div class="bkx-item">
+                <div class="bkx-item-row">
+                  <span class="bkx-fic {{ 'snap' if f.is_snapshot }}"><i class="fa-solid fa-{{ 'shield-halved' if f.is_snapshot else 'file-zipper' }}"></i></span>
+                  <div class="bkx-fmain">
+                    <div class="bkx-fname">{{ f.name }}</div>
+                    <div class="bkx-fmeta">
+                      <span><i class="fa-solid fa-clock" style="opacity:.6"></i> {{ fmt_dt(f.modified_at) }}</span>
+                      <span><i class="fa-solid fa-weight-hanging" style="opacity:.6"></i> {{ f.size_mb }} م.ب</span>
+                      <span>{{ 'نسخة احترازية' if f.is_snapshot else 'نسخة كاملة' }}</span>
+                    </div>
+                  </div>
+                  <div class="bkx-acts">
+                    <button type="button" class="bkx-act" title="عرض المحتوى" data-bk-content data-name="{{ f.name }}" data-target="bk-sum-{{ loop.index0 }}"><i class="fa-solid fa-list-ul"></i></button>
+                    <a class="bkx-act" title="تنزيل" href="{{ url_for('radius.backups_download', name=f.name) }}"><i class="fa-solid fa-download"></i></a>
+                    {% if restore_enabled %}<button type="button" class="bkx-act" title="استعادة" data-bk-restore data-name="{{ f.name }}"><i class="fa-solid fa-rotate-left"></i></button>{% endif %}
+                    <button type="button" class="bkx-act danger" title="حذف" data-bk-delete data-name="{{ f.name }}"><i class="fa-solid fa-trash-can"></i></button>
+                  </div>
                 </div>
-              </td>
-            </tr>
-            <tr class="bk-sum-row" id="bk-sum-{{ loop.index0 }}" data-loaded="0" style="display:none">
-              <td colspan="5">
-                <div class="bk-sum-cell-wrap">
+                <div class="bkx-sum" id="bk-sum-{{ loop.index0 }}" data-loaded="0">
                   <div class="bk-sum-title">محتوى هذه النسخة</div>
                   <div class="bk-sum-body"><span class="bk-sum-msg">…</span></div>
                 </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ hub.empty("لا توجد نسخ بعد.", sub="اضغط «نسخة كاملة الآن» لإنشاء أول نسخة.", icon="database") }}
+        {% endif %}
+      </div>
     </div>
-  {% else %}
-    {{ hub.empty("لا توجد نسخ محلية بعد.", sub="شغّل «نسخة محلية» لإنشاء أول نسخة.", icon="database") }}
-  {% endif %}
-{% endcall %}
 
-{# ── Recent backup attempts ── #}
-{% call hub.section("آخر محاولات النسخ", icon="clock-rotate-left", meta=(runs|length ~ ' محاولة') if runs else '', flush=True) %}
-  {% if runs %}
-    <div class="hub-table-wrap" style="border:none">
-      <table class="hub-table">
-        <thead>
-          <tr><th>الحالة</th><th>المسار</th><th>الرسالة</th><th>الوقت</th></tr>
-        </thead>
-        <tbody>
+    {# ─── RIGHT rail ─── #}
+    <div class="bkx-rail">
+
+      {# Google Drive #}
+      <div class="bkx-card">
+        <div class="bkx-card-h"><span class="ic"><i class="fa-brands fa-google-drive"></i></span><h2>Google Drive</h2>
+          <span class="meta">{{ '● متصل' if gdrive.connected else 'اختياري' }}</span></div>
+        <div class="bkx-card-b">
+          {% if gdrive.connected %}
+            <div class="bkx-kv">
+              <div class="row"><span class="k">الحساب</span><span class="v ltr">{{ gdrive.email or '—' }}</span></div>
+              <div class="row"><span class="k">المجلد</span><span class="v">{{ gdrive.folder_name or 'HobeRadius Backups' }}</span></div>
+              <div class="row"><span class="k">آخر رفع</span><span class="v ltr">{{ gdrive.last_upload_at or '—' }}</span></div>
+            </div>
+            <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">إدارة الربط من بوابة العميل ↗</a>
+          {% else %}
+            <p class="bkx-soft">اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة <span class="mono">drive.file</span>).</p>
+            <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> ربط Google Drive</a>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Schedule #}
+      <div class="bkx-card">
+        <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-clock"></i></span><h2>الجدولة التلقائية</h2>
+          <span class="meta">{{ '● مفعّلة' if backup_schedule.enabled else 'متوقفة' }}</span></div>
+        <div class="bkx-card-b">
+          <form method="post" action="{{ url_for('radius.backups_schedule') }}" style="margin:0">
+            {{ csrf_token_input() }}
+            <label class="bkx-switch"><input type="checkbox" name="enabled" value="1" {{ 'checked' if backup_schedule.enabled else '' }}> تفعيل النسخ التلقائي</label>
+            <select name="interval" class="bkx-input" style="margin-bottom:11px">
+              <option value="6h" {{ 'selected' if backup_schedule.interval == '6h' else '' }}>كل 6 ساعات</option>
+              <option value="12h" {{ 'selected' if backup_schedule.interval == '12h' else '' }}>كل 12 ساعة</option>
+              <option value="daily" {{ 'selected' if backup_schedule.interval == 'daily' else '' }}>يوميًا</option>
+              <option value="weekly" {{ 'selected' if backup_schedule.interval == 'weekly' else '' }}>أسبوعيًا</option>
+            </select>
+            <button type="submit" class="bkx-btn primary" style="width:100%;justify-content:center"><i class="fa-solid fa-floppy-disk"></i> حفظ الجدولة</button>
+            {% if backup_schedule.last_run %}<p class="bkx-soft" style="margin:10px 0 0;font-size:11.5px">آخر تشغيل مجدول: {{ fmt_dt(backup_schedule.last_run) }}</p>{% endif %}
+          </form>
+        </div>
+      </div>
+
+      {# Upload from computer #}
+      <div class="bkx-card">
+        <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-upload"></i></span><h2>رفع نسخة من جهازك</h2></div>
+        <div class="bkx-card-b">
+          <form method="post" action="{{ url_for('radius.backups_upload_computer') }}" enctype="multipart/form-data" style="margin:0">
+            {{ csrf_token_input() }}
+            <input type="file" name="backup_file" accept=".sqlite3" required class="bkx-input" style="margin-bottom:11px">
+            <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-upload"></i> رفع الملف (.sqlite3)</button>
+          </form>
+        </div>
+      </div>
+
+      {# Retention + panel service #}
+      <div class="bkx-card">
+        <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-sliders"></i></span><h2>حدّ الاحتفاظ</h2>
+          <span class="meta">{{ backup_max_count }} نسخة</span></div>
+        <div class="bkx-card-b">
+          <p class="bkx-soft" style="margin:0"><i class="fa-solid fa-lock" style="color:#7c3aed"></i>
+            المسموح في باقتك <strong>{{ backup_max_count }} نسخة</strong> (للريدياس وملف اللوحة معًا)؛ عند تجاوزه يُحذف الأقدم.
+            محدَّد من لوحة التراخيص حسب إصدارك ورسومك.</p>
+          {% if not panel_backup.enabled %}
+            <div class="bkx-note info" style="margin:12px 0 0"><i class="fa-solid fa-circle-info"></i>
+              <div>رفع النسخ إلى لوحة التراخيص خدمة مدفوعة غير مفعّلة.</div></div>
+            <form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:10px 0 0">
+              {{ csrf_token_input() }}
+              <input type="hidden" name="service_key" value="backups">
+              <input type="hidden" name="service_name" value="النسخ الاحتياطي السحابي">
+              <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-paper-plane"></i> طلب تفعيل النسخ على اللوحة</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ════ recent attempts (compact) ════ #}
+  <div class="bkx-card">
+    <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-clock-rotate-left"></i></span><h2>آخر محاولات النسخ</h2>
+      <span class="meta">{{ runs|length }} محاولة</span></div>
+    <div class="bkx-card-b">
+      {% if runs %}
+        <div class="bkx-runs">
           {% for run in runs %}
             {% set st = run.get('status') %}
-            <tr>
-              <td>
-                {% if st == 'ok' or st == 'success' %}
-                  <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ st_ar(st) }}</span>
-                {% elif st == 'failed' or st == 'error' %}
-                  <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ st_ar(st) }}</span>
-                {% else %}
-                  <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ st_ar(st) }}</span>
-                {% endif %}
-              </td>
-              <td class="mono" style="font-size:12px">{{ run.get('path') or '—' }}</td>
-              <td>{{ run.get('message') or '—' }}</td>
-              <td class="mono" style="font-size:12px">{{ fmt_dt(run.get('created_at')) }}</td>
-            </tr>
+            <div class="bkx-run">
+              <span class="rs" style="background:{{ '#16a34a' if st in ['ok','success'] else ('#dc2626' if st in ['failed','error'] else '#94a3b8') }}"></span>
+              <span style="font-weight:800;color:#0f172a;flex:none">{{ st_ar(st) }}</span>
+              <span class="rp">{{ run.get('path') or run.get('message') or '—' }}</span>
+              <span class="rt">{{ fmt_dt(run.get('created_at')) }}</span>
+            </div>
           {% endfor %}
-        </tbody>
-      </table>
+        </div>
+      {% else %}
+        {{ hub.empty("لا توجد محاولات نسخ بعد.", icon="database") }}
+      {% endif %}
     </div>
-  {% else %}
-    {{ hub.empty("لا توجد محاولات نسخ بعد.", icon="database") }}
-  {% endif %}
-{% endcall %}
+  </div>
 
 </div>
 
@@ -423,7 +429,7 @@
     var row = document.getElementById(b.getAttribute('data-target'));
     if(!row) return;
     var open = row.style.display === 'none' || !row.style.display;
-    row.style.display = open ? 'table-row' : 'none';
+    row.style.display = open ? 'block' : 'none';
     if(open && row.getAttribute('data-loaded') !== '1') load(row, b.getAttribute('data-name'));
   });
 })();
