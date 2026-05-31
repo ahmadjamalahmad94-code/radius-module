@@ -5,8 +5,20 @@
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}مركز العمليات{% endblock %}
 {% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة NAS/RADIUS، إشارات المحاسبة، وإجراءات طوارئ آمنة كمؤشرات فقط.</span>{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
+<div class="opsx-redesign">
+{% set _state_labels = {
+  'ok': 'سليم',
+  'degraded': 'متأثر',
+  'blocked_until_live_approval': 'محظور حتى الاعتماد',
+  'dry_run_only': 'تجربة جافة فقط'
+} %}
+{% set _action_labels = {
+  'disconnect_all': 'فصل كل الجلسات',
+  'global_speed_cut': 'خفض السرعة العام'
+} %}
 {{ hub.hero(
   "مركز العمليات",
   subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات تجربة جافة فقط. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
@@ -25,7 +37,7 @@
   {% call hub.section("الجلسات النشطة", icon="wifi", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="active-sessions-table">
-        <thead><tr><th>المستخدم</th><th>NAS</th><th>IP</th><th>MAC</th></tr></thead>
+        <thead><tr><th>المستخدم</th><th>جهاز NAS</th><th>عنوان IP</th><th>عنوان MAC</th></tr></thead>
         <tbody>
           {% for session in snapshot.active_sessions %}
             <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>
@@ -39,9 +51,9 @@
 
   {% call hub.section("إشارات الصحة", icon="heart-pulse") %}
     <ul class="hub-list" data-testid="operations-health">
-      <li>مسار قاعدة RADIUS: {{ snapshot.radius_health.status }}</li>
+      <li>مسار قاعدة RADIUS: {{ _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة') }}</li>
       <li>أجهزة مضبوطة عبر API: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
-      <li>فحص مباشر: {{ snapshot.vpn_api_health.live_probe }}</li>
+      <li>فحص مباشر: {{ "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل" }}</li>
     </ul>
   {% endcall %}
 </div>
@@ -52,10 +64,11 @@
       <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
       <tbody>
         {% for action in snapshot.emergency_actions %}
-          <tr><td>{{ action.key }}</td><td>{{ action.status }}</td><td>{{ action.reason }}</td></tr>
+          <tr><td>{{ _action_labels.get(action.key, 'إجراء طوارئ') }}</td><td>{{ _state_labels.get(action.status, 'حالة غير معروفة') }}</td><td>{{ action.reason }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 {% endcall %}
+</div>
 {% endblock %}

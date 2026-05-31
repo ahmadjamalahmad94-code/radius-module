@@ -4,12 +4,27 @@
 {% block title %}التحكم بالسرعة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
 {% block page_title %}مركز التحكم بالسرعة{% endblock %}
-{% block page_sub %}<span class="sub">راجع تغييرات السرعة العامة أو حسب الباقة واحفظ سياسات تجربة جافة بدون CoA مباشر.</span>{% endblock %}
+{% block page_sub %}<span class="sub">راجع تغييرات السرعة العامة أو حسب الباقة واحفظ سياسات تجربة جافة بدون تنفيذ مباشر على أجهزة الشبكة.</span>{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
+<div class="opsx-redesign">
+{% set _preset_labels = {
+  'normal': 'الوضع الطبيعي',
+  'pressure': 'وضع الضغط',
+  'night': 'وضع الليل',
+  'emergency': 'وضع الطوارئ',
+  'vip_protected': 'حماية الباقات المهمة'
+} %}
+{% set _policy_status_labels = {
+  'dry_run_ready': 'جاهزة كتجربة جافة',
+  'pending': 'معلقة',
+  'applied': 'مطبقة',
+  'cancelled': 'ملغاة'
+} %}
 {{ hub.hero(
   "مركز التحكم بالسرعة",
-  subtitle="احسب أثر تغيير السرعة قبل أي إجراء. السياسات المحفوظة تبقى معلقة و applied_to_radius=false.",
+  subtitle="احسب أثر تغيير السرعة قبل أي إجراء. السياسات المحفوظة تبقى معلقة ولا تطبق على RADIUS إلا بعد اعتماد تشغيل لاحق.",
   icon="sliders",
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.operations_center') ~ '"><i class="fa-solid fa-gauge-high"></i> العمليات</a>'
 ) }}
@@ -17,16 +32,16 @@
 {% call hub.section("معاينة سياسة السرعة", icon="sliders") %}
   <form method="post" class="hub-form-grid" data-testid="speed-control-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>مفتاح السياسة <input name="policy_key" placeholder="pressure-mode-may"></label>
+    <input type="hidden" name="policy_key" value="">
     <label>العنوان <input name="title" placeholder="وضع الضغط لشهر مايو"></label>
-    <label>Preset
+    <label>نمط التغيير
       <select name="preset">
         {% for key, preset in presets.items() %}
           <option value="{{ key }}">{{ preset.label }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>Multiplier <input name="multiplier" type="number" min="0.1" max="5" step="0.05" value="1.0"></label>
+    <label>معامل التغيير <input name="multiplier" type="number" min="0.1" max="5" step="0.05" value="1.0"></label>
     <label>أرقام الباقات <input name="profile_ids" placeholder="1,2,3"></label>
     <button class="hub-btn hub-btn--secondary" type="submit">معاينة الأثر</button>
     <button class="hub-btn hub-btn--primary" type="submit" name="save_policy" value="1">حفظ سياسة تجربة جافة</button>
@@ -34,16 +49,16 @@
 {% endcall %}
 
 {% if preview %}
-  {% call hub.section("Impact preview", icon="chart-simple", flush=True) %}
+  {% call hub.section("معاينة الأثر", icon="chart-simple", flush=True) %}
     <div class="hub-kpi-grid" data-testid="speed-preview-summary">
-      {{ hub.kpi("Preset", preview.preset_label, icon="bookmark") }}
-      {{ hub.kpi("Multiplier", preview.multiplier, icon="percent") }}
+      {{ hub.kpi("نمط التغيير", preview.preset_label, icon="bookmark") }}
+      {{ hub.kpi("معامل التغيير", preview.multiplier, icon="percent") }}
       {{ hub.kpi("المشتركون", preview.total_subscribers, icon="users") }}
-      {{ hub.kpi("CoA required", "yes" if preview.coa_required else "no", icon="bolt", variant="amber") }}
+      {{ hub.kpi("تحديث الجلسات مطلوب", "نعم" if preview.coa_required else "لا", icon="bolt", variant="amber") }}
     </div>
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="speed-impact-table">
-        <thead><tr><th>الباقة</th><th>المشتركون</th><th>السرعة الأساسية نزول/رفع</th><th>السرعة الفعلية نزول/رفع</th><th>المتصلون</th><th>CoA</th></tr></thead>
+        <thead><tr><th>الباقة</th><th>المشتركون</th><th>السرعة الأساسية نزول/رفع</th><th>السرعة الفعلية نزول/رفع</th><th>المتصلون</th><th>يتطلب تحديث الجلسات</th></tr></thead>
         <tbody>
           {% for item in preview.impact %}
             <tr>
@@ -52,10 +67,10 @@
               <td>{{ item.base_down_kbps }}/{{ item.base_up_kbps }}</td>
               <td>{{ item.effective_down_kbps }}/{{ item.effective_up_kbps }}</td>
               <td>{{ item.online_sessions }}</td>
-              <td>{{ item.coa_required }}</td>
+              <td>{{ "نعم" if item.coa_required else "لا" }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="6">No profiles selected.</td></tr>
+            <tr><td colspan="6">لم يتم اختيار أي باقات.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -66,15 +81,16 @@
 {% call hub.section("سياسات التجربة الجافة المحفوظة", icon="clipboard-list", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="speed-policies-table">
-      <thead><tr><th>ID</th><th>المفتاح</th><th>القالب</th><th>الحالة</th><th>مطبق على RADIUS</th></tr></thead>
+      <thead><tr><th>الرقم</th><th>الاسم المختصر</th><th>النمط</th><th>الحالة</th><th>مطبق على RADIUS</th></tr></thead>
       <tbody>
         {% for policy in policies %}
-          <tr><td>#{{ policy.id }}</td><td>{{ policy.policy_key }}</td><td>{{ policy.preset }}</td><td>{{ policy.status }}</td><td>{{ policy.applied_to_radius }}</td></tr>
+          <tr><td>#{{ policy.id }}</td><td>{{ policy.policy_key }}</td><td>{{ _preset_labels.get(policy.preset, 'نمط غير معروف') }}</td><td>{{ _policy_status_labels.get(policy.status, 'حالة غير معروفة') }}</td><td>{{ "نعم" if policy.applied_to_radius else "لا" }}</td></tr>
         {% else %}
-          <tr><td colspan="5">No saved policies yet.</td></tr>
+          <tr><td colspan="5">لا توجد سياسات محفوظة حتى الآن.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 {% endcall %}
+</div>
 {% endblock %}

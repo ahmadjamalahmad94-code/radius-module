@@ -5,8 +5,10 @@
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
 {% block page_title %}حدث #{{ event.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
+<div class="opsx-redesign">
 {{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info") }}
 {% include "radius/events_nav.html" %}
 
@@ -24,7 +26,7 @@
 {% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="entity-timeline-table">
-      <thead><tr><th>ID</th><th>الخطورة</th><th>المفتاح</th><th>الرسالة</th></tr></thead>
+      <thead><tr><th>الرقم</th><th>الخطورة</th><th>المفتاح</th><th>الرسالة</th></tr></thead>
       <tbody>
         {% for item in timeline %}
           <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td>{{ item.event_key }}</td><td>{{ item.message }}</td></tr>
@@ -35,4 +37,5 @@
     </table>
   </div>
 {% endcall %}
+</div>
 {% endblock %}
