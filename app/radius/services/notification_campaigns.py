@@ -89,6 +89,10 @@ class QueuedOnlyProvider(NotificationProvider):
 class NotificationCampaignService:
     def __init__(self, *, tenant_id: int = 1, provider: NotificationProvider | None = None) -> None:
         self.tenant_id = int(tenant_id or 1)
+        # When a caller injects an explicit provider it always wins (dependency
+        # injection / test seam). Only in the default case do we auto-select a
+        # per-channel HTTP sender for sms/whatsapp from the tenant's settings.
+        self._explicit_provider = provider is not None
         self.provider = provider or QueuedOnlyProvider()
         self.events = EventService()
 
@@ -156,7 +160,12 @@ class NotificationCampaignService:
         return [
             self._template_row(row_to_dict(row))
             for row in db().execute(
-                "SELECT * FROM notification_templates WHERE tenant_id=? ORDER BY id DESC LIMIT 200",
+                """
+                SELECT * FROM notification_templates
+                WHERE tenant_id=?
+                ORDER BY COALESCE(updated_at, created_at, '') DESC, id DESC
+                LIMIT 200
+                """,
                 (self.tenant_id,),
             ).fetchall()
         ]
@@ -265,9 +274,11 @@ class NotificationCampaignService:
             ),
         )
         notification = self.get_notification(int(cur.lastrowid))
-        delivery_id = self._create_delivery(notification)
+        address = self._resolve_address(rtype, int(recipient_id or 0))
+        delivery_id = self._create_delivery(notification, recipient_address=address)
         delivery = self.get_delivery(delivery_id)
-        result = self.provider.send(delivery=delivery, notification=notification)
+        provider = self._provider_for(ch)
+        result = provider.send(delivery=delivery, notification=notification)
         self._update_delivery(delivery_id, result)
         return {"notification": self.get_notification(notification["id"]), "delivery": self.get_delivery(delivery_id)}
 
@@ -297,7 +308,7 @@ class NotificationCampaignService:
             tenant_id=self.tenant_id,
             category="notification",
             event_key="notification.manual_queued",
-            message="Manual notification queued",
+            message="تمت إضافة رسالة يدوية إلى قائمة الإرسال",
             actor_type="admin",
             target_type="notification_campaign",
             metadata={"count": len(queued), "channel": _channel(channel)},
@@ -430,7 +441,7 @@ class NotificationCampaignService:
             "failed": counts.get("failed", 0),
         }
 
-    def _create_delivery(self, notification: dict[str, Any]) -> int:
+    def _create_delivery(self, notification: dict[str, Any], *, recipient_address: str = "") -> int:
         cur = db().execute(
             """
             INSERT INTO message_deliveries(
@@ -445,7 +456,7 @@ class NotificationCampaignService:
                 notification.get("campaign_id"),
                 notification["channel"],
                 "null",
-                "",
+                recipient_address or "",
                 "queued",
                 _json({}),
                 now_iso(),
@@ -477,6 +488,53 @@ class NotificationCampaignService:
             "UPDATE message_notifications SET status=?, updated_at=? WHERE tenant_id=? AND id=(SELECT notification_id FROM message_deliveries WHERE id=?)",
             (result.status, now_iso(), self.tenant_id, int(delivery_id)),
         )
+
+    def _provider_for(self, channel: str) -> NotificationProvider:
+        """Pick the dispatcher for a channel.
+
+        For HTTP-capable channels (sms/whatsapp) we build a generic-HTTP
+        provider from the tenant's channel settings; if it is disabled or
+        unconfigured the provider itself returns ``skipped`` (queued-only
+        behaviour preserved). All other channels keep the configured default
+        provider (queued-only).
+
+        An explicitly injected provider always wins — auto HTTP selection only
+        applies to the default (production) provider so tests and custom
+        adapters keep full control.
+        """
+        if self._explicit_provider:
+            return self.provider
+        try:
+            from .comms_providers import provider_for_channel
+
+            http_provider = provider_for_channel(self.tenant_id, channel)
+        except Exception:  # noqa: BLE001 — never let provider selection break queuing
+            http_provider = None
+        return http_provider or self.provider
+
+    def _resolve_address(self, recipient_type: str, recipient_id: int) -> str:
+        """Best-effort lookup of a recipient's phone/contact for dispatch.
+
+        Never raises — a missing recipient simply yields an empty address and
+        HTTP channels will mark the delivery ``failed`` with a clear note.
+        """
+        rid = int(recipient_id or 0)
+        if rid <= 0:
+            return ""
+        try:
+            if recipient_type == "subscriber":
+                rows = self._subscribers(ids=[rid], limit=1)
+            elif recipient_type == "card_user":
+                rows = self._card_users(ids=[rid], limit=1)
+            elif recipient_type == "manager":
+                rows = self._managers(ids=[rid], limit=1)
+            elif recipient_type == "distributor":
+                rows = self._distributors(ids=[rid], limit=1)
+            else:
+                return ""
+        except Exception:  # noqa: BLE001
+            return ""
+        return str((rows[0].get("address") if rows else "") or "").strip()
 
     def _action_plan(self, actions: list[dict[str, Any]], recipients: list[dict[str, Any]]) -> list[dict[str, Any]]:
         allowed = {"record_event", "wallet_credit", "add_free_days"}
