@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}مطابقة تحصيل الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
@@ -6,40 +7,59 @@
 {% block page_sub %}<span class="sub">صحة التحصيل</span>{% endblock %}
 
 {% block content %}
-<div class="hub-grid hub-grid--4" style="margin-bottom:16px">
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_without_ledger }}</strong><br><span class="small">مدفوع بلا قيد مالي</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.paid_not_applied }}</strong><br><span class="small">مدفوع غير مطبق</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.expired_pending }}</strong><br><span class="small">منتهي ومعلق</span></div>
-  <div class="hub-card" style="padding:16px"><strong>{{ report.counts.duplicate_provider_transactions }}</strong><br><span class="small">مخاطر تكرار لدى المزوّد</span></div>
+{{ hub.hero(
+  "مطابقة تحصيل الدفعات",
+  subtitle="فحص صحة التحصيل — اكتشاف الدفعات بلا قيد مالي، أو المدفوعة غير المطبقة، أو المنتهية والمعلّقة، أو تكرار المزوّد.",
+  icon="scale-balanced",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> كل الطلبات</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("مدفوع بلا قيد مالي", report.counts.paid_without_ledger, icon="file-circle-xmark", variant="red") }}
+  {{ hub.kpi("مدفوع غير مطبق", report.counts.paid_not_applied, icon="bolt", variant="amber") }}
+  {{ hub.kpi("منتهي ومعلق", report.counts.expired_pending, icon="hourglass-end", variant="blue") }}
+  {{ hub.kpi("مخاطر تكرار لدى المزوّد", report.counts.duplicate_provider_transactions, icon="clone", variant="brand") }}
 </div>
 
-{% for key, title in [
-  ('paid_without_ledger', 'مدفوع بلا قيد مالي'),
-  ('paid_not_applied', 'مدفوع غير مطبق'),
-  ('expired_pending', 'منتهي ومعلق'),
-  ('duplicate_provider_transactions', 'مخاطر تكرار لدى المزوّد')
+{% for key, title, icon in [
+  ('paid_without_ledger', 'مدفوع بلا قيد مالي', 'file-circle-xmark'),
+  ('paid_not_applied', 'مدفوع غير مطبق', 'bolt'),
+  ('expired_pending', 'منتهي ومعلق', 'hourglass-end'),
+  ('duplicate_provider_transactions', 'مخاطر تكرار لدى المزوّد', 'clone')
 ] %}
-<div class="hub-card" style="padding:18px;margin-bottom:16px">
-  <h3>{{ title }}</h3>
-  {% set rows = report[key] %}
+{% set rows = report[key] %}
+{% call hub.section(title, icon=icon, meta=(rows|length|string + " صف") if rows else "", flush=True) %}
   {% if rows %}
-  <table class="hub-table">
-    <thead><tr><th>#</th><th>المرجع</th><th>الحالة</th><th>المبلغ</th><th>معلومات</th></tr></thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>
-        <td class="mono">{{ row.id or row.provider_transaction_id }}</td>
-        <td class="mono">{{ row.reference_code or '-' }}</td>
-        <td>{{ row.status or '-' }}</td>
-        <td class="mono">{% if row.amount %}{{ row.amount|money }}{% else %}-{% endif %}</td>
-        <td class="small">{{ row.expires_at or row.service_apply_status or row.payment_request_ids or '-' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:56px">#</th>
+          <th>المرجع</th>
+          <th>الحالة</th>
+          <th class="num">المبلغ</th>
+          <th>معلومات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="num mono">{{ row.id or row.provider_transaction_id }}</td>
+          <td class="mono">{{ row.reference_code or '—' }}</td>
+          <td>{{ row.status or '—' }}</td>
+          <td class="num mono">{% if row.amount %}{{ row.amount|money }}{% else %}—{% endif %}</td>
+          <td class="small">{{ row.expires_at or row.service_apply_status or row.payment_request_ids or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p class="small">لا توجد ملاحظات.</p>
+  <div style="padding:6px 4px">{{ hub.empty("لا توجد ملاحظات.", icon="circle-check") }}</div>
   {% endif %}
-</div>
+{% endcall %}
 {% endfor %}
 {% endblock %}

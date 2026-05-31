@@ -1,93 +1,133 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}دفعة {{ item.reference_code }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
 {% block page_title %}دفعة {{ item.reference_code }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ item.status }}</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  .pcd-kv{ display:grid; grid-template-columns: 130px 1fr; gap:9px 12px; font-size:12.5px; margin:0; }
+  .pcd-kv dt{ color: var(--hub-text-mute); }
+  .pcd-kv dd{ margin:0; font-weight:700; color: var(--hub-text); }
+  .pcd-form-stack{ display:grid; gap:10px; }
+  .pcd-form-stack label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); display:block; margin-bottom:5px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="hub-card" style="padding:18px;margin-bottom:16px">
-  <strong>رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا.</strong>
-  <p class="small" style="margin:8px 0 0">مراجعة الإثبات وتفعيل الخدمة غير متاحين من هذه الصفحة التأسيسية بعد.</p>
+{{ hub.hero(
+  "دفعة " ~ item.reference_code,
+  subtitle="تفاصيل طلب التحصيل ومراجعة إثبات الدفع — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
+  icon="receipt",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> كل الطلبات</a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("المبلغ", item.amount|money, icon="money-bill-wave", variant="green") }}
+  {{ hub.kpi("الحالة", item.status, icon="circle-info", variant="brand") }}
+  {{ hub.kpi("القيد المالي", item.ledger_entry_id or "لم يُرحّل بعد", icon="scale-balanced", variant="blue") }}
+  {{ hub.kpi("تطبيق الخدمة", item.service_apply_status or "غير مطبّق", icon="bolt", variant="amber") }}
 </div>
 
-<div class="hub-card" style="padding:18px">
-  <dl class="hub-defs">
-    <dt>ID</dt><dd class="mono">{{ item.id }}</dd>
-    <dt>المرجع</dt><dd class="mono">{{ item.reference_code }}</dd>
-    <dt>الغرض</dt><dd>{{ item.purpose }}</dd>
-    <dt>الدافع</dt><dd>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</dd>
-    <dt>المبلغ</dt><dd class="mono">{{ item.amount|money }}</dd>
-    <dt>المحفظة</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
-    <dt>الحالة</dt><dd>{{ item.status }}</dd>
-    <dt>دفتر القيود</dt><dd class="mono">{{ item.ledger_entry_id or 'not posted yet' }}</dd>
-    <dt>تطبيق الخدمة</dt><dd>{{ item.service_apply_status or 'not_applied' }}</dd>
-    <dt>ينتهي في</dt><dd class="mono">{{ item.expires_at|dt_local if item.expires_at else '-' }}</dd>
-  </dl>
-</div>
+<div class="hub-grid-2">
+  {% call hub.section("تفاصيل الطلب", icon="circle-info") %}
+    <dl class="pcd-kv">
+      <dt>المعرّف</dt><dd class="mono">{{ item.id }}</dd>
+      <dt>المرجع</dt><dd class="mono">{{ item.reference_code }}</dd>
+      <dt>الغرض</dt><dd>{{ item.purpose }}</dd>
+      <dt>الدافع</dt><dd>{{ item.payer_type }}{% if item.payer_id %} <span class="hub-text-mute mono">#{{ item.payer_id }}</span>{% endif %}</dd>
+      <dt>المبلغ</dt><dd class="mono">{{ item.amount|money }}</dd>
+      <dt>المحفظة</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
+      <dt>الحالة</dt><dd>{{ item.status }}</dd>
+      <dt>دفتر القيود</dt><dd class="mono">{{ item.ledger_entry_id or 'لم يُرحّل بعد' }}</dd>
+      <dt>تطبيق الخدمة</dt><dd>{{ item.service_apply_status or 'غير مطبّق' }}</dd>
+      <dt>ينتهي في</dt><dd class="mono">{{ item.expires_at|dt_local if item.expires_at else '—' }}</dd>
+    </dl>
+  {% endcall %}
 
-<div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>إثباتات الدفع</h3>
-  {% if proofs %}
-  <table class="hub-table">
-    <thead><tr><th>#</th><th>المرجع</th><th>الملاحظة</th><th>تاريخ الإرسال</th><th>المراجعة</th></tr></thead>
-    <tbody>
-      {% for proof in proofs %}
-      <tr>
-        <td class="mono">{{ proof.id }}</td>
-        <td class="mono">{{ proof.reference_number or '-' }}</td>
-        <td>{{ proof.note or '-' }}</td>
-        <td class="mono small">{{ proof.submitted_at|dt_local }}</td>
-        <td>{{ proof.review_status or 'pending' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="small">لم يتم إرسال إثبات دفع بعد.</p>
-  {% endif %}
+  {% call hub.section("إثباتات الدفع", icon="file-lines", meta=(proofs|length|string + " إثبات") if proofs else "", flush=True) %}
+    {% if proofs %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead><tr><th class="num" style="width:56px">#</th><th>المرجع</th><th>الملاحظة</th><th>تاريخ الإرسال</th><th>المراجعة</th></tr></thead>
+        <tbody>
+          {% for proof in proofs %}
+          <tr>
+            <td class="num mono">{{ proof.id }}</td>
+            <td class="mono">{{ proof.reference_number or '—' }}</td>
+            <td class="small">{{ proof.note or '—' }}</td>
+            <td class="mono small">{{ proof.submitted_at|dt_local }}</td>
+            <td>{{ proof.review_status or 'pending' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding:6px 4px">{{ hub.empty("لم يتم إرسال إثبات دفع بعد.", icon="file-lines") }}</div>
+    {% endif %}
+  {% endcall %}
 </div>
 
 {% if item.status in ['proof_submitted','under_review'] %}
-<div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>مراجعة يدوية</h3>
-  <form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" style="display:inline-block;margin-inline-end:8px">
-    {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <input class="hub-input" name="review_note" placeholder="ملاحظة المراجعة" style="width:260px;display:inline-block">
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> قبول الدفع اليدوي</button>
-  </form>
-  <form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" style="display:inline-block">
-    {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <input class="hub-input" name="review_note" placeholder="ملاحظة الرفض" style="width:220px;display:inline-block">
-    <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> رفض الإثبات</button>
-  </form>
-  <p class="small">القبول يعلّم الدفع كمدفوع ويرحّل قيدًا واحدًا قابلًا للتكرار الآمن. تفعيل الخدمة لا ينفذ في هذه المرحلة.</p>
-</div>
+{% call hub.section("مراجعة يدوية", icon="clipboard-check") %}
+  <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
+    القبول يعلّم الدفع كمدفوع ويرحّل قيدًا واحدًا قابلًا للتكرار الآمن. تفعيل الخدمة لا ينفذ في هذه المرحلة.
+  </p>
+  <div class="hub-grid-2">
+    <form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" class="pcd-form-stack">
+      {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+      <div>
+        <label>ملاحظة المراجعة</label>
+        <input class="hub-input" name="review_note" placeholder="ملاحظة المراجعة">
+      </div>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> قبول الدفع اليدوي</button>
+    </form>
+    <form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" class="pcd-form-stack">
+      {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+      <div>
+        <label>ملاحظة الرفض</label>
+        <input class="hub-input" name="review_note" placeholder="ملاحظة الرفض">
+      </div>
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> رفض الإثبات</button>
+    </form>
+  </div>
+{% endcall %}
 {% endif %}
 
 {% if item.status == 'paid' %}
-<div class="hub-card" style="padding:18px;margin-top:16px">
-  <h3>تطبيق الخدمة</h3>
-  <form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="display:inline-block;margin-inline-end:8px">
-    {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> تسجيل تطبيق الخدمة</button>
-  </form>
-  <p class="small">هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي RADIUS أو CoA أو MikroTik.</p>
+{% call hub.section("تطبيق الخدمة", icon="bolt", meta=(apply_attempts|length|string + " محاولة") if apply_attempts else "", flush=apply_attempts|length > 0) %}
+  <div style="{% if apply_attempts %}padding:14px 16px{% endif %}">
+    <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
+      هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي RADIUS أو CoA أو MikroTik.
+    </p>
+    <form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="margin:0">
+      {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> تسجيل تطبيق الخدمة</button>
+    </form>
+  </div>
   {% if apply_attempts %}
-  <table class="hub-table">
-    <thead><tr><th>#</th><th>الحالة</th><th>الخطأ</th><th>تاريخ الإنشاء</th></tr></thead>
-    <tbody>
-      {% for attempt in apply_attempts %}
-      <tr>
-        <td class="mono">{{ attempt.id }}</td>
-        <td>{{ attempt.status }}</td>
-        <td>{{ attempt.error_message or '-' }}</td>
-        <td class="mono small">{{ attempt.created_at|dt_local }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead><tr><th class="num" style="width:56px">#</th><th>الحالة</th><th>الخطأ</th><th>تاريخ الإنشاء</th></tr></thead>
+      <tbody>
+        {% for attempt in apply_attempts %}
+        <tr>
+          <td class="num mono">{{ attempt.id }}</td>
+          <td>{{ attempt.status }}</td>
+          <td class="small">{{ attempt.error_message or '—' }}</td>
+          <td class="mono small">{{ attempt.created_at|dt_local }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% endif %}
-</div>
+{% endcall %}
 {% endif %}
 {% endblock %}

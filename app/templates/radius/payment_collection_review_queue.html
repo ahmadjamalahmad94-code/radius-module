@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}طابور مراجعة الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
@@ -6,38 +7,65 @@
 {% block page_sub %}<span class="sub">{{ items|length }} إثبات بانتظار المراجعة</span>{% endblock %}
 
 {% block content %}
-<div class="hub-card" style="padding:18px;margin-bottom:16px">
-  <strong>مراجعة يدوية فقط.</strong>
-  <p class="small" style="margin:8px 0 0">اعتماد إثبات الدفع يعلّم الطلب كمدفوع ويسجل حركة يدوية. قيود المحاسبة وتفعيل الخدمة تبقى حسب خطوة الاعتماد التالية.</p>
+{{ hub.hero(
+  "طابور مراجعة الدفعات",
+  subtitle="مراجعة يدوية لإثباتات الدفع — اعتماد الإثبات يعلّم الطلب كمدفوع ويسجل حركة يدوية.",
+  icon="clipboard-check",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> كل الطلبات</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
+  '
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("بانتظار المراجعة", items|length, icon="clipboard-check", variant="amber") }}
 </div>
 
-<div class="hub-table-wrap">
-  <table class="hub-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>المرجع</th>
-        <th>الغرض</th>
-        <th>المبلغ</th>
-        <th>الحالة</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <td class="mono">{{ item.id }}</td>
-        <td class="mono">{{ item.reference_code }}</td>
-        <td>{{ item.purpose }}</td>
-        <td class="mono">{{ item.amount|money }}</td>
-        <td>{{ item.status }}</td>
-        <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">مراجعة</a></td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="small">لا توجد إثباتات بانتظار المراجعة.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
+            border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
+            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
+  <i class="fa-solid fa-circle-info"></i>
+  مراجعة يدوية فقط. اعتماد إثبات الدفع يعلّم الطلب كمدفوع ويسجل حركة يدوية. قيود المحاسبة وتفعيل الخدمة تبقى حسب خطوة الاعتماد التالية.
 </div>
+
+{% if items %}
+{% call hub.section("الإثباتات بانتظار المراجعة", icon="table-list", meta=items|length|string + " إثبات", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:56px">#</th>
+          <th>المرجع</th>
+          <th>الغرض</th>
+          <th class="num">المبلغ</th>
+          <th>الحالة</th>
+          <th style="width:90px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td class="num mono">{{ item.id }}</td>
+          <td class="mono">{{ item.reference_code }}</td>
+          <td>{{ item.purpose }}</td>
+          <td class="num mono"><strong>{{ item.amount|money }}</strong></td>
+          <td>{{ hub.pill(item.status, variant="amber") }}</td>
+          <td>
+            <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
+              <i class="fa-solid fa-magnifying-glass"></i> مراجعة
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد إثباتات بانتظار المراجعة",
+  sub="عند إرسال المشتركين لإثباتات الدفع ستظهر هنا للمراجعة اليدوية.",
+  icon="clipboard-check"
+) }}
+{% endif %}
 {% endblock %}
-

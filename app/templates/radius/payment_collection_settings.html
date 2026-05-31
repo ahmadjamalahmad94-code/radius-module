@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}إعدادات تحصيل الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
@@ -6,63 +7,111 @@
 {% block page_sub %}<span class="sub">إعدادات المحفظة اليدوية</span>{% endblock %}
 
 {% block content %}
-<h2 style="margin:0 0 12px">مركز تحصيل الدفعات</h2>
-<div class="hub-card" style="padding:18px;margin-bottom:16px">
-  <strong>رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا.</strong>
-  <p class="small" style="margin:8px 0 0">المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا. التطبيق التلقائي يبقى تجربة جافة حتى يكتمل مسار تفعيل الخدمة.</p>
+{{ hub.hero(
+  "مركز تحصيل الدفعات",
+  subtitle="إعدادات استقبال الدفعات عبر محفظة يدوية — مع مراجعة بشرية قبل اعتبار أي طلب مدفوعًا.",
+  icon="wallet",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> الطلبات</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
+  '
+) }}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
+            border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
+            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
+  <i class="fa-solid fa-circle-info"></i>
+  رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا. المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا،
+  ويبقى التطبيق التلقائي تجربة جافة حتى يكتمل مسار تفعيل الخدمة.
 </div>
 
-<form method="post" class="hub-card" style="padding:18px;display:grid;gap:14px;max-width:980px">
-  <label class="hub-check"><input type="checkbox" name="enabled" value="1" {% if settings and settings.enabled %}checked{% endif %}> تفعيل تحصيل الدفعات</label>
+<form method="post">
+  {% call hub.section("إعدادات المزوّد والمحفظة", icon="gear") %}
+    <label class="hub-field" style="margin-bottom:14px;display:flex;flex-direction:row;align-items:center;gap:9px">
+      <input type="checkbox" name="enabled" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if settings and settings.enabled %}checked{% endif %}>
+      <span class="hub-field-label" style="margin:0">تفعيل تحصيل الدفعات</span>
+    </label>
+
+    <div class="hub-grid-2">
+      <label class="hub-field">
+        <span class="hub-field-label">المزوّد</span>
+        <select class="hub-select" name="provider">
+          <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
+          <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (لاحقًا)</option>
+        </select>
+      </label>
+      <label class="hub-field">
+        <span class="hub-field-label">العملة</span>
+        <select class="hub-select" name="currency">
+          {% for c in ['ILS','USD','JOD'] %}
+          <option value="{{ c }}" {% if settings and settings.currency == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <div class="hub-grid-2" style="margin-top:12px">
+      <label class="hub-field">
+        <span class="hub-field-label">رقم المحفظة</span>
+        <input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}">
+      </label>
+      <label class="hub-field">
+        <span class="hub-field-label">مالك المحفظة</span>
+        <input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}">
+      </label>
+    </div>
+  {% endcall %}
 
   <div class="hub-grid-2">
-    <label>المزوّد
-      <select class="hub-select" name="provider">
-        <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
-        <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (لاحقًا)</option>
-      </select>
-    </label>
-    <label>العملة
-      <select class="hub-select" name="currency">
-        {% for c in ['ILS','USD','JOD'] %}
-        <option value="{{ c }}" {% if settings and settings.currency == c %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    {% call hub.section("التأكيد والحدود", icon="sliders") %}
+      <label class="hub-field">
+        <span class="hub-field-label">طريقة التأكيد</span>
+        <select class="hub-select" name="confirmation_mode">
+          <option value="manual" selected>مراجعة يدوية</option>
+          <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>API (لاحقًا)</option>
+        </select>
+      </label>
+      <label class="hub-field" style="margin-top:12px">
+        <span class="hub-field-label">مدة الصلاحية بالدقائق</span>
+        <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}">
+      </label>
+      <label class="hub-field" style="margin-top:12px">
+        <span class="hub-field-label">تطبيق تلقائي <span class="small hub-text-mute">(تجربة جافة)</span></span>
+        <select class="hub-select" name="auto_apply" disabled>
+          <option>معطل حتى يكتمل محرك تطبيق الخدمة</option>
+        </select>
+      </label>
+    {% endcall %}
+
+    {% call hub.section("المبالغ والأنواع المسموحة", icon="money-bill-wave") %}
+      <div class="hub-grid-2">
+        <label class="hub-field">
+          <span class="hub-field-label">أقل مبلغ</span>
+          <input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}">
+        </label>
+        <label class="hub-field">
+          <span class="hub-field-label">أعلى مبلغ</span>
+          <input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}">
+        </label>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">
+        <label class="hub-field" style="flex-direction:row;align-items:center;gap:9px">
+          <input type="checkbox" name="allow_cards" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if not settings or settings.allow_cards %}checked{% endif %}>
+          <span class="hub-field-label" style="margin:0">البطاقات</span>
+        </label>
+        <label class="hub-field" style="flex-direction:row;align-items:center;gap:9px">
+          <input type="checkbox" name="allow_monthly_subscriptions" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if not settings or settings.allow_monthly_subscriptions %}checked{% endif %}>
+          <span class="hub-field-label" style="margin:0">الاشتراكات الشهرية</span>
+        </label>
+        <label class="hub-field" style="flex-direction:row;align-items:center;gap:9px">
+          <input type="checkbox" name="allow_distributor_payments" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if not settings or settings.allow_distributor_payments %}checked{% endif %}>
+          <span class="hub-field-label" style="margin:0">دفعات الموزعين</span>
+        </label>
+      </div>
+    {% endcall %}
   </div>
 
-  <div class="hub-grid-2">
-    <label>رقم المحفظة <input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
-    <label>مالك المحفظة <input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
-  </div>
-
-  <div class="hub-grid-3">
-    <label>طريقة التأكيد
-      <select class="hub-select" name="confirmation_mode">
-        <option value="manual" selected>مراجعة يدوية</option>
-        <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>API (لاحقًا)</option>
-      </select>
-    </label>
-    <label>مدة الصلاحية بالدقائق <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
-    <label>تطبيق تلقائي <span class="small">(تجربة جافة)</span>
-      <select class="hub-select" name="auto_apply" disabled>
-        <option>معطل حتى يكتمل محرك تطبيق الخدمة</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="hub-grid-2">
-    <label>أقل مبلغ <input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
-    <label>أعلى مبلغ <input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
-  </div>
-
-  <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-    <label class="hub-check"><input type="checkbox" name="allow_cards" value="1" {% if not settings or settings.allow_cards %}checked{% endif %}> البطاقات</label>
-    <label class="hub-check"><input type="checkbox" name="allow_monthly_subscriptions" value="1" {% if not settings or settings.allow_monthly_subscriptions %}checked{% endif %}> الاشتراكات الشهرية</label>
-    <label class="hub-check"><input type="checkbox" name="allow_distributor_payments" value="1" {% if not settings or settings.allow_distributor_payments %}checked{% endif %}> دفعات الموزعين</label>
-  </div>
-
-  <div>
+  <div class="hub-flex-row" style="gap:8px;margin-top:var(--hub-gap-section)">
     <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
     <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_requests') }}"><i class="fa-solid fa-list"></i> الطلبات</a>
   </div>
