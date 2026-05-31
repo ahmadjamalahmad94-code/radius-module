@@ -269,6 +269,17 @@
       <div class="usq-picked-sub" data-users-picked-sub>ستظهر الإجراءات المتاحة فقط لهذا المشترك.</div>
     </div>
   </div>
+  <style>
+    .usq-menu{ position:relative; display:inline-block; }
+    .usq-menu > summary{ list-style:none; cursor:pointer; user-select:none; display:inline-flex; align-items:center; gap:6px; }
+    .usq-menu > summary::-webkit-details-marker{ display:none; }
+    .usq-menu .usq-caret{ font-size:10px; transition:transform .15s ease; }
+    .usq-menu[open] .usq-caret{ transform:rotate(180deg); }
+    .usq-menu-panel{ position:absolute; z-index:50; inset-inline-start:0; margin-top:6px; min-width:230px; display:flex; flex-direction:column; gap:4px; padding:8px; background:#fff; border:1px solid var(--hub-border,#e7e9f2); border-radius:12px; box-shadow:0 8px 24px rgba(16,24,40,.12); }
+    .usq-menu-panel .hub-btn, .usq-menu-panel form{ width:100%; }
+    .usq-menu-panel .hub-btn{ justify-content:flex-start; }
+    @media (prefers-reduced-motion: reduce){ .usq-menu .usq-caret{ transition:none; } }
+  </style>
   <div class="usq-actions">
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
       <i class="fa-solid fa-id-badge"></i> الملف
@@ -276,51 +287,65 @@
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="edit" href="#">
       <i class="fa-solid fa-pen"></i> تعديل
     </a>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="plan">
-      <i class="fa-solid fa-right-left"></i> تغيير العرض
-    </button>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="extend">
-      <i class="fa-solid fa-clock"></i> إضافة وقت
-    </button>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="sms">
-      <i class="fa-solid fa-paper-plane"></i> إرسال SMS
-    </button>
-    <form method="post" data-single-action data-usq-form="quota-reset" data-usq-confirm="استعادة الكوتة اليومية لهذا المشترك؟" data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}">
-      <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-        <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
-      </button>
-    </form>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="quota">
-      <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
-    </button>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="balance">
-      <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
-    </button>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="payment">
-      <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
-    </button>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-single-action data-usq-open="loan">
-      <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
-    </button>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
       <i class="fa-solid fa-wallet"></i> الدفعات والسلف
     </a>
-    <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
-      <input type="hidden" name="username" data-usq-field="username">
-      <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
-        <i class="fa-solid fa-scissors"></i> فصل الاتصال
-      </button>
-    </form>
-    <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
-      <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
-        <i class="fa-solid fa-pause"></i> تغيير الحالة
-      </button>
-    </form>
-    <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
-      <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
-        <i class="fa-solid fa-box-archive"></i> أرشفة
-      </button>
-    </form>
+    <details class="usq-menu" data-usq-menu>
+      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
+        <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
+      </summary>
+      <div class="usq-menu-panel">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="extend">
+          <i class="fa-solid fa-clock"></i> إضافة وقت
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota">
+          <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
+        </button>
+        <form method="post" data-single-action data-usq-form="quota-reset" data-usq-confirm="استعادة الكوتة اليومية لهذا المشترك؟" data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}">
+          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
+            <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+          </button>
+        </form>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="balance">
+          <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="payment">
+          <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="loan">
+          <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
+        </button>
+      </div>
+    </details>
+    <details class="usq-menu" data-usq-menu>
+      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
+        <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
+      </summary>
+      <div class="usq-menu-panel">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="sms">
+          <i class="fa-solid fa-paper-plane"></i> إرسال SMS
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
+          <i class="fa-solid fa-right-left"></i> تغيير العرض
+        </button>
+        <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+          <input type="hidden" name="username" data-usq-field="username">
+          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
+            <i class="fa-solid fa-scissors"></i> فصل الاتصال
+          </button>
+        </form>
+        <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
+          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
+            <i class="fa-solid fa-pause"></i> تغيير الحالة
+          </button>
+        </form>
+        <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
+          <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
+            <i class="fa-solid fa-box-archive"></i> أرشفة
+          </button>
+        </form>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -991,6 +1016,17 @@
     if (!window.confirm(`أرشفة ${username}؟ يمكن استعادته من سلة المحذوفات.`)) {
       event.preventDefault();
     }
+  });
+
+  document.addEventListener("click", (event) => {
+    page.querySelectorAll("[data-usq-menu][open]").forEach((menu) => {
+      if (!menu.contains(event.target)) menu.removeAttribute("open");
+    });
+  });
+  page.querySelectorAll("[data-usq-menu] [data-usq-open], [data-usq-menu] form").forEach((el) => {
+    el.addEventListener("click", () => {
+      setTimeout(() => el.closest("[data-usq-menu]") && el.closest("[data-usq-menu]").removeAttribute("open"), 0);
+    });
   });
 
   // ── Password column: reveal-eye + copy-to-clipboard ──────────
