@@ -64,6 +64,38 @@ def create_distributor(tenant_id: int, data: dict, *, actor: str) -> dict:
     return get_distributor(tenant_id, distributor_id) or {}
 
 
+def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            """
+            UPDATE distributors
+            SET name = ?, display_name = ?, email = ?, phone = ?, status = ?,
+                permissions_json = ?, scope_json = ?,
+                balance = ?, credit_limit = ?, debt_balance = ?,
+                notes = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                data["name"],
+                data.get("display_name") or data["name"],
+                data.get("email") or "",
+                data.get("phone") or "",
+                data.get("status") or "active",
+                _json(data.get("permissions"), []),
+                _json(data.get("scope"), {}),
+                float(data.get("balance") or 0),
+                float(data.get("credit_limit") or 0),
+                float(data.get("debt_balance") or 0),
+                data.get("notes") or "",
+                now,
+                tenant_id,
+                distributor_id,
+            ),
+        )
+    return get_distributor(tenant_id, distributor_id) or {}
+
+
 def list_distributors(tenant_id: int, *, status: Optional[str] = None,
                       limit: int = 200, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM distributors WHERE tenant_id = ?"

@@ -177,7 +177,7 @@
       <span>خفف شروط البحث أو امسح الفلاتر لعرض السجل الكامل.</span>
     </div>
     {% else %}
-    <div class="audit-timeline" data-audit-log-rows>
+    <div class="audit-timeline" id="audit-log-rows" data-audit-log-rows>
       {% for r in rows %}
       <article class="audit-event audit-event--{{ r.severity_tone }}"
                data-audit-row="{{ r.id }}">
@@ -208,7 +208,7 @@
           <dl class="audit-event__meta">
             <div>
               <dt>الوقت</dt>
-              <dd><code dir="ltr">{{ r.created_at }}</code></dd>
+              <dd><code dir="ltr">{{ r.created_at|dt_local }}</code></dd>
             </div>
             <div>
               <dt>الفاعل</dt>
@@ -241,9 +241,53 @@
       </article>
       {% endfor %}
     </div>
+    <div class="bkx-pager" id="audit-log-rows-pager"></div>
     {% endif %}
   </section>
 
 </section>
+
+{# ── Client-side pagination (25 rows/page) — pattern from backups.html ── #}
+<style>
+  .bkx-pager{ display:flex; gap:6px; justify-content:center; align-items:center; margin-top:13px; flex-wrap:wrap; }
+  .bkx-pager:empty{ display:none; }
+  .bkx-pg{ min-width:33px; height:33px; padding:0 9px; border-radius:9px; border:1px solid #e2e8f0; background:#fff;
+    color:#475569; cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; transition:.13s; }
+  .bkx-pg:hover:not([disabled]):not(.is-active){ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+  .bkx-pg.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+  .bkx-pg[disabled]{ opacity:.4; cursor:default; }
+</style>
+<script>
+(function(){
+  function paginate(listId, pagerId, size){
+    var list = document.getElementById(listId);
+    var pager = document.getElementById(pagerId);
+    if(!list || !pager) return;
+    var items = Array.prototype.slice.call(list.children);
+    var pages = Math.ceil(items.length / size);
+    if(pages <= 1){ items.forEach(function(it){ it.style.display=''; }); pager.innerHTML=''; return; }
+    var current = 1;
+    function render(){
+      items.forEach(function(it,i){
+        it.style.display = (i >= (current-1)*size && i < current*size) ? '' : 'none';
+      });
+      var html = '<button type="button" class="bkx-pg" data-pg="prev"'+(current===1?' disabled':'')+'>‹</button>';
+      for(var p=1; p<=pages; p++){ html += '<button type="button" class="bkx-pg'+(p===current?' is-active':'')+'" data-pg="'+p+'">'+p+'</button>'; }
+      html += '<button type="button" class="bkx-pg" data-pg="next"'+(current===pages?' disabled':'')+'>›</button>';
+      pager.innerHTML = html;
+    }
+    pager.addEventListener('click', function(e){
+      var b = e.target.closest('[data-pg]'); if(!b) return;
+      var v = b.getAttribute('data-pg');
+      if(v==='prev' && current>1) current--;
+      else if(v==='next' && current<pages) current++;
+      else if(v!=='prev' && v!=='next') current = parseInt(v,10);
+      render();
+    });
+    render();
+  }
+  paginate('audit-log-rows','audit-log-rows-pager',25);
+})();
+</script>
 
 {% endblock %}

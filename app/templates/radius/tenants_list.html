@@ -73,7 +73,7 @@
             <div class="hub-text-mute">{{ t.max_nas }} جهاز · {{ t.api_rpm }} طلب/د</div>
           </td>
           <td class="small">{{ t.currency }} · {{ t.locale }}</td>
-          <td class="mono small">{{ t.created_at.strftime('%Y-%m-%d') if t.created_at else '—' }}</td>
+          <td class="mono small">{{ t.created_at|date_local if t.created_at else '—' }}</td>
           <td>
             <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
                href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">

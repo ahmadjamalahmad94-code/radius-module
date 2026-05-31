@@ -74,7 +74,7 @@
           </td>
           <td class="mono small">{{ a.email or '—' }}</td>
           <td class="mono small">{{ a.mobile or '—' }}</td>
-          <td class="mono small">{{ a.last_login_at.strftime('%Y-%m-%d %H:%M') if a.last_login_at else '—' }}</td>
+          <td class="mono small">{{ a.last_login_at|dt_local if a.last_login_at else '—' }}</td>
           <td>
             {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
             {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}

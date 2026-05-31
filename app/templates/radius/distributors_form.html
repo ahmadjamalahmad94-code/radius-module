@@ -2,9 +2,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إضافة موزع{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-user-plus"></i>{% endblock %}
-{% block page_title %}إضافة موزع{% endblock %}
+{% set _ds_title = "إضافة موزع" if is_new else "تعديل موزع" %}
+{% block title %}{{ _ds_title }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-{{ 'plus' if is_new else 'pen' }}"></i>{% endblock %}
+{% block page_title %}{{ _ds_title }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -58,9 +59,10 @@
 {% block content %}
 
 {{ hub.hero(
-  "إضافة موزع",
-  subtitle="نطاق وصلاحيات تشغيلية — أنشئ حساب موزع يمكن ربط حزم كروت به لاحقًا",
-  icon="user-plus",
+  _ds_title,
+  subtitle="نطاق وصلاحيات تشغيلية — أنشئ حساب موزع يمكن ربط حزم كروت به لاحقًا" if is_new
+           else "تعديل بيانات الموزع وصلاحياته ونطاقه — لا يؤثر على الحزم المربوطة",
+  icon="user-plus" if is_new else "user-pen",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.distributors_list') + '">
       <i class="fa-solid fa-arrow-right"></i> الرجوع للقائمة
@@ -69,7 +71,7 @@
 ) }}
 
 <div class="ds-form">
-<form method="post" action="{{ url_for('radius.distributors_create') }}">
+<form method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">
 
   {# ── 1. Identity ─────────────────────── #}
   <section class="ds-section ds-section--id">
@@ -186,7 +188,7 @@
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">إلغاء</a>
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> حفظ الموزع
+      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ الموزع" if is_new else "حفظ التعديلات" }}
     </button>
   </div>
 </form>
