@@ -1728,7 +1728,28 @@ class OperationsService:
     # ── Count-based retention (cap how many backups are kept) ──
     BACKUP_MAX_COUNT_DEFAULT = 60
 
+    def _contract_backup_max_count(self, *, tenant_id: int) -> int | None:
+        """Backup cap defined on the license panel (per edition/fees), delivered
+        in the runtime contract as limits.backups.max_count. Authoritative."""
+        try:
+            from app.radius.services.admin_panel_client import LicenseAdminSnapshotStore, SNAPSHOT_CAPACITY
+            snap = LicenseAdminSnapshotStore().latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY)
+            if snap and isinstance(snap.get("payload_json"), dict):
+                pj = snap["payload_json"]
+                limits = (pj.get("contract") or {}).get("limits") or pj.get("limits") or {}
+                raw = (limits.get("backups") or {}).get("max_count")
+                n = int(raw)
+                if n > 0:
+                    return min(1000, n)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
     def backup_max_count(self, *, tenant_id: int) -> int:
+        # The license panel is authoritative (set by edition/fees).
+        contract_cap = self._contract_backup_max_count(tenant_id=tenant_id)
+        if contract_cap:
+            return contract_cap
         from app.radius.db.repos import tenants_repo
         try:
             raw = tenants_repo.get_setting(int(tenant_id), "backup_max_count", str(self.BACKUP_MAX_COUNT_DEFAULT))
@@ -1736,6 +1757,10 @@ class OperationsService:
         except (TypeError, ValueError):
             n = self.BACKUP_MAX_COUNT_DEFAULT
         return max(1, min(1000, n))
+
+    def backup_max_count_from_panel(self, *, tenant_id: int) -> bool:
+        """True when the cap is dictated by the license contract (read-only on radius)."""
+        return self._contract_backup_max_count(tenant_id=tenant_id) is not None
 
     def set_backup_max_count(self, *, tenant_id: int, value: int) -> int:
         from app.radius.db.repos import tenants_repo

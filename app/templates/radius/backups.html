@@ -158,22 +158,34 @@
   </form>
 {% endcall %}
 
-{# ── Retention settings: cap the number of kept backups ── #}
-{% call hub.section("إعدادات الاحتفاظ بالنسخ", icon="sliders") %}
-  <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
-    حدّد <strong>أقصى عدد للنسخ المحلية</strong> المحفوظة. عند تجاوز الحد يُحذف <strong>الأقدم تلقائيًا</strong>
-    لتوفير المساحة. (النسخ الاحترازية المأخوذة قبل الاستعادة لا تُحذف تلقائيًا.)
-  </p>
-  <form method="post" action="{{ url_for('radius.backups_settings') }}"
-        class="hub-flex-row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0">
-    <label style="display:grid;gap:6px">
-      <span style="font-size:12.5px;font-weight:700;color:#475569">أقصى عدد للنسخ</span>
-      <input type="number" name="max_count" min="1" max="1000" value="{{ backup_max_count }}" required
-             style="width:150px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px">
-    </label>
-    {{ hub.btn("حفظ الحد", icon="floppy-disk", variant="primary", type="submit") }}
-    <span class="hub-text-soft" style="font-size:12px">الحالي: <strong>{{ backup_max_count }}</strong> نسخة</span>
-  </form>
+{# ── Retention cap: dictated by the license panel (edition/fees) ── #}
+{% call hub.section("حدّ الاحتفاظ بالنسخ", icon="sliders", meta=(backup_max_count ~ ' نسخة')) %}
+  {% if backup_max_from_panel %}
+    <div class="bk-kv" style="margin-bottom:0">
+      <div class="row">
+        <span class="k">أقصى عدد للنسخ المحفوظة (حسب باقتك)</span>
+        <span class="v">{{ backup_max_count }} نسخة</span>
+      </div>
+    </div>
+    <p class="hub-text-soft" style="margin:12px 0 0;font-size:12.5px;line-height:1.8">
+      <i class="fa-solid fa-lock" style="color:#7c3aed"></i>
+      هذا الحد <strong>محدَّد من لوحة التراخيص حسب إصدارك ورسومك</strong>. عند تجاوزه يُحذف الأقدم تلقائيًا
+      لتوفير المساحة (النسخ الاحترازية قبل الاستعادة لا تُحذف). لرفع الحد تواصل مع مزوّد الخدمة.
+    </p>
+  {% else %}
+    <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
+      أقصى عدد للنسخ المحلية؛ عند تجاوزه يُحذف <strong>الأقدم تلقائيًا</strong>. (يُضبط عادةً من لوحة التراخيص حسب باقتك.)
+    </p>
+    <form method="post" action="{{ url_for('radius.backups_settings') }}"
+          class="hub-flex-row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0">
+      <label style="display:grid;gap:6px">
+        <span style="font-size:12.5px;font-weight:700;color:#475569">أقصى عدد للنسخ</span>
+        <input type="number" name="max_count" min="1" max="1000" value="{{ backup_max_count }}" required
+               style="width:150px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px">
+      </label>
+      {{ hub.btn("حفظ الحد", icon="floppy-disk", variant="primary", type="submit") }}
+    </form>
+  {% endif %}
 {% endcall %}
 
 {# ── Google Drive — status mirrored from the panel (one-click via SSO) ── #}

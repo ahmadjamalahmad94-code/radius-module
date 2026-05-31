@@ -21,7 +21,10 @@ from ...radius.db.repos.payments_repo import (
     PaymentSettings,
     PaymentSettingsRepository,
 )
-from ...radius.db.repos.service_entitlements_repo import ServiceRequestLinkRepository
+from ...radius.db.repos.service_entitlements_repo import (
+    LocalServiceEntitlementRepository,
+    ServiceRequestLinkRepository,
+)
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -228,14 +231,54 @@ def _create_payment_request(subscriber_id: int, payment_context: dict[str, Any])
     )
 
 
-def _decision_reply(decision: str, note: str, payment_request: dict[str, Any] | None = None) -> str:
+def _trial_days(value: Any) -> int:
+    if value in (None, ""):
+        return 7
+    try:
+        days = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("trial_days") from exc
+    if days < 1 or days > 60:
+        raise ValueError("trial_days")
+    return days
+
+
+def _entitlement_payload(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not row:
+        return None
+    return {
+        "id": row.get("id"),
+        "service_key": row.get("service_key"),
+        "service_label": row.get("service_label"),
+        "enabled": bool(row.get("enabled")),
+        "status": row.get("status"),
+        "source_type": row.get("source_type"),
+        "ticket_id": row.get("ticket_id"),
+        "subscriber_id": row.get("subscriber_id"),
+        "expires_at": row.get("expires_at"),
+        "updated_at": row.get("updated_at"),
+    }
+
+
+def _decision_reply(
+    decision: str,
+    note: str,
+    payment_request: dict[str, Any] | None = None,
+    trial_days: int | None = None,
+    entitlement: dict[str, Any] | None = None,
+) -> str:
     lines = [f"قرار الإدارة: {DECISIONS[decision]}"]
     if decision == "approve":
         lines.append("تمت الموافقة المبدئية على طلب الخدمة. التنفيذ النهائي يبقى حسب الدفع والصلاحيات.")
     elif decision == "reject":
         lines.append("تم رفض طلب الخدمة وإغلاق التذكرة.")
     elif decision == "trial":
-        lines.append("تمت الموافقة على فتح تجربة مؤقتة. لا يوجد تفعيل آلي من التطبيق.")
+        days = trial_days or 7
+        expires_at = entitlement.get("expires_at") if entitlement else None
+        lines.append(f"تم فتح صلاحية تجريبية مؤقتة لمدة {days} يوم.")
+        if expires_at:
+            lines.append(f"تاريخ انتهاء التجربة: {expires_at}")
+        lines.append("هذا يحدث عقد التشغيل فقط، بدون أي أوامر مباشرة على الراوتر.")
     elif decision == "request_payment" and payment_request:
         lines.append(
             f"تم فتح طلب دفع: {payment_request['reference_code']} "
@@ -407,10 +450,16 @@ def service_request_decision(ticket_id: int):
     note = str(body.get("note") or "").strip()[:1000]
 
     payment_request = None
+    trial_days = None
+    service_entitlement = None
     next_status = ticket.status
     if decision == "approve":
         next_status = "in_progress"
     elif decision == "trial":
+        try:
+            trial_days = _trial_days(body.get("trial_days"))
+        except ValueError:
+            return fail("validation_error", "مدة التجربة يجب أن تكون بين 1 و60 يوم.", status=422)
         next_status = "in_progress"
     elif decision == "reject":
         next_status = "closed"
@@ -424,20 +473,33 @@ def service_request_decision(ticket_id: int):
         next_status = "pending"
 
     updated = tickets_repo.update_ticket(_tid(), ticket.id or ticket_id, status=next_status)
-    ServiceRequestLinkRepository().update_decision(
+    service_link = ServiceRequestLinkRepository().update_decision(
         tenant_id=_tid(),
         ticket_id=int(ticket.id or ticket_id),
         decision=decision,
         status=next_status,
         latest_payment_request_id=int(payment_request["id"]) if payment_request else None,
     )
+    if decision == "trial" and service_link:
+        service_entitlement = LocalServiceEntitlementRepository().upsert_trial_from_service_request(
+            tenant_id=_tid(),
+            link=service_link,
+            trial_days=trial_days or 7,
+            actor=f"admin:{_admin_id()}",
+        )
     tickets_repo.add_reply(TicketReply(
         id=None,
         tenant_id=_tid(),
         ticket_id=ticket.id or ticket_id,
         author_type="admin",
         author_id=_admin_id(),
-        body=_decision_reply(decision, note, payment_request),
+        body=_decision_reply(
+            decision,
+            note,
+            payment_request,
+            trial_days=trial_days,
+            entitlement=service_entitlement,
+        ),
     ))
     updated = tickets_repo.get_ticket(_tid(), ticket.id or ticket_id) or updated
     return ok({
@@ -448,7 +510,11 @@ def service_request_decision(ticket_id: int):
             "status": updated.status if updated else next_status,
             "decision": decision,
             "decision_label": DECISIONS[decision],
+            "local_service_apply": bool(service_entitlement),
+            "trial_days": trial_days,
+            "expires_at": service_entitlement.get("expires_at") if service_entitlement else None,
         },
         "ticket": _ticket_payload(updated or ticket),
         "payment_request": _payment_request_payload(payment_request) if payment_request else None,
+        "service_entitlement": _entitlement_payload(service_entitlement),
     })

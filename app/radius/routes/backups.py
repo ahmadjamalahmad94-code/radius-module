@@ -84,6 +84,7 @@ def backups():
         panel_backup=_backup_service_state(_tid()),
         retention_days=get_operations_service().LOCAL_BACKUP_RETENTION_DAYS,
         backup_max_count=get_operations_service().backup_max_count(tenant_id=_tid()),
+        backup_max_from_panel=get_operations_service().backup_max_count_from_panel(tenant_id=_tid()),
         backup_schedule=get_operations_service().get_backup_schedule(tenant_id=_tid()),
         gdrive=_gdrive_status(_tid()),
     )

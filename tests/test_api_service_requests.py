@@ -290,6 +290,35 @@ def test_service_request_decision_can_request_payment(client):
     assert any(data["payment_request"]["reference_code"] in reply["body"] for reply in detail["replies"])
 
 
+def test_service_request_trial_creates_temporary_local_entitlement(client):
+    subscriber_id = _create_subscriber("customer-trial")
+    created = _create_service_request(client, subscriber_id)
+    ticket_id = created["service_request"]["ticket_id"]
+
+    response = client.post(
+        f"/api/v1/service-requests/{ticket_id}/decision",
+        json={"decision": "trial", "trial_days": 3, "note": "فتح تجربة قصيرة"},
+        headers=_auth(),
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    assert data["service_request"]["local_service_apply"] is True
+    assert data["service_request"]["trial_days"] == 3
+    assert data["service_request"]["expires_at"]
+    assert data["service_entitlement"]["source_type"] == "service_request_trial"
+
+    capacity = client.get(
+        "/api/v1/system/admin-bridge/capacity-status",
+        headers=_auth(),
+    ).get_json()["data"]
+    service = capacity["services"]["customer_portal"]
+    assert service["enabled"] is True
+    assert service["status"] == "active"
+    assert service["trial_days"] == 3
+    assert service["expires_at"]
+
+
 def test_service_request_decision_rejects_general_ticket(client):
     subscriber_id = _create_subscriber("customer-8")
     regular = client.post(
