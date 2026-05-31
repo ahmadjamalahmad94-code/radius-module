@@ -100,11 +100,41 @@ class FinanceCenterService:
         params.append(int(limit))
         return [dict(row) for row in db().execute(sql, tuple(params)).fetchall()]
 
-    def debts(self, *, tenant_id: int = 1) -> dict[str, Any]:
+    def debts(self, *, tenant_id: int = 1, limit: int = 300) -> dict[str, Any]:
+        """Money owed to the operator, derived from existing records.
+
+        No dedicated debt-cycle table exists, so the closest real "money
+        owed" records are open (unsettled) loan entries. Each open loan is
+        an amount lent to a subscriber that has not yet been paid back.
+        This is read-only and creates no synthetic numbers.
+        """
+        tenant = int(tenant_id)
+        if not _table_exists("loan_entries"):
+            return {
+                "items": [],
+                "count": 0,
+                "total": "0.00",
+                "source": "loan_entries",
+                "tenant_id": tenant,
+            }
+        rows = db().execute(
+            "SELECT * FROM loan_entries WHERE tenant_id=? AND status='open' "
+            "ORDER BY id DESC LIMIT ?",
+            (tenant, int(limit)),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        total = 0.0
+        for row in rows:
+            item = dict(row)
+            try:
+                total += float(item.get("amount") or 0)
+            except (TypeError, ValueError):
+                pass
+            items.append(item)
         return {
-            "items": [],
-            "count": 0,
-            "status": "pending_configuration",
-            "message_ar": "دورة الديون التفصيلية غير مفعّلة بعد. لا يتم عرض أرقام تقديرية أو مصطنعة.",
-            "tenant_id": int(tenant_id),
+            "items": items,
+            "count": len(items),
+            "total": f"{total:.2f}",
+            "source": "loan_entries",
+            "tenant_id": tenant,
         }

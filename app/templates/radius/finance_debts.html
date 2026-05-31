@@ -4,20 +4,62 @@
 {% block title %}الديون — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}الديون{% endblock %}
-{% block page_sub %}<span class="sub">نظرة تمهيدية للديون وربطها القادم بالمركز المالي</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ debts.count or 0 }} ذمّة مفتوحة</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("الديون", subtitle="هذا المسار محفوظ كجزء من المركز المالي، دون إنشاء منطق وهمي قبل اكتمال دورة الديون.", icon="file-invoice-dollar") }}
+{{ hub.hero("الديون", subtitle="الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (loan_entries, status=open).", icon="file-invoice-dollar") }}
 {% include "radius/_finance_nav.html" %}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الديون", summary.total_debts|money, icon="file-invoice-dollar", variant="amber") }}
+  {{ hub.kpi("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="amber") }}
+  {{ hub.kpi("عدد الذمم", debts.count or 0, icon="list-ol", variant="blue") }}
   {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("إجمالي السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="blue") }}
   {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="green") }}
 </div>
 
-{% call hub.section("حالة الديون", icon="circle-info") %}
-  {{ hub.empty(debts.message_ar, sub="لن يتم عرض أرقام مصطنعة هنا. عند تفعيل دورة الديون التفصيلية ستظهر الحالات والفلاتر والسداد.", icon="file-invoice-dollar") }}
+{% if debts.items %}
+{% call hub.section("الذمم المفتوحة", icon="table-list", meta=debts.count|string + " ذمّة", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="finance-debts">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>المشترك</th>
+          <th class="num">المبلغ</th>
+          <th>السبب</th>
+          <th>الاعتماد</th>
+          <th>بدأت</th>
+          <th>تنتهي</th>
+          <th>أُنشئت</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in debts.items %}
+        <tr>
+          <td class="num mono">{{ d.id }}</td>
+          <td class="mono">{{ d.username or '—' }}</td>
+          <td class="num"><strong>{{ d.amount|money }}</strong></td>
+          <td class="small">{{ d.reason or '—' }}</td>
+          <td>
+            {% if d.approval_status == 'approved' %}{{ hub.pill("معتمَدة", variant="green") }}
+            {% elif d.approval_status == 'pending' %}{{ hub.pill("بانتظار", variant="amber") }}
+            {% elif d.approval_status == 'not_required' %}{{ hub.pill("لا يلزم", variant="grey") }}
+            {% else %}{{ hub.pill(d.approval_status or '—', variant="grey") }}{% endif %}
+          </td>
+          <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
+          <td class="mono small">{{ d.ends_at|dt_local if d.ends_at else '—' }}</td>
+          <td class="mono small">{{ d.created_at|dt_local if d.created_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا ذمم مفتوحة",
+  sub="لا توجد سلف غير مسدَّدة على المشتركين حاليًا. تظهر هنا أي سلفة بحالة «مفتوحة» باعتبارها دَينًا مستحقًا.",
+  icon="file-invoice-dollar"
+) }}
+{% endif %}
 {% endblock %}
