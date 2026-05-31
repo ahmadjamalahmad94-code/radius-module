@@ -13,7 +13,7 @@ def register_v1(parent: Blueprint) -> None:
 
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules, business_os,
-        card_checker, card_users, cards, dashboard, devices, distributors, health, internal_auth,
+        card_checker, card_users, cards, communications, dashboard, devices, distributors, health, internal_auth,
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_policy,
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, services, sessions,
@@ -25,6 +25,7 @@ def register_v1(parent: Blueprint) -> None:
     card_users.register(v1)
     hotspot_cards.register(v1)
     card_checker.register(v1)
+    communications.register(v1)
     loans.register(v1)
     recycle_bin.register(v1)
     ledger.register(v1)

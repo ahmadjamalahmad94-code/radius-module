@@ -365,6 +365,19 @@ class NotificationCampaignService:
         ).fetchone()
         return self._campaign_row(row_to_dict(row))
 
+    def list_campaigns(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        return [
+            self._campaign_row(row_to_dict(row))
+            for row in db().execute(
+                """
+                SELECT * FROM message_campaigns
+                WHERE tenant_id=?
+                ORDER BY id DESC LIMIT ?
+                """,
+                (self.tenant_id, int(limit)),
+            ).fetchall()
+        ]
+
     def delivery_log(self, *, limit: int = 100) -> list[dict[str, Any]]:
         return [
             self._delivery_row(row_to_dict(row))
