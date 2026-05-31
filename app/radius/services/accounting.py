@@ -248,19 +248,42 @@ class AccountingService:
         subscriber = self.resolve_subscriber(body)
         hours = body.get("hours")
         days = body.get("days")
+        amount = _to_float(body.get("amount") or 0, field="amount", minimum=0)
         duration_minutes = 0
         if hours not in (None, ""):
             duration_minutes += _to_int(hours, field="hours", minimum=0) * 60
         if days not in (None, ""):
             duration_minutes += _to_int(days, field="days", minimum=0) * 24 * 60
+        max_minutes = _max_loan_minutes()
+        # Explicit time always wins. If none was given, derive the loaned time
+        # PROPORTIONALLY from the subscriber's official price (custom_price, else
+        # plan price) - same rule as a partial payment. e.g. custom 150 for 30
+        # days, loan amount 75 -> 15 days. A price-derived duration is clamped to
+        # the loan cap (operator gave money, not an out-of-range time).
+        derived_from_price = False
+        if duration_minutes <= 0 and amount > 0:
+            plan = (
+                accounting_repo.resolve_plan(self.tenant_id, int(subscriber["plan_id"]))
+                if subscriber.get("plan_id") else None
+            )
+            sub_custom_price = float(subscriber.get("custom_price") or 0)
+            official_price = sub_custom_price or float((plan or {}).get("price") or 0)
+            derived = calculate_proportional_minutes(
+                amount_paid=amount,
+                plan_price=official_price,
+                base_minutes=_base_plan_minutes(plan),
+                rounding_mode="floor",
+            )
+            if derived > 0:
+                derived_from_price = True
+                duration_minutes = min(derived, max_minutes)
         if duration_minutes <= 0:
             duration_minutes = _to_int(
                 body.get("duration_minutes"),
                 field="duration_minutes",
                 minimum=1,
             )
-        max_minutes = _max_loan_minutes()
-        if duration_minutes > max_minutes:
+        if not derived_from_price and duration_minutes > max_minutes:
             raise RadiusValidationError(
                 f"loan duration exceeds configured limit ({max_minutes // 60} hours)"
             )
