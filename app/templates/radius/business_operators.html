@@ -6,6 +6,14 @@
 {% block page_title %}المدراء والموزعون{% endblock %}
 {% block page_sub %}<span class="sub">المحافظ والحدود والصلاحيات والمساءلة المالية لمشغلي النظام.</span>{% endblock %}
 
+{% macro op_status(value, enabled=None) -%}
+  {%- set v = value if value is not none else ('active' if enabled else 'disabled') -%}
+  {%- if v in ['active','enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- elif v in ['blocked','suspended'] -%}{{ hub.pill("محظور", variant="red") }}
+  {%- elif v in ['inactive','disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
+  {%- else -%}{{ hub.pill(v, variant="amber") }}{%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 {{ hub.hero(
   "المدراء والموزعون",
@@ -17,48 +25,67 @@
 <div class="hub-kpi-grid" data-testid="business-operators-summary">
   {{ hub.kpi("المدراء", managers|length, icon="users-gear", variant="blue") }}
   {{ hub.kpi("الموزعون", distributors|length, icon="people-carry-box", variant="green") }}
-  {{ hub.kpi("التطبيق المباشر", "متوقف", icon="shield-halved", variant="amber") }}
+  {{ hub.kpi("التطبيق المباشر", "متوقف", icon="shield-halved", variant="amber",
+             sub="السياسات محفوظة كأساس قابل للتوسعة.") }}
 </div>
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("المدراء", icon="users-gear", flush=True) %}
-    <div class="hub-table-wrap">
+<div class="hub-grid-1-1">
+  {% call hub.section("المدراء", icon="users-gear", meta=(managers|length|string ~ " مدير") if managers else "", flush=True) %}
+    {% if managers %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="manager-operators-table">
-        <thead><tr><th>ID</th><th>الاسم</th><th>الحالة</th><th>الملف</th></tr></thead>
+        <thead>
+          <tr><th class="num" style="width:64px">#</th><th>الاسم</th><th>الحالة</th><th style="width:88px">الملف</th></tr>
+        </thead>
         <tbody>
           {% for manager in managers %}
             <tr>
-              <td>#{{ manager.id }}</td>
+              <td class="num mono">{{ manager.id }}</td>
               <td>{{ manager.full_name or manager.username }}</td>
-              <td>{{ manager.status if manager.status is defined else ("enabled" if manager.enabled else "disabled") }}</td>
-              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">فتح</a></td>
+              <td>{{ op_status(manager.status if manager.status is defined else none, manager.enabled) }}</td>
+              <td>
+                <a class="hub-btn hub-btn--secondary hub-btn--icon" title="فتح الملف"
+                   href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              </td>
             </tr>
-          {% else %}
-            <tr><td colspan="4">لا يوجد مدراء.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+      {{ hub.empty("لا يوجد مدراء بعد", icon="users-gear") }}
+    {% endif %}
   {% endcall %}
 
-  {% call hub.section("الموزعون", icon="people-carry-box", flush=True) %}
-    <div class="hub-table-wrap">
+  {% call hub.section("الموزعون", icon="people-carry-box", meta=(distributors|length|string ~ " موزع") if distributors else "", flush=True) %}
+    {% if distributors %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="distributor-operators-table">
-        <thead><tr><th>ID</th><th>الاسم</th><th>الحالة</th><th>الملف</th></tr></thead>
+        <thead>
+          <tr><th class="num" style="width:64px">#</th><th>الاسم</th><th>الحالة</th><th style="width:88px">الملف</th></tr>
+        </thead>
         <tbody>
           {% for distributor in distributors %}
             <tr>
-              <td>#{{ distributor.id }}</td>
+              <td class="num mono">{{ distributor.id }}</td>
               <td>{{ distributor.full_name or distributor.username }}</td>
-              <td>{{ distributor.status }}</td>
-              <td><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">فتح</a></td>
+              <td>{{ op_status(distributor.status) }}</td>
+              <td>
+                <a class="hub-btn hub-btn--secondary hub-btn--icon" title="فتح الملف"
+                   href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              </td>
             </tr>
-          {% else %}
-            <tr><td colspan="4">لا يوجد موزعون.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+      {{ hub.empty("لا يوجد موزعون بعد", icon="people-carry-box") }}
+    {% endif %}
   {% endcall %}
 </div>
 {% endblock %}

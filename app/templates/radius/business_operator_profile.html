@@ -8,12 +8,38 @@
 {% block page_title %}{{ label }}{% endblock %}
 {% block page_sub %}<span class="sub">المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.</span>{% endblock %}
 
+{% macro op_status(value) -%}
+  {%- if value in ['active','enabled','ok','completed','success'] -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- elif value in ['blocked','suspended','failed','error'] -%}{{ hub.pill("متوقّف", variant="red") }}
+  {%- elif value in ['pending','warning'] -%}{{ hub.pill(value, variant="amber") }}
+  {%- elif value -%}{{ hub.pill(value, variant="grey") }}
+  {%- else -%}<span class="hub-text-mute">—</span>{%- endif -%}
+{%- endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .op-form{ display:grid; gap:12px; }
+  .op-field{ display:flex; flex-direction:column; gap:5px; }
+  .op-field > span:first-child{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .op-checks{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
+  .op-check{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px; background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .op-check input{ width:16px; height:16px; accent-color:var(--hub-brand); cursor:pointer; }
+  .op-form .hub-btn{ justify-self:start; }
+</style>
+{% endblock %}
+
 {% block content %}
 {{ hub.hero(
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة RADIUS.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-left"></i> المشغلون</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> المشغلون</a>'
 ) }}
 
 <div class="hub-kpi-grid" data-testid="operator-profile-kpis">
@@ -23,54 +49,60 @@
   {{ hub.kpi("نقاط الثقة", profile.score.trust_score, icon="shield-heart") }}
 </div>
 
-<div class="hub-grid hub-grid--2">
+<div class="hub-grid-1-1">
   {% call hub.section("شحن المحفظة", icon="wallet") %}
-    <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="hub-form-grid" data-testid="operator-recharge-form">
+    <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>المبلغ
-        <input name="amount" type="number" step="0.01" min="0.01" required>
+      <label class="op-field"><span>المبلغ</span>
+        <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
       </label>
-      <label>الطريقة
-        <select name="method">
+      <label class="op-field"><span>الطريقة</span>
+        <select class="hub-select" name="method">
           <option value="cash">نقدًا</option>
           <option value="bank">بنك</option>
-        <option value="wallet">المحفظة</option>
+          <option value="wallet">المحفظة</option>
           <option value="manual">يدوي</option>
         </select>
       </label>
-      <button class="hub-btn hub-btn--primary" type="submit">شحن</button>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wallet"></i> شحن</button>
     </form>
   {% endcall %}
 
   {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
-    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="hub-form-grid" data-testid="operator-policy-form">
+    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      {% for key, value in profile.permissions.items() %}
-        <label class="hub-check">
-          <input type="checkbox" name="{{ key }}" {% if value %}checked{% endif %}>
-          {{ key }}
-        </label>
-      {% endfor %}
-      <label>أقصى أيام مجانية
-        <input name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
+      {% if profile.permissions %}
+      <div class="op-field"><span>الصلاحيات</span>
+        <div class="op-checks">
+          {% for key, value in profile.permissions.items() %}
+            <label class="op-check">
+              <input type="checkbox" name="{{ key }}" {% if value %}checked{% endif %}>
+              {{ key }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <label class="op-field"><span>أقصى أيام مجانية</span>
+        <input class="hub-input" name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>
-      <label>أقصى أيام تجربة
-        <input name="max_trial_days" type="number" min="0" value="{{ profile.limits.max_trial_days }}">
+      <label class="op-field"><span>أقصى أيام تجربة</span>
+        <input class="hub-input" name="max_trial_days" type="number" min="0" value="{{ profile.limits.max_trial_days }}">
       </label>
-      <label>حد الائتمان
-        <input name="credit_limit" type="number" step="0.01" value="{{ profile.debt_credit.credit_limit }}">
+      <label class="op-field"><span>حد الائتمان</span>
+        <input class="hub-input" name="credit_limit" type="number" step="0.01" value="{{ profile.debt_credit.credit_limit }}">
       </label>
-      <label>موافقة فوق
-        <input name="require_approval_above" type="number" step="0.01" value="{{ profile.policy.require_approval_above }}">
+      <label class="op-field"><span>موافقة فوق</span>
+        <input class="hub-input" name="require_approval_above" type="number" step="0.01" value="{{ profile.policy.require_approval_above }}">
       </label>
-      <label>نسبة مشاركة الربح %
-        <input name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
+      <label class="op-field"><span>نسبة مشاركة الربح %</span>
+        <input class="hub-input" name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
       </label>
-      <label class="hub-check">
+      <label class="op-check">
         <input type="checkbox" name="loan_wallet_deducted" {% if profile.limits.loan_wallet_deducted %}checked{% endif %}>
         السلفة تخصم من المحفظة
       </label>
-      <button class="hub-btn hub-btn--secondary" type="submit">حفظ السياسة</button>
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ السياسة</button>
     </form>
   {% endcall %}
 </div>
@@ -84,54 +116,59 @@
   </div>
 {% endcall %}
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("المشتركون ضمن النطاق", icon="users", flush=True) %}
-    <div class="hub-table-wrap">
+<div class="hub-grid-1-1">
+  {% call hub.section("المشتركون ضمن النطاق", icon="users", meta=(profile.subscribers|length|string ~ " مشترك") if profile.subscribers else "", flush=True) %}
+    {% if profile.subscribers %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-subscribers">
-        <thead><tr><th>ID</th><th>اسم المستخدم</th><th>الحالة</th><th>الباقة</th></tr></thead>
+        <thead><tr><th class="num" style="width:64px">#</th><th>اسم المستخدم</th><th>الحالة</th><th>الباقة</th></tr></thead>
         <tbody>
           {% for subscriber in profile.subscribers %}
-            <tr><td>#{{ subscriber.id }}</td><td>{{ subscriber.username }}</td><td>{{ subscriber.status }}</td><td>{{ subscriber.plan_id or "-" }}</td></tr>
-          {% else %}
-            <tr><td colspan="4">لا يوجد مشتركون ضمن هذا النطاق.</td></tr>
+            <tr><td class="num mono">{{ subscriber.id }}</td><td class="mono">{{ subscriber.username }}</td><td>{{ op_status(subscriber.status) }}</td><td>{{ subscriber.plan_id or "—" }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+      {{ hub.empty("لا يوجد مشتركون ضمن هذا النطاق.", icon="users") }}
+    {% endif %}
   {% endcall %}
 
-  {% call hub.section("Card batches under scope", icon="layer-group", flush=True) %}
-    <div class="hub-table-wrap">
+  {% call hub.section("حزم الكروت ضمن النطاق", icon="layer-group", meta=(profile.batches|length|string ~ " حزمة") if profile.batches else "", flush=True) %}
+    {% if profile.batches %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-batches">
-        <thead><tr><th>ID</th><th>الحزمة</th><th>العدد</th><th>الحالة</th></tr></thead>
+        <thead><tr><th class="num" style="width:64px">#</th><th>الحزمة</th><th class="num">العدد</th><th>الحالة</th></tr></thead>
         <tbody>
           {% for batch in profile.batches %}
-            <tr><td>#{{ batch.id }}</td><td>{{ batch.batch_code }}</td><td>{{ batch.count }}</td><td>{{ batch.status }}</td></tr>
-          {% else %}
-            <tr><td colspan="4">No card batches in this scope.</td></tr>
+            <tr><td class="num mono">{{ batch.id }}</td><td class="mono">{{ batch.batch_code }}</td><td class="num">{{ batch.count }}</td><td>{{ op_status(batch.status) }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+      {{ hub.empty("لا توجد حزم كروت ضمن هذا النطاق.", icon="layer-group") }}
+    {% endif %}
   {% endcall %}
 </div>
 
-{% call hub.section("Events and operations", icon="timeline", flush=True) %}
-  <div class="hub-table-wrap">
+{% call hub.section("الأحداث والعمليات", icon="timeline", flush=True) %}
+  {% if profile.operations or profile.events %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="operator-events">
       <thead><tr><th>النوع</th><th>المفتاح</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
-          <tr><td>operation</td><td>{{ op.operation_key }}</td><td>{{ op.status }}</td><td>{{ op.created_at }}</td></tr>
+          <tr><td>{{ hub.pill("عملية", variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at }}</td></tr>
         {% endfor %}
         {% for event in profile.events %}
-          <tr><td>event</td><td>{{ event.event_key }}</td><td>{{ event.severity }}</td><td>{{ event.created_at }}</td></tr>
+          <tr><td>{{ hub.pill("حدث", variant="blue", dot=False) }}</td><td class="mono">{{ event.event_key }}</td><td>{{ op_status(event.severity) }}</td><td class="mono small">{{ event.created_at }}</td></tr>
         {% endfor %}
-        {% if not profile.operations and not profile.events %}
-          <tr><td colspan="4">لا توجد أحداث بعد.</td></tr>
-        {% endif %}
       </tbody>
     </table>
   </div>
+  {% else %}
+    {{ hub.empty("لا توجد أحداث بعد.", icon="timeline") }}
+  {% endif %}
 {% endcall %}
 {% endblock %}
