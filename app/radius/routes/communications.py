@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
-from ..services import comms_bot, comms_providers, notifications_engine
+from ..services import comms_bot, comms_providers, comms_quota, notifications_engine
 from ..services.notification_campaigns import NotificationCampaignError, NotificationCampaignService
 
 
@@ -21,6 +21,10 @@ def register_communications_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/communications/bot/webhook", "communications_bot_webhook", communications_bot_webhook, methods=["POST"])
     # Event-driven notifications (Phase 3): one simple toggle-per-event page.
     bp.add_url_rule("/communications/notifications", "communications_notifications", communications_notifications, methods=["GET", "POST"])
+    # Message quota + paid packages (Phase 4): status + request-to-panel + local credit.
+    bp.add_url_rule("/communications/quota", "communications_quota", communications_quota, methods=["GET"])
+    bp.add_url_rule("/communications/quota/request", "communications_quota_request", communications_quota_request, methods=["POST"])
+    bp.add_url_rule("/communications/quota/credit", "communications_quota_credit", communications_quota_credit, methods=["POST"])
 
 
 def _tid() -> int:
@@ -191,9 +195,11 @@ def communications_channels():
         return redirect(url_for("radius.communications_channels"))
 
     channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
+    quotas = {ch: comms_quota.quota_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
     return render_template(
         "radius/communications_channels.html",
         channels=channels,
+        quotas=quotas,
         modes=comms_providers.CHANNEL_MODES,
         active="channels",
     )
@@ -330,6 +336,143 @@ def communications_notifications():
         telegram_ready=telegram_ready,
         active="notifications",
     )
+
+
+def communications_quota():
+    """Phase 4 — «الرصيد والحِزم»: per-channel quota status + paid-package request.
+
+    A simple page showing, per HTTP channel (SMS / واتساب): the current mode,
+    the remaining quota (big number) + lifetime used, and a short ledger. Two
+    actions live on the page (their POST handlers are below):
+      * «طلب حزمة رسائل» → posts to the EXISTING license-panel service-request
+        bridge so the operator sees the request.
+      * «إضافة رصيد يدويًا» (operator) → credits the balance locally + audited.
+    """
+    tid = _tid()
+    channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
+    quotas = {ch: comms_quota.quota_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
+    ledgers = {ch: list(reversed(comms_quota.quota_ledger(tid, ch, limit=10))) for ch in comms_providers.HTTP_CHANNELS}
+    return render_template(
+        "radius/communications_quota.html",
+        channels=channels,
+        quotas=quotas,
+        ledgers=ledgers,
+        active="quota",
+    )
+
+
+def communications_quota_request():
+    """Request a paid message package from the license panel (existing bridge).
+
+    Mirrors the paid-service request used by backups: it records an audit entry
+    and posts a signed service request to the panel. ``service_key`` is the
+    channel ('sms'/'whatsapp'); the requested quantity + a fixed «طلب حزمة
+    رسائل» marker travel in the notes so the operator sees the ask. Never
+    mutates the local quota — only the panel operator credits it on approval.
+    """
+    tid = _tid()
+    channel = (request.form.get("channel") or "").strip().lower()
+    if channel not in comms_providers.HTTP_CHANNELS:
+        flash("قناة غير مدعومة.", "error")
+        return redirect(url_for("radius.communications_quota"))
+    try:
+        quantity = int((request.form.get("quantity") or "0").strip())
+    except (TypeError, ValueError):
+        quantity = 0
+    if quantity <= 0:
+        flash("أدخل عدد الرسائل المطلوبة في الحزمة (رقم أكبر من صفر).", "error")
+        return redirect(url_for("radius.communications_quota"))
+    note = (request.form.get("note") or "").strip()[:300]
+
+    ch_name = _QUOTA_CH_LABELS.get(channel, channel)
+    notes = f"طلب حزمة رسائل — قناة {ch_name} — الكمية المطلوبة: {quantity} رسالة."
+    if note:
+        notes += f" ملاحظة العميل: {note}"
+
+    from ..db.repos import audit_repo
+    from ..services.admin_panel_client import AdminPanelClient
+
+    audit_repo.record(
+        tenant_id=tid,
+        actor=_actor(),
+        action="comms_quota_package_requested",
+        target_type="comms_quota",
+        target_id=channel,
+        payload={"channel": channel, "quantity": quantity, "note": note},
+    )
+    try:
+        result = AdminPanelClient().post_customer_service_request(
+            service_key=channel,
+            request_type="activation",
+            notes=notes,
+            desired_limits={"message_quota": quantity, "channel": channel},
+        )
+    except Exception:  # noqa: BLE001 — bridge errors must never 500 the page
+        result = {"ok": False, "status": "unavailable"}
+
+    if result.get("ok"):
+        response = result.get("response") or {}
+        service_request = response.get("service_request") if isinstance(response, dict) else {}
+        reference = service_request.get("reference") if isinstance(service_request, dict) else ""
+        suffix = f" رقم الطلب: {reference}." if reference else ""
+        flash(f"تم إرسال طلب حزمة رسائل لقناة «{ch_name}» ({quantity} رسالة) إلى لوحة التراخيص.{suffix} سيتم شحن الرصيد عند الموافقة.", "success")
+    else:
+        from .admin_bridge import _sync_status_label
+
+        status = _sync_status_label(result.get("status"))
+        flash(f"تعذّر إرسال طلب الحزمة إلى لوحة التراخيص: {status}. تأكد من رابط HTTPS وسر الربط ثم أعد المحاولة.", "error")
+    return redirect(url_for("radius.communications_quota"))
+
+
+def communications_quota_credit():
+    """Operator/provider action: add quota balance locally (audited).
+
+    For the license-panel operator (or a local provider) to top up a channel's
+    balance directly when a paid package is granted, without a round-trip. The
+    credit is recorded in the channel ledger + the audit log.
+    """
+    tid = _tid()
+    channel = (request.form.get("channel") or "").strip().lower()
+    if channel not in comms_providers.HTTP_CHANNELS:
+        flash("قناة غير مدعومة.", "error")
+        return redirect(url_for("radius.communications_quota"))
+    try:
+        amount = int((request.form.get("amount") or "0").strip())
+    except (TypeError, ValueError):
+        amount = 0
+    if amount <= 0:
+        flash("أدخل عدد الرسائل المراد إضافتها للرصيد (رقم أكبر من صفر).", "error")
+        return redirect(url_for("radius.communications_quota"))
+    note = (request.form.get("note") or "").strip()[:240] or "إضافة رصيد يدويًا"
+
+    actor = _actor()
+    try:
+        new_balance = comms_quota.credit_quota(tid, channel, amount, by=actor, note=note)
+    except Exception:  # noqa: BLE001 — never 500 the page on an accounting error
+        flash("تعذّرت إضافة الرصيد. حاول مرة أخرى.", "error")
+        return redirect(url_for("radius.communications_quota"))
+
+    try:
+        from ..db.repos import audit_repo
+
+        audit_repo.record(
+            tenant_id=tid,
+            actor=actor,
+            action="comms_quota_manual_credit",
+            target_type="comms_quota",
+            target_id=channel,
+            payload={"channel": channel, "amount": amount, "note": note, "balance_after": new_balance},
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    ch_name = _QUOTA_CH_LABELS.get(channel, channel)
+    flash(f"تمت إضافة {amount} رسالة إلى رصيد «{ch_name}». الرصيد الحالي: {new_balance} رسالة.", "success")
+    return redirect(url_for("radius.communications_quota"))
+
+
+# Arabic channel labels reused by the quota route flashes + notes.
+_QUOTA_CH_LABELS = {"sms": "الرسائل القصيرة", "whatsapp": "واتساب"}
 
 
 # Arabic labels + icons for the three channels, used by the settings template.

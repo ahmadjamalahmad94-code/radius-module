@@ -163,6 +163,7 @@
 {%- set m_communications_channels = (path == url_for('radius.communications_channels')) -%}
 {%- set m_communications_bot = ('/communications/bot' in path) -%}
 {%- set m_communications_notifications = ('/communications/notifications' in path) -%}
+{%- set m_communications_quota = ('/communications/quota' in path) -%}
 {%- set m_events_center = ('/events' in path) -%}
 {%- set m_events_risk = (path == url_for('radius.events_risk')) -%}
 {%- set m_events_security = (path == url_for('radius.events_security')) -%}
@@ -202,6 +203,7 @@
 {%- set sec_engagement_active = m_communications or m_communications_templates or m_communications_send
                                   or m_communications_campaigns or m_communications_deliveries or m_communications_audience
                                   or m_communications_channels or m_communications_bot or m_communications_notifications
+                                  or m_communications_quota
                                   or m_events_center or m_events_risk or m_events_security or m_events_investigations
                                   or m_operations_center -%}
 {%- set sec_reports_active = m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors
@@ -422,6 +424,7 @@
         {{ sub_item('radius.communications_channels', 'قنوات الإرسال', m_communications_channels) }}
         {{ sub_item('radius.communications_bot', '🤖 بوت واتساب', m_communications_bot) }}
         {{ sub_item('radius.communications_notifications', '🔔 الإشعارات الحدثية', m_communications_notifications) }}
+        {{ sub_item('radius.communications_quota', '💳 الرصيد والحِزم', m_communications_quota) }}
         {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
         {{ sub_item('radius.communications_audience', 'الجمهور', m_communications_audience) }}
         {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}

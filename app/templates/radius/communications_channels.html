@@ -32,6 +32,9 @@
   .cch-badge.on{ background:#dcfce7; color:#15803d; } .cch-badge.on .dot{ background:#16a34a; }
   .cch-badge.off{ background:#f1f5f9; color:#64748b; } .cch-badge.off .dot{ background:#94a3b8; }
   .cch-badge.mode{ background:#eef2ff; color:#4338ca; } .cch-badge.mode .dot{ background:#6366f1; }
+  .cch-badge.quota{ background:#ede9fe; color:#5b21b6; text-decoration:none; } .cch-badge.quota .dot{ background:#7c3aed; }
+  .cch-badge.quota.zero{ background:#fef2f2; color:#b91c1c; } .cch-badge.quota.zero .dot{ background:#dc2626; }
+  .cch-badge.quota:hover{ filter:brightness(.97); }
   .cch-body{ padding:16px; display:grid; gap:13px; }
   .cch-field{ display:grid; gap:5px; }
   .cch-field label{ font-size:12.5px; font-weight:700; color:#475569; }
@@ -108,6 +111,13 @@
             <span class="cch-badge off"><span class="dot"></span> متوقفة</span>
           {% endif %}
           <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
+          {% set _q = quotas.get(ch) if quotas else None %}
+          {% if _q and _q.is_quota_mode %}
+            <a class="cch-badge quota {{ 'zero' if _q.balance == 0 else '' }}" href="{{ url_for('radius.communications_quota') }}"
+               title="الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم">
+              <span class="dot"></span> الرصيد: {{ _q.balance }}
+            </a>
+          {% endif %}
         </div>
       </div>
 

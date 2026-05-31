@@ -241,9 +241,11 @@ class GenericHttpProvider(NotificationProvider):
 
     provider_key = "generic_http"
 
-    def __init__(self, *, channel: str, config: dict[str, Any]) -> None:
+    def __init__(self, *, channel: str, config: dict[str, Any], tenant_id: int = 1) -> None:
         self.channel = _channel(channel)
         self.config = config or {}
+        # Needed by the Phase-4 quota gate to bill the right tenant's balance.
+        self.tenant_id = int(tenant_id or 1)
         self.provider_config = ProviderConfig(provider_key=self.provider_key, channel=self.channel)
 
     def _phone(self, delivery: dict[str, Any], notification: dict[str, Any]) -> str:
@@ -283,6 +285,34 @@ class GenericHttpProvider(NotificationProvider):
             )
 
         message = str((notification or {}).get("body") or "")
+
+        # ── Phase-4 quota gate ────────────────────────────────────────────
+        # In admin_quota mode every real send must be paid for from the
+        # admin-provided balance. self_api channels are unlimited and skip
+        # this entirely. We check availability BEFORE hitting the network and
+        # consume exactly one unit AFTER a confirmed success, so a failed send
+        # never burns quota. Never raises — a quota-accounting error degrades
+        # to "send freely" rather than blocking the pipeline.
+        if mode == "admin_quota":
+            try:
+                from . import comms_quota
+
+                if not comms_quota.quota_available(self.tenant_id, self.channel):
+                    return ProviderResult(
+                        status="skipped",
+                        provider_key=self.provider_key,
+                        error_message=comms_quota.QUOTA_EXHAUSTED_REASON,
+                        result={
+                            "external_send": False,
+                            "reason": "quota_exhausted",
+                            "mode": mode,
+                            "channel": self.channel,
+                            "quota_balance": 0,
+                        },
+                    )
+            except Exception:  # noqa: BLE001 — accounting must never block a send
+                pass
+
         outcome = http_send(
             template=template,
             method=self.config.get("http_method") or DEFAULT_METHOD,
@@ -298,6 +328,15 @@ class GenericHttpProvider(NotificationProvider):
             "response_excerpt": outcome.body_excerpt,
         }
         if outcome.ok:
+            # Phase-4: a confirmed admin_quota send costs exactly one unit. A
+            # failed send (below) never reaches here, so it never bills.
+            if mode == "admin_quota":
+                try:
+                    from . import comms_quota
+
+                    result_payload["quota_balance"] = comms_quota.consume_quota(self.tenant_id, self.channel, 1)
+                except Exception:  # noqa: BLE001 — accounting must never break a send
+                    pass
             return ProviderResult(
                 status="sent",
                 provider_key=self.provider_key,
@@ -341,7 +380,7 @@ def provider_for_channel(tenant_id: int, channel: str) -> GenericHttpProvider | 
     if ch not in HTTP_CHANNELS:
         return None
     config = load_channel_config(tenant_id, ch)
-    return GenericHttpProvider(channel=ch, config=config)
+    return GenericHttpProvider(channel=ch, config=config, tenant_id=int(tenant_id or 1))
 
 
 def channel_status(tenant_id: int, channel: str) -> dict[str, Any]:
