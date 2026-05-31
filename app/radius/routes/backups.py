@@ -82,11 +82,22 @@ def backups():
 
 
 def _gdrive_status(tid: int) -> dict:
+    """Google Drive connection lives on the panel (per-customer). Fetch it via
+    the bridge so the radius page can reflect whether it's connected."""
     try:
-        from ..services import google_drive as gd
-        return gd.status(tid)
+        from ..services.admin_panel_client import AdminPanelClient
+        r = AdminPanelClient().fetch_google_drive_status()
+        if r.get("ok"):
+            resp = r.get("response") or {}
+            return {
+                "connected": bool(resp.get("connected")),
+                "email": resp.get("email") or "",
+                "folder_name": resp.get("folder_name") or "",
+                "last_upload_at": resp.get("last_upload_at") or "",
+            }
     except Exception:  # noqa: BLE001
-        return {"configured": False, "connected": False, "email": "", "pending": False, "last_error": "", "last_upload_at": ""}
+        pass
+    return {"connected": False, "email": "", "folder_name": "", "last_upload_at": ""}
 
 
 def backups_run():

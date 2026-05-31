@@ -83,20 +83,35 @@
   {% endif %}
 {% endcall %}
 
-{# ── Google Drive — one-click via the customer portal (SSO) ── #}
-{% call hub.section("النسخ إلى Google Drive", icon="cloud", meta="بضغطة واحدة") %}
-  <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.9">
-    اربط حساب Google Drive الخاص بك <strong>بضغطة واحدة</strong> — بدون أي إعدادات تقنية أو رموز.
-    تفتح بوابة عميلك تلقائيًا، تضغط «ربط Google Drive»، توافق من حساب Google، وتنتهي.
-    بعدها تُرفع نسخك الاحتياطية إلى درايفك الخاص تلقائيًا.
-  </p>
-  <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
-    <i class="fa-brands fa-google-drive"></i> ربط Google Drive (يفتح بوابة عميلك)
-  </a>
-  <p class="hub-text-soft" style="margin:12px 0 0;font-size:12px">
-    <i class="fa-solid fa-shield-halved" style="color:#7c3aed"></i>
-    صلاحية محدودة (<span class="mono">drive.file</span>) — لا نطّلع على بقية ملفاتك.
-  </p>
+{# ── Google Drive — status mirrored from the panel (one-click via SSO) ── #}
+{% call hub.section("النسخ إلى Google Drive", icon="cloud", meta=('● متصل' if gdrive.connected else 'بضغطة واحدة')) %}
+  {% if gdrive.connected %}
+    <div class="hub-detail-list" style="margin-bottom:14px">
+      <div><span>الحساب المربوط</span><strong class="ltr">{{ gdrive.email or '—' }}</strong></div>
+      <div><span>مجلد النسخ</span><strong>{{ gdrive.folder_name or 'HobeRadius Backups' }}</strong></div>
+      <div><span>آخر رفع</span><strong>{{ gdrive.last_upload_at or 'لم يتم بعد' }}</strong></div>
+    </div>
+    <p class="hub-text-soft" style="margin:0 0 12px;font-size:12.5px;line-height:1.8">
+      <i class="fa-solid fa-circle-check" style="color:#16a34a"></i>
+      مربوط. كل نسخة تُرفع إلى لوحة التراخيص تُحفظ تلقائيًا في درايفك.
+      لإدارته أو فصله، افتح بوابة عميلك.
+    </p>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> إدارة الربط من بوابة العميل
+    </a>
+  {% else %}
+    <p class="hub-text-soft" style="margin:0 0 14px;line-height:1.9">
+      اربط حساب Google Drive الخاص بك <strong>بضغطة واحدة</strong> — بدون أي إعدادات تقنية أو رموز.
+      تفتح بوابة عميلك تلقائيًا، تضغط «ربط Google Drive»، توافق من حساب Google، وتنتهي.
+    </p>
+    <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
+      <i class="fa-brands fa-google-drive"></i> ربط Google Drive (يفتح بوابة عميلك)
+    </a>
+    <p class="hub-text-soft" style="margin:12px 0 0;font-size:12px">
+      <i class="fa-solid fa-shield-halved" style="color:#7c3aed"></i>
+      صلاحية محدودة (<span class="mono">drive.file</span>) — لا نطّلع على بقية ملفاتك.
+    </p>
+  {% endif %}
 {% endcall %}
 
 {# ── Local backup files: download / restore ── #}
