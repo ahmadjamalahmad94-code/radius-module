@@ -36,6 +36,22 @@ def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _log_safe_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize + strip the heavy base64 content before persisting an attempt.
+
+    Storing `content_base64` (multiple MB per upload) in the attempts log
+    bloated the database by hundreds of MB. We keep only a size marker."""
+    safe = dict(sanitize_bridge_payload(payload) or {})
+    if "content_base64" in safe:
+        raw = payload.get("content_base64") or ""
+        try:
+            n = len(raw)
+        except TypeError:
+            n = 0
+        safe["content_base64"] = f"<omitted {n} base64 chars>"
+    return safe
+
+
 def _safe_int(value: str | None, default: int, *, minimum: int, maximum: int) -> int:
     try:
         parsed = int(str(value or "").strip())
@@ -251,14 +267,37 @@ class BackupUploadService:
                 1 if attempt.dry_run else 0,
                 1 if attempt.content_included else 0,
                 attempt.status,
-                json.dumps(sanitize_bridge_payload(attempt.payload), ensure_ascii=False),
+                json.dumps(_log_safe_payload(attempt.payload), ensure_ascii=False),
                 json.dumps(sanitize_bridge_payload(attempt.error or {}), ensure_ascii=False),
                 json.dumps(sanitize_bridge_payload(attempt.response or {}), ensure_ascii=False),
                 attempt.sent_at,
                 _utcnow(),
             ),
         )
-        return self.get_attempt(int(cur.lastrowid)) or {}
+        attempt_id = int(cur.lastrowid)
+        self._prune_attempts(int(attempt.tenant_id))
+        return self.get_attempt(attempt_id) or {}
+
+    def _prune_attempts(self, tenant_id: int, *, keep: int = 30) -> None:
+        """Keep only the most recent N upload attempts per tenant.
+
+        Upload attempts are diagnostic logs; without pruning the table grows
+        unbounded (and historically stored the base64 backup content, which
+        bloated the DB to hundreds of MB)."""
+        try:
+            db().execute(
+                """
+                DELETE FROM license_admin_backup_upload_attempts
+                WHERE tenant_id = ?
+                  AND id NOT IN (
+                    SELECT id FROM license_admin_backup_upload_attempts
+                    WHERE tenant_id = ? ORDER BY id DESC LIMIT ?
+                  )
+                """,
+                (int(tenant_id), int(tenant_id), int(keep)),
+            )
+        except Exception:  # noqa: BLE001 — pruning must never break an upload
+            pass
 
     def get_attempt(self, attempt_id: int) -> dict[str, Any] | None:
         row = db().execute(
