@@ -526,6 +526,38 @@ class OperationsService:
         )
         return saved
 
+    def update_distributor(self, *, tenant_id: int, distributor_id: int,
+                           actor: str, data: dict) -> dict:
+        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        name = (data.get("name") or data.get("username") or "").strip()
+        if not name:
+            raise RadiusValidationError("name is required")
+        normalized = {
+            "name": name,
+            "display_name": (data.get("display_name") or name).strip(),
+            "email": (data.get("email") or "").strip(),
+            "phone": (data.get("phone") or "").strip(),
+            "status": (data.get("status") or "active").strip().lower(),
+            "permissions": data.get("permissions") or [],
+            "scope": data.get("scope") or {},
+            "balance": _float_field(data, "balance", default=0),
+            "credit_limit": _float_field(data, "credit_limit", default=0),
+            "debt_balance": _float_field(data, "debt_balance", default=0),
+            "notes": (data.get("notes") or "")[:500],
+        }
+        try:
+            saved = operations_repo.update_distributor(tenant_id, distributor_id, normalized)
+        except sqlite3.IntegrityError:
+            raise RadiusValidationError("distributor name already exists")
+        self._audit.record(
+            actor=actor,
+            action="distributor.update",
+            target_type="distributor",
+            target_id=str(distributor_id),
+            payload={"name": saved.get("name")},
+        )
+        return saved
+
     def list_distributors(self, *, tenant_id: int, status: Optional[str] = None,
                           limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_distributors(

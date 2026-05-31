@@ -100,7 +100,7 @@
             {% elif item.status %}{{ hub.pill(item.status, variant="grey") }}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
-          <td class="mono small">{{ item.deleted_at or '—' }}</td>
+          <td class="mono small">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</td>
           <td>
             {% if item.archive_source == 'auto' %}
               {{ hub.pill("تلقائية", variant="blue") }}
@@ -112,7 +112,7 @@
             {% endif %}
           </td>
           <td class="mono small">
-            {{ item.retention_expires_at or 'غير محدد' }}
+            {{ item.retention_expires_at|date_local if item.retention_expires_at else 'غير محدد' }}
             {% if item.retention_expired %}
               <div class="hub-text-mute">انتهت مدة الاحتفاظ</div>
             {% endif %}

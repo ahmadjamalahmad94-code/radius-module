@@ -63,7 +63,7 @@
           <th>النطاق</th>
           <th>الرصيد والدين</th>
           <th>الحالة</th>
-          <th style="width:80px">عرض</th>
+          <th style="width:110px">إجراءات</th>
         </tr>
       </thead>
       <tbody>
@@ -113,10 +113,16 @@
             {% else %}{{ hub.pill(d.status or 'غير معروف', variant="amber") }}{% endif %}
           </td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
-               href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
-              <i class="fa-solid fa-eye"></i>
-            </a>
+            <div class="hub-flex-row" style="gap:4px">
+              <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
+                 href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.distributors_edit', distributor_id=d.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+            </div>
           </td>
         </tr>
         {% endfor %}

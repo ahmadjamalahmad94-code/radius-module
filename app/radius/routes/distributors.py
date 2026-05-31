@@ -16,6 +16,18 @@ def register_distributors_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/distributors", "distributors_create", distributors_create, methods=["POST"])
     bp.add_url_rule("/distributors/<int:distributor_id>", "distributors_detail", distributors_detail, methods=["GET"])
     bp.add_url_rule(
+        "/distributors/<int:distributor_id>/edit",
+        "distributors_edit",
+        distributors_edit,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/distributors/<int:distributor_id>/edit",
+        "distributors_update",
+        distributors_update,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/distributors/<int:distributor_id>/assign-batch",
         "distributors_assign_batch",
         distributors_assign_batch,
@@ -122,6 +134,62 @@ def distributors_create():
         ), 400
     flash("تم إنشاء الموزع.", "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=saved["id"]))
+
+
+def _distributor_form_values(distributor: dict) -> dict:
+    return {
+        "name": distributor.get("name") or "",
+        "display_name": distributor.get("display_name") or "",
+        "email": distributor.get("email") or "",
+        "phone": distributor.get("phone") or "",
+        "status": distributor.get("status") or "active",
+        "permissions": ", ".join(distributor.get("permissions_json") or []),
+        "scope_json": json.dumps(
+            distributor.get("scope_json") or {}, ensure_ascii=False
+        ),
+        "balance": distributor.get("balance", 0),
+        "credit_limit": distributor.get("credit_limit", 0),
+        "debt_balance": distributor.get("debt_balance", 0),
+        "notes": distributor.get("notes") or "",
+    }
+
+
+def distributors_edit(distributor_id: int):
+    try:
+        distributor = _svc().get_distributor(
+            tenant_id=_tid(),
+            distributor_id=distributor_id,
+        )
+    except RadiusNotFound:
+        abort(404)
+    return render_template(
+        "radius/distributors_form.html",
+        form=_distributor_form_values(distributor),
+        distributor=distributor,
+        is_new=False,
+    )
+
+
+def distributors_update(distributor_id: int):
+    try:
+        _svc().update_distributor(
+            tenant_id=_tid(),
+            distributor_id=distributor_id,
+            actor=_actor(),
+            data=_form_payload(),
+        )
+    except RadiusNotFound:
+        abort(404)
+    except RadiusValidationError as e:
+        flash(e.message, "error")
+        return render_template(
+            "radius/distributors_form.html",
+            form=request.form,
+            distributor={"id": distributor_id},
+            is_new=False,
+        ), 400
+    flash("تم تحديث الموزع.", "success")
+    return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
 
 def _detail_context(distributor_id: int) -> dict:

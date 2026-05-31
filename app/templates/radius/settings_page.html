@@ -65,12 +65,20 @@
   {% endcall %}
 
   {# ── Everything else ── #}
+  {% set numeric_keys = [
+       'billing.tax_pct',
+       'api.rate_limit_per_minute',
+       'session.timeout_minutes',
+       'display.records_per_page',
+       'cards.default_username_length',
+       'cards.default_password_length',
+     ] %}
   {% call hub.section("القيم العامة", icon="sliders") %}
     <div class="hub-form-row">
       {% for it in items if it.key not in identity_keys %}
         <div class="hub-field">
           <label class="hub-field-label">{{ it.label }}</label>
-          <input class="hub-input" type="text" name="{{ it.key }}" value="{{ it.value }}">
+          <input class="hub-input" type="{{ 'number' if it.key in numeric_keys else 'text' }}" name="{{ it.key }}" value="{{ it.value }}">
           <div class="hub-field-hint mono">{{ it.key }}</div>
         </div>
       {% endfor %}
