@@ -1861,12 +1861,23 @@ class OperationsService:
             except Exception as exc:  # noqa: BLE001
                 steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(exc)})
 
-        # Drive: the panel forwards to the customer's Drive in the background.
+        # Drive: the customer connects it on the panel (portal OAuth), and the
+        # panel forwards uploaded backups to that Drive in the background — so
+        # read the PANEL's Drive status, not the radius's dormant device flow.
+        connected = False
         try:
-            from . import google_drive as gd
-            connected = bool(gd.status(tenant_id).get("connected"))
+            from .admin_panel_client import AdminPanelClient
+            r = AdminPanelClient().fetch_google_drive_status()
+            if r.get("ok"):
+                connected = bool((r.get("response") or {}).get("connected"))
         except Exception:  # noqa: BLE001
             connected = False
+        if not connected:
+            try:
+                from . import google_drive as gd
+                connected = bool(gd.status(tenant_id).get("connected"))
+            except Exception:  # noqa: BLE001
+                connected = False
         if not connected:
             steps.append({"key": "drive", "label": "Google Drive", "status": "skipped", "message": "غير مربوط."})
         elif panel_ok:
