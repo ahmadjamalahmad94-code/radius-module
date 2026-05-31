@@ -297,11 +297,33 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="flash-stack">
+      <div class="flash-stack" id="flash-stack">
         {% for cat, msg in messages %}
-          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          <div class="flash flash-{{ cat }}" role="alert">
+            <span class="flash-msg">{{ msg }}</span>
+            <button type="button" class="flash-close" aria-label="إغلاق" onclick="this.parentNode.remove()">&times;</button>
+          </div>
         {% endfor %}
       </div>
+      <style>
+        #flash-stack .flash{ position:relative; display:flex; align-items:center; gap:10px; padding-inline-end:34px; transition:opacity .35s ease, transform .35s ease; }
+        #flash-stack .flash-msg{ flex:1; }
+        #flash-stack .flash-close{ position:absolute; inset-inline-start:10px; top:50%; transform:translateY(-50%); border:0; background:transparent; font-size:20px; line-height:1; cursor:pointer; color:inherit; opacity:.6; }
+        #flash-stack .flash-close:hover{ opacity:1; }
+        #flash-stack .flash.is-hiding{ opacity:0; transform:translateY(-6px); }
+      </style>
+      <script>
+        (function(){
+          var stack = document.getElementById('flash-stack');
+          if(!stack) return;
+          stack.querySelectorAll('.flash').forEach(function(el, i){
+            setTimeout(function(){
+              el.classList.add('is-hiding');
+              setTimeout(function(){ el.remove(); }, 400);
+            }, 6000 + i * 400);
+          });
+        })();
+      </script>
     {% endif %}
   {% endwith %}
 
