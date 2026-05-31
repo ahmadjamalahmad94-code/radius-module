@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
-from ..services import comms_providers
+from ..services import comms_bot, comms_providers
 from ..services.notification_campaigns import NotificationCampaignError, NotificationCampaignService
 
 
@@ -16,6 +16,9 @@ def register_communications_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/communications/audience", "communications_audience", communications_audience, methods=["GET", "POST"])
     bp.add_url_rule("/communications/channels", "communications_channels", communications_channels, methods=["GET", "POST"])
     bp.add_url_rule("/communications/channels/test", "communications_channels_test", communications_channels_test, methods=["POST"])
+    # WhatsApp bot (Phase 2): a simple settings page + a public inbound webhook.
+    bp.add_url_rule("/communications/bot", "communications_bot", communications_bot_settings, methods=["GET", "POST"])
+    bp.add_url_rule("/communications/bot/webhook", "communications_bot_webhook", communications_bot_webhook, methods=["POST"])
 
 
 def _tid() -> int:
@@ -234,6 +237,93 @@ def communications_channels_test():
         ),
         "response_excerpt": outcome.body_excerpt,
     })
+
+
+def communications_bot_settings():
+    """Simple WhatsApp-bot settings page (enable + greeting/fallback + commands).
+
+    GET renders the page; POST saves the config and redirects back. Everything
+    is stored in ``tenant_settings`` (``comms.bot.*``) — no migration.
+    """
+    tid = _tid()
+    if request.method == "POST":
+        try:
+            comms_bot.save_bot_config(
+                tid,
+                {
+                    "enabled": request.form.get("enabled") or "0",
+                    "greeting": request.form.get("greeting") or "",
+                    "fallback": request.form.get("fallback") or "",
+                    "commands": _bot_commands_from_form(),
+                },
+                by=_admin_id(),
+            )
+            flash("تم حفظ إعدادات بوت واتساب.", "success")
+        except Exception:  # noqa: BLE001 — settings must never 500 the page
+            flash("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى.", "error")
+        return redirect(url_for("radius.communications_bot"))
+
+    config = comms_bot.load_bot_config(tid)
+    whatsapp = comms_providers.channel_status(tid, comms_bot.BOT_CHANNEL)
+    return render_template(
+        "radius/communications_bot.html",
+        config=config,
+        webhook_url=_bot_webhook_url(),
+        whatsapp=whatsapp,
+        active="bot",
+    )
+
+
+def communications_bot_webhook():
+    """Public inbound webhook for the WhatsApp bot (CSRF-exempt).
+
+    Reads the sender phone + message from common JSON/form shapes, hands them
+    to the bot dispatcher (match → render → send), and ALWAYS answers 200 fast.
+    Never raises: a disabled bot or a malformed payload is a quiet no-op.
+    """
+    try:
+        json_body = request.get_json(silent=True)
+    except Exception:  # noqa: BLE001
+        json_body = None
+    try:
+        phone, text = comms_bot.parse_inbound(
+            json_body=json_body,
+            form=request.form,
+            args=request.args,
+        )
+        result = comms_bot.handle_inbound(_tid(), phone=phone, text=text)
+        return jsonify({"ok": True, "handled": result.handled, "reason": result.reason}), 200
+    except Exception:  # noqa: BLE001 — the webhook must never 500
+        return jsonify({"ok": True, "handled": False, "reason": "error"}), 200
+
+
+def _bot_webhook_url() -> str:
+    """Absolute URL of the inbound webhook, built from the current request host."""
+    try:
+        return url_for("radius.communications_bot_webhook", _external=True)
+    except Exception:  # noqa: BLE001
+        # Fallback: relative path is still useful even if _external fails.
+        return url_for("radius.communications_bot_webhook")
+
+
+def _bot_commands_from_form() -> list[dict]:
+    """Read the editable command rows posted by the settings page.
+
+    The form posts parallel arrays ``cmd_keyword[]`` / ``cmd_reply[]`` /
+    ``cmd_enabled[]`` (enabled is a hidden 0/1 per row). Empty rows are dropped.
+    """
+    keywords = request.form.getlist("cmd_keyword")
+    replies = request.form.getlist("cmd_reply")
+    enabled = request.form.getlist("cmd_enabled")
+    rows: list[dict] = []
+    for idx, keyword in enumerate(keywords):
+        kw = (keyword or "").strip()
+        reply = (replies[idx] if idx < len(replies) else "").strip()
+        if not kw and not reply:
+            continue
+        is_on = (enabled[idx] if idx < len(enabled) else "1")
+        rows.append({"keyword": kw, "reply_template": reply, "enabled": is_on})
+    return rows
 
 
 def _audience_from_form() -> dict:

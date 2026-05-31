@@ -30,6 +30,11 @@ _PUBLIC_ENDPOINTS = {
     # No secrets in the response — only check names + Arabic
     # titles + boolean-ish statuses.
     "radius.setup_wizard_system_health",
+    # WhatsApp bot inbound webhook (Phase 2). Called server-to-server by the
+    # WhatsApp gateway, which has no admin session cookie. It only reads the
+    # incoming message and replies via the configured provider — never exposes
+    # admin data — and always answers 200. Also CSRF-exempt (see app/__init__).
+    "radius.communications_bot_webhook",
 }
 
 

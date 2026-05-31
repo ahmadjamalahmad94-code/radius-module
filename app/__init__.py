@@ -351,6 +351,11 @@ def _install_stubs(app: Flask) -> None:
         # on every form keystroke. Read-only render — never mutates DB.
         # Without the exemption every keystroke would 302 to login.
         "/admin/radius/print-templates/designer-svg",
+        # WhatsApp bot inbound webhook (Phase 2): called server-to-server by
+        # the WhatsApp gateway, which has no session/CSRF token. It only reads
+        # the message and replies via the configured provider — never mutates
+        # admin data — and always answers 200.
+        "/admin/radius/communications/bot/webhook",
     }
 
     # CSRF عام مبسَّط — تحقّق الـ token على غير-GET

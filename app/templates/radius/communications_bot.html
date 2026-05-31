@@ -1,0 +1,277 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}بوت واتساب — مركز التواصل{% endblock %}
+{% block page_icon %}<i class="fa-brands fa-whatsapp"></i>{% endblock %}
+{% block page_title %}بوت واتساب{% endblock %}
+{% block page_sub %}<span class="sub">ردود تلقائية على رسائل المشتركين: الرصيد، الباقة، تاريخ الانتهاء… يعمل بضغطة واحدة.</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .cbot{ display:grid; gap:16px; }
+  /* enable hero switch */
+  .cbot-toggle{ display:flex; align-items:center; gap:14px; padding:15px 17px; border:1px solid #e2e8f0; border-radius:14px;
+    background:linear-gradient(135deg,#f0fdf4,#fbfdff); cursor:pointer; }
+  .cbot-toggle input{ width:22px;height:22px;accent-color:#16a34a;flex:none; }
+  .cbot-toggle .t{ font-size:14.5px; font-weight:800; color:#0f172a; }
+  .cbot-toggle .d{ font-size:12px; color:#475569; margin-top:2px; line-height:1.7; }
+  /* generic field */
+  .cbot-field{ display:grid; gap:6px; }
+  .cbot-field label{ font-size:13px; font-weight:800; color:#0f172a; }
+  .cbot-field .hint{ font-size:11.5px; color:#94a3b8; line-height:1.7; }
+  .cbot-input,.cbot-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:13px;
+    background:#fff; color:#0f172a; }
+  .cbot-input:focus,.cbot-area:focus{ outline:0; border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+  .cbot-area{ min-height:90px; resize:vertical; line-height:1.8; }
+  /* webhook URL + copy */
+  .cbot-url{ display:flex; gap:9px; align-items:stretch; flex-wrap:wrap; }
+  .cbot-url input{ flex:1; min-width:240px; font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate;
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; color:#0f172a; }
+  .cbot-copy{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:10px; padding:10px 16px; font:inherit; font-size:13px;
+    font-weight:800; cursor:pointer; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; box-shadow:0 6px 16px rgba(22,163,74,.25); transition:.15s; }
+  .cbot-copy:hover{ box-shadow:0 8px 20px rgba(22,163,74,.34); }
+  .cbot-copy.copied{ background:#0f172a; }
+  /* warning if whatsapp channel not set up */
+  .cbot-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.7; border-radius:12px; padding:11px 14px; }
+  .cbot-note.warn{ background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+  .cbot-note.ok{ background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+  .cbot-note a{ color:inherit; font-weight:800; text-decoration:underline; }
+  /* commands list */
+  .cbot-cmds{ display:grid; gap:11px; }
+  .cbot-cmd{ border:1px solid #e8edf3; border-radius:13px; padding:12px 13px; background:#fcfcff; display:grid; gap:10px;
+    grid-template-columns: 220px 1fr auto; align-items:start; }
+  @media (max-width:760px){ .cbot-cmd{ grid-template-columns:1fr; } }
+  .cbot-cmd .kw label,.cbot-cmd .rp label{ font-size:11.5px; font-weight:800; color:#475569; display:block; margin-bottom:5px; }
+  .cbot-cmd .cbot-input,.cbot-cmd .cbot-area{ font-size:12.5px; }
+  .cbot-cmd .rp .cbot-area{ min-height:74px; }
+  .cbot-cmd-side{ display:flex; flex-direction:column; gap:8px; align-items:stretch; padding-top:2px; }
+  @media (max-width:760px){ .cbot-cmd-side{ flex-direction:row; align-items:center; justify-content:space-between; } }
+  .cbot-onoff{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; color:#0f172a; cursor:pointer; white-space:nowrap; }
+  .cbot-onoff input{ width:17px;height:17px;accent-color:#16a34a; }
+  .cbot-del{ display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid #fecaca; background:#fff; color:#dc2626;
+    border-radius:9px; padding:7px 11px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; transition:.15s; }
+  .cbot-del:hover{ background:#fef2f2; }
+  .cbot-add{ display:inline-flex; align-items:center; gap:8px; border:1px dashed #c4b5fd; background:#fff; color:#5b21b6; border-radius:11px;
+    padding:10px 15px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; transition:.15s; }
+  .cbot-add:hover{ background:#f5f3ff; }
+  /* variables helper chips */
+  .cbot-vars{ display:flex; gap:6px; flex-wrap:wrap; }
+  .cbot-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
+    padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
+  .cbot-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
+  /* save bar */
+  .cbot-save{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .cbot-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:11px 18px; font:inherit; font-size:14px;
+    font-weight:800; cursor:pointer; text-decoration:none; transition:.15s; }
+  .cbot-btn.primary{ background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; box-shadow:0 8px 18px rgba(22,163,74,.28); }
+  .cbot-btn.primary:hover{ box-shadow:0 10px 22px rgba(22,163,74,.36); }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "بوت واتساب",
+  subtitle="فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.",
+  icon="robot"
+) }}
+
+{% include "radius/communications_nav.html" %}
+
+<form method="post" action="{{ url_for('radius.communications_bot') }}" class="cbot">
+  {{ csrf_token_input() }}
+
+  {# ── 1) Enable toggle ── #}
+  {% call hub.section("تشغيل البوت", icon="power-off") %}
+    <label class="cbot-toggle">
+      <input type="checkbox" name="enabled" value="1" {{ 'checked' if config.enabled else '' }}>
+      <span>
+        <span class="t">تفعيل الرد التلقائي على رسائل واتساب</span>
+        <span class="d">عند الإيقاف لن يرد البوت على أي رسالة واردة (لا شيء يُرسَل). يمكنك تركه مفعّلًا دائمًا.</span>
+      </span>
+    </label>
+
+    {% if whatsapp and whatsapp.active %}
+      <div class="cbot-note ok" style="margin-top:12px">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>قناة واتساب مهيأة للإرسال — البوت سيرسل ردوده عبرها مباشرة.</div>
+      </div>
+    {% else %}
+      <div class="cbot-note warn" style="margin-top:12px">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          قناة واتساب غير مكتملة الضبط بعد. لكي يتمكّن البوت من إرسال الردود،
+          اضبط رابط الإرسال وفعّل القناة من
+          <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>.
+        </div>
+      </div>
+    {% endif %}
+  {% endcall %}
+
+  {# ── 2) Webhook URL (read-only + copy) ── #}
+  {% call hub.section("رابط الويب-هوك", icon="link", meta="انسخه وضعه عند مزوّد واتساب") %}
+    <div class="cbot-field">
+      <label>عنوان استقبال الرسائل الواردة</label>
+      <div class="cbot-url">
+        <input type="text" id="cbot-webhook" value="{{ webhook_url }}" readonly onfocus="this.select()">
+        <button type="button" class="cbot-copy" id="cbot-copy" data-url="{{ webhook_url }}">
+          <i class="fa-solid fa-copy"></i> نسخ الرابط
+        </button>
+      </div>
+      <div class="hint">
+        ضع هذا الرابط في إعدادات الويب-هوك (Webhook) لدى مزوّد واتساب لديك. عند وصول رسالة من مشترك،
+        يستقبلها البوت ويرد عليها تلقائيًا. الرابط عام ولا يحتاج تسجيل دخول.
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── 3) Greeting + fallback ── #}
+  {% call hub.section("رسائل الترحيب والرد الافتراضي", icon="comment-dots") %}
+    <div class="cbot-field">
+      <label for="cbot-greeting">رسالة الترحيب / القائمة</label>
+      <textarea class="cbot-area" id="cbot-greeting" name="greeting"
+                placeholder="تُرسَل عند بدء المحادثة أو كتابة «القائمة».">{{ config.greeting }}</textarea>
+      <div class="hint">تظهر عند بدء المحادثة أو عند كلمات مثل «القائمة» / «ابدأ» / «مرحبا».</div>
+    </div>
+    <div class="cbot-field">
+      <label for="cbot-fallback">الرد عند عدم فهم الطلب</label>
+      <textarea class="cbot-area" id="cbot-fallback" name="fallback"
+                placeholder="يُرسَل عندما لا تطابق الرسالة أي أمر.">{{ config.fallback }}</textarea>
+      <div class="hint">يُرسَل عندما لا تطابق رسالة المشترك أي كلمة مفتاحية في القائمة أدناه.</div>
+    </div>
+  {% endcall %}
+
+  {# ── 4) Commands list ── #}
+  {% call hub.section("أوامر البوت (كلمة ← رد)", icon="list-check", meta="اكتب الكلمة التي يرسلها المشترك والرد المناسب") %}
+    <div class="cbot-field" style="margin-bottom:13px">
+      <label>المتغيّرات المتاحة في الردود</label>
+      <div class="cbot-vars">
+        {% for v in ['{username}','{prof}','{balance}','{exp}','{status}','{down_speed}','{up_speed}','{remain_quota}'] %}
+          <span class="cbot-var" data-var="{{ v }}" title="انقر للنسخ">{{ v }}</span>
+        {% endfor %}
+      </div>
+      <div class="hint">اكتب المتغيّر داخل الرد وسيُستبدل ببيانات المشترك عند الإرسال. مثال: «رصيدك: {balance}».</div>
+    </div>
+
+    <div class="cbot-cmds" id="cbot-cmds">
+      {% for cmd in config.commands %}
+      <div class="cbot-cmd" data-row>
+        <div class="kw">
+          <label>الكلمة المفتاحية</label>
+          <input class="cbot-input" name="cmd_keyword" value="{{ cmd.keyword }}" placeholder="مثال: الرصيد">
+        </div>
+        <div class="rp">
+          <label>الرد</label>
+          <textarea class="cbot-area" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}">{{ cmd.reply_template }}</textarea>
+        </div>
+        <div class="cbot-cmd-side">
+          <label class="cbot-onoff">
+            <input type="checkbox" data-enabled {{ 'checked' if cmd.enabled else '' }}>
+            مفعّل
+          </label>
+          <input type="hidden" name="cmd_enabled" value="{{ '1' if cmd.enabled else '0' }}">
+          <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> حذف</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:13px">
+      <button type="button" class="cbot-add" id="cbot-add"><i class="fa-solid fa-plus"></i> إضافة أمر جديد</button>
+    </div>
+  {% endcall %}
+
+  {# ── save ── #}
+  <div class="cbot-save">
+    <button type="submit" class="cbot-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات البوت</button>
+  </div>
+</form>
+
+{# Hidden template for a fresh empty command row #}
+<template id="cbot-row-tpl">
+  <div class="cbot-cmd" data-row>
+    <div class="kw">
+      <label>الكلمة المفتاحية</label>
+      <input class="cbot-input" name="cmd_keyword" value="" placeholder="مثال: الرصيد">
+    </div>
+    <div class="rp">
+      <label>الرد</label>
+      <textarea class="cbot-area" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}"></textarea>
+    </div>
+    <div class="cbot-cmd-side">
+      <label class="cbot-onoff">
+        <input type="checkbox" data-enabled checked>
+        مفعّل
+      </label>
+      <input type="hidden" name="cmd_enabled" value="1">
+      <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> حذف</button>
+    </div>
+  </div>
+</template>
+
+<script>
+(function(){
+  // ── copy webhook URL ──
+  var copyBtn = document.getElementById('cbot-copy');
+  if(copyBtn){
+    copyBtn.addEventListener('click', function(){
+      var url = copyBtn.getAttribute('data-url') || '';
+      var input = document.getElementById('cbot-webhook');
+      function done(){
+        var old = copyBtn.innerHTML;
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        setTimeout(function(){ copyBtn.classList.remove('copied'); copyBtn.innerHTML = old; }, 1600);
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(done, function(){ if(input){ input.select(); document.execCommand('copy'); done(); } });
+      } else if(input){ input.select(); document.execCommand('copy'); done(); }
+    });
+  }
+
+  // ── click a variable chip → copy it ──
+  document.querySelectorAll('.cbot-var').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var v = chip.getAttribute('data-var') || chip.textContent;
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(v); }
+      var old = chip.textContent; chip.textContent = 'تم النسخ ✓';
+      setTimeout(function(){ chip.textContent = old; }, 900);
+    });
+  });
+
+  // ── keep hidden cmd_enabled in sync with its checkbox (so getlist stays aligned) ──
+  function bindEnabled(row){
+    var cb = row.querySelector('[data-enabled]');
+    var hidden = row.querySelector('input[name="cmd_enabled"]');
+    if(cb && hidden){
+      cb.addEventListener('change', function(){ hidden.value = cb.checked ? '1' : '0'; });
+    }
+  }
+  var list = document.getElementById('cbot-cmds');
+  if(list){ Array.prototype.forEach.call(list.children, bindEnabled); }
+
+  // ── add a new row ──
+  var addBtn = document.getElementById('cbot-add');
+  var tpl = document.getElementById('cbot-row-tpl');
+  if(addBtn && tpl && list){
+    addBtn.addEventListener('click', function(){
+      var node = tpl.content.firstElementChild.cloneNode(true);
+      list.appendChild(node);
+      bindEnabled(node);
+      var input = node.querySelector('input[name="cmd_keyword"]');
+      if(input) input.focus();
+    });
+  }
+
+  // ── remove a row (delegated) ──
+  if(list){
+    list.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-del]');
+      if(!btn) return;
+      var row = btn.closest('[data-row]');
+      if(row) row.parentNode.removeChild(row);
+    });
+  }
+})();
+</script>
+{% endblock %}
