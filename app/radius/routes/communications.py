@@ -47,15 +47,101 @@ def _svc() -> NotificationCampaignService:
 
 
 def communications_dashboard():
+    """Phase 5 — «غرفة العمليات»: the single unified Operations Center landing.
+
+    One clean, RTL dashboard that surfaces the LIVE state of every comms
+    capability (phases 1-4) as status cards + big one-tap action tiles, plus a
+    quick-send form. Pure read-only aggregation — it reuses the existing phase
+    services and never duplicates their logic.
+    """
+    tid = _tid()
     svc = _svc()
     return render_template(
         "radius/communications.html",
-        summary=svc.dashboard(),
-        templates=svc.list_templates(),
-        segments=svc.list_segments(),
-        deliveries=svc.delivery_log(limit=10),
+        status=_hub_status(tid, svc),
+        deliveries=svc.delivery_log(limit=8),
         active="dashboard",
     )
+
+
+def _hub_status(tenant_id: int, svc: NotificationCampaignService) -> dict:
+    """Aggregate the live Operations-Center status from phases 1-4.
+
+    Returns a flat, template-friendly dict. Every lookup is defensive: a
+    missing/broken capability degrades to a safe "off/unknown" rather than
+    500-ing the landing page (the whole point of the hub is that it always
+    renders, «بكبسة زر»).
+    """
+    tid = int(tenant_id or 1)
+
+    # ── Phase 1: SMS / WhatsApp channels (+ Phase-4 quota when admin_quota) ──
+    channels: dict[str, dict] = {}
+    for ch in comms_providers.HTTP_CHANNELS:
+        try:
+            st = comms_providers.channel_status(tid, ch)
+            q = comms_quota.quota_status(tid, ch)
+            channels[ch] = {
+                "enabled": bool(st.get("enabled")),
+                "active": bool(st.get("active")),
+                "mode": st.get("mode"),
+                "is_quota_mode": bool(q.is_quota_mode),
+                "balance": int(q.balance),
+                "used": int(q.used),
+            }
+        except Exception:  # noqa: BLE001 — never break the landing page
+            channels[ch] = {"enabled": False, "active": False, "mode": comms_providers.DEFAULT_MODE,
+                            "is_quota_mode": False, "balance": 0, "used": 0}
+
+    # ── Phase 2: WhatsApp bot ──
+    try:
+        bot_cfg = comms_bot.load_bot_config(tid)
+        bot = {"enabled": bool(bot_cfg.enabled), "commands": len(bot_cfg.active_commands())}
+    except Exception:  # noqa: BLE001
+        bot = {"enabled": False, "commands": 0}
+
+    # ── Phase 3: event-driven notifications (how many of the events are on) ──
+    try:
+        rules = notifications_engine.load_rules(tid)
+        notif = {
+            "enabled": sum(1 for r in rules if r.enabled and r.active_channels()),
+            "total": len(rules),
+        }
+    except Exception:  # noqa: BLE001
+        notif = {"enabled": 0, "total": len(notifications_engine.EVENT_KEYS)}
+
+    # ── Network alerts via Telegram (Phase-2 tenant Telegram) ──
+    telegram = {"connected": _telegram_ready(tid)}
+
+    # ── Recent deliveries summary (sent / failed / queued) ──
+    try:
+        dash = svc.dashboard()
+        deliveries = {
+            "sent": int(dash.get("sent", 0)),
+            "failed": int(dash.get("failed", 0)),
+            "queued": int(dash.get("queued", 0)),
+            "templates": int(dash.get("templates", 0)),
+        }
+    except Exception:  # noqa: BLE001
+        deliveries = {"sent": 0, "failed": 0, "queued": 0, "templates": 0}
+
+    # Headline "how many capabilities are live" — drives the hero pill.
+    ready = sum([
+        1 if channels.get("sms", {}).get("active") else 0,
+        1 if channels.get("whatsapp", {}).get("active") else 0,
+        1 if bot.get("enabled") else 0,
+        1 if notif.get("enabled") else 0,
+        1 if telegram.get("connected") else 0,
+    ])
+
+    return {
+        "channels": channels,
+        "bot": bot,
+        "notifications": notif,
+        "telegram": telegram,
+        "deliveries": deliveries,
+        "ready": ready,
+        "ready_total": 5,
+    }
 
 
 def communications_templates():

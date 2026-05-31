@@ -154,7 +154,7 @@
 {%- set m_card_users = (path == url_for('radius.card_users_list')) -%}
 {%- set m_card_marketplace = (path == url_for('radius.card_marketplace')) -%}
 {%- set m_business_operators = (path == url_for('radius.business_operators')) -%}
-{%- set m_communications = ('/communications' in path) -%}
+{%- set m_communications = (path == url_for('radius.communications')) -%}
 {%- set m_communications_templates = (path == url_for('radius.communications_templates')) -%}
 {%- set m_communications_send = (path == url_for('radius.communications_send')) -%}
 {%- set m_communications_campaigns = (path == url_for('radius.communications_campaigns')) -%}
@@ -417,15 +417,15 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications) }}
-        {{ sub_item('radius.communications_templates', 'قوالب الرسائل', m_communications_templates) }}
-        {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
-        {{ sub_item('radius.communications_campaigns', 'الحملات', m_communications_campaigns) }}
+        {{ sub_item('radius.communications', '🛰️ غرفة العمليات', m_communications) }}
         {{ sub_item('radius.communications_channels', 'قنوات الإرسال', m_communications_channels) }}
-        {{ sub_item('radius.communications_bot', '🤖 بوت واتساب', m_communications_bot) }}
-        {{ sub_item('radius.communications_notifications', '🔔 الإشعارات الحدثية', m_communications_notifications) }}
-        {{ sub_item('radius.communications_quota', '💳 الرصيد والحِزم', m_communications_quota) }}
+        {{ sub_item('radius.communications_bot', 'بوت واتساب', m_communications_bot) }}
+        {{ sub_item('radius.communications_notifications', 'الإشعارات الحدثية', m_communications_notifications) }}
+        {{ sub_item('radius.communications_quota', 'الرصيد والحِزم', m_communications_quota) }}
+        {{ sub_item('radius.communications_templates', 'القوالب', m_communications_templates) }}
+        {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
         {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
+        {{ sub_item('radius.communications_campaigns', 'الحملات', m_communications_campaigns) }}
         {{ sub_item('radius.communications_audience', 'الجمهور', m_communications_audience) }}
         {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}
         {{ sub_item('radius.events_risk', 'تقييم المخاطر', m_events_risk) }}

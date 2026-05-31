@@ -1,12 +1,14 @@
+{# ── Operations Center in-section tab bar (reused across all comms pages) ──
+   Pass `active` from the route to highlight the current tab. The hub
+   («غرفة العمليات») is intentionally the first, primary entry. #}
+{% set _a = active|default('') %}
 <div class="hub-actions" data-testid="communications-nav">
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications') }}"><i class="fa-solid fa-chart-simple"></i> النظرة العامة</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_templates') }}"><i class="fa-solid fa-file-lines"></i> القوالب</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_send') }}"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_campaigns') }}"><i class="fa-solid fa-bullseye"></i> الحملات</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_audience') }}"><i class="fa-solid fa-users-viewfinder"></i> الجمهور</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-tower-broadcast"></i> قنوات الإرسال</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_bot') }}"><i class="fa-brands fa-whatsapp"></i> بوت واتساب</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_notifications') }}"><i class="fa-solid fa-bell"></i> الإشعارات الحدثية</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_quota') }}"><i class="fa-solid fa-wallet"></i> الرصيد والحِزم</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_deliveries') }}"><i class="fa-solid fa-truck-fast"></i> سجل الإرسال</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'dashboard' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications') }}"><i class="fa-solid fa-satellite-dish"></i> غرفة العمليات</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'channels' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-tower-broadcast"></i> قنوات الإرسال</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'bot' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_bot') }}"><i class="fa-brands fa-whatsapp"></i> بوت واتساب</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'notifications' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_notifications') }}"><i class="fa-solid fa-bell"></i> الإشعارات الحدثية</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'quota' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_quota') }}"><i class="fa-solid fa-wallet"></i> الرصيد والحِزم</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'templates' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_templates') }}"><i class="fa-solid fa-file-lines"></i> القوالب</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'send' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_send') }}"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة</a>
+  <a class="hub-btn {{ 'hub-btn--primary' if _a == 'deliveries' else 'hub-btn--secondary' }}" href="{{ url_for('radius.communications_deliveries') }}"><i class="fa-solid fa-truck-fast"></i> سجل الإرسال</a>
 </div>
