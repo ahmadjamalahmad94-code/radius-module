@@ -321,6 +321,22 @@ def _install_stubs(app: Flask) -> None:
             "endpoint_exists": lambda name: name in app.view_functions,
         }
 
+    # Unified system config (currency / timezone / branding) + money & local-time
+    # filters — single source of truth read from tenant_settings.
+    @app.context_processor
+    def _inject_system_config():
+        try:
+            from app.radius.core.system_config import system_config
+            return {"cfg": system_config()}
+        except Exception:  # noqa: BLE001 — never break a page on config read
+            return {"cfg": {"currency": "JOD", "currency_symbol": "د.أ", "tz_offset": 3.0,
+                            "system_name": "HobeRadius", "country": "", "logo_url": "", "primary_color": "#2BAACC"}}
+
+    from app.radius.core.system_config import format_money as _fmt_money, to_local as _to_local, to_local_date as _to_local_date
+    app.jinja_env.filters["money"] = _fmt_money
+    app.jinja_env.filters["dt_local"] = _to_local
+    app.jinja_env.filters["date_local"] = _to_local_date
+
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
     app.jinja_env.filters.setdefault("arabize", lambda s: s)
     app.jinja_env.filters.setdefault("arabize_audit", lambda s: s)

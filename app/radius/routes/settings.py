@@ -15,10 +15,12 @@ def _tid() -> int:
 
 # مفاتيح معيارية نعرضها في الواجهة (key, label, default)
 _SETTINGS_KEYS = [
+    ("system.name",             "اسم النظام",            "HobeRadius"),
     ("branding.logo_url",       "رابط الشعار",         ""),
     ("branding.primary_color",  "اللون الأساسي",        "#2BAACC"),
-    ("radius.default_country",   "الدولة الافتراضية",    ""),
-    ("billing.currency",        "العملة",               "JOD"),
+    ("radius.default_country",   "الدولة (موقع النظام)", ""),
+    ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", "JOD"),
+    ("billing.timezone_offset", "فارق توقيت النظام بالساعات (مثال: 3 تعني +3)", "3"),
     ("billing.tax_pct",         "ضريبة %",              "0"),
     ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),
     ("cards.default_username_length", "طول اسم البطاقة الافتراضي",   "8"),

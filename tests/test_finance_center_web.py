@@ -98,7 +98,25 @@ def test_finance_section_routes_render_and_ledger_has_no_delete(app):
         }.items():
             res = client.get(path)
             assert res.status_code == 200
-            assert marker in res.get_data(as_text=True)
+            html = res.get_data(as_text=True)
+            assert marker in html
+            assert '"status": "placeholder"' not in html.lower()
+            assert "سيتم ربط" not in html
 
         delete_attempt = client.delete("/admin/radius/finance/ledger")
         assert delete_attempt.status_code >= 400
+
+
+def test_report_archive_page_uses_arabic_visible_copy(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        res = client.get("/admin/radius/reports/archive")
+        html = res.get_data(as_text=True)
+
+    assert res.status_code == 200
+    assert "أرشيف التقارير" in html
+    assert "نوع الأرشفة" in html
+    assert "اللقطات المحفوظة" in html
+    assert "Report Archives" not in html
+    assert "Archive type" not in html
+    assert "Existing archives" not in html

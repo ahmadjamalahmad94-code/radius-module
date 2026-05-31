@@ -388,8 +388,8 @@ class CardUsersMarketplaceService:
             "timeline": self._timeline(purchases, events, ledger),
             "messages": [
                 {
-                    "status": "placeholder",
-                    "message": "Message delivery is recorded as an event placeholder for now.",
+                    "status": "event_recorded",
+                    "message": "تم تسجيل إشعار العملية في سجل الأحداث. إرسال الرسائل الفعلي يحتاج مزود رسائل مفعّل.",
                 }
             ],
             "events": events,
@@ -516,7 +516,12 @@ class CardUsersMarketplaceService:
                 package["currency"],
                 "completed",
                 "event_only",
-                _json({"message_delivery": "placeholder_event"}),
+                _json(
+                    {
+                        "message_delivery": "event_recorded",
+                        "message_ar": "تم تسجيل إشعار العملية في سجل الأحداث.",
+                    }
+                ),
                 now_iso(),
             ),
         )

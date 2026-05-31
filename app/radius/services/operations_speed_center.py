@@ -50,13 +50,13 @@ class OperationsSpeedCenterService:
             "emergency_actions": [
                 {
                     "key": "disconnect_all",
-                    "status": "placeholder_blocked",
-                    "reason": "Requires explicit safe live integration and operator approval.",
+                    "status": "blocked_until_live_approval",
+                    "reason": "هذا الإجراء يحتاج ربطًا حيًا آمنًا وموافقة صريحة من المشغّل قبل التنفيذ.",
                 },
                 {
                     "key": "global_speed_cut",
-                    "status": "use_speed_control_dry_run",
-                    "reason": "Preview first; this center does not push live CoA.",
+                    "status": "dry_run_only",
+                    "reason": "استخدم معاينة التحكم بالسرعة أولًا. هذا المركز لا يرسل أوامر CoA حيّة مباشرة.",
                 },
             ],
         }

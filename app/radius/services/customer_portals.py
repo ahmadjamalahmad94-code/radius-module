@@ -241,7 +241,11 @@ class CustomerPortalService:
             status="pending",
             requested_minutes=0,
             reason=reason,
-            result={"applied_to_radius": False, "gateway": "placeholder"},
+            result={
+                "applied_to_radius": False,
+                "gateway": "manual_review",
+                "message_ar": "تم تسجيل طلب التجديد بانتظار مراجعة الإدارة.",
+            },
         )
         return self.get_request(request_id)
 

@@ -238,7 +238,22 @@ def test_marketplace_does_not_touch_live_radius(app):
         ).fetchone()
 
     assert purchase["delivery_status"] == "event_only"
+    assert purchase["metadata"]["message_delivery"] == "event_recorded"
     if radius_actions:
         with app.app_context():
             count = db().execute("SELECT COUNT(*) AS c FROM radius_activation_actions").fetchone()["c"]
         assert count == 0
+
+
+def test_card_user_360_messages_are_arabic_and_not_placeholder(app):
+    user, package = _market(app)
+    with app.app_context():
+        service = CardUsersMarketplaceService(tenant_id=1)
+        service.recharge_wallet(card_user_id=user["id"], amount="5.00", actor="qa")
+        service.purchase_package(card_user_id=user["id"], package_id=package["id"])
+        card_user = service.card_user_360(user["id"])
+
+    message = card_user["messages"][0]
+    assert message["status"] == "event_recorded"
+    assert "تم تسجيل" in message["message"]
+    assert "placeholder" not in message["message"].lower()

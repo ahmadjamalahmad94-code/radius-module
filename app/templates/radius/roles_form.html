@@ -109,8 +109,8 @@
     <div class="rl-grid">
       <div class="rl-field"><label>اسم الدور الداخلي <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %} required
-               value="{{ role.name if role else '' }}" placeholder="manager / viewer / auditor">
-        <div class="help">اسم تقني فريد — يُستخدم في الكود.</div></div>
+               value="{{ role.name if role else '' }}" placeholder="اكتب مفتاحًا تقنيًا فريدًا">
+        <div class="help">هذا المفتاح داخلي ويُفضّل أن يكون بحروف لاتينية صغيرة وشرطة سفلية، مثل دور مدير الفرع.</div></div>
       <div class="rl-field"><label>الاسم الظاهر</label>
         <input class="hub-input" type="text" name="display_name" value="{{ role.display_name if role else '' }}"></div>
       <div class="rl-field"><label>اللون</label>

@@ -104,7 +104,7 @@ class FinanceCenterService:
         return {
             "items": [],
             "count": 0,
-            "status": "placeholder",
-            "message_ar": "سيتم ربط الديون التفصيلية هنا عند تفعيل دورة الديون الكاملة.",
+            "status": "pending_configuration",
+            "message_ar": "دورة الديون التفصيلية غير مفعّلة بعد. لا يتم عرض أرقام تقديرية أو مصطنعة.",
             "tenant_id": int(tenant_id),
         }
