@@ -16,6 +16,7 @@ from app.radius.services.admin_panel_client import (
     SNAPSHOT_LICENSE,
     LicenseAdminSnapshotStore,
 )
+from app.radius.db.repos.service_entitlements_repo import LocalServiceEntitlementRepository
 from app.radius.services.license_admin_runtime_sync import (
     ACTIVE_LICENSE_STATUSES,
     BLOCKING_LICENSE_STATUSES,
@@ -321,6 +322,7 @@ class CapacityEnforcementService:
             services = latest_capacity_contract.get("services") or {}
         elif isinstance(license_payload, dict) and isinstance(license_payload.get("services"), dict):
             services = license_payload.get("services") or {}
+        services = self._merge_local_services(tenant_id=tenant_id, services=services)
         return {
             "status": status,
             "mode": "local_snapshot",
@@ -356,7 +358,8 @@ class CapacityEnforcementService:
         warnings: list[str] = []
         if not state.get("last_success"):
             warnings.append("no_capacity_contract")
-            return state, {}, warnings
+            local_services = self._merge_local_services(tenant_id=tenant_id, services={})
+            return state, {"services": local_services} if local_services else {}, warnings
         if state.get("stale"):
             warnings.append("stale_contract")
         snapshot = state.get("last_success") or {}
@@ -369,8 +372,30 @@ class CapacityEnforcementService:
             or isinstance(contract.get("features"), dict)
             or isinstance(contract.get("services"), dict)
         ):
-            return state, contract, warnings
-        return state, payload, warnings
+            return state, self._payload_with_local_services(tenant_id=tenant_id, payload=contract), warnings
+        return state, self._payload_with_local_services(tenant_id=tenant_id, payload=payload), warnings
+
+    def _payload_with_local_services(self, *, tenant_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return payload
+        local_services = LocalServiceEntitlementRepository().contract_services(tenant_id=tenant_id)
+        if not local_services:
+            return payload
+        merged = dict(payload)
+        services = merged.get("services") if isinstance(merged.get("services"), dict) else {}
+        merged["services"] = {**services, **local_services}
+        return merged
+
+    def _merge_local_services(
+        self,
+        *,
+        tenant_id: int,
+        services: dict[str, Any],
+    ) -> dict[str, Any]:
+        local_services = LocalServiceEntitlementRepository().contract_services(tenant_id=tenant_id)
+        if not local_services:
+            return dict(services or {})
+        return {**dict(services or {}), **local_services}
 
     def _license_payload(self, *, tenant_id: int) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
         state = self.store.state(tenant_id=tenant_id, snapshot_type=SNAPSHOT_LICENSE)

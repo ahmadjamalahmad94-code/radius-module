@@ -15,6 +15,10 @@ from typing import Any, Optional
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso
 from . import accounting_repo
+from .service_entitlements_repo import (
+    LocalServiceEntitlementRepository,
+    ServiceRequestLinkRepository,
+)
 
 PAYMENT_PROVIDERS = {"manual_wallet", "jawwal_pay"}
 CONFIRMATION_MODES = {"manual", "api"}
@@ -562,6 +566,7 @@ class PaymentServiceApplyRepository:
                 "live_coa_apply": False,
                 "live_mikrotik_apply": False,
                 "mode": "record_only",
+                "local_service_apply": False,
             }
             status = "applied"
             error_message = ""
@@ -569,6 +574,28 @@ class PaymentServiceApplyRepository:
                 status = "failed"
                 error_message = "simulated apply failure"
                 result["failure"] = error_message
+            else:
+                link = ServiceRequestLinkRepository().get_by_payment_request(
+                    tenant_id=tenant_id,
+                    payment_request_id=request_id,
+                    conn=conn,
+                )
+                if link:
+                    entitlement = LocalServiceEntitlementRepository().upsert_from_service_request_payment(
+                        conn=conn,
+                        tenant_id=tenant_id,
+                        link=link,
+                        payment_request=request_data,
+                        actor=actor,
+                    )
+                    result.update({
+                        "mode": "local_entitlement_only",
+                        "local_service_apply": True,
+                        "service_key": link.get("service_key"),
+                        "service_label": link.get("service_label"),
+                        "ticket_id": link.get("ticket_id"),
+                        "entitlement_id": entitlement.get("id"),
+                    })
 
             cur = conn.execute(
                 """

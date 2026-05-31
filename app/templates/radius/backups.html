@@ -1,5 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
+{# format an ISO timestamp (2026-05-31T07:49:08.574Z) → "2026-05-31 07:49:08" #}
+{% macro fmt_dt(s) %}{% set t = s|string %}{% if 'T' in t and t|length >= 19 %}{{ t[:10] }} {{ t[11:19] }}{% elif s %}{{ t }}{% else %}—{% endif %}{% endmacro %}
+{# Arabic label for a backup/run status #}
+{% macro st_ar(s) %}{% set m = {'success':'ناجحة','ok':'ناجحة','failed':'فاشلة','error':'خطأ','dry_run':'تجريبية','uploaded':'مرفوعة','timeout':'انتهت المهلة','metadata_only':'بيانات وصفية'} %}{{ m.get(s|string, s if s else '—') }}{% endmacro %}
 {% block title %}النسخ الاحتياطي{% endblock %}
 {% block page_title %}النسخ الاحتياطي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
@@ -30,6 +35,14 @@
   .bk-kv .row .k{ font-size:12.5px; color:#475569; font-weight:700; }
   .bk-kv .row .v{ font-size:13px; color:#0f172a; font-weight:800; text-align:start; word-break:break-word; }
   .bk-kv .row .v.ltr{ direction:ltr; unicode-bidi:isolate; }
+  /* per-backup content summary */
+  .bk-sum-cell-wrap{ padding:6px 4px 12px; }
+  .bk-sum-title{ font-size:11px; font-weight:800; color:#94a3b8; letter-spacing:.4px; margin:0 0 9px; }
+  .bk-sum-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:9px; }
+  .bk-sum-cell{ background:#f5f3ff; border:1px solid #ede9fe; border-radius:11px; padding:10px 12px; text-align:center; }
+  .bk-sum-cell .v{ font-size:19px; font-weight:800; color:#5b21b6; }
+  .bk-sum-cell .l{ font-size:11px; color:#475569; font-weight:700; margin-top:2px; }
+  .bk-sum-msg{ font-size:12.5px; color:#475569; }
 </style>
 {% endblock %}
 
@@ -46,9 +59,9 @@
 ) }}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("الحالة الأخيرة", job.get('last_status') or 'لم تُشغّل بعد', icon="circle-info", variant="brand",
+  {{ hub.kpi("الحالة الأخيرة", st_ar(job.get('last_status')) if job.get('last_status') else 'لم تُشغّل بعد', icon="circle-info", variant="brand",
              sub=(job.get('last_message') or 'لم يتم تشغيل نسخة بعد.')) }}
-  {{ hub.kpi("آخر تشغيل", job.get('last_run_at') or '—', icon="clock-rotate-left", variant="blue",
+  {{ hub.kpi("آخر تشغيل", fmt_dt(job.get('last_run_at')) if job.get('last_run_at') else '—', icon="clock-rotate-left", variant="blue",
              sub="تحقق من النسخة خارج التطبيق قبل الاعتماد عليها إنتاجيًا.") }}
   {{ hub.kpi("النسخ المحلية", local_files|length, icon="hard-drive", variant="grey",
              sub="ملفات SQLite محفوظة بجانب قاعدة البيانات.") }}
@@ -159,10 +172,14 @@
                   <span class="hub-pill hub-pill--blue"><span class="dot"></span>نسخة</span>
                 {% endif %}
               </td>
-              <td class="num">{{ f.size_mb }} MB</td>
-              <td class="mono" style="font-size:12px">{{ f.modified_at }}</td>
+              <td class="num">{{ f.size_mb }} م.ب</td>
+              <td class="mono" style="font-size:12px">{{ fmt_dt(f.modified_at) }}</td>
               <td>
                 <div class="hub-flex-row" style="gap:6px; flex-wrap:nowrap; justify-content:flex-end">
+                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+                          data-bk-content data-name="{{ f.name }}" data-target="bk-sum-{{ loop.index0 }}">
+                    <i class="fa-solid fa-list-ul"></i> المحتوى
+                  </button>
                   <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.backups_download', name=f.name) }}">
                     <i class="fa-solid fa-download"></i> تنزيل
                   </a>
@@ -172,6 +189,14 @@
                       <i class="fa-solid fa-rotate-left"></i> استعادة
                     </button>
                   {% endif %}
+                </div>
+              </td>
+            </tr>
+            <tr class="bk-sum-row" id="bk-sum-{{ loop.index0 }}" data-loaded="0" style="display:none">
+              <td colspan="5">
+                <div class="bk-sum-cell-wrap">
+                  <div class="bk-sum-title">محتوى هذه النسخة</div>
+                  <div class="bk-sum-body"><span class="bk-sum-msg">…</span></div>
                 </div>
               </td>
             </tr>
@@ -198,16 +223,16 @@
             <tr>
               <td>
                 {% if st == 'ok' or st == 'success' %}
-                  <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ st }}</span>
+                  <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ st_ar(st) }}</span>
                 {% elif st == 'failed' or st == 'error' %}
-                  <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ st }}</span>
+                  <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ st_ar(st) }}</span>
                 {% else %}
-                  <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ st or '—' }}</span>
+                  <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ st_ar(st) }}</span>
                 {% endif %}
               </td>
               <td class="mono" style="font-size:12px">{{ run.get('path') or '—' }}</td>
               <td>{{ run.get('message') or '—' }}</td>
-              <td class="mono" style="font-size:12px">{{ run.get('created_at') or '—' }}</td>
+              <td class="mono" style="font-size:12px">{{ fmt_dt(run.get('created_at')) }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -219,6 +244,40 @@
 {% endcall %}
 
 </div>
+
+{# ── Per-backup content summary (read-only counts) ── #}
+<script>
+(function(){
+  var base = "{{ url_for('radius.backups_content', name='__N__') }}";
+  function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function load(row, name){
+    var body = row.querySelector('.bk-sum-body');
+    if(body) body.innerHTML = '<span class="bk-sum-msg">…جارٍ قراءة محتوى النسخة</span>';
+    fetch(base.replace('__N__', encodeURIComponent(name)), {headers:{'X-Requested-With':'fetch'}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        row.setAttribute('data-loaded','1');
+        if(!body) return;
+        if(!d || !d.ok || !d.items || !d.items.length){
+          body.innerHTML = '<span class="bk-sum-msg">تعذّر قراءة محتوى هذه النسخة أو لا تحتوي جداول معروفة.</span>'; return;
+        }
+        var html = '<div class="bk-sum-grid">';
+        d.items.forEach(function(it){ html += '<div class="bk-sum-cell"><div class="v">'+ it.count +'</div><div class="l">'+ esc(it.label) +'</div></div>'; });
+        body.innerHTML = html + '</div>';
+      })
+      .catch(function(){ if(body) body.innerHTML = '<span class="bk-sum-msg">تعذّر الاتصال لقراءة المحتوى.</span>'; });
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-bk-content]');
+    if(!b) return;
+    var row = document.getElementById(b.getAttribute('data-target'));
+    if(!row) return;
+    var open = row.style.display === 'none' || !row.style.display;
+    row.style.display = open ? 'table-row' : 'none';
+    if(open && row.getAttribute('data-loaded') !== '1') load(row, b.getAttribute('data-name'));
+  });
+})();
+</script>
 
 {# ── Restore confirm modal ── #}
 {% if restore_enabled %}

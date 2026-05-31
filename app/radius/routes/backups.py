@@ -17,6 +17,7 @@ def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups/run", "backups_run", backups_run, methods=["POST"])
     bp.add_url_rule("/backups/upload-panel", "backups_upload_panel", backups_upload_panel, methods=["POST"])
     bp.add_url_rule("/backups/download/<path:name>", "backups_download", backups_download, methods=["GET"])
+    bp.add_url_rule("/backups/content/<path:name>", "backups_content", backups_content, methods=["GET"])
     bp.add_url_rule("/backups/restore", "backups_restore", backups_restore, methods=["POST"])
     bp.add_url_rule("/backups/gdrive/save", "backups_gdrive_save", backups_gdrive_save, methods=["POST"])
     bp.add_url_rule("/backups/gdrive/start", "backups_gdrive_start", backups_gdrive_start, methods=["POST"])
@@ -194,6 +195,11 @@ def backups_gdrive_disconnect():
     session.pop("gdrive_pairing", None)
     flash("تم فصل Google Drive.", "info")
     return redirect(url_for("radius.backups"))
+
+
+def backups_content(name: str):
+    """JSON content summary (row counts) for one local backup — loaded on demand."""
+    return jsonify(get_operations_service().summarize_local_backup(name=name))
 
 
 def backups_download(name: str):

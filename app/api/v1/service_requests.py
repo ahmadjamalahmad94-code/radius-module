@@ -21,6 +21,7 @@ from ...radius.db.repos.payments_repo import (
     PaymentSettings,
     PaymentSettingsRepository,
 )
+from ...radius.db.repos.service_entitlements_repo import ServiceRequestLinkRepository
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -349,8 +350,24 @@ def create_service_request():
     ))
 
     payment_request = None
+    ServiceRequestLinkRepository().create_or_update(
+        tenant_id=_tid(),
+        ticket_id=int(ticket.id or 0),
+        subscriber_id=subscriber_id,
+        service_key=service_key,
+        service_label=service_label,
+        request_type=request_type,
+        status=ticket.status,
+    )
     if payment_context:
         payment_request = _create_payment_request(subscriber_id, payment_context)
+        ServiceRequestLinkRepository().update_decision(
+            tenant_id=_tid(),
+            ticket_id=int(ticket.id or 0),
+            decision="payment_requested",
+            status=ticket.status,
+            latest_payment_request_id=int(payment_request["id"]),
+        )
         tickets_repo.add_reply(TicketReply(
             id=None,
             tenant_id=_tid(),
@@ -407,6 +424,13 @@ def service_request_decision(ticket_id: int):
         next_status = "pending"
 
     updated = tickets_repo.update_ticket(_tid(), ticket.id or ticket_id, status=next_status)
+    ServiceRequestLinkRepository().update_decision(
+        tenant_id=_tid(),
+        ticket_id=int(ticket.id or ticket_id),
+        decision=decision,
+        status=next_status,
+        latest_payment_request_id=int(payment_request["id"]) if payment_request else None,
+    )
     tickets_repo.add_reply(TicketReply(
         id=None,
         tenant_id=_tid(),

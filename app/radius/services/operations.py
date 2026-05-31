@@ -1755,6 +1755,46 @@ class OperationsService:
             return None
         return path
 
+    # Tables surfaced in the per-backup content summary (read-only counts).
+    BACKUP_SUMMARY_TABLES = [
+        ("subscribers", "المشتركون"),
+        ("cards", "الكروت"),
+        ("access_plans", "الباقات"),
+        ("card_batches", "دفعات الكروت"),
+        ("vouchers", "القسائم"),
+        ("subscriber_recharges", "عمليات التعبئة"),
+    ]
+
+    def summarize_local_backup(self, *, name: str) -> dict:
+        """Open a local backup file read-only and count rows in known tables.
+
+        Returns {"ok": bool, "items": [{key,label,count}]}. Never writes and
+        never raises — a missing/corrupt file yields ok=False.
+        """
+        path = self.resolve_local_backup_path(name=name)
+        if not path:
+            return {"ok": False, "items": []}
+        items: list[dict] = []
+        try:
+            con = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=3)
+            try:
+                cur = con.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                present = {str(r[0]) for r in cur.fetchall()}
+                for table, label in self.BACKUP_SUMMARY_TABLES:
+                    if table not in present:
+                        continue
+                    try:
+                        cur.execute('SELECT COUNT(*) FROM "%s"' % table)  # noqa: S608 — fixed allow-list
+                        items.append({"key": table, "label": label, "count": int(cur.fetchone()[0])})
+                    except sqlite3.Error:
+                        continue
+            finally:
+                con.close()
+        except sqlite3.Error:
+            return {"ok": False, "items": []}
+        return {"ok": True, "items": items}
+
     def restore_local_backup(self, *, tenant_id: int, actor: str, name: str) -> dict:
         """Restore the live DB from a local backup file. Heavily gated.
 
