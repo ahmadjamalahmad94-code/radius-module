@@ -333,7 +333,61 @@ def _maybe_fire_alert(
         )
         if delivered:
             fired_anything = True
+        # Phase 3 — also route the alert through the event-driven
+        # notifications engine so the operator's SMS/WhatsApp channels can
+        # fire for the same network event. The existing Telegram path above
+        # is untouched; this is purely additive and fully isolated (a notify
+        # failure can never break the monitor tick).
+        _notify_network_event(
+            tenant_id=int(device["tenant_id"]),
+            event_type=event_type,
+            device=device,
+            latency_ms=latency_ms,
+        )
     return fired_anything
+
+
+# Monitor's internal event types → notifications-engine keys.
+_NET_EVENT_TO_NOTIF: dict[str, str] = {
+    "device_down": "router_down",
+    "device_up": "router_up",
+    "device_high_latency": "network_high_latency",
+}
+
+
+def _notify_network_event(
+    *,
+    tenant_id: int,
+    event_type: str,
+    device: dict,
+    latency_ms: Optional[float],
+) -> None:
+    """Fire the matching notify_event for a network alert. Never raises.
+
+    Builds a small device-flavoured context ({device},{ip},{time},{latency})
+    consumed by the network event templates. The engine itself decides whether
+    the rule is enabled and which channels to use — this only hands it the data.
+    """
+    notif_key = _NET_EVENT_TO_NOTIF.get(event_type)
+    if not notif_key:
+        return
+    try:
+        from . import notifications_engine as ne
+
+        latency_str = (f"{latency_ms:.1f} ms" if latency_ms is not None else "—")
+        ne.notify_event(
+            notif_key,
+            tenant_id=int(tenant_id),
+            subscriber=None,
+            context={
+                "device": device.get("name") or f"#{device.get('id')}",
+                "ip": device.get("ip_address") or "",
+                "time": _now_local_iso(),
+                "latency": latency_str,
+            },
+        )
+    except Exception:  # noqa: BLE001 — monitor must never break on a notify
+        _LOG.debug("[net-monitor] notify_event fan-out failed (%s)", event_type)
 
 
 def _fire_with_cooldown(

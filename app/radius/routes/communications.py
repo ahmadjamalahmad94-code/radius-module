@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
-from ..services import comms_bot, comms_providers
+from ..services import comms_bot, comms_providers, notifications_engine
 from ..services.notification_campaigns import NotificationCampaignError, NotificationCampaignService
 
 
@@ -19,6 +19,8 @@ def register_communications_routes(bp: Blueprint) -> None:
     # WhatsApp bot (Phase 2): a simple settings page + a public inbound webhook.
     bp.add_url_rule("/communications/bot", "communications_bot", communications_bot_settings, methods=["GET", "POST"])
     bp.add_url_rule("/communications/bot/webhook", "communications_bot_webhook", communications_bot_webhook, methods=["POST"])
+    # Event-driven notifications (Phase 3): one simple toggle-per-event page.
+    bp.add_url_rule("/communications/notifications", "communications_notifications", communications_notifications, methods=["GET", "POST"])
 
 
 def _tid() -> int:
@@ -295,6 +297,77 @@ def communications_bot_webhook():
         return jsonify({"ok": True, "handled": result.handled, "reason": result.reason}), 200
     except Exception:  # noqa: BLE001 — the webhook must never 500
         return jsonify({"ok": True, "handled": False, "reason": "error"}), 200
+
+
+def communications_notifications():
+    """Phase 3 — event-driven notifications settings (the heart).
+
+    One dense, friendly page: every business event is a compact card with an
+    enable toggle, channel checkboxes (SMS / واتساب / Telegram), an editable
+    Arabic message (with clickable variable chips) and — for the dunning
+    reminder — a ``days_before`` field. Defaults are pre-filled so it works
+    "بكبسة زر". GET renders; POST persists all rules and redirects back.
+    """
+    tid = _tid()
+    if request.method == "POST":
+        try:
+            notifications_engine.save_rules(tid, _notif_values_from_form(), by=_admin_id())
+            flash("تم حفظ إعدادات الإشعارات الحدثية.", "success")
+        except Exception:  # noqa: BLE001 — settings must never 500 the page
+            flash("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى.", "error")
+        return redirect(url_for("radius.communications_notifications"))
+
+    rules = notifications_engine.load_rules(tid)
+    channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
+    telegram_ready = _telegram_ready(tid)
+    return render_template(
+        "radius/communications_notifications.html",
+        rules=rules,
+        groups=notifications_engine.GROUP_LABELS,
+        all_channels=notifications_engine.NOTIF_CHANNELS,
+        channel_labels=NOTIF_CHANNEL_LABELS,
+        channels=channels,
+        telegram_ready=telegram_ready,
+        active="notifications",
+    )
+
+
+# Arabic labels + icons for the three channels, used by the settings template.
+NOTIF_CHANNEL_LABELS = {
+    "sms": ("SMS", "comment-sms"),
+    "whatsapp": ("واتساب", "whatsapp"),
+    "telegram": ("Telegram", "telegram"),
+}
+
+
+def _telegram_ready(tenant_id: int) -> bool:
+    """Whether the tenant's Telegram channel is configured (for a UI hint)."""
+    try:
+        from ..db.repos import tenant_telegram_settings_repo
+
+        return bool(tenant_telegram_settings_repo.is_configured(int(tenant_id or 1)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _notif_values_from_form() -> dict:
+    """Translate the posted per-event fields into the ``save_rules`` mapping.
+
+    For each known event key the page posts:
+      * ``<event>__enabled``     hidden 0/1 (mirrors the toggle)
+      * ``<event>__channels``    repeated checkbox values (getlist)
+      * ``<event>__template``    textarea
+      * ``<event>__days_before`` (near_expiry only)
+    """
+    values: dict = {}
+    for key in notifications_engine.EVENT_KEYS:
+        values[f"{key}__enabled"] = request.form.get(f"{key}__enabled") or "0"
+        values[f"{key}__channels"] = request.form.getlist(f"{key}__channels")
+        values[f"{key}__template"] = request.form.get(f"{key}__template") or ""
+        days = request.form.get(f"{key}__days_before")
+        if days is not None:
+            values[f"{key}__days_before"] = days
+    return values
 
 
 def _bot_webhook_url() -> str:

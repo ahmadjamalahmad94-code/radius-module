@@ -1,0 +1,197 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الإشعارات الحدثية — مركز التواصل{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
+{% block page_title %}الإشعارات الحدثية{% endblock %}
+{% block page_sub %}<span class="sub">فعّل أي حدث، اختر القنوات، وعدّل نص الرسالة — جاهز مسبقًا ويعمل بكبسة زر.</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .cnf{ display:grid; gap:16px; }
+  /* group title strip */
+  .cnf-group{ display:flex; align-items:center; gap:9px; margin:6px 2px 2px; font-size:13px; font-weight:800; color:#5b21b6; }
+  .cnf-group .ln{ flex:1; height:1px; background:linear-gradient(90deg,#ede9fe,transparent); }
+  /* event card */
+  .cnf-card{ border:1px solid #e8edf3; border-radius:14px; background:#fcfcff; overflow:hidden; transition:.15s; }
+  .cnf-card.on{ border-color:#c4b5fd; box-shadow:0 4px 14px rgba(91,33,182,.06); }
+  .cnf-head{ display:flex; align-items:center; gap:12px; padding:13px 15px; cursor:pointer; }
+  .cnf-head .ttl{ font-size:14px; font-weight:800; color:#0f172a; flex:1; }
+  .cnf-head .ttl .ek{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#94a3b8; font-weight:600; margin-inline-start:7px; direction:ltr; unicode-bidi:isolate; }
+  /* toggle switch */
+  .cnf-sw{ position:relative; width:46px; height:26px; flex:none; }
+  .cnf-sw input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:2; }
+  .cnf-sw .track{ position:absolute; inset:0; background:#cbd5e1; border-radius:99px; transition:.18s; }
+  .cnf-sw .knob{ position:absolute; top:3px; inset-inline-start:3px; width:20px; height:20px; background:#fff; border-radius:50%;
+    box-shadow:0 1px 3px rgba(0,0,0,.25); transition:.18s; }
+  .cnf-sw input:checked ~ .track{ background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+  .cnf-sw input:checked ~ .knob{ inset-inline-start:23px; }
+  /* card body (revealed when enabled) */
+  .cnf-body{ padding:0 15px 15px; display:grid; gap:13px; border-top:1px solid #f1f5f9; }
+  .cnf-card:not(.on) .cnf-body{ display:none; }
+  /* channels row */
+  .cnf-chans{ display:flex; flex-wrap:wrap; gap:9px; padding-top:13px; }
+  .cnf-chan{ display:inline-flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:10px; padding:8px 13px;
+    font-size:12.5px; font-weight:800; color:#334155; cursor:pointer; background:#fff; transition:.13s; user-select:none; }
+  .cnf-chan input{ width:16px; height:16px; accent-color:#7c3aed; cursor:pointer; }
+  .cnf-chan:hover{ border-color:#c4b5fd; }
+  .cnf-chan.sel{ background:#f5f3ff; border-color:#c4b5fd; color:#5b21b6; }
+  .cnf-chan .warn{ font-size:10.5px; font-weight:700; color:#b45309; }
+  /* message field */
+  .cnf-field{ display:grid; gap:6px; }
+  .cnf-field label{ font-size:12.5px; font-weight:800; color:#0f172a; }
+  .cnf-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:12.5px;
+    background:#fff; color:#0f172a; min-height:74px; resize:vertical; line-height:1.85; }
+  .cnf-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.14); }
+  /* variable chips */
+  .cnf-vars{ display:flex; gap:6px; flex-wrap:wrap; }
+  .cnf-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
+    padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
+  .cnf-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
+  /* days_before inline field */
+  .cnf-days{ display:flex; align-items:center; gap:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:9px 13px; }
+  .cnf-days label{ font-size:12.5px; font-weight:800; color:#92400e; }
+  .cnf-days input{ width:74px; border:1px solid #fcd34d; border-radius:8px; padding:6px 9px; font:inherit; font-size:13px; text-align:center; background:#fff; }
+  .cnf-days .u{ font-size:12px; color:#a16207; font-weight:700; }
+  /* notes */
+  .cnf-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.7; border-radius:12px; padding:11px 14px; }
+  .cnf-note.info{ background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  .cnf-note a{ color:inherit; font-weight:800; text-decoration:underline; }
+  /* sticky save bar */
+  .cnf-save{ position:sticky; bottom:0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:13px 0 2px;
+    background:linear-gradient(0deg,var(--bg,#f6f7fb) 65%,transparent); }
+  .cnf-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:11px 20px; font:inherit; font-size:14px;
+    font-weight:800; cursor:pointer; transition:.15s; }
+  .cnf-btn.primary{ background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; box-shadow:0 8px 18px rgba(124,58,237,.26); }
+  .cnf-btn.primary:hover{ box-shadow:0 10px 22px rgba(124,58,237,.34); }
+  .cnf-save .hint{ font-size:12px; color:#64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "الإشعارات الحدثية",
+  subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على SMS / واتساب / Telegram. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
+  icon="bolt"
+) }}
+
+{% include "radius/communications_nav.html" %}
+
+{# helper: base variables available to subscriber-type events #}
+{%- set base_vars = ['{username}','{name}','{prof}','{exp}','{balance}','{status}','{down_speed}','{up_speed}','{remain_quota}'] -%}
+
+<form method="post" action="{{ url_for('radius.communications_notifications') }}" class="cnf">
+  {{ csrf_token_input() }}
+
+  {% call hub.section("كيف تعمل؟", icon="circle-info", flush=False) %}
+    <div class="cnf-note info">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <div>
+        فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت
+        (انقر أي متغيّر لنسخه داخل النص). قنوات SMS وواتساب تُضبط من
+        <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>،
+        وقناة Telegram من
+        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات Telegram</a>.
+      </div>
+    </div>
+  {% endcall %}
+
+  {# group the events by their group key, in registry order #}
+  {%- set ns = namespace(current='') -%}
+  {% for rule in rules %}
+    {%- if rule.event.group != ns.current -%}
+      {%- set ns.current = rule.event.group -%}
+      <div class="cnf-group"><span>{{ groups.get(rule.event.group, rule.event.group) }}</span><span class="ln"></span></div>
+    {%- endif -%}
+
+    {%- set ek = rule.event.key -%}
+    <div class="cnf-card{{ ' on' if rule.enabled else '' }}" data-card>
+      <label class="cnf-head">
+        <span class="cnf-sw">
+          <input type="checkbox" name="{{ ek }}__enabled" value="1" data-toggle {{ 'checked' if rule.enabled else '' }}>
+          <span class="track"></span><span class="knob"></span>
+        </span>
+        <span class="ttl">{{ rule.event.label }}<span class="ek">{{ ek }}</span></span>
+      </label>
+
+      <div class="cnf-body">
+        {# channels #}
+        <div class="cnf-chans">
+          {% for ch in all_channels %}
+            {%- set lbl = channel_labels.get(ch) -%}
+            {%- set is_sel = ch in rule.channels -%}
+            <label class="cnf-chan{{ ' sel' if is_sel else '' }}" data-chan>
+              <input type="checkbox" name="{{ ek }}__channels" value="{{ ch }}" {{ 'checked' if is_sel else '' }}>
+              <i class="fa-{{ 'brands' if ch in ('whatsapp','telegram') else 'solid' }} fa-{{ lbl[1] if lbl else 'paper-plane' }}"></i>
+              {{ lbl[0] if lbl else ch }}
+              {%- if ch in ('sms','whatsapp') and not (channels.get(ch) and channels[ch].active) %}
+                <span class="warn" title="القناة غير مهيأة بعد">(غير مهيأة)</span>
+              {%- elif ch == 'telegram' and not telegram_ready %}
+                <span class="warn" title="Telegram غير مهيأ بعد">(غير مهيأة)</span>
+              {%- endif -%}
+            </label>
+          {% endfor %}
+        </div>
+
+        {# days_before — only for the dunning reminder #}
+        {% if rule.event.has_days_before %}
+          <div class="cnf-days">
+            <label for="{{ ek }}-days">أرسل التذكير قبل الانتهاء بـ</label>
+            <input type="number" id="{{ ek }}-days" name="{{ ek }}__days_before" min="1" max="60" value="{{ rule.days_before }}">
+            <span class="u">يوم</span>
+          </div>
+        {% endif %}
+
+        {# message #}
+        <div class="cnf-field">
+          <label for="{{ ek }}-msg">نص الرسالة</label>
+          <textarea class="cnf-area" id="{{ ek }}-msg" name="{{ ek }}__template" data-msg>{{ rule.template }}</textarea>
+          <div class="cnf-vars" data-vars-for="{{ ek }}-msg">
+            {% for v in base_vars %}<span class="cnf-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>{% endfor %}
+            {% for ev in rule.event.extra_vars %}<span class="cnf-var" data-var="{{ '{' ~ ev ~ '}' }}" title="انقر لإدراجه في النص">{{ '{' ~ ev ~ '}' }}</span>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="cnf-save">
+    <button type="submit" class="cnf-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كل الإعدادات</button>
+    <span class="hint">يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.</span>
+  </div>
+</form>
+
+<script>
+(function(){
+  // reveal/hide the card body when its toggle flips + keep the .on class
+  document.querySelectorAll('[data-card]').forEach(function(card){
+    var tog = card.querySelector('[data-toggle]');
+    if(tog){
+      tog.addEventListener('change', function(){ card.classList.toggle('on', tog.checked); });
+    }
+    // channel chip selected styling
+    card.querySelectorAll('[data-chan]').forEach(function(chip){
+      var cb = chip.querySelector('input[type=checkbox]');
+      if(cb){ cb.addEventListener('change', function(){ chip.classList.toggle('sel', cb.checked); }); }
+    });
+  });
+
+  // click a variable chip → insert it at the cursor in its textarea
+  document.querySelectorAll('.cnf-vars').forEach(function(group){
+    var id = group.getAttribute('data-vars-for');
+    var area = document.getElementById(id);
+    group.querySelectorAll('.cnf-var').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        var v = chip.getAttribute('data-var') || chip.textContent;
+        if(!area){ return; }
+        var s = area.selectionStart || 0, e = area.selectionEnd || 0;
+        area.value = area.value.slice(0,s) + v + area.value.slice(e);
+        area.focus();
+        area.selectionStart = area.selectionEnd = s + v.length;
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

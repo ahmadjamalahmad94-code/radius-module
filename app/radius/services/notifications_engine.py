@@ -1,0 +1,604 @@
+"""Event-driven notifications engine — Phase 3 (the heart).
+
+A single, dead-simple layer that turns *business events* (a subscriber was
+created, a balance was withdrawn, a router went down…) into outgoing messages
+on the channels the operator chose — SMS / WhatsApp / Telegram — using a
+ready-to-use Arabic template per event. The whole thing is built to work
+"بكبسة زر": every event ships with sensible defaults, so the settings page is
+pre-populated and notifications fire the moment a channel is configured.
+
+Design (mirrors Phases 1 & 2 — *reuse, never rebuild*):
+  * Per-event config lives in ``tenant_settings`` under
+    ``notif.<event>.{enabled,channels,template,days_before}`` — no migration.
+  * The substitution context is the *same* one the WhatsApp bot uses
+    (:func:`app.radius.services.comms_bot.build_context`) plus a few
+    event-specific extras ({price},{amount},{days},{prof}/{old_prof},
+    {exp},{balance},{percent},{device}…). Templates use ``{var}`` single
+    braces, exactly like the bot.
+  * Dispatch reuses the Phase-1 HTTP provider for sms/whatsapp
+    (:func:`app.radius.services.comms_providers.http_send`, with a
+    delivery-log row via :class:`NotificationCampaignService.queue_notification`
+    when we have a real subscriber recipient) and the Phase-2 Telegram sender
+    (:func:`app.radius.services.telegram_notifier.send_to_tenant`).
+
+Golden rule: :func:`notify_event` NEVER raises. A disabled rule, a missing
+subscriber, an unconfigured channel or a flaky gateway can never break the
+business flow that fired the event — every failure is swallowed and logged.
+"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import Any
+
+_LOG = logging.getLogger(__name__)
+
+# Channels an event can fan out to. sms/whatsapp go through the Phase-1 HTTP
+# provider; telegram goes through the Phase-2 tenant Telegram sender.
+NOTIF_CHANNELS = ("sms", "whatsapp", "telegram")
+
+_KEY_PREFIX = "notif."
+
+
+def _settings_key(event_key: str, field_name: str) -> str:
+    return f"{_KEY_PREFIX}{event_key}.{field_name}"
+
+
+def _truthy(value: Any) -> bool:
+    return str(value if value is not None else "").strip().lower() in ("1", "true", "yes", "on")
+
+
+# ── event registry ────────────────────────────────────────────────────
+@dataclass(frozen=True)
+class EventDef:
+    """A notifiable business event + its out-of-the-box defaults."""
+
+    key: str
+    label: str                       # Arabic label shown on the settings card
+    template: str                    # default Arabic message body ({var} substitution)
+    channels: tuple[str, ...]        # default channels enabled
+    group: str = "subscribers"       # ui grouping: subscribers / billing / network
+    has_days_before: bool = False    # only near_expiry exposes days_before
+    extra_vars: tuple[str, ...] = ()  # event-specific variables (for the UI chips)
+    default_enabled: bool = False    # whether on by default (most start OFF)
+
+
+# The ordered registry. Labels + templates are deliberately friendly and ready
+# to send as-is. Defaults are conservative (most OFF) so nothing is sent until
+# the operator opts in, except the universally-wanted lifecycle ones.
+_EVENTS: tuple[EventDef, ...] = (
+    # ── subscriber lifecycle ──────────────────────────────────────────
+    EventDef(
+        key="subscriber_created",
+        label="إنشاء مشترك جديد",
+        template="مرحبًا {name} 👋\nتم إنشاء حسابك بنجاح.\nاسم المستخدم: {username}\nالباقة: {prof}",
+        channels=("whatsapp",),
+        group="subscribers",
+        default_enabled=False,
+    ),
+    EventDef(
+        key="subscriber_activated",
+        label="تفعيل الاشتراك",
+        template="تم تفعيل اشتراكك ✅\nالمستخدم: {username}\nالباقة: {prof}\nتاريخ الانتهاء: {exp}",
+        channels=("sms", "whatsapp"),
+        group="subscribers",
+        default_enabled=True,
+    ),
+    EventDef(
+        key="near_expiry",
+        label="تنبيه قرب الانتهاء (التحصيل)",
+        template=(
+            "تذكير ⏰\nاشتراكك «{username}» سينتهي خلال {days} يوم "
+            "(بتاريخ {exp}).\nجدّد الآن لتجنّب انقطاع الخدمة."
+        ),
+        channels=("sms", "whatsapp"),
+        group="subscribers",
+        has_days_before=True,
+        extra_vars=("days",),
+        default_enabled=True,
+    ),
+    EventDef(
+        key="subscriber_expired",
+        label="انتهاء الاشتراك",
+        template="انتهى اشتراكك ⛔\nالمستخدم: {username}\nتاريخ الانتهاء: {exp}\nجدّد الآن لاستعادة الخدمة.",
+        channels=("sms", "whatsapp"),
+        group="subscribers",
+        default_enabled=True,
+    ),
+    EventDef(
+        key="subscriber_renewed",
+        label="تجديد الاشتراك",
+        template="تم تجديد اشتراكك بنجاح ♻️\nالباقة: {prof}\nتاريخ الانتهاء الجديد: {exp}",
+        channels=("sms", "whatsapp"),
+        group="subscribers",
+        default_enabled=False,
+    ),
+    EventDef(
+        key="plan_changed",
+        label="تغيير الباقة",
+        template="تم تغيير باقتك 🔄\nمن: {old_prof}\nإلى: {prof}\nتاريخ الانتهاء: {exp}",
+        channels=("whatsapp",),
+        group="subscribers",
+        extra_vars=("old_prof",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="quota_threshold",
+        label="بلوغ حد الاستهلاك",
+        template="تنبيه 📊\nوصل استهلاك «{username}» إلى {percent}% من الباقة.\nالمتبقّي: {remain_quota}",
+        channels=("whatsapp",),
+        group="subscribers",
+        extra_vars=("percent",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="login_new_device",
+        label="دخول من جهاز جديد",
+        template="تنبيه أمان 🔐\nتم تسجيل دخول حساب «{username}» من جهاز جديد.\nالجهاز: {device}",
+        channels=("whatsapp",),
+        group="subscribers",
+        extra_vars=("device",),
+        default_enabled=False,
+    ),
+    # ── billing / wallet ──────────────────────────────────────────────
+    EventDef(
+        key="recharge_added",
+        label="إضافة شحن",
+        template="تم شحن حسابك 💳\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        channels=("sms", "whatsapp"),
+        group="billing",
+        extra_vars=("amount",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="balance_deposit",
+        label="إيداع رصيد",
+        template="تم إيداع مبلغ في محفظتك ➕\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        channels=("sms", "whatsapp"),
+        group="billing",
+        extra_vars=("amount",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="balance_withdraw",
+        label="سحب رصيد",
+        template="تم سحب مبلغ من محفظتك ➖\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        channels=("sms", "whatsapp"),
+        group="billing",
+        extra_vars=("amount",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="payment_received",
+        label="استلام دفعة",
+        template="تم استلام دفعتك بنجاح ✅\nالمبلغ: {amount}\nشكرًا لك.",
+        channels=("sms", "whatsapp"),
+        group="billing",
+        extra_vars=("amount",),
+        default_enabled=False,
+    ),
+    # ── network / infrastructure (operator-facing, via Telegram) ───────
+    EventDef(
+        key="router_down",
+        label="انقطاع راوتر/جهاز",
+        template="🚨 انقطع الاتصال مع «{device}»\nالعنوان: {ip}\nالوقت: {time}",
+        channels=("telegram",),
+        group="network",
+        extra_vars=("device", "ip", "time"),
+        default_enabled=True,
+    ),
+    EventDef(
+        key="router_up",
+        label="عودة راوتر/جهاز",
+        template="✅ عاد الاتصال مع «{device}»\nالعنوان: {ip}\nالبنج: {latency}",
+        channels=("telegram",),
+        group="network",
+        extra_vars=("device", "ip", "latency"),
+        default_enabled=True,
+    ),
+    EventDef(
+        key="network_high_latency",
+        label="ارتفاع زمن الاستجابة (بنج)",
+        template="🐌 ارتفاع البنج على «{device}»\nالعنوان: {ip}\nالبنج الحالي: {latency}",
+        channels=("telegram",),
+        group="network",
+        extra_vars=("device", "ip", "latency"),
+        default_enabled=False,
+    ),
+)
+
+# Fast lookup by key, preserving order for the UI.
+EVENTS: dict[str, EventDef] = {e.key: e for e in _EVENTS}
+EVENT_KEYS: tuple[str, ...] = tuple(EVENTS.keys())
+
+# UI groups (ordered) → Arabic group titles.
+GROUP_LABELS: dict[str, str] = {
+    "subscribers": "أحداث المشتركين",
+    "billing": "المالية والمحفظة",
+    "network": "الشبكة والأجهزة",
+}
+
+# Default days_before for the dunning (near_expiry) reminder.
+DEFAULT_DAYS_BEFORE = 3
+
+
+# ── per-event rule ─────────────────────────────────────────────────────
+@dataclass
+class NotifRule:
+    """A single event's saved (or default) configuration."""
+
+    event: EventDef
+    enabled: bool
+    channels: list[str]
+    template: str
+    days_before: int = DEFAULT_DAYS_BEFORE
+
+    @property
+    def key(self) -> str:
+        return self.event.key
+
+    def active_channels(self) -> list[str]:
+        return [c for c in self.channels if c in NOTIF_CHANNELS]
+
+
+def _parse_channels(raw: Any, default: tuple[str, ...]) -> list[str]:
+    """CSV (or list) → clean ordered list of known channels.
+
+    ``None``/unset → the event's default channels. An explicitly-saved empty
+    string means "no channels" (operator unticked them all) and is honoured.
+    """
+    if raw is None:
+        return list(default)
+    if isinstance(raw, (list, tuple)):
+        parts = [str(p).strip().lower() for p in raw]
+    else:
+        text = str(raw).strip()
+        if text == "":
+            return []  # explicitly none
+        parts = [p.strip().lower() for p in text.split(",")]
+    seen: list[str] = []
+    for p in parts:
+        if p in NOTIF_CHANNELS and p not in seen:
+            seen.append(p)
+    return seen
+
+
+def _coerce_days(raw: Any, default: int = DEFAULT_DAYS_BEFORE) -> int:
+    try:
+        n = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+    # Keep it sane: 1..60 days.
+    return max(1, min(60, n))
+
+
+# ── load / save ─────────────────────────────────────────────────────────
+def load_rule(tenant_id: int, event_key: str) -> NotifRule | None:
+    """Load a single event's rule (with defaults). ``None`` for unknown keys."""
+    event = EVENTS.get(event_key)
+    if event is None:
+        return None
+    from ..db.repos import tenants_repo
+
+    tid = int(tenant_id or 1)
+
+    def _get(name: str, default: str = "") -> str:
+        return tenants_repo.get_setting(tid, _settings_key(event_key, name), default)
+
+    enabled_raw = _get("enabled", "")
+    enabled = _truthy(enabled_raw) if enabled_raw.strip() != "" else event.default_enabled
+
+    channels_raw = tenants_repo.get_setting(tid, _settings_key(event_key, "channels"), "__unset__")
+    channels = _parse_channels(None if channels_raw == "__unset__" else channels_raw, event.channels)
+
+    template = (_get("template", "") or "").strip() or event.template
+    days_before = _coerce_days(_get("days_before", ""), DEFAULT_DAYS_BEFORE)
+
+    return NotifRule(
+        event=event,
+        enabled=enabled,
+        channels=channels,
+        template=template,
+        days_before=days_before,
+    )
+
+
+def load_rules(tenant_id: int) -> list[NotifRule]:
+    """Load every event's rule (defaults included) in registry order.
+
+    First run (nothing saved) returns the full set of sensible defaults so the
+    settings page is fully pre-populated and the engine works out of the box.
+    """
+    tid = int(tenant_id or 1)
+    rules: list[NotifRule] = []
+    for key in EVENT_KEYS:
+        rule = load_rule(tid, key)
+        if rule is not None:
+            rules.append(rule)
+    return rules
+
+
+def save_rules(tenant_id: int, values: dict[str, Any], *, by: int = 0) -> list[NotifRule]:
+    """Persist all event rules from a posted form mapping to ``tenant_settings``.
+
+    ``values`` keys follow the form-field naming convention used by the
+    settings page:
+        ``<event>__enabled`` / ``<event>__channels`` (list or csv)
+        ``<event>__template`` / ``<event>__days_before``
+
+    Only known event keys are touched. Returns the freshly-loaded rules.
+    """
+    from ..db.repos import tenants_repo
+
+    tid = int(tenant_id or 1)
+    for key in EVENT_KEYS:
+        event = EVENTS[key]
+        enabled = _truthy(values.get(f"{key}__enabled"))
+        channels = _parse_channels(values.get(f"{key}__channels"), event.channels)
+        template = (str(values.get(f"{key}__template") or "").strip()) or event.template
+
+        tenants_repo.set_setting(tid, _settings_key(key, "enabled"), "1" if enabled else "0", by=by)
+        tenants_repo.set_setting(tid, _settings_key(key, "channels"), ",".join(channels), by=by)
+        tenants_repo.set_setting(tid, _settings_key(key, "template"), template, by=by)
+        if event.has_days_before:
+            days = _coerce_days(values.get(f"{key}__days_before"), DEFAULT_DAYS_BEFORE)
+            tenants_repo.set_setting(tid, _settings_key(key, "days_before"), str(days), by=by)
+
+    return load_rules(tid)
+
+
+# ── context building ─────────────────────────────────────────────────────
+def _bot_context(tenant_id: int, subscriber) -> dict[str, str]:
+    """Reuse the Phase-2 subscriber context builder (same variable set)."""
+    try:
+        from . import comms_bot
+
+        return comms_bot.build_context(int(tenant_id or 1), subscriber)
+    except Exception:  # noqa: BLE001 — context must never break a notify
+        return {}
+
+
+def build_event_context(
+    tenant_id: int,
+    subscriber=None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    """Full substitution context for an event template.
+
+    Starts from the Phase-2 subscriber context ({username},{prof},{exp},
+    {balance},{status},{down_speed}…) then layers any event-specific extras
+    ({amount},{days},{percent},{device},{old_prof}…). Every value is a string;
+    unknown ``{var}`` placeholders render empty (handled by the renderer).
+    """
+    ctx: dict[str, str] = {}
+    ctx.update(_bot_context(tenant_id, subscriber))
+    for k, v in (extra or {}).items():
+        if v is None:
+            continue
+        ctx[str(k).strip().lower()] = str(v)
+    return ctx
+
+
+def render_template(template: str, context: dict[str, str]) -> str:
+    """Substitute ``{var}`` placeholders (reusing the bot's renderer)."""
+    try:
+        from . import comms_bot
+
+        return comms_bot.render_reply(template, context)
+    except Exception:  # noqa: BLE001
+        return str(template or "")
+
+
+# ── dispatch result (for tests / logging) ───────────────────────────────
+@dataclass
+class NotifyOutcome:
+    """Outcome of one :func:`notify_event` call."""
+
+    fired: bool = False
+    reason: str = ""
+    event_key: str = ""
+    message: str = ""
+    channels: list[str] = field(default_factory=list)
+    sent: dict[str, bool] = field(default_factory=dict)
+    errors: dict[str, str] = field(default_factory=dict)
+
+
+# ── the engine ───────────────────────────────────────────────────────────
+def notify_event(
+    event_key: str,
+    *,
+    tenant_id: int,
+    subscriber=None,
+    context: dict[str, Any] | None = None,
+) -> NotifyOutcome:
+    """Fire one business event's notification. NEVER raises.
+
+    Steps:
+      1. Load the event's rule. If unknown / disabled / no channels → no-op.
+      2. Build the substitution context (subscriber + extras) and render the
+         saved template.
+      3. Dispatch to each enabled channel:
+           * sms / whatsapp → Phase-1 HTTP provider. When we have a real
+             subscriber recipient we go through the campaign service so a
+             delivery row is logged; otherwise we fall back to a direct
+             ``http_send`` to the subscriber's phone.
+           * telegram → Phase-2 :func:`telegram_notifier.send_to_tenant`.
+
+    Returns a :class:`NotifyOutcome` describing what happened (handy for the
+    dunning worker + tests). On any internal error the outcome simply reports
+    ``fired=False`` with a reason — the caller is never disturbed.
+    """
+    tid = int(tenant_id or 1)
+    outcome = NotifyOutcome(event_key=str(event_key or ""))
+    try:
+        rule = load_rule(tid, event_key)
+    except Exception:  # noqa: BLE001
+        outcome.reason = "load_error"
+        return outcome
+
+    if rule is None:
+        outcome.reason = "unknown_event"
+        return outcome
+    if not rule.enabled:
+        outcome.reason = "disabled"
+        return outcome
+
+    channels = rule.active_channels()
+    if not channels:
+        outcome.reason = "no_channels"
+        return outcome
+
+    try:
+        ctx = build_event_context(tid, subscriber, context or {})
+        message = render_template(rule.template, ctx).strip()
+    except Exception:  # noqa: BLE001
+        outcome.reason = "render_error"
+        return outcome
+
+    if not message:
+        outcome.reason = "empty_message"
+        return outcome
+
+    outcome.message = message
+    outcome.channels = list(channels)
+
+    phone = _subscriber_phone(subscriber)
+    recipient_id = _subscriber_id(subscriber)
+
+    for channel in channels:
+        try:
+            if channel == "telegram":
+                ok, err = _send_telegram(tid, message)
+            else:  # sms / whatsapp
+                ok, err = _send_http_channel(
+                    tid,
+                    channel,
+                    message,
+                    phone=phone,
+                    recipient_id=recipient_id,
+                )
+        except Exception as exc:  # noqa: BLE001 — a single channel can never break the rest
+            ok, err = False, f"خطأ غير متوقع: {exc}"
+        outcome.sent[channel] = bool(ok)
+        if not ok and err:
+            outcome.errors[channel] = err
+
+    # We reached the dispatch loop with ≥1 enabled channel, so we *attempted*
+    # to notify — that's what ``fired`` means here (the dunning worker uses it
+    # to mark "reminded today" so it won't re-nudge, even if a channel was
+    # unconfigured). ``sent`` carries the per-channel success detail.
+    outcome.fired = True
+    outcome.reason = "sent" if any(outcome.sent.values()) else "no_channel_sent"
+    return outcome
+
+
+# ── channel senders ──────────────────────────────────────────────────────
+def _send_telegram(tenant_id: int, message: str) -> tuple[bool, str]:
+    """Send to the tenant's Telegram chat (Phase 2). Never raises."""
+    try:
+        from . import telegram_notifier
+
+        ok, err = telegram_notifier.send_to_tenant(int(tenant_id or 1), message)
+        # An empty error string with ok=False means "not configured / disabled".
+        return bool(ok), (err or ("telegram غير مهيأ" if not ok else ""))
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ في إرسال telegram: {exc}"
+
+
+def _send_http_channel(
+    tenant_id: int,
+    channel: str,
+    message: str,
+    *,
+    phone: str,
+    recipient_id: int,
+) -> tuple[bool, str]:
+    """Send an sms/whatsapp message via the Phase-1 provider. Never raises.
+
+    Preference order:
+      1. Real subscriber recipient → go through the campaign service's
+         ``queue_notification`` so a ``message_deliveries`` row is logged and
+         the per-channel HTTP provider is auto-selected from tenant settings.
+      2. No subscriber id but we have a phone → direct ``http_send`` to that
+         phone (still no network unless the channel is configured with a URL).
+    """
+    from . import comms_providers
+
+    # Path 1 — logged delivery via the campaign service (best: audit trail).
+    if recipient_id > 0:
+        try:
+            from .notification_campaigns import NotificationCampaignService
+
+            svc = NotificationCampaignService(tenant_id=int(tenant_id or 1))
+            result = svc.queue_notification(
+                recipient_type="subscriber",
+                recipient_id=recipient_id,
+                channel=channel,
+                subject="",
+                body=message,
+                metadata={"source": "notifications_engine"},
+                actor="system:notifications",
+            )
+            status = str((result.get("delivery") or {}).get("status") or "")
+            if status == "sent":
+                return True, ""
+            if status in ("queued", "skipped"):
+                # Provider degraded gracefully (channel off / unconfigured).
+                err = str((result.get("delivery") or {}).get("error_message") or "")
+                return False, (err or "القناة غير مهيأة — تم التسجيل فقط.")
+            # failed (e.g. no phone on the recipient)
+            err = str((result.get("delivery") or {}).get("error_message") or "فشل الإرسال.")
+            return False, err
+        except Exception as exc:  # noqa: BLE001 — fall through to direct send
+            _LOG.debug("[notif] campaign dispatch failed, trying direct: %s", exc)
+
+    # Path 2 — direct send to a bare phone number.
+    if not phone:
+        return False, "لا يوجد رقم هاتف للمستلم."
+    try:
+        cfg = comms_providers.load_channel_config(int(tenant_id or 1), channel)
+        if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
+            return False, f"قناة {channel} غير مهيأة للإرسال."
+        sent = comms_providers.http_send(
+            template=cfg["send_url_template"],
+            method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
+            phone=phone,
+            message=message,
+        )
+        return bool(sent.ok), ("" if sent.ok else (sent.error or "فشل الإرسال."))
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"
+
+
+# ── subscriber helpers ────────────────────────────────────────────────────
+def _subscriber_phone(subscriber) -> str:
+    if subscriber is None:
+        return ""
+    return str(getattr(subscriber, "mobile", "") or "").strip()
+
+
+def _subscriber_id(subscriber) -> int:
+    if subscriber is None:
+        return 0
+    try:
+        return int(getattr(subscriber, "id", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def find_subscriber(tenant_id: int, *, username: str = "", subscriber_id: int = 0):
+    """Best-effort subscriber lookup for callers that only have a key. Never raises."""
+    tid = int(tenant_id or 1)
+    try:
+        from ..db.repos import subscribers_repo
+
+        if username:
+            return subscribers_repo.get_subscriber(tid, username)
+        if subscriber_id:
+            rows = subscribers_repo.list_subscribers(tid, limit=1000)
+            for s in rows:
+                if int(getattr(s, "id", 0) or 0) == int(subscriber_id):
+                    return s
+    except Exception:  # noqa: BLE001
+        return None
+    return None
