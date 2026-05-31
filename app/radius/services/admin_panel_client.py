@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import hashlib
+import secrets
 import hmac
 import socket
 import time
@@ -990,19 +991,26 @@ def _server_fingerprint() -> str:
     if db_fingerprint:
         return db_fingerprint[:255]
 
-    # 3 — auto-computed hash (changes when hostname/path changes — avoid for prod)
-    seed = "|".join(
-        part
-        for part in (
-            os.environ.get("HOBERADIUS_INSTANCE_ID", "").strip(),
-            _hostname(),
-            os.environ.get("HOBERADIUS_DB_PATH", "").strip(),
-        )
-        if part
-    )
-    if not seed:
-        seed = _hostname() or "hoberadius-local-instance"
-    return f"hr-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:32]}"
+    # 3 — generate a RANDOM, stable fingerprint once and persist it, so it never
+    # changes (no hostname/path drift), needs no manual entry, and never needs a
+    # reset. First call mints + saves it; later calls read it back via option 2.
+    generated = "hr-" + secrets.token_hex(16)
+    try:
+        from app.radius.core.tenant import DEFAULT_TENANT_ID
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(DEFAULT_TENANT_ID, "license_admin_bridge.server_fingerprint", generated)
+        return generated
+    except Exception:  # noqa: BLE001 — DB unavailable: fall back to a stable hash
+        seed = "|".join(
+            part
+            for part in (
+                os.environ.get("HOBERADIUS_INSTANCE_ID", "").strip(),
+                _hostname(),
+                os.environ.get("HOBERADIUS_DB_PATH", "").strip(),
+            )
+            if part
+        ) or (_hostname() or "hoberadius-local-instance")
+        return f"hr-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:32]}"
 
 
 def _hostname() -> str:
