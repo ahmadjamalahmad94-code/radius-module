@@ -155,7 +155,14 @@ class AccountingService:
         if rounding not in {"floor", "ceil", "nearest"}:
             raise RadiusValidationError("rounding_mode must be floor, ceil, or nearest")
 
-        default_price = float((plan or {}).get("price") or 0)
+        # The subscriber's stored custom_price is the OFFICIAL base price for all
+        # money math (full payment, partial payment, renewal, loan). It overrides
+        # the plan (offer) price. 0 / None falls back to the plan price. A
+        # per-transaction custom_price in the request body still wins for that one
+        # entry (manual one-off override).
+        plan_offer_price = float((plan or {}).get("price") or 0)
+        sub_custom_price = float(subscriber.get("custom_price") or 0)
+        default_price = sub_custom_price or plan_offer_price
         custom_price = body.get("custom_price")
         custom_price_f = None
         if custom_price not in (None, ""):
