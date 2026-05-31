@@ -1,6 +1,20 @@
 {# Subscriber finance — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
+{# Humanize a raw MINUTE count to days/hours/minutes (e.g. '3 ايام و 18 ساعة' instead of '5400 دقيقة'). #}
+{% macro fmt_minutes(m) -%}
+  {%- set m = (m or 0)|int -%}
+  {%- if m <= 0 -%}—
+  {%- else -%}
+    {%- set d = m // 1440 -%}{%- set h = (m % 1440) // 60 -%}{%- set mm = m % 60 -%}
+    {%- set parts = [] -%}
+    {%- if d -%}{%- set _ = parts.append(d ~ ' يوم') -%}{%- endif -%}
+    {%- if h -%}{%- set _ = parts.append(h ~ ' ساعة') -%}{%- endif -%}
+    {%- if mm and not d -%}{%- set _ = parts.append(mm ~ ' دقيقة') -%}{%- endif -%}
+    {{ parts | join(' و ') }}
+  {%- endif -%}
+{%- endmacro %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
@@ -152,7 +166,7 @@
         <tr>
           <td class="num mono">{{ p.id }}</td>
           <td class="mono"><strong>{{ p.amount|money }}</strong></td>
-          <td>{{ p.earned_minutes or 0 }} دقيقة</td>
+          <td>{{ fmt_minutes(p.earned_minutes) }}</td>
           <td class="mono">{{ (p.discount_amount or 0)|money }}</td>
           <td>{{ hub.pill(p.status, variant="green") }}</td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>

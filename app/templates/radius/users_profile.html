@@ -14,6 +14,20 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
+{# Humanize a raw MINUTE count to days/hours/minutes (e.g. '3 ايام و 18 ساعة' instead of '5400 دقيقة'). #}
+{% macro fmt_minutes(m) -%}
+  {%- set m = (m or 0)|int -%}
+  {%- if m <= 0 -%}—
+  {%- else -%}
+    {%- set d = m // 1440 -%}{%- set h = (m % 1440) // 60 -%}{%- set mm = m % 60 -%}
+    {%- set parts = [] -%}
+    {%- if d -%}{%- set _ = parts.append(d ~ ' يوم') -%}{%- endif -%}
+    {%- if h -%}{%- set _ = parts.append(h ~ ' ساعة') -%}{%- endif -%}
+    {%- if mm and not d -%}{%- set _ = parts.append(mm ~ ' دقيقة') -%}{%- endif -%}
+    {{ parts | join(' و ') }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% block title %}ملف المشترك — {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-badge"></i>{% endblock %}
 {% block page_title %}ملف المشترك{% endblock %}
