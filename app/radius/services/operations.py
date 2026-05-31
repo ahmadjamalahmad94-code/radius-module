@@ -1785,6 +1785,153 @@ class OperationsService:
         )
         return {"ok": True, "message": f"تم حذف النسخة {name}."}
 
+    # ── Unified "full backup": local → panel → Drive (one action) ──
+    def panel_backup_enabled(self, *, tenant_id: int) -> bool:
+        """Is the paid `backups` service active in the latest license contract?"""
+        try:
+            from app.radius.services.admin_panel_client import LicenseAdminSnapshotStore, SNAPSHOT_CAPACITY
+            snap = LicenseAdminSnapshotStore().latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY)
+            services = {}
+            if snap and isinstance(snap.get("payload_json"), dict):
+                pj = snap["payload_json"]
+                services = (pj.get("contract") or {}).get("services") or pj.get("services") or {}
+            return bool((services.get("backups") or {}).get("enabled"))
+        except Exception:  # noqa: BLE001
+            return False
+
+    def run_full_backup(self, *, tenant_id: int, actor: str) -> dict:
+        """Run local backup, then upload to the panel (if paid), and report
+        Google Drive. Returns {"ok": bool, "steps": [{key,label,status,message}]}."""
+        steps: list[dict] = []
+        local = self.run_local_backup(tenant_id=tenant_id, actor=actor)
+        local_ok = bool(local.get("verified"))
+        steps.append({
+            "key": "local", "label": "نسخة محلية",
+            "status": "success" if local_ok else "failed",
+            "message": "تم إنشاء النسخة المحلية والتحقق منها." if local_ok
+                       else (local.get("run", {}).get("message") or "تعذّر إنشاء النسخة المحلية."),
+        })
+
+        panel_ok = False
+        if not self.panel_backup_enabled(tenant_id=tenant_id):
+            steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "skipped",
+                          "message": "الخدمة غير مفعّلة (خدمة مدفوعة)."})
+        elif not local_ok:
+            steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "skipped",
+                          "message": "تم التخطّي بسبب فشل النسخة المحلية."})
+        else:
+            try:
+                from .license_admin_backup_upload import BackupUploadService
+                up = BackupUploadService().upload_latest_backup(
+                    tenant_id=tenant_id, dry_run=False, include_content=True)
+                if up.get("ok") and not up.get("dry_run"):
+                    panel_ok = True
+                    content = bool((up.get("payload") or {}).get("content_included"))
+                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "success",
+                                  "message": "تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل." if content
+                                             else "تم تسجيل البيانات الوصفية على ملفك."})
+                else:
+                    err = (up.get("error") or {}).get("message") or up.get("status") or "تعذّر الرفع."
+                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(err)})
+            except Exception as exc:  # noqa: BLE001
+                steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(exc)})
+
+        # Drive: the panel forwards to the customer's Drive in the background.
+        try:
+            from . import google_drive as gd
+            connected = bool(gd.status(tenant_id).get("connected"))
+        except Exception:  # noqa: BLE001
+            connected = False
+        if not connected:
+            steps.append({"key": "drive", "label": "Google Drive", "status": "skipped", "message": "غير مربوط."})
+        elif panel_ok:
+            steps.append({"key": "drive", "label": "Google Drive", "status": "success",
+                          "message": "سيُرفع تلقائيًا إلى درايفك في الخلفية."})
+        else:
+            steps.append({"key": "drive", "label": "Google Drive", "status": "skipped",
+                          "message": "يتطلّب نجاح الرفع إلى اللوحة."})
+        return {"ok": local_ok, "steps": steps}
+
+    def import_uploaded_backup(self, *, tenant_id: int, actor: str, fileobj, filename: str) -> dict:
+        """Save a user-uploaded backup file into the local backups dir (validated)."""
+        from datetime import datetime
+
+        backup_dir = self._backup_dir()
+        safe = "uploaded-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".sqlite3"
+        target = backup_dir / safe
+        try:
+            fileobj.save(str(target))
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "message": f"تعذّر حفظ الملف المرفوع: {exc}"}
+        try:
+            with open(target, "rb") as fh:
+                header = fh.read(16)
+        except OSError as exc:
+            try:
+                target.unlink()
+            except OSError:
+                pass
+            return {"ok": False, "message": f"تعذّرت قراءة الملف: {exc}"}
+        if not header.startswith(b"SQLite format 3"):
+            try:
+                target.unlink()
+            except OSError:
+                pass
+            return {"ok": False, "message": "الملف ليس قاعدة بيانات SQLite صالحة."}
+        try:
+            job = operations_repo.ensure_backup_job(tenant_id, actor=actor)
+            operations_repo.record_backup_run(
+                tenant_id, job_id=job.get("id"), status="success",
+                path=str(target), message="نسخة مرفوعة من جهاز المستخدم.")
+        except Exception:  # noqa: BLE001
+            pass
+        self._audit.record(actor=actor, action="backup.uploaded_import", target_type="backup_file",
+                           target_id=safe, payload={"name": safe, "original": str(filename)[:160]})
+        try:
+            self.prune_local_backups_by_count(tenant_id=tenant_id)
+        except Exception:  # noqa: BLE001
+            pass
+        return {"ok": True, "name": safe, "message": "تم رفع النسخة من جهازك وحفظها محليًا."}
+
+    # ── Scheduling (auto backups) ──
+    BACKUP_SCHEDULE_INTERVALS = {"6h": 6 * 3600, "12h": 12 * 3600, "daily": 86400, "weekly": 7 * 86400}
+
+    def get_backup_schedule(self, *, tenant_id: int) -> dict:
+        from app.radius.db.repos import tenants_repo
+        enabled = str(tenants_repo.get_setting(tenant_id, "backup_schedule_enabled", "0")).strip().lower() in {"1", "true", "yes", "on"}
+        interval = str(tenants_repo.get_setting(tenant_id, "backup_schedule_interval", "daily")).strip() or "daily"
+        if interval not in self.BACKUP_SCHEDULE_INTERVALS:
+            interval = "daily"
+        last_run = str(tenants_repo.get_setting(tenant_id, "backup_schedule_last_run", "")).strip()
+        return {"enabled": enabled, "interval": interval,
+                "interval_seconds": self.BACKUP_SCHEDULE_INTERVALS[interval], "last_run": last_run}
+
+    def set_backup_schedule(self, *, tenant_id: int, enabled: bool, interval: str) -> dict:
+        from app.radius.db.repos import tenants_repo
+        interval = interval if interval in self.BACKUP_SCHEDULE_INTERVALS else "daily"
+        tenants_repo.set_setting(tenant_id, "backup_schedule_enabled", "1" if enabled else "0")
+        tenants_repo.set_setting(tenant_id, "backup_schedule_interval", interval)
+        return self.get_backup_schedule(tenant_id=tenant_id)
+
+    def mark_schedule_ran(self, *, tenant_id: int) -> None:
+        from app.radius.db.repos import tenants_repo
+        from datetime import datetime
+        tenants_repo.set_setting(tenant_id, "backup_schedule_last_run", datetime.utcnow().isoformat() + "Z")
+
+    def schedule_due(self, *, tenant_id: int) -> bool:
+        from datetime import datetime
+        sched = self.get_backup_schedule(tenant_id=tenant_id)
+        if not sched["enabled"]:
+            return False
+        last = sched["last_run"]
+        if not last:
+            return True
+        try:
+            prev = datetime.fromisoformat(last.replace("Z", ""))
+        except ValueError:
+            return True
+        return (datetime.utcnow() - prev).total_seconds() >= sched["interval_seconds"]
+
     def list_local_backups(self, *, tenant_id: int = 1) -> list[dict]:
         """Return the local backup files (newest first) for the UI."""
         from datetime import datetime

@@ -15,6 +15,9 @@ from ..services.operations import get_operations_service
 def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups", "backups", backups, methods=["GET"])
     bp.add_url_rule("/backups/run", "backups_run", backups_run, methods=["POST"])
+    bp.add_url_rule("/backups/run-all", "backups_run_all", backups_run_all, methods=["POST"])
+    bp.add_url_rule("/backups/upload-computer", "backups_upload_computer", backups_upload_computer, methods=["POST"])
+    bp.add_url_rule("/backups/schedule", "backups_schedule", backups_schedule, methods=["POST"])
     bp.add_url_rule("/backups/upload-panel", "backups_upload_panel", backups_upload_panel, methods=["POST"])
     bp.add_url_rule("/backups/download/<path:name>", "backups_download", backups_download, methods=["GET"])
     bp.add_url_rule("/backups/content/<path:name>", "backups_content", backups_content, methods=["GET"])
@@ -81,8 +84,44 @@ def backups():
         panel_backup=_backup_service_state(_tid()),
         retention_days=get_operations_service().LOCAL_BACKUP_RETENTION_DAYS,
         backup_max_count=get_operations_service().backup_max_count(tenant_id=_tid()),
+        backup_schedule=get_operations_service().get_backup_schedule(tenant_id=_tid()),
         gdrive=_gdrive_status(_tid()),
     )
+
+
+def backups_run_all():
+    """Unified manual backup: local → panel (if paid) → Drive. Returns JSON steps."""
+    result = get_operations_service().run_full_backup(tenant_id=_tid(), actor=_actor())
+    return jsonify(result)
+
+
+def backups_upload_computer():
+    """Accept a backup file uploaded from the user's computer → store locally."""
+    f = request.files.get("backup_file")
+    if not f or not f.filename:
+        flash("اختر ملف نسخة بصيغة .sqlite3 للرفع.", "error")
+        return redirect(url_for("radius.backups"))
+    if not str(f.filename).lower().endswith(".sqlite3"):
+        flash("صيغة الملف يجب أن تكون .sqlite3", "error")
+        return redirect(url_for("radius.backups"))
+    result = get_operations_service().import_uploaded_backup(
+        tenant_id=_tid(), actor=_actor(), fileobj=f, filename=f.filename)
+    flash(result.get("message") or ("تم الرفع." if result.get("ok") else "تعذّر الرفع."),
+          "success" if result.get("ok") else "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_schedule():
+    """Save the automatic-backup schedule (enable + interval)."""
+    enabled = (request.form.get("enabled") or "").strip().lower() in {"1", "true", "yes", "on"}
+    interval = (request.form.get("interval") or "daily").strip()
+    sched = get_operations_service().set_backup_schedule(tenant_id=_tid(), enabled=enabled, interval=interval)
+    labels = {"6h": "كل 6 ساعات", "12h": "كل 12 ساعة", "daily": "يوميًا", "weekly": "أسبوعيًا"}
+    if sched["enabled"]:
+        flash(f"تم تفعيل الجدولة التلقائية ({labels.get(sched['interval'], sched['interval'])}).", "success")
+    else:
+        flash("تم إيقاف الجدولة التلقائية.", "info")
+    return redirect(url_for("radius.backups"))
 
 
 def _gdrive_status(tid: int) -> dict:
@@ -214,21 +253,33 @@ def backups_download(name: str):
 
 
 def backups_restore():
+    ajax = (request.form.get("ajax") or request.args.get("ajax") or "").strip() == "1"
+
+    def _fail(message: str, code: str = "invalid"):
+        if ajax:
+            return jsonify({"ok": False, "code": code, "message": message}), 200
+        flash(message, "error")
+        return redirect(url_for("radius.backups"))
+
     if not _restore_enabled():
-        flash("الاستعادة داخل التطبيق معطّلة على هذا الخادم.", "error")
-        return redirect(url_for("radius.backups"))
+        return _fail("الاستعادة داخل التطبيق معطّلة على هذا الخادم.", "restore_disabled")
     if (request.form.get("ack") or "").strip() != "1":
-        flash("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية.", "error")
-        return redirect(url_for("radius.backups"))
+        return _fail("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية.", "ack")
     if (request.form.get("confirm") or "").strip().upper() != "RESTORE":
-        flash("لإتمام الاستعادة يجب كتابة كلمة التأكيد RESTORE بشكل صحيح.", "error")
-        return redirect(url_for("radius.backups"))
+        return _fail("لإتمام الاستعادة يجب كتابة كلمة التأكيد RESTORE بشكل صحيح.", "confirm")
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().restore_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
-    if result.get("ok"):
-        flash(result.get("message") or "تمت الاستعادة بنجاح.", "success")
-    else:
-        flash(result.get("message") or "تعذّرت الاستعادة.", "error")
+    if ajax:
+        ok = bool(result.get("ok"))
+        # synthesize the staged steps the operation performed for the progress UI
+        steps = [
+            {"key": "snapshot", "label": "نسخة احترازية قبل الاستعادة", "status": "success" if ok else ("success" if result.get("code") not in {"not_found", "restore_disabled"} else "failed"), "message": "تم أخذ نسخة احترازية." if ok else ""},
+            {"key": "apply", "label": "استبدال قاعدة البيانات", "status": "success" if ok else "failed", "message": result.get("message") or ("تمت الاستعادة." if ok else "فشلت الاستعادة.")},
+            {"key": "verify", "label": "التحقق", "status": "success" if ok else "skipped", "message": "تم التحقق من القاعدة المستعادة." if ok else ""},
+        ]
+        return jsonify({"ok": ok, "message": result.get("message") or ("تمت الاستعادة بنجاح." if ok else "تعذّرت الاستعادة."), "steps": steps})
+    flash(result.get("message") or ("تمت الاستعادة بنجاح." if result.get("ok") else "تعذّرت الاستعادة."),
+          "success" if result.get("ok") else "error")
     return redirect(url_for("radius.backups"))
 
 
