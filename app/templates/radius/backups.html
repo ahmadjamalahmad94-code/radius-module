@@ -316,7 +316,7 @@
 </div>
 
 {# ── Elegant staged progress overlay (full backup + restore) ── #}
-<div class="bk-prog" id="bk-prog" role="dialog" aria-modal="true">
+<div class="bk-prog" id="bk-prog" role="dialog" aria-modal="true" data-csrf="{{ csrf_token() }}">
   <div class="bk-prog-card">
     <div class="bk-prog-head">
       <span class="ic"><i class="fa-solid fa-bolt" id="bk-prog-ic"></i></span>
@@ -370,7 +370,9 @@
   }
   window.bkRunProgress = function(opts){
     open(opts.title, opts.hints);
-    fetch(opts.url, {method:'POST', body: opts.formData || new FormData(), headers:{'X-Requested-With':'fetch'}})
+    var csrf = overlay.getAttribute('data-csrf') || '';
+    fetch(opts.url, {method:'POST', body: opts.formData || new FormData(), credentials:'same-origin',
+                     headers:{'X-Requested-With':'fetch','X-CSRFToken':csrf}})
       .then(function(r){ return r.json(); })
       .then(function(d){
         var steps = (d && d.steps && d.steps.length) ? d.steps
