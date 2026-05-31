@@ -29,7 +29,7 @@
         <td class="mono">{{ item.id }}</td>
         <td class="mono">{{ item.reference_code }}</td>
         <td>{{ item.purpose }}</td>
-        <td class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</td>
+        <td class="mono">{{ item.amount|money }}</td>
         <td>{{ item.status }}</td>
         <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">مراجعة</a></td>
       </tr>

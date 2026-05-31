@@ -39,11 +39,11 @@
         <tr>
           <td>{{ wallet.id }}</td>
           <td>{{ wallet.owner_type }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
-          <td><strong>{{ wallet.balance }}</strong> {{ wallet.currency }}</td>
+          <td><strong>{{ wallet.balance|money }}</strong></td>
           <td>{{ hub.pill(wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
-              <div style="font-size:12px">{{ tx.transaction_type }} — {{ tx.amount }} — {{ tx.created_at }}</div>
+              <div style="font-size:12px">{{ tx.transaction_type }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
               <span class="muted">لا توجد حركات بعد.</span>
             {% endfor %}

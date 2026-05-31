@@ -17,12 +17,12 @@
     <dt>المرجع</dt><dd class="mono">{{ item.reference_code }}</dd>
     <dt>الغرض</dt><dd>{{ item.purpose }}</dd>
     <dt>الدافع</dt><dd>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</dd>
-    <dt>المبلغ</dt><dd class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</dd>
+    <dt>المبلغ</dt><dd class="mono">{{ item.amount|money }}</dd>
     <dt>المحفظة</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
     <dt>الحالة</dt><dd>{{ item.status }}</dd>
     <dt>دفتر القيود</dt><dd class="mono">{{ item.ledger_entry_id or 'not posted yet' }}</dd>
     <dt>تطبيق الخدمة</dt><dd>{{ item.service_apply_status or 'not_applied' }}</dd>
-    <dt>ينتهي في</dt><dd class="mono">{{ item.expires_at or '-' }}</dd>
+    <dt>ينتهي في</dt><dd class="mono">{{ item.expires_at|dt_local if item.expires_at else '-' }}</dd>
   </dl>
 </div>
 
@@ -37,7 +37,7 @@
         <td class="mono">{{ proof.id }}</td>
         <td class="mono">{{ proof.reference_number or '-' }}</td>
         <td>{{ proof.note or '-' }}</td>
-        <td class="mono small">{{ proof.submitted_at }}</td>
+        <td class="mono small">{{ proof.submitted_at|dt_local }}</td>
         <td>{{ proof.review_status or 'pending' }}</td>
       </tr>
       {% endfor %}
@@ -82,7 +82,7 @@
         <td class="mono">{{ attempt.id }}</td>
         <td>{{ attempt.status }}</td>
         <td>{{ attempt.error_message or '-' }}</td>
-        <td class="mono small">{{ attempt.created_at }}</td>
+        <td class="mono small">{{ attempt.created_at|dt_local }}</td>
       </tr>
       {% endfor %}
     </tbody>

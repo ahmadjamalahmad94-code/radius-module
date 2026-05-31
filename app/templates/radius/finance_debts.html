@@ -11,10 +11,10 @@
 {% include "radius/_finance_nav.html" %}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الديون", summary.total_debts, icon="file-invoice-dollar", variant="amber") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("إجمالي السلف المفتوحة", summary.total_loans, icon="hand-holding-dollar", variant="blue") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="green") }}
+  {{ hub.kpi("إجمالي الديون", summary.total_debts|money, icon="file-invoice-dollar", variant="amber") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
+  {{ hub.kpi("إجمالي السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="blue") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="green") }}
 </div>
 
 {% call hub.section("حالة الديون", icon="circle-info") %}

@@ -72,7 +72,7 @@
             <td>{{ snap.source }}</td>
             <td class="mono small">{{ (snap.result or {}).get('count', 0) }}</td>
             <td class="small">{{ snap.created_by or "—" }}</td>
-            <td class="mono small">{{ snap.created_at }}</td>
+            <td class="mono small">{{ snap.created_at|dt_local }}</td>
           </tr>
           {% endfor %}
         </tbody>

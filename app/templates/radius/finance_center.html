@@ -17,10 +17,10 @@
 {% include "radius/_finance_nav.html" %}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance, icon="wallet", variant="blue") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
+  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance|money, icon="wallet", variant="blue") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
 </div>
 
 <div class="hub-grid hub-grid--2">
@@ -36,9 +36,9 @@
   {% call hub.section("حالة المشاركة والتسويات", icon="scale-balanced") %}
     <div class="hub-tile-grid">
       {{ hub.tile("حصص الموزعين", summary.distributor_shares, icon="people-arrows") }}
-      {{ hub.tile("إجمالي السلف المفتوحة", summary.total_loans, icon="hand-holding-dollar") }}
-      {{ hub.tile("إجمالي الديون", summary.total_debts, icon="file-invoice-dollar") }}
-      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total, icon="book-open") }}
+      {{ hub.tile("إجمالي السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar") }}
+      {{ hub.tile("إجمالي الديون", summary.total_debts|money, icon="file-invoice-dollar") }}
+      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
 </div>

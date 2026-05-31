@@ -11,8 +11,8 @@
 {% include "radius/_finance_nav.html" %}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
   {{ hub.kpi("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="blue") }}
   {{ hub.kpi("حصص الموزعين", summary.distributor_shares, icon="people-arrows", variant="brand") }}
 </div>
@@ -37,11 +37,11 @@
         <tr>
           <td>{{ item.id }}</td>
           <td>{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
-          <td>{{ item.original_price }}</td>
-          <td>{{ item.collected }}</td>
-          <td>{{ item.wholesale_cost }}</td>
-          <td><strong>{{ item.net_profit }}</strong></td>
-          <td>{{ item.created_at }}</td>
+          <td>{{ item.original_price|money }}</td>
+          <td>{{ item.collected|money }}</td>
+          <td>{{ item.wholesale_cost|money }}</td>
+          <td><strong>{{ item.net_profit|money }}</strong></td>
+          <td>{{ item.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>

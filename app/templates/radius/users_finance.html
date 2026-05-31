@@ -151,11 +151,11 @@
         {% for p in payments %}
         <tr>
           <td class="num mono">{{ p.id }}</td>
-          <td class="mono"><strong>{{ p.amount }}</strong> {{ p.currency }}</td>
+          <td class="mono"><strong>{{ p.amount|money }}</strong></td>
           <td>{{ p.earned_minutes or 0 }} دقيقة</td>
-          <td class="mono">{{ p.discount_amount or 0 }}</td>
+          <td class="mono">{{ (p.discount_amount or 0)|money }}</td>
           <td>{{ hub.pill(p.status, variant="green") }}</td>
-          <td class="mono small">{{ p.created_at }}</td>
+          <td class="mono small">{{ p.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -188,7 +188,7 @@
         <tr>
           <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.duration_minutes }} دقيقة</td>
-          <td class="mono"><strong>{{ loan.amount }}</strong> {{ loan.currency }}</td>
+          <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
             {% else %}{{ hub.pill("مُسوّاة", variant="green") }}{% endif %}
@@ -246,10 +246,10 @@
             {% elif entry.direction == 'debit' %}{{ hub.pill("مدين", variant="amber", dot=False) }}
             {% else %}{{ hub.pill(entry.direction or '—', variant="grey", dot=False) }}{% endif %}
           </td>
-          <td class="mono"><strong>{{ entry.amount }}</strong> {{ entry.currency }}</td>
+          <td class="mono"><strong>{{ entry.amount|money }}</strong></td>
           <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} #{{ entry.source_id }}{% endif %}</td>
           <td class="small">{{ entry.notes or '—' }}</td>
-          <td class="mono small">{{ entry.created_at }}</td>
+          <td class="mono small">{{ entry.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>

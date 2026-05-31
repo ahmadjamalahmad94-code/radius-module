@@ -315,11 +315,11 @@
         <div class="rc-card-stats">
           <div class="stat"><div class="k">بطاقات</div><div class="v">{{ b.card_count or 0 }}</div></div>
           <div class="stat"><div class="k">مستخدمة</div><div class="v">{{ b.used_count or 0 }}</div></div>
-          <div class="stat"><div class="k">القيمة</div><div class="v">{{ "%.0f"|format(b.price_bulk or 0) }}</div></div>
+          <div class="stat"><div class="k">القيمة</div><div class="v">{{ (b.price_bulk or 0)|money }}</div></div>
         </div>
       </a>
       <div class="rc-card-actions">
-        <span class="meta">{{ (b.created_at or '')[:10] }}</span>
+        <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
         <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
            class="rc-act rc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
@@ -372,8 +372,8 @@
           </td>
           <td style="font-variant-numeric:tabular-nums"><strong>{{ b.card_count or 0 }}</strong></td>
           <td style="font-variant-numeric:tabular-nums">{{ b.used_count or 0 }}</td>
-          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_bulk or 0) }}</td>
-          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ (b.created_at or '')[:19] }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ (b.price_bulk or 0)|money }}</td>
+          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ b.created_at|dt_local if b.created_at else '' }}</td>
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
               <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"

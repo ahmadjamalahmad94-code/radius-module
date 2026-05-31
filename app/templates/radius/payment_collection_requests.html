@@ -52,9 +52,9 @@
         <td class="mono">{{ item.reference_code }}</td>
         <td>{{ item.purpose }}</td>
         <td>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</td>
-        <td class="mono">{{ "%.2f"|format(item.amount) }} {{ item.currency }}</td>
+        <td class="mono">{{ item.amount|money }}</td>
         <td><span class="hub-pill">{{ item.status }}</span></td>
-        <td class="mono small">{{ item.created_at }}</td>
+        <td class="mono small">{{ item.created_at|dt_local }}</td>
         <td><a class="hub-btn hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">فتح</a></td>
       </tr>
       {% else %}

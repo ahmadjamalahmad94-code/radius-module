@@ -31,7 +31,7 @@
         <td class="mono">{{ row.id or row.provider_transaction_id }}</td>
         <td class="mono">{{ row.reference_code or '-' }}</td>
         <td>{{ row.status or '-' }}</td>
-        <td class="mono">{% if row.amount %}{{ "%.2f"|format(row.amount) }} {{ row.currency }}{% else %}-{% endif %}</td>
+        <td class="mono">{% if row.amount %}{{ row.amount|money }}{% else %}-{% endif %}</td>
         <td class="small">{{ row.expires_at or row.service_apply_status or row.payment_request_ids or '-' }}</td>
       </tr>
       {% endfor %}

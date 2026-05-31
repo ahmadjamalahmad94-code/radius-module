@@ -81,7 +81,7 @@
             {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
             {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
           </td>
-          <td class="num mono"><strong>{{ entry.amount }}</strong> <small class="hub-text-mute">{{ entry.currency }}</small></td>
+          <td class="num mono"><strong>{{ entry.amount|money }}</strong></td>
           <td>
             {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
             {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
@@ -89,7 +89,7 @@
           </td>
           <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
           <td class="small">{{ entry.notes or '—' }}</td>
-          <td class="mono small">{{ entry.created_at }}</td>
+          <td class="mono small">{{ entry.created_at|dt_local }}</td>
           <td>
             {% if entry.entry_type not in ['void','reversal','correction'] %}
             <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">

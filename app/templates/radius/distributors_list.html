@@ -46,8 +46,8 @@
 <div class="hub-kpi-grid">
   {{ hub.kpi("الإجمالي",      distributors|length, icon="users", variant="brand") }}
   {{ hub.kpi("مفعَّلون",       _active,              icon="circle-check", variant="green") }}
-  {{ hub.kpi("إجمالي الرصيد", "%.2f"|format(_total_bal or 0), icon="wallet", variant="blue") }}
-  {{ hub.kpi("إجمالي الديون", "%.2f"|format(_total_debt or 0), icon="hand-holding-dollar", variant="amber") }}
+  {{ hub.kpi("إجمالي الرصيد", (_total_bal or 0)|money, icon="wallet", variant="blue") }}
+  {{ hub.kpi("إجمالي الديون", (_total_debt or 0)|money, icon="hand-holding-dollar", variant="amber") }}
 </div>
 
 {% call hub.section("قائمة الموزعين", icon="table-list", meta=distributors|length|string + " موزع", flush=True) %}
@@ -101,9 +101,9 @@
             {% endif %}
           </td>
           <td>
-            <div class="mono small"><strong>رصيد:</strong> {{ "%.2f"|format(d.balance or 0) }}</div>
+            <div class="mono small"><strong>رصيد:</strong> {{ (d.balance or 0)|money }}</div>
             <div class="mono small hub-text-mute">
-              دين: {{ "%.2f"|format(d.debt_balance or 0) }} · حد: {{ "%.2f"|format(d.credit_limit or 0) }}
+              دين: {{ (d.debt_balance or 0)|money }} · حد: {{ (d.credit_limit or 0)|money }}
             </div>
           </td>
           <td>
