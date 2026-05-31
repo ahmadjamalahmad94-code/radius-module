@@ -3,20 +3,71 @@
 {% block title %}الإعدادات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gear"></i>{% endblock %}
 {% block page_title %}إعدادات النظام{% endblock %}
-{% block page_sub %}<span class="sub">(لكل جهة)</span>{% endblock %}
+{% block page_sub %}<span class="sub">هوية النظام والعملة والتوقيت والقيم العامة</span>{% endblock %}
 
 {% block content %}
+{# lookup: key → current value #}
+{% set vals = {} %}{% for it in items %}{% if vals.update({it.key: it.value}) %}{% endif %}{% endfor %}
+{% set identity_keys = ['system.name','branding.logo_url','branding.primary_color','radius.default_country','billing.currency','billing.timezone_offset'] %}
+{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
+{% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن/فلسطين/العراق/السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
+
 {{ hub.hero(
   "إعدادات النظام",
-  subtitle="القيم العامة التي يستخدمها النظام لكل جهة.",
+  subtitle="حدّد هوية نظامك: الاسم، الشعار، الدولة، العملة، والتوقيت — تنعكس فورًا على كل الصفحات.",
   icon="gear"
 ) }}
 
 <form method="post">
 
+  {# ── System identity ── #}
+  {% call hub.section("هوية النظام", icon="id-badge", meta='تنعكس على كل الصفحات والعملة والوقت') %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">اسم النظام</label>
+        <input class="hub-input" type="text" name="system.name" value="{{ vals.get('system.name','') }}" placeholder="HobeRadius">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الدولة (الموقع)</label>
+        <input class="hub-input" type="text" name="radius.default_country" value="{{ vals.get('radius.default_country','') }}" placeholder="مثال: الأردن / فلسطين / العراق">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">العملة</label>
+        <select class="hub-input" name="billing.currency">
+          {% for code, label in currencies %}
+            <option value="{{ code }}" {{ 'selected' if vals.get('billing.currency','JOD') == code else '' }}>{{ label }} — {{ code }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">توقيت النظام</label>
+        <select class="hub-input" name="billing.timezone_offset">
+          {% set cur_off = vals.get('billing.timezone_offset','3') %}
+          {% for off, label in offsets %}
+            <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">اللون الأساسي</label>
+        <input class="hub-input" type="color" name="branding.primary_color" value="{{ vals.get('branding.primary_color','#2BAACC') }}" style="height:42px;padding:4px">
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">رابط الشعار (URL)</label>
+        <input class="hub-input" type="text" name="branding.logo_url" value="{{ vals.get('branding.logo_url','') }}" placeholder="https://…/logo.png">
+        {% if vals.get('branding.logo_url') %}
+          <div style="margin-top:10px"><img src="{{ vals.get('branding.logo_url') }}" alt="شعار" style="max-height:54px;border:1px solid #e2e8f0;border-radius:10px;padding:6px;background:#fff"></div>
+        {% else %}
+          <div class="hub-field-hint">أدخل رابط صورة شعارك ليظهر في النظام.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── Everything else ── #}
   {% call hub.section("القيم العامة", icon="sliders") %}
     <div class="hub-form-row">
-      {% for it in items %}
+      {% for it in items if it.key not in identity_keys %}
         <div class="hub-field">
           <label class="hub-field-label">{{ it.label }}</label>
           <input class="hub-input" type="text" name="{{ it.key }}" value="{{ it.value }}">
