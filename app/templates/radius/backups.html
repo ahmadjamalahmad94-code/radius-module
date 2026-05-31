@@ -140,6 +140,18 @@
   .bkx-run .rs{ width:8px;height:8px;border-radius:50%;flex:none; }
   .bkx-run .rp{ font-family:ui-monospace,monospace; color:#64748b; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; }
   .bkx-run .rt{ font-family:ui-monospace,monospace; color:#94a3b8; flex:none; }
+  /* nicer native file picker */
+  .bkx-input[type=file]::file-selector-button{ border:0; background:#ede9fe; color:#5b21b6; font:inherit; font-weight:800;
+    padding:7px 13px; border-radius:8px; margin-inline-end:11px; cursor:pointer; }
+  .bkx-input[type=file]::file-selector-button:hover{ background:#ddd6fe; }
+  /* pagination */
+  .bkx-pager{ display:flex; gap:6px; justify-content:center; align-items:center; margin-top:13px; flex-wrap:wrap; }
+  .bkx-pager:empty{ display:none; }
+  .bkx-pg{ min-width:33px; height:33px; padding:0 9px; border-radius:9px; border:1px solid #e2e8f0; background:#fff;
+    color:#475569; cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; transition:.13s; }
+  .bkx-pg:hover:not([disabled]):not(.is-active){ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+  .bkx-pg.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+  .bkx-pg[disabled]{ opacity:.4; cursor:default; }
 </style>
 {% endblock %}
 
@@ -185,7 +197,7 @@
           <div class="bkx-note warn"><i class="fa-solid fa-lock"></i><div>الاستعادة داخل التطبيق معطّلة على هذا الخادم. التنزيل متاح دائمًا.</div></div>
         {% endif %}
         {% if local_files %}
-          <div class="bkx-list">
+          <div class="bkx-list" id="bkx-backups">
             {% for f in local_files %}
               <div class="bkx-item">
                 <div class="bkx-item-row">
@@ -212,6 +224,7 @@
               </div>
             {% endfor %}
           </div>
+          <div class="bkx-pager" id="bkx-backups-pager"></div>
         {% else %}
           {{ hub.empty("لا توجد نسخ بعد.", sub="اضغط «نسخة كاملة الآن» لإنشاء أول نسخة.", icon="database") }}
         {% endif %}
@@ -302,7 +315,7 @@
       <span class="meta">{{ runs|length }} محاولة</span></div>
     <div class="bkx-card-b">
       {% if runs %}
-        <div class="bkx-runs">
+        <div class="bkx-runs" id="bkx-runs">
           {% for run in runs %}
             {% set st = run.get('status') %}
             <div class="bkx-run">
@@ -313,6 +326,7 @@
             </div>
           {% endfor %}
         </div>
+        <div class="bkx-pager" id="bkx-runs-pager"></div>
       {% else %}
         {{ hub.empty("لا توجد محاولات نسخ بعد.", icon="database") }}
       {% endif %}
@@ -398,6 +412,41 @@
       successText:'تمّت عملية النسخ.', reloadOnDone:true}); return; }
     if(e.target.closest('[data-bk-prog-close]')){ overlay.classList.remove('is-open'); }
   });
+})();
+</script>
+
+{# ── Client-side pagination for the two lists ── #}
+<script>
+(function(){
+  function paginate(listId, pagerId, size){
+    var list = document.getElementById(listId);
+    var pager = document.getElementById(pagerId);
+    if(!list || !pager) return;
+    var items = Array.prototype.slice.call(list.children);
+    var pages = Math.ceil(items.length / size);
+    if(pages <= 1){ items.forEach(function(it){ it.style.display=''; }); pager.innerHTML=''; return; }
+    var current = 1;
+    function render(){
+      items.forEach(function(it,i){
+        it.style.display = (i >= (current-1)*size && i < current*size) ? '' : 'none';
+      });
+      var html = '<button type="button" class="bkx-pg" data-pg="prev"'+(current===1?' disabled':'')+'>‹</button>';
+      for(var p=1; p<=pages; p++){ html += '<button type="button" class="bkx-pg'+(p===current?' is-active':'')+'" data-pg="'+p+'">'+p+'</button>'; }
+      html += '<button type="button" class="bkx-pg" data-pg="next"'+(current===pages?' disabled':'')+'>›</button>';
+      pager.innerHTML = html;
+    }
+    pager.addEventListener('click', function(e){
+      var b = e.target.closest('[data-pg]'); if(!b) return;
+      var v = b.getAttribute('data-pg');
+      if(v==='prev' && current>1) current--;
+      else if(v==='next' && current<pages) current++;
+      else if(v!=='prev' && v!=='next') current = parseInt(v,10);
+      render();
+    });
+    render();
+  }
+  paginate('bkx-backups','bkx-backups-pager',10);
+  paginate('bkx-runs','bkx-runs-pager',5);
 })();
 </script>
 

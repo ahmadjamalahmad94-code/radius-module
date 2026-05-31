@@ -903,7 +903,7 @@ def backup_status(tenant_id: int) -> dict:
         """
         SELECT * FROM backup_run_logs
         WHERE tenant_id = ?
-        ORDER BY id DESC LIMIT 5
+        ORDER BY id DESC LIMIT 50
         """,
         (tenant_id,),
     ).fetchall()
