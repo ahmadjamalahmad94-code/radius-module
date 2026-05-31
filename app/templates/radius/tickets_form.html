@@ -31,17 +31,21 @@
       <div class="hub-field">
         <label class="hub-field-label">الفئة</label>
         <select class="hub-select" name="category">
-          {% for c in ['general','billing','connection','hardware','complaint'] %}
-            <option value="{{ c }}">{{ c }}</option>
-          {% endfor %}
+          <option value="general">عام</option>
+          <option value="billing">الفواتير والدفع</option>
+          <option value="connection">الاتصال والخدمة</option>
+          <option value="hardware">الأجهزة والمعدات</option>
+          <option value="complaint">شكوى</option>
+          <option value="service_request">طلب خدمة</option>
         </select>
       </div>
       <div class="hub-field">
         <label class="hub-field-label">الأولوية</label>
         <select class="hub-select" name="priority">
-          {% for p in ['low','normal','high','urgent'] %}
-            <option value="{{ p }}" {% if p=='normal' %}selected{% endif %}>{{ p }}</option>
-          {% endfor %}
+          <option value="low">منخفضة</option>
+          <option value="normal" selected>عادية</option>
+          <option value="high">مرتفعة</option>
+          <option value="urgent">عاجلة</option>
         </select>
       </div>
       <div class="hub-field" style="grid-column:1/-1">

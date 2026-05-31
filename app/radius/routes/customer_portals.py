@@ -64,7 +64,7 @@ def subscriber_login():
                 password=request.form.get("password") or "",
             )
         except PortalAuthError:
-            flash("Subscriber credentials are not valid.", "error")
+            flash("بيانات دخول المشترك غير صحيحة.", "error")
             return render_template("radius/portal_subscriber_login.html"), 401
         session["portal_tenant_id"] = 1
         session["portal_subscriber_id"] = int(subscriber["id"])
@@ -97,7 +97,7 @@ def subscriber_loan_request():
             requested_minutes=int(request.form.get("requested_minutes") or 0),
             reason=request.form.get("reason") or "",
         )
-        flash(f"Loan request saved: {result['status']}", "success")
+        flash(f"تم تسجيل طلب السلفة. الحالة: {_portal_status_label(result['status'])}", "success")
     except (RadiusValidationError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.subscriber_home"))
@@ -111,7 +111,7 @@ def subscriber_renewal_request():
         subscriber_id=int(subscriber_id),
         reason=request.form.get("reason") or "",
     )
-    flash(f"Renewal request saved: {result['status']}", "success")
+    flash(f"تم تسجيل الطلب. الحالة: {_portal_status_label(result['status'])}", "success")
     return redirect(url_for("portal.subscriber_home"))
 
 
@@ -168,10 +168,19 @@ def card_purchase():
             card_user_id=int(card_user_id),
             package_id=int(request.form.get("package_id") or 0),
         )
-        flash(f"Card purchased: #{purchase['id']}", "success")
+        flash(f"تم شراء الكرت رقم #{purchase['id']}.", "success")
     except (ValueError, RadiusValidationError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.card_home"))
+
+
+def _portal_status_label(status: str) -> str:
+    return {
+        "pending": "بانتظار المراجعة",
+        "auto_approved": "معتمد تلقائيًا",
+        "requires_approval": "يحتاج موافقة",
+        "rejected": "مرفوض",
+    }.get(str(status or ""), str(status or "غير معروف"))
 
 
 def card_redeem():

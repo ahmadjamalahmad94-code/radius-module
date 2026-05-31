@@ -8,6 +8,14 @@
 {% block page_sub %}<span class="sub">{{ items|length }} تذكرة في النتائج</span>{% endblock %}
 
 {% block content %}
+{% set category_labels = {
+  'general': 'عام',
+  'billing': 'الفواتير والدفع',
+  'connection': 'الاتصال والخدمة',
+  'hardware': 'الأجهزة والمعدات',
+  'complaint': 'شكوى',
+  'service_request': 'طلب خدمة'
+} %}
 
 {{ hub.hero(
   "التذاكر والشكاوى",
@@ -69,7 +77,7 @@
               {{ t.subject }}
             </a>
           </td>
-          <td>{{ hub.pill(t.category or '—', variant="grey", dot=False) }}</td>
+          <td>{{ hub.pill(category_labels.get(t.category, t.category or '—'), variant="grey", dot=False) }}</td>
           <td>
             {% if t.priority == 'urgent' %}{{ hub.pill("عاجل", variant="red") }}
             {% elif t.priority == 'high' %}{{ hub.pill("مرتفع", variant="amber") }}

@@ -59,7 +59,7 @@ def _csrf(client, token: str = "portal-csrf") -> str:
 def _card_user_with_purchase() -> tuple[int, dict, dict]:
     plan_id = _plan("Card Portal Plan", loan_enabled=False)
     svc = CardUsersMarketplaceService(tenant_id=1)
-    card_user = svc.create_card_user(display_name="Card Customer", mobile="0590000000")
+    card_user = svc.create_card_user(display_name="Card Customer", mobile="0590000000", password="portal-pass")
     package = svc.create_package(name="Portal Package", plan_id=plan_id, price="2.00")
     svc.recharge_wallet(card_user_id=card_user["id"], amount="10.00", actor="test")
     purchase = svc.purchase_package(card_user_id=card_user["id"], package_id=package["id"], actor="test")
@@ -86,8 +86,8 @@ def test_subscriber_portal_access_is_self_scoped_and_expired_can_view(app):
     body = res.get_data(as_text=True)
     assert res.status_code == 200
     assert "subscriber-portal-home" in body
-    assert "expired" in body
-    assert str(other_id) not in body
+    assert "منته" in body
+    assert "other-user" not in body
     assert admin_probe.status_code in {302, 303}
     assert subscriber_id != other_id
 
@@ -129,9 +129,53 @@ def test_loan_request_requires_approval_when_plan_policy_blocks(app):
             requested_minutes=1440,
             reason="blocked",
         )
+        ticket = db().execute(
+            "SELECT * FROM tickets WHERE tenant_id=1 AND subscriber_id=? ORDER BY id DESC LIMIT 1",
+            (subscriber_id,),
+        ).fetchone()
+        inbox = db().execute(
+            "SELECT * FROM inbox_messages WHERE tenant_id=1 AND subscriber_id=? ORDER BY id DESC LIMIT 1",
+            (subscriber_id,),
+        ).fetchone()
+        event = db().execute(
+            "SELECT * FROM business_events WHERE tenant_id=1 AND target_type='subscriber' AND target_id=? ORDER BY id DESC LIMIT 1",
+            (subscriber_id,),
+        ).fetchone()
 
     assert result["status"] == "requires_approval"
     assert result["result"]["applied_to_radius"] is False
+    assert result["result"]["ticket_id"] == ticket["id"]
+    assert ticket["category"] == "service_request"
+    assert ticket["status"] == "open"
+    assert "طلب سلفة وقت" in ticket["subject"]
+    assert inbox is not None
+    assert "تم فتح تذكرة متابعة" in inbox["body"]
+    assert event is not None
+    assert "تم تسجيل طلب سلفة وقت" in event["message"]
+
+
+def test_subscriber_support_request_opens_complaint_ticket_and_notification(app):
+    with app.app_context():
+        subscriber_id = _subscriber("support-user")
+        result = CustomerPortalService(tenant_id=1).submit_renewal_request(
+            subscriber_id=subscriber_id,
+            reason="[شكوى] الخدمة بطيئة جدًا",
+        )
+        ticket = db().execute(
+            "SELECT * FROM tickets WHERE tenant_id=1 AND subscriber_id=? ORDER BY id DESC LIMIT 1",
+            (subscriber_id,),
+        ).fetchone()
+        request_row = db().execute(
+            "SELECT * FROM customer_portal_requests WHERE tenant_id=1 AND id=?",
+            (result["id"],),
+        ).fetchone()
+
+    assert result["request_type"] == "support"
+    assert result["result"]["ticket_id"] == ticket["id"]
+    assert ticket["category"] == "complaint"
+    assert ticket["status"] == "open"
+    assert "طلب دعم من بوابة المشترك" in ticket["subject"]
+    assert request_row["request_type"] == "support"
 
 
 def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
@@ -144,7 +188,7 @@ def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
         token = _csrf(client)
         login = client.post(
             "/admin/radius/portal/card/login",
-            data={"_csrf_token": token, "card_username": card["username"], "card_password": card["password"]},
+            data={"_csrf_token": token, "mobile": "0590000000", "password": "portal-pass"},
             follow_redirects=True,
         )
         purchase = client.post(
@@ -165,7 +209,7 @@ def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
     ).fetchone()
 
     assert login.status_code == 200
-    assert "card-portal-home" in login.get_data(as_text=True)
+    assert "محفظتي" in login.get_data(as_text=True)
     assert card["password"] not in login.get_data(as_text=True)
     assert purchase.status_code == 200
     assert purchased_card is not None

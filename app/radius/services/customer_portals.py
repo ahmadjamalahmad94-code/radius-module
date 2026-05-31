@@ -7,11 +7,13 @@ from typing import Any
 
 from werkzeug.security import check_password_hash
 
+from ..core.types_saas import Ticket
 from ..core.errors import RadiusValidationError
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
+from ..db.repos import tickets_repo
 from .accounting import AccountingService
-from .business_os_finance import WalletService
+from .business_os_finance import EventService, WalletService
 from .card_users_marketplace import CardUsersMarketplaceService
 
 
@@ -70,7 +72,7 @@ class CustomerPortalService:
             "notifications": self._events("subscriber", int(subscriber["id"])),
             "cards": self._subscriber_cards(int(subscriber["id"]), subscriber["username"]),
             "loan_policy": self.loan_policy(subscriber_id),
-            "walled_garden_note": "Allow this portal URL in MikroTik walled garden so expired users can reach it.",
+            "walled_garden_note": "أضف رابط هذه البوابة إلى قائمة السماح في MikroTik حتى يصل لها المشترك المنتهي.",
         }
 
     def card_user_dashboard(self, card_user_id: int) -> dict[str, Any]:
@@ -79,7 +81,7 @@ class CustomerPortalService:
             card.pop("password", None)
         data["marketplace"] = CardUsersMarketplaceService(tenant_id=self.tenant_id).list_packages(active_only=True)
         data["notifications"] = self._events("card_user", int(card_user_id))
-        data["walled_garden_note"] = "Allow the card portal URL in MikroTik walled garden when selling cards through captive networks."
+        data["walled_garden_note"] = "أضف رابط بوابة الكروت إلى قائمة السماح في MikroTik عند بيع الكروت من شبكة مقيدة."
         return data
 
     def redeem_card_to_wallet(
@@ -131,7 +133,7 @@ class CustomerPortalService:
             bulk = float(card.get("price_bulk") or 0)
             price = (bulk / count) if count > 0 and bulk > 0 else 0
         if price <= 0:
-            raise RadiusValidationError("card has no wallet value")
+            raise RadiusValidationError("لا توجد قيمة محفظة لهذه البطاقة.")
 
         wallet = CardUsersMarketplaceService(tenant_id=self.tenant_id)._wallet_for_card_user(card_user_id)
         credit = WalletService().credit(
@@ -160,7 +162,7 @@ class CustomerPortalService:
                 (now, self.tenant_id, int(card["id"])),
             )
             if cur.rowcount <= 0:
-                raise RadiusValidationError("card was already redeemed")
+                raise RadiusValidationError("تم شحن هذه البطاقة من قبل.")
         return {
             "card": card,
             "wallet": credit["wallet"],
@@ -189,7 +191,7 @@ class CustomerPortalService:
                 "auto_approve": False,
                 "allowed_minutes": 0,
                 "sequence": "disabled",
-                "reason": "loan is not enabled for this subscriber plan",
+                "reason": "السلفة غير مفعّلة لهذه الباقة.",
             }
         sequence_limit = 2 * 24 * 60 if open_count == 0 else 24 * 60 if open_count == 1 else 0
         allowed = min(plan_max, sequence_limit)
@@ -199,7 +201,7 @@ class CustomerPortalService:
             "allowed_minutes": allowed,
             "sequence": "first_2_days_then_1_day",
             "open_loan_count": open_count,
-            "reason": "" if allowed > 0 else "loan sequence requires staff approval",
+            "reason": "" if allowed > 0 else "تحتاج السلفة الحالية إلى موافقة الموظف.",
         }
 
     def submit_loan_request(self, *, subscriber_id: int, requested_minutes: int, reason: str = "") -> dict[str, Any]:
@@ -216,7 +218,7 @@ class CustomerPortalService:
                     "subscriber_id": int(subscriber["id"]),
                     "duration_minutes": requested,
                     "amount": 0,
-                    "reason": reason or "customer portal loan",
+                    "reason": reason or "سلفة من بوابة المشترك",
                 },
                 actor="subscriber_portal",
             )
@@ -231,20 +233,44 @@ class CustomerPortalService:
             reason=reason,
             result=result,
         )
+        self._attach_ticket_to_request(
+            request_id,
+            subscriber_id=int(subscriber_id),
+            request_type="loan",
+            status=status,
+            reason=reason,
+            requested_minutes=requested,
+            result=result,
+        )
         return self.get_request(request_id)
 
     def submit_renewal_request(self, *, subscriber_id: int, reason: str = "") -> dict[str, Any]:
+        clean_reason = str(reason or "").strip()
+        request_type = "support" if clean_reason.startswith("[شكوى]") else "renewal"
         request_id = self._create_request(
             requester_type="subscriber",
             requester_id=int(subscriber_id),
-            request_type="renewal",
+            request_type=request_type,
             status="pending",
             requested_minutes=0,
-            reason=reason,
+            reason=clean_reason,
             result={
                 "applied_to_radius": False,
                 "gateway": "manual_review",
-                "message_ar": "تم تسجيل طلب التجديد بانتظار مراجعة الإدارة.",
+                "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
+            },
+        )
+        self._attach_ticket_to_request(
+            request_id,
+            subscriber_id=int(subscriber_id),
+            request_type=request_type,
+            status="pending",
+            reason=clean_reason,
+            requested_minutes=0,
+            result={
+                "applied_to_radius": False,
+                "gateway": "manual_review",
+                "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
             },
         )
         return self.get_request(request_id)
@@ -294,6 +320,95 @@ class CustomerPortalService:
             ),
         )
         return int(cur.lastrowid)
+
+    def _attach_ticket_to_request(
+        self,
+        request_id: int,
+        *,
+        subscriber_id: int,
+        request_type: str,
+        status: str,
+        requested_minutes: int,
+        reason: str,
+        result: dict[str, Any],
+    ) -> None:
+        labels = {
+            "loan": "طلب سلفة وقت",
+            "renewal": "طلب تجديد اشتراك",
+            "support": "طلب دعم من بوابة المشترك",
+        }
+        label = labels.get(request_type, "طلب من بوابة المشترك")
+        subscriber = self.get_subscriber(subscriber_id)
+        ticket_status = "closed" if status == "auto_approved" else "open"
+        body_lines = [
+            f"مصدر الطلب: بوابة المشترك",
+            f"رقم طلب البوابة: CPR-{request_id}",
+            f"نوع الطلب: {label}",
+            f"المشترك: {subscriber.get('username')}",
+        ]
+        if requested_minutes:
+            body_lines.append(f"الدقائق المطلوبة: {requested_minutes}")
+        if reason:
+            body_lines.extend(["", "ملاحظة المشترك:", reason])
+        if status == "auto_approved":
+            body_lines.append("تم اعتماد الطلب تلقائيًا حسب سياسة الباقة.")
+        else:
+            body_lines.append("الطلب مفتوح لمراجعة الإدارة والمتابعة من قسم الدعم.")
+        ticket = tickets_repo.create_ticket(Ticket(
+            id=None,
+            tenant_id=self.tenant_id,
+            subscriber_id=int(subscriber_id),
+            subject=f"{label}: {subscriber.get('username')}",
+            category="service_request" if request_type != "support" else "complaint",
+            priority="normal",
+            status=ticket_status,
+            body="\n".join(body_lines),
+        ))
+        updated_result = dict(result or {})
+        updated_result["ticket_id"] = int(ticket.id or 0)
+        updated_result["ticket_reference"] = f"TK-{ticket.id}"
+        db().execute(
+            """
+            UPDATE customer_portal_requests
+            SET result_json=?
+            WHERE tenant_id=? AND id=?
+            """,
+            (json.dumps(updated_result, ensure_ascii=False, sort_keys=True), self.tenant_id, int(request_id)),
+        )
+        db().execute(
+            """
+            INSERT INTO inbox_messages(
+                tenant_id, subscriber_id, subject, body, type, sent_by_admin_id, created_at
+            ) VALUES(?,?,?,?,?,?,?)
+            """,
+            (
+                self.tenant_id,
+                int(subscriber_id),
+                "تم تسجيل طلبك",
+                f"تم فتح تذكرة متابعة رقم TK-{ticket.id} لطلبك: {label}.",
+                "in_app",
+                0,
+                now_iso(),
+            ),
+        )
+        EventService().record_event(
+            tenant_id=self.tenant_id,
+            category="subscriber",
+            event_key="customer_portal.request_created",
+            message=f"تم تسجيل {label} وفتح تذكرة متابعة رقم TK-{ticket.id}.",
+            severity="info",
+            actor_type="subscriber",
+            actor_id=int(subscriber_id),
+            target_type="subscriber",
+            target_id=int(subscriber_id),
+            metadata={
+                "request_id": int(request_id),
+                "ticket_id": int(ticket.id or 0),
+                "request_type": request_type,
+                "status": status,
+            },
+            correlation_id=f"portal-request:{request_id}",
+        )
 
     def _plan(self, plan_id: Any) -> dict[str, Any]:
         if not plan_id:

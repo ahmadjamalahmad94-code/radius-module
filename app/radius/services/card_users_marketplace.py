@@ -63,7 +63,7 @@ class CardUsersMarketplaceService:
     ) -> dict[str, Any]:
         name = str(display_name or "").strip()
         if not name:
-            raise CardMarketplaceError("display_name is required")
+            raise CardMarketplaceError("اسم مستخدم الكروت مطلوب.")
         now = now_iso()
         password_hash = ""
         password_set_at = None
@@ -102,7 +102,7 @@ class CardUsersMarketplaceService:
             tenant_id=self.tenant_id,
             category="card",
             event_key="card_user.created",
-            message="Card user profile created",
+            message="تم إنشاء حساب مستخدم كروت.",
             target_type="card_user",
             target_id=card_user_id,
         )
@@ -116,7 +116,7 @@ class CardUsersMarketplaceService:
     ) -> dict[str, Any]:
         raw = str(password or "").strip()
         if len(raw) < 4:
-            raise CardMarketplaceError("password must be at least 4 characters")
+            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
@@ -134,12 +134,12 @@ class CardUsersMarketplaceService:
                 ),
             )
             if cur.rowcount <= 0:
-                raise CardMarketplaceError("card user not found")
+                raise CardMarketplaceError("مستخدم الكروت غير موجود.")
         self.events.record_event(
             tenant_id=self.tenant_id,
             category="card",
             event_key="card_user.password_updated",
-            message="Card user portal password updated",
+            message="تم تحديث كلمة مرور بوابة الكروت.",
             target_type="card_user",
             target_id=int(card_user_id),
         )
@@ -161,7 +161,7 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(card_user_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("card user not found")
+            raise CardMarketplaceError("مستخدم الكروت غير موجود.")
         return _row(row)
 
     def create_package(
@@ -336,7 +336,7 @@ class CardUsersMarketplaceService:
             tenant_id=self.tenant_id,
             category="card",
             event_key="card_user.card_purchased",
-            message="Card user purchased marketplace card",
+            message="اشترى مستخدم الكروت بطاقة من السوق.",
             actor_type="card_user",
             actor_id=int(card_user_id),
             target_type="card_user",

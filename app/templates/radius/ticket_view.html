@@ -45,6 +45,14 @@
 {% endblock %}
 
 {% block content %}
+{% set category_labels = {
+  'general': 'عام',
+  'billing': 'الفواتير والدفع',
+  'connection': 'الاتصال والخدمة',
+  'hardware': 'الأجهزة والمعدات',
+  'complaint': 'شكوى',
+  'service_request': 'طلب خدمة'
+} %}
 
 {{ hub.hero(
   ticket.subject,
@@ -103,7 +111,7 @@
     {% call hub.section("معلومات التذكرة", icon="circle-info") %}
       <div class="tk-info-row">
         <span class="lbl">الفئة:</span>
-        <span class="val">{{ hub.pill(ticket.category or '—', variant="grey", dot=False) }}</span>
+        <span class="val">{{ hub.pill(category_labels.get(ticket.category, ticket.category or '—'), variant="grey", dot=False) }}</span>
       </div>
       <div class="tk-info-row">
         <span class="lbl">الأولوية:</span>
