@@ -60,6 +60,22 @@ def _create_request(client) -> dict:
     ).get_json()["data"]["request"]
 
 
+def _create_subscriber(username: str = "payment-customer") -> int:
+    from app.radius.core.types import Subscriber
+    from app.radius.db.repos import subscribers_repo
+
+    subscriber = subscribers_repo.upsert_subscriber(Subscriber(
+        id=None,
+        tenant_id=1,
+        username=username,
+        password="secret",
+        full_name="Payment Customer",
+        mobile="0599001000",
+    ))
+    assert subscriber.id is not None
+    return int(subscriber.id)
+
+
 def test_submit_proof_success(client):
     request = _create_request(client)
     response = client.post(
@@ -237,6 +253,75 @@ def test_paid_request_service_apply_is_record_only_and_idempotent(client):
         (request["id"],),
     ).fetchone()["c"]
     assert count == 1
+
+
+def test_paid_service_request_applies_local_runtime_entitlement(client):
+    client.patch(
+        "/api/v1/payments/settings",
+        json={
+            "enabled": True,
+            "provider": "manual_wallet",
+            "wallet_number": "0599000000",
+            "wallet_owner_name": "Hobe Wallet",
+            "currency": "ILS",
+            "confirmation_mode": "manual",
+        },
+        headers=_auth(),
+    )
+    subscriber_id = _create_subscriber("service-pay-customer")
+    created = client.post(
+        "/api/v1/service-requests",
+        json={
+            "subscriber_id": subscriber_id,
+            "service_key": "customer_portal",
+            "request_type": "activation",
+            "payment": {
+                "amount": 30,
+                "currency": "ILS",
+                "purpose": "monthly_subscription",
+            },
+        },
+        headers=_auth(),
+    )
+    assert created.status_code == 201
+    payment_request = created.get_json()["data"]["payment_request"]
+
+    client.post(
+        f"/api/v1/payments/requests/{payment_request['id']}/proofs",
+        json={"reference_number": "SERVICE-REF"},
+        headers=_auth(),
+    )
+    client.post(
+        f"/api/v1/admin/payments/requests/{payment_request['id']}/approve",
+        json={"review_note": "matched wallet"},
+        headers=_auth(),
+    )
+    applied = client.post(
+        f"/api/v1/admin/payments/requests/{payment_request['id']}/apply-service",
+        json={},
+        headers=_auth(),
+    )
+
+    assert applied.status_code == 200
+    data = applied.get_json()["data"]
+    result = data["apply_attempt"]["result"]
+    assert data["request"]["service_apply_status"] == "applied"
+    assert result["local_service_apply"] is True
+    assert result["service_key"] == "customer_portal"
+    assert result["live_radius_apply"] is False
+    assert result["live_mikrotik_apply"] is False
+
+    capacity = client.get(
+        "/api/v1/system/admin-bridge/capacity-status",
+        headers=_auth(),
+    ).get_json()["data"]
+    service = capacity["services"]["customer_portal"]
+    assert service["enabled"] is True
+    assert service["status"] == "active"
+    assert service["source"] == "local_service_entitlement"
+
+    license_file = client.get("/api/v1/system/license-file", headers=_auth()).get_json()["data"]
+    assert license_file["contract"]["services"]["customer_portal"]["enabled"] is True
 
 
 def test_service_apply_failure_is_recorded_without_ledger_rollback(client):

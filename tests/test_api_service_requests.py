@@ -145,6 +145,14 @@ def test_service_request_can_open_manual_payment_request(client):
     assert payment_request["payer_type"] == "subscriber"
     assert payment_request["payer_id"] == subscriber_id
     assert data["service_request"]["payment_request_id"] == payment_request["id"]
+    from app.radius.db.connection import db
+
+    link = db().execute(
+        "SELECT * FROM service_request_links WHERE ticket_id = ?",
+        (data["service_request"]["ticket_id"],),
+    ).fetchone()
+    assert link["service_key"] == "payment_collection"
+    assert link["latest_payment_request_id"] == payment_request["id"]
 
     ticket = client.get(
         f"/api/v1/tickets/{data['service_request']['ticket_id']}",
@@ -269,6 +277,14 @@ def test_service_request_decision_can_request_payment(client):
     assert data["ticket"]["status"] == "pending"
     assert data["service_request"]["payment_request_id"] == data["payment_request"]["id"]
     assert data["payment_request"]["amount"] == 45.0
+    from app.radius.db.connection import db
+
+    link = db().execute(
+        "SELECT * FROM service_request_links WHERE ticket_id = ?",
+        (ticket_id,),
+    ).fetchone()
+    assert link["decision"] == "request_payment"
+    assert link["latest_payment_request_id"] == data["payment_request"]["id"]
 
     detail = client.get(f"/api/v1/tickets/{ticket_id}", headers=_auth()).get_json()["data"]
     assert any(data["payment_request"]["reference_code"] in reply["body"] for reply in detail["replies"])

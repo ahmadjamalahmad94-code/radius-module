@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusValidationError
+from ...radius.db.helpers import json_load
 from ...radius.db.repos.payments_repo import (
     CURRENCIES,
     PAYMENT_PURPOSES,
@@ -430,6 +431,7 @@ def payment_collection_reject(request_id: int):
 
 
 def _apply_attempt_payload(row: dict) -> dict:
+    result = json_load(row.get("result_json"), default={})
     return {
         "id": row["id"],
         "tenant_id": row["tenant_id"],
@@ -437,6 +439,7 @@ def _apply_attempt_payload(row: dict) -> dict:
         "status": row["status"],
         "actor": row["actor"],
         "result_json": row["result_json"],
+        "result": result if isinstance(result, dict) else {},
         "error_message": row["error_message"],
         "created_at": row["created_at"],
     }

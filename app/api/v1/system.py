@@ -265,6 +265,10 @@ def system_license_file():
     missing = config.missing_fields()
     if not config.shared_secret:
         missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
+    capacity_status = CapacityEnforcementService().capacity_status(tenant_id=tenant_id)
+    contract_services = contract_payload.get("services", {})
+    if isinstance(capacity_status, dict) and isinstance(capacity_status.get("services"), dict):
+        contract_services = capacity_status.get("services") or {}
 
     return ok(
         {
@@ -300,13 +304,13 @@ def system_license_file():
             "contract": sanitize_bridge_payload(
                 {
                     "license": contract_payload.get("license", {}),
-                    "services": contract_payload.get("services", {}),
+                    "services": contract_services,
                     "limits": contract_payload.get("limits", {}),
                     "features": contract_payload.get("features", {}),
                 }
             ),
             "capacity": sanitize_bridge_payload(
-                CapacityEnforcementService().capacity_status(tenant_id=tenant_id)
+                capacity_status
             ),
         }
     )

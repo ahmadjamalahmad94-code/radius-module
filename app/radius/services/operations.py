@@ -1678,6 +1678,7 @@ class OperationsService:
         )
         try:
             self.prune_local_backups()
+            self.prune_local_backups_by_count(tenant_id=tenant_id)
         except Exception:  # noqa: BLE001 — retention must never break a backup run
             pass
         # Best-effort: push to the operator's Google Drive if connected.
@@ -1723,6 +1724,66 @@ class OperationsService:
                 target_id=str(retention), payload={"removed": removed, "retention_days": retention},
             )
         return removed
+
+    # ── Count-based retention (cap how many backups are kept) ──
+    BACKUP_MAX_COUNT_DEFAULT = 60
+
+    def backup_max_count(self, *, tenant_id: int) -> int:
+        from app.radius.db.repos import tenants_repo
+        try:
+            raw = tenants_repo.get_setting(int(tenant_id), "backup_max_count", str(self.BACKUP_MAX_COUNT_DEFAULT))
+            n = int(str(raw).strip())
+        except (TypeError, ValueError):
+            n = self.BACKUP_MAX_COUNT_DEFAULT
+        return max(1, min(1000, n))
+
+    def set_backup_max_count(self, *, tenant_id: int, value: int) -> int:
+        from app.radius.db.repos import tenants_repo
+        n = max(1, min(1000, int(value)))
+        tenants_repo.set_setting(int(tenant_id), "backup_max_count", str(n))
+        return n
+
+    def prune_local_backups_by_count(self, *, tenant_id: int, max_count: int | None = None) -> list[str]:
+        """Keep only the newest `max_count` regular backups; delete the oldest
+        beyond that. Pre-restore snapshots are never auto-deleted."""
+        cap = int(max_count if max_count is not None else self.backup_max_count(tenant_id=tenant_id))
+        if cap <= 0:
+            return []
+        files = [
+            p for p in self._backup_dir().glob("*.sqlite3")
+            if p.is_file() and not p.name.startswith("pre-restore-")
+        ]
+        if len(files) <= cap:
+            return []
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=True)  # newest first
+        removed: list[str] = []
+        for path in files[cap:]:
+            try:
+                path.unlink()
+                removed.append(path.name)
+            except OSError:
+                continue
+        if removed:
+            self._audit.record(
+                actor="system", action="backup.local_count_pruned", target_type="backup_retention",
+                target_id=str(cap), payload={"removed": removed, "max_count": cap},
+            )
+        return removed
+
+    def delete_local_backup(self, *, tenant_id: int, actor: str, name: str) -> dict:
+        """Delete a single local backup file (validated). Audited."""
+        path = self.resolve_local_backup_path(name=name)
+        if not path:
+            return {"ok": False, "message": "ملف النسخة غير موجود أو غير صالح."}
+        try:
+            path.unlink()
+        except OSError as exc:
+            return {"ok": False, "message": f"تعذّر حذف الملف: {exc}"}
+        self._audit.record(
+            actor=actor, action="backup.local_deleted", target_type="backup_file",
+            target_id=name, payload={"name": name},
+        )
+        return {"ok": True, "message": f"تم حذف النسخة {name}."}
 
     def list_local_backups(self, *, tenant_id: int = 1) -> list[dict]:
         """Return the local backup files (newest first) for the UI."""

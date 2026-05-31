@@ -102,6 +102,24 @@
   {% endif %}
 {% endcall %}
 
+{# ── Retention settings: cap the number of kept backups ── #}
+{% call hub.section("إعدادات الاحتفاظ بالنسخ", icon="sliders") %}
+  <p class="hub-text-soft" style="margin:0 0 12px;line-height:1.8">
+    حدّد <strong>أقصى عدد للنسخ المحلية</strong> المحفوظة. عند تجاوز الحد يُحذف <strong>الأقدم تلقائيًا</strong>
+    لتوفير المساحة. (النسخ الاحترازية المأخوذة قبل الاستعادة لا تُحذف تلقائيًا.)
+  </p>
+  <form method="post" action="{{ url_for('radius.backups_settings') }}"
+        class="hub-flex-row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0">
+    <label style="display:grid;gap:6px">
+      <span style="font-size:12.5px;font-weight:700;color:#475569">أقصى عدد للنسخ</span>
+      <input type="number" name="max_count" min="1" max="1000" value="{{ backup_max_count }}" required
+             style="width:150px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px">
+    </label>
+    {{ hub.btn("حفظ الحد", icon="floppy-disk", variant="primary", type="submit") }}
+    <span class="hub-text-soft" style="font-size:12px">الحالي: <strong>{{ backup_max_count }}</strong> نسخة</span>
+  </form>
+{% endcall %}
+
 {# ── Google Drive — status mirrored from the panel (one-click via SSO) ── #}
 {% call hub.section("النسخ إلى Google Drive", icon="cloud", meta=('● متصل' if gdrive.connected else 'بضغطة واحدة')) %}
   {% if gdrive.connected %}
@@ -189,6 +207,10 @@
                       <i class="fa-solid fa-rotate-left"></i> استعادة
                     </button>
                   {% endif %}
+                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+                          data-bk-delete data-name="{{ f.name }}" style="color:#dc2626">
+                    <i class="fa-solid fa-trash-can"></i> حذف
+                  </button>
                 </div>
               </td>
             </tr>
@@ -276,6 +298,59 @@
     row.style.display = open ? 'table-row' : 'none';
     if(open && row.getAttribute('data-loaded') !== '1') load(row, b.getAttribute('data-name'));
   });
+})();
+</script>
+
+{# ── Delete confirm modal (always available) ── #}
+<div class="bk-modal" id="bk-del-modal" role="dialog" aria-modal="true">
+  <div class="bk-dialog">
+    <form method="post" action="{{ url_for('radius.backups_delete') }}">
+      <div class="bk-dlg-head">
+        <span class="bk-dlg-ico"><i class="fa-solid fa-trash-can"></i></span>
+        <div class="bk-dlg-title">تأكيد حذف النسخة</div>
+      </div>
+      <div class="bk-dlg-body">
+        <p>سيتم <strong>حذف ملف النسخة نهائيًا</strong> من الريدياس. لا يمكن التراجع عن هذا الإجراء.</p>
+        <div class="bk-dlg-target" id="bk-del-target">—</div>
+        <p style="margin:4px 0 0">اكتب <strong>DELETE</strong> للتأكيد:</p>
+        <input type="hidden" name="name" id="bk-del-name" value="">
+        <input class="bk-conf-input" type="text" name="confirm" id="bk-del-confirm" autocomplete="off" placeholder="DELETE">
+      </div>
+      <div class="bk-dlg-foot">
+        <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-bk-del-close>إلغاء</button>
+        <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" id="bk-del-submit" disabled style="opacity:.5;pointer-events:none">
+          <i class="fa-solid fa-trash-can"></i> حذف نهائي
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  var modal = document.getElementById('bk-del-modal');
+  var nameField = document.getElementById('bk-del-name');
+  var target = document.getElementById('bk-del-target');
+  var confirmInput = document.getElementById('bk-del-confirm');
+  var submit = document.getElementById('bk-del-submit');
+  function refresh(){
+    var ok = confirmInput && confirmInput.value.trim().toUpperCase() === 'DELETE';
+    if(submit){ submit.disabled = !ok; submit.style.opacity = ok ? '1' : '.5'; submit.style.pointerEvents = ok ? 'auto' : 'none'; }
+  }
+  function open(name){
+    if(!modal) return;
+    nameField.value = name; target.textContent = name;
+    if(confirmInput) confirmInput.value = '';
+    refresh(); modal.classList.add('is-open');
+  }
+  function close(){ if(modal) modal.classList.remove('is-open'); }
+  if(confirmInput) confirmInput.addEventListener('input', refresh);
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-bk-delete]');
+    if(b){ open(b.getAttribute('data-name') || ''); return; }
+    if(e.target.closest('[data-bk-del-close]')){ close(); return; }
+    if(e.target === modal){ close(); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
 })();
 </script>
 

@@ -19,6 +19,8 @@ def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups/download/<path:name>", "backups_download", backups_download, methods=["GET"])
     bp.add_url_rule("/backups/content/<path:name>", "backups_content", backups_content, methods=["GET"])
     bp.add_url_rule("/backups/restore", "backups_restore", backups_restore, methods=["POST"])
+    bp.add_url_rule("/backups/delete", "backups_delete", backups_delete, methods=["POST"])
+    bp.add_url_rule("/backups/settings", "backups_settings", backups_settings, methods=["POST"])
     bp.add_url_rule("/backups/gdrive/save", "backups_gdrive_save", backups_gdrive_save, methods=["POST"])
     bp.add_url_rule("/backups/gdrive/start", "backups_gdrive_start", backups_gdrive_start, methods=["POST"])
     bp.add_url_rule("/backups/gdrive/poll", "backups_gdrive_poll", backups_gdrive_poll, methods=["GET"])
@@ -78,6 +80,7 @@ def backups():
         restore_enabled=_restore_enabled(),
         panel_backup=_backup_service_state(_tid()),
         retention_days=get_operations_service().LOCAL_BACKUP_RETENTION_DAYS,
+        backup_max_count=get_operations_service().backup_max_count(tenant_id=_tid()),
         gdrive=_gdrive_status(_tid()),
     )
 
@@ -226,4 +229,36 @@ def backups_restore():
         flash(result.get("message") or "تمت الاستعادة بنجاح.", "success")
     else:
         flash(result.get("message") or "تعذّرت الاستعادة.", "error")
+    return redirect(url_for("radius.backups"))
+
+
+def backups_delete():
+    """Delete a single local backup file — gated by a typed DELETE confirmation."""
+    if (request.form.get("confirm") or "").strip().upper() != "DELETE":
+        flash("لحذف النسخة يجب كتابة كلمة التأكيد DELETE بشكل صحيح.", "error")
+        return redirect(url_for("radius.backups"))
+    name = (request.form.get("name") or "").strip()
+    result = get_operations_service().delete_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
+    flash(
+        result.get("message") or ("تم الحذف." if result.get("ok") else "تعذّر الحذف."),
+        "success" if result.get("ok") else "error",
+    )
+    return redirect(url_for("radius.backups"))
+
+
+def backups_settings():
+    """Save the backup retention cap (max number of kept backups) + enforce it."""
+    raw = (request.form.get("max_count") or "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        flash("أدخل عددًا صحيحًا لحدّ عدد النسخ.", "error")
+        return redirect(url_for("radius.backups"))
+    svc = get_operations_service()
+    saved = svc.set_backup_max_count(tenant_id=_tid(), value=value)
+    removed = svc.prune_local_backups_by_count(tenant_id=_tid(), max_count=saved)
+    if removed:
+        flash(f"تم ضبط حدّ النسخ إلى {saved}، وحُذفت {len(removed)} نسخة قديمة زائدة.", "success")
+    else:
+        flash(f"تم ضبط حدّ النسخ إلى {saved} نسخة.", "success")
     return redirect(url_for("radius.backups"))
