@@ -1,0 +1,228 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}قنوات الإرسال — مركز التواصل{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
+{% block page_title %}قنوات الإرسال{% endblock %}
+{% block page_sub %}<span class="sub">تفعيل وضبط الإرسال الفعلي عبر الرسائل القصيرة وواتساب من خلال رابط مزوّد خارجي.</span>{% endblock %}
+
+{# Arabic labels for channel + mode #}
+{% macro ch_label(ch) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب'}.get(ch, 'قناة غير معروفة') }}{% endmacro %}
+{% macro ch_icon(ch) %}{{ {'sms':'comment-sms','whatsapp':'whatsapp'}.get(ch, 'paper-plane') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':'ربط مباشر من العميل','admin_quota':'رصيد مخصص من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .cch{ display:grid; gap:16px; }
+  .cch-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:16px; align-items:start; }
+  @media (max-width:900px){ .cch-grid{ grid-template-columns:1fr; } }
+  /* per-channel card */
+  .cch-card{ background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3); border-radius:16px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05),0 8px 22px rgba(15,23,42,.05); overflow:hidden; }
+  .cch-head{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--hub-border-soft,#eef2f7);
+    background:linear-gradient(135deg,#faf9ff,#fbfdff); }
+  .cch-head .ic{ width:38px;height:38px;border-radius:11px;background:#ede9fe;color:#5b21b6;display:grid;place-items:center;font-size:16px;flex:none; }
+  .cch-head .ic.wa{ background:#dcfce7;color:#16a34a; }
+  .cch-head h2{ margin:0; font-size:15px; font-weight:800; color:#0f172a; }
+  .cch-head .sub{ font-size:11.5px; color:#94a3b8; margin-top:2px; }
+  .cch-status{ margin-inline-start:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .cch-badge{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; border-radius:999px; padding:4px 11px; }
+  .cch-badge .dot{ width:7px;height:7px;border-radius:50%;flex:none; }
+  .cch-badge.on{ background:#dcfce7; color:#15803d; } .cch-badge.on .dot{ background:#16a34a; }
+  .cch-badge.off{ background:#f1f5f9; color:#64748b; } .cch-badge.off .dot{ background:#94a3b8; }
+  .cch-badge.mode{ background:#eef2ff; color:#4338ca; } .cch-badge.mode .dot{ background:#6366f1; }
+  .cch-body{ padding:16px; display:grid; gap:13px; }
+  .cch-field{ display:grid; gap:5px; }
+  .cch-field label{ font-size:12.5px; font-weight:700; color:#475569; }
+  .cch-hint{ font-size:11px; color:#94a3b8; line-height:1.7; }
+  .cch-hint code{ font-family:ui-monospace,Consolas,monospace; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; padding:1px 6px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; }
+  .cch-row2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:520px){ .cch-row2{ grid-template-columns:1fr; } }
+  .cch-input,.cch-select{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
+  .cch-input:focus,.cch-select:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
+  .cch-input.mono{ font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate; }
+  /* enable switch */
+  .cch-switch{ display:flex; align-items:center; gap:11px; padding:11px 13px; border:1px solid #e2e8f0; border-radius:12px; background:#fafafe; cursor:pointer; }
+  .cch-switch input{ width:18px;height:18px;accent-color:#7c3aed;flex:none; }
+  .cch-switch .t{ font-size:13px; font-weight:800; color:#0f172a; }
+  .cch-switch .d{ font-size:11px; color:#64748b; margin-top:1px; }
+  /* footer actions */
+  .cch-foot{ display:flex; gap:9px; align-items:center; flex-wrap:wrap; padding-top:3px; }
+  .cch-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:9px 15px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; transition:.15s; }
+  .cch-btn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; box-shadow:0 8px 18px rgba(124,58,237,.25); }
+  .cch-btn.primary:hover{ box-shadow:0 10px 22px rgba(124,58,237,.34); }
+  .cch-btn.ghost{ background:#fff; color:#475569; border:1px solid #cbd5e1; }
+  .cch-btn.ghost:hover{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+  /* test block */
+  .cch-test{ border:1px dashed #e2e8f0; border-radius:13px; padding:13px; background:#fcfcff; display:grid; gap:10px; }
+  .cch-test-title{ font-size:12.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px; }
+  .cch-test-row{ display:flex; gap:9px; flex-wrap:wrap; align-items:end; }
+  .cch-test-row .grow{ flex:1; min-width:160px; }
+  .cch-result{ display:none; font-size:12.5px; line-height:1.7; border-radius:10px; padding:10px 12px; }
+  .cch-result.show{ display:block; }
+  .cch-result.ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .cch-result.err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+  .cch-result.info{ background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+  .cch-result .ex{ display:block; margin-top:6px; font-family:ui-monospace,Consolas,monospace; font-size:11px; direction:ltr; unicode-bidi:isolate; word-break:break-all; color:#475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "قنوات الإرسال",
+  subtitle="اربط رابط مزوّد الرسائل القصيرة أو واتساب لتتحول الرسائل من الطابور إلى إرسال فعلي. القنوات المتوقفة تبقى مجدولة كما هي.",
+  icon="tower-broadcast"
+) }}
+
+{% set _sms = channels.get('sms') %}
+{% set _wa = channels.get('whatsapp') %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("حالة الرسائل القصيرة", "مفعّلة" if _sms and _sms.enabled else "متوقفة",
+     icon="comment-sms", variant=("green" if _sms and _sms.enabled else "grey"),
+     sub=("جاهزة للإرسال" if _sms and _sms.active else "غير مكتملة الضبط")) }}
+  {{ hub.kpi("نمط الرسائل القصيرة", mode_label(_sms.mode) if _sms else "—", icon="sliders", variant="blue") }}
+  {{ hub.kpi("حالة واتساب", "مفعّلة" if _wa and _wa.enabled else "متوقفة",
+     icon="whatsapp", variant=("green" if _wa and _wa.enabled else "grey"),
+     sub=("جاهزة للإرسال" if _wa and _wa.active else "غير مكتملة الضبط")) }}
+  {{ hub.kpi("نمط واتساب", mode_label(_wa.mode) if _wa else "—", icon="sliders", variant="blue") }}
+</div>
+
+{% include "radius/communications_nav.html" %}
+
+<div class="cch">
+  <div class="cch-grid">
+    {% for ch, st in channels.items() %}
+    {% set cfg = st.config %}
+    <div class="cch-card" data-testid="channel-{{ ch }}">
+      <div class="cch-head">
+        <span class="ic {{ 'wa' if ch == 'whatsapp' else '' }}"><i class="fa-{{ 'brands' if ch == 'whatsapp' else 'solid' }} fa-{{ ch_icon(ch) }}"></i></span>
+        <div>
+          <h2>{{ ch_label(ch) }}</h2>
+          <div class="sub">إرسال عبر رابط ويب عام من مزوّد الخدمة</div>
+        </div>
+        <div class="cch-status">
+          {% if st.enabled %}
+            <span class="cch-badge on"><span class="dot"></span> مفعّلة</span>
+          {% else %}
+            <span class="cch-badge off"><span class="dot"></span> متوقفة</span>
+          {% endif %}
+          <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('radius.communications_channels') }}" class="cch-body">
+        {{ csrf_token_input() }}
+        <input type="hidden" name="channel" value="{{ ch }}">
+
+        <label class="cch-switch">
+          <input type="checkbox" name="enabled" value="1" {{ 'checked' if st.enabled else '' }}>
+          <span>
+            <span class="t">تفعيل الإرسال الفعلي عبر هذه القناة</span>
+            <span class="d">عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.</span>
+          </span>
+        </label>
+
+        <div class="cch-row2">
+          <div class="cch-field">
+            <label for="mode-{{ ch }}">نمط التشغيل</label>
+            <select class="cch-select" id="mode-{{ ch }}" name="mode">
+              {% for m in modes %}
+                <option value="{{ m }}" {{ 'selected' if st.mode == m else '' }}>{{ mode_label(m) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cch-field">
+            <label for="method-{{ ch }}">طريقة الطلب</label>
+            <select class="cch-select" id="method-{{ ch }}" name="http_method">
+              <option value="GET" {{ 'selected' if cfg.http_method == 'GET' else '' }}>تمرير البيانات داخل الرابط</option>
+              <option value="POST" {{ 'selected' if cfg.http_method == 'POST' else '' }}>إرسال البيانات كنموذج</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cch-field">
+          <label for="url-{{ ch }}">قالب رابط الإرسال</label>
+          <input class="cch-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
+                 value="{{ cfg.send_url_template }}"
+                 placeholder="ضع رابط الإرسال من المزوّد هنا">
+          <div class="cch-hint">
+            استخدم <code>{phone}</code> لموضع رقم الهاتف و <code>{msg}</code> لموضع نص الرسالة. يتم ترميزهما تلقائيًا.
+            يمكن أن يحتوي الرابط على مفتاح المزوّد ضمنه إذا كان المزوّد يطلب ذلك.
+          </div>
+        </div>
+
+        <div class="cch-field">
+          <label for="bal-{{ ch }}">رابط الرصيد (اختياري)</label>
+          <input class="cch-input mono" id="bal-{{ ch }}" name="balance_url" dir="ltr"
+                 value="{{ cfg.balance_url }}"
+                 placeholder="ضع رابط فحص الرصيد من المزوّد هنا">
+          <div class="cch-hint">رابط لاستعلام رصيد المزوّد — يُحفظ للمراحل القادمة.</div>
+        </div>
+
+        <div class="cch-foot">
+          <button type="submit" class="cch-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
+        </div>
+      </form>
+
+      <div class="cch-body" style="border-top:1px solid #eef2f7;padding-top:14px">
+        <div class="cch-test" data-test-block data-channel="{{ ch }}"
+             data-url="{{ url_for('radius.communications_channels_test') }}"
+             data-csrf="{{ csrf_token() }}">
+          <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> إرسال اختبار</div>
+          <div class="cch-test-row">
+            <div class="cch-field grow">
+              <label for="testphone-{{ ch }}">رقم الهاتف للاختبار</label>
+              <input class="cch-input mono" id="testphone-{{ ch }}" data-test-phone dir="ltr" placeholder="07XXXXXXXX">
+            </div>
+            <button type="button" class="cch-btn ghost" data-test-btn>
+              <i class="fa-solid fa-paper-plane"></i> إرسال اختبار
+            </button>
+          </div>
+          <div class="cch-hint">يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.</div>
+          <div class="cch-result" data-test-result role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('[data-test-block]').forEach(function(block){
+    var btn = block.querySelector('[data-test-btn]');
+    var phoneEl = block.querySelector('[data-test-phone]');
+    var resultEl = block.querySelector('[data-test-result]');
+    var url = block.getAttribute('data-url');
+    var csrf = block.getAttribute('data-csrf') || '';
+    var channel = block.getAttribute('data-channel');
+    function show(cls, msg, excerpt){
+      resultEl.className = 'cch-result show ' + cls;
+      var html = msg ? msg : '';
+      if(excerpt){ var d=document.createElement('div'); d.textContent=excerpt; resultEl.innerHTML = html + '<span class="ex">'+ d.innerHTML +'</span>'; }
+      else { resultEl.textContent = msg; }
+    }
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      var phone = (phoneEl && phoneEl.value || '').trim();
+      if(!phone){ show('err', 'أدخل رقم هاتف للاختبار.'); return; }
+      btn.disabled = true; var old = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جارٍ الإرسال…';
+      show('info', 'جارٍ إرسال رسالة الاختبار…');
+      var fd = new FormData();
+      fd.append('channel', channel); fd.append('phone', phone);
+      fetch(url, {method:'POST', body:fd, credentials:'same-origin',
+                  headers:{'X-Requested-With':'fetch','X-CSRFToken':csrf}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          var cls = d && d.ok ? 'ok' : (d && d.status === 'skipped' ? 'info' : 'err');
+          show(cls, (d && d.message) || 'تعذّر تنفيذ الاختبار.', d && d.response_excerpt);
+        })
+        .catch(function(){ show('err', 'تعذّر الاتصال بالخادم.'); })
+        .finally(function(){ btn.disabled = false; btn.innerHTML = old; });
+    });
+  });
+})();
+</script>
+{% endblock %}
