@@ -264,7 +264,6 @@ class AccountingService:
             raise RadiusValidationError(
                 f"loan duration exceeds configured limit ({max_minutes // 60} hours)"
             )
-        amount = _to_float(body.get("amount") or 0, field="amount", minimum=0)
         now = datetime.utcnow()
         loan = accounting_repo.create_loan(
             tenant_id=self.tenant_id,
