@@ -69,3 +69,38 @@ def test_legacy_wizard_routes_stay_registered(app):
         "/admin/radius/mt/setup",
     ):
         assert rule in rules, rule
+
+
+# ── N2: router-management in-section nav ──
+def test_router_management_landing_has_shared_nav(app):
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/mt/operations")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'data-testid="network-ops-nav"' in html
+    for label in ("إدارة الراوترات", "خريطة الشبكة", "مركز المشاكل",
+                  "تشخيص الراوترات", "الإعداد الهندسي"):
+        assert label in html, label
+
+
+def test_sidebar_cluster_collapsed_to_one_entry(app):
+    with app.test_client() as client:
+        _auth(client)
+        html = client.get("/admin/radius/").get_data(as_text=True)
+    assert "إدارة الراوترات" in html
+    # the cluster sub-pages live in the in-section nav now, not the sidebar
+    assert "خريطة الشبكة" not in html
+    assert "مركز المشاكل" not in html
+    assert "تشخيص الراوترات" not in html
+
+
+def test_cluster_routes_stay_registered(app):
+    rules = {r.rule for r in app.url_map.iter_rules()}
+    for rule in (
+        "/admin/radius/mt/operations",
+        "/admin/radius/topology",
+        "/admin/radius/problems",
+        "/admin/radius/diagnostics",
+    ):
+        assert rule in rules, rule

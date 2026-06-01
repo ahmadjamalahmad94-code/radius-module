@@ -1,0 +1,30 @@
+{# ── إدارة الراوترات — in-section nav (operations / topology / problems / diagnostics) ──
+   Active tab from request.path; no route change. This single bar is how the
+   consolidated «إدارة الراوترات» sidebar entry reaches the whole router-
+   management cluster. The advanced/engineering setup view is linked here
+   too (it left the main sidebar but stays reachable on demand). #}
+{% set p = request.path %}
+{% set _ops = '/mt/operations' in p %}
+{% set _topo = '/topology' in p %}
+{% set _prob = '/problems' in p %}
+{% set _diag = '/diagnostics' in p %}
+<style>
+.nnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.nnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.nnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.nnav a.is-active{background:linear-gradient(135deg,#059669,#065f46);color:#fff;box-shadow:0 6px 16px rgba(5,150,105,.22)}
+.nnav a i{font-size:12px}
+.nnav .nnav-sep{flex:1}
+.nnav a.nnav-ghost{font-weight:700;color:var(--hub-text-mute,#94a3b8);font-size:12px}
+</style>
+<nav class="nnav" data-testid="network-ops-nav">
+  <a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}"><i class="fa-solid fa-sliders"></i> إدارة الراوترات</a>
+  <a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}"><i class="fa-solid fa-diagram-project"></i> خريطة الشبكة</a>
+  <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> مركز المشاكل</a>
+  <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> تشخيص الراوترات</a>
+  <span class="nnav-sep"></span>
+  <a class="nnav-ghost" href="{{ url_for('radius.setup_wizard_page') }}" title="عرض الإعداد الهندسي وأدوات الاسترجاع"><i class="fa-solid fa-screwdriver-wrench"></i> الإعداد الهندسي</a>
+</nav>
