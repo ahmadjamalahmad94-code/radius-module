@@ -2049,6 +2049,17 @@ trigger from the Card Checker:
      cash; only the *time* added is `amount − settled`.
    - **Custom price wins:** `effective_subscriber_price` returns custom_price
      when >0, else plan price. The "سعر مخصّص/سعر العرض" pill reflects `custom`.
+   - **Two kinds of debt — don't confuse them:** open **loans** live in
+     `loan_entries` (settled via `loan_actions`); a **negative `subscribers.balance`**
+     is a SEPARATE debt (from a higher-priced plan change or any `charge_mode=debt`
+     action). The payment modal handles BOTH: loans via the per-loan radios, and
+     the negative balance via a single «سدِّد الدين من هذه الدفعة» toggle shown only
+     when `sub.balance < 0`. Backend: `balance_settled_total` is carved out of the
+     time-basis (like `loan_settled_total`); `users.apply_payment_to_balance` credits
+     the balance toward zero (capped, never past 0) and posts a `debt_settlement`
+     CREDIT that NETS the original debt debit — so the journal balances and
+     `entry_type=payment` revenue is untouched. «إضافة رصيد» needs no special case:
+     crediting the wallet already lifts a negative balance toward zero.
 
 9. **Reusable in.** Subscribers list quick-actions (already shares the engine),
    «إضافة وقت» modal, any future per-subscriber money action. When adding a new
