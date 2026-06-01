@@ -62,7 +62,7 @@
                   {% elif r.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
                   {% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}
                 </td>
-                <td class="mono small">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+                <td class="mono small">{{ r.created_at|date_local if r.created_at else '—' }}</td>
               </tr>
               {% endfor %}
             </tbody>

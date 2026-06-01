@@ -19,7 +19,7 @@
 <script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 {% endblock %}
 
-{% macro money(value) -%}{{ "%.2f"|format(value or 0) }}{%- endmacro %}
+{% macro money(value) -%}{{ value|money }}{%- endmacro %}
 {% macro num(value) -%}{{ "{:,}".format(value or 0) }}{%- endmacro %}
 
 {% macro duration_label(b) -%}
@@ -64,7 +64,7 @@
 {%- endmacro %}
 
 {% macro short_date(value) -%}
-  {{ (value|string)[:10] if value else '—' }}
+  {{ value|date_local if value else '—' }}
 {%- endmacro %}
 
 {% macro quota_label(b) -%}
@@ -294,7 +294,7 @@
               <div><dt>المدير</dt><dd>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</dd></div>
               <div><dt>الموزع</dt><dd>{{ b.distributor_display_name or b.distributor_name or '—' }}</dd></div>
               <div><dt>الأسعار</dt><dd class="batch-price-pair"><span>بيع {{ money(unit_price) }}</span><small>جملة {{ money(b.price_bulk or 0) }}</small></dd></div>
-              <div><dt>تاريخ الإنشاء</dt><dd>{{ (b.created_at|string)[:16].replace('T',' ') if b.created_at else '—' }}</dd></div>
+              <div><dt>تاريخ الإنشاء</dt><dd>{{ b.created_at|dt_local if b.created_at else '—' }}</dd></div>
             </dl>
 
             <footer class="batch-card__actions">
@@ -581,7 +581,7 @@
           <select class="hub-select" name="plan_id" required>
             <option value="">اختر العرض</option>
             {% for p in plans %}
-              <option value="{{ p.id }}">{{ p.name }} · {{ "%.2f"|format(p.price) }} {{ p.currency }}</option>
+              <option value="{{ p.id }}">{{ p.name }} · {{ p.price|money }}</option>
             {% endfor %}
           </select>
         </label>

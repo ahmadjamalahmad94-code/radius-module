@@ -45,9 +45,9 @@
           {% if job.current_step %}— {{ job.current_step }}{% endif %}
         </li>
         {% if job.router_id %}<li>الراوتر: #{{ job.router_id }}</li>{% endif %}
-        <li>أُنشئت: <code>{{ job.created_at }}</code></li>
-        {% if job.started_at %}<li>بدأت: <code>{{ job.started_at }}</code></li>{% endif %}
-        {% if job.finished_at %}<li>انتهت: <code>{{ job.finished_at }}</code></li>{% endif %}
+        <li>أُنشئت: <code>{{ job.created_at|dt_local }}</code></li>
+        {% if job.started_at %}<li>بدأت: <code>{{ job.started_at|dt_local }}</code></li>{% endif %}
+        {% if job.finished_at %}<li>انتهت: <code>{{ job.finished_at|dt_local }}</code></li>{% endif %}
       </ul>
 
       {% if job.error_message %}

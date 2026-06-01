@@ -1,0 +1,47 @@
+{# كروت الشحن المستخدمة — من جدول cards (used=1) #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% import "_partials/repfilter.html" as rf %}
+
+{% block title %}كروت الشحن المستخدمة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
+{% block page_title %}كروت الشحن المستخدمة{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("كروت الشحن المستخدمة",
+   subtitle="الكروت التي تم استخدامها — تاريخ أول استخدام والجهاز والباقة وتاريخ الانتهاء.",
+   icon="ticket") }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي المستخدمة", total, icon="ticket", variant="brand") }}
+</div>
+
+{{ rf.bar('radius.rep_used_cards', filters, show_date=True, q_placeholder='بحث (اسم الكرت / عنوان الجهاز)…') }}
+
+{% if items %}
+{% call hub.section("الكروت المستخدمة", icon="table-list", meta=items|length|string + " كرت", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-used-cards">
+      <thead><tr><th>#</th><th>اسم الكرت</th><th>الباقة</th><th>أول استخدام</th><th>عنوان الجهاز</th><th>ينتهي</th><th>الحالة</th></tr></thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="rep-mono">{{ r.id }}</td>
+          <td><span class="rep-primary">{{ r.username }}</span></td>
+          <td>{{ r.plan_name or r.plan_id or '—' }}</td>
+          {% set _fu = r.first_used_at|dt_local if r.first_used_at else '' %}
+          <td class="rep-mono"><span class="rep-primary">{{ _fu[:10] or '—' }}</span><span class="rep-sub">{{ _fu[11:16] }}</span></td>
+          <td class="rep-mono">{{ r.used_by_mac or '—' }}</td>
+          <td class="rep-mono">{{ r.expire_at|date_local if r.expire_at else '—' }}</td>
+          <td>{% if r.revoked %}{{ hub.pill("محظور", variant="red") }}{% else %}{{ hub.pill("مستخدم", variant="green") }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا كروت مستخدمة مطابقة", sub="غيّر الفلاتر أو لا توجد كروت مستخدمة بعد.", icon="ticket") }}
+{% endif %}
+{% endblock %}

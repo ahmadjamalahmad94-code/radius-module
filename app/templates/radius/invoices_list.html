@@ -78,7 +78,7 @@
             {% elif i.direction == 'credit' %}{{ hub.pill("رصيد", variant="brand") }}
             {% else %}{{ hub.pill(i.direction, variant="grey") }}{% endif %}
           </td>
-          <td class="num"><strong>{{ "%.2f"|format(i.amount) }}</strong></td>
+          <td class="num"><strong>{{ i.amount|money }}</strong></td>
           <td class="small">
             {% if i.payment_method == 'cash' %}نقدًا
             {% elif i.payment_method == 'transfer' %}حوالة
@@ -87,7 +87,7 @@
             {% elif i.payment_method == 'manual' %}يدوي
             {% else %}{{ i.payment_method }}{% endif %}
           </td>
-          <td class="mono small">{{ i.created_at.strftime('%Y-%m-%d %H:%M') if i.created_at else '—' }}</td>
+          <td class="mono small">{{ i.created_at|dt_local if i.created_at else '—' }}</td>
           <td>
             {% if i.status == 'paid' %}{{ hub.pill("مدفوعة", variant="green") }}
             {% elif i.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}

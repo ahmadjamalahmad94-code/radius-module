@@ -189,8 +189,8 @@
             </code>
           {% endif %}
         </td>
-        <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.created_at[:19] }}</td>
-        <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.expires_at[:19] }}</td>
+        <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.created_at|dt_local if s.created_at else '—' }}</td>
+        <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.expires_at|dt_local if s.expires_at else '—' }}</td>
         <td style="font-size:12px;color:#475569">{{ s.requested_by or '—' }}</td>
         <td>
           {% if s.status == 'active' %}

@@ -1,0 +1,158 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   حالات تسجيل الدخول — موحّد (لوحة الإدارة + البوابة + شبكة RADIUS)
+   نجاح/فشل لكل الفاعلين مع IP / الجهاز / المتصفح / MAC / NAS / السبب.
+   البيانات من services/login_events.fetch_login_events → rows + stats.
+   التنسيق من static/css/reports.css (كلاسات rep-*).
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}حالات تسجيل الدخول{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-right-to-bracket"></i>{% endblock %}
+{% block page_title %}حالات تسجيل الدخول{% endblock %}
+{% block page_sub %}<span class="sub">{{ matched }} محاولة</span>{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "حالات تسجيل الدخول",
+  subtitle="سجل موحّد لكل محاولات الدخول — مدراء، مشتركون، كروت — نجاحًا وفشلًا، مع عنوان الشبكة والجهاز والمتصفح وعنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+  icon="right-to-bracket"
+) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي المحاولات", matched, icon="right-to-bracket", variant="brand",
+             sub="مدراء " ~ stats.admins ~ " · مشتركون " ~ stats.subs ~ " · كروت " ~ stats.cards) }}
+  {{ hub.kpi("ناجحة", stats.ok, icon="circle-check", variant="green") }}
+  {{ hub.kpi("فاشلة", stats.fail, icon="circle-xmark", variant="red") }}
+  {{ hub.kpi("عناوين شبكة مميّزة", stats.ips, icon="network-wired", variant="blue") }}
+</div>
+
+{% call hub.section("تصفية", icon="filter") %}
+  <form method="get" action="{{ url_for('radius.rep_login_states') }}" class="rep-filter">
+    <div class="rep-f">
+      <label>الفاعل</label>
+      <select class="hub-input" name="actor">
+        <option value="">الكل</option>
+        <option value="admin"      {% if filters.actor=='admin' %}selected{% endif %}>المدراء</option>
+        <option value="subscriber" {% if filters.actor=='subscriber' %}selected{% endif %}>المشتركون</option>
+        <option value="card"       {% if filters.actor=='card' %}selected{% endif %}>الكروت</option>
+      </select>
+    </div>
+    <div class="rep-f">
+      <label>النتيجة</label>
+      <select class="hub-input" name="result">
+        <option value="">الكل</option>
+        <option value="success" {% if filters.result=='success' %}selected{% endif %}>ناجحة</option>
+        <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>فاشلة</option>
+      </select>
+    </div>
+    <div class="rep-f">
+      <label>المصدر</label>
+      <select class="hub-input" name="source">
+        <option value="">الكل</option>
+        <option value="panel"   {% if filters.source=='panel' %}selected{% endif %}>لوحة الإدارة</option>
+        <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>البوابة</option>
+        <option value="network" {% if filters.source=='network' %}selected{% endif %}>شبكة المصادقة</option>
+      </select>
+    </div>
+    <div class="rep-f grow">
+      <label>بحث (مستخدم / عنوان الشبكة / عنوان الجهاز / جهاز الشبكة)</label>
+      <input class="hub-input" type="text" name="q" value="{{ filters.q }}" placeholder="ابحث…">
+    </div>
+    <div class="rep-f">
+      <label>من تاريخ</label>
+      <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}">
+    </div>
+    <div class="rep-f">
+      <label>إلى تاريخ</label>
+      <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}">
+    </div>
+    <div class="rep-f-actions">
+      {{ hub.btn("تطبيق", variant="primary", icon="magnifying-glass", type="submit") }}
+      {{ hub.btn("مسح", href=url_for('radius.rep_login_states'), variant="ghost", icon="eraser") }}
+    </div>
+  </form>
+{% endcall %}
+
+{% if rows %}
+{% call hub.section("سجل المحاولات", icon="table-list",
+                    meta=(shown|string) ~ (" من " ~ matched|string if matched > shown else ""), flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table rep-table"
+           data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100"
+           data-persist-key="rep-login-states">
+      <thead>
+        <tr>
+          <th>الوقت</th>
+          <th>الفاعل</th>
+          <th>المستخدم</th>
+          <th>النتيجة</th>
+          <th>المصدر</th>
+          <th>الشبكة (عنوان الشبكة / جهاز الشبكة)</th>
+          <th>الجهاز (المتصفح / عنوان الجهاز)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="{{ 'is-fail' if not r.success else '' }}">
+          {% set _dl = r.when|dt_local if r.when else '' %}
+          <td class="rep-mono">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td>
+            <span class="rep-actor {{ r.actor_type }}">
+              {% if r.actor_type=='admin' %}<i class="fa-solid fa-user-shield"></i>
+              {% elif r.actor_type=='card' %}<i class="fa-solid fa-ticket"></i>
+              {% else %}<i class="fa-solid fa-user"></i>{% endif %}
+              {{ actor_labels.get(r.actor_type, r.actor_type) }}
+            </span>
+          </td>
+          <td><span class="rep-primary">{{ r.username }}</span></td>
+          <td>
+            {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
+            {% else %}{{ hub.pill("فشل", variant="red") }}
+              {% if r.reason %}<span class="rep-reason">{{ r.reason }}</span>{% endif %}
+            {% endif %}
+          </td>
+          <td>
+            <span class="rep-src src-{{ r.source }}">
+              {% if r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
+              {% elif r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
+              {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
+              {{ source_labels.get(r.source, r.source) }}
+            </span>
+          </td>
+          <td class="rep-mono">
+            {% if r.ip or r.nas %}
+              <span class="rep-primary">{{ r.ip or '—' }}</span>
+              {% if r.nas %}<span class="rep-sub">جهاز الشبكة: {{ r.nas }}</span>{% endif %}
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if r.os or r.browser or r.mac %}
+            <div class="rep-cell-dev">
+              {% if r.device=='موبايل' %}<i class="fa-solid fa-mobile-screen"></i>
+              {% elif r.device=='جهاز لوحي' %}<i class="fa-solid fa-tablet-screen-button"></i>
+              {% elif r.os or r.browser %}<i class="fa-solid fa-desktop"></i>
+              {% else %}<i class="fa-solid fa-wifi"></i>{% endif %}
+              <div>
+                <span class="rep-primary">{{ r.os or 'جهاز شبكة' }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
+                {% if r.mac %}<span class="rep-sub rep-mono">عنوان الجهاز: {{ r.mac }}</span>{% endif %}
+              </div>
+            </div>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا توجد محاولات دخول مطابقة",
+   sub="غيّر الفلاتر أو انتظر أول محاولة دخول لتظهر هنا.", icon="shield-halved") }}
+{% endif %}
+
+{% endblock %}

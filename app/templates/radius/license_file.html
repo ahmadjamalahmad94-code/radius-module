@@ -753,7 +753,7 @@
               {% endif %}
             </div>
             <div class="lf-snap-meta">
-              آخر تحديث: <span class="mono">{{ snap.fetched_at or snap.created_at or "—" }}</span>
+              آخر تحديث: <span class="mono">{{ (snap.fetched_at or snap.created_at)|dt_local if (snap.fetched_at or snap.created_at) else "—" }}</span>
             </div>
           {% else %}
             <div>

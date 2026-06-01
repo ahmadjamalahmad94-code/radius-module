@@ -127,9 +127,9 @@
                icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
     {{ hub.kpi("المستخدمة", batch.used_count or 0,
                icon="circle-check", variant="green", sub="رُدّت في محافظ العملاء") }}
-    {{ hub.kpi("القيمة الكلية", "%.2f"|format(batch.total_value or batch.price_bulk or 0),
+    {{ hub.kpi("القيمة الكلية", (batch.total_value or batch.price_bulk)|money,
                icon="coins", variant="amber", sub="مجموع قيم البطاقات") }}
-    {{ hub.kpi("أُنشئت في", (batch.created_at or '—')[:10],
+    {{ hub.kpi("أُنشئت في", batch.created_at|date_local if batch.created_at else '—',
                icon="calendar", variant="purple", sub="تاريخ التوليد") }}
   </div>
 
@@ -138,7 +138,7 @@
     {% for d in denominations %}
       <span class="rc-denom-chip">
         <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-        <strong>{{ d.count|int }}</strong> × <strong>{{ "%.0f"|format(d.value) }}</strong>
+        <strong>{{ d.count|int }}</strong> × <strong>{{ d.value|money }}</strong>
       </span>
     {% endfor %}
   </div>
@@ -184,7 +184,7 @@
           <td><span class="row-num">{{ range_lo + loop.index0 }}</span></td>
           <td class="mono code">{{ c.username }}</td>
           <td class="mono pin">{{ c.password or '—' }}</td>
-          <td class="mono value">{{ "%.2f"|format(c.wallet_value or 0) }}</td>
+          <td class="mono value">{{ c.wallet_value|money }}</td>
           <td>
             {% if c.used %}
               <span class="rc-status-used">مستخدمة</span>

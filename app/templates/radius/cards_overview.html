@@ -654,7 +654,6 @@
 {%- endmacro %}
 
 {% block content %}
-{% set sales_currency = "₪" if (sales.currency or "ILS")|upper in ["ILS", "NIS"] else (sales.currency or "₪") %}
 <div class="hr-page-shell cards-overview">
 
 {# ───── Unified mega-hero: title + actions + KPI strip ── #}
@@ -703,7 +702,7 @@
       </div>
       <div class="co-sales-summary-item co-sales-summary-item--money">
         <span>إجمالي الإيرادات</span>
-        <strong>{{ sales_currency }} {{ "%.2f"|format(sales.total.monthly.amount|float) }}</strong>
+        <strong>{{ sales.total.monthly.amount|money }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-coins"></i>
       </div>
       <div class="co-sales-summary-item co-sales-summary-item--print">
@@ -761,7 +760,7 @@
           </div>
           <div class="co-sales-metric">
             <span>الإيراد</span>
-            <strong class="co-sales-value co-sales-value--money">{{ sales_currency }} {{ "%.2f"|format(sales.total[key].amount|float) }}</strong>
+            <strong class="co-sales-value co-sales-value--money">{{ sales.total[key].amount|money }}</strong>
           </div>
         </div>
         <div class="co-sales-split">
@@ -798,7 +797,7 @@
               <th>النوع</th>
               <th>اسم المستخدم</th>
               <th>حزمة</th>
-              <th class="num">السعر ({{ sales_currency }})</th>
+              <th class="num">السعر</th>
               <th>الوقت</th>
             </tr>
           </thead>
@@ -815,7 +814,7 @@
               </td>
               <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
               <td>{{ sale.plan_name or sale.batch_code or "—" }}</td>
-              <td class="num mono">{{ "%.2f"|format(sale.amount|float) }}</td>
+              <td class="num mono">{{ sale.amount|money }}</td>
               <td class="co-table-note">{{ sale.sold_at or "—" }}</td>
             </tr>
             {% endfor %}
@@ -949,7 +948,7 @@
           <td class="num mono">{{ b.available_count or 0 }}</td>
           <td class="num mono">{{ b.active_count or b.used or 0 }}</td>
           <td class="num mono">{{ b.online_sessions or 0 }}</td>
-          <td class="co-table-note">{{ b.created_at or "—" }}</td>
+          <td class="co-table-note">{{ b.created_at|dt_local if b.created_at else "—" }}</td>
         </tr>
         {% endfor %}
       </tbody>

@@ -197,7 +197,7 @@
 
   <div class="cu-hero-kpis">
     {{ hub.kpi("إجمالي المستخدمين", users_summary.users or 0, icon="users-rectangle", variant="brand", sub="حساب نشط") }}
-    {{ hub.kpi("إجمالي الرصيد", "%.2f"|format(users_summary.balance or 0), icon="wallet", variant="green", sub="مجموع المحافظ") }}
+    {{ hub.kpi("إجمالي الرصيد", users_summary.balance|money, icon="wallet", variant="green", sub="مجموع المحافظ") }}
     {{ hub.kpi("إجمالي المشتريات", users_summary.purchases or 0, icon="cart-shopping", variant="blue", sub="عملية شراء") }}
     {{ hub.kpi("إجمالي المبيعات", "%.2f"|format(users_summary.spent or 0), icon="coins", variant="amber", sub="من المحافظ") }}
   </div>
@@ -247,8 +247,7 @@
       <div class="cu-balance">
         <span class="lbl">رصيد المحفظة</span>
         <span class="amt">
-          <span class="ccy">{{ u.wallet_currency or 'ILS' }}</span>
-          {{ "%.2f"|format(u.balance or 0) }}
+          {{ u.balance|money }}
         </span>
       </div>
 
@@ -281,8 +280,7 @@
           <td><strong style="color:#0f172a">{{ u.display_name or '—' }}</strong></td>
           <td style="direction:ltr;text-align:start;font-size:12.5px;color:#475569">{{ u.mobile or '—' }}</td>
           <td style="font-variant-numeric:tabular-nums">
-            <strong style="color:#5b21b6">{{ "%.2f"|format(u.balance or 0) }}</strong>
-            <small style="color:#94a3b8;margin-inline-start:4px">{{ u.wallet_currency or 'ILS' }}</small>
+            <strong style="color:#5b21b6">{{ u.balance|money }}</strong>
           </td>
           <td style="font-variant-numeric:tabular-nums">{{ u.purchase_count or 0 }}</td>
           <td style="font-variant-numeric:tabular-nums">{{ u.owned_cards_count or 0 }}</td>

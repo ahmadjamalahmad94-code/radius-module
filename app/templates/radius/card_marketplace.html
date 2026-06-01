@@ -10,9 +10,8 @@
   {{ "{:,}".format((value or 0)|int) }}
 {%- endmacro %}
 
-{% macro money(value, currency="ILS") -%}
-  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
-  {{ "%.2f"|format((value or 0)|float) }} <span>{{ cur }}</span>
+{% macro money(value, currency=None) -%}
+  {{ value|money }}
 {%- endmacro %}
 
 {% macro duration_minutes_label(minutes) -%}
@@ -57,7 +56,7 @@
 {%- endmacro %}
 
 {% macro date_label(value) -%}
-  {{ (value|string)[:16].replace("T", " ") if value else "بدون تاريخ" }}
+  {{ value|dt_local if value else "بدون تاريخ" }}
 {%- endmacro %}
 
 {% block content %}

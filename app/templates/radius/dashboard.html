@@ -839,10 +839,10 @@
         <span class="ops-big-icon"><i class="fa-solid fa-chart-line"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "%.2f"|format(revenue_month) }}</strong><span>₪ هذا الشهر</span></div>
+        <div class="ops-primary-number"><strong>{{ revenue_month|money }}</strong><span>هذا الشهر</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>اليوم</span><strong>{{ "%.2f"|format(revenue_today) }} ₪</strong></div>
-          <div class="ops-metric"><span>السنة</span><strong>{{ "%.2f"|format(revenue_year) }} ₪</strong></div>
+          <div class="ops-metric"><span>اليوم</span><strong>{{ revenue_today|money }}</strong></div>
+          <div class="ops-metric"><span>السنة</span><strong>{{ revenue_year|money }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">

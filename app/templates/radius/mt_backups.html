@@ -73,7 +73,7 @@
           <tbody data-mt-backups-rows>
             {% for b in backups %}
             <tr data-mt-backup-row="{{ b.id }}">
-              <td class="mt-iface-mac">{{ b.created_at }}</td>
+              <td class="mt-iface-mac">{{ b.created_at|dt_local }}</td>
               <td>{{ b.backup_type }}</td>
               <td class="mt-iface-name">{{ b.filename }}</td>
               <td>

@@ -141,7 +141,7 @@
 
         <span class="npc-cs-meta"
               style="margin-inline-start:auto;">
-          {{ cs.created_at }}
+          {{ cs.created_at|dt_local }}
           · بواسطة <strong>{{ cs.created_by or '—' }}</strong>
           · وضع: <code>{{ cs.execution_mode }}</code>
         </span>

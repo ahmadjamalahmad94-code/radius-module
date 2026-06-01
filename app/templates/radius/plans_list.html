@@ -79,8 +79,7 @@
           </td>
           <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
           <td class="num">
-            <strong>{{ "%.2f"|format(p.price) }}</strong>
-            <small class="hub-text-mute">{{ p.currency or '' }}</small>
+            <strong>{{ p.price|money }}</strong>
           </td>
           <td>
             <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">

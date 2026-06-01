@@ -82,7 +82,7 @@
       <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th><th>الموظف</th></tr></thead>
       <tbody>
         {% for p in financial.payments %}
-          <tr><td>{{ p.created_at }}</td><td>{{ p.amount }} {{ p.currency }}</td><td>{{ p.method }}</td><td>{{ p.created_by }}</td></tr>
+          <tr><td>{{ p.created_at|dt_local }}</td><td>{{ p.amount|money }}</td><td>{{ p.method }}</td><td>{{ p.created_by }}</td></tr>
         {% else %}
           <tr><td colspan="4">لا توجد مدفوعات بعد.</td></tr>
         {% endfor %}
@@ -138,7 +138,7 @@
 {% call hub.section("الخط الزمني", icon="timeline") %}
   <div class="hub-list" data-testid="subscriber-timeline">
     {% for item in s360.timeline %}
-      <div class="hub-list-row"><strong>{{ item.created_at or "—" }}</strong><span>{{ item.item.entry_type or item.item.event_key or item.item.reply or item.item.status }}</span></div>
+      <div class="hub-list-row"><strong>{{ item.created_at|dt_local if item.created_at else "—" }}</strong><span>{{ item.item.entry_type or item.item.event_key or item.item.reply or item.item.status }}</span></div>
     {% else %}
       <div class="hub-empty">لا توجد أحداث كافية لبناء خط زمني بعد.</div>
     {% endfor %}

@@ -39,7 +39,7 @@
       <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for card in result.cards %}
-          <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at }}</td></tr>
+          <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at|dt_local if card.created_at else '—' }}</td></tr>
         {% else %}
           <tr><td colspan="3">لم يتم توليد الكروت في هذا المسار المالي.</td></tr>
         {% endfor %}

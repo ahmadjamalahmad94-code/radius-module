@@ -1,0 +1,41 @@
+{# فشل تحديث السرعة — من audit_log (عمليات السرعة/الباقة الفاشلة) #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% import "_partials/repfilter.html" as rf %}
+
+{% block title %}فشل تحديث السرعة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
+{% block page_title %}فشل تحديث السرعة{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} عملية</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero("فشل تحديث السرعة",
+   subtitle="عمليات تغيير السرعة أو الباقة التي فشلت، مع توضيح المنفّذ والسبب بلغة مفهومة.",
+   icon="gauge-high") }}
+
+{{ rf.bar('radius.rep_speed_failures', filters, show_date=True, q_placeholder='بحث (منفّذ / إجراء / هدف / خطأ)…') }}
+
+{% if items %}
+{% call hub.section("العمليات الفاشلة", icon="table-list", meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-speed-failures">
+      <thead><tr><th>الوقت</th><th>المنفّذ</th><th>الإجراء</th><th>الهدف</th><th>الخطأ</th></tr></thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="is-fail">
+          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          <td class="rep-mono"><span class="rep-primary">{{ _dl[:10] }}</span><span class="rep-sub">{{ _dl[11:16] }}</span></td>
+          <td><span class="rep-primary">{{ r.actor or '—' }}</span></td>
+          <td>{{ r.action_label or '—' }}</td>
+          <td>{{ r.target_display or '—' }}</td>
+          <td><span class="rep-reason">{{ r.error_message or '—' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا عمليات سرعة فاشلة", sub="كل عمليات تحديث السرعة نجحت — لا شيء هنا.", icon="circle-check") }}
+{% endif %}
+{% endblock %}

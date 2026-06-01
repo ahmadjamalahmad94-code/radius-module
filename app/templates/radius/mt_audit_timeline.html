@@ -92,7 +92,7 @@
 
           <div style="display:flex;gap:12px;flex-wrap:wrap;
                       margin-top:6px;font-size:12px;color:#64748B">
-            <span><code>{{ e.created_at }}</code></span>
+            <span><code>{{ e.created_at|dt_local }}</code></span>
             <a href="{{ url_for('radius.audit_log_detail', audit_id=e.audit_id) }}"
                class="mt-mini-btn"
                data-mt-timeline-raw="{{ e.audit_id }}">

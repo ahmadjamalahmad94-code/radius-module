@@ -935,7 +935,7 @@
       {% endif %}
       {% if policy.expires_at %}
         صالح حتى
-        <strong>{{ policy.expires_at }}</strong>
+        <strong>{{ policy.expires_at|dt_local }}</strong>
         ثم يُغلَق تلقائياً.
       {% endif %}
     </p>

@@ -32,11 +32,11 @@
 
 {# ─────────── helpers ─────────── #}
 {% macro dt(value) -%}
-  {{ (value or '—')|replace('T', ' ')|replace('Z', '') }}
+  {{ value|dt_local if value else '—' }}
 {%- endmacro %}
 
 {% macro dt_split(value) -%}
-  {%- set raw = (value or '')|replace('T', ' ')|replace('Z', '') -%}
+  {%- set raw = value|dt_local if value else '' -%}
   {%- if raw -%}
     {%- set parts = raw.split(' ', 1) -%}
     <span class="day">{{ parts[0] }}</span>
@@ -285,8 +285,7 @@
         <span class="cc-card-side-label">سعر البيع</span>
         <span class="cc-card-side-value">
           {% if card.batch and (card.batch.unit_price or 0) > 0 %}
-            {{ '%.2f' % card.batch.unit_price }}
-            <span style="opacity:.75;font-size:11px">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+            {{ card.batch.unit_price|money }}
           {% else %}
             <span class="cc-card-side-empty">غير محدد</span>
           {% endif %}
@@ -296,8 +295,7 @@
         <span class="cc-card-side-label">سعر الجملة</span>
         <span class="cc-card-side-value">
           {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
-            {{ '%.2f' % card.batch.price_bulk }}
-            <span style="opacity:.75;font-size:11px">{{ card.profile.currency if card.profile and card.profile.currency else '' }}</span>
+            {{ card.batch.price_bulk|money }}
           {% else %}
             <span class="cc-card-side-empty">غير محدد</span>
           {% endif %}

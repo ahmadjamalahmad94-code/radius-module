@@ -282,11 +282,11 @@
   <div class="hub-kpi-grid">
     {{ hub.kpi("عدد البطاقات",  batch.card_count or total_cards,
                icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
-    {{ hub.kpi("سعر البطاقة",   "%.2f"|format(batch.price_per_card or 0),
+    {{ hub.kpi("سعر البطاقة",   batch.price_per_card|money,
                icon="tag", variant="amber", sub="سعر البيع للقطعة") }}
-    {{ hub.kpi("سعر الجملة",    "%.2f"|format(batch.price_bulk or 0),
+    {{ hub.kpi("سعر الجملة",    batch.price_bulk|money,
                icon="coins", variant="purple", sub="إجمالي الدفعة") }}
-    {{ hub.kpi("أُنشئت في",    (batch.created_at or '—')[:10],
+    {{ hub.kpi("أُنشئت في",    batch.created_at|date_local if batch.created_at else '—',
                icon="calendar", variant="green", sub="تاريخ الاستيراد") }}
   </div>
 {% endcall %}
@@ -331,7 +331,7 @@
           <td><span class="row-num">{{ range_lo + loop.index0 }}</span></td>
           <td class="mono user">{{ c.username }}</td>
           <td class="mono">{{ c.password or '—' }}</td>
-          <td style="font-size:11.5px;color:#64748b">{{ (c.created_at or '')[:19] }}</td>
+          <td style="font-size:11.5px;color:#64748b">{{ c.created_at|dt_local if c.created_at else '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>

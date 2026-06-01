@@ -40,8 +40,8 @@
         {% endif %}
         <li>القاعدة: <code>{{ alert.rule }}</code></li>
         <li>الحالة: <strong>{{ alert.status }}</strong></li>
-        <li>أول رصد: <code>{{ alert.first_seen }}</code></li>
-        <li>آخر رصد: <code>{{ alert.last_seen }}</code></li>
+        <li>أول رصد: <code>{{ alert.first_seen|dt_local }}</code></li>
+        <li>آخر رصد: <code>{{ alert.last_seen|dt_local }}</code></li>
         {% if alert.resolved_at %}
         <li>أُغلِق: <code>{{ alert.resolved_at }}</code></li>
         {% endif %}

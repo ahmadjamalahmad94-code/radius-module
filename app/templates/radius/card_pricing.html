@@ -9,18 +9,16 @@
   {{ "{:,}".format((value or 0)|int) }}
 {%- endmacro %}
 
-{% macro money(value, currency="ILS") -%}
-  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
-  {{ "%.2f"|format((value or 0)|float) }} <span>{{ cur }}</span>
+{% macro money(value, currency=None) -%}
+  {{ value|money }}
 {%- endmacro %}
 
-{% macro money_text(value, currency="ILS") -%}
-  {% set cur = "₪" if (currency or "ILS") in ["ILS", "NIS", "₪", "شيكل"] else currency %}
-  {{ value or "0.00" }} <span>{{ cur }}</span>
+{% macro money_text(value, currency=None) -%}
+  {{ value|money }}
 {%- endmacro %}
 
 {% macro date_label(value) -%}
-  {{ (value|string)[:16].replace("T", " ") if value else "لا يوجد" }}
+  {{ value|dt_local if value else "لا يوجد" }}
 {%- endmacro %}
 
 {% block content %}
@@ -701,14 +699,14 @@
         <label class="cp-field">الباقة
           <select class="cp-input" name="package_id" required>
             {% for package in packages %}
-              <option value="{{ package.id }}">{{ package.name }} - جملة {{ package.wholesale_price }} {{ package.currency }}</option>
+              <option value="{{ package.id }}">{{ package.name }} - جملة {{ package.wholesale_price|money }}</option>
             {% endfor %}
           </select>
         </label>
         <label class="cp-field">المدير المسؤول
           <select class="cp-input" name="responsible_manager_id" required>
             {% for manager in managers %}
-              <option value="{{ manager.id }}">{{ manager.display_name }} - رصيد {{ manager.balance }} {{ manager.currency }}</option>
+              <option value="{{ manager.id }}">{{ manager.display_name }} - رصيد {{ manager.balance|money }}</option>
             {% endfor %}
           </select>
         </label>

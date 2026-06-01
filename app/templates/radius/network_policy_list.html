@@ -190,7 +190,7 @@
           {% if p.created_at %}
             <span>
               <i class="fa-regular fa-calendar-plus"></i>
-              أنشئت: {{ p.created_at }}
+              أنشئت: {{ p.created_at|dt_local }}
             </span>
           {% endif %}
         </div>

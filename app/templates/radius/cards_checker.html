@@ -6,7 +6,7 @@
 {% block page_sub %}<span class="sub">فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.</span>{% endblock %}
 
 {% macro dt(value) -%}
-  {{ (value or '—')|replace('T', ' ')|replace('Z', '') }}
+  {{ value|dt_local if value else '—' }}
 {%- endmacro %}
 
 {% macro duration(seconds) -%}

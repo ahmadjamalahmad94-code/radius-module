@@ -233,8 +233,8 @@
                     {{ hub.pill("نشط", variant="green") }}
                   {% endif %}
                 </td>
-                <td class="mono small">{{ t.last_used_at[:16] if t.last_used_at else '—' }}</td>
-                <td class="mono small">{{ t.created_at[:16] if t.created_at else '—' }}</td>
+                <td class="mono small">{{ t.last_used_at|dt_local if t.last_used_at else '—' }}</td>
+                <td class="mono small">{{ t.created_at|dt_local if t.created_at else '—' }}</td>
                 <td>
                   {% if not t.revoked %}
                     <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"

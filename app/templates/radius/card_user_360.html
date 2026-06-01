@@ -329,15 +329,14 @@
       {% endif %}
       <span class="u360-chip">
         <i class="fa-regular fa-calendar"></i>
-        أُنشئ {{ (user.created_at or '')[:10] }}
+        أُنشئ {{ user.created_at|date_local if user.created_at else '—' }}
       </span>
     </div>
   </div>
   <div class="u360-balance-pill">
     <div class="lbl">رصيد المحفظة</div>
     <div class="val">
-      <span class="ccy">{{ currency }}</span>
-      <span>{{ "%.2f"|format(balance) }}</span>
+      <span>{{ balance|money }}</span>
     </div>
   </div>
 </section>
@@ -347,8 +346,8 @@
 {% call hub.section("نظرة سريعة", icon="chart-column") %}
   <div class="hub-kpi-grid">
     {{ hub.kpi("الرصيد",
-               "%.2f"|format(balance),
-               icon="wallet", variant="green", sub=currency) }}
+               balance|money,
+               icon="wallet", variant="green") }}
     {{ hub.kpi("بطاقاتي",
                card360.cards|length,
                icon="id-card", variant="brand", sub="بطاقة مملوكة") }}
@@ -434,8 +433,7 @@
           {% endif %}
         </div>
         <div class="u360-pack-price">
-          <span class="val">{{ "%.2f"|format(_pp) }}</span>
-          <span class="ccy">{{ pack.currency or currency }}</span>
+          <span class="val">{{ _pp|money }}</span>
         </div>
       </button>
       {% endfor %}
@@ -444,7 +442,7 @@
     <div class="u360-pack-actions">
       <div class="info">
         <i class="fa-solid fa-wallet" style="color:#5b21b6" aria-hidden="true"></i>
-        رصيد المحفظة: <strong>{{ "%.2f"|format(balance) }} {{ currency }}</strong>
+        رصيد المحفظة: <strong>{{ balance|money }}</strong>
         <span id="u360-purchase-summary" style="margin-inline-start:12px"></span>
       </div>
       <button type="submit" class="u360-action-btn" id="u360-purchase-submit" disabled>
@@ -497,9 +495,8 @@
           <td>
             {% if pur %}
               <span class="u360-mono" style="font-size:13px;font-weight:800;color:#5b21b6">
-                {{ "%.2f"|format((pur.amount_minor or 0) / 100) }}
+                {{ ((pur.amount_minor or 0) / 100)|money }}
               </span>
-              <small style="color:#94a3b8;margin-inline-start:4px;font-weight:700">{{ pur.currency or currency }}</small>
             {% else %}
               <span style="color:#cbd5e1">—</span>
             {% endif %}
@@ -514,10 +511,10 @@
             {% endif %}
           </td>
           <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
-            {{ (c.created_at or '')[:10] or '—' }}
+            {{ c.created_at|date_local if c.created_at else '—' }}
           </td>
           <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
-            {{ (c.first_used_at or '')[:10] or '—' }}
+            {{ c.first_used_at|date_local if c.first_used_at else '—' }}
           </td>
         </tr>
         {% endfor %}
@@ -562,7 +559,7 @@
     <tbody>
     {% for t in card360.timeline %}
       {% set row = t.item or t %}
-      {% set when = (t.created_at or row.created_at or '')[:19] %}
+      {% set when = (t.created_at or row.created_at)|dt_local if (t.created_at or row.created_at) else '—' %}
 
       {# ── Purchase: has package_name + amount_minor + status ── #}
       {% if row.package_name and row.amount_minor is defined %}
@@ -584,7 +581,7 @@
             شراء «{{ row.package_name }}» —
             <small style="color:#64748b">{{ status_ar }}</small>
           </td>
-          <td class="tl-amt"><span class="u360-tl-amt--purchase">−{{ "%.2f"|format(amount) }}</span> <small style="color:#94a3b8">{{ ccy }}</small></td>
+          <td class="tl-amt"><span class="u360-tl-amt--purchase">−{{ amount|money }}</span></td>
           <td class="tl-date">{{ when }}</td>
         </tr>
 
@@ -609,9 +606,8 @@
           </td>
           <td class="tl-amt">
             <span class="u360-tl-amt--{{ 'credit' if is_credit else 'debit' }}">
-              {{ '+' if is_credit else '−' }}{{ "%.2f"|format(amount) }}
+              {{ '+' if is_credit else '−' }}{{ amount|money }}
             </span>
-            <small style="color:#94a3b8">{{ row.currency or 'ILS' }}</small>
           </td>
           <td class="tl-date">{{ when }}</td>
         </tr>

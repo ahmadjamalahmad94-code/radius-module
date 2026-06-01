@@ -120,7 +120,7 @@
             {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
             {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
           </td>
-          <td class="mono small">{{ a.last_login_at or '—' }}</td>
+          <td class="mono small">{{ a.last_login_at|dt_local if a.last_login_at else '—' }}</td>
           <td class="mono small">{{ a.last_login_ip or '—' }}</td>
         </tr>
         {% endfor %}

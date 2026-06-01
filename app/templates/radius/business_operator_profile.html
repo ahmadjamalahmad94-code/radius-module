@@ -43,9 +43,9 @@
 ) }}
 
 <div class="hub-kpi-grid" data-testid="operator-profile-kpis">
-  {{ hub.kpi("رصيد المحفظة", profile.wallet.balance, icon="wallet", variant="green") }}
-  {{ hub.kpi("حد الائتمان", profile.debt_credit.credit_limit, icon="scale-balanced", variant="blue") }}
-  {{ hub.kpi("صافي الهامش", profile.profit.net_margin, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("رصيد المحفظة", profile.wallet.balance|money, icon="wallet", variant="green") }}
+  {{ hub.kpi("حد الائتمان", profile.debt_credit.credit_limit|money, icon="scale-balanced", variant="blue") }}
+  {{ hub.kpi("صافي الهامش", profile.profit.net_margin|money, icon="chart-line", variant="amber") }}
   {{ hub.kpi("نقاط الثقة", profile.score.trust_score, icon="shield-heart") }}
 </div>
 
@@ -109,10 +109,10 @@
 
 {% call hub.section("تتبع الأرباح", icon="chart-simple") %}
   <div class="hub-kpi-grid" data-testid="operator-profit-summary">
-    {{ hub.kpi("السعر الأصلي", profile.profit.original_price, icon="tag") }}
-    {{ hub.kpi("تكلفة الجملة", profile.profit.wholesale_cost, icon="receipt") }}
-    {{ hub.kpi("حصة المدير", profile.profit.manager_share, icon="hand-holding-dollar", variant="green") }}
-    {{ hub.kpi("حصة الشركة", profile.profit.company_share, icon="building", variant="blue") }}
+    {{ hub.kpi("السعر الأصلي", profile.profit.original_price|money, icon="tag") }}
+    {{ hub.kpi("تكلفة الجملة", profile.profit.wholesale_cost|money, icon="receipt") }}
+    {{ hub.kpi("حصة المدير", profile.profit.manager_share|money, icon="hand-holding-dollar", variant="green") }}
+    {{ hub.kpi("حصة الشركة", profile.profit.company_share|money, icon="building", variant="blue") }}
   </div>
 {% endcall %}
 
@@ -159,10 +159,10 @@
       <thead><tr><th>النوع</th><th>المفتاح</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
-          <tr><td>{{ hub.pill("عملية", variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at }}</td></tr>
+          <tr><td>{{ hub.pill("عملية", variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at|dt_local }}</td></tr>
         {% endfor %}
         {% for event in profile.events %}
-          <tr><td>{{ hub.pill("حدث", variant="blue", dot=False) }}</td><td class="mono">{{ event.event_key }}</td><td>{{ op_status(event.severity) }}</td><td class="mono small">{{ event.created_at }}</td></tr>
+          <tr><td>{{ hub.pill("حدث", variant="blue", dot=False) }}</td><td class="mono">{{ event.event_key }}</td><td>{{ op_status(event.severity) }}</td><td class="mono small">{{ event.created_at|dt_local }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

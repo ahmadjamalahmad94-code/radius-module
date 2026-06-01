@@ -375,7 +375,7 @@
             {% set sev = (ev.severity or 'info')|lower %}
             <div class="note {{ 'danger' if sev in ['error','critical','high'] else ('warn' if sev in ['warning','warn','medium'] else 'info') }}">
               <i class="fa-solid fa-{{ 'circle-exclamation' if sev in ['error','critical','high'] else ('triangle-exclamation' if sev in ['warning','warn','medium'] else 'circle-info') }}"></i>
-              <span>{{ ev.message or ev.event_key }}{% if ev.created_at %} <small style="opacity:.7" class="mono">· {{ ev.created_at[:16] }}</small>{% endif %}</span>
+              <span>{{ ev.message or ev.event_key }}{% if ev.created_at %} <small style="opacity:.7" class="mono">· {{ ev.created_at|dt_local }}</small>{% endif %}</span>
             </div>
           {% endfor %}
           {% if not dashboard.notifications and not (rem is not none and rem <= 3) and not (dashboard.debt and dashboard.debt > 0) %}
@@ -415,7 +415,7 @@
           <p class="card-intro">تفاصيل الباقة المرتبطة باشتراكك الحالي.</p>
           <div class="dl">
             <div><span>اسم الباقة</span><strong>{{ dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—' }}</strong></div>
-            <div><span>السعر</span><strong class="num">{{ dashboard.plan.price if dashboard.plan and dashboard.plan.price is defined else '—' }}</strong></div>
+            <div><span>السعر</span><strong class="num">{{ dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—' }}</strong></div>
             <div><span>ينتهي في</span><strong class="mono">{{ (sub.expire_at or '—')[:16] }}</strong></div>
             <div><span>المتبقي</span><strong class="num">
               {% if rem is none %}—{% elif rem < 0 %}منتهٍ{% else %}{{ rem }} يوم{% endif %}
@@ -492,7 +492,7 @@
     <div class="kpi-grid">
       <div class="kpi">
         <div class="ico green"><i class="fa-solid fa-wallet"></i></div>
-        <div><div class="lbl">رصيد المحفظة</div><div class="val num">{{ dashboard.wallet.balance if dashboard.wallet and dashboard.wallet.balance is defined else '0.00' }}</div></div>
+        <div><div class="lbl">رصيد المحفظة</div><div class="val num">{{ dashboard.wallet.balance|money if dashboard.wallet and dashboard.wallet.balance is defined else '0.00' }}</div></div>
       </div>
       <div class="kpi">
         <div class="ico {{ 'red' if dashboard.debt and dashboard.debt > 0 else '' }}"><i class="fa-solid fa-money-bill-trend-up"></i></div>
@@ -519,14 +519,14 @@
           {% for p in dashboard.payments %}
             <tr>
               <td class="num">{{ p.id or loop.index }}</td>
-              <td class="num mono">{{ p.amount if p.amount is defined else '—' }}</td>
+              <td class="num mono">{{ p.amount|money if p.amount is defined else '—' }}</td>
               <td>
                 {% set ps = (p.status or '')|lower %}
                 {% if ps in ['paid','completed'] %}<span class="pill green">مدفوعة</span>
                 {% elif ps in ['unpaid','pending','open'] %}<span class="pill amber">غير مدفوعة</span>
                 {% elif ps %}<span class="pill grey">{{ p.status }}</span>{% else %}—{% endif %}
               </td>
-              <td class="mono">{{ (p.created_at or '—')[:16] }}</td>
+              <td class="mono">{{ p.created_at|dt_local if p.created_at else '—' }}</td>
             </tr>
           {% endfor %}
           </tbody>
@@ -552,7 +552,7 @@
             <tr>
               <td class="num">{{ l.id or loop.index }}</td>
               <td class="num">{{ fmt_mins(l.duration_minutes) }}</td>
-              <td class="num mono">{{ l.amount if l.amount is defined else '—' }}</td>
+              <td class="num mono">{{ l.amount|money if l.amount is defined else '—' }}</td>
               <td>
                 {% set ls = (l.status or '')|lower %}
                 {% if ls == 'open' %}<span class="pill blue">مفتوحة</span>

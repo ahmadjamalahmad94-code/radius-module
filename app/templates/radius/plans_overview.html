@@ -26,7 +26,7 @@
 <div class="hub-kpi-grid">
   {{ hub.kpi("إجمالي الباقات", total_plans,                          icon="tags",        variant="brand") }}
   {{ hub.kpi("مفعَّلة",          enabled_plans,                        icon="circle-check", variant="green") }}
-  {{ hub.kpi("تقدير الإيراد",    "%.2f"|format(revenue_estimate),     icon="coins",       variant="amber") }}
+  {{ hub.kpi("تقدير الإيراد",    revenue_estimate|money,              icon="coins",       variant="amber") }}
   {{ hub.kpi("أنواع",            by_type|length,                       icon="layer-group", variant="blue")  }}
 </div>
 
@@ -51,7 +51,7 @@
               <td class="num mono">{{ r.id }}</td>
               <td><strong>{{ r.name }}</strong></td>
               <td>{{ hub.pill(r.plan_type, variant="brand", dot=False) }}</td>
-              <td class="num"><strong>{{ "%.2f"|format(r.price) }}</strong> <small class="hub-text-mute">{{ r.currency }}</small></td>
+              <td class="num"><strong>{{ r.price|money }}</strong></td>
               <td class="num">{{ r.subscribers_count }}</td>
             </tr>
             {% endfor %}

@@ -219,7 +219,7 @@
             <option value="">اختر الباقة</option>
             {% for p in plans %}
               <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>
-                {{ p.name }} · {{ "%.2f"|format(p.price or 0) }} {{ p.currency }}
+                {{ p.name }} · {{ p.price|money }}
               </option>
             {% endfor %}
           </select>

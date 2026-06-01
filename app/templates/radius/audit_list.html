@@ -37,7 +37,7 @@
             <td class="mono">{{ r.target_type }}</td>
             <td class="mono">{{ r.target_id }}</td>
             <td class="mono">{{ r.ip_address or '—' }}</td>
-            <td class="mono">{{ r.created_at[:16] if r.created_at else '—' }}</td>
+            <td class="mono">{{ r.created_at|dt_local if r.created_at else '—' }}</td>
             <td class="mono"
                 style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
                 title="{{ r.payload_json }}">

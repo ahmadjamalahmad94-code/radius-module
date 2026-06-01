@@ -413,14 +413,14 @@
         </div>
         <div class="pc-card-stats">
           <div class="pc-stat"><div class="k">عدد</div><div class="v">{{ b.card_count or 0 }}</div></div>
-          <div class="pc-stat"><div class="k">بيع</div><div class="v">{{ "%.2f"|format(b.price_per_card or 0) }}</div></div>
-          <div class="pc-stat"><div class="k">جملة</div><div class="v">{{ "%.2f"|format(b.price_bulk or 0) }}</div></div>
+          <div class="pc-stat"><div class="k">بيع</div><div class="v">{{ b.price_per_card|money }}</div></div>
+          <div class="pc-stat"><div class="k">جملة</div><div class="v">{{ b.price_bulk|money }}</div></div>
         </div>
       </a>
 
       {# Action row — outside the link so buttons don't navigate #}
       <div class="pc-card-actions">
-        <span class="meta">{{ (b.created_at or '')[:10] }}</span>
+        <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
 
         <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
            class="pc-act pc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
@@ -478,9 +478,9 @@
             {% if b.notes %}<br><small style="color:#64748b">{{ b.notes[:60] }}</small>{% endif %}
           </td>
           <td style="font-variant-numeric:tabular-nums"><strong>{{ b.card_count or 0 }}</strong></td>
-          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_per_card or 0) }}</td>
-          <td style="font-variant-numeric:tabular-nums">{{ "%.2f"|format(b.price_bulk or 0) }}</td>
-          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ (b.created_at or '')[:19] }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ b.price_per_card|money }}</td>
+          <td style="font-variant-numeric:tabular-nums">{{ b.price_bulk|money }}</td>
+          <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ b.created_at|dt_local if b.created_at else '' }}</td>
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
               <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"

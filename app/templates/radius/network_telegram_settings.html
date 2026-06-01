@@ -142,7 +142,7 @@
 
 {% if settings.updated_at %}
 <p style="margin-top:18px;color:#9CA3AF;font-size:11.5px;direction:ltr;text-align:start">
-  آخر تحديث: <code>{{ settings.updated_at[:19] }}</code>
+  آخر تحديث: <code>{{ settings.updated_at|dt_local if settings.updated_at else '—' }}</code>
 </p>
 {% endif %}
 

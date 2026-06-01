@@ -91,7 +91,7 @@
             {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
             {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
           </td>
-          <td class="mono small">{{ c.expire_at.strftime('%Y-%m-%d') if c.expire_at else '—' }}</td>
+          <td class="mono small">{{ c.expire_at|date_local if c.expire_at else '—' }}</td>
           <td>
             {% if not c.revoked %}
             <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"

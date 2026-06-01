@@ -43,7 +43,7 @@
         {% if plan.router_id %}
         <li>الراوتر: <code>#{{ plan.router_id }}</code></li>
         {% endif %}
-        <li>الوقت: <code>{{ plan.timestamp }}</code></li>
+        <li>الوقت: <code>{{ plan.timestamp|dt_local }}</code></li>
       </ul>
       {% if plan.what_changed_ar %}
       <div class="mt-program-banner mt-program-banner--warn"
@@ -83,7 +83,7 @@
     <div class="mt-card-body">
       <ul class="mt-program-summary">
         <li>الملف: <code>{{ plan.nearest_backup.filename }}</code></li>
-        <li>تاريخ الإنشاء: <code>{{ plan.nearest_backup.created_at }}</code></li>
+        <li>تاريخ الإنشاء: <code>{{ plan.nearest_backup.created_at|dt_local }}</code></li>
         <li>السبب: <code>{{ plan.nearest_backup.reason }}</code></li>
         <li>
           <a class="mt-mini-btn"

@@ -161,7 +161,7 @@
               {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
               {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
             </td>
-            <td class="mono small">{{ r.last_seen_at[:16] if r.last_seen_at else '—' }}</td>
+            <td class="mono small">{{ r.last_seen_at|dt_local if r.last_seen_at else '—' }}</td>
             <td class="mono small" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               {{ r.last_status or '—' }}
             </td>

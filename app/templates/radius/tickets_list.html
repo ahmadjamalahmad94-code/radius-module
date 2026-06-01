@@ -93,7 +93,7 @@
             {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
           </td>
           <td class="mono small">{{ t.assignee_admin_id or '—' }}</td>
-          <td class="mono small">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '—' }}</td>
+          <td class="mono small">{{ t.created_at|dt_local if t.created_at else '—' }}</td>
           <td>
             <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
                href="{{ url_for('radius.tk_view', tid=t.id) }}">

@@ -61,7 +61,7 @@
         <tr>
           <td class="num mono">{{ v.id }}</td>
           <td class="mono"><strong style="color:var(--hub-brand-ink)">{{ v.code }}</strong></td>
-          <td class="num"><strong>{{ "%.2f"|format(v.amount) }}</strong></td>
+          <td class="num"><strong>{{ v.amount|money }}</strong></td>
           <td>
             {% if v.plan_id and plans.get(v.plan_id) %}
               {{ hub.pill(plans[v.plan_id].name, variant="brand", dot=False) }}
@@ -74,7 +74,7 @@
             {% elif v.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
             {% else %}{{ hub.pill(v.status, variant="grey") }}{% endif %}
           </td>
-          <td class="mono small">{{ v.expire_at.strftime('%Y-%m-%d') if v.expire_at else '—' }}</td>
+          <td class="mono small">{{ v.expire_at|date_local if v.expire_at else '—' }}</td>
           <td class="mono small">{{ v.generated_by or '—' }}</td>
           <td>
             {% if v.status == 'active' %}

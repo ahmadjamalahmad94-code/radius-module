@@ -30,7 +30,7 @@
   <div class="opsx-row-meta">
     <span>النوع <code>{{ p.type }}</code></span>
     {% if p.router_id %}<span>راوتر #{{ p.router_id }}</span>{% endif %}
-    {% if p.last_seen %}<span>آخر رصد <code>{{ p.last_seen }}</code></span>{% endif %}
+    {% if p.last_seen %}<span>آخر رصد <code>{{ p.last_seen|dt_local }}</code></span>{% endif %}
     <a class="opsx-btn" href="{{ p.suggested_href }}" data-mt-problem-action="{{ p.type }}">
       <i class="fa-solid fa-arrow-left"></i> {{ p.suggested_action_ar }}
     </a>

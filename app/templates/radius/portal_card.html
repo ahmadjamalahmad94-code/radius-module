@@ -519,8 +519,7 @@
     <div class="balance-side">
       <div class="label">رصيد المحفظة</div>
       <div class="amount">
-        <span class="currency">{{ wallet_currency }}</span>
-        <span>{{ "%.2f"|format(wallet_balance) }}</span>
+        <span>{{ wallet_balance|money }}</span>
       </div>
       <div class="greeting">
         مرحباً <strong>{{ user_name }}</strong>
@@ -589,9 +588,9 @@
             <span class="ico"><i class="fa-solid fa-cart-shopping"></i></span>
             <div class="body">
               <div class="title">{{ p.package_name or 'عملية شراء' }}</div>
-              <div class="sub">{{ (p.created_at or '')[:19] }}</div>
+              <div class="sub">{{ p.created_at|dt_local if p.created_at else '' }}</div>
             </div>
-            <div class="amount">−{{ "%.2f"|format((p.amount_minor or 0) / 100) }}</div>
+            <div class="amount">−{{ ((p.amount_minor or 0) / 100)|money }}</div>
           </div>
           {% endfor %}
         {% else %}
@@ -637,8 +636,7 @@
           {% endif %}
         </div>
         <div class="market-price">
-          <span class="val">{{ "%.2f"|format(_price) }}</span>
-          <span class="ccy">{{ pkg.currency or wallet_currency }}</span>
+          <span class="val">{{ _price|money }}</span>
         </div>
         <button type="button" class="market-buy"
                 {% if not _affordable %}disabled{% endif %}
@@ -680,11 +678,11 @@
           <div class="my-card-meta">
             <div class="cell">
               <span class="k">تاريخ الشراء</span>
-              <span class="v">{{ (c.created_at or '—')[:10] }}</span>
+              <span class="v">{{ c.created_at|date_local if c.created_at else '—' }}</span>
             </div>
             <div class="cell">
               <span class="k">أول استخدام</span>
-              <span class="v">{{ (c.first_used_at or '')[:10] or '—' }}</span>
+              <span class="v">{{ c.first_used_at|date_local if c.first_used_at else '—' }}</span>
             </div>
             {% if c.expire_at %}
             <div class="cell">

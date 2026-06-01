@@ -66,7 +66,7 @@
             {% elif s.status == 'damaged' %}{{ hub.pill("متضرّرة", variant="amber") }}
             {% else %}{{ hub.pill(s.status, variant="grey") }}{% endif %}
           </td>
-          <td class="mono small">{{ s.given_at.strftime('%Y-%m-%d') if s.given_at else '—' }}</td>
+          <td class="mono small">{{ s.given_at|date_local if s.given_at else '—' }}</td>
           <td>
             <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
               <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"

@@ -580,7 +580,7 @@
         <h1>كروت الحزمة {{ batch.batch_code }}</h1>
         <p>
           {{ plan.name if plan else (batch.package_name or 'بدون عرض') }}
-          · أنشئت {{ batch.created_at.strftime('%Y-%m-%d %H:%M') if batch.created_at else '—' }}
+          · أنشئت {{ batch.created_at|dt_local if batch.created_at else '—' }}
           · {{ batch.created_by or 'بدون مدير' }}
         </p>
       </div>

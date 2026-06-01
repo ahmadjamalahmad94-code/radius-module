@@ -87,7 +87,7 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
             {% if d.last_check_at %}
               <div class="hub-text-mono hub-text-mute" style="font-size:10.5px;margin-top:3px">
-                {{ d.last_check_at.strftime('%H:%M') if d.last_check_at.strftime else d.last_check_at }}
+                {{ (d.last_check_at|dt_local)[11:16] if d.last_check_at else '—' }}
               </div>
             {% endif %}
           </td>

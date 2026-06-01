@@ -37,7 +37,7 @@
         <select class="hub-select" id="hub-f-plan_id" name="plan_id">
           <option value="">— بدون —</option>
           {% for p in plans %}
-            <option value="{{ p.id }}">{{ p.name }} ({{ "%.2f"|format(p.price) }})</option>
+            <option value="{{ p.id }}">{{ p.name }} ({{ p.price|money }})</option>
           {% endfor %}
         </select>
       </div>

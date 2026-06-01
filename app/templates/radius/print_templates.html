@@ -1086,7 +1086,7 @@
             <td>{{ job.export_type }}</td>
             <td>{{ hub.pill(job.status, variant='green' if job.status == 'success' else 'amber', dot=False) }}</td>
             <td>{{ job.card_count }}</td>
-            <td class="small hub-text-mute">{{ job.created_at }}</td>
+            <td class="small hub-text-mute">{{ job.created_at|dt_local if job.created_at else '—' }}</td>
           </tr>
         {% else %}
           <tr><td colspan="7" class="hub-empty">لا توجد عمليات تصدير بعد.</td></tr>
