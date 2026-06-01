@@ -116,6 +116,24 @@ def calculate_proportional_minutes(
     return int(math.floor(raw))
 
 
+def calculate_proportional_amount(
+    *,
+    minutes: int,
+    plan_price: float,
+    base_minutes: int,
+    decimals: int = 2,
+) -> float:
+    """Inverse of calculate_proportional_minutes: the money value of a span of
+    time at the subscriber's effective price. ``amount = price × minutes/base``.
+
+    Rounded to ``decimals`` places (operator decision: 2 decimals). Returns 0.0
+    on any non-positive input so callers can divide/compare safely.
+    """
+    if minutes <= 0 or plan_price <= 0 or base_minutes <= 0:
+        return 0.0
+    return round(plan_price * (minutes / base_minutes), decimals)
+
+
 def _truthy(value: Any) -> bool:
     return value is True or str(value).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -286,6 +304,19 @@ class AccountingService:
             duration_minutes += _to_int(hours, field="hours", minimum=0) * 60
         if days not in (None, ""):
             duration_minutes += _to_int(days, field="days", minimum=0) * 24 * 60
+        # Operator-picks-DAYS flow: when the modal prices the loan from its
+        # duration (price_from_days), derive the loan VALUE from the subscriber's
+        # effective price (offer/custom), rounded to 2 decimals (operator choice).
+        if _truthy(body.get("price_from_days")) and duration_minutes > 0:
+            _plan = (
+                accounting_repo.resolve_plan(self.tenant_id, int(subscriber["plan_id"]))
+                if subscriber.get("plan_id") else None
+            )
+            amount = calculate_proportional_amount(
+                minutes=duration_minutes,
+                plan_price=effective_subscriber_price(subscriber, _plan),
+                base_minutes=_base_plan_minutes(_plan),
+            )
         max_minutes = _max_loan_minutes()
         # Explicit time always wins. If none was given, derive the loaned time
         # PROPORTIONALLY from the subscriber's official price (custom_price, else
