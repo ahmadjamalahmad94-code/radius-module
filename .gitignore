@@ -36,6 +36,8 @@ docs/*
 !docs/company_inventory_expenses/*.md
 !docs/finance_hubs/
 !docs/finance_hubs/*.md
+!docs/section_hubs/
+!docs/section_hubs/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
 
