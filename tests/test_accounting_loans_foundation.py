@@ -246,3 +246,41 @@ def test_foundational_reports_aggregate_real_records(client):
         res = client.get(path, headers=AUTH)
         assert res.status_code == 200, (path, res.get_json())
         assert res.get_json()["data"]["count"] >= 1
+
+
+def test_calculate_proportional_amount_inverse_and_rounding():
+    from app.radius.services.accounting import (
+        calculate_proportional_amount,
+        calculate_proportional_minutes,
+    )
+
+    # 100 over a 30-day plan (43200 min), 7 days (10080 min) -> 23.33 (2 decimals)
+    assert calculate_proportional_amount(minutes=10080, plan_price=100, base_minutes=43200) == 23.33
+    # clean division -> exact
+    assert calculate_proportional_amount(minutes=4320, plan_price=150, base_minutes=43200) == 15.0
+    # guards
+    assert calculate_proportional_amount(minutes=0, plan_price=100, base_minutes=43200) == 0.0
+    assert calculate_proportional_amount(minutes=4320, plan_price=0, base_minutes=43200) == 0.0
+    # round-trips with the existing minutes helper (floor) at a clean point
+    mins = calculate_proportional_minutes(amount_paid=15.0, plan_price=150, base_minutes=43200)
+    assert mins == 4320
+
+
+def test_loan_price_from_days_derives_amount_from_effective_price(client):
+    # configured_plan fixture pins plan 1 = price 150, duration 43200 min (30 days)
+    subscriber = _create_subscriber(client)
+    res = client.post(
+        "/api/v1/loans",
+        json={
+            "username": subscriber["username"],
+            "days": 3,
+            "price_from_days": True,
+            "reason": "auto-priced loan",
+        },
+        headers=AUTH,
+    )
+    assert res.status_code == 201, res.get_json()
+    loan = res.get_json()["data"]["loan"]
+    assert loan["duration_minutes"] == 3 * 24 * 60
+    # 150 × (4320 / 43200) = 15.00 — derived from the effective price, not typed
+    assert abs(float(loan["amount"]) - 15.0) < 0.001
