@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from ..core.system_config import default_currency
 from ..services.business_os_access import PERM_WALLET_CREDIT, PERM_WALLET_DEBIT, SafetyGateService
 from ..services.business_os_finance import BusinessOSValidationError, WalletService
 from ..services.business_os_finance_center import FinanceCenterService
@@ -91,7 +92,7 @@ def finance_wallet_create():
             tenant_id=_tid(),
             owner_type=_field("owner_type") or "company",
             owner_id=int(_field("owner_id")) if _field("owner_id") else None,
-            currency=_field("currency") or "JOD",
+            currency=_field("currency") or default_currency(),
             metadata={"source": "finance_center"},
         )
         flash("تم إنشاء المحفظة المالية.", "success")

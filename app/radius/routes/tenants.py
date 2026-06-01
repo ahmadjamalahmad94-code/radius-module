@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+from ..core.system_config import default_currency
 from ..core.tenant import (
     TIER_LIMITS, Tenant,
     TENANT_STATUS_ACTIVE, TENANT_STATUS_SUSPENDED, TENANT_STATUS_TRIAL, TENANT_STATUS_CLOSED,
@@ -88,7 +89,7 @@ def _form_dto() -> Tenant:
         display_name=(request.form.get("display_name") or "").strip(),
         email=(request.form.get("email") or "").strip(),
         phone=(request.form.get("phone") or "").strip(),
-        currency=(request.form.get("currency") or "JOD").strip(),
+        currency=(request.form.get("currency") or default_currency()).strip(),
         locale=(request.form.get("locale") or "ar").strip(),
         timezone=(request.form.get("timezone") or "Asia/Amman").strip(),
         logo_url=(request.form.get("logo_url") or "").strip(),

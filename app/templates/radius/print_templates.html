@@ -534,7 +534,7 @@
               <input class="hub-input" name="hotspot_address" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
             </label>
             <label class="pr-field">السعر الظاهر
-              <input class="hub-input" name="price_text" data-export-override placeholder="مثال: JOD 1.00">
+              <input class="hub-input" name="price_text" data-export-override placeholder="مثال: {{ cfg.currency }} 1.00">
             </label>
             <label class="pr-field">الصلاحية الظاهرة
               <input class="hub-input" name="validity_text" data-export-override placeholder="مثال: 4 ساعات">
@@ -865,7 +865,7 @@
               <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
               <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="{{ fl.card_title or 'Internet Card' }}" data-preview="title"></label>
               <label class="pr-field">عنوان Hotspot/DNS<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
-              <label class="pr-field">السعر<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: JOD 1.00" data-preview="price"></label>
+              <label class="pr-field">السعر<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: {{ cfg.currency }} 1.00" data-preview="price"></label>
               <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
               <label class="pr-field">نمط QR
                 <select class="hub-select" name="qr_style"><option value="boxed" {% if (fl.qr_style or 'boxed') == 'boxed' %}selected{% endif %}>مربع واضح</option><option value="rounded" {% if fl.qr_style == 'rounded' %}selected{% endif %}>ناعم</option><option value="clean" {% if fl.qr_style == 'clean' %}selected{% endif %}>بسيط</option></select>

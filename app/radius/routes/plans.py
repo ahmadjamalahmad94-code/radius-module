@@ -14,6 +14,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 
 from ..core.constants import PLAN_TYPES
 from ..core.errors import RadiusError
+from ..core.system_config import default_currency
 from ..core.types import AccessPlan
 from ..services.plans import get_plans_service
 from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
@@ -188,7 +189,7 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         allowed_hours_from=_s("allowed_hours_from"),
         allowed_hours_to=_s("allowed_hours_to"),
         price=_f("price"),
-        currency=_s("currency") or "JOD",
+        currency=_s("currency") or default_currency(),
         description=_s("description"),
         enabled=_b("enabled"),
         priority=_i("priority", 100),

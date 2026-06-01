@@ -71,6 +71,17 @@ def test_settings_api_lists_updates_and_rejects_unknown_keys(client):
     )
     assert rejected.status_code == 422
     assert rejected.get_json()["error"]["code"] == "validation_error"
+    assert rejected.get_json()["error"]["message"] == "مفتاح إعداد غير معروف."
+    assert "unknown setting key" not in rejected.get_json()["error"]["message"]
+
+    invalid_shape = client.patch(
+        "/api/v1/settings",
+        json={"settings": ["billing.currency"]},
+        headers=AUTH,
+    )
+    assert invalid_shape.status_code == 422
+    assert invalid_shape.get_json()["error"]["message"] == "الإعدادات يجب أن تكون كائنًا."
+    assert "settings must be an object" not in invalid_shape.get_json()["error"]["message"]
 
 
 def test_token_api_shows_plaintext_once_and_never_lists_hash(client):

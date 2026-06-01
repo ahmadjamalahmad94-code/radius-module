@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from ...core.system_config import default_currency
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso, row_to_dict
 
@@ -37,7 +38,7 @@ def resolve_plan(tenant_id: int, plan_id: int | None) -> Optional[dict]:
 
 
 def create_ledger_entry(conn, *, tenant_id: int, entry_type: str, amount: float,
-                        direction: str = "credit", currency: str = "JOD",
+                        direction: str = "credit", currency: str = "",
                         subscriber_id: int | None = None, username: str = "",
                         admin_id: int = 0, operator: str = "",
                         source_type: str = "", source_id: int | None = None,
@@ -45,6 +46,7 @@ def create_ledger_entry(conn, *, tenant_id: int, entry_type: str, amount: float,
                         reversal_of_entry_id: int | None = None,
                         status: str = "posted", notes: str = "",
                         metadata: dict[str, Any] | None = None) -> int:
+    currency = currency or default_currency()
     cur = conn.execute(
         """
         INSERT INTO accounting_ledger_entries(

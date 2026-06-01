@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
 from ..core.errors import RadiusNotFound, RadiusValidationError
+from ..core.system_config import default_currency
 from ..db.connection import close_thread_conn, db, db_path
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
 from .audit import RadiusAuditService
@@ -615,7 +616,7 @@ class OperationsService:
             entry_type=entry_type,
             direction=direction,
             amount=amount,
-            currency=(data.get("currency") or "JOD").strip().upper(),
+            currency=(data.get("currency") or default_currency()).strip().upper(),
             actor=actor,
             notes=(data.get("notes") or "")[:500],
             related_type=(data.get("related_type") or "").strip(),

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ..core.errors import RadiusValidationError
+from ..core.system_config import default_currency
 from ..db.helpers import dt_to_iso, json_load
 from ..db.repos import accounting_repo
 from .radius_apply import apply_activation_minutes
@@ -181,7 +182,7 @@ class AccountingService:
         plan = accounting_repo.resolve_plan(self.tenant_id, int(plan_id)) if plan_id else None
 
         amount = _to_float(body.get("amount"), field="amount", minimum=0.01)
-        currency = str(body.get("currency") or (plan or {}).get("currency") or "JOD").upper()[:8]
+        currency = str(body.get("currency") or (plan or {}).get("currency") or default_currency()).upper()[:8]
         method = str(body.get("method") or "cash")[:40]
         notes = str(body.get("notes") or "")[:500]
         rounding = str(body.get("rounding_mode") or "floor")
@@ -323,7 +324,7 @@ class AccountingService:
             subscriber=subscriber,
             duration_minutes=duration_minutes,
             amount=amount,
-            currency=str(body.get("currency") or "JOD").upper()[:8],
+            currency=str(body.get("currency") or default_currency()).upper()[:8],
             reason=str(body.get("reason") or "")[:500],
             created_by=actor,
             starts_at=dt_to_iso(now),
@@ -388,7 +389,7 @@ class AccountingService:
             tenant_id=self.tenant_id,
             loan=loan,
             amount=amount,
-            currency=str(body.get("currency") or loan.get("currency") or "JOD").upper()[:8],
+            currency=str(body.get("currency") or loan.get("currency") or default_currency()).upper()[:8],
             method=str(body.get("method") or "manual")[:40],
             created_by=actor,
             notes=str(body.get("notes") or "")[:500],

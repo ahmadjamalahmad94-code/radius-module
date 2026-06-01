@@ -5,6 +5,7 @@ from typing import Any
 
 from flask import Blueprint, g, request
 
+from ...radius.core.system_config import default_currency
 from ...radius.core.tenant import DEFAULT_TENANT_ID
 from ...radius.db.connection import db
 from ...radius.db.helpers import json_load
@@ -88,7 +89,7 @@ def wallets_create():
             tenant_id=_tid(),
             owner_type=str(data.get("owner_type") or ""),
             owner_id=data.get("owner_id"),
-            currency=str(data.get("currency") or "JOD"),
+            currency=str(data.get("currency") or default_currency()),
             metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
         )
     except BusinessOSValidationError as exc:
@@ -172,7 +173,7 @@ def ledger_correction():
             debit_account=str(data.get("debit_account") or ""),
             credit_account=str(data.get("credit_account") or ""),
             amount=data.get("amount"),
-            currency=str(data.get("currency") or "JOD"),
+            currency=str(data.get("currency") or default_currency()),
             actor_type=actor_type,
             actor_id=actor_id,
             target_type=str(data.get("target_type") or ""),
@@ -266,7 +267,7 @@ def price_snapshots_capture():
             wholesale_price=data.get("wholesale_price", 0),
             effective_price=data.get("effective_price"),
             discount_amount=data.get("discount_amount", 0),
-            currency=str(data.get("currency") or "JOD"),
+            currency=str(data.get("currency") or default_currency()),
             captured_by_type=actor_type,
             captured_by_id=actor_id,
             metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},

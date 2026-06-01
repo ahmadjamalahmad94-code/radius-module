@@ -36,7 +36,7 @@
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     {{ hub.field("نوع المالك", "owner_type", "company", hint="company / manager / distributor / subscriber / card_user") }}
     {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغا لمحفظة الشركة") }}
-    {{ hub.field("العملة", "currency", "JOD") }}
+    {{ hub.field("العملة", "currency", cfg.currency) }}
     {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
   </form>
 {% endcall %}

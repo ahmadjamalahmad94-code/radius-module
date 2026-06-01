@@ -43,8 +43,8 @@
       <label class="hub-field">
         <span class="hub-field-label">العملة</span>
         <select class="hub-select" name="currency">
-          {% for c in ['ILS','USD','JOD'] %}
-          <option value="{{ c }}" {% if settings and settings.currency == c %}selected{% endif %}>{{ c }}</option>
+          {% for c in ['JOD','ILS','USD','IQD','SAR','EGP','AED','EUR','TRY'] %}
+          <option value="{{ c }}" {% if (settings.currency if settings else cfg.currency) == c %}selected{% endif %}>{{ c }}</option>
           {% endfor %}
         </select>
       </label>

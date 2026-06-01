@@ -61,6 +61,19 @@ def system_config() -> dict[str, Any]:
     }
 
 
+def default_currency() -> str:
+    """إرجاع رمز العملة المضبوطة للمستأجر.
+
+    هذا هو المرجع الموحد لأي سجل أو نموذج جديد بدل تثبيت ``"JOD"`` داخل
+    الكود. يقرأ ``billing.currency`` من لوحة التحكم، ولا يسمح لعطل قراءة
+    الإعدادات أن يكسر أي مسار تشغيلي.
+    """
+    try:
+        return system_config()["currency"]
+    except Exception:  # noqa: BLE001 — قراءة العملة لا يجب أن تكسر أي عملية
+        return _DEFAULTS["billing.currency"]
+
+
 def format_money(amount: Any, currency: str | None = None) -> str:
     """Format a number with the system currency symbol (unified display)."""
     if amount in (None, ""):

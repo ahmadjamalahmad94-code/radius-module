@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, request
 
 from ...radius.core.errors import RadiusError
+from ...radius.core.system_config import default_currency
 from ...radius.core.tenant import (
     TIER_LIMITS,
     TENANT_STATUS_ACTIVE,
@@ -87,7 +88,7 @@ def _tenant_from_body(body: dict) -> Tenant:
         display_name=str(body.get("display_name") or "").strip(),
         email=str(body.get("email") or "").strip(),
         phone=str(body.get("phone") or "").strip(),
-        currency=str(body.get("currency") or "JOD").strip(),
+        currency=str(body.get("currency") or default_currency()).strip(),
         locale=str(body.get("locale") or "ar").strip(),
         timezone=str(body.get("timezone") or "Asia/Amman").strip(),
         logo_url=str(body.get("logo_url") or "").strip(),

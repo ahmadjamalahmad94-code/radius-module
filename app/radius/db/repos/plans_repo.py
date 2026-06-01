@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from ...core.system_config import default_currency
 from ...core.types import AccessPlan
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
@@ -81,7 +82,7 @@ def _row(r) -> AccessPlan:
         auto_renew=bool(r["auto_renew"]),
         router_ids=tuple(json_load(r["router_ids"], default=[])),
         price_card=r["price_card"] or 0.0, price_bulk=r["price_bulk"] or 0.0,
-        price=r["price"] or 0.0, currency=r["currency"] or "JOD",
+        price=r["price"] or 0.0, currency=r["currency"] or default_currency(),
         plan_tier=r["plan_tier"] or "Personal", prepaid=bool(r["prepaid"]),
         project=r["project"] or "", description=r["description"] or "",
         enabled=bool(r["enabled"]), priority=r["priority"] or 100,

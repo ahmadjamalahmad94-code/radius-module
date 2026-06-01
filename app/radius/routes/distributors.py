@@ -6,6 +6,7 @@ import json
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ..core.system_config import default_currency
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
 
@@ -255,7 +256,7 @@ def distributors_settle(distributor_id: int):
                 "amount": _float_field("amount", 0.0),
                 "direction": _field("direction") or "credit",
                 "entry_type": _field("entry_type") or "settlement",
-                "currency": _field("currency") or "JOD",
+                "currency": _field("currency") or default_currency(),
                 "notes": _field("notes"),
             },
         )

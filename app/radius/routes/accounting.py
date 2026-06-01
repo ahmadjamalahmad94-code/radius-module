@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
+from ..core.system_config import default_currency
 from ..services.accounting import service_from_context
 from ..services.users import get_users_service
 
@@ -91,7 +92,7 @@ def users_payment_create(username: str):
     body = {
         "username": username,
         "amount": _field("amount"),
-        "currency": _field("currency") or "JOD",
+        "currency": _field("currency") or default_currency(),
         "method": _field("method") or "cash",
         "custom_price": _field("custom_price"),
         "discount_amount": _field("discount_amount") or 0,
@@ -123,7 +124,7 @@ def users_loan_create(username: str):
         "days": _field("days"),
         "duration_minutes": _field("duration_minutes"),
         "amount": _field("amount") or 0,
-        "currency": _field("currency") or "JOD",
+        "currency": _field("currency") or default_currency(),
         "reason": _field("reason"),
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
@@ -146,7 +147,7 @@ def users_loan_settle(username: str, loan_id: int):
     _subscriber(username)
     body = {
         "amount": _field("amount"),
-        "currency": _field("currency") or "JOD",
+        "currency": _field("currency") or default_currency(),
         "method": _field("method") or "manual",
         "settlement_type": _field("settlement_type") or "manual",
         "notes": _field("notes"),

@@ -522,7 +522,7 @@
           data-plan-name="{{ p.name if p else '' }}"
           data-plan-price="{{ _eff_price or 0 }}"
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
-          data-plan-currency="{{ (p.currency or 'JOD') if p else 'JOD' }}"
+          data-plan-currency="{{ (p.currency or cfg.currency) if p else cfg.currency }}"
           data-plan-minutes="{{ p.duration_minutes if p else 0 }}"
           data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
@@ -743,7 +743,7 @@
             <option value="">اختر العرض</option>
             {% for p in plans %}
               <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ p.duration_minutes or 0 }}">
-                {{ p.name }} — {{ "%.2f"|format(p.price or 0) }} {{ p.currency or "JOD" }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
+                {{ p.name }} — {{ (p.price or 0)|money }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
               </option>
             {% endfor %}
           </select>
@@ -886,7 +886,7 @@
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
           <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="JOD" maxlength="8">
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
           </label>
         </div>
         <label class="usq-field wide">ملاحظات
@@ -919,7 +919,7 @@
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required data-usq-balance-amount>
           </label>
           <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="JOD" maxlength="8">
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
           </label>
           <label class="usq-field wide">ملاحظات
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
@@ -950,7 +950,7 @@
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
           </label>
           <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="JOD" maxlength="8">
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
           </label>
           <label class="usq-field">طريقة الدفع
             <select class="hub-select" name="method">
@@ -1025,7 +1025,7 @@
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
           <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="JOD" maxlength="8">
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
           </label>
         </div>
         <label class="usq-field wide">سبب السلفة
@@ -1147,7 +1147,7 @@
   function fmtMoney(amount, currency) {
     const n = Number(amount) || 0;
     let s = n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    return `${s} ${currency || "JOD"}`;
+    return `${s} ${currency || {{ cfg.currency|tojson }}}`;
   }
   function arDays(n) {
     n = Math.max(0, Math.round(n));
@@ -1163,7 +1163,7 @@
     if (!hint || !activeRow) return;
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const minutes = parseInt(activeRow.dataset.planMinutes || "0", 10);
-    const cur = activeRow.dataset.planCurrency || "JOD";
+    const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
     // Effective price may be a per-subscriber custom price (overrides the offer).
     const isCustom = activeRow.dataset.planCustom === "1";
     const priceLabel = isCustom ? "سعره المخصّص" : "سعر باقته الحالية";

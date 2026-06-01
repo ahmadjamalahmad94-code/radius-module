@@ -55,13 +55,13 @@ def settings_patch():
     body = request.get_json(silent=True) or {}
     settings = body.get("settings", body)
     if not isinstance(settings, dict):
-        return fail("validation_error", "settings must be an object", status=422)
+        return fail("validation_error", "الإعدادات يجب أن تكون كائنًا.", status=422)
     catalog = _catalog()
     unknown = sorted(str(k) for k in settings if str(k) not in catalog)
     if unknown:
         return fail(
             "validation_error",
-            "unknown setting key",
+            "مفتاح إعداد غير معروف.",
             status=422,
             details={"unknown": unknown},
         )

@@ -10,6 +10,7 @@ from typing import Any
 
 from werkzeug.security import generate_password_hash
 
+from ..core.system_config import default_currency
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import (
@@ -173,7 +174,7 @@ class CardUsersMarketplaceService:
         duration_minutes: int = 0,
         speed_down_kbps: int = 0,
         speed_up_kbps: int = 0,
-        currency: str = "JOD",
+        currency: str = "",
         card_color: str = "#14b8a6",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -207,7 +208,7 @@ class CardUsersMarketplaceService:
                     int(speed_down_kbps or 0),
                     int(speed_up_kbps or 0),
                     price_minor,
-                    str(currency or "JOD").upper()[:8],
+                    str(currency or default_currency()).upper()[:8],
                     1,
                     _json(meta),
                     now,

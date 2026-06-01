@@ -15,6 +15,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
 from ..core.errors import RadiusError
+from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..services.plans import get_plans_service
 from ..services.users import get_users_service
@@ -1243,7 +1244,7 @@ def users_quota_topup(username: str):
             quota_target=(request.form.get("quota_target") or "combined").strip(),
             charge_mode=charge_mode,
             amount=amount,
-            currency=(request.form.get("currency") or "JOD").strip(),
+            currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
@@ -1262,7 +1263,7 @@ def users_balance_add(username: str):
             actor=_actor(),
             username=username,
             amount=amount,
-            currency=(request.form.get("currency") or "JOD").strip(),
+            currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip(),
         )
         flash(f"تمت إضافة رصيد نقدي بقيمة {amount:.2f}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")

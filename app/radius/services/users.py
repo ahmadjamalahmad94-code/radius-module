@@ -11,6 +11,7 @@ from ..core.constants import (
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
 from ..core.errors import RadiusValidationError
+from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..integration.adapter import RadiusAdapter
 from .audit import RadiusAuditService
@@ -148,7 +149,7 @@ class UsersService:
                 old_plan_id=sub.plan_id,
                 new_plan_id=plan_id,
                 amount=debt_amount,
-                currency=(getattr(new_plan, "currency", "") or "JOD"),
+                currency=(getattr(new_plan, "currency", "") or default_currency()),
                 remaining_minutes=remaining,
             )
         self._audit.record(
@@ -228,8 +229,9 @@ class UsersService:
 
     def add_quota(self, *, actor: str, username: str, quota_mb: int,
                   quota_target: str = "combined", charge_mode: str = "free",
-                  amount: float = 0.0, currency: str = "JOD",
+                  amount: float = 0.0, currency: str = "",
                   notes: str = "") -> Subscriber:
+        currency = currency or default_currency()
         if quota_mb <= 0:
             raise RadiusValidationError("quota_mb must be > 0")
         if quota_target not in {"combined", "download", "upload"}:
@@ -288,7 +290,8 @@ class UsersService:
         return saved
 
     def add_cash_balance(self, *, actor: str, username: str, amount: float,
-                         currency: str = "JOD", notes: str = "") -> Subscriber:
+                         currency: str = "", notes: str = "") -> Subscriber:
+        currency = currency or default_currency()
         if amount <= 0:
             raise RadiusValidationError("amount must be > 0")
         sub = self._adapter.get_account(username)
@@ -434,7 +437,7 @@ def _record_subscriber_ledger(*, actor: str, subscriber: Subscriber,
             entry_type=entry_type,
             amount=amount,
             direction=direction,
-            currency=(currency or "JOD").upper()[:8],
+            currency=(currency or default_currency()).upper()[:8],
             subscriber_id=subscriber.id,
             username=subscriber.username,
             operator=actor,

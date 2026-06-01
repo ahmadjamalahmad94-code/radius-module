@@ -10,6 +10,7 @@ import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
+from ..core.system_config import default_currency
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 
@@ -190,7 +191,7 @@ class LedgerService:
         debit_account: str,
         credit_account: str,
         amount: Any,
-        currency: str = "JOD",
+        currency: str = "",
         actor_type: str = "",
         actor_id: int | None = None,
         target_type: str = "",
@@ -257,7 +258,7 @@ class LedgerService:
                 str(kwargs["debit_account"]),
                 str(kwargs["credit_account"]),
                 amount_minor,
-                str(kwargs.get("currency") or "JOD"),
+                str(kwargs.get("currency") or default_currency()),
                 str(kwargs.get("actor_type") or ""),
                 kwargs.get("actor_id"),
                 str(kwargs.get("target_type") or ""),
@@ -320,9 +321,10 @@ class WalletService:
         tenant_id: int = 1,
         owner_type: str,
         owner_id: int | None = None,
-        currency: str = "JOD",
+        currency: str = "",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        currency = currency or default_currency()
         owner = str(owner_type or "").strip()
         if owner not in _OWNER_TYPES:
             raise BusinessOSValidationError("unknown wallet owner_type")
@@ -463,7 +465,7 @@ class WalletService:
                     amount_minor,
                     before,
                     after,
-                    str(wallet["currency"] or "JOD"),
+                    str(wallet["currency"] or default_currency()),
                     reference_type,
                     reference_id,
                     actor_type,
@@ -481,7 +483,7 @@ class WalletService:
                 debit_account="cash" if transaction_type == "credit" else f"wallet:{wallet_id}",
                 credit_account=f"wallet:{wallet_id}" if transaction_type == "credit" else "cash",
                 amount=amount,
-                currency=str(wallet["currency"] or "JOD"),
+                currency=str(wallet["currency"] or default_currency()),
                 actor_type=actor_type,
                 actor_id=actor_id,
                 target_type=str(wallet["owner_type"] or ""),
@@ -532,11 +534,12 @@ class PricingSnapshotService:
         wholesale_price: Any = 0,
         effective_price: Any | None = None,
         discount_amount: Any = 0,
-        currency: str = "JOD",
+        currency: str = "",
         captured_by_type: str = "",
         captured_by_id: int | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        currency = currency or default_currency()
         if not str(reference_type or "").strip():
             raise BusinessOSValidationError("reference_type is required")
         retail = money_to_minor(retail_price)
