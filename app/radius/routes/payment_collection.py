@@ -98,31 +98,21 @@ def payment_collection_settings():
             flash(f"إعداد دفع غير صالح: {exc}", "danger")
         else:
             flash("تم حفظ إعدادات تحصيل الدفعات.", "success")
-        return redirect(url_for("radius.payment_collection_settings"))
+        return redirect(url_for("radius.collection_hub", tab="settings"))
 
-    return render_template(
-        "radius/payment_collection_settings.html",
-        settings=settings,
-    )
+    # GET: the settings form now lives in a modal on the collection hub.
+    return redirect(url_for("radius.collection_hub", tab="settings"))
 
 
 def payment_collection_requests():
-    repo = PaymentRequestRepository()
-    status = (request.args.get("status") or "").strip()
-    purpose = (request.args.get("purpose") or "").strip()
-    payer_type = (request.args.get("payer_type") or "").strip()
-    try:
-        items = repo.list(_tid(), status=status, purpose=purpose, payer_type=payer_type)
-    except ValueError as exc:
-        flash(f"Invalid filter: {exc}", "warning")
-        items = []
-    return render_template(
-        "radius/payment_collection_requests.html",
-        items=items,
-        status=status,
-        purpose=purpose,
-        payer_type=payer_type,
-    )
+    # Consolidated into the collection hub (Hub 2). Redirect keeps the
+    # old URL + filters working.
+    args = {"tab": "requests"}
+    for key in ("status", "purpose", "payer_type"):
+        val = (request.args.get(key) or "").strip()
+        if val:
+            args[key] = val
+    return redirect(url_for("radius.collection_hub", **args))
 
 
 def payment_collection_request_detail(request_id: int):
@@ -144,13 +134,13 @@ def payment_collection_request_detail(request_id: int):
 
 
 def payment_collection_review_queue_web():
-    items = PaymentRequestRepository().list_for_review(_tid())
-    return render_template("radius/payment_collection_review_queue.html", items=items)
+    # Consolidated into the collection hub (Hub 2).
+    return redirect(url_for("radius.collection_hub", tab="review"))
 
 
 def payment_collection_reconciliation_web():
-    report = PaymentReconciliationRepository().summary(tenant_id=_tid())
-    return render_template("radius/payment_collection_reconciliation.html", report=report)
+    # Consolidated into the collection hub (Hub 2).
+    return redirect(url_for("radius.collection_hub", tab="reconciliation"))
 
 
 def _reviewable(request_id: int):
