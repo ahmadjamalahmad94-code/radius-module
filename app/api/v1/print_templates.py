@@ -66,7 +66,7 @@ def print_templates_list():
         limit = min(int(request.args.get("limit") or 200), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     items = _svc().list_print_templates(tenant_id=_tid(), limit=limit, offset=offset)
     return ok({"items": items, "count": len(items)})
 
@@ -116,7 +116,7 @@ def print_jobs_list():
         limit = min(int(request.args.get("limit") or 50), 200)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     items = _svc().list_print_jobs(tenant_id=_tid(), limit=limit, offset=offset)
     return ok({"items": items, "count": len(items)})
 
@@ -168,7 +168,7 @@ def _export_request_payload() -> tuple[dict, int | None, dict, dict]:
     try:
         batch_id_int = int(batch_id) if batch_id not in (None, "") else None
     except (TypeError, ValueError) as exc:
-        raise RadiusValidationError("batch_id must be int") from exc
+        raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.") from exc
 
     print_settings = {}
     if isinstance(body.get("print_settings"), dict):

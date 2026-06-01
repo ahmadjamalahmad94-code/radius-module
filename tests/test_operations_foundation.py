@@ -253,6 +253,31 @@ def test_print_template_persistence_and_json_preview(client):
     assert export.data.startswith(b"%PDF")
 
 
+def test_print_template_api_validation_messages_are_arabic(client):
+    bad_templates = client.get("/api/v1/print-templates?limit=bad", headers=_auth(client))
+    assert bad_templates.status_code == 422
+    assert bad_templates.get_json()["error"]["message"] == "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
+
+    bad_jobs = client.get("/api/v1/print-jobs?offset=bad", headers=_auth(client))
+    assert bad_jobs.status_code == 422
+    assert bad_jobs.get_json()["error"]["message"] == "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
+
+    created = client.post(
+        "/api/v1/print-templates",
+        json={"name": "bad_export_" + secrets.token_hex(4)},
+        headers=_auth(client),
+    )
+    assert created.status_code == 201, created.get_json()
+    template_id = created.get_json()["data"]["template"]["id"]
+
+    bad_batch = client.get(
+        f"/api/v1/print-templates/{template_id}/export.pdf?batch_id=bad",
+        headers=_auth(client),
+    )
+    assert bad_batch.status_code == 422
+    assert bad_batch.get_json()["error"]["message"] == "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا."
+
+
 def test_print_template_presets_update_batch_export_and_jobs(client):
     # The old helpers (_card_snapshot_metrics, _pdf_safe_latin,
     # _scaled_card_rect) were removed when the PDF export moved onto
