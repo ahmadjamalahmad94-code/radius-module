@@ -75,6 +75,20 @@ def test_report_snapshot_validation_messages_are_arabic(client):
     assert bad_list.get_json()["error"]["message"] == "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
 
 
+def test_accounting_ledger_validation_messages_are_arabic(client):
+    missing_entry = client.post("/api/v1/ledger/void", json={}, headers=AUTH)
+    assert missing_entry.status_code == 422
+    assert missing_entry.get_json()["error"]["message"] == "معرّف القيد مطلوب."
+
+    bad_entry = client.post("/api/v1/ledger/void", json={"entry_id": "bad"}, headers=AUTH)
+    assert bad_entry.status_code == 422
+    assert bad_entry.get_json()["error"]["message"] == "معرّف القيد يجب أن يكون رقمًا صحيحًا."
+
+    bad_list = client.get("/api/v1/ledger?subscriber_id=bad", headers=AUTH)
+    assert bad_list.status_code == 422
+    assert bad_list.get_json()["error"]["message"] == "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة."
+
+
 def test_financial_report_csv_export_is_real(client):
     item = subscriber(client)
     client.post(

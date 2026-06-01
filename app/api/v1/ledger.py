@@ -31,7 +31,9 @@ def ledger_list():
             limit=limit,
             offset=offset,
         )
-    except (ValueError, RadiusValidationError) as e:
+    except ValueError:
+        return fail("validation_error", "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة.", status=422)
+    except RadiusValidationError as e:
         return fail("validation_error", getattr(e, "message", str(e)), status=422)
     return ok({"items": items, "count": len(items)})
 
@@ -41,12 +43,14 @@ def ledger_void():
     try:
         entry_id = int(body.get("entry_id") or 0)
         if entry_id <= 0:
-            raise RadiusValidationError("entry_id is required")
+            raise RadiusValidationError("معرّف القيد مطلوب.")
         entry = service_from_context().void_ledger(
             entry_id=entry_id,
             actor=_actor(),
             reason=str(body.get("reason") or "")[:500],
         )
-    except (ValueError, RadiusValidationError) as e:
+    except ValueError:
+        return fail("validation_error", "معرّف القيد يجب أن يكون رقمًا صحيحًا.", status=422)
+    except RadiusValidationError as e:
         return fail("validation_error", getattr(e, "message", str(e)), status=422)
     return ok({"entry": entry}, status=201)

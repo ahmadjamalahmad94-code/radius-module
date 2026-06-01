@@ -68,8 +68,36 @@ def _limit(default: int = 100, maximum: int = 500) -> int:
         return default
 
 
+_ERROR_TRANSLATIONS = {
+    "amount must be numeric": "المبلغ يجب أن يكون رقمًا صحيحًا.",
+    "unknown event category": "تصنيف الحدث غير معروف.",
+    "unknown event severity": "درجة الحدث غير معروفة.",
+    "event_key is required": "مفتاح الحدث مطلوب.",
+    "unknown ledger entry_type": "نوع قيد الدفتر غير معروف.",
+    "debit_account is required": "حساب المدين مطلوب.",
+    "credit_account is required": "حساب الدائن مطلوب.",
+    "unknown wallet owner_type": "نوع صاحب المحفظة غير معروف.",
+    "owner_id is required for this wallet owner_type": "معرّف صاحب المحفظة مطلوب لهذا النوع.",
+    "unsupported wallet transaction": "حركة المحفظة غير مدعومة.",
+    "wallet not found": "المحفظة غير موجودة.",
+    "wallet balance cannot go negative": "رصيد المحفظة لا يمكن أن يصبح سالبًا.",
+    "reference_type is required": "نوع المرجع مطلوب.",
+    "prices cannot be negative": "الأسعار لا يمكن أن تكون سالبة.",
+}
+
+
+def _business_error_message(exc: Exception) -> str:
+    raw = str(exc)
+    if raw in _ERROR_TRANSLATIONS:
+        return _ERROR_TRANSLATIONS[raw]
+    if raw.endswith(" must be positive"):
+        field = raw.removesuffix(" must be positive")
+        return f"قيمة {field} يجب أن تكون أكبر من صفر."
+    return raw
+
+
 def _validation_error(exc: Exception):
-    return fail("validation_error", str(exc), status=422)
+    return fail("validation_error", _business_error_message(exc), status=422)
 
 
 def wallets_list():
@@ -100,7 +128,7 @@ def wallets_create():
 def wallets_detail(wallet_id: int):
     wallet = WalletService().get_wallet(tenant_id=_tid(), wallet_id=wallet_id)
     if not wallet:
-        return fail("not_found", "wallet not found", status=404)
+        return fail("not_found", "المحفظة غير موجودة.", status=404)
     return ok({"wallet": wallet})
 
 
@@ -244,7 +272,7 @@ def price_snapshots_list():
     try:
         package_id_int = int(package_id) if package_id else None
     except ValueError:
-        return fail("validation_error", "package_id must be an integer", status=422)
+        return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
     items = PricingSnapshotService().list_snapshots(
         tenant_id=_tid(),
         reference_type=(request.args.get("reference_type") or "").strip(),

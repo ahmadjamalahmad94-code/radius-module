@@ -84,6 +84,11 @@ def test_wallet_contract_rejects_invalid_amounts(client):
     )
     assert invalid.status_code == 422
     assert invalid.get_json()["error"]["code"] == "validation_error"
+    assert invalid.get_json()["error"]["message"] == "قيمة amount يجب أن تكون أكبر من صفر."
+
+    missing = client.get("/api/v1/finance/wallets/999999999", headers=AUTH)
+    assert missing.status_code == 404
+    assert missing.get_json()["error"]["message"] == "المحفظة غير موجودة."
 
 
 def test_ledger_contract_lists_entries_and_exposes_no_delete_semantics(client):
@@ -164,3 +169,17 @@ def test_pricing_snapshots_and_revenue_summary_contracts(client):
     data = _data(summary)
     assert data["price_snapshots"] == 1
     assert data["events"] >= 1
+
+
+def test_business_os_validation_messages_are_arabic(client):
+    bad_package = client.get("/api/v1/pricing/snapshots?package_id=bad", headers=AUTH)
+    assert bad_package.status_code == 422
+    assert bad_package.get_json()["error"]["message"] == "معرّف الباقة يجب أن يكون رقمًا صحيحًا."
+
+    bad_event = client.post(
+        "/api/v1/events",
+        headers=AUTH,
+        json={"category": "bad", "severity": "info", "event_key": "x"},
+    )
+    assert bad_event.status_code == 422
+    assert bad_event.get_json()["error"]["message"] == "تصنيف الحدث غير معروف."
