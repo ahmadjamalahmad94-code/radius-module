@@ -511,7 +511,7 @@
   {# Compute the live values once at the top — the service returns
      wallet balances in minor units (1/100), and purchases the same. #}
   {% set wallet_balance = (dashboard.wallet.balance_minor or 0) / 100 %}
-  {% set wallet_currency = dashboard.wallet.currency or 'ILS' %}
+  {% set wallet_currency = dashboard.wallet.currency or cfg.currency %}
   {% set user_name = dashboard.card_user.display_name or 'مستخدم' %}
 
   {# ── Balance hero — horizontal layout: balance | divider | stats ── #}

@@ -9,7 +9,7 @@
 {% set user    = card360.card_user %}
 {% set wallet  = card360.wallet %}
 {% set balance = (wallet.balance_minor or 0) / 100 %}
-{% set currency= wallet.currency or 'ILS' %}
+{% set currency= wallet.currency or cfg.currency %}
 
 {% block title %}{{ user.display_name or 'مستخدم البطاقة' }} · ملف الكروت 360{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-tag"></i>{% endblock %}
@@ -564,7 +564,7 @@
       {# ── Purchase: has package_name + amount_minor + status ── #}
       {% if row.package_name and row.amount_minor is defined %}
         {% set amount = (row.amount_minor or 0) / 100 %}
-        {% set ccy = row.currency or 'ILS' %}
+        {% set ccy = row.currency or cfg.currency %}
         {% set ps = (row.status or '')|lower %}
         {% set status_ar =
             ('مكتملة' if ps == 'completed'
