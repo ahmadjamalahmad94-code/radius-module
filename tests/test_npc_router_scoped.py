@@ -155,8 +155,9 @@ def test_scoped_list_renders_with_router_context(
     # an "العودة إلى لوحة الراوتر" link.
     assert "rtr-A" in html
     assert "العودة إلى لوحة الراوتر" in html
-    # The dry-run banner is still present.
-    assert "معاينة فقط (Dry-Run)" in html
+    # The Arabic preview banner is still present.
+    assert "معاينة فقط" in html
+    assert "Dry-Run" not in html
     # The other two sub-service tabs are reachable from the
     # scoped tab bar.
     other_services = (

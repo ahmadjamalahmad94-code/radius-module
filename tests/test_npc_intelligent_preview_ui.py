@@ -475,8 +475,9 @@ def test_dry_run_banner_and_label_remain_on_preview(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    # The shared shell banner is still present.
-    assert "معاينة فقط (Dry-Run)" in html
+    # The shared Arabic preview banner is still present.
+    assert "معاينة فقط" in html
+    assert "Dry-Run" not in html
     # AND the in-hero "no apply" pill.
     assert "لم يتم التطبيق على الراوتر" in html
 

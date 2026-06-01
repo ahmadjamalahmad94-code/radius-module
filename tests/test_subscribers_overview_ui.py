@@ -76,6 +76,22 @@ def _seed_payment_and_loan(client) -> dict:
     return sub
 
 
+def _seed_large_open_loan(client) -> dict:
+    sub = _create_subscriber(client)
+    loan = client.post(
+        "/api/v1/loans",
+        json={
+            "username": sub["username"],
+            "hours": 1,
+            "amount": 98765,
+            "reason": "qa-top-debtor",
+        },
+        headers=AUTH,
+    )
+    assert loan.status_code == 201, loan.get_json()
+    return sub
+
+
 # ───────────────────────── aggregation helpers ─────────────────────────
 
 
@@ -122,14 +138,14 @@ def test_outstanding_summary_is_point_in_time(client):
 
 
 def test_top_debtors_lists_open_loan_holders(client):
-    sub = _seed_payment_and_loan(client)
+    sub = _seed_large_open_loan(client)
     from app.radius.db.repos import accounting_repo as ar
 
     debtors = ar.top_debtors(1, limit=10)
     assert isinstance(debtors, list)
     match = [d for d in debtors if d["username"] == sub["username"]]
     assert match, "subscriber with an open loan should appear in top_debtors"
-    assert match[0]["open_loans_total"] >= 8
+    assert match[0]["open_loans_total"] >= 98765
     assert match[0]["subscriber_id"]
 
 

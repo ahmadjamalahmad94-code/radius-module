@@ -185,7 +185,8 @@ def test_list_pages_render_with_dry_run_banner(
     r = client.get(f"/admin/radius/network-policy/{slug}/")
     assert r.status_code == 200, r.data.decode("utf-8")[:500]
     html = r.data.decode("utf-8")
-    assert "معاينة فقط (Dry-Run)" in html
+    assert "معاينة فقط" in html
+    assert "Dry-Run" not in html
     assert "لم يتم التطبيق على الراوتر" in html
     assert "الوصول البعيد" in html
     assert "حظر المواقع" in html
@@ -194,22 +195,20 @@ def test_list_pages_render_with_dry_run_banner(
     assert label in html
 
 
-def test_landing_redirects_to_devices_list(
+def test_landing_renders_router_picker(
     app, client, monkeypatch,
 ):
-    """Pass-2 cleanup: the global NPC landing used to render a
-    router-picker page. It now redirects to the NAS list —
-    operators pick a router there, then use the router's own
-    dashboard quicknav to reach NPC."""
+    """The global NPC landing is a real router picker for bookmarked
+    links and sidebar entry points."""
     _login_super(client, app, monkeypatch)
     r = client.get(
         "/admin/radius/network-policy/",
         follow_redirects=False,
     )
-    assert r.status_code in (301, 302, 303, 307, 308)
-    assert "/admin/radius/devices" in r.headers.get(
-        "Location", ""
-    )
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "سياسات الشبكة" in html
+    assert ("لا توجد راوترات" in html or "npc-rp-grid" in html)
 
 
 def test_dashboard_links_to_npc_per_service(
@@ -625,4 +624,5 @@ def test_dry_run_label_appears_on_every_npc_page(
         r = client.get(url)
         assert r.status_code == 200, url
         html = r.data.decode("utf-8")
-        assert ("Dry-Run" in html or "معاينة فقط" in html), url
+        assert "معاينة فقط" in html, url
+        assert "Dry-Run" not in html, url
