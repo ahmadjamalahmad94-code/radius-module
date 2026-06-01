@@ -481,6 +481,168 @@ def activation_report(tenant_id: int) -> list[dict]:
     return sorted(totals.values(), key=lambda x: x["earned_minutes"], reverse=True)
 
 
+# ────────────────────────────────────────────────────────────────────────
+# Subscribers Overview — period-bucketed reporting series (monthly/yearly).
+# Mirror sales_summary's grain pattern. Consumed by
+# routes/subscribers_overview.py. See SERVICES_COOKBOOK.md §20.
+# ────────────────────────────────────────────────────────────────────────
+
+def _grain_expr(column: str, grain: str) -> str:
+    """SUBSTR bucket expression for a YYYY-MM (monthly) / YYYY (yearly) prefix.
+
+    Only monthly + yearly are supported here on purpose — the Subscribers
+    Overview deliberately drops the daily/weekly grains.
+    """
+    return f"substr({column}, 1, 4)" if grain == "yearly" else f"substr({column}, 1, 7)"
+
+
+def loans_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
+    """السلف — loans granted per period (count + value + minutes + still-open).
+
+    Source: loan_entries (the dedicated loans table). Kept separate from
+    الديون/outstanding so the two read as distinct buckets (operator decision).
+    """
+    expr = _grain_expr("created_at", grain)
+    rows = db().execute(
+        f"""
+        SELECT {expr} AS period,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS total,
+               COALESCE(SUM(duration_minutes), 0) AS minutes,
+               COALESCE(SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END), 0) AS still_open
+        FROM loan_entries
+        WHERE tenant_id = ?
+        GROUP BY period
+        ORDER BY period DESC
+        LIMIT 24
+        """,
+        (tenant_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def activation_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
+    """التفعيل — activations per period (posted payments that granted time).
+
+    Source: payment_transactions with earned_minutes > 0 (simpler/cleaner than
+    parsing ledger metadata). Returns count + amount collected + minutes granted.
+    """
+    expr = _grain_expr("created_at", grain)
+    rows = db().execute(
+        f"""
+        SELECT {expr} AS period,
+               COUNT(*) AS count,
+               COALESCE(SUM(amount), 0) AS amount,
+               COALESCE(SUM(earned_minutes), 0) AS minutes
+        FROM payment_transactions
+        WHERE tenant_id = ?
+          AND status = 'posted'
+          AND earned_minutes > 0
+        GROUP BY period
+        ORDER BY period DESC
+        LIMIT 24
+        """,
+        (tenant_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def data_usage_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
+    """الجيجات — data consumed per period (bytes_in + bytes_out + sessions).
+
+    Source: bandwidth_usage_daily (pre-aggregated, fast). Caller converts
+    bytes → GB. This is consumption; quota *allocation* is point-in-time.
+    """
+    expr = _grain_expr("day", grain)
+    rows = db().execute(
+        f"""
+        SELECT {expr} AS period,
+               COALESCE(SUM(bytes_in), 0) AS bytes_in,
+               COALESCE(SUM(bytes_out), 0) AS bytes_out,
+               COALESCE(SUM(sessions_count), 0) AS sessions
+        FROM bandwidth_usage_daily
+        WHERE tenant_id = ?
+        GROUP BY period
+        ORDER BY period DESC
+        LIMIT 24
+        """,
+        (tenant_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def outstanding_summary(tenant_id: int) -> dict:
+    """شو ضل / الديون — point-in-time outstanding (NOT period-bucketed).
+
+    Per the operator's definition, «what's left» = two components measured
+    as-of-now (balances are not historized per month):
+      • open loans        — loan_entries.status = 'open'
+      • negative balances — subscribers whose balance < 0 (in deficit)
+    The credit side (positive balances) is returned for context.
+    """
+    loans = db().execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               COUNT(*) AS count,
+               COALESCE(SUM(duration_minutes), 0) AS minutes
+        FROM loan_entries
+        WHERE tenant_id = ? AND status = 'open'
+        """,
+        (tenant_id,),
+    ).fetchone()
+    bal = db().execute(
+        """
+        SELECT COALESCE(SUM(CASE WHEN balance < 0 THEN -balance ELSE 0 END), 0) AS owed,
+               COALESCE(SUM(CASE WHEN balance < 0 THEN 1 ELSE 0 END), 0) AS owed_count,
+               COALESCE(SUM(CASE WHEN balance > 0 THEN balance ELSE 0 END), 0) AS credit,
+               COALESCE(SUM(CASE WHEN balance > 0 THEN 1 ELSE 0 END), 0) AS credit_count
+        FROM subscribers
+        WHERE tenant_id = ? AND deleted_at IS NULL
+        """,
+        (tenant_id,),
+    ).fetchone()
+    open_loans_total = float((loans and loans["total"]) or 0.0)
+    owed = float((bal and bal["owed"]) or 0.0)
+    return {
+        "open_loans_total": open_loans_total,
+        "open_loans_count": int((loans and loans["count"]) or 0),
+        "open_loans_minutes": int((loans and loans["minutes"]) or 0),
+        "balance_owed": owed,
+        "balance_owed_count": int((bal and bal["owed_count"]) or 0),
+        "balance_credit": float((bal and bal["credit"]) or 0.0),
+        "balance_credit_count": int((bal and bal["credit_count"]) or 0),
+        "outstanding_total": open_loans_total + owed,
+    }
+
+
+def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
+    """Per-subscriber drill-down rows for the overview — biggest open-loan
+    holders + deepest negative balances, each deep-linking to Finance.
+    """
+    rows = db().execute(
+        """
+        SELECT s.id AS subscriber_id, s.username, s.full_name, s.balance,
+               COALESCE(l.open_total, 0) AS open_loans_total,
+               COALESCE(l.open_count, 0) AS open_loans_count
+        FROM subscribers s
+        LEFT JOIN (
+            SELECT subscriber_id,
+                   SUM(amount) AS open_total,
+                   COUNT(*) AS open_count
+            FROM loan_entries
+            WHERE tenant_id = ? AND status = 'open'
+            GROUP BY subscriber_id
+        ) l ON l.subscriber_id = s.id
+        WHERE s.tenant_id = ? AND s.deleted_at IS NULL
+          AND (s.balance < 0 OR COALESCE(l.open_total, 0) > 0)
+        ORDER BY (COALESCE(l.open_total, 0) + CASE WHEN s.balance < 0 THEN -s.balance ELSE 0 END) DESC
+        LIMIT ?
+        """,
+        (tenant_id, tenant_id, int(limit)),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def profit_loss_summary(tenant_id: int) -> list[dict]:
     row = db().execute(
         """
