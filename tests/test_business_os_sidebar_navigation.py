@@ -58,16 +58,11 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "مستخدمو البطاقات": "/admin/radius/card-users",
         "سوق البطاقات": "/admin/radius/card-marketplace",
         "المدراء والموزعون": "/admin/radius/business-operators",
+        # Communications + events sidebar entries are consolidated: the
+        # sub-pages now live in each section's in-section tab bar, not the
+        # sidebar. Only the single section entry remains in the sidebar.
         "التواصل والحملات": "/admin/radius/communications",
-        "قوالب الرسائل": "/admin/radius/communications/templates",
-        "إرسال رسالة": "/admin/radius/communications/send",
-        "الحملات": "/admin/radius/communications/campaigns",
-        "سجل الإرسال": "/admin/radius/communications/deliveries",
-        "الجمهور": "/admin/radius/communications/audience",
         "الأحداث والمخاطر": "/admin/radius/events",
-        "تقييم المخاطر": "/admin/radius/events/risk",
-        "الأمان": "/admin/radius/events/security",
-        "التحقيقات": "/admin/radius/events/investigations",
         "مركز العمليات": "/admin/radius/operations",
         "التحكم بالسرعة": "/admin/radius/operations/speed-control",
         "التقارير": "/admin/radius/reports",
