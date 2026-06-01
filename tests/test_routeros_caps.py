@@ -188,6 +188,32 @@ def test_validate_sstp_on_v7_warns_not_blocks():
     assert any(w["code"] == "sstp_on_v7_not_recommended" for w in res["warnings"])
 
 
+# ── PPTP (Legacy/insecure traffic option) ──
+@pytest.mark.parametrize("v,ok", [
+    ("6", True), ("6.49.7", True), ("7", True), ("", False), (None, False),
+])
+def test_supports_pptp_traffic(v, ok):
+    assert caps.supports_pptp_traffic(v) is ok
+
+
+def test_pptp_is_allowed_but_warned_never_recommended():
+    res = caps.validate_connection_plan("6", "sstp_mgmt", "pptp_traffic")
+    # allowed (not blocking) ...
+    assert res["valid"] is True
+    # ... but always warns about insecurity
+    assert any(w["code"] == "pptp_insecure_legacy" for w in res["warnings"])
+    # and PPTP is NEVER the recommended/default traffic tunnel
+    assert caps.recommended_traffic_tunnel("6") == "l2tp_ipsec_traffic"
+    assert caps.recommended_traffic_tunnel("6") != "pptp_traffic"
+
+
+def test_pptp_in_traffic_vocabulary_and_capabilities():
+    assert "pptp_traffic" in caps.TRAFFIC_TUNNEL_TYPES
+    assert "pptp" in caps.TRAFFIC_PROTOCOLS
+    matrix = caps.tunnel_capabilities("6.49.7")
+    assert matrix["supports_pptp_traffic"] is True
+
+
 def test_provisioner_wg_guard_uses_caps():
     """render_wg_block must refuse v6 and accept v7 (via the central helper)."""
     from app.radius.services import mt_provisioner as prov

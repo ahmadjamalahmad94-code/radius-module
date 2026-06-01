@@ -27,10 +27,18 @@ WIREGUARD_MIN_MAJOR = 7
 # v6 strategy (SSTP = management, L2TP/IPsec = optional traffic).
 SSTP_MIN_MAJOR = 6
 L2TP_IPSEC_MIN_MAJOR = 6
+# PPTP exists on v6/v7 but is INSECURE (MS-CHAPv2 is broken). It is offered
+# only as an explicit Legacy traffic option — never recommended, never default.
+PPTP_MIN_MAJOR = 6
 
 # Tunnel-type vocabularies (stored per router; see migration 092).
 MANAGEMENT_TUNNEL_TYPES = ("wireguard", "sstp_mgmt", "direct", "none")
-TRAFFIC_TUNNEL_TYPES = ("wireguard_traffic", "l2tp_ipsec_traffic", "none")
+TRAFFIC_TUNNEL_TYPES = (
+    "wireguard_traffic", "l2tp_ipsec_traffic", "pptp_traffic", "none",
+)
+# Traffic protocols the operator can pick for a v6 router's traffic tunnel.
+# L2TP/IPsec is recommended; PPTP is Legacy/insecure (opt-in only).
+TRAFFIC_PROTOCOLS = ("l2tp_ipsec", "pptp")
 TRAFFIC_MODES = (
     "disabled", "full_tunnel", "policy_routing",
     "selected_pool", "selected_subscribers",
@@ -187,6 +195,16 @@ def supports_l2tp_ipsec_traffic(version: object) -> bool:
     return major is not None and major >= L2TP_IPSEC_MIN_MAJOR
 
 
+def supports_pptp_traffic(version: object) -> bool:
+    """Whether PPTP can be used as a (Legacy/insecure) traffic tunnel.
+
+    Available on 6.x/7.x, but PPTP encryption is broken — callers MUST treat
+    it as opt-in only and surface the insecurity warning. Never recommend it.
+    """
+    major = parse_major(version)
+    return major is not None and major >= PPTP_MIN_MAJOR
+
+
 def recommended_management_tunnel(version: object) -> str:
     """The recommended management tunnel for a version.
 
@@ -243,6 +261,8 @@ def _allowed_traffic(version: object) -> set[str]:
         allowed.add("wireguard_traffic")
     if supports_l2tp_ipsec_traffic(version):
         allowed.add("l2tp_ipsec_traffic")
+    if supports_pptp_traffic(version):
+        allowed.add("pptp_traffic")  # Legacy/insecure — allowed but warned
     return allowed
 
 
@@ -338,6 +358,13 @@ def validate_connection_plan(
         warn("sstp_on_v7_not_recommended",
              "RouterOS 7 يُفضّل WireGuard للإدارة بدل SSTP.")
 
+    # PPTP is allowed only as an explicit Legacy choice — never silently. It
+    # is valid (not blocking) but always carries the insecurity warning.
+    if traffic == "pptp_traffic":
+        warn("pptp_insecure_legacy",
+             "PPTP غير آمن (تشفير MS-CHAPv2 مخترَق) — للاستخدام الاضطراري فقط. "
+             "يُفضّل L2TP/IPsec.")
+
     return {"valid": not errors, "errors": errors, "warnings": warnings}
 
 
@@ -348,6 +375,7 @@ def tunnel_capabilities(version: object) -> dict:
         "supports_wireguard": supports_wireguard(version),
         "supports_sstp_mgmt": supports_sstp_mgmt(version),
         "supports_l2tp_ipsec_traffic": supports_l2tp_ipsec_traffic(version),
+        "supports_pptp_traffic": supports_pptp_traffic(version),
         "recommended_management_tunnel": recommended_management_tunnel(version),
         "recommended_traffic_tunnel": recommended_traffic_tunnel(version),
         "connection_modes": connection_modes_for_version(version),
@@ -359,14 +387,17 @@ __all__ = [
     "WIREGUARD_MIN_MAJOR",
     "SSTP_MIN_MAJOR",
     "L2TP_IPSEC_MIN_MAJOR",
+    "PPTP_MIN_MAJOR",
     "MANAGEMENT_TUNNEL_TYPES",
     "TRAFFIC_TUNNEL_TYPES",
+    "TRAFFIC_PROTOCOLS",
     "TRAFFIC_MODES",
     "parse_major",
     "parse_routeros_major",
     "supports_wireguard",
     "supports_sstp_mgmt",
     "supports_l2tp_ipsec_traffic",
+    "supports_pptp_traffic",
     "requires_direct_address",
     "connection_modes",
     "connection_modes_for_version",
