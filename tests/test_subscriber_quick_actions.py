@@ -488,6 +488,48 @@ def test_add_time_modal_has_pricing_and_billing(client, app):
     assert "مدفوع — دين" in extend_modal
 
 
+def test_plan_minutes_falls_back_to_validity_for_quota_plans(client, app):
+    # A quota/data plan has duration_minutes=0 but validity_days>0. The row's
+    # time-basis (data-plan-minutes) must fall back to validity_days×1440 so the
+    # price↔time math (loan/add-time/coverage) computes instead of yielding 0.
+    with app.app_context():
+        from app.radius.db.connection import db
+
+        cur = db().execute(
+            """
+            INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days,
+                                     price, currency, enabled, created_at, updated_at)
+            VALUES(1, '5GB Quota', 0, 30, 3, 'ILS', 1, ?, ?)
+            """,
+            (datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),
+        )
+        pid = int(cur.lastrowid)
+        _seed_subscriber(
+            "quota_plan_user",
+            plan_id=pid,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    row = html.split('data-username="quota_plan_user"', 1)[1].split("</tr>", 1)[0]
+    assert 'data-plan-minutes="43200"' in row  # 30 days × 1440 (validity fallback)
+
+
+def test_add_time_modal_is_days_only_no_hours(client, app):
+    with app.app_context():
+        plan = _seed_plan("Days Only Plan", price=30)
+        _seed_subscriber(
+            "daysonly_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    extend_modal = html.split('data-usq-modal="extend"', 1)[1].split('data-usq-modal="sms"', 1)[0]
+    assert "data-usq-days" in extend_modal       # days input kept
+    assert "data-usq-hours" not in extend_modal  # hours input removed
+
+
 def test_open_loans_endpoint_is_wired(client, app):
     with app.app_context():
         plan = _seed_plan("Open Loans Plan", price=30)
