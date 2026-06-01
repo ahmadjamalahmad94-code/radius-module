@@ -1171,11 +1171,18 @@ def users_toggle(username: str):
 
 
 def users_extend(username: str):
-    minutes = request.form.get("minutes")
     try:
-        m = int(minutes)
-        get_users_service().extend_time(actor=_actor(), username=username, minutes=m)
-        flash(f"تم تمديد الحساب {m} دقيقة.", "success")
+        m = int(request.form.get("minutes"))
+        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        amount = _form_float("amount", 0.0)
+        get_users_service().extend_time(
+            actor=_actor(), username=username, minutes=m,
+            charge_mode=charge_mode, amount=amount,
+            currency=(request.form.get("currency") or default_currency()).strip(),
+            notes=(request.form.get("notes") or "").strip(),
+        )
+        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+        flash(f"تم تمديد الحساب {m} دقيقة ({mode_label}).", "success")
     except (TypeError, ValueError):
         flash("قيمة دقائق غير صحيحة", "error")
     except RadiusError as e:
