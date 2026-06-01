@@ -142,3 +142,40 @@ def test_saas_validation_routes_do_not_500(client):
         res = client.post(path, json=payload, headers=AUTH)
         assert res.status_code == 422, (path, res.status_code, res.get_data(as_text=True))
         assert res.get_json()["error"]["code"] == "validation_error"
+
+
+def test_saas_validation_messages_are_arabic_and_guard_numeric_inputs(client):
+    probes = (
+        ("/api/v1/bandwidth-profiles", {"rate_down": 100}, "اسم ملف السرعة مطلوب."),
+        (
+            "/api/v1/bandwidth-profiles",
+            {"name": "Bad speed", "rate_down": "bad"},
+            "قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة.",
+        ),
+        ("/api/v1/pools", {"pool_name": "main"}, "اسم الـ pool ونطاق العناوين مطلوبان."),
+        (
+            "/api/v1/pools",
+            {"pool_name": "main", "range_ip": "10.0.0.1-10.0.0.2", "router_id": "bad"},
+            "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.",
+        ),
+        ("/api/v1/share-groups", {"name": "VIP", "max_members": "bad"}, "قيم حدود المجموعة يجب أن تكون أرقامًا صحيحة."),
+        ("/api/v1/services", {"subscriber_id": "bad", "name": "Router"}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),
+        ("/api/v1/tickets", {"subscriber_id": "bad", "subject": "Help"}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),
+        ("/api/v1/invoices", {"subscriber_id": "bad", "username": "ali", "amount": 1}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),
+    )
+    for path, payload, message in probes:
+        res = client.post(path, json=payload, headers=AUTH)
+        assert res.status_code == 422, (path, res.status_code, res.get_data(as_text=True))
+        assert res.get_json()["error"]["message"] == message
+
+    missing = client.get("/api/v1/bandwidth-profiles/999999999", headers=AUTH)
+    assert missing.status_code == 404
+    assert missing.get_json()["error"]["message"] == "ملف السرعة غير موجود."
+
+    bad_status = client.post(
+        "/api/v1/tickets",
+        json={"subscriber_id": 1, "subject": "طلب", "priority": "bad"},
+        headers=AUTH,
+    )
+    assert bad_status.status_code == 422
+    assert bad_status.get_json()["error"]["message"] == "أولوية التذكرة أو حالتها غير صحيحة."

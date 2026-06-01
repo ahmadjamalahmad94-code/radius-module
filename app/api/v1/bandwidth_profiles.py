@@ -30,17 +30,23 @@ def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "name is required", status=422)
+        return fail("validation_error", "اسم ملف السرعة مطلوب.", status=422)
+    try:
+        rate_down = max(0, int(body.get("rate_down") or 0))
+        rate_up = max(0, int(body.get("rate_up") or 0))
+        priority = int(body.get("priority") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة.", status=422)
     return BandwidthProfile(
         id=profile_id,
         tenant_id=_tid(),
         name=name,
-        rate_down=max(0, int(body.get("rate_down") or 0)),
+        rate_down=rate_down,
         rate_down_unit=str(body.get("rate_down_unit") or "Kbps"),
-        rate_up=max(0, int(body.get("rate_up") or 0)),
+        rate_up=rate_up,
         rate_up_unit=str(body.get("rate_up_unit") or "Kbps"),
         burst=str(body.get("burst") or ""),
-        priority=int(body.get("priority") or 0),
+        priority=priority,
     )
 
 
@@ -60,7 +66,7 @@ def list_profiles():
 def get_profile(profile_id: int):
     profile = bandwidth_repo.get(_tid(), profile_id)
     if not profile:
-        return fail("not_found", "bandwidth profile not found", status=404)
+        return fail("not_found", "ملف السرعة غير موجود.", status=404)
     return ok(_item(profile))
 
 
@@ -74,7 +80,7 @@ def create_profile():
 
 def patch_profile(profile_id: int):
     if not bandwidth_repo.get(_tid(), profile_id):
-        return fail("not_found", "bandwidth profile not found", status=404)
+        return fail("not_found", "ملف السرعة غير موجود.", status=404)
     profile = _payload(profile_id)
     if isinstance(profile, tuple):
         return profile
@@ -83,6 +89,6 @@ def patch_profile(profile_id: int):
 
 def delete_profile(profile_id: int):
     if not bandwidth_repo.get(_tid(), profile_id):
-        return fail("not_found", "bandwidth profile not found", status=404)
+        return fail("not_found", "ملف السرعة غير موجود.", status=404)
     bandwidth_repo.delete(_tid(), profile_id)
     return ok({"id": profile_id, "deleted": True})

@@ -12,7 +12,10 @@ def _tid() -> int:
 
 
 def _int(body: dict, key: str, default: int = 0) -> int:
-    return int(body.get(key) or default)
+    try:
+        return int(body.get(key) or default)
+    except (TypeError, ValueError) as exc:
+        raise ValueError from exc
 
 
 def register(bp: Blueprint) -> None:
@@ -33,7 +36,7 @@ def list_groups():
 def get_group(group_id: int):
     group = share_groups_repo.get(_tid(), group_id)
     if not group:
-        return fail("not_found", "share group not found", status=404)
+        return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
     return ok({"group": group, "members": share_groups_repo.list_members(group_id)})
 
 
@@ -41,15 +44,22 @@ def create_group():
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "name is required", status=422)
+        return fail("validation_error", "اسم مجموعة المشاركة مطلوب.", status=422)
+    try:
+        shared_quota_mb = _int(body, "shared_quota_mb")
+        shared_speed_down_kbps = _int(body, "shared_speed_down_kbps")
+        shared_speed_up_kbps = _int(body, "shared_speed_up_kbps")
+        max_members = _int(body, "max_members")
+    except ValueError:
+        return fail("validation_error", "قيم حدود المجموعة يجب أن تكون أرقامًا صحيحة.", status=422)
     group_id = share_groups_repo.create(
         tenant_id=_tid(),
         name=name,
         description=str(body.get("description") or ""),
-        shared_quota_mb=_int(body, "shared_quota_mb"),
-        shared_speed_down_kbps=_int(body, "shared_speed_down_kbps"),
-        shared_speed_up_kbps=_int(body, "shared_speed_up_kbps"),
-        max_members=_int(body, "max_members"),
+        shared_quota_mb=shared_quota_mb,
+        shared_speed_down_kbps=shared_speed_down_kbps,
+        shared_speed_up_kbps=shared_speed_up_kbps,
+        max_members=max_members,
         enabled=bool(body.get("enabled", True)),
     )
     return ok(share_groups_repo.get(_tid(), group_id), status=201)
@@ -57,7 +67,7 @@ def create_group():
 
 def patch_group(group_id: int):
     if not share_groups_repo.get(_tid(), group_id):
-        return fail("not_found", "share group not found", status=404)
+        return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
     body = request.get_json(silent=True) or {}
     updated = share_groups_repo.update(_tid(), group_id, **body)
     return ok(updated)
@@ -65,24 +75,27 @@ def patch_group(group_id: int):
 
 def delete_group(group_id: int):
     if not share_groups_repo.get(_tid(), group_id):
-        return fail("not_found", "share group not found", status=404)
+        return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
     share_groups_repo.delete(_tid(), group_id)
     return ok({"id": group_id, "deleted": True})
 
 
 def add_member(group_id: int):
     if not share_groups_repo.get(_tid(), group_id):
-        return fail("not_found", "share group not found", status=404)
+        return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
     body = request.get_json(silent=True) or {}
-    subscriber_id = int(body.get("subscriber_id") or 0)
+    try:
+        subscriber_id = int(body.get("subscriber_id") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     if subscriber_id <= 0:
-        return fail("validation_error", "subscriber_id is required", status=422)
+        return fail("validation_error", "اختر المشترك أولًا.", status=422)
     share_groups_repo.add_member(_tid(), group_id, subscriber_id)
     return ok({"group_id": group_id, "subscriber_id": subscriber_id, "added": True}, status=201)
 
 
 def remove_member(group_id: int, subscriber_id: int):
     if not share_groups_repo.get(_tid(), group_id):
-        return fail("not_found", "share group not found", status=404)
+        return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
     share_groups_repo.remove_member(group_id, subscriber_id)
     return ok({"group_id": group_id, "subscriber_id": subscriber_id, "removed": True})

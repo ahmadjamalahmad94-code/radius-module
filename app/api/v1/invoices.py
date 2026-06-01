@@ -25,8 +25,11 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("date values must be ISO strings")
-    return datetime.fromisoformat(raw.replace("Z", ""))
+        raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
+    try:
+        return datetime.fromisoformat(raw.replace("Z", ""))
+    except ValueError as exc:
+        raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
 
 
 def _item(invoice: Invoice) -> dict:
@@ -81,7 +84,7 @@ def list_invoices():
 def get_invoice(invoice_id: int):
     invoice = invoices_repo.get(_tid(), invoice_id)
     if not invoice:
-        return fail("not_found", "invoice not found", status=404)
+        return fail("not_found", "الفاتورة غير موجودة.", status=404)
     return ok(_item(invoice))
 
 
@@ -89,14 +92,32 @@ def create_invoice():
     body = request.get_json(silent=True) or {}
     try:
         subscriber_id = int(body.get("subscriber_id") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
+    try:
         amount = float(body.get("amount") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة الفاتورة يجب أن تكون رقمًا صحيحًا.", status=422)
+    try:
         recharged_on = _dt(body.get("recharged_on"))
         expiration_at = _dt(body.get("expiration_at"))
-    except (TypeError, ValueError) as exc:
+    except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
     username = str(body.get("username") or "").strip()
     if subscriber_id <= 0 or amount < 0 or not username:
-        return fail("validation_error", "subscriber_id, username and amount are required", status=422)
+        return fail("validation_error", "اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة.", status=422)
+    try:
+        plan_id = int(body["plan_id"]) if body.get("plan_id") not in (None, "") else None
+        router_id = int(body["router_id"]) if body.get("router_id") not in (None, "") else None
+        payment_gateway_id = (
+            int(body["payment_gateway_id"])
+            if body.get("payment_gateway_id") not in (None, "")
+            else None
+        )
+        balance_before = float(body.get("balance_before") or 0)
+        balance_after = float(body.get("balance_after") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "القيم الرقمية في الفاتورة يجب أن تكون صحيحة.", status=422)
     invoice = Invoice(
         id=None,
         tenant_id=_tid(),
@@ -105,22 +126,22 @@ def create_invoice():
         username=username,
         amount=amount,
         admin_id=int(getattr(g, "admin_id", 0) or 0),
-        plan_id=int(body["plan_id"]) if body.get("plan_id") not in (None, "") else None,
+        plan_id=plan_id,
         plan_name=str(body.get("plan_name") or ""),
         service_type=str(body.get("service_type") or "Hotspot"),
-        router_id=int(body["router_id"]) if body.get("router_id") not in (None, "") else None,
+        router_id=router_id,
         direction=str(body.get("direction") or "charge"),
-        balance_before=float(body.get("balance_before") or 0),
-        balance_after=float(body.get("balance_after") or 0),
+        balance_before=balance_before,
+        balance_after=balance_after,
         recharged_on=recharged_on,
         expiration_at=expiration_at,
         payment_method=str(body.get("payment_method") or "cash"),
-        payment_gateway_id=int(body["payment_gateway_id"]) if body.get("payment_gateway_id") not in (None, "") else None,
+        payment_gateway_id=payment_gateway_id,
         status=str(body.get("status") or "paid"),
         note=str(body.get("note") or ""),
     )
     if invoice.status not in INVOICE_STATUSES:
-        return fail("validation_error", "invalid invoice status", status=422)
+        return fail("validation_error", "حالة الفاتورة غير صحيحة.", status=422)
     return ok(_item(invoices_repo.create(invoice)), status=201)
 
 
@@ -128,8 +149,8 @@ def update_status(invoice_id: int):
     body = request.get_json(silent=True) or {}
     status = str(body.get("status") or "").strip()
     if status not in INVOICE_STATUSES:
-        return fail("validation_error", "invalid invoice status", status=422)
+        return fail("validation_error", "حالة الفاتورة غير صحيحة.", status=422)
     if not invoices_repo.get(_tid(), invoice_id):
-        return fail("not_found", "invoice not found", status=404)
+        return fail("not_found", "الفاتورة غير موجودة.", status=404)
     invoices_repo.update_status(_tid(), invoice_id, status, note=str(body.get("note") or ""))
     return ok(_item(invoices_repo.get(_tid(), invoice_id)))

@@ -25,8 +25,11 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("date values must be ISO strings")
-    return datetime.fromisoformat(raw.replace("Z", ""))
+        raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
+    try:
+        return datetime.fromisoformat(raw.replace("Z", ""))
+    except ValueError as exc:
+        raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
 
 
 def _item(service: Service) -> dict:
@@ -49,14 +52,21 @@ def _item(service: Service) -> dict:
 def _payload(service_id: int | None = None) -> Service | tuple:
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
-    subscriber_id = int(body.get("subscriber_id") or 0)
+    try:
+        subscriber_id = int(body.get("subscriber_id") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     if not name or subscriber_id <= 0:
-        return fail("validation_error", "subscriber_id and name are required", status=422)
+        return fail("validation_error", "اختر المشترك وأدخل اسم الخدمة.", status=422)
     try:
         given_at = _dt(body.get("given_at"))
         returned_at = _dt(body.get("returned_at"))
     except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
+    try:
+        rent_per_month = float(body.get("rent_per_month") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة الإيجار الشهري يجب أن تكون رقمًا صحيحًا.", status=422)
     return Service(
         id=service_id,
         tenant_id=_tid(),
@@ -65,7 +75,7 @@ def _payload(service_id: int | None = None) -> Service | tuple:
         serial=str(body.get("serial") or ""),
         mac=str(body.get("mac") or ""),
         type=str(body.get("type") or "router"),
-        rent_per_month=float(body.get("rent_per_month") or 0),
+        rent_per_month=rent_per_month,
         status=str(body.get("status") or "given"),
         given_at=given_at,
         returned_at=returned_at,
@@ -84,12 +94,16 @@ def register(bp: Blueprint) -> None:
 def list_services():
     status = (request.args.get("status") or "").strip() or None
     subscriber_id = request.args.get("subscriber_id")
+    try:
+        parsed_subscriber_id = int(subscriber_id) if subscriber_id else None
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     items = [
         _item(s)
         for s in services_repo.list_all(
             _tid(),
             status=status,
-            subscriber_id=int(subscriber_id) if subscriber_id else None,
+            subscriber_id=parsed_subscriber_id,
             limit=_int_arg("limit", 200),
             offset=_int_arg("offset", 0, maximum=100000),
         )
@@ -100,7 +114,7 @@ def list_services():
 def get_service(service_id: int):
     service = services_repo.get(_tid(), service_id)
     if not service:
-        return fail("not_found", "service not found", status=404)
+        return fail("not_found", "الخدمة غير موجودة.", status=404)
     return ok(_item(service))
 
 
@@ -113,7 +127,7 @@ def create_service():
 
 def patch_service(service_id: int):
     if not services_repo.get(_tid(), service_id):
-        return fail("not_found", "service not found", status=404)
+        return fail("not_found", "الخدمة غير موجودة.", status=404)
     service = _payload(service_id)
     if isinstance(service, tuple):
         return service
@@ -122,6 +136,6 @@ def patch_service(service_id: int):
 
 def delete_service(service_id: int):
     if not services_repo.get(_tid(), service_id):
-        return fail("not_found", "service not found", status=404)
+        return fail("not_found", "الخدمة غير موجودة.", status=404)
     services_repo.delete(_tid(), service_id)
     return ok({"id": service_id, "deleted": True})

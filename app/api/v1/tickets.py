@@ -58,12 +58,16 @@ def register(bp: Blueprint) -> None:
 def list_tickets():
     status = (request.args.get("status") or "").strip() or None
     subscriber_id = request.args.get("subscriber_id")
+    try:
+        parsed_subscriber_id = int(subscriber_id) if subscriber_id else None
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     items = [
         _ticket(t)
         for t in tickets_repo.list_tickets(
             _tid(),
             status=status,
-            subscriber_id=int(subscriber_id) if subscriber_id else None,
+            subscriber_id=parsed_subscriber_id,
             limit=_int_arg("limit", 200),
             offset=_int_arg("offset", 0, maximum=100000),
         )
@@ -74,7 +78,7 @@ def list_tickets():
 def get_ticket(ticket_id: int):
     ticket = tickets_repo.get_ticket(_tid(), ticket_id)
     if not ticket:
-        return fail("not_found", "ticket not found", status=404)
+        return fail("not_found", "التذكرة غير موجودة.", status=404)
     replies = [_reply(r) for r in tickets_repo.list_replies(_tid(), ticket_id)]
     return ok({"ticket": _ticket(ticket), "replies": replies})
 
@@ -82,13 +86,20 @@ def get_ticket(ticket_id: int):
 def create_ticket():
     body = request.get_json(silent=True) or {}
     subject = str(body.get("subject") or "").strip()
-    subscriber_id = int(body.get("subscriber_id") or 0)
+    try:
+        subscriber_id = int(body.get("subscriber_id") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     if not subject or subscriber_id <= 0:
-        return fail("validation_error", "subscriber_id and subject are required", status=422)
+        return fail("validation_error", "اختر المشترك وأدخل عنوان التذكرة.", status=422)
     priority = str(body.get("priority") or "normal")
     status = str(body.get("status") or "open")
     if priority not in TICKET_PRIORITIES or status not in TICKET_STATUSES:
-        return fail("validation_error", "invalid ticket priority or status", status=422)
+        return fail("validation_error", "أولوية التذكرة أو حالتها غير صحيحة.", status=422)
+    try:
+        assignee_admin_id = int(body["assignee_admin_id"]) if body.get("assignee_admin_id") not in (None, "") else None
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف الموظف المسؤول يجب أن يكون رقمًا صحيحًا.", status=422)
     ticket = Ticket(
         id=None,
         tenant_id=_tid(),
@@ -97,7 +108,7 @@ def create_ticket():
         category=str(body.get("category") or "general"),
         priority=priority,
         status=status,
-        assignee_admin_id=int(body["assignee_admin_id"]) if body.get("assignee_admin_id") not in (None, "") else None,
+        assignee_admin_id=assignee_admin_id,
         body=str(body.get("body") or ""),
         attachments=tuple(body.get("attachments") or ()),
     )
@@ -106,23 +117,23 @@ def create_ticket():
 
 def patch_ticket(ticket_id: int):
     if not tickets_repo.get_ticket(_tid(), ticket_id):
-        return fail("not_found", "ticket not found", status=404)
+        return fail("not_found", "التذكرة غير موجودة.", status=404)
     body = request.get_json(silent=True) or {}
     if "priority" in body and body["priority"] not in TICKET_PRIORITIES:
-        return fail("validation_error", "invalid ticket priority", status=422)
+        return fail("validation_error", "أولوية التذكرة غير صحيحة.", status=422)
     if "status" in body and body["status"] not in TICKET_STATUSES:
-        return fail("validation_error", "invalid ticket status", status=422)
+        return fail("validation_error", "حالة التذكرة غير صحيحة.", status=422)
     ticket = tickets_repo.update_ticket(_tid(), ticket_id, **body)
     return ok(_ticket(ticket))
 
 
 def add_reply(ticket_id: int):
     if not tickets_repo.get_ticket(_tid(), ticket_id):
-        return fail("not_found", "ticket not found", status=404)
+        return fail("not_found", "التذكرة غير موجودة.", status=404)
     body = request.get_json(silent=True) or {}
     text = str(body.get("body") or "").strip()
     if not text:
-        return fail("validation_error", "body is required", status=422)
+        return fail("validation_error", "نص الرد مطلوب.", status=422)
     reply = TicketReply(
         id=None,
         tenant_id=_tid(),
