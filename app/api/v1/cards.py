@@ -173,7 +173,7 @@ def _card_or_response(card_id: int):
 
     card = cards_repo.get_card(_tid(), card_id)
     if not card:
-        return None, fail("not_found", "card not found", status=404)
+        return None, fail("not_found", "الكرت غير موجود.", status=404)
     if not batch_in_scope(int(card.batch_id or 0)):
         return None, deny_out_of_scope()
     return card, None
@@ -359,7 +359,7 @@ def cards_generate():
     if not plan_id:
         return fail("validation_error", "plan_id مطلوب", status=422)
     if not isinstance(count, int) or count <= 0 or count > 2000:
-        return fail("validation_error", "count must be 1..2000", status=422)
+        return fail("validation_error", "عدد الكروت يجب أن يكون بين 1 و2000.", status=422)
     capacity = CapacityEnforcementService().check_cards_generate(
         tenant_id=_tid(),
         requested_count=count,
@@ -421,12 +421,12 @@ def cards_batches_import():
         return fail("validation_error", "plan_id مطلوب", status=422)
     rows = _parse_import_cards(body)
     if not rows:
-        return fail("validation_error", "cards or csv_text is required", status=422)
+        return fail("validation_error", "أدخل قائمة الكروت أو نص CSV.", status=422)
     if len(rows) > 5000:
-        return fail("validation_error", "maximum import size is 5000 cards", status=422)
+        return fail("validation_error", "الحد الأقصى للاستيراد هو 5000 كرت.", status=422)
     source_type = str(body.get("source_type") or "imported").strip().lower()
     if source_type not in {"imported", "external"}:
-        return fail("validation_error", "source_type must be imported or external", status=422)
+        return fail("validation_error", "مصدر الكروت يجب أن يكون imported أو external.", status=422)
     sync_to_radius = bool(body.get("sync_to_radius")) and source_type != "external"
     from ...radius.services.cards import get_cards_service
     try:
@@ -482,7 +482,7 @@ def cards_batches_bulk():
     action = str(body.get("action") or body.get("bulk_action") or "").strip()
     raw_ids = body.get("batch_ids") or body.get("ids") or []
     if not isinstance(raw_ids, list):
-        return fail("validation_error", "batch_ids must be a list", status=422)
+        return fail("validation_error", "قائمة الحزم يجب أن تكون مصفوفة.", status=422)
     batch_ids: list[int] = []
     for raw in raw_ids:
         try:
@@ -492,7 +492,7 @@ def cards_batches_bulk():
         if batch_id > 0 and batch_id not in batch_ids:
             batch_ids.append(batch_id)
     if not batch_ids:
-        return fail("validation_error", "select at least one batch", status=422)
+        return fail("validation_error", "اختر حزمة واحدة على الأقل.", status=422)
     for batch_id in batch_ids:
         if not batch_in_scope(batch_id):
             return deny_out_of_scope()
@@ -515,7 +515,7 @@ def cards_batches_bulk():
         elif action == "refresh":
             changed = 0
         else:
-            return fail("validation_error", "unknown bulk action", status=422)
+            return fail("validation_error", "إجراء الحزم غير معروف.", status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({
@@ -613,7 +613,7 @@ def cards_batch_update(batch_id: int):
         return deny_out_of_scope()
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("validation_error", "JSON body must be an object", status=422)
+        return fail("validation_error", "بيانات الطلب يجب أن تكون كائن JSON.", status=422)
     from ...radius.services.cards import get_cards_service
     try:
         batch = get_cards_service().update_batch(
@@ -645,7 +645,7 @@ def cards_of_batch(batch_id: int):
         limit = min(int(request.args.get("limit") or 200), 2000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     used = request.args.get("used")
     revoked = request.args.get("revoked")
     used_bool = None if used is None else used.lower() in ("1", "true", "yes")
@@ -677,7 +677,7 @@ def cards_get(card_id: int):
     for c in items:
         if c.id == card_id:
             return ok(_serialize_card(c))
-    return fail("not_found", "card not found", status=404)
+    return fail("not_found", "الكرت غير موجود.", status=404)
 
 
 def cards_revoke(card_id: int):
@@ -725,7 +725,7 @@ def cards_lock_mac(card_id: int):
         return response
     mac = str(_body().get("mac") or "").strip()[:64]
     if not mac:
-        return fail("validation_error", "mac is required", status=422)
+        return fail("validation_error", "عنوان MAC مطلوب.", status=422)
     from ...radius.services.cards import get_cards_service
     try:
         get_cards_service().lock_card_mac(actor=_actor(), card_id=card_id, mac=mac)
@@ -785,7 +785,7 @@ def cards_delete_permanent(card_id: int):
     if confirm != f"DELETE:{card.username}":
         return fail(
             "validation_error",
-            "confirm must be DELETE:<username>",
+            "للحذف النهائي اكتب DELETE: ثم اسم مستخدم الكرت.",
             status=422,
         )
     from ...radius.services.cards import get_cards_service

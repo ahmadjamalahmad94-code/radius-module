@@ -183,6 +183,7 @@ def test_card_operations_lock_unlock_mac(client, auth_headers):
         headers=auth_headers,
     )
     assert empty.status_code == 422
+    assert empty.get_json()["error"]["message"] == "عنوان MAC مطلوب."
 
     locked = client.post(
         f"/api/v1/cards/{card['id']}/lock-mac",
@@ -262,6 +263,7 @@ def test_card_permanent_delete_requires_strong_confirmation(client, auth_headers
         headers=auth_headers,
     )
     assert rejected.status_code == 422
+    assert rejected.get_json()["error"]["message"] == "للحذف النهائي اكتب DELETE: ثم اسم مستخدم الكرت."
 
     deleted = client.post(
         f"/api/v1/cards/{card['id']}/delete-permanent",
@@ -275,3 +277,14 @@ def test_card_permanent_delete_requires_strong_confirmation(client, auth_headers
 def test_card_operations_missing_card_returns_404(client, auth_headers):
     res = client.post("/api/v1/cards/999999999/enable", headers=auth_headers)
     assert res.status_code == 404
+    assert res.get_json()["error"]["message"] == "الكرت غير موجود."
+
+
+def test_card_generation_validation_message_is_arabic(client, auth_headers):
+    res = client.post(
+        "/api/v1/cards/generate",
+        json={"plan_id": 1, "count": 0},
+        headers=auth_headers,
+    )
+    assert res.status_code == 422
+    assert res.get_json()["error"]["message"] == "عدد الكروت يجب أن يكون بين 1 و2000."
