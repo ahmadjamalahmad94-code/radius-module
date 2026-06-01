@@ -304,7 +304,8 @@ def test_dry_run_labels_remain_visible_on_preview(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    assert "معاينة فقط (Dry-Run)" in html
+    assert "معاينة فقط — لم يتم التطبيق على الراوتر" in html
+    assert "Dry-Run" not in html
     assert "لم يتم التطبيق على الراوتر" in html
 
 

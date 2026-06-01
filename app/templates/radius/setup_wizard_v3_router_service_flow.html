@@ -341,18 +341,29 @@ li[data-status="pending"] .swsvf-verify-icon{
     {% else %}
       <h2>تهيئة الخدمة</h2>
       <p class="swsvf-pane-sub">
-        نموذج إعداد هذه الخدمة لم يُربط بعد. سنفعّله في تحديث قادم.
+        هذه الخدمة لا تملك شاشة تهيئة مفعّلة لهذا الراوتر. ارجع إلى صفحة الخدمات واختر خدمة مكتملة الإعداد.
       </p>
     {% endif %}
     <div class="swsvf-pane-foot">
-      <span style="color:var(--swsvf-mute);font-size:12px">
-        املأ الحقول أعلاه ثم اضغط التالي
-      </span>
-      <button type="button" class="swsvf-btn swsvf-btn-primary"
-              data-swsvf-next="preview">
-        التالي
-        <i class="fa-solid fa-arrow-left"></i>
-      </button>
+      {% if service_config_partial %}
+        <span style="color:var(--swsvf-mute);font-size:12px">
+          املأ الحقول أعلاه ثم اضغط التالي
+        </span>
+        <button type="button" class="swsvf-btn swsvf-btn-primary"
+                data-swsvf-next="preview">
+          التالي
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+      {% else %}
+        <span style="color:var(--swsvf-mute);font-size:12px">
+          لا يوجد نموذج تهيئة متاح لهذه الخدمة على هذا الراوتر.
+        </span>
+        <a class="swsvf-btn swsvf-btn-primary"
+           href="{{ url_for('radius.mt_dashboard', router_id=router.id) }}">
+          العودة إلى الخدمات
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+      {% endif %}
     </div>
   </section>
 
@@ -502,8 +513,8 @@ li[data-status="pending"] .swsvf-verify-icon{
    form fires the `swsvf:configure-submit` event and this script
    takes the data forward through the remaining 3 phases.
 
-   For now the configure → preview transition is a UI-only stub
-   that displays «لم يُربط بعد» until per-service backends arrive.
+   الانتقال من التهيئة إلى المعاينة يعمل فقط للخدمات التي تملك نموذج
+   تهيئة مفعّل. أي خدمة لا تملك نموذجًا تعود بالمشغل إلى صفحة الخدمات.
 */
 (function () {
   "use strict";

@@ -129,6 +129,55 @@ def test_network_devices_page_uses_actionable_monitoring_copy(client):
     assert "إعدادات المراقبة" in text
 
 
+def test_operational_pages_do_not_show_future_placeholder_copy(client):
+    _web_login(client)
+    routes = [
+        "/admin/radius/network/devices/new",
+        "/admin/radius/operations/speed-control",
+        "/admin/radius/communications/channels",
+    ]
+    forbidden = [
+        "لم يُربط بعد",
+        "تحديث قادم",
+        "Sprint القادم",
+        "تشغيل لاحق",
+        "المراحل القادمة",
+        "مرحلة قادمة",
+        "UI-only stub",
+    ]
+
+    for route in routes:
+        response = client.get(route)
+        assert response.status_code == 200, route
+        text = _visible_text(response.get_data(as_text=True))
+        for token in forbidden:
+            assert token not in text, f"{token!r} leaked in {route}"
+
+
+def test_source_templates_do_not_keep_future_placeholder_copy():
+    paths = [
+        Path("app/templates/radius/setup_wizard_v3_router_service_flow.html"),
+        Path("app/templates/radius/network_devices_form.html"),
+        Path("app/templates/radius/operations_speed_control.html"),
+        Path("app/templates/radius/communications_channels.html"),
+        Path("app/radius/routes/network_policy.py"),
+    ]
+    forbidden = [
+        "لم يُربط بعد",
+        "تحديث قادم",
+        "Sprint القادم",
+        "تشغيل لاحق",
+        "المراحل القادمة",
+        "مرحلة قادمة",
+        "UI-only stub",
+    ]
+
+    for path in paths:
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [
