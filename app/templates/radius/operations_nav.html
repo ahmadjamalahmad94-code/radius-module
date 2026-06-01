@@ -1,0 +1,18 @@
+{# ── Operations Center in-section tab bar (shared by the operations pages) ──
+   Active tab derived from request.path; no route change needed. Gives the
+   operations landing + speed-control a single, consistent hub navigation. #}
+{% set _speed = '/operations/speed-control' in request.path %}
+<style>
+.onav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.onav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.onav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.onav a.is-active{background:linear-gradient(135deg,#e11d48,#9f1239);color:#fff;box-shadow:0 6px 16px rgba(225,29,72,.22)}
+.onav a i{font-size:12px}
+</style>
+<nav class="onav" data-testid="operations-nav">
+  <a class="{{ 'is-active' if not _speed }}" href="{{ url_for('radius.operations_center') }}"><i class="fa-solid fa-gauge-high"></i> العمليات</a>
+  <a class="{{ 'is-active' if _speed }}" href="{{ url_for('radius.operations_speed_control') }}"><i class="fa-solid fa-sliders"></i> التحكم بالسرعة</a>
+</nav>
