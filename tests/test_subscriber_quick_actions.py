@@ -530,6 +530,22 @@ def test_add_time_modal_is_days_only_no_hours(client, app):
     assert "data-usq-hours" not in extend_modal  # hours input removed
 
 
+def test_sms_modal_has_ready_templates(client, app):
+    with app.app_context():
+        plan = _seed_plan("SMS Tpl Plan", price=30)
+        _seed_subscriber(
+            "sms_tpl_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    sms_modal = html.split('data-usq-modal="sms"', 1)[1].split('data-usq-modal="quota"', 1)[0]
+    assert "data-sms-tpl" in sms_modal     # clickable ready templates
+    assert "قوالب جاهزة" in sms_modal
+    assert "تذكير انتهاء" in sms_modal
+
+
 def test_quota_modal_uses_mb_gb_unit_picker(client, app):
     with app.app_context():
         plan = _seed_plan("Quota Picker Plan", price=30)
