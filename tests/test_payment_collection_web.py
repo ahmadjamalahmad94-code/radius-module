@@ -78,6 +78,9 @@ def test_settings_page_renders_and_saves(client):
     assert "مركز تحصيل الدفعات" in html
     assert "رقم المحفظة لتوجيه الدفع فقط" in html
     assert "تجربة جافة" in html
+    assert "Jawwal Pay (لاحقًا)" not in html
+    assert "واجهة الربط الآلي (لاحقًا)" not in html
+    assert "غير مفعل حاليًا" in html
 
     saved = client.post(
         "/admin/radius/payments/settings",
