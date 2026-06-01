@@ -1,11 +1,8 @@
-{# Subscriber finance — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Subscriber finance — REBUILT (hub-v2): floating payment/loan modals,
+   auto-priced from the subscriber's effective price, real execution (no
+   dry-run), AJAX submit (stay on page, inline errors). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-
-{# Durations are stored in MINUTES; the `dur_days` filter (app/__init__.py)
-   humanizes them to a friendly Arabic days string — e.g. 5400 → «3 أيام و18 ساعة»
-   instead of «5400 دقيقة». #}
-{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
@@ -15,32 +12,70 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
 <style>
-  .uf-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
-  @media (max-width: 980px){ .uf-grid{ grid-template-columns: 1fr; } }
-  .uf-form{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
-  .uf-form .wide{ grid-column: 1 / -1; }
-  .uf-form label{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .uf-checks{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .uf-checks .uf-chk{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; background:var(--hub-bg-soft);
-    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
-    font-size:12.5px; font-weight:700;
-  }
-  .uf-checks .uf-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
-  @media (max-width: 540px){ .uf-form{ grid-template-columns: 1fr; } }
+  .ff-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-bottom:14px; }
+  .ff-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+  .ff-actions .hub-btn{ font-size:14px; padding:12px 20px; }
+  /* ── floating modal ── */
+  .ff-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+  .ff-modal.is-open{ display:grid; }
+  .ff-dialog{ width:min(560px,100%); max-height:min(88vh,760px); overflow:auto; border-radius:16px; background:#fff;
+    box-shadow:0 28px 80px rgba(15,23,42,.32); }
+  .ff-head{ position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+  .ff-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+  .ff-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+  .ff-body{ padding:16px 18px; display:grid; gap:12px; }
+  .ff-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+  .ff-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .ff-field{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:800; color:var(--hub-text-soft,#475569); }
+  .ff-field.wide{ grid-column:1 / -1; }
+  .ff-current{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:10px;
+    border:1px solid var(--hub-border-soft,#e2e8f0); border-radius:12px; background:var(--hub-bg-soft,#f8fafc); }
+  .ff-current div{ display:flex; flex-direction:column; gap:2px; }
+  .ff-current span{ font-size:11px; color:#94a3b8; font-weight:800; }
+  .ff-current strong{ font-size:13px; color:var(--hub-text,#0f172a); }
+  /* segmented free/paid/debt */
+  .ff-seg{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .ff-seg label{ flex:1 1 0; min-width:120px; cursor:pointer; display:flex; align-items:flex-start; gap:8px; padding:10px 12px;
+    border:1px solid var(--hub-border,#cbd5e1); border-radius:12px; background:#fff; }
+  .ff-seg label:has(input:checked){ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; }
+  .ff-seg input{ margin-top:3px; accent-color:var(--hub-brand,#7c3aed); }
+  .ff-seg strong{ display:block; font-size:12.5px; color:var(--hub-text,#0f172a); }
+  .ff-seg small{ display:block; font-size:11px; color:#94a3b8; font-weight:600; }
+  .ff-hint{ font-size:12px; color:var(--hub-text-mute,#64748b); font-weight:700; line-height:1.7; }
+  .ff-reveal[hidden]{ display:none; }
+  /* open-loans settlement */
+  .ff-loans-head{ font-size:12.5px; font-weight:900; color:var(--hub-text,#0f172a); margin-bottom:6px; }
+  .ff-loan-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    padding:8px 10px; border:1px solid var(--hub-border-soft,#e2e8f0); border-radius:12px; background:var(--hub-bg-soft,#f8fafc); margin-bottom:6px; }
+  .ff-loan-info{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .ff-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-weight:900; font-size:12px; white-space:nowrap; }
+  .ff-chip--days{ background:#eff6ff; color:#1d4ed8; }
+  .ff-chip--amt{ background:#fffbeb; color:#b45309; direction:ltr; }
+  .ff-loan-acts{ display:flex; gap:4px; flex-wrap:wrap; }
+  .ff-loan-acts label{ display:inline-flex; align-items:center; gap:4px; cursor:pointer; padding:4px 9px;
+    border:1px solid var(--hub-border,#cbd5e1); border-radius:999px; font-size:11.5px; font-weight:800; color:var(--hub-text-soft,#475569); background:#fff; }
+  .ff-loan-acts label:has(input:checked){ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
+  .ff-loan-acts input{ position:absolute; opacity:0; width:0; height:0; }
+  /* inline result message */
+  .ff-msg{ padding:8px 10px; border-radius:10px; font-size:12.5px; font-weight:800; line-height:1.6; }
+  .ff-msg[hidden]{ display:none; }
+  .ff-msg.is-ok{ background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+  .ff-msg.is-err{ background:#fff1f2; border:1px solid #fecaca; color:#b91c1c; }
+  @media (max-width:540px){ .ff-grid{ grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set open_loans = loans|selectattr('status','equalto','open')|list %}
 
 {{ hub.hero(
   "دفعات وسلف المستفيد",
-  subtitle="تسجيل الدفعات والسلف ومتابعة سجل القيود للمستفيد: " + sub.username,
+  subtitle="السعر والمدة تُحتسب تلقائيًا حسب باقة المشترك: " + sub.username,
   icon="wallet",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_edit', username=sub.username) + '">
-      <i class="fa-solid fa-user-pen"></i> الرجوع للمستفيد
+      <i class="fa-solid fa-user-pen"></i> ملف المشترك
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger', subscriber_id=sub.id) + '">
       <i class="fa-solid fa-scale-balanced"></i> قيود هذا المستفيد
@@ -48,114 +83,27 @@
   '
 ) }}
 
-<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:12.5px;
-            border-radius:var(--hub-r-lg);border:1px solid var(--hub-border-soft);
-            background:var(--hub-bg-soft);color:var(--hub-text-mute);line-height:1.8">
-  <i class="fa-solid fa-circle-info"></i>
-  هذه الصفحة تسجل الدفعات والسلف في السجل المالي. عند اختيار <strong>«تطبيق على RADIUS»</strong>
-  يتم تنفيذ مدة الاستحقاق عبر طبقة التطبيق الحالية، و<strong>«معاينة بدون تنفيذ»</strong> لا تغيّر حساب الشبكة.
+<div class="ff-kpis">
+  {{ hub.kpi("الرصيد الحالي", (sub.balance or 0)|money, icon="scale-balanced", variant=("red" if (sub.balance or 0) < 0 else "green"), sub=("عليه دين" if (sub.balance or 0) < 0 else "رصيد دائن")) }}
+  {{ hub.kpi("سعر الباقة الفعّال", eff_price|money, icon="tag", variant="brand", sub=("سعر مخصّص" if price_custom else "سعر العرض")) }}
+  {{ hub.kpi("الدفعات", payments|length, icon="receipt", variant="blue") }}
+  {{ hub.kpi("سلف مفتوحة", open_loans|length, icon="hand-holding-dollar", variant="amber") }}
 </div>
 
-<div class="uf-grid">
-
-  {% call hub.section("تسجيل دفعة", icon="money-bill-wave") %}
-    <form class="uf-form" method="post" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
-      <label>المبلغ
-        <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
-      </label>
-      <label>العملة
-        <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
-      </label>
-      <label>طريقة الدفع
-        <select class="hub-select" name="method">
-          <option value="cash">نقدًا</option>
-          <option value="bank">تحويل بنكي</option>
-          <option value="manual">يدوي</option>
-          <option value="other">أخرى</option>
-        </select>
-      </label>
-      <label>التقريب
-        <select class="hub-select" name="rounding_mode">
-          <option value="floor">للأسفل</option>
-          <option value="nearest">الأقرب</option>
-          <option value="ceil">للأعلى</option>
-        </select>
-      </label>
-      <label>سعر خاص
-        <input class="hub-input" name="custom_price" type="number" step="0.01" min="0">
-      </label>
-      <label>خصم
-        <input class="hub-input" name="discount_amount" type="number" step="0.01" min="0" value="0">
-      </label>
-      <label class="wide">سبب الخصم
-        <input class="hub-input" name="discount_reason" maxlength="300">
-      </label>
-      <label class="wide">ملاحظات
-        <textarea class="hub-textarea" name="notes" rows="2"></textarea>
-      </label>
-      <div class="uf-checks wide">
-        {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق على RADIUS", off_label="بدون تطبيق RADIUS") }}
-        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="معاينة بدون تنفيذ", off_label="تنفيذ فعلي") }}
-      </div>
-      <div class="wide">
-        <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-plus"></i> تسجيل الدفعة
-        </button>
-      </div>
-    </form>
-  {% endcall %}
-
-  {% call hub.section("منح سلفة", icon="hand-holding-dollar") %}
-    <form class="uf-form" method="post" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
-      <label>عدد الساعات
-        <input class="hub-input" name="hours" type="number" min="0" placeholder="مثال: 6">
-      </label>
-      <label>عدد الأيام
-        <input class="hub-input" name="days" type="number" min="0" placeholder="مثال: 1">
-      </label>
-      <label>قيمة السلفة (الدين)
-        <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0">
-      </label>
-      <label>العملة
-        <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
-      </label>
-      <div class="wide" style="font-size:12px;color:var(--hub-text-mute);line-height:1.7;margin:-2px 0 2px">
-        <i class="fa-solid fa-circle-info"></i>
-        اترك <strong>قيمة السلفة = 0</strong> لمنح <strong>سلفة وقت مجانية</strong> (مدة فقط بدون دين)؛
-        أو أدخل قيمة لتسجيلها <strong>كدين (مدين)</strong> على رصيد المشترك.
-      </div>
-      <label class="wide">سبب السلفة
-        <textarea class="hub-textarea" name="reason" rows="2"
-                  placeholder="اكتب سببًا واضحًا ليسهل الرجوع له عند المراجعة."></textarea>
-      </label>
-      <div class="uf-checks wide">
-        {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق مؤقت على RADIUS", off_label="بدون تطبيق RADIUS") }}
-        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="معاينة بدون تنفيذ", off_label="تنفيذ فعلي") }}
-      </div>
-      <div class="wide">
-        <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-clock"></i> منح السلفة
-        </button>
-      </div>
-    </form>
-  {% endcall %}
+<div class="ff-actions">
+  <button class="hub-btn hub-btn--primary" type="button" data-ff-open="payment">
+    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
+  </button>
+  <button class="hub-btn hub-btn--secondary" type="button" data-ff-open="loan">
+    <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
+  </button>
 </div>
 
 {% if payments %}
-{% call hub.section("آخر الدفعات", icon="receipt",
-                    meta=payments|length|string + " دفعة", flush=True) %}
+{% call hub.section("آخر الدفعات", icon="receipt", meta=payments|length|string + " دفعة", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>المبلغ</th>
-          <th>المدة المستحقة</th>
-          <th>الخصم</th>
-          <th>الحالة</th>
-          <th>التاريخ</th>
-        </tr>
-      </thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>المبلغ</th><th>المدة المستحقة</th><th>الخصم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
       <tbody>
         {% for p in payments %}
         <tr>
@@ -172,26 +120,14 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("آخر الدفعات", icon="receipt") %}
-    {{ hub.empty("لا توجد دفعات بعد", icon="receipt") }}
-  {% endcall %}
+  {% call hub.section("آخر الدفعات", icon="receipt") %}{{ hub.empty("لا توجد دفعات بعد", icon="receipt") }}{% endcall %}
 {% endif %}
 
 {% if loans %}
-{% call hub.section("السلف والتسويات", icon="handshake",
-                    meta=loans|length|string + " سلفة", flush=True) %}
+{% call hub.section("السلف والتسويات", icon="handshake", meta=loans|length|string + " سلفة", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>المدة</th>
-          <th>القيمة</th>
-          <th>الحالة</th>
-          <th>السبب</th>
-          <th style="width:340px">تسوية</th>
-        </tr>
-      </thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th><th style="width:340px">تسوية</th></tr></thead>
       <tbody>
         {% for loan in loans %}
         <tr>
@@ -200,22 +136,19 @@
           <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
+            {% elif loan.status == 'voided' %}{{ hub.pill("مُسامَحة", variant="grey") }}
             {% else %}{{ hub.pill("مُسوّاة", variant="green") }}{% endif %}
           </td>
           <td class="small">{{ loan.reason or '—' }}</td>
           <td>
             {% if loan.status == 'open' %}
-            <form method="post"
-                  action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
+            <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <input class="hub-input" name="amount" type="number" step="0.01" min="0"
-                     value="{{ loan.amount }}" style="width:100px">
+              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="ملاحظة" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">تسوية</button>
             </form>
-            {% else %}
-              <span class="hub-text-mute small">تمت التسوية</span>
-            {% endif %}
+            {% else %}<span class="hub-text-mute small">—</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -224,27 +157,14 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("السلف والتسويات", icon="handshake") %}
-    {{ hub.empty("لا توجد سلف بعد", icon="hand-holding-dollar") }}
-  {% endcall %}
+  {% call hub.section("السلف والتسويات", icon="handshake") %}{{ hub.empty("لا توجد سلف بعد", icon="hand-holding-dollar") }}{% endcall %}
 {% endif %}
 
 {% if ledger %}
-{% call hub.section("سجل القيود", icon="scale-balanced",
-                    meta=ledger|length|string + " قيد", flush=True) %}
+{% call hub.section("سجل القيود", icon="scale-balanced", meta=ledger|length|string + " قيد", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>النوع</th>
-          <th>الاتجاه</th>
-          <th>المبلغ</th>
-          <th>المصدر</th>
-          <th>ملاحظات</th>
-          <th>التاريخ</th>
-        </tr>
-      </thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>النوع</th><th>الاتجاه</th><th>المبلغ</th><th>المصدر</th><th>ملاحظات</th><th>التاريخ</th></tr></thead>
       <tbody>
         {% for entry in ledger %}
         <tr>
@@ -266,9 +186,204 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("سجل القيود", icon="scale-balanced") %}
-    {{ hub.empty("لا توجد قيود مالية بعد", icon="scale-balanced") }}
-  {% endcall %}
+  {% call hub.section("سجل القيود", icon="scale-balanced") %}{{ hub.empty("لا توجد قيود مالية بعد", icon="scale-balanced") }}{% endcall %}
 {% endif %}
 
+{# ───────────── floating: تسجيل دفعة ───────────── #}
+<div class="ff-modal" data-ff-modal="payment" hidden>
+  <div class="ff-dialog" role="dialog" aria-modal="true">
+    <form data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+      <div class="ff-head"><h3>تسجيل دفعة نقدية</h3><button type="button" class="ff-x" data-ff-close><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="ff-body">
+        <div class="ff-current">
+          <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
+          <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
+          <div><span>الرصيد</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+        </div>
+        <div class="ff-grid">
+          <label class="ff-field">المبلغ
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required data-ff-pay-amount>
+          </label>
+          <label class="ff-field">العملة
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly>
+          </label>
+          <label class="ff-field">طريقة الدفع
+            <select class="hub-select" name="method">
+              <option value="cash">نقدًا</option><option value="bank">تحويل بنكي</option><option value="manual">يدوي</option>
+            </select>
+          </label>
+          <label class="ff-field">ملاحظات
+            <input class="hub-input" name="notes" maxlength="300">
+          </label>
+        </div>
+        {% if open_loans %}
+        <div class="ff-loans">
+          <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة ({{ open_loans|length }}) — اختر لكل واحدة:</div>
+          {% for ln in open_loans %}
+          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.amount or 0 }}">
+            <div class="ff-loan-info">
+              <span class="ff-chip ff-chip--days"><i class="fa-solid fa-calendar-day"></i> {{ ln.duration_minutes|dur_days }}</span>
+              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> القيمة {{ (ln.amount or 0)|money }}</span>
+            </div>
+            <div class="ff-loan-acts">
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>خصم</span></label>
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="defer" checked><span>تأجيل</span></label>
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="writeoff"><span>مسامحة</span></label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <input type="hidden" name="loan_actions" data-ff-actions>
+        <input type="hidden" name="apply_to_radius" value="1">
+        <div class="ff-hint" data-ff-pay-coverage>أدخل المبلغ لعرض عدد الأيام التي يغطّيها.</div>
+        <div class="ff-msg" data-ff-pay-msg hidden></div>
+      </div>
+      <div class="ff-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-ff-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ───────────── floating: منح سلفة ───────────── #}
+<div class="ff-modal" data-ff-modal="loan" hidden>
+  <div class="ff-dialog" role="dialog" aria-modal="true">
+    <form data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+      <div class="ff-head"><h3>منح سلفة</h3><button type="button" class="ff-x" data-ff-close><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="ff-body">
+        <div class="ff-current">
+          <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
+          <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
+          <div><span>الرصيد</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+        </div>
+        <div class="ff-field wide">نوع السلفة
+          <div class="ff-seg">
+            <label><input type="radio" name="_loan_kind" value="free" checked data-ff-loan-kind>
+              <span><strong>مجانية</strong><small>منح وقت فقط بدون قيمة مالية.</small></span></label>
+            <label><input type="radio" name="_loan_kind" value="debt" data-ff-loan-kind>
+              <span><strong>تسجيل دين (مدين)</strong><small>القيمة تُحتسب تلقائيًا من سعر الباقة.</small></span></label>
+          </div>
+        </div>
+        <div class="ff-grid">
+          <label class="ff-field">عدد الأيام
+            <input class="hub-input" name="days" type="number" min="0" value="1" data-ff-loan-days>
+          </label>
+          <label class="ff-field ff-reveal" data-ff-debt-only hidden>قيمة السلفة (تلقائي)
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" readonly data-ff-loan-amount>
+          </label>
+        </div>
+        <input type="hidden" name="price_from_days" value="0" data-ff-loan-pfd>
+        <input type="hidden" name="currency" value="{{ cfg.currency }}">
+        <input type="hidden" name="apply_to_radius" value="1">
+        <label class="ff-field wide">سبب السلفة
+          <textarea class="hub-textarea" name="reason" rows="2"></textarea>
+        </label>
+        <div class="ff-hint" data-ff-loan-hint>سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.</div>
+        <div class="ff-msg" data-ff-loan-msg hidden></div>
+      </div>
+      <div class="ff-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-ff-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> منح</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const root = document;
+  const EFF_PRICE = {{ eff_price|tojson }};
+  const PLAN_MIN = {{ plan_minutes|tojson }} || 43200;
+  const IS_CUSTOM = {{ price_custom|tojson }};
+  const CUR = {{ cfg.currency|tojson }};
+
+  function money(n){ return `${(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:2})} ${CUR}`; }
+  function arDays(n){ n = Math.max(0, Math.round(n)); if(n===1) return "يوم"; if(n===2) return "يومان"; if(n>=3&&n<=10) return `${n} أيام`; return `${n} يوم`; }
+  const priceLabel = IS_CUSTOM ? "السعر المخصّص" : "سعر العرض";
+
+  // open / close modals
+  function open(key){ const m = root.querySelector(`[data-ff-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-ff-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-ff-open]").forEach(b=> b.addEventListener("click", ()=>{ open(b.dataset.ffOpen); if(b.dataset.ffOpen==="payment") payCoverage(); if(b.dataset.ffOpen==="loan") loanSync(); }));
+  root.querySelectorAll("[data-ff-close]").forEach(b=> b.addEventListener("click", closeAll));
+  root.querySelectorAll("[data-ff-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+
+  // ── payment: live coverage + loan settlement ──
+  const payModal = root.querySelector("[data-ff-modal='payment']");
+  function payCoverage(){
+    if(!payModal) return;
+    const amount = parseFloat(payModal.querySelector("[data-ff-pay-amount]")?.value || "0");
+    const rows = Array.from(payModal.querySelectorAll("[data-ff-loan-row]")).map(r=>({
+      id:parseInt(r.dataset.loanId,10), amount:parseFloat(r.dataset.loanAmount||"0"),
+      action:(r.querySelector("input[type=radio]:checked")||{}).value||"defer",
+    }));
+    const settled = rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0);
+    const timeAmount = Math.max(amount-settled,0);
+    const days = (EFF_PRICE>0 && PLAN_MIN>0) ? (timeAmount/EFF_PRICE)*(PLAN_MIN/1440) : 0;
+    const acts = rows.filter(r=>r.action!=="defer").map(r=>({loan_id:r.id, action:r.action}));
+    const field = payModal.querySelector("[data-ff-actions]"); if(field) field.value = acts.length?JSON.stringify(acts):"";
+    const cov = payModal.querySelector("[data-ff-pay-coverage]");
+    if(cov){
+      if(amount>0 && EFF_PRICE>0){
+        let msg = `إجمالي ما سيُضاف ≈ ${arDays(days)}.`;
+        if(settled>0) msg = `سيُخصم ${money(settled)} لتسوية سلف؛ والباقي ${money(timeAmount)} → ${msg}`;
+        cov.textContent = msg;
+      } else cov.textContent = "أدخل المبلغ لعرض عدد الأيام التي يغطّيها.";
+    }
+  }
+  payModal?.querySelector("[data-ff-pay-amount]")?.addEventListener("input", payCoverage);
+  payModal?.querySelectorAll("[data-ff-loan-row] input[type=radio]").forEach(r=> r.addEventListener("change", payCoverage));
+
+  // ── loan: free/debt + auto-price from days ──
+  const loanModal = root.querySelector("[data-ff-modal='loan']");
+  function loanSync(){
+    if(!loanModal) return;
+    const debt = loanModal.querySelector("[data-ff-loan-kind]:checked")?.value === "debt";
+    loanModal.querySelector("[data-ff-debt-only]").hidden = !debt;
+    loanModal.querySelector("[data-ff-loan-pfd]").value = debt ? "1" : "0";
+    const days = Math.max(0, parseInt(loanModal.querySelector("[data-ff-loan-days]")?.value || "0", 10));
+    const minutes = days*1440;
+    const amount = (debt && EFF_PRICE>0 && PLAN_MIN>0 && minutes>0) ? Math.round(EFF_PRICE*(minutes/PLAN_MIN)*100)/100 : 0;
+    const amtEl = loanModal.querySelector("[data-ff-loan-amount]"); if(amtEl) amtEl.value = amount?amount.toFixed(2):"0";
+    const hint = loanModal.querySelector("[data-ff-loan-hint]");
+    if(hint){
+      if(!debt) hint.textContent = "سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.";
+      else if(amount>0) hint.textContent = `سيتم تسجيل دين ${arDays(days)} بقيمة ${money(amount)} (حسب ${priceLabel} ${money(EFF_PRICE)}).`;
+      else hint.textContent = "حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا.";
+    }
+  }
+  loanModal?.querySelectorAll("[data-ff-loan-kind]").forEach(r=> r.addEventListener("change", loanSync));
+  loanModal?.querySelector("[data-ff-loan-days]")?.addEventListener("input", loanSync);
+
+  // ── AJAX submit: stay on page on success, inline error on fail ──
+  function wire(form, msgSel){
+    if(!form) return;
+    form.addEventListener("submit", e=>{
+      e.preventDefault();
+      const msgEl = form.querySelector(msgSel);
+      const btn = form.querySelector("button[type=submit]");
+      if(msgEl){ msgEl.hidden=true; msgEl.textContent=""; msgEl.className="ff-msg"; }
+      if(btn) btn.disabled=true;
+      fetch(form.action, { method:"POST", credentials:"same-origin", headers:{ "X-Requested-With":"fetch" }, body:new FormData(form) })
+        .then(r=> r.json().then(j=>({ok:r.ok,j})).catch(()=>({ok:r.ok,j:{}})))
+        .then(({ok,j})=>{
+          if(ok && j && j.ok){
+            if(msgEl){ msgEl.hidden=false; msgEl.textContent = j.message || "تمّ بنجاح ✅"; msgEl.classList.add("is-ok"); }
+            setTimeout(()=> window.location.reload(), 800);
+          } else {
+            if(msgEl){ msgEl.hidden=false; msgEl.textContent = (j && j.error) || "تعذّر تنفيذ العملية."; msgEl.classList.add("is-err"); }
+            if(btn) btn.disabled=false;
+          }
+        })
+        .catch(()=>{ if(msgEl){ msgEl.hidden=false; msgEl.textContent="تعذّر الاتصال بالخادم."; msgEl.classList.add("is-err"); } if(btn) btn.disabled=false; });
+    });
+  }
+  wire(root.querySelector("[data-ff-form='payment']"), "[data-ff-pay-msg]");
+  wire(root.querySelector("[data-ff-form='loan']"), "[data-ff-loan-msg]");
+})();
+</script>
 {% endblock %}
