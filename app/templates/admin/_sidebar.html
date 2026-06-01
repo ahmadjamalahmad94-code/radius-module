@@ -109,6 +109,7 @@
 {# Accounting / Payments #}
 {%- set m_invoices    = '/invoices' in path -%}
 {%- set m_vouchers    = '/vouchers' in path -%}
+{%- set m_billing_hub = ('/finance/billing' in path) or m_invoices or m_vouchers -%}
 {%- set m_ledger      = '/finance/ledger' in path -%}
 {%- set m_finance_rep = '/finance/reports' in path -%}
 {%- set m_payment_settings = (path == url_for('radius.payment_collection_settings')) -%}
@@ -213,7 +214,7 @@
                                 or m_audit_log or m_jobs
                                 or m_problems or m_npc -%}
 {%- set sec_billing_active  = m_business_finance or m_business_wallets or m_business_revenue or m_business_debts
-                                or m_business_loans or m_invoices or m_vouchers or m_ledger or m_payment_collection
+                                or m_business_loans or m_billing_hub or m_ledger or m_payment_collection
                                 or m_company_inventory -%}
 {%- set sec_engagement_active = m_communications or m_communications_templates or m_communications_send
                                   or m_communications_campaigns or m_communications_deliveries or m_communications_audience
@@ -415,8 +416,7 @@
         {{ sub_item('radius.business_finance_debts', 'الديون', m_business_debts) }}
         {{ sub_item('radius.business_finance_loans', 'القروض', m_business_loans) }}
         {{ sub_item('radius.finance_ledger', 'دفتر القيود', m_ledger) }}
-        {{ sub_item('radius.inv_list',        'الفواتير',         m_invoices) }}
-        {{ sub_item('radius.vch_list',        'الكوبونات',        m_vouchers) }}
+        {{ sub_item('radius.billing_hub',     'الفواتير والكوبونات', m_billing_hub) }}
         {{ sub_item('radius.payment_collection_settings', 'إعدادات التحصيل', m_payment_settings) }}
         {{ sub_item('radius.payment_collection_requests', 'طلبات الدفع', m_payment_requests) }}
         {{ sub_item('radius.payment_collection_review_queue_web', 'مراجعة الدفعات', m_payment_review) }}
