@@ -227,7 +227,12 @@ class AccountingService:
         settled_deduction = _to_float(
             body.get("loan_settled_total") or 0, field="loan_settled_total", minimum=0
         )
-        time_amount = max(amount - settled_deduction, 0.0)
+        # دين الرصيد السالب الذي اختار الموظف تسويته من هذه الدفعة لا يشتري مدة.
+        # المسار يسوي الرصيد ويسجل قيدًا موازنًا لاحقًا؛ هنا نخصمه فقط من أساس الوقت.
+        balance_settled = _to_float(
+            body.get("balance_settled_total") or 0, field="balance_settled_total", minimum=0
+        )
+        time_amount = max(amount - settled_deduction - balance_settled, 0.0)
         earned_minutes = calculate_proportional_minutes(
             amount_paid=time_amount,
             plan_price=effective_price,
@@ -255,6 +260,7 @@ class AccountingService:
             metadata={
                 "base_minutes": base_minutes,
                 "loan_settled_total": settled_deduction,
+                "balance_settled_total": balance_settled,
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )

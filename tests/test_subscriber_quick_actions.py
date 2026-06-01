@@ -354,6 +354,86 @@ def test_balance_add_route_settles_open_loan_and_credits_net(client, app):
         assert settled_loan["status"] == "settled"
 
 
+def test_apply_payment_to_balance_clears_debt_capped_at_due(app):
+    """apply_payment_to_balance credits a NEGATIVE balance toward zero, never past
+    it, and is a no-op once the debt is gone."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        plan = _seed_plan("Debt Settle Plan", price=100)
+        _seed_subscriber(
+            "debt_settle_case",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE subscribers SET balance = -14.53 WHERE tenant_id=1 AND username='debt_settle_case'"
+            )
+
+        svc = get_users_service()
+        applied = svc.apply_payment_to_balance(
+            actor="tester", username="debt_settle_case", amount=20.0
+        )
+        assert applied == 14.53  # capped to the debt, not the full 20
+        assert round(subscribers_repo.get_subscriber(1, "debt_settle_case").balance, 2) == 0.0
+        # debt cleared → further attempts settle nothing
+        assert svc.apply_payment_to_balance(
+            actor="tester", username="debt_settle_case", amount=5.0
+        ) == 0.0
+
+
+def test_payment_route_settles_negative_balance_and_reduces_time(client, app):
+    """End-to-end: a payment with settle_balance=1 diverts part of the cash to clear
+    the negative-balance debt (رصيد سالب) and only the remainder buys time."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+
+        plan = _seed_plan("Pay Debt Plan", price=100)  # 30 days @ 100
+        _seed_subscriber(
+            "pay_debt_case",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE subscribers SET balance = -30 WHERE tenant_id=1 AND username='pay_debt_case'"
+            )
+
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/pay_debt_case/payments",
+        data={
+            "_csrf_token": "quick-csrf",
+            "amount": "50",
+            "currency": "JOD",
+            "method": "cash",
+            "settle_balance": "1",
+        },
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+
+    with app.app_context():
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+
+        updated = subscribers_repo.get_subscriber(1, "pay_debt_case")
+        assert round(updated.balance, 2) == 0.0  # 30 of the 50 cleared the debt
+
+        # full 50 still recorded as a payment (income), plus a netting debt_settlement
+        pay = db().execute(
+            "SELECT amount FROM accounting_ledger_entries WHERE tenant_id=1 AND username='pay_debt_case' AND entry_type='payment'"
+        ).fetchone()
+        assert pay is not None and float(pay["amount"]) == 50.0
+        settle = db().execute(
+            "SELECT amount FROM accounting_ledger_entries WHERE tenant_id=1 AND username='pay_debt_case' AND entry_type='debt_settlement'"
+        ).fetchone()
+        assert settle is not None and round(float(settle["amount"]), 2) == 30.0
+
+
 def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     with app.app_context():
         plan = _seed_plan("Quick Plan", price=120)

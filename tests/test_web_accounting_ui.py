@@ -198,6 +198,26 @@ def test_subscriber_finance_page_renders_floating_modals(client):
     assert "const PLAN_MIN = 43200" in html
 
 
+def test_finance_payment_modal_offers_to_settle_negative_balance(client, app):
+    """When the subscriber owes (balance < 0), the payment modal exposes a
+    «سدِّد الدين من هذه الدفعة» toggle and injects the debt into the JS engine."""
+    _web_login(client)
+    sub = _subscriber(client)
+    with app.app_context():
+        from app.radius.db.connection import transaction
+
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE subscribers SET balance = -14.53 WHERE tenant_id = 1 AND username = ?",
+                (sub["username"],),
+            )
+    html = client.get(f"/admin/radius/users/{sub['username']}/finance").get_data(as_text=True)
+    assert 'name="settle_balance"' in html
+    assert "data-ff-settle-balance" in html
+    assert "عليه دين" in html
+    assert "const BAL = -14.53" in html
+
+
 def test_financial_reports_page_reads_ledger_reports(client):
     _web_login(client)
     sub = _subscriber(client)
