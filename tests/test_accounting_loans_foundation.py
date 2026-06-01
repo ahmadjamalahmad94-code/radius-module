@@ -284,3 +284,31 @@ def test_loan_price_from_days_derives_amount_from_effective_price(client):
     assert loan["duration_minutes"] == 3 * 24 * 60
     # 150 × (4320 / 43200) = 15.00 — derived from the effective price, not typed
     assert abs(float(loan["amount"]) - 15.0) < 0.001
+
+
+def test_writeoff_loan_voids_and_posts_reversing_credit(client):
+    subscriber = _create_subscriber(client)
+    loan = client.post(
+        "/api/v1/loans",
+        json={"username": subscriber["username"], "days": 2, "price_from_days": True, "reason": "wo"},
+        headers=AUTH,
+    ).get_json()["data"]["loan"]
+
+    from app.radius.db.connection import db
+    from app.radius.db.repos import accounting_repo
+
+    full = accounting_repo.get_loan(1, loan["id"])
+    out = accounting_repo.writeoff_loan(
+        tenant_id=1, loan=full, currency=full["currency"],
+        created_by="tester", notes="forgive",
+    )
+    assert out["status"] == "voided"
+    # a reversing CREDIT ledger entry nets the original loan debit
+    wo = db().execute(
+        "SELECT * FROM accounting_ledger_entries WHERE tenant_id=1 "
+        "AND entry_type='writeoff' AND related_id=?",
+        (loan["id"],),
+    ).fetchone()
+    assert wo is not None
+    assert wo["direction"] == "credit"
+    assert abs(float(wo["amount"]) - float(full["amount"])) < 0.001

@@ -428,6 +428,69 @@ class AccountingService:
         )
         return settlement
 
+    def writeoff_loan(self, loan_id: int, *, actor: str, notes: str = "") -> dict:
+        loan = self.get_loan(loan_id)
+        if loan["status"] != "open":
+            raise RadiusValidationError("loan is not open")
+        return accounting_repo.writeoff_loan(
+            tenant_id=self.tenant_id,
+            loan=loan,
+            currency=str(loan.get("currency") or default_currency()).upper()[:8],
+            created_by=actor,
+            notes=(notes or "مسامحة سلفة")[:500],
+        )
+
+    def open_loans_for(self, *, subscriber_id: int) -> list[dict]:
+        """Open loans for a subscriber, each annotated with its day-equivalent
+        (duration_minutes / 1440) so the UI can show «٣ أيام / ٩ ₪»."""
+        loans = accounting_repo.list_loans(
+            self.tenant_id, status="open", subscriber_id=subscriber_id, limit=100,
+        )
+        for ln in loans:
+            ln["days"] = round(int(ln.get("duration_minutes") or 0) / 1440.0, 2)
+        return loans
+
+    def resolve_loan_actions(self, actions: list[dict], *, actor: str) -> dict:
+        """Apply per-loan operator choices from the payment/balance modal.
+
+        Each action = {loan_id, action: 'settle'|'writeoff'} ('defer'/unknown =
+        left open). Returns {settled_total, settled_ids, writeoff_ids} so the
+        caller can DEDUCT settled_total from an incoming payment's time-basis.
+        """
+        settled_total = 0.0
+        settled_ids: list[int] = []
+        writeoff_ids: list[int] = []
+        for action in actions or []:
+            try:
+                loan_id = int(action.get("loan_id"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            kind = str(action.get("action") or "").strip()
+            loan = accounting_repo.get_loan(self.tenant_id, loan_id)
+            if not loan or loan.get("status") != "open":
+                continue
+            currency = str(loan.get("currency") or default_currency()).upper()[:8]
+            if kind == "settle":
+                amt = float(loan.get("amount") or 0)
+                accounting_repo.settle_loan(
+                    tenant_id=self.tenant_id, loan=loan, amount=amt,
+                    currency=currency, method="payment", created_by=actor,
+                    notes="تسوية مع دفعة", metadata={"settlement_type": "with_payment"},
+                )
+                settled_total += amt
+                settled_ids.append(loan_id)
+            elif kind == "writeoff":
+                accounting_repo.writeoff_loan(
+                    tenant_id=self.tenant_id, loan=loan, currency=currency,
+                    created_by=actor, notes="مسامحة سلفة",
+                )
+                writeoff_ids.append(loan_id)
+        return {
+            "settled_total": round(settled_total, 2),
+            "settled_ids": settled_ids,
+            "writeoff_ids": writeoff_ids,
+        }
+
     def reports(self, *, report_type: str) -> list[dict]:
         if report_type in {"daily", "monthly", "yearly"}:
             return accounting_repo.sales_summary(self.tenant_id, grain=report_type)
