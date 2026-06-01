@@ -45,7 +45,7 @@ def _page_args(default_limit: int = 200) -> tuple[int, int]:
         limit = min(int(request.args.get("limit") or default_limit), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        raise RadiusValidationError("limit/offset must be int")
+        raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
     return limit, offset
 
 
@@ -105,9 +105,9 @@ def distributors_assign_batch(distributor_id: int):
     try:
         batch_id = int(body.get("batch_id") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "batch_id must be int", status=422)
+        return fail("validation_error", "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.", status=422)
     if batch_id <= 0:
-        return fail("validation_error", "batch_id is required", status=422)
+        return fail("validation_error", "اختر حزمة الكروت أولًا.", status=422)
     try:
         assignment = _svc().assign_batch(
             tenant_id=_tid(),

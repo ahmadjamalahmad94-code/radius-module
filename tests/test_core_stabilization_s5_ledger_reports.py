@@ -65,6 +65,16 @@ def test_financial_report_snapshots_freeze_current_report(client):
     assert fetched.get_json()["data"]["snapshot"]["id"] == snapshot["id"]
 
 
+def test_report_snapshot_validation_messages_are_arabic(client):
+    missing_type = client.post("/api/v1/reports/snapshots", json={}, headers=AUTH)
+    assert missing_type.status_code == 422
+    assert missing_type.get_json()["error"]["message"] == "نوع التقرير مطلوب."
+
+    bad_list = client.get("/api/v1/reports/snapshots?limit=bad", headers=AUTH)
+    assert bad_list.status_code == 422
+    assert bad_list.get_json()["error"]["message"] == "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
+
+
 def test_financial_report_csv_export_is_real(client):
     item = subscriber(client)
     client.post(

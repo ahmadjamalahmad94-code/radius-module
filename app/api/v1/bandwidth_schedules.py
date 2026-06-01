@@ -47,7 +47,7 @@ def bandwidth_schedules_list():
         limit = min(int(request.args.get("limit") or 200), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "plan_id/card_batch_id/limit/offset must be int", status=422)
+        return fail("validation_error", "معرّفات الخطة والحزمة وقيم الترقيم يجب أن تكون أرقامًا صحيحة.", status=422)
     items = _svc().list_bandwidth_schedules(
         tenant_id=_tid(),
         plan_id=plan_id,
@@ -82,7 +82,7 @@ def bandwidth_schedules_effective():
         card_batch_raw = request.args.get("card_batch_id")
         card_batch_id = int(card_batch_raw) if card_batch_raw else None
     except ValueError:
-        return fail("validation_error", "plan_id/card_batch_id must be int", status=422)
+        return fail("validation_error", "معرّف الخطة ومعرّف حزمة الكروت يجب أن يكونا أرقامًا صحيحة.", status=422)
     result = _svc().resolve_effective_bandwidth_schedule(
         tenant_id=_tid(),
         subscriber_username=request.args.get("subscriber_username")

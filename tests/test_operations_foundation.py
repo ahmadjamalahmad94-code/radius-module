@@ -181,6 +181,36 @@ def test_bandwidth_schedule_validation_and_planned_apply(client):
     assert invalid.status_code == 422
 
 
+def test_operations_api_validation_messages_are_arabic(client):
+    bad_schedule_list = client.get("/api/v1/bandwidth-schedules?limit=bad", headers=_auth(client))
+    assert bad_schedule_list.status_code == 422
+    assert bad_schedule_list.get_json()["error"]["message"] == "معرّفات الخطة والحزمة وقيم الترقيم يجب أن تكون أرقامًا صحيحة."
+
+    bad_effective = client.get("/api/v1/bandwidth-schedules/effective?plan_id=bad", headers=_auth(client))
+    assert bad_effective.status_code == 422
+    assert bad_effective.get_json()["error"]["message"] == "معرّف الخطة ومعرّف حزمة الكروت يجب أن يكونا أرقامًا صحيحة."
+
+    bad_distributors_list = client.get("/api/v1/distributors?limit=bad", headers=_auth(client))
+    assert bad_distributors_list.status_code == 422
+    assert bad_distributors_list.get_json()["error"]["message"] == "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
+
+    bad_batch = client.post(
+        "/api/v1/distributors/1/assign-batch",
+        json={"batch_id": "bad"},
+        headers=_auth(client),
+    )
+    assert bad_batch.status_code == 422
+    assert bad_batch.get_json()["error"]["message"] == "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا."
+
+    missing_batch = client.post(
+        "/api/v1/distributors/1/assign-batch",
+        json={},
+        headers=_auth(client),
+    )
+    assert missing_batch.status_code == 422
+    assert missing_batch.get_json()["error"]["message"] == "اختر حزمة الكروت أولًا."
+
+
 def test_print_template_persistence_and_json_preview(client):
     created = client.post(
         "/api/v1/print-templates",

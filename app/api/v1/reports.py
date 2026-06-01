@@ -140,7 +140,7 @@ def _page_args(default_limit: int = 50) -> tuple[int, int]:
         limit = min(max(int(request.args.get("limit") or default_limit), 1), 200)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        raise RadiusValidationError("limit/offset must be int")
+        raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
     return limit, offset
 
 
@@ -161,7 +161,7 @@ def reports_snapshots_create():
     body = request.get_json(silent=True) or {}
     report_type = str(body.get("report_type") or "").strip()
     if not report_type:
-        return fail("validation_error", "report_type is required", status=422)
+        return fail("validation_error", "نوع التقرير مطلوب.", status=422)
     try:
         snapshot = service_from_context().create_report_snapshot(
             report_type=report_type,
