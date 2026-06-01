@@ -27,10 +27,10 @@ _PERM_LABELS_AR: dict[str, str] = {
     "mikrotik.restore": "استعادة",
     "mikrotik.audit.view": "سجل العمليات",
     "mikrotik.admin": "تحكم كامل",
-    "site_exit.view": "عرض VPS Exit",
-    "site_exit.manage": "إدارة VPS Exit",
-    "site_exit.preview": "معاينة VPS Exit",
-    "site_exit.apply": "تطبيق VPS Exit",
+    "site_exit.view": "عرض خروج الإنترنت عبر VPS",
+    "site_exit.manage": "إدارة خروج الإنترنت عبر VPS",
+    "site_exit.preview": "معاينة خروج الإنترنت عبر VPS",
+    "site_exit.apply": "تطبيق خروج الإنترنت عبر VPS",
     "site_exit.override_backup_warning": "تجاوز تحذير النسخ",
     "site_exit.enable_risky_groups": "تفعيل مجموعات خطرة",
     "npc.remote_access.view": "عرض الوصول",
@@ -81,7 +81,7 @@ _PERM_GROUPS = (
     ),
     (
         "exit",
-        "VPS Exit",
+        "خروج الإنترنت عبر VPS",
         "route",
         "تحويل مواقع مختارة عبر الخادم",
         (

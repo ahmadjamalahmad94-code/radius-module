@@ -72,7 +72,7 @@
 {% block content %}
 {{ hub.hero(
   "الإشعارات الحدثية",
-  subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على SMS / واتساب / Telegram. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
+  subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
   icon="bolt",
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
 ) }}
@@ -93,8 +93,8 @@
         (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة.
         قنوات SMS وواتساب تُضبط من
         <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>،
-        وقناة Telegram من
-        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات Telegram</a>،
+        وقناة تلجرام من
+        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات تلجرام</a>،
         وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل</a>.
       </div>
     </div>
@@ -131,7 +131,7 @@
               {%- if ch in ('sms','whatsapp') and not (channels.get(ch) and channels[ch].active) %}
                 <span class="warn" title="القناة غير مهيأة بعد">(غير مهيأة)</span>
               {%- elif ch == 'telegram' and not telegram_ready %}
-                <span class="warn" title="Telegram غير مهيأ بعد">(غير مهيأة)</span>
+                <span class="warn" title="تلجرام غير مهيأ بعد">(غير مهيأة)</span>
               {%- endif -%}
             </label>
           {% endfor %}

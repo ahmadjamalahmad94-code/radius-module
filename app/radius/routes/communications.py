@@ -592,7 +592,7 @@ _QUOTA_CH_LABELS = {"sms": "الرسائل القصيرة", "whatsapp": "وات�
 NOTIF_CHANNEL_LABELS = {
     "sms": ("SMS", "comment-sms"),
     "whatsapp": ("واتساب", "whatsapp"),
-    "telegram": ("Telegram", "telegram"),
+    "telegram": ("تلجرام", "telegram"),
 }
 
 

@@ -435,7 +435,7 @@ class AddedServicesPlanner:
             "plan_status": "not_supported_yet",
             "supported": False,
             "script_preview": "",
-            "warnings": ["هذه الخدمة تحتاج تفعيلًا لاحقًا ولا يوجد مخطط آمن لها الآن."],
+            "warnings": ["هذه الخدمة تحتاج تفعيلًا أو مخططًا آمنًا قبل التنفيذ."],
             "validation_commands": [],
             "rollback_notes": "لا يوجد rollback لأن الخدمة غير مدعومة في هذا المسار.",
             "diagnostics": [

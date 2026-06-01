@@ -568,7 +568,7 @@ def _hotspot_summary(v: ValidatedHotspot) -> list[str]:
         items.append(f"User profile rate-limit الافتراضي: {v.rate_limit}.")
     items.append(
         "كل أمر يحمل comment="
-        f"{HOTSPOT_COMMENT} لتسهيل التراجع لاحقًا."
+        f"{HOTSPOT_COMMENT} لتسهيل التراجع عند الحاجة."
     )
     return items
 

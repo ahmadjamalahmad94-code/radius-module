@@ -347,7 +347,7 @@ class InternetUplinkScriptPlanner:
             lines=lines,
             validation_commands=validation_commands,
             warnings=[
-                "إذا كانت الشبكة تعطي DNS غير موثوق، عطّل use_peer_dns وحدد DNS يدويًا لاحقًا.",
+                "إذا كانت الشبكة تعطي DNS غير موثوق، عطّل use_peer_dns وحدد DNS يدويًا عند الحاجة.",
             ],
             generated_objects=[{"type": "ip.dhcp-client", "name": interface, "tag": tag}],
             masked_sensitive_values={},

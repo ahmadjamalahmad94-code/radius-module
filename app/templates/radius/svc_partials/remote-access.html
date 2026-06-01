@@ -534,7 +534,7 @@
     }
     rows.push(`<tr><td>معرّف الإذن</td><td><code>${grantToken}</code>
       <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
-        احفظه لو أردت إلغاء هذا الوصول تحديداً لاحقاً
+        احفظه لو أردت إلغاء هذا الوصول تحديداً عند الحاجة
       </small></td></tr>`);
     tbody.innerHTML = rows.join("");
     card.hidden = false;
@@ -559,9 +559,9 @@
           if (creds.password) lines.push(`Password: ${creds.password}`);
         }
         if (conn.vpn_address) lines.push(`VPN IP: ${conn.vpn_address}`);
-        if (conn.ttl_hours) lines.push(`Expires: ${conn.ttl_hours}h`);
-        else lines.push(`Expires: permanent`);
-        lines.push(`Grant ID: ${grantToken}`);
+        if (conn.ttl_hours) lines.push(`ينتهي بعد: ${conn.ttl_hours} ساعة`);
+        else lines.push(`المدة: دائمة`);
+        lines.push(`معرّف الإذن: ${grantToken}`);
         return lines.join("\n");
       });
     }

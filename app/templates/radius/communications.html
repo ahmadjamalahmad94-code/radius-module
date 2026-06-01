@@ -8,7 +8,7 @@
 
 {# ── tiny Arabic helpers ── #}
 {% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي (API)','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
   {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
@@ -224,7 +224,7 @@
     <div class="oc-stat {{ 'on' if status.telegram.connected else 'dead' }}" data-testid="oc-stat-telegram">
       <div class="oc-stat-top">
         <span class="oc-stat-ic tg"><i class="fa-brands fa-telegram"></i></span>
-        <div class="oc-stat-name">تنبيهات الشبكة<small>عبر Telegram</small></div>
+        <div class="oc-stat-name">تنبيهات الشبكة<small>عبر تلجرام</small></div>
         {% if status.telegram.connected %}<span class="oc-pill on"><span class="dot"></span> متصل</span>
         {% else %}<span class="oc-pill dead"><span class="dot"></span> غير متصل</span>{% endif %}
       </div>
@@ -232,7 +232,7 @@
         {% if status.telegram.connected %}
           <span class="oc-tag">جاهز لإرسال تنبيهات الراوترات والأجهزة</span>
         {% else %}
-          <a class="oc-tag" href="{{ url_for('radius.network_telegram_settings') }}">اربط بوت Telegram لتنبيهات الشبكة</a>
+          <a class="oc-tag" href="{{ url_for('radius.network_telegram_settings') }}">اربط بوت تلجرام لتنبيهات الشبكة</a>
         {% endif %}
       </div>
     </div>

@@ -709,21 +709,21 @@
                 </button>
                 <button class="pr-engine-option{% if active_render_engine == 'en_horizontal' %} is-selected{% endif %}" type="button" data-engine-option="en_horizontal">
                   <i class="pr-engine-mini"></i>
-                  <span>English H</span>
-                  <em>LTR / wide</em>
+                  <span>إنجليزي أفقي</span>
+                  <em>يسار إلى يمين / عريض</em>
                 </button>
                 <button class="pr-engine-option{% if active_render_engine == 'en_vertical' %} is-selected{% endif %}" type="button" data-engine-option="en_vertical">
                   <i class="pr-engine-mini is-vertical"></i>
-                  <span>English V</span>
-                  <em>LTR / tall</em>
+                  <span>إنجليزي عمودي</span>
+                  <em>يسار إلى يمين / طويل</em>
                 </button>
               </div>
               <label class="pr-field pr-engine-select-field">محرك التصميم المحكم
                 <select class="hub-select" name="render_engine" data-render-engine>
                   <option value="ar_horizontal" {% if active_render_engine == 'ar_horizontal' %}selected{% endif %}>عربي أفقي</option>
                   <option value="ar_vertical" {% if active_render_engine == 'ar_vertical' %}selected{% endif %}>عربي عمودي</option>
-                  <option value="en_horizontal" {% if active_render_engine == 'en_horizontal' %}selected{% endif %}>English Horizontal</option>
-                  <option value="en_vertical" {% if active_render_engine == 'en_vertical' %}selected{% endif %}>English Vertical</option>
+                  <option value="en_horizontal" {% if active_render_engine == 'en_horizontal' %}selected{% endif %}>إنجليزي أفقي</option>
+                  <option value="en_vertical" {% if active_render_engine == 'en_vertical' %}selected{% endif %}>إنجليزي عمودي</option>
                 </select>
               </label>
               <small>هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة كاملًا، والإنجليزي يبقى يسار إلى يمين.</small>
@@ -863,7 +863,7 @@
           <div class="pr-pane" data-pr-pane="content">
             <div class="pr-grid2">
               <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
-              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="{{ fl.card_title or 'Internet Card' }}" data-preview="title"></label>
+              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="{{ fl.card_title or 'بطاقة إنترنت' }}" data-preview="title"></label>
               <label class="pr-field">عنوان Hotspot/DNS<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
               <label class="pr-field">السعر<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: {{ cfg.currency }} 1.00" data-preview="price"></label>
               <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
@@ -879,16 +879,16 @@
               </label>
               <label class="pr-field">تسميات اليوزر والباس
                 <select class="hub-select" name="credential_label_language">
-                  <option value="english" {% if (fl.credential_label_language or 'english') == 'english' %}selected{% endif %}>USER / PASS</option>
+                  <option value="english" {% if (fl.credential_label_language or 'english') == 'english' %}selected{% endif %}>اسم المستخدم / كلمة المرور</option>
                   <option value="arabic" {% if fl.credential_label_language == 'arabic' %}selected{% endif %}>اسم المستخدم / كلمة المرور</option>
                 </select>
               </label>
             </div>
             <label class="pr-field">نص أسفل البطاقة
-              <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'Keep login data until expiry' }}" data-preview="footer">
+              <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية' }}" data-preview="footer">
             </label>
             <label class="pr-field">تعليمات الاستخدام
-              <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or 'Use the username, password, or QR code to log in.' }}</textarea>
+              <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.' }}</textarea>
             </label>
             <div class="pr-checks">
               {% for key,label,checked in [
@@ -1154,14 +1154,14 @@
     },
     english: {
       brand_name: 'HobeRadius',
-      card_title: 'Internet Card',
-      footer_text: 'Keep login data until expiry',
-      instructions_text: 'Use the username, password, or QR code to log in.',
+      card_title: 'بطاقة إنترنت',
+      footer_text: 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
+      instructions_text: 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.',
     },
   };
   const defaultTextValues = {
     brand_name: ['HobeRadius', 'HobeRadius Fiber', 'هوب راديوس', 'هوب راديوس فايبر'],
-    card_title: ['Internet Card', 'Hotspot Voucher', 'Premium Card', 'Access Card', 'WiFi Access', 'Speed Card', 'Smart WiFi Pass', 'Fiber Access', 'Golden Voucher', 'Access Token', 'بطاقة إنترنت'],
+    card_title: ['Internet Card', 'Hotspot Voucher', 'Premium Card', 'Access Card', 'WiFi Access', 'Speed Card', 'Smart WiFi Pass', 'Fiber Access', 'Golden Voucher', 'Access Token', 'بطاقة إنترنت', 'رمز دخول'],
     footer_text: [
       'Keep login data until expiry',
       'Technical support is available at the sales point',
@@ -1174,6 +1174,15 @@
       'Keep this card until the subscription expires',
       'Secure access token for hotspot login',
       'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
+      'الدعم الفني متوفر من نقطة البيع',
+      'سرعة ثابتة وتجربة أفضل',
+      'استخدم اسم المستخدم وكلمة المرور مرة واحدة',
+      'امسح رمز QR أو أدخل البيانات يدويًا',
+      'سلّم هذه البطاقة للعميل بعد الدفع',
+      'امسح الرمز واتصل واستمتع بخدمة مستقرة',
+      'بطاقة دخول بسرعة عالية',
+      'احتفظ بهذه البطاقة حتى انتهاء الاشتراك',
+      'رمز دخول آمن لبوابة الهوتسبوت',
     ],
     instructions_text: ['Use the username, password, or QR code to log in.', 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.'],
   };

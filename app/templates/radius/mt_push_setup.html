@@ -130,7 +130,7 @@
    get it from. #}
 <div class="pushp-card" style="border-color:#A593F2;background:linear-gradient(180deg,#fff,#F4F1FE)">
   <h3 style="color:#5B4BD6">
-    <i class="fa-solid fa-key"></i> من أين تجلب الـ Token؟
+    <i class="fa-solid fa-key"></i> من أين تجلب رمز الربط؟
   </h3>
   <ol style="margin:8px 0 0;padding-inline-start:22px;font-size:14px;line-height:1.9;color:#1F2937">
     <li>
@@ -138,30 +138,30 @@
       <a href="{{ url_for('radius.tok_list') }}"
          style="font-weight:800;color:#5B4BD6;text-decoration:underline"
          target="_blank" rel="noopener">
-        إدارة API Tokens
+        إدارة رموز الربط
       </a>
       (تفتح في تبويب جديد)
     </li>
-    <li>اضغط <strong>«إنشاء توكن جديد»</strong> وسمّيه <code>mikrotik-push</code> (أو أي اسم).</li>
+    <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّيه <code>mikrotik-push</code> (أو أي اسم).</li>
     <li>
       بعد الإنشاء بيظهر الـ token كامل <strong>مرة واحدة فقط</strong>
       في بنر أصفر — انسخه فوراً.
     </li>
-    <li>ارجع لهذه الصفحة، الصق الـ token في حقل «API Token» تحت.</li>
+    <li>ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.</li>
   </ol>
   <p style="margin:10px 0 0;padding:8px 12px;background:#fef3c7;border:1px solid #fcd34d;
             border-radius:6px;font-size:12.5px;color:#92400e">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <strong>تنبيه:</strong> لأمان النظام نحفظ في قاعدة البيانات
     <em>hash</em> من الـ token فقط، فالقيمة الأصلية لا تظهر مرة ثانية.
-    لو ضاع منك أنشئ توكن جديد واستبدله في السكربت.
+    لو ضاع منك أنشئ رمزًا جديدًا واستبدله في السكربت.
   </p>
 </div>
 
 {% if not tokens %}
 <div class="pushp-warn">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  لا يوجد عندك أي توكن بعد. اضغط الرابط بالأعلى لإنشاء واحد.
+  لا يوجد عندك أي رمز بعد. اضغط الرابط بالأعلى لإنشاء واحد.
 </div>
 {% else %}
 
@@ -172,15 +172,15 @@
     <input type="text" id="pushp-url" value="{{ base_url }}" dir="ltr">
   </div>
   <div class="pushp-config-row">
-    <label>API Token</label>
+    <label>رمز الربط</label>
     <input type="text" id="pushp-token" value="" autocomplete="off"
-           placeholder="الصق قيمة الـ token من شاشة إدارة Tokens">
+           placeholder="الصق قيمة رمز الربط من شاشة إدارة الرموز">
   </div>
   <p style="font-size:12.5px;color:#64748B;margin:4px 0 0">
-    لديك حالياً <strong>{{ tokens|length }}</strong> توكن مفعّل. اسم أحدها:
+    لديك حالياً <strong>{{ tokens|length }}</strong> رمز مفعّل. اسم أحدها:
     <strong>{{ suggested_token_name or '—' }}</strong>.
     <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:#5B4BD6">
-      إدارة Tokens →
+      إدارة الرموز →
     </a>
   </p>
 </div>

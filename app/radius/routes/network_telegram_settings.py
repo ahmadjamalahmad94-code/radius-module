@@ -75,7 +75,7 @@ def network_telegram_save():
         thread_id=thread_id,
     )
     if enabled and bot_token and chat_id:
-        flash("حُفظت إعدادات Telegram. التنبيهات مفعّلة.", "success")
+        flash("حُفظت إعدادات تلجرام. التنبيهات مفعّلة.", "success")
     elif enabled:
         flash(
             "حُفظت الإعدادات لكن التنبيهات لن تعمل — أكمل bot token و chat id.",
@@ -92,12 +92,12 @@ def network_telegram_test():
     tenant_id = _tid()
     test_text = (
         "✅ <b>اختبار التنبيهات</b>\n"
-        "تم إرسال هذه الرسالة من إعدادات Telegram في HobeRadius.\n"
+        "تم إرسال هذه الرسالة من إعدادات تلجرام في HobeRadius.\n"
         "إذا تستلمها — إعداداتك صحيحة وستصلك التنبيهات الفعلية عند انقطاع جهاز."
     )
     ok, err = telegram_notifier.send_to_tenant(tenant_id, test_text)
     if ok:
-        flash("✅ نجح الإرسال — افحص محادثة Telegram.", "success")
+        flash("✅ نجح الإرسال — افحص محادثة تلجرام.", "success")
     elif err:
         flash(f"فشل الإرسال: {err}", "danger")
     else:

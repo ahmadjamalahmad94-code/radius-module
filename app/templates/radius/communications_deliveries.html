@@ -6,7 +6,7 @@
 {% block page_title %}سجل الإرسال{% endblock %}
 {% block page_sub %}<span class="sub">حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.</span>{% endblock %}
 
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
   {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}

@@ -9,10 +9,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}توكنات الواجهة البرمجية{% endblock %}
+{% block title %}رموز الواجهة البرمجية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
-{% block page_title %}توكنات الواجهة البرمجية{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} توكن</span>{% endblock %}
+{% block page_title %}رموز الواجهة البرمجية{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} رمز</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -166,8 +166,8 @@
       <div class="tk-hero-text">
         <span class="tk-hero-icon"><i class="fa-solid fa-key"></i></span>
         <div>
-          <h1 class="tk-hero-title">توكنات الواجهة البرمجية</h1>
-          <div class="tk-hero-sub">إدارة توكنات الوصول للـ API: إنشاء، إلغاء، ومراجعة آخر استخدام.</div>
+          <h1 class="tk-hero-title">رموز الواجهة البرمجية</h1>
+          <div class="tk-hero-sub">إدارة رموز الوصول للواجهة البرمجية: إنشاء، إلغاء، ومراجعة آخر استخدام.</div>
         </div>
       </div>
     </header>
@@ -183,7 +183,7 @@
     <div class="tk-reveal">
       <div class="tk-reveal-head">
         <i class="fa-solid fa-circle-check"></i>
-        <span>تم إنشاء التوكن — انسخه الآن، لن يُعرض مجددًا.</span>
+        <span>تم إنشاء الرمز — انسخه الآن، لن يُعرض مجددًا.</span>
       </div>
       <div class="tk-reveal-token">
         <code id="tk-new">{{ new_plain }}</code>
@@ -192,7 +192,7 @@
         </button>
       </div>
       <div class="tk-reveal-warn">
-        ضع التوكن في مكان آمن (مدير كلمات المرور / vault). إن فُقد، اطلب توكنًا جديدًا — لا توجد طريقة لاستعادته.
+        ضع الرمز في مكان آمن مثل مدير كلمات المرور. إن فُقد، اطلب رمزًا جديدًا — لا توجد طريقة لاستعادته.
       </div>
     </div>
   {% endif %}
@@ -200,13 +200,13 @@
   {# ───── Create-token form ─────────────────────────────────── #}
   <form method="post" class="tk-create">
     <span class="tk-create-icon"><i class="fa-solid fa-plus"></i></span>
-    <input type="text" name="name" placeholder="اسم التوكن الجديد (مثال: integration-prod)" required>
-    {{ hub.btn("إنشاء توكن", icon="plus", variant="primary", type="submit") }}
+    <input type="text" name="name" placeholder="اسم الرمز الجديد (مثال: integration-prod)" required>
+    {{ hub.btn("إنشاء رمز", icon="plus", variant="primary", type="submit") }}
   </form>
 
   {# ───── Tokens table ──────────────────────────────────────── #}
   {% if items %}
-    {% call hub.section("التوكنات الموجودة", icon="table-list", meta=_total|string + " توكن", flush=True) %}
+    {% call hub.section("الرموز الموجودة", icon="table-list", meta=_total|string + " رمز", flush=True) %}
       <div class="hub-table-wrap" style="border:none; border-radius:0" data-tk-page>
         <table class="hub-table">
           <thead>
@@ -238,7 +238,7 @@
                 <td>
                   {% if not t.revoked %}
                     <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
-                          onsubmit="return confirm('إلغاء التوكن؟ لا يمكن استعادته.')"
+                          onsubmit="return confirm('إلغاء الرمز؟ لا يمكن استعادته.')"
                           style="display:inline; margin:0">
                       <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
                         <i class="fa-solid fa-ban"></i> إلغاء
@@ -260,7 +260,7 @@
             <strong id="tk-from">1</strong>–<strong id="tk-to">10</strong>
             <span>من</span>
             <strong id="tk-total">{{ _total }}</strong>
-            <span>توكن</span>
+            <span>رمز</span>
           </div>
           <nav class="tk-pager-list" aria-label="ترقيم الصفحات">
             <button type="button" class="tk-pager-btn" data-tk-prev aria-label="السابق">
@@ -276,8 +276,8 @@
     {% endcall %}
   {% else %}
     {{ hub.empty(
-      "لا توكنات بعد",
-      sub="أنشئ أول توكن من النموذج بالأعلى. التوكنات تستخدم لمصادقة طلبات الواجهة البرمجية.",
+      "لا توجد رموز بعد",
+      sub="أنشئ أول رمز من النموذج بالأعلى. الرموز تستخدم لمصادقة طلبات الواجهة البرمجية.",
       icon="key"
     ) }}
   {% endif %}

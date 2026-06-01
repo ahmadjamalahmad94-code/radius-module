@@ -30,11 +30,11 @@ def tok_create():
         created_by=session.get("admin_id") or 0,
     )
     session["_new_token_plain"] = plain
-    flash(f"تم إنشاء توكن «{name}». انسخه الآن — لن يُعرض مرة أخرى.", "success")
+    flash(f"تم إنشاء رمز «{name}». انسخه الآن — لن يُعرض مرة أخرى.", "success")
     return redirect(url_for("radius.tok_list"))
 
 
 def tok_revoke(tid: int):
     api_tokens_repo.revoke_token(_tid(), tid)
-    flash("تم إلغاء التوكن.", "warning")
+    flash("تم إلغاء الرمز.", "warning")
     return redirect(url_for("radius.tok_list"))

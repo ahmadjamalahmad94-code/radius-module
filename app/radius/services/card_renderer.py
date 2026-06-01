@@ -509,7 +509,7 @@ def build_card_render_model(
 
     # ── Text + meta ──
     brand_text   = _override(overrides, "brand_name",   layout, "HobeRadius")
-    title_text   = _override(overrides, "card_title",   layout, "Internet Card")
+    title_text   = _override(overrides, "card_title",   layout, "بطاقة إنترنت")
     footer_text  = _override(overrides, "footer_text",  layout, "")
     hotspot_text = _override(overrides, "hotspot_address", layout, "")
     price_text   = _override(overrides, "price_text",   layout, "")

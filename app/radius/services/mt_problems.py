@@ -159,7 +159,7 @@ def _problems_for_router(ov) -> list[Problem]:
             type=PROBLEM_BACKUP_STALE, severity=SEV_INFO,
             title_ar=f"{rname} نسخة احتياطية قديمة",
             explanation_ar="آخر نسخة احتياطية قديمة.",
-            suggested_action_ar="خذ نسخة جديدة لاحقًا اليوم.",
+            suggested_action_ar="خذ نسخة جديدة اليوم عند أول فرصة.",
             suggested_href=f"/admin/radius/mt/{rid}/backups",
             last_seen=ov.last_backup_at or "",
         ))

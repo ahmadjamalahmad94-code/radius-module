@@ -191,7 +191,7 @@ def payment_collection_approve_web(request_id: int):
             request_id=request_id,
             actor="admin-web",
         )
-        flash("تم قبول الدفع يدويًا وترحيله إلى دفتر القيود. تفعيل الخدمة ما زال مؤجلًا لمرحلة لاحقة.", "success")
+        flash("تم قبول الدفع يدويًا وترحيله إلى دفتر القيود. تفعيل الخدمة ينتظر اعتماد الإدارة من صفحة الطلب.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
 
 

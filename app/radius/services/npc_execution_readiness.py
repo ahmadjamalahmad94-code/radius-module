@@ -148,7 +148,7 @@ def evaluate_for_preview(
         apply_perm=apply_perm,
         apply_perm_label_ar=apply_perm,
         caveat_ar=(
-            "التنفيذ مرحلة لاحقة — هذه شاشة معاينة وتحليل فقط."
+            "هذه شاشة معاينة وتحليل فقط. التنفيذ المباشر يتطلب صلاحية تطبيق منفصلة."
         ),
     )
 

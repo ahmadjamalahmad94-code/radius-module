@@ -349,7 +349,7 @@ class CapacityEnforcementService:
                 "available": True,
                 "mode": "local_intent_only",
                 "dry_run_only": True,
-                "message_ar": "يمكن استخدام هذه البيانات لاحقاً لعرض طلب ترقية، بدون إرسال أي طلب مدفوع من هذا المسار.",
+                "message_ar": "يمكن استخدام هذه البيانات لعرض طلب ترقية، بدون إرسال أي طلب مدفوع من هذا المسار.",
             },
         }
 

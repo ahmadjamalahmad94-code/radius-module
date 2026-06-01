@@ -6,7 +6,7 @@
 {% block page_title %}قوالب الرسائل{% endblock %}
 {% block page_sub %}<span class="sub">نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.</span>{% endblock %}
 
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
@@ -117,7 +117,7 @@
             <option value="internal">رسالة داخلية</option>
             <option value="sms">الرسائل القصيرة</option>
             <option value="whatsapp">واتساب</option>
-            <option value="telegram">Telegram</option>
+            <option value="telegram">تلجرام</option>
             <option value="email">البريد الإلكتروني</option>
             <option value="push">إشعار فوري</option>
           </select>
