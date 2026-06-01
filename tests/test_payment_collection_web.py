@@ -58,7 +58,9 @@ def _web_login(client) -> None:
 
 
 def _csrf(client, url: str) -> str:
-    res = client.get(url)
+    # follow_redirects so legacy URLs that now 302 into a hub still
+    # render a template (which seeds the CSRF token into the session).
+    res = client.get(url, follow_redirects=True)
     assert res.status_code == 200
     with client.session_transaction() as sess:
         return sess["_csrf_token"]
@@ -72,15 +74,16 @@ def test_payment_collection_web_routes_are_login_guarded(client):
 
 def test_settings_page_renders_and_saves(client):
     _web_login(client)
-    page = client.get("/admin/radius/payments/settings")
+    # The legacy /payments/settings GET now redirects into the
+    # consolidated collection hub (settings modal). The old URL still
+    # works; it just lands on the hub.
+    page = client.get("/admin/radius/payments/settings", follow_redirects=True)
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert "مركز تحصيل الدفعات" in html
-    assert "رقم المحفظة لتوجيه الدفع فقط" in html
-    assert "معاينة بدون تنفيذ" in html
-    assert "Jawwal Pay (لاحقًا)" not in html
-    assert "واجهة الربط الآلي (لاحقًا)" not in html
-    assert "غير مفعل حاليًا" in html
+    assert "التحصيل والمدفوعات" in html
+    assert "إعدادات التحصيل" in html
+    assert "رقم المحفظة" in html
+    assert "تفعيل تحصيل الدفعات" in html
 
     saved = client.post(
         "/admin/radius/payments/settings",
@@ -100,6 +103,7 @@ def test_settings_page_renders_and_saves(client):
         follow_redirects=True,
     )
     assert saved.status_code == 200
+    # The saved wallet number round-trips into the hub's settings modal.
     assert "0599000000" in saved.get_data(as_text=True)
 
 
@@ -118,7 +122,10 @@ def test_requests_list_and_detail_render_without_paid_apply_buttons(client):
         receiver_wallet="0599000000",
     )
 
-    page = client.get("/admin/radius/payments/requests")
+    # Legacy list URL now redirects into the hub's requests tab.
+    page = client.get(
+        "/admin/radius/payments/requests", follow_redirects=True
+    )
     assert page.status_code == 200
     html = page.get_data(as_text=True)
     assert request["reference_code"] in html
@@ -135,8 +142,12 @@ def test_requests_list_and_detail_render_without_paid_apply_buttons(client):
 
 def test_payment_collection_reconciliation_page_renders(client):
     _web_login(client)
-    response = client.get("/admin/radius/payments/reconciliation")
+    # Legacy reconciliation URL now redirects into the hub's
+    # reconciliation tab.
+    response = client.get(
+        "/admin/radius/payments/reconciliation", follow_redirects=True
+    )
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert "مطابقة تحصيل الدفعات" in html
+    assert "المطابقة والتدقيق" in html
     assert "مدفوع بلا قيد مالي" in html
