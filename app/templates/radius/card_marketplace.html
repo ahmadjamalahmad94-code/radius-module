@@ -514,7 +514,7 @@
                     data-down="{{ plan.speed_down_kbps }}"
                     data-up="{{ plan.speed_up_kbps }}"
                     data-price="{{ plan.suggested_price }}"
-                    data-currency="{{ plan.currency }}">
+                    data-currency="{{ cfg.currency }}">
               {{ plan.display_name }} — {{ duration_minutes_label(plan.duration_minutes) }} / {{ speed_label(plan.speed_down_kbps) }}
             </option>
           {% endfor %}

@@ -522,7 +522,7 @@
           data-plan-name="{{ p.name if p else '' }}"
           data-plan-price="{{ _eff_price or 0 }}"
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
-          data-plan-currency="{{ (p.currency or cfg.currency) if p else cfg.currency }}"
+          data-plan-currency="{{ cfg.currency }}"
           data-plan-minutes="{{ p.duration_minutes if p else 0 }}"
           data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
