@@ -74,13 +74,13 @@ def _tenant_from_body(body: dict) -> Tenant:
     slug = str(body.get("slug") or "").strip().lower()
     name = str(body.get("name") or "").strip()
     if not slug or not name:
-        raise ValueError("slug and name are required")
+        raise ValueError("معرّف المستأجر والاسم مطلوبان.")
     tier = str(body.get("plan_tier") or TENANT_TIER_STARTER).strip()
     status = str(body.get("status") or TENANT_STATUS_ACTIVE).strip()
     if tier not in _TIERS:
-        raise ValueError("unknown plan_tier")
+        raise ValueError("نوع الخطة غير معروف.")
     if status not in _STATUSES:
-        raise ValueError("unknown status")
+        raise ValueError("حالة المستأجر غير معروفة.")
     return Tenant(
         id=None,
         slug=slug,
@@ -136,7 +136,7 @@ def tenants_list():
 def tenants_get(tenant_id: int):
     item = get_tenants_service().get(tenant_id)
     if not item:
-        return fail("not_found", "tenant not found", status=404)
+        return fail("not_found", "المستأجر غير موجود.", status=404)
     return ok(_serialize_tenant(item))
 
 
@@ -154,7 +154,7 @@ def tenants_create():
 
 def tenants_patch(tenant_id: int):
     if not get_tenants_service().get(tenant_id):
-        return fail("not_found", "tenant not found", status=404)
+        return fail("not_found", "المستأجر غير موجود.", status=404)
     body = request.get_json(silent=True) or {}
     allowed = {
         "name",
@@ -174,15 +174,15 @@ def tenants_patch(tenant_id: int):
     }
     changes = {key: body[key] for key in allowed if key in body}
     if "status" in changes and changes["status"] not in _STATUSES:
-        return fail("validation_error", "unknown status", status=422)
+        return fail("validation_error", "حالة المستأجر غير معروفة.", status=422)
     if "plan_tier" in changes and changes["plan_tier"] not in _TIERS:
-        return fail("validation_error", "unknown plan_tier", status=422)
+        return fail("validation_error", "نوع الخطة غير معروف.", status=422)
     for key in ("max_subscribers", "max_nas", "api_rpm"):
         if key in changes:
             try:
                 changes[key] = int(changes[key])
             except (TypeError, ValueError):
-                return fail("validation_error", f"{key} must be integer", status=422)
+                return fail("validation_error", f"قيمة {key} يجب أن تكون رقمًا صحيحًا.", status=422)
     try:
         saved = get_tenants_service().update(
             actor=_actor(),

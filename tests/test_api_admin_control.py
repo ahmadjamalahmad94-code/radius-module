@@ -133,6 +133,15 @@ def test_tenants_api_manage_existing_backend_model(client):
     assert patched.get_json()["data"]["display_name"] == "Updated"
     assert patched.get_json()["data"]["api_rpm"] == 0
 
+    invalid_status = client.patch(
+        f"/api/v1/tenants/{tenant['id']}",
+        json={"status": "bad"},
+        headers=AUTH,
+    )
+    assert invalid_status.status_code == 422
+    assert invalid_status.get_json()["error"]["message"] == "حالة المستأجر غير معروفة."
+    assert "unknown status" not in invalid_status.get_json()["error"]["message"]
+
     listed = client.get("/api/v1/tenants", headers=AUTH)
     assert listed.status_code == 200, listed.get_json()
     assert any(item["slug"] == slug for item in listed.get_json()["data"]["items"])

@@ -118,3 +118,12 @@ def test_localization_glossary_documents_allowed_technical_terms():
     assert "تجربة جافة" in glossary
     assert "`RADIUS`" in glossary
     assert "`MikroTik`" in glossary
+
+
+def test_network_devices_page_uses_actionable_monitoring_copy(client):
+    _web_login(client)
+    response = client.get("/admin/radius/network/devices")
+    assert response.status_code == 200
+    text = _visible_text(response.get_data(as_text=True))
+    assert "قريبًا" not in text
+    assert "إعدادات المراقبة" in text
