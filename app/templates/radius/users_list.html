@@ -113,8 +113,12 @@
     padding:8px 10px; border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
     background:var(--hub-bg-soft); margin-bottom:6px; flex-wrap:wrap;
   }
-  .usq-loan-info{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .usq-loan-info strong{ color:var(--hub-text); direction:ltr; }
+  .usq-loan-info{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12.5px; font-weight:700; }
+  .usq-loan-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-weight:900; font-size:12px; white-space:nowrap; }
+  .usq-loan-chip i{ font-size:11px; }
+  .usq-loan-chip--days{ background:#eff6ff; color:#1d4ed8; }
+  .usq-loan-chip--amt{ background:#fffbeb; color:#b45309; direction:ltr; }
+  .usq-loan-reason{ color:var(--hub-text-mute,#94a3b8); font-weight:600; font-size:11.5px; }
   .usq-loan-acts{ display:flex; gap:4px; flex-wrap:wrap; }
   .usq-loan-acts label{
     display:inline-flex; align-items:center; gap:4px; cursor:pointer;
@@ -1457,7 +1461,11 @@
       `<div class="usq-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة (${loans.length}) — اختر لكل واحدة:</div>` +
       loans.map((ln) => `
         <div class="usq-loan-row" data-usq-loan-row data-loan-id="${ln.id}" data-loan-amount="${ln.amount}">
-          <div class="usq-loan-info"><strong>${fmtMoney(ln.amount, ln.currency || cur)}</strong> · ${arDays(ln.days)}${ln.reason ? ` · ${ln.reason}` : ""}</div>
+          <div class="usq-loan-info">
+            <span class="usq-loan-chip usq-loan-chip--days"><i class="fa-solid fa-calendar-day"></i> ${arDays(ln.days)}</span>
+            <span class="usq-loan-chip usq-loan-chip--amt"><i class="fa-solid fa-coins"></i> القيمة ${fmtMoney(ln.amount, ln.currency || cur)}</span>
+            ${ln.reason ? `<span class="usq-loan-reason">${ln.reason}</span>` : ""}
+          </div>
           <div class="usq-loan-acts">
             <label><input type="radio" name="loan_act_${ln.id}" value="settle"><span>خصم</span></label>
             <label><input type="radio" name="loan_act_${ln.id}" value="defer" checked><span>تأجيل</span></label>
