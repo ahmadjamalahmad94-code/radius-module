@@ -345,6 +345,44 @@ def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
     return get_settlement(tenant_id, settlement_id) or {}
 
 
+def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
+                  notes: str = "", metadata: dict[str, Any] | None = None) -> dict:
+    """Forgive (مسامحة) an open loan: void it + post a reversing CREDIT ledger
+    entry so the debt disappears from the books. Append-only / audit-preserving —
+    the original loan debit stays; the write-off credit nets it to zero.
+    """
+    amount = float(loan.get("amount") or 0)
+    with transaction() as conn:
+        ledger_id = create_ledger_entry(
+            conn,
+            tenant_id=tenant_id,
+            entry_type="writeoff",
+            amount=amount,
+            direction="credit",
+            currency=currency,
+            subscriber_id=loan["subscriber_id"],
+            username=loan["username"],
+            operator=created_by,
+            source_type="loan_writeoff",
+            source_id=loan["id"],
+            related_type="loan",
+            related_id=loan["id"],
+            notes=notes or "مسامحة سلفة",
+            metadata=metadata or {"action": "writeoff"},
+        )
+        conn.execute(
+            """
+            UPDATE loan_entries
+            SET status = 'voided', settled_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (now_iso(), tenant_id, loan["id"]),
+        )
+    out = get_loan(tenant_id, loan["id"]) or {}
+    out["writeoff_ledger_entry_id"] = ledger_id
+    return out
+
+
 def get_settlement(tenant_id: int, settlement_id: int) -> Optional[dict]:
     row = db().execute(
         "SELECT * FROM settlement_entries WHERE tenant_id = ? AND id = ?",
