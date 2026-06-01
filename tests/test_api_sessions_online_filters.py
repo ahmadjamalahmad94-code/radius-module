@@ -127,6 +127,11 @@ def test_sessions_online_rejects_unknown_type(client):
     res = client.get("/api/v1/sessions/online?type=bad", headers=AUTH)
     assert res.status_code == 422
     assert res.get_json()["error"]["code"] == "validation_error"
+    assert res.get_json()["error"]["message"] == "نوع الجلسات يجب أن يكون الكل أو مشترك أو كرت."
+
+    long_query = client.get("/api/v1/sessions/online?q=" + ("x" * 81), headers=AUTH)
+    assert long_query.status_code == 422
+    assert long_query.get_json()["error"]["message"] == "عبارة البحث طويلة جدًا."
 
 
 def test_sessions_disconnect_uses_real_service(app, client, monkeypatch):
@@ -151,3 +156,9 @@ def test_sessions_disconnect_uses_real_service(app, client, monkeypatch):
         "username": "sub-online",
         "session_id": "s-sub",
     }]
+
+
+def test_sessions_disconnect_requires_username(client):
+    res = client.post("/api/v1/sessions/disconnect", headers=AUTH, json={})
+    assert res.status_code == 422
+    assert res.get_json()["error"]["message"] == "اسم المستخدم مطلوب."

@@ -104,9 +104,9 @@ def sessions_online():
     }
     kind = aliases.get(kind, kind)
     if kind not in {"all", "subscriber", "card"}:
-        return fail("validation_error", "type must be all, subscriber, or card", status=422)
+        return fail("validation_error", "نوع الجلسات يجب أن يكون الكل أو مشترك أو كرت.", status=422)
     if len(query) > 80:
-        return fail("validation_error", "query is too long", status=422)
+        return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
 
     items = []
     for session in _svc().list(limit=500):
@@ -143,7 +143,7 @@ def sessions_disconnect():
     body = request.get_json(silent=True) or {}
     username = (body.get("username") or "").strip()
     if not username:
-        return fail("validation_error", "username مطلوب", status=422)
+        return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
     if not subscriber_in_scope(username=username):
         return deny_out_of_scope()
     session_id = body.get("session_id")

@@ -107,6 +107,26 @@ def test_token_api_shows_plaintext_once_and_never_lists_hash(client):
     assert revoked.status_code == 200, revoked.get_json()
     assert revoked.get_json()["data"]["revoked"] is True
 
+    missing_name = client.post("/api/v1/tokens", json={"name": ""}, headers=AUTH)
+    assert missing_name.status_code == 422
+    assert missing_name.get_json()["error"]["message"] == "اسم التوكن مطلوب."
+
+    bad_scopes = client.post("/api/v1/tokens", json={"name": "bad", "scopes": "admin:full"}, headers=AUTH)
+    assert bad_scopes.status_code == 422
+    assert bad_scopes.get_json()["error"]["message"] == "صلاحيات التوكن يجب أن تكون قائمة نصوص."
+
+    bad_date = client.post(
+        "/api/v1/tokens",
+        json={"name": "bad-date", "expires_at": "not-a-date"},
+        headers=AUTH,
+    )
+    assert bad_date.status_code == 422
+    assert bad_date.get_json()["error"]["message"] == "تاريخ انتهاء التوكن غير صالح. استخدم صيغة ISO."
+
+    missing = client.post("/api/v1/tokens/999999999/revoke", headers=AUTH)
+    assert missing.status_code == 404
+    assert missing.get_json()["error"]["message"] == "التوكن غير موجود."
+
 
 def test_tenants_api_manage_existing_backend_model(client):
     slug = "tenant" + secrets.token_hex(4)

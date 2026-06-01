@@ -35,8 +35,11 @@ def _parse_expires_at(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("expires_at must be ISO string")
-    return datetime.fromisoformat(raw.replace("Z", ""))
+        raise ValueError("تاريخ انتهاء التوكن يجب أن يكون نصًا بصيغة ISO.")
+    try:
+        return datetime.fromisoformat(raw.replace("Z", ""))
+    except ValueError as exc:
+        raise ValueError("تاريخ انتهاء التوكن غير صالح. استخدم صيغة ISO.") from exc
 
 
 def register(bp: Blueprint) -> None:
@@ -69,12 +72,12 @@ def tokens_create():
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "name is required", status=422)
+        return fail("validation_error", "اسم التوكن مطلوب.", status=422)
     scopes = body.get("scopes")
     if scopes is None:
         scopes = ["admin:full"]
     if not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes):
-        return fail("validation_error", "scopes must be a list of strings", status=422)
+        return fail("validation_error", "صلاحيات التوكن يجب أن تكون قائمة نصوص.", status=422)
     try:
         expires_at = _parse_expires_at(body.get("expires_at"))
     except ValueError as exc:
@@ -106,7 +109,7 @@ def tokens_revoke(token_id: int):
         None,
     )
     if not existing:
-        return fail("not_found", "token not found", status=404)
+        return fail("not_found", "التوكن غير موجود.", status=404)
     api_tokens_repo.revoke_token(_tid(), token_id)
     audit_repo.record(
         tenant_id=_tid(),
