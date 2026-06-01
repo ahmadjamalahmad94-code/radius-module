@@ -1,0 +1,20 @@
+{# ── البيانات والحفظ والأرشفة — in-section nav (backups + recycle + lifecycle) ──
+   Active tab from request.path. The sensitive POST actions (restore /
+   lifecycle run / delete) keep their own confirmation-gated endpoints —
+   this bar only navigates between the three landing pages. #}
+{% set p = request.path %}
+<style>
+.dpnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.dpnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.dpnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.dpnav a.is-active{background:linear-gradient(135deg,#ea580c,#9a3412);color:#fff;box-shadow:0 6px 16px rgba(234,88,12,.22)}
+.dpnav a i{font-size:12px}
+</style>
+<nav class="dpnav" data-testid="data-protection-nav">
+  <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> النسخ الاحتياطي</a>
+  <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> سلة المحذوفات</a>
+  <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> الأرشفة التلقائية</a>
+</nav>

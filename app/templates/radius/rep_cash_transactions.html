@@ -9,6 +9,7 @@
 {% block page_sub %}<span class="sub">{{ total }} معاملة</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero("معاملات الكاش وتفاصيلها",
    subtitle="سجل المدفوعات النقدية مع السعر والخصم والمنفّذ بدون عرض مفاتيح تقنية.",
    icon="money-bill-wave") }}

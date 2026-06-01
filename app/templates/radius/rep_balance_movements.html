@@ -9,6 +9,7 @@
 {% block page_sub %}<span class="sub">{{ total }} حركة</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero("تحويلات الرصيد وحركة رصيد المديرين",
    subtitle="حركات الرصيد المالية — إضافة وخصم — للمشتركين والمدراء والموزعين.",
    icon="right-left") }}

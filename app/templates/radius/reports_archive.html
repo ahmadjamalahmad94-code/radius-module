@@ -7,6 +7,7 @@
 {% block page_sub %}<span class="sub">لقطات يومية وشهرية وسنوية ثابتة لا يتم تعديلها بعد إنشائها.</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero(
   "أرشيف التقارير",
   subtitle="اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء. اللقطات السابقة لا تُستبدل ولا تُحذف تلقائيًا.",

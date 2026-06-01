@@ -22,9 +22,10 @@
 {{ hub.hero(
   "مركز العمليات",
   subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات معاينة آمنة بدون تنفيذ. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
-  icon="gauge-high",
-  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> التحكم بالسرعة</a>'
+  icon="gauge-high"
 ) }}
+
+{% include "radius/operations_nav.html" %}
 
 <div class="hub-kpi-grid" data-testid="operations-summary">
   {{ hub.kpi("المستخدمون المتصلون", snapshot.online_users, icon="wifi", variant="green") }}

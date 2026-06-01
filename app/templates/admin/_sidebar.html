@@ -170,6 +170,8 @@
 {%- set m_communications_bot = ('/communications/bot' in path) -%}
 {%- set m_communications_notifications = ('/communications/notifications' in path) -%}
 {%- set m_communications_quota = ('/communications/quota' in path) -%}
+{# Consolidated «التواصل والحملات» entry — active on any /communications/* sub-page. #}
+{%- set m_communications_hub = ('/communications' in path) -%}
 {%- set m_whatsapp_subscribers = ('/whatsapp' in path) -%}
 {%- set m_events_center = ('/events' in path) -%}
 {%- set m_events_risk = (path == url_for('radius.events_risk')) -%}
@@ -431,22 +433,13 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications) }}
-        {{ sub_item('radius.communications_channels', 'قنوات الإرسال', m_communications_channels) }}
-        {{ sub_item('radius.communications_bot', 'بوت واتساب', m_communications_bot) }}
+        {# التواصل والحملات — مركز موحّد: شريط تبويب داخلي يصل لكل الصفحات الفرعية
+           (قنوات/بوت/إشعارات/رصيد/قوالب/إرسال/حملات/جمهور/سجل/دليل). #}
+        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications_hub) }}
         {{ sub_item('radius.whatsapp', 'رسائل واتساب للمشتركين', m_whatsapp_subscribers) }}
-        {{ sub_item('radius.communications_notifications', 'الإشعارات الحدثية', m_communications_notifications) }}
-        {{ sub_item('radius.communications_quota', 'الرصيد والحِزم', m_communications_quota) }}
-        {{ sub_item('radius.communications_templates', 'قوالب الرسائل', m_communications_templates) }}
-        {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
-        {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
-        {{ sub_item('radius.communications_guide', '📚 دليل وشروحات', '/communications/guide' in path) }}
-        {{ sub_item('radius.communications_campaigns', 'الحملات', m_communications_campaigns) }}
-        {{ sub_item('radius.communications_audience', 'الجمهور', m_communications_audience) }}
+        {# الأحداث والمخاطر — مركز موحّد: شريط تبويب داخلي يصل للأحداث وتقييم
+           المخاطر والأمان والتحقيقات (وتفاصيل كل حدث على صفحتها المستقلة). #}
         {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}
-        {{ sub_item('radius.events_risk', 'تقييم المخاطر', m_events_risk) }}
-        {{ sub_item('radius.events_security', 'الأمان', m_events_security) }}
-        {{ sub_item('radius.events_investigations', 'التحقيقات', m_events_investigations) }}
         {{ sub_item('radius.operations_center', 'مركز العمليات', m_operations_center) }}
       </div></div>
     </div>
@@ -461,35 +454,20 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.reports_home', 'مركز التقارير', m_reports_home) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-shield-halved"></i>الدخول والأمان</div>
-        {{ sub_item('radius.rep_login_states', 'حالات تسجيل الدخول', m_reports_login_states) }}
-        {{ sub_item('radius.rep_failed_logins', 'فشل دخول الشبكة', m_reports_failed_logins) }}
-        {{ sub_item('radius.rep_login_status', 'حالة دخول المشتركين', m_reports_login_status) }}
-        {{ sub_item('radius.rep_manager_login_status', 'حالة دخول المدراء', m_reports_manager_login) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-network-wired"></i>الشبكة والجلسات</div>
-        {{ sub_item('radius.rep_sessions', 'تقارير الجلسات', m_reports_sessions) }}
-        {{ sub_item('radius.rep_mac_history', 'سجل تغييرات الماك', m_reports_mac_history) }}
-        {{ sub_item('radius.rep_coa_failures', 'فشل الفصل/التحديث', m_reports_coa_failures) }}
-        {{ sub_item('radius.rep_speed_failures', 'فشل تحديث السرعة', m_reports_speed_failures) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-clock-rotate-left"></i>النشاط والأحداث</div>
-        {{ sub_item('radius.rep_manager_events', 'أحداث المدراء', m_reports_manager_events) }}
-        {{ sub_item('radius.rep_user_events', 'أحداث المشتركين', m_reports_user_events) }}
-        {{ sub_item('radius.rep_profile_changes', 'تغيير العروض', m_reports_profile_changes) }}
-        {{ sub_item('radius.rep_api_messages', 'سجل رسائل الربط', m_reports_api_messages) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-coins"></i>المالية والكروت</div>
-        {{ sub_item('radius.reports_financial', 'التقرير المالي', m_reports_financial) }}
+        {# التقارير — 5 محاور موحّدة: كل محور صفحة عليها شريط تبويب من مستويين
+           (المحاور + تقارير المحور النشط) يصل لكل تقرير دون إغراق الشريط الجانبي.
+           «تقارير المحاسبة» رابط متقاطع يبقى ضمن محور المحاسبة. #}
+        {{ sub_item('radius.reports_home', 'التقارير التنفيذية',
+            m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors or m_reports_archive) }}
+        {{ sub_item('radius.rep_login_states', 'الدخول والأمان',
+            m_reports_login_states or m_reports_failed_logins or m_reports_login_status or m_reports_manager_login) }}
+        {{ sub_item('radius.rep_sessions', 'الشبكة والجلسات',
+            m_reports_sessions or m_reports_mac_history or m_reports_coa_failures or m_reports_speed_failures) }}
+        {{ sub_item('radius.rep_manager_events', 'النشاط والأحداث',
+            m_reports_manager_events or m_reports_user_events or m_reports_profile_changes or m_reports_api_messages) }}
+        {{ sub_item('radius.rep_used_cards', 'المالية والموازنات',
+            m_reports_used_cards or m_reports_cash_tx or m_reports_balance_moves) }}
         {{ sub_item('radius.finance_reports', 'تقارير المحاسبة', m_finance_rep) }}
-        {{ sub_item('radius.reports_cards', 'تقارير البطاقات', m_reports_cards) }}
-        {{ sub_item('radius.rep_used_cards', 'كروت الشحن المستخدمة', m_reports_used_cards) }}
-        {{ sub_item('radius.rep_cash_transactions', 'معاملات الكاش', m_reports_cash_tx) }}
-        {{ sub_item('radius.rep_balance_movements', 'تحويلات الرصيد', m_reports_balance_moves) }}
-        {{ sub_item('radius.reports_distributors', 'تقارير الموزعين', m_reports_distributors) }}
-        {{ sub_item('radius.reports_archive', 'الأرشيف', m_reports_archive) }}
       </div></div>
     </div>
 
@@ -519,18 +497,17 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.business_operators', 'المدراء والموزعون', m_business_operators) }}
-        {{ sub_item('radius.admins_list',             'المدراء',           m_admins) }}
-        {{ sub_item('radius.admins_profile_summary', 'ملخص المدراء',     m_admin_profile) }}
-        {{ sub_item('radius.distributors_list',       'الموزعون',          m_distributors) }}
-        {{ sub_item('radius.roles_list',        'الأدوار والصلاحيات', m_roles) }}
-        {{ sub_item('radius.mt_permission_matrix', 'مركز الصلاحيات', m_perms) }}
+        {# الإدارة — 3 محاور موحّدة (كل محور صفحة عليها شريط تبويب داخلي يصل
+           لصفحاته الفرعية) + إعدادات النظام الحسّاسة تبقى مستقلة. العمليات
+           الخطيرة (استعادة/أرشفة/حذف) تبقى على مساراتها المحمية بتأكيد. #}
+        {{ sub_item('radius.business_operators', 'المدراء والموزعون',
+            m_business_operators or m_admins or m_admin_profile or m_distributors) }}
+        {{ sub_item('radius.roles_list', 'الأدوار والصلاحيات', m_roles or m_perms) }}
+        {{ sub_item('radius.backups', 'البيانات والحفظ والأرشفة',
+            m_backups or m_recycle or m_lifecycle) }}
         {{ sub_item('radius.settings_page',     'إعدادات النظام',     m_settings) }}
         {{ sub_item('radius.sync_list',         'المزامنة',           m_sync) }}
         {{ sub_item('radius.tenants_list',      'المستأجرون',         m_tenants) }}
-        {{ sub_item('radius.recycle_bin',       'سلة المحذوفات',       m_recycle) }}
-        {{ sub_item('radius.backups',           'النسخ الاحتياطي',     m_backups) }}
-        {{ sub_item('radius.lifecycle_settings','الأرشفة التلقائية',   m_lifecycle) }}
       </div></div>
     </div>
 

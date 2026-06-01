@@ -1,6 +1,25 @@
-<div class="hub-actions" data-testid="events-nav">
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.events_center') }}"><i class="fa-solid fa-list"></i> Events</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.events_risk') }}"><i class="fa-solid fa-shield-halved"></i> Risk</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.events_security') }}"><i class="fa-solid fa-lock"></i> Security</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.events_investigations') }}"><i class="fa-solid fa-magnifying-glass-chart"></i> التحقيقات</a>
-</div>
+{# ── Events & Risk Center in-section tab bar (reused across all event pages) ──
+   Active tab is derived from request.path so no route change is needed. This
+   single bar is how the consolidated «الأحداث والمخاطر» sidebar entry reaches
+   every sub-page (risk / security / investigations + event detail). #}
+{% set _p = request.path %}
+{% set _risk = '/events/risk' in _p %}
+{% set _sec = '/events/security' in _p %}
+{% set _inv = '/events/investigations' in _p %}
+{% set _center = ('/events' in _p) and not (_risk or _sec or _inv) %}
+<style>
+.enav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.enav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.enav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.enav a.is-active{background:linear-gradient(135deg,#e11d48,#9f1239);color:#fff;box-shadow:0 6px 16px rgba(225,29,72,.22)}
+.enav a i{font-size:12px}
+</style>
+<nav class="enav" data-testid="events-nav">
+  <a class="{{ 'is-active' if _center }}" href="{{ url_for('radius.events_center') }}"><i class="fa-solid fa-list"></i> الأحداث</a>
+  <a class="{{ 'is-active' if _risk }}" href="{{ url_for('radius.events_risk') }}"><i class="fa-solid fa-shield-halved"></i> تقييم المخاطر</a>
+  <a class="{{ 'is-active' if _sec }}" href="{{ url_for('radius.events_security') }}"><i class="fa-solid fa-lock"></i> الأمان</a>
+  <a class="{{ 'is-active' if _inv }}" href="{{ url_for('radius.events_investigations') }}"><i class="fa-solid fa-magnifying-glass-chart"></i> التحقيقات</a>
+</nav>

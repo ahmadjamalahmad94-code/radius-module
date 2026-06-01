@@ -9,6 +9,7 @@
 {% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero("كروت الشحن المستخدمة",
    subtitle="الكروت التي تم استخدامها — تاريخ أول استخدام والجهاز والباقة وتاريخ الانتهاء.",
    icon="ticket") }}

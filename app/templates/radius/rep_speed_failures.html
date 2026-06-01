@@ -9,6 +9,7 @@
 {% block page_sub %}<span class="sub">{{ total }} عملية</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero("فشل تحديث السرعة",
    subtitle="عمليات تغيير السرعة أو الباقة التي فشلت، مع توضيح المنفّذ والسبب بلغة مفهومة.",
    icon="gauge-high") }}
