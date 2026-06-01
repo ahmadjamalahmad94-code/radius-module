@@ -7,6 +7,7 @@
 {% block page_sub %}<span class="sub">تحليلات تنفيذية، تقارير تفصيلية، ولقطات أرشيف ثابتة.</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {{ hub.hero(
   "مركز التقارير",
   subtitle="عروض يومية وشهرية وسنوية للأعمال بدون حذف أو إعادة كتابة التاريخ المالي.",

@@ -7,6 +7,7 @@
 {% block page_sub %}<span class="sub">عرض تفصيلي للتقرير بعد الفلترة.</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 {% set field_labels = {
   'metric':'المؤشر',
   'value':'القيمة',

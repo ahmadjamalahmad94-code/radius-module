@@ -1,0 +1,80 @@
+{# ── Reports Center two-level in-section nav (shared by all report pages) ──
+   Top row: the 5 report hubs. Second row: only the active hub's reports, so
+   the bar stays calm (no 19-pill overload). Active state is derived from
+   request.path; no route change needed. This is how the 5 consolidated
+   «التقارير» sidebar entries reach every report without sidebar clutter.
+
+   NOTE: تقارير المحاسبة (radius.finance_reports) intentionally lives in the
+   accounting hub and is NOT duplicated here. #}
+{% set p = request.path %}
+{% set GROUPS = [
+  {'key':'exec',     'label':'تنفيذية',          'icon':'chart-line',
+   'reports':[
+     {'ep':'radius.reports_home',        'label':'نظرة عامة'},
+     {'ep':'radius.reports_financial',   'label':'التقرير المالي'},
+     {'ep':'radius.reports_cards',       'label':'تقارير البطاقات'},
+     {'ep':'radius.reports_distributors','label':'تقارير الموزعين'},
+     {'ep':'radius.reports_archive',     'label':'الأرشيف'},
+   ]},
+  {'key':'logins',   'label':'الدخول والأمان',   'icon':'right-to-bracket',
+   'reports':[
+     {'ep':'radius.rep_login_states',         'label':'حالات تسجيل الدخول'},
+     {'ep':'radius.rep_failed_logins',        'label':'فشل دخول الشبكة'},
+     {'ep':'radius.rep_login_status',         'label':'حالة دخول المشتركين'},
+     {'ep':'radius.rep_manager_login_status', 'label':'حالة دخول المدراء'},
+   ]},
+  {'key':'network',  'label':'الشبكة والجلسات',  'icon':'network-wired',
+   'reports':[
+     {'ep':'radius.rep_sessions',       'label':'تقارير الجلسات'},
+     {'ep':'radius.rep_mac_history',    'label':'سجل تغييرات الماك'},
+     {'ep':'radius.rep_coa_failures',   'label':'فشل الفصل/التحديث'},
+     {'ep':'radius.rep_speed_failures', 'label':'فشل تحديث السرعة'},
+   ]},
+  {'key':'activity', 'label':'النشاط والأحداث',  'icon':'clock-rotate-left',
+   'reports':[
+     {'ep':'radius.rep_manager_events',  'label':'أحداث المدراء'},
+     {'ep':'radius.rep_user_events',     'label':'أحداث المشتركين'},
+     {'ep':'radius.rep_profile_changes', 'label':'تغيير العروض'},
+     {'ep':'radius.rep_api_messages',    'label':'سجل رسائل الربط'},
+   ]},
+  {'key':'finance',  'label':'المالية والموازنات','icon':'coins',
+   'reports':[
+     {'ep':'radius.rep_used_cards',        'label':'كروت الشحن المستخدمة'},
+     {'ep':'radius.rep_cash_transactions', 'label':'معاملات الكاش'},
+     {'ep':'radius.rep_balance_movements', 'label':'تحويلات الرصيد'},
+   ]},
+] %}
+{# resolve the active group by matching the current path against each report url #}
+{% set ns = namespace(active='exec') %}
+{% for g in GROUPS %}
+  {% for r in g.reports %}
+    {% if url_for(r.ep) == p %}{% set ns.active = g.key %}{% endif %}
+  {% endfor %}
+{% endfor %}
+<style>
+.rnav{margin-bottom:16px}
+.rnav-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-radius:16px;
+  background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.rnav-row+.rnav-row{margin-top:8px;background:transparent;border:1px dashed var(--hub-border-soft,#e2e8f0)}
+.rnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.rnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.rnav-row--groups a.is-active{background:linear-gradient(135deg,#475569,#1e293b);color:#fff;box-shadow:0 6px 16px rgba(30,41,59,.22)}
+.rnav-row--reports a.is-active{background:#fff;color:#0f172a;border-color:var(--hub-border-soft,#e2e8f0);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+.rnav a i{font-size:12px}
+</style>
+<nav class="rnav" data-testid="reports-nav">
+  <div class="rnav-row rnav-row--groups">
+    {% for g in GROUPS %}
+    <a class="{{ 'is-active' if ns.active == g.key }}" href="{{ url_for(g.reports[0].ep) }}"><i class="fa-solid fa-{{ g.icon }}"></i> {{ g.label }}</a>
+    {% endfor %}
+  </div>
+  {% for g in GROUPS if g.key == ns.active %}
+  <div class="rnav-row rnav-row--reports">
+    {% for r in g.reports %}
+    <a class="{{ 'is-active' if url_for(r.ep) == p }}" href="{{ url_for(r.ep) }}">{{ r.label }}</a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</nav>

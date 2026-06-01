@@ -454,35 +454,20 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.reports_home', 'مركز التقارير', m_reports_home) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-shield-halved"></i>الدخول والأمان</div>
-        {{ sub_item('radius.rep_login_states', 'حالات تسجيل الدخول', m_reports_login_states) }}
-        {{ sub_item('radius.rep_failed_logins', 'فشل دخول الشبكة', m_reports_failed_logins) }}
-        {{ sub_item('radius.rep_login_status', 'حالة دخول المشتركين', m_reports_login_status) }}
-        {{ sub_item('radius.rep_manager_login_status', 'حالة دخول المدراء', m_reports_manager_login) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-network-wired"></i>الشبكة والجلسات</div>
-        {{ sub_item('radius.rep_sessions', 'تقارير الجلسات', m_reports_sessions) }}
-        {{ sub_item('radius.rep_mac_history', 'سجل تغييرات الماك', m_reports_mac_history) }}
-        {{ sub_item('radius.rep_coa_failures', 'فشل الفصل/التحديث', m_reports_coa_failures) }}
-        {{ sub_item('radius.rep_speed_failures', 'فشل تحديث السرعة', m_reports_speed_failures) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-clock-rotate-left"></i>النشاط والأحداث</div>
-        {{ sub_item('radius.rep_manager_events', 'أحداث المدراء', m_reports_manager_events) }}
-        {{ sub_item('radius.rep_user_events', 'أحداث المشتركين', m_reports_user_events) }}
-        {{ sub_item('radius.rep_profile_changes', 'تغيير العروض', m_reports_profile_changes) }}
-        {{ sub_item('radius.rep_api_messages', 'سجل رسائل الربط', m_reports_api_messages) }}
-
-        <div class="hb-side-subhead"><i class="fa-solid fa-coins"></i>المالية والكروت</div>
-        {{ sub_item('radius.reports_financial', 'التقرير المالي', m_reports_financial) }}
+        {# التقارير — 5 محاور موحّدة: كل محور صفحة عليها شريط تبويب من مستويين
+           (المحاور + تقارير المحور النشط) يصل لكل تقرير دون إغراق الشريط الجانبي.
+           «تقارير المحاسبة» رابط متقاطع يبقى ضمن محور المحاسبة. #}
+        {{ sub_item('radius.reports_home', 'التقارير التنفيذية',
+            m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors or m_reports_archive) }}
+        {{ sub_item('radius.rep_login_states', 'الدخول والأمان',
+            m_reports_login_states or m_reports_failed_logins or m_reports_login_status or m_reports_manager_login) }}
+        {{ sub_item('radius.rep_sessions', 'الشبكة والجلسات',
+            m_reports_sessions or m_reports_mac_history or m_reports_coa_failures or m_reports_speed_failures) }}
+        {{ sub_item('radius.rep_manager_events', 'النشاط والأحداث',
+            m_reports_manager_events or m_reports_user_events or m_reports_profile_changes or m_reports_api_messages) }}
+        {{ sub_item('radius.rep_used_cards', 'المالية والموازنات',
+            m_reports_used_cards or m_reports_cash_tx or m_reports_balance_moves) }}
         {{ sub_item('radius.finance_reports', 'تقارير المحاسبة', m_finance_rep) }}
-        {{ sub_item('radius.reports_cards', 'تقارير البطاقات', m_reports_cards) }}
-        {{ sub_item('radius.rep_used_cards', 'كروت الشحن المستخدمة', m_reports_used_cards) }}
-        {{ sub_item('radius.rep_cash_transactions', 'معاملات الكاش', m_reports_cash_tx) }}
-        {{ sub_item('radius.rep_balance_movements', 'تحويلات الرصيد', m_reports_balance_moves) }}
-        {{ sub_item('radius.reports_distributors', 'تقارير الموزعين', m_reports_distributors) }}
-        {{ sub_item('radius.reports_archive', 'الأرشيف', m_reports_archive) }}
       </div></div>
     </div>
 

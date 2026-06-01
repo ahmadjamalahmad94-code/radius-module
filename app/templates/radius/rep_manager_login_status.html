@@ -14,6 +14,7 @@
 {% block page_sub %}<span class="sub">{{ items|length }} مدير</span>{% endblock %}
 
 {% block content %}
+{% include "radius/reports_nav.html" %}
 
 {{ hub.hero(
   "حالة دخول المدراء",
