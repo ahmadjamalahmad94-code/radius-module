@@ -1225,8 +1225,24 @@ def users_send_sms(username: str):
 
 def users_quota_reset_daily(username: str):
     try:
-        get_users_service().reset_daily_quota(actor=_actor(), username=username)
-        flash("تمت استعادة الكوتة اليومية للمشترك.", "success")
+        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        amount = _form_float("amount", 0.0)
+        saved = get_users_service().reset_daily_quota(
+            actor=_actor(),
+            username=username,
+            charge_mode=charge_mode,
+            amount=amount,
+            currency=(request.form.get("currency") or default_currency()).strip(),
+            notes=(request.form.get("notes") or "").strip(),
+        )
+        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+        if charge_mode in {"paid", "debt"}:
+            flash(f"تمت استعادة الكوتة اليومية ({mode_label}) بقيمة {amount:.2f}. "
+                  f"الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+        else:
+            flash("تمت استعادة الكوتة اليومية للمشترك (مجانية).", "success")
+    except (TypeError, ValueError):
+        flash("قيمة المبلغ غير صحيحة.", "error")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_list"))

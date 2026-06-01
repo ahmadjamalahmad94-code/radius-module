@@ -307,3 +307,118 @@ def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     assert "طباعة آخر فاتورة" not in quick_panel
     assert "إنشاء عقد" not in quick_panel
     assert "ضغط البيانات" not in quick_panel
+
+
+def test_reset_daily_quota_paid_records_credit_ledger_without_touching_balance(app):
+    with app.app_context():
+        plan = _seed_plan("Quota Reset Paid Plan", price=20)
+        _seed_subscriber(
+            "quota_reset_paid",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        db().execute(
+            "UPDATE subscribers SET used_seconds=3600, used_bytes_in=1048576, "
+            "used_bytes_out=2097152, balance=0 WHERE tenant_id=1 AND username='quota_reset_paid'"
+        )
+        get_users_service().reset_daily_quota(
+            actor="tester", username="quota_reset_paid",
+            charge_mode="paid", amount=3.0, currency="JOD", notes="paid reset",
+        )
+        updated = subscribers_repo.get_subscriber(1, "quota_reset_paid")
+        entry = db().execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id=1 "
+            "AND username='quota_reset_paid' AND source_type='subscriber_daily_quota_reset'"
+        ).fetchone()
+
+        # counters cleared, balance unchanged (cash), ledger credited
+        assert updated.used_seconds == 0 and updated.used_bytes_in == 0
+        assert updated.balance == 0
+        assert entry is not None
+        assert entry["entry_type"] == "quota_topup"
+        assert entry["direction"] == "credit"
+        assert float(entry["amount"]) == 3.0
+
+
+def test_reset_daily_quota_debt_reduces_balance_and_records_debt(app):
+    with app.app_context():
+        plan = _seed_plan("Quota Reset Debt Plan", price=20)
+        _seed_subscriber(
+            "quota_reset_debt",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        db().execute(
+            "UPDATE subscribers SET used_seconds=120, balance=0 "
+            "WHERE tenant_id=1 AND username='quota_reset_debt'"
+        )
+        get_users_service().reset_daily_quota(
+            actor="tester", username="quota_reset_debt",
+            charge_mode="debt", amount=4.5, currency="JOD",
+        )
+        updated = subscribers_repo.get_subscriber(1, "quota_reset_debt")
+        debt = db().execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id=1 "
+            "AND username='quota_reset_debt' AND source_type='subscriber_daily_quota_reset'"
+        ).fetchone()
+
+        assert updated.used_seconds == 0
+        assert updated.balance == -4.5
+        assert debt is not None
+        assert debt["entry_type"] == "debt"
+        assert debt["direction"] == "debit"
+
+
+def test_quota_reset_route_reads_charge_mode(client, app):
+    with app.app_context():
+        plan = _seed_plan("Quota Reset Route Plan", price=20)
+        _seed_subscriber(
+            "quota_reset_route",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/quota_reset_route/quota/reset-daily",
+        data={"_csrf_token": "quick-csrf", "charge_mode": "debt", "amount": "6"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    with app.app_context():
+        from app.radius.db.repos import subscribers_repo
+
+        updated = subscribers_repo.get_subscriber(1, "quota_reset_route")
+        assert float(updated.balance) == -6.0
+
+
+def test_quota_reset_uses_floating_modal_not_native_confirm(client, app):
+    with app.app_context():
+        plan = _seed_plan("Quota Reset UI Plan", price=20)
+        _seed_subscriber(
+            "quota_reset_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+    _auth_session(client)
+    res = client.get("/admin/radius/subscribers")
+    html = res.get_data(as_text=True)
+
+    assert res.status_code == 200
+    # the floating modal exists and both triggers open it
+    assert 'data-usq-modal="quota-reset"' in html
+    assert 'data-usq-open="quota-reset"' in html
+    assert 'data-urow-open="quota-reset"' in html
+    # daily quota is surfaced + the free/paid/debt billing choice is present
+    assert "الكوتة اليومية" in html
+    assert 'name="charge_mode"' in html
+    # the old native-confirm form for daily-quota-reset is gone
+    assert 'data-usq-confirm="استعادة الكوتة اليومية' not in html
+    assert 'data-urow-confirm="استعادة الكوتة اليومية' not in html
