@@ -1,0 +1,226 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الفواتير والكوبونات — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
+{% block page_title %}الفواتير والكوبونات{% endblock %}
+{% block page_sub %}<span class="sub">إصدار الفواتير وتوليد الكوبونات في صفحة واحدة</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+.fb-hero{position:relative;border-radius:18px;padding:22px 24px;margin-bottom:18px;
+  background:linear-gradient(135deg,#1d4ed8,#0e7490);color:#fff;box-shadow:0 18px 44px rgba(29,78,216,.22);overflow:hidden}
+.fb-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:900}
+.fb-hero p{margin:0;max-width:760px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.7}
+.fb-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.fb-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
+  background:rgba(255,255,255,.14);color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(255,255,255,.18);font-size:13px}
+.fb-tabs a:hover{background:rgba(255,255,255,.24)}
+.fb-tabs a.is-active{background:#fff;color:#1d4ed8;border-color:#fff}
+.fb-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
+.fb-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.fb-filters{display:flex;flex-wrap:wrap;gap:6px}
+.fb-filters a{padding:6px 12px;border-radius:999px;border:1px solid var(--hub-border-soft);background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none;font-size:12px}
+.fb-filters a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+.fb-modal{border:none;border-radius:18px;padding:0;max-width:680px;width:calc(100% - 32px);box-shadow:0 30px 80px rgba(15,23,42,.35);background:#fff}
+.fb-modal::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
+.fb-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--hub-border-soft)}
+.fb-modal-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.fb-modal-body{padding:18px 20px}
+.fb-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:0 0 18px 18px}
+.fb-x{width:34px;height:34px;border-radius:9px;border:1px solid var(--hub-border-soft);background:#fff;cursor:pointer;color:var(--hub-text-mute)}
+.fb-x:hover{background:var(--hub-bg-soft);color:var(--hub-text)}
+.fb-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fb-form-grid .span2{grid-column:1 / -1}
+@media(max-width:560px){.fb-form-grid{grid-template-columns:1fr}}
+.fb-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:800;color:var(--hub-text-soft)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fb-hero">
+  <h2><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والكوبونات</h2>
+  <p>أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. هذه واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.</p>
+  <nav class="fb-tabs">
+    <a href="?tab=invoices" class="{{ 'is-active' if tab == 'invoices' }}"><i class="fa-solid fa-file-invoice"></i> الفواتير</a>
+    <a href="?tab=vouchers" class="{{ 'is-active' if tab == 'vouchers' }}"><i class="fa-solid fa-ticket"></i> الكوبونات</a>
+  </nav>
+</div>
+
+{# ═══════════════ TAB: INVOICES ═══════════════ #}
+{% if tab == 'invoices' %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الفواتير", inv_stats.total|money, icon="file-invoice-dollar", variant="brand") }}
+  {{ hub.kpi("المدفوعة", inv_stats.paid|money, icon="circle-check", variant="green") }}
+  {{ hub.kpi("المعلّقة", inv_stats.pending|money, icon="clock", variant="amber") }}
+  {{ hub.kpi("عدد الفواتير", inv_stats.count, icon="hashtag", variant="blue") }}
+</div>
+
+<div class="fb-panel-head">
+  <h3><i class="fa-solid fa-file-invoice"></i> الفواتير</h3>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="fb-filters">
+      <a href="?tab=invoices" class="{{ 'is-active' if not status }}">الكل</a>
+      <a href="?tab=invoices&status=paid" class="{{ 'is-active' if status=='paid' }}">مدفوعة</a>
+      <a href="?tab=invoices&status=pending" class="{{ 'is-active' if status=='pending' }}">معلّقة</a>
+      <a href="?tab=invoices&status=failed" class="{{ 'is-active' if status=='failed' }}">فشلت</a>
+    </div>
+    <button class="hub-btn hub-btn--primary" type="button" data-modal-open="invoice"><i class="fa-solid fa-plus"></i> فاتورة جديدة</button>
+  </div>
+</div>
+{% if invoices %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead><tr><th>الرقم</th><th>المشترك</th><th>الباقة</th><th>المبلغ</th><th>الاتجاه</th><th>طريقة الدفع</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+    <tbody>
+      {% for i in invoices %}
+      <tr>
+        <td><strong>{{ i.invoice_number or i.id }}</strong></td>
+        <td>{{ i.username }}</td>
+        <td>{{ i.plan_name or "—" }}</td>
+        <td><strong>{{ i.amount|money }}</strong></td>
+        <td>{{ i.direction or "—" }}</td>
+        <td>{{ i.payment_method or "—" }}</td>
+        <td>{{ hub.pill(i.status, variant="green" if i.status=="paid" else ("amber" if i.status=="pending" else "grey")) }}</td>
+        <td class="small hub-text-mute">{{ i.created_at|dt_local if i.created_at else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد فواتير بعد.", sub="اضغط «فاتورة جديدة» لإصدار أول فاتورة.", icon="file-invoice") }}</div>
+{% endif %}
+{% endif %}
+
+{# ═══════════════ TAB: VOUCHERS ═══════════════ #}
+{% if tab == 'vouchers' %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("القيمة الإجمالية", vch_stats.total_amount|money, icon="sack-dollar", variant="brand") }}
+  {{ hub.kpi("نشطة", vch_stats.active, icon="ticket", variant="green") }}
+  {{ hub.kpi("مستخدمة", vch_stats.used, icon="circle-check", variant="blue") }}
+  {{ hub.kpi("ملغاة", vch_stats.revoked, icon="ban", variant="amber") }}
+</div>
+
+<div class="fb-panel-head">
+  <h3><i class="fa-solid fa-ticket"></i> الكوبونات</h3>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="fb-filters">
+      <a href="?tab=vouchers" class="{{ 'is-active' if not status }}">الكل</a>
+      <a href="?tab=vouchers&status=active" class="{{ 'is-active' if status=='active' }}">نشطة</a>
+      <a href="?tab=vouchers&status=used" class="{{ 'is-active' if status=='used' }}">مستخدمة</a>
+      <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">ملغاة</a>
+    </div>
+    <button class="hub-btn hub-btn--primary" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> توليد كوبونات</button>
+  </div>
+</div>
+{% if vouchers %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead><tr><th>الكود</th><th>القيمة</th><th>الباقة</th><th>الحالة</th><th>تنتهي في</th><th>إجراء</th></tr></thead>
+    <tbody>
+      {% for v in vouchers %}
+      <tr>
+        <td class="mono"><strong>{{ v.code }}</strong></td>
+        <td>{{ v.amount|money }}</td>
+        <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
+        <td>{{ hub.pill(v.status, variant="green" if v.status=="active" else ("blue" if v.status=="used" else "grey")) }}</td>
+        <td class="small hub-text-mute">{{ v.expire_at or "—" }}</td>
+        <td>
+          {% if v.status == 'active' %}
+          <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
+                onsubmit="return confirm('إلغاء هذا الكوبون؟');">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-ban"></i> إلغاء</button>
+          </form>
+          {% else %}<span class="hub-text-mute">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد كوبونات بعد.", sub="اضغط «توليد كوبونات» لإنشاء دفعة.", icon="ticket") }}</div>
+{% endif %}
+{% endif %}
+
+{# ═══════════════ MODALS ═══════════════ #}
+
+{# Invoice modal — posts to the unchanged inv_create endpoint #}
+<dialog class="fb-modal" data-modal="invoice">
+  <form method="post" action="{{ url_for('radius.inv_create') }}">
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-file-invoice"></i> فاتورة جديدة</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fb-form-grid">
+        <label class="span2">المشترك <span class="req">*</span>
+          <select class="hub-select" name="subscriber_id" required>
+            <option value="">— اختر —</option>
+            {% for s in subs %}<option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>الباقة
+          <select class="hub-select" name="plan_id">
+            <option value="">— بدون —</option>
+            {% for p in plans %}<option value="{{ p.id }}">{{ p.name }} ({{ p.price|money }})</option>{% endfor %}
+          </select>
+        </label>
+        <label>المبلغ <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0" required value="0"></label>
+        <label>الاتجاه
+          <select class="hub-select" name="direction">
+            <option value="charge">تحصيل</option><option value="refund">إرجاع</option>
+            <option value="deposit">إيداع</option><option value="withdraw">سحب</option><option value="credit">رصيد</option>
+          </select>
+        </label>
+        <label>نوع الخدمة
+          <select class="hub-select" name="service_type"><option value="Hotspot">Hotspot</option><option value="PPPoE">PPPoE</option><option value="Balance">Balance</option></select>
+        </label>
+        <label>طريقة الدفع
+          <select class="hub-select" name="payment_method">
+            <option value="cash">نقدًا</option><option value="transfer">حوالة</option><option value="card">بطاقة</option>
+            <option value="online">دفع إلكتروني</option><option value="manual">يدوي</option>
+          </select>
+        </label>
+        <label>الحالة
+          <select class="hub-select" name="status"><option value="paid">مدفوعة</option><option value="pending">معلَّقة</option><option value="failed">فشلت</option></select>
+        </label>
+        <label>تنتهي في<input class="hub-input" type="date" name="expiration_at"></label>
+        <label class="span2">ملاحظة<input class="hub-input" name="note"></label>
+      </div>
+    </div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> إصدار الفاتورة</button></div>
+  </form>
+</dialog>
+
+{# Voucher modal — posts to the unchanged vch_generate endpoint #}
+<dialog class="fb-modal" data-modal="voucher">
+  <form method="post" action="{{ url_for('radius.vch_generate') }}">
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-ticket"></i> توليد كوبونات</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fb-form-grid">
+        <label>عدد الكوبونات <span class="req">*</span><input class="hub-input" type="number" name="count" min="1" max="5000" required value="20"></label>
+        <label>القيمة لكل كوبون <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0.01" required value="5.00"></label>
+        <label>الباقة (اختياري)
+          <select class="hub-select" name="plan_id"><option value="">— بدون ربط —</option>{% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+        </label>
+        <label>تنتهي في<input class="hub-input" type="date" name="expire_at"></label>
+      </div>
+    </div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> توليد</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  function dialogFor(n){ return document.querySelector('dialog[data-modal="'+n+'"]'); }
+  document.addEventListener('click', function(ev){
+    var o = ev.target.closest('[data-modal-open]');
+    if(o){ var d = dialogFor(o.getAttribute('data-modal-open')); if(d && d.showModal) d.showModal(); return; }
+    if(ev.target.closest('[data-modal-close]')){ var dlg = ev.target.closest('dialog'); if(dlg) dlg.close(); return; }
+    if(ev.target.tagName === 'DIALOG' && ev.target.classList.contains('fb-modal')){ ev.target.close(); }
+  });
+})();
+</script>
+{% endblock %}
