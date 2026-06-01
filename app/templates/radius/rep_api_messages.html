@@ -5,6 +5,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}سجل رسائل واجهة الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-message"></i>{% endblock %}
@@ -14,24 +15,26 @@
 {% block content %}
 
 {{ hub.hero(
-  "رسائل واجهة الربط (API)",
-  subtitle="كل استدعاء أُرسل بتوكن — من audit_log حيث actor LIKE 'api-token%'.",
+  "رسائل واجهة الربط",
+  subtitle="كل استدعاء وصل من مفاتيح الربط، مع الفعل والكيان والوقت بطريقة قابلة للمراجعة.",
   icon="message"
 ) }}
+
+{{ rf.bar('radius.rep_api_messages', filters, show_date=True, q_placeholder='بحث (إجراء / هدف)…') }}
 
 {% if items %}
 {% call hub.section("الرسائل", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-api-messages">
       <thead>
         <tr>
           <th class="num" style="width:70px">#</th>
-          <th>التوكن</th>
+          <th>مفتاح الربط</th>
           <th>الفعل</th>
           <th>الكيان</th>
           <th>المعرّف</th>
-          <th>IP</th>
+          <th>عنوان الشبكة</th>
           <th>الوقت</th>
         </tr>
       </thead>
@@ -39,9 +42,9 @@
         {% for r in items %}
         <tr>
           <td class="num mono">{{ r.id }}</td>
-          <td>{{ hub.pill(r.actor, variant="blue", dot=False) }}</td>
-          <td class="mono small">{{ r.action or '—' }}</td>
-          <td class="mono small">{{ r.target_type or '—' }}</td>
+          <td>{{ hub.pill(r.actor_label, variant="blue", dot=False) }}</td>
+          <td>{{ r.action_label or '—' }}</td>
+          <td>{{ r.target_type_label or '—' }}</td>
           <td class="mono small">{{ r.target_id or '—' }}</td>
           <td class="mono small">{{ r.ip_address or '—' }}</td>
           <td class="mono small">{{ r.created_at[:16] if r.created_at else '—' }}</td>
@@ -53,8 +56,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد رسائل API بعد",
-  sub="يظهر هنا أول استدعاء بمجرد استخدام أي توكن API.",
+  "لا توجد رسائل ربط بعد",
+  sub="يظهر هنا أول استدعاء بمجرد استخدام أي مفتاح واجهة.",
   icon="message"
 ) }}
 {% endif %}

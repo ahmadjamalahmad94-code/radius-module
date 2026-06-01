@@ -165,4 +165,4 @@ def test_operations_routes_render_and_save_dry_run_policy(app):
     assert saved.status_code == 200
     body = saved.get_data(as_text=True)
     assert "route-pressure" in body
-    assert "False" in body
+    assert "لا" in body

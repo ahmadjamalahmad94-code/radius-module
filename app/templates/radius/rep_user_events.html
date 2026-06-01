@@ -5,6 +5,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}أحداث المستخدمين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
@@ -15,15 +16,17 @@
 
 {{ hub.hero(
   "أحداث المستخدمين",
-  subtitle="كل حدث في audit_log يخصّ مشتركًا — إنشاء، تعديل، تعطيل، تمديد، حذف.",
+  subtitle="كل حدث يخصّ مشتركًا — إنشاء، تعديل، تعطيل، تمديد، أو حذف — مع ملخص مفهوم.",
   icon="users-rectangle"
 ) }}
+
+{{ rf.bar('radius.rep_user_events', filters, show_date=True, q_placeholder='بحث (مشترك / إجراء)…') }}
 
 {% if items %}
 {% call hub.section("سجل الأحداث", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-user-events">
       <thead>
         <tr>
           <th class="num" style="width:70px">#</th>
@@ -38,12 +41,12 @@
         {% for r in items %}
         <tr>
           <td class="num mono">{{ r.id }}</td>
-          <td>{{ r.actor }}</td>
-          <td>{{ hub.pill(r.action, variant="blue", dot=False) }}</td>
+          <td>{{ r.actor_label }}</td>
+          <td>{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
           <td class="mono"><strong>{{ r.target_id or '—' }}</strong></td>
-          <td class="mono small" title="{{ r.payload_json or '' }}"
+          <td class="small" title="{{ r.payload_summary or '' }}"
               style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ r.payload_json or '—' }}
+            {{ r.payload_summary or '—' }}
           </td>
           <td class="mono small">{{ r.created_at[:16] if r.created_at else '—' }}</td>
         </tr>

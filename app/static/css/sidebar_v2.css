@@ -359,6 +359,19 @@ html[dir="rtl"] .hb-side-subitem{padding:8px 42px 8px 12px}
   box-shadow:0 0 0 3px var(--hb-section-softer, var(--hb-purple-softer));
 }
 
+/* ── Sub-group label inside a section (groups related sub-items) ── */
+.hb-side-subhead{
+  padding:11px 12px 3px 42px;
+  font-size:10.5px;font-weight:800;
+  letter-spacing:.01em;
+  color:var(--hb-text-mute, #94a3b8);
+  white-space:nowrap;
+  display:flex;align-items:center;gap:6px;
+}
+html[dir="rtl"] .hb-side-subhead{padding:11px 42px 3px 12px}
+.hb-side-subhead > i{font-size:9px;opacity:.7}
+.hb-side-section-body-inner > .hb-side-subhead:first-child{padding-top:3px}
+
 /* ═════════════════════════ FOOT (user pill) ═════════════════════════ */
 .hb-side-foot{
   padding:10px var(--hb-side-pad-x) 14px;

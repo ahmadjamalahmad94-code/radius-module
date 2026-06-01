@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز التقارير - Hobe Hub{% endblock %}
+{% block title %}مركز التقارير - هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
 {% block page_title %}مركز التقارير{% endblock %}
 {% block page_sub %}<span class="sub">تحليلات تنفيذية، تقارير تفصيلية، ولقطات أرشيف ثابتة.</span>{% endblock %}
@@ -23,7 +23,7 @@
 
 {% call hub.section("مؤشرات تفصيلية", icon="arrow-up-right-from-square", flush=True) %}
   <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="drilldown-links">
+    <table class="hub-table rep-table" data-testid="drilldown-links">
       <thead><tr><th>المؤشر</th><th>القيمة</th><th>فتح التفاصيل</th></tr></thead>
       <tbody>
         <tr><td>المشتركون النشطون</td><td>{{ summary.subscribers.active }}</td><td><a href="{{ summary.drilldowns.subscribers_active }}">فتح</a></td></tr>
@@ -39,7 +39,7 @@
 {% call hub.section("مكتبة التقارير", icon="folder-open") %}
   <div class="hub-actions" data-testid="report-catalog">
     {% for report in catalog %}
-      {{ hub.action_card(report.title, sub=report.key, icon="file-lines", href=report.url, variant="grey") }}
+      {{ hub.action_card(report.title, sub=report.description or "افتح التقرير التفصيلي", icon="file-lines", href=report.url, variant="grey") }}
     {% endfor %}
   </div>
 {% endcall %}

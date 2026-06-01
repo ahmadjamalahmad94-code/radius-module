@@ -4,9 +4,29 @@ import os
 
 import pytest
 
-from app.radius.db.connection import db, reset_for_tests
-from app.radius.services.card_users_marketplace import CardUsersMarketplaceService
-from app.radius.services.customer_portals import CustomerPortalService, PortalAuthError
+
+def db():
+    from app.radius.db.connection import db as live_db
+
+    return live_db()
+
+
+def _marketplace_service():
+    from app.radius.services.card_users_marketplace import CardUsersMarketplaceService
+
+    return CardUsersMarketplaceService
+
+
+def _portal_service():
+    from app.radius.services.customer_portals import CustomerPortalService
+
+    return CustomerPortalService
+
+
+def _portal_auth_error():
+    from app.radius.services.customer_portals import PortalAuthError
+
+    return PortalAuthError
 
 
 @pytest.fixture
@@ -14,12 +34,31 @@ def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "customer_portals.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
+    from app.radius.db.connection import reset_for_tests
+
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    flask_app.config["_HOBERADIUS_TEST_DB_FILE"] = db_file
+
+    @flask_app.before_request
+    def _bind_customer_portal_test_db():
+        os.environ["HOBERADIUS_DB_PATH"] = db_file
+        from app.radius.db.connection import reset_for_tests
+
+        reset_for_tests(db_file)
+
+    with flask_app.app_context():
+        from app.radius.db.migrations_runner import run_pending_migrations
+        from app.radius.db.repos import tenants_repo
+
+        run_pending_migrations()
+        tenants_repo.ensure_default_tenant()
+    return flask_app
 
 
 def _plan(name: str = "Portal Plan", *, loan_enabled: bool = True, max_loan_minutes: int = 2880) -> int:
@@ -58,7 +97,7 @@ def _csrf(client, token: str = "portal-csrf") -> str:
 
 def _card_user_with_purchase() -> tuple[int, dict, dict]:
     plan_id = _plan("Card Portal Plan", loan_enabled=False)
-    svc = CardUsersMarketplaceService(tenant_id=1)
+    svc = _marketplace_service()(tenant_id=1)
     card_user = svc.create_card_user(display_name="Card Customer", mobile="0590000000", password="portal-pass")
     package = svc.create_package(name="Portal Package", plan_id=plan_id, price="2.00")
     svc.recharge_wallet(card_user_id=card_user["id"], amount="10.00", actor="test")
@@ -95,8 +134,8 @@ def test_subscriber_portal_access_is_self_scoped_and_expired_can_view(app):
 def test_subscriber_auth_rejects_other_password(app):
     with app.app_context():
         _subscriber()
-        with pytest.raises(PortalAuthError):
-            CustomerPortalService(tenant_id=1).authenticate_subscriber(
+        with pytest.raises(_portal_auth_error()):
+            _portal_service()(tenant_id=1).authenticate_subscriber(
                 username="portal-user",
                 password="wrong",
             )
@@ -105,7 +144,7 @@ def test_subscriber_auth_rejects_other_password(app):
 def test_loan_request_auto_approves_when_plan_policy_allows(app):
     with app.app_context():
         subscriber_id = _subscriber()
-        result = CustomerPortalService(tenant_id=1).submit_loan_request(
+        result = _portal_service()(tenant_id=1).submit_loan_request(
             subscriber_id=subscriber_id,
             requested_minutes=1440,
             reason="need one day",
@@ -124,7 +163,7 @@ def test_loan_request_auto_approves_when_plan_policy_allows(app):
 def test_loan_request_requires_approval_when_plan_policy_blocks(app):
     with app.app_context():
         subscriber_id = _subscriber(plan_id=_plan("No Loan Plan", loan_enabled=False, max_loan_minutes=0))
-        result = CustomerPortalService(tenant_id=1).submit_loan_request(
+        result = _portal_service()(tenant_id=1).submit_loan_request(
             subscriber_id=subscriber_id,
             requested_minutes=1440,
             reason="blocked",
@@ -157,7 +196,7 @@ def test_loan_request_requires_approval_when_plan_policy_blocks(app):
 def test_subscriber_support_request_opens_complaint_ticket_and_notification(app):
     with app.app_context():
         subscriber_id = _subscriber("support-user")
-        result = CustomerPortalService(tenant_id=1).submit_renewal_request(
+        result = _portal_service()(tenant_id=1).submit_renewal_request(
             subscriber_id=subscriber_id,
             reason="[شكوى] الخدمة بطيئة جدًا",
         )
@@ -181,7 +220,7 @@ def test_subscriber_support_request_opens_complaint_ticket_and_notification(app)
 def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
     with app.app_context():
         card_user_id, _purchase, card = _card_user_with_purchase()
-        svc = CardUsersMarketplaceService(tenant_id=1)
+        svc = _marketplace_service()(tenant_id=1)
         package = svc.create_package(name="Second Package", plan_id=card["plan_id"], price="1.00")
         svc.recharge_wallet(card_user_id=card_user_id, amount="5.00", actor="test")
     with app.test_client() as client:

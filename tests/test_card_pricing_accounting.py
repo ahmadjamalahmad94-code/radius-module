@@ -5,6 +5,8 @@ import os
 import pytest
 
 from app.radius.db.connection import db, reset_for_tests
+from app.radius.db.migrations_runner import run_pending_migrations
+from app.radius.db.repos import admins_repo, tenants_repo
 from app.radius.services.business_os_finance import WalletService
 from app.radius.services.card_pricing import CardPricingError, CardPricingService
 from app.radius.services.card_users_marketplace import CardUsersMarketplaceService
@@ -20,7 +22,12 @@ def app(monkeypatch, tmp_path):
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        run_pending_migrations()
+        tenants_repo.ensure_default_tenant()
+        admins_repo.ensure_default_roles()
+    return flask_app
 
 
 def _auth_session(client):

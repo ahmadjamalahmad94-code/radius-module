@@ -1,12 +1,42 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ title }} - Hobe Hub{% endblock %}
+{% block title %}{{ title }} - هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
 {% block page_sub %}<span class="sub">عرض تفصيلي للتقرير بعد الفلترة.</span>{% endblock %}
 
 {% block content %}
+{% set field_labels = {
+  'metric':'المؤشر',
+  'value':'القيمة',
+  'total':'الإجمالي',
+  'active':'النشط',
+  'unused':'غير المستخدم',
+  'expired':'المنتهي',
+  'connected':'المتصل',
+  'sold_today':'مباع اليوم',
+  'sold_month':'مباع الشهر',
+  'sold_year':'مباع السنة',
+  'distributor_id':'رقم الموزع',
+  'share_count':'عدد الحصص',
+  'share_total':'إجمالي الحصص'
+} %}
+{% set value_labels = {
+  'revenue':'الإيرادات',
+  'payments':'الدفعات',
+  'margin':'الهامش',
+  'subscriber_debts':'ديون المشتركين',
+  'distributor_profits':'أرباح الموزعين',
+  'total':'الإجمالي',
+  'active':'النشط',
+  'unused':'غير المستخدم',
+  'expired':'المنتهي',
+  'connected':'المتصل',
+  'sold_today':'مباع اليوم',
+  'sold_month':'مباع الشهر',
+  'sold_year':'مباع السنة'
+} %}
 {{ hub.hero(
   title,
   subtitle="استخدم فلاتر التاريخ لاختيار نطاق محدد. يتم إنشاء لقطات الأرشيف من تبويب الأرشيف.",
@@ -24,12 +54,15 @@
 
 {% call hub.section("صفوف التقرير", icon="table", flush=True) %}
   <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="report-detail-table">
+    <table class="hub-table rep-table" data-testid="report-detail-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-detail">
       <thead><tr><th>الحقل</th><th>القيمة</th></tr></thead>
       <tbody>
         {% for item in data["items"] %}
           {% for key, value in item.items() %}
-            <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+            <tr>
+              <td>{{ field_labels.get(key, key|replace('_', ' ')) }}</td>
+              <td>{{ value_labels.get(value, value) }}</td>
+            </tr>
           {% endfor %}
         {% else %}
           <tr><td colspan="2">لا توجد بيانات ضمن هذا الفلتر.</td></tr>

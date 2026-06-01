@@ -157,6 +157,9 @@ class VpnRadiusBootstrapPlanner:
         else:
             lines += [
                 "# لا يمكن إنشاء peer الآن لأن مفتاح WireGuard العام للسيرفر غير مضبوط في HobeRadius.",
+                f'# اسم peer المحجوز لهذا الراوتر: "{peer_name}"',
+                f'# عنوان Allowed Address المتوقع عند ضبط المفتاح: "{allowed_address}"',
+                f'# مسار الخادم المتوقع داخل النفق: "{allowed_address}" عبر "{wg_interface}"',
                 "# اضبط HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم ثم أعد توليد السكربت.",
                 "# لم يتم توليد أمر إنشاء peer حتى لا يفشل MikroTik برسالة no key set.",
                 "",

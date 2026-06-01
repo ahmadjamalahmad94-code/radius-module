@@ -5,6 +5,7 @@ import os
 import pytest
 
 from app.radius.db.connection import db, reset_for_tests
+from app.radius.db.migrations_runner import run_pending_migrations
 from app.radius.services.business_os_finance import (
     BusinessOSValidationError,
     EventService,
@@ -25,7 +26,10 @@ def app(monkeypatch, tmp_path):
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        run_pending_migrations()
+    return flask_app
 
 
 def test_business_os_migration_creates_core_tables(app):
@@ -41,6 +45,7 @@ def test_business_os_migration_creates_core_tables(app):
         "approval_requests",
     }
     with app.app_context():
+        run_pending_migrations()
         rows = db().execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         ).fetchall()

@@ -145,7 +145,7 @@ def test_eligible_run_returns_pilot_checklist(app):
         assert body["eligible"] is True
         assert body["expected_operation_count"] > 0
         assert body["checklist"]
-        assert "Router backup/export taken" in body["required_manual_confirmations"]
+        assert "تم أخذ نسخة احتياطية وتصدير للراوتر" in body["required_manual_confirmations"]
 
 
 def test_missing_inventory_blocks_pilot_drill(app):

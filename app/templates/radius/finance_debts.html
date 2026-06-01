@@ -17,7 +17,7 @@
   {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="green") }}
 </div>
 
-{% if debts.items %}
+{% if debts['items'] %}
 {% call hub.section("الذمم المفتوحة", icon="table-list", meta=debts.count|string + " ذمّة", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="finance-debts">
@@ -34,7 +34,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for d in debts.items %}
+        {% for d in debts['items'] %}
         <tr>
           <td class="num mono">{{ d.id }}</td>
           <td class="mono">{{ d.username or '—' }}</td>

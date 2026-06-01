@@ -52,7 +52,7 @@
   {% call hub.section("إشارات الصحة", icon="heart-pulse") %}
     <ul class="hub-list" data-testid="operations-health">
       <li>مسار قاعدة RADIUS: {{ _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة') }}</li>
-      <li>أجهزة مضبوطة عبر API: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
+      <li>أجهزة مضبوطة عبر واجهة الربط: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
       <li>فحص مباشر: {{ "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل" }}</li>
     </ul>
   {% endcall %}

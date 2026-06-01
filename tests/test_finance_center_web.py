@@ -4,8 +4,23 @@ import os
 
 import pytest
 
-from app.radius.db.connection import reset_for_tests
-from app.radius.services.business_os_finance import WalletService
+
+def _reset_for_tests(db_file: str) -> None:
+    from app.radius.db.connection import reset_for_tests
+
+    reset_for_tests(db_file)
+
+
+def _run_pending_migrations() -> None:
+    from app.radius.db.migrations_runner import run_pending_migrations
+
+    run_pending_migrations()
+
+
+def _wallet_service():
+    from app.radius.services.business_os_finance import WalletService
+
+    return WalletService
 
 
 @pytest.fixture
@@ -13,12 +28,16 @@ def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "finance_center.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
-    reset_for_tests(db_file)
+    _reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        _run_pending_migrations()
+    return flask_app
 
 
 def _auth_session(client):
@@ -45,8 +64,8 @@ def test_finance_center_dashboard_route_renders(app):
 
 def test_finance_wallets_route_lists_wallets_and_recent_transactions(app):
     with app.app_context():
-        wallet = WalletService().create_wallet(tenant_id=1, owner_type="manager", owner_id=44)
-        WalletService().credit(
+        wallet = _wallet_service()().create_wallet(tenant_id=1, owner_type="manager", owner_id=44)
+        _wallet_service()().credit(
             tenant_id=1,
             wallet_id=wallet["id"],
             amount="25.00",
@@ -61,15 +80,15 @@ def test_finance_wallets_route_lists_wallets_and_recent_transactions(app):
         html = res.get_data(as_text=True)
 
     assert res.status_code == 200
-    assert "manager #44" in html
-    assert "25.00" in html
+    assert "مدير #44" in html
+    assert "25 د.أ" in html
     assert "شحن" in html
     assert "خصم" in html
 
 
 def test_finance_wallet_credit_action_writes_transaction(app):
     with app.app_context():
-        wallet = WalletService().create_wallet(tenant_id=1, owner_type="company")
+        wallet = _wallet_service()().create_wallet(tenant_id=1, owner_type="company")
 
     with app.test_client() as client:
         _auth_session(client)
@@ -83,7 +102,7 @@ def test_finance_wallet_credit_action_writes_transaction(app):
     assert res.status_code == 200
     assert "11.25" in html
     with app.app_context():
-        tx = WalletService().list_transactions(tenant_id=1, wallet_id=wallet["id"])
+        tx = _wallet_service()().list_transactions(tenant_id=1, wallet_id=wallet["id"])
     assert tx[0]["transaction_type"] == "credit"
 
 

@@ -6,6 +6,27 @@
 {% block page_title %}الخزائن والمحافظ{% endblock %}
 {% block page_sub %}<span class="sub">أرصدة قابلة للتتبع مع سجل حركات حديث</span>{% endblock %}
 
+{% macro owner_label(owner_type) -%}
+  {{ {
+    'company': 'الشركة',
+    'manager': 'مدير',
+    'distributor': 'موزع',
+    'subscriber': 'مشترك',
+    'card_user': 'مستخدم بطاقات'
+  }.get(owner_type, 'مالك') }}
+{%- endmacro %}
+
+{% macro tx_label(transaction_type) -%}
+  {{ {
+    'credit': 'شحن',
+    'debit': 'خصم',
+    'transfer': 'تحويل',
+    'hold': 'حجز',
+    'release': 'فك حجز',
+    'reversal': 'عكس قيد'
+  }.get(transaction_type, 'حركة مالية') }}
+{%- endmacro %}
+
 {% block content %}
 {{ hub.hero("الخزائن والمحافظ", subtitle="إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.", icon="wallet") }}
 {% include "radius/_finance_nav.html" %}
@@ -38,12 +59,12 @@
       {% for wallet in wallets %}
         <tr>
           <td>{{ wallet.id }}</td>
-          <td>{{ wallet.owner_type }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
+          <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
           <td><strong>{{ wallet.balance|money }}</strong></td>
           <td>{{ hub.pill(wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
-              <div style="font-size:12px">{{ tx.transaction_type }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
+              <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
               <span class="muted">لا توجد حركات بعد.</span>
             {% endfor %}

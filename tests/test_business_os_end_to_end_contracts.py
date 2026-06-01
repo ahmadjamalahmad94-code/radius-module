@@ -5,6 +5,7 @@ import os
 import pytest
 
 from app.radius.db.connection import reset_for_tests
+from app.radius.db.migrations_runner import run_pending_migrations
 from app.radius.services.business_os_finance import EventService
 from app.radius.services.operations_speed_center import OperationsSpeedCenterService
 
@@ -23,7 +24,10 @@ def app(monkeypatch, tmp_path):
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        run_pending_migrations()
+    return flask_app
 
 
 def _auth_session(client):

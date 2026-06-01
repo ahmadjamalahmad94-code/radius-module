@@ -1,0 +1,29 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   repfilter — شريط فلترة موحّد لصفحات التقارير
+   الاستخدام:
+     {% import "_partials/repfilter.html" as rf %}
+     {{ rf.bar('radius.rep_manager_events', filters) }}
+     {{ rf.bar('radius.rep_login_status', filters, show_date=False, extra_html=...) }}
+   يعتمد على كلاسات hub-filterbar / hub-input / hub-btn الموجودة في النظام.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% macro bar(endpoint, filters, show_date=True, q_placeholder="بحث…", extra_html="") -%}
+<form method="get" action="{{ url_for(endpoint) }}" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}" placeholder="{{ q_placeholder }}">
+  {%- if show_date %}
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {%- endif %}
+  {{ extra_html|safe }}
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
+    <i class="fa-solid fa-filter"></i> تطبيق
+  </button>
+  {%- if filters and (filters.q or filters.date_from or filters.date_to) %}
+  <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for(endpoint) }}">
+    <i class="fa-solid fa-rotate-left"></i> مسح
+  </a>
+  {%- endif %}
+</form>
+{%- endmacro %}

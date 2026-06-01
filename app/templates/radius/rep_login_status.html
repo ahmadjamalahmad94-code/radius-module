@@ -19,6 +19,21 @@
   icon="circle-check"
 ) }}
 
+<form method="get" action="{{ url_for('radius.rep_login_status') }}" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}" placeholder="بحث باسم المستخدم…">
+  <select class="hub-input" name="status">
+    <option value="">كل الحالات</option>
+    <option value="enabled"  {% if status=='enabled' %}selected{% endif %}>مفعَّل</option>
+    <option value="expired"  {% if status=='expired' %}selected{% endif %}>منتهٍ</option>
+    <option value="disabled" {% if status=='disabled' %}selected{% endif %}>معطَّل</option>
+  </select>
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+  {% if (filters and filters.q) or status %}
+  <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.rep_login_status') }}"><i class="fa-solid fa-rotate-left"></i> مسح</a>
+  {% endif %}
+</form>
+
 {% if items %}
 {% set _online = items|selectattr('online_count')|list|length %}
 {% set _active = items|selectattr('status','equalto','enabled')|list|length %}
@@ -31,7 +46,7 @@
 {% call hub.section("حالة الدخول", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-login-status">
       <thead>
         <tr>
           <th>المستخدم</th>

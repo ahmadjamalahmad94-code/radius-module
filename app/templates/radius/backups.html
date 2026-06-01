@@ -247,6 +247,7 @@
             </div>
             <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">إدارة الربط من بوابة العميل ↗</a>
           {% else %}
+            <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>Google Drive غير مفعل حاليًا؛ اربطه من بوابة العميل عندما تريد رفع النسخ خارج السيرفر.</div></div>
             <p class="bkx-soft">اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة <span class="mono">drive.file</span>).</p>
             <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> ربط Google Drive</a>
           {% endif %}

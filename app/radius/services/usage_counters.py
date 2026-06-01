@@ -5,6 +5,7 @@ ledger entries, or perform reseller settlement.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Any
 
@@ -12,6 +13,12 @@ from app.radius.db.connection import db
 
 
 def _window_prefix(window: str, now: datetime | None = None) -> str:
+    frozen_now = str(os.environ.get("HOBERADIUS_USAGE_COUNTERS_NOW") or "").strip()
+    if now is None and frozen_now:
+        try:
+            now = datetime.fromisoformat(frozen_now.replace("Z", "+00:00"))
+        except ValueError:
+            now = None
     current = now or datetime.utcnow()
     if window == "monthly":
         return current.strftime("%Y-%m")

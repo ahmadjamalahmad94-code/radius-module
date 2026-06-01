@@ -4,6 +4,8 @@ sync_queue, webhook_deliveries). كلها read-only، tenant-scoped.
 """
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -20,7 +22,97 @@ def _svc() -> DashboardReportsService:
 
 
 def _actor() -> str:
-    return session.get("admin_name") or session.get("admin_user") or "anonymous"
+    return session.get("admin_name") or session.get("admin_user") or "غير معروف"
+
+
+_ACTION_LABELS = {
+    "create": "إنشاء",
+    "update": "تعديل",
+    "delete": "حذف",
+    "disable": "تعطيل",
+    "enable": "تفعيل",
+    "extend_time": "تمديد",
+    "reset_password": "إعادة تعيين كلمة المرور",
+    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "notification.manual_queued": "رسالة يدوية",
+    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
+    "payment_collection.request_approved": "اعتماد طلب دفع",
+    "payment_collection.request_rejected": "رفض طلب دفع",
+}
+
+_TARGET_LABELS = {
+    "user": "مشترك",
+    "subscriber": "مشترك",
+    "card": "كرت",
+    "plan": "باقة",
+    "admin": "مدير",
+    "manager": "مدير",
+    "distributor": "موزّع",
+    "notification_campaign": "حملة رسائل",
+    "payment_request": "طلب دفع",
+    "router": "راوتر",
+    "nas": "جهاز شبكة",
+    "service": "خدمة",
+}
+
+
+def _display_action(action: str) -> str:
+    action = (action or "").strip()
+    if not action:
+        return "غير محدد"
+    return _ACTION_LABELS.get(action, action.replace("_", " ").replace(".", " "))
+
+
+def _display_target(target_type: str, target_id: object) -> str:
+    label = _TARGET_LABELS.get((target_type or "").strip(), "كيان")
+    return f"{label} #{target_id}" if target_id not in (None, "") else label
+
+
+def _display_actor(actor: str) -> str:
+    actor = (actor or "").strip()
+    if actor.startswith("api-token"):
+        return "مفتاح ربط"
+    if actor == "system":
+        return "النظام"
+    return actor or "غير معروف"
+
+
+def _payload_summary(raw: object) -> str:
+    if not raw:
+        return ""
+    try:
+        data = json.loads(str(raw))
+    except (TypeError, ValueError):
+        return "تفاصيل محفوظة في السجل"
+    if not isinstance(data, dict) or not data:
+        return "تفاصيل محفوظة في السجل"
+    keys = {
+        "username": "المستخدم",
+        "plan": "الباقة",
+        "plan_id": "رقم الباقة",
+        "status": "الحالة",
+        "amount": "المبلغ",
+        "channel": "القناة",
+        "count": "العدد",
+    }
+    bits = []
+    for key, label in keys.items():
+        value = data.get(key)
+        if value not in (None, "", [], {}):
+            bits.append(f"{label}: {value}")
+        if len(bits) >= 3:
+            break
+    return "، ".join(bits) if bits else "تفاصيل محفوظة في السجل"
+
+
+def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        row["actor_label"] = _display_actor(str(row.get("actor") or ""))
+        row["action_label"] = _display_action(str(row.get("action") or ""))
+        row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
+        row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
+        row["payload_summary"] = _payload_summary(row.get("payload_json"))
+    return rows
 
 
 def register_reports_routes(bp: Blueprint) -> None:
@@ -34,6 +126,7 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/sessions", "rep_sessions", rep_sessions, methods=["GET"])
     bp.add_url_rule("/reports/failed_logins", "rep_failed_logins", rep_failed_logins, methods=["GET"])
     bp.add_url_rule("/reports/login_status", "rep_login_status", rep_login_status, methods=["GET"])
+    bp.add_url_rule("/reports/login_states", "rep_login_states", rep_login_states, methods=["GET"])
     bp.add_url_rule("/reports/mac_history", "rep_mac_history", rep_mac_history, methods=["GET"])
     bp.add_url_rule("/reports/profile_changes", "rep_profile_changes", rep_profile_changes, methods=["GET"])
     bp.add_url_rule("/reports/api_messages", "rep_api_messages", rep_api_messages, methods=["GET"])
@@ -41,6 +134,10 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/manager_events", "rep_manager_events", rep_manager_events, methods=["GET"])
     bp.add_url_rule("/reports/manager_login_status", "rep_manager_login_status", rep_manager_login_status, methods=["GET"])
     bp.add_url_rule("/reports/user_events", "rep_user_events", rep_user_events, methods=["GET"])
+    bp.add_url_rule("/reports/speed_failures", "rep_speed_failures", rep_speed_failures, methods=["GET"])
+    bp.add_url_rule("/reports/used_cards", "rep_used_cards", rep_used_cards, methods=["GET"])
+    bp.add_url_rule("/reports/balance_movements", "rep_balance_movements", rep_balance_movements, methods=["GET"])
+    bp.add_url_rule("/reports/cash_transactions", "rep_cash_transactions", rep_cash_transactions, methods=["GET"])
 
 
 def reports_home():
@@ -125,124 +222,322 @@ def _limit() -> tuple[int, int]:
     return l, o
 
 
+def _args() -> dict:
+    """فلاتر مشتركة لصفحات التقارير: بحث نصّي + نطاق تاريخ."""
+    return {
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+
+
+def _date_where(col: str, date_from: str, date_to: str) -> tuple[list, list]:
+    where, params = [], []
+    if date_from:
+        where.append(f"{col} >= ?"); params.append(f"{date_from} 00:00:00")
+    if date_to:
+        where.append(f"{col} <= ?"); params.append(f"{date_to} 23:59:59")
+    return where, params
+
+
+def _audit_rows(base_where: str, base_params: list, f: dict, *,
+                q_cols=("actor", "action", "target_id"), limit: int = 500):
+    """قراءة audit_log مع فلاتر q + نطاق تاريخ. يرجّع (rows, total_count)."""
+    where = [base_where]
+    params = list(base_params)
+    if f["q"]:
+        like = f"%{f['q']}%"
+        where.append("(" + " OR ".join(f"{c} LIKE ?" for c in q_cols) + ")")
+        params += [like] * len(q_cols)
+    dw, dp = _date_where("created_at", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    where_sql = " AND ".join(where)
+    total = db().execute(
+        f"SELECT COUNT(*) AS c FROM audit_log WHERE {where_sql}", params
+    ).fetchone()["c"]
+    rows = [dict(r) for r in db().execute(
+        f"SELECT * FROM audit_log WHERE {where_sql} ORDER BY id DESC LIMIT ?",
+        params + [limit],
+    ).fetchall()]
+    return _decorate_audit_rows(rows), total
+
+
 # ─────────────── 1. Sessions (radacct) ───────────────
 
 def rep_sessions():
     limit, offset = _limit()
+    f = _args()
     username = (request.args.get("username") or "").strip()
     sql = "SELECT * FROM radacct WHERE tenant_id = ?"
     vals: list = [_tid()]
     if username:
         sql += " AND username LIKE ?"
         vals.append(f"%{username}%")
+    dw, dp = _date_where("acctstarttime", f["date_from"], f["date_to"])
+    if dw:
+        sql += " AND " + " AND ".join(dw); vals += dp
     sql += " ORDER BY radacctid DESC LIMIT ? OFFSET ?"
     vals += [limit, offset]
     rows = [dict(r) for r in db().execute(sql, vals).fetchall()]
     return render_template("radius/rep_sessions.html",
-                            items=rows, username=username, limit=limit)
+                            items=rows, username=username, limit=limit, filters=f)
 
 
 # ─────────────── 2. Failed logins (radpostauth Access-Reject) ───────────────
 
 def rep_failed_logins():
-    limit, offset = _limit()
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM radpostauth
-        WHERE tenant_id = ? AND reply != 'Access-Accept'
-        ORDER BY id DESC LIMIT ? OFFSET ?
-    """, (_tid(), limit, offset)).fetchall()]
-    return render_template("radius/rep_failed_logins.html", items=rows, limit=limit)
+    f = _args()
+    where = ["tenant_id = ?", "reply != 'Access-Accept'"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(username LIKE ? OR nas LIKE ? OR class LIKE ?)")
+        params += [f"%{f['q']}%"] * 3
+    dw, dp = _date_where("authdate", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    where_sql = " AND ".join(where)
+    total = db().execute(f"SELECT COUNT(*) AS c FROM radpostauth WHERE {where_sql}", params).fetchone()["c"]
+    rows = [dict(r) for r in db().execute(
+        f"SELECT * FROM radpostauth WHERE {where_sql} ORDER BY id DESC LIMIT 500", params
+    ).fetchall()]
+    return render_template("radius/rep_failed_logins.html", items=rows, total=total, filters=f, limit=500)
 
 
 # ─────────────── 3. Login status (last login per user) ───────────────
 
 def rep_login_status():
-    rows = [dict(r) for r in db().execute("""
+    f = _args()
+    status = (request.args.get("status") or "").strip()
+    where = ["tenant_id = ?"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("username LIKE ?"); params.append(f"%{f['q']}%")
+    if status in ("enabled", "disabled", "expired"):
+        where.append("status = ?"); params.append(status)
+    where_sql = " AND ".join(where)
+    rows = [dict(r) for r in db().execute(f"""
         SELECT username, last_login_at, last_seen_at, status, expire_at, online_count
-        FROM subscribers
-        WHERE tenant_id = ?
-        ORDER BY last_seen_at DESC NULLS LAST
-        LIMIT 500
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_login_status.html", items=rows)
+        FROM subscribers WHERE {where_sql}
+        ORDER BY last_seen_at DESC NULLS LAST LIMIT 500
+    """, params).fetchall()]
+    return render_template("radius/rep_login_status.html", items=rows, filters=f, status=status)
+
+
+# ─────────────── 3b. Login states (unified: panel + portal + RADIUS) ───────────────
+
+def rep_login_states():
+    from ..services.login_events import fetch_login_events, ACTOR_LABELS, SOURCE_LABELS
+    filters = {
+        "actor":     (request.args.get("actor") or "").strip(),
+        "result":    (request.args.get("result") or "").strip(),
+        "source":    (request.args.get("source") or "").strip(),
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+    data = fetch_login_events(_tid(), **filters)
+    return render_template(
+        "radius/rep_login_states.html",
+        rows=data["rows"], stats=data["stats"],
+        shown=data["shown"], matched=data["matched"],
+        filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+    )
 
 
 # ─────────────── 4. MAC history (per username distinct MACs) ───────────────
 
 def rep_mac_history():
-    rows = [dict(r) for r in db().execute("""
+    f = _args()
+    where = ["tenant_id = ?", "callingstationid != ''"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(username LIKE ? OR callingstationid LIKE ? OR nasipaddress LIKE ?)")
+        params += [f"%{f['q']}%"] * 3
+    where_sql = " AND ".join(where)
+    rows = [dict(r) for r in db().execute(f"""
         SELECT username, callingstationid AS mac, nasipaddress,
                COUNT(*) AS sessions, MAX(acctstarttime) AS last_seen
-        FROM radacct
-        WHERE tenant_id = ? AND callingstationid != ''
+        FROM radacct WHERE {where_sql}
         GROUP BY username, callingstationid
-        ORDER BY last_seen DESC NULLS LAST
-        LIMIT 500
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_mac_history.html", items=rows)
+        ORDER BY last_seen DESC NULLS LAST LIMIT 500
+    """, params).fetchall()]
+    return render_template("radius/rep_mac_history.html", items=rows, filters=f)
 
 
 # ─────────────── 5. Profile (plan) changes (audit_log) ───────────────
 
 def rep_profile_changes():
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM audit_log
-        WHERE tenant_id = ? AND target_type = 'user' AND action IN ('update','extend_time')
-        ORDER BY id DESC LIMIT 300
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_profile_changes.html", items=rows)
+    f = _args()
+    rows, total = _audit_rows(
+        "tenant_id = ? AND target_type = 'user' AND action IN ('update','extend_time')",
+        [_tid()], f, limit=300)
+    return render_template("radius/rep_profile_changes.html", items=rows, total=total, filters=f)
 
 
 # ─────────────── 6. API messages (audit_log where actor=api-token) ───────────────
 
 def rep_api_messages():
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM audit_log
-        WHERE tenant_id = ? AND actor LIKE 'api-token%'
-        ORDER BY id DESC LIMIT 300
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_api_messages.html", items=rows)
+    f = _args()
+    rows, total = _audit_rows("tenant_id = ? AND actor LIKE 'api-token%'", [_tid()], f, limit=300)
+    return render_template("radius/rep_api_messages.html", items=rows, total=total, filters=f)
 
 
 # ─────────────── 7. CoA failures (sync_queue disconnect failed) ───────────────
 
 def rep_coa_failures():
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM sync_queue
-        WHERE tenant_id = ? AND kind IN ('disconnect','reset_password')
-              AND status IN ('failed','retrying')
-        ORDER BY id DESC LIMIT 300
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_coa_failures.html", items=rows)
+    f = _args()
+    where = ["tenant_id = ?", "kind IN ('disconnect','reset_password')",
+             "status IN ('failed','retrying')"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(kind LIKE ? OR status LIKE ?)")
+        params += [f"%{f['q']}%"] * 2
+    dw, dp = _date_where("created_at", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    where_sql = " AND ".join(where)
+    rows = [dict(r) for r in db().execute(
+        f"SELECT * FROM sync_queue WHERE {where_sql} ORDER BY id DESC LIMIT 300", params
+    ).fetchall()]
+    return render_template("radius/rep_coa_failures.html", items=rows, filters=f)
 
 
 # ─────────────── 8. Manager events (admin actions) ───────────────
 
 def rep_manager_events():
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM audit_log
-        WHERE tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor != 'system'
-        ORDER BY id DESC LIMIT 500
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_manager_events.html", items=rows)
+    f = _args()
+    rows, total = _audit_rows(
+        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor != 'system'",
+        [_tid()], f, limit=500)
+    return render_template("radius/rep_manager_events.html", items=rows, total=total, filters=f)
 
 
 # ─────────────── 9. Manager login status (admins) ───────────────
 
 def rep_manager_login_status():
-    rows = [dict(r) for r in db().execute("""
+    f = _args()
+    where, params = [], []
+    if f["q"]:
+        where.append("(username LIKE ? OR full_name LIKE ? OR email LIKE ?)")
+        params += [f"%{f['q']}%"] * 3
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    rows = [dict(r) for r in db().execute(f"""
         SELECT id, username, full_name, email, role_id, enabled, last_login_at, created_at
-        FROM admins ORDER BY last_login_at DESC NULLS LAST
-    """).fetchall()]
-    return render_template("radius/rep_manager_login_status.html", items=[dict(r) for r in rows])
+        FROM admins{where_sql} ORDER BY last_login_at DESC NULLS LAST
+    """, params).fetchall()]
+    return render_template("radius/rep_manager_login_status.html", items=rows, filters=f)
 
 
 # ─────────────── 10. User events (per subscriber) ───────────────
 
 def rep_user_events():
-    rows = [dict(r) for r in db().execute("""
-        SELECT * FROM audit_log
-        WHERE tenant_id = ? AND target_type = 'user'
-        ORDER BY id DESC LIMIT 500
-    """, (_tid(),)).fetchall()]
-    return render_template("radius/rep_user_events.html", items=rows)
+    f = _args()
+    rows, total = _audit_rows("tenant_id = ? AND target_type = 'user'", [_tid()], f, limit=500)
+    return render_template("radius/rep_user_events.html", items=rows, total=total, filters=f)
+
+
+# ─────────────── 11. Speed-update failures (audit_log) ───────────────
+
+def rep_speed_failures():
+    f = _args()
+    rows, total = _audit_rows(
+        "tenant_id = ? AND result_status = 'failed' "
+        "AND (action LIKE '%speed%' OR action LIKE '%profile%' OR action = 'bulk_set_speeds')",
+        [_tid()], f, q_cols=("actor", "action", "target_id", "error_message"), limit=300)
+    return render_template("radius/rep_speed_failures.html", items=rows, total=total, filters=f)
+
+
+# ─────────────── 12. Used recharge cards (cards) ───────────────
+
+def rep_used_cards():
+    f = _args()
+    where = ["c.tenant_id = ?", "c.used = 1"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(c.username LIKE ? OR c.used_by_mac LIKE ?)")
+        params += [f"%{f['q']}%"] * 2
+    dw, dp = _date_where("c.first_used_at", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    where_sql = " AND ".join(where)
+    total = db().execute(f"SELECT COUNT(*) AS c FROM cards c WHERE {where_sql}", params).fetchone()["c"]
+    rows = [dict(r) for r in db().execute(f"""
+        SELECT c.id, c.username, c.used_by_mac, c.first_used_at, c.expire_at,
+               c.revoked, c.plan_id, COALESCE(p.name, '') AS plan_name
+        FROM cards c LEFT JOIN access_plans p ON p.id = c.plan_id
+        WHERE {where_sql}
+        ORDER BY c.first_used_at DESC NULLS LAST LIMIT 500
+    """, params).fetchall()]
+    return render_template("radius/rep_used_cards.html", items=rows, total=total, filters=f)
+
+
+# ─────────────── 13. Balance movements (accounting + distributor ledger) ───────────────
+
+def rep_balance_movements():
+    f = _args()
+    rows: list[dict] = []
+    # حركات الرصيد العامة (مشتركون/مدراء) من accounting_ledger_entries
+    where = ["tenant_id = ?"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(username LIKE ? OR operator LIKE ? OR entry_type LIKE ? OR source_type LIKE ?)")
+        params += [f"%{f['q']}%"] * 4
+    dw, dp = _date_where("created_at", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    ws = " AND ".join(where)
+    try:
+        for r in db().execute(f"""
+            SELECT created_at, entry_type, direction, amount, currency, username,
+                   operator, admin_id, source_type, status, notes
+            FROM accounting_ledger_entries WHERE {ws}
+            ORDER BY id DESC LIMIT 400""", params).fetchall():
+            d = dict(r); d["scope"] = "general"; rows.append(d)
+    except Exception:
+        pass
+    # حركات رصيد الموزّعين
+    dwhere = ["dl.tenant_id = ?"]
+    dparams: list = [_tid()]
+    if f["q"]:
+        dwhere.append("(d.name LIKE ? OR dl.entry_type LIKE ?)")
+        dparams += [f"%{f['q']}%"] * 2
+    ddw, ddp = _date_where("dl.created_at", f["date_from"], f["date_to"])
+    dwhere += ddw; dparams += ddp
+    dws = " AND ".join(dwhere)
+    try:
+        for r in db().execute(f"""
+            SELECT dl.created_at, dl.entry_type, dl.direction, dl.amount, dl.currency,
+                   COALESCE(d.name,'') AS username, dl.created_by AS operator,
+                   dl.distributor_id AS admin_id, 'distributor' AS source_type,
+                   dl.status, dl.notes
+            FROM distributor_ledger_entries dl
+            LEFT JOIN distributors d ON d.id = dl.distributor_id
+            WHERE {dws} ORDER BY dl.id DESC LIMIT 400""", dparams).fetchall():
+            x = dict(r); x["scope"] = "distributor"; rows.append(x)
+    except Exception:
+        pass
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    rows = rows[:500]
+    return render_template("radius/rep_balance_movements.html", items=rows, total=len(rows), filters=f)
+
+
+# ─────────────── 14. Cash transactions (payment_transactions) ───────────────
+
+def rep_cash_transactions():
+    f = _args()
+    where = ["tenant_id = ?"]
+    params: list = [_tid()]
+    if f["q"]:
+        where.append("(username LIKE ? OR created_by LIKE ? OR method LIKE ?)")
+        params += [f"%{f['q']}%"] * 3
+    dw, dp = _date_where("created_at", f["date_from"], f["date_to"])
+    where += dw; params += dp
+    ws = " AND ".join(where)
+    total = db().execute(f"SELECT COUNT(*) AS c FROM payment_transactions WHERE {ws}", params).fetchone()["c"]
+    agg = db().execute(
+        f"SELECT COALESCE(SUM(amount),0) AS total_amount, COALESCE(SUM(discount_amount),0) AS total_discount "
+        f"FROM payment_transactions WHERE {ws}", params).fetchone()
+    rows = [dict(r) for r in db().execute(f"""
+        SELECT id, created_at, username, amount, currency, method, status,
+               plan_price, effective_price, discount_amount, discount_reason,
+               earned_minutes, created_by, notes
+        FROM payment_transactions WHERE {ws}
+        ORDER BY id DESC LIMIT 500""", params).fetchall()]
+    return render_template("radius/rep_cash_transactions.html", items=rows, total=total,
+                           total_amount=agg["total_amount"], total_discount=agg["total_discount"], filters=f)

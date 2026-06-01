@@ -15,6 +15,7 @@ def app_db(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.fspath(tmp_path / "usage_counters.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    monkeypatch.setenv("HOBERADIUS_USAGE_COUNTERS_NOW", "2026-05-25T12:00:00Z")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     from app import create_app
 

@@ -15,11 +15,11 @@ class OperationsSpeedError(ValueError):
 
 
 SPEED_PRESETS: dict[str, dict[str, Any]] = {
-    "normal": {"label": "Normal", "multiplier": 1.0, "vip_protected": True},
-    "pressure": {"label": "Pressure mode", "multiplier": 0.7, "vip_protected": True},
-    "night": {"label": "Night mode", "multiplier": 1.25, "vip_protected": True},
-    "emergency": {"label": "Emergency", "multiplier": 0.4, "vip_protected": True},
-    "vip_protected": {"label": "VIP protected", "multiplier": 1.0, "vip_protected": True},
+    "normal": {"label": "الوضع الطبيعي", "multiplier": 1.0, "vip_protected": True},
+    "pressure": {"label": "وضع الضغط", "multiplier": 0.7, "vip_protected": True},
+    "night": {"label": "وضع الليل", "multiplier": 1.25, "vip_protected": True},
+    "emergency": {"label": "وضع الطوارئ", "multiplier": 0.4, "vip_protected": True},
+    "vip_protected": {"label": "حماية الباقات المهمة", "multiplier": 1.0, "vip_protected": True},
 }
 
 
@@ -129,18 +129,22 @@ class OperationsSpeedCenterService:
         actor: str = "system",
     ) -> dict[str, Any]:
         preview = self.speed_preview(preset=preset, multiplier=multiplier, profile_ids=profile_ids)
+        now = now_iso()
+        try:
+            key = self._key(policy_key or f"{preset}-{now}")
+        except OperationsSpeedError:
+            key = self._key(f"{preset}-{now.replace(':', '').replace('.', '')}")
+        clean_title = str(title or "").strip() or f"سياسة سرعة - {SPEED_PRESETS.get(preset, SPEED_PRESETS['normal'])['label']}"
         event = self.events.record_event(
             tenant_id=self.tenant_id,
             category="system",
             severity="info",
             event_key="speed_control.dry_run_saved",
-            message="Speed control dry-run policy saved",
+            message="تم حفظ سياسة سرعة كتجربة جافة بدون تطبيق مباشر على RADIUS",
             actor_type="admin",
             target_type="speed_control_policy",
             metadata={"preset": preset, "applied_to_radius": False},
         )
-        key = self._key(policy_key)
-        now = now_iso()
         db().execute(
             """
             INSERT INTO speed_control_policies(
@@ -162,7 +166,7 @@ class OperationsSpeedCenterService:
             (
                 self.tenant_id,
                 key,
-                title,
+                clean_title,
                 preset,
                 preview["multiplier"],
                 _json({"profile_ids": profile_ids or []}),
@@ -189,7 +193,7 @@ class OperationsSpeedCenterService:
                 (self.tenant_id, self._key(str(policy_key_or_id))),
             ).fetchone()
         if not row:
-            raise OperationsSpeedError("speed policy not found")
+            raise OperationsSpeedError("سياسة السرعة غير موجودة.")
         return self._policy_row(row_to_dict(row))
 
     def list_policies(self, *, limit: int = 100) -> list[dict[str, Any]]:
@@ -287,5 +291,5 @@ class OperationsSpeedCenterService:
     def _key(value: str) -> str:
         key = re.sub(r"[^a-zA-Z0-9_.-]+", "-", str(value or "").strip().lower()).strip("-")
         if not key:
-            raise OperationsSpeedError("policy key required")
+            raise OperationsSpeedError("اسم السياسة المختصر مطلوب.")
         return key[:120]

@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   reports.css — طبقة موحّدة لكل صفحات التقارير
+   تُحمَّل من admin/_admin_layout.html. كل الكلاسات بادئتها rep- لتفادي أي تعارض.
+   تكمّل .hub-table (رأس ثابت + حدود) وتضيف: قراءة مريحة، تظليل متناوب،
+   تلوين صفوف الفشل، شريط فلاتر، وشارات/خلايا موحّدة.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── جدول مريح وقابل للقراءة ── */
+.hub-table.rep-table thead th{
+  text-align:start;
+  background:#f8fafc;
+  color:#475569;
+  font-size:11.5px;
+  letter-spacing:.01em;
+}
+.hub-table.rep-table tbody td{
+  text-align:start;
+  padding:11px 14px;
+  vertical-align:middle;
+  line-height:1.5;
+}
+.hub-table.rep-table tbody tr:nth-child(even){ background:#fbfcfe; }
+.hub-table.rep-table tbody tr:hover{ background:#f1f5ff; }
+
+/* صفوف الفشل / الخطر — مسح بصري سريع */
+.hub-table.rep-table tbody tr.is-fail{ background:#fef5f5; }
+.hub-table.rep-table tbody tr.is-fail:hover{ background:#fdeeee; }
+.hub-table.rep-table tbody tr.is-fail td:first-child{ box-shadow:inset 3px 0 0 #ef4444; }
+html[dir="rtl"] .hub-table.rep-table tbody tr.is-fail td:first-child{ box-shadow:inset -3px 0 0 #ef4444; }
+
+/* صفوف تحذيرية (مثلاً قيد إعادة المحاولة) */
+.hub-table.rep-table tbody tr.is-warn td:first-child{ box-shadow:inset 3px 0 0 #f59e0b; }
+html[dir="rtl"] .hub-table.rep-table tbody tr.is-warn td:first-child{ box-shadow:inset -3px 0 0 #f59e0b; }
+
+/* ── خلايا: أساسي / فرعي / mono ── */
+.rep-primary{ font-weight:700; color:#0f172a; }
+.rep-sub{ display:block; font-size:11px; color:#94a3b8; margin-top:2px; }
+.rep-mono{ font-family:ui-monospace,Menlo,Consolas,monospace; }
+.rep-reason{ display:inline-block; margin-top:3px; font-size:11px; color:#b91c1c; }
+.rep-muted{ color:#cbd5e1; }
+.rep-cell-dev{ display:flex; align-items:flex-start; gap:8px; }
+.rep-cell-dev > i{ color:#64748b; margin-top:2px; width:15px; text-align:center; }
+
+/* ── شارة الفاعل ── */
+.rep-actor{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:999px; font-size:11.5px; font-weight:800; white-space:nowrap; }
+.rep-actor.admin{ background:#1e293b; color:#fbbf24; }
+.rep-actor.subscriber{ background:#e0ecff; color:#1d4ed8; }
+.rep-actor.card{ background:#fef3c7; color:#92400e; }
+
+/* ── شارة المصدر ── */
+.rep-src{ display:inline-flex; align-items:center; gap:5px; padding:2px 8px;
+  border-radius:7px; font-size:11px; font-weight:700; background:#f1f5f9; color:#475569; }
+.rep-src.src-panel{ background:#ede9fe; color:#6d28d9; }
+.rep-src.src-network{ background:#ecfdf5; color:#047857; }
+
+/* ── شريط الفلاتر ── */
+.rep-filter{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.rep-f{ display:flex; flex-direction:column; gap:4px; }
+.rep-f label{ font-size:11px; font-weight:700; color:#64748b; }
+.rep-f select, .rep-f input{ min-width:135px; }
+.rep-f.grow{ flex:1; min-width:160px; }
+.rep-f-actions{ display:flex; gap:8px; }

@@ -7,6 +7,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}أخطاء قطع الجلسة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
@@ -16,10 +17,12 @@
 {% block content %}
 
 {{ hub.hero(
-  "أخطاء أوامر CoA",
-  subtitle="فشل/إعادة محاولة لأوامر disconnect و reset_password — من sync_queue.",
+  "أخطاء التحكم الفوري",
+  subtitle="فشل أو إعادة محاولة لأوامر قطع الجلسة أو تغيير كلمة المرور.",
   icon="plug-circle-xmark"
 ) }}
+
+{{ rf.bar('radius.rep_coa_failures', filters, show_date=True, q_placeholder='بحث (نوع / حالة)…') }}
 
 {% if items %}
 {% set _failed   = items|selectattr('status','equalto','failed')|list|length %}
@@ -33,7 +36,7 @@
 {% call hub.section("المهام الفاشلة", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-coa-failures">
       <thead>
         <tr>
           <th class="num" style="width:70px">#</th>
@@ -81,7 +84,7 @@
 {% else %}
 {{ hub.empty(
   "لا إخفاقات حاليًا",
-  sub="كل أوامر CoA نجحت أو ما زالت قيد التنفيذ.",
+  sub="كل أوامر التحكم الفوري نجحت أو ما زالت قيد التنفيذ.",
   icon="circle-check"
 ) }}
 {% endif %}

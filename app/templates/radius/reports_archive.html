@@ -36,7 +36,7 @@
 
 {% call hub.section("اللقطات المحفوظة", icon="lock", flush=True) %}
   <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="archive-snapshots-table">
+    <table class="hub-table rep-table" data-testid="archive-snapshots-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-archive">
       <thead><tr><th>الرقم</th><th>النوع</th><th>الفترة</th><th>التقرير</th><th>الإيرادات</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for archive in archives %}

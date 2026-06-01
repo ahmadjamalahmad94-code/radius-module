@@ -59,13 +59,20 @@ def customer_portals_admin():
 def subscriber_login():
     if request.method == "POST":
         try:
+            _u = request.form.get("username") or ""
             subscriber = CustomerPortalService(tenant_id=1).authenticate_subscriber(
-                username=request.form.get("username") or "",
+                username=_u,
                 password=request.form.get("password") or "",
             )
         except PortalAuthError:
+            from ..services.login_events import record_login_event
+            record_login_event(actor_type="subscriber", username=request.form.get("username") or "",
+                               success=False, reason="bad_password", tenant_id=1)
             flash("بيانات دخول المشترك غير صحيحة.", "error")
             return render_template("radius/portal_subscriber_login.html"), 401
+        from ..services.login_events import record_login_event
+        record_login_event(actor_type="subscriber", username=subscriber.get("username") or _u,
+                           success=True, actor_id=subscriber.get("id"), tenant_id=1)
         session["portal_tenant_id"] = 1
         session["portal_subscriber_id"] = int(subscriber["id"])
         session.pop("portal_card_user_id", None)
@@ -118,13 +125,20 @@ def subscriber_renewal_request():
 def card_login():
     if request.method == "POST":
         try:
+            _mob = request.form.get("mobile") or ""
             card_user = CustomerPortalService(tenant_id=1).authenticate_card_user(
-                mobile=request.form.get("mobile") or "",
+                mobile=_mob,
                 password=request.form.get("password") or "",
             )
         except PortalAuthError:
+            from ..services.login_events import record_login_event
+            record_login_event(actor_type="card", username=request.form.get("mobile") or "",
+                               success=False, reason="bad_password", tenant_id=1)
             flash("رقم الجوال أو كلمة المرور غير صحيحة.", "error")
             return render_template("radius/portal_card_login.html"), 401
+        from ..services.login_events import record_login_event
+        record_login_event(actor_type="card", username=str(card_user.get("mobile") or _mob),
+                           success=True, actor_id=card_user.get("id"), tenant_id=1)
         session["portal_tenant_id"] = 1
         session["portal_card_user_id"] = int(card_user["id"])
         session.pop("portal_subscriber_id", None)

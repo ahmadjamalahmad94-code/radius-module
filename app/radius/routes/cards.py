@@ -1586,12 +1586,8 @@ def cards_checker():
 # طبيعية (`result.exists = false`)، لا خطأ.
 # ─────────────────────────────────────────────────────────────────────────────
 def cards_checker_v2():
-    """Silent compatibility alias for old /cards/checker/v2 bookmarks."""
-    query = (request.args.get("query") or request.args.get("q") or "").strip()
-    args = {}
-    if query:
-        args["query"] = query
-    return redirect(url_for("radius.cards_checker", **args), code=302)
+    """Render the same checker page for old /cards/checker/v2 bookmarks."""
+    return cards_checker()
 
 
 def cards_checker_api_lookup():

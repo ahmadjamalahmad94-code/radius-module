@@ -4,8 +4,29 @@ import os
 
 import pytest
 
-from app.radius.db.connection import db, reset_for_tests
-from app.radius.services.dashboard_reports import DashboardReportsService
+
+def db():
+    from app.radius.db.connection import db as live_db
+
+    return live_db()
+
+
+def _reset_for_tests(db_file: str) -> None:
+    from app.radius.db.connection import reset_for_tests
+
+    reset_for_tests(db_file)
+
+
+def _run_pending_migrations() -> None:
+    from app.radius.db.migrations_runner import run_pending_migrations
+
+    run_pending_migrations()
+
+
+def _dashboard_reports_service():
+    from app.radius.services.dashboard_reports import DashboardReportsService
+
+    return DashboardReportsService
 
 
 @pytest.fixture
@@ -13,12 +34,16 @@ def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "dashboard_reports_archives.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
-    reset_for_tests(db_file)
+    _reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        _run_pending_migrations()
+    return flask_app
 
 
 def _auth_session(client):
@@ -101,7 +126,7 @@ def test_dashboard_summary_endpoint_returns_executive_metrics(app):
 
 def test_date_range_filters_revenue_and_margin(app):
     with app.app_context():
-        service = DashboardReportsService(tenant_id=1)
+        service = _dashboard_reports_service()(tenant_id=1)
         _revenue(1000, 400, "2026-05-10T12:00:00Z")
         _revenue(7000, 2000, "2026-04-10T12:00:00Z")
         summary = service.executive_summary(date_from="2026-05-01", date_to="2026-05-31")
@@ -112,7 +137,7 @@ def test_date_range_filters_revenue_and_margin(app):
 
 def test_drilldown_url_generation(app):
     with app.app_context():
-        links = DashboardReportsService(tenant_id=1).drilldown_links()
+        links = _dashboard_reports_service()(tenant_id=1).drilldown_links()
 
     assert links["subscribers_active"] == "/admin/radius/users?status=enabled"
     assert links["financial_reports"] == "/admin/radius/reports/financial"
@@ -121,7 +146,7 @@ def test_drilldown_url_generation(app):
 
 def test_archive_snapshot_creation_is_immutable(app):
     with app.app_context():
-        service = DashboardReportsService(tenant_id=1)
+        service = _dashboard_reports_service()(tenant_id=1)
         _revenue(2500, 800, "2026-05-10T12:00:00Z")
         first = service.create_archive_snapshot(
             archive_type="yearly",
@@ -174,3 +199,53 @@ def test_report_routes_render_and_archive_post_preserves_financial_history(app):
     assert archive.status_code == 200
     assert "archive-snapshots-table" in archive.get_data(as_text=True)
     assert dashboard.status_code == 200
+
+
+def test_login_states_report_renders_unified_arabic_labels(app):
+    with app.app_context():
+        db().execute(
+            """
+            INSERT INTO audit_log(
+                tenant_id, actor, action, target_type, target_id, payload_json,
+                ip_address, user_agent, created_at, severity, result_status,
+                error_message, before_json, after_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                1,
+                "admin-qa",
+                "auth_login",
+                "admin",
+                "1",
+                '{"kind":"login_event","actor_type":"admin","reason":""}',
+                "10.0.0.5",
+                "Mozilla/5.0 (Windows NT 10.0) Chrome/125",
+                "2026-05-31T08:00:00Z",
+                "info",
+                "success",
+                "",
+                "{}",
+                "{}",
+            ),
+        )
+        db().execute(
+            """
+            INSERT INTO radpostauth(tenant_id, username, pass, reply, authdate, class, nas)
+            VALUES(?,?,?,?,?,?,?)
+            """,
+            (1, "subscriber-qa", "", "Access-Reject", "2026-05-31T08:05:00Z", "bad_password", "nas-1"),
+        )
+
+    with app.test_client() as client:
+        _auth_session(client)
+        response = client.get("/admin/radius/reports/login_states")
+
+    assert response.status_code == 200
+    text = response.get_data(as_text=True)
+    assert "حالات تسجيل الدخول" in text
+    assert "شبكة المصادقة" in text
+    assert "عنوان الشبكة" in text
+    assert "عنوان الجهاز" in text
+    assert "API" not in text
+    assert "NAS:" not in text
+    assert "MAC:" not in text

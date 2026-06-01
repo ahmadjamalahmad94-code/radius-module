@@ -49,6 +49,7 @@
               attrs='onclick="window.location=' + "'" + url_for('radius.finance_ledger') + "'" + '"') }}
 </form>
 
+<div data-testid="ledger-list">
 {% if items %}
 {% call hub.section("القيود", icon="table-list", meta=items|length|string + " قيد", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
@@ -117,5 +118,6 @@
   icon="scale-balanced"
 ) }}
 {% endif %}
+</div>
 
 {% endblock %}

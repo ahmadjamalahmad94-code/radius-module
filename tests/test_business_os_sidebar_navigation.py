@@ -5,6 +5,7 @@ import os
 import pytest
 
 from app.radius.db.connection import reset_for_tests
+from app.radius.db.migrations_runner import run_pending_migrations
 from app.radius.services.business_os_finance import EventService
 
 
@@ -19,7 +20,10 @@ def app(monkeypatch, tmp_path):
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        run_pending_migrations()
+    return flask_app
 
 
 def _auth_session(client):
@@ -73,9 +77,16 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "التقارير": "/admin/radius/reports",
         "التقرير المالي": "/admin/radius/reports/financial",
         "تقارير الجلسات": "/admin/radius/reports/sessions",
-        "فشل الدخول": "/admin/radius/reports/failed_logins",
-        "فشل CoA": "/admin/radius/reports/coa_failures",
-        "رسائل API": "/admin/radius/reports/api_messages",
+        "حالات تسجيل الدخول": "/admin/radius/reports/login_states",
+        "فشل دخول الشبكة": "/admin/radius/reports/failed_logins",
+        "حالة دخول المشتركين": "/admin/radius/reports/login_status",
+        "حالة دخول المدراء": "/admin/radius/reports/manager_login_status",
+        "سجل تغييرات الماك": "/admin/radius/reports/mac_history",
+        "فشل الفصل/التحديث": "/admin/radius/reports/coa_failures",
+        "أحداث المدراء": "/admin/radius/reports/manager_events",
+        "أحداث المشتركين": "/admin/radius/reports/user_events",
+        "تغيير العروض": "/admin/radius/reports/profile_changes",
+        "سجل رسائل الربط": "/admin/radius/reports/api_messages",
         "تقارير البطاقات": "/admin/radius/reports/cards",
         "تقارير الموزعين": "/admin/radius/reports/distributors",
         "الأرشيف": "/admin/radius/reports/archive",
@@ -147,9 +158,16 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/operations/speed-control",
         "/admin/radius/reports",
         "/admin/radius/reports/financial",
+        "/admin/radius/reports/login_states",
         "/admin/radius/reports/sessions",
         "/admin/radius/reports/failed_logins",
+        "/admin/radius/reports/login_status",
+        "/admin/radius/reports/manager_login_status",
+        "/admin/radius/reports/mac_history",
         "/admin/radius/reports/coa_failures",
+        "/admin/radius/reports/manager_events",
+        "/admin/radius/reports/user_events",
+        "/admin/radius/reports/profile_changes",
         "/admin/radius/reports/api_messages",
         "/admin/radius/reports/cards",
         "/admin/radius/reports/distributors",

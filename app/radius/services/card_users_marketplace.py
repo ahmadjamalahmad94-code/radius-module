@@ -178,12 +178,12 @@ class CardUsersMarketplaceService:
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
-            raise CardMarketplaceError("name is required")
+            raise CardMarketplaceError("اسم الباقة مطلوب.")
         price_minor = money_to_minor(price)
         if price_minor <= 0:
-            raise CardMarketplaceError("price must be positive")
+            raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
         if not self._plan_exists(plan_id):
-            raise CardMarketplaceError("plan not found")
+            raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
         meta = dict(metadata or {})
         color = str(card_color or meta.get("card_color") or "#14b8a6").strip()
         if not color.startswith("#") or len(color) not in {4, 7}:
@@ -255,7 +255,7 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(package_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("package not found")
+            raise CardMarketplaceError("باقة السوق غير موجودة.")
         return _row(row)
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
@@ -267,7 +267,7 @@ class CardUsersMarketplaceService:
             actor_type="admin",
             actor_id=None,
             reference_type="card_user_recharge",
-            notes=f"Card user recharge by {actor}",
+            notes=f"شحن محفظة مستخدم الكروت بواسطة {actor}",
         )
 
     def purchase_package(
@@ -280,11 +280,11 @@ class CardUsersMarketplaceService:
         card_user = self.get_card_user(card_user_id)
         package = self.get_package(package_id)
         if not int(package.get("active") or 0):
-            raise CardMarketplaceError("package is inactive")
+            raise CardMarketplaceError("باقة السوق غير مفعلة.")
         wallet = self._wallet_for_card_user(card_user_id)
         price_minor = int(package["price_minor"])
         if int(wallet.get("balance_minor") or 0) < price_minor:
-            raise CardMarketplaceError("insufficient wallet balance")
+            raise CardMarketplaceError("رصيد المحفظة غير كاف.")
 
         card = self._generate_card_for_package(package, card_user)
         debit = self.wallets.debit(
@@ -294,7 +294,7 @@ class CardUsersMarketplaceService:
             actor_type="card_user",
             actor_id=int(card_user_id),
             reference_type="card_marketplace_purchase",
-            notes=f"Card marketplace purchase by {actor}",
+            notes=f"شراء من سوق الكروت بواسطة {actor}",
             metadata={"package_id": int(package_id), "card_id": int(card["id"])},
         )
         purchase_id = self._create_purchase(
@@ -356,7 +356,7 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(purchase_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("purchase not found")
+            raise CardMarketplaceError("عملية الشراء غير موجودة.")
         return _row(row)
 
     def list_purchases(self, *, card_user_id: int | None = None, limit: int = 100) -> list[dict[str, Any]]:

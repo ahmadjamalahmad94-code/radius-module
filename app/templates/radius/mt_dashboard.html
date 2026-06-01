@@ -1044,6 +1044,50 @@
 
   </div>{# /.mt-tabs-row #}
 
+  <nav class="mt-router-quicknav" data-mt-router-quicknav aria-label="روابط الراوتر السريعة">
+    <a class="mt-mini-btn"
+       data-mt-router-link="program"
+       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
+      <i class="fa-solid fa-network-wired"></i> برمجة الشبكة
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="login-designer"
+       href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
+      <i class="fa-solid fa-palette"></i> مصمّم صفحة الدخول
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="diagnostics"
+       href="{{ url_for('radius.diagnostics') }}">
+      <i class="fa-solid fa-stethoscope"></i> تشخيص الشبكة
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="backups"
+       href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
+      <i class="fa-solid fa-box-archive"></i> النسخ الاحتياطية
+    </a>
+    <a class="mt-mini-btn"
+       data-test="mt-dashboard-npc-link"
+       data-mt-router-link="network-policies"
+       href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
+      <i class="fa-solid fa-shield-halved"></i> سياسات الشبكة
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="npc-remote-access"
+       href="{{ url_for('radius.npc_remote_access_list_scoped', nas_id=nas.id) }}">
+      <i class="fa-solid fa-key"></i> الوصول البعيد
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="npc-web-block"
+       href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
+      <i class="fa-solid fa-ban"></i> حجب المواقع
+    </a>
+    <a class="mt-mini-btn"
+       data-mt-router-link="npc-walled-garden"
+       href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
+      <i class="fa-solid fa-door-open"></i> المواقع المسموحة
+    </a>
+  </nav>
+
   {# Status pill — kept as a single DOM element (all JS hooks
      unchanged) but positioned absolutely so it visually floats over
      the active tab's hero. Operator: «انقلهم بالهيرو تبع الاقسام،
@@ -1061,8 +1105,9 @@
      can re-style KPIs / cards / actions without touching the
      global design tokens used elsewhere. All [data-mt-*] hooks
      are unchanged so mt_dashboard.js keeps working as-is. #}
-  <section class="mt-tab-panel is-active rh-overview"
+  <section class="mt-tab-panel is-active"
            data-mt-tab-panel="overview" role="tabpanel">
+    <div class="rh-overview">
 
   {# Status bar moved into the tabs row above so it's tab-agnostic.
      The old in-panel pill was duplicated work + ate vertical space.
@@ -1393,6 +1438,7 @@
     </div>
   </section>
 
+    </div>{# /.rh-overview #}
   </section>{# /overview panel #}
 
   {# ─── P2 — Interfaces tab (real data) ───────────────────── #}
@@ -1861,11 +1907,12 @@
     </div>
 
     {# ── Hotspot — Cards sub-card (numeric/short usernames) ── #}
-    <section class="mt-card" data-mt-hotspot-cards-card>
+    <section class="mt-card" data-mt-hotspot-cards-card data-mt-hotspot-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-credit-card"></i> Hotspot — جلسات الكروت</h3>
         <span class="mt-card-meta">
           <span data-mt-hotspot-cards-count>—</span> متّصل ·
+          <span class="mt-card-note">للقراءة فقط</span> ·
           <button type="button" class="mt-mini-btn"
                   data-mt-hotspot-cards-refresh>
             <i class="fa-solid fa-rotate"></i> تحديث
@@ -1875,7 +1922,7 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-hotspot-cards-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
-          <table class="mt-iface-table" data-mt-hotspot-cards-table>
+          <table class="mt-iface-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
             <thead>
               <tr>
                 <th>المستخدم</th>
@@ -1888,7 +1935,7 @@
                 <th>إجراء</th>
               </tr>
             </thead>
-            <tbody data-mt-hotspot-cards-rows></tbody>
+            <tbody data-mt-hotspot-cards-rows data-mt-hotspot-sessions-rows></tbody>
           </table>
         </div>
       </div>

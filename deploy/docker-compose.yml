@@ -50,7 +50,8 @@ services:
       - ../logs/freeradius:/var/log/freeradius
     # ─── Host networking (postmortem #19) ───────────────────
     # Before: freeradius used the docker bridge network with
-    # ports: 1812/1813/3799 published. RADIUS packets from
+    # ports: 1812/1813/3799 published (legacy bridge example:
+    # "1813:1813/udp"). RADIUS packets from
     # MT routers (10.10.0.x via WireGuard) got SNAT-ed by the
     # bridge's MASQUERADE rule (`-s 10.10.0.0/24 ! -o wg0 -j
     # MASQUERADE`), so freeradius saw src=172.18.0.1 instead

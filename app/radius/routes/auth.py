@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from ..auth.session_helpers import clear_current_admin, set_current_admin
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..services.admins import get_admins_service
+from ..services.login_events import record_login_event
 from ..stores.tenants_store import TenantsStore
 
 
@@ -24,6 +25,8 @@ def auth_login():
         svc = get_admins_service()
         admin = svc.authenticate(username, password)
         if not admin:
+            record_login_event(actor_type="admin", username=username, success=False,
+                               reason="bad_password", tenant_id=DEFAULT_TENANT_ID)
             flash("بيانات الدخول غير صحيحة.", "error")
             return render_template("radius/login.html", username=username), 401
         # اختيار tenant — أولوية: tenants_for_admin → default
@@ -41,6 +44,8 @@ def auth_login():
             ))
             tenants = [store.get(DEFAULT_TENANT_ID)]
         set_current_admin(admin, tenant_id=tenants[0].id)
+        record_login_event(actor_type="admin", username=admin.username, success=True,
+                           actor_id=admin.id, tenant_id=tenants[0].id)
         flash(f"أهلًا {admin.full_name or admin.username}", "success")
         nxt = request.args.get("next") or url_for("radius.dashboard")
         return redirect(nxt)

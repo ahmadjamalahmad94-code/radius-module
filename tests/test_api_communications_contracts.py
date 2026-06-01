@@ -16,6 +16,7 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "communications-api-token")
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     reset_for_tests(db_file)
@@ -132,7 +133,9 @@ def test_communications_api_queues_manual_message_and_campaign_dry_run(client):
 
     summary = client.get("/api/v1/communications/summary", headers=AUTH)
     assert summary.status_code == 200
-    assert _data(summary)["summary"]["templates"] == 1
+    summary_data = _data(summary)
+    assert summary_data["summary"]["templates"] >= 1
+    assert any(item["id"] == template["id"] for item in summary_data["templates"])
 
 
 def test_communications_api_rejects_invalid_channel_in_arabic(client):

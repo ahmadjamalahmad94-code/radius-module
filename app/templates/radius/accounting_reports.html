@@ -53,7 +53,7 @@
 {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table">
+      <table class="hub-table rep-table">
         <thead>
           <tr>
             <th>#</th>
@@ -85,7 +85,7 @@
   {% set columns = items[0].keys()|list %}
   {% call hub.section(report_label, icon="chart-pie", meta=items|length|string + " صف", flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="reports-list">
+      <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="reports-list">
         <thead>
           <tr>
             {% for column in columns %}<th>{{ column }}</th>{% endfor %}

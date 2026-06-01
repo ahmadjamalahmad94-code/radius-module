@@ -137,10 +137,10 @@
 {%- set m_tokens      = '/tokens' in path -%}
 
 {# Setup Wizard / Operations #}
+{%- set m_setup_wizard_v3 = (path == url_for('radius.setup_wizard_v3_page')) -%}
 {%- set m_setup_wizard_v2 = (path == url_for('radius.setup_wizard_v2_page')) -%}
 {%- set m_setup_wizard_engineering = (path == url_for('radius.setup_wizard_page')) -%}
-{# m_setup_wizard_fleet retired May 2026: fleet page consolidated into
-   mt_operations (radius.mt_operations now serves both roles). #}
+{%- set m_setup_wizard_fleet = (path == url_for('radius.setup_wizard_fleet_page')) -%}
 
 {# Business OS #}
 {%- set m_business_dashboard = (path == url_for('radius.dashboard_alias')) -%}
@@ -179,6 +179,17 @@
 {%- set m_reports_failed_logins = (path == url_for('radius.rep_failed_logins')) -%}
 {%- set m_reports_coa_failures = (path == url_for('radius.rep_coa_failures')) -%}
 {%- set m_reports_api_messages = (path == url_for('radius.rep_api_messages')) -%}
+{%- set m_reports_login_states = (path == url_for('radius.rep_login_states')) -%}
+{%- set m_reports_login_status = (path == url_for('radius.rep_login_status')) -%}
+{%- set m_reports_manager_login = (path == url_for('radius.rep_manager_login_status')) -%}
+{%- set m_reports_mac_history = (path == url_for('radius.rep_mac_history')) -%}
+{%- set m_reports_profile_changes = (path == url_for('radius.rep_profile_changes')) -%}
+{%- set m_reports_manager_events = (path == url_for('radius.rep_manager_events')) -%}
+{%- set m_reports_user_events = (path == url_for('radius.rep_user_events')) -%}
+{%- set m_reports_speed_failures = (path == url_for('radius.rep_speed_failures')) -%}
+{%- set m_reports_used_cards = (path == url_for('radius.rep_used_cards')) -%}
+{%- set m_reports_balance_moves = (path == url_for('radius.rep_balance_movements')) -%}
+{%- set m_reports_cash_tx = (path == url_for('radius.rep_cash_transactions')) -%}
 {%- set m_customer_portals = (path == url_for('radius.customer_portals_admin')) -%}
 
 {# Admin Bridge #}
@@ -209,13 +220,17 @@
                                   or m_operations_center -%}
 {%- set sec_reports_active = m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors
                                or m_reports_archive or m_reports_sessions or m_reports_failed_logins
-                               or m_reports_coa_failures or m_reports_api_messages or m_finance_rep -%}
+                               or m_reports_coa_failures or m_reports_api_messages or m_finance_rep
+                               or m_reports_login_states or m_reports_login_status or m_reports_manager_login
+                               or m_reports_mac_history or m_reports_profile_changes or m_reports_manager_events
+                               or m_reports_user_events or m_reports_speed_failures or m_reports_used_cards
+                               or m_reports_balance_moves or m_reports_cash_tx -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
 {%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file -%}
-{%- set sec_setup_ops_active = m_setup_wizard_v2 or m_setup_wizard_engineering -%}
+{%- set sec_setup_ops_active = m_setup_wizard_v3 or m_setup_wizard_v2 or m_setup_wizard_engineering or m_setup_wizard_fleet -%}
 
 {# Standalone Dashboard #}
 {%- set m_dashboard = (path == url_for('radius.dashboard')) or (path == url_for('radius.dashboard_alias')) -%}
@@ -340,15 +355,11 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {# Setup / wizard entries.
-           v2 + engineering view hidden 2026-05-28 per operator —
-           «اخفيهم مبدأيا من السايد بار … قداما لحد ما نخلص منهم
-           ونمسحهم». Routes stay registered (no 404 for old
-           bookmarks) — just dropped from the nav so v3 is the
-           only entry point. #}
-        {{ sub_item('radius.setup_wizard_v3_page',    '🚀 معالج الإعداد v3',  m_setup_wizard_v2) }}
-        {# {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد (v2)',   m_setup_wizard_v2) }} #}
-        {# {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }} #}
+        <div class="hb-side-subhead"><i class="fa-solid fa-wand-magic-sparkles"></i>الإعداد والتشغيل</div>
+        {{ sub_item('radius.setup_wizard_v3_page',    'معالج إضافة راوتر',  m_setup_wizard_v3) }}
+        {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد',   m_setup_wizard_v2) }}
+        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات', m_setup_wizard_fleet) }}
+        {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
         {{ sub_item('radius.mt_setup_form',           'معالج إضافة راوتر',    m_mt) }}
 
         {# Inventory + operational view — mt_operations is now THE
@@ -418,12 +429,12 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.communications', '🛰️ غرفة العمليات', m_communications) }}
+        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications) }}
         {{ sub_item('radius.communications_channels', 'قنوات الإرسال', m_communications_channels) }}
         {{ sub_item('radius.communications_bot', 'بوت واتساب', m_communications_bot) }}
         {{ sub_item('radius.communications_notifications', 'الإشعارات الحدثية', m_communications_notifications) }}
         {{ sub_item('radius.communications_quota', 'الرصيد والحِزم', m_communications_quota) }}
-        {{ sub_item('radius.communications_templates', 'القوالب', m_communications_templates) }}
+        {{ sub_item('radius.communications_templates', 'قوالب الرسائل', m_communications_templates) }}
         {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
         {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
         {{ sub_item('radius.communications_guide', '📚 دليل وشروحات', '/communications/guide' in path) }}
@@ -448,13 +459,32 @@
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.reports_home', 'مركز التقارير', m_reports_home) }}
+
+        <div class="hb-side-subhead"><i class="fa-solid fa-shield-halved"></i>الدخول والأمان</div>
+        {{ sub_item('radius.rep_login_states', 'حالات تسجيل الدخول', m_reports_login_states) }}
+        {{ sub_item('radius.rep_failed_logins', 'فشل دخول الشبكة', m_reports_failed_logins) }}
+        {{ sub_item('radius.rep_login_status', 'حالة دخول المشتركين', m_reports_login_status) }}
+        {{ sub_item('radius.rep_manager_login_status', 'حالة دخول المدراء', m_reports_manager_login) }}
+
+        <div class="hb-side-subhead"><i class="fa-solid fa-network-wired"></i>الشبكة والجلسات</div>
+        {{ sub_item('radius.rep_sessions', 'تقارير الجلسات', m_reports_sessions) }}
+        {{ sub_item('radius.rep_mac_history', 'سجل تغييرات الماك', m_reports_mac_history) }}
+        {{ sub_item('radius.rep_coa_failures', 'فشل الفصل/التحديث', m_reports_coa_failures) }}
+        {{ sub_item('radius.rep_speed_failures', 'فشل تحديث السرعة', m_reports_speed_failures) }}
+
+        <div class="hb-side-subhead"><i class="fa-solid fa-clock-rotate-left"></i>النشاط والأحداث</div>
+        {{ sub_item('radius.rep_manager_events', 'أحداث المدراء', m_reports_manager_events) }}
+        {{ sub_item('radius.rep_user_events', 'أحداث المشتركين', m_reports_user_events) }}
+        {{ sub_item('radius.rep_profile_changes', 'تغيير العروض', m_reports_profile_changes) }}
+        {{ sub_item('radius.rep_api_messages', 'سجل رسائل الربط', m_reports_api_messages) }}
+
+        <div class="hb-side-subhead"><i class="fa-solid fa-coins"></i>المالية والكروت</div>
         {{ sub_item('radius.reports_financial', 'التقرير المالي', m_reports_financial) }}
         {{ sub_item('radius.finance_reports', 'تقارير المحاسبة', m_finance_rep) }}
-        {{ sub_item('radius.rep_sessions', 'تقارير الجلسات', m_reports_sessions) }}
-        {{ sub_item('radius.rep_failed_logins', 'فشل الدخول', m_reports_failed_logins) }}
-        {{ sub_item('radius.rep_coa_failures', 'فشل CoA', m_reports_coa_failures) }}
-        {{ sub_item('radius.rep_api_messages', 'رسائل API', m_reports_api_messages) }}
         {{ sub_item('radius.reports_cards', 'تقارير البطاقات', m_reports_cards) }}
+        {{ sub_item('radius.rep_used_cards', 'كروت الشحن المستخدمة', m_reports_used_cards) }}
+        {{ sub_item('radius.rep_cash_transactions', 'معاملات الكاش', m_reports_cash_tx) }}
+        {{ sub_item('radius.rep_balance_movements', 'تحويلات الرصيد', m_reports_balance_moves) }}
         {{ sub_item('radius.reports_distributors', 'تقارير الموزعين', m_reports_distributors) }}
         {{ sub_item('radius.reports_archive', 'الأرشيف', m_reports_archive) }}
       </div></div>

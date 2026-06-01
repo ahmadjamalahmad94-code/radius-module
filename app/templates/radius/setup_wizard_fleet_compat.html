@@ -1,0 +1,46 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}أسطول الراوترات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-sitemap"></i>{% endblock %}
+{% block page_title %}أسطول الراوترات{% endblock %}
+
+{% block content %}
+<section class="sec-card" dir="rtl">
+  <div class="sec-card-head">
+    <div>
+      <h2>إدارة الأسطول أصبحت داخل غرفة الراوترات</h2>
+      <p>
+        تم نقل متابعة الراوترات، حالات الربط، وإجراءات الصيانة إلى صفحة إدارة الراوترات حتى تكون كل عمليات الشبكة في مكان واحد واضح.
+      </p>
+    </div>
+    <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.mt_operations') }}">
+      <i class="fa-solid fa-network-wired"></i>
+      فتح إدارة الراوترات
+    </a>
+  </div>
+
+  <div class="hub-kpi-grid">
+    <div class="hub-kpi hub-kpi--blue">
+      <div class="hub-kpi-icon"><i class="fa-solid fa-route"></i></div>
+      <div>
+        <div class="hub-kpi-label">المكان الجديد</div>
+        <div class="hub-kpi-value">إدارة الراوترات</div>
+      </div>
+    </div>
+    <div class="hub-kpi hub-kpi--green">
+      <div class="hub-kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div>
+        <div class="hub-kpi-label">سلامة الرابط</div>
+        <div class="hub-kpi-value">صفحة قراءة فقط</div>
+      </div>
+    </div>
+    <div class="hub-kpi hub-kpi--amber">
+      <div class="hub-kpi-icon"><i class="fa-solid fa-bookmark"></i></div>
+      <div>
+        <div class="hub-kpi-label">الروابط القديمة</div>
+        <div class="hub-kpi-value">ما زالت تعمل</div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

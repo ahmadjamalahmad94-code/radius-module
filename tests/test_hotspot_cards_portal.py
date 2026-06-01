@@ -6,7 +6,11 @@ from datetime import datetime, timedelta
 import pytest
 from werkzeug.security import generate_password_hash
 
-from app.radius.db.connection import db, reset_for_tests
+
+def db():
+    from app.radius.db.connection import db as live_db
+
+    return live_db()
 
 
 @pytest.fixture
@@ -17,10 +21,28 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
+    from app.radius.db.connection import reset_for_tests
+
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    flask_app.config["_HOBERADIUS_TEST_DB_FILE"] = db_file
+
+    @flask_app.before_request
+    def _bind_hotspot_portal_test_db():
+        os.environ["HOBERADIUS_DB_PATH"] = db_file
+        from app.radius.db.connection import reset_for_tests
+
+        reset_for_tests(db_file)
+
+    with flask_app.app_context():
+        from app.radius.db.migrations_runner import run_pending_migrations
+        from app.radius.db.repos import tenants_repo
+
+        run_pending_migrations()
+        tenants_repo.ensure_default_tenant()
+    return flask_app
 
 
 @pytest.fixture

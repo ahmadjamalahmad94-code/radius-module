@@ -33,6 +33,10 @@ def _map_validation_to_code(message: str) -> str:
         or "conflict" in low
         or "subnet" in low
         or "remote_pool" in low
+        or "يتعارض" in low
+        or "نطاق العناوين" in low
+        or "ÙŠØªØ¹Ø§Ø±Ø¶" in low
+        or "Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†" in low
     ):
         return "broadband_pool_conflict"
     if "interface" in low:

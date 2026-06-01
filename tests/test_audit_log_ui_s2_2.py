@@ -96,7 +96,7 @@ def test_audit_index_lists_rows(app, client):
 
 def test_audit_index_renders_empty_state_when_no_rows(app, client):
     _login(client)
-    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    html = client.get("/admin/radius/audit?q=__no_such_audit_row__").get_data(as_text=True)
     assert "data-audit-empty" in html
 
 

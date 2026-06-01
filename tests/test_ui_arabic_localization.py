@@ -78,6 +78,7 @@ def test_core_admin_pages_use_arabic_visible_copy(client):
         "/admin/radius/events",
         "/admin/radius/events/security",
         "/admin/radius/reports",
+        "/admin/radius/reports/login_states",
         "/admin/radius/setup-wizard-v2",
     ]
     forbidden = [
@@ -98,6 +99,9 @@ def test_core_admin_pages_use_arabic_visible_copy(client):
         "Filter",
         "Settings",
         "Status",
+        "API",
+        "NAS:",
+        "MAC:",
     ]
 
     for route in routes:

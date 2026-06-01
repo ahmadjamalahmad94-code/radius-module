@@ -465,7 +465,7 @@
           <div class="swv2-action-row">
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>مراجعة خطة Peer</button>
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>فحص wg show</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled title="يتطلب كل flags المختبر وجاهزية VPS">تطبيق مختبري مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled data-swv2-server-peer-simple-apply title="يتطلب كل flags المختبر وجاهزية VPS">تطبيق مختبري مغلق</button>
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب عملية applied سابقة وconfirmation">تمرين رجوع مغلق</button>
           </div>
           <label class="swv2-lab-confirmation">تأكيد وضع المختبر الداخلي
@@ -517,7 +517,7 @@
           <div class="swv2-diagnostics" data-swv2-diagnostics="vpn">
             <div class="swv2-diagnostic-card is-waiting">
               <strong>بانتظار فحص الربط</strong>
-              <span>سنبحث عن handshake ناجح، ping ناجح، وإشارات RADIUS/API.</span>
+              <span>سنبحث عن اتصال آمن ناجح، وفحص وصول ناجح، وإشارات المصادقة والربط.</span>
             </div>
           </div>
         </div>
@@ -531,8 +531,8 @@
               MikroTik. The wizard extracts the public key
               from the text — no router connectivity needed.
 
-           2) API mode (only when the router has a reachable
-              public IP + API port open): operator enters
+              2) Direct mode (only when the router has a reachable
+              public address + management port open): operator enters
               address + creds and the wizard fetches the key
               directly. #}
         <div class="swv2-auto-finalize-card"
@@ -548,7 +548,7 @@
             </p>
           </div>
 
-          {# Mode selector (paste vs API). #}
+          {# Mode selector (paste vs direct router connection). #}
           <div class="swv2-mode-tabs">
             <button type="button"
                     class="swv2-mode-tab is-active"
@@ -587,7 +587,7 @@
             </label>
           </div>
 
-          {# API mode panel. #}
+          {# Direct router connection panel. #}
           <div class="swv2-mode-panel"
                data-swv2-mode-panel="api" hidden>
             <div class="swv2-auto-finalize-grid">
@@ -599,7 +599,7 @@
                        autocomplete="off">
               </label>
               <label class="swv2-field">
-                <span>اسم مستخدم API على الراوتر</span>
+                <span>اسم مستخدم الربط على الراوتر</span>
                 <input type="text"
                        data-swv2-auto-api-user
                        placeholder="admin"
@@ -607,14 +607,14 @@
                        autocomplete="off">
               </label>
               <label class="swv2-field">
-                <span>كلمة مرور API</span>
+                <span>كلمة مرور الربط</span>
                 <input type="password"
                        data-swv2-auto-api-password
                        placeholder="••••••••"
                        autocomplete="off">
               </label>
               <label class="swv2-field swv2-field-narrow">
-                <span>منفذ API</span>
+                <span>منفذ الربط</span>
                 <input type="number"
                        data-swv2-auto-api-port
                        value="8728"

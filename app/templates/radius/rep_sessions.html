@@ -26,6 +26,10 @@
 <form method="get" class="hub-filterbar">
   <input class="hub-input grow" type="text" name="username"
          placeholder="بحث باسم المستخدم..." value="{{ username or '' }}">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
       <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} صف</option>
@@ -42,7 +46,7 @@
 {% call hub.section("سجل الجلسات", icon="table-list",
                     meta=items|length|string + " صف", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-sessions">
       <thead>
         <tr>
           <th class="num" style="width:70px">#</th>

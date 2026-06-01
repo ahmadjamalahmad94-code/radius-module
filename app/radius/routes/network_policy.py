@@ -469,16 +469,29 @@ def register_network_policy_routes(bp: Blueprint) -> None:
 
 
 def npc_index():
-    """Legacy landing — operators now reach NPC from inside a
-    router's dashboard (see the three quicknav buttons on
-    /admin/radius/mt/<nas_id>/dashboard).
+    """Router-picker landing for network policies.
 
-    We keep the route alive (some bookmarks may still point at
-    it, and `url_for('radius.network_policy_index')` is still
-    referenced in older templates) but redirect to the NAS
-    list — which is the canonical "pick a router" surface
-    after the pass-2 sidebar cleanup."""
-    return redirect(url_for("radius.devices_list"))
+    The router dashboard is the daily entry point, but this route
+    remains a real picker for bookmarks and sidebar links.
+    """
+    routers = _nas_list()
+    for router in routers:
+        rid = int(router["id"])
+        router["counts"] = {
+            nc.SERVICE_REMOTE_ACCESS: len(ra_repo.list_for_router(_tid(), rid)),
+            nc.SERVICE_WEB_BLOCK: len(
+                wb_repo.list_policies_for_router(_tid(), rid)
+            ),
+            nc.SERVICE_WALLED_GARDEN: len(
+                wg_repo.list_policies_for_router(_tid(), rid)
+            ),
+        }
+    return render_template(
+        "radius/network_policy_router_picker.html",
+        page_title="سياسات الشبكة",
+        routers=routers,
+        services=list(_REGISTRY.values()),
+    )
 
 
 def _npc_router_landing(nas_id: int):

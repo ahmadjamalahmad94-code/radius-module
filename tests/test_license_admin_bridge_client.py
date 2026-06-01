@@ -4,8 +4,6 @@ import os
 
 import pytest
 
-from app.radius.db.connection import reset_for_tests
-
 
 class MockTransport:
     def __init__(self, response=None, exc: Exception | None = None):
@@ -20,18 +18,33 @@ class MockTransport:
         return self.response
 
 
+def _reset_for_tests(db_file: str | None) -> None:
+    from app.radius.db.connection import reset_for_tests
+
+    reset_for_tests(db_file)
+
+
+def _run_pending_migrations() -> None:
+    from app.radius.db.migrations_runner import run_pending_migrations
+
+    run_pending_migrations()
+
+
 @pytest.fixture()
 def app_db(monkeypatch, tmp_path):
-    reset_for_tests(None)
-    monkeypatch.setenv("HOBERADIUS_DB_PATH", os.fspath(tmp_path / "bridge.db"))
+    db_file = os.fspath(tmp_path / "bridge.db")
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    _reset_for_tests(db_file)
     from app import create_app
 
     app = create_app()
     with app.app_context():
+        _run_pending_migrations()
         yield app
+    _reset_for_tests(None)
 
 
 def _enabled_config():

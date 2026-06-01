@@ -308,7 +308,8 @@ def card_users_create():
 def card_user_360(card_user_id: int):
     try:
         payload = _service().card_user_360(card_user_id)
-    except CardMarketplaceError:
+    except CardMarketplaceError as exc:
+        flash(str(exc), "error")
         return redirect(url_for("radius.card_users_list"))
     return render_template(
         "radius/card_user_360.html",
