@@ -389,11 +389,9 @@
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota">
           <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
         </button>
-        <form method="post" data-single-action data-usq-form="quota-reset" data-usq-confirm="استعادة الكوتة اليومية لهذا المشترك؟" data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}">
-          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
-            <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
-          </button>
-        </form>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota-reset">
+          <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+        </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="balance">
           <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
         </button>
@@ -514,8 +512,10 @@
         {% set _up_mb = (u.used_bytes_out or 0) / 1048576 %}
         {% set _down_kbps = (u.download_speed_kbps or (p.speed_down_kbps if p else 0)) %}
         {% set _up_kbps   = (u.upload_speed_kbps   or (p.speed_up_kbps   if p else 0)) %}
+        {% set _daily_quota_mb = u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
         <tr
           data-username="{{ u.username }}"
+          data-daily-quota="{{ _daily_quota_mb }}"
           data-full-name="{{ u.full_name or '' }}"
           data-mobile="{{ u.mobile or '' }}"
           data-plan-id="{{ u.plan_id or '' }}"
@@ -660,12 +660,9 @@
                   <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
                 </button>
                 <div class="urow-sep"></div>
-                <form method="post" action="{{ url_for('radius.users_quota_reset_daily', username=u.username) }}"
-                      data-urow-confirm="استعادة الكوتة اليومية للمشترك {{ u.username|e }}؟">
-                  <button type="submit" class="urow-item">
-                    <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
-                  </button>
-                </form>
+                <button type="button" class="urow-item" data-urow-open="quota-reset">
+                  <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+                </button>
               </div>
 
               {# ── «إدارية» menu — SMS / disable / disconnect / plan / archive ── #}
@@ -896,6 +893,64 @@
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="usq-modal" data-usq-modal="quota-reset" hidden>
+  <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-quota-reset-title">
+    <form method="post" data-usq-modal-form="quota-reset" data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}">
+      <div class="usq-head">
+        <h3 id="usq-quota-reset-title">استعادة الكوتة اليومية</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="usq-body">
+        <div class="usq-current">
+          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
+          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>الكوتة اليومية</span><strong data-usq-current="daily_quota">—</strong></div>
+        </div>
+        <p class="hub-text-mute small" style="margin:2px 0 0;line-height:1.6;font-weight:600">
+          تُصفَّر العدّادات المستهلَكة ليعود للمشترك كامل كوتته اليومية فورًا.
+        </p>
+        <div class="usq-field wide" style="margin-top:2px">طريقة الاستعادة
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-usq-charge-seg="free" class="is-active">
+              <i class="fa-solid fa-gift usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <span><strong>مجاني</strong><small>تجديد بدون أي مقابل مالي.</small></span>
+            </label>
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+            </label>
+            <label data-usq-charge-seg="debt">
+              <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
+              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+            </label>
+          </div>
+          <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
+            استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.
+          </div>
+        </div>
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
+          <label class="usq-field">المبلغ
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
+          </label>
+          <label class="usq-field">العملة
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          </label>
+        </div>
+        <label class="usq-field wide">ملاحظات
+          <textarea class="hub-textarea" name="notes" rows="2"></textarea>
+        </label>
+      </div>
+      <div class="usq-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-rotate-left"></i> استعادة</button>
       </div>
     </form>
   </div>
@@ -1141,6 +1196,12 @@
       const price = parseFloat(data.planPrice || "0");
       el.textContent = price > 0 ? fmtMoney(price, data.planCurrency) : "—";
     });
+    page.querySelectorAll("[data-usq-current='daily_quota']").forEach((el) => {
+      const mb = parseFloat(data.dailyQuota || "0");
+      el.textContent = mb > 0
+        ? (mb >= 1024 ? (mb / 1024).toFixed(mb % 1024 ? 1 : 0) + " GB" : mb + " MB")
+        : "غير محدّدة";
+    });
   }
 
   // ── Smart-activation helpers (price explanation + coverage) ──
@@ -1203,11 +1264,19 @@
     });
     const hint = modal.querySelector("[data-usq-charge-hint]");
     if (hint) {
-      hint.textContent = {
-        free: "كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.",
-        paid: "كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
-        debt: "كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
-      }[mode];
+      const hintMaps = {
+        quota: {
+          free: "كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.",
+          paid: "كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
+          debt: "كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
+        },
+        "quota-reset": {
+          free: "استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.",
+          paid: "استعادة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
+          debt: "استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
+        },
+      };
+      hint.textContent = (hintMaps[scope] || hintMaps.quota)[mode];
     }
   }
   function syncLoanPolicy() {
@@ -1389,6 +1458,7 @@
     if (key === "extend") updateMinutes();
     if (key === "balance") updateBalanceCoverage();
     if (key === "quota") syncChargeMode("quota");
+    if (key === "quota-reset") syncChargeMode("quota-reset");
     if (key === "loan") syncLoanPolicy();
     modal.hidden = false;
     modal.querySelector("input, select, textarea, button")?.focus();
@@ -1441,7 +1511,8 @@
       openActionModal(button.dataset.urowOpen);
     });
   });
-  // Per-row confirm-guarded POST forms (daily-quota-reset / archive).
+  // Per-row confirm-guarded POST forms (archive). Daily-quota-reset now
+  // uses the floating quota-reset modal (data-urow-open) instead.
   page.querySelectorAll("form[data-urow-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       if (!window.confirm(form.dataset.urowConfirm || "تنفيذ هذا الإجراء؟")) {
@@ -1471,7 +1542,10 @@
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
   page.querySelectorAll("[data-usq-charge-input]").forEach((input) =>
-    input.addEventListener("change", () => syncChargeMode("quota")));
+    input.addEventListener("change", () => {
+      const scope = input.closest("[data-usq-modal]")?.dataset.usqModal || "quota";
+      syncChargeMode(scope);
+    }));
   page.querySelectorAll("[data-usq-loan-input]").forEach((input) =>
     input.addEventListener("change", syncLoanPolicy));
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {

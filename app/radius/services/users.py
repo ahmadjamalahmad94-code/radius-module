@@ -209,11 +209,45 @@ class UsersService:
         )
         return result
 
-    def reset_daily_quota(self, *, actor: str, username: str) -> Subscriber:
+    def reset_daily_quota(self, *, actor: str, username: str,
+                          charge_mode: str = "free", amount: float = 0.0,
+                          currency: str = "", notes: str = "") -> Subscriber:
+        """Refresh the subscriber's daily allowance (zero the used counters).
+
+        Optionally bills the restore like add_quota: free (no charge), paid
+        (cash credited to the ledger), or debt (recorded as a debit + the
+        amount subtracted from the subscriber balance). Defaults to free, so
+        existing callers keep the original no-cost behaviour.
+        """
+        currency = currency or default_currency()
+        if charge_mode not in {"free", "paid", "debt"}:
+            raise RadiusValidationError("unknown reset charge mode")
+        if charge_mode in {"paid", "debt"} and amount <= 0:
+            raise RadiusValidationError("amount must be > 0")
+
         sub = self._adapter.get_account(username)
-        saved = self._adapter.upsert_account(
-            replace(sub, used_seconds=0, used_bytes_in=0, used_bytes_out=0)
-        )
+        changes = {
+            "used_seconds": 0,
+            "used_bytes_in": 0,
+            "used_bytes_out": 0,
+            "balance": float(sub.balance or 0),
+        }
+        if charge_mode == "debt":
+            changes["balance"] = float(sub.balance or 0) - float(amount)
+        saved = self._adapter.upsert_account(replace(sub, **changes))
+        if charge_mode in {"paid", "debt"}:
+            _record_subscriber_ledger(
+                actor=actor,
+                subscriber=saved,
+                entry_type="quota_topup" if charge_mode == "paid" else "debt",
+                direction="credit" if charge_mode == "paid" else "debit",
+                amount=float(amount),
+                currency=currency,
+                source_type="subscriber_daily_quota_reset",
+                notes=notes or ("استعادة كوتة يومية مدفوعة" if charge_mode == "paid"
+                                else "استعادة كوتة يومية على الدين"),
+                metadata={"charge_mode": charge_mode},
+            )
         self._audit.record(
             actor=actor,
             action="subscriber.daily_quota_reset",
@@ -223,6 +257,8 @@ class UsersService:
                 "previous_used_seconds": sub.used_seconds,
                 "previous_used_bytes_in": sub.used_bytes_in,
                 "previous_used_bytes_out": sub.used_bytes_out,
+                "charge_mode": charge_mode,
+                "amount": float(amount) if charge_mode in {"paid", "debt"} else 0,
             },
         )
         return saved
