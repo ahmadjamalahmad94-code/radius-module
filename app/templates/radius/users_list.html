@@ -926,7 +926,7 @@
           </label>
         </div>
         <div class="hub-text-mute small" data-usq-balance-hint style="line-height:1.7">
-          يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم لاحقًا للتجديد التلقائي أو لتغطية الباقة.
+          يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.
         </div>
       </div>
       <div class="usq-foot">
@@ -1062,7 +1062,7 @@
         <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
         <div>
           سيتم أرشفة <strong><span data-users-bulk-count3>0</span> مشترك</strong> دفعة واحدة.
-          هذا إجراء حسّاس — يمكن استعادتهم لاحقًا من <strong>سلة المحذوفات</strong>.
+          هذا إجراء حسّاس — يمكن استعادتهم من <strong>سلة المحذوفات</strong> عند الحاجة.
           للتأكيد اكتب <strong>DELETE</strong> في الحقل أدناه.
         </div>
       </div>
@@ -1180,7 +1180,7 @@
     } else if (price > 0) {
       hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض عدد الأيام التي يغطيها.`;
     } else {
-      hint.textContent = "يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم لاحقًا للتجديد التلقائي أو لتغطية الباقة.";
+      hint.textContent = "يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.";
     }
   }
   // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
