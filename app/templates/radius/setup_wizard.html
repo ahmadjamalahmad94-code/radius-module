@@ -42,7 +42,7 @@
       </article>
       {% endfor %}
     {% else %}
-      <article class="sw-status-card status-blocked"><h3>جاهزية التحقق</h3><div class="status-pill">pending</div><p>ابدأ تشغيل جديد لعرض بطاقات الحالة.</p></article>
+      <article class="sw-status-card status-blocked"><h3>جاهزية التحقق</h3><div class="status-pill">بانتظار التشغيل</div><p>ابدأ تشغيل جديد لعرض بطاقات الحالة.</p></article>
     {% endif %}
   </section>
 
@@ -173,7 +173,7 @@
     <pre class="sw-output" data-sw-output-preview>-- لا توجد نتائج بعد --</pre>
   </section>
   <section class="sw-panel">
-    <h2>Guarded operations</h2>
+    <h2>عمليات محمية</h2>
     <p class="sw-muted">المعاينة بدون تنفيذ آمنة. التطبيق والتراجع يبقيان محظورين ما لم تكن HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true و HOBERADIUS_SETUP_WIZARD_LAB_MODE=true مع جرد حديث ومعاينة تنفيذ ومعاينة تراجع وتأكيد.</p>
     <div class="sw-inline-actions">
       <select data-sw-operation-step>
@@ -230,7 +230,7 @@
         <h2>لوحة تدريب التشغيل الداخلي</h2>
         <p class="sw-muted">هذه اللوحة لا تنفذ أي أمر على MikroTik. هدفها تجهيز قائمة فحص قبل تجربة CHR مضبوطة.</p>
       </div>
-      <span class="status-pill status-blocked">Pilot only</span>
+      <span class="status-pill status-blocked">تجربة فقط</span>
     </div>
     <div class="sw-inline-actions">
       <select data-sw-pilot-step aria-label="Pilot drill step">
@@ -239,7 +239,7 @@
         <option value="hotspot">hotspot</option>
         <option value="broadband">broadband</option>
       </select>
-      <button class="hub-btn hub-btn--primary" type="button" data-sw-action="pilot-drill">Generate Pilot Drill Checklist</button>
+      <button class="hub-btn hub-btn--primary" type="button" data-sw-action="pilot-drill">إنشاء قائمة فحص التجربة</button>
     </div>
     <div class="sw-pilot-grid">
       <label class="sw-check"><input type="checkbox" disabled> Router backup/export taken</label>

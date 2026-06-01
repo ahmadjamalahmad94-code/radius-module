@@ -167,7 +167,7 @@
   <div class="bkx-bar">
     <div>
       <h1><i class="fa-solid fa-database"></i> النسخ الاحتياطي</h1>
-      <div class="sub">نسخة محلية + ملف العميل بلوحة التراخيص + Google Drive + استعادة آمنة</div>
+      <div class="sub">نسخة محلية + ملف العميل بلوحة التراخيص + جوجل درايف + استعادة آمنة</div>
     </div>
     <div class="bkx-chips">
       <div class="bkx-chip"><span class="dot" style="background:{{ '#86efac' if _ok else ('#cbd5e1' if not _last else '#fcd34d') }}"></span>
@@ -175,7 +175,7 @@
       <div class="bkx-chip"><div><div class="v" style="font-size:12px">{{ fmt_dt(job.get('last_run_at')) if job.get('last_run_at') else '—' }}</div><div class="l">آخر تشغيل</div></div></div>
       <div class="bkx-chip"><div><div class="v">{{ local_files|length }} <span style="opacity:.7;font-weight:600">/ {{ backup_max_count }}</span></div><div class="l">النسخ المحفوظة</div></div></div>
       <div class="bkx-chip"><span class="dot" style="background:{{ '#86efac' if gdrive.connected else '#cbd5e1' }}"></span>
-        <div><div class="v">{{ 'متصل' if gdrive.connected else 'غير مربوط' }}</div><div class="l">Google Drive</div></div></div>
+        <div><div class="v">{{ 'متصل' if gdrive.connected else 'غير مربوط' }}</div><div class="l">جوجل درايف</div></div></div>
     </div>
     <button type="button" class="bkx-cta" data-bk-runall data-url="{{ url_for('radius.backups_run_all') }}">
       <i class="fa-solid fa-bolt"></i> نسخة كاملة الآن
@@ -234,9 +234,9 @@
     {# ─── RIGHT rail ─── #}
     <div class="bkx-rail">
 
-      {# Google Drive #}
+      {# جوجل درايف #}
       <div class="bkx-card">
-        <div class="bkx-card-h"><span class="ic"><i class="fa-brands fa-google-drive"></i></span><h2>Google Drive</h2>
+        <div class="bkx-card-h"><span class="ic"><i class="fa-brands fa-google-drive"></i></span><h2>جوجل درايف</h2>
           <span class="meta">{{ '● متصل' if gdrive.connected else 'اختياري' }}</span></div>
         <div class="bkx-card-b">
           {% if gdrive.connected %}
@@ -247,9 +247,9 @@
             </div>
             <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">إدارة الربط من بوابة العميل ↗</a>
           {% else %}
-            <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>Google Drive غير مفعل حاليًا؛ اربطه من بوابة العميل عندما تريد رفع النسخ خارج السيرفر.</div></div>
+            <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>جوجل درايف غير مفعل حاليًا؛ اربطه من بوابة العميل عندما تريد رفع النسخ خارج السيرفر.</div></div>
             <p class="bkx-soft">اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة <span class="mono">drive.file</span>).</p>
-            <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> ربط Google Drive</a>
+            <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> ربط جوجل درايف</a>
           {% endif %}
         </div>
       </div>
@@ -409,7 +409,7 @@
     var b = e.target.closest('[data-bk-runall]');
     if(b){ e.preventDefault(); window.bkRunProgress({
       title:'إنشاء نسخة كاملة', url:b.getAttribute('data-url'),
-      hints:[{key:'local',label:'نسخة محلية'},{key:'panel',label:'لوحة التراخيص'},{key:'drive',label:'Google Drive'}],
+      hints:[{key:'local',label:'نسخة محلية'},{key:'panel',label:'لوحة التراخيص'},{key:'drive',label:'جوجل درايف'}],
       successText:'تمّت عملية النسخ.', reloadOnDone:true}); return; }
     if(e.target.closest('[data-bk-prog-close]')){ overlay.classList.remove('is-open'); }
   });

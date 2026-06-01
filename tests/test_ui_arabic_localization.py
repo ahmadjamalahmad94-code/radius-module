@@ -178,6 +178,50 @@ def test_source_templates_do_not_keep_future_placeholder_copy():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_source_templates_do_not_keep_old_english_operator_labels():
+    paths = [
+        Path("app/templates/radius/audit_log_detail.html"),
+        Path("app/templates/radius/backups.html"),
+        Path("app/templates/radius/cards_print_batch.html"),
+        Path("app/templates/radius/dashboard.html"),
+        Path("app/templates/radius/finance_billing.html"),
+        Path("app/templates/radius/invoices_form.html"),
+        Path("app/templates/radius/mt_dashboard.html"),
+        Path("app/templates/radius/mt_diagnostics.html"),
+        Path("app/templates/radius/setup_wizard.html"),
+        Path("app/templates/radius/users_form.html"),
+    ]
+    forbidden = [
+        "<h3>Payload</h3>",
+        ">Google Drive<",
+        "Google Drive غير",
+        "ربط Google Drive",
+        "<th>Username</th>",
+        "<th>Password</th>",
+        ">Uptime<",
+        ">Process<",
+        ">Disk<",
+        ">Storage<",
+        ">Clock<",
+        ">Link<",
+        ">TCP probe<",
+        ">API login<",
+        ">identity<",
+        ">timeout 20s<",
+        ">Guarded operations<",
+        ">Pilot only<",
+        "Generate Pilot Drill Checklist",
+        ">Balance<",
+        "Primary DNS (PPP)",
+        "Secondary DNS (PPP)",
+    ]
+
+    for path in paths:
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

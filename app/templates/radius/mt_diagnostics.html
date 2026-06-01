@@ -3,7 +3,7 @@
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
-{% block page_sub %}<span class="sub">TCP، API login، identity، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
+{% block page_sub %}<span class="sub">فحص TCP، دخول API، هوية الراوتر، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -103,28 +103,28 @@
           <div class="opsx-stats" style="margin-bottom:14px">
             {% if r.tcp %}
             <div class="opsx-stat {% if r.tcp.ok %}opsx-stat--ok{% else %}opsx-stat--bad{% endif %}">
-              <span>TCP probe</span>
+              <span>فحص TCP</span>
               <strong style="font-size:18px">{% if r.tcp.ok %}متاح{% else %}فشل{% endif %}</strong>
               {% if r.tcp.latency_ms is not none %}<span>{{ r.tcp.latency_ms }} ms</span>{% endif %}
             </div>
             {% endif %}
             {% if r.api %}
             <div class="opsx-stat {% if r.api.ok %}opsx-stat--ok{% else %}opsx-stat--warn{% endif %}">
-              <span>API login</span>
+              <span>دخول API</span>
               <strong style="font-size:18px">{% if r.api.ok %}ناجح{% else %}فشل{% endif %}</strong>
               {% if r.api.latency_ms is not none %}<span>{{ r.api.latency_ms }} ms</span>{% endif %}
             </div>
             {% endif %}
             {% if r.api and r.api.ok %}
             <div class="opsx-stat opsx-stat--ok">
-              <span>identity</span>
+              <span>هوية الراوتر</span>
               <strong style="font-size:18px">{{ r.api.identity or '—' }}</strong>
             </div>
             {% endif %}
             <div class="opsx-stat">
               <span>المنفذ</span>
               <strong style="font-size:18px">{{ r.port }}</strong>
-              <span>timeout 20s</span>
+              <span>مهلة 20 ثانية</span>
             </div>
           </div>
 
