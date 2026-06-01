@@ -1411,8 +1411,9 @@ def _handle_card_operation():
             query = ""
         elif action == "delete_permanent":
             # Hard-delete path retained for the recycle bin screen.
-            if _form_str("confirm_delete") != "DELETE":
-                flash("للحذف النهائي اكتب DELETE في خانة التأكيد.", "error")
+            confirm_delete = _form_str("confirm_delete")
+            if confirm_delete != "حذف البطاقة" and confirm_delete.upper() != "DELETE":
+                flash("للحذف النهائي اكتب عبارة التأكيد في خانة التأكيد.", "error")
             else:
                 svc.delete_card_permanently(actor=_actor(), card_id=card_id)
                 flash("تم حذف البطاقة نهائيًا. لا يظهر هذا الخيار في التشغيل اليومي إلا بحذر.", "warning")

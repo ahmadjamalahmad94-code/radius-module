@@ -266,8 +266,9 @@ def backups_restore():
         return _fail("الاستعادة داخل التطبيق معطّلة على هذا الخادم.", "restore_disabled")
     if (request.form.get("ack") or "").strip() != "1":
         return _fail("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية.", "ack")
-    if (request.form.get("confirm") or "").strip().upper() != "RESTORE":
-        return _fail("لإتمام الاستعادة يجب كتابة كلمة التأكيد RESTORE بشكل صحيح.", "confirm")
+    confirm_value = (request.form.get("confirm") or "").strip()
+    if confirm_value != "استعادة النسخة" and confirm_value.upper() != "RESTORE":
+        return _fail("لإتمام الاستعادة يجب كتابة عبارة التأكيد بشكل صحيح.", "confirm")
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().restore_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
     if ajax:
@@ -285,9 +286,10 @@ def backups_restore():
 
 
 def backups_delete():
-    """Delete a single local backup file — gated by a typed DELETE confirmation."""
-    if (request.form.get("confirm") or "").strip().upper() != "DELETE":
-        flash("لحذف النسخة يجب كتابة كلمة التأكيد DELETE بشكل صحيح.", "error")
+    """Delete a single local backup file behind an explicit typed confirmation."""
+    confirm_value = (request.form.get("confirm") or "").strip()
+    if confirm_value != "حذف النسخة" and confirm_value.upper() != "DELETE":
+        flash("لحذف النسخة يجب كتابة عبارة التأكيد بشكل صحيح.", "error")
         return redirect(url_for("radius.backups"))
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().delete_local_backup(tenant_id=_tid(), actor=_actor(), name=name)

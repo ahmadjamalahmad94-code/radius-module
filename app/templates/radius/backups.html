@@ -496,9 +496,9 @@
       <div class="bk-dlg-body">
         <p>سيتم <strong>حذف ملف النسخة نهائيًا</strong> من الريدياس. لا يمكن التراجع عن هذا الإجراء.</p>
         <div class="bk-dlg-target" id="bk-del-target">—</div>
-        <p style="margin:4px 0 0">اكتب <strong>DELETE</strong> للتأكيد:</p>
+        <p style="margin:4px 0 0">اكتب <strong>حذف النسخة</strong> للتأكيد:</p>
         <input type="hidden" name="name" id="bk-del-name" value="">
-        <input class="bk-conf-input" type="text" name="confirm" id="bk-del-confirm" autocomplete="off" placeholder="DELETE">
+        <input class="bk-conf-input" type="text" name="confirm" id="bk-del-confirm" autocomplete="off" placeholder="حذف النسخة">
       </div>
       <div class="bk-dlg-foot">
         <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-bk-del-close>إلغاء</button>
@@ -517,7 +517,8 @@
   var confirmInput = document.getElementById('bk-del-confirm');
   var submit = document.getElementById('bk-del-submit');
   function refresh(){
-    var ok = confirmInput && confirmInput.value.trim().toUpperCase() === 'DELETE';
+    var typed = confirmInput ? confirmInput.value.trim() : '';
+    var ok = typed === 'حذف النسخة' || typed.toUpperCase() === 'DELETE';
     if(submit){ submit.disabled = !ok; submit.style.opacity = ok ? '1' : '.5'; submit.style.pointerEvents = ok ? 'auto' : 'none'; }
   }
   function open(name){
@@ -554,9 +555,9 @@
           <input type="checkbox" name="ack" value="1" id="bk-ack">
           <span>أُقرّ بأنني أفهم أن هذا الإجراء سيستبدل قاعدة البيانات الحالية ولا يمكن التراجع عنه إلا عبر النسخة الاحترازية.</span>
         </label>
-        <p style="margin:4px 0 0">اكتب <strong>RESTORE</strong> للتأكيد النهائي:</p>
+        <p style="margin:4px 0 0">اكتب <strong>استعادة النسخة</strong> للتأكيد النهائي:</p>
         <input type="hidden" name="name" id="bk-name" value="">
-        <input class="bk-conf-input" type="text" name="confirm" id="bk-confirm" autocomplete="off" placeholder="RESTORE">
+        <input class="bk-conf-input" type="text" name="confirm" id="bk-confirm" autocomplete="off" placeholder="استعادة النسخة">
       </div>
       <div class="bk-dlg-foot">
         <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-bk-close>إلغاء</button>
@@ -576,7 +577,8 @@
   var confirmInput = document.getElementById('bk-confirm');
   var submit = document.getElementById('bk-submit');
   function refresh(){
-    var ok = ack && ack.checked && confirmInput && confirmInput.value.trim().toUpperCase() === 'RESTORE';
+    var typed = confirmInput ? confirmInput.value.trim() : '';
+    var ok = ack && ack.checked && (typed === 'استعادة النسخة' || typed.toUpperCase() === 'RESTORE');
     if(submit){ submit.disabled = !ok; submit.style.opacity = ok ? '1' : '.5'; submit.style.pointerEvents = ok ? 'auto' : 'none'; }
   }
   function open(name){

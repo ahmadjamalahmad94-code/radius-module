@@ -127,7 +127,7 @@
     border-radius:999px; background:var(--hub-brand, #7c3aed); color:#fff; font-size:13px;
   }
   .ubulk-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  /* Strong DELETE confirm modal (reuses usq-modal shell sizing) */
+  /* Strong bulk archive confirmation modal (reuses usq-modal shell sizing) */
   .ubulk-confirm-list{
     max-height:150px; overflow:auto; padding:8px 10px; margin:0;
     border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
@@ -1048,7 +1048,7 @@
   </div>
 </div>
 
-{# ───── Strong BULK-DELETE confirm (type DELETE) ────────────── #}
+{# ───── Strong bulk archive confirmation ────────────── #}
 <div class="usq-modal" data-users-bulk-modal hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="ubulk-title" style="width:min(560px,100%)">
     <div class="usq-head">
@@ -1063,13 +1063,13 @@
         <div>
           سيتم أرشفة <strong><span data-users-bulk-count3>0</span> مشترك</strong> دفعة واحدة.
           هذا إجراء حسّاس — يمكن استعادتهم من <strong>سلة المحذوفات</strong> عند الحاجة.
-          للتأكيد اكتب <strong>DELETE</strong> في الحقل أدناه.
+          للتأكيد اكتب <strong>أرشفة المشتركين</strong> في الحقل أدناه.
         </div>
       </div>
       <ul class="ubulk-confirm-list" data-users-bulk-names></ul>
-      <label class="ubulk-type-field">اكتب DELETE للتأكيد
+      <label class="ubulk-type-field">اكتب عبارة التأكيد
         <input class="hub-input" type="text" data-users-bulk-type autocomplete="off"
-               placeholder="DELETE" dir="ltr">
+               placeholder="أرشفة المشتركين">
       </label>
     </div>
     <div class="usq-foot">
@@ -1350,10 +1350,12 @@
     if (event.target === bulkModal) closeBulkModal();
   });
   bulkType?.addEventListener("input", () => {
-    if (bulkConfirm) bulkConfirm.disabled = bulkType.value.trim().toUpperCase() !== "DELETE";
+    const typed = bulkType.value.trim();
+    if (bulkConfirm) bulkConfirm.disabled = typed !== "أرشفة المشتركين" && typed.toUpperCase() !== "DELETE";
   });
   bulkConfirm?.addEventListener("click", () => {
-    if (bulkType && bulkType.value.trim().toUpperCase() !== "DELETE") return;
+    const typed = bulkType ? bulkType.value.trim() : "";
+    if (bulkType && typed !== "أرشفة المشتركين" && typed.toUpperCase() !== "DELETE") return;
     const rows = selectedRows();
     if (!rows.length || !bulkForm) return;
     // Rebuild the hidden form with one <input name="usernames"> per row.

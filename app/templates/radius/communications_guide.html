@@ -442,7 +442,7 @@
           </div>
           <div class="gd-req-item tg">
             <span class="ic"><i class="fa-solid fa-hashtag"></i></span>
-            <div><div class="t">Token + Chat ID</div><div class="d">قيمتان نحصل عليهما من تلجرام ونضعهما في النظام.</div></div>
+            <div><div class="t">رمز البوت ومعرّف المحادثة</div><div class="d">قيمتان نحصل عليهما من تلجرام ونضعهما في النظام.</div></div>
           </div>
         </div>
       </div>
@@ -477,11 +477,11 @@
                   <div><div class="nm">BotFather</div><div class="st">bot</div></div></div>
                 <div class="gd-chat tg">
                   <div class="gd-bub tg-out">/newbot<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">Alright! Send me the name for your bot.</div>
+                  <div class="gd-bub tg-in">أرسل اسم البوت الذي تريد إنشاءه.</div>
                   <div class="gd-bub tg-out">تنبيهات شبكتي<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">Good. Now choose a username ending in <b>bot</b>.</div>
+                  <div class="gd-bub tg-in">جيد. اختر اسم مستخدم ينتهي بكلمة <b>bot</b>.</div>
                   <div class="gd-bub tg-out">my_net_alerts_bot<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">Done! 🎉 Use this token to access the HTTP API:
+                  <div class="gd-bub tg-in">تم إنشاء البوت. استخدم هذا الرمز للربط:
 <b>123456789:ABCdefGhIJ…</b></div>
                 </div>
               </div>
@@ -493,36 +493,36 @@
         <div class="gd-step tg">
           <div class="gd-step-badge"></div>
           <div class="gd-step-main">
-            <h4><i class="fa-solid fa-hashtag" style="color:#0ea5e9"></i> احصل على الـ Chat ID</h4>
-            <p>الـ Chat ID يحدّد لمن تُرسل التنبيهات. أبسط طريقة:</p>
+            <h4><i class="fa-solid fa-hashtag" style="color:#0ea5e9"></i> احصل على معرّف المحادثة</h4>
+            <p>معرّف المحادثة يحدّد لمن تُرسل التنبيهات. أبسط طريقة:</p>
             <ul>
-              <li>افتح محادثة مع بوتك الجديد واضغط <strong>Start</strong> (أو أرسل أي رسالة).</li>
+              <li>افتح محادثة مع بوتك الجديد واضغط زر البدء داخل تلجرام (أو أرسل أي رسالة).</li>
               <li>افتح في المتصفح الرابط التالي بعد استبدال <span class="gd-code">&lt;token&gt;</span> برمزك:</li>
             </ul>
             <div class="gd-code" style="display:block;padding:9px 11px;margin-top:7px;word-break:break-all">https://api.telegram.org/bot&lt;token&gt;/getUpdates</div>
-            <p style="margin-top:7px">ستجد في النتيجة حقلًا باسم <span class="gd-code">"chat":{"id": …}</span> — هذا الرقم هو الـ Chat ID.
+            <p style="margin-top:7px">ستجد في النتيجة حقلًا باسم <span class="gd-code">"chat":{"id": …}</span> — هذا الرقم هو معرّف المحادثة.
               (رقم موجب لشخص، سالب لمجموعة عادية، ويبدأ بـ <span class="gd-code">-100</span> للقنوات).</p>
             <p style="margin-top:6px"><i class="fa-solid fa-users" style="color:#0ea5e9"></i>
-              للتنبيهات الجماعية: أضف البوت إلى مجموعة تلجرام، أرسل رسالة في المجموعة، ثم خذ الـ Chat ID (السالب) بنفس الطريقة.</p>
+              للتنبيهات الجماعية: أضف البوت إلى مجموعة تلجرام، أرسل رسالة في المجموعة، ثم خذ معرّف المحادثة السالب بنفس الطريقة.</p>
           </div>
         </div>
 
         <div class="gd-step tg">
           <div class="gd-step-badge"></div>
           <div class="gd-step-main">
-            <h4><i class="fa-solid fa-keyboard" style="color:#0ea5e9"></i> أدخل Token و Chat ID في «تنبيهات الشبكة/تلجرام»</h4>
-            <p>افتح صفحة <strong>تنبيهات Telegram</strong>، والصق القيمتين في حقليهما، ثم احفظ.</p>
+            <h4><i class="fa-solid fa-keyboard" style="color:#0ea5e9"></i> أدخل رمز البوت ومعرّف المحادثة في «تنبيهات الشبكة/تلجرام»</h4>
+            <p>افتح صفحة <strong>تنبيهات تلجرام</strong>، والصق القيمتين في حقليهما، ثم احفظ.</p>
 
             <div class="gd-mock" style="max-width:440px;margin-top:11px">
-              <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">تنبيهات الشبكة › Telegram</span></div>
+              <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">تنبيهات الشبكة › تلجرام</span></div>
               <div class="gd-mock-body">
-                <div class="gd-mock-field"><label>Bot Token</label><div class="gd-mock-input filled">123456789:ABCdefGhIJ…</div></div>
-                <div class="gd-mock-field"><label>Chat ID</label><div class="gd-mock-input filled">-1001234567890</div></div>
+                <div class="gd-mock-field"><label>رمز البوت</label><div class="gd-mock-input filled">123456789:ABCdefGhIJ…</div></div>
+                <div class="gd-mock-field"><label>معرّف المحادثة</label><div class="gd-mock-input filled">-1001234567890</div></div>
                 <button class="gd-mock-btn tg"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
               </div>
             </div>
             <a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">
-              <i class="fa-solid fa-arrow-left"></i> افتح صفحة تنبيهات Telegram</a>
+              <i class="fa-solid fa-arrow-left"></i> افتح صفحة تنبيهات تلجرام</a>
           </div>
         </div>
 
@@ -530,7 +530,7 @@
           <div class="gd-step-badge"></div>
           <div class="gd-step-main">
             <h4><i class="fa-solid fa-toggle-on" style="color:#0ea5e9"></i> فعّل التنبيهات</h4>
-            <p>في نفس الصفحة، فعّل خيار «تفعيل تنبيهات Telegram» ثم احفظ. عند الإيقاف تبقى الإعدادات محفوظة لكن لا تُرسل تنبيهات.</p>
+            <p>في نفس الصفحة، فعّل خيار «تفعيل تنبيهات تلجرام» ثم احفظ. عند الإيقاف تبقى الإعدادات محفوظة لكن لا تُرسل تنبيهات.</p>
           </div>
         </div>
 
@@ -627,10 +627,10 @@
         <summary><span class="qic"><i class="fa-brands fa-telegram"></i></span> لا تصل تنبيهات تلجرام؟ <i class="fa-solid fa-chevron-down chev"></i></summary>
         <div class="ans">
           <ul>
-            <li>هل خيار «تفعيل تنبيهات Telegram» مفعّل؟</li>
-            <li>هل الـ Token والـ Chat ID صحيحان (انسخهما من جديد بدقّة، دون مسافات زائدة)؟</li>
-            <li>هل ضغطت <strong>Start</strong> للبوت، أو أرسلت رسالة في المجموعة قبل أخذ الـ Chat ID؟</li>
-            <li>إن كانت مجموعة: تأكد أن البوت عضو فيها، والـ Chat ID رقم سالب.</li>
+            <li>هل خيار «تفعيل تنبيهات تلجرام» مفعّل؟</li>
+            <li>هل رمز البوت ومعرّف المحادثة صحيحان (انسخهما من جديد بدقّة، دون مسافات زائدة)؟</li>
+            <li>هل ضغطت زر البدء للبوت، أو أرسلت رسالة في المجموعة قبل أخذ معرّف المحادثة؟</li>
+            <li>إن كانت مجموعة: تأكد أن البوت عضو فيها، وأن معرّف المحادثة رقم سالب.</li>
             <li>اضغط «إرسال رسالة اختبار» — إن فشل، الرسالة تشرح السبب.</li>
             <li>تنبيهات الأجهزة تُطلق فقط للأجهزة المفعّل عليها «أرسل تنبيه عند الانقطاع» من صفحة الجهاز.</li>
           </ul>
