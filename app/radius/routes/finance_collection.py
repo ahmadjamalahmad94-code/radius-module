@@ -1,14 +1,9 @@
-"""Hub 2 — التحصيل والمدفوعات (Payment Collection) consolidated page.
+"""Hub 2 — التحصيل والمدفوعات.
 
-UI-ONLY consolidation: renders the existing payment-collection
-workflow (requests, review queue, reconciliation) as tabs of one hub,
-with the settings screen in a floating <dialog> modal. It does NOT
-change any payment logic — reads go through the same repos, the
-settings POST still targets the original endpoint, and the request
-detail page + approve/reject/apply-service actions stay standalone
-(reached from the requests table).
-
-See docs/finance_hubs/FINANCE_HUBS_PLAN.md (Hub 2).
+تجميع واجهة فقط: يعرض مسار التحصيل الحالي داخل صفحة واحدة بتبويبات
+للطلبات، المراجعة، المطابقة، والإعدادات. لا يغيّر منطق الدفع نفسه:
+القراءة تتم عبر نفس المستودعات، وحفظ الإعدادات يبقى على المسار الأصلي،
+وتفاصيل الطلب والاعتماد/الرفض/تطبيق الخدمة تبقى على صفحاتها الأصلية.
 """
 from __future__ import annotations
 

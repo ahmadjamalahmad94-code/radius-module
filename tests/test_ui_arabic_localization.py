@@ -105,7 +105,7 @@ def test_core_admin_pages_use_arabic_visible_copy(client):
     ]
 
     for route in routes:
-        response = client.get(route)
+        response = client.get(route, follow_redirects=True)
         assert response.status_code == 200, route
         text = _visible_text(response.get_data(as_text=True))
         for token in forbidden:
