@@ -334,10 +334,18 @@ def _install_stubs(app: Flask) -> None:
             return {"cfg": {"currency": "JOD", "currency_symbol": "د.أ", "tz_offset": 3.0,
                             "system_name": "HobeRadius", "country": "", "logo_url": "", "primary_color": "#2BAACC"}}
 
-    from app.radius.core.system_config import format_money as _fmt_money, to_local as _to_local, to_local_date as _to_local_date
+    from app.radius.core.system_config import (
+        format_duration_days as _dur_days,
+        format_money as _fmt_money,
+        to_local as _to_local,
+        to_local_date as _to_local_date,
+    )
     app.jinja_env.filters["money"] = _fmt_money
     app.jinja_env.filters["dt_local"] = _to_local
     app.jinja_env.filters["date_local"] = _to_local_date
+    # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations
+    # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
+    app.jinja_env.filters["dur_days"] = _dur_days
 
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
     app.jinja_env.filters.setdefault("arabize", lambda s: s)

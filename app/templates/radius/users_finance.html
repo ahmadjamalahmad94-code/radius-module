@@ -2,19 +2,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{# Humanize a raw MINUTE count to days/hours/minutes (e.g. '3 ايام و 18 ساعة' instead of '5400 دقيقة'). #}
-{% macro fmt_minutes(m) -%}
-  {%- set m = (m or 0)|int -%}
-  {%- if m <= 0 -%}—
-  {%- else -%}
-    {%- set d = m // 1440 -%}{%- set h = (m % 1440) // 60 -%}{%- set mm = m % 60 -%}
-    {%- set parts = [] -%}
-    {%- if d -%}{%- set _ = parts.append(d ~ ' يوم') -%}{%- endif -%}
-    {%- if h -%}{%- set _ = parts.append(h ~ ' ساعة') -%}{%- endif -%}
-    {%- if mm and not d -%}{%- set _ = parts.append(mm ~ ' دقيقة') -%}{%- endif -%}
-    {{ parts | join(' و ') }}
-  {%- endif -%}
-{%- endmacro %}
+{# Durations are stored in MINUTES; the `dur_days` filter (app/__init__.py)
+   humanizes them to a friendly Arabic days string — e.g. 5400 → «3 أيام و18 ساعة»
+   instead of «5400 دقيقة». #}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
@@ -123,12 +113,17 @@
       <label>عدد الأيام
         <input class="hub-input" name="days" type="number" min="0" placeholder="مثال: 1">
       </label>
-      <label>قيمة السلفة
+      <label>قيمة السلفة (الدين)
         <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0">
       </label>
       <label>العملة
         <input class="hub-input" name="currency" value="JOD" maxlength="8">
       </label>
+      <div class="wide" style="font-size:12px;color:var(--hub-text-mute);line-height:1.7;margin:-2px 0 2px">
+        <i class="fa-solid fa-circle-info"></i>
+        اترك <strong>قيمة السلفة = 0</strong> لمنح <strong>سلفة وقت مجانية</strong> (مدة فقط بدون دين)؛
+        أو أدخل قيمة لتسجيلها <strong>كدين (مدين)</strong> على رصيد المشترك.
+      </div>
       <label class="wide">سبب السلفة
         <textarea class="hub-textarea" name="reason" rows="2"
                   placeholder="اكتب سببًا واضحًا ليسهل الرجوع له لاحقًا."></textarea>
@@ -166,7 +161,7 @@
         <tr>
           <td class="num mono">{{ p.id }}</td>
           <td class="mono"><strong>{{ p.amount|money }}</strong></td>
-          <td>{{ fmt_minutes(p.earned_minutes) }}</td>
+          <td>{{ p.earned_minutes|dur_days }}</td>
           <td class="mono">{{ (p.discount_amount or 0)|money }}</td>
           <td>{{ hub.pill(p.status, variant="green") }}</td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>
@@ -201,7 +196,7 @@
         {% for loan in loans %}
         <tr>
           <td class="num mono">{{ loan.id }}</td>
-          <td>{{ fmt_minutes(loan.duration_minutes) }}</td>
+          <td>{{ loan.duration_minutes|dur_days }}</td>
           <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}

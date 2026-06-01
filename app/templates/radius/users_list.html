@@ -85,10 +85,68 @@
     display:flex; justify-content:flex-end; gap:8px; padding:14px 20px;
     border-top:1px solid var(--hub-border-soft); background:var(--hub-bg-soft);
   }
+  /* Segmented toggle (free / paid / debt) — pretty, RTL, interactive. */
+  .usq-seg{ display:flex; gap:6px; flex-wrap:wrap; }
+  .usq-seg label{
+    flex:1 1 0; min-width:120px; cursor:pointer; position:relative;
+    display:flex; align-items:flex-start; gap:8px; padding:10px 12px;
+    border:1.5px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    background:var(--hub-bg-card); transition:border-color .12s ease, background .12s ease;
+  }
+  .usq-seg label:hover{ border-color:var(--hub-brand-line, #c7b9f7); }
+  .usq-seg input{ position:absolute; opacity:0; pointer-events:none; }
+  .usq-seg label.is-active{
+    border-color:var(--hub-brand, #7c3aed);
+    background:var(--hub-brand-soft, #f5f3ff);
+    box-shadow:0 0 0 3px rgba(124,58,237,.08);
+  }
+  .usq-seg label strong{ display:block; color:var(--hub-text); font-size:13px; }
+  .usq-seg label small{ display:block; color:var(--hub-text-mute); font-size:11px; margin-top:2px; line-height:1.5; }
+  .usq-seg .usq-seg-ico{ font-size:14px; color:var(--hub-text-mute); margin-top:1px; }
+  .usq-seg label.is-active .usq-seg-ico{ color:var(--hub-brand-ink); }
+  .usq-reveal[hidden]{ display:none; }
   @media (max-width: 780px){
     .usq-panel{ align-items:flex-start; flex-direction:column; }
     .usq-actions{ justify-content:flex-start; }
     .usq-form-grid, .usq-current{ grid-template-columns:1fr; }
+  }
+
+  /* ── Sticky BULK action bar (appears when ≥1 row selected) ── */
+  .ubulk-bar{
+    position:sticky; bottom:14px; z-index:55;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    margin:14px 0 0; padding:12px 16px;
+    border:1px solid var(--hub-brand-line, #c7b9f7); border-radius:var(--hub-r-lg, 14px);
+    background:linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+    box-shadow:0 12px 30px rgba(15,23,42,.16);
+  }
+  .ubulk-bar[hidden]{ display:none; }
+  .ubulk-info{ display:flex; align-items:center; gap:10px; font-weight:800; color:var(--hub-text); }
+  .ubulk-info .ubulk-count{
+    display:inline-grid; place-items:center; min-width:28px; height:28px; padding:0 8px;
+    border-radius:999px; background:var(--hub-brand, #7c3aed); color:#fff; font-size:13px;
+  }
+  .ubulk-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  /* Strong DELETE confirm modal (reuses usq-modal shell sizing) */
+  .ubulk-confirm-list{
+    max-height:150px; overflow:auto; padding:8px 10px; margin:0;
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft); font-size:12.5px; color:var(--hub-text-soft);
+    list-style:none; display:flex; flex-wrap:wrap; gap:6px;
+  }
+  .ubulk-confirm-list li{
+    padding:2px 8px; border-radius:999px; background:#fff;
+    border:1px solid var(--hub-border-soft); font-family:var(--hub-mono, monospace);
+  }
+  .ubulk-danger-note{
+    display:flex; gap:10px; padding:10px 12px; border-radius:var(--hub-r-md);
+    background:var(--hub-red-soft, #fef2f2); color:var(--hub-red-ink, #b91c1c);
+    font-size:12.5px; line-height:1.7; border:1px solid #fecaca;
+  }
+  .ubulk-type-field{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:800; color:var(--hub-text-soft); }
+  @media (max-width: 780px){
+    .ubulk-bar{ flex-direction:column; align-items:stretch; }
+    .ubulk-actions{ justify-content:flex-end; }
   }
 
   /* ── Sortable column headers ─────────────────────────────── */
@@ -143,6 +201,36 @@
     display:flex; gap:6px; padding:6px;
   }
   .col-picker-foot button{ flex:1; }
+
+  /* ── Per-row action menus (two tidy dropdowns) ───────────── */
+  .urow-actions{ display:inline-flex; gap:6px; flex-wrap:nowrap; }
+  .urow-menu-btn{ white-space:nowrap; }
+  .urow-menu-btn .urow-caret{ font-size:9px; margin-inline-start:2px; opacity:.75; }
+  /* Fixed-position popover so it never clips inside the table's overflow. */
+  .urow-pop{
+    position:fixed; z-index:80; min-width:220px;
+    display:flex; flex-direction:column; gap:2px; padding:7px;
+    background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:var(--hub-r-lg, 14px);
+    box-shadow:0 14px 36px rgba(15,23,42,.18);
+  }
+  .urow-pop[hidden]{ display:none; }
+  .urow-pop .urow-sep{ height:1px; background:var(--hub-border-soft,#e2e8f0); margin:4px 2px; }
+  .urow-pop .urow-item{
+    display:flex; align-items:center; gap:9px; width:100%;
+    padding:8px 10px; border:0; border-radius:8px; cursor:pointer;
+    background:transparent; color:var(--hub-text); font:inherit; font-size:13.5px; font-weight:700;
+    text-align:start; text-decoration:none;
+  }
+  .urow-pop .urow-item:hover{ background:var(--hub-bg-soft, #f5f3ff); }
+  .urow-pop .urow-item i{ width:16px; text-align:center; color:var(--hub-text-mute); }
+  .urow-pop .urow-item:hover i{ color:var(--hub-brand-ink); }
+  .urow-pop .urow-item--danger{ color:var(--hub-red-ink, #b91c1c); }
+  .urow-pop .urow-item--danger i{ color:var(--hub-red-ink, #b91c1c); }
+  .urow-pop .urow-item--danger:hover{ background:var(--hub-red-soft, #fef2f2); }
+  .urow-pop form{ margin:0; }
+  .urow-pop form .urow-item{ width:100%; }
 
   /* ── Mega-hero: title row + KPI strip in one unified panel ── */
   .users-mega-hero{
@@ -349,6 +437,26 @@
   </div>
 </div>
 
+{# ───── Sticky BULK action bar (shown when ≥1 row checked) ──── #}
+<div class="ubulk-bar" data-users-bulk-bar hidden>
+  <div class="ubulk-info">
+    <span class="ubulk-count" data-users-bulk-count>0</span>
+    <span>مشترك محدَّد</span>
+  </div>
+  <div class="ubulk-actions">
+    <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-users-bulk-clear>
+      <i class="fa-solid fa-xmark"></i> إلغاء التحديد
+    </button>
+    <button type="button" class="hub-btn hub-btn--danger" data-users-bulk-open>
+      <i class="fa-solid fa-trash-can"></i> حذف المحدد (<span data-users-bulk-count2>0</span>)
+    </button>
+  </div>
+</div>
+
+{# Hidden bulk-delete form — JS fills the usernames before submit. #}
+<form method="post" action="{{ url_for('radius.users_bulk_delete') }}"
+      data-users-bulk-form hidden></form>
+
 {# ───── Subscribers Table ──────────────────────────────────── #}
 {% if items %}
 {% set _picker_meta %}
@@ -409,6 +517,7 @@
           data-plan-id="{{ u.plan_id or '' }}"
           data-plan-name="{{ p.name if p else '' }}"
           data-plan-price="{{ p.price if p else 0 }}"
+          data-plan-currency="{{ (p.currency or 'JOD') if p else 'JOD' }}"
           data-plan-minutes="{{ p.duration_minutes if p else 0 }}"
           data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
@@ -518,35 +627,81 @@
             {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}
           </td>
           <td data-col="actions">
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+            <div class="urow-actions">
               <a class="hub-btn hub-btn--primary hub-btn--icon" title="ملف 360°"
                  href="{{ url_for('radius.users_profile', username=u.username) }}">
                 <i class="fa-solid fa-id-badge"></i>
               </a>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.users_edit', username=u.username) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="الدفعات والسلف"
-                 href="{{ url_for('radius.users_finance', username=u.username) }}">
-                <i class="fa-solid fa-wallet"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}" style="display:inline">
-                <button type="submit"
-                  class="hub-btn hub-btn--{{ 'amber' if u.status=='enabled' else 'green' }} hub-btn--icon"
-                  style="background:{{ 'var(--hub-amber-soft)' if u.status=='enabled' else 'var(--hub-green-soft)' }};
-                         color:{{ 'var(--hub-amber-ink)' if u.status=='enabled' else 'var(--hub-green-ink)' }};
-                         border-color:transparent"
-                  title="{{ 'تعطيل' if u.status=='enabled' else 'تفعيل' }}">
-                  <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
+
+              {# ── «تفعيل» menu — activation / balance / quota / loan ── #}
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm urow-menu-btn"
+                      data-urow-trigger aria-haspopup="true" aria-expanded="false">
+                <i class="fa-solid fa-bolt"></i> تفعيل <i class="fa-solid fa-chevron-down urow-caret"></i>
+              </button>
+              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="إجراءات التفعيل">
+                <button type="button" class="urow-item" data-urow-open="extend">
+                  <i class="fa-solid fa-clock"></i> تجديد / إضافة وقت
                 </button>
-              </form>
-              <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
-                    onsubmit="return confirm('أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
-                  <i class="fa-solid fa-box-archive"></i>
+                <button type="button" class="urow-item" data-urow-open="balance">
+                  <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
                 </button>
-              </form>
+                <button type="button" class="urow-item" data-urow-open="quota">
+                  <i class="fa-solid fa-gauge-high"></i> إضافة كوتة / جيجا
+                </button>
+                <button type="button" class="urow-item" data-urow-open="payment">
+                  <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
+                </button>
+                <button type="button" class="urow-item" data-urow-open="loan">
+                  <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
+                </button>
+                <div class="urow-sep"></div>
+                <form method="post" action="{{ url_for('radius.users_quota_reset_daily', username=u.username) }}"
+                      data-urow-confirm="استعادة الكوتة اليومية للمشترك {{ u.username|e }}؟">
+                  <button type="submit" class="urow-item">
+                    <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+                  </button>
+                </form>
+              </div>
+
+              {# ── «إدارية» menu — SMS / disable / disconnect / plan / archive ── #}
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm urow-menu-btn"
+                      data-urow-trigger aria-haspopup="true" aria-expanded="false">
+                <i class="fa-solid fa-sliders"></i> إدارية <i class="fa-solid fa-chevron-down urow-caret"></i>
+              </button>
+              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="إجراءات إدارية">
+                <a class="urow-item" href="{{ url_for('radius.users_edit', username=u.username) }}">
+                  <i class="fa-solid fa-pen"></i> تعديل المشترك
+                </a>
+                <a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
+                  <i class="fa-solid fa-wallet"></i> الدفعات والسلف
+                </a>
+                <div class="urow-sep"></div>
+                <button type="button" class="urow-item" data-urow-open="sms">
+                  <i class="fa-solid fa-paper-plane"></i> إرسال رسالة تفعيل
+                </button>
+                <button type="button" class="urow-item" data-urow-open="plan">
+                  <i class="fa-solid fa-right-left"></i> تغيير العرض / السرعة
+                </button>
+                <form method="post" action="{{ url_for('radius.online_disconnect') }}">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <button type="submit" class="urow-item">
+                    <i class="fa-solid fa-scissors"></i> فصل الاتصال
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}">
+                  <button type="submit" class="urow-item">
+                    <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
+                    {{ 'تعطيل المشترك' if u.status=='enabled' else 'تفعيل المشترك' }}
+                  </button>
+                </form>
+                <div class="urow-sep"></div>
+                <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
+                      data-urow-confirm="أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
+                  <button type="submit" class="urow-item urow-item--danger">
+                    <i class="fa-solid fa-box-archive"></i> أرشفة المشترك
+                  </button>
+                </form>
+              </div>
             </div>
           </td>
         </tr>
@@ -583,7 +738,7 @@
             <option value="">اختر العرض</option>
             {% for p in plans %}
               <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ p.duration_minutes or 0 }}">
-                {{ p.name }} — {{ "%.2f"|format(p.price or 0) }} {{ p.currency or "JOD" }}
+                {{ p.name }} — {{ "%.2f"|format(p.price or 0) }} {{ p.currency or "JOD" }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
               </option>
             {% endfor %}
           </select>
@@ -698,23 +853,40 @@
               <option value="upload">رفع فقط</option>
             </select>
           </label>
-          <label class="usq-field">طريقة الإضافة
-            <select class="hub-select" name="charge_mode" data-usq-charge-mode>
-              <option value="free">مجانية</option>
-              <option value="paid">مدفوعة</option>
-              <option value="debt">دين</option>
-            </select>
-          </label>
+        </div>
+        <div class="usq-field wide" style="margin-top:2px">طريقة الإضافة
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-usq-charge-seg="free" class="is-active">
+              <i class="fa-solid fa-gift usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <span><strong>مجاني</strong><small>بدون أي مقابل مالي.</small></span>
+            </label>
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+            </label>
+            <label data-usq-charge-seg="debt">
+              <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
+              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+            </label>
+          </div>
+          <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
+            كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.
+          </div>
+        </div>
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
           <label class="usq-field">المبلغ
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0">
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
           <label class="usq-field">العملة
             <input class="hub-input" name="currency" value="JOD" maxlength="8">
           </label>
-          <label class="usq-field wide">ملاحظات
-            <textarea class="hub-textarea" name="notes" rows="2"></textarea>
-          </label>
         </div>
+        <label class="usq-field wide">ملاحظات
+          <textarea class="hub-textarea" name="notes" rows="2"></textarea>
+        </label>
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
@@ -732,9 +904,14 @@
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
+        <div class="usq-current">
+          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
+          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+        </div>
         <div class="usq-form-grid">
           <label class="usq-field">المبلغ
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required data-usq-balance-amount>
           </label>
           <label class="usq-field">العملة
             <input class="hub-input" name="currency" value="JOD" maxlength="8">
@@ -742,6 +919,9 @@
           <label class="usq-field wide">ملاحظات
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
           </label>
+        </div>
+        <div class="hub-text-mute small" data-usq-balance-hint style="line-height:1.7">
+          يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم لاحقًا للتجديد التلقائي أو لتغطية الباقة.
         </div>
       </div>
       <div class="usq-foot">
@@ -810,37 +990,89 @@
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
-        <div class="usq-form-grid">
+        <div class="usq-field wide">نوع السلفة
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-usq-loan-seg="free" class="is-active">
+              <i class="fa-solid fa-gift usq-seg-ico"></i>
+              <input type="radio" name="_loan_kind" value="free" checked data-usq-loan-input>
+              <span><strong>مجانية</strong><small>منح وقت فقط بدون قيمة مالية.</small></span>
+            </label>
+            <label data-usq-loan-seg="debt">
+              <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
+              <input type="radio" name="_loan_kind" value="debt" data-usq-loan-input>
+              <span><strong>تسجيل دين (مدين)</strong><small>تُسجَّل قيمتها كدين على المشترك.</small></span>
+            </label>
+          </div>
+          <div class="hub-text-mute small" data-usq-loan-hint style="margin-top:6px;line-height:1.6;font-weight:600">
+            سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.
+          </div>
+        </div>
+        <div class="usq-form-grid" style="margin-top:4px">
           <label class="usq-field">عدد الأيام
             <input class="hub-input" name="days" type="number" min="0" value="1">
           </label>
           <label class="usq-field">عدد الساعات
             <input class="hub-input" name="hours" type="number" min="0" value="0">
           </label>
-          <label class="usq-field">قيمة السلفة
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0">
+        </div>
+        <div class="usq-form-grid usq-reveal" data-usq-debt-only hidden style="margin-top:4px">
+          <label class="usq-field">قيمة السلفة (الدين)
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
           <label class="usq-field">العملة
             <input class="hub-input" name="currency" value="JOD" maxlength="8">
           </label>
-          <label class="usq-field wide">سبب السلفة
-            <textarea class="hub-textarea" name="reason" rows="2"></textarea>
-          </label>
-          <label class="usq-choice wide">
-            <input type="checkbox" name="apply_to_radius" value="1">
-            <span><strong>تطبيق السلفة مؤقتًا على RADIUS</strong><small>بدون تحديد، يتم تسجيل السلفة ماليًا فقط.</small></span>
-          </label>
-          <label class="usq-choice wide">
-            <input type="checkbox" name="dry_run" value="1" checked>
-            <span><strong>تجربة فقط</strong><small>مفعّلة افتراضيًا مثل صفحة السلف الكاملة؛ أزلها عند التنفيذ الفعلي.</small></span>
-          </label>
         </div>
+        <label class="usq-field wide">سبب السلفة
+          <textarea class="hub-textarea" name="reason" rows="2"></textarea>
+        </label>
+        <label class="usq-choice wide">
+          <input type="checkbox" name="apply_to_radius" value="1">
+          <span><strong>تطبيق السلفة مؤقتًا على RADIUS</strong><small>بدون تحديد، يتم تسجيل السلفة ماليًا فقط.</small></span>
+        </label>
+        <label class="usq-choice wide">
+          <input type="checkbox" name="dry_run" value="1" checked>
+          <span><strong>تجربة فقط</strong><small>مفعّلة افتراضيًا مثل صفحة السلف الكاملة؛ أزلها عند التنفيذ الفعلي.</small></span>
+        </label>
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
       </div>
     </form>
+  </div>
+</div>
+
+{# ───── Strong BULK-DELETE confirm (type DELETE) ────────────── #}
+<div class="usq-modal" data-users-bulk-modal hidden>
+  <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="ubulk-title" style="width:min(560px,100%)">
+    <div class="usq-head">
+      <h3 id="ubulk-title">تأكيد حذف المشتركين المحددين</h3>
+      <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-users-bulk-cancel aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="usq-body">
+      <div class="ubulk-danger-note">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
+        <div>
+          سيتم أرشفة <strong><span data-users-bulk-count3>0</span> مشترك</strong> دفعة واحدة.
+          هذا إجراء حسّاس — يمكن استعادتهم لاحقًا من <strong>سلة المحذوفات</strong>.
+          للتأكيد اكتب <strong>DELETE</strong> في الحقل أدناه.
+        </div>
+      </div>
+      <ul class="ubulk-confirm-list" data-users-bulk-names></ul>
+      <label class="ubulk-type-field">اكتب DELETE للتأكيد
+        <input class="hub-input" type="text" data-users-bulk-type autocomplete="off"
+               placeholder="DELETE" dir="ltr">
+      </label>
+    </div>
+    <div class="usq-foot">
+      <button class="hub-btn hub-btn--ghost" type="button" data-users-bulk-cancel>إلغاء</button>
+      <button class="hub-btn hub-btn--danger" type="button" data-users-bulk-confirm disabled>
+        <i class="fa-solid fa-trash-can"></i> حذف نهائي للتحديد
+      </button>
+    </div>
   </div>
 </div>
 
@@ -900,6 +1132,96 @@
     page.querySelectorAll("[data-usq-current='username']").forEach((el) => { el.textContent = data.username || "—"; });
     page.querySelectorAll("[data-usq-current='plan']").forEach((el) => { el.textContent = data.planName || "—"; });
     page.querySelectorAll("[data-usq-current='expire']").forEach((el) => { el.textContent = data.expire || "—"; });
+    page.querySelectorAll("[data-usq-current='price']").forEach((el) => {
+      const price = parseFloat(data.planPrice || "0");
+      el.textContent = price > 0 ? fmtMoney(price, data.planCurrency) : "—";
+    });
+  }
+
+  // ── Smart-activation helpers (price explanation + coverage) ──
+  function fmtMoney(amount, currency) {
+    const n = Number(amount) || 0;
+    let s = n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return `${s} ${currency || "JOD"}`;
+  }
+  function arDays(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return "يوم";
+    if (n === 2) return "يومان";
+    if (n >= 3 && n <= 10) return `${n} أيام`;
+    return `${n} يوم`;
+  }
+  // «إضافة رصيد نقدي» — live coverage text from amount / plan price.
+  function updateBalanceCoverage() {
+    const modal = page.querySelector("[data-usq-modal='balance']");
+    const hint = modal?.querySelector("[data-usq-balance-hint]");
+    if (!hint || !activeRow) return;
+    const price = parseFloat(activeRow.dataset.planPrice || "0");
+    const minutes = parseInt(activeRow.dataset.planMinutes || "0", 10);
+    const cur = activeRow.dataset.planCurrency || "JOD";
+    const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
+    if (price > 0 && amount > 0) {
+      let msg = `يُضاف ${fmtMoney(amount, cur)} إلى رصيد المشترك.`;
+      if (minutes > 0) {
+        const days = (amount / price) * (minutes / 1440);
+        msg += ` يكفي لتجديد ~${arDays(days)} على باقته الحالية بسعر ${fmtMoney(price, cur)}، أو يُستخدم للتجديد التلقائي.`;
+      } else {
+        msg += ` سعر باقته الحالية ${fmtMoney(price, cur)}؛ يُستخدم للتجديد التلقائي.`;
+      }
+      hint.textContent = msg;
+    } else if (price > 0) {
+      hint.textContent = `سعر باقة المشترك الحالية ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض عدد الأيام التي يغطيها.`;
+    } else {
+      hint.textContent = "يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم لاحقًا للتجديد التلقائي أو لتغطية الباقة.";
+    }
+  }
+  // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
+  // «منح سلفة» — free vs debt segmented reveal.
+  function syncChargeMode(scope) {
+    const modal = page.querySelector(`[data-usq-modal='${scope}']`);
+    if (!modal) return;
+    // The checked radio (name=charge_mode) is the source of truth posted
+    // to the existing handler — no hidden mirror needed.
+    const mode = modal.querySelector("input[name='charge_mode']:checked")?.value || "free";
+    const paid = mode === "paid" || mode === "debt";
+    modal.querySelectorAll("[data-usq-paid-only]").forEach((el) => {
+      el.hidden = !paid;
+      el.querySelectorAll("input, select").forEach((inp) => {
+        if (inp.dataset.usqReq === "1") inp.required = paid;
+      });
+    });
+    modal.querySelectorAll("[data-usq-charge-seg]").forEach((seg) => {
+      seg.classList.toggle("is-active", seg.dataset.usqChargeSeg === mode);
+    });
+    const hint = modal.querySelector("[data-usq-charge-hint]");
+    if (hint) {
+      hint.textContent = {
+        free: "كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.",
+        paid: "كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
+        debt: "كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
+      }[mode];
+    }
+  }
+  function syncLoanPolicy() {
+    const modal = page.querySelector("[data-usq-modal='loan']");
+    if (!modal) return;
+    const mode = modal.querySelector("[data-usq-loan-input]:checked")?.value || "free";
+    const debt = mode === "debt";
+    modal.querySelectorAll("[data-usq-debt-only]").forEach((el) => {
+      el.hidden = !debt;
+      el.querySelectorAll("input, select").forEach((inp) => {
+        if (inp.dataset.usqReq === "1") inp.required = debt;
+      });
+    });
+    modal.querySelectorAll("[data-usq-loan-seg]").forEach((seg) => {
+      seg.classList.toggle("is-active", seg.dataset.usqLoanSeg === mode);
+    });
+    const hint = modal.querySelector("[data-usq-loan-hint]");
+    if (hint) {
+      hint.textContent = debt
+        ? "تُسجَّل السلفة كدين بقيمة مالية على رصيد المشترك ويظهر في سجل القيود."
+        : "سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.";
+    }
   }
 
   function refreshPanel() {
@@ -908,6 +1230,7 @@
       checkAll.checked = rows.length > 0 && rows.length === checks.length;
       checkAll.indeterminate = rows.length > 0 && rows.length < checks.length;
     }
+    refreshBulk(rows);
     panel.hidden = rows.length === 0;
     if (!rows.length) {
       activeRow = null;
@@ -970,25 +1293,155 @@
     }
   }
 
+  // ── Bulk-delete machinery ─────────────────────────────────
+  const bulkBar    = page.querySelector("[data-users-bulk-bar]");
+  const bulkForm   = page.querySelector("[data-users-bulk-form]");
+  const bulkModal  = page.querySelector("[data-users-bulk-modal]");
+  const bulkNames  = page.querySelector("[data-users-bulk-names]");
+  const bulkType   = page.querySelector("[data-users-bulk-type]");
+  const bulkConfirm = page.querySelector("[data-users-bulk-confirm]");
+  const bulkCounts = Array.from(page.querySelectorAll("[data-users-bulk-count],[data-users-bulk-count2],[data-users-bulk-count3]"));
+
+  function refreshBulk(rows) {
+    if (!bulkBar) return;
+    rows = rows || selectedRows();
+    const n = rows.length;
+    bulkCounts.forEach((el) => { el.textContent = String(n); });
+    bulkBar.hidden = n === 0;
+  }
+
+  function openBulkModal() {
+    const rows = selectedRows();
+    if (!rows.length || !bulkModal) return;
+    if (bulkNames) {
+      bulkNames.innerHTML = "";
+      rows.forEach((row) => {
+        const li = document.createElement("li");
+        li.textContent = row.dataset.username || "";
+        bulkNames.appendChild(li);
+      });
+    }
+    if (bulkType) bulkType.value = "";
+    if (bulkConfirm) bulkConfirm.disabled = true;
+    bulkModal.hidden = false;
+    bulkType?.focus();
+  }
+
+  function closeBulkModal() {
+    if (bulkModal) bulkModal.hidden = true;
+  }
+
+  page.querySelector("[data-users-bulk-open]")?.addEventListener("click", openBulkModal);
+  page.querySelector("[data-users-bulk-clear]")?.addEventListener("click", () => {
+    checks.forEach((input) => { input.checked = false; });
+    refreshPanel();
+  });
+  page.querySelectorAll("[data-users-bulk-cancel]").forEach((btn) =>
+    btn.addEventListener("click", closeBulkModal));
+  bulkModal?.addEventListener("click", (event) => {
+    if (event.target === bulkModal) closeBulkModal();
+  });
+  bulkType?.addEventListener("input", () => {
+    if (bulkConfirm) bulkConfirm.disabled = bulkType.value.trim().toUpperCase() !== "DELETE";
+  });
+  bulkConfirm?.addEventListener("click", () => {
+    if (bulkType && bulkType.value.trim().toUpperCase() !== "DELETE") return;
+    const rows = selectedRows();
+    if (!rows.length || !bulkForm) return;
+    // Rebuild the hidden form with one <input name="usernames"> per row.
+    bulkForm.querySelectorAll("input[name='usernames']").forEach((el) => el.remove());
+    rows.forEach((row) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "usernames";
+      input.value = row.dataset.username || "";
+      bulkForm.appendChild(input);
+    });
+    bulkConfirm.disabled = true;
+    bulkForm.submit();
+  });
+
   checks.forEach((input) => input.addEventListener("change", refreshPanel));
   checkAll?.addEventListener("change", () => {
     checks.forEach((input) => { input.checked = checkAll.checked; });
     refreshPanel();
   });
 
+  // Open an activation modal for the CURRENT activeRow. Shared by the
+  // quick-panel buttons and the per-row «تفعيل»/«إدارية» dropdowns.
+  function openActionModal(key) {
+    if (!activeRow || !key) return;
+    const modal = page.querySelector(`[data-usq-modal='${key}']`);
+    if (!modal) return;
+    const form = modal.querySelector("form[data-action-template]");
+    if (form) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
+    if (key === "plan") updatePlanPolicy();
+    if (key === "extend") updateMinutes();
+    if (key === "balance") updateBalanceCoverage();
+    if (key === "quota") syncChargeMode("quota");
+    if (key === "loan") syncLoanPolicy();
+    modal.hidden = false;
+    modal.querySelector("input, select, textarea, button")?.focus();
+  }
+
   page.querySelectorAll("[data-usq-open]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!activeRow) return;
-      const modal = page.querySelector(`[data-usq-modal='${button.dataset.usqOpen}']`);
-      if (!modal) return;
-      const form = modal.querySelector("form[data-action-template]");
-      if (form) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
-      if (button.dataset.usqOpen === "plan") updatePlanPolicy();
-      if (button.dataset.usqOpen === "extend") updateMinutes();
-      modal.hidden = false;
-      modal.querySelector("input, select, textarea, button")?.focus();
+    button.addEventListener("click", () => openActionModal(button.dataset.usqOpen));
+  });
+
+  // ── Per-row two-menu dropdowns (تفعيل / إدارية) ────────────
+  function closeRowPops() {
+    page.querySelectorAll("[data-urow-pop]").forEach((pop) => { pop.hidden = true; });
+    page.querySelectorAll("[data-urow-trigger][aria-expanded='true']")
+        .forEach((t) => t.setAttribute("aria-expanded", "false"));
+  }
+  page.querySelectorAll("[data-urow-trigger]").forEach((trigger) => {
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const pop = trigger.nextElementSibling;
+      if (!pop || !pop.matches("[data-urow-pop]")) return;
+      const isOpen = !pop.hidden;
+      closeRowPops();
+      if (isOpen) return;
+      // Position the fixed popover under the trigger (RTL-aware: align
+      // the menu's inline-end edge with the trigger's right edge).
+      const r = trigger.getBoundingClientRect();
+      pop.hidden = false;
+      pop.style.visibility = "hidden";
+      const pw = pop.offsetWidth;
+      let left = r.right - pw;
+      if (left < 8) left = 8;
+      const maxLeft = window.innerWidth - pw - 8;
+      if (left > maxLeft) left = Math.max(8, maxLeft);
+      let top = r.bottom + 6;
+      if (top + pop.offsetHeight > window.innerHeight - 8) {
+        top = Math.max(8, r.top - pop.offsetHeight - 6);
+      }
+      pop.style.left = `${left}px`;
+      pop.style.top = `${top}px`;
+      pop.style.visibility = "";
+      trigger.setAttribute("aria-expanded", "true");
     });
   });
+  // Per-row modal openers: set this row as the active context, then open.
+  page.querySelectorAll("[data-urow-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const row = button.closest("tr");
+      if (row) applyRow(row);   // sets activeRow + populates modal fields
+      closeRowPops();
+      openActionModal(button.dataset.urowOpen);
+    });
+  });
+  // Per-row confirm-guarded POST forms (daily-quota-reset / archive).
+  page.querySelectorAll("form[data-urow-confirm]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      if (!window.confirm(form.dataset.urowConfirm || "تنفيذ هذا الإجراء؟")) {
+        event.preventDefault();
+      }
+    });
+  });
+  document.addEventListener("click", closeRowPops);
+  window.addEventListener("resize", closeRowPops);
+  page.querySelector(".hr-table-scroll")?.addEventListener("scroll", closeRowPops);
 
   page.querySelectorAll("[data-usq-close]").forEach((button) => {
     button.addEventListener("click", closeModals);
@@ -999,12 +1452,18 @@
     });
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeModals();
+    if (event.key === "Escape") { closeModals(); closeBulkModal(); }
   });
   page.querySelector("[data-usq-plan-select]")?.addEventListener("change", updatePlanPolicy);
   page.querySelectorAll("[data-usq-days], [data-usq-hours]").forEach((input) => {
     input.addEventListener("input", updateMinutes);
   });
+  // Smart-activation interactivity: live coverage + segmented reveals.
+  page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
+  page.querySelectorAll("[data-usq-charge-input]").forEach((input) =>
+    input.addEventListener("change", () => syncChargeMode("quota")));
+  page.querySelectorAll("[data-usq-loan-input]").forEach((input) =>
+    input.addEventListener("change", syncLoanPolicy));
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       const message = form.dataset.usqConfirm || "تنفيذ هذا الإجراء؟";

@@ -104,6 +104,7 @@ def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users/<username>/edit", "users_edit", users_edit, methods=["GET"])
     bp.add_url_rule("/users/<username>", "users_update", users_update, methods=["POST"])
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
+    bp.add_url_rule("/users/bulk-delete", "users_bulk_delete", users_bulk_delete, methods=["POST"])
     bp.add_url_rule("/users/<username>/toggle", "users_toggle", users_toggle, methods=["POST"])
     bp.add_url_rule("/users/<username>/extend", "users_extend", users_extend, methods=["POST"])
     bp.add_url_rule("/users/<username>/change-plan", "users_change_plan", users_change_plan, methods=["POST"])
@@ -1099,6 +1100,58 @@ def users_delete(username: str):
         flash("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.", "success")
     except RadiusError as e:
         flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_bulk_delete():
+    """Soft-delete (archive) every selected subscriber in one POST.
+
+    Reuses the EXACT single-row delete path — get_users_service().delete()
+    — which archives via the adapter (subscribers_repo.archive_subscriber,
+    tenant-scoped) and writes an audit record per subscriber. Unknown /
+    already-archived / failing usernames are skipped and reported, never
+    aborting the batch. Returns to the list with a flash summary.
+
+    Accepts the selected usernames from `usernames` (repeated form field,
+    what the sticky bulk bar posts); also tolerates a single comma-joined
+    `usernames` value for resilience.
+    """
+    raw = request.form.getlist("usernames")
+    if len(raw) == 1 and "," in raw[0]:
+        raw = raw[0].split(",")
+    # De-dupe while preserving order; drop blanks.
+    seen: set[str] = set()
+    usernames: list[str] = []
+    for name in raw:
+        name = (name or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            usernames.append(name)
+
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك للحذف.", "warning")
+        return redirect(url_for("radius.users_list"))
+
+    svc = get_users_service()
+    actor = _actor()
+    deleted = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            svc.delete(actor=actor, username=name)
+            deleted += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — never abort the batch on one bad row
+            failed.append(name)
+
+    if deleted:
+        flash(f"تم حذف {deleted} مشترك. يمكن الاستعادة من سلة المحذوفات.", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّر حذف {len(failed)} مشترك: {preview}", "warning")
+    if not deleted and not failed:
+        flash("لم يتم حذف أي مشترك.", "warning")
     return redirect(url_for("radius.users_list"))
 
 

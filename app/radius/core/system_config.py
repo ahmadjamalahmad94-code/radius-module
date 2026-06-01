@@ -103,3 +103,69 @@ def to_local(value: Any, fmt: str = "%Y-%m-%d %H:%M") -> str:
 
 def to_local_date(value: Any) -> str:
     return to_local(value, fmt="%Y-%m-%d")
+
+
+def _ar_days(n: int) -> str:
+    """Arabic-correct day count: 1→يوم، 2→يومان، 3-10→أيام، 11+→يوم."""
+    if n == 1:
+        return "يوم"
+    if n == 2:
+        return "يومان"
+    if 3 <= n <= 10:
+        return f"{n} أيام"
+    return f"{n} يوم"
+
+
+def _ar_hours(n: int) -> str:
+    """Arabic-correct hour count: 1→ساعة، 2→ساعتان، 3-10→ساعات، 11+→ساعة."""
+    if n == 1:
+        return "ساعة"
+    if n == 2:
+        return "ساعتان"
+    if 3 <= n <= 10:
+        return f"{n} ساعات"
+    return f"{n} ساعة"
+
+
+def _ar_minutes(n: int) -> str:
+    """Arabic-correct minute count: 1→دقيقة، 2→دقيقتان، 3-10→دقائق، 11+→دقيقة."""
+    if n == 1:
+        return "دقيقة"
+    if n == 2:
+        return "دقيقتان"
+    if 3 <= n <= 10:
+        return f"{n} دقائق"
+    return f"{n} دقيقة"
+
+
+def format_duration_days(minutes: Any) -> str:
+    """Humanize a raw MINUTE count to a friendly Arabic days string.
+
+    Durations across the panel are stored in MINUTES, but operators think
+    in DAYS — so 5400 دقيقة becomes «3 أيام و18 ساعة» instead of a wall of
+    minutes. Rules:
+      • whole days        → «X يوم/أيام» (e.g. 1440 → «يوم», 4320 → «3 أيام»)
+      • days + hours      → «X أيام وY ساعة» (e.g. 5400 → «3 أيام و18 ساعة»)
+      • < 1 day           → hours (e.g. 90 → «ساعة ونصف»? no — «ساعة»/«ساعات»)
+      • < 1 hour          → minutes
+      • 0 / invalid / None → «—»
+    Used by the `dur_days` Jinja filter (registered in app/__init__.py).
+    """
+    try:
+        m = int(float(minutes or 0))
+    except (TypeError, ValueError):
+        return "—"
+    if m <= 0:
+        return "—"
+    days = m // 1440
+    hours = (m % 1440) // 60
+    mins = m % 60
+    if days:
+        if hours:
+            return f"{_ar_days(days)} و{_ar_hours(hours)}"
+        return _ar_days(days)
+    if hours:
+        if mins:
+            return f"{_ar_hours(hours)} و{_ar_minutes(mins)}"
+        return _ar_hours(hours)
+    return _ar_minutes(mins)
