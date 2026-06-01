@@ -530,6 +530,9 @@
         {% set _down_kbps = (u.download_speed_kbps or (p.speed_down_kbps if p else 0)) %}
         {% set _up_kbps   = (u.upload_speed_kbps   or (p.speed_up_kbps   if p else 0)) %}
         {% set _daily_quota_mb = u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
+        {# Time basis for price↔time math: a time plan's duration, else the plan's
+           validity window (quota/data plans have no duration_minutes). #}
+        {% set _plan_minutes = (p.duration_minutes or (p.validity_days * 1440) or 0) if p else 0 %}
         <tr
           data-username="{{ u.username }}"
           data-daily-quota="{{ _daily_quota_mb }}"
@@ -540,7 +543,7 @@
           data-plan-price="{{ _eff_price or 0 }}"
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
           data-plan-currency="{{ cfg.currency }}"
-          data-plan-minutes="{{ p.duration_minutes if p else 0 }}"
+          data-plan-minutes="{{ _plan_minutes }}"
           data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
           data-profile-url="{{ url_for('radius.users_profile', username=u.username) }}"
@@ -817,11 +820,8 @@
           <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
         </div>
         <div class="usq-form-grid">
-          <label class="usq-field">أيام
+          <label class="usq-field wide">عدد الأيام
             <input class="hub-input" type="number" min="0" value="1" data-usq-days>
-          </label>
-          <label class="usq-field">ساعات
-            <input class="hub-input" type="number" min="0" max="23" value="0" data-usq-hours>
           </label>
         </div>
         <div class="usq-field wide" style="margin-top:2px">طريقة الإضافة
