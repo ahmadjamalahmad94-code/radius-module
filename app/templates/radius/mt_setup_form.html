@@ -56,6 +56,58 @@
       <span class="mt-setup-field-hint">إذا غير متأكّد، اختر 7. السكربت يطلع جاهز للنسخ بعد الحفظ.</span>
     </fieldset>
 
+    {# ── RouterOS v6 tunnel strategy (shown only for v6) ──
+       v6 لا يدعم WireGuard. الإدارة عبر SSTP (نفق دائم، إدارة فقط)،
+       والترافيك الاختياري عبر L2TP/IPsec كنفق منفصل. #}
+    <div class="mt-v6-tunnels" data-mt-v6-tunnels hidden
+         style="display:flex;flex-direction:column;gap:12px;margin:6px 0 4px">
+      <div style="font-weight:900;color:var(--hub-text)"><i class="fa-solid fa-shield-halved"></i> ربط RouterOS v6</div>
+
+      {# Management card — SSTP, recommended #}
+      <div class="mt-v6-card" style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:14px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:14px"><i class="fa-brands fa-windows"></i> نفق الإدارة عبر SSTP</strong>
+          <span style="background:#16a34a;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">موصى به للإدارة</span>
+        </div>
+        <p style="margin:8px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
+          يستخدم هذا النفق لإدارة الراوتر فقط: API، Winbox، Ping، Monitoring، وإرسال أوامر HobeRadius. لا يتم تمرير إنترنت المشتركين من خلاله.
+        </p>
+        <div style="font-size:12px;font-weight:700;color:#047857"><i class="fa-solid fa-circle-info"></i> لن يتم ضبط Default Route على نفق SSTP.</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft)">
+          <input type="checkbox" name="sstp_verify_certificate" value="1">
+          التحقق من شهادة الخادم (verify-server-certificate) — فعّله في الإنتاج عند جاهزية الشهادة.
+        </label>
+      </div>
+
+      {# Traffic card — L2TP/IPsec, advanced + off by default #}
+      <details class="mt-v6-card" style="border:1px solid var(--hub-border-soft);border-radius:14px;padding:14px">
+        <summary style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800">
+          <i class="fa-solid fa-route"></i> نفق تغيير IP عبر L2TP/IPsec
+          <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">متقدم</span>
+        </summary>
+        <p style="margin:10px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
+          يستخدم هذا النفق عند تفعيل خدمة تغيير IP أو تمرير ترافيك مشتركين محددين عبر VPS. هذا النفق منفصل عن نفق الإدارة.
+        </p>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
+          وضع الترافيك
+          <select name="traffic_mode" class="hub-select" data-mt-traffic-mode>
+            <option value="disabled" selected>معطّل</option>
+            <option value="selected_pool">تجمّع IP محدد</option>
+            <option value="selected_subscribers">مشتركون محددون</option>
+            <option value="full_tunnel">تمرير كل الترافيك (متقدم)</option>
+          </select>
+        </label>
+        <label data-mt-fulltunnel-confirm hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px">
+          <input type="checkbox" name="full_tunnel_confirmed" value="1" style="margin-top:2px">
+          أفهم أن تمرير كل الترافيك قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
+        </label>
+        <div style="font-size:11.5px;color:var(--hub-text-mute);margin-top:8px;line-height:1.7">
+          <i class="fa-solid fa-triangle-exclamation"></i> لا تفعّل تمرير كل الترافيك إلا بعد فحص قدرة الراوتر والـ VPS. السرعة تعتمد على موديل الراوتر والمعالج ودعم IPsec Hardware Acceleration وجودة الخط.<br>
+          <i class="fa-solid fa-code-branch"></i> لا يمكن جعل SSTP و L2TP/IPsec يملكان Default Route بنفس الوقت.
+        </div>
+      </details>
+    </div>
+
     <label class="mt-setup-field">
       <span class="mt-setup-field-label">عنوان السيرفر (كما يراه الراوتر)</span>
       <input type="text" name="server_ip" value="{{ default_server_ip }}"
@@ -99,15 +151,28 @@
   const addrInput = document.querySelector('[data-mt-address-field] input[name="address"]');
   const hintV7 = document.querySelector('[data-mt-address-hint-v7]');
   const hintV6 = document.querySelector('[data-mt-address-hint-v6]');
+  const v6Tunnels = document.querySelector('[data-mt-v6-tunnels]');
   function apply() {
     const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
     const isV7 = v === "7";
     if (addrInput) addrInput.required = !isV7;
     if (hintV7) hintV7.hidden = !isV7;
     if (hintV6) hintV6.hidden = isV7;
+    // v6 tunnel strategy (SSTP mgmt + optional L2TP traffic) — v6 only.
+    if (v6Tunnels) v6Tunnels.hidden = isV7;
   }
   radios.forEach(r => r.addEventListener("change", apply));
   apply();
+
+  // Full-tunnel mode requires an explicit confirmation checkbox.
+  const modeSel = document.querySelector('[data-mt-traffic-mode]');
+  const confirmBox = document.querySelector('[data-mt-fulltunnel-confirm]');
+  function applyMode() {
+    if (!modeSel || !confirmBox) return;
+    confirmBox.hidden = modeSel.value !== "full_tunnel";
+  }
+  if (modeSel) modeSel.addEventListener("change", applyMode);
+  applyMode();
 })();
 </script>
 
