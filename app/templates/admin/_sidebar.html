@@ -146,6 +146,7 @@
 {%- set m_setup_wizard_v2 = (path == url_for('radius.setup_wizard_v2_page')) -%}
 {%- set m_setup_wizard_engineering = (path == url_for('radius.setup_wizard_page')) -%}
 {%- set m_setup_wizard_fleet = (path == url_for('radius.setup_wizard_fleet_page')) -%}
+{%- set m_mt_setup = ('/mt/setup' in path) -%}
 
 {# Business OS #}
 {%- set m_business_dashboard = (path == url_for('radius.dashboard_alias')) -%}
@@ -367,11 +368,15 @@
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         <div class="hb-side-subhead"><i class="fa-solid fa-wand-magic-sparkles"></i>الإعداد والتشغيل</div>
-        {{ sub_item('radius.setup_wizard_v3_page',    'معالج إضافة راوتر',  m_setup_wizard_v3) }}
-        {{ sub_item('radius.setup_wizard_v2_page',    'معالج الإعداد',   m_setup_wizard_v2) }}
-        {{ sub_item('radius.setup_wizard_fleet_page', 'أسطول الراوترات', m_setup_wizard_fleet) }}
-        {{ sub_item('radius.setup_wizard_page',       'عرض الإعداد الهندسي', m_setup_wizard_engineering) }}
-        {{ sub_item('radius.mt_setup_form',           'معالج إضافة راوتر',    m_mt) }}
+        {# مساران واضحان لإضافة راوتر بدل خمسة متكررين:
+           - سريع: mt_setup_form (3 حقول → سكربت → اختبار)
+           - متقدم: setup_wizard_v3_page (معالج كامل بخطوات + خدمات)
+           معالج v2 و«أسطول الراوترات» و«الإعداد الهندسي» تبقى مساراتها
+           حيّة (للـ bookmarks) لكن خارج القائمة: v2 استبدله v3، و«الأسطول»
+           تحوّل لـ«إدارة الراوترات»، و«الهندسي» يُفتح عند الحاجة من صفحة
+           إدارة الراوترات. #}
+        {{ sub_item('radius.mt_setup_form',        'إضافة راوتر (سريع)', m_mt_setup) }}
+        {{ sub_item('radius.setup_wizard_v3_page', 'إعداد راوتر متقدم',  m_setup_wizard_v3) }}
 
         {# Inventory + operational view — mt_operations is now THE
            unified router management page (replaced the old separate
