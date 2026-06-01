@@ -130,6 +130,11 @@
     background:#fff; color:var(--hub-text-soft); font-size:12px; font-weight:800; cursor:pointer;
   }
   .usq-sms-tpl:hover{ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
+  /* Inline loan result message (AJAX) */
+  .usq-loan-msg{ margin-top:8px; padding:8px 10px; border-radius:var(--hub-r-md); font-size:12.5px; font-weight:800; line-height:1.6; }
+  .usq-loan-msg[hidden]{ display:none; }
+  .usq-loan-msg.is-ok{ background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+  .usq-loan-msg.is-err{ background:#fff1f2; border:1px solid #fecaca; color:#b91c1c; }
   @media (max-width: 780px){
     .usq-panel{ align-items:flex-start; flex-direction:column; }
     .usq-actions{ justify-content:flex-start; }
@@ -1156,6 +1161,7 @@
         </label>
         {# رسمي: السلفة تُسجَّل وتُطبَّق فعليًا — بدون معاينة. #}
         <input type="hidden" name="apply_to_radius" value="1">
+        <div class="usq-loan-msg" data-usq-loan-msg hidden></div>
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
@@ -1761,6 +1767,38 @@
   // Live re-price the loan as the operator types days/hours.
   page.querySelectorAll("[data-usq-modal='loan'] [name='days'], [data-usq-modal='loan'] [name='hours']").forEach((input) =>
     input.addEventListener("input", syncLoanAmount));
+  // «منح سلفة» submits via AJAX: stay on this page on success; on error show it
+  // inside the floating box without closing it or navigating to the loans page.
+  const loanForm = page.querySelector("[data-usq-modal-form='loan']");
+  if (loanForm) {
+    loanForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const msgEl = loanForm.querySelector("[data-usq-loan-msg]");
+      const submitBtn = loanForm.querySelector("button[type='submit']");
+      if (msgEl) { msgEl.hidden = true; msgEl.textContent = ""; msgEl.className = "usq-loan-msg"; }
+      if (submitBtn) submitBtn.disabled = true;
+      fetch(loanForm.action, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "fetch" },
+        body: new FormData(loanForm),
+      })
+        .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
+        .then(({ ok, j }) => {
+          if (ok && j && j.ok) {
+            if (msgEl) { msgEl.hidden = false; msgEl.textContent = j.message || "تمت إضافة السلفة ✅"; msgEl.classList.add("is-ok"); }
+            setTimeout(() => window.location.reload(), 800);  // stay on the subscribers page
+          } else {
+            if (msgEl) { msgEl.hidden = false; msgEl.textContent = (j && j.error) || "تعذّر إضافة السلفة."; msgEl.classList.add("is-err"); }
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        })
+        .catch(() => {
+          if (msgEl) { msgEl.hidden = false; msgEl.textContent = "تعذّر الاتصال بالخادم."; msgEl.classList.add("is-err"); }
+          if (submitBtn) submitBtn.disabled = false;
+        });
+    });
+  }
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       const message = form.dataset.usqConfirm || "تنفيذ هذا الإجراء؟";
