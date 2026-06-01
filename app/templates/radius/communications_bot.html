@@ -123,8 +123,8 @@
     {% endif %}
   {% endcall %}
 
-  {# ── 2) Webhook URL (read-only + copy) ── #}
-  {% call hub.section("رابط الويب-هوك", icon="link", meta="انسخه وضعه عند مزوّد واتساب") %}
+  {# ── 2) Incoming messages URL (read-only + copy) ── #}
+  {% call hub.section("رابط استقبال رسائل واتساب", icon="link", meta="انسخه وضعه عند مزوّد واتساب") %}
     <div class="cbot-field">
       <label>عنوان استقبال الرسائل الواردة</label>
       <div class="cbot-url">
@@ -134,7 +134,7 @@
         </button>
       </div>
       <div class="hint">
-        ضع هذا الرابط في إعدادات الويب-هوك (Webhook) لدى مزوّد واتساب لديك. عند وصول رسالة من مشترك،
+        ضع هذا الرابط في خانة استقبال الرسائل لدى مزوّد واتساب لديك. عند وصول رسالة من مشترك،
         يستقبلها البوت ويرد عليها تلقائيًا. الرابط عام ولا يحتاج تسجيل دخول.
       </div>
     </div>

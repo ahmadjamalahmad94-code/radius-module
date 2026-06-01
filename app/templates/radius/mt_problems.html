@@ -129,7 +129,7 @@
       {% if soon_problems %}
       <section class="opsx-panel" data-mt-problems-bucket="soon">
         <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-triangle-exclamation"></i> يحتاج انتباه قريباً</div>
+          <div class="opsx-panel-title"><i class="fa-solid fa-triangle-exclamation"></i> يحتاج انتباه اليوم</div>
           <span class="opsx-chip opsx-chip--warning">{{ soon_problems|length }} تحذير</span>
         </header>
         <div class="opsx-panel-body"><ul class="opsx-list">{% for p in soon_problems %}{{ problem_row(p) }}{% endfor %}</ul></div>

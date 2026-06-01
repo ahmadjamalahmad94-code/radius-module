@@ -127,3 +127,36 @@ def test_network_devices_page_uses_actionable_monitoring_copy(client):
     text = _visible_text(response.get_data(as_text=True))
     assert "قريبًا" not in text
     assert "إعدادات المراقبة" in text
+
+
+def test_operational_pages_hide_raw_technical_copy(client):
+    _web_login(client)
+    routes = [
+        "/admin/radius/webhooks",
+        "/admin/radius/webhooks/deliveries",
+        "/admin/radius/cards/batches/import",
+        "/admin/radius/cards/print/new",
+        "/admin/radius/mt/setup",
+    ]
+    forbidden = [
+        "Webhook",
+        "CSRF failed",
+        "فشل CSRF",
+        "Internet Card",
+        "Hotspot Voucher",
+        "Keep login data",
+        "Use the username",
+        "HTTP 404",
+        "RouterOS Terminal",
+        "New Terminal",
+        "قريباً",
+        "لاحقًا",
+        "لاحقاً",
+    ]
+
+    for route in routes:
+        response = client.get(route)
+        assert response.status_code == 200, route
+        text = _visible_text(response.get_data(as_text=True))
+        for token in forbidden:
+            assert token not in text, f"{token!r} leaked in {route}"

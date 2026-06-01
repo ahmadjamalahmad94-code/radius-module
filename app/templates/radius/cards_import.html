@@ -537,11 +537,11 @@
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         const snippet = (rawText || '').slice(0, 140).replace(/\s+/g, ' ').trim();
         if (res.status === 404) {
-          setStatus('المسار غير مسجَّل على الخادم (HTTP 404). أعد تشغيل الـ container بعد سحب آخر تحديث.', 'err');
+          setStatus('المسار غير مسجَّل على الخادم (رمز 404). أعد تشغيل الخدمة بعد سحب آخر تحديث.', 'err');
         } else if (res.status === 400 && snippet.includes('CSRF')) {
-          setStatus('CSRF failed — حدّث الصفحة (F5) وحاول مرة أخرى.', 'err');
+          setStatus('انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5) وحاول مرة أخرى.', 'err');
         } else {
-          setStatus(`فشل الخادم (HTTP ${res.status}). ${snippet}`, 'err');
+          setStatus(`فشل الخادم (رمز ${res.status}). ${snippet}`, 'err');
         }
         console.warn('cards-import preview raw response:', res.status, snippet);
         return;

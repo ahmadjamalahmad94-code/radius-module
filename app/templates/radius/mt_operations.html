@@ -444,7 +444,7 @@
   async function getJson(url) {
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!res.ok) throw new Error(data.error || `رمز ${res.status}`);
     return data;
   }
 
@@ -466,7 +466,7 @@
           },
         );
         const data = await res.json().catch(() => ({ ok: false }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
         const sweep = data.sweep || {};
         window.alert(
           `تم تنظيف ${sweep.reclaimed_count || 0} محاولة منتهية ` +
@@ -503,7 +503,7 @@
           },
         );
         const data = await res.json().catch(() => ({ ok: false }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
         window.location.reload();
       } catch (error) {
         window.alert("فشل التقاعد: " + error.message);
@@ -587,7 +587,7 @@
           }),
         });
         const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
         if (emergencyResult) {
           emergencyResult.hidden = false;
           emergencyResult.textContent = JSON.stringify(data.reset, null, 2);

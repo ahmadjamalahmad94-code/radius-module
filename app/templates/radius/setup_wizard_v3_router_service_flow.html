@@ -706,7 +706,7 @@ li[data-status="pending"] .swsvf-verify-icon{
           body: JSON.stringify({}) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `HTTP ${res.status}`);
+        throw new Error(data.error || `رمز ${res.status}`);
       }
       revokeResult.hidden = false;
       revokeResult.textContent = "تم إيقاف الخدمة بنجاح.";

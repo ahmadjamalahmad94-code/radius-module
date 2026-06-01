@@ -6,10 +6,10 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% block title %}إشعارات Webhook — Hobe Hub{% endblock %}
+{% block title %}إشعارات الربط الخارجي — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
-{% block page_title %}إشعارات Webhook{% endblock %}
-{% block page_sub %}<span class="sub">إرسال أحداث النظام إلى رابط خارجي بتوقيع HMAC</span>{% endblock %}
+{% block page_title %}إشعارات الربط الخارجي{% endblock %}
+{% block page_sub %}<span class="sub">إرسال أحداث النظام إلى رابط خارجي بتوقيع أمني</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -145,8 +145,8 @@
 
   {# ───── Hero: title + action buttons inside ──────────────── #}
   {{ hub.hero(
-    "إشعارات Webhook",
-    subtitle="إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع HMAC آمن. مناسب لدمج الريدياس مع نظام CRM أو منصة محاسبة.",
+    "إشعارات الربط الخارجي",
+    subtitle="إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.",
     icon="bolt",
     actions_html='
       <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_deliveries') + '">
@@ -165,17 +165,17 @@
                "موجود" if current and current.target_url else "غير محدد",
                icon="link",
                variant=("blue" if current and current.target_url else "grey")) }}
-    {{ hub.kpi("توقيع HMAC",
+    {{ hub.kpi("التوقيع الأمني",
                "مضبوط" if current and current.secret else "غير مضبوط",
                icon="shield-halved",
                variant=("violet" if current and current.secret else "grey")) }}
   </div>
 
   {# ───── Explanation: numbered steps ──────────────────────── #}
-  {% call hub.section("ما هو Webhook ولماذا تستخدمه؟", icon="circle-question") %}
+  {% call hub.section("ما هي إشعارات الربط الخارجي؟", icon="circle-question") %}
     <ol class="wh-help">
-      <li><strong>تنبيه فوري بأحداث النظام.</strong> عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني — يرسل النظام إشعار HTTP POST لرابط خاص بك.</li>
-      <li><strong>توقيع آمن بكل طلب.</strong> كل طلب يحمل ترويسة <code>X-Radius-Signature</code> تحتوي توقيع HMAC-SHA256 يتم حسابه بالمفتاح السري أدناه. تحقّق من التوقيع قبل الوثوق بالبيانات.</li>
+      <li><strong>تنبيه فوري بأحداث النظام.</strong> عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني، يرسل النظام إشعارًا آليًا للرابط الذي تحدده.</li>
+      <li><strong>توقيع آمن بكل طلب.</strong> كل إشعار يحمل توقيعًا أمنيًا محسوبًا بالمفتاح السري أدناه. تحقّق من التوقيع قبل الوثوق بالبيانات.</li>
       <li><strong>إعادة محاولة ذكية.</strong> الفشل المؤقت (أخطاء شبكة أو 5xx) يُعاد بفترات متصاعدة، والفشل النهائي (4xx) يتوقف فورًا.</li>
       <li><strong>سجل كامل.</strong> كل عملية إرسال محفوظة في سجل الإرسال — يمكنك مراجعتها وإعادة المحاولة يدويًا عند الحاجة.</li>
     </ol>
@@ -272,28 +272,11 @@
 
     </div>
 
-    {# Sample payload card #}
-    {% call hub.section("مثال على الطلب المُرسَل", icon="code") %}
+    {# External receiver explanation #}
+    {% call hub.section("ماذا يستقبل الرابط الخارجي؟", icon="circle-info") %}
       <div class="wh-field-hint" style="margin-bottom:10px">
-        كل طلب يصلك بهذا الشكل تقريبًا. تحقّق من ترويسة <code>X-Radius-Signature</code> قبل قبول البيانات:
+        الرابط الخارجي يستقبل اسم الحدث، وقت حدوثه، رقم المنشأة، وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك. لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي أو أعطِه للمطور المسؤول عن النظام الخارجي.
       </div>
-<pre class="wh-sample">POST /webhooks/radius HTTP/1.1
-Host: hobehub.example.com
-Content-Type: <span class="s">"application/json"</span>
-X-Radius-Signature: <span class="s">"sha256=&lt;hmac_sha256_hex&gt;"</span>
-X-Radius-Event:     <span class="s">"payment.recorded"</span>
-
-{
-  <span class="k">"event"</span>:      <span class="s">"payment.recorded"</span>,
-  <span class="k">"event_id"</span>:   <span class="s">"evt_01J9X…"</span>,
-  <span class="k">"occurred_at"</span>: <span class="s">"2026-05-30T14:22:11Z"</span>,
-  <span class="k">"tenant_id"</span>:  <span class="n">1</span>,
-  <span class="k">"payload"</span>: {
-    <span class="k">"amount"</span>:   <span class="n">25.00</span>,
-    <span class="k">"currency"</span>: <span class="s">"{{ cfg.currency }}"</span>,
-    <span class="k">"username"</span>: <span class="s">"acct_b0c1a00941"</span>
-  }
-}</pre>
     {% endcall %}
 
     {# Save bar at the bottom #}

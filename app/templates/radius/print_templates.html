@@ -1161,18 +1161,8 @@
   };
   const defaultTextValues = {
     brand_name: ['HobeRadius', 'HobeRadius Fiber', 'هوب راديوس', 'هوب راديوس فايبر'],
-    card_title: ['Internet Card', 'Hotspot Voucher', 'Premium Card', 'Access Card', 'WiFi Access', 'Speed Card', 'Smart WiFi Pass', 'Fiber Access', 'Golden Voucher', 'Access Token', 'بطاقة إنترنت', 'رمز دخول'],
+    card_title: ['بطاقة إنترنت', 'كرت هوتسبوت', 'بطاقة مميزة', 'بطاقة دخول', 'دخول واي فاي', 'كرت سرعة', 'رمز دخول ذكي', 'دخول فايبر', 'كرت ذهبي', 'رمز دخول'],
     footer_text: [
-      'Keep login data until expiry',
-      'Technical support is available at the sales point',
-      'Stable speed and a better experience',
-      'Use the username and password once',
-      'Scan QR or enter credentials manually',
-      'Give this card to the customer after payment',
-      'Scan, connect, and enjoy reliable access',
-      'High speed access card',
-      'Keep this card until the subscription expires',
-      'Secure access token for hotspot login',
       'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
       'الدعم الفني متوفر من نقطة البيع',
       'سرعة ثابتة وتجربة أفضل',
@@ -1184,7 +1174,7 @@
       'احتفظ بهذه البطاقة حتى انتهاء الاشتراك',
       'رمز دخول آمن لبوابة الهوتسبوت',
     ],
-    instructions_text: ['Use the username, password, or QR code to log in.', 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.'],
+    instructions_text: ['استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.'],
   };
   function setIfDefault(name, value){
     const field = form && form.querySelector(`[name="${name}"]`);
@@ -1302,7 +1292,7 @@
       const svg = await res.text();
       if(seq !== fetchSeq) return;
       if(!res.ok){
-        throw new Error('HTTP ' + res.status);
+        throw new Error('رمز ' + res.status);
       }
       if(!svg || !svg.includes('<svg')){
         throw new Error('استجابة المعاينة ليست SVG');
@@ -1879,7 +1869,7 @@
           const message = jobPayload && jobPayload.error && jobPayload.error.message
             ? jobPayload.error.message
             : '\u0641\u0634\u0644 \u0628\u062f\u0621 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
-          throw new Error(message + ' (HTTP ' + jobResponse.status + ')');
+          throw new Error(message + ' (رمز ' + jobResponse.status + ')');
         }
         let statusUrl = jobPayload.status_url;
         let downloadUrl = jobPayload.download_url;
@@ -1897,7 +1887,7 @@
             statusPayload = await statusResponse.json();
           }catch(_err){}
           if(!statusResponse.ok || !statusPayload || !statusPayload.ok){
-            throw new Error('\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u062d\u0627\u0644\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631 (HTTP ' + statusResponse.status + ')');
+            throw new Error('\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u062d\u0627\u0644\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631 (رمز ' + statusResponse.status + ')');
           }
           latestJob = statusPayload.job || {};
           downloadUrl = statusPayload.download_url || downloadUrl;
@@ -1918,7 +1908,7 @@
           credentials: 'same-origin',
           headers: {'X-Requested-With': 'fetch'},
         });
-        if(!response.ok) throw new Error('\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 PDF \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 (HTTP ' + response.status + ')');
+        if(!response.ok) throw new Error('\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 PDF \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 (رمز ' + response.status + ')');
         const blob = await response.blob();
         const disposition = response.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="?([^";]+)"?/i);

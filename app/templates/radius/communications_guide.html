@@ -303,9 +303,9 @@
         <div class="gd-step wa">
           <div class="gd-step-badge"></div>
           <div class="gd-step-main">
-            <h4><i class="fa-solid fa-copy" style="color:#16a34a"></i> انسخ رابط الـ Webhook والصقه عند مزوّد واتساب</h4>
-            <p>الـ Webhook هو الرابط الذي «يستمع» للرسائل الواردة من مشتركيك. انسخه من هنا (وستجده أيضًا داخل صفحة «بوت واتساب»)
-              ثم ضعه في خانة <span class="gd-code">Webhook URL</span> داخل لوحة مزوّد واتساب لديك، وفعّل خيار استقبال الرسائل الواردة (Incoming messages).</p>
+            <h4><i class="fa-solid fa-copy" style="color:#16a34a"></i> انسخ رابط استقبال الرسائل والصقه عند مزوّد واتساب</h4>
+            <p>هذا هو الرابط الذي يستقبل الرسائل الواردة من مشتركيك. انسخه من هنا (وستجده أيضًا داخل صفحة «بوت واتساب»)
+              ثم ضعه في خانة <span class="gd-code">رابط استقبال الرسائل</span> داخل لوحة مزوّد واتساب لديك، وفعّل خيار استقبال الرسائل الواردة.</p>
             <div class="gd-copy-wrap">
               <input type="text" id="gd-webhook" value="{{ webhook_url }}" readonly onfocus="this.select()">
               <button type="button" class="gd-copy-btn" id="gd-copy" data-url="{{ webhook_url }}"><i class="fa-solid fa-copy"></i> نسخ الرابط</button>
@@ -392,7 +392,7 @@
                 <i class="fa-solid fa-arrow-right gd-arrow back"></i>
                 <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يرسل الرد</span></div>
               </div>
-              <div class="gd-flow-note">الرسالة الواردة تصل عبر الـ Webhook، والرد يخرج عبر رابط الإرسال (API) — كلاهما ضبطته في الخطوات أعلاه.</div>
+              <div class="gd-flow-note">الرسالة الواردة تصل عبر رابط الاستقبال، والرد يخرج عبر رابط الإرسال البرمجي — كلاهما ضبطته في الخطوات أعلاه.</div>
             </div>
           </div>
 
@@ -616,7 +616,7 @@
         <div class="ans">
           <ul>
             <li>تأكد أن «تفعيل الرد التلقائي» مفعّل في صفحة «بوت واتساب».</li>
-            <li>تأكد أنك ألصقت رابط الـ Webhook الصحيح في لوحة المزوّد، وأن استقبال الرسائل الواردة مفعّل هناك.</li>
+            <li>تأكد أنك ألصقت رابط استقبال الرسائل الصحيح في لوحة المزوّد، وأن استقبال الرسائل الواردة مفعّل هناك.</li>
             <li>الكلمة التي يرسلها المشترك يجب أن تطابق إحدى الكلمات المفتاحية المفعّلة (أو يحصل على الرد الافتراضي).</li>
             <li>القناة يجب أن تكون مهيأة للإرسال حتى يتمكّن البوت من إرسال الرد.</li>
           </ul>
@@ -646,7 +646,7 @@
       </details>
 
       <details>
-        <summary><span class="qic"><i class="fa-solid fa-lock"></i></span> هل رابط الـ Webhook آمن؟ <i class="fa-solid fa-chevron-down chev"></i></summary>
+        <summary><span class="qic"><i class="fa-solid fa-lock"></i></span> هل رابط استقبال الرسائل آمن؟ <i class="fa-solid fa-chevron-down chev"></i></summary>
         <div class="ans">
           الرابط عام (لا يحتاج تسجيل دخول) لأن مزوّد واتساب يحتاج الوصول إليه لتسليم الرسائل الواردة. لكنه لا يكشف بياناتك:
           مهمته الوحيدة استقبال رسالة واردة وتسليمها للبوت ليطابقها ويرد. لا تشارك رمز مزوّدك أو رمز بوت تلجرام مع أحد.

@@ -11,7 +11,7 @@
 
 {{ hub.hero(
   "سجل إرسال إشعارات الربط",
-  subtitle="آخر محاولات إرسال Webhook — الحالة، عدد المحاولات، آخر استجابة",
+  subtitle="آخر محاولات إرسال إشعارات الربط الخارجي — الحالة، عدد المحاولات، آخر استجابة",
   icon="bolt",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_settings') + '">
@@ -92,7 +92,7 @@
 {% else %}
 {{ hub.empty(
   "لا سجلات بعد",
-  sub="عند إرسال أول إشعار Webhook ستظهر السجلات هنا.",
+  sub="عند إرسال أول إشعار ربط خارجي ستظهر السجلات هنا.",
   icon="bolt"
 ) }}
 {% endif %}

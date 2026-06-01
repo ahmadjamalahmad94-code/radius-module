@@ -2999,7 +2999,7 @@
       }
       if (!res.ok || data.ok === false) {
         errorEl.textContent = (data.error
-          || `فشل الجلب — HTTP ${res.status}. افتح Console للتفاصيل.`);
+          || `فشل الجلب — رمز ${res.status}. افتح سجل المتصفح للتفاصيل.`);
         errorEl.hidden = false;
         return;
       }
@@ -3397,7 +3397,7 @@
       );
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        finishProgress(false, data.error || data.stderr || `HTTP ${res.status}`);
+        finishProgress(false, data.error || data.stderr || `رمز ${res.status}`);
         modalConfirm.disabled = false;
         modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
         return;

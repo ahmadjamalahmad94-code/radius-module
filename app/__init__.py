@@ -392,7 +392,7 @@ def _install_stubs(app: Flask) -> None:
             csrf_token()  # يولّد ويحفظ في session
             return redirect(request.referrer or "/admin/radius/login")
         if sent != expected:
-            return ("CSRF failed — حدّث الصفحة وحاول مرة أخرى", 400)
+            return ("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى", 400)
         return None
 
     # حقن _csrf_token في كل <form method="post"> تلقائيًا

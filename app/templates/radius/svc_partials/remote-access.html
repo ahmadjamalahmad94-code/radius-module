@@ -396,7 +396,7 @@
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
@@ -423,7 +423,7 @@
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (HTTP ${res.status})`);
+        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (رمز ${res.status})`);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");

@@ -166,7 +166,7 @@ streaming.service.com"></textarea>
         `/admin/radius/setup-wizard-v3/routers/${routerId}/exit-nodes`,
         { headers: { "X-CSRFToken": token() } });
       const data = await res.json().catch(() => ({ ok: false }));
-      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
       loadingEl.hidden = true;
       const nodes = data.nodes || [];
       if (!nodes.length) {
@@ -226,7 +226,7 @@ streaming.service.com"></textarea>
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
@@ -260,7 +260,7 @@ streaming.service.com"></textarea>
           console.warn("[Public-IP] FAILED — script that was sent to the router:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
-                      `تعذّر الإرسال (HTTP ${res.status})`);
+                      `تعذّر الإرسال (رمز ${res.status})`);
         if (data.debug_script) {
           banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
                   + data.debug_script;

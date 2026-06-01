@@ -225,7 +225,7 @@
           headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
           body: JSON.stringify({}) });
       const data = await res.json().catch(() => ({ ok: false }));
-      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
       wanInterfaces = data.wan_interfaces || [];
       // Pre-tick active PPPoE interfaces so re-apply preserves them.
       // Per-item delete lives in the «خدماتي» tab instead.
@@ -347,7 +347,7 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (window.console) console.debug("[Broadband] preview response:", data);
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `HTTP ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
@@ -384,7 +384,7 @@
           console.warn("[Broadband] FAILED — script that was sent to the router:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
-                      `تعذّر الإرسال (HTTP ${res.status})`);
+                      `تعذّر الإرسال (رمز ${res.status})`);
         if (data.debug_script) {
           banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
                   + data.debug_script;
