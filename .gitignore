@@ -30,6 +30,8 @@ docs/*
 !docs/admin_ui/*.md
 !docs/setup_wizard/
 !docs/setup_wizard/*.md
+!docs/whatsapp_gateway/
+!docs/whatsapp_gateway/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
 
