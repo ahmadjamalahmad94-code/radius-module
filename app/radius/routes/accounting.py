@@ -105,6 +105,15 @@ def _parse_loan_actions() -> list[dict]:
     return data if isinstance(data, list) else []
 
 
+def _wants_json() -> bool:
+    """True when the request came from the floating modal (fetch) and expects a
+    JSON reply instead of a redirect."""
+    return (
+        request.headers.get("X-Requested-With") == "fetch"
+        or "application/json" in (request.headers.get("Accept") or "")
+    )
+
+
 def _subscriber(username: str):
     try:
         return get_users_service().get(username)
@@ -202,12 +211,17 @@ def users_loan_create(username: str):
         loan = _svc().create_loan(body, actor=_actor())
         result = loan.get("activation_result") or {}
         if result.get("dry_run"):
-            flash("تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS.", "warning")
+            msg = "تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS."
         elif result.get("applied_to_radius"):
-            flash("تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة.", "success")
+            msg = "تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة."
         else:
-            flash("تم تسجيل السلفة بدون تطبيق فوري على RADIUS.", "success")
-    except RadiusValidationError as e:
+            msg = "تم تسجيل السلفة بدون تطبيق فوري على RADIUS."
+        if _wants_json():
+            return jsonify({"ok": True, "message": msg})
+        flash(msg, "success")
+    except RadiusError as e:
+        if _wants_json():
+            return jsonify({"ok": False, "error": e.message}), 400
         flash(e.message, "error")
     return redirect(url_for("radius.users_finance", username=username))
 

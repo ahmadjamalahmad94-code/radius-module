@@ -530,6 +530,59 @@ def test_add_time_modal_is_days_only_no_hours(client, app):
     assert "data-usq-hours" not in extend_modal  # hours input removed
 
 
+def test_loan_modal_ajax_success_returns_json_stays_on_page(client, app):
+    with app.app_context():
+        plan = _seed_plan("Loan AJAX Plan", price=30)
+        _seed_subscriber(
+            "loan_ajax_ok",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/loan_ajax_ok/loans",
+        data={"_csrf_token": "quick-csrf", "days": "3", "price_from_days": "1", "_loan_kind": "debt"},
+        headers={"X-Requested-With": "fetch"},
+    )
+    # AJAX → JSON (no redirect to the loans page)
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["ok"] is True and body.get("message")
+
+
+def test_loan_modal_ajax_error_returns_json_400(client, app, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_MAX_LOAN_HOURS", "1")
+    with app.app_context():
+        plan = _seed_plan("Loan AJAX Err Plan", price=30)
+        _seed_subscriber(
+            "loan_ajax_err",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/loan_ajax_err/loans",
+        data={"_csrf_token": "quick-csrf", "days": "5"},  # 5 days >> 1h cap → validation error
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert res.status_code == 400
+    body = res.get_json()
+    assert body["ok"] is False and body.get("error")
+
+
+def test_loan_modal_has_inline_message_element(client, app):
+    with app.app_context():
+        plan = _seed_plan("Loan Msg Plan", price=30)
+        _seed_subscriber(
+            "loan_msg_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert "data-usq-loan-msg" in html  # inline success/error target (no navigation)
+
+
 def test_sms_modal_has_ready_templates(client, app):
     with app.app_context():
         plan = _seed_plan("SMS Tpl Plan", price=30)
