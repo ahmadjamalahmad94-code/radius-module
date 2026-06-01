@@ -1,0 +1,18 @@
+{# ── الأدوار والصلاحيات — in-section nav (roles + permission matrix) ──
+   Active tab from request.path. Reaches both pages from the single
+   consolidated «الأدوار والصلاحيات» sidebar entry. #}
+{% set p = request.path %}
+<style>
+.rpnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.rpnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.rpnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.rpnav a.is-active{background:linear-gradient(135deg,#ea580c,#9a3412);color:#fff;box-shadow:0 6px 16px rgba(234,88,12,.22)}
+.rpnav a i{font-size:12px}
+</style>
+<nav class="rpnav" data-testid="roles-permissions-nav">
+  <a class="{{ 'is-active' if url_for('radius.roles_list') == p }}" href="{{ url_for('radius.roles_list') }}"><i class="fa-solid fa-user-gear"></i> الأدوار والصلاحيات</a>
+  <a class="{{ 'is-active' if url_for('radius.mt_permission_matrix') == p }}" href="{{ url_for('radius.mt_permission_matrix') }}"><i class="fa-solid fa-table-cells-large"></i> مركز الصلاحيات</a>
+</nav>

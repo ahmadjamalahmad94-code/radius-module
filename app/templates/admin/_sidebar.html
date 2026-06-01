@@ -497,18 +497,17 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.business_operators', 'المدراء والموزعون', m_business_operators) }}
-        {{ sub_item('radius.admins_list',             'المدراء',           m_admins) }}
-        {{ sub_item('radius.admins_profile_summary', 'ملخص المدراء',     m_admin_profile) }}
-        {{ sub_item('radius.distributors_list',       'الموزعون',          m_distributors) }}
-        {{ sub_item('radius.roles_list',        'الأدوار والصلاحيات', m_roles) }}
-        {{ sub_item('radius.mt_permission_matrix', 'مركز الصلاحيات', m_perms) }}
+        {# الإدارة — 3 محاور موحّدة (كل محور صفحة عليها شريط تبويب داخلي يصل
+           لصفحاته الفرعية) + إعدادات النظام الحسّاسة تبقى مستقلة. العمليات
+           الخطيرة (استعادة/أرشفة/حذف) تبقى على مساراتها المحمية بتأكيد. #}
+        {{ sub_item('radius.business_operators', 'المدراء والموزعون',
+            m_business_operators or m_admins or m_admin_profile or m_distributors) }}
+        {{ sub_item('radius.roles_list', 'الأدوار والصلاحيات', m_roles or m_perms) }}
+        {{ sub_item('radius.backups', 'البيانات والحفظ والأرشفة',
+            m_backups or m_recycle or m_lifecycle) }}
         {{ sub_item('radius.settings_page',     'إعدادات النظام',     m_settings) }}
         {{ sub_item('radius.sync_list',         'المزامنة',           m_sync) }}
         {{ sub_item('radius.tenants_list',      'المستأجرون',         m_tenants) }}
-        {{ sub_item('radius.recycle_bin',       'سلة المحذوفات',       m_recycle) }}
-        {{ sub_item('radius.backups',           'النسخ الاحتياطي',     m_backups) }}
-        {{ sub_item('radius.lifecycle_settings','الأرشفة التلقائية',   m_lifecycle) }}
       </div></div>
     </div>
 

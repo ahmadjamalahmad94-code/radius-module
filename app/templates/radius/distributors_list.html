@@ -8,6 +8,7 @@
 {% block page_sub %}<span class="sub">{{ distributors|length }} موزع في النتائج</span>{% endblock %}
 
 {% block content %}
+{% include "radius/admin_operations_nav.html" %}
 
 {{ hub.hero(
   "الموزعون والصلاحيات",

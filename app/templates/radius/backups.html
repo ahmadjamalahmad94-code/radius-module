@@ -156,6 +156,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "radius/data_protection_nav.html" %}
 {% set job = status.get('job') or {} %}
 {% set runs = status.get('recent_runs') or [] %}
 

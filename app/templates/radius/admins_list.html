@@ -8,6 +8,7 @@
 {% block page_sub %}<span class="sub">{{ admins|length }} مدير في النتائج</span>{% endblock %}
 
 {% block content %}
+{% include "radius/admin_operations_nav.html" %}
 
 {{ hub.hero(
   "المدراء",
