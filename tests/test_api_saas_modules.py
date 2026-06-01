@@ -114,6 +114,24 @@ def test_voucher_generation_and_revoke_api(client):
     assert revoked.get_json()["data"]["status"] == "revoked"
 
 
+def test_voucher_validation_errors_are_arabic_and_do_not_500(client):
+    probes = (
+        ({"amount": 0, "count": 1}, "قيمة القسيمة يجب أن تكون أكبر من صفر."),
+        ({"amount": "bad", "count": 1}, "قيمة القسيمة يجب أن تكون رقمًا صحيحًا."),
+        ({"amount": 5, "count": "bad"}, "عدد القسائم يجب أن يكون رقمًا صحيحًا."),
+        ({"amount": 5, "count": 1, "plan_id": "bad"}, "معرّف الباقة يجب أن يكون رقمًا صحيحًا."),
+        ({"amount": 5, "count": 1, "expire_at": "not-a-date"}, "تاريخ الانتهاء غير صالح. استخدم صيغة ISO."),
+    )
+    for payload, message in probes:
+        res = client.post("/api/v1/vouchers", json=payload, headers=AUTH)
+        assert res.status_code == 422, (payload, res.status_code, res.get_data(as_text=True))
+        assert res.get_json()["error"]["message"] == message
+
+    missing = client.post("/api/v1/vouchers/999999999/revoke", json={}, headers=AUTH)
+    assert missing.status_code == 404
+    assert missing.get_json()["error"]["message"] == "القسيمة غير موجودة."
+
+
 def test_saas_validation_routes_do_not_500(client):
     probes = (
         ("/api/v1/invoices", {"amount": 10}),

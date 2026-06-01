@@ -24,8 +24,11 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("expire_at must be ISO string")
-    return datetime.fromisoformat(raw.replace("Z", ""))
+        raise ValueError("تاريخ الانتهاء يجب أن يكون نصًا بصيغة ISO.")
+    try:
+        return datetime.fromisoformat(raw.replace("Z", ""))
+    except ValueError as exc:
+        raise ValueError("تاريخ الانتهاء غير صالح. استخدم صيغة ISO.") from exc
 
 
 def _item(voucher) -> dict:
@@ -61,18 +64,28 @@ def generate_vouchers():
     body = request.get_json(silent=True) or {}
     try:
         count = min(max(1, int(body.get("count") or 1)), 1000)
+    except (TypeError, ValueError):
+        return fail("validation_error", "عدد القسائم يجب أن يكون رقمًا صحيحًا.", status=422)
+    try:
         amount = float(body.get("amount") or 0)
-        plan_id = body.get("plan_id")
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة القسيمة يجب أن تكون رقمًا صحيحًا.", status=422)
+    try:
         expire_at = _dt(body.get("expire_at"))
-    except (TypeError, ValueError) as exc:
+    except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
-    if amount < 0:
-        return fail("validation_error", "amount must be positive", status=422)
+    plan_id = body.get("plan_id")
+    try:
+        parsed_plan_id = int(plan_id) if plan_id not in (None, "") else None
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
+    if amount <= 0:
+        return fail("validation_error", "قيمة القسيمة يجب أن تكون أكبر من صفر.", status=422)
     items = vouchers_repo.generate_bulk(
         tenant_id=_tid(),
         amount=amount,
         count=count,
-        plan_id=int(plan_id) if plan_id not in (None, "") else None,
+        plan_id=parsed_plan_id,
         expire_at=expire_at,
         generated_by=int(getattr(g, "admin_id", 0) or 0),
     )
@@ -81,6 +94,6 @@ def generate_vouchers():
 
 def revoke_voucher(voucher_id: int):
     if not vouchers_repo.get(_tid(), voucher_id):
-        return fail("not_found", "voucher not found", status=404)
+        return fail("not_found", "القسيمة غير موجودة.", status=404)
     vouchers_repo.revoke(_tid(), voucher_id)
     return ok({"id": voucher_id, "status": "revoked"})
