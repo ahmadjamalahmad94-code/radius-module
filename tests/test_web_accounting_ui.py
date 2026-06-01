@@ -175,6 +175,29 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
     ).get_data(as_text=True)
 
 
+def test_subscriber_finance_page_renders_floating_modals(client):
+    """The rebuilt finance page exposes payment + loan floating modals
+    with the auto-price engine wired in (no dry-run / rounding controls)."""
+    _web_login(client)
+    sub = _subscriber(client)
+    res = client.get(f"/admin/radius/users/{sub['username']}/finance")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # both floating modals present
+    assert "data-ff-modal=\"payment\"" in html
+    assert "data-ff-modal=\"loan\"" in html
+    # opener buttons present
+    assert "data-ff-open=\"payment\"" in html
+    assert "data-ff-open=\"loan\"" in html
+    # real execution, no dry-run / rounding controls leaked into the UI
+    assert "name=\"dry_run\"" not in html
+    assert "name=\"rounding_mode\"" not in html
+    assert "name=\"apply_to_radius\" value=\"1\"" in html
+    # auto-price engine constants injected (plan price 150 from fixture)
+    assert "const EFF_PRICE = 150" in html
+    assert "const PLAN_MIN = 43200" in html
+
+
 def test_financial_reports_page_reads_ledger_reports(client):
     _web_login(client)
     sub = _subscriber(client)

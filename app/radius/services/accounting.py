@@ -519,6 +519,20 @@ class AccountingService:
                 total += float(loan.get("amount") or 0)
         return round(total, 2)
 
+    def price_basis(self, subscriber) -> dict:
+        """Effective price + time-basis for a subscriber — feeds the finance
+        modals' auto-price and day-coverage. minutes falls back to a 30-day month
+        so quota plans (no duration_minutes) still price."""
+        def _get(key):
+            return subscriber.get(key) if isinstance(subscriber, dict) else getattr(subscriber, key, None)
+        pid = _get("plan_id")
+        plan = accounting_repo.resolve_plan(self.tenant_id, int(pid)) if pid else None
+        return {
+            "price": float(effective_subscriber_price(subscriber, plan) or 0),
+            "minutes": int(_base_plan_minutes(plan) or 0) or 43200,
+            "custom": bool(float(_get("custom_price") or 0) > 0),
+        }
+
     def reports(self, *, report_type: str) -> list[dict]:
         if report_type in {"daily", "monthly", "yearly"}:
             return accounting_repo.sales_summary(self.tenant_id, grain=report_type)

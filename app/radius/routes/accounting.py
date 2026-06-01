@@ -128,12 +128,16 @@ def users_finance(username: str):
     payments = svc.list_payments(subscriber_id=subscriber_id, limit=100)
     loans = svc.list_loans(subscriber_id=subscriber_id, limit=100)
     ledger = svc.list_ledger(subscriber_id=subscriber_id, limit=150)
+    basis = svc.price_basis(sub)
     return render_template(
         "radius/users_finance.html",
         sub=sub,
         payments=payments,
         loans=loans,
         ledger=ledger,
+        eff_price=basis["price"],
+        plan_minutes=basis["minutes"],
+        price_custom=basis["custom"],
     )
 
 
@@ -148,6 +152,8 @@ def users_payment_create(username: str):
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
+        if _wants_json():
+            return jsonify({"ok": False, "error": "قيمة الدفعة غير صحيحة."}), 400
         flash("قيمة الدفعة غير صحيحة.", "error")
         return redirect(url_for("radius.users_finance", username=username))
     # PREVIEW the settle total (read-only) so the payment is recorded FIRST.
@@ -170,7 +176,9 @@ def users_payment_create(username: str):
     }
     try:
         payment = _svc().create_payment(body, actor=_actor())
-    except RadiusValidationError as e:
+    except RadiusError as e:
+        if _wants_json():
+            return jsonify({"ok": False, "error": e.message}), 400
         flash(e.message, "error")
         return redirect(url_for("radius.users_finance", username=username))
     # Payment recorded — NOW apply the loan resolutions (settle/writeoff). If this
@@ -185,11 +193,14 @@ def users_payment_create(username: str):
     result = payment.get("activation_result") or {}
     settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
     if result.get("dry_run"):
-        flash(f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning")
+        msg, cat = f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning"
     elif result.get("applied_to_radius"):
-        flash(f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success")
+        msg, cat = f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success"
     else:
-        flash(f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success")
+        msg, cat = f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success"
+    if _wants_json():
+        return jsonify({"ok": True, "message": msg})
+    flash(msg, cat)
     return redirect(url_for("radius.users_finance", username=username))
 
 
