@@ -531,8 +531,9 @@
         {% set _up_kbps   = (u.upload_speed_kbps   or (p.speed_up_kbps   if p else 0)) %}
         {% set _daily_quota_mb = u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
         {# Time basis for price↔time math: a time plan's duration, else the plan's
-           validity window (quota/data plans have no duration_minutes). #}
-        {% set _plan_minutes = (p.duration_minutes or (p.validity_days * 1440) or 0) if p else 0 %}
+           validity window, else a 30-day month — so the auto-price never yields 0
+           for pure-quota plans (matches the backend _base_plan_minutes fallback). #}
+        {% set _plan_minutes = (p.duration_minutes or (p.validity_days * 1440) or 43200) if p else 43200 %}
         <tr
           data-username="{{ u.username }}"
           data-daily-quota="{{ _daily_quota_mb }}"
@@ -1069,24 +1070,11 @@
               <option value="manual">يدوي</option>
             </select>
           </label>
-          <label class="usq-field">التقريب
-            <select class="hub-select" name="rounding_mode">
-              <option value="floor">للأسفل</option>
-              <option value="nearest">الأقرب</option>
-              <option value="ceil">للأعلى</option>
-            </select>
-          </label>
           <label class="usq-field wide">ملاحظات
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
           </label>
-          <label class="usq-choice wide">
-            <input type="checkbox" name="apply_to_radius" value="1">
-            <span><strong>تطبيق مدة الدفعة على RADIUS</strong><small>اتركها بدون تحديد إذا أردت تسجيل الدفعة ماليًا فقط.</small></span>
-          </label>
-          <label class="usq-choice wide">
-            <input type="checkbox" name="dry_run" value="1" checked>
-            <span><strong>معاينة بدون تنفيذ</strong><small>مفعّلة افتراضيًا مثل صفحة الدفعات الكاملة؛ أزلها عند التنفيذ الفعلي.</small></span>
-          </label>
+          {# رسمي: الدفعة تُسجَّل وتُطبَّق فعليًا — بدون معاينة ولا تقريب يدوي. #}
+          <input type="hidden" name="apply_to_radius" value="1">
         </div>
         {# Interactive open-loans settlement — populated by JS on open. #}
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
@@ -1149,14 +1137,8 @@
         <label class="usq-field wide">سبب السلفة
           <textarea class="hub-textarea" name="reason" rows="2"></textarea>
         </label>
-        <label class="usq-choice wide">
-          <input type="checkbox" name="apply_to_radius" value="1">
-          <span><strong>تطبيق السلفة مؤقتًا على RADIUS</strong><small>بدون تحديد، يتم تسجيل السلفة ماليًا فقط.</small></span>
-        </label>
-        <label class="usq-choice wide">
-          <input type="checkbox" name="dry_run" value="1" checked>
-          <span><strong>معاينة بدون تنفيذ</strong><small>مفعّلة افتراضيًا مثل صفحة السلف الكاملة؛ أزلها عند التنفيذ الفعلي.</small></span>
-        </label>
+        {# رسمي: السلفة تُسجَّل وتُطبَّق فعليًا — بدون معاينة. #}
+        <input type="hidden" name="apply_to_radius" value="1">
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
