@@ -1,0 +1,230 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مخزون ومصروفات الشركة — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-boxes-stacked"></i>{% endblock %}
+{% block page_title %}مخزون ومصروفات الشركة{% endblock %}
+{% block page_sub %}<span class="sub">دفتر تشغيلي داخلي مستقل عن القيود المالية الرسمية</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "مخزون ومصروفات الشركة",
+  subtitle="سجّل الوارد والصرف والمصروفات التشغيلية في دفتر داخلي للمتابعة فقط. هذه الصفحة لا تعدّل أرصدة العملاء أو الموزعين ولا ترحّل قيودًا مالية.",
+  icon="boxes-stacked"
+) }}
+
+{% include "radius/_finance_nav.html" %}
+
+<div style="margin-bottom:var(--hub-gap-section);padding:12px 16px;border:1px solid var(--hub-blue-soft);border-radius:var(--hub-r-lg);background:var(--hub-blue-soft);color:var(--hub-blue-ink);line-height:1.8;font-weight:700">
+  <i class="fa-solid fa-circle-info"></i>
+  هذا دفتر متابعة داخلي. الأسعار والكميات هنا معلومات تشغيلية ولا تؤثر على دفتر الأستاذ أو الإيرادات أو الأرباح.
+</div>
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("قيمة الوارد", summary.incoming_value|money, icon="truck-ramp-box", variant="green") }}
+  {{ hub.kpi("مصروفات الشركة", summary.expenses_total|money, icon="receipt", variant="amber") }}
+  {{ hub.kpi("الأصناف النشطة", summary.items_count, icon="boxes-stacked", variant="blue") }}
+  {{ hub.kpi("تنبيه مخزون", summary.low_or_out_count, icon="triangle-exclamation", variant="red") }}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("إضافة وارد مخزون", icon="circle-plus") %}
+    <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>صنف موجود
+        <select class="hub-select" name="item_id">
+          <option value="">إضافة صنف جديد من الاسم أدناه</option>
+          {% for item in items %}
+            <option value="{{ item.id }}">{{ item.name }}{% if item.unit %} — {{ item.unit }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>اسم صنف جديد <input class="hub-input" name="item_name" placeholder="مثال: راوتر hAP ax2"></label>
+      <label>الفئة <input class="hub-input" name="category" placeholder="معدات / كابلات / صيانة"></label>
+      <label>الوحدة <input class="hub-input" name="unit" placeholder="قطعة / متر / علبة"></label>
+      <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+      <label>تكلفة الوحدة <input class="hub-input" type="number" min="0" step="0.01" name="unit_cost"></label>
+      <label>المورّد <input class="hub-input" name="supplier"></label>
+      <label>مرجع الفاتورة <input class="hub-input" name="reference"></label>
+      <label>تاريخ الحركة <input class="hub-input" type="date" name="movement_date"></label>
+      <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> تسجيل الوارد</button>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("صرف من المخزون", icon="arrow-up-from-bracket") %}
+    <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_inventory_usage') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label class="hub-span-2">الصنف
+        <select class="hub-select" name="item_id" required>
+          <option value="">اختر الصنف</option>
+          {% for item in items %}
+            <option value="{{ item.id }}">{{ item.name }}{% if item.unit %} — {{ item.unit }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+      <label>سبب الصرف <input class="hub-input" name="usage_reason" placeholder="تركيب / استبدال / صيانة"></label>
+      <label>الموقع <input class="hub-input" name="location"></label>
+      <label>الفني <input class="hub-input" name="technician"></label>
+      <label>رقم العميل المرتبط <input class="hub-input" type="number" min="1" name="related_customer_id"></label>
+      <label>تاريخ الحركة <input class="hub-input" type="date" name="movement_date"></label>
+      <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-check"></i> تسجيل الصرف</button>
+    </form>
+  {% endcall %}
+</div>
+
+{% call hub.section("مصروفات الشركة", icon="receipt") %}
+  <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_expense_add') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label>عنوان المصروف <input class="hub-input" name="title" required placeholder="مثال: صيانة مركبة"></label>
+    <label>المبلغ <input class="hub-input" type="number" min="0.01" step="0.01" name="amount" required></label>
+    <label>الفئة <input class="hub-input" name="category" placeholder="صيانة / أجور / مكتب"></label>
+    <label>التاريخ <input class="hub-input" type="date" name="expense_date"></label>
+    <label>مدفوع إلى <input class="hub-input" name="paid_to"></label>
+    <label>طريقة الدفع <input class="hub-input" name="payment_method" placeholder="نقدًا / تحويل / محفظة"></label>
+    <label>مرجع <input class="hub-input" name="reference"></label>
+    <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل المصروف</button>
+  </form>
+{% endcall %}
+
+{% set status_variants = {"متوفر": "green", "منخفض": "amber", "نفد": "red"} %}
+{% call hub.section("ملخص المخزون", icon="warehouse", meta=overview|length|string + " صنف", flush=True) %}
+  {% if overview %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الصنف</th>
+            <th>الفئة</th>
+            <th>الوارد</th>
+            <th>المصروف</th>
+            <th>المتبقي</th>
+            <th>القيمة</th>
+            <th>الحالة</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in overview %}
+            <tr>
+              <td><strong>{{ item.name }}</strong><div class="small hub-text-mute">{{ item.last_movement or "لا توجد حركة" }}</div></td>
+              <td>{{ item.category or "غير مصنّف" }}</td>
+              <td class="mono">{{ "%g"|format(item.purchased) }} {{ item.unit }}</td>
+              <td class="mono">{{ "%g"|format(item.used) }} {{ item.unit }}</td>
+              <td class="mono"><strong>{{ "%g"|format(item.remaining) }} {{ item.unit }}</strong></td>
+              <td>{{ item.incoming_value|money }}</td>
+              <td>{{ hub.pill(item.status, variant=status_variants.get(item.status, "grey")) }}</td>
+              <td>
+                <form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                    <i class="fa-solid fa-ban"></i> تعطيل
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ hub.empty("لا يوجد مخزون مسجل بعد", sub="ابدأ بتسجيل وارد مخزون جديد من النموذج أعلى الصفحة.", icon="box-open") }}
+  {% endif %}
+{% endcall %}
+
+{% call hub.section("السجل والتقارير", icon="chart-column") %}
+  <form class="hub-form-grid" method="get">
+    <label>من تاريخ <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
+    <label>إلى تاريخ <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}"></label>
+    <label>الصنف
+      <select class="hub-select" name="item_id">
+        <option value="">كل الأصناف</option>
+        {% for item in items %}
+          <option value="{{ item.id }}" {% if filters.item_id|string == item.id|string %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>نوع الحركة
+      <select class="hub-select" name="movement_type">
+        <option value="">كل الحركات</option>
+        <option value="incoming" {% if filters.movement_type == "incoming" %}selected{% endif %}>وارد</option>
+        <option value="usage" {% if filters.movement_type == "usage" %}selected{% endif %}>صرف</option>
+        <option value="adjustment" {% if filters.movement_type == "adjustment" %}selected{% endif %}>تسوية</option>
+      </select>
+    </label>
+    <label>فئة المصروف <input class="hub-input" name="expense_category" value="{{ filters.expense_category }}"></label>
+    <div style="display:flex;align-items:end">
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-filter"></i> تصفية</button>
+    </div>
+  </form>
+
+  <div class="hub-kpi-grid" style="margin-top:14px">
+    {{ hub.kpi("وارد الفترة", reports.incoming_value|money, icon="truck", variant="green") }}
+    {{ hub.kpi("كمية الصرف", "%g"|format(reports.usage_quantity), icon="arrow-up", variant="amber") }}
+    {{ hub.kpi("مصروفات الفترة", reports.expenses_total|money, icon="receipt", variant="red") }}
+  </div>
+
+  <div class="hub-grid hub-grid--2">
+    <div>
+      <h3 class="hub-section-title">حركات المخزون</h3>
+      {% if reports.movements %}
+        <div class="hub-table-wrap">
+          <table class="hub-table">
+            <thead><tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>ملاحظة</th></tr></thead>
+            <tbody>
+              {% for move in reports.movements %}
+                <tr>
+                  <td class="mono small">{{ move.movement_date }}</td>
+                  <td>{{ move.item_name or "صنف محذوف" }}</td>
+                  <td>{{ {"incoming":"وارد","usage":"صرف","adjustment":"تسوية"}.get(move.movement_type, move.movement_type) }}</td>
+                  <td class="mono">{{ "%g"|format(move.quantity) }} {{ move.item_unit or "" }}</td>
+                  <td class="small">{{ move.notes or move.usage_reason or move.reference or "—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ hub.empty("لا توجد حركات ضمن الفلتر", sub="غيّر الفترة أو سجّل حركة جديدة.", icon="list") }}
+      {% endif %}
+    </div>
+
+    <div>
+      <h3 class="hub-section-title">مصروفات الشركة</h3>
+      {% if reports.expenses %}
+        <div class="hub-table-wrap">
+          <table class="hub-table">
+            <thead><tr><th>التاريخ</th><th>العنوان</th><th>الفئة</th><th>المبلغ</th></tr></thead>
+            <tbody>
+              {% for expense in reports.expenses %}
+                <tr>
+                  <td class="mono small">{{ expense.expense_date }}</td>
+                  <td>{{ expense.title }}<div class="small hub-text-mute">{{ expense.paid_to or expense.reference or "" }}</div></td>
+                  <td>{{ expense.category or "غير مصنّف" }}</td>
+                  <td>{{ expense.amount|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ hub.empty("لا توجد مصروفات ضمن الفلتر", sub="سجّل أول مصروف من النموذج أعلى الصفحة.", icon="receipt") }}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if reports.expenses_by_category %}
+    <div style="margin-top:14px">
+      <h3 class="hub-section-title">المصروفات حسب الفئة</h3>
+      <div class="hub-tile-grid">
+        {% for row in reports.expenses_by_category %}
+          {{ hub.tile(row.category, row.total|money, icon="tag") }}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endcall %}
+{% endblock %}
