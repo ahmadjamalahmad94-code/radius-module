@@ -73,7 +73,8 @@
 {{ hub.hero(
   "الإشعارات الحدثية",
   subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على SMS / واتساب / Telegram. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
-  icon="bolt"
+  icon="bolt",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
 ) }}
 
 {% include "radius/communications_nav.html" %}
@@ -89,10 +90,12 @@
       <i class="fa-solid fa-wand-magic-sparkles"></i>
       <div>
         فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت
-        (انقر أي متغيّر لنسخه داخل النص). قنوات SMS وواتساب تُضبط من
+        (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة.
+        قنوات SMS وواتساب تُضبط من
         <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>،
         وقناة Telegram من
-        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات Telegram</a>.
+        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات Telegram</a>،
+        وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل</a>.
       </div>
     </div>
   {% endcall %}

@@ -204,6 +204,7 @@
                                   or m_communications_campaigns or m_communications_deliveries or m_communications_audience
                                   or m_communications_channels or m_communications_bot or m_communications_notifications
                                   or m_communications_quota
+                                  or ('/communications/guide' in path)
                                   or m_events_center or m_events_risk or m_events_security or m_events_investigations
                                   or m_operations_center -%}
 {%- set sec_reports_active = m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors
@@ -425,6 +426,7 @@
         {{ sub_item('radius.communications_templates', 'القوالب', m_communications_templates) }}
         {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
         {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
+        {{ sub_item('radius.communications_guide', '📚 دليل وشروحات', '/communications/guide' in path) }}
         {{ sub_item('radius.communications_campaigns', 'الحملات', m_communications_campaigns) }}
         {{ sub_item('radius.communications_audience', 'الجمهور', m_communications_audience) }}
         {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}

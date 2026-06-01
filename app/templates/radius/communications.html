@@ -8,11 +8,24 @@
 
 {# ── tiny Arabic helpers ── #}
 {% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي (API)','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro st_pill(s) %}
+  {%- set s = s|string -%}
+  {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set pair = m.get(s, (s if s else '—','grey')) -%}
+  <span class="oc-stpill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
+{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
   .oc{ display:grid; gap:18px; }
+
+  /* ── plain-Arabic explainer callout ── */
+  .oc-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
+  .oc-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
+  .oc-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
+  .oc-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
 
   /* ── live status cards ── */
   .oc-status{ display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:13px; }
@@ -52,6 +65,14 @@
   .oc-deliv .n{ font-size:21px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
   .oc-deliv .n.s{ color:#16a34a; } .oc-deliv .n.f{ color:#dc2626; } .oc-deliv .n.q{ color:#b45309; }
   .oc-deliv .t{ font-size:10.5px; font-weight:700; color:#94a3b8; margin-top:4px; }
+
+  /* ── status pill used in the recent-deliveries table ── */
+  .oc-stpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+  .oc-stpill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
+  .oc-stpill.green{ background:#dcfce7; color:#15803d; } .oc-stpill.green .dot{ background:#16a34a; }
+  .oc-stpill.amber{ background:#fef3c7; color:#92400e; } .oc-stpill.amber .dot{ background:#f59e0b; }
+  .oc-stpill.red{ background:#fee2e2; color:#b91c1c; } .oc-stpill.red .dot{ background:#ef4444; }
+  .oc-stpill.grey{ background:#f1f5f9; color:#64748b; } .oc-stpill.grey .dot{ background:#94a3b8; }
 
   /* ── section heading ── */
   .oc-h{ display:flex; align-items:center; gap:9px; margin:2px 2px -4px; }
@@ -108,12 +129,24 @@
   "غرفة العمليات",
   subtitle="نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.",
   icon="satellite-dish",
-  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة سريعة</a>'
+  actions_html=(
+    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+    ~ '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة سريعة</a>'
+  )
 ) }}
 
 {% include "radius/communications_nav.html" %}
 
 <div class="oc">
+
+  {# ════════ what is this page (plain-Arabic explainer) ════════ #}
+  <div class="oc-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      هذه هي الصفحة الرئيسية لمركز التواصل: تعرض حالة كل قناة وإشعار وبوت في مكان واحد، وتتيح إرسالًا سريعًا.
+      جديد على الإعداد؟ <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل المصوّر</a> لربط واتساب وتلجرام خطوة بخطوة.
+    </div>
+  </div>
 
   {# ════════ LIVE STATUS CARDS ════════ #}
   <div class="oc-h"><i class="fa-solid fa-wave-square"></i><b>الحالة المباشرة</b>
@@ -292,27 +325,34 @@
       <div class="oc-act-b"><div class="ttl">سجل الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
         <div class="hint">تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.</div></div>
     </a>
+    <a class="oc-act" href="{{ url_for('radius.communications_guide') }}">
+      <span class="oc-act-ic green"><i class="fa-solid fa-book-open"></i></span>
+      <div class="oc-act-b"><div class="ttl">دليل وشروحات <i class="fa-solid fa-arrow-left arr"></i></div>
+        <div class="hint">شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.</div></div>
+    </a>
   </div>
 
   {# ════════ RECENT DELIVERIES TABLE ════════ #}
-  {% call hub.section("أحدث عمليات الإرسال", icon="clock-rotate-left", flush=True) %}
-    <div class="hub-table-wrap">
-      <table class="hub-table">
-        <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
-        <tbody>
-          {% for item in deliveries %}
-            <tr>
-              <td>#{{ item.id }}</td>
-              <td>{{ item.channel }}</td>
-              <td>{{ item.status }}</td>
-              <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="4">لا توجد عمليات إرسال بعد — جرّب «إرسال رسالة سريعة» بالأعلى.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+  {% call hub.section("أحدث عمليات الإرسال", icon="clock-rotate-left", meta="آخر 8 عمليات", flush=True) %}
+    {% if deliveries %}
+      <div class="hub-table-wrap">
+        <table class="hub-table">
+          <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
+          <tbody>
+            {% for item in deliveries %}
+              <tr>
+                <td>#{{ item.id }}</td>
+                <td>{{ ch_label(item.channel) }}</td>
+                <td>{{ st_pill(item.status) }}</td>
+                <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد عمليات إرسال بعد.", sub="جرّب «إرسال رسالة سريعة» بالأعلى، أو افتح الدليل لإعداد القنوات.", icon="truck-fast") }}
+    {% endif %}
   {% endcall %}
 
 </div>

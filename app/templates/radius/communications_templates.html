@@ -6,44 +6,211 @@
 {% block page_title %}قوالب الرسائل{% endblock %}
 {% block page_sub %}<span class="sub">نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.</span>{% endblock %}
 
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .ctpl{ display:grid; gap:16px; }
+  .ctpl-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
+  .ctpl-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
+  .ctpl-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
+  .ctpl-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
+  /* ready-made suggestion chips */
+  .ctpl-seed{ display:flex; gap:8px; flex-wrap:wrap; }
+  .ctpl-seed-chip{ display:inline-flex; align-items:center; gap:8px; border:1px solid #c4b5fd; background:#f5f3ff; color:#5b21b6;
+    border-radius:11px; padding:8px 13px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; transition:.14s; }
+  .ctpl-seed-chip:hover{ background:#ede9fe; border-color:#a78bfa; transform:translateY(-1px); }
+  .ctpl-seed-chip i{ color:#7c3aed; }
+  /* form */
+  .ctpl-form{ display:grid; gap:14px; }
+  .ctpl-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; }
+  .ctpl-fld{ display:grid; gap:6px; }
+  .ctpl-fld label{ font-size:12.5px; font-weight:800; color:#0f172a; }
+  .ctpl-fld .hint{ font-size:11px; color:#94a3b8; line-height:1.6; }
+  .ctpl-input,.ctpl-select,.ctpl-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
+  .ctpl-input:focus,.ctpl-select:focus,.ctpl-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
+  .ctpl-input.mono{ font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate; }
+  .ctpl-area{ min-height:110px; resize:vertical; line-height:1.85; }
+  .ctpl-vars{ display:flex; gap:6px; flex-wrap:wrap; }
+  .ctpl-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
+    padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
+  .ctpl-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
+  /* channel pill in the table */
+  .ctpl-chpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; background:#eef2ff; color:#4338ca; }
+  .ctpl-stpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; }
+  .ctpl-stpill.on{ background:#dcfce7; color:#15803d; } .ctpl-stpill.off{ background:#f1f5f9; color:#64748b; }
+</style>
+{% endblock %}
+
 {% block content %}
-{{ hub.hero("قوالب الرسائل", subtitle="يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.", icon="file-lines") }}
+{{ hub.hero(
+  "قوالب الرسائل",
+  subtitle="يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.",
+  icon="file-lines",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+) }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("إنشاء أو تحديث قالب", icon="pen-to-square") %}
-  <form method="post" class="hub-form-grid" data-testid="notification-template-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>معرّف القالب <input name="template_key" required placeholder="renewal-reminder"></label>
-    <label>العنوان <input name="title" required></label>
-    <label>القناة
-      <select name="channel">
-        <option value="internal">رسالة داخلية</option>
-        <option value="sms">SMS</option>
-        <option value="whatsapp">WhatsApp</option>
-        <option value="telegram">Telegram</option>
-        <option value="email">البريد الإلكتروني</option>
-        <option value="push">إشعار فوري</option>
-      </select>
-    </label>
-    <label>العنوان المختصر <input name="subject"></label>
-    <label>المتغيرات <input name="variables" placeholder="name, expire_at, balance"></label>
-    <label class="hub-form-span">نص القالب <textarea name="body" rows="5" required></textarea></label>
-    <button class="hub-btn hub-btn--primary" type="submit">حفظ القالب</button>
-  </form>
-{% endcall %}
-
-{% call hub.section("القوالب", icon="file-lines", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="notification-templates-table">
-      <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th>الحالة</th></tr></thead>
-      <tbody>
-        {% for item in templates %}
-          <tr><td>{{ item.template_key }}</td><td>{{ item.channel }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td></tr>
-        {% else %}
-          <tr><td colspan="4">لا توجد قوالب بعد.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="ctpl">
+  <div class="ctpl-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      أنشئ قوالب جاهزة لإعادة استخدامها في الإرسال اليدوي. استعن بالنماذج الجاهزة أدناه كنقطة بداية —
+      اضغط أي نموذج ليملأ الحقول، ثم عدّله واحفظه. المتغيّرات مثل <code style="font-family:ui-monospace,monospace">{name}</code> تُملأ تلقائيًا.
+    </div>
   </div>
-{% endcall %}
+
+  {% call hub.section("نماذج جاهزة للبدء السريع", icon="wand-magic-sparkles", meta="اضغط لملء النموذج") %}
+    <div class="ctpl-seed" id="ctpl-seed">
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="welcome" data-title="ترحيب بمشترك جديد" data-channel="whatsapp" data-vars="name, username, prof"
+        data-body="مرحبًا {name} 👋&#10;تم إنشاء حسابك بنجاح.&#10;اسم المستخدم: {username}&#10;الباقة: {prof}">
+        <i class="fa-solid fa-hand-sparkles"></i> ترحيب بمشترك جديد</button>
+
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="renewal-reminder" data-title="تذكير بقرب الانتهاء" data-channel="sms" data-vars="username, exp"
+        data-body="تذكير ⏰ اشتراكك «{username}» سينتهي بتاريخ {exp}. جدّد الآن لتجنّب انقطاع الخدمة.">
+        <i class="fa-solid fa-clock"></i> تذكير بقرب الانتهاء</button>
+
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="renewed-thanks" data-title="تأكيد تجديد" data-channel="whatsapp" data-vars="prof, exp"
+        data-body="تم تجديد اشتراكك بنجاح ♻️&#10;الباقة: {prof}&#10;تاريخ الانتهاء الجديد: {exp}&#10;شكرًا لك.">
+        <i class="fa-solid fa-rotate"></i> تأكيد تجديد</button>
+
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="recharge-confirm" data-title="تأكيد شحن رصيد" data-channel="sms" data-vars="amount, balance"
+        data-body="تم شحن حسابك 💳&#10;المبلغ: {amount}&#10;الرصيد الحالي: {balance}">
+        <i class="fa-solid fa-wallet"></i> تأكيد شحن رصيد</button>
+
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="maintenance-notice" data-title="إشعار صيانة" data-channel="whatsapp" data-vars=""
+        data-body="عزيزنا المشترك 🛠️&#10;ستجري صيانة مجدولة للشبكة وقد تتأثر الخدمة مؤقتًا. نعتذر عن الإزعاج ونشكر تفهّمك.">
+        <i class="fa-solid fa-screwdriver-wrench"></i> إشعار صيانة</button>
+
+      <button type="button" class="ctpl-seed-chip" data-seed
+        data-key="offer-promo" data-title="عرض ترويجي" data-channel="whatsapp" data-vars="name"
+        data-body="مرحبًا {name} 🎉&#10;لدينا عرض خاص هذا الشهر على باقات الإنترنت! تواصل معنا لمعرفة التفاصيل والاستفادة قبل انتهاء العرض.">
+        <i class="fa-solid fa-tags"></i> عرض ترويجي</button>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("إنشاء أو تحديث قالب", icon="pen-to-square") %}
+    <form method="post" class="ctpl-form" data-testid="notification-template-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="ctpl-row">
+        <div class="ctpl-fld">
+          <label for="tpl-key">معرّف القالب</label>
+          <input id="tpl-key" class="ctpl-input mono" name="template_key" required placeholder="renewal-reminder">
+          <div class="hint">معرّف فريد بالإنجليزية بدون مسافات.</div>
+        </div>
+        <div class="ctpl-fld">
+          <label for="tpl-title">العنوان</label>
+          <input id="tpl-title" class="ctpl-input" name="title" required placeholder="تذكير بقرب الانتهاء">
+        </div>
+      </div>
+
+      <div class="ctpl-row">
+        <div class="ctpl-fld">
+          <label for="tpl-channel">القناة</label>
+          <select id="tpl-channel" class="ctpl-select" name="channel">
+            <option value="internal">رسالة داخلية</option>
+            <option value="sms">الرسائل القصيرة</option>
+            <option value="whatsapp">واتساب</option>
+            <option value="telegram">Telegram</option>
+            <option value="email">البريد الإلكتروني</option>
+            <option value="push">إشعار فوري</option>
+          </select>
+        </div>
+        <div class="ctpl-fld">
+          <label for="tpl-subject">العنوان المختصر <span style="font-weight:600;color:#94a3b8">(اختياري)</span></label>
+          <input id="tpl-subject" class="ctpl-input" name="subject" placeholder="يُستخدم للبريد والإشعارات">
+        </div>
+        <div class="ctpl-fld">
+          <label for="tpl-vars">المتغيرات</label>
+          <input id="tpl-vars" class="ctpl-input mono" name="variables" placeholder="name, expire_at, balance">
+          <div class="hint">أسماء المتغيّرات المستخدمة، مفصولة بفاصلة.</div>
+        </div>
+      </div>
+
+      <div class="ctpl-fld">
+        <label for="tpl-body">نص القالب</label>
+        <textarea id="tpl-body" class="ctpl-area" name="body" rows="5" required placeholder="اكتب نص القالب… أدرج المتغيّرات بالضغط على الأزرار أدناه."></textarea>
+        <div class="ctpl-vars" data-vars-for="tpl-body">
+          {% for v in ['{name}','{username}','{prof}','{exp}','{balance}','{amount}','{status}'] %}
+            <span class="ctpl-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</button>
+      </div>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("القوالب", icon="file-lines", meta=(templates|length ~ " قالب"), flush=True) %}
+    {% if templates %}
+      <div class="hub-table-wrap">
+        <table class="hub-table" data-testid="notification-templates-table">
+          <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th>الحالة</th></tr></thead>
+          <tbody>
+            {% for item in templates %}
+              <tr>
+                <td style="font-family:ui-monospace,monospace;direction:ltr;text-align:start">{{ item.template_key }}</td>
+                <td><span class="ctpl-chpill">{{ ch_label(item.channel) }}</span></td>
+                <td>{{ item.title }}</td>
+                <td>
+                  {%- set _st = item.status|string -%}
+                  {%- if _st in ('active','enabled') -%}<span class="ctpl-stpill on">مفعّل</span>
+                  {%- elif _st -%}<span class="ctpl-stpill off">{{ _st }}</span>
+                  {%- else -%}—{%- endif -%}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد قوالب بعد.", sub="اضغط أحد «النماذج الجاهزة» بالأعلى لإنشاء أول قالب بسرعة.", icon="file-lines") }}
+    {% endif %}
+  {% endcall %}
+</div>
+
+<script>
+(function(){
+  // ── fill the form from a ready-made suggestion chip ──
+  var form = document.querySelector('[data-testid="notification-template-form"]');
+  function setVal(name, val){ var el = form && form.querySelector('[name="'+name+'"]'); if(el) el.value = (val == null ? '' : val); }
+  document.querySelectorAll('[data-seed]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      setVal('template_key', btn.getAttribute('data-key'));
+      setVal('title', btn.getAttribute('data-title'));
+      setVal('subject', btn.getAttribute('data-title'));
+      setVal('variables', btn.getAttribute('data-vars'));
+      setVal('body', btn.getAttribute('data-body'));
+      var sel = form && form.querySelector('[name="channel"]');
+      if(sel) sel.value = btn.getAttribute('data-channel') || 'internal';
+      var key = form && form.querySelector('[name="template_key"]');
+      if(key){ key.focus(); key.scrollIntoView({behavior:'smooth', block:'center'}); }
+    });
+  });
+
+  // ── click a variable chip → insert it at the cursor in the body textarea ──
+  document.querySelectorAll('.ctpl-vars').forEach(function(group){
+    var id = group.getAttribute('data-vars-for');
+    var area = document.getElementById(id);
+    group.querySelectorAll('.ctpl-var').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        var v = chip.getAttribute('data-var') || chip.textContent;
+        if(!area){ return; }
+        var s = area.selectionStart || 0, e = area.selectionEnd || 0;
+        area.value = area.value.slice(0,s) + v + area.value.slice(e);
+        area.focus();
+        area.selectionStart = area.selectionEnd = s + v.length;
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}

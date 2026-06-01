@@ -9,6 +9,7 @@ from ..services.notification_campaigns import NotificationCampaignError, Notific
 
 def register_communications_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/communications", "communications", communications_dashboard, methods=["GET"])
+    bp.add_url_rule("/communications/guide", "communications_guide", communications_guide, methods=["GET"])
     bp.add_url_rule("/communications/templates", "communications_templates", communications_templates, methods=["GET", "POST"])
     bp.add_url_rule("/communications/send", "communications_send", communications_send, methods=["GET", "POST"])
     bp.add_url_rule("/communications/campaigns", "communications_campaigns", communications_campaigns, methods=["GET", "POST"])
@@ -61,6 +62,32 @@ def communications_dashboard():
         status=_hub_status(tid, svc),
         deliveries=svc.delivery_log(limit=8),
         active="dashboard",
+    )
+
+
+def communications_guide():
+    """«دليل وشروحات» — an illustrated, step-by-step setup guide.
+
+    A read-only help page (no forms, no logic) with two full walkthroughs:
+      (A) the WhatsApp self-service bot for subscribers, and
+      (B) the Telegram admin-alerts bot for the operator.
+
+    It surfaces the live webhook URL (with a copy button) and a couple of
+    "are these already set up?" hints so the reader knows where they stand,
+    but it never mutates anything.
+    """
+    tid = _tid()
+    try:
+        wa = comms_providers.channel_status(tid, comms_bot.BOT_CHANNEL)
+        wa_ready = bool(wa.get("active"))
+    except Exception:  # noqa: BLE001 — the guide must always render
+        wa_ready = False
+    return render_template(
+        "radius/communications_guide.html",
+        webhook_url=_bot_webhook_url(),
+        whatsapp_ready=wa_ready,
+        telegram_ready=_telegram_ready(tid),
+        active="guide",
     )
 
 

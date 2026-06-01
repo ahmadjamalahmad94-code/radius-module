@@ -15,6 +15,20 @@
 {{ super() }}
 <style>
   .cch{ display:grid; gap:16px; }
+  /* plain-Arabic explainer callout */
+  .cch-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
+  .cch-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
+  .cch-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
+  .cch-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
+  /* inline "؟" help popover (hover/focus) */
+  .cch-help{ position:relative; display:inline-flex; }
+  .cch-help > .q{ width:17px;height:17px;border-radius:50%;border:0;background:#ede9fe;color:#5b21b6;font:inherit;font-size:10.5px;font-weight:900;
+    cursor:help;display:grid;place-items:center;padding:0;margin-inline-start:6px; }
+  .cch-help > .pop{ position:absolute; z-index:30; inset-inline-end:0; top:24px; width:250px; background:#0f172a; color:#fff; border-radius:10px;
+    padding:10px 12px; font-size:11px; line-height:1.7; font-weight:600; box-shadow:0 14px 30px rgba(15,23,42,.34); opacity:0; visibility:hidden;
+    transform:translateY(-4px); transition:.16s; pointer-events:none; }
+  .cch-help > .pop code{ background:rgba(255,255,255,.16); border:0; color:#e9d5ff; }
+  .cch-help:hover > .pop, .cch-help:focus-within > .pop{ opacity:1; visibility:visible; transform:translateY(0); }
   .cch-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:16px; align-items:start; }
   @media (max-width:900px){ .cch-grid{ grid-template-columns:1fr; } }
   /* per-channel card */
@@ -75,7 +89,8 @@
 {{ hub.hero(
   "قنوات الإرسال",
   subtitle="اربط رابط مزوّد الرسائل القصيرة أو واتساب لتتحول الرسائل من الطابور إلى إرسال فعلي. القنوات المتوقفة تبقى مجدولة كما هي.",
-  icon="tower-broadcast"
+  icon="tower-broadcast",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل</a>'
 ) }}
 
 {% set _sms = channels.get('sms') %}
@@ -94,6 +109,14 @@
 {% include "radius/communications_nav.html" %}
 
 <div class="cch">
+  <div class="cch-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      لتفعيل الإرسال الفعلي: انسخ رابط الإرسال (API) من مزوّدك، ألصقه في القناة المناسبة مع
+      <code style="font-family:ui-monospace,monospace">{phone}</code> و<code style="font-family:ui-monospace,monospace">{msg}</code>، فعّل القناة، ثم جرّب «إرسال اختبار».
+      لشرح مصوّر كامل <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل</a>.
+    </div>
+  </div>
   <div class="cch-grid">
     {% for ch, st in channels.items() %}
     {% set cfg = st.config %}
@@ -152,7 +175,10 @@
         </div>
 
         <div class="cch-field">
-          <label for="url-{{ ch }}">قالب رابط الإرسال</label>
+          <label for="url-{{ ch }}">قالب رابط الإرسال
+            <span class="cch-help"><button type="button" class="q" aria-label="ما هو قالب الرابط؟">؟</button>
+              <span class="pop">الصق رابط الإرسال من مزوّدك، وضع <code>{phone}</code> مكان رقم الهاتف و<code>{msg}</code> مكان نص الرسالة. النظام يستبدلهما ويرمّزهما تلقائيًا عند كل إرسال.</span></span>
+          </label>
           <input class="cch-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
                  value="{{ cfg.send_url_template }}"
                  placeholder="ضع رابط الإرسال من المزوّد هنا">

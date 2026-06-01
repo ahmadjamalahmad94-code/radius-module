@@ -6,29 +6,132 @@
 {% block page_title %}سجل الإرسال{% endblock %}
 {% block page_sub %}<span class="sub">حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.</span>{% endblock %}
 
+{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'Telegram','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro st_pill(s) %}
+  {%- set s = s|string -%}
+  {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set pair = m.get(s, (s if s else '—','grey')) -%}
+  <span class="cdl-pill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
+{% endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .cdl{ display:grid; gap:16px; }
+  .cdl-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
+  .cdl-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
+  .cdl-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
+  .cdl-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
+  /* summary tiles */
+  .cdl-sum{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .cdl-tile{ display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e8edf3; border-radius:14px; padding:13px 15px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05); }
+  .cdl-tile .ic{ width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:16px;flex:none; }
+  .cdl-tile .ic.g{ background:#dcfce7;color:#16a34a; } .cdl-tile .ic.r{ background:#fee2e2;color:#dc2626; }
+  .cdl-tile .ic.a{ background:#fef3c7;color:#b45309; } .cdl-tile .ic.b{ background:#ede9fe;color:#5b21b6; }
+  .cdl-tile .n{ font-size:22px; font-weight:900; color:#0f172a; line-height:1; font-variant-numeric:tabular-nums; }
+  .cdl-tile .t{ font-size:11px; font-weight:700; color:#94a3b8; margin-top:4px; }
+  /* status pill */
+  .cdl-pill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+  .cdl-pill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
+  .cdl-pill.green{ background:#dcfce7; color:#15803d; } .cdl-pill.green .dot{ background:#16a34a; }
+  .cdl-pill.amber{ background:#fef3c7; color:#92400e; } .cdl-pill.amber .dot{ background:#f59e0b; }
+  .cdl-pill.red{ background:#fee2e2; color:#b91c1c; } .cdl-pill.red .dot{ background:#ef4444; }
+  .cdl-pill.grey{ background:#f1f5f9; color:#64748b; } .cdl-pill.grey .dot{ background:#94a3b8; }
+  /* filter chips */
+  .cdl-filter{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .cdl-filter .lbl{ font-size:11.5px; font-weight:800; color:#64748b; margin-inline-end:3px; }
+  .cdl-fchip{ border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:5px 13px; font:inherit; font-size:11.5px;
+    font-weight:800; cursor:pointer; transition:.13s; }
+  .cdl-fchip:hover{ border-color:#c4b5fd; color:#5b21b6; }
+  .cdl-fchip.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+  .cdl-err{ font-size:11.5px; color:#b91c1c; direction:ltr; unicode-bidi:isolate; }
+</style>
+{% endblock %}
+
 {% block content %}
-{{ hub.hero("سجل الإرسال", subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط.", icon="truck-fast") }}
+{% set _sent = deliveries|selectattr('status','in',['sent','delivered','read'])|list|length %}
+{% set _failed = deliveries|selectattr('status','in',['failed','error'])|list|length %}
+{% set _queued = deliveries|selectattr('status','in',['queued','pending'])|list|length %}
+
+{{ hub.hero(
+  "سجل الإرسال",
+  subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط.",
+  icon="truck-fast",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+) }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("عمليات الإرسال", icon="truck-fast", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="delivery-log-table">
-      <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
-      <tbody>
-        {% for item in deliveries %}
-          <tr>
-            <td>#{{ item.id }}</td>
-            <td>{{ item.channel }}</td>
-            <td>{{ item.status }}</td>
-            <td>{{ item.provider_key }}</td>
-            <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
-            <td>{{ item.error_message }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="6">لا توجد عمليات إرسال بعد.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="cdl">
+  <div class="cdl-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      هنا تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد. القنوات غير المفعّلة تبقى رسائلها «بالطابور»
+      دون إرسال خارجي — فعّلها من <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>.
+    </div>
   </div>
-{% endcall %}
+
+  {% if deliveries %}
+    <div class="cdl-sum">
+      <div class="cdl-tile"><span class="ic g"><i class="fa-solid fa-circle-check"></i></span><div><div class="n">{{ _sent }}</div><div class="t">ناجحة</div></div></div>
+      <div class="cdl-tile"><span class="ic r"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="n">{{ _failed }}</div><div class="t">فاشلة</div></div></div>
+      <div class="cdl-tile"><span class="ic a"><i class="fa-solid fa-clock"></i></span><div><div class="n">{{ _queued }}</div><div class="t">بالطابور</div></div></div>
+      <div class="cdl-tile"><span class="ic b"><i class="fa-solid fa-list"></i></span><div><div class="n">{{ deliveries|length }}</div><div class="t">الإجمالي</div></div></div>
+    </div>
+  {% endif %}
+
+  {% call hub.section("عمليات الإرسال", icon="truck-fast", flush=True) %}
+    {% if deliveries %}
+      <div style="padding:13px 16px 0">
+        <div class="cdl-filter" id="cdl-filter">
+          <span class="lbl">تصفية:</span>
+          <button type="button" class="cdl-fchip is-active" data-filter="all">الكل</button>
+          <button type="button" class="cdl-fchip" data-filter="ok">الناجحة</button>
+          <button type="button" class="cdl-fchip" data-filter="failed">الفاشلة</button>
+          <button type="button" class="cdl-fchip" data-filter="queued">بالطابور</button>
+        </div>
+      </div>
+      <div class="hub-table-wrap">
+        <table class="hub-table" data-testid="delivery-log-table">
+          <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
+          <tbody id="cdl-rows">
+            {% for item in deliveries %}
+              {%- set _s = item.status|string -%}
+              {%- set _grp = 'ok' if _s in ('sent','delivered','read') else ('failed' if _s in ('failed','error') else ('queued' if _s in ('queued','pending') else 'other')) -%}
+              <tr data-grp="{{ _grp }}">
+                <td>#{{ item.id }}</td>
+                <td>{{ ch_label(item.channel) }}</td>
+                <td>{{ st_pill(item.status) }}</td>
+                <td style="direction:ltr;text-align:start">{{ item.provider_key or '—' }}</td>
+                <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
+                <td><span class="cdl-err">{{ item.error_message or '' }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد عمليات إرسال بعد.", sub="ستظهر هنا كل رسالة تُرسل من المركز أو الإشعارات الحدثية.", icon="truck-fast") }}
+    {% endif %}
+  {% endcall %}
+</div>
+
+{% if deliveries %}
+<script>
+(function(){
+  var bar = document.getElementById('cdl-filter');
+  var rows = document.getElementById('cdl-rows');
+  if(!bar || !rows) return;
+  bar.addEventListener('click', function(e){
+    var b = e.target.closest('[data-filter]'); if(!b) return;
+    bar.querySelectorAll('[data-filter]').forEach(function(x){ x.classList.toggle('is-active', x === b); });
+    var f = b.getAttribute('data-filter');
+    Array.prototype.forEach.call(rows.children, function(tr){
+      var g = tr.getAttribute('data-grp');
+      tr.style.display = (f === 'all' || g === f) ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

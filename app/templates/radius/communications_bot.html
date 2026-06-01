@@ -10,6 +10,11 @@
 {{ super() }}
 <style>
   .cbot{ display:grid; gap:16px; }
+  /* plain-Arabic lead callout under the nav */
+  .cbot-lead{ display:flex; gap:12px; align-items:flex-start; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:13px 16px; margin-bottom:16px; }
+  .cbot-lead .ic{ width:34px;height:34px;border-radius:10px;background:#dcfce7;color:#15803d;display:grid;place-items:center;font-size:15px;flex:none; }
+  .cbot-lead .tx{ font-size:12.5px; line-height:1.85; color:#166534; }
+  .cbot-lead .tx a{ color:#15803d; font-weight:800; text-decoration:underline; }
   /* enable hero switch */
   .cbot-toggle{ display:flex; align-items:center; gap:14px; padding:15px 17px; border:1px solid #e2e8f0; border-radius:14px;
     background:linear-gradient(135deg,#f0fdf4,#fbfdff); cursor:pointer; }
@@ -73,10 +78,20 @@
 {{ hub.hero(
   "بوت واتساب",
   subtitle="فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.",
-  icon="robot"
+  icon="robot",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل</a>'
 ) }}
 
 {% include "radius/communications_nav.html" %}
+
+<div class="cbot-lead">
+  <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+  <div class="tx">
+    البوت يرد على مشتركيك عبر واتساب: يرسل المشترك كلمة (مثل «الرصيد») فيرد البوت ببياناته فورًا.
+    لتشغيله تحتاج قناة واتساب مهيأة + لصق رابط الويب-هوك أدناه عند مزوّدك. شرح كامل في
+    <a href="{{ url_for('radius.communications_guide') }}">الدليل المصوّر</a>.
+  </div>
+</div>
 
 <form method="post" action="{{ url_for('radius.communications_bot') }}" class="cbot">
   {{ csrf_token_input() }}

@@ -15,6 +15,18 @@
 {{ super() }}
 <style>
   .cq{ display:grid; gap:18px; }
+  /* plain-Arabic explainer + help popover */
+  .cq-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
+  .cq-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
+  .cq-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
+  .cq-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
+  .cq-help{ position:relative; display:inline-flex; }
+  .cq-help > .q{ width:17px;height:17px;border-radius:50%;border:0;background:#dbeafe;color:#1d4ed8;font:inherit;font-size:10.5px;font-weight:900;
+    cursor:help;display:grid;place-items:center;padding:0;margin-inline-start:6px; }
+  .cq-help > .pop{ position:absolute; z-index:30; inset-inline-start:0; top:24px; width:270px; background:#0f172a; color:#fff; border-radius:10px;
+    padding:10px 12px; font-size:11px; line-height:1.75; font-weight:600; box-shadow:0 14px 30px rgba(15,23,42,.34); opacity:0; visibility:hidden;
+    transform:translateY(-4px); transition:.16s; pointer-events:none; text-align:start; }
+  .cq-help:hover > .pop, .cq-help:focus-within > .pop{ opacity:1; visibility:visible; transform:translateY(0); }
   .cq-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(440px,1fr)); gap:16px; align-items:start; }
   @media (max-width:920px){ .cq-grid{ grid-template-columns:1fr; } }
   .cq-card{ background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3); border-radius:16px;
@@ -76,7 +88,8 @@
 {{ hub.hero(
   "الرصيد والحِزم",
   subtitle="القنوات التي تعمل برصيد مخصص من الإدارة تستهلك رسالة واحدة لكل إرسال. عند نفاد الرصيد يتوقف الإرسال على تلك القناة. القنوات ذات الربط المباشر من العميل غير محدودة ومجانية.",
-  icon="wallet"
+  icon="wallet",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
 ) }}
 
 {% set _sms_q = quotas.get('sms') %}
@@ -97,6 +110,16 @@
 {% include "radius/communications_nav.html" %}
 
 <div class="cq">
+  <div class="cq-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      نمط القناة يحدّد كيف يُحتسب الإرسال
+      <span class="cq-help"><button type="button" class="q" aria-label="ما هو نمط الكوتة؟">؟</button>
+        <span class="pop"><b>ربط مباشر من العميل:</b> إرسال غير محدود ومجاني عبر رابط مزوّدك.<br><b>رصيد مخصص من الإدارة:</b> كل رسالة تستهلك وحدة من رصيدك، ويتوقف الإرسال عند نفاده.</span></span>:
+      القنوات بربط مباشر غير محدودة، والقنوات برصيد الإدارة تستهلك رسالة لكل إرسال. لتغيير النمط استخدم
+      <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>.
+    </div>
+  </div>
   <div class="cq-grid">
     {% for ch, q in quotas.items() %}
     {% set ledger = ledgers.get(ch) or [] %}
