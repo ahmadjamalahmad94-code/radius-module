@@ -11,6 +11,26 @@ from ..services.accounting import service_from_context
 from ..services.users import get_users_service
 
 
+def users_open_loans(username: str):
+    """JSON response for open subscriber loans used by the payment modal."""
+    sub = _subscriber(username)
+    loans = _svc().open_loans_for(subscriber_id=sub.id)
+    return jsonify({
+        "ok": True,
+        "loans": [
+            {
+                "id": ln["id"],
+                "amount": float(ln.get("amount") or 0),
+                "days": ln.get("days", 0),
+                "minutes": int(ln.get("duration_minutes") or 0),
+                "currency": ln.get("currency") or default_currency(),
+                "reason": ln.get("reason") or "",
+            }
+            for ln in loans
+        ],
+    })
+
+
 def register_accounting_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/finance/ledger", "finance_ledger", finance_ledger, methods=["GET"])
     bp.add_url_rule("/finance/ledger/void", "finance_ledger_void", finance_ledger_void, methods=["POST"])
@@ -121,14 +141,10 @@ def users_payment_create(username: str):
     if amount_f <= 0:
         flash("قيمة الدفعة غير صحيحة.", "error")
         return redirect(url_for("radius.users_finance", username=username))
-    settled_total = 0.0
-    if actions:
-        try:
-            resolution = svc.resolve_loan_actions(actions, actor=_actor())
-            settled_total = float(resolution.get("settled_total") or 0)
-        except RadiusError as e:
-            flash(e.message, "error")
-            return redirect(url_for("radius.users_finance", username=username))
+    # PREVIEW the settle total (read-only) so the payment is recorded FIRST.
+    # Loans are only actually settled AFTER the payment succeeds — a failed
+    # payment must never leave orphaned (already-settled) loans.
+    settled_total = svc.settle_preview_total(actions) if actions else 0.0
     body = {
         "username": username,
         "amount": _field("amount"),
@@ -145,38 +161,27 @@ def users_payment_create(username: str):
     }
     try:
         payment = _svc().create_payment(body, actor=_actor())
-        result = payment.get("activation_result") or {}
-        settle_note = f" وتسوية سلف بقيمة {settled_total:.2f}" if settled_total > 0 else ""
-        if result.get("dry_run"):
-            flash(f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning")
-        elif result.get("applied_to_radius"):
-            flash(f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success")
-        else:
-            flash(f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success")
     except RadiusValidationError as e:
         flash(e.message, "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    # Payment recorded — NOW apply the loan resolutions (settle/writeoff). If this
+    # best-effort step fails, the payment still stands and the loans simply stay
+    # open (operator can re-settle); no money lost, nothing orphaned.
+    settled_done = 0.0
+    if actions:
+        try:
+            settled_done = float(svc.resolve_loan_actions(actions, actor=_actor()).get("settled_total") or 0)
+        except RadiusError:
+            settled_done = 0.0
+    result = payment.get("activation_result") or {}
+    settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
+    if result.get("dry_run"):
+        flash(f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning")
+    elif result.get("applied_to_radius"):
+        flash(f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success")
+    else:
+        flash(f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success")
     return redirect(url_for("radius.users_finance", username=username))
-
-
-def users_open_loans(username: str):
-    """JSON: a subscriber's OPEN loans (id, amount, days) for the modal to render
-    the interactive settle / defer / forgive choices."""
-    sub = _subscriber(username)
-    loans = _svc().open_loans_for(subscriber_id=sub.id)
-    return jsonify({
-        "ok": True,
-        "loans": [
-            {
-                "id": ln["id"],
-                "amount": float(ln.get("amount") or 0),
-                "days": ln.get("days", 0),
-                "minutes": int(ln.get("duration_minutes") or 0),
-                "currency": ln.get("currency") or default_currency(),
-                "reason": ln.get("reason") or "",
-            }
-            for ln in loans
-        ],
-    })
 
 
 def users_loan_create(username: str):
