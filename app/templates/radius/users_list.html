@@ -1076,13 +1076,15 @@
           </label>
         </div>
         <div class="usq-form-grid usq-reveal" data-usq-debt-only hidden style="margin-top:4px">
-          <label class="usq-field">قيمة السلفة (الدين)
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
+          <label class="usq-field">قيمة السلفة (تُحتسب تلقائيًا)
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-loan-amount readonly title="تُحتسب من سعر العرض/المخصّص × عدد الأيام">
           </label>
           <label class="usq-field">العملة
             <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
           </label>
         </div>
+        {# debt loans are priced from DAYS server-side (effective price × duration). #}
+        <input type="hidden" name="price_from_days" value="0" data-usq-loan-pfd>
         <label class="usq-field wide">سبب السلفة
           <textarea class="hub-textarea" name="reason" rows="2"></textarea>
         </label>
@@ -1279,26 +1281,53 @@
       hint.textContent = (hintMaps[scope] || hintMaps.quota)[mode];
     }
   }
+  // «منح سلفة» — debt loans are priced from DAYS: amount = effective price ×
+  // (duration / plan duration). The amount field is read-only (auto), and a live
+  // preview «سيتم تسجيل دين ٣ أيام بقيمة ٩ ₪» reassures the operator.
+  function syncLoanAmount() {
+    const modal = page.querySelector("[data-usq-modal='loan']");
+    if (!modal || !activeRow) return;
+    const debt = modal.querySelector("[data-usq-loan-input]:checked")?.value === "debt";
+    const days = Math.max(0, parseInt(modal.querySelector("[name='days']")?.value || "0", 10));
+    const hours = Math.max(0, parseInt(modal.querySelector("[name='hours']")?.value || "0", 10));
+    const minutes = days * 1440 + hours * 60;
+    const price = parseFloat(activeRow.dataset.planPrice || "0");
+    const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
+    const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
+    const amount = (price > 0 && planMin > 0 && minutes > 0)
+      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amtField = modal.querySelector("[data-usq-loan-amount]");
+    if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";
+    if (!debt) return;
+    const hint = modal.querySelector("[data-usq-loan-hint]");
+    if (!hint) return;
+    if (amount > 0) {
+      const isCustom = activeRow.dataset.planCustom === "1";
+      const priceLabel = isCustom ? "السعر المخصّص" : "سعر العرض";
+      const span = [days ? arDays(days) : "", hours ? `${hours} ساعة` : ""].filter(Boolean).join(" و");
+      hint.textContent = `سيتم تسجيل دين ${span} بقيمة ${fmtMoney(amount, cur)} (حسب ${priceLabel} ${fmtMoney(price, cur)}).`;
+    } else {
+      hint.textContent = "حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا حسب سعر العرض/المخصّص.";
+    }
+  }
+
   function syncLoanPolicy() {
     const modal = page.querySelector("[data-usq-modal='loan']");
     if (!modal) return;
     const mode = modal.querySelector("[data-usq-loan-input]:checked")?.value || "free";
     const debt = mode === "debt";
-    modal.querySelectorAll("[data-usq-debt-only]").forEach((el) => {
-      el.hidden = !debt;
-      el.querySelectorAll("input, select").forEach((inp) => {
-        if (inp.dataset.usqReq === "1") inp.required = debt;
-      });
-    });
+    modal.querySelectorAll("[data-usq-debt-only]").forEach((el) => { el.hidden = !debt; });
     modal.querySelectorAll("[data-usq-loan-seg]").forEach((seg) => {
       seg.classList.toggle("is-active", seg.dataset.usqLoanSeg === mode);
     });
+    // Tell the server to price the loan from its days (debt mode only).
+    const pfd = modal.querySelector("[data-usq-loan-pfd]");
+    if (pfd) pfd.value = debt ? "1" : "0";
     const hint = modal.querySelector("[data-usq-loan-hint]");
-    if (hint) {
-      hint.textContent = debt
-        ? "تُسجَّل السلفة كدين بقيمة مالية على رصيد المشترك ويظهر في سجل القيود."
-        : "سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.";
+    if (hint && !debt) {
+      hint.textContent = "سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.";
     }
+    syncLoanAmount();
   }
 
   function refreshPanel() {
@@ -1548,6 +1577,9 @@
     }));
   page.querySelectorAll("[data-usq-loan-input]").forEach((input) =>
     input.addEventListener("change", syncLoanPolicy));
+  // Live re-price the loan as the operator types days/hours.
+  page.querySelectorAll("[data-usq-modal='loan'] [name='days'], [data-usq-modal='loan'] [name='hours']").forEach((input) =>
+    input.addEventListener("input", syncLoanAmount));
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       const message = form.dataset.usqConfirm || "تنفيذ هذا الإجراء؟";
