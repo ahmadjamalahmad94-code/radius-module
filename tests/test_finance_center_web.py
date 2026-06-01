@@ -53,7 +53,7 @@ def _auth_session(client):
 def test_finance_center_dashboard_route_renders(app):
     with app.test_client() as client:
         _auth_session(client)
-        res = client.get("/admin/radius/finance")
+        res = client.get("/admin/radius/finance-center")
         html = res.get_data(as_text=True)
 
     assert res.status_code == 200
@@ -76,7 +76,7 @@ def test_finance_wallets_route_lists_wallets_and_recent_transactions(app):
 
     with app.test_client() as client:
         _auth_session(client)
-        res = client.get("/admin/radius/finance/wallets")
+        res = client.get("/admin/radius/finance-center?tab=wallets")
         html = res.get_data(as_text=True)
 
     assert res.status_code == 200
@@ -106,21 +106,20 @@ def test_finance_wallet_credit_action_writes_transaction(app):
     assert tx[0]["transaction_type"] == "credit"
 
 
-def test_finance_section_routes_render_and_ledger_has_no_delete(app):
+def test_finance_legacy_urls_redirect_to_hub_and_ledger_has_no_delete(app):
     with app.test_client() as client:
         _auth_session(client)
-        for path, marker in {
-            "/admin/radius/finance/revenue": "الإيرادات",
-            "/admin/radius/finance/debts": "الديون",
-            "/admin/radius/finance/loans": "السلف",
-            "/admin/radius/finance/ledger": "ledger-list",
+        for path, expect in {
+            "/admin/radius/finance": "tab=dashboard",
+            "/admin/radius/finance/wallets": "tab=wallets",
+            "/admin/radius/finance/revenue": "tab=revenue",
+            "/admin/radius/finance/debts": "tab=loans_debts",
+            "/admin/radius/finance/loans?status=settled": "status=settled",
+            "/admin/radius/finance/ledger": "/finance/accounting",
         }.items():
-            res = client.get(path)
-            assert res.status_code == 200
-            html = res.get_data(as_text=True)
-            assert marker in html
-            assert '"status": "placeholder"' not in html.lower()
-            assert "سيتم ربط" not in html
+            res = client.get(path, follow_redirects=False)
+            assert res.status_code in {301, 302, 303}
+            assert expect in res.headers.get("Location", "")
 
         delete_attempt = client.delete("/admin/radius/finance/ledger")
         assert delete_attempt.status_code >= 400

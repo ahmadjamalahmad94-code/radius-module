@@ -163,6 +163,8 @@
 ---
 
 ## محور 4 — المركز المالي
+**الحالة:** مكتمل في هذه الشريحة.
+
 **ملف route جديد:** `app/radius/routes/finance_center_hub.py` · `_BASE='/finance-center'` · `_TABS=('dashboard','wallets','revenue','loans_debts')`
 **قالب:** `app/templates/radius/finance_center_hub.html` · المصدر: `app/radius/routes/finance_center.py`
 
@@ -197,7 +199,11 @@
 `/finance→tab=dashboard` · `/finance/wallets→tab=wallets` · `/finance/revenue→tab=revenue` · `/finance/debts→tab=loans_debts&status=open` · `/finance/loans→tab=loans_debts`.
 
 ### sidebar
-استبدل الخمسة (business_finance/wallets/revenue/debts/loans) بسطر `sub_item('radius.finance_center_hub','المركز المالي', m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans)`.
+تم استبدال الخمسة (business_finance/wallets/revenue/debts/loans) بسطر `sub_item('radius.finance_center_hub','المركز المالي', m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans)`.
+
+**اختبارات التثبيت:**
+- `tests/test_finance_center_hub_web.py`
+- تحديث `tests/test_finance_center_web.py` للتحقق من التحويلات بدل فتح الصفحات المتفرقة.
 
 ### commits
 - **F4.1** scaffold + redirects (credit/debit/create POST تبقى مستقلة بـ gates). *verify:* url_map.

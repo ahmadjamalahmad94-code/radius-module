@@ -120,6 +120,7 @@ def _register_all(bp: Blueprint) -> None:
     from .distributors import register_distributors_routes
     from .accounting import register_accounting_routes
     from .finance_center import register_finance_center_routes
+    from .finance_center_hub import register_finance_center_hub_routes
     from .finance_accounting import register_finance_accounting_routes
     from .finance_billing import register_finance_billing_routes
     from .finance_collection import register_finance_collection_routes
@@ -163,6 +164,7 @@ def _register_all(bp: Blueprint) -> None:
     register_distributors_routes(bp)
     register_accounting_routes(bp)
     register_finance_center_routes(bp)
+    register_finance_center_hub_routes(bp)
     register_finance_accounting_routes(bp)
     register_finance_billing_routes(bp)
     register_finance_collection_routes(bp)

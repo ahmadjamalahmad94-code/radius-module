@@ -110,6 +110,7 @@
 {%- set m_invoices    = '/invoices' in path -%}
 {%- set m_vouchers    = '/vouchers' in path -%}
 {%- set m_billing_hub = ('/finance/billing' in path) or m_invoices or m_vouchers -%}
+{%- set m_finance_center_hub = (path == url_for('radius.finance_center_hub')) -%}
 {%- set m_accounting_hub = (path == url_for('radius.accounting_hub')) -%}
 {%- set m_ledger      = ('/finance/ledger' in path) or (m_accounting_hub and request.args.get('tab', 'ledger') == 'ledger') -%}
 {%- set m_finance_rep = ('/finance/reports' in path) or (m_accounting_hub and request.args.get('tab') == 'reports') -%}
@@ -148,11 +149,11 @@
 
 {# Business OS #}
 {%- set m_business_dashboard = (path == url_for('radius.dashboard_alias')) -%}
-{%- set m_business_finance = (path == url_for('radius.business_finance')) -%}
-{%- set m_business_wallets = (path == url_for('radius.business_finance_wallets')) -%}
-{%- set m_business_revenue = (path == url_for('radius.business_finance_revenue')) -%}
-{%- set m_business_debts = (path == url_for('radius.business_finance_debts')) -%}
-{%- set m_business_loans = (path == url_for('radius.business_finance_loans')) -%}
+{%- set m_business_finance = (path == url_for('radius.business_finance')) or (m_finance_center_hub and request.args.get('tab', 'dashboard') == 'dashboard') -%}
+{%- set m_business_wallets = (path == url_for('radius.business_finance_wallets')) or (m_finance_center_hub and request.args.get('tab') == 'wallets') -%}
+{%- set m_business_revenue = (path == url_for('radius.business_finance_revenue')) or (m_finance_center_hub and request.args.get('tab') == 'revenue') -%}
+{%- set m_business_debts = (path == url_for('radius.business_finance_debts')) or (m_finance_center_hub and request.args.get('tab') == 'loans_debts' and request.args.get('status') == 'open') -%}
+{%- set m_business_loans = (path == url_for('radius.business_finance_loans')) or (m_finance_center_hub and request.args.get('tab') == 'loans_debts') -%}
 {%- set m_business_ledger = (path == url_for('radius.finance_ledger')) -%}
 {%- set m_company_inventory = (endpoint_exists is defined and endpoint_exists('radius.company_inventory') and path == url_for('radius.company_inventory')) -%}
 {%- set m_subscribers_360 = (path == url_for('radius.subscribers_list')) -%}
@@ -412,11 +413,7 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.business_finance', 'المركز المالي', m_business_finance) }}
-        {{ sub_item('radius.business_finance_wallets', 'المحافظ', m_business_wallets) }}
-        {{ sub_item('radius.business_finance_revenue', 'الإيرادات', m_business_revenue) }}
-        {{ sub_item('radius.business_finance_debts', 'الديون', m_business_debts) }}
-        {{ sub_item('radius.business_finance_loans', 'القروض', m_business_loans) }}
+        {{ sub_item('radius.finance_center_hub', 'المركز المالي', m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans) }}
         {{ sub_item('radius.accounting_hub', 'السجل والتقارير المحاسبية', m_accounting_hub or m_ledger) }}
         {{ sub_item('radius.billing_hub',     'الفواتير والكوبونات', m_billing_hub) }}
         {{ sub_item('radius.collection_hub', 'التحصيل والمدفوعات', m_payment_collection) }}

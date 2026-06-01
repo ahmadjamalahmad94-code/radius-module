@@ -1,0 +1,335 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}المركز المالي — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
+{% block page_title %}المركز المالي{% endblock %}
+{% block page_sub %}<span class="sub">الخزائن والمحافظ والإيرادات والديون والسلف في صفحة تشغيلية واحدة</span>{% endblock %}
+
+{% macro owner_label(owner_type) -%}
+  {{ {
+    'company': 'الشركة',
+    'manager': 'مدير',
+    'distributor': 'موزّع',
+    'subscriber': 'مشترك',
+    'card_user': 'مستخدم بطاقات'
+  }.get(owner_type, 'مالك') }}
+{%- endmacro %}
+
+{% macro tx_label(transaction_type) -%}
+  {{ {
+    'credit': 'شحن',
+    'debit': 'خصم',
+    'transfer': 'تحويل',
+    'hold': 'حجز',
+    'release': 'فك حجز',
+    'reversal': 'عكس قيد'
+  }.get(transaction_type, 'حركة مالية') }}
+{%- endmacro %}
+
+{% macro source_label(source_type) -%}
+  {{ {
+    'subscriber_payment': 'دفعة مشترك',
+    'card_sale': 'بيع بطاقات',
+    'invoice': 'فاتورة',
+    'voucher': 'كوبون',
+    'manual': 'تسجيل يدوي'
+  }.get(source_type, source_type or 'مصدر مالي') }}
+{%- endmacro %}
+
+{% macro loan_status_label(status) -%}
+  {{ {
+    'open': 'مفتوحة',
+    'settled': 'مسددة',
+    'voided': 'ملغاة'
+  }.get(status, status or 'غير محددة') }}
+{%- endmacro %}
+
+{% macro approval_label(status) -%}
+  {{ {
+    'approved': 'معتمدة',
+    'pending': 'بانتظار الاعتماد',
+    'not_required': 'لا يلزم اعتماد',
+    'rejected': 'مرفوضة'
+  }.get(status, status or 'غير محددة') }}
+{%- endmacro %}
+
+{% block head_extra %}
+<style>
+.fc-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.fc-tabs a{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--hub-border-soft);border-radius:10px;background:#fff;color:var(--hub-text-mute);font-weight:900;text-decoration:none}
+.fc-tabs a:hover,.fc-tabs a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+.fc-table-actions{display:grid;gap:7px;min-width:250px}
+.fc-wallet-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fc-wallet-form .hub-input{min-width:110px;max-width:150px}
+.fc-pill-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fc-pill-filters a{padding:7px 12px;border-radius:999px;border:1px solid var(--hub-border-soft);background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none;font-size:12px}
+.fc-pill-filters a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+@media(max-width:640px){.fc-tabs a{width:100%;justify-content:center}.fc-wallet-form .hub-input{max-width:none;flex:1}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "المركز المالي",
+  subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
+  icon="coins",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> السجل المحاسبي</a>'
+) }}
+
+<nav class="fc-tabs" aria-label="تبويبات المركز المالي">
+  <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> النظرة العامة</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> الخزائن والمحافظ</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> الإيرادات</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> الديون والسلف</a>
+</nav>
+
+{% if tab == 'dashboard' %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
+  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance|money, icon="wallet", variant="blue") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
+</div>
+
+<div class="hub-grid hub-grid--2">
+  {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
+      {{ hub.tile("قيود دفتر الأستاذ", summary.ledger_entries, icon="book") }}
+      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt") }}
+      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("المشاركة والتسويات", icon="scale-balanced") %}
+    <div class="hub-tile-grid">
+      {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows") }}
+      {{ hub.tile("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar") }}
+      {{ hub.tile("إجمالي الديون", debts.total|money, icon="file-invoice-dollar") }}
+      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
+    </div>
+  {% endcall %}
+</div>
+
+{% call hub.section("قاعدة الأمان المالي", icon="shield-halved") %}
+  <div class="hub-empty" style="text-align:initial">
+    <div class="hub-empty-msg">لا يوجد حذف مباشر للحركات المالية.</div>
+    <div class="hub-empty-sub">أي شحن أو خصم يمر عبر المسار الأصلي ويترك قيدًا قابلًا للمراجعة، لذلك تبقى الأرقام قابلة للتدقيق.</div>
+  </div>
+{% endcall %}
+{% endif %}
+
+{% if tab == 'wallets' %}
+{% call hub.section("إنشاء محفظة", icon="circle-plus") %}
+  <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <label class="hub-field">
+      <span class="hub-field-label">نوع المالك</span>
+      <select class="hub-input" name="owner_type">
+        <option value="company">الشركة</option>
+        <option value="manager">مدير</option>
+        <option value="distributor">موزّع</option>
+        <option value="subscriber">مشترك</option>
+        <option value="card_user">مستخدم بطاقات</option>
+      </select>
+      <span class="hub-field-hint">اختر الجهة التي ستتبع لها المحفظة.</span>
+    </label>
+    {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
+    {{ hub.field("العملة", "currency", cfg.currency, hint="تستخدم في عرض الرصيد والحركات.") }}
+    {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
+  </form>
+{% endcall %}
+
+{% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", flush=True) %}
+  {% if wallets %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المالك</th>
+          <th>الرصيد</th>
+          <th>الحالة</th>
+          <th>آخر الحركات</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for wallet in wallets %}
+        <tr>
+          <td>{{ wallet.id }}</td>
+          <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
+          <td><strong>{{ wallet.balance|money }}</strong></td>
+          <td>{{ hub.pill("نشطة" if wallet.status == "active" else wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
+          <td>
+            {% for tx in tx_by_wallet.get(wallet.id, []) %}
+              <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
+            {% else %}
+              <span class="muted">لا توجد حركات بعد.</span>
+            {% endfor %}
+          </td>
+          <td>
+            <div class="fc-table-actions">
+              <form method="post" action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}" class="fc-wallet-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input class="hub-input" name="amount" placeholder="مبلغ الشحن" {% if not can_wallet_credit %}disabled{% endif %}>
+                <button class="hub-btn hub-btn--secondary" type="submit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</button>
+              </form>
+              <form method="post" action="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}" class="fc-wallet-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input class="hub-input" name="amount" placeholder="مبلغ الخصم" {% if not can_wallet_debit %}disabled{% endif %}>
+                <button class="hub-btn hub-btn--ghost" type="submit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
+  {% endif %}
+{% endcall %}
+{% endif %}
+
+{% if tab == 'revenue' %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
+  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
+  {{ hub.kpi("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="blue") }}
+  {{ hub.kpi("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="brand") }}
+</div>
+
+{% call hub.section("سجلات الإيرادات", icon="receipt", flush=True) %}
+  {% if revenue %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المصدر</th>
+          <th>السعر الأصلي</th>
+          <th>المحصّل</th>
+          <th>تكلفة الجملة</th>
+          <th>الربح الصافي</th>
+          <th>التاريخ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in revenue %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td>{{ source_label(item.source_type) }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
+          <td>{{ item.original_price|money }}</td>
+          <td>{{ item.collected|money }}</td>
+          <td>{{ item.wholesale_cost|money }}</td>
+          <td><strong>{{ item.net_profit|money }}</strong></td>
+          <td>{{ item.created_at|dt_local }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="ستظهر هنا سجلات البيع والتحصيل عند تسجيل العمليات المالية.", icon="receipt") }}
+  {% endif %}
+{% endcall %}
+{% endif %}
+
+{% if tab == 'loans_debts' %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="amber") }}
+  {{ hub.kpi("عدد الذمم", debts['count'] or 0, icon="list-ol", variant="blue") }}
+  {{ hub.kpi("عدد السلف", summary.loan_count, icon="list", variant="brand") }}
+  {{ hub.kpi("سلف مفتوحة", summary.open_loan_count, icon="hourglass-half", variant="green") }}
+</div>
+
+{% call hub.section("فلترة السلف", icon="filter") %}
+  <form method="get" action="{{ url_for('radius.finance_center_hub') }}" class="hub-form-grid">
+    <input type="hidden" name="tab" value="loans_debts">
+    <label class="hub-field">
+      <span class="hub-field-label">حالة السلفة</span>
+      <select class="hub-input" name="status">
+        <option value="" {% if not loan_status %}selected{% endif %}>كل الحالات</option>
+        <option value="open" {% if loan_status == "open" %}selected{% endif %}>مفتوحة</option>
+        <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>مسددة</option>
+        <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>ملغاة</option>
+      </select>
+    </label>
+    {{ hub.btn("تطبيق الفلتر", variant="secondary", icon="filter", type="submit") }}
+  </form>
+{% endcall %}
+
+{% call hub.section("الذمم المفتوحة", icon="file-invoice-dollar", meta=(debts['count']|string + " ذمة"), flush=True) %}
+  {% if debts['items'] %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="finance-center-debts">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>المشترك</th>
+          <th class="num">المبلغ</th>
+          <th>السبب</th>
+          <th>الاعتماد</th>
+          <th>بدأت</th>
+          <th>تنتهي</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in debts['items'] %}
+        <tr>
+          <td class="num mono">{{ d.id }}</td>
+          <td class="mono">{{ d.username or '—' }}</td>
+          <td class="num"><strong>{{ d.amount|money }}</strong></td>
+          <td class="small">{{ d.reason or '—' }}</td>
+          <td>{{ hub.pill(approval_label(d.approval_status), variant="green" if d.approval_status == "approved" else ("amber" if d.approval_status == "pending" else "grey")) }}</td>
+          <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
+          <td class="mono small">{{ d.ends_at|dt_local if d.ends_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد ذمم مفتوحة.", sub="أي سلفة مفتوحة وغير مسددة تظهر هنا كدين مستحق.", icon="file-invoice-dollar") }}
+  {% endif %}
+{% endcall %}
+
+{% call hub.section("قائمة السلف", icon="hand-holding-dollar", flush=True) %}
+  {% if loans %}
+  <div class="table-responsive">
+    <table class="table hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المشترك</th>
+          <th>المدة</th>
+          <th>المبلغ</th>
+          <th>الحالة</th>
+          <th>البداية</th>
+          <th>النهاية</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>{{ loan.id }}</td>
+          <td>{{ loan.username or loan.subscriber_id }}</td>
+          <td>{{ loan.duration_minutes }} دقيقة</td>
+          <td>{{ loan.amount|money }}</td>
+          <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
+          <td>{{ loan.starts_at|dt_local }}</td>
+          <td>{{ loan.ends_at|dt_local }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="تظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
+  {% endif %}
+{% endcall %}
+{% endif %}
+{% endblock %}

@@ -5,25 +5,25 @@
 @media(max-width:640px){.finance-tabs a{width:100%;justify-content:center}}
 </style>
 <nav class="finance-tabs">
-  <a class="hub-tab{% if active == 'dashboard' %} is-active{% endif %}" href="{{ url_for('radius.business_finance') }}">
+  <a class="hub-tab{% if active == 'dashboard' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}">
     <i class="fa-solid fa-chart-pie"></i> المركز المالي
   </a>
-  <a class="hub-tab{% if active == 'wallets' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_wallets') }}">
+  <a class="hub-tab{% if active == 'wallets' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='wallets') }}">
     <i class="fa-solid fa-wallet"></i> الخزائن والمحافظ
   </a>
-  <a class="hub-tab" href="{{ url_for('radius.finance_ledger') }}">
+  <a class="hub-tab" href="{{ url_for('radius.accounting_hub') }}">
     <i class="fa-solid fa-book"></i> القيود
   </a>
   <a class="hub-tab{% if active == 'invoices' %} is-active{% endif %}" href="{{ url_for('radius.inv_list') }}">
     <i class="fa-solid fa-file-invoice-dollar"></i> الفواتير
   </a>
-  <a class="hub-tab{% if active == 'revenue' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_revenue') }}">
+  <a class="hub-tab{% if active == 'revenue' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='revenue') }}">
     <i class="fa-solid fa-coins"></i> الإيرادات
   </a>
-  <a class="hub-tab{% if active == 'debts' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_debts') }}">
+  <a class="hub-tab{% if active == 'debts' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='loans_debts', status='open') }}">
     <i class="fa-solid fa-file-invoice-dollar"></i> الديون
   </a>
-  <a class="hub-tab{% if active == 'loans' %} is-active{% endif %}" href="{{ url_for('radius.business_finance_loans') }}">
+  <a class="hub-tab{% if active == 'loans' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}">
     <i class="fa-solid fa-hand-holding-dollar"></i> السلف
   </a>
 </nav>

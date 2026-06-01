@@ -48,6 +48,13 @@ def _svc() -> FinanceCenterService:
     return FinanceCenterService()
 
 
+def _hub_url(tab: str, **extra: str) -> str:
+    args = request.args.to_dict(flat=True)
+    args.update({key: value for key, value in extra.items() if value})
+    args["tab"] = tab
+    return url_for("radius.finance_center_hub", **args)
+
+
 def _can_wallet_credit() -> bool:
     return SafetyGateService().check("wallet.credit", permissions=_permissions()).allowed
 
@@ -65,6 +72,10 @@ def _common_context(active: str) -> dict:
 
 
 def finance_dashboard():
+    return redirect(_hub_url("dashboard"))
+
+
+def finance_dashboard_legacy_context():
     return render_template(
         "radius/finance_center.html",
         summary=_svc().dashboard(tenant_id=_tid()),
@@ -73,6 +84,10 @@ def finance_dashboard():
 
 
 def finance_wallets():
+    return redirect(_hub_url("wallets"))
+
+
+def finance_wallets_legacy_context():
     wallets = _svc().wallets(tenant_id=_tid(), limit=150)
     tx_by_wallet = {
         wallet["id"]: _svc().wallet_transactions(tenant_id=_tid(), wallet_id=int(wallet["id"]), limit=5)
@@ -98,13 +113,13 @@ def finance_wallet_create():
         flash("تم إنشاء المحفظة المالية.", "success")
     except (BusinessOSValidationError, ValueError) as exc:
         flash(str(exc), "error")
-    return redirect(url_for("radius.business_finance_wallets"))
+    return redirect(url_for("radius.finance_center_hub", tab="wallets"))
 
 
 def finance_wallet_credit(wallet_id: int):
     if not _can_wallet_credit():
         flash("لا تملك صلاحية شحن المحفظة.", "error")
-        return redirect(url_for("radius.business_finance_wallets"))
+        return redirect(url_for("radius.finance_center_hub", tab="wallets"))
     try:
         WalletService().credit(
             tenant_id=_tid(),
@@ -119,7 +134,7 @@ def finance_wallet_credit(wallet_id: int):
         flash("تم شحن المحفظة وتسجيل القيد المالي.", "success")
     except BusinessOSValidationError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("radius.business_finance_wallets"))
+    return redirect(url_for("radius.finance_center_hub", tab="wallets"))
 
 
 def finance_wallet_debit(wallet_id: int):
@@ -127,7 +142,7 @@ def finance_wallet_debit(wallet_id: int):
     gate = SafetyGateService().check("wallet.debit", permissions=_permissions(), amount=amount)
     if not gate.allowed:
         flash("تم منع الخصم بسبب الصلاحيات أو حدود الأمان.", "error")
-        return redirect(url_for("radius.business_finance_wallets"))
+        return redirect(url_for("radius.finance_center_hub", tab="wallets"))
     try:
         WalletService().debit(
             tenant_id=_tid(),
@@ -142,10 +157,14 @@ def finance_wallet_debit(wallet_id: int):
         flash("تم خصم المبلغ وتسجيل القيد المالي.", "success")
     except BusinessOSValidationError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("radius.business_finance_wallets"))
+    return redirect(url_for("radius.finance_center_hub", tab="wallets"))
 
 
 def finance_revenue():
+    return redirect(_hub_url("revenue"))
+
+
+def finance_revenue_legacy_context():
     return render_template(
         "radius/finance_revenue.html",
         revenue=_svc().revenue(tenant_id=_tid()),
@@ -155,6 +174,10 @@ def finance_revenue():
 
 
 def finance_debts():
+    return redirect(_hub_url("loans_debts", status="open"))
+
+
+def finance_debts_legacy_context():
     return render_template(
         "radius/finance_debts.html",
         debts=_svc().debts(tenant_id=_tid()),
@@ -164,6 +187,10 @@ def finance_debts():
 
 
 def finance_loans():
+    return redirect(_hub_url("loans_debts"))
+
+
+def finance_loans_legacy_context():
     status = _field("status")
     return render_template(
         "radius/finance_loans.html",
