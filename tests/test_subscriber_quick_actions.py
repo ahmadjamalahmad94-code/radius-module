@@ -530,6 +530,23 @@ def test_add_time_modal_is_days_only_no_hours(client, app):
     assert "data-usq-hours" not in extend_modal  # hours input removed
 
 
+def test_payment_and_loan_modals_are_real_no_preview(client, app):
+    with app.app_context():
+        plan = _seed_plan("Real Exec Plan", price=30)
+        _seed_subscriber(
+            "real_exec_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    # «رسمي»: rounding dropdown + dry-run preview removed from the quick-action modals
+    assert 'name="rounding_mode"' not in html
+    assert 'name="dry_run"' not in html
+    # payment + loan both apply for real (hidden apply_to_radius=1)
+    assert html.count('name="apply_to_radius" value="1"') >= 2
+
+
 def test_open_loans_endpoint_is_wired(client, app):
     with app.app_context():
         plan = _seed_plan("Open Loans Plan", price=30)
