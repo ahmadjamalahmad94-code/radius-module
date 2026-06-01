@@ -1721,6 +1721,90 @@ template for any "rule per time window" UI we build next.
 
 ---
 
+## 20. Subscribers Overview — read-only monthly/yearly snapshot
+
+**What it does.** One read-only page for the المشتركون section that mirrors
+Cards Overview: a money/usage snapshot covering المُحصّل (collected), السلف
+(loans), التفعيل (activations), الجيجات (data), الكوتة (quota allocation), and
+شو ضل/الديون (outstanding) — **monthly + yearly grains only**. Every detail and
+per-subscriber line links OUT to the Finance section; this page never mutates.
+
+**Pattern: the route owns DATA aggregation, not mutations** (same rule as §14).
+
+### 20.1 Route + endpoint
+
+`app/radius/routes/subscribers_overview.py`:
+`register_subscribers_overview_routes(bp)` → `GET /subscribers/overview`,
+endpoint `radius.subscribers_overview`. Reads `?period=monthly|yearly`
+(invalid → monthly). URL: `/admin/radius/subscribers/overview`. Registered in
+`blueprint.py` right after `register_overview_routes`.
+
+### 20.2 Data sources (no DB migration — every table/column already exists)
+
+| Bucket | Helper (`accounting_repo.py`) | Source | Grain |
+|---|---|---|---|
+| المُحصّل (دخل) | `sales_summary(grain=)` **REUSE** | ledger payment/posted | monthly+yearly |
+| السلف (صرف) | `loans_summary(grain=)` | `loan_entries` | monthly+yearly |
+| التفعيل | `activation_summary(grain=)` | `payment_transactions` earned_minutes>0 | monthly+yearly |
+| الجيجات | `data_usage_summary(grain=)` | `bandwidth_usage_daily` | monthly+yearly |
+| شو ضل/الديون | `outstanding_summary()` | open loans + `subscribers.balance<0` | point-in-time |
+| أكبر المدينين | `top_debtors(limit=)` | `loan_entries` + balance | point-in-time |
+| الكوتة | inline `_quota_allocation()` | `access_plans` × `subscribers` | point-in-time |
+| census | inline `_subscriber_census()` | `subscribers` + `radacct` | point-in-time |
+
+All grain helpers mirror `sales_summary`: `substr(col,1,7)` monthly /
+`substr(col,1,4)` yearly, `GROUP BY period ORDER BY period DESC LIMIT 24`.
+
+### 20.3 Operator decisions baked in (don't re-litigate)
+
+- **«شو اندفع» = الاثنين**: hero shows دخل (collected=`sales`) AND صرف
+  (disbursed=`loans`), non-overlapping.
+- **«شو ضل» = open loans + negative balances**, labeled «حتى اللحظة»
+  (point-in-time; balances aren't historized per month).
+- **السلف ≠ الديون**: two distinct cards (loans = `loan_entries` *flow*;
+  debts = outstanding *stock*) — no double-count.
+- **الكوتة = allocation** (per-plan limit), **الجيجات = consumption** — two
+  separate concepts, each labeled.
+
+### 20.4 Charts — NO chart library
+
+CSS bars only (`.so-spark` flex container, `.so-spark-bar` `height:{{pct}}%`),
+exactly like cards_overview. Compute every `*_max` + `pct` in Python (`_bars()`).
+Scoped CSS in `app/static/css/subscribers_overview.css` (`.so-*` namespace),
+linked via `head_extra`.
+
+### 20.5 Drill-down to Finance
+
+Each section links to the verified finance routes, **guarded with
+`endpoint_exists`** (a missing route degrades to no-link, never a BuildError):
+`finance_ledger`, `business_finance_debts`, `business_finance_loans`,
+`business_finance_revenue`, and **per-subscriber** `users_finance` (`username=…`).
+Never invent a mutation route here.
+
+### 20.6 Sidebar
+
+`{{ sub_item('radius.subscribers_overview', 'نظرة عامة', m_subscribers_overview) }}`
+as the FIRST item under المشتركون. Matcher `m_subscribers_overview` is guarded by
+`endpoint_exists`; added to `sec_subs_active` so the section auto-opens.
+
+### 20.7 Edge cases
+
+- Empty tenant → 200, all KPIs 0, no traceback (helpers `COALESCE`; `_pick`
+  returns `{}` → template guards every read with `(x or 0)`).
+- `subscribers` / `access_plans` filter `deleted_at IS NULL` (soft-delete added
+  in migration 020).
+- Whole-page substring tests for "يومي"/"أسبوعي" give false positives (chrome
+  help-text uses them) — assert on the page's own `period=` toggle links instead.
+- v1 has no AJAX/bucket-picker (cards_overview's calendar agenda); the period
+  toggle reloads the page. AJAX section-swap is a v2 nicety.
+
+### 20.8 Reusable in
+
+- Any future section-level "overview" (plans, distributors) — copy the
+  `_*_summary(grain=)` repo pattern + `.so-*` board + finance drill-down.
+
+---
+
 ## A. Foundations — ccModal API
 
 A single `#cc-gmodal` element + a global `window.ccModal` namespace.
