@@ -530,6 +530,22 @@ def test_add_time_modal_is_days_only_no_hours(client, app):
     assert "data-usq-hours" not in extend_modal  # hours input removed
 
 
+def test_quota_modal_uses_mb_gb_unit_picker(client, app):
+    with app.app_context():
+        plan = _seed_plan("Quota Picker Plan", price=30)
+        _seed_subscriber(
+            "quota_picker_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    quota_modal = html.split('data-usq-modal="quota"', 1)[1].split('data-usq-modal="quota-reset"', 1)[0]
+    assert 'class="ui-unit"' in quota_modal   # canonical value+unit picker
+    assert "GB" in quota_modal                 # MB/GB/TB selectable
+    assert 'name="quota_mb"' in quota_modal    # still submits base MB
+
+
 def test_payment_and_loan_modals_are_real_no_preview(client, app):
     with app.app_context():
         plan = _seed_plan("Real Exec Plan", price=30)
