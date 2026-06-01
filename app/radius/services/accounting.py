@@ -65,6 +65,39 @@ def _base_plan_minutes(plan: dict | None) -> int:
     return 0
 
 
+def _coerce_price(value: Any) -> float:
+    """Best-effort float for a price-like field; non-numeric / negative → 0.0."""
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return out if out > 0 else 0.0
+
+
+def effective_subscriber_price(subscriber: Any, plan: Any) -> float:
+    """Single source of truth for "what does this subscriber actually pay?".
+
+    The subscriber's stored ``custom_price`` overrides the plan (offer) price.
+    A NULL / 0 / missing custom price falls back to the plan price. Returns 0.0
+    when neither is set (callers that divide by price already guard ``<= 0``).
+
+    Accepts either a mapping (sqlite row dict) or a dataclass/object for both
+    ``subscriber`` and ``plan`` so every call site — repo dicts in accounting,
+    ``Subscriber`` dataclasses in routes — can share the exact same rule.
+    """
+    def _get(obj: Any, key: str) -> Any:
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            return obj.get(key)
+        return getattr(obj, key, None)
+
+    custom = _coerce_price(_get(subscriber, "custom_price"))
+    if custom > 0:
+        return custom
+    return _coerce_price(_get(plan, "price"))
+
+
 def calculate_proportional_minutes(
     *,
     amount_paid: float,
@@ -160,9 +193,7 @@ class AccountingService:
         # the plan (offer) price. 0 / None falls back to the plan price. A
         # per-transaction custom_price in the request body still wins for that one
         # entry (manual one-off override).
-        plan_offer_price = float((plan or {}).get("price") or 0)
-        sub_custom_price = float(subscriber.get("custom_price") or 0)
-        default_price = sub_custom_price or plan_offer_price
+        default_price = effective_subscriber_price(subscriber, plan)
         custom_price = body.get("custom_price")
         custom_price_f = None
         if custom_price not in (None, ""):
@@ -266,8 +297,7 @@ class AccountingService:
                 accounting_repo.resolve_plan(self.tenant_id, int(subscriber["plan_id"]))
                 if subscriber.get("plan_id") else None
             )
-            sub_custom_price = float(subscriber.get("custom_price") or 0)
-            official_price = sub_custom_price or float((plan or {}).get("price") or 0)
+            official_price = effective_subscriber_price(subscriber, plan)
             derived = calculate_proportional_minutes(
                 amount_paid=amount,
                 plan_price=official_price,

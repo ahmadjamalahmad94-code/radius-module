@@ -705,9 +705,9 @@
           <span class="k">السعر المعتمد</span>
           <span class="v">
             {%- if sub.custom_price and sub.custom_price > 0 -%}
-              {{ "%.2f"|format(sub.custom_price) }} {{ plan.currency if plan else "" }} <small style="color:var(--hub-brand-ink);font-weight:700">(مخصّص)</small>
+              {{ sub.custom_price|money }} <small style="color:var(--hub-brand-ink);font-weight:700">(مخصّص)</small>
             {%- elif plan and plan.price -%}
-              {{ "%.2f"|format(plan.price) }} {{ plan.currency }} <small style="color:var(--hub-text-mute)">(سعر العرض)</small>
+              {{ plan.price|money }} <small style="color:var(--hub-text-mute)">(سعر العرض)</small>
             {%- else -%}—{%- endif -%}
           </span>
         </div>

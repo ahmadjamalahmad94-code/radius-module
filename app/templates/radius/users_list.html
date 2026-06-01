@@ -501,6 +501,10 @@
       <tbody>
         {% for u in items %}
         {% set p = plans|selectattr('id','equalto',u.plan_id)|first %}
+        {# Effective price = subscriber custom_price (if set/>0) else plan price.
+           Drives the smart-activation coverage hint so "كم يوم يغطي المبلغ"
+           is computed against what this subscriber actually pays. #}
+        {% set _eff_price = u.custom_price if (u.custom_price and u.custom_price > 0) else (p.price if p else 0) %}
         {% set _expire_ts = (u.expire_at.timestamp()|int) if u.expire_at else 0 %}
         {% set _last_login_ts = (u.last_login_at.timestamp()|int) if u.last_login_at else 0 %}
         {% set _last_seen_ts = (u.last_seen_at.timestamp()|int) if u.last_seen_at else 0 %}
@@ -516,7 +520,8 @@
           data-mobile="{{ u.mobile or '' }}"
           data-plan-id="{{ u.plan_id or '' }}"
           data-plan-name="{{ p.name if p else '' }}"
-          data-plan-price="{{ p.price if p else 0 }}"
+          data-plan-price="{{ _eff_price or 0 }}"
+          data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
           data-plan-currency="{{ (p.currency or 'JOD') if p else 'JOD' }}"
           data-plan-minutes="{{ p.duration_minutes if p else 0 }}"
           data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
@@ -1159,18 +1164,21 @@
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const minutes = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || "JOD";
+    // Effective price may be a per-subscriber custom price (overrides the offer).
+    const isCustom = activeRow.dataset.planCustom === "1";
+    const priceLabel = isCustom ? "سعره المخصّص" : "سعر باقته الحالية";
     const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
     if (price > 0 && amount > 0) {
       let msg = `يُضاف ${fmtMoney(amount, cur)} إلى رصيد المشترك.`;
       if (minutes > 0) {
         const days = (amount / price) * (minutes / 1440);
-        msg += ` يكفي لتجديد ~${arDays(days)} على باقته الحالية بسعر ${fmtMoney(price, cur)}، أو يُستخدم للتجديد التلقائي.`;
+        msg += ` يكفي لتجديد ~${arDays(days)} حسب ${priceLabel} ${fmtMoney(price, cur)}، أو يُستخدم للتجديد التلقائي.`;
       } else {
-        msg += ` سعر باقته الحالية ${fmtMoney(price, cur)}؛ يُستخدم للتجديد التلقائي.`;
+        msg += ` ${priceLabel} ${fmtMoney(price, cur)}؛ يُستخدم للتجديد التلقائي.`;
       }
       hint.textContent = msg;
     } else if (price > 0) {
-      hint.textContent = `سعر باقة المشترك الحالية ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض عدد الأيام التي يغطيها.`;
+      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض عدد الأيام التي يغطيها.`;
     } else {
       hint.textContent = "يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم لاحقًا للتجديد التلقائي أو لتغطية الباقة.";
     }

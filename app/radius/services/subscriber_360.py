@@ -15,6 +15,7 @@ from typing import Any
 from ..db.connection import db
 from ..db.helpers import json_load, row_to_dict
 from ..db.repos import accounting_repo
+from .accounting import effective_subscriber_price
 from .business_os_finance import EventService, WalletService
 
 
@@ -228,8 +229,11 @@ class Subscriber360Service:
         if not subscriber:
             raise KeyError("subscriber not found")
         plan = accounting_repo.resolve_plan(self.tenant_id, subscriber.get("plan_id"))
+        # Effective price = subscriber.custom_price (if set/>0) else plan price.
+        # Renewal cost/coverage must honor a per-subscriber custom price exactly
+        # like payments and loans do.
         calc = self.renewal_calculator.calculate(
-            plan_price=float((plan or {}).get("price") or 0),
+            plan_price=effective_subscriber_price(subscriber, plan),
             amount_paid=amount_paid,
             base_days=int((plan or {}).get("validity_days") or 30),
             discount_amount=discount_amount,
