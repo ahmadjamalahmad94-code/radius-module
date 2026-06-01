@@ -37,11 +37,23 @@ def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
 
 
 def _max_loan_minutes() -> int:
+    """Cap for FREE time loans (temporary access). Default 72h, env-configurable."""
     raw = os.environ.get("HOBERADIUS_MAX_LOAN_HOURS", "72")
     try:
         return max(1, int(raw)) * 60
     except ValueError:
         return 72 * 60
+
+
+def _max_debt_loan_minutes() -> int:
+    """Cap for DEBT loans (recorded credit / money owed). A debt loan isn't a
+    free giveaway, so it isn't bound by the free-loan cap — only by a generous
+    sanity limit (default 366 days) to catch typos. Env: HOBERADIUS_MAX_DEBT_LOAN_DAYS."""
+    raw = os.environ.get("HOBERADIUS_MAX_DEBT_LOAN_DAYS", "366")
+    try:
+        return max(1, int(raw)) * 24 * 60
+    except ValueError:
+        return 366 * 24 * 60
 
 
 def _base_plan_minutes(plan: dict | None) -> int:
@@ -149,7 +161,7 @@ class AccountingService:
             username=str(body.get("username") or "").strip(),
         )
         if not subscriber:
-            raise RadiusValidationError("subscriber not found")
+            raise RadiusValidationError("المشترك غير موجود.")
         return subscriber
 
     def list_ledger(self, *, entry_type: str = "", subscriber_id: int | None = None,
@@ -352,16 +364,28 @@ class AccountingService:
             )
             if derived > 0:
                 derived_from_price = True
-                duration_minutes = min(derived, max_minutes)
+                # amount-only loans carry a recorded value → debt → sanity cap.
+                duration_minutes = min(derived, _max_debt_loan_minutes())
         if duration_minutes <= 0:
             duration_minutes = _to_int(
                 body.get("duration_minutes"),
                 field="duration_minutes",
                 minimum=1,
             )
-        if not derived_from_price and duration_minutes > max_minutes:
+        # A FREE loan (temporary access, no recorded value) keeps the strict
+        # operator cap. A DEBT loan is recorded credit (money owed) — not a
+        # giveaway — so it's bounded only by a generous sanity limit. This is why
+        # «تسجيل دين» can span many days while «مجانية» is capped at the free limit.
+        is_debt_loan = _truthy(body.get("price_from_days")) or amount > 0
+        cap_minutes = _max_debt_loan_minutes() if is_debt_loan else max_minutes
+        if not derived_from_price and duration_minutes > cap_minutes:
+            if is_debt_loan:
+                raise RadiusValidationError(
+                    f"مدة الدين تتجاوز الحدّ الأقصى المعقول ({cap_minutes // (24 * 60)} يومًا)."
+                )
             raise RadiusValidationError(
-                f"loan duration exceeds configured limit ({max_minutes // 60} hours)"
+                f"مدة السلفة المجانية تتجاوز الحدّ المسموح ({max_minutes // 60} ساعة) — "
+                "للمُدد الأطول استخدم «تسجيل دين (مدين)»."
             )
         now = datetime.utcnow()
         loan = accounting_repo.create_loan(
