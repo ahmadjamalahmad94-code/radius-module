@@ -221,8 +221,15 @@ class AccountingService:
         plan_price = custom_price_f if custom_price_f is not None else default_price
         effective_price = max(plan_price - discount, 0)
         base_minutes = _base_plan_minutes(plan)
+        # Loans the operator chose to SETTLE from this payment reduce the amount
+        # that converts to time — the FULL amount is still recorded as income,
+        # but the settled portion clears old debt instead of buying new time.
+        settled_deduction = _to_float(
+            body.get("loan_settled_total") or 0, field="loan_settled_total", minimum=0
+        )
+        time_amount = max(amount - settled_deduction, 0.0)
         earned_minutes = calculate_proportional_minutes(
-            amount_paid=amount,
+            amount_paid=time_amount,
             plan_price=effective_price,
             base_minutes=base_minutes,
             rounding_mode=rounding,
@@ -247,6 +254,7 @@ class AccountingService:
             distributor_id=distributor_id,
             metadata={
                 "base_minutes": base_minutes,
+                "loan_settled_total": settled_deduction,
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )

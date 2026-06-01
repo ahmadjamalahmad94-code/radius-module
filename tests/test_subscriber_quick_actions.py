@@ -488,6 +488,38 @@ def test_add_time_modal_has_pricing_and_billing(client, app):
     assert "مدفوع — دين" in extend_modal
 
 
+def test_open_loans_endpoint_is_wired(client, app):
+    with app.app_context():
+        plan = _seed_plan("Open Loans Plan", price=30)
+        _seed_subscriber(
+            "openloans_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    res = client.get("/admin/radius/users/openloans_ui/open-loans")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["ok"] is True
+    assert isinstance(data["loans"], list)
+
+
+def test_payment_modal_has_interactive_loan_settlement(client, app):
+    with app.app_context():
+        plan = _seed_plan("Payment UI Plan", price=30)
+        _seed_subscriber(
+            "payment_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    pay_modal = html.split('data-usq-modal="payment"', 1)[1].split('data-usq-modal="loan"', 1)[0]
+    assert "data-usq-loans-box" in pay_modal      # interactive open-loans container
+    assert 'name="loan_actions"' in pay_modal     # hidden field the route reads
+    assert "data-usq-coverage" in pay_modal       # live «إجمالي الأيام» line
+
+
 def test_quota_reset_uses_floating_modal_not_native_confirm(client, app):
     with app.app_context():
         plan = _seed_plan("Quota Reset UI Plan", price=20)

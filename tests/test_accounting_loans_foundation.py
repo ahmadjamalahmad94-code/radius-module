@@ -312,3 +312,27 @@ def test_writeoff_loan_voids_and_posts_reversing_credit(client):
     assert wo is not None
     assert wo["direction"] == "credit"
     assert abs(float(wo["amount"]) - float(full["amount"])) < 0.001
+
+
+def test_payment_loan_settled_total_deducts_from_time_basis(client):
+    # plan 1 = price 150 / 43200 min (30 days)
+    subscriber = _create_subscriber(client)
+    # baseline: a 30 payment with no settlement buys 30/150 × 43200 = 8640 min
+    base = client.post(
+        "/api/v1/payments",
+        json={"username": subscriber["username"], "amount": 30},
+        headers=AUTH,
+    )
+    assert base.status_code == 201, base.get_json()
+    assert base.get_json()["data"]["payment"]["earned_minutes"] == 8640
+
+    # with loan_settled_total=10, only (30-10)=20 buys time → 20/150 × 43200 = 5760
+    settled = client.post(
+        "/api/v1/payments",
+        json={"username": subscriber["username"], "amount": 30, "loan_settled_total": 10},
+        headers=AUTH,
+    )
+    assert settled.status_code == 201, settled.get_json()
+    payment = settled.get_json()["data"]["payment"]
+    assert payment["earned_minutes"] == 5760  # time-basis reduced by the settled 10
+    assert payment["amount"] == 30  # full amount still recorded as income

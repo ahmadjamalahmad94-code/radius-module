@@ -1,7 +1,9 @@
 """Web admin accounting screens for payments, loans, and ledger."""
 from __future__ import annotations
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+import json
+
+from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
@@ -46,6 +48,12 @@ def register_accounting_routes(bp: Blueprint) -> None:
         users_loan_settle,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/users/<username>/open-loans",
+        "users_open_loans",
+        users_open_loans,
+        methods=["GET"],
+    )
 
 
 def _actor() -> str:
@@ -62,6 +70,19 @@ def _field(name: str) -> str:
 
 def _truthy(name: str) -> bool:
     return request.form.get(name, "") in {"1", "on", "true", "yes"}
+
+
+def _parse_loan_actions() -> list[dict]:
+    """Parse the modal's loan_actions field — a JSON list of {loan_id, action}
+    where action ∈ settle|writeoff (defer/omitted = leave open)."""
+    raw = (request.form.get("loan_actions") or "").strip()
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    return data if isinstance(data, list) else []
 
 
 def _subscriber(username: str):
@@ -89,6 +110,25 @@ def users_finance(username: str):
 
 def users_payment_create(username: str):
     _subscriber(username)
+    svc = _svc()
+    actions = _parse_loan_actions()
+    # Validate the amount BEFORE touching loans so we never settle a debt and
+    # then fail to record the payment.
+    try:
+        amount_f = float(_field("amount") or 0)
+    except (TypeError, ValueError):
+        amount_f = 0.0
+    if amount_f <= 0:
+        flash("قيمة الدفعة غير صحيحة.", "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    settled_total = 0.0
+    if actions:
+        try:
+            resolution = svc.resolve_loan_actions(actions, actor=_actor())
+            settled_total = float(resolution.get("settled_total") or 0)
+        except RadiusError as e:
+            flash(e.message, "error")
+            return redirect(url_for("radius.users_finance", username=username))
     body = {
         "username": username,
         "amount": _field("amount"),
@@ -101,19 +141,42 @@ def users_payment_create(username: str):
         "notes": _field("notes"),
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
+        "loan_settled_total": settled_total,
     }
     try:
         payment = _svc().create_payment(body, actor=_actor())
         result = payment.get("activation_result") or {}
+        settle_note = f" وتسوية سلف بقيمة {settled_total:.2f}" if settled_total > 0 else ""
         if result.get("dry_run"):
-            flash("تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS.", "warning")
+            flash(f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning")
         elif result.get("applied_to_radius"):
-            flash("تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب.", "success")
+            flash(f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success")
         else:
-            flash("تم تسجيل الدفعة في السجل المالي.", "success")
+            flash(f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success")
     except RadiusValidationError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_finance", username=username))
+
+
+def users_open_loans(username: str):
+    """JSON: a subscriber's OPEN loans (id, amount, days) for the modal to render
+    the interactive settle / defer / forgive choices."""
+    sub = _subscriber(username)
+    loans = _svc().open_loans_for(subscriber_id=sub.id)
+    return jsonify({
+        "ok": True,
+        "loans": [
+            {
+                "id": ln["id"],
+                "amount": float(ln.get("amount") or 0),
+                "days": ln.get("days", 0),
+                "minutes": int(ln.get("duration_minutes") or 0),
+                "currency": ln.get("currency") or default_currency(),
+                "reason": ln.get("reason") or "",
+            }
+            for ln in loans
+        ],
+    })
 
 
 def users_loan_create(username: str):
@@ -124,6 +187,7 @@ def users_loan_create(username: str):
         "days": _field("days"),
         "duration_minutes": _field("duration_minutes"),
         "amount": _field("amount") or 0,
+        "price_from_days": _truthy("price_from_days"),
         "currency": _field("currency") or default_currency(),
         "reason": _field("reason"),
         "apply_to_radius": _truthy("apply_to_radius"),
