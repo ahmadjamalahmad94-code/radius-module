@@ -272,9 +272,16 @@
               <span style="color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> لا نفق إدارة مُعدّ</span>
             {% endif %}
             {% if item.traffic_enabled and item.traffic_tunnel_type != 'none' %}
+              {% set _is_pptp = item.traffic_tunnel_type == 'pptp_traffic' %}
               <span title="نفق الترافيك (تغيير IP / توجيه)">
                 <i class="fa-solid fa-route" style="color:#7c3aed"></i>
-                ترافيك: <strong>L2TP/IPsec</strong>
+                ترافيك:
+                {% if _is_pptp %}
+                  <strong style="color:#b91c1c">PPTP</strong>
+                  <span class="hub-pill hub-pill--red" style="font-size:10px"><span class="dot"></span>غير آمن</span>
+                {% else %}
+                  <strong>L2TP/IPsec</strong>
+                {% endif %}
                 <span class="hub-pill hub-pill--grey" style="font-size:10px"><span class="dot"></span>{{ item.traffic_mode }}</span>
               </span>
             {% endif %}

@@ -53,7 +53,7 @@ def test_add_form_renders_v6_tunnel_strategy(app):
     assert "لن يتم ضبط Default Route على نفق SSTP" in html
     assert 'name="sstp_verify_certificate"' in html
     # L2TP/IPsec advanced traffic section
-    assert "نفق تغيير IP عبر L2TP/IPsec" in html
+    assert "نفق تغيير IP (تمرير الترافيك)" in html
     assert "متقدم" in html
     assert 'name="traffic_mode"' in html
     assert 'name="full_tunnel_confirmed"' in html
