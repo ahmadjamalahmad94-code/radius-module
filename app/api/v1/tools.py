@@ -97,13 +97,13 @@ def set_speeds():
     data = _payload()
     plan_ids = data.get("plan_ids") or []
     if not isinstance(plan_ids, list):
-        return fail("validation_error", "plan_ids must be a list", status=422)
+        return fail("validation_error", "قائمة الباقات يجب أن تكون مصفوفة.", status=422)
     try:
         ids = [int(pid) for pid in plan_ids]
     except (TypeError, ValueError):
-        return fail("validation_error", "plan_ids must contain integers", status=422)
+        return fail("validation_error", "معرّفات الباقات يجب أن تكون أرقامًا صحيحة.", status=422)
     if not ids:
-        return fail("validation_error", "select at least one plan", status=422)
+        return fail("validation_error", "اختر باقة واحدة على الأقل.", status=422)
 
     try:
         mult_down = float(data.get("mult_down", 1.0) or 1.0)
@@ -111,9 +111,9 @@ def set_speeds():
         set_down = int(data.get("set_down", 0) or 0)
         set_up = int(data.get("set_up", 0) or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "speed values are invalid", status=422)
+        return fail("validation_error", "قيم السرعة غير صحيحة.", status=422)
     if mult_down <= 0 or mult_up <= 0 or set_down < 0 or set_up < 0:
-        return fail("validation_error", "speed values must be positive", status=422)
+        return fail("validation_error", "قيم السرعة يجب أن تكون موجبة.", status=422)
 
     dry_run = _bool_value(data.get("dry_run", False))
     changes: list[dict[str, Any]] = []
@@ -176,15 +176,15 @@ def general_adjustments():
             if part.strip()
         ]
     if not isinstance(usernames, list) or not usernames:
-        return fail("validation_error", "usernames must not be empty", status=422)
+        return fail("validation_error", "أدخل اسم مستخدم واحدًا على الأقل.", status=422)
     usernames = [str(u).strip() for u in usernames if str(u).strip()]
     if len(usernames) > 500:
-        return fail("validation_error", "too many usernames in one request", status=422)
+        return fail("validation_error", "عدد أسماء المستخدمين كبير جدًا لطلب واحد.", status=422)
 
     dry_run = _bool_value(data.get("dry_run", False))
     allowed = {"disable", "enable", "extend", "reset_password"}
     if action not in allowed:
-        return fail("validation_error", "unknown adjustment action", status=422)
+        return fail("validation_error", "إجراء التعديل غير معروف.", status=422)
 
     result: list[dict[str, Any]] = []
     if dry_run:
@@ -245,7 +245,7 @@ def test_auth():
     data = _payload()
     username = str(data.get("username") or "").strip()
     if not username:
-        return fail("validation_error", "username is required", status=422)
+        return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
     from ...radius.services.policy_engine import AuthRequest, authorize
 
     req = AuthRequest(
@@ -400,10 +400,10 @@ def maintenance_preview():
     try:
         days = max(1, min(int(data.get("days") or 90), 3650))
     except (TypeError, ValueError):
-        return fail("validation_error", "days must be a number", status=422)
+        return fail("validation_error", "عدد الأيام يجب أن يكون رقمًا صحيحًا.", status=422)
     plan = _maintenance_plan(action, days)
     if not plan:
-        return fail("validation_error", "unknown maintenance action", status=422)
+        return fail("validation_error", "إجراء الصيانة غير معروف.", status=422)
     plan["confirm_phrase"] = "RUN_MAINTENANCE"
     plan["confirm_token"] = _confirm_token(plan)
     return ok(plan)
@@ -415,14 +415,14 @@ def maintenance_run():
     try:
         days = max(1, min(int(data.get("days") or 90), 3650))
     except (TypeError, ValueError):
-        return fail("validation_error", "days must be a number", status=422)
+        return fail("validation_error", "عدد الأيام يجب أن يكون رقمًا صحيحًا.", status=422)
     plan = _maintenance_plan(action, days)
     if not plan:
-        return fail("validation_error", "unknown maintenance action", status=422)
+        return fail("validation_error", "إجراء الصيانة غير معروف.", status=422)
     if data.get("confirm_phrase") != "RUN_MAINTENANCE":
-        return fail("confirmation_required", "maintenance confirmation phrase is required", status=409)
+        return fail("confirmation_required", "عبارة تأكيد الصيانة مطلوبة.", status=409)
     if not hmac.compare_digest(str(data.get("confirm_token") or ""), _confirm_token(plan)):
-        return fail("confirmation_required", "maintenance preview token is invalid", status=409)
+        return fail("confirmation_required", "رمز معاينة الصيانة غير صالح.", status=409)
 
     tenant_id = _tid()
     cutoff = _maintenance_cutoff(days)

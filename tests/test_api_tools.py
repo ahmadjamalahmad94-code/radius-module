@@ -95,6 +95,7 @@ def test_maintenance_requires_preview_token_before_run(client):
     )
     assert blocked.status_code == 409
     assert blocked.get_json()["error"]["code"] == "confirmation_required"
+    assert blocked.get_json()["error"]["message"] == "عبارة تأكيد الصيانة مطلوبة."
 
     preview = client.post(
         "/api/v1/tools/maintenance/preview",
@@ -118,3 +119,47 @@ def test_maintenance_requires_preview_token_before_run(client):
     )
     assert ran.status_code == 200, ran.get_json()
     assert ran.get_json()["data"]["action"] == "vacuum"
+
+
+def test_tools_validation_messages_are_arabic(client):
+    probes = (
+        (
+            "/api/v1/tools/set-speeds",
+            {"plan_ids": "bad"},
+            "قائمة الباقات يجب أن تكون مصفوفة.",
+        ),
+        (
+            "/api/v1/tools/set-speeds",
+            {"plan_ids": ["bad"]},
+            "معرّفات الباقات يجب أن تكون أرقامًا صحيحة.",
+        ),
+        (
+            "/api/v1/tools/general-adjustments",
+            {"action": "disable", "usernames": []},
+            "أدخل اسم مستخدم واحدًا على الأقل.",
+        ),
+        (
+            "/api/v1/tools/general-adjustments",
+            {"action": "bad", "usernames": ["ali"]},
+            "إجراء التعديل غير معروف.",
+        ),
+        (
+            "/api/v1/tools/test-auth",
+            {},
+            "اسم المستخدم مطلوب.",
+        ),
+        (
+            "/api/v1/tools/maintenance/preview",
+            {"action": "vacuum", "days": "bad"},
+            "عدد الأيام يجب أن يكون رقمًا صحيحًا.",
+        ),
+        (
+            "/api/v1/tools/maintenance/preview",
+            {"action": "bad", "days": 1},
+            "إجراء الصيانة غير معروف.",
+        ),
+    )
+    for path, payload, message in probes:
+        res = client.post(path, json=payload, headers=AUTH)
+        assert res.status_code in {409, 422}, (path, res.status_code, res.get_data(as_text=True))
+        assert res.get_json()["error"]["message"] == message
