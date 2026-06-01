@@ -166,6 +166,34 @@ def test_loan_limit_is_enforced(client, monkeypatch):
     assert res.get_json()["error"]["code"] == "validation_error"
 
 
+def test_free_loan_capped_but_debt_loan_may_exceed_free_cap(client, monkeypatch):
+    """The duration cap is for FREE loans (temporary access). A DEBT loan
+    (price_from_days / recorded value) is recorded credit, so it's allowed to
+    span beyond the free cap — bounded only by the generous debt sanity limit."""
+    monkeypatch.setenv("HOBERADIUS_MAX_LOAN_HOURS", "72")  # free cap = 3 days
+    subscriber = _create_subscriber(client)
+
+    # 5-day DEBT loan (priced from days) is ALLOWED even though it exceeds 72h.
+    debt = client.post(
+        "/api/v1/loans",
+        json={"username": subscriber["username"], "days": 5, "price_from_days": True,
+              "reason": "5-day credit"},
+        headers=AUTH,
+    )
+    assert debt.status_code == 201, debt.get_json()
+    assert debt.get_json()["data"]["loan"]["duration_minutes"] == 5 * 24 * 60
+
+    # The SAME 5-day span as a FREE loan is rejected, in Arabic, with guidance.
+    free = client.post(
+        "/api/v1/loans",
+        json={"username": subscriber["username"], "days": 5, "reason": "5-day free"},
+        headers=AUTH,
+    )
+    assert free.status_code == 422
+    assert free.get_json()["error"]["code"] == "validation_error"
+    assert "السلفة المجانية" in free.get_json()["error"]["message"]
+
+
 def test_ledger_void_is_append_only_and_no_financial_delete_routes_exist(client, app):
     subscriber = _create_subscriber(client)
     payment = client.post(
