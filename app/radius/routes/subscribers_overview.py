@@ -155,11 +155,6 @@ def _subscribers_overview_snapshot(tenant_id: int, period: str) -> dict:
     grain = period  # "monthly" | "yearly"
     selected = request.args.get("month") if grain == "monthly" else request.args.get("year")
 
-    currency_row = db().execute(
-        "SELECT currency FROM tenants WHERE id = ?", (tenant_id,)
-    ).fetchone()
-    currency = str((currency_row and currency_row["currency"]) or "ILS").upper()
-
     # ── period-bucketed series (DESC by period) ──
     sales_rows = accounting_repo.sales_summary(tenant_id, grain=grain)        # المُحصّل
     loan_rows = accounting_repo.loans_summary(tenant_id, grain=grain)         # السلف
@@ -198,7 +193,6 @@ def _subscribers_overview_snapshot(tenant_id: int, period: str) -> dict:
     return {
         "period": period,
         "grain": grain,
-        "currency": currency,
         "selected_label": selected_label,
         # دخل + صرف headline (الاثنين)
         "collected_total": float(sales_sel.get("total") or 0),   # المُحصّل من المشتركين
