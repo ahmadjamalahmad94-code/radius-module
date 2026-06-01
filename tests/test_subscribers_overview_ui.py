@@ -20,6 +20,7 @@ def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_API_TOKENS", "dev-token-please-change")
     from app import create_app
 
     return create_app()

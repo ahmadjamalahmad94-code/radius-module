@@ -3,19 +3,19 @@ from __future__ import annotations
 
 import os
 import secrets
-import sys
 import tempfile
 
 
-def _fresh_app():
+def _fresh_app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_speed_rules_")
-    os.environ.pop("HOBERADIUS_NO_SEED", None)
-    os.environ["HOBERADIUS_DB_PATH"] = os.path.join(tmp, "test.db")
-    os.environ["HOBERADIUS_NO_WORKER"] = "1"
-    os.environ["HOBERADIUS_API_TOKENS"] = "speed-rules-test-token"
-    for key in list(sys.modules):
-        if key.startswith("app."):
-            del sys.modules[key]
+    db_path = os.path.join(tmp, "test.db")
+    monkeypatch.delenv("HOBERADIUS_NO_SEED", raising=False)
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", db_path)
+    monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_API_TOKENS", "speed-rules-test-token")
+    from app.radius.db.connection import reset_for_tests
+
+    reset_for_tests(db_path)
     from app import create_app
     return create_app()
 
@@ -33,8 +33,8 @@ def _web_login(client) -> None:
     assert res.status_code in {302, 303}
 
 
-def test_bandwidth_schedule_api_accepts_plan_subscriber_and_card_batch_targets():
-    app = _fresh_app()
+def test_bandwidth_schedule_api_accepts_plan_subscriber_and_card_batch_targets(monkeypatch):
+    app = _fresh_app(monkeypatch)
     client = app.test_client()
     username = "speed_" + secrets.token_hex(4)
     created_sub = client.post(
@@ -79,8 +79,8 @@ def test_bandwidth_schedule_api_accepts_plan_subscriber_and_card_batch_targets()
     assert {"plan", "subscriber", "card_batch"}.issubset(target_types)
 
 
-def test_policy_engine_speed_precedence_subscriber_then_card_batch_then_plan():
-    app = _fresh_app()
+def test_policy_engine_speed_precedence_subscriber_then_card_batch_then_plan(monkeypatch):
+    app = _fresh_app(monkeypatch)
     with app.app_context():
         from app.radius.core.types import AccessPlan, CardBatch, Subscriber
         from app.radius.db.repos import cards_repo, plans_repo, subscribers_repo
@@ -186,8 +186,8 @@ def test_policy_engine_speed_precedence_subscriber_then_card_batch_then_plan():
         assert plan_decision.reply_attrs["Mikrotik-Rate-Limit"] == "500k/5000k"
 
 
-def test_effective_speed_rule_api_explains_precedence():
-    app = _fresh_app()
+def test_effective_speed_rule_api_explains_precedence(monkeypatch):
+    app = _fresh_app(monkeypatch)
     client = app.test_client()
     username = "effective_" + secrets.token_hex(4)
     created_sub = client.post(
@@ -232,7 +232,7 @@ def test_effective_speed_rule_api_explains_precedence():
 
 
 def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatch):
-    app = _fresh_app()
+    app = _fresh_app(monkeypatch)
     client = app.test_client()
     username = "live_speed_" + secrets.token_hex(4)
     created_sub = client.post(
@@ -294,8 +294,8 @@ def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatc
     assert captured == [(1, username, "900k/9000k")]
 
 
-def test_card_batch_update_edits_package_settings_and_available_cards_plan():
-    app = _fresh_app()
+def test_card_batch_update_edits_package_settings_and_available_cards_plan(monkeypatch):
+    app = _fresh_app(monkeypatch)
     client = app.test_client()
     with app.app_context():
         from app.radius.core.types import AccessPlan
@@ -349,8 +349,8 @@ def test_card_batch_update_edits_package_settings_and_available_cards_plan():
     assert {item["plan_id"] for item in cards.get_json()["data"]["items"]} == {new_plan.id}
 
 
-def test_card_batch_edit_web_route_shows_speed_rules_entry():
-    app = _fresh_app()
+def test_card_batch_edit_web_route_shows_speed_rules_entry(monkeypatch):
+    app = _fresh_app(monkeypatch)
     client = app.test_client()
     created_batch = client.post(
         "/api/v1/cards/generate",

@@ -1,9 +1,9 @@
 """Network section consolidation (N1 wizard cleanup, N2 router-mgmt nav).
 
 UI-only: the five duplicate «setup wizard» sidebar entries collapse to two
-clear paths (quick add + advanced), and the router-management cluster
-(operations / topology / problems / diagnostics) shares one in-section nav
-behind a single sidebar entry. All legacy routes stay registered so old
+clear paths (quick add + advanced), and the router-management cluster keeps
+operations plus a direct topology shortcut while problems/diagnostics stay in
+the in-section nav. All legacy routes stay registered so old
 bookmarks keep working.
 """
 from __future__ import annotations
@@ -84,13 +84,14 @@ def test_router_management_landing_has_shared_nav(app):
         assert label in html, label
 
 
-def test_sidebar_cluster_collapsed_to_one_entry(app):
+def test_sidebar_cluster_keeps_operations_and_topology_entries(app):
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
     assert "إدارة الراوترات" in html
-    # the cluster sub-pages live in the in-section nav now, not the sidebar
-    assert "خريطة الشبكة" not in html
+    assert "خريطة الشبكة" in html
+    assert 'href="/admin/radius/topology"' in html
+    # problems and diagnostics stay in the in-section nav, not the sidebar
     assert "مركز المشاكل" not in html
     assert "تشخيص الراوترات" not in html
 

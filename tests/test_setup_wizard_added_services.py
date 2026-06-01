@@ -8,18 +8,22 @@ import pytest
 from app.radius.services.setup_wizard import (
     STEP_INTERNET_VERIFICATION,
     STEP_VPN_RADIUS_VERIFICATION,
-    get_setup_wizard_service,
 )
 
 
 @pytest.fixture
 def app(monkeypatch, tmp_path):
     token = "wiz-added-" + secrets.token_hex(8)
+    db_path = os.path.join(tmp_path, "test.db")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
-    monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", db_path)
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    from app.radius.db.connection import reset_for_tests
+
+    reset_for_tests(db_path)
     from app import create_app
 
     return create_app()
@@ -43,6 +47,8 @@ def _verified_run(app, client) -> int:
     assert res.status_code == 200
     run_id = int(res.get_json()["run"]["id"])
     with app.app_context():
+        from app.radius.services.setup_wizard import get_setup_wizard_service
+
         svc = get_setup_wizard_service()
         svc.set_internet_source(
             tenant_id=1,

@@ -137,7 +137,7 @@ def test_routes_columns_are_arabic(app, client):
     idx = html.index("data-mt-routes-table")
     block = html[idx:html.index("</section>", idx)]
     for label in (
-        "الوجهة", "Gateway", "المسافة", "الحالة", "المصدر", "تعليق",
+        "الوجهة", "البوابة", "المسافة", "الحالة", "المصدر", "تعليق",
     ):
         assert label in block, f"missing routes column: {label}"
 
