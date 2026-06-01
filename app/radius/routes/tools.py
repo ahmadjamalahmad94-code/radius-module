@@ -82,9 +82,59 @@ def tool_set_speeds():
 
 # ─────────────── 2. maintenance ───────────────
 
+def _send_maintenance_notice() -> None:
+    """Enqueue a gated, fail-safe WhatsApp maintenance notice to subscribers.
+
+    Explicit «maintenance notice» action only. Recipients are the usernames the
+    operator listed (CSV/newline) or, if blank, every real subscriber. Each
+    enqueue is gated on ``whatsapp.send.maintenance`` and wrapped so a bridge
+    failure can never break the maintenance page. A single stable ``run_id``
+    bucket de-dupes a double-submit within the same minute.
+    """
+    from ..services.whatsapp_notify import notify_whatsapp
+
+    tid = _tid()
+    # Coarse per-minute run bucket → resubmitting within the minute is deduped
+    # by the idempotency key; a later run is a fresh batch.
+    run_id = str(int(datetime.utcnow().timestamp() // 60))
+    raw = request.form.get("usernames") or ""
+    wanted = {u.strip() for u in raw.replace(",", "\n").split("\n") if u.strip()}
+
+    try:
+        rows = subscribers_repo.list_subscribers(tid, user_type="subscriber", limit=5000)
+    except Exception:  # noqa: BLE001 — recipient lookup must not break the page
+        rows = []
+
+    sent = 0
+    for sub in rows:
+        username = str(getattr(sub, "username", "") or "")
+        if wanted and username not in wanted:
+            continue
+        sid = int(getattr(sub, "id", 0) or 0)
+        if sid <= 0:
+            continue
+        phone = str(getattr(sub, "mobile", "") or "").strip()
+        if notify_whatsapp(
+            tid,
+            "maintenance_notice",
+            gate="maintenance",
+            recipient_phone=phone,
+            template_key="maintenance_notice",
+            subscriber_id=sid,
+            idempotency_key=f"maint:{tid}:{run_id}:{sid}",
+        ):
+            sent += 1
+    flash(f"تم إرسال إشعار الصيانة عبر واتساب إلى {sent} مشترك (حسب التفعيل).", "success")
+
+
 def tool_maintenance():
     if request.method == "POST":
         action = request.form.get("action")
+        # Explicit maintenance-notice broadcast — handled before the DB-purge
+        # transaction since it touches no tables, only the gated WhatsApp bridge.
+        if action == "notice":
+            _send_maintenance_notice()
+            return redirect(url_for("radius.tool_maintenance"))
         days = int(request.form.get("days") or 90)
         cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat() + "Z"
         with transaction() as conn:

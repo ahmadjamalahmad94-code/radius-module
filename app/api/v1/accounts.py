@@ -278,7 +278,48 @@ def accounts_create():
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("conflict", e.message, status=409)
+    # Fire-and-forget WhatsApp activation/OTP notice (gated + fail-safe). The
+    # create() path produces no OTP/activation code, so we send no code value —
+    # the operator's opt-in just yields a templated activation notice. This call
+    # can NEVER break account creation: notify_whatsapp swallows every error.
+    _notify_account_created(saved)
     return ok(_serialize(saved), status=201)
+
+
+def _account_nonce(sub) -> str:
+    """Stable-per-record nonce for idempotency keys (created/updated time)."""
+    for attr in ("created_at", "updated_at"):
+        value = getattr(sub, attr, None)
+        if value is not None:
+            try:
+                return value.isoformat()
+            except AttributeError:
+                return str(value)
+    return "0"
+
+
+def _notify_account_created(sub) -> None:
+    """Enqueue the gated 'otp' WhatsApp activation notice for a new account.
+
+    Wrapped so a notify failure can never turn a successful create into an
+    error response. No OTP code is invented — create() does not produce one.
+    """
+    try:
+        from ...radius.services.whatsapp_notify import notify_whatsapp
+
+        phone = str(getattr(sub, "mobile", "") or "").strip()
+        username = str(getattr(sub, "username", "") or "")
+        notify_whatsapp(
+            _tid(),
+            "otp",
+            gate="otp",
+            recipient_phone=phone,
+            template_key="otp",
+            subscriber_id=getattr(sub, "id", None),
+            idempotency_key=f"otp:{_tid()}:{username}:{_account_nonce(sub)}",
+        )
+    except Exception:  # noqa: BLE001 — notification must never break account create
+        pass
 
 
 def accounts_get(username: str):
@@ -325,7 +366,38 @@ def accounts_reset_pw(username: str):
         _svc().reset_password(actor=_actor(), username=username, new_password=str(pw))
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
+    # Fire-and-forget WhatsApp 'password changed' notice (gated + fail-safe).
+    # The new password is NEVER put in the payload — only a heads-up that it
+    # changed. This call can NEVER break the password reset.
+    _notify_password_changed(username)
     return ok({"username": username, "reset": True})
+
+
+def _notify_password_changed(username: str) -> None:
+    """Enqueue the gated 'password_changed' WhatsApp notice (no password sent).
+
+    Re-reads the subscriber for its phone + id + a version nonce; any lookup or
+    notify failure is swallowed so the reset itself always succeeds.
+    """
+    try:
+        from ...radius.services.whatsapp_notify import notify_whatsapp
+
+        try:
+            sub = _svc().get(username)
+        except Exception:  # noqa: BLE001 — lookup is best-effort
+            sub = None
+        phone = str(getattr(sub, "mobile", "") or "").strip() if sub else ""
+        notify_whatsapp(
+            _tid(),
+            "password_changed",
+            gate="password",
+            recipient_phone=phone,
+            template_key="password_changed",
+            subscriber_id=getattr(sub, "id", None) if sub else None,
+            idempotency_key=f"pwd:{_tid()}:{username}:{_account_nonce(sub) if sub else '0'}",
+        )
+    except Exception:  # noqa: BLE001 — notification must never break the reset
+        pass
 
 
 def accounts_extend(username: str):

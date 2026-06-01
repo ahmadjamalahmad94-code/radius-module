@@ -101,6 +101,11 @@ def _run_for_tenant(tenant_id: int) -> tuple[int, int]:
             subscriber=sub,
             context={"days": days_left},
         )
+        # WhatsApp expiry notice via the gated, fail-safe bridge helper. It
+        # reuses THIS once-per-day dedup (we're inside the `already` guard), so
+        # it fires at most once per subscriber per day. A bridge/enqueue failure
+        # can never abort the sweep — notify_whatsapp swallows everything.
+        _notify_expiry_whatsapp(tenant_id, sub)
         # Record the attempt for today so we don't re-nudge on the next tick,
         # even if a channel was unconfigured (avoids hammering a bad gateway).
         fresh_log[sid] = today
@@ -109,6 +114,58 @@ def _run_for_tenant(tenant_id: int) -> tuple[int, int]:
 
     _save_sent_log(tenant_id, fresh_log)
     return len(candidates), notified
+
+
+# ── WhatsApp expiry notice (gated, fail-safe) ────────────────────────────
+def _notify_expiry_whatsapp(tenant_id: int, sub) -> None:
+    """Enqueue the gated 'expiry_notice' WhatsApp message for one subscriber.
+
+    Fail-safe by construction: notify_whatsapp swallows every error, and this
+    extra try/except guarantees even an import/attribute error can't abort the
+    dunning sweep. Called once-per-day per subscriber (the caller's dedup).
+    """
+    try:
+        from app.radius.services.whatsapp_notify import notify_whatsapp
+
+        sid = int(getattr(sub, "id", 0) or 0)
+        if sid <= 0:
+            return
+        phone = str(getattr(sub, "mobile", "") or "").strip()
+        name = str(getattr(sub, "full_name", "") or getattr(sub, "username", "") or "")
+        expiry_date = _expiry_date_str(getattr(sub, "expire_at", None))
+        notify_whatsapp(
+            int(tenant_id or 1),
+            "expiry_notice",
+            gate="expiry",
+            recipient_phone=phone,
+            template_key="subscription_expiry_soon",
+            subscriber_id=sid,
+            variables=[name, expiry_date, _portal_url(tenant_id)],
+            idempotency_key=f"exp:{int(tenant_id or 1)}:{sid}:{_today_str()}",
+        )
+    except Exception:  # noqa: BLE001 — never let the notice abort the sweep
+        _LOG.exception("[dunning] whatsapp expiry notice failed (non-fatal)")
+
+
+def _expiry_date_str(value) -> str:
+    """Best-effort YYYY-MM-DD for the expiry-notice template variable."""
+    dt = _parse_dt(value)
+    if dt is None:
+        return ""
+    try:
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, AttributeError):
+        return ""
+
+
+def _portal_url(tenant_id: int) -> str:
+    """Subscriber-portal URL for the notice, best-effort (may be empty)."""
+    try:
+        from app.radius.services.admin_panel_client import bridge_setting
+
+        return (bridge_setting("license_admin_bridge.base_url", "") or "").strip().rstrip("/")
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 # ── candidate query ────────────────────────────────────────────────────
