@@ -39,6 +39,16 @@ INSTANCE_HEARTBEAT_PATH = "/api/integration/hoberadius/instance-ops/heartbeat"
 BACKUP_UPLOAD_PATH = "/api/integration/hoberadius/backups/upload"
 PORTAL_SSO_PATH = "/api/integration/hoberadius/portal-sso"
 GDRIVE_STATUS_PATH = "/api/integration/hoberadius/google-drive/status"
+# WhatsApp subscriber messaging — the radius module is a THIN CLIENT: it never
+# talks to the upstream messaging provider's API and never stores any provider
+# credential (token / business-account id / app secret). Every WhatsApp action
+# is a signed bridge POST to the license panel, which owns the provider
+# credentials and performs the actual send.
+WHATSAPP_STATUS_PATH = "/api/integration/hoberadius/whatsapp/status"
+WHATSAPP_ENQUEUE_PATH = "/api/integration/hoberadius/whatsapp/messages/enqueue"
+WHATSAPP_TEST_PATH = "/api/integration/hoberadius/whatsapp/messages/test"
+WHATSAPP_PREFERENCES_SYNC_PATH = "/api/integration/hoberadius/whatsapp/subscriber-preferences/sync"
+WHATSAPP_MESSAGE_STATUS_PATH = "/api/integration/hoberadius/whatsapp/messages/status"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
@@ -635,6 +645,65 @@ class AdminPanelClient:
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {"ok": False, "status": "https_required"}
         return self._post_bridge_payload(path=GDRIVE_STATUS_PATH, payload=self._license_check_payload())
+
+    # ── WhatsApp subscriber messaging (thin client) ─────────────────────────
+    # All five methods are signed bridge POSTs through the panel, mirroring
+    # fetch_google_drive_status EXACTLY. The panel holds the provider
+    # credentials and performs the real send; this module never calls the
+    # upstream messaging provider's API and never stores any provider secret.
+    # Each returns the parsed JSON dict and NEVER raises — a safe dict comes
+    # back on any failure.
+    def get_whatsapp_status(self) -> dict[str, Any]:
+        """Read the customer's WhatsApp connection/usage status from the panel."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(path=WHATSAPP_STATUS_PATH, payload=self._license_check_payload())
+
+    def enqueue_whatsapp_message(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Ask the panel to enqueue a templated WhatsApp message to a subscriber.
+
+        ``payload`` carries source_event_type, subscriber_id, recipient_phone,
+        template_key, language, variables and idempotency_key — all merged into
+        the signed license-check envelope so the panel can authenticate + dedupe.
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=WHATSAPP_ENQUEUE_PATH,
+            payload=self._license_check_payload(dict(payload or {})),
+        )
+
+    def send_whatsapp_test(self, recipient_phone: str, idempotency_key: str) -> dict[str, Any]:
+        """Ask the panel to send a single WhatsApp test message (idempotent)."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=WHATSAPP_TEST_PATH,
+            payload=self._license_check_payload({
+                "recipient_phone": str(recipient_phone or "").strip(),
+                "idempotency_key": str(idempotency_key or "").strip(),
+            }),
+        )
+
+    def sync_subscriber_preferences(self, subscribers: list) -> dict[str, Any]:
+        """Push the local per-subscriber WhatsApp opt-in preferences to the panel."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=WHATSAPP_PREFERENCES_SYNC_PATH,
+            payload=self._license_check_payload({"subscribers": list(subscribers or [])}),
+        )
+
+    def get_message_status(self, idempotency_key: str) -> dict[str, Any]:
+        """Read the delivery status of a previously enqueued WhatsApp message."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=WHATSAPP_MESSAGE_STATUS_PATH,
+            payload=self._license_check_payload({
+                "idempotency_key": str(idempotency_key or "").strip(),
+            }),
+        )
 
     def request_portal_sso(self) -> dict[str, Any]:
         """Ask the panel for a short-lived SSO link into the customer portal."""

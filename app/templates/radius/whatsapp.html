@@ -1,0 +1,226 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}رسائل واتساب للمشتركين — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-brands fa-whatsapp"></i>{% endblock %}
+{% block page_title %}رسائل واتساب للمشتركين{% endblock %}
+{% block page_sub %}<span class="sub">إشعارات واتساب الرسمية للمشتركين — تُدار بالكامل عبر لوحة التراخيص. هذه الصفحة تتحكم بأنواع الرسائل وتُرسل اختبارًا فقط.</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .wa{ display:grid; gap:18px; }
+
+  /* plain-Arabic explainer */
+  .wa-explain{ display:flex; gap:12px; align-items:flex-start; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:13px 16px; }
+  .wa-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dcfce7;color:#15803d;display:grid;place-items:center;font-size:15px;flex:none; }
+  .wa-explain .tx{ font-size:12.5px; line-height:1.85; color:#166534; }
+  .wa-explain .tx a{ color:#15803d; font-weight:800; text-decoration:underline; }
+
+  /* section heading */
+  .wa-h{ display:flex; align-items:center; gap:9px; margin:2px 2px -4px; }
+  .wa-h i{ color:#16a34a; font-size:14px; }
+  .wa-h b{ font-size:14px; font-weight:800; color:#0f172a; }
+  .wa-h span{ font-size:11.5px; color:#94a3b8; }
+
+  /* status card */
+  .wa-status{ position:relative; background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3);
+    border-radius:16px; padding:18px; box-shadow:0 1px 3px rgba(15,23,42,.05),0 7px 18px rgba(15,23,42,.04); overflow:hidden; }
+  .wa-status::before{ content:""; position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:#cbd5e1; }
+  .wa-status.on::before{ background:linear-gradient(180deg,#22c55e,#16a34a); }
+  .wa-status.off::before{ background:linear-gradient(180deg,#f59e0b,#d97706); }
+  .wa-status.dead::before{ background:linear-gradient(180deg,#ef4444,#dc2626); }
+  .wa-status-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .wa-status-ic{ width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:none;
+    background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#16a34a; }
+  .wa-status-name{ font-size:15px; font-weight:800; color:#0f172a; line-height:1.3; }
+  .wa-status-name small{ display:block; font-size:11px; font-weight:600; color:#94a3b8; margin-top:2px; }
+  .wa-pill{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800;
+    border-radius:999px; padding:5px 12px; white-space:nowrap; }
+  .wa-pill .dot{ width:7px;height:7px;border-radius:50%; }
+  .wa-pill.on{ background:#dcfce7; color:#15803d; } .wa-pill.on .dot{ background:#22c55e; }
+  .wa-pill.off{ background:#fef3c7; color:#92400e; } .wa-pill.off .dot{ background:#f59e0b; }
+  .wa-pill.dead{ background:#fee2e2; color:#b91c1c; } .wa-pill.dead .dot{ background:#ef4444; }
+  .wa-status-meta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .wa-tag{ font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-radius:999px; padding:5px 12px; }
+  .wa-tag b{ color:#0f172a; }
+  .wa-tag .num{ direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+
+  /* pending / unavailable card */
+  .wa-pending{ display:flex; gap:12px; align-items:flex-start; background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:14px 16px; }
+  .wa-pending .ic{ width:36px;height:36px;border-radius:10px;background:#fef3c7;color:#b45309;display:grid;place-items:center;font-size:16px;flex:none; }
+  .wa-pending .tx{ font-size:12.5px; line-height:1.85; color:#92400e; }
+  .wa-pending .tx b{ display:block; font-size:13.5px; margin-bottom:3px; }
+
+  /* card surface for forms */
+  .wa-card{ background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3); border-radius:16px; padding:18px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05); }
+
+  /* event toggles */
+  .wa-events{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:11px; }
+  .wa-event{ display:flex; align-items:center; gap:12px; border:1px solid #e2e8f0; border-radius:13px; padding:12px 14px;
+    background:#fcfcff; cursor:pointer; transition:border-color .14s ease, background .14s ease; }
+  .wa-event:hover{ border-color:#bbf7d0; background:#f0fdf4; }
+  .wa-event input{ width:20px;height:20px;accent-color:#16a34a;flex:none; }
+  .wa-event .t{ font-size:13px; font-weight:800; color:#0f172a; line-height:1.4; }
+  .wa-event .t small{ display:block; font-size:10.5px; font-weight:600; color:#94a3b8; margin-top:2px; }
+
+  /* opt-in note */
+  .wa-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.8; border-radius:12px; padding:12px 15px;
+    background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  .wa-note .ic{ flex:none; font-size:15px; color:#1d4ed8; margin-top:1px; }
+
+  /* generic field */
+  .wa-fld{ display:grid; gap:6px; }
+  .wa-fld label{ font-size:13px; font-weight:800; color:#0f172a; }
+  .wa-fld .hint{ font-size:11.5px; color:#94a3b8; line-height:1.7; }
+  .wa-fld input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:13px;
+    background:#fff; color:#0f172a; direction:ltr; unicode-bidi:isolate; text-align:start; }
+  .wa-fld input:focus{ outline:0; border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+
+  /* buttons */
+  .wa-foot{ display:flex; align-items:center; gap:11px; margin-top:14px; flex-wrap:wrap; }
+  .wa-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:11px 18px; font:inherit;
+    font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; color:#fff;
+    background:linear-gradient(135deg,#16a34a,#15803d); box-shadow:0 8px 18px rgba(22,163,74,.26); transition:.15s; }
+  .wa-btn:hover{ box-shadow:0 11px 24px rgba(22,163,74,.34); transform:translateY(-1px); }
+  .wa-btn.secondary{ background:#fff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:none; }
+  .wa-btn.secondary:hover{ background:#f8fafc; box-shadow:none; }
+  .wa-foot-note{ font-size:11.5px; color:#64748b; }
+
+  /* panel-portal link strip */
+  .wa-portal{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:linear-gradient(135deg,#faf5ff,#f5f3ff);
+    border:1px solid #ddd6fe; border-radius:14px; padding:15px 17px; }
+  .wa-portal .ic{ width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;
+    display:grid;place-items:center;font-size:16px;flex:none; }
+  .wa-portal .t{ font-size:13px; font-weight:800; color:#0f172a; }
+  .wa-portal .t small{ display:block; font-size:11.5px; font-weight:600; color:#7c6aae; margin-top:2px; }
+  .wa-portal a{ margin-inline-start:auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+  "رسائل واتساب للمشتركين",
+  subtitle="إشعارات واتساب الرسمية تُدار من لوحة التراخيص. هنا تختار أنواع الرسائل المسموح بها وتُرسل رسالة اختبار.",
+  icon="whatsapp",
+  actions_html=(
+    ('<a class="hub-btn hub-btn--secondary" href="' ~ panel_portal_url ~ '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> إدارة الربط من لوحة التراخيص</a>') if panel_portal_url else ''
+  )
+) }}
+
+<div class="wa">
+
+  {# ════════ what is this page ════════ #}
+  <div class="wa-explain">
+    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
+    <div class="tx">
+      رسائل واتساب الرسمية تمر عبر لوحة التراخيص فقط — لا يُخزَّن أي مفتاح أو رمز Meta في هذا النظام.
+      يتولّى مزوّد الخدمة الربط الرسمي، وأنت هنا تتحكم بأنواع الرسائل المسموح بإرسالها للمشتركين وتجرّب الإرسال.
+    </div>
+  </div>
+
+  {# ════════ STATUS CARD (from the panel) ════════ #}
+  <div class="wa-h"><i class="fa-solid fa-wave-square"></i><b>حالة الربط</b>
+    <span>— كما تردّها لوحة التراخيص</span></div>
+
+  {% if status.ok %}
+    {% set cls = 'on' if status.connected else ('off' if status.enabled else 'dead') %}
+    <div class="wa-status {{ cls }}" data-testid="wa-status">
+      <div class="wa-status-top">
+        <span class="wa-status-ic"><i class="fa-brands fa-whatsapp"></i></span>
+        <div class="wa-status-name">واتساب للأعمال
+          <small>تُدار عبر لوحة التراخيص</small></div>
+        {% if status.connected %}
+          <span class="wa-pill on"><span class="dot"></span> متصل</span>
+        {% elif status.enabled %}
+          <span class="wa-pill off"><span class="dot"></span> مفعّل — غير متصل</span>
+        {% else %}
+          <span class="wa-pill dead"><span class="dot"></span> غير مفعّل</span>
+        {% endif %}
+      </div>
+      <div class="wa-status-meta">
+        {% if status.phone %}
+          <span class="wa-tag">الرقم: <b class="num">{{ status.phone }}</b></span>
+        {% endif %}
+        {% if status.usage %}
+          {% if status.usage.sent is defined %}<span class="wa-tag">المُرسَل: <b class="num">{{ status.usage.sent }}</b></span>{% endif %}
+          {% if status.usage.remaining is defined %}<span class="wa-tag">المتبقّي: <b class="num">{{ status.usage.remaining }}</b></span>{% endif %}
+          {% if status.usage.limit is defined %}<span class="wa-tag">الحد: <b class="num">{{ status.usage.limit }}</b></span>{% endif %}
+        {% endif %}
+        {% if not status.phone and not status.usage %}
+          <span class="wa-tag">لا توجد تفاصيل استخدام بعد.</span>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="wa-pending" data-testid="wa-status-pending">
+      <span class="ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div class="tx">
+        <b>تعذّر جلب الحالة من لوحة التراخيص</b>
+        تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ملف التراخيص»، ثم حدّث الصفحة.
+        يمكنك ضبط أنواع الرسائل بالأسفل الآن — ستُطبَّق فور توفّر الربط.
+      </div>
+    </div>
+  {% endif %}
+
+  {# ════════ EVENT TOGGLES (local radius-side gates) ════════ #}
+  <form class="wa-card" method="post" action="{{ url_for('radius.whatsapp_settings') }}" data-testid="wa-settings-form">
+    {{ csrf_token_input() }}
+    <div class="wa-h" style="margin-top:0"><i class="fa-solid fa-sliders"></i><b>أنواع الرسائل المسموح بها</b>
+      <span>— تتحكم بما يُسمح بإرساله للمشتركين عبر واتساب</span></div>
+
+    <div class="wa-note" style="margin:12px 0 14px">
+      <i class="fa-solid fa-shield-halved ic"></i>
+      <div>
+        هذه المفاتيح إعدادات محلية فقط (لا تحتوي على أي بيانات Meta). لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا على استلام
+        رسائل واتساب (opt-in)، وبما يتوافق مع سياسات واتساب الرسمية.
+      </div>
+    </div>
+
+    <div class="wa-events">
+      {% for key, label in events %}
+        <label class="wa-event" data-testid="wa-event-{{ key }}">
+          <input type="checkbox" name="send_{{ key }}" value="1" {{ 'checked' if toggles.get(key) }}>
+          <span class="t">{{ label }}<small>whatsapp.send.{{ key }}</small></span>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="wa-foot">
+      <button type="submit" class="wa-btn"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+      <span class="wa-foot-note">الافتراضي: كل الأنواع متوقفة حتى تفعّلها يدويًا.</span>
+    </div>
+  </form>
+
+  {# ════════ TEST MESSAGE (through the bridge only) ════════ #}
+  <form class="wa-card" method="post" action="{{ url_for('radius.whatsapp_test') }}" data-testid="wa-test-form">
+    {{ csrf_token_input() }}
+    <div class="wa-h" style="margin-top:0"><i class="fa-solid fa-paper-plane"></i><b>رسالة اختبار</b>
+      <span>— تُرسل عبر لوحة التراخيص للتأكد من الربط</span></div>
+
+    <div class="wa-fld" style="margin-top:13px; max-width:360px">
+      <label for="wa-phone">رقم هاتف المستلم</label>
+      <input id="wa-phone" type="tel" name="recipient_phone" inputmode="tel" placeholder="9627xxxxxxxx" autocomplete="off">
+      <span class="hint">أدخل الرقم بصيغة دولية. تُرسل رسالة قالب اختبار واحدة عبر مزوّد لوحة التراخيص.</span>
+    </div>
+
+    <div class="wa-foot">
+      <button type="submit" class="wa-btn"><i class="fa-brands fa-whatsapp"></i> إرسال اختبار</button>
+      <span class="wa-foot-note">لا يتم إرسال أي رسالة من هذا النظام مباشرة — كل شيء يمر عبر لوحة التراخيص.</span>
+    </div>
+  </form>
+
+  {# ════════ MANAGE CONNECTION ON PANEL PORTAL ════════ #}
+  {% if panel_portal_url %}
+    <div class="wa-portal" data-testid="wa-portal-link">
+      <span class="ic"><i class="fa-solid fa-plug-circle-bolt"></i></span>
+      <div class="t">إدارة ربط واتساب
+        <small>الاتصال الرسمي بـ Meta وإعداد القوالب يتمّان في بوابة لوحة التراخيص.</small></div>
+      <a class="wa-btn secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener">
+        <i class="fa-solid fa-up-right-from-square"></i> فتح بوابة لوحة التراخيص</a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

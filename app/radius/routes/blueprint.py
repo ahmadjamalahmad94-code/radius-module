@@ -123,6 +123,7 @@ def _register_all(bp: Blueprint) -> None:
     from .card_users_marketplace import register_card_users_marketplace_routes
     from .manager_distributor_ops import register_manager_distributor_ops_routes
     from .communications import register_communications_routes
+    from .whatsapp import register_whatsapp_routes
     from .events_risk import register_events_risk_routes
     from .operations_center import register_operations_center_routes
     from .customer_portals import register_customer_portal_routes
@@ -161,6 +162,7 @@ def _register_all(bp: Blueprint) -> None:
     register_card_users_marketplace_routes(bp)
     register_manager_distributor_ops_routes(bp)
     register_communications_routes(bp)
+    register_whatsapp_routes(bp)
     register_events_risk_routes(bp)
     register_operations_center_routes(bp)
     register_customer_portal_routes(bp)
