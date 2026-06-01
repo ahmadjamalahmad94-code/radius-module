@@ -2051,6 +2051,20 @@ trigger from the Card Checker:
      when >0, else plan price. The "سعر مخصّص/سعر العرض" pill reflects `custom`.
 
 9. **Reusable in.** Subscribers list quick-actions (already shares the engine),
-   «إضافة رصيد» / «إضافة وقت» modals, any future per-subscriber money action.
-   When adding a new money modal: import the formula from here verbatim, inject
-   `price_basis()` constants, keep `apply_to_radius=1`, AJAX-submit, reload.
+   «إضافة وقت» modal, any future per-subscriber money action. When adding a new
+   money modal: import the formula from here verbatim, inject `price_basis()`
+   constants, keep `apply_to_radius=1`, AJAX-submit, reload.
+
+   **«إضافة رصيد» — DONE (net-credit variant).** The cash-balance modal reuses
+   the SAME open-loans machinery (`loadLoansInto`/`renderLoanRows`/`loanRows`)
+   but credits the WALLET instead of converting money to time:
+   `syncMoneyCoverage("balance")` routes to `updateBalanceCoverage()`, which
+   computes `credited = max(amount − settled, 0)` and serializes the same
+   `loan_actions`. Backend: `users.add_cash_balance(settled_deduction=…)` credits
+   the net and records the cash_balance ledger at the net figure; the route does
+   preview→credit→settle (`settle_preview_total` → `add_cash_balance` →
+   `resolve_loan_actions`). KEY DIFFERENCE from payment: loans do NOT touch
+   `subscribers.balance` (they live in `loan_entries` + ledger), so settling +
+   net-crediting balances the books (wallet credit + settlement credits = cash in)
+   with no double-count. To add the loans list to ANY money modal, branch its
+   sync fn the same way and pass `settled_deduction` to the crediting service.
