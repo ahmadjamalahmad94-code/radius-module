@@ -190,12 +190,13 @@ def pool_delete(pid: int):
 # ───────────────────────────────── Vouchers ─────────────────────────────────
 
 def vch_list():
-    status = request.args.get("status") or None
-    items = vouchers_repo.list_all(_tid(), status=status, limit=500)
-    plans = {p.id: p for p in plans_repo.list_plans(_tid(), limit=500)}
-    s = vouchers_repo.stats(_tid())
-    return render_template("radius/vouchers_list.html",
-        items=items, plans=plans, stats=s, status=status)
+    # Consolidated into the billing hub (Hub 1). Keep this URL alive as
+    # a redirect so bookmarks + POST success-redirects keep working.
+    status = request.args.get("status")
+    args = {"tab": "vouchers"}
+    if status:
+        args["status"] = status
+    return redirect(url_for("radius.billing_hub", **args))
 
 
 def vch_generate():
@@ -218,9 +219,9 @@ def vch_generate():
             generated_by=session.get("admin_id") or 0,
         )
         flash(f"تم توليد {len(new_items)} كوبون.", "success")
-        return redirect(url_for("radius.vch_list", status="active"))
-    plans = plans_repo.list_plans(_tid(), limit=500)
-    return render_template("radius/vouchers_generate.html", plans=plans)
+        return redirect(url_for("radius.billing_hub", tab="vouchers", status="active"))
+    # GET: the generate form now lives in a modal on the billing hub.
+    return redirect(url_for("radius.billing_hub", tab="vouchers"))
 
 
 def vch_revoke(vid: int):
@@ -232,17 +233,18 @@ def vch_revoke(vid: int):
 # ───────────────────────────────── Invoices ─────────────────────────────────
 
 def inv_list():
-    status = request.args.get("status") or None
-    items = invoices_repo.list_all(_tid(), status=status, limit=500)
-    s = invoices_repo.stats(_tid())
-    return render_template("radius/invoices_list.html",
-        items=items, stats=s, status=status)
+    # Consolidated into the billing hub (Hub 1). Redirect keeps the old
+    # URL + POST success-redirects working.
+    status = request.args.get("status")
+    args = {"tab": "invoices"}
+    if status:
+        args["status"] = status
+    return redirect(url_for("radius.billing_hub", **args))
 
 
 def inv_new():
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
-    plans = plans_repo.list_plans(_tid(), limit=500)
-    return render_template("radius/invoices_form.html", subs=subs, plans=plans)
+    # The "new invoice" form now lives in a modal on the billing hub.
+    return redirect(url_for("radius.billing_hub", tab="invoices"))
 
 
 def inv_create():
