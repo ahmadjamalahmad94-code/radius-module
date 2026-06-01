@@ -147,14 +147,17 @@ def test_add_forms_are_in_modals(app):
 # ── 10. nav link appears in the sidebar ─────────────────────────
 
 
-def test_nav_link_appears_in_sidebar(app):
+def test_nav_link_appears_in_sidebar_finance_section(app):
     with app.test_client() as client:
         _auth_session(client)
         # The sidebar renders on every admin page; check the dashboard
-        # (a different page) carries the standalone section + link.
+        # (a different page) carries the link, which now lives under the
+        # Finance section ("المال والتحصيل").
         html = client.get("/admin/radius/").get_data(as_text=True)
     assert "/company-inventory" in html
-    assert "مخزون الشركة" in html
+    assert "مخزون ومصروفات الشركة" in html
+    # It sits inside the finance/billing section, not a standalone one.
+    assert "المال والتحصيل" in html
 
 
 # ── 2. incoming increases remaining ─────────────────────────────
