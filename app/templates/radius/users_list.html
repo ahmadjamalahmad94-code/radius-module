@@ -105,6 +105,23 @@
   .usq-seg .usq-seg-ico{ font-size:14px; color:var(--hub-text-mute); margin-top:1px; }
   .usq-seg label.is-active .usq-seg-ico{ color:var(--hub-brand-ink); }
   .usq-reveal[hidden]{ display:none; }
+  /* Interactive open-loans settlement (payment modal) */
+  .usq-loans-head{ font-size:12.5px; font-weight:900; color:var(--hub-text); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .usq-loan-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:8px 10px; border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft); margin-bottom:6px; flex-wrap:wrap;
+  }
+  .usq-loan-info{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .usq-loan-info strong{ color:var(--hub-text); direction:ltr; }
+  .usq-loan-acts{ display:flex; gap:4px; flex-wrap:wrap; }
+  .usq-loan-acts label{
+    display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+    padding:4px 9px; border:1px solid var(--hub-border); border-radius:999px;
+    font-size:11.5px; font-weight:800; color:var(--hub-text-soft); background:#fff;
+  }
+  .usq-loan-acts label:has(input:checked){ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
+  .usq-loan-acts input{ position:absolute; opacity:0; width:0; height:0; }
   @media (max-width: 780px){
     .usq-panel{ align-items:flex-start; flex-direction:column; }
     .usq-actions{ justify-content:flex-start; }
@@ -1071,6 +1088,12 @@
             <span><strong>معاينة بدون تنفيذ</strong><small>مفعّلة افتراضيًا مثل صفحة الدفعات الكاملة؛ أزلها عند التنفيذ الفعلي.</small></span>
           </label>
         </div>
+        {# Interactive open-loans settlement — populated by JS on open. #}
+        <div data-usq-loans-box hidden style="margin-top:8px"></div>
+        <input type="hidden" name="loan_actions" data-usq-actions>
+        <div class="hub-text-mute small" data-usq-coverage style="margin-top:8px;line-height:1.7;font-weight:600">
+          أدخل المبلغ لعرض عدد الأيام التي يغطّيها.
+        </div>
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
@@ -1380,6 +1403,81 @@
       : "حدّد المدة لاحتساب السعر تلقائيًا حسب سعر العرض/المخصّص.";
   }
 
+  // ── Interactive loan settlement inside the payment modal ──
+  // Each open loan offers خصم(settle) / تأجيل(defer) / مسامحة(writeoff). Settling
+  // deducts the loan from the payment's time-basis; the day total recomputes live.
+  function loanRows(modal) {
+    return Array.from(modal.querySelectorAll("[data-usq-loan-row]")).map((row) => ({
+      loan_id: parseInt(row.dataset.loanId, 10),
+      amount: parseFloat(row.dataset.loanAmount || "0"),
+      action: (row.querySelector("input[type=radio]:checked") || {}).value || "defer",
+    }));
+  }
+
+  function syncMoneyCoverage(scope) {
+    const modal = page.querySelector(`[data-usq-modal='${scope}']`);
+    if (!modal || !activeRow) return;
+    const amount = parseFloat(modal.querySelector("[name='amount']")?.value || "0");
+    const price = parseFloat(activeRow.dataset.planPrice || "0");
+    const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
+    const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
+    const rows = loanRows(modal);
+    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    const timeAmount = Math.max(amount - settled, 0);
+    const days = (price > 0 && planMin > 0) ? (timeAmount / price) * (planMin / 1440) : 0;
+    // serialize non-defer choices into the hidden field the route reads
+    const actions = rows.filter((r) => r.action !== "defer").map((r) => ({loan_id: r.loan_id, action: r.action}));
+    const field = modal.querySelector("[data-usq-actions]");
+    if (field) field.value = actions.length ? JSON.stringify(actions) : "";
+    const cov = modal.querySelector("[data-usq-coverage]");
+    if (cov) {
+      if (amount > 0 && price > 0) {
+        let msg = `إجمالي ما سيُضاف ≈ ${arDays(days)}.`;
+        if (settled > 0) msg = `سيُخصم ${fmtMoney(settled, cur)} لتسوية سلف؛ والباقي ${fmtMoney(timeAmount, cur)} → ${msg}`;
+        cov.textContent = msg;
+      } else {
+        cov.textContent = "أدخل المبلغ لعرض عدد الأيام التي يغطّيها.";
+      }
+    }
+  }
+
+  function renderLoanRows(scope, loans) {
+    const modal = page.querySelector(`[data-usq-modal='${scope}']`);
+    const box = modal && modal.querySelector("[data-usq-loans-box]");
+    if (!box) return;
+    if (!loans.length) { box.hidden = true; box.innerHTML = ""; return; }
+    const cur = (activeRow && activeRow.dataset.planCurrency) || {{ cfg.currency|tojson }};
+    box.hidden = false;
+    box.innerHTML =
+      `<div class="usq-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة (${loans.length}) — اختر لكل واحدة:</div>` +
+      loans.map((ln) => `
+        <div class="usq-loan-row" data-usq-loan-row data-loan-id="${ln.id}" data-loan-amount="${ln.amount}">
+          <div class="usq-loan-info"><strong>${fmtMoney(ln.amount, ln.currency || cur)}</strong> · ${arDays(ln.days)}${ln.reason ? ` · ${ln.reason}` : ""}</div>
+          <div class="usq-loan-acts">
+            <label><input type="radio" name="loan_act_${ln.id}" value="settle"><span>خصم</span></label>
+            <label><input type="radio" name="loan_act_${ln.id}" value="defer" checked><span>تأجيل</span></label>
+            <label><input type="radio" name="loan_act_${ln.id}" value="writeoff"><span>مسامحة</span></label>
+          </div>
+        </div>`).join("");
+    box.querySelectorAll("input[type=radio]").forEach((r) =>
+      r.addEventListener("change", () => syncMoneyCoverage(scope)));
+  }
+
+  function loadLoansInto(scope) {
+    const modal = page.querySelector(`[data-usq-modal='${scope}']`);
+    if (!modal || !activeRow) return;
+    const box = modal.querySelector("[data-usq-loans-box]");
+    if (box) { box.hidden = true; box.innerHTML = ""; }
+    const field = modal.querySelector("[data-usq-actions]");
+    if (field) field.value = "";
+    const url = (activeRow.dataset.financeUrl || "").replace(/\/finance$/, "/open-loans");
+    if (!url) { syncMoneyCoverage(scope); return; }
+    fetch(url, {credentials: "same-origin", headers: {"X-Requested-With": "fetch"}})
+      .then((r) => r.json())
+      .then((j) => { renderLoanRows(scope, (j && j.loans) || []); syncMoneyCoverage(scope); })
+      .catch(() => { syncMoneyCoverage(scope); });
+  }
+
   function syncLoanPolicy() {
     const modal = page.querySelector("[data-usq-modal='loan']");
     if (!modal) return;
@@ -1555,6 +1653,7 @@
     if (key === "plan") updatePlanPolicy();
     if (key === "extend") { updateMinutes(); syncChargeMode("extend"); }
     if (key === "balance") updateBalanceCoverage();
+    if (key === "payment") loadLoansInto("payment");
     if (key === "quota") syncChargeMode("quota");
     if (key === "quota-reset") syncChargeMode("quota-reset");
     if (key === "loan") syncLoanPolicy();
@@ -1639,6 +1738,7 @@
   });
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
+  page.querySelector("[data-usq-modal='payment'] [name='amount']")?.addEventListener("input", () => syncMoneyCoverage("payment"));
   page.querySelectorAll("[data-usq-charge-input]").forEach((input) =>
     input.addEventListener("change", () => {
       const scope = input.closest("[data-usq-modal]")?.dataset.usqModal || "quota";
