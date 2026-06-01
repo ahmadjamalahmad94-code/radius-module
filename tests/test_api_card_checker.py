@@ -92,12 +92,14 @@ def test_card_checker_rejects_empty_query(client, auth_headers):
     res = _check(client, auth_headers, "   ")
     assert res.status_code == 422
     assert res.get_json()["error"]["code"] == "validation_error"
+    assert res.get_json()["error"]["message"] == "عبارة البحث مطلوبة."
 
 
 def test_card_checker_rejects_long_query(client, auth_headers):
     res = _check(client, auth_headers, "x" * 129)
     assert res.status_code == 422
     assert res.get_json()["error"]["code"] == "validation_error"
+    assert res.get_json()["error"]["message"] == "عبارة البحث يجب ألا تتجاوز 128 حرفًا."
 
 
 def test_card_checker_does_not_expose_password(client, auth_headers):

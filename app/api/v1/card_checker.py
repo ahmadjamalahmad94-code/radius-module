@@ -27,11 +27,11 @@ def register(bp: Blueprint) -> None:
 def cards_check():
     query = (request.args.get("query") or "").strip()
     if not query:
-        return fail("validation_error", "query مطلوب", status=422)
+        return fail("validation_error", "عبارة البحث مطلوبة.", status=422)
     if len(query) > _MAX_QUERY_LENGTH:
         return fail(
             "validation_error",
-            f"query must be {_MAX_QUERY_LENGTH} characters or less",
+            f"عبارة البحث يجب ألا تتجاوز {_MAX_QUERY_LENGTH} حرفًا.",
             status=422,
         )
     card = check_card(_tid(), query)

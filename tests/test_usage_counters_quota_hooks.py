@@ -148,3 +148,19 @@ def test_usage_and_quota_routes(client):
     )
     assert quota.get_json()["data"]["decision"] == "block"
     assert quota.get_json()["data"]["enforced"] is False
+
+    missing_username = client.post(
+        "/api/v1/accounting/quota/check",
+        json={"limit_bytes": 20},
+        headers=AUTH,
+    )
+    assert missing_username.status_code == 422
+    assert missing_username.get_json()["error"]["message"] == "اسم المستخدم مطلوب."
+
+    bad_limit = client.post(
+        "/api/v1/accounting/quota/check",
+        json={"username": "ali", "limit_bytes": "bad"},
+        headers=AUTH,
+    )
+    assert bad_limit.status_code == 422
+    assert bad_limit.get_json()["error"]["message"] == "قيمة limit_bytes يجب أن تكون رقمًا صحيحًا."

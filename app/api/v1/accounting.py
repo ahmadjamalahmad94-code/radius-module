@@ -39,7 +39,7 @@ def accounting_list():
         limit = min(int(request.args.get("limit") or 50), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     username = request.args.get("username")
     from ...radius.integration.factory import get_radius_adapter
     items = get_radius_adapter().list_accounting(
@@ -69,7 +69,10 @@ def accounting_event_ingest():
 def accounting_online():
     from ...radius.services.accounting_events import AccountingEventsService
 
-    limit = min(max(int(request.args.get("limit") or 100), 1), 500)
+    try:
+        limit = min(max(int(request.args.get("limit") or 100), 1), 500)
+    except ValueError:
+        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
     items = AccountingEventsService().list_online(tenant_id=_tid(), limit=limit)
     return ok({"items": items, "count": len(items)})
 
@@ -77,7 +80,10 @@ def accounting_online():
 def accounting_sessions_history():
     from ...radius.services.accounting_events import AccountingEventsService
 
-    limit = min(max(int(request.args.get("limit") or 100), 1), 500)
+    try:
+        limit = min(max(int(request.args.get("limit") or 100), 1), 500)
+    except ValueError:
+        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
     items = AccountingEventsService().list_history(tenant_id=_tid(), limit=limit)
     return ok({"items": items, "count": len(items)})
 
@@ -87,7 +93,7 @@ def accounting_session_detail(session_id: str):
 
     item = AccountingEventsService().session_detail(tenant_id=_tid(), session_id=session_id)
     if not item:
-        return fail("not_found", "Accounting session not found", status=404)
+        return fail("not_found", "جلسة المحاسبة غير موجودة.", status=404)
     return ok({"item": item})
 
 
@@ -131,11 +137,11 @@ def accounting_quota_check():
     body = request.get_json(silent=True) or {}
     username = str(body.get("username") or "").strip()
     if not username:
-        return fail("validation_error", "username is required", status=422)
+        return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
     try:
         limit_bytes = int(body.get("limit_bytes") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "limit_bytes must be an integer", status=422)
+        return fail("validation_error", "قيمة limit_bytes يجب أن تكون رقمًا صحيحًا.", status=422)
     window = "monthly" if body.get("window") == "monthly" else "daily"
     result = UsageCountersService().quota_decision(
         tenant_id=_tid(),

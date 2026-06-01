@@ -123,3 +123,11 @@ def test_accounting_event_api_and_read_routes(client):
 
     history = client.get("/api/v1/accounting/sessions", headers=AUTH)
     assert history.get_json()["data"]["count"] == 1
+
+    bad_online = client.get("/api/v1/accounting/online?limit=bad", headers=AUTH)
+    assert bad_online.status_code == 422
+    assert bad_online.get_json()["error"]["message"] == "قيمة limit يجب أن تكون رقمًا صحيحًا."
+
+    missing = client.get("/api/v1/accounting/sessions/missing-session", headers=AUTH)
+    assert missing.status_code == 404
+    assert missing.get_json()["error"]["message"] == "جلسة المحاسبة غير موجودة."
