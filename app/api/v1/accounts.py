@@ -104,18 +104,18 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"metadata is not valid JSON: {e}")
+            raise RadiusValidationError(f"بيانات metadata ليست JSON صالحًا: {e}")
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
-                "metadata must decode to a JSON object or array")
+                "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
         return raw
     if isinstance(raw, (dict, list)):
         try:
             return json.dumps(raw, ensure_ascii=False)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"metadata not JSON-serialisable: {e}")
+            raise RadiusValidationError(f"تعذّر تحويل metadata إلى JSON: {e}")
     raise RadiusValidationError(
-        f"metadata must be a dict, list, or JSON string (got {type(raw).__name__})")
+        f"metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع {type(raw).__name__}.")
 
 
 def _coerce(field_name: str, value):
@@ -131,7 +131,7 @@ def _coerce(field_name: str, value):
         try:
             return int(value)
         except (TypeError, ValueError):
-            raise RadiusValidationError(f"{field_name} must be integer")
+            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
     # leave strings/booleans/numbers to the dataclass — replace() won't coerce
     # but it does accept whatever is on the right type. We do a few common
     # coercions for numerics that often arrive as strings.
@@ -141,7 +141,7 @@ def _coerce(field_name: str, value):
         try:
             return float(value)
         except (TypeError, ValueError):
-            raise RadiusValidationError(f"{field_name} must be numeric")
+            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمية.")
     if field_name in {
         "download_speed_kbps", "upload_speed_kbps",
         "vlan_id", "override_concurrent",
@@ -154,7 +154,7 @@ def _coerce(field_name: str, value):
         try:
             return int(value)
         except (TypeError, ValueError):
-            raise RadiusValidationError(f"{field_name} must be numeric")
+            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمية.")
     if field_name in {
         "bandwidth_control_enabled", "custom_speed", "temporary_speed",
         "auto_renewal",
@@ -238,7 +238,7 @@ def accounts_list():
         limit = min(int(request.args.get("limit") or 50), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     status = request.args.get("status")
     search = request.args.get("search") or ""
     plan_id = request.args.get("plan_id")
@@ -285,7 +285,7 @@ def accounts_get(username: str):
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", f"account {username} not found", status=404)
+        return fail("not_found", f"الحساب {username} غير موجود.", status=404)
     return ok(_serialize(sub))
 
 
@@ -294,7 +294,7 @@ def accounts_patch(username: str):
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     try:
         new_sub = _apply_body(sub, body)
     except RadiusValidationError as e:
@@ -333,13 +333,13 @@ def accounts_extend(username: str):
     try:
         minutes = int(body.get("minutes") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "minutes must be int", status=422)
+        return fail("validation_error", "قيمة minutes يجب أن تكون رقمًا صحيحًا.", status=422)
     if minutes <= 0:
-        return fail("validation_error", "minutes > 0 required", status=422)
+        return fail("validation_error", "قيمة minutes يجب أن تكون أكبر من صفر.", status=422)
     try:
         saved = _svc().extend_time(actor=_actor(), username=username, minutes=minutes)
     except RadiusNotFound:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"username": username, "extended_minutes": minutes,
@@ -350,7 +350,7 @@ def accounts_disable(username: str):
     try:
         _svc().disable(actor=_actor(), username=username)
     except RadiusNotFound:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     return ok({"username": username, "status": "disabled"})
 
 
@@ -358,7 +358,7 @@ def accounts_enable(username: str):
     try:
         _svc().enable(actor=_actor(), username=username)
     except RadiusNotFound:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     return ok({"username": username, "status": "enabled"})
 
 
@@ -366,7 +366,7 @@ def accounts_usage(username: str):
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     return ok({
         "username": sub.username,
         "used_seconds": sub.used_seconds,
@@ -384,7 +384,7 @@ def accounts_360(username: str):
     try:
         payload = Subscriber360Service(tenant_id=_tid()).get_by_username(username)
     except KeyError:
-        return fail("not_found", "account not found", status=404)
+        return fail("not_found", "الحساب غير موجود.", status=404)
     return ok(_safe_360_payload(payload))
 
 

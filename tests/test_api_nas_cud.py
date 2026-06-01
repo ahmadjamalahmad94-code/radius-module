@@ -101,7 +101,7 @@ def test_create_nas_unknown_vendor_returns_422(client, auth_headers):
         headers=auth_headers,
     )
     assert res.status_code == 422
-    assert "vendor" in res.get_json()["error"]["message"].lower()
+    assert "نوع الجهاز غير معروف" in res.get_json()["error"]["message"]
 
 
 def test_get_nas_round_trips(client, auth_headers, cleanup_nas):

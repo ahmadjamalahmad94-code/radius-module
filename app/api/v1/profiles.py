@@ -96,18 +96,18 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"metadata is not valid JSON: {e}")
+            raise RadiusValidationError(f"بيانات metadata ليست JSON صالحًا: {e}")
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
-                "metadata must decode to a JSON object or array")
+                "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
         return raw
     if isinstance(raw, (dict, list)):
         try:
             return json.dumps(raw, ensure_ascii=False)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"metadata not JSON-serialisable: {e}")
+            raise RadiusValidationError(f"تعذّر تحويل metadata إلى JSON: {e}")
     raise RadiusValidationError(
-        f"metadata must be a dict, list, or JSON string (got {type(raw).__name__})")
+        f"metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع {type(raw).__name__}.")
 
 
 def _coerce_int(name: str, v: Any) -> int:
@@ -116,7 +116,7 @@ def _coerce_int(name: str, v: Any) -> int:
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{name} must be integer")
+        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
 
 
 def _coerce_float(name: str, v: Any) -> float:
@@ -125,7 +125,7 @@ def _coerce_float(name: str, v: Any) -> float:
     try:
         return float(v)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{name} must be numeric")
+        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمية.")
 
 
 def _coerce_days(v: Any) -> tuple[str, ...]:
@@ -138,10 +138,10 @@ def _coerce_days(v: Any) -> tuple[str, ...]:
     elif isinstance(v, (list, tuple)):
         parts = [str(p).strip().lower() for p in v if str(p).strip()]
     else:
-        raise RadiusValidationError("allowed_days must be list or CSV string")
+        raise RadiusValidationError("الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.")
     bad = [p for p in parts if p not in _VALID_DAYS]
     if bad:
-        raise RadiusValidationError(f"allowed_days has invalid entries: {bad}")
+        raise RadiusValidationError(f"الأيام المسموحة تحتوي قيمًا غير صحيحة: {bad}")
     # de-dup, preserve canonical order
     canonical_order = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
     seen = set(parts)
@@ -156,13 +156,13 @@ def _coerce_router_ids(v: Any) -> tuple[int, ...]:
     elif isinstance(v, (list, tuple)):
         parts = [str(p).strip() for p in v if str(p).strip() != ""]
     else:
-        raise RadiusValidationError("router_ids must be list or CSV string")
+        raise RadiusValidationError("أرقام الراوترات يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.")
     out = []
     for p in parts:
         try:
             out.append(int(p))
         except (TypeError, ValueError):
-            raise RadiusValidationError(f"router_ids entry not int: {p!r}")
+            raise RadiusValidationError(f"قيمة غير رقمية في أرقام الراوترات: {p!r}")
     return tuple(out)
 
 
@@ -240,7 +240,7 @@ def profiles_list():
         limit = min(int(request.args.get("limit") or 200), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     items = _svc().list(limit=limit, offset=offset)
     return ok({"items": [_serialize(p) for p in items], "count": len(items)})
 

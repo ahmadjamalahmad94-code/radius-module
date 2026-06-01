@@ -62,7 +62,7 @@ def _coerce_int(name: str, v: Any) -> int:
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{name} must be integer")
+        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
 
 
 def _apply_body(device: NasDevice, body: dict) -> NasDevice:
@@ -81,8 +81,8 @@ def _apply_body(device: NasDevice, body: dict) -> NasDevice:
         changes["vendor"] = changes["vendor"].strip().lower()
         if changes["vendor"] not in _VALID_VENDORS:
             raise RadiusValidationError(
-                f"unknown vendor: {changes['vendor']!r}. "
-                f"Allowed: {sorted(_VALID_VENDORS)}"
+                f"نوع الجهاز غير معروف: {changes['vendor']!r}. "
+                f"المسموح: {sorted(_VALID_VENDORS)}"
             )
     if "nas_type" in changes:
         changes["nas_type"] = changes["nas_type"].strip().lower()
@@ -128,7 +128,7 @@ def nas_list():
         limit = min(int(request.args.get("limit") or 100), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "limit/offset must be int", status=422)
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     items = _svc().list(limit=limit, offset=offset)
     return ok({"items": [_serialize(d) for d in items], "count": len(items)})
 

@@ -116,7 +116,7 @@ def _coerce_int(name: str, v: Any) -> int | None:
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{name} must be integer")
+        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
 
 
 def admins_list():
@@ -191,7 +191,7 @@ def admins_patch(admin_id: int):
     except ValueError as exc:
         return fail("password_managed_by_license_admin", str(exc), status=409)
     if not admin:
-        return fail("not_found", "admin not found", status=404)
+        return fail("not_found", "الحساب الإداري غير موجود.", status=404)
     _audit("update", "admin", str(admin_id), {"fields": list(changes.keys())})
     return ok(_serialize_admin(admin))
 
@@ -226,7 +226,7 @@ def _validate_permissions(perms: Any) -> tuple[str, ...]:
     if perms is None:
         return ()
     if not isinstance(perms, (list, tuple)):
-        raise RadiusValidationError("permissions must be a list of strings")
+        raise RadiusValidationError("الصلاحيات يجب أن تكون قائمة نصية.")
     out: list[str] = []
     valid = set(ALL_PERMISSIONS)
     bad: list[str] = []
@@ -238,8 +238,8 @@ def _validate_permissions(perms: Any) -> tuple[str, ...]:
             out.append(s)
     if bad:
         raise RadiusValidationError(
-            f"unknown permission(s): {bad}. "
-            f"See GET /api/v1/permissions for the catalog."
+            f"توجد صلاحيات غير معروفة: {bad}. "
+            "راجع GET /api/v1/permissions لقائمة الصلاحيات."
         )
     return tuple(dict.fromkeys(out))  # de-dup, preserve order
 
@@ -285,7 +285,7 @@ def roles_patch(role_id: int):
             return fail("validation_error", e.message, status=422)
     role = admins_repo.update_role(role_id, **changes)
     if not role:
-        return fail("not_found", "role not found", status=404)
+        return fail("not_found", "الدور غير موجود.", status=404)
     _audit("update", "role", str(role_id), {"fields": list(changes.keys())})
     return ok(_serialize_role(role))
 
