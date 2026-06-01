@@ -116,7 +116,8 @@
 {%- set m_payment_requests = (path == url_for('radius.payment_collection_requests')) -%}
 {%- set m_payment_review = (path == url_for('radius.payment_collection_review_queue_web')) -%}
 {%- set m_payment_reconciliation = (path == url_for('radius.payment_collection_reconciliation_web')) -%}
-{%- set m_payment_collection = m_payment_settings or m_payment_requests or m_payment_review or m_payment_reconciliation or ('/payments/requests/' in path) -%}
+{%- set m_payment_collection_hub = (path == url_for('radius.collection_hub')) -%}
+{%- set m_payment_collection = m_payment_collection_hub or m_payment_settings or m_payment_requests or m_payment_review or m_payment_reconciliation or ('/payments/requests/' in path) -%}
 
 {# Support #}
 {%- set m_tickets     = '/tickets' in path -%}
@@ -417,10 +418,7 @@
         {{ sub_item('radius.business_finance_loans', 'القروض', m_business_loans) }}
         {{ sub_item('radius.finance_ledger', 'دفتر القيود', m_ledger) }}
         {{ sub_item('radius.billing_hub',     'الفواتير والكوبونات', m_billing_hub) }}
-        {{ sub_item('radius.payment_collection_settings', 'إعدادات التحصيل', m_payment_settings) }}
-        {{ sub_item('radius.payment_collection_requests', 'طلبات الدفع', m_payment_requests) }}
-        {{ sub_item('radius.payment_collection_review_queue_web', 'مراجعة الدفعات', m_payment_review) }}
-        {{ sub_item('radius.payment_collection_reconciliation_web', 'مطابقة التحصيل', m_payment_reconciliation) }}
+        {{ sub_item('radius.collection_hub', 'التحصيل والمدفوعات', m_payment_collection) }}
         {{ sub_item('radius.company_inventory', 'مخزون ومصروفات الشركة', m_company_inventory) }}
       </div></div>
     </div>
