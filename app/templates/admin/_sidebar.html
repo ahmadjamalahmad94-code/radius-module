@@ -170,6 +170,8 @@
 {%- set m_communications_bot = ('/communications/bot' in path) -%}
 {%- set m_communications_notifications = ('/communications/notifications' in path) -%}
 {%- set m_communications_quota = ('/communications/quota' in path) -%}
+{# Consolidated «التواصل والحملات» entry — active on any /communications/* sub-page. #}
+{%- set m_communications_hub = ('/communications' in path) -%}
 {%- set m_whatsapp_subscribers = ('/whatsapp' in path) -%}
 {%- set m_events_center = ('/events' in path) -%}
 {%- set m_events_risk = (path == url_for('radius.events_risk')) -%}
@@ -431,18 +433,10 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications) }}
-        {{ sub_item('radius.communications_channels', 'قنوات الإرسال', m_communications_channels) }}
-        {{ sub_item('radius.communications_bot', 'بوت واتساب', m_communications_bot) }}
+        {# التواصل والحملات — مركز موحّد: شريط تبويب داخلي يصل لكل الصفحات الفرعية
+           (قنوات/بوت/إشعارات/رصيد/قوالب/إرسال/حملات/جمهور/سجل/دليل). #}
+        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications_hub) }}
         {{ sub_item('radius.whatsapp', 'رسائل واتساب للمشتركين', m_whatsapp_subscribers) }}
-        {{ sub_item('radius.communications_notifications', 'الإشعارات الحدثية', m_communications_notifications) }}
-        {{ sub_item('radius.communications_quota', 'الرصيد والحِزم', m_communications_quota) }}
-        {{ sub_item('radius.communications_templates', 'قوالب الرسائل', m_communications_templates) }}
-        {{ sub_item('radius.communications_send', 'إرسال رسالة', m_communications_send) }}
-        {{ sub_item('radius.communications_deliveries', 'سجل الإرسال', m_communications_deliveries) }}
-        {{ sub_item('radius.communications_guide', '📚 دليل وشروحات', '/communications/guide' in path) }}
-        {{ sub_item('radius.communications_campaigns', 'الحملات', m_communications_campaigns) }}
-        {{ sub_item('radius.communications_audience', 'الجمهور', m_communications_audience) }}
         {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}
         {{ sub_item('radius.events_risk', 'تقييم المخاطر', m_events_risk) }}
         {{ sub_item('radius.events_security', 'الأمان', m_events_security) }}
