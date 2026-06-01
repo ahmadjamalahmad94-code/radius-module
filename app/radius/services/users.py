@@ -374,6 +374,46 @@ class UsersService:
         )
         return saved
 
+    def apply_payment_to_balance(self, *, actor: str, username: str,
+                                 amount: float) -> float:
+        """يسوي جزءًا من دفعة نقدية مع رصيد سالب مسجل كدين.
+
+        يرفع الرصيد باتجاه الصفر دون تجاوزه، ويسجل قيد `debt_settlement`
+        موازنًا لقيد الدين الأصلي. تقارير الدخل المبنية على `payment`
+        تبقى كما هي. ترجع الدالة المبلغ الذي تم تطبيقه فعليًا.
+        """
+        if amount is None or float(amount) <= 0:
+            return 0.0
+        sub = self._adapter.get_account(username)
+        previous = float(sub.balance or 0)
+        due = max(-previous, 0.0)
+        settle = round(min(float(amount), due), 2)
+        if settle <= 0:
+            return 0.0
+        saved = self._adapter.upsert_account(replace(sub, balance=previous + settle))
+        _record_subscriber_ledger(
+            actor=actor,
+            subscriber=saved,
+            entry_type="debt_settlement",
+            direction="credit",
+            amount=settle,
+            currency=default_currency(),
+            source_type="payment_balance_settlement",
+            notes="تسوية دين من دفعة نقدية",
+            metadata={
+                "previous_balance": previous,
+                "new_balance": float(saved.balance or 0),
+            },
+        )
+        self._audit.record(
+            actor=actor,
+            action="subscriber.debt_settled_from_payment",
+            target_type="user",
+            target_id=username,
+            payload={"amount": settle},
+        )
+        return settle
+
     def disable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
         self._adapter.upsert_account(replace(u, status=STATUS_DISABLED))

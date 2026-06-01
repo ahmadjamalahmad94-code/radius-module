@@ -43,6 +43,10 @@
   .ff-seg strong{ display:block; font-size:12.5px; color:var(--hub-text,#0f172a); }
   .ff-seg small{ display:block; font-size:11px; color:#94a3b8; font-weight:600; }
   .ff-hint{ font-size:12px; color:var(--hub-text-mute,#64748b); font-weight:700; line-height:1.7; }
+  .ff-debt{ display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border:1px solid #fecaca;
+    border-radius:12px; background:#fff7f7; cursor:pointer; font-size:12.5px; font-weight:700; color:#7f1d1d; line-height:1.7; }
+  .ff-debt input{ margin-top:3px; accent-color:#dc2626; flex:0 0 auto; }
+  .ff-debt strong{ color:#b91c1c; }
   .ff-reveal[hidden]{ display:none; }
   /* open-loans settlement */
   .ff-loans-head{ font-size:12.5px; font-weight:900; color:var(--hub-text,#0f172a); margin-bottom:6px; }
@@ -236,6 +240,12 @@
         {% endif %}
         <input type="hidden" name="loan_actions" data-ff-actions>
         <input type="hidden" name="apply_to_radius" value="1">
+        {% if (sub.balance or 0) < 0 %}
+        <label class="ff-debt">
+          <input type="checkbox" name="settle_balance" value="1" checked data-ff-settle-balance>
+          <span>عليه دين بقيمة <strong>{{ (-(sub.balance or 0))|money }}</strong> — سدِّده من هذه الدفعة (يُخصم من المبلغ ويُقلّل الأيام المُضافة).</span>
+        </label>
+        {% endif %}
         <div class="ff-hint" data-ff-pay-coverage>أدخل المبلغ لعرض عدد الأيام التي يغطّيها.</div>
         <div class="ff-msg" data-ff-pay-msg hidden></div>
       </div>
@@ -299,12 +309,14 @@
   const PLAN_MIN = {{ plan_minutes|tojson }} || 43200;
   const IS_CUSTOM = {{ price_custom|tojson }};
   const CUR = {{ cfg.currency|tojson }};
+  const BAL = {{ (sub.balance or 0)|tojson }};
+  const DEBT_DUE = Math.max(-BAL, 0);  // الرصيد السالب دين يمكن تسويته من الدفعة.
 
   function money(n){ return `${(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:2})} ${CUR}`; }
   function arDays(n){ n = Math.max(0, Math.round(n)); if(n===1) return "يوم"; if(n===2) return "يومان"; if(n>=3&&n<=10) return `${n} أيام`; return `${n} يوم`; }
   const priceLabel = IS_CUSTOM ? "السعر المخصّص" : "سعر العرض";
 
-  // open / close modals
+  // فتح وإغلاق النوافذ.
   function open(key){ const m = root.querySelector(`[data-ff-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
   function closeAll(){ root.querySelectorAll("[data-ff-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
   root.querySelectorAll("[data-ff-open]").forEach(b=> b.addEventListener("click", ()=>{ open(b.dataset.ffOpen); if(b.dataset.ffOpen==="payment") payCoverage(); if(b.dataset.ffOpen==="loan") loanSync(); }));
@@ -312,7 +324,7 @@
   root.querySelectorAll("[data-ff-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
   root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
 
-  // ── payment: live coverage + loan settlement ──
+  // معاينة الدفعة وتسوية السلف.
   const payModal = root.querySelector("[data-ff-modal='payment']");
   function payCoverage(){
     if(!payModal) return;
@@ -322,21 +334,28 @@
       action:(r.querySelector("input[type=radio]:checked")||{}).value||"defer",
     }));
     const settled = rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0);
-    const timeAmount = Math.max(amount-settled,0);
+    // دين الرصيد السالب: نخصص له جزءًا من الدفعة بعد السلف وبحد قيمة الدين.
+    const settleBalEl = payModal.querySelector("[data-ff-settle-balance]");
+    const settleBal = (settleBalEl && settleBalEl.checked) ? Math.min(Math.max(amount-settled,0), DEBT_DUE) : 0;
+    const timeAmount = Math.max(amount-settled-settleBal,0);
     const days = (EFF_PRICE>0 && PLAN_MIN>0) ? (timeAmount/EFF_PRICE)*(PLAN_MIN/1440) : 0;
     const acts = rows.filter(r=>r.action!=="defer").map(r=>({loan_id:r.id, action:r.action}));
     const field = payModal.querySelector("[data-ff-actions]"); if(field) field.value = acts.length?JSON.stringify(acts):"";
     const cov = payModal.querySelector("[data-ff-pay-coverage]");
     if(cov){
       if(amount>0 && EFF_PRICE>0){
+        const parts = [];
+        if(settled>0) parts.push(`خصم ${money(settled)} لتسوية سلف`);
+        if(settleBal>0) parts.push(`سداد دين ${money(settleBal)}`);
         let msg = `إجمالي ما سيُضاف ≈ ${arDays(days)}.`;
-        if(settled>0) msg = `سيُخصم ${money(settled)} لتسوية سلف؛ والباقي ${money(timeAmount)} → ${msg}`;
+        if(parts.length) msg = `${parts.join(" و")}؛ والباقي ${money(timeAmount)} → ${msg}`;
         cov.textContent = msg;
       } else cov.textContent = "أدخل المبلغ لعرض عدد الأيام التي يغطّيها.";
     }
   }
   payModal?.querySelector("[data-ff-pay-amount]")?.addEventListener("input", payCoverage);
   payModal?.querySelectorAll("[data-ff-loan-row] input[type=radio]").forEach(r=> r.addEventListener("change", payCoverage));
+  payModal?.querySelector("[data-ff-settle-balance]")?.addEventListener("change", payCoverage);
 
   // ── loan: free/debt + auto-price from days ──
   const loanModal = root.querySelector("[data-ff-modal='loan']");

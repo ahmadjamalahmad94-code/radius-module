@@ -142,7 +142,7 @@ def users_finance(username: str):
 
 
 def users_payment_create(username: str):
-    _subscriber(username)
+    sub = _subscriber(username)
     svc = _svc()
     actions = _parse_loan_actions()
     # Validate the amount BEFORE touching loans so we never settle a debt and
@@ -160,6 +160,14 @@ def users_payment_create(username: str):
     # Loans are only actually settled AFTER the payment succeeds — a failed
     # payment must never leave orphaned (already-settled) loans.
     settled_total = svc.settle_preview_total(actions) if actions else 0.0
+    # الرصيد السالب يعني دينًا على المشترك. إذا اختار الموظف تسويته من الدفعة،
+    # نخصم جزءًا من المبلغ بعد السلف وبحد الدين نفسه؛ والباقي فقط يشتري مدة.
+    # التنفيذ الفعلي يحدث بعد نجاح تسجيل الدفعة، مثل مسار السلف.
+    cur_balance = float(getattr(sub, "balance", 0) or 0)
+    balance_settle = 0.0
+    if _truthy("settle_balance") and cur_balance < 0:
+        remaining = max(amount_f - settled_total, 0.0)
+        balance_settle = round(min(remaining, -cur_balance), 2)
     body = {
         "username": username,
         "amount": _field("amount"),
@@ -173,6 +181,7 @@ def users_payment_create(username: str):
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
         "loan_settled_total": settled_total,
+        "balance_settled_total": balance_settle,
     }
     try:
         payment = _svc().create_payment(body, actor=_actor())
@@ -190,14 +199,25 @@ def users_payment_create(username: str):
             settled_done = float(svc.resolve_loan_actions(actions, actor=_actor()).get("settled_total") or 0)
         except RadiusError:
             settled_done = 0.0
+    # ثم نسوي دين الرصيد السالب بإرجاع الرصيد باتجاه الصفر وتسجيل قيد موازن.
+    debt_done = 0.0
+    if balance_settle > 0:
+        try:
+            debt_done = float(get_users_service().apply_payment_to_balance(
+                actor=_actor(), username=username, amount=balance_settle,
+            ))
+        except RadiusError:
+            debt_done = 0.0
     result = payment.get("activation_result") or {}
     settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
+    debt_note = f" وسداد دين بقيمة {debt_done:.2f}" if debt_done > 0 else ""
+    extra = f"{settle_note}{debt_note}"
     if result.get("dry_run"):
-        msg, cat = f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{settle_note}.", "warning"
+        msg, cat = f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{extra}.", "warning"
     elif result.get("applied_to_radius"):
-        msg, cat = f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{settle_note}.", "success"
+        msg, cat = f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{extra}.", "success"
     else:
-        msg, cat = f"تم تسجيل الدفعة في السجل المالي{settle_note}.", "success"
+        msg, cat = f"تم تسجيل الدفعة في السجل المالي{extra}.", "success"
     if _wants_json():
         return jsonify({"ok": True, "message": msg})
     flash(msg, cat)
