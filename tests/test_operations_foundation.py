@@ -486,3 +486,17 @@ def test_backup_status_and_local_run_are_non_destructive(client):
     assert payload["verified"] is True
     assert payload["run"]["status"] == "success"
     assert payload["run"]["path"].endswith(".sqlite3")
+
+
+def test_google_drive_connect_contract_returns_arabic_disabled_message(client):
+    res = client.post(
+        "/api/v1/backups/google-drive/connect",
+        json={},
+        headers=_auth(client),
+    )
+    assert res.status_code == 501
+    body = res.get_json()
+    assert body["ok"] is False
+    assert body["error"]["code"] == "not_implemented"
+    assert "غير مفعل حاليًا" in body["error"]["message"]
+    assert "OAuth is intentionally not enabled" not in body["error"]["message"]
