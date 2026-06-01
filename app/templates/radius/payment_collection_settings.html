@@ -22,7 +22,7 @@
             background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
   <i class="fa-solid fa-circle-info"></i>
   رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا. المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا،
-  ويبقى التطبيق التلقائي تجربة جافة حتى يكتمل مسار تفعيل الخدمة.
+  ويبقى التطبيق التلقائي معاينة بدون تنفيذ حتى يكتمل مسار تفعيل الخدمة.
 </div>
 
 <form method="post">
@@ -76,7 +76,7 @@
         <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}">
       </label>
       <label class="hub-field" style="margin-top:12px">
-        <span class="hub-field-label">تطبيق تلقائي <span class="small hub-text-mute">(تجربة جافة)</span></span>
+        <span class="hub-field-label">تطبيق تلقائي <span class="small hub-text-mute">(معاينة بدون تنفيذ)</span></span>
         <select class="hub-select" name="auto_apply" disabled>
           <option>معطل حتى يكتمل محرك تطبيق الخدمة</option>
         </select>

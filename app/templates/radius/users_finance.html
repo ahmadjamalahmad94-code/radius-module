@@ -53,7 +53,7 @@
             background:var(--hub-bg-soft);color:var(--hub-text-mute);line-height:1.8">
   <i class="fa-solid fa-circle-info"></i>
   هذه الصفحة تسجل الدفعات والسلف في السجل المالي. عند اختيار <strong>«تطبيق على RADIUS»</strong>
-  يتم تنفيذ مدة الاستحقاق عبر طبقة التطبيق الحالية، و<strong>«تجربة فقط»</strong> لا تغيّر حساب الشبكة.
+  يتم تنفيذ مدة الاستحقاق عبر طبقة التطبيق الحالية، و<strong>«معاينة بدون تنفيذ»</strong> لا تغيّر حساب الشبكة.
 </div>
 
 <div class="uf-grid">
@@ -95,7 +95,7 @@
       </label>
       <div class="uf-checks wide">
         {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق على RADIUS", off_label="بدون تطبيق RADIUS") }}
-        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="تجربة فقط", off_label="تنفيذ فعلي") }}
+        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="معاينة بدون تنفيذ", off_label="تنفيذ فعلي") }}
       </div>
       <div class="wide">
         <button class="hub-btn hub-btn--primary" type="submit">
@@ -130,7 +130,7 @@
       </label>
       <div class="uf-checks wide">
         {{ toggle_switch(name="apply_to_radius", checked=False, value="1", on_label="تطبيق مؤقت على RADIUS", off_label="بدون تطبيق RADIUS") }}
-        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="تجربة فقط", off_label="تنفيذ فعلي") }}
+        {{ toggle_switch(name="dry_run", checked=True, value="1", on_label="معاينة بدون تنفيذ", off_label="تنفيذ فعلي") }}
       </div>
       <div class="wide">
         <button class="hub-btn hub-btn--primary" type="submit">

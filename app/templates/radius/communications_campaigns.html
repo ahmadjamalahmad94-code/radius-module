@@ -4,13 +4,13 @@
 {% block title %}الحملات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bullseye"></i>{% endblock %}
 {% block page_title %}الحملات{% endblock %}
-{% block page_sub %}<span class="sub">حضّر حملات بتجربة جافة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("الحملات", subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات تجربة جافة.", icon="bullseye") }}
+{{ hub.hero("الحملات", subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ.", icon="bullseye") }}
 {% include "radius/communications_nav.html" %}
 
-{% call hub.section("تجهيز تجربة جافة للحملة", icon="clipboard-check") %}
+{% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
   <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <label>مفتاح الحملة <input name="campaign_key" required placeholder="renewal-may"></label>
@@ -33,8 +33,8 @@
     <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
     <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
     <label class="hub-check"><input type="checkbox" name="actions" value="record_event"> إرسال + تسجيل حدث</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> إرسال + تجربة جافة لإضافة أيام مجانية</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> إرسال + تجربة جافة لإضافة رصيد للمحفظة</label>
+    <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> إرسال + معاينة إضافة أيام مجانية بدون تنفيذ</label>
+    <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ</label>
     <button class="hub-btn hub-btn--primary" type="submit">تجهيز التجربة الجافة</button>
   </form>
 {% endcall %}

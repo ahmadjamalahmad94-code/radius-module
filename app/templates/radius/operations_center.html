@@ -13,7 +13,7 @@
   'ok': 'سليم',
   'degraded': 'متأثر',
   'blocked_until_live_approval': 'محظور حتى الاعتماد',
-  'dry_run_only': 'تجربة جافة فقط'
+  'dry_run_only': 'معاينة بدون تنفيذ'
 } %}
 {% set _action_labels = {
   'disconnect_all': 'فصل كل الجلسات',
@@ -21,7 +21,7 @@
 } %}
 {{ hub.hero(
   "مركز العمليات",
-  subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات تجربة جافة فقط. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
+  subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات معاينة آمنة بدون تنفيذ. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
   icon="gauge-high",
   actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> التحكم بالسرعة</a>'
 ) }}

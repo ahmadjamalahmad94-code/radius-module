@@ -580,7 +580,7 @@
   }
 
   async function dryRunServerPeer() {
-    writeServerPeerResult("جاري إنشاء تجربة جافة لخطة server peer...");
+    writeServerPeerResult("جاري إنشاء معاينة تنفيذ لخطة server peer...");
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
