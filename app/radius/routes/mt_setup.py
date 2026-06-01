@@ -113,6 +113,8 @@ def mt_operations():
           nd.id, nd.name, nd.address, nd.enabled, nd.ros_version,
           nd.provisioned_at, nd.last_check_status, nd.last_check_at,
           nd.connection_mode, nd.api_user, nd.api_port,
+          nd.management_tunnel_type, nd.management_tunnel_status,
+          nd.traffic_tunnel_type, nd.traffic_mode, nd.traffic_enabled,
           rpr.id              AS registry_id,
           rpr.wizard_run_id   AS wizard_run_id,
           rpr.lifecycle_state AS lifecycle_state,
@@ -176,6 +178,12 @@ def mt_operations():
             "lifecycle_color": color,
             "is_provisioning": is_provisioning,
             "failure_reason": row["failure_reason"] or "",
+            # ── VPN tunnel profile (migration 092) ──
+            "management_tunnel_type": row["management_tunnel_type"] or "none",
+            "management_tunnel_status": row["management_tunnel_status"] or "not_configured",
+            "traffic_tunnel_type": row["traffic_tunnel_type"] or "none",
+            "traffic_mode": row["traffic_mode"] or "disabled",
+            "traffic_enabled": bool(row["traffic_enabled"]),
         })
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
     # O2 — pass an api_token so the per-row counter poll JS can

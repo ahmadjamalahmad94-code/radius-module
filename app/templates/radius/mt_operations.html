@@ -14,6 +14,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "radius/network_ops_nav.html" %}
 
 {# Ensure CSRF token is in the DOM even when there are 0 routers (the
    bulk-action form below renders only when items exist). The fleet
@@ -256,6 +257,28 @@
           {% else %}
             <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
           {% endif %}
+          {# ── VPN tunnels (migration 092) — management + optional traffic ── #}
+          {% set _mtype = item.management_tunnel_type %}
+          {% set _mlabel = {'wireguard':'WireGuard','sstp_mgmt':'SSTP','direct':'مباشر'}.get(_mtype, _mtype) %}
+          {% set _scolor = {'connected':'green','pending':'amber','failed':'red','disabled':'grey'}.get(item.management_tunnel_status, 'grey') %}
+          <div data-mt-tunnels style="display:flex;flex-direction:column;gap:3px;margin-top:6px;font-size:11px">
+            {% if _mtype and _mtype != 'none' %}
+              <span title="نفق الإدارة">
+                <i class="fa-solid fa-shield-halved" style="color:#64748b"></i>
+                إدارة: <strong>{{ _mlabel }}</strong>
+                <span class="hub-pill hub-pill--{{ _scolor }}" style="font-size:10px"><span class="dot"></span>{{ item.management_tunnel_status }}</span>
+              </span>
+            {% else %}
+              <span style="color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> لا نفق إدارة مُعدّ</span>
+            {% endif %}
+            {% if item.traffic_enabled and item.traffic_tunnel_type != 'none' %}
+              <span title="نفق الترافيك (تغيير IP / توجيه)">
+                <i class="fa-solid fa-route" style="color:#7c3aed"></i>
+                ترافيك: <strong>L2TP/IPsec</strong>
+                <span class="hub-pill hub-pill--grey" style="font-size:10px"><span class="dot"></span>{{ item.traffic_mode }}</span>
+              </span>
+            {% endif %}
+          </div>
         </td>
         <td>
           {# Primary action — opens the unified Router Hub at

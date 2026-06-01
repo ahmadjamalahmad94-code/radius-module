@@ -38,21 +38,24 @@ def _sidebar(html: str) -> str:
     return html[start:end]
 
 
-def test_setup_wizard_sidebar_exposes_safe_html_pages_only(app):
+def test_setup_wizard_sidebar_shows_two_consolidated_paths(app):
+    # The five overlapping wizard links were consolidated to two clear
+    # paths (quick add + advanced). The superseded pages keep their routes
+    # but leave the sidebar.
     with app.test_client() as client:
         _auth_session(client)
-        response = client.get("/admin/radius/setup-wizard-v2")
+        response = client.get("/admin/radius/setup-wizard-v3")
         html = response.get_data(as_text=True)
 
     assert response.status_code == 200
     sidebar = _sidebar(html)
-    assert "/admin/radius/setup-wizard-v2" in sidebar
-    assert "/admin/radius/setup-wizard/fleet" in sidebar
-    assert "/admin/radius/setup-wizard" in sidebar
     assert "الإعداد والتشغيل" in sidebar
-    assert "معالج الإعداد" in sidebar
-    assert "أسطول الراوترات" in sidebar
-    assert "عرض الإعداد الهندسي" in sidebar
+    assert "إضافة راوتر (سريع)" in sidebar
+    assert "إعداد راوتر متقدم" in sidebar
+    # superseded / duplicate labels no longer in the sidebar
+    assert "معالج الإعداد" not in sidebar
+    assert "أسطول الراوترات" not in sidebar
+    assert "عرض الإعداد الهندسي" not in sidebar
 
     forbidden = (
         "server-peer/apply",
@@ -65,7 +68,8 @@ def test_setup_wizard_sidebar_exposes_safe_html_pages_only(app):
         assert token not in sidebar
 
 
-def test_setup_wizard_sidebar_linked_pages_render_html(app):
+def test_legacy_wizard_pages_still_render_for_bookmarks(app):
+    # Routes stay alive even though they left the sidebar.
     routes = [
         "/admin/radius/setup-wizard-v2",
         "/admin/radius/setup-wizard/fleet",
@@ -74,16 +78,19 @@ def test_setup_wizard_sidebar_linked_pages_render_html(app):
     with app.test_client() as client:
         _auth_session(client)
         for route in routes:
-            response = client.get(route)
-            assert response.status_code == 200
+            # Legacy bookmarks stay reachable — either they still render
+            # (200) or they redirect to their consolidated home (302, e.g.
+            # the fleet shim → router management). Following the redirect
+            # must land on a real HTML page, never a 404/500.
+            response = client.get(route, follow_redirects=True)
+            assert response.status_code == 200, route
             assert "text/html" in response.content_type
 
 
-def test_setup_wizard_active_state_uses_exact_pages(app):
+def test_consolidated_paths_active_state_is_exact(app):
     checks = [
-        ("/admin/radius/setup-wizard-v2", "معالج الإعداد"),
-        ("/admin/radius/setup-wizard/fleet", "أسطول الراوترات"),
-        ("/admin/radius/setup-wizard", "عرض الإعداد الهندسي"),
+        ("/admin/radius/mt/setup", "إضافة راوتر (سريع)"),
+        ("/admin/radius/setup-wizard-v3", "إعداد راوتر متقدم"),
     ]
     with app.test_client() as client:
         _auth_session(client)
@@ -94,5 +101,5 @@ def test_setup_wizard_active_state_uses_exact_pages(app):
                 sidebar,
                 flags=re.S,
             )
-            assert len(active_items) == 1
+            assert len(active_items) == 1, (route, len(active_items))
             assert label in active_items[0]
