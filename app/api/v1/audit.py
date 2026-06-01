@@ -50,7 +50,7 @@ def audit_list():
     try:
         limit = min(int(request.args.get("limit") or 200), 1000)
     except ValueError:
-        return fail("validation_error", "limit must be int", status=422)
+        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
 
     actor = (request.args.get("actor") or "").strip().lower()
     action = (request.args.get("action") or "").strip().lower()

@@ -40,11 +40,11 @@ def webhooks_set():
     body = request.get_json(silent=True) or {}
     url = (body.get("target_url") or "").strip()
     if url and not (url.startswith("http://") or url.startswith("https://")):
-        return fail("validation_error", "target_url يجب أن يبدأ بـ http(s)://", status=422)
+        return fail("validation_error", "رابط الاستقبال يجب أن يبدأ بـ http:// أو https://.", status=422)
     secret = (body.get("secret") or "").strip()
     events = body.get("enabled_events")
     if events is not None and not isinstance(events, list):
-        return fail("validation_error", "enabled_events يجب أن تكون list", status=422)
+        return fail("validation_error", "الأحداث المفعلة يجب أن تكون قائمة.", status=422)
     cfg = _config_store().update(target_url=url, secret=secret, enabled_events=events)
     return ok({
         "target_url": cfg.target_url,
@@ -57,7 +57,7 @@ def webhooks_test():
     from app.webhooks.dispatcher import dispatch_event
     event_id = dispatch_event(
         "webhook.test",
-        {"message": "this is a test event from HobeRadius"},
+        {"message": "هذا حدث اختبار من HobeRadius"},
     )
     return ok({"dispatched": True, "event_id": event_id})
 
@@ -86,11 +86,11 @@ def webhooks_deliveries():
 
     status = (request.args.get("status") or "").strip()
     if status and status not in {"queued", "retrying", "delivered", "failed"}:
-        return fail("validation_error", "unknown status", status=422)
+        return fail("validation_error", "حالة التسليم غير معروفة.", status=422)
     try:
         limit = min(500, max(1, int(request.args.get("limit") or 200)))
     except ValueError:
-        return fail("validation_error", "limit must be integer", status=422)
+        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
     items = webhooks_repo.list_deliveries(
         int(getattr(g, "tenant_id", 1)),
         status=status or None,

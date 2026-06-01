@@ -93,6 +93,8 @@ def test_contract_endpoints_do_not_500(client, method, path):
     assert body["ok"] is (res.status_code in {200, 201})
     if res.status_code == 501:
         assert body["error"]["code"] == "not_implemented"
+        assert "API contract is reserved" not in body["error"]["message"]
+        assert "عقد API" in body["error"]["message"]
 
 
 def test_contract_mutations_do_not_mutate_core_tables(client):

@@ -24,6 +24,25 @@ from ..auth import require_api_token
 from ..responses import fail, ok
 
 
+_PAYMENT_ERROR_MESSAGES = {
+    "amount": "المبلغ غير صالح.",
+    "currency": "العملة غير مسموحة.",
+    "purpose": "نوع طلب الدفع غير صالح.",
+    "payer_type": "نوع الدافع غير صالح.",
+    "limit": "قيمة limit يجب أن تكون رقمًا صحيحًا.",
+    "offset": "قيمة offset يجب أن تكون رقمًا صحيحًا.",
+    "payment_request": "طلب الدفع غير موجود.",
+    "status": "حالة طلب الدفع غير صالحة.",
+    "proof_type": "نوع إثبات الدفع غير صالح.",
+    "reference_number": "رقم مرجع الدفع مطلوب.",
+}
+
+
+def _payment_error_message(message: object) -> str:
+    text = str(message)
+    return _PAYMENT_ERROR_MESSAGES.get(text, text)
+
+
 def _actor() -> str:
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
 
@@ -235,7 +254,7 @@ def payment_collection_settings_patch():
         details = {}
         if message.startswith("unknown:"):
             details["unknown"] = message.replace("unknown:", "").split(",")
-            message = "unknown setting key"
+            message = "مفتاح إعداد غير معروف."
         return fail("validation_error", message, status=422, details=details)
     return ok({"settings": _settings_payload(settings)})
 
@@ -244,25 +263,25 @@ def payment_collection_requests_create():
     body = request.get_json(silent=True) or {}
     settings = PaymentSettingsRepository().get(_tid())
     if not settings or not settings.enabled:
-        return fail("payments_disabled", "payment collection is disabled", status=422)
+        return fail("payments_disabled", "تحصيل المدفوعات غير مفعل.", status=422)
     if settings.provider == "jawwal_pay":
-        return fail("provider_disabled", "Jawwal Pay provider shell is disabled", status=422)
+        return fail("provider_disabled", "مزود Jawwal Pay غير مفعل حاليًا.", status=422)
     purpose = str(body.get("purpose") or "").strip()
     if purpose not in PAYMENT_PURPOSES:
-        return fail("validation_error", "purpose", status=422)
+        return fail("validation_error", "نوع طلب الدفع غير صالح.", status=422)
     if not _purpose_enabled(settings, purpose):
-        return fail("purpose_disabled", "payment purpose is disabled", status=422)
+        return fail("purpose_disabled", "هذا النوع من الدفع غير مفعل.", status=422)
     try:
         amount = float(body.get("amount"))
     except (TypeError, ValueError):
-        return fail("validation_error", "amount", status=422)
+        return fail("validation_error", "المبلغ غير صالح.", status=422)
     if settings.min_amount is not None and amount < settings.min_amount:
-        return fail("validation_error", "amount below minimum", status=422)
+        return fail("validation_error", "المبلغ أقل من الحد الأدنى.", status=422)
     if settings.max_amount is not None and amount > settings.max_amount:
-        return fail("validation_error", "amount above maximum", status=422)
+        return fail("validation_error", "المبلغ أعلى من الحد الأقصى.", status=422)
     currency = str(body.get("currency") or settings.currency).strip()
     if currency not in CURRENCIES:
-        return fail("validation_error", "currency", status=422)
+        return fail("validation_error", "العملة غير مسموحة.", status=422)
     try:
         created = PaymentRequestRepository().create(
             tenant_id=_tid(),
@@ -277,7 +296,7 @@ def payment_collection_requests_create():
             ttl_minutes=settings.payment_request_ttl_minutes,
         )
     except ValueError as exc:
-        return fail("validation_error", str(exc), status=422)
+        return fail("validation_error", _payment_error_message(exc), status=422)
     return ok({"request": _request_payload(created)}, status=201)
 
 
@@ -292,21 +311,21 @@ def payment_collection_requests_list():
             offset=int(request.args.get("offset") or 0),
         )
     except ValueError as exc:
-        return fail("validation_error", str(exc), status=422)
+        return fail("validation_error", _payment_error_message(exc), status=422)
     return ok({"items": [_request_payload(row) for row in rows], "count": len(rows)})
 
 
 def payment_collection_requests_get(request_id: int):
     row = PaymentRequestRepository().get(_tid(), request_id)
     if not row:
-        return fail("not_found", "payment request not found", status=404)
+        return fail("not_found", "طلب الدفع غير موجود.", status=404)
     return ok({"request": _request_payload(row)})
 
 
 def payment_collection_request_instructions(request_id: int):
     row = PaymentRequestRepository().get(_tid(), request_id)
     if not row:
-        return fail("not_found", "payment request not found", status=404)
+        return fail("not_found", "طلب الدفع غير موجود.", status=404)
     settings = PaymentSettingsRepository().get(_tid())
     return ok({
         "instructions": {
@@ -316,7 +335,7 @@ def payment_collection_request_instructions(request_id: int):
             "wallet_owner_name": settings.wallet_owner_name if settings else "",
             "reference_code": row["reference_code"],
             "expires_at": row["expires_at"],
-            "instructions": "Send the exact amount to the wallet and include the reference code. Payment is not confirmed until admin review.",
+            "instructions": "أرسل المبلغ نفسه إلى المحفظة، واكتب رمز المرجع مع العملية. لا يعتمد الدفع إلا بعد مراجعة الإدارة.",
             "status": row["status"],
         }
     })
@@ -341,9 +360,9 @@ def _proof_payload(row: dict) -> dict:
 def payment_collection_submit_proof(request_id: int):
     request_row = PaymentRequestRepository().get(_tid(), request_id)
     if not request_row:
-        return fail("not_found", "payment request not found", status=404)
+        return fail("not_found", "طلب الدفع غير موجود.", status=404)
     if request_row["status"] in {"paid", "rejected", "expired", "cancelled", "failed"}:
-        return fail("invalid_state", "proof cannot be submitted for this request", status=422)
+        return fail("invalid_state", "لا يمكن إرسال إثبات دفع لهذا الطلب.", status=422)
     body = request.get_json(silent=True) or {}
     try:
         proof = PaymentProofRepository().create(
@@ -354,7 +373,7 @@ def payment_collection_submit_proof(request_id: int):
         )
         PaymentRequestRepository().update_status(_tid(), request_id, "proof_submitted")
     except ValueError as exc:
-        return fail("validation_error", str(exc), status=422)
+        return fail("validation_error", _payment_error_message(exc), status=422)
     return ok({"proof": _proof_payload(proof)}, status=201)
 
 
@@ -370,12 +389,12 @@ def payment_collection_reconciliation():
 def _reviewable_request(request_id: int):
     row = PaymentRequestRepository().get(_tid(), request_id)
     if not row:
-        return None, fail("not_found", "payment request not found", status=404)
+        return None, fail("not_found", "طلب الدفع غير موجود.", status=404)
     if row["status"] not in {"proof_submitted", "under_review"}:
-        return None, fail("invalid_state", "request is not reviewable", status=422)
+        return None, fail("invalid_state", "هذا الطلب غير قابل للمراجعة.", status=422)
     proof = PaymentProofRepository().latest_for_request(request_id)
     if not proof:
-        return None, fail("invalid_state", "no proof submitted", status=422)
+        return None, fail("invalid_state", "لم يتم إرفاق إثبات دفع.", status=422)
     return (row, proof), None
 
 
@@ -457,9 +476,9 @@ def payment_collection_apply_service(request_id: int):
     except ValueError as exc:
         message = str(exc)
         if message == "payment_request":
-            return fail("not_found", "payment request not found", status=404)
+            return fail("not_found", "طلب الدفع غير موجود.", status=404)
         if message == "status":
-            return fail("invalid_state", "only paid requests can be applied", status=422)
+            return fail("invalid_state", "لا يمكن تطبيق الخدمة إلا بعد اعتماد الدفع.", status=422)
         return fail("validation_error", message, status=422)
     updated = PaymentRequestRepository().get(_tid(), request_id)
     return ok({"request": _request_payload(updated), "apply_attempt": _apply_attempt_payload(attempt)})

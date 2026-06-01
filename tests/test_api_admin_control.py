@@ -164,3 +164,13 @@ def test_webhook_deliveries_api_does_not_return_payload_or_secret(client):
     assert item["event"] == "webhook.test"
     assert "payload" not in item
     assert "secret" not in item
+
+    bad_limit = client.get("/api/v1/webhooks/deliveries?limit=abc", headers=AUTH)
+    assert bad_limit.status_code == 422
+    assert bad_limit.get_json()["error"]["message"] == "قيمة limit يجب أن تكون رقمًا صحيحًا."
+    assert "limit must be integer" not in bad_limit.get_json()["error"]["message"]
+
+    bad_status = client.get("/api/v1/webhooks/deliveries?status=bad", headers=AUTH)
+    assert bad_status.status_code == 422
+    assert bad_status.get_json()["error"]["message"] == "حالة التسليم غير معروفة."
+    assert "unknown status" not in bad_status.get_json()["error"]["message"]

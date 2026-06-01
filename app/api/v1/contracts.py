@@ -1,7 +1,6 @@
-"""Helpers for customer-roadmap API contracts.
+"""مساعدات عقود API لخارطة العملاء.
 
-Contract endpoints reserve stable API surfaces while refusing to fake business
-work that is not implemented yet.
+هذه المسارات تثبّت شكل API المستقبلي بدون ادعاء أن التنفيذ التجاري جاهز.
 """
 from __future__ import annotations
 
@@ -46,10 +45,7 @@ def contract_view(
     planned_slice: str,
     required_work: list[str] | None = None,
 ) -> Callable:
-    message = (
-        f"{domain} API contract is reserved for the upcoming "
-        f"{planned_slice} slice."
-    )
+    message = f"عقد API الخاص بـ {domain} محجوز لشريحة {planned_slice} القادمة."
 
     def _view(**_route_values):
         return not_implemented_contract(

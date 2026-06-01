@@ -96,6 +96,8 @@ def test_create_request_fails_when_payments_disabled(client):
     )
     assert response.status_code == 422
     assert response.get_json()["error"]["code"] == "payments_disabled"
+    assert response.get_json()["error"]["message"] == "تحصيل المدفوعات غير مفعل."
+    assert "payment collection is disabled" not in response.get_json()["error"]["message"]
 
 
 def test_create_request_fails_when_purpose_disabled(client):
@@ -107,6 +109,7 @@ def test_create_request_fails_when_purpose_disabled(client):
     )
     assert response.status_code == 422
     assert response.get_json()["error"]["code"] == "purpose_disabled"
+    assert response.get_json()["error"]["message"] == "هذا النوع من الدفع غير مفعل."
 
 
 @pytest.mark.parametrize(
@@ -121,6 +124,11 @@ def test_create_request_rejects_invalid_amount_or_currency(client, payload):
     response = client.post("/api/v1/payments/requests", json=payload, headers=_auth())
     assert response.status_code == 422
     assert response.get_json()["error"]["code"] == "validation_error"
+    assert response.get_json()["error"]["message"] in {
+        "المبلغ غير صالح.",
+        "المبلغ أقل من الحد الأدنى.",
+        "العملة غير مسموحة.",
+    }
 
 
 def test_instructions_endpoint_exposes_safe_fields_only(client):
@@ -148,6 +156,8 @@ def test_instructions_endpoint_exposes_safe_fields_only(client):
         "status",
     }
     assert "created_by" not in instructions
+    assert "Send the exact amount" not in instructions["instructions"]
+    assert "أرسل المبلغ نفسه" in instructions["instructions"]
 
 
 def test_request_list_filters(client):
@@ -171,4 +181,3 @@ def test_request_list_filters(client):
     data = response.get_json()["data"]
     assert data["count"] == 1
     assert data["items"][0]["purpose"] == "card_purchase"
-

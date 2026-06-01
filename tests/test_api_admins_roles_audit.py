@@ -246,5 +246,10 @@ def test_audit_list_returns_recent_events(client, auth_headers):
         )
         filtered = res.get_json()["data"]["items"]
         assert all(it["target_type"] == "admin" for it in filtered)
+
+        bad_limit = client.get("/api/v1/audit?limit=abc", headers=auth_headers)
+        assert bad_limit.status_code == 422
+        assert bad_limit.get_json()["error"]["message"] == "قيمة limit يجب أن تكون رقمًا صحيحًا."
+        assert "limit must be int" not in bad_limit.get_json()["error"]["message"]
     finally:
         client.delete(f"/api/v1/admins/{aid}", headers=auth_headers)
