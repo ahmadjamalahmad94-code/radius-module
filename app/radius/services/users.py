@@ -376,15 +376,40 @@ class UsersService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_RESET_PASSWORD,
                            target_type="user", target_id=username)
 
-    def extend_time(self, *, actor: str, username: str, minutes: int) -> Subscriber:
+    def extend_time(self, *, actor: str, username: str, minutes: int,
+                    charge_mode: str = "free", amount: float = 0.0,
+                    currency: str = "", notes: str = "") -> Subscriber:
         if minutes <= 0:
             raise RadiusValidationError("minutes > 0 required")
+        currency = currency or default_currency()
+        if charge_mode not in {"free", "paid", "debt"}:
+            raise RadiusValidationError("unknown extend charge mode")
+        if charge_mode in {"paid", "debt"} and amount <= 0:
+            raise RadiusValidationError("amount must be > 0")
         u = self._adapter.get_account(username)
         new_exp = (u.expire_at or datetime.utcnow()) + timedelta(minutes=minutes)
-        saved = self._adapter.upsert_account(replace(u, expire_at=new_exp))
+        new_balance = float(u.balance or 0)
+        if charge_mode == "debt":
+            new_balance -= float(amount)
+        saved = self._adapter.upsert_account(replace(u, expire_at=new_exp, balance=new_balance))
+        if charge_mode in {"paid", "debt"}:
+            _record_subscriber_ledger(
+                actor=actor,
+                subscriber=saved,
+                entry_type="time_extension" if charge_mode == "paid" else "debt",
+                direction="credit" if charge_mode == "paid" else "debit",
+                amount=float(amount),
+                currency=currency,
+                source_type="subscriber_time_extension",
+                notes=notes or ("إضافة وقت مدفوعة" if charge_mode == "paid"
+                                else "إضافة وقت على الدين"),
+                metadata={"minutes": minutes, "charge_mode": charge_mode},
+            )
         self._audit.record(actor=actor, action="extend_time",
                            target_type="user", target_id=username,
-                           payload={"minutes": minutes, "new_expire_at": new_exp.isoformat()})
+                           payload={"minutes": minutes, "new_expire_at": new_exp.isoformat(),
+                                    "charge_mode": charge_mode,
+                                    "amount": float(amount) if charge_mode in {"paid", "debt"} else 0})
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:

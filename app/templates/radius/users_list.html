@@ -794,6 +794,11 @@
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
+        <div class="usq-current">
+          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
+          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+        </div>
         <div class="usq-form-grid">
           <label class="usq-field">أيام
             <input class="hub-input" type="number" min="0" value="1" data-usq-days>
@@ -802,6 +807,39 @@
             <input class="hub-input" type="number" min="0" max="23" value="0" data-usq-hours>
           </label>
         </div>
+        <div class="usq-field wide" style="margin-top:2px">طريقة الإضافة
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-usq-charge-seg="free" class="is-active">
+              <i class="fa-solid fa-gift usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <span><strong>مجاني</strong><small>إضافة وقت بدون مقابل مالي.</small></span>
+            </label>
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+            </label>
+            <label data-usq-charge-seg="debt">
+              <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
+              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+            </label>
+          </div>
+          <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
+            إضافة وقت مجانية بدون أي قيمة مالية.
+          </div>
+        </div>
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
+          <label class="usq-field">السعر (يُحتسب تلقائيًا)
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-extend-amount readonly title="سعر الوقت المُضاف حسب سعر العرض/المخصّص">
+          </label>
+          <label class="usq-field">العملة
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          </label>
+        </div>
+        <label class="usq-field wide">ملاحظات
+          <textarea class="hub-textarea" name="notes" rows="2"></textarea>
+        </label>
       </div>
       <div class="usq-foot">
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
@@ -1277,9 +1315,15 @@
           paid: "استعادة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
           debt: "استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
         },
+        "extend": {
+          free: "إضافة وقت مجانية بدون أي قيمة مالية.",
+          paid: "وقت مدفوع — يدفع المشترك قيمته نقدًا وتُسجَّل دائنة في سجل القيود.",
+          debt: "وقت على الدين — تُسجَّل قيمته كدين (مدين) على رصيد المشترك.",
+        },
       };
       hint.textContent = (hintMaps[scope] || hintMaps.quota)[mode];
     }
+    if (scope === "extend") syncExtendAmount();
   }
   // «منح سلفة» — debt loans are priced from DAYS: amount = effective price ×
   // (duration / plan duration). The amount field is read-only (auto), and a live
@@ -1309,6 +1353,31 @@
     } else {
       hint.textContent = "حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا حسب سعر العرض/المخصّص.";
     }
+  }
+
+  // «إضافة وقت» — price the added time from its duration when paid/debt.
+  function syncExtendAmount() {
+    const modal = page.querySelector("[data-usq-modal='extend']");
+    if (!modal || !activeRow) return;
+    const days = Math.max(0, parseInt(modal.querySelector("[data-usq-days]")?.value || "0", 10));
+    const hours = Math.max(0, parseInt(modal.querySelector("[data-usq-hours]")?.value || "0", 10));
+    const minutes = days * 1440 + hours * 60;
+    const price = parseFloat(activeRow.dataset.planPrice || "0");
+    const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
+    const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
+    const amount = (price > 0 && planMin > 0 && minutes > 0)
+      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amtField = modal.querySelector("[data-usq-extend-amount]");
+    if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";
+    const mode = modal.querySelector("input[name='charge_mode']:checked")?.value || "free";
+    if (mode === "free") return;
+    const hint = modal.querySelector("[data-usq-charge-hint]");
+    if (!hint) return;
+    const isCustom = activeRow.dataset.planCustom === "1";
+    const priceLabel = isCustom ? "السعر المخصّص" : "سعر العرض";
+    hint.textContent = amount > 0
+      ? `سعر الوقت المُضاف ${fmtMoney(amount, cur)} (حسب ${priceLabel} ${fmtMoney(price, cur)}).`
+      : "حدّد المدة لاحتساب السعر تلقائيًا حسب سعر العرض/المخصّص.";
   }
 
   function syncLoanPolicy() {
@@ -1484,7 +1553,7 @@
     const form = modal.querySelector("form[data-action-template]");
     if (form) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
     if (key === "plan") updatePlanPolicy();
-    if (key === "extend") updateMinutes();
+    if (key === "extend") { updateMinutes(); syncChargeMode("extend"); }
     if (key === "balance") updateBalanceCoverage();
     if (key === "quota") syncChargeMode("quota");
     if (key === "quota-reset") syncChargeMode("quota-reset");
@@ -1566,7 +1635,7 @@
   });
   page.querySelector("[data-usq-plan-select]")?.addEventListener("change", updatePlanPolicy);
   page.querySelectorAll("[data-usq-days], [data-usq-hours]").forEach((input) => {
-    input.addEventListener("input", updateMinutes);
+    input.addEventListener("input", () => { updateMinutes(); syncExtendAmount(); });
   });
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);

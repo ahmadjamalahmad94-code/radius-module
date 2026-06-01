@@ -399,6 +399,95 @@ def test_quota_reset_route_reads_charge_mode(client, app):
         assert float(updated.balance) == -6.0
 
 
+def test_extend_time_debt_reduces_balance_and_records_ledger(app):
+    with app.app_context():
+        plan = _seed_plan("Extend Debt Plan", price=30)
+        _seed_subscriber(
+            "extend_debt",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=2),
+        )
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        db().execute("UPDATE subscribers SET balance=0 WHERE tenant_id=1 AND username='extend_debt'")
+        get_users_service().extend_time(
+            actor="tester", username="extend_debt", minutes=1440,
+            charge_mode="debt", amount=2.5, currency="JOD",
+        )
+        updated = subscribers_repo.get_subscriber(1, "extend_debt")
+        debt = db().execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id=1 "
+            "AND username='extend_debt' AND source_type='subscriber_time_extension'"
+        ).fetchone()
+
+        assert updated.balance == -2.5
+        assert debt is not None and debt["entry_type"] == "debt" and debt["direction"] == "debit"
+
+
+def test_extend_time_paid_records_credit_without_touching_balance(app):
+    with app.app_context():
+        plan = _seed_plan("Extend Paid Plan", price=30)
+        _seed_subscriber(
+            "extend_paid",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=2),
+        )
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        db().execute("UPDATE subscribers SET balance=0 WHERE tenant_id=1 AND username='extend_paid'")
+        get_users_service().extend_time(
+            actor="tester", username="extend_paid", minutes=720,
+            charge_mode="paid", amount=1.5, currency="JOD",
+        )
+        updated = subscribers_repo.get_subscriber(1, "extend_paid")
+        entry = db().execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id=1 "
+            "AND username='extend_paid' AND source_type='subscriber_time_extension'"
+        ).fetchone()
+
+        assert updated.balance == 0  # cash paid → balance unchanged
+        assert entry is not None and entry["entry_type"] == "time_extension" and entry["direction"] == "credit"
+
+
+def test_extend_time_free_is_backward_compatible(app):
+    with app.app_context():
+        plan = _seed_plan("Extend Free Plan", price=30)
+        _seed_subscriber(
+            "extend_free",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=2),
+        )
+        from app.radius.db.connection import db
+        from app.radius.services.users import get_users_service
+
+        get_users_service().extend_time(actor="tester", username="extend_free", minutes=1440)
+        entry = db().execute(
+            "SELECT COUNT(*) AS c FROM accounting_ledger_entries WHERE tenant_id=1 "
+            "AND username='extend_free' AND source_type='subscriber_time_extension'"
+        ).fetchone()
+        assert int(entry["c"]) == 0  # free extend posts no ledger entry
+
+
+def test_add_time_modal_has_pricing_and_billing(client, app):
+    with app.app_context():
+        plan = _seed_plan("Extend UI Plan", price=30)
+        _seed_subscriber(
+            "extend_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=2),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    extend_modal = html.split('data-usq-modal="extend"', 1)[1].split('data-usq-modal="sms"', 1)[0]
+    assert 'name="charge_mode"' in extend_modal
+    assert "data-usq-extend-amount" in extend_modal
+    assert "مدفوع — دين" in extend_modal
+
+
 def test_quota_reset_uses_floating_modal_not_native_confirm(client, app):
     with app.app_context():
         plan = _seed_plan("Quota Reset UI Plan", price=20)
