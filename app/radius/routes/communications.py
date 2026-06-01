@@ -238,7 +238,7 @@ def communications_campaigns():
                 actions=actions,
                 actor=_actor(),
             )
-            flash("تم تجهيز تجربة جافة للحملة. لم يتم إرسال أي رسالة خارجية.", "success")
+            flash("تم تجهيز معاينة الحملة. لم يتم إرسال أي رسالة خارجية.", "success")
         except (NotificationCampaignError, ValueError) as exc:
             flash(str(exc), "error")
     return render_template(

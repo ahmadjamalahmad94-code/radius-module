@@ -53,7 +53,7 @@ class SetupWizardLabPolicyEngine:
         if not operations:
             blocking.append(_reason("no_dry_run", "طابور التجربة الجافة مطلوب قبل التطبيق."))
         elif not all(op.get("status") == OP_STATUS_DRY_RUN_READY for op in operations):
-            blocking.append(_reason("no_dry_run", "كل العمليات يجب أن تكون جاهزة كتجربة جافة قبل تطبيق المختبر."))
+            blocking.append(_reason("no_dry_run", "كل العمليات يجب أن تكون جاهزة كمعاينة بدون تنفيذ قبل تطبيق المختبر."))
 
         rollback_ops = [op for op in operations if str(op.get("rollback_command") or "").strip()]
         if require_rollback and not rollback_ops:

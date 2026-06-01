@@ -140,7 +140,7 @@ class OperationsSpeedCenterService:
             category="system",
             severity="info",
             event_key="speed_control.dry_run_saved",
-            message="تم حفظ سياسة سرعة كتجربة جافة بدون تطبيق مباشر على RADIUS",
+            message="تم حفظ سياسة سرعة كمعاينة بدون تطبيق مباشر على RADIUS",
             actor_type="admin",
             target_type="speed_control_policy",
             metadata={"preset": preset, "applied_to_radius": False},

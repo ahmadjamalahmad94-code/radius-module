@@ -35,12 +35,12 @@
     <label class="hub-check"><input type="checkbox" name="actions" value="record_event"> إرسال + تسجيل حدث</label>
     <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> إرسال + معاينة إضافة أيام مجانية بدون تنفيذ</label>
     <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ</label>
-    <button class="hub-btn hub-btn--primary" type="submit">تجهيز التجربة الجافة</button>
+    <button class="hub-btn hub-btn--primary" type="submit">تجهيز المعاينة</button>
   </form>
 {% endcall %}
 
 {% if campaign %}
-  {% call hub.section("نتيجة التجربة الجافة", icon="circle-info") %}
+  {% call hub.section("نتيجة المعاينة", icon="circle-info") %}
     <div data-testid="campaign-dry-run-result">
       <p>المستلمون: {{ campaign.dry_run.recipient_count }}</p>
       <p>إرسال خارجي: {{ campaign.dry_run.external_send }}</p>

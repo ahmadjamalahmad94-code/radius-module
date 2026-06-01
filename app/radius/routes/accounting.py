@@ -106,7 +106,7 @@ def users_payment_create(username: str):
         payment = _svc().create_payment(body, actor=_actor())
         result = payment.get("activation_result") or {}
         if result.get("dry_run"):
-            flash("تم تسجيل الدفعة كتجربة فقط بدون تطبيق على RADIUS.", "warning")
+            flash("تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS.", "warning")
         elif result.get("applied_to_radius"):
             flash("تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب.", "success")
         else:
@@ -133,7 +133,7 @@ def users_loan_create(username: str):
         loan = _svc().create_loan(body, actor=_actor())
         result = loan.get("activation_result") or {}
         if result.get("dry_run"):
-            flash("تم تسجيل السلفة كتجربة فقط بدون تطبيق على RADIUS.", "warning")
+            flash("تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS.", "warning")
         elif result.get("applied_to_radius"):
             flash("تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة.", "success")
         else:

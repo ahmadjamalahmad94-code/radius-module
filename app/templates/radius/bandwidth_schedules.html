@@ -33,7 +33,7 @@
 
 {{ hub.hero(
   "جدولة السرعات",
-  subtitle="خطط تغيير سرعة حسب الوقت — التطبيق الفعلي على RADIUS غير مباشر في هذه المرحلة",
+  subtitle="خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على RADIUS",
   icon="clock"
 ) }}
 
@@ -41,8 +41,7 @@
             border-radius:var(--hub-r-lg);border:1px solid var(--hub-amber);
             background:var(--hub-amber-soft);color:var(--hub-amber-ink);line-height:1.8">
   <i class="fa-solid fa-circle-info"></i>
-  هذه الصفحة تحفظ جداول السرعة وتتحقق منها فقط. زر التطبيق الحالي يسجّل تجربة تطبيق
-  ولا يغيّر RADIUS فعليًا: <strong>applied_to_radius = false</strong>.
+  هذه الصفحة تحفظ جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا يغيّر السرعة فعليًا على RADIUS، بل يعرض نتيجة مراجعة آمنة للمشغل.
 </div>
 
 <div class="bs-grid">
@@ -218,7 +217,7 @@
                 <td>
                   <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}">
                     <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                      <i class="fa-solid fa-vial"></i> تجربة تطبيق
+                      <i class="fa-solid fa-shield-halved"></i> فحص الجاهزية
                     </button>
                     <div class="small" style="margin-top:4px">
                       {{ hub.pill("لا يطبق على RADIUS", variant="amber", dot=False) }}

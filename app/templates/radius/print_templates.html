@@ -558,7 +558,7 @@
                   style="margin:0">
               <button type="submit" class="hub-btn"
                       title="يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.">
-                <i class="fa-solid fa-broom"></i> تنظيف القوالب التجريبية
+                <i class="fa-solid fa-broom"></i> تنظيف القوالب المؤقتة
               </button>
             </form>
           </div>
@@ -1852,7 +1852,7 @@
         const jobBase = selectedExportTemplateId && EXPORT_JOB_URL_TEMPLATE
           ? urlForTemplate(EXPORT_JOB_URL_TEMPLATE, selectedExportTemplateId)
           : '';
-        if(!jobBase) throw new Error('تعذر بدء مهمة التصدير التجريبية.');
+        if(!jobBase) throw new Error('تعذر بدء مهمة معاينة التصدير.');
         const jobBody = exportJobBody();
         const jobResponse = await fetch(jobBase, {
           method: 'POST',

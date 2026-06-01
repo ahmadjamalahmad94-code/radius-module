@@ -44,7 +44,7 @@ def operations_speed_control():
                     profile_ids=profile_ids,
                     actor=_actor(),
                 )
-                flash("تم حفظ سياسة السرعة كتجربة جافة. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.", "success")
+                flash("تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.", "success")
                 return redirect(url_for("radius.operations_speed_control", policy_id=policy["id"]))
             preview = svc.speed_preview(preset=preset, multiplier=multiplier, profile_ids=profile_ids)
         except (OperationsSpeedError, ValueError) as exc:

@@ -45,7 +45,7 @@ def contract_view(
     planned_slice: str,
     required_work: list[str] | None = None,
 ) -> Callable:
-    message = f"عقد API الخاص بـ {domain} محجوز لشريحة {planned_slice} القادمة."
+    message = f"عقد API الخاص بـ {domain} غير مفعّل لهذا المسار."
 
     def _view(**_route_values):
         return not_implemented_contract(

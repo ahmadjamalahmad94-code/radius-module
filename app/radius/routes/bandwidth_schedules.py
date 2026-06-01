@@ -162,7 +162,7 @@ def bandwidth_schedules_apply(schedule_id: int):
         if result.get("applied_to_radius"):
             flash("تم تطبيق الجدول على RADIUS.", "success")
         else:
-            flash("تم تنفيذ تجربة تطبيق فقط. لم يتم تغيير السرعة فعليًا على RADIUS.", "warning")
+            flash("تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS.", "warning")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(url_for("radius.bandwidth_schedules"))

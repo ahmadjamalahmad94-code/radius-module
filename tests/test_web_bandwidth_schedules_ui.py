@@ -76,7 +76,8 @@ def test_bandwidth_schedules_create_and_apply_dry_run(client):
     page = client.get("/admin/radius/bandwidth-schedules")
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert "applied_to_radius = false" in html
+    assert "فحص الجاهزية" in html
+    assert "applied_to_radius = false" not in html
 
     token = _csrf(client, "/admin/radius/bandwidth-schedules")
     created = client.post(
@@ -115,7 +116,8 @@ def test_bandwidth_schedules_create_and_apply_dry_run(client):
     assert applied.status_code == 200
     applied_html = applied.get_data(as_text=True)
     assert "Night speed window" in applied_html
-    assert "applied_to_radius = false" in applied_html
+    assert "فحص الجاهزية" in applied_html
+    assert "applied_to_radius = false" not in applied_html
 
 
 def test_card_batch_edit_embeds_speed_rule_creator(client):
