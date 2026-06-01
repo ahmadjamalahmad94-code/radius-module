@@ -123,6 +123,13 @@
   }
   .usq-loan-acts label:has(input:checked){ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
   .usq-loan-acts input{ position:absolute; opacity:0; width:0; height:0; }
+  /* SMS ready-template chips */
+  .usq-sms-tpls{ display:flex; flex-wrap:wrap; gap:6px; }
+  .usq-sms-tpl{
+    padding:5px 11px; border:1px solid var(--hub-border); border-radius:999px;
+    background:#fff; color:var(--hub-text-soft); font-size:12px; font-weight:800; cursor:pointer;
+  }
+  .usq-sms-tpl:hover{ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
   @media (max-width: 780px){
     .usq-panel{ align-items:flex-start; flex-direction:column; }
     .usq-actions{ justify-content:flex-start; }
@@ -881,8 +888,17 @@
           <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
           <div><span>ينتهي</span><strong data-usq-current="expire">—</strong></div>
         </div>
+        <div class="usq-field wide">قوالب جاهزة — اضغط لتعبئة الرسالة
+          <div class="usq-sms-tpls" style="margin-top:4px">
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="أهلاً {username} 👋 تم تفعيل اشتراكك بنجاح. نشكر ثقتك بنا، وأي استفسار نحن بخدمتك.">ترحيب</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، اشتراكك ({plan}) ينتهي بتاريخ {expire}. يُرجى التجديد لتفادي انقطاع الخدمة.">تذكير انتهاء</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="تم استلام دفعتك وتجديد اشتراكك بنجاح ✅ شكرًا لك.">تأكيد دفعة</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، لديكم مستحقات على الاشتراك. يُرجى المراجعة لتسوية الحساب. شكرًا.">تذكير سداد</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="إشعار صيانة: سنعمل على تحسين الشبكة وقد تنقطع الخدمة مؤقتًا. نعتذر عن الإزعاج.">صيانة</button>
+          </div>
+        </div>
         <label class="usq-field">نص الرسالة
-          <textarea class="hub-textarea" name="message" rows="4" required placeholder="اكتب نص الرسالة هنا"></textarea>
+          <textarea class="hub-textarea" name="message" rows="4" required placeholder="اكتب نص الرسالة هنا أو اختر قالبًا"></textarea>
         </label>
       </div>
       <div class="usq-foot">
@@ -1722,6 +1738,19 @@
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
   page.querySelector("[data-usq-modal='payment'] [name='amount']")?.addEventListener("input", () => syncMoneyCoverage("payment"));
+  // SMS ready templates — fill the message, substituting the active subscriber.
+  page.querySelectorAll("[data-sms-tpl]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ta = page.querySelector("[data-usq-modal='sms'] [name='message']");
+      if (!ta) return;
+      const d = (activeRow && activeRow.dataset) || {};
+      ta.value = (btn.dataset.smsTpl || "")
+        .replace(/\{username\}/g, d.username || "")
+        .replace(/\{expire\}/g, d.expire || "")
+        .replace(/\{plan\}/g, d.planName || "");
+      ta.focus();
+    });
+  });
   page.querySelectorAll("[data-usq-charge-input]").forEach((input) =>
     input.addEventListener("change", () => {
       const scope = input.closest("[data-usq-modal]")?.dataset.usqModal || "quota";
