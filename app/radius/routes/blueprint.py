@@ -255,6 +255,9 @@ def _register_all(bp: Blueprint) -> None:
     from .overviews import register_overview_routes
     register_overview_routes(bp)
 
+    from .subscribers_overview import register_subscribers_overview_routes
+    register_subscribers_overview_routes(bp)
+
     from .share_groups import register_share_groups_routes
     register_share_groups_routes(bp)
 

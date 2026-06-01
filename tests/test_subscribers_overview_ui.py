@@ -8,6 +8,7 @@ monthly + yearly only, and links every detail out to the Finance section.
 from __future__ import annotations
 
 import secrets
+from uuid import uuid4
 
 import pytest
 
@@ -130,3 +131,80 @@ def test_top_debtors_lists_open_loan_holders(client):
     assert match, "subscriber with an open loan should appear in top_debtors"
     assert match[0]["open_loans_total"] >= 8
     assert match[0]["subscriber_id"]
+
+
+# ───────────────────────── page / route UI ─────────────────────────
+
+
+def _web_login(client) -> None:
+    from app.radius.db.repos import admins_repo
+
+    username = f"sov_web_{uuid4().hex[:10]}"
+    password = "sov-web-pass"
+    admins_repo.create_admin(
+        username=username,
+        password=password,
+        full_name="Subscribers Overview Tester",
+        is_super_admin=True,
+    )
+    res = client.post(
+        "/admin/radius/login",
+        data={"username": username, "password": password},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+
+
+def test_overview_endpoint_registered(app):
+    assert "radius.subscribers_overview" in app.view_functions
+
+
+def test_overview_route_is_login_guarded(client):
+    res = client.get("/admin/radius/subscribers/overview", follow_redirects=False)
+    assert res.status_code in {302, 303}
+    assert "/admin/radius/login" in res.headers.get("Location", "")
+
+
+def test_overview_page_renders_rtl_and_monthly_yearly_only(client):
+    _web_login(client)
+    res = client.get("/admin/radius/subscribers/overview")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'dir="rtl"' in html
+    assert "نظرة عامة" in html
+    # monthly + yearly toggle present
+    assert "شهري" in html and "سنوي" in html
+    # daily/weekly grains are deliberately dropped — only these two toggle links exist
+    # (scoped to the page's own period options; the chrome may use يومي/أسبوعي elsewhere)
+    assert "period=monthly" in html
+    assert "period=yearly" in html
+    assert "period=daily" not in html
+    assert "period=weekly" not in html
+    # the requested buckets are all surfaced
+    for label in ("المُحصّل", "السلف", "التفعيل", "الجيجات", "شو ضل"):
+        assert label in html, f"missing bucket label: {label}"
+
+
+def test_overview_period_param_honored_and_falls_back(client):
+    _web_login(client)
+    for period in ("monthly", "yearly"):
+        res = client.get(f"/admin/radius/subscribers/overview?period={period}")
+        assert res.status_code == 200
+    # invalid grain → silently falls back to monthly (200, no traceback)
+    res = client.get("/admin/radius/subscribers/overview?period=daily")
+    assert res.status_code == 200
+
+
+def test_overview_has_finance_drilldown_links(client):
+    _web_login(client)
+    res = client.get("/admin/radius/subscribers/overview")
+    html = res.get_data(as_text=True)
+    assert "/finance/debts" in html
+    assert "/finance/loans" in html
+
+
+def test_overview_sidebar_links_to_page(client):
+    _web_login(client)
+    res = client.get("/admin/radius/subscribers/overview")
+    html = res.get_data(as_text=True)
+    assert "/subscribers/overview" in html

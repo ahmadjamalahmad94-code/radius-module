@@ -1,0 +1,204 @@
+/* ════════════════════════════════════════════════════════════════════
+   Subscribers Overview — scoped styles (.so-*)
+   Mirrors cards_overview's violet/slate language. No chart library:
+   sparklines are CSS bars; everything RTL-safe via logical properties.
+   ════════════════════════════════════════════════════════════════════ */
+
+.subs-overview{ display:grid; gap:14px; }
+
+/* ── Mega-hero ── */
+.so-hero{
+  position:relative;
+  display:grid; gap:16px;
+  padding:18px 20px;
+  border-radius:18px;
+  background:
+    radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.10) 0%, transparent 60%),
+    linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+  border:1px solid var(--hub-border-soft, #e2e8f0);
+  box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
+  overflow:hidden;
+}
+.so-hero-row{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap;
+}
+.so-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+.so-hero-icon{
+  width:46px; height:46px; flex:0 0 auto;
+  border-radius:13px;
+  background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+  color:#fff; display:grid; place-items:center; font-size:19px;
+  box-shadow:0 6px 16px rgba(124,58,237,.32);
+}
+.so-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text, #0f172a); }
+.so-hero-sub{ margin-top:4px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.7; }
+.so-hero-chip{
+  display:inline-flex; align-items:center; gap:5px;
+  margin-inline-start:8px; padding:2px 9px;
+  border:1px solid #ddd6fe; border-radius:999px;
+  background:#f5f3ff; color:#5b21b6; font-size:12px; font-weight:800;
+}
+
+/* ── Period toggle (monthly / yearly only) ── */
+.so-hero-toggle{
+  display:inline-flex; gap:4px; padding:4px;
+  border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
+}
+.so-seg{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:8px 16px; border-radius:9px;
+  color:#475569; font-size:13px; font-weight:800; text-decoration:none;
+  transition:background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.so-seg:hover{ color:#5b21b6; background:#f5f3ff; }
+.so-seg.is-active{
+  color:#fff;
+  background:linear-gradient(135deg, #7c3aed, #5b21b6);
+  box-shadow:0 6px 16px rgba(124,58,237,.30);
+}
+
+/* ── دخل + صرف flow row ── */
+.so-flow{
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;
+}
+.so-flow-item{
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border-radius:12px; border:1px solid #e2e8f0; background:#fff;
+}
+.so-flow-icon{
+  width:40px; height:40px; flex:0 0 auto; display:grid; place-items:center;
+  border-radius:10px; font-size:17px;
+}
+.so-flow-item--in .so-flow-icon{ background:#ecfdf5; color:#15803d; }
+.so-flow-item--out .so-flow-icon{ background:#fff7ed; color:#b45309; }
+.so-flow-label{ color:#64748b; font-size:12px; font-weight:800; }
+.so-flow-value{ direction:ltr; color:#0f172a; font-size:22px; font-weight:950; white-space:nowrap; }
+
+/* ── KPI strip ── */
+.so-hero-kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:10px;
+  padding-top:16px;
+  border-top:1px solid var(--hub-border-soft, #e2e8f0);
+}
+
+/* ── Period board: 4 lanes with CSS-bar sparklines ── */
+.so-board{
+  display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:0;
+  border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; background:#fff;
+}
+.so-lane{
+  position:relative; display:grid; gap:10px; min-width:0;
+  padding:16px; border-inline-start:1px solid #eef2f7;
+}
+.so-lane:first-child{ border-inline-start:0; }
+.so-lane::before{
+  content:""; position:absolute; inset-block:0; inset-inline-start:0; width:3px; opacity:.85;
+}
+.so-lane--brand::before{ background:linear-gradient(180deg,#7c3aed,#5b21b6); }
+.so-lane--amber::before{ background:linear-gradient(180deg,#f59e0b,#b45309); }
+.so-lane--blue::before{ background:linear-gradient(180deg,#3b82f6,#1d4ed8); }
+.so-lane--green::before{ background:linear-gradient(180deg,#22c55e,#15803d); }
+.so-lane-head{ display:flex; align-items:center; gap:8px; }
+.so-lane-icon{
+  width:30px; height:30px; display:grid; place-items:center; border-radius:8px;
+  font-size:14px;
+}
+.so-lane--brand .so-lane-icon{ background:#f5f3ff; color:#5b21b6; }
+.so-lane--amber .so-lane-icon{ background:#fffbeb; color:#b45309; }
+.so-lane--blue  .so-lane-icon{ background:#eff6ff; color:#1d4ed8; }
+.so-lane--green .so-lane-icon{ background:#f0fdf4; color:#15803d; }
+.so-lane-title{ color:#334155; font-size:13px; font-weight:900; }
+.so-lane-value{ direction:ltr; text-align:right; color:#0f172a; font-size:24px; font-weight:950; line-height:1.05; white-space:nowrap; }
+.so-lane-sub{ color:#64748b; font-size:12px; font-weight:700; line-height:1.5; }
+
+.so-spark{
+  display:flex; align-items:flex-end; gap:3px; height:64px;
+  padding:6px; border:1px solid #eef2f7; border-radius:8px; background:#fbfdff;
+}
+.so-spark-bar{
+  flex:1 1 0; min-height:2px; border-radius:3px 3px 0 0;
+  background:#cbd5e1; transition:background .18s ease;
+}
+.so-lane--brand .so-spark-bar{ background:linear-gradient(180deg,#a78bfa,#7c3aed); }
+.so-lane--amber .so-spark-bar{ background:linear-gradient(180deg,#fbbf24,#d97706); }
+.so-lane--blue  .so-spark-bar{ background:linear-gradient(180deg,#60a5fa,#2563eb); }
+.so-lane--green .so-spark-bar{ background:linear-gradient(180deg,#4ade80,#16a34a); }
+.so-spark-empty{ margin:auto; color:#94a3b8; font-size:12px; font-weight:800; }
+.so-spark-axis{
+  display:flex; gap:3px; padding-inline:6px;
+}
+.so-spark-axis span{
+  flex:1 1 0; text-align:center; direction:ltr;
+  color:#94a3b8; font-size:10px; font-weight:700;
+  overflow:hidden; white-space:nowrap;
+}
+
+/* ── Finance drill-down link ── */
+.so-flink{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 10px; border:1px solid #cbd5e1; border-radius:8px;
+  color:#0f172a; font-size:12px; font-weight:900; text-decoration:none; background:#fff;
+}
+.so-flink:hover{ border-color:#7c3aed; color:#5b21b6; background:#f5f3ff; }
+
+/* ── شو ضل (debts) ── */
+.so-debt{ display:grid; gap:12px; }
+.so-debt-tiles{
+  display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px;
+}
+.so-debt-tile{
+  display:grid; gap:4px; padding:14px;
+  border:1px solid #e2e8f0; border-radius:10px; background:#fff;
+}
+.so-debt-tile-label{ display:flex; align-items:center; gap:6px; color:#64748b; font-size:12px; font-weight:800; }
+.so-debt-tile-value{ direction:ltr; text-align:right; color:#0f172a; font-size:22px; font-weight:950; white-space:nowrap; }
+.so-debt-tile-meta{ color:#94a3b8; font-size:11px; font-weight:700; }
+.so-debt-tile--amber{ border-color:#fde68a; background:#fffbeb; }
+.so-debt-tile--amber .so-debt-tile-label,.so-debt-tile--amber .so-debt-tile-value{ color:#92400e; }
+.so-debt-tile--red{ border-color:#fecaca; background:#fff1f2; }
+.so-debt-tile--red .so-debt-tile-label,.so-debt-tile--red .so-debt-tile-value{ color:#b91c1c; }
+.so-debt-tile--green{ border-color:#bbf7d0; background:#f0fdf4; }
+.so-debt-tile--green .so-debt-tile-label,.so-debt-tile--green .so-debt-tile-value{ color:#15803d; }
+.so-debt-tile--total{ border-color:#ddd6fe; background:#f5f3ff; }
+.so-debt-tile--total .so-debt-tile-label,.so-debt-tile--total .so-debt-tile-value{ color:#5b21b6; }
+.so-debt-links{ display:flex; flex-wrap:wrap; gap:8px; }
+
+/* ── tables helpers ── */
+.so-muted{ color:#94a3b8; font-size:12px; font-weight:600; }
+.so-neg{ color:#dc2626; font-weight:950; }
+
+/* ── quota share bar ── */
+.so-share{ display:flex; align-items:center; gap:8px; min-width:160px; }
+.so-share-track{ flex:1 1 0; height:8px; border-radius:999px; background:#eef2f7; overflow:hidden; }
+.so-share-track span{ display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#7c3aed,#5b21b6); }
+.so-share-pct{ color:#475569; font-size:12px; font-weight:900; min-width:34px; text-align:end; }
+
+.so-note{
+  display:flex; align-items:center; gap:8px; margin-top:10px;
+  color:#64748b; font-size:12px; font-weight:700;
+}
+.so-note i{ color:#7c3aed; }
+
+/* ── census tiles ── */
+.so-census{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px;
+}
+
+/* ── responsive ── */
+@media (max-width: 1080px){
+  .so-board{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .so-lane:nth-child(3){ border-inline-start:0; }
+  .so-lane:nth-child(n+3){ border-top:1px solid #eef2f7; }
+  .so-debt-tiles{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 640px){
+  .so-flow{ grid-template-columns:1fr; }
+  .so-board{ grid-template-columns:1fr; }
+  .so-lane{ border-inline-start:0; border-top:1px solid #eef2f7; }
+  .so-lane:first-child{ border-top:0; }
+  .so-debt-tiles{ grid-template-columns:1fr; }
+  .so-hero-toggle{ flex:1 1 100%; justify-content:center; }
+}
