@@ -1,0 +1,180 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}التحصيل والمدفوعات — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-money-bill-transfer"></i>{% endblock %}
+{% block page_title %}التحصيل والمدفوعات{% endblock %}
+{% block page_sub %}<span class="sub">طلبات الدفع والمراجعة والمطابقة في صفحة واحدة</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+.fc-hero{position:relative;border-radius:18px;padding:22px 24px;margin-bottom:18px;
+  background:linear-gradient(135deg,#047857,#0e7490);color:#fff;box-shadow:0 18px 44px rgba(4,120,87,.22);overflow:hidden}
+.fc-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:900}
+.fc-hero p{margin:0;max-width:760px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.7}
+.fc-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.fc-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
+  background:rgba(255,255,255,.14);color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(255,255,255,.18);font-size:13px;cursor:pointer}
+.fc-tabs a:hover{background:rgba(255,255,255,.24)}
+.fc-tabs a.is-active{background:#fff;color:#047857;border-color:#fff}
+.fc-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
+.fc-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.fc-modal{border:none;border-radius:18px;padding:0;max-width:680px;width:calc(100% - 32px);box-shadow:0 30px 80px rgba(15,23,42,.35);background:#fff}
+.fc-modal::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
+.fc-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--hub-border-soft)}
+.fc-modal-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.fc-modal-body{padding:18px 20px}
+.fc-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:0 0 18px 18px}
+.fc-x{width:34px;height:34px;border-radius:9px;border:1px solid var(--hub-border-soft);background:#fff;cursor:pointer;color:var(--hub-text-mute)}
+.fc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fc-form-grid .span2{grid-column:1 / -1}
+@media(max-width:560px){.fc-form-grid{grid-template-columns:1fr}}
+.fc-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:800;color:var(--hub-text-soft)}
+.fc-check{flex-direction:row !important;align-items:center;gap:8px}
+.fc-check input{width:17px;height:17px;accent-color:var(--hub-brand)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fc-hero">
+  <h2><i class="fa-solid fa-money-bill-transfer"></i> التحصيل والمدفوعات</h2>
+  <p>تابع طلبات الدفع وراجع الإثباتات وطابق التحصيل من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق دفع أو محاسبة.</p>
+  <nav class="fc-tabs">
+    <a href="?tab=requests" class="{{ 'is-active' if tab == 'requests' }}"><i class="fa-solid fa-file-invoice-dollar"></i> طلبات الدفع</a>
+    <a href="?tab=review" class="{{ 'is-active' if tab == 'review' }}"><i class="fa-solid fa-clipboard-check"></i> قائمة المراجعة</a>
+    <a href="?tab=reconciliation" class="{{ 'is-active' if tab == 'reconciliation' }}"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
+    <a data-modal-open="settings"><i class="fa-solid fa-gear"></i> الإعدادات</a>
+  </nav>
+</div>
+
+{# ═══════════ TAB: REQUESTS (also the background for the settings modal) ═══════════ #}
+{% if tab in ('requests', 'settings') %}
+<div class="fc-panel-head">
+  <h3><i class="fa-solid fa-file-invoice-dollar"></i> طلبات الدفع</h3>
+  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input type="hidden" name="tab" value="requests">
+    <select class="hub-select" name="status" onchange="this.form.submit()">
+      <option value="">كل الحالات</option>
+      {% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+{% if requests_list %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead><tr><th>#</th><th>الدافع</th><th>الغرض</th><th>المبلغ</th><th>المرجع</th><th>الحالة</th><th>التاريخ</th><th></th></tr></thead>
+    <tbody>
+      {% for item in requests_list %}
+      <tr>
+        <td><strong>{{ item.id }}</strong></td>
+        <td>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</td>
+        <td>{{ item.purpose or "—" }}</td>
+        <td><strong>{{ item.amount|money }}</strong></td>
+        <td class="mono small">{{ item.reference_code or "—" }}</td>
+        <td>{{ hub.pill(item.status, variant="green" if item.status=="paid" else ("amber" if item.status in ("under_review","proof_submitted") else "grey")) }}</td>
+        <td class="small hub-text-mute">{{ item.created_at|dt_local if item.created_at else "—" }}</td>
+        <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-arrow-left"></i> تفاصيل</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد طلبات دفع.", icon="file-invoice-dollar") }}</div>
+{% endif %}
+{% endif %}
+
+{# ═══════════ TAB: REVIEW ═══════════ #}
+{% if tab == 'review' %}
+<div class="fc-panel-head"><h3><i class="fa-solid fa-clipboard-check"></i> قائمة المراجعة</h3></div>
+{% if review_list %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead><tr><th>#</th><th>الغرض</th><th>المبلغ</th><th>الحالة</th><th>المرجع</th><th></th></tr></thead>
+    <tbody>
+      {% for item in review_list %}
+      <tr>
+        <td><strong>{{ item.id }}</strong></td>
+        <td>{{ item.purpose or "—" }}</td>
+        <td><strong>{{ item.amount|money }}</strong></td>
+        <td>{{ hub.pill(item.status, variant="amber") }}</td>
+        <td class="mono small">{{ item.reference_code or "—" }}</td>
+        <td><a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد دفعات بانتظار المراجعة.", sub="كل الطلبات تمت مراجعتها.", icon="clipboard-check") }}</div>
+{% endif %}
+{% endif %}
+
+{# ═══════════ TAB: RECONCILIATION ═══════════ #}
+{% if tab == 'reconciliation' %}
+<div class="fc-panel-head"><h3><i class="fa-solid fa-scale-balanced"></i> المطابقة والتدقيق</h3></div>
+<div class="hub-kpi-grid">
+  {{ hub.kpi("مدفوع بلا قيد مالي", reconciliation.counts.paid_without_ledger, icon="file-circle-xmark", variant="red") }}
+  {{ hub.kpi("مدفوع غير مطبّق", reconciliation.counts.paid_not_applied, icon="bolt", variant="amber") }}
+  {{ hub.kpi("منتهٍ ومعلّق", reconciliation.counts.expired_pending, icon="hourglass-end", variant="blue") }}
+  {{ hub.kpi("تكرار لدى المزوّد", reconciliation.counts.duplicate_provider_transactions, icon="clone", variant="brand") }}
+</div>
+<div style="margin-top:14px">{{ hub.empty("هذه اللوحة تكشف الفجوات بين الدفعات والقيود. الأرقام أعلاه صفر = لا فجوات.", sub="افتح صفحة الطلب لمعالجة أي حالة.", icon="scale-balanced") }}</div>
+{% endif %}
+
+{# ═══════════ SETTINGS MODAL ═══════════ #}
+<dialog class="fc-modal" data-modal="settings">
+  <form method="post" action="{{ url_for('radius.payment_collection_settings') }}">
+    <div class="fc-modal-head"><h3><i class="fa-solid fa-gear"></i> إعدادات التحصيل</h3><button class="fc-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fc-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fc-form-grid">
+        <label class="span2 fc-check"><input type="checkbox" name="enabled" value="1" {% if settings and settings.enabled %}checked{% endif %}> تفعيل تحصيل الدفعات</label>
+        <label>المزوّد
+          <select class="hub-select" name="provider">
+            <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
+            <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (غير مفعّل)</option>
+          </select>
+        </label>
+        <label>العملة
+          <select class="hub-select" name="currency">
+            {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else 'ILS') == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>رقم المحفظة<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
+        <label>اسم صاحب المحفظة<input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
+        <label>وضع التأكيد
+          <select class="hub-select" name="confirmation_mode">
+            <option value="manual" {% if not settings or settings.confirmation_mode == 'manual' %}selected{% endif %}>مراجعة يدوية</option>
+            <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>ربط آلي (غير مفعّل)</option>
+          </select>
+        </label>
+        <label>مهلة الطلب (دقائق)<input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
+        <label>أقل مبلغ<input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
+        <label>أعلى مبلغ<input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
+        <label class="fc-check"><input type="checkbox" name="allow_cards" value="1" {% if not settings or settings.allow_cards %}checked{% endif %}> السماح بشراء الكروت</label>
+        <label class="fc-check"><input type="checkbox" name="allow_monthly_subscriptions" value="1" {% if not settings or settings.allow_monthly_subscriptions %}checked{% endif %}> الاشتراكات الشهرية</label>
+        <label class="span2 fc-check"><input type="checkbox" name="allow_distributor_payments" value="1" {% if settings and settings.allow_distributor_payments %}checked{% endif %}> مدفوعات الموزعين</label>
+      </div>
+    </div>
+    <div class="fc-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> حفظ الإعدادات</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  function dialogFor(n){ return document.querySelector('dialog[data-modal="'+n+'"]'); }
+  document.addEventListener('click', function(ev){
+    var o = ev.target.closest('[data-modal-open]');
+    if(o){ var d = dialogFor(o.getAttribute('data-modal-open')); if(d && d.showModal) d.showModal(); return; }
+    if(ev.target.closest('[data-modal-close]')){ var dlg = ev.target.closest('dialog'); if(dlg) dlg.close(); return; }
+    if(ev.target.tagName === 'DIALOG' && ev.target.classList.contains('fc-modal')){ ev.target.close(); }
+  });
+  // Auto-open the settings modal when arriving via ?tab=settings
+  // (e.g. the legacy /payments/settings redirect).
+  {% if tab == 'settings' %}
+  var sd = dialogFor('settings'); if(sd && sd.showModal) sd.showModal();
+  {% endif %}
+})();
+</script>
+{% endblock %}

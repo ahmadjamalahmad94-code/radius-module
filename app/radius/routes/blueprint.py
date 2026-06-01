@@ -121,6 +121,7 @@ def _register_all(bp: Blueprint) -> None:
     from .accounting import register_accounting_routes
     from .finance_center import register_finance_center_routes
     from .finance_billing import register_finance_billing_routes
+    from .finance_collection import register_finance_collection_routes
     from .company_inventory import register_company_inventory_routes
     from .card_users_marketplace import register_card_users_marketplace_routes
     from .manager_distributor_ops import register_manager_distributor_ops_routes
@@ -162,6 +163,7 @@ def _register_all(bp: Blueprint) -> None:
     register_accounting_routes(bp)
     register_finance_center_routes(bp)
     register_finance_billing_routes(bp)
+    register_finance_collection_routes(bp)
     register_company_inventory_routes(bp)
     register_card_users_marketplace_routes(bp)
     register_manager_distributor_ops_routes(bp)
