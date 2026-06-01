@@ -388,13 +388,28 @@
       if(msgEl){ msgEl.hidden=true; msgEl.textContent=""; msgEl.className="ff-msg"; }
       if(btn) btn.disabled=true;
       fetch(form.action, { method:"POST", credentials:"same-origin", headers:{ "X-Requested-With":"fetch" }, body:new FormData(form) })
-        .then(r=> r.json().then(j=>({ok:r.ok,j})).catch(()=>({ok:r.ok,j:{}})))
-        .then(({ok,j})=>{
+        .then(async r=>{
+          let j=null, text="";
+          try { j = await r.json(); } catch(_){ try { text = (await r.text()) || ""; } catch(__){} }
+          return { ok:r.ok, status:r.status, j, text };
+        })
+        .then(({ok,status,j,text})=>{
           if(ok && j && j.ok){
             if(msgEl){ msgEl.hidden=false; msgEl.textContent = j.message || "تمّ بنجاح ✅"; msgEl.classList.add("is-ok"); }
             setTimeout(()=> window.location.reload(), 800);
           } else {
-            if(msgEl){ msgEl.hidden=false; msgEl.textContent = (j && j.error) || "تعذّر تنفيذ العملية."; msgEl.classList.add("is-err"); }
+            // Always show a REASON: server-provided error first, else the HTTP
+            // status (+ a cleaned snippet of any non-JSON body, e.g. a traceback).
+            let err = (j && j.error) || "";
+            if(!err){
+              if(status>=500) err = `خطأ في الخادم (${status}). راجع سجل النظام.`;
+              else if(status===400) err = "طلب غير صحيح — تحقّق من المدخلات.";
+              else if(status===401 || status===403) err = "انتهت الجلسة أو لا تملك صلاحية — أعد تسجيل الدخول.";
+              else err = `تعذّر تنفيذ العملية (HTTP ${status}).`;
+              const snip = (text||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,160);
+              if(snip) err += ` — ${snip}`;
+            }
+            if(msgEl){ msgEl.hidden=false; msgEl.textContent = err; msgEl.classList.add("is-err"); }
             if(btn) btn.disabled=false;
           }
         })

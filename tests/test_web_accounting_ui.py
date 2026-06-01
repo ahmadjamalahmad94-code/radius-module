@@ -198,6 +198,40 @@ def test_subscriber_finance_page_renders_floating_modals(client):
     assert "const PLAN_MIN = 43200" in html
 
 
+def test_loan_create_surfaces_unexpected_error_as_json(client, app, monkeypatch):
+    """An unexpected (non-RadiusError) failure during loan creation — e.g. the
+    RADIUS apply layer raising on a live server — must come back as a JSON reason,
+    NOT a silent 500 HTML page, so the floating modal can show «سبب التعذر»."""
+    _web_login(client)
+    sub = _subscriber(client)
+    finance_url = f"/admin/radius/users/{sub['username']}/finance"
+    token = _csrf(client, finance_url)
+
+    from app.radius.services.accounting import AccountingService
+
+    def boom(self, body, *, actor):
+        raise RuntimeError("router unreachable: connection timed out")
+
+    monkeypatch.setattr(AccountingService, "create_loan", boom)
+
+    res = client.post(
+        f"/admin/radius/users/{sub['username']}/loans",
+        data={
+            "_csrf_token": token,
+            "days": "3",
+            "amount": "2",
+            "price_from_days": "1",
+            "currency": "JOD",
+            "apply_to_radius": "1",
+        },
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert res.status_code == 500
+    body = res.get_json()
+    assert body is not None and body["ok"] is False
+    assert "router unreachable: connection timed out" in body["error"]
+
+
 def test_finance_payment_modal_offers_to_settle_negative_balance(client, app):
     """When the subscriber owes (balance < 0), the payment modal exposes a
     «سدِّد الدين من هذه الدفعة» toggle and injects the debt into the JS engine."""

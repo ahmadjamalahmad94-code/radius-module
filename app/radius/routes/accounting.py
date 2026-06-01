@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
@@ -187,8 +187,15 @@ def users_payment_create(username: str):
         payment = _svc().create_payment(body, actor=_actor())
     except RadiusError as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), 400
+            return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
         flash(e.message, "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    except Exception as e:  # noqa: BLE001 — surface the real reason, don't 500 silently
+        current_app.logger.exception("payment create failed for %s", username)
+        reason = f"خطأ غير متوقع أثناء تسجيل الدفعة: {e}"
+        if _wants_json():
+            return jsonify({"ok": False, "error": reason}), 500
+        flash(reason, "error")
         return redirect(url_for("radius.users_finance", username=username))
     # Payment recorded — NOW apply the loan resolutions (settle/writeoff). If this
     # best-effort step fails, the payment still stands and the loans simply stay
@@ -252,8 +259,14 @@ def users_loan_create(username: str):
         flash(msg, "success")
     except RadiusError as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), 400
+            return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
         flash(e.message, "error")
+    except Exception as e:  # noqa: BLE001 — never swallow the reason; the operator must see it
+        current_app.logger.exception("loan create failed for %s", username)
+        reason = f"خطأ غير متوقع أثناء منح السلفة: {e}"
+        if _wants_json():
+            return jsonify({"ok": False, "error": reason}), 500
+        flash(reason, "error")
     return redirect(url_for("radius.users_finance", username=username))
 
 
