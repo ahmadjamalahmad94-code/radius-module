@@ -25,7 +25,7 @@ def _tid() -> int:
 def operational_report(slug: str):
     query = (request.args.get("q") or request.args.get("query") or "").strip()
     if len(query) > 120:
-        return fail("validation_error", "query is too long", status=422)
+        return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
     try:
         payload = operational_reports_repo.list_report(
             _tid(),

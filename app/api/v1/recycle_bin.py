@@ -165,7 +165,7 @@ def recycle_bin_list():
     tables = [_SUPPORTED.get(requested)] if requested else sorted(set(_SUPPORTED.values()))
     tables = [t for t in tables if t]
     if requested and not tables:
-        return fail("validation_error", "unsupported entity_type", status=422)
+        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
     items: list[dict] = []
     for table in tables:
         items.extend(_deleted_rows(table, limit=limit, offset=offset))
@@ -180,20 +180,20 @@ def recycle_bin_list():
 def recycle_bin_archive(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
-        return fail("validation_error", "unsupported entity_type", status=422)
+        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
     body = request.get_json(silent=True) or {}
     reason = str(body.get("reason") or "")[:300]
     changed = _archive_handler(table)(entity_id, reason)
     if not changed:
-        return fail("not_found", "record not found or already archived", status=404)
+        return fail("not_found", "السجل غير موجود أو مؤرشف مسبقًا.", status=404)
     return ok({"entity_type": table, "id": entity_id, "archived": True})
 
 
 def recycle_bin_restore(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
-        return fail("validation_error", "unsupported entity_type", status=422)
+        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
     changed = _restore_handler(table)(entity_id)
     if not changed:
-        return fail("not_found", "record not found or not archived", status=404)
+        return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)
     return ok({"entity_type": table, "id": entity_id, "restored": True})

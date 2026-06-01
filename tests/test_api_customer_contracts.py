@@ -39,6 +39,17 @@ def test_recycle_bin_restore_returns_real_not_found_shape(client):
     body = res.get_json()
     assert body["ok"] is False
     assert body["error"]["code"] == "not_found"
+    assert body["error"]["message"] == "السجل غير موجود أو ليس مؤرشفًا."
+
+
+def test_recycle_bin_rejects_unknown_entity_type_in_arabic(client):
+    listed = client.get("/api/v1/recycle-bin?entity_type=bad", headers=AUTH)
+    assert listed.status_code == 422
+    assert listed.get_json()["error"]["message"] == "نوع السجل غير مدعوم."
+
+    archived = client.post("/api/v1/recycle-bin/bad/1/archive", json={}, headers=AUTH)
+    assert archived.status_code == 422
+    assert archived.get_json()["error"]["message"] == "نوع السجل غير مدعوم."
 
 
 def test_contract_routes_are_registered(client):

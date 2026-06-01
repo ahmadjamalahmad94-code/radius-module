@@ -99,3 +99,9 @@ def test_unknown_operational_report_returns_404(client):
     res = client.get("/api/v1/operational-reports/nope", headers=AUTH)
     assert res.status_code == 404
     assert res.get_json()["error"]["code"] == "not_found"
+
+
+def test_operational_report_rejects_long_query_in_arabic(client):
+    res = client.get("/api/v1/operational-reports/sessions?q=" + ("x" * 121), headers=AUTH)
+    assert res.status_code == 422
+    assert res.get_json()["error"]["message"] == "عبارة البحث طويلة جدًا."
