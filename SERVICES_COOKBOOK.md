@@ -1976,3 +1976,81 @@ trigger from the Card Checker:
 ---
 
 *Generated 2026-05-21. Source of truth: cards_checker_v2.html + services/cards.py + integration/radius_coa.py. Last verified working in commit `cf71213` and after.*
+
+---
+
+## 12. Subscriber finance — floating payment + loan modals (money↔time engine)
+
+> Added 2026-06-01. Source of truth: `app/templates/radius/users_finance.html`
+> + `app/templates/radius/users_list.html` (quick-actions) +
+> `services/accounting.py`. The finance page (`/users/<u>/finance`) and the
+> subscribers list share ONE money↔time engine — copy from here, do not
+> re-derive the price formula.
+
+1. **What it does.** Records a cash payment or grants a loan from a floating
+   popup (no page nav). Days are auto-derived from money and vice-versa using
+   the subscriber's *effective* price; debt loans are auto-priced from days.
+
+2. **Routes + action keys.**
+   - Payment: `POST /users/<username>/payments` → `radius.users_payment_create`
+   - Loan: `POST /users/<username>/loans` → `radius.users_loan_create`
+   - Loan settle (inline, in table): `POST /users/<u>/loans/<id>/settle`
+   - Open loans JSON (list page only): `GET /users/<u>/open-loans`
+
+3. **Service methods** (`AccountingService`):
+   - `price_basis(subscriber) -> {price, minutes, custom}` — THE source for
+     the JS engine. `price` = effective price (custom_price>0 else plan.price);
+     `minutes` = base plan minutes (falls back to **43200** for quota plans
+     whose `duration_minutes` is 0); `custom` = bool.
+   - `create_payment(...)` — records full amount; **time-basis = amount −
+     settled_loans** (preview→pay→apply ordering, see edge cases).
+   - `create_loan(...)` — `price_from_days=1` → value computed server-side
+     from days × effective price; `apply_to_radius=1` extends the session.
+   - `settle_preview_total(actions)` (read-only sum) + `resolve_loan_actions`
+     (apply settle/writeoff) + `open_loans_for(subscriber_id)`.
+
+4. **Auto-price formula (JS mirror of backend, 2-dp).** Identical on both pages:
+   ```js
+   // days → money (loan debt value)
+   amount = Math.round(EFF_PRICE * (days*1440 / PLAN_MIN) * 100) / 100;
+   // money → days (payment coverage)
+   days = (timeAmount / EFF_PRICE) * (PLAN_MIN / 1440);
+   ```
+   Inject constants from the template: `const EFF_PRICE = {{ eff_price|tojson }};`
+   `const PLAN_MIN = {{ plan_minutes|tojson }} || 43200;`
+   `const IS_CUSTOM = {{ price_custom|tojson }};`
+
+5. **Template (finance page).** Two `.ff-modal` overlays (`data-ff-modal="payment|loan"`)
+   opened by `<button data-ff-open="payment|loan">`. Hidden `apply_to_radius=1`
+   in BOTH forms (everything official — **no `dry_run`, no `rounding_mode`**
+   controls in the UI). Open loans for the payment settle are rendered
+   server-side from the page's `loans` (filter `status=='open'`) — no AJAX
+   needed since the finance page already has the loans list.
+
+6. **JS pattern.** AJAX submit with `headers:{"X-Requested-With":"fetch"}` →
+   on `{ok:true}` show inline success + `location.reload()`; on failure show
+   `.ff-msg.is-err` in the box WITHOUT closing. Payment coverage recomputes on
+   amount input + per-loan radio change; loan value recomputes on days input +
+   free/debt toggle. Loan rows show separate **days chip** (`#eff6ff/#1d4ed8`)
+   and **value chip** (`#fffbeb/#b45309; direction:ltr`).
+
+7. **Flash / JSON format.** Routes are AJAX-aware via `_wants_json()` (true when
+   `X-Requested-With=='fetch'` or Accept json): success → `jsonify({ok:True,
+   message})`; `RadiusError` → `jsonify({ok:False, error}), 400`. Non-AJAX
+   (direct form POST) still flashes + redirects — preserves full-page behavior.
+
+8. **Edge cases.**
+   - **Quota plans price 0:** `duration_minutes==0` → `PLAN_MIN` falls back to
+     43200 in BOTH `price_basis()` and the JS `|| 43200`. Never divide by 0.
+   - **Orphaned settlements:** settle loans only AFTER the payment succeeds.
+     Order = `settle_preview_total()` (read-only, drives the deduction) →
+     `create_payment` → `resolve_loan_actions()`. Never settle-then-pay.
+   - **Full amount recorded, time from remainder:** the ledger shows the full
+     cash; only the *time* added is `amount − settled`.
+   - **Custom price wins:** `effective_subscriber_price` returns custom_price
+     when >0, else plan price. The "سعر مخصّص/سعر العرض" pill reflects `custom`.
+
+9. **Reusable in.** Subscribers list quick-actions (already shares the engine),
+   «إضافة رصيد» / «إضافة وقت» modals, any future per-subscriber money action.
+   When adding a new money modal: import the formula from here verbatim, inject
+   `price_basis()` constants, keep `apply_to_radius=1`, AJAX-submit, reload.
