@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 from typing import Optional
 from typing import Optional
 
+from . import routeros_caps
+
 
 # Constants chosen to balance entropy against RouterOS field
 # length limits. RouterOS accepts passwords up to ~64 chars; 32
@@ -166,7 +168,11 @@ def render_wg_block(
     Raises ValueError in that case so a downstream bug surfaces
     early instead of producing a no-op script.
     """
-    if ros_version != "7":
+    # Central capability check: WireGuard is RouterOS 7+ only. Behaviour is
+    # identical to the historical `ros_version != "7"` guard for the
+    # supported versions ("6"/"7"), but now sourced from routeros_caps so
+    # every caller agrees on the version→capability matrix.
+    if not routeros_caps.supports_wireguard(ros_version):
         raise ValueError(
             f"WireGuard block requires RouterOS 7+, got {ros_version!r}"
         )

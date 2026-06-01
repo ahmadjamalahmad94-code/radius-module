@@ -385,7 +385,7 @@
         {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
         {# إدارة الراوترات — مدخل موحّد: شريط تبويب داخلي يصل للخريطة
            ومركز المشاكل والتشخيص (والإعداد الهندسي عند الحاجة). #}
-        {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   m_mt or m_topology or m_problems or m_diag) }}
+        {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   ('/mt/operations' in path) or m_topology or m_problems or m_diag) }}
         {# ────────────────────────────────────────────────────
            Network Operations family (Sprints 1-6, 2026-05-28).
            HIDDEN until next release — operator decision:
