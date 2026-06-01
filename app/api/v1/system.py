@@ -184,7 +184,7 @@ def system_sync_retry(job_id: int):
             (now_iso(), tenant_id, job_id),
         )
         if cur.rowcount == 0:
-            return fail("not_found", "Sync job not found", status=404)
+            return fail("not_found", "مهمة المزامنة غير موجودة.", status=404)
     return ok({"job": _job(tenant_id, job_id), "action": "retry"})
 
 
@@ -194,13 +194,13 @@ def system_sync_cancel(job_id: int):
         cur = conn.execute(
             """
             UPDATE sync_queue
-            SET status='failed', last_error='canceled by admin'
+            SET status='failed', last_error='أُلغي بواسطة الإدارة'
             WHERE tenant_id = ? AND id = ? AND status IN ('queued', 'retrying')
             """,
             (tenant_id, job_id),
         )
         if cur.rowcount == 0:
-            return fail("not_found", "Sync job not found or not cancellable", status=404)
+            return fail("not_found", "مهمة المزامنة غير موجودة أو لا يمكن إلغاؤها.", status=404)
     return ok({"job": _job(tenant_id, job_id), "action": "cancel"})
 
 
@@ -210,7 +210,7 @@ def system_reconcile():
 
         stats = mt_reconciler.reconcile_once()
     except Exception as exc:  # noqa: BLE001
-        return fail("reconcile_failed", str(exc), status=500)
+        return fail("reconcile_failed", f"تعذرت المصالحة: {exc}", status=500)
     return ok({"stats": stats})
 
 

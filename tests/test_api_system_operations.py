@@ -152,7 +152,15 @@ def test_system_sync_list_retry_cancel_are_real(client):
     assert cancelled.status_code == 200, cancelled.get_json()
     job = cancelled.get_json()["data"]["job"]
     assert job["status"] == "failed"
-    assert job["last_error"] == "canceled by admin"
+    assert job["last_error"] == "أُلغي بواسطة الإدارة"
+
+    missing_retry = client.post("/api/v1/system/sync/999999999/retry", headers=AUTH)
+    assert missing_retry.status_code == 404
+    assert missing_retry.get_json()["error"]["message"] == "مهمة المزامنة غير موجودة."
+
+    missing_cancel = client.post("/api/v1/system/sync/999999999/cancel", headers=AUTH)
+    assert missing_cancel.status_code == 404
+    assert missing_cancel.get_json()["error"]["message"] == "مهمة المزامنة غير موجودة أو لا يمكن إلغاؤها."
 
 
 def test_system_reconcile_returns_structured_result(client, monkeypatch):

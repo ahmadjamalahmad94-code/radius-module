@@ -55,7 +55,7 @@ def devices_by_mac(mac: str):
     from ...radius.db.repos import device_fingerprints_repo
     fp = device_fingerprints_repo.get_by_mac(_tid(), mac)
     if not fp:
-        return fail("not_found", "no fingerprint for this MAC", status=404)
+        return fail("not_found", "لا توجد بصمة جهاز لهذا العنوان.", status=404)
     return ok({"device": fp})
 
 
@@ -123,13 +123,13 @@ def devices_ingest():
     raw = request.get_data(as_text=True) or ""
     raw = raw.strip()
     if not raw:
-        return fail("empty_body", "no payload", status=400)
+        return fail("empty_body", "بيانات الأجهزة مطلوبة.", status=400)
 
     # Accept both JSON and text-as-JSON
     try:
         body = json.loads(raw)
     except (ValueError, TypeError):
-        return fail("invalid_json", "body is not valid JSON", status=400)
+        return fail("invalid_json", "بيانات الطلب ليست JSON صالحًا.", status=400)
 
     if isinstance(body, dict) and "leases" in body:
         leases = body["leases"]
@@ -137,11 +137,11 @@ def devices_ingest():
         leases = body
     else:
         return fail("invalid_shape",
-                    "expected JSON array or {leases: [...]}",
+                    "أرسل مصفوفة JSON أو كائنًا يحتوي leases.",
                     status=400)
 
     if not isinstance(leases, list):
-        return fail("invalid_shape", "leases must be a list", status=400)
+        return fail("invalid_shape", "قائمة leases يجب أن تكون مصفوفة.", status=400)
 
     tenant_id = _tid()
     ingested = 0
