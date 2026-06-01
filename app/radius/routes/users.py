@@ -17,6 +17,7 @@ from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
 from ..core.errors import RadiusError
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
+from ..services.accounting import service_from_context
 from ..services.plans import get_plans_service
 from ..services.users import get_users_service
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
@@ -133,6 +134,19 @@ def _form_float(name: str, default: float = 0.0) -> float:
     if not raw:
         return default
     return float(raw)
+
+
+def _parse_loan_actions() -> list[dict]:
+    """Parse the modal's loan_actions field — a JSON list of {loan_id, action}
+    where action ∈ settle|writeoff (defer/omitted = leave the loan open)."""
+    raw = (request.form.get("loan_actions") or "").strip()
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    return data if isinstance(data, list) else []
 
 
 def _default_country() -> str:
@@ -1282,16 +1296,42 @@ def users_quota_topup(username: str):
 def users_balance_add(username: str):
     try:
         amount = _form_float("amount")
+    except (TypeError, ValueError):
+        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+    actions = _parse_loan_actions()
+    acc = service_from_context()
+    # PREVIEW the settle total (read-only) so the wallet is credited FIRST; the
+    # chosen loans are only actually settled AFTER the credit succeeds — a failed
+    # credit must never leave orphaned (already-settled) loans. Mirrors payments.
+    settled_total = acc.settle_preview_total(actions) if actions else 0.0
+    try:
         saved = get_users_service().add_cash_balance(
             actor=_actor(),
             username=username,
             amount=amount,
             currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip(),
+            settled_deduction=settled_total,
         )
-        flash(f"تمت إضافة رصيد نقدي بقيمة {amount:.2f}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
     except (TypeError, ValueError):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
     except RadiusError as e:
         flash(e.message, "error")
+        return redirect(url_for("radius.users_list"))
+    # Wallet credited — NOW resolve the loan choices (settle/writeoff). Best-effort:
+    # if this fails the credit still stands and the loans simply stay open.
+    settled_done = 0.0
+    if actions:
+        try:
+            settled_done = float(acc.resolve_loan_actions(actions, actor=_actor()).get("settled_total") or 0)
+        except RadiusError:
+            settled_done = 0.0
+    credited = max(amount - settled_done, 0.0)
+    note = f" بعد خصم {settled_done:.2f} لتسوية سلف" if settled_done > 0 else ""
+    flash(
+        f"تمت إضافة رصيد نقدي: {credited:.2f}{note}. الرصيد الحالي {float(saved.balance or 0):.2f}.",
+        "success",
+    )
     return redirect(url_for("radius.users_list"))

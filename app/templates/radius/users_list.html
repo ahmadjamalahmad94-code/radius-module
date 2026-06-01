@@ -1062,8 +1062,13 @@
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
           </label>
         </div>
-        <div class="hub-text-mute small" data-usq-balance-hint style="line-height:1.7">
-          يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.
+        {# Interactive open-loans settlement — populated by JS on open. Choosing
+           «خصم» deducts the loan from the added amount; the wallet is credited
+           with the remainder (net of deductions). #}
+        <div data-usq-loans-box hidden style="margin-top:8px"></div>
+        <input type="hidden" name="loan_actions" data-usq-actions>
+        <div class="hub-text-mute small" data-usq-balance-hint style="margin-top:8px;line-height:1.7">
+          يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.
         </div>
       </div>
       <div class="usq-foot">
@@ -1289,7 +1294,7 @@
     if (n >= 3 && n <= 10) return `${n} أيام`;
     return `${n} يوم`;
   }
-  // «إضافة رصيد نقدي» — live coverage text from amount / plan price.
+  // «إضافة رصيد نقدي» — net wallet credit (amount − settled loans) + live hint.
   function updateBalanceCoverage() {
     const modal = page.querySelector("[data-usq-modal='balance']");
     const hint = modal?.querySelector("[data-usq-balance-hint]");
@@ -1301,19 +1306,26 @@
     const isCustom = activeRow.dataset.planCustom === "1";
     const priceLabel = isCustom ? "سعره المخصّص" : "سعر باقته الحالية";
     const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
-    if (price > 0 && amount > 0) {
-      let msg = `يُضاف ${fmtMoney(amount, cur)} إلى رصيد المشترك.`;
-      if (minutes > 0) {
-        const days = (amount / price) * (minutes / 1440);
-        msg += ` يكفي لتجديد ~${arDays(days)} حسب ${priceLabel} ${fmtMoney(price, cur)}، أو يُستخدم للتجديد التلقائي.`;
-      } else {
-        msg += ` ${priceLabel} ${fmtMoney(price, cur)}؛ يُستخدم للتجديد التلقائي.`;
+    // Open-loan settlement: «خصم» loans are deducted; the wallet gets the rest.
+    const rows = loanRows(modal);
+    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    const actions = rows.filter((r) => r.action !== "defer").map((r) => ({loan_id: r.loan_id, action: r.action}));
+    const field = modal.querySelector("[data-usq-actions]");
+    if (field) field.value = actions.length ? JSON.stringify(actions) : "";
+    const credited = Math.max(amount - settled, 0);
+    if (amount > 0) {
+      let msg = (settled > 0)
+        ? `سيُخصم ${fmtMoney(settled, cur)} لتسوية سلف؛ ويُضاف ${fmtMoney(credited, cur)} إلى رصيد المحفظة.`
+        : `يُضاف ${fmtMoney(amount, cur)} إلى رصيد المحفظة.`;
+      if (price > 0 && minutes > 0 && credited > 0) {
+        const days = (credited / price) * (minutes / 1440);
+        msg += ` يكفي لتجديد ~${arDays(days)} حسب ${priceLabel} ${fmtMoney(price, cur)}.`;
       }
       hint.textContent = msg;
     } else if (price > 0) {
-      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض عدد الأيام التي يغطيها.`;
+      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض ما يُضاف إلى المحفظة.`;
     } else {
-      hint.textContent = "يُضاف المبلغ إلى رصيد المشترك؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.";
+      hint.textContent = "يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.";
     }
   }
   // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
@@ -1424,6 +1436,9 @@
   }
 
   function syncMoneyCoverage(scope) {
+    // «إضافة رصيد» shares the loans-box machinery but credits the WALLET (net of
+    // settlements) instead of converting money to time — route it to its own calc.
+    if (scope === "balance") { updateBalanceCoverage(); return; }
     const modal = page.querySelector(`[data-usq-modal='${scope}']`);
     if (!modal || !activeRow) return;
     const amount = parseFloat(modal.querySelector("[name='amount']")?.value || "0");
@@ -1665,7 +1680,7 @@
     if (form) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
     if (key === "plan") updatePlanPolicy();
     if (key === "extend") { updateMinutes(); syncChargeMode("extend"); }
-    if (key === "balance") updateBalanceCoverage();
+    if (key === "balance") loadLoansInto("balance");
     if (key === "payment") loadLoansInto("payment");
     if (key === "quota") syncChargeMode("quota");
     if (key === "quota-reset") syncChargeMode("quota-reset");

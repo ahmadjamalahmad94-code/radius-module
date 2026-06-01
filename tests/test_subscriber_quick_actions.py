@@ -280,6 +280,80 @@ def test_add_cash_balance_increases_balance_and_records_ledger(app):
         assert ledger["source_type"] == "subscriber_cash_balance"
 
 
+def test_add_cash_balance_credits_net_of_settled_loans(app):
+    """«إضافة رصيد» with a loan deduction credits the wallet with amount − settled,
+    and records the cash_balance ledger at the NET figure."""
+    with app.app_context():
+        plan = _seed_plan("Net Balance Plan", price=100)
+        _seed_subscriber(
+            "net_balance_case",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+
+        from app.radius.db.connection import db
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        saved = get_users_service().add_cash_balance(
+            actor="tester",
+            username="net_balance_case",
+            amount=50.0,
+            currency="JOD",
+            settled_deduction=9.0,
+        )
+        assert saved.balance == 41.0  # 50 received − 9 used to settle a loan
+        updated = subscribers_repo.get_subscriber(1, "net_balance_case")
+        assert updated.balance == 41.0
+        ledger = db().execute(
+            """
+            SELECT amount FROM accounting_ledger_entries
+            WHERE tenant_id=1 AND username='net_balance_case' AND entry_type='cash_balance'
+            """
+        ).fetchone()
+        assert ledger is not None and float(ledger["amount"]) == 41.0
+
+
+def test_balance_add_route_settles_open_loan_and_credits_net(client, app):
+    """End-to-end: POST balance/add with a «خصم» loan choice settles that loan and
+    credits the wallet with the remainder (رصيد المحفظة مضاف بعد الخصومات)."""
+    with app.app_context():
+        plan = _seed_plan("Route Net Plan", price=100)
+        _seed_subscriber(
+            "route_net_case",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=7),
+        )
+        from app.radius.services.accounting import AccountingService
+
+        loan = AccountingService(tenant_id=1).create_loan(
+            {"username": "route_net_case", "days": "3", "amount": "30", "currency": "JOD"},
+            actor="tester",
+        )
+        loan_id = int(loan["id"])
+
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/route_net_case/balance/add",
+        data={
+            "_csrf_token": "quick-csrf",
+            "amount": "50",
+            "currency": "JOD",
+            "loan_actions": f'[{{"loan_id": {loan_id}, "action": "settle"}}]',
+        },
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+
+    with app.app_context():
+        from app.radius.db.repos import accounting_repo, subscribers_repo
+
+        updated = subscribers_repo.get_subscriber(1, "route_net_case")
+        assert updated.balance == 20.0  # 50 − 30 settled
+        settled_loan = accounting_repo.get_loan(1, loan_id)
+        assert settled_loan["status"] == "settled"
+
+
 def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     with app.app_context():
         plan = _seed_plan("Quick Plan", price=120)

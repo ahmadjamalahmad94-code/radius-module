@@ -326,34 +326,51 @@ class UsersService:
         return saved
 
     def add_cash_balance(self, *, actor: str, username: str, amount: float,
-                         currency: str = "", notes: str = "") -> Subscriber:
+                         currency: str = "", notes: str = "",
+                         settled_deduction: float = 0.0) -> Subscriber:
         currency = currency or default_currency()
         if amount <= 0:
             raise RadiusValidationError("amount must be > 0")
+        # Net wallet credit = cash received − the part used to settle open loans.
+        # Loans the operator chose to «خصم» are cleared separately (their own
+        # settlement ledger), so ONLY the remainder lands in the wallet — the
+        # balance therefore reflects the deductions. With no settlements
+        # (settled_deduction=0) this is a plain full-amount credit as before.
+        settled_deduction = max(float(settled_deduction or 0.0), 0.0)
+        credit = round(max(float(amount) - settled_deduction, 0.0), 2)
         sub = self._adapter.get_account(username)
+        previous = float(sub.balance or 0)
         saved = self._adapter.upsert_account(
-            replace(sub, balance=float(sub.balance or 0) + float(amount))
+            replace(sub, balance=previous + credit)
         )
-        _record_subscriber_ledger(
-            actor=actor,
-            subscriber=saved,
-            entry_type="cash_balance",
-            direction="credit",
-            amount=float(amount),
-            currency=currency,
-            source_type="subscriber_cash_balance",
-            notes=notes or "إضافة رصيد نقدي",
-            metadata={
-                "previous_balance": float(sub.balance or 0),
-                "new_balance": float(saved.balance or 0),
-            },
-        )
+        if credit > 0:
+            _record_subscriber_ledger(
+                actor=actor,
+                subscriber=saved,
+                entry_type="cash_balance",
+                direction="credit",
+                amount=credit,
+                currency=currency,
+                source_type="subscriber_cash_balance",
+                notes=notes or "إضافة رصيد نقدي",
+                metadata={
+                    "previous_balance": previous,
+                    "new_balance": float(saved.balance or 0),
+                    "gross_amount": round(float(amount), 2),
+                    "settled_deduction": round(settled_deduction, 2),
+                },
+            )
         self._audit.record(
             actor=actor,
             action="subscriber.cash_balance_add",
             target_type="user",
             target_id=username,
-            payload={"amount": amount, "currency": currency},
+            payload={
+                "amount": round(float(amount), 2),
+                "credited": credit,
+                "settled_deduction": round(settled_deduction, 2),
+                "currency": currency,
+            },
         )
         return saved
 
