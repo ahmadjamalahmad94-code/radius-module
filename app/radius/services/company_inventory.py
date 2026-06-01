@@ -401,3 +401,18 @@ class CompanyInventoryService:
 
     def recent_movements(self, *, tenant_id: int, limit: int = 15) -> list[dict]:
         return repo.list_movements(tenant_id=tenant_id, limit=limit)
+
+    # ── per-tab record lists (display tables) ────────────────────
+
+    def incoming_records(self, *, tenant_id: int, limit: int = 200) -> list[dict]:
+        return repo.list_movements(
+            tenant_id=tenant_id, movement_type="incoming", limit=limit
+        )
+
+    def usage_records(self, *, tenant_id: int, limit: int = 200) -> list[dict]:
+        return repo.list_movements(
+            tenant_id=tenant_id, movement_type="usage", limit=limit
+        )
+
+    def expense_records(self, *, tenant_id: int, limit: int = 200) -> list[dict]:
+        return repo.list_expenses(tenant_id=tenant_id, limit=limit)

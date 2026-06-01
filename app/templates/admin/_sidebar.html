@@ -150,6 +150,7 @@
 {%- set m_business_debts = (path == url_for('radius.business_finance_debts')) -%}
 {%- set m_business_loans = (path == url_for('radius.business_finance_loans')) -%}
 {%- set m_business_ledger = (path == url_for('radius.finance_ledger')) -%}
+{%- set m_company_inventory = (endpoint_exists is defined and endpoint_exists('radius.company_inventory') and path == url_for('radius.company_inventory')) -%}
 {%- set m_subscribers_360 = (path == url_for('radius.subscribers_list')) -%}
 {%- set m_card_users = (path == url_for('radius.card_users_list')) -%}
 {%- set m_card_marketplace = (path == url_for('radius.card_marketplace')) -%}
@@ -417,6 +418,20 @@
         {{ sub_item('radius.payment_collection_requests', 'طلبات الدفع', m_payment_requests) }}
         {{ sub_item('radius.payment_collection_review_queue_web', 'مراجعة الدفعات', m_payment_review) }}
         {{ sub_item('radius.payment_collection_reconciliation_web', 'مطابقة التحصيل', m_payment_reconciliation) }}
+      </div></div>
+    </div>
+
+    {# ───────── مخزون الشركة (standalone) ───────── #}
+    <div class="hb-side-section{% if m_company_inventory %} is-open has-active{% endif %}"
+         data-hb-section="company_inventory" data-hb-tone="emerald">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="مخزون الشركة">
+        <span class="hb-side-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <span class="hb-side-text">مخزون الشركة</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.company_inventory', 'مخزون ومصروفات الشركة', m_company_inventory) }}
       </div></div>
     </div>
 

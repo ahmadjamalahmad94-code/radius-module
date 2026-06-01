@@ -62,7 +62,8 @@ def _auth_session(client):
         sess["_csrf_token"] = "inv-csrf"
 
 
-_BASE = "/admin/radius/finance/company-inventory-expenses"
+_BASE = "/admin/radius/company-inventory"
+_OLD_BASE = "/admin/radius/finance/company-inventory-expenses"
 
 
 def _post(client, path, **data):
@@ -106,25 +107,54 @@ def test_arabic_labels_render(app):
         # remaining-quantity column) renders, not just the empty state.
         _post(client, "/incoming", item_name="كابل", unit="متر", quantity="10")
         html = client.get(_BASE).get_data(as_text=True)
+    # Hero + always-present tab labels.
     assert "مخزون ومصروفات الشركة" in html
     assert "ملخص المخزون" in html
-    assert "صرف من المخزون" in html
-    assert "مصروفات الشركة" in html
+    assert "الصرف" in html
+    assert "المصروفات" in html
     # The remaining-quantity column header is present once stock exists.
-    assert "المتبقي" in html or "الكمية المتبقية" in html
+    assert "المتبقي" in html
 
 
-# ── 10. nav link appears in Finance section ─────────────────────
-
-
-def test_nav_link_appears_in_finance_section(app):
+def test_legacy_finance_url_redirects_to_standalone(app):
     with app.test_client() as client:
         _auth_session(client)
-        # The finance nav is included on every finance page; check the
-        # main finance dashboard carries the new tab.
-        html = client.get("/admin/radius/finance").get_data(as_text=True)
-    assert "company-inventory-expenses" in html
-    assert "مخزون ومصروفات الشركة" in html
+        res = client.get(_OLD_BASE, follow_redirects=False)
+    assert res.status_code in {301, 302}
+    assert res.headers.get("Location", "").endswith("/company-inventory")
+
+
+def test_tabs_switch_active_section(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        for tab in ("overview", "incoming", "usage", "expenses", "reports"):
+            res = client.get(f"{_BASE}?tab={tab}")
+            assert res.status_code == 200
+            html = res.get_data(as_text=True)
+            # The requested tab pill carries the active class.
+            assert f'?tab={tab}" class="is-active"' in html
+
+
+def test_add_forms_are_in_modals(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        html = client.get(f"{_BASE}?tab=incoming").get_data(as_text=True)
+    # Floating <dialog> modals for each add form, opened by buttons.
+    assert '<dialog class="cie-modal" data-modal="incoming"' in html
+    assert 'data-modal-open="incoming"' in html
+
+
+# ── 10. nav link appears in the sidebar ─────────────────────────
+
+
+def test_nav_link_appears_in_sidebar(app):
+    with app.test_client() as client:
+        _auth_session(client)
+        # The sidebar renders on every admin page; check the dashboard
+        # (a different page) carries the standalone section + link.
+        html = client.get("/admin/radius/").get_data(as_text=True)
+    assert "/company-inventory" in html
+    assert "مخزون الشركة" in html
 
 
 # ── 2. incoming increases remaining ─────────────────────────────

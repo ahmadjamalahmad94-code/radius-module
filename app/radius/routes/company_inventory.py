@@ -11,7 +11,13 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from ..services.company_inventory import CompanyInventoryError, CompanyInventoryService
 
-_BASE = "/finance/company-inventory-expenses"
+# Standalone top-level page (its own sidebar section, separate from the
+# Finance center). The old Finance URL keeps working as a 302 redirect.
+_BASE = "/company-inventory"
+_OLD_BASE = "/finance/company-inventory-expenses"
+
+# Ordered tabs surfaced in the page hero.
+_TABS = ("overview", "incoming", "usage", "expenses", "reports")
 
 
 def register_company_inventory_routes(bp: Blueprint) -> None:
@@ -39,6 +45,12 @@ def register_company_inventory_routes(bp: Blueprint) -> None:
         "company_inventory_item_deactivate",
         company_inventory_item_deactivate, methods=["POST"],
     )
+    # Back-compat: the previous Finance-nested URL now redirects to the
+    # standalone page so existing bookmarks / the finance tab keep working.
+    bp.add_url_rule(
+        _OLD_BASE, "company_inventory_expenses_legacy",
+        company_inventory_legacy_redirect, methods=["GET"],
+    )
 
 
 def _tid() -> int:
@@ -63,17 +75,24 @@ def _svc() -> CompanyInventoryService:
 
 def _redirect(tab: str = ""):
     target = url_for("radius.company_inventory")
-    if tab:
-        target = f"{target}#{tab}"
+    if tab in _TABS:
+        target = f"{target}?tab={tab}"
     return redirect(target)
 
 
 # ── page ─────────────────────────────────────────────────────────
 
 
+def company_inventory_legacy_redirect():
+    return redirect(url_for("radius.company_inventory"))
+
+
 def company_inventory_page():
     svc = _svc()
     tid = _tid()
+    tab = request.args.get("tab", "overview").strip()
+    if tab not in _TABS:
+        tab = "overview"
     reports = svc.reports(
         tenant_id=tid,
         date_from=request.args.get("date_from", "").strip(),
@@ -85,9 +104,14 @@ def company_inventory_page():
     return render_template(
         "radius/company_inventory_expenses.html",
         active="company_inventory",
+        tab=tab,
+        tabs=_TABS,
         summary=svc.summary_cards(tenant_id=tid),
         overview=svc.overview(tenant_id=tid),
         items=svc.items_for_select(tenant_id=tid),
+        incoming_records=svc.incoming_records(tenant_id=tid),
+        usage_records=svc.usage_records(tenant_id=tid),
+        expense_records=svc.expense_records(tenant_id=tid),
         reports=reports,
         filters={
             "date_from": request.args.get("date_from", "").strip(),
@@ -116,7 +140,7 @@ def company_inventory_item_create():
         flash("تم إنشاء الصنف.", "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
-    return _redirect("inventory")
+    return _redirect("overview")
 
 
 def company_inventory_incoming():
@@ -190,4 +214,4 @@ def company_inventory_item_deactivate(item_id: int):
         flash("تم تعطيل الصنف.", "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
-    return _redirect("inventory")
+    return _redirect("overview")

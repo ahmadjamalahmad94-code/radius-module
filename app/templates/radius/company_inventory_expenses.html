@@ -6,225 +6,412 @@
 {% block page_title %}مخزون ومصروفات الشركة{% endblock %}
 {% block page_sub %}<span class="sub">دفتر تشغيلي داخلي مستقل عن القيود المالية الرسمية</span>{% endblock %}
 
+{% block head_extra %}
+<style>
+.cie-hero{position:relative;border-radius:var(--hub-r-xl,18px);padding:22px 24px;margin-bottom:18px;
+  background:linear-gradient(135deg,#0f766e,#0e7490);color:#fff;box-shadow:0 18px 44px rgba(13,118,110,.22);overflow:hidden}
+.cie-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:900}
+.cie-hero p{margin:0;max-width:760px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.7}
+.cie-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.cie-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
+  background:rgba(255,255,255,.14);color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(255,255,255,.18);font-size:13px}
+.cie-tabs a:hover{background:rgba(255,255,255,.24)}
+.cie-tabs a.is-active{background:#fff;color:#0f766e;border-color:#fff}
+.cie-note{background:var(--hub-bg-soft);border:1px dashed var(--hub-border-soft);border-radius:12px;padding:11px 14px;
+  color:var(--hub-text-mute);font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:9px}
+.cie-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
+.cie-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.cie-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.cie-badge--ok{background:#e7f7ee;color:#137a45}
+.cie-badge--low{background:#fff4e0;color:#9a6300}
+.cie-badge--out{background:#fde7e7;color:#a32424}
+.cie-badge--in{background:#e7f7ee;color:#137a45}
+.cie-badge--use{background:#eef2ff;color:#3949ab}
+.cie-badge--adj{background:#f3f4f6;color:#4b5563}
+/* Floating modal (native <dialog>) */
+.cie-modal{border:none;border-radius:18px;padding:0;max-width:640px;width:calc(100% - 32px);
+  box-shadow:0 30px 80px rgba(15,23,42,.35);background:#fff}
+.cie-modal::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
+.cie-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 20px;border-bottom:1px solid var(--hub-border-soft)}
+.cie-modal-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+.cie-modal-body{padding:18px 20px}
+.cie-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:0 0 18px 18px}
+.cie-x{width:34px;height:34px;border-radius:9px;border:1px solid var(--hub-border-soft);background:#fff;cursor:pointer;color:var(--hub-text-mute)}
+.cie-x:hover{background:var(--hub-bg-soft);color:var(--hub-text)}
+.cie-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cie-form-grid .span2{grid-column:1 / -1}
+@media(max-width:560px){.cie-form-grid{grid-template-columns:1fr}}
+.cie-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:800;color:var(--hub-text-soft)}
+.cie-empty-cta{text-align:center;padding:30px 16px}
+</style>
+{% endblock %}
+
 {% block content %}
-{{ hub.hero(
-  "مخزون ومصروفات الشركة",
-  subtitle="سجّل الوارد والصرف والمصروفات التشغيلية في دفتر داخلي للمتابعة فقط. هذه الصفحة لا تعدّل أرصدة العملاء أو الموزعين ولا ترحّل قيودًا مالية.",
-  icon="boxes-stacked"
-) }}
+{% set status_variants = {"متوفر": "ok", "منخفض": "low", "نفد": "out"} %}
 
-{% include "radius/_finance_nav.html" %}
-
-<div style="margin-bottom:var(--hub-gap-section);padding:12px 16px;border:1px solid var(--hub-blue-soft);border-radius:var(--hub-r-lg);background:var(--hub-blue-soft);color:var(--hub-blue-ink);line-height:1.8;font-weight:700">
-  <i class="fa-solid fa-circle-info"></i>
-  هذا دفتر متابعة داخلي. الأسعار والكميات هنا معلومات تشغيلية ولا تؤثر على دفتر الأستاذ أو الإيرادات أو الأرباح.
+<div class="cie-hero">
+  <h2><i class="fa-solid fa-boxes-stacked"></i> مخزون ومصروفات الشركة</h2>
+  <p>سجّل وارد وصرف المخزون ومصروفات الشركة في دفتر داخلي للمتابعة فقط. الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل.</p>
+  <nav class="cie-tabs">
+    <a href="?tab=overview" class="{{ 'is-active' if tab == 'overview' }}"><i class="fa-solid fa-warehouse"></i> ملخص المخزون</a>
+    <a href="?tab=incoming" class="{{ 'is-active' if tab == 'incoming' }}"><i class="fa-solid fa-truck-ramp-box"></i> الوارد</a>
+    <a href="?tab=usage" class="{{ 'is-active' if tab == 'usage' }}"><i class="fa-solid fa-screwdriver-wrench"></i> الصرف</a>
+    <a href="?tab=expenses" class="{{ 'is-active' if tab == 'expenses' }}"><i class="fa-solid fa-receipt"></i> المصروفات</a>
+    <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-column"></i> التقارير</a>
+  </nav>
 </div>
 
 <div class="hub-kpi-grid">
   {{ hub.kpi("قيمة الوارد", summary.incoming_value|money, icon="truck-ramp-box", variant="green") }}
   {{ hub.kpi("مصروفات الشركة", summary.expenses_total|money, icon="receipt", variant="amber") }}
   {{ hub.kpi("الأصناف النشطة", summary.items_count, icon="boxes-stacked", variant="blue") }}
-  {{ hub.kpi("تنبيه مخزون", summary.low_or_out_count, icon="triangle-exclamation", variant="red") }}
+  {{ hub.kpi("تنبيه مخزون", summary.low_or_out_count, icon="triangle-exclamation", variant="red" if summary.low_or_out_count else "green") }}
 </div>
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("إضافة وارد مخزون", icon="circle-plus") %}
-    <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>صنف موجود
-        <select class="hub-select" name="item_id">
-          <option value="">إضافة صنف جديد من الاسم أدناه</option>
-          {% for item in items %}
-            <option value="{{ item.id }}">{{ item.name }}{% if item.unit %} — {{ item.unit }}{% endif %}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>اسم صنف جديد <input class="hub-input" name="item_name" placeholder="مثال: راوتر hAP ax2"></label>
-      <label>الفئة <input class="hub-input" name="category" placeholder="معدات / كابلات / صيانة"></label>
-      <label>الوحدة <input class="hub-input" name="unit" placeholder="قطعة / متر / علبة"></label>
-      <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
-      <label>تكلفة الوحدة <input class="hub-input" type="number" min="0" step="0.01" name="unit_cost"></label>
-      <label>المورّد <input class="hub-input" name="supplier"></label>
-      <label>مرجع الفاتورة <input class="hub-input" name="reference"></label>
-      <label>تاريخ الحركة <input class="hub-input" type="date" name="movement_date"></label>
-      <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
-      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> تسجيل الوارد</button>
-    </form>
-  {% endcall %}
-
-  {% call hub.section("صرف من المخزون", icon="arrow-up-from-bracket") %}
-    <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_inventory_usage') }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label class="hub-span-2">الصنف
-        <select class="hub-select" name="item_id" required>
-          <option value="">اختر الصنف</option>
-          {% for item in items %}
-            <option value="{{ item.id }}">{{ item.name }}{% if item.unit %} — {{ item.unit }}{% endif %}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
-      <label>سبب الصرف <input class="hub-input" name="usage_reason" placeholder="تركيب / استبدال / صيانة"></label>
-      <label>الموقع <input class="hub-input" name="location"></label>
-      <label>الفني <input class="hub-input" name="technician"></label>
-      <label>رقم العميل المرتبط <input class="hub-input" type="number" min="1" name="related_customer_id"></label>
-      <label>تاريخ الحركة <input class="hub-input" type="date" name="movement_date"></label>
-      <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
-      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-check"></i> تسجيل الصرف</button>
-    </form>
-  {% endcall %}
+<div class="cie-note">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه الصفحة للمتابعة الداخلية فقط ولا تؤثر على المبيعات أو المدفوعات أو أرصدة العملاء أو الموزعين أو القيود المحاسبية.
 </div>
 
-{% call hub.section("مصروفات الشركة", icon="receipt") %}
-  <form class="hub-form-grid" method="post" action="{{ url_for('radius.company_expense_add') }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>عنوان المصروف <input class="hub-input" name="title" required placeholder="مثال: صيانة مركبة"></label>
-    <label>المبلغ <input class="hub-input" type="number" min="0.01" step="0.01" name="amount" required></label>
-    <label>الفئة <input class="hub-input" name="category" placeholder="صيانة / أجور / مكتب"></label>
-    <label>التاريخ <input class="hub-input" type="date" name="expense_date"></label>
-    <label>مدفوع إلى <input class="hub-input" name="paid_to"></label>
-    <label>طريقة الدفع <input class="hub-input" name="payment_method" placeholder="نقدًا / تحويل / محفظة"></label>
-    <label>مرجع <input class="hub-input" name="reference"></label>
-    <label class="hub-span-2">ملاحظات <textarea class="hub-textarea" name="notes" rows="2"></textarea></label>
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل المصروف</button>
-  </form>
-{% endcall %}
-
-{% set status_variants = {"متوفر": "green", "منخفض": "amber", "نفد": "red"} %}
-{% call hub.section("ملخص المخزون", icon="warehouse", meta=overview|length|string + " صنف", flush=True) %}
-  {% if overview %}
-    <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>الصنف</th>
-            <th>الفئة</th>
-            <th>الوارد</th>
-            <th>المصروف</th>
-            <th>المتبقي</th>
-            <th>القيمة</th>
-            <th>الحالة</th>
-            <th>إجراء</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in overview %}
-            <tr>
-              <td><strong>{{ item.name }}</strong><div class="small hub-text-mute">{{ item.last_movement or "لا توجد حركة" }}</div></td>
-              <td>{{ item.category or "غير مصنّف" }}</td>
-              <td class="mono">{{ "%g"|format(item.purchased) }} {{ item.unit }}</td>
-              <td class="mono">{{ "%g"|format(item.used) }} {{ item.unit }}</td>
-              <td class="mono"><strong>{{ "%g"|format(item.remaining) }} {{ item.unit }}</strong></td>
-              <td>{{ item.incoming_value|money }}</td>
-              <td>{{ hub.pill(item.status, variant=status_variants.get(item.status, "grey")) }}</td>
-              <td>
-                <form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                    <i class="fa-solid fa-ban"></i> تعطيل
-                  </button>
-                </form>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    {{ hub.empty("لا يوجد مخزون مسجل بعد", sub="ابدأ بتسجيل وارد مخزون جديد من النموذج أعلى الصفحة.", icon="box-open") }}
-  {% endif %}
-{% endcall %}
-
-{% call hub.section("السجل والتقارير", icon="chart-column") %}
-  <form class="hub-form-grid" method="get">
-    <label>من تاريخ <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
-    <label>إلى تاريخ <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}"></label>
-    <label>الصنف
-      <select class="hub-select" name="item_id">
-        <option value="">كل الأصناف</option>
-        {% for item in items %}
-          <option value="{{ item.id }}" {% if filters.item_id|string == item.id|string %}selected{% endif %}>{{ item.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>نوع الحركة
-      <select class="hub-select" name="movement_type">
-        <option value="">كل الحركات</option>
-        <option value="incoming" {% if filters.movement_type == "incoming" %}selected{% endif %}>وارد</option>
-        <option value="usage" {% if filters.movement_type == "usage" %}selected{% endif %}>صرف</option>
-        <option value="adjustment" {% if filters.movement_type == "adjustment" %}selected{% endif %}>تسوية</option>
-      </select>
-    </label>
-    <label>فئة المصروف <input class="hub-input" name="expense_category" value="{{ filters.expense_category }}"></label>
-    <div style="display:flex;align-items:end">
-      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-filter"></i> تصفية</button>
-    </div>
-  </form>
-
-  <div class="hub-kpi-grid" style="margin-top:14px">
-    {{ hub.kpi("وارد الفترة", reports.incoming_value|money, icon="truck", variant="green") }}
-    {{ hub.kpi("كمية الصرف", "%g"|format(reports.usage_quantity), icon="arrow-up", variant="amber") }}
-    {{ hub.kpi("مصروفات الفترة", reports.expenses_total|money, icon="receipt", variant="red") }}
+{# ════════════════════ TAB: OVERVIEW ════════════════════ #}
+{% if tab == 'overview' %}
+<div class="cie-panel-head">
+  <h3><i class="fa-solid fa-warehouse"></i> ملخص المخزون</h3>
+  <button class="hub-btn hub-btn--primary" type="button" data-modal-open="item">
+    <i class="fa-solid fa-plus"></i> صنف جديد
+  </button>
+</div>
+{% if overview %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead>
+      <tr>
+        <th>الصنف</th><th>الفئة</th><th>الوحدة</th><th>الوارد</th><th>المصروف</th>
+        <th>المتبقي</th><th>القيمة</th><th>آخر حركة</th><th>الحالة</th><th>إجراء</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in overview %}
+      <tr>
+        <td><strong>{{ item.name }}</strong></td>
+        <td>{{ item.category or "غير مصنّف" }}</td>
+        <td>{{ item.unit or "—" }}</td>
+        <td class="mono">{{ "%g"|format(item.purchased) }}</td>
+        <td class="mono">{{ "%g"|format(item.used) }}</td>
+        <td class="mono"><strong>{{ "%g"|format(item.remaining) }} {{ item.unit }}</strong></td>
+        <td>{{ item.incoming_value|money }}</td>
+        <td class="small hub-text-mute">{{ item.last_movement|dt_local if item.last_movement else "—" }}</td>
+        <td>
+          {% set v = status_variants.get(item.status, "ok") %}
+          <span class="cie-badge cie-badge--{{ v }}">{{ item.status }}</span>
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}"
+                onsubmit="return confirm('تعطيل هذا الصنف؟ لن تُحذف حركاته.');">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-box-archive"></i> تعطيل</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="cie-empty-cta">
+    {{ hub.empty("لا توجد أصناف بعد.", sub="أضف أول وارد مخزون وسيظهر الصنف هنا تلقائيًا.", icon="boxes-stacked") }}
+    <div style="margin-top:14px"><button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming"><i class="fa-solid fa-plus"></i> تسجيل أول وارد</button></div>
   </div>
+{% endif %}
+{% endif %}
 
-  <div class="hub-grid hub-grid--2">
-    <div>
-      <h3 class="hub-section-title">حركات المخزون</h3>
-      {% if reports.movements %}
-        <div class="hub-table-wrap">
-          <table class="hub-table">
-            <thead><tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>ملاحظة</th></tr></thead>
-            <tbody>
-              {% for move in reports.movements %}
-                <tr>
-                  <td class="mono small">{{ move.movement_date }}</td>
-                  <td>{{ move.item_name or "صنف محذوف" }}</td>
-                  <td>{{ {"incoming":"وارد","usage":"صرف","adjustment":"تسوية"}.get(move.movement_type, move.movement_type) }}</td>
-                  <td class="mono">{{ "%g"|format(move.quantity) }} {{ move.item_unit or "" }}</td>
-                  <td class="small">{{ move.notes or move.usage_reason or move.reference or "—" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        {{ hub.empty("لا توجد حركات ضمن الفلتر", sub="غيّر الفترة أو سجّل حركة جديدة.", icon="list") }}
-      {% endif %}
-    </div>
+{# ════════════════════ TAB: INCOMING ════════════════════ #}
+{% if tab == 'incoming' %}
+<div class="cie-panel-head">
+  <h3><i class="fa-solid fa-truck-ramp-box"></i> وارد المخزون</h3>
+  <button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming">
+    <i class="fa-solid fa-plus"></i> تسجيل وارد
+  </button>
+</div>
+{% if incoming_records %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead>
+      <tr><th>التاريخ</th><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>المورّد</th><th>المرجع</th></tr>
+    </thead>
+    <tbody>
+      {% for m in incoming_records %}
+      <tr>
+        <td>{{ m.movement_date }}</td>
+        <td><strong>{{ m.item_name or "—" }}</strong></td>
+        <td class="mono">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
+        <td>{{ m.unit_cost|money if m.unit_cost else "—" }}</td>
+        <td>{{ m.total_cost|money if m.total_cost else "—" }}</td>
+        <td>{{ m.supplier or "—" }}</td>
+        <td>{{ m.reference or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="cie-empty-cta">{{ hub.empty("لا يوجد وارد مسجّل بعد.", sub="اضغط «تسجيل وارد» لإضافة أول حركة.", icon="truck-ramp-box") }}</div>
+{% endif %}
+{% endif %}
 
-    <div>
-      <h3 class="hub-section-title">مصروفات الشركة</h3>
-      {% if reports.expenses %}
-        <div class="hub-table-wrap">
-          <table class="hub-table">
-            <thead><tr><th>التاريخ</th><th>العنوان</th><th>الفئة</th><th>المبلغ</th></tr></thead>
-            <tbody>
-              {% for expense in reports.expenses %}
-                <tr>
-                  <td class="mono small">{{ expense.expense_date }}</td>
-                  <td>{{ expense.title }}<div class="small hub-text-mute">{{ expense.paid_to or expense.reference or "" }}</div></td>
-                  <td>{{ expense.category or "غير مصنّف" }}</td>
-                  <td>{{ expense.amount|money }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        {{ hub.empty("لا توجد مصروفات ضمن الفلتر", sub="سجّل أول مصروف من النموذج أعلى الصفحة.", icon="receipt") }}
-      {% endif %}
-    </div>
+{# ════════════════════ TAB: USAGE ════════════════════ #}
+{% if tab == 'usage' %}
+<div class="cie-panel-head">
+  <h3><i class="fa-solid fa-screwdriver-wrench"></i> صرف المخزون</h3>
+  <button class="hub-btn hub-btn--primary" type="button" data-modal-open="usage">
+    <i class="fa-solid fa-plus"></i> تسجيل صرف
+  </button>
+</div>
+{% if usage_records %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead>
+      <tr><th>التاريخ</th><th>الصنف</th><th>الكمية</th><th>السبب</th><th>الموقع</th><th>الفني</th></tr>
+    </thead>
+    <tbody>
+      {% for m in usage_records %}
+      <tr>
+        <td>{{ m.movement_date }}</td>
+        <td><strong>{{ m.item_name or "—" }}</strong></td>
+        <td class="mono">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
+        <td>{{ m.usage_reason or "—" }}</td>
+        <td>{{ m.location or "—" }}</td>
+        <td>{{ m.technician or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="cie-empty-cta">{{ hub.empty("لا يوجد صرف مسجّل بعد.", sub="اضغط «تسجيل صرف» لإضافة أول حركة.", icon="screwdriver-wrench") }}</div>
+{% endif %}
+{% endif %}
+
+{# ════════════════════ TAB: EXPENSES ════════════════════ #}
+{% if tab == 'expenses' %}
+<div class="cie-panel-head">
+  <h3><i class="fa-solid fa-receipt"></i> مصروفات الشركة</h3>
+  <button class="hub-btn hub-btn--primary" type="button" data-modal-open="expense">
+    <i class="fa-solid fa-plus"></i> مصروف جديد
+  </button>
+</div>
+{% if expense_records %}
+<div class="hub-table-wrap" style="border-radius:14px">
+  <table class="hub-table">
+    <thead>
+      <tr><th>التاريخ</th><th>العنوان</th><th>الفئة</th><th>المبلغ</th><th>مدفوع إلى</th><th>طريقة الدفع</th></tr>
+    </thead>
+    <tbody>
+      {% for e in expense_records %}
+      <tr>
+        <td>{{ e.expense_date }}</td>
+        <td><strong>{{ e.title }}</strong></td>
+        <td>{{ e.category or "غير مصنّف" }}</td>
+        <td><strong>{{ e.amount|money }}</strong></td>
+        <td>{{ e.paid_to or "—" }}</td>
+        <td>{{ e.payment_method or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="cie-empty-cta">{{ hub.empty("لا توجد مصروفات بعد.", sub="اضغط «مصروف جديد» لتسجيل أول مصروف.", icon="receipt") }}</div>
+{% endif %}
+{% endif %}
+
+{# ════════════════════ TAB: REPORTS ════════════════════ #}
+{% if tab == 'reports' %}
+<div class="cie-panel-head">
+  <h3><i class="fa-solid fa-chart-column"></i> السجل والتقارير</h3>
+</div>
+<form method="get" action="{{ url_for('radius.company_inventory') }}" class="cie-form-grid" style="margin-bottom:16px">
+  <input type="hidden" name="tab" value="reports">
+  <label>من تاريخ <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
+  <label>إلى تاريخ <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}"></label>
+  <label>الصنف
+    <select class="hub-select" name="item_id">
+      <option value="">كل الأصناف</option>
+      {% for it in items %}<option value="{{ it.id }}" {% if filters.item_id == it.id|string %}selected{% endif %}>{{ it.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>نوع الحركة
+    <select class="hub-select" name="movement_type">
+      <option value="">الكل</option>
+      <option value="incoming" {% if filters.movement_type=='incoming' %}selected{% endif %}>وارد</option>
+      <option value="usage" {% if filters.movement_type=='usage' %}selected{% endif %}>صرف</option>
+      <option value="adjustment" {% if filters.movement_type=='adjustment' %}selected{% endif %}>تسوية</option>
+    </select>
+  </label>
+  <label>فئة المصروف <input class="hub-input" name="expense_category" value="{{ filters.expense_category }}"></label>
+  <label style="justify-content:flex-end"><button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-filter"></i> تصفية</button></label>
+</form>
+
+<div class="hub-tile-grid">
+  {{ hub.tile("وارد المخزون (قيمة)", reports.incoming_value|money, icon="truck-ramp-box") }}
+  {{ hub.tile("كمية الصرف", "%g"|format(reports.usage_quantity), icon="screwdriver-wrench") }}
+  {{ hub.tile("مصروفات الشركة", reports.expenses_total|money, icon="receipt") }}
+  {{ hub.tile("عدد فئات المصروف", reports.expenses_by_category|length, icon="layer-group") }}
+</div>
+
+{% if reports.expenses_by_category %}
+<div style="margin-top:16px">{% call hub.section("المصروفات حسب الفئة", icon="layer-group", flush=True) %}
+  <div class="hub-table-wrap" style="border:none">
+    <table class="hub-table">
+      <thead><tr><th>الفئة</th><th>الإجمالي</th><th>العدد</th></tr></thead>
+      <tbody>{% for c in reports.expenses_by_category %}
+        <tr><td><strong>{{ c.category }}</strong></td><td>{{ c.total|money }}</td><td>{{ c.count }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
   </div>
+{% endcall %}</div>
+{% endif %}
 
-  {% if reports.expenses_by_category %}
-    <div style="margin-top:14px">
-      <h3 class="hub-section-title">المصروفات حسب الفئة</h3>
-      <div class="hub-tile-grid">
-        {% for row in reports.expenses_by_category %}
-          {{ hub.tile(row.category, row.total|money, icon="tag") }}
-        {% endfor %}
+<div style="margin-top:16px">{% call hub.section("آخر الحركات", icon="clock-rotate-left", flush=True) %}
+  {% if reports.movements %}
+  <div class="hub-table-wrap" style="border:none">
+    <table class="hub-table">
+      <thead><tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>القيمة</th><th>التفاصيل</th></tr></thead>
+      <tbody>{% for m in reports.movements %}
+        <tr>
+          <td>{{ m.movement_date }}</td>
+          <td><strong>{{ m.item_name or "—" }}</strong></td>
+          <td>
+            {% if m.movement_type=='incoming' %}<span class="cie-badge cie-badge--in">وارد</span>
+            {% elif m.movement_type=='usage' %}<span class="cie-badge cie-badge--use">صرف</span>
+            {% else %}<span class="cie-badge cie-badge--adj">تسوية</span>{% endif %}
+          </td>
+          <td class="mono">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
+          <td>{{ m.total_cost|money if m.total_cost else "—" }}</td>
+          <td class="small hub-text-mute">{{ m.usage_reason or m.supplier or m.reference or m.notes or "—" }}</td>
+        </tr>
+      {% endfor %}</tbody>
+    </table>
+  </div>
+  {% else %}{{ hub.empty("لا توجد حركات في الفترة المحددة.", icon="clock-rotate-left") }}{% endif %}
+{% endcall %}</div>
+{% endif %}
+
+{# ════════════════════ MODALS ════════════════════ #}
+
+{# Item modal #}
+<dialog class="cie-modal" data-modal="item">
+  <form method="post" action="{{ url_for('radius.company_inventory_item_create') }}">
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-tag"></i> صنف جديد</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="cie-form-grid">
+        <label class="span2">اسم الصنف <input class="hub-input" name="name" required placeholder="مثال: كابل CAT6"></label>
+        <label>الفئة <input class="hub-input" name="category" placeholder="شبكات / معدات"></label>
+        <label>الوحدة <input class="hub-input" name="unit" placeholder="متر / قطعة"></label>
+        <label>حد التنبيه (اختياري) <input class="hub-input" type="number" min="0" step="0.01" name="low_stock_threshold"></label>
+        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
       </div>
     </div>
-  {% endif %}
-{% endcall %}
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> حفظ الصنف</button></div>
+  </form>
+</dialog>
+
+{# Incoming modal #}
+<dialog class="cie-modal" data-modal="incoming">
+  <form method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-truck-ramp-box"></i> تسجيل وارد مخزون</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="cie-form-grid">
+        <label class="span2">صنف موجود
+          <select class="hub-select" name="item_id">
+            <option value="">— صنف جديد بالأسفل —</option>
+            {% for it in items %}<option value="{{ it.id }}">{{ it.name }}{% if it.unit %} ({{ it.unit }}){% endif %}</option>{% endfor %}
+          </select>
+        </label>
+        <label>اسم صنف جديد <input class="hub-input" name="item_name" placeholder="إن لم يكن موجودًا"></label>
+        <label>الفئة <input class="hub-input" name="category"></label>
+        <label>الوحدة <input class="hub-input" name="unit" placeholder="متر / قطعة"></label>
+        <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+        <label>سعر الوحدة (اختياري) <input class="hub-input" type="number" min="0" step="0.01" name="unit_cost"></label>
+        <label>المورّد <input class="hub-input" name="supplier"></label>
+        <label>المرجع/الفاتورة <input class="hub-input" name="reference"></label>
+        <label>تاريخ الشراء <input class="hub-input" type="date" name="movement_date"></label>
+        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+      </div>
+    </div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل الوارد</button></div>
+  </form>
+</dialog>
+
+{# Usage modal #}
+<dialog class="cie-modal" data-modal="usage">
+  <form method="post" action="{{ url_for('radius.company_inventory_usage') }}">
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-screwdriver-wrench"></i> تسجيل صرف مخزون</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="cie-form-grid">
+        <label class="span2">الصنف
+          <select class="hub-select" name="item_id" required>
+            <option value="">— اختر صنفًا —</option>
+            {% for it in items %}<option value="{{ it.id }}">{{ it.name }}{% if it.unit %} ({{ it.unit }}){% endif %}</option>{% endfor %}
+          </select>
+        </label>
+        <label>الكمية المستخدمة <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+        <label>سبب الاستخدام <input class="hub-input" name="usage_reason" placeholder="تركيب / استبدال"></label>
+        <label>الموقع <input class="hub-input" name="location"></label>
+        <label>الفني/الموظف <input class="hub-input" name="technician"></label>
+        <label>رقم عميل مرتبط (للمعلومة) <input class="hub-input" type="number" min="1" name="related_customer_id"></label>
+        <label>تاريخ الصرف <input class="hub-input" type="date" name="movement_date"></label>
+        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+      </div>
+    </div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-minus"></i> تسجيل الصرف</button></div>
+  </form>
+</dialog>
+
+{# Expense modal #}
+<dialog class="cie-modal" data-modal="expense">
+  <form method="post" action="{{ url_for('radius.company_expense_add') }}">
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-receipt"></i> مصروف جديد</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="cie-form-grid">
+        <label class="span2">عنوان المصروف <input class="hub-input" name="title" required placeholder="مثال: اشتراك إنترنت"></label>
+        <label>المبلغ <input class="hub-input" type="number" min="0.01" step="0.01" name="amount" required></label>
+        <label>الفئة <input class="hub-input" name="category" placeholder="تشغيل / أجور / صيانة"></label>
+        <label>التاريخ <input class="hub-input" type="date" name="expense_date"></label>
+        <label>مدفوع إلى <input class="hub-input" name="paid_to"></label>
+        <label>طريقة الدفع <input class="hub-input" name="payment_method" placeholder="نقدًا / تحويل"></label>
+        <label>مرجع <input class="hub-input" name="reference"></label>
+        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+      </div>
+    </div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> تسجيل المصروف</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  function dialogFor(name){ return document.querySelector('dialog[data-modal="'+name+'"]'); }
+  document.addEventListener('click', function(ev){
+    var opener = ev.target.closest('[data-modal-open]');
+    if(opener){
+      var d = dialogFor(opener.getAttribute('data-modal-open'));
+      if(d && typeof d.showModal === 'function'){ d.showModal(); }
+      return;
+    }
+    if(ev.target.closest('[data-modal-close]')){
+      var dlg = ev.target.closest('dialog'); if(dlg){ dlg.close(); }
+      return;
+    }
+    // click on backdrop closes
+    if(ev.target.tagName === 'DIALOG' && ev.target.classList.contains('cie-modal')){
+      ev.target.close();
+    }
+  });
+})();
+</script>
 {% endblock %}
