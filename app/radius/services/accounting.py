@@ -499,6 +499,26 @@ class AccountingService:
             "writeoff_ids": writeoff_ids,
         }
 
+    def settle_preview_total(self, actions: list[dict]) -> float:
+        """READ-ONLY: sum of the open 'settle' loans' amounts — no mutation.
+
+        Lets the payment route compute the time-basis deduction and create the
+        payment FIRST; loans are only actually settled AFTER the payment succeeds,
+        so a failed payment never leaves orphaned settlements.
+        """
+        total = 0.0
+        for action in actions or []:
+            if str(action.get("action") or "").strip() != "settle":
+                continue
+            try:
+                loan_id = int(action.get("loan_id"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            loan = accounting_repo.get_loan(self.tenant_id, loan_id)
+            if loan and loan.get("status") == "open":
+                total += float(loan.get("amount") or 0)
+        return round(total, 2)
+
     def reports(self, *, report_type: str) -> list[dict]:
         if report_type in {"daily", "monthly", "yearly"}:
             return accounting_repo.sales_summary(self.tenant_id, grain=report_type)

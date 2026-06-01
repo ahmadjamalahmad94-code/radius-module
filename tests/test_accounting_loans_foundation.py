@@ -336,3 +336,30 @@ def test_payment_loan_settled_total_deducts_from_time_basis(client):
     payment = settled.get_json()["data"]["payment"]
     assert payment["earned_minutes"] == 5760  # time-basis reduced by the settled 10
     assert payment["amount"] == 30  # full amount still recorded as income
+
+
+def test_settle_preview_is_read_only_then_resolve_settles(client, app):
+    # The payment route previews the settle total (read-only) BEFORE creating the
+    # payment, and only settles loans AFTER — so a failed payment never orphans loans.
+    subscriber = _create_subscriber(client)
+    loan = client.post(
+        "/api/v1/loans",
+        json={"username": subscriber["username"], "days": 2, "price_from_days": True},
+        headers=AUTH,
+    ).get_json()["data"]["loan"]
+    loan_amount = float(loan["amount"])
+    actions = [{"loan_id": loan["id"], "action": "settle"}]
+
+    from app.radius.db.repos import accounting_repo
+    from app.radius.services.accounting import service_from_context
+
+    with app.test_request_context("/", headers=AUTH):
+        svc = service_from_context()
+        # preview returns the amount WITHOUT settling
+        preview = svc.settle_preview_total(actions)
+        assert abs(preview - loan_amount) < 0.01
+        assert accounting_repo.get_loan(1, loan["id"])["status"] == "open"  # untouched
+        # resolve actually settles
+        resolved = svc.resolve_loan_actions(actions, actor="tester")
+        assert abs(float(resolved["settled_total"]) - loan_amount) < 0.01
+        assert accounting_repo.get_loan(1, loan["id"])["status"] == "settled"
