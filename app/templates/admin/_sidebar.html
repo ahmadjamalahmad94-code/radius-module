@@ -110,8 +110,9 @@
 {%- set m_invoices    = '/invoices' in path -%}
 {%- set m_vouchers    = '/vouchers' in path -%}
 {%- set m_billing_hub = ('/finance/billing' in path) or m_invoices or m_vouchers -%}
-{%- set m_ledger      = '/finance/ledger' in path -%}
-{%- set m_finance_rep = '/finance/reports' in path -%}
+{%- set m_accounting_hub = (path == url_for('radius.accounting_hub')) -%}
+{%- set m_ledger      = ('/finance/ledger' in path) or (m_accounting_hub and request.args.get('tab', 'ledger') == 'ledger') -%}
+{%- set m_finance_rep = ('/finance/reports' in path) or (m_accounting_hub and request.args.get('tab') == 'reports') -%}
 {%- set m_payment_settings = (path == url_for('radius.payment_collection_settings')) -%}
 {%- set m_payment_requests = (path == url_for('radius.payment_collection_requests')) -%}
 {%- set m_payment_review = (path == url_for('radius.payment_collection_review_queue_web')) -%}
@@ -416,7 +417,7 @@
         {{ sub_item('radius.business_finance_revenue', 'الإيرادات', m_business_revenue) }}
         {{ sub_item('radius.business_finance_debts', 'الديون', m_business_debts) }}
         {{ sub_item('radius.business_finance_loans', 'القروض', m_business_loans) }}
-        {{ sub_item('radius.finance_ledger', 'دفتر القيود', m_ledger) }}
+        {{ sub_item('radius.accounting_hub', 'السجل والتقارير المحاسبية', m_accounting_hub or m_ledger) }}
         {{ sub_item('radius.billing_hub',     'الفواتير والكوبونات', m_billing_hub) }}
         {{ sub_item('radius.collection_hub', 'التحصيل والمدفوعات', m_payment_collection) }}
         {{ sub_item('radius.company_inventory', 'مخزون ومصروفات الشركة', m_company_inventory) }}

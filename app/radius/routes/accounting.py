@@ -161,6 +161,12 @@ def users_loan_settle(username: str, loan_id: int):
 
 
 def finance_ledger():
+    args = request.args.to_dict(flat=True)
+    args["tab"] = "ledger"
+    return redirect(url_for("radius.accounting_hub", **args))
+
+
+def finance_ledger_legacy_context():
     entry_type = (request.args.get("entry_type") or "").strip()
     subscriber_id = request.args.get("subscriber_id")
     try:
@@ -190,7 +196,7 @@ def finance_ledger_void():
         flash(f"تم إنشاء قيد عكسي للقيد #{entry['reversal_of_entry_id']}.", "success")
     except (ValueError, RadiusValidationError) as e:
         flash(getattr(e, "message", str(e)), "error")
-    return redirect(url_for("radius.finance_ledger"))
+    return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 
 _REPORTS = {
@@ -207,6 +213,12 @@ _REPORTS = {
 
 
 def finance_reports():
+    args = request.args.to_dict(flat=True)
+    args["tab"] = "reports"
+    return redirect(url_for("radius.accounting_hub", **args))
+
+
+def finance_reports_legacy_context():
     report_type = (request.args.get("type") or "daily").strip()
     if report_type not in _REPORTS:
         report_type = "daily"
@@ -235,7 +247,7 @@ def finance_reports_export_csv():
         csv_text = _svc().report_csv(report_type=report_type)
     except RadiusValidationError as e:
         flash(e.message, "error")
-        return redirect(url_for("radius.finance_reports", type=report_type))
+        return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         csv_text,
         mimetype="text/csv; charset=utf-8",
@@ -253,7 +265,7 @@ def finance_reports_export_xlsx():
         xlsx_bytes = _svc().report_xlsx(report_type=report_type)
     except RadiusValidationError as e:
         flash(e.message, "error")
-        return redirect(url_for("radius.finance_reports", type=report_type))
+        return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         xlsx_bytes,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -271,7 +283,7 @@ def finance_reports_export_pdf():
         pdf_bytes = _svc().report_pdf(report_type=report_type)
     except RadiusValidationError as e:
         flash(e.message, "error")
-        return redirect(url_for("radius.finance_reports", type=report_type))
+        return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         pdf_bytes,
         mimetype="application/pdf",
@@ -294,4 +306,4 @@ def finance_reports_snapshot():
         flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}.", "success")
     except RadiusValidationError as e:
         flash(e.message, "error")
-    return redirect(url_for("radius.finance_reports", type=report_type))
+    return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))

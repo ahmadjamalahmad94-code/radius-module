@@ -149,7 +149,10 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
     assert settled.status_code == 200
     assert "settled" in settled.get_data(as_text=True)
 
-    ledger_page = client.get(f"/admin/radius/finance/ledger?subscriber_id={sub['id']}")
+    ledger_page = client.get(
+        f"/admin/radius/finance/ledger?subscriber_id={sub['id']}",
+        follow_redirects=True,
+    )
     assert ledger_page.status_code == 200
     ledger_html = ledger_page.get_data(as_text=True)
     assert "web payment smoke" in ledger_html
@@ -168,6 +171,7 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
     assert voided.status_code == 200
     assert "web correction" in client.get(
         f"/admin/radius/finance/ledger?subscriber_id={sub['id']}",
+        follow_redirects=True,
     ).get_data(as_text=True)
 
 
@@ -188,7 +192,10 @@ def test_financial_reports_page_reads_ledger_reports(client):
     )
     assert created.status_code == 200
 
-    reports = client.get("/admin/radius/finance/reports?type=subscriber_payments")
+    reports = client.get(
+        "/admin/radius/finance/reports?type=subscriber_payments",
+        follow_redirects=True,
+    )
     assert reports.status_code == 200
     html = reports.get_data(as_text=True)
     assert "دفعات المستفيدين" in html

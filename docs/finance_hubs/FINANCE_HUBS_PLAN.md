@@ -120,15 +120,15 @@
 ---
 
 ## محور 3 — السجل والتقارير المحاسبية
-**ملف route جديد:** `app/radius/routes/accounting_hub.py` · `_BASE='/accounting-hub'` · `_TABS=('ledger','reports')`
-**قالب:** `app/templates/radius/accounting_hub.html` · المصدر: `app/radius/routes/accounting.py`
+**ملف route جديد:** `app/radius/routes/finance_accounting.py` · `_BASE='/finance/accounting'` · `_TABS=('ledger','reports')`
+**قالب:** `app/templates/radius/finance_accounting.html` · المصدر: `app/radius/routes/accounting.py`
 
 ### Endpoints
 | endpoint | url | methods | يصبح |
 |---|---|---|---|
-| radius.finance_ledger | /finance/ledger | GET | hub_landing tab=ledger |
+| radius.finance_ledger | /finance/ledger | GET | redirect إلى `radius.accounting_hub` مع `tab=ledger` |
 | radius.finance_ledger_void | /finance/ledger/void | POST | modal void (kept_standalone) |
-| radius.finance_reports | /finance/reports | GET | hub_landing tab=reports |
+| radius.finance_reports | /finance/reports | GET | redirect إلى `radius.accounting_hub` مع `tab=reports` |
 | radius.finance_reports_export_csv/xlsx/pdf | /finance/reports/export.* | GET | **kept_standalone** (أزرار تصدير) |
 | radius.finance_reports_snapshot | /finance/reports/snapshot | POST | modal snapshot (kept) |
 | radius.users_finance | /users/<username>/finance | GET | **standalone** tab=finance (restyle فقط) |
@@ -148,7 +148,7 @@
 دفتر **append-only**: لا حذف. التصحيح عبر void/reversal (صف جديد). التقارير تحترم الانعكاسات — **نادِ نفس دوال repo** ولا تعد الحساب يدويًا. CSV يكتب UTF-8 BOM. snapshot يخزّن النتيجة JSON في `financial_report_snapshots`.
 
 ### إعادة التوجيه
-`/finance/ledger→hub?tab=ledger` · `/finance/reports→hub?tab=reports`. (`/users/<username>/finance` يبقى على رابطه.)
+`/finance/ledger` → `/finance/accounting?tab=ledger` · `/finance/reports` → `/finance/accounting?tab=reports`. (`/users/<username>/finance` يبقى على رابطه.)
 
 ### sidebar
 استبدل `sub_item('radius.finance_ledger',...)` بـ `sub_item('radius.accounting_hub','السجل والتقارير المحاسبية', m_accounting_hub or m_ledger)`. أبقِ `radius.finance_reports` في قسم «التقارير» (رابط متقاطع — لا تحذفه).
