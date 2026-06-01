@@ -52,12 +52,12 @@ def test_business_os_ui_routes_render_without_missing_templates_or_route_drift(a
 
     routes = [
         "/admin/radius/dashboard",
-        "/admin/radius/finance",
-        "/admin/radius/finance/wallets",
-        "/admin/radius/finance/ledger",
-        "/admin/radius/finance/revenue",
-        "/admin/radius/finance/debts",
-        "/admin/radius/finance/loans",
+        "/admin/radius/finance-center",
+        "/admin/radius/finance-center?tab=wallets",
+        "/admin/radius/finance/accounting",
+        "/admin/radius/finance-center?tab=revenue",
+        "/admin/radius/finance-center?tab=loans_debts&status=open",
+        "/admin/radius/finance-center?tab=loans_debts",
         "/admin/radius/card-users",
         "/admin/radius/card-marketplace",
         "/admin/radius/business-operators",
