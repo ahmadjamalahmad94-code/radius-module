@@ -12,7 +12,7 @@
 | Reports | التقارير |
 | Payment Collection | تحصيل الدفعات |
 | Review Queue | طابور المراجعة |
-| Dry-run | تجربة جافة |
+| Dry-run | معاينة بدون تنفيذ |
 | Save | حفظ |
 | Cancel | إلغاء |
 | Create | إنشاء |

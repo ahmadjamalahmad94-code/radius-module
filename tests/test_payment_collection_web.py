@@ -77,7 +77,7 @@ def test_settings_page_renders_and_saves(client):
     html = page.get_data(as_text=True)
     assert "مركز تحصيل الدفعات" in html
     assert "رقم المحفظة لتوجيه الدفع فقط" in html
-    assert "تجربة جافة" in html
+    assert "معاينة بدون تنفيذ" in html
     assert "Jawwal Pay (لاحقًا)" not in html
     assert "واجهة الربط الآلي (لاحقًا)" not in html
     assert "غير مفعل حاليًا" in html

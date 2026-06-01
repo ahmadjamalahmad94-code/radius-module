@@ -115,7 +115,7 @@ def test_core_admin_pages_use_arabic_visible_copy(client):
 def test_localization_glossary_documents_allowed_technical_terms():
     glossary = Path("app/radius/docs/ARABIC_UI_GLOSSARY.md").read_text(encoding="utf-8")
     assert "لوحة التحكم" in glossary
-    assert "تجربة جافة" in glossary
+    assert "معاينة بدون تنفيذ" in glossary
     assert "`RADIUS`" in glossary
     assert "`MikroTik`" in glossary
 

@@ -143,7 +143,7 @@ def test_unsupported_service_copy_is_honest():
     source = _template_source()
 
     assert "غير مدعومة في هذا المسار حاليًا" in source
-    assert "تحتاج تفعيلًا لاحقًا" in source or "تحتاج تفعيل" in source
+    assert "تحتاج تفعيلًا من الوضع الهندسي قبل التشغيل" in source
 
 
 def test_existing_engineering_route_still_renders(app):
