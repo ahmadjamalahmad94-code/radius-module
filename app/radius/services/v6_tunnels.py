@@ -190,11 +190,296 @@ def render_v6_sstp_management_script(plan: dict) -> str:
     return "\n".join(lines)
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# L2TP/IPsec traffic tunnel (OPTIONAL) — IP-change / selected routing only.
+# Separate from SSTP management; only owns the default route in full_tunnel.
+# ─────────────────────────────────────────────────────────────────────────
+
+L2TP_TRAFFIC_IFACE = "l2tp-hoberadius-traffic"
+L2TP_TRAFFIC_COMMENT = "HobeRadius managed: L2TP/IPsec traffic tunnel"
+TRAFFIC_ADDRESS_LIST = "hoberadius-vpn-traffic-clients"
+TRAFFIC_ROUTING_MARK = "hoberadius_traffic_vpn"
+TRAFFIC_POLICY_COMMENT = "HobeRadius managed: traffic policy routing"
+TRAFFIC_NAT_COMMENT = "HobeRadius managed: traffic tunnel NAT"
+
+# Modes whose routing is scoped to selected clients (not the whole router).
+_SCOPED_MODES = ("policy_routing", "selected_pool", "selected_subscribers")
+
+
+def build_v6_l2tp_ipsec_traffic_plan(router: dict, settings: dict) -> dict:
+    """Build the OPTIONAL L2TP/IPsec traffic-tunnel plan for a v6 router.
+
+    ``settings`` : {l2tp_server_host, username, password, ipsec_secret,
+                    traffic_mode, selected_pool?, full_tunnel_confirmed?bool,
+                    source_clients?[]}
+
+    Only ``full_tunnel`` owns the default route (and requires explicit
+    confirmation). Scoped modes use address-list + routing-mark instead.
+    Raises TunnelPlanError on an invalid/unsafe plan.
+    """
+    ros_version = _clean(router.get("ros_version"))
+    if not routeros_caps.supports_l2tp_ipsec_traffic(ros_version):
+        raise TunnelPlanError(
+            f"L2TP/IPsec traffic tunnel needs RouterOS 6+, got {ros_version!r}"
+        )
+
+    mode = _clean(settings.get("traffic_mode")) or "disabled"
+    server_host = _clean(settings.get("l2tp_server_host"))
+    username = _clean(settings.get("username"))
+    password = settings.get("password")
+    ipsec_secret = settings.get("ipsec_secret")
+    selected_pool = _clean(settings.get("selected_pool"))
+    full_confirmed = bool(settings.get("full_tunnel_confirmed", False))
+    source_clients = [_clean(c) for c in (settings.get("source_clients") or []) if _clean(c)]
+
+    owns_default_route = mode == "full_tunnel"
+
+    # Central validation gate (management assumed SSTP on v6).
+    verdict = routeros_caps.validate_connection_plan(
+        ros_version, "sstp_mgmt", "l2tp_ipsec_traffic",
+        traffic_mode=mode,
+        traffic_owns_default_route=owns_default_route,
+        full_tunnel_confirmed=full_confirmed,
+        selected_pool=selected_pool or None,
+    )
+    if not verdict["valid"]:
+        raise TunnelPlanError(
+            "invalid L2TP plan: " + "; ".join(e["code"] for e in verdict["errors"])
+        )
+
+    if mode != "disabled":
+        if not server_host or not username or not password:
+            raise TunnelPlanError("L2TP plan needs server host, username and password")
+        if not ipsec_secret:
+            raise TunnelPlanError("missing_ipsec_secret")
+
+    warnings = [w["message_ar"] for w in verdict["warnings"]]
+    if mode == "full_tunnel":
+        warnings.append(
+            "تمرير كل الترافيك (full tunnel) قد يقطع إنترنت المشتركين إذا كان الإعداد خاطئًا."
+        )
+    warnings.append(
+        "السرعة تعتمد على موديل الراوتر والمعالج ودعم IPsec Hardware Acceleration وجودة الخط — لا ضمان لسرعة محددة."
+    )
+
+    return {
+        "role": "traffic",
+        "tunnel_type": "l2tp_ipsec_traffic",
+        "ros_version": routeros_caps.parse_routeros_major(ros_version),
+        "interface_name": L2TP_TRAFFIC_IFACE,
+        "traffic_mode": mode,
+        "enabled": mode != "disabled",
+        "server_host": server_host,
+        "username": username,
+        "password": password,
+        "ipsec_secret": ipsec_secret,
+        "use_ipsec": True,
+        "add_default_route": owns_default_route,
+        "owns_default_route": owns_default_route,
+        "selected_pool": selected_pool,
+        "source_clients": source_clients,
+        "address_list": TRAFFIC_ADDRESS_LIST,
+        "routing_mark": TRAFFIC_ROUTING_MARK,
+        "comment": L2TP_TRAFFIC_COMMENT,
+        "warnings": warnings,
+    }
+
+
+def render_v6_l2tp_ipsec_traffic_script(plan: dict) -> str:
+    """Render the idempotent RouterOS v6 L2TP/IPsec traffic-tunnel script."""
+    if plan.get("tunnel_type") != "l2tp_ipsec_traffic":
+        raise TunnelPlanError("not an L2TP/IPsec traffic plan")
+    mode = plan.get("traffic_mode", "disabled")
+    iface = plan["interface_name"]
+    comment = plan.get("comment", L2TP_TRAFFIC_COMMENT)
+
+    lines: list[str] = []
+    lines.append("# ===========================================================")
+    lines.append(f"# {comment}")
+    lines.append("# Traffic tunnel — IP change / selected subscriber routing only.")
+    lines.append("# Separate from the SSTP management tunnel; idempotent.")
+    lines.append("# ===========================================================")
+    lines.append("")
+
+    if mode == "disabled":
+        lines.append("# Traffic tunnel disabled — disable any HobeRadius L2TP traffic interface.")
+        lines.append(
+            f':if ([/interface l2tp-client find name="{iface}"] != "") do={{'
+        )
+        lines.append(f"  /interface l2tp-client set [find name=\"{iface}\"] disabled=yes")
+        lines.append("}")
+        lines.append("# End traffic tunnel (disabled)")
+        return "\n".join(lines)
+
+    host = plan["server_host"]
+    user = plan["username"]
+    password = plan["password"]
+    ipsec_secret = plan["ipsec_secret"]
+    add_dr = "yes" if plan.get("add_default_route") else "no"
+    alist = plan["address_list"]
+    mark = plan["routing_mark"]
+
+    # L2TP client with IPsec.
+    lines.append("# L2TP/IPsec client interface")
+    lines.append(f':local l2tpName "{iface}"')
+    lines.append(':if ([/interface l2tp-client find name=$l2tpName] = "") do={')
+    lines.append(
+        "  /interface l2tp-client add name=$l2tpName "
+        f'connect-to="{host}" user="{user}" password="{password}" '
+        f'use-ipsec=yes ipsec-secret="{ipsec_secret}" '
+        f'add-default-route={add_dr} disabled=no comment="{comment}"'
+    )
+    lines.append("} else={")
+    lines.append(
+        "  /interface l2tp-client set [find name=$l2tpName] "
+        f'connect-to="{host}" user="{user}" password="{password}" '
+        f'use-ipsec=yes ipsec-secret="{ipsec_secret}" '
+        f'add-default-route={add_dr} disabled=no comment="{comment}"'
+    )
+    lines.append("}")
+    lines.append("")
+
+    if mode == "full_tunnel":
+        # Broad NAT is only acceptable here because the operator explicitly
+        # confirmed full tunnel.
+        lines.append("# Full tunnel NAT (operator-confirmed)")
+        lines.append(
+            f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{'
+        )
+        lines.append(
+            f"  /ip firewall nat add chain=srcnat out-interface=$l2tpName "
+            f'action=masquerade comment="{TRAFFIC_NAT_COMMENT}"'
+        )
+        lines.append("}")
+    elif mode in _SCOPED_MODES:
+        # Scoped: address-list + routing-mark + scoped NAT. No broad NAT, no
+        # global default route.
+        lines.append("# Scoped traffic clients (address list)")
+        for src in plan.get("source_clients") or []:
+            lines.append(
+                f':if ([/ip firewall address-list find list="{alist}" address="{src}"] = "") do={{'
+            )
+            lines.append(
+                f"  /ip firewall address-list add list={alist} address={src} "
+                f'comment="{TRAFFIC_POLICY_COMMENT}"'
+            )
+            lines.append("}")
+        lines.append("")
+        lines.append("# Policy routing: mark selected clients, route the mark via L2TP")
+        lines.append(
+            f':if ([/ip firewall mangle find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{'
+        )
+        lines.append(
+            f"  /ip firewall mangle add chain=prerouting src-address-list={alist} "
+            f"action=mark-routing new-routing-mark={mark} passthrough=yes "
+            f'comment="{TRAFFIC_POLICY_COMMENT}"'
+        )
+        lines.append("}")
+        lines.append(
+            f':if ([/ip route find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{'
+        )
+        lines.append(
+            f"  /ip route add dst-address=0.0.0.0/0 gateway=$l2tpName "
+            f'routing-mark={mark} comment="{TRAFFIC_POLICY_COMMENT}"'
+        )
+        lines.append("}")
+        lines.append("")
+        lines.append("# Scoped NAT for selected clients only")
+        lines.append(
+            f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{'
+        )
+        lines.append(
+            f"  /ip firewall nat add chain=srcnat src-address-list={alist} "
+            f"out-interface=$l2tpName action=masquerade "
+            f'comment="{TRAFFIC_NAT_COMMENT}"'
+        )
+        lines.append("}")
+
+    lines.append("")
+    lines.append("# End L2TP/IPsec traffic tunnel")
+    return "\n".join(lines)
+
+
+def analyze_tunnel_conflicts(
+    router_id: object,
+    version: object,
+    management_plan: dict | None,
+    traffic_plan: dict | None,
+) -> list[dict]:
+    """Detect conflicts between a management plan and a traffic plan.
+
+    Returns a list of ``{severity, code, message_ar, suggested_fix}`` where
+    severity is ``ok`` / ``warning`` / ``blocking``. Plan-derivable checks
+    only; live-router checks (existing marks, duplicate interfaces on the box)
+    belong to the verify phase and are flagged as such.
+    """
+    issues: list[dict] = []
+    mgmt = management_plan or {}
+    traffic = traffic_plan or {}
+
+    def add(sev: str, code: str, msg: str, fix: str = "") -> None:
+        issues.append({"severity": sev, "code": code, "message_ar": msg, "suggested_fix": fix})
+
+    # WireGuard on v6 (management or traffic).
+    if mgmt.get("tunnel_type") == "wireguard" and not routeros_caps.supports_wireguard(version):
+        add("blocking", "routeros_v6_wireguard_not_supported",
+            "RouterOS 6 لا يدعم WireGuard.", "استخدم SSTP للإدارة.")
+
+    # SSTP management must not own default route.
+    if mgmt.get("tunnel_type") == "sstp_mgmt" and mgmt.get("add_default_route"):
+        add("blocking", "sstp_default_route",
+            "نفق SSTP للإدارة لا يجوز أن يملك Default Route.",
+            "اضبط add-default-route=no على SSTP.")
+
+    # Both tunnels owning the default route.
+    if mgmt.get("add_default_route") and traffic.get("owns_default_route"):
+        add("blocking", "default_route_conflict",
+            "نفقان يحاولان امتلاك Default Route في آن واحد.",
+            "نفق واحد فقط يملك Default Route.")
+
+    if traffic.get("enabled"):
+        # Traffic enabled without IPsec secret.
+        if not traffic.get("ipsec_secret"):
+            add("blocking", "missing_ipsec_secret",
+                "نفق الترافيك مفعّل دون IPsec secret.", "أدخل IPsec secret.")
+        # Same interface name as management.
+        if mgmt.get("interface_name") and mgmt["interface_name"] == traffic.get("interface_name"):
+            add("blocking", "interface_name_clash",
+                "اسم واجهة نفق الترافيك يطابق نفق الإدارة.",
+                "استخدم أسماء واجهات مختلفة.")
+        # Full tunnel risk / broad NAT.
+        if traffic.get("traffic_mode") == "full_tunnel":
+            add("warning", "full_tunnel_high_risk",
+                "وضع تمرير كل الترافيك عالي الخطورة وقد يقطع الإنترنت.",
+                "تأكد من قدرة الراوتر والـ VPS قبل التفعيل.")
+            add("warning", "unsafe_broad_nat",
+                "NAT شامل لكل الترافيك — لا تستخدمه إلا مع full tunnel المؤكد.", "")
+        # Management disabled while traffic enabled.
+        if mgmt and mgmt.get("tunnel_type") == "none":
+            add("blocking", "management_tunnel_would_be_lost",
+                "نفق الإدارة معطّل بينما نفق الترافيك مفعّل.",
+                "فعّل نفق الإدارة (SSTP) أولًا.")
+        # Live-state checks (routing mark / duplicate rules) — verify phase.
+        add("warning", "verify_live_routing_mark",
+            "تحقّق أثناء التطبيق من عدم استخدام routing-mark بواسطة قاعدة غير تابعة لـ HobeRadius.", "")
+
+    if not issues:
+        add("ok", "no_conflicts", "لا توجد تعارضات.", "")
+    return issues
+
+
 __all__ = [
     "SSTP_MGMT_IFACE",
     "SSTP_MGMT_COMMENT",
     "SSTP_MGMT_ONLY_NOTE",
+    "L2TP_TRAFFIC_IFACE",
+    "L2TP_TRAFFIC_COMMENT",
+    "TRAFFIC_ADDRESS_LIST",
+    "TRAFFIC_ROUTING_MARK",
     "TunnelPlanError",
     "build_v6_sstp_management_plan",
     "render_v6_sstp_management_script",
+    "build_v6_l2tp_ipsec_traffic_plan",
+    "render_v6_l2tp_ipsec_traffic_script",
+    "analyze_tunnel_conflicts",
 ]
