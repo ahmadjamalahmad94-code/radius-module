@@ -261,7 +261,7 @@ def ra_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "router_id must be int", status=422)
+                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
         rows = ra_repo.list_for_router(_tid(), rid)
     else:
         rows = ra_repo.list_for_tenant(_tid())
@@ -379,7 +379,7 @@ def wb_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "router_id must be int", status=422)
+                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
         rows = wb_repo.list_policies_for_router(_tid(), rid)
     else:
         rows = wb_repo.list_policies_for_tenant(_tid())
@@ -554,7 +554,7 @@ def wg_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "router_id must be int", status=422)
+                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
         rows = wg_repo.list_policies_for_router(_tid(), rid)
     else:
         rows = wg_repo.list_policies_for_tenant(_tid())

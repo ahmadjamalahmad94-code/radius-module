@@ -59,6 +59,16 @@ def test_three_subservice_list_endpoints_exist(client):
         assert body["data"]["count"] == 0
 
 
+def test_policy_list_rejects_bad_router_id_in_arabic(client):
+    for sub in ("remote-access", "web-block", "walled-garden"):
+        r = client.get(
+            f"/api/v1/network-policy/{sub}/policies?router_id=bad",
+            headers=_HEADERS,
+        )
+        assert r.status_code == 422, sub
+        assert _json(r)["error"]["message"] == "معرّف الراوتر يجب أن يكون رقمًا صحيحًا."
+
+
 # ─── Remote access CRUD ──────────────────────────────────────
 
 
