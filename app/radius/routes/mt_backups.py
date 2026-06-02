@@ -88,8 +88,8 @@ def mt_backups_list(nas_id: int):
         "radius/mt_backups.html",
         nas=nas, backups=rows,
         restore_disabled_reason=(
-            "ميزة التطبيق معطّلة حاليًا — هذه المرحلة "
-            "تعرض خطة الاستعادة فقط دون تنفيذها."
+            "تطبيق الاستعادة مقفل حاليًا لحماية الراوتر. "
+            "يمكنك فحص الملف ومراجعة الخطة دون تنفيذ أي تغيير."
         ),
     )
 
@@ -188,6 +188,30 @@ def _nas_for_mac(nas: dict) -> dict:
     }
 
 
+def _restore_plan_rows(metadata: dict) -> list[dict]:
+    if not metadata:
+        return []
+    labels = {
+        "filename": "اسم الملف",
+        "head_size_bytes": "حجم عينة الفحص",
+        "appears_binary": "نوع الملف",
+        "checksum_prefix": "بصمة الفحص",
+    }
+    rows: list[dict] = []
+    for key in ("filename", "head_size_bytes", "appears_binary", "checksum_prefix"):
+        if key not in metadata:
+            continue
+        value = metadata.get(key)
+        if key == "appears_binary":
+            rendered = "ملف ثنائي" if value else "ملف نصي أو غير ثنائي"
+        elif key == "head_size_bytes":
+            rendered = f"{int(value or 0)} بايت"
+        else:
+            rendered = str(value or "—")
+        rows.append({"key": key, "label": labels[key], "value": rendered})
+    return rows
+
+
 # ─── Restore planner (S8.4 — gated) ──────────────────────────
 
 
@@ -225,9 +249,10 @@ def mt_backups_restore_plan(nas_id: int):
         nas=nas,
         backups=router_backups_repo.list_for_router(_tid(), nas_id),
         restore_plan=metadata,
+        restore_plan_rows=_restore_plan_rows(metadata),
         restore_error=error,
         restore_disabled_reason=(
-            "هذه خطة فحص فقط — تطبيق الاستعادة يحتاج تدفّقًا "
-            "مخصّصًا غير مفعّل في هذه المرحلة."
+            "هذه خطة فحص فقط — تطبيق الاستعادة مقفل لحماية الراوتر "
+            "ويتطلب موافقة تشغيلية منفصلة قبل التنفيذ."
         ),
     )

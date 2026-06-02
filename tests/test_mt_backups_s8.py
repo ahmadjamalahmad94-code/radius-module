@@ -233,4 +233,7 @@ def test_restore_plan_inspects_file_without_applying(app, client):
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert "data-mt-backups-restore-plan" in html
+    assert 'data-mt-backups-restore-row="filename"' in html
+    assert 'data-mt-backups-restore-row="appears_binary"' in html
+    assert "{&#34;filename&#34;" not in html
     assert "data-mt-backups-restore-disabled" in html

@@ -17,7 +17,7 @@
 
   {{ hub.hero(
     "النسخ الاحتياطية — " ~ nas.name,
-    subtitle="حفظ نسخة من إعدادات الراوتر — تطبيق الاستعادة معطّل في هذه المرحلة.",
+    subtitle="حفظ نسخة من إعدادات الراوتر وفحص ملفات الاستعادة بأمان دون تنفيذ تغيير مباشر.",
     icon="floppy-disk",
   ) }}
 
@@ -130,9 +130,9 @@
           <button type="button"
                   class="mt-action-btn mt-action-btn--danger"
                   disabled
-                  title="غير مفعّل في هذه المرحلة"
+                  title="مقفل لحماية الراوتر ويتطلب موافقة تشغيلية منفصلة"
                   data-mt-backups-restore-apply>
-            <i class="fa-solid fa-bolt"></i> تطبيق الاستعادة (معطّل)
+            <i class="fa-solid fa-bolt"></i> تطبيق الاستعادة (مقفل)
           </button>
         </div>
       </form>
@@ -144,8 +144,25 @@
       </div>
       {% endif %}
 
-      {% if restore_plan %}
-      <pre class="mt-logs-output" data-mt-backups-restore-plan>{{ restore_plan | tojson(indent=2) }}</pre>
+      {% if restore_plan_rows %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0" data-mt-backups-restore-plan>
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>البند</th>
+              <th>القيمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in restore_plan_rows %}
+            <tr data-mt-backups-restore-row="{{ row.key }}">
+              <td>{{ row.label }}</td>
+              <td><strong>{{ row.value }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% endif %}
     </div>
   </section>
