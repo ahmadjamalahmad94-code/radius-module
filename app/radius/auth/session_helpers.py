@@ -16,11 +16,17 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
     session["admin_name"] = admin.full_name or admin.username
     session["is_super_admin"] = bool(getattr(admin, "is_super_admin", False))
     session["tenant_id"] = tenant_id
+    # حمّل صلاحيات الدور في الجلسة حتى تعمل فحوصات RBAC (الحارس + SafetyGate).
+    try:
+        from ..services.admins import get_admins_service
+        session["permissions"] = list(get_admins_service().permissions_of(admin))
+    except Exception:
+        session["permissions"] = []
     session.permanent = True
 
 
 def clear_current_admin() -> None:
-    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin", "tenant_id"):
+    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin", "tenant_id", "permissions"):
         session.pop(k, None)
 
 
