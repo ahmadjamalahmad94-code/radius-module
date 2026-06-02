@@ -44,6 +44,11 @@ def register_mt_alerts_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/alerts/loop-setup", "mt_loop_setup",
+        requires_perm(PERM_DIAGNOSTICS)(mt_loop_setup),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/alerts/<int:alert_id>", "mt_alerts_detail",
         requires_perm(PERM_DIAGNOSTICS)(mt_alerts_detail),
         methods=["GET"],
@@ -192,6 +197,37 @@ def mt_metrics_setup():
         tokens=tokens,
         suggested_token_name=(tokens[0]["name"] if tokens else ""),
         routers=_routers_with_thresholds(tid),
+    )
+
+
+def mt_loop_setup():
+    """Loop-tracking «خدمة تتبع اللوب»: pick a router + interfaces → generate a
+    passive DHCP-client probe script (the loop-detection trick) + show each
+    router's current probe status."""
+    from ..db.repos import api_tokens_repo, router_loop_probes_repo
+
+    tid = _tid()
+    tokens = [t for t in api_tokens_repo.list_tokens(tid) if not t.get("revoked")]
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    forwarded_host = request.headers.get("X-Forwarded-Host", "")
+    proto = forwarded_proto or ("https" if request.is_secure else "http")
+    host = forwarded_host or request.host
+
+    # Group probe readings by router for the status panel.
+    by_router: dict[int, list[dict]] = {}
+    for p in router_loop_probes_repo.list_for_tenant(tid):
+        by_router.setdefault(int(p["router_id"]), []).append(p)
+
+    routers = _routers_with_thresholds(tid)
+    for r in routers:
+        r["probes"] = by_router.get(r["id"], [])
+
+    return render_template(
+        "radius/mt_loop_setup.html",
+        base_url=f"{proto}://{host}",
+        tokens=tokens,
+        suggested_token_name=(tokens[0]["name"] if tokens else ""),
+        routers=routers,
     )
 
 

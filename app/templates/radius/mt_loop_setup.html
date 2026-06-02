@@ -1,0 +1,186 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% block title %}تتبّع اللوب على الراوتر{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-arrows-spin"></i>{% endblock %}
+{% block page_title %}تتبّع اللوب (الحلقات) على الراوتر{% endblock %}
+{% block page_sub %}<span class="sub">مجسّ DHCP سلبي على منفذ مختار — لو حصل على إيجار فهناك لوب</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+  .lp-card{background:#fff;border:1px solid var(--hub-border,#cbd5e1);border-radius:14px;box-shadow:var(--hub-sh-sm,0 1px 3px rgba(15,23,42,.06));margin-bottom:14px;padding:16px 20px}
+  .lp-card h3{margin:0 0 10px;font-size:15px;color:#5b21b6;display:flex;align-items:center;gap:8px}
+  .lp-row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+  .lp-row label{font-size:13px;font-weight:800;color:#475569}
+  .lp-row input,.lp-row select{width:100%;padding:8px 12px;border:1px solid #d5ccf5;border-radius:8px;font-size:13px;direction:ltr}
+  .lp-script{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px 16px;margin-top:10px;position:relative;overflow:auto}
+  .lp-script pre{margin:0;font-family:var(--hub-mono,monospace);font-size:12px;line-height:1.65;color:#bfdbfe;direction:ltr;white-space:pre}
+  .lp-copy{position:absolute;inset-inline-end:10px;top:10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer}
+  .lp-copy:hover{color:#fff;background:#334155}
+  .lp-copy.is-copied{background:#16a34a;color:#fff;border-color:#16a34a}
+  .lp-warn{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:12px}
+  .lp-probe{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:7px;background:#fafbfc}
+  .lp-badge{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:900}
+  .lp-badge--loop{background:#fee2e2;color:#b91c1c}
+  .lp-badge--ok{background:#dcfce7;color:#15803d}
+  .lp-badge--wait{background:#f1f5f9;color:#64748b}
+  .lp-mono{font-family:var(--hub-mono,monospace);direction:ltr;font-size:12.5px}
+  .lp-rtitle{font-weight:900;color:#0f172a;font-size:13.5px;margin:14px 0 6px}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero("تتبّع اللوب على الراوتر",
+    subtitle="ركّب مجسّ DHCP على منفذ، ولو أخذ إيجارًا فهذا دليل لوب — يظهر هنا بالـIP",
+    icon="arrows-spin") }}
+
+<div class="lp-card">
+  <h3><i class="fa-solid fa-circle-info"></i> كيف يعمل؟</h3>
+  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
+    نضع <strong>DHCP Client سلبيًا</strong> (بدون default route ولا DNS) على المنفذ المختار.
+    المنفذ المفترض ألا يصله DHCP، فيبقى <code>searching</code>. لو حصل <strong>لوب</strong> أعاد المنفذ
+    إلى شبكة فيها DHCP server، يأخذ المجسّ إيجارًا (<code>bound</code>) — وهذا <strong>دليل اللوب</strong>،
+    والـIP المُستأجَر يدلّك على المقطع. الراوتر يدفع القراءات للخادم، وأي لوب يظهر في
+    <a href="{{ url_for('radius.mt_alerts_index') }}" style="font-weight:800;color:#5b21b6">التنبيهات الذكية</a>
+    مع المنفذ والـIP.
+  </p>
+</div>
+
+{# ── Live status per router ── #}
+<div class="lp-card">
+  <h3><i class="fa-solid fa-wave-square"></i> حالة التتبّع الحالية</h3>
+  {% set any_probe = routers | selectattr('probes') | list %}
+  {% if not any_probe %}
+  <p style="font-size:13px;color:#64748b;margin:0">لا توجد مجسّات بعد. ركّب السكربت بالأسفل على راوتر لتبدأ القراءات.</p>
+  {% else %}
+  {% for r in routers if r.probes %}
+  <div class="lp-rtitle"><i class="fa-solid fa-router"></i> {{ r.name }}</div>
+  {% for p in r.probes %}
+  {% set is_loop = (p.last_status == 'bound') or (p.last_lease_ip and p.last_lease_ip|trim) %}
+  <div class="lp-probe">
+    <div><span class="lp-mono">{{ p.interface }}</span>
+      {% if is_loop %}<span class="lp-mono" style="color:#b91c1c"> — IP {{ p.last_lease_ip or '—' }}{% if p.last_server_ip %} (من {{ p.last_server_ip }}){% endif %}</span>{% endif %}
+    </div>
+    {% if is_loop %}<span class="lp-badge lp-badge--loop">لوب مكتشَف</span>
+    {% elif p.last_status == 'searching' %}<span class="lp-badge lp-badge--ok">سليم</span>
+    {% else %}<span class="lp-badge lp-badge--wait">{{ p.last_status or 'بانتظار قراءة' }}</span>{% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
+  {% endif %}
+</div>
+
+{% if not tokens %}
+<div class="lp-warn">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  لا يوجد رمز ربط بعد. أنشئ واحدًا من
+  <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener" style="font-weight:800;color:#92400e;text-decoration:underline">إدارة رموز الربط</a>.
+</div>
+{% endif %}
+
+<div class="lp-card">
+  <h3><i class="fa-solid fa-screwdriver-wrench"></i> تركيب مجسّ التتبّع</h3>
+  <div class="lp-row">
+    <label>الراوتر</label>
+    <select id="lp-router">
+      {% for r in routers %}<option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>{% endfor %}
+      {% if not routers %}<option value="">لا توجد راوترات مُسجّلة</option>{% endif %}
+    </select>
+  </div>
+  <div class="lp-row">
+    <label>المنافذ المراقَبة</label>
+    <input type="text" id="lp-ifaces" value="ether2" placeholder="مثال: ether2,ether3" dir="ltr">
+  </div>
+  <div class="lp-row">
+    <label>عنوان الخادم</label>
+    <input type="text" id="lp-url" value="{{ base_url }}" dir="ltr">
+  </div>
+  <div class="lp-row">
+    <label>رمز الربط</label>
+    <input type="text" id="lp-token" value="" autocomplete="off" placeholder="الصق رمز الربط">
+  </div>
+  <p style="font-size:12px;color:#64748b;margin:4px 0 0">
+    اكتب أسماء المنافذ مفصولة بفاصلة (المنافذ التي يجب ألا يصلها DHCP — منافذ الزبائن).
+    <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:#5b21b6">إدارة الرموز →</a>
+  </p>
+</div>
+
+<div class="lp-card">
+  <h3><i class="fa-solid fa-code"></i> سكربت MikroTik</h3>
+  <div class="lp-script">
+    <button class="lp-copy" type="button" data-copy-script><i class="fa-solid fa-copy"></i> نسخ</button>
+<pre id="lp-script-body" dir="ltr">جارٍ توليد السكربت…</pre>
+  </div>
+</div>
+
+<div class="lp-card">
+  <h3><i class="fa-solid fa-broom"></i> إيقاف التتبّع وإزالته</h3>
+  <div class="lp-script"><pre dir="ltr">/system scheduler remove [find name=hoberadius-loop-probe]
+/ip dhcp-client remove [find comment="hoberadius-loop"]</pre></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var routerSel=document.getElementById("lp-router");
+  var ifInp=document.getElementById("lp-ifaces");
+  var urlInp=document.getElementById("lp-url");
+  var tokInp=document.getElementById("lp-token");
+  var scriptEl=document.getElementById("lp-script-body");
+
+  function rebuild(){
+    var url=(urlInp.value||"").trim().replace(/\/+$/,"");
+    var tok=(tokInp.value||"").trim();
+    var rid=(routerSel&&routerSel.value)||"";
+    var endpoint=url+"/api/v1/routers/"+rid+"/loop/ingest";
+    var isHttps=/^https:\/\//i.test(url);
+    var modeAndCert=isHttps?"mode=https check-certificate=no":"mode=http";
+    var ifaces=(ifInp.value||"").split(/[,\s]+/).map(function(s){return s.trim();}).filter(Boolean);
+
+    var lines=[];
+    lines.push('/ip dhcp-client remove [find comment="hoberadius-loop"]');
+    lines.push('/system scheduler remove [find name=hoberadius-loop-probe]');
+    lines.push("");
+    ifaces.forEach(function(i){
+      lines.push('/ip dhcp-client add interface='+i+' add-default-route=no use-peer-dns=no use-peer-ntp=no disabled=no comment="hoberadius-loop"');
+    });
+    lines.push("");
+    // Scheduler: read every hoberadius-loop dhcp-client + POST its status.
+    var ev=
+      '/system scheduler add name="hoberadius-loop-probe" interval=1m \\\n'+
+      '    start-time=startup comment="HobeRadius loop probe" \\\n'+
+      '    on-event="\n'+
+      ':local body \\"{\\\\\\"probes\\\\\\":[\\";\n'+
+      ':local first true;\n'+
+      ':foreach c in=[/ip dhcp-client find comment=\\"hoberadius-loop\\"] do={\n'+
+      '  :local ifn [/ip dhcp-client get \\$c interface];\n'+
+      '  :local st [/ip dhcp-client get \\$c status];\n'+
+      '  :local addr \\"\\";\n'+
+      '  :do { :set addr [/ip dhcp-client get \\$c address] } on-error={};\n'+
+      '  :local gw \\"\\";\n'+
+      '  :do { :set gw [/ip dhcp-client get \\$c gateway] } on-error={};\n'+
+      '  :if (!\\$first) do={ :set body (\\$body . \\",\\") };\n'+
+      '  :set body (\\$body . \\"{\\\\\\"interface\\\\\\":\\\\\\"\\" . \\$ifn . \\"\\\\\\",\\\\\\"status\\\\\\":\\\\\\"\\" . \\$st . \\"\\\\\\",\\\\\\"address\\\\\\":\\\\\\"\\" . \\$addr . \\"\\\\\\",\\\\\\"server\\\\\\":\\\\\\"\\" . \\$gw . \\"\\\\\\"}\\");\n'+
+      '  :set first false;\n'+
+      '};\n'+
+      ':set body (\\$body . \\"]}\\");\n'+
+      '/tool fetch url=\\"'+endpoint+'\\" \\\\\n'+
+      '    http-method=post '+modeAndCert+' \\\\\n'+
+      '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer '+tok+'\\" \\\\\n'+
+      '    http-data=\\$body output=none;\n'+
+      '"';
+    lines.push(ev);
+    scriptEl.textContent=lines.join("\n");
+  }
+
+  function copy(text,btn){
+    navigator.clipboard.writeText(text).then(function(){
+      var o=btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-check"></i> منسوخ'; btn.classList.add("is-copied");
+      setTimeout(function(){ btn.innerHTML=o; btn.classList.remove("is-copied"); },1700);
+    });
+  }
+  [routerSel,ifInp,urlInp,tokInp].forEach(function(el){ if(el){ el.addEventListener("input",rebuild); el.addEventListener("change",rebuild); } });
+  var b=document.querySelector("[data-copy-script]"); if(b) b.addEventListener("click",function(){ copy(scriptEl.textContent,this); });
+  rebuild();
+})();
+</script>
+{% endblock %}

@@ -16,7 +16,7 @@ def register_v1(parent: Blueprint) -> None:
         card_checker, card_users, cards, communications, customer_portals, dashboard, devices, distributors, health, internal_auth,
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
         operational_reports,
-        payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
+        payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_loops, router_metrics, service_requests, services, sessions,
         settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
         setup_wizard,
     )
@@ -44,6 +44,7 @@ def register_v1(parent: Blueprint) -> None:
     nas.register(v1)
     network_devices.register(v1)
     router_alerts.register(v1)
+    router_loops.register(v1)
     router_metrics.register(v1)
     sessions.register(v1)
     accounting.register(v1)

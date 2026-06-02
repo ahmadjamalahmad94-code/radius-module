@@ -150,6 +150,8 @@
         <i class="fa-solid fa-circle-info"></i>
         الكشف يعتمد على دفع الراوتر لمقاييسه كل دقيقتين.
         <a href="{{ url_for('radius.mt_metrics_setup') }}">إعداد عميل المقاييس على الراوتر ←</a>
+        &nbsp;·&nbsp;
+        <a href="{{ url_for('radius.mt_loop_setup') }}">تتبّع اللوب (الحلقات) ←</a>
       </div>
 
       <div class="sa-card">
@@ -163,6 +165,7 @@
         <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>راوتر مفصول (توقّف عن الإرسال)</span></label>
         <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>ترافيك عالٍ فوق حدّ السرعة</span></label>
         <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق حدّ الجيجابايت</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="loop" value="1" {% if settings.loop %}checked{% endif %}><span>حلقة (لوب) على منفذ — عبر مجسّ DHCP</span></label>
         <div class="sa-grid">
           <label class="sa-field">يُعدّ مفصولًا بعد (دقيقة)
             <input type="number" min="2" name="offline_after_min" value="{{ settings.offline_after_min }}">

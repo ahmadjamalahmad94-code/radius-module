@@ -22,6 +22,7 @@ from ..db.repos import (
     alerts_repo,
     nas_repo,
     router_alert_settings_repo,
+    router_loop_probes_repo,
     router_metrics_repo,
     tenants_repo,
 )
@@ -33,6 +34,7 @@ _DEFAULTS = {
     "offline": True,
     "high_traffic": True,
     "high_usage": True,
+    "loop": True,
     "offline_after_min": 6,      # 3× the 2-min push interval
     "default_speed_mbps": 100,
     "default_usage_gb": 200,
@@ -68,6 +70,7 @@ def global_settings(tenant_id: int) -> dict[str, Any]:
         "offline":            _bool(g(tenant_id, "network.alerts.offline"), d["offline"]),
         "high_traffic":       _bool(g(tenant_id, "network.alerts.high_traffic"), d["high_traffic"]),
         "high_usage":         _bool(g(tenant_id, "network.alerts.high_usage"), d["high_usage"]),
+        "loop":               _bool(g(tenant_id, "network.alerts.loop"), d["loop"]),
         "offline_after_min":  _int(g(tenant_id, "network.alerts.offline_after_min"), d["offline_after_min"]),
         "default_speed_mbps": _int(g(tenant_id, "network.alerts.default_speed_mbps"), d["default_speed_mbps"]),
         "default_usage_gb":   _int(g(tenant_id, "network.alerts.default_usage_gb"), d["default_usage_gb"]),
@@ -83,6 +86,7 @@ def save_global_settings(tenant_id: int, values: dict, *, by: int = 0) -> None:
         "offline": "network.alerts.offline",
         "high_traffic": "network.alerts.high_traffic",
         "high_usage": "network.alerts.high_usage",
+        "loop": "network.alerts.loop",
         "offline_after_min": "network.alerts.offline_after_min",
         "default_speed_mbps": "network.alerts.default_speed_mbps",
         "default_usage_gb": "network.alerts.default_usage_gb",
@@ -351,21 +355,82 @@ def evaluate_push(tenant_id: int, router_id: int,
     return result
 
 
+# ── Phase 3: loop detection (DHCP-client probe) ────────────────────
+_LOOP_RULE = "auto.router.loop"
+
+
+def _probe_looped(probe: dict) -> bool:
+    """A probe is a loop if its DHCP client got a lease (operator decision:
+    ANY lease on the monitored access port = loop)."""
+    if str(probe.get("last_status") or "").strip().lower() == "bound":
+        return True
+    return bool(str(probe.get("last_lease_ip") or "").strip())
+
+
+def evaluate_loops(tenant_id: int, router_id: int,
+                   glob: Optional[dict] = None) -> dict[str, str]:
+    """Open/resolve auto.router.loop per monitored interface from its probe
+    reading. Returns {interface: opened|resolved}."""
+    glob = glob or global_settings(tenant_id)
+    if not glob["enabled"] or not glob.get("loop", True):
+        return {}
+    per_router = router_alert_settings_repo.list_for_tenant(tenant_id)
+    if not effective_for_router(router_id, glob, per_router)["enabled"]:
+        return {}
+    name = _router_names(tenant_id).get(router_id, f"#{router_id}")
+    result: dict[str, str] = {}
+    for p in router_loop_probes_repo.list_for_router(tenant_id, router_id):
+        iface = p.get("interface") or ""
+        dedup = f"{_LOOP_RULE}:{router_id}:{iface}"
+        if _probe_looped(p):
+            lease = (p.get("last_lease_ip") or "—")
+            server = (p.get("last_server_ip") or "—")
+            alerts_repo.open(
+                tenant_id=tenant_id, rule=_LOOP_RULE, dedup_key=dedup,
+                router_id=router_id, severity="critical",
+                title_ar=f"حلقة (لوب) على المنفذ «{iface}» في «{name}»",
+                explanation_ar=(f"حصل المنفذ {iface} على إيجار DHCP ({lease}) من "
+                                f"{server} — وجود إيجار على هذا المنفذ يدلّ على "
+                                f"حلقة تُعيد الشبكة على نفسها (لوب)."),
+                recommended_action_ar=("افصل الكبل/المنفذ المزدوج وتحقّق من توصيلات "
+                                       "السويتش لإزالة الحلقة."),
+                evidence={"interface": iface, "lease_ip": lease,
+                          "server_ip": server, "status": p.get("last_status")},
+            )
+            result[iface] = "opened"
+            if glob["telegram"]:
+                _notify(tenant_id, f"تنبيه حرج: حلقة (لوب) على المنفذ «{iface}» "
+                                   f"في «{name}» — IP {lease}.")
+        else:
+            if alerts_repo.resolve(tenant_id, dedup):
+                result[iface] = "resolved"
+    return result
+
+
 def evaluate_all(tenant_id: int) -> dict[str, int]:
-    """Re-evaluate traffic/usage for every router that has pushed — used on
-    the alerts-page open so it reflects current breaches without a new push."""
+    """Re-evaluate traffic/usage/loop for every router with data — used on the
+    alerts-page open so it reflects current breaches without a new push."""
     glob = global_settings(tenant_id)
-    if not glob["enabled"] or not (glob["high_traffic"] or glob["high_usage"]):
-        return {"opened": 0, "resolved": 0}
     opened = resolved = 0
-    for rid in router_metrics_repo.last_push_map(tenant_id):
-        try:
-            out = evaluate_push(tenant_id, rid, glob)
-        except Exception:  # noqa: BLE001
-            continue
+
+    def _tally(out: dict) -> None:
+        nonlocal opened, resolved
         for v in out.values():
             if v == "opened":
                 opened += 1
             elif v == "resolved":
                 resolved += 1
+
+    if glob["enabled"] and (glob["high_traffic"] or glob["high_usage"]):
+        for rid in router_metrics_repo.last_push_map(tenant_id):
+            try:
+                _tally(evaluate_push(tenant_id, rid, glob))
+            except Exception:  # noqa: BLE001
+                continue
+    if glob["enabled"] and glob.get("loop", True):
+        for rid in router_loop_probes_repo.routers_with_probes(tenant_id):
+            try:
+                _tally(evaluate_loops(tenant_id, rid, glob))
+            except Exception:  # noqa: BLE001
+                continue
     return {"opened": opened, "resolved": resolved}
