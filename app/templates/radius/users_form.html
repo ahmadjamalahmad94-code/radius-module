@@ -240,7 +240,7 @@
   @media (max-width: 920px){ .uf-subrow-3{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px){ .uf-subrow-3{ grid-template-columns: 1fr; } }
 
-  /* Password input + eye toggle on the right (start-edge in RTL). */
+  /* حقل كلمة المرور وزر الإظهار. */
   .uf-pw{ position: relative; }
   .uf-pw-input{ padding-inline-start: 42px; }
   .uf-pw-toggle{
@@ -256,7 +256,7 @@
   }
   .uf-pw-toggle:hover{ background: #f6f4ff; color: var(--hub-brand-ink); }
 
-  /* Service-type cards (Hotspot + Broadband, multi-select) */
+  /* بطاقات نوع الخدمة. */
   .uf-svc-cards{
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -795,7 +795,7 @@
       <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
       <a href="#uf-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
       <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
-      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> PPPoE</a>
+      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> البرودباند</a>
     </nav>
     <div class="uf-side-note">
       ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.
@@ -809,8 +809,8 @@
     {# ── 1. Account ─────────────────────────────────────── #}
     {# Per SERVICES_COOKBOOK §16 redesign:
        - Removed: نوع الحساب (form is subscribers-only), مرجع HobeHub.
-       - Password gets an eye-toggle reveal button.
-       - Service type → two cards (Hotspot, Broadband=PPPoE) multi-select.
+       - زر إظهار لكلمة المرور.
+       - نوع الخدمة بطاقتان قابلتان للاختيار معًا.
        - Plan name uses display name from DB.
        - Manager + Group are dropdowns sourced from DB.
        - beneficiary_ref kept as a hidden field so existing values aren't
@@ -895,8 +895,8 @@
                   {% if svc_pppoe %}checked{% endif %}>
                 <span class="uf-svc-icon"><i class="fa-solid fa-plug"></i></span>
                 <span class="uf-svc-body">
-                  <span class="uf-svc-title">برود باند (PPPoE)</span>
-                  <span class="uf-svc-sub">اتصال DSL/Fiber باسم وكلمة سرّ</span>
+                  <span class="uf-svc-title">برودباند</span>
+                  <span class="uf-svc-sub">اشتراك منزلي باسم وكلمة سرّ</span>
                 </span>
               </label>
             </div>
@@ -1506,7 +1506,7 @@
             <div class="help">عنوان ثابت للمشترك عند الحاجة.</div></div>
           <div class="uf-field"><label>إيبي الجهاز المرسل</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">NAS-IP-Address للجهاز الذي يرسل طلبات RADIUS.</div></div>
+            <div class="help">عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.</div></div>
           <div class="uf-field"><label>اسم الخدمة</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="service_name" value="{{ sub.service_name or '' }}" placeholder="pppoe / hotspot"><i class="fa-solid fa-laptop"></i></span>
             <div class="help">اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.</div></div>
@@ -1532,26 +1532,26 @@
       </div>
     </section>
 
-    {# ── 6. PPPoE ───────────────────────────────────────── #}
+    {# ── 6. البرودباند ─────────────────────────────────── #}
     <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
-        <span class="uf-section-title">PPPoE (اختياري)</span>
+        <span class="uf-section-title">البرودباند (اختياري)</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
         <div class="uf-grid">
           <div class="uf-field">
-            <label>اسم دخول PPPoE</label>
+            <label>اسم دخول البرودباند</label>
             <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
             <div class="help">اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.</div>
           </div>
           <div class="uf-field">
-            <label>كلمة مرور PPPoE</label>
+            <label>كلمة مرور البرودباند</label>
             <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
           </div>
           <div class="uf-field">
-            <label>عنوان PPPoE</label>
+            <label>عنوان البرودباند</label>
             <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
             <div class="help">عنوان ثابت اختياري.</div>
           </div>
@@ -1569,18 +1569,18 @@
       <div class="uf-section-body">
         <div style="font-size:12px;color:var(--hub-text-mute);margin-bottom:12px">
           <i class="fa-solid fa-circle-info"></i>
-          للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة MikroTik أو RADIUS محددة لهذا المشترك.
+          للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.
         </div>
         <div class="uf-grid">
-          <div class="uf-field"><label>سلسلة فلترة MikroTik</label>
+          <div class="uf-field"><label>سلسلة فلترة الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}" placeholder="forward / input"></div>
-          <div class="uf-field"><label>قائمة عناوين MikroTik</label>
+          <div class="uf-field"><label>قائمة عناوين الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}"></div>
-          <div class="uf-field"><label>مسار MikroTik الموجَّه</label>
+          <div class="uf-field"><label>مسار الراوتر الموجَّه</label>
             <input class="hub-input" type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}" placeholder="10.10.0.0/24 10.10.0.1"></div>
-          <div class="uf-field"><label>مجموعة مستخدم MikroTik</label>
+          <div class="uf-field"><label>مجموعة مستخدم الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}"></div>
-          <div class="uf-field"><label>مجموعة Winbox</label>
+          <div class="uf-field"><label>مجموعة إدارة الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}"></div>
           <div class="uf-field"><label>أولوية طابور السرعة</label>
             <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8"></div>
@@ -1943,7 +1943,7 @@
     sync();
   });
 
-  // ── Password reveal toggle (eye button) ──────────────────────
+  // ── زر إظهار كلمة المرور ──────────────────────
   document.querySelectorAll('[data-uf-pw-toggle]').forEach(function(btn){
     btn.addEventListener('click', function(){
       var input = btn.parentElement.querySelector('input.uf-pw-input');
@@ -1959,7 +1959,7 @@
     });
   });
 
-  // ── Password copy-to-clipboard (so operator can hand it to the
+  // ── نسخ كلمة المرور للحافظة حتى يعطيها المشغل للمشترك
   //    customer without revealing it on-screen).
   document.querySelectorAll('[data-uf-pw-copy]').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -1985,7 +1985,7 @@
     });
   });
 
-  // ── Service-type cards: mirror checked state to .is-checked class
+  // ── بطاقات نوع الخدمة: مطابقة الحالة المرئية مع التحديد
   //    so the visual stays in sync on browsers without :has() support.
   document.querySelectorAll('.uf-svc-card input[type=checkbox]').forEach(function(cb){
     function refresh(){ cb.closest('.uf-svc-card').classList.toggle('is-checked', cb.checked); }

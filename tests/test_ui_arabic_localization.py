@@ -424,6 +424,19 @@ def test_core_operations_do_not_show_old_service_english_labels():
             "[Broadband]",
             "script that was sent",
         ],
+        Path("app/templates/radius/users_form.html"): [
+            ">PPPoE<",
+            "برود باند (PPPoE)",
+            "NAS-IP-Address",
+            "سياسة MikroTik أو RADIUS",
+            "سلسلة فلترة MikroTik",
+            "قائمة عناوين MikroTik",
+            "مسار MikroTik",
+            "مجموعة مستخدم MikroTik",
+            "مجموعة Winbox",
+            "Password input",
+            "Service-type cards",
+        ],
     }
 
     for path, forbidden in files.items():
