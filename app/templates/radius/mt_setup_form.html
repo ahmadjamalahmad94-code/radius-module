@@ -82,12 +82,23 @@
       {# Traffic card — L2TP/IPsec, advanced + off by default #}
       <details class="mt-v6-card" style="border:1px solid var(--hub-border-soft);border-radius:14px;padding:14px">
         <summary style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800">
-          <i class="fa-solid fa-route"></i> نفق تغيير IP عبر L2TP/IPsec
+          <i class="fa-solid fa-route"></i> نفق تغيير IP (تمرير الترافيك)
           <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">متقدم</span>
         </summary>
         <p style="margin:10px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
           يستخدم هذا النفق عند تفعيل خدمة تغيير IP أو تمرير ترافيك مشتركين محددين عبر VPS. هذا النفق منفصل عن نفق الإدارة.
         </p>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
+          بروتوكول النفق
+          <select name="traffic_protocol" class="hub-select" data-mt-traffic-protocol>
+            <option value="l2tp_ipsec" selected>L2TP/IPsec — موصى به (مشفّر)</option>
+            <option value="pptp">PPTP — قديم وغير آمن (Legacy)</option>
+          </select>
+        </label>
+        <div data-mt-pptp-warn hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px;margin-bottom:8px">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
+          PPTP غير آمن — تشفيره (MS-CHAPv2) مخترَق. لا تستخدمه إلا اضطرارًا عندما لا يدعم الراوتر L2TP/IPsec. يُفضّل بشدة L2TP/IPsec.
+        </div>
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
           وضع الترافيك
           <select name="traffic_mode" class="hub-select" data-mt-traffic-mode>
@@ -173,6 +184,16 @@
   }
   if (modeSel) modeSel.addEventListener("change", applyMode);
   applyMode();
+
+  // PPTP protocol → show the insecurity warning.
+  const protoSel = document.querySelector('[data-mt-traffic-protocol]');
+  const pptpWarn = document.querySelector('[data-mt-pptp-warn]');
+  function applyProto() {
+    if (!protoSel || !pptpWarn) return;
+    pptpWarn.hidden = protoSel.value !== "pptp";
+  }
+  if (protoSel) protoSel.addEventListener("change", applyProto);
+  applyProto();
 })();
 </script>
 

@@ -383,13 +383,10 @@
            «أسطول الراوترات» link). #}
         {{ sub_item('radius.devices_list',     'NAS',                  m_devices) }}
         {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
-        {# إدارة الراوترات — مدخل موحّد (N2): شريط التبويب الداخلي
-           network_ops_nav.html يصل للخريطة ومركز المشاكل والتشخيص
-           (والإعداد الهندسي عند الحاجة).
-           ⚠️ لا تُعِد mt_topology / mt_problems_index / diagnostics كعناصر
-           مستقلة في الشريط الجانبي. «خريطة الشبكة» تبقى تبويبًا داخل هذا
-           المدخل فقط (قرار المالك). #}
+        {# إدارة الراوترات هي المدخل التشغيلي العام، وخريطة الشبكة تبقى
+           رابطًا مباشرًا لأن المشغل يحتاج الوصول السريع لها أثناء الفحص. #}
         {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   ('/mt/operations' in path) or m_topology or m_problems or m_diag) }}
+        {{ sub_item('radius.mt_topology',      'خريطة الشبكة',         m_topology) }}
         {# ────────────────────────────────────────────────────
            Network Operations family (Sprints 1-6, 2026-05-28).
            HIDDEN until next release — operator decision:

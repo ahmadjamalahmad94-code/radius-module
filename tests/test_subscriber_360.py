@@ -22,6 +22,7 @@ def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "subscriber_360.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_API_TOKENS", "dev-token-please-change")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     reset_for_tests(db_file)

@@ -197,6 +197,9 @@ def render_v6_sstp_management_script(plan: dict) -> str:
 
 L2TP_TRAFFIC_IFACE = "l2tp-hoberadius-traffic"
 L2TP_TRAFFIC_COMMENT = "HobeRadius managed: L2TP/IPsec traffic tunnel"
+# PPTP — Legacy/insecure traffic option (operator opt-in only).
+PPTP_TRAFFIC_IFACE = "pptp-hoberadius-traffic"
+PPTP_TRAFFIC_COMMENT = "HobeRadius managed: PPTP traffic tunnel (Legacy/insecure)"
 TRAFFIC_ADDRESS_LIST = "hoberadius-vpn-traffic-clients"
 TRAFFIC_ROUTING_MARK = "hoberadius_traffic_vpn"
 TRAFFIC_POLICY_COMMENT = "HobeRadius managed: traffic policy routing"
@@ -285,6 +288,67 @@ def build_v6_l2tp_ipsec_traffic_plan(router: dict, settings: dict) -> dict:
     }
 
 
+def _render_traffic_routing(plan: dict, iface_var: str) -> list[str]:
+    """Shared mode-specific routing/NAT block for any traffic tunnel.
+
+    Used by both the L2TP/IPsec and PPTP renderers so the routing logic
+    (full-tunnel broad NAT vs scoped address-list + routing-mark + scoped NAT)
+    lives in ONE place. ``iface_var`` is the RouterOS script variable holding
+    the interface name (e.g. ``$l2tpName`` / ``$pptpName``).
+    """
+    mode = plan.get("traffic_mode")
+    alist = plan["address_list"]
+    mark = plan["routing_mark"]
+    out: list[str] = []
+
+    if mode == "full_tunnel":
+        # Broad NAT is only acceptable here because the operator explicitly
+        # confirmed full tunnel.
+        out.append("# Full tunnel NAT (operator-confirmed)")
+        out.append(f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{')
+        out.append(
+            f"  /ip firewall nat add chain=srcnat out-interface={iface_var} "
+            f'action=masquerade comment="{TRAFFIC_NAT_COMMENT}"'
+        )
+        out.append("}")
+    elif mode in _SCOPED_MODES:
+        # Scoped: address-list + routing-mark + scoped NAT. No broad NAT, no
+        # global default route.
+        out.append("# Scoped traffic clients (address list)")
+        for src in plan.get("source_clients") or []:
+            out.append(f':if ([/ip firewall address-list find list="{alist}" address="{src}"] = "") do={{')
+            out.append(
+                f"  /ip firewall address-list add list={alist} address={src} "
+                f'comment="{TRAFFIC_POLICY_COMMENT}"'
+            )
+            out.append("}")
+        out.append("")
+        out.append("# Policy routing: mark selected clients, route the mark via the tunnel")
+        out.append(f':if ([/ip firewall mangle find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{')
+        out.append(
+            f"  /ip firewall mangle add chain=prerouting src-address-list={alist} "
+            f"action=mark-routing new-routing-mark={mark} passthrough=yes "
+            f'comment="{TRAFFIC_POLICY_COMMENT}"'
+        )
+        out.append("}")
+        out.append(f':if ([/ip route find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{')
+        out.append(
+            f"  /ip route add dst-address=0.0.0.0/0 gateway={iface_var} "
+            f'routing-mark={mark} comment="{TRAFFIC_POLICY_COMMENT}"'
+        )
+        out.append("}")
+        out.append("")
+        out.append("# Scoped NAT for selected clients only")
+        out.append(f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{')
+        out.append(
+            f"  /ip firewall nat add chain=srcnat src-address-list={alist} "
+            f"out-interface={iface_var} action=masquerade "
+            f'comment="{TRAFFIC_NAT_COMMENT}"'
+        )
+        out.append("}")
+    return out
+
+
 def render_v6_l2tp_ipsec_traffic_script(plan: dict) -> str:
     """Render the idempotent RouterOS v6 L2TP/IPsec traffic-tunnel script."""
     if plan.get("tunnel_type") != "l2tp_ipsec_traffic":
@@ -339,64 +403,133 @@ def render_v6_l2tp_ipsec_traffic_script(plan: dict) -> str:
     lines.append("}")
     lines.append("")
 
-    if mode == "full_tunnel":
-        # Broad NAT is only acceptable here because the operator explicitly
-        # confirmed full tunnel.
-        lines.append("# Full tunnel NAT (operator-confirmed)")
-        lines.append(
-            f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{'
-        )
-        lines.append(
-            f"  /ip firewall nat add chain=srcnat out-interface=$l2tpName "
-            f'action=masquerade comment="{TRAFFIC_NAT_COMMENT}"'
-        )
-        lines.append("}")
-    elif mode in _SCOPED_MODES:
-        # Scoped: address-list + routing-mark + scoped NAT. No broad NAT, no
-        # global default route.
-        lines.append("# Scoped traffic clients (address list)")
-        for src in plan.get("source_clients") or []:
-            lines.append(
-                f':if ([/ip firewall address-list find list="{alist}" address="{src}"] = "") do={{'
-            )
-            lines.append(
-                f"  /ip firewall address-list add list={alist} address={src} "
-                f'comment="{TRAFFIC_POLICY_COMMENT}"'
-            )
-            lines.append("}")
-        lines.append("")
-        lines.append("# Policy routing: mark selected clients, route the mark via L2TP")
-        lines.append(
-            f':if ([/ip firewall mangle find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{'
-        )
-        lines.append(
-            f"  /ip firewall mangle add chain=prerouting src-address-list={alist} "
-            f"action=mark-routing new-routing-mark={mark} passthrough=yes "
-            f'comment="{TRAFFIC_POLICY_COMMENT}"'
-        )
-        lines.append("}")
-        lines.append(
-            f':if ([/ip route find comment="{TRAFFIC_POLICY_COMMENT}"] = "") do={{'
-        )
-        lines.append(
-            f"  /ip route add dst-address=0.0.0.0/0 gateway=$l2tpName "
-            f'routing-mark={mark} comment="{TRAFFIC_POLICY_COMMENT}"'
-        )
-        lines.append("}")
-        lines.append("")
-        lines.append("# Scoped NAT for selected clients only")
-        lines.append(
-            f':if ([/ip firewall nat find comment="{TRAFFIC_NAT_COMMENT}"] = "") do={{'
-        )
-        lines.append(
-            f"  /ip firewall nat add chain=srcnat src-address-list={alist} "
-            f"out-interface=$l2tpName action=masquerade "
-            f'comment="{TRAFFIC_NAT_COMMENT}"'
-        )
-        lines.append("}")
+    lines.extend(_render_traffic_routing(plan, "$l2tpName"))
 
     lines.append("")
     lines.append("# End L2TP/IPsec traffic tunnel")
+    return "\n".join(lines)
+
+
+def build_v6_pptp_traffic_plan(router: dict, settings: dict) -> dict:
+    """Build the OPTIONAL **PPTP** (Legacy/insecure) traffic-tunnel plan.
+
+    Identical routing model to L2TP/IPsec but PPTP has NO IPsec layer and its
+    encryption is broken — so the plan always carries a prominent insecurity
+    warning. PPTP is opt-in only; it is never the default (the wizard defaults
+    to L2TP/IPsec). Raises TunnelPlanError on an invalid/unsafe plan.
+    """
+    ros_version = _clean(router.get("ros_version"))
+    if not routeros_caps.supports_pptp_traffic(ros_version):
+        raise TunnelPlanError(
+            f"PPTP traffic tunnel needs RouterOS 6+, got {ros_version!r}"
+        )
+
+    mode = _clean(settings.get("traffic_mode")) or "disabled"
+    server_host = _clean(settings.get("pptp_server_host") or settings.get("l2tp_server_host"))
+    username = _clean(settings.get("username"))
+    password = settings.get("password")
+    selected_pool = _clean(settings.get("selected_pool"))
+    full_confirmed = bool(settings.get("full_tunnel_confirmed", False))
+    source_clients = [_clean(c) for c in (settings.get("source_clients") or []) if _clean(c)]
+
+    owns_default_route = mode == "full_tunnel"
+
+    verdict = routeros_caps.validate_connection_plan(
+        ros_version, "sstp_mgmt", "pptp_traffic",
+        traffic_mode=mode,
+        traffic_owns_default_route=owns_default_route,
+        full_tunnel_confirmed=full_confirmed,
+        selected_pool=selected_pool or None,
+    )
+    if not verdict["valid"]:
+        raise TunnelPlanError(
+            "invalid PPTP plan: " + "; ".join(e["code"] for e in verdict["errors"])
+        )
+
+    if mode != "disabled" and (not server_host or not username or not password):
+        raise TunnelPlanError("PPTP plan needs server host, username and password")
+
+    warnings = [w["message_ar"] for w in verdict["warnings"]]
+    warnings.insert(0, (
+        "⚠️ PPTP غير آمن — تشفيره مخترَق. لا تستخدمه إلا اضطرارًا؛ يُفضّل L2TP/IPsec."
+    ))
+    if mode == "full_tunnel":
+        warnings.append(
+            "تمرير كل الترافيك (full tunnel) قد يقطع إنترنت المشتركين إذا كان الإعداد خاطئًا."
+        )
+
+    return {
+        "role": "traffic",
+        "tunnel_type": "pptp_traffic",
+        "protocol": "pptp",
+        "insecure": True,
+        "ros_version": routeros_caps.parse_routeros_major(ros_version),
+        "interface_name": PPTP_TRAFFIC_IFACE,
+        "traffic_mode": mode,
+        "enabled": mode != "disabled",
+        "server_host": server_host,
+        "username": username,
+        "password": password,
+        "use_ipsec": False,
+        "add_default_route": owns_default_route,
+        "owns_default_route": owns_default_route,
+        "selected_pool": selected_pool,
+        "source_clients": source_clients,
+        "address_list": TRAFFIC_ADDRESS_LIST,
+        "routing_mark": TRAFFIC_ROUTING_MARK,
+        "comment": PPTP_TRAFFIC_COMMENT,
+        "warnings": warnings,
+    }
+
+
+def render_v6_pptp_traffic_script(plan: dict) -> str:
+    """Render the idempotent RouterOS v6 PPTP (Legacy) traffic-tunnel script."""
+    if plan.get("tunnel_type") != "pptp_traffic":
+        raise TunnelPlanError("not a PPTP traffic plan")
+    mode = plan.get("traffic_mode", "disabled")
+    iface = plan["interface_name"]
+    comment = plan.get("comment", PPTP_TRAFFIC_COMMENT)
+
+    lines: list[str] = []
+    lines.append("# ===========================================================")
+    lines.append(f"# {comment}")
+    lines.append("# ⚠️ PPTP is INSECURE (broken encryption) — Legacy use only.")
+    lines.append("# Traffic tunnel — IP change / selected routing only; idempotent.")
+    lines.append("# ===========================================================")
+    lines.append("")
+
+    if mode == "disabled":
+        lines.append("# Traffic tunnel disabled — disable any HobeRadius PPTP traffic interface.")
+        lines.append(f':if ([/interface pptp-client find name="{iface}"] != "") do={{')
+        lines.append(f'  /interface pptp-client set [find name="{iface}"] disabled=yes')
+        lines.append("}")
+        lines.append("# End traffic tunnel (disabled)")
+        return "\n".join(lines)
+
+    host = plan["server_host"]
+    user = plan["username"]
+    password = plan["password"]
+    add_dr = "yes" if plan.get("add_default_route") else "no"
+
+    lines.append("# PPTP client interface (no IPsec — insecure)")
+    lines.append(f':local pptpName "{iface}"')
+    lines.append(':if ([/interface pptp-client find name=$pptpName] = "") do={')
+    lines.append(
+        "  /interface pptp-client add name=$pptpName "
+        f'connect-to="{host}" user="{user}" password="{password}" '
+        f'add-default-route={add_dr} disabled=no comment="{comment}"'
+    )
+    lines.append("} else={")
+    lines.append(
+        "  /interface pptp-client set [find name=$pptpName] "
+        f'connect-to="{host}" user="{user}" password="{password}" '
+        f'add-default-route={add_dr} disabled=no comment="{comment}"'
+    )
+    lines.append("}")
+    lines.append("")
+    lines.extend(_render_traffic_routing(plan, "$pptpName"))
+    lines.append("")
+    lines.append("# End PPTP traffic tunnel")
     return "\n".join(lines)
 
 
@@ -438,8 +571,14 @@ def analyze_tunnel_conflicts(
             "نفق واحد فقط يملك Default Route.")
 
     if traffic.get("enabled"):
-        # Traffic enabled without IPsec secret.
-        if not traffic.get("ipsec_secret"):
+        # PPTP is insecure — always warn (never blocking; operator opt-in).
+        if traffic.get("tunnel_type") == "pptp_traffic":
+            add("warning", "pptp_insecure_legacy",
+                "نفق الترافيك يستخدم PPTP غير الآمن (Legacy).",
+                "استخدم L2TP/IPsec بدل PPTP متى أمكن.")
+        # IPsec secret is required ONLY for the L2TP/IPsec protocol (PPTP has
+        # no IPsec layer).
+        elif not traffic.get("ipsec_secret"):
             add("blocking", "missing_ipsec_secret",
                 "نفق الترافيك مفعّل دون IPsec secret.", "أدخل IPsec secret.")
         # Same interface name as management.
@@ -474,6 +613,8 @@ __all__ = [
     "SSTP_MGMT_ONLY_NOTE",
     "L2TP_TRAFFIC_IFACE",
     "L2TP_TRAFFIC_COMMENT",
+    "PPTP_TRAFFIC_IFACE",
+    "PPTP_TRAFFIC_COMMENT",
     "TRAFFIC_ADDRESS_LIST",
     "TRAFFIC_ROUTING_MARK",
     "TunnelPlanError",
@@ -481,5 +622,7 @@ __all__ = [
     "render_v6_sstp_management_script",
     "build_v6_l2tp_ipsec_traffic_plan",
     "render_v6_l2tp_ipsec_traffic_script",
+    "build_v6_pptp_traffic_plan",
+    "render_v6_pptp_traffic_script",
     "analyze_tunnel_conflicts",
 ]

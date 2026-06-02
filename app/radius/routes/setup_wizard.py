@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, abort, g, jsonify, render_template, request
+from flask import Blueprint, abort, g, jsonify, redirect, render_template, request, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..services.setup_wizard import (
@@ -171,7 +171,7 @@ def setup_wizard_v2_page():
 
 def setup_wizard_fleet_page():
     """Compatibility page for the legacy fleet URL."""
-    return render_template("radius/setup_wizard_fleet_compat.html")
+    return redirect(url_for("radius.mt_operations"))
 
 
 def setup_wizard_fleet_data():

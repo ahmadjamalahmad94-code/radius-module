@@ -128,7 +128,7 @@ def test_ppp_subcard_columns(app, client):
     idx = html.index("data-mt-ppp-sessions-table")
     block = html[idx:html.index("</section>", idx)]
     for label in (
-        "المستخدم", "الخدمة", "العنوان", "Caller", "المدة",
+        "المستخدم", "الخدمة", "العنوان", "المتصل", "المدة",
     ):
         assert label in block, f"missing ppp column: {label}"
 
