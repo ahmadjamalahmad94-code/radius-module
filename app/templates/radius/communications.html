@@ -154,12 +154,12 @@
 
   <div class="oc-status" data-testid="communications-summary">
 
-    {# ── SMS channel ── #}
+    {# ── قناة الرسائل القصيرة ── #}
     {% set on = ch_sms and ch_sms.active %}
     <div class="oc-stat {{ 'on' if on else 'off' }}" data-testid="oc-stat-sms">
       <div class="oc-stat-top">
         <span class="oc-stat-ic"><i class="fa-solid fa-comment-sms"></i></span>
-        <div class="oc-stat-name">قناة SMS<small>الرسائل القصيرة</small></div>
+        <div class="oc-stat-name">قناة الرسائل القصيرة<small>رسائل نصية للمشتركين</small></div>
         {% if on %}<span class="oc-pill on"><span class="dot"></span> مفعّلة</span>
         {% else %}<span class="oc-pill off"><span class="dot"></span> متوقفة</span>{% endif %}
       </div>
@@ -173,12 +173,12 @@
       </div>
     </div>
 
-    {# ── WhatsApp channel ── #}
+    {# ── قناة واتساب ── #}
     {% set on = ch_wa and ch_wa.active %}
     <div class="oc-stat {{ 'on' if on else 'off' }}" data-testid="oc-stat-whatsapp">
       <div class="oc-stat-top">
         <span class="oc-stat-ic wa"><i class="fa-brands fa-whatsapp"></i></span>
-        <div class="oc-stat-name">قناة واتساب<small>WhatsApp</small></div>
+        <div class="oc-stat-name">قناة واتساب<small>رسائل عبر واتساب</small></div>
         {% if on %}<span class="oc-pill on"><span class="dot"></span> مفعّلة</span>
         {% else %}<span class="oc-pill off"><span class="dot"></span> متوقفة</span>{% endif %}
       </div>
@@ -192,7 +192,7 @@
       </div>
     </div>
 
-    {# ── WhatsApp bot ── #}
+    {# ── بوت واتساب ── #}
     <div class="oc-stat {{ 'on' if status.bot.enabled else 'off' }}" data-testid="oc-stat-bot">
       <div class="oc-stat-top">
         <span class="oc-stat-ic wa"><i class="fa-solid fa-robot"></i></span>
@@ -270,7 +270,7 @@
         <label for="oc-ch">القناة</label>
         <select id="oc-ch" name="channel">
           <option value="whatsapp">واتساب</option>
-          <option value="sms">SMS</option>
+          <option value="sms">الرسائل القصيرة</option>
           <option value="internal">داخلية (الطابور)</option>
         </select>
       </div>
@@ -293,7 +293,7 @@
     <a class="oc-act" href="{{ url_for('radius.communications_channels') }}">
       <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
       <div class="oc-act-b"><div class="ttl">قنوات الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">فعّل SMS وواتساب واضبط روابط المزوّد ونمط الإرسال.</div></div>
+        <div class="hint">فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.</div></div>
     </a>
     <a class="oc-act" href="{{ url_for('radius.communications_bot') }}">
       <span class="oc-act-ic green"><i class="fa-solid fa-robot"></i></span>

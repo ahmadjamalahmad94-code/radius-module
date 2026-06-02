@@ -702,6 +702,10 @@ def test_router_operator_pages_hide_raw_vendor_copy():
         ],
         Path("app/templates/radius/communications.html"): [
             "ربط ذاتي (API)",
+            "قناة SMS",
+            ">SMS<",
+            "فعّل SMS",
+            "WhatsApp",
         ],
     }
 
