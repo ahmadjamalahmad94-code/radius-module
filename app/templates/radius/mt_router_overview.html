@@ -15,7 +15,7 @@
 {% block title %}نظرة عامة — {{ ov.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
 {% block page_title %}نظرة عامة على الراوتر — {{ ov.name }}{% endblock %}
-{% block page_sub %}<span class="sub">NAS #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -51,16 +51,16 @@
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       {% if health.state == 'healthy' %}
       <i class="fa-solid fa-heart-pulse"></i>
-      <strong>الراوتر صحّي — score {{ health.score }}/100</strong>
+      <strong>الراوتر صحّي — درجة الصحة {{ health.score }}/100</strong>
       {% elif health.state == 'attention' %}
       <i class="fa-solid fa-circle-info"></i>
-      <strong>يحتاج انتباهًا — score {{ health.score }}/100</strong>
+      <strong>يحتاج انتباهًا — درجة الصحة {{ health.score }}/100</strong>
       {% elif health.state == 'risky' %}
       <i class="fa-solid fa-shield-halved"></i>
-      <strong>خطر تشغيلي — score {{ health.score }}/100</strong>
+      <strong>خطر تشغيلي — درجة الصحة {{ health.score }}/100</strong>
       {% elif health.state == 'offline' %}
       <i class="fa-solid fa-plug-circle-xmark"></i>
-      <strong>غير متصل — score {{ health.score }}/100</strong>
+      <strong>غير متصل — درجة الصحة {{ health.score }}/100</strong>
       {% else %}
       <i class="fa-solid fa-question"></i>
       <strong>الحالة غير معروفة — لا توجد بيانات كافية</strong>
@@ -323,7 +323,7 @@
            data-mt-overview-link="dashboard">
           <i class="fa-solid fa-gauge-high"></i>
           <span class="mt-router-quicknav-label">لوحة الراوتر</span>
-          <span class="mt-router-quicknav-sub">KPI + tabs</span>
+          <span class="mt-router-quicknav-sub">ملخص وتبويبات</span>
         </a>
         <a class="mt-router-quicknav-link"
            href="{{ url_for('radius.mt_audit_timeline', nas_id=ov.nas_id) }}"
@@ -337,7 +337,7 @@
            data-mt-overview-link="audit">
           <i class="fa-solid fa-clipboard-list"></i>
           <span class="mt-router-quicknav-label">سجل عمليات الراوتر</span>
-          <span class="mt-router-quicknav-sub">JSON خام</span>
+          <span class="mt-router-quicknav-sub">سجل تفصيلي</span>
         </a>
         <a class="mt-router-quicknav-link"
            href="{{ url_for('radius.mt_alerts_index') }}?router_id={{ ov.nas_id }}"

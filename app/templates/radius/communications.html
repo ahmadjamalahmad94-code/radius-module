@@ -7,7 +7,7 @@
 {% block page_sub %}<span class="sub">مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.</span>{% endblock %}
 
 {# ── tiny Arabic helpers ── #}
-{% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي (API)','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي عبر واجهة الربط','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}

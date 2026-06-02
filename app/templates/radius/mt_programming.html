@@ -1,10 +1,9 @@
-{# Q1 — Network programming wizard.
+{# مرحلة التخطيط — معالج برمجة الشبكة.
 
    Read-only generator. Operator fills the form, server returns
    the planned RouterOS script + a summary + any warnings / risks
    detected against the router's current state. The apply button
-   is disabled and labelled "Q2" so it's clear the work landed in
-   layers.
+   stays disabled until the operator reviews the plan.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -12,7 +11,7 @@
 {% block title %}برمجة الشبكة — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}برمجة الشبكة على {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }} · المرحلة Q1</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -25,7 +24,7 @@
 
   {{ hub.hero(
     "برمجة الشبكة — " ~ nas.name,
-    subtitle="هذه المرحلة تُولّد script RouterOS فقط ولا تُطبّقه. زر التطبيق يصبح فعّالاً في Q2.",
+    subtitle="هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.",
     icon="diagram-project",
   ) }}
 
@@ -42,12 +41,12 @@
     <a class="mt-tab {% if _kind == 'hotspot' %}is-active{% endif %}"
        href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=hotspot"
        data-mt-program-kind="hotspot" role="tab">
-      <i class="fa-solid fa-wifi"></i> Hotspot
+      <i class="fa-solid fa-wifi"></i> بوابة الدخول
     </a>
     <a class="mt-tab {% if _kind == 'pppoe' %}is-active{% endif %}"
        href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=pppoe"
        data-mt-program-kind="pppoe" role="tab">
-      <i class="fa-solid fa-plug"></i> PPPoE
+      <i class="fa-solid fa-plug"></i> البرودباند
     </a>
   </nav>
 
@@ -55,9 +54,9 @@
     <header class="mt-card-head">
       <h3>
         {% if _kind == 'pppoe' %}
-        <i class="fa-solid fa-plug"></i> إعداد PPPoE Server
+        <i class="fa-solid fa-plug"></i> إعداد خادم البرودباند
         {% else %}
-        <i class="fa-solid fa-network-wired"></i> إعداد Hotspot
+        <i class="fa-solid fa-network-wired"></i> إعداد بوابة الدخول
         {% endif %}
       </h3>
     </header>
@@ -86,47 +85,47 @@
 
           {% if _kind == 'pppoe' %}
           <label class="mt-program-field">
-            <span>اسم الـ profile</span>
+            <span>اسم الملف التشغيلي</span>
             <input type="text" name="profile_name" required
                    value="{{ form.profile_name or '' }}"
                    placeholder="pppoe-prof"
                    data-mt-program-profile>
           </label>
           <label class="mt-program-field">
-            <span>service-name</span>
+            <span>اسم الخدمة</span>
             <input type="text" name="service_name" required
                    value="{{ form.service_name or '' }}"
                    placeholder="hoberadius-pppoe"
                    data-mt-program-service>
           </label>
           <label class="mt-program-field">
-            <span>local-address (اختياري)</span>
+            <span>العنوان المحلي (اختياري)</span>
             <input type="text" name="local_address"
                    value="{{ form.local_address or '' }}"
                    placeholder="افتراضيًا أول عنوان">
           </label>
           {% else %}
           <label class="mt-program-field">
-            <span>اسم الـ hotspot</span>
+            <span>اسم بوابة الدخول</span>
             <input type="text" name="hotspot_name" required
                    value="{{ form.hotspot_name or '' }}"
                    placeholder="hs"
                    data-mt-program-name>
           </label>
           <label class="mt-program-field">
-            <span>Gateway (اختياري)</span>
+            <span>البوابة (اختياري)</span>
             <input type="text" name="gateway"
                    value="{{ form.gateway or '' }}"
                    placeholder="افتراضيًا أول عنوان">
           </label>
           <label class="mt-program-field">
-            <span>مدة الـ lease</span>
+            <span>مدة الإيجار</span>
             <input type="text" name="lease_time"
                    value="{{ form.lease_time or '1h' }}"
                    placeholder="1h">
           </label>
           <label class="mt-program-field">
-            <span>Rate-limit الافتراضي (اختياري)</span>
+            <span>حد السرعة الافتراضي (اختياري)</span>
             <input type="text" name="rate_limit"
                    value="{{ form.rate_limit or '' }}"
                    placeholder="10M/10M">
@@ -141,14 +140,14 @@
           </label>
 
           <label class="mt-program-field">
-            <span>بداية الـ pool (اختياري)</span>
+            <span>بداية نطاق العناوين (اختياري)</span>
             <input type="text" name="pool_start"
                    value="{{ form.pool_start or '' }}"
                    placeholder="مثلًا 192.168.10.10">
           </label>
 
           <label class="mt-program-field">
-            <span>نهاية الـ pool (اختياري)</span>
+            <span>نهاية نطاق العناوين (اختياري)</span>
             <input type="text" name="pool_end"
                    value="{{ form.pool_end or '' }}"
                    placeholder="مثلًا 192.168.10.254">
@@ -159,7 +158,7 @@
           <button type="submit" class="mt-action-btn"
                   data-mt-program-submit>
             <i class="fa-solid fa-rotate-right"></i>
-            توليد الـ script
+            توليد السكربت
           </button>
         </div>
       </form>
@@ -184,7 +183,7 @@
   {% if plan %}
   <section class="mt-card" data-mt-program-plan-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-file-code"></i> الـ Script المُولّد</h3>
+      <h3><i class="fa-solid fa-file-code"></i> السكربت المولّد</h3>
     </header>
     <div class="mt-card-body">
 
@@ -269,7 +268,7 @@
           <input type="checkbox" name="confirm" value="1"
                  data-mt-program-confirm
                  {% if plan.risks %}disabled{% endif %}>
-          أُؤكّد قراءة التحذيرات وأرغب بتطبيق الـ script أعلاه على
+          أُؤكّد قراءة التحذيرات وأرغب بتطبيق السكربت أعلاه على
           هذا الراوتر.
         </label>
 
@@ -296,7 +295,7 @@
     </header>
     <div class="mt-card-body">
       <p class="mt-tab-hint">
-        يبحث عن كل الكائنات التي تحمل comment=hoberadius:{{ _kind }} على
+        يبحث عن كل الكائنات التي تحمل علامة hoberadius:{{ _kind }} على
         الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء
         من نقطة نظيفة.
       </p>

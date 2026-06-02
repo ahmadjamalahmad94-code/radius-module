@@ -667,6 +667,42 @@ def test_router_operator_pages_hide_raw_vendor_copy():
         Path("app/templates/radius/mt_audit_timeline.html"): [
             "NAS #{{ nas.id }}",
         ],
+        Path("app/templates/radius/mt_programming.html"): [
+            "NAS #{{ nas.id }}",
+            "المرحلة Q1",
+            "Q2",
+            "script RouterOS",
+            "Hotspot",
+            "PPPoE",
+            "PPPoE Server",
+            "service-name",
+            "Gateway",
+            "Rate-limit",
+            "الـ pool",
+            "الـ script",
+            "الـ Script",
+        ],
+        Path("app/templates/radius/mt_router_overview.html"): [
+            "NAS #{{ ov.nas_id }}",
+            "score {{ health.score }}",
+            "KPI + tabs",
+            "JSON خام",
+        ],
+        Path("app/templates/radius/mt_recovery_plan.html"): [
+            "الخام (JSON)",
+        ],
+        Path("app/templates/radius/mt_login_designer.html"): [
+            "NAS #{{ nas.id }}",
+            "المرحلة R2",
+            "R3",
+            "Q1/Q2",
+            "hotspot/login.html",
+            "الـ hotspot",
+            "الـ login.html",
+        ],
+        Path("app/templates/radius/communications.html"): [
+            "ربط ذاتي (API)",
+        ],
     }
 
     for path, forbidden in files.items():
