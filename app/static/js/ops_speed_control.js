@@ -22,11 +22,24 @@
   function mb(kbps) { return (kbps / 1000).toFixed(2); }
   function avg(list) { return list.length ? list.reduce(function (a, b) { return a + b; }, 0) / list.length : 0; }
 
-  // Boost zones: ≤100% base color, 100–200% amber, 200–300% red.
+  // Boost zones (ring label colour): ≤100% base, 100–200% amber, 200–300% red.
   function applyZone(el, v) {
     if (!el) return;
     el.classList.toggle("is-warn", v > 100 && v <= 200);
     el.classList.toggle("is-danger", v > 200);
+  }
+
+  // Live colour interpolation: base → amber (100–200%) → red (200–300%), so the
+  // slider colour builds up gradually as the value climbs (no hard switch).
+  var C_PURPLE = [107, 90, 237], C_TEAL = [13, 148, 136], C_AMBER = [245, 158, 11], C_RED = [220, 38, 38];
+  function lerp(a, b, t) {
+    return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
+  }
+  function rgb(c) { return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"; }
+  function valueColor(val, base) {
+    if (val <= 100) return base;
+    if (val <= 200) return lerp(base, C_AMBER, (val - 100) / 100);
+    return lerp(C_AMBER, C_RED, clamp((val - 200) / 100, 0, 1));
   }
 
   // ── slider registry (for accurate px positioning + resize) ─────────────
@@ -37,6 +50,7 @@
     if (!wrap || !rail) return null;
     var fill = $("[data-fill]", wrap);
     var bubble = $("[data-bubble]", wrap);
+    var base = input.classList.contains("spdx-slider__input--teal") ? C_TEAL : C_PURPLE;
     var raf = null;
 
     function render() {
@@ -46,7 +60,12 @@
       var center = THUMB / 2 + frac * (w - THUMB);
       if (fill) fill.style.width = center + "px";
       if (bubble) { bubble.style.left = center + "px"; bubble.textContent = Math.round(val) + "%"; }
-      applyZone(wrap, val);
+      // gradual colour build-up
+      var col = valueColor(val, base);
+      var c = rgb(col), light = rgb(lerp(col, [255, 255, 255], 0.22));
+      wrap.style.setProperty("--bubble-c", c);
+      wrap.style.setProperty("--fill-grad", "linear-gradient(90deg," + light + "," + c + ")");
+      input.style.setProperty("--thumb-c", c);
     }
     function schedule() { if (raf) return; raf = requestAnimationFrame(function () { raf = null; render(); }); }
 
@@ -136,13 +155,17 @@
   }
 
   function renderRing(pct) {
-    var bar = $("[data-ring]");
-    // Ring fills 0→100% (reaching "full" at the original speed); beyond 100% it
-    // stays full and the colour escalates (amber → red) to flag the boost.
-    var frac = clamp(pct, 0, 100) / 100;
-    if (bar) { bar.style.strokeDasharray = RING_C; bar.style.strokeDashoffset = RING_C * (1 - frac); }
+    // Three laps: each 100% completes a full circle and the next colour layers on
+    // top, so 150% = full purple + half amber, 250% = full amber + half red.
+    setLap(1, clamp(pct, 0, 100) / 100);
+    setLap(2, clamp(pct - 100, 0, 100) / 100);
+    setLap(3, clamp(pct - 200, 0, 100) / 100);
     setText("[data-ring-value]", Math.round(pct));
     applyZone($(".spdx-ring"), pct);
+  }
+  function setLap(n, frac) {
+    var c = $('[data-ring-lap="' + n + '"]');
+    if (c) { c.style.strokeDasharray = RING_C; c.style.strokeDashoffset = RING_C * (1 - frac); }
   }
 
   function renderImpact(enabled) {

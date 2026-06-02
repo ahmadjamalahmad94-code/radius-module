@@ -158,11 +158,17 @@
 .opsx-redesign .spdx-ring { position: relative; width: 168px; height: 168px; margin-inline: auto; }
 .opsx-redesign .spdx-ring__svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .opsx-redesign .spdx-ring__track { fill: none; stroke: #eceefb; stroke-width: 12; }
-.opsx-redesign .spdx-ring__bar {
-  fill: none; stroke: var(--spdx-purple); stroke-width: 12; stroke-linecap: round;
-  stroke-dasharray: 326.7; stroke-dashoffset: 0;
+/* Three stacked laps: each 100% completes one full circle. Lap 2 (amber) draws
+   over a full lap 1, lap 3 (red) over a full lap 2 — the higher colour rides on
+   top of the previous one as the value grows past 100% / 200%. */
+.opsx-redesign .spdx-ring__lap {
+  fill: none; stroke-width: 12; stroke-linecap: round;
+  stroke-dasharray: 326.7; stroke-dashoffset: 326.7;
   transition: stroke-dashoffset var(--spdx-med) var(--spdx-ease);
 }
+.opsx-redesign .spdx-ring__lap--1 { stroke: var(--spdx-purple); }
+.opsx-redesign .spdx-ring__lap--2 { stroke: #f59e0b; }
+.opsx-redesign .spdx-ring__lap--3 { stroke: #dc2626; }
 .opsx-redesign .spdx-ring__label {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 0;
@@ -176,14 +182,14 @@
 .opsx-redesign .spdx-slider__bubble {
   display: inline-block; min-width: 42px; text-align: center;
   margin: 0 0 8px 0; padding: 4px 9px; border-radius: var(--spdx-pill);
-  background: var(--spdx-purple); color: #fff; font-weight: 800; font-size: .78rem;
+  background: var(--bubble-c, var(--spdx-purple)); color: #fff; font-weight: 800; font-size: .78rem;
   position: relative; transform: translateX(-50%); left: 50%;
   transition: left var(--spdx-fast) linear, background var(--spdx-fast) var(--spdx-ease);
-  box-shadow: 0 3px 8px rgba(74, 54, 201, .25);
+  box-shadow: 0 3px 8px rgba(20, 28, 46, .22);
 }
 .opsx-redesign .spdx-slider__bubble::after {
   content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: var(--spdx-purple);
+  border: 5px solid transparent; border-top-color: var(--bubble-c, var(--spdx-purple));
 }
 .opsx-redesign .spdx-slider__rail { position: relative; height: 26px; }
 .opsx-redesign .spdx-slider__rail::before {
@@ -193,8 +199,8 @@
 .opsx-redesign .spdx-slider__fill {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   height: 8px; width: 0; border-radius: var(--spdx-pill);
-  background: linear-gradient(90deg, var(--spdx-purple), var(--spdx-purple-deep));
-  transition: width var(--spdx-fast) linear;
+  background: var(--fill-grad, linear-gradient(90deg, var(--spdx-purple), var(--spdx-purple-deep)));
+  transition: width var(--spdx-fast) linear, background var(--spdx-fast) linear;
 }
 .opsx-redesign .spdx-slider.is-dragging .spdx-slider__fill { transition: none; }
 .opsx-redesign .spdx-slider.is-dragging .spdx-slider__bubble { transition: none; }
@@ -208,45 +214,28 @@
 .opsx-redesign .spdx-slider__input::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 20px; height: 20px; border-radius: 50%; cursor: grab;
-  background: #fff; border: 3px solid var(--spdx-purple);
+  background: #fff; border: 3px solid var(--thumb-c, var(--spdx-purple));
   box-shadow: 0 2px 6px rgba(20, 28, 46, .25);
-  transition: transform var(--spdx-fast) var(--spdx-ease), box-shadow var(--spdx-fast) var(--spdx-ease);
+  transition: transform var(--spdx-fast) var(--spdx-ease), box-shadow var(--spdx-fast) var(--spdx-ease), border-color var(--spdx-fast) linear;
   margin-top: 0;
 }
 .opsx-redesign .spdx-slider__input::-moz-range-thumb {
   width: 20px; height: 20px; border-radius: 50%; cursor: grab;
-  background: #fff; border: 3px solid var(--spdx-purple);
+  background: #fff; border: 3px solid var(--thumb-c, var(--spdx-purple));
   box-shadow: 0 2px 6px rgba(20, 28, 46, .25);
+  transition: border-color var(--spdx-fast) linear;
 }
 .opsx-redesign .spdx-slider__input:hover::-webkit-slider-thumb { transform: scale(1.12); }
 .opsx-redesign .spdx-slider__input:active::-webkit-slider-thumb { cursor: grabbing; box-shadow: 0 0 0 6px rgba(107, 90, 237, .15); }
 .opsx-redesign .spdx-slider__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px rgba(107, 90, 237, .28); }
 .opsx-redesign .spdx-slider__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px rgba(107, 90, 237, .28); }
 
-/* teal slider variant (upload) — driven by an explicit wrapper class so no
-   reliance on :has(). The purple gradient is the default. */
-.opsx-redesign .spdx-slider__input--teal::-webkit-slider-thumb { border-color: var(--spdx-teal); }
-.opsx-redesign .spdx-slider__input--teal::-moz-range-thumb { border-color: var(--spdx-teal); }
-.opsx-redesign .spdx-slider--teal .spdx-slider__fill { background: linear-gradient(90deg, #2bb7a8, var(--spdx-teal)); }
-.opsx-redesign .spdx-slider--teal .spdx-slider__bubble { background: var(--spdx-teal); box-shadow: 0 3px 8px rgba(13, 148, 136, .25); }
-.opsx-redesign .spdx-slider--teal .spdx-slider__bubble::after { border-top-color: var(--spdx-teal); }
-
-/* boost zones — override the base colour above 100% (amber) and 200% (red) */
-.opsx-redesign .spdx-slider.is-warn .spdx-slider__fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-.opsx-redesign .spdx-slider.is-warn .spdx-slider__bubble { background: #f59e0b; box-shadow: 0 3px 8px rgba(245, 158, 11, .3); }
-.opsx-redesign .spdx-slider.is-warn .spdx-slider__bubble::after { border-top-color: #f59e0b; }
-.opsx-redesign .spdx-slider.is-warn .spdx-slider__input::-webkit-slider-thumb { border-color: #f59e0b; }
-.opsx-redesign .spdx-slider.is-warn .spdx-slider__input::-moz-range-thumb { border-color: #f59e0b; }
-.opsx-redesign .spdx-slider.is-danger .spdx-slider__fill { background: linear-gradient(90deg, #f87171, #dc2626); }
-.opsx-redesign .spdx-slider.is-danger .spdx-slider__bubble { background: #dc2626; box-shadow: 0 3px 8px rgba(220, 38, 38, .3); }
-.opsx-redesign .spdx-slider.is-danger .spdx-slider__bubble::after { border-top-color: #dc2626; }
-.opsx-redesign .spdx-slider.is-danger .spdx-slider__input::-webkit-slider-thumb { border-color: #dc2626; }
-.opsx-redesign .spdx-slider.is-danger .spdx-slider__input::-moz-range-thumb { border-color: #dc2626; }
-
-.opsx-redesign .spdx-ring.is-warn .spdx-ring__bar { stroke: #f59e0b; }
+/* Slider fill / bubble / thumb colour is interpolated live in JS via the
+   --fill-grad, --bubble-c and --thumb-c custom properties (base → amber → red
+   as the value climbs 0 → 300%), so the colour builds up gradually while
+   dragging. The ring-label colour still escalates by zone: */
 .opsx-redesign .spdx-ring.is-warn .spdx-ring__label strong,
 .opsx-redesign .spdx-ring.is-warn .spdx-ring__label span { color: #b45309; }
-.opsx-redesign .spdx-ring.is-danger .spdx-ring__bar { stroke: #dc2626; }
 .opsx-redesign .spdx-ring.is-danger .spdx-ring__label strong,
 .opsx-redesign .spdx-ring.is-danger .spdx-ring__label span { color: #b91c1c; }
 
