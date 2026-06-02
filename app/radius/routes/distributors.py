@@ -77,15 +77,29 @@ def _permissions(raw: str) -> list[str]:
     ]
 
 
+def _permissions_from_request() -> list[str]:
+    raw_items = request.form.getlist("permissions")
+    checked = [
+        item.strip()
+        for raw in raw_items
+        for part in raw.replace("\n", ",").split(",")
+        for item in [part.strip()]
+        if item
+    ]
+    if checked:
+        return checked
+    return _permissions(_field("permissions"))
+
+
 def _scope(raw: str) -> dict:
     if not raw:
         return {"card_batches": "assigned"}
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        raise RadiusValidationError("scope_json must be valid JSON") from None
+        raise RadiusValidationError("نطاق البيانات غير صالح.") from None
     if not isinstance(parsed, dict):
-        raise RadiusValidationError("scope_json must be a JSON object")
+        raise RadiusValidationError("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا.")
     return parsed
 
 
@@ -96,7 +110,7 @@ def _form_payload() -> dict:
         "email": _field("email"),
         "phone": _field("phone"),
         "status": _field("status") or "active",
-        "permissions": _permissions(_field("permissions")),
+        "permissions": _permissions_from_request(),
         "scope": _scope(_field("scope_json")),
         "balance": _float_field("balance"),
         "credit_limit": _float_field("credit_limit"),

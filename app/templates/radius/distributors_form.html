@@ -53,6 +53,15 @@
   .ds-section--perm  .ds-section-icon{ background: #EDE9FE; color: #6D28D9; }
   .ds-section--notes { border-inline-start: 3px solid var(--hub-amber); }
   .ds-section--notes .ds-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .ds-choice-list{ display:grid; gap:10px; }
+  .ds-choice{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:12px 13px; border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-md); background:#f8fafc;
+  }
+  .ds-choice input{ margin-top:3px; accent-color:var(--hub-brand); }
+  .ds-choice strong{ display:block; color:var(--hub-text); font-size:13px; margin-bottom:3px; }
+  .ds-choice span{ display:block; color:var(--hub-text-mute); font-size:11.5px; line-height:1.7; }
 </style>
 {% endblock %}
 
@@ -155,14 +164,39 @@
       <div class="ds-grid">
         <div class="ds-field full">
           <label>الصلاحيات</label>
-          <textarea class="hub-textarea" name="permissions" rows="3"
-                    placeholder="cards.read, cards.sell, payments.read">{{ form.get('permissions','cards.read, cards.sell') }}</textarea>
-          <div class="help">اكتب الصلاحيات مفصولة بفواصل أو كل صلاحية في سطر. هذه قيم API فعلية وليست واجهة RBAC كاملة بعد.</div>
+          {% set perms_raw = (form.get('permissions','cards.read, cards.sell') or '') %}
+          {% set perms_norm = ',' ~ perms_raw|replace('\n', ',')|replace(' ', '') ~ ',' %}
+          <div class="ds-choice-list">
+            <label class="ds-choice">
+              <input type="checkbox" name="permissions" value="cards.read"
+                     {% if ',cards.read,' in perms_norm %}checked{% endif %}>
+              <span>
+                <strong>عرض الكروت والحزم</strong>
+                <span>يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها.</span>
+              </span>
+            </label>
+            <label class="ds-choice">
+              <input type="checkbox" name="permissions" value="cards.sell"
+                     {% if ',cards.sell,' in perms_norm %}checked{% endif %}>
+              <span>
+                <strong>بيع الكروت</strong>
+                <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.</span>
+              </span>
+            </label>
+          </div>
+          <div class="help">اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.</div>
         </div>
         <div class="ds-field full">
-          <label>نطاق البيانات (JSON)</label>
-          <textarea class="hub-textarea mono" name="scope_json" rows="3">{{ form.get('scope_json','{"card_batches":"assigned"}') }}</textarea>
-          <div class="help">القيمة الافتراضية تجعل الموزع يرى الحزم المربوطة به فقط في الواجهات التي تدعم العزل.</div>
+          <label>نطاق البيانات</label>
+          <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
+          <div class="ds-choice">
+            <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand)"></i>
+            <span>
+              <strong>الحزم المعيّنة فقط</strong>
+              <span>لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.</span>
+            </span>
+          </div>
+          <div class="help">هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.</div>
         </div>
       </div>
     </div>

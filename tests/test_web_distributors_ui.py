@@ -90,6 +90,19 @@ def test_distributors_web_routes_are_login_guarded(client):
     assert "/admin/radius/login" in res.headers.get("Location", "")
 
 
+def test_distributors_web_form_uses_choice_controls_not_json_fields(client):
+    _web_login(client)
+    res = client.get("/admin/radius/distributors/new")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'type="checkbox" name="permissions"' in html
+    assert 'type="hidden" name="scope_json"' in html
+    assert "نطاق البيانات (JSON)" not in html
+    assert "hub-textarea mono" not in html
+    assert "cards.read, cards.sell" not in html
+    assert "اختر الصلاحيات من القائمة" in html
+
+
 def test_distributors_web_create_detail_assign_and_settle(client):
     _web_login(client)
     token = _csrf(client)
