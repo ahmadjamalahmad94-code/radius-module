@@ -14,7 +14,7 @@ def register_v1(parent: Blueprint) -> None:
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules, business_os,
         card_checker, card_users, cards, communications, customer_portals, dashboard, devices, distributors, health, internal_auth,
-        hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_policy,
+        hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, service_requests, services, sessions,
         settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
@@ -41,6 +41,7 @@ def register_v1(parent: Blueprint) -> None:
     backups.register(v1)
     profiles.register(v1)
     nas.register(v1)
+    network_devices.register(v1)
     sessions.register(v1)
     accounting.register(v1)
     webhooks.register(v1)
