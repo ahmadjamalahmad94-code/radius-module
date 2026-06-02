@@ -51,7 +51,7 @@
     var fill = $("[data-fill]", wrap);
     var bubble = $("[data-bubble]", wrap);
     var base = input.classList.contains("spdx-slider__input--teal") ? C_TEAL : C_PURPLE;
-    var raf = null;
+    var raf = null, lastColorVal = -1;
 
     function render() {
       var min = +input.min || 0, max = +input.max || 100, val = +input.value;
@@ -60,12 +60,16 @@
       var center = THUMB / 2 + frac * (w - THUMB);
       if (fill) fill.style.width = center + "px";
       if (bubble) { bubble.style.left = center + "px"; bubble.textContent = Math.round(val) + "%"; }
-      // gradual colour build-up
-      var col = valueColor(val, base);
-      var c = rgb(col), light = rgb(lerp(col, [255, 255, 255], 0.22));
-      wrap.style.setProperty("--bubble-c", c);
-      wrap.style.setProperty("--fill-grad", "linear-gradient(90deg," + light + "," + c + ")");
-      input.style.setProperty("--thumb-c", c);
+      // Gradual colour build-up — solid colour (cheap to repaint) refreshed only
+      // when the rounded value changes, so dragging stays smooth.
+      var rv = Math.round(val);
+      if (rv !== lastColorVal) {
+        lastColorVal = rv;
+        var c = rgb(valueColor(val, base));
+        if (fill) fill.style.background = c;
+        wrap.style.setProperty("--bubble-c", c);
+        input.style.setProperty("--thumb-c", c);
+      }
     }
     function schedule() { if (raf) return; raf = requestAnimationFrame(function () { raf = null; render(); }); }
 
@@ -80,6 +84,7 @@
     input.addEventListener("blur", stop);
 
     var rec = { render: render, input: input };
+    input._spdxRender = render; // O(1) lookup for setSlider (avoids array scans)
     sliders.push(rec);
     // Re-measure whenever the rail's width changes — covers window resize AND
     // sidebar collapse/expand (which reflows the layout without a resize event),
@@ -96,8 +101,9 @@
   });
 
   function setSlider(input, value) {
+    if (!input) return;
     input.value = value;
-    sliders.forEach(function (s) { if (s.input === input) s.render(); });
+    if (input._spdxRender) input._spdxRender();
   }
 
   // ── model ──────────────────────────────────────────────────────────────
@@ -154,6 +160,13 @@
     }
   }
 
+  // rAF-throttle recompute so rapid slider input coalesces to one update/frame.
+  var recomputeRaf = null;
+  function scheduleRecompute() {
+    if (recomputeRaf) return;
+    recomputeRaf = requestAnimationFrame(function () { recomputeRaf = null; recompute(); });
+  }
+
   function renderRing(pct) {
     // Three laps: each 100% completes a full circle and the next colour layers on
     // top, so 150% = full purple + half amber, 250% = full amber + half red.
@@ -198,19 +211,19 @@
   if (gUni) bindSlider(gUni, function (v) {
     state.globalUni = v;
     profiles.forEach(function (p) { if (receivesGlobal(p)) { p.uni = v; setSlider($("[data-row-uni]", p.el), v); } });
-    recompute();
+    scheduleRecompute();
   });
   var gDown = $("[data-global-down]");
   if (gDown) bindSlider(gDown, function (v) {
     state.globalDown = v;
     profiles.forEach(function (p) { if (receivesGlobal(p)) { p.dn = v; setSlider($("[data-row-down]", p.el), v); } });
-    recompute();
+    scheduleRecompute();
   });
   var gUp = $("[data-global-up]");
   if (gUp) bindSlider(gUp, function (v) {
     state.globalUp = v;
     profiles.forEach(function (p) { if (receivesGlobal(p)) { p.upp = v; setSlider($("[data-row-up]", p.el), v); } });
-    recompute();
+    scheduleRecompute();
   });
 
   // ── bind per-profile controls ──────────────────────────────────────────
@@ -218,9 +231,9 @@
     var rUni = $("[data-row-uni]", p.el);
     var rDown = $("[data-row-down]", p.el);
     var rUp = $("[data-row-up]", p.el);
-    if (rUni) bindSlider(rUni, function (v) { p.uni = v; recompute(); });
-    if (rDown) bindSlider(rDown, function (v) { p.dn = v; recompute(); });
-    if (rUp) bindSlider(rUp, function (v) { p.upp = v; recompute(); });
+    if (rUni) bindSlider(rUni, function (v) { p.uni = v; scheduleRecompute(); });
+    if (rDown) bindSlider(rDown, function (v) { p.dn = v; scheduleRecompute(); });
+    if (rUp) bindSlider(rUp, function (v) { p.upp = v; scheduleRecompute(); });
 
     var enable = $("[data-enable]", p.el);
     if (enable) enable.addEventListener("change", function () {
