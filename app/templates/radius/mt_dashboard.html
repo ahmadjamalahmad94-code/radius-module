@@ -1253,7 +1253,7 @@
           <span class="mt-live-icon"><i class="fa-solid fa-users"></i></span>
           <div>
             <h3>المتصلون الآن</h3>
-            <span class="mt-live-sub">جلسات Hotspot و PPP الفعالة</span>
+            <span class="mt-live-sub">جلسات بوابة الدخول والبرودباند الفعالة</span>
           </div>
         </div>
         <span class="mt-card-meta">تحديث تلقائي كل 10 ثواني</span>
@@ -1268,11 +1268,11 @@
             </div>
           </div>
           <div class="mt-users-pill mt-users-pill--hotspot">
-            <span>Hotspot</span>
+            <span>بوابة الدخول</span>
             <strong data-mt-hotspot-count>—</strong>
           </div>
           <div class="mt-users-pill mt-users-pill--ppp">
-            <span>PPP</span>
+            <span>برودباند</span>
             <strong data-mt-ppp-count>—</strong>
           </div>
         </div>
@@ -1312,7 +1312,7 @@
                 data-mt-action-ping>
           <i class="fa-solid fa-bullseye"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">اختبار Ping</span>
+            <span class="mt-action-label">اختبار الوصول</span>
             <span class="mt-action-sub">فحص الوصول لعنوان</span>
           </span>
         </button>
@@ -1320,7 +1320,7 @@
                 data-mt-action-traceroute>
           <i class="fa-solid fa-route"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">Traceroute</span>
+            <span class="mt-action-label">تتبّع المسار</span>
             <span class="mt-action-sub">مسار الحزم خطوة بخطوة</span>
           </span>
         </button>
@@ -1824,7 +1824,7 @@
         </span>
         <h3>المتصلون الآن على الراوتر</h3>
         <p>
-          جلسات Hotspot — كروت ويوزرات منفصلة — وجلسات PPPoE.
+          جلسات بوابة الدخول — كروت ويوزرات منفصلة — وجلسات البرودباند.
           كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
         </p>
       
@@ -1845,7 +1845,7 @@
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-hotspot-cards-count]">—</span>
-          <span class="np-summary-card-sub">متّصلون عبر بطاقات Hotspot</span>
+          <span class="np-summary-card-sub">متّصلون عبر بطاقات بوابة الدخول</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--green">
@@ -1860,7 +1860,7 @@
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-hotspot-users-count]">—</span>
-          <span class="np-summary-card-sub">يوزرات Hotspot الاعتياديّون</span>
+          <span class="np-summary-card-sub">يوزرات بوابة الدخول الاعتياديّون</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--purple">
@@ -1875,15 +1875,15 @@
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-ppp-sessions-count]">—</span>
-          <span class="np-summary-card-sub">اشتراكات PPPoE النشطة</span>
+          <span class="np-summary-card-sub">اشتراكات البرودباند النشطة</span>
         </div>
       </div>
     </div>
 
-    {# ── Hotspot — Cards sub-card (numeric/short usernames) ── #}
+    {# ── بوابة الدخول — جلسات الكروت الرقمية أو القصيرة ── #}
     <section class="mt-card" data-mt-hotspot-cards-card data-mt-hotspot-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-credit-card"></i> Hotspot — جلسات الكروت</h3>
+        <h3><i class="fa-solid fa-credit-card"></i> بوابة الدخول — جلسات الكروت</h3>
         <span class="mt-card-meta">
           <span data-mt-hotspot-cards-count>—</span> متّصل ·
           <span class="mt-card-note">للقراءة فقط</span> ·
@@ -1915,10 +1915,10 @@
       </div>
     </section>
 
-    {# ── Hotspot — Users sub-card (non-card usernames) ── #}
+    {# ── بوابة الدخول — جلسات اليوزرات العادية ── #}
     <section class="mt-card" data-mt-hotspot-users-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-wifi"></i> Hotspot — جلسات اليوزرات</h3>
+        <h3><i class="fa-solid fa-wifi"></i> بوابة الدخول — جلسات اليوزرات</h3>
         <span class="mt-card-meta">
           <span data-mt-hotspot-users-count>—</span> متّصل ·
           <button type="button" class="mt-mini-btn"
@@ -1952,7 +1952,7 @@
     {# ── PPP sessions sub-card ── #}
     <section class="mt-card" data-mt-ppp-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-plug"></i> جلسات PPP</h3>
+        <h3><i class="fa-solid fa-plug"></i> جلسات البرودباند</h3>
         <span class="mt-card-meta">
           <span data-mt-ppp-sessions-count>—</span> متّصل ·
           <button type="button" class="mt-mini-btn"
@@ -2113,8 +2113,8 @@
       {% for svc in [
         {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'sub': 'توجيه المشتركين عبر IP عام جديد',     'icon': 'globe',           'color': 'amber'},
         {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ VPN آمن لإدارة الراوتر',          'icon': 'key',             'color': 'purple'},
-        {'key': 'hotspot',       'title': 'برمجة Hotspot',     'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
-        {'key': 'broadband',     'title': 'برمجة Broadband',   'sub': 'PPPoE — اشتراك ثابت لكل مستخدم',     'icon': 'ethernet',        'color': 'green'},
+        {'key': 'hotspot',       'title': 'برمجة بوابة الدخول', 'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
+        {'key': 'broadband',     'title': 'برمجة البرودباند',   'sub': 'اشتراك ثابت لكل مستخدم',             'icon': 'ethernet',        'color': 'green'},
         {'key': 'block-sites',   'title': 'حجب المواقع',        'sub': 'منع الوصول لمواقع محدّدة',             'icon': 'ban',             'color': 'red'},
         {'key': 'open-sites',    'title': 'فتح المواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',        'icon': 'circle-check',    'color': 'teal'},
       ] %}

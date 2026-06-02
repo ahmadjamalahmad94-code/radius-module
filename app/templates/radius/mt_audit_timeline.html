@@ -24,7 +24,7 @@
 
   {{ hub.hero(
     "سجلّ نشاط — " ~ nas.name,
-    subtitle="ما حدث على هذا الراوتر — بلغة المشغّل، لا الـ JSON.",
+    subtitle="ما حدث على هذا الراوتر — بلغة المشغّل وبدون عرض الاستجابة الخام.",
     icon="timeline",
   ) }}
 
@@ -37,7 +37,7 @@
         <a class="mt-mini-btn"
            href="{{ url_for('radius.audit_log_index') }}?router_id={{ nas.id }}"
            data-mt-timeline-raw-link>
-          <i class="fa-solid fa-code"></i> الراو (JSON)
+          <i class="fa-solid fa-code"></i> التفاصيل الفنية
         </a>
       </span>
     </header>

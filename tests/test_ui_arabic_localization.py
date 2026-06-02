@@ -354,6 +354,41 @@ def test_setup_wizard_v3_operator_copy_is_arabic():
         assert token not in script, f"{token!r} remained in v3 script"
 
 
+def test_core_operations_do_not_show_old_service_english_labels():
+    files = {
+        Path("app/templates/radius/finance_billing.html"): [
+            '<option value="PPPoE">PPPoE',
+        ],
+        Path("app/templates/radius/invoices_form.html"): [
+            '<option value="Hotspot">Hotspot',
+            '<option value="PPPoE">PPPoE',
+        ],
+        Path("app/templates/radius/mt_audit_timeline.html"): [
+            "لا الـ JSON",
+            "الراو (JSON)",
+        ],
+        Path("app/templates/radius/mt_dashboard.html"): [
+            "جلسات Hotspot",
+            "جلسات Hotspot و PPP",
+            "بطاقات Hotspot",
+            "يوزرات Hotspot",
+            "اشتراكات PPPoE",
+            "Hotspot —",
+            "برمجة Hotspot",
+            "برمجة Broadband",
+            "اختبار Ping",
+            "Traceroute",
+            ">Hotspot<",
+            ">PPP<",
+        ],
+    }
+
+    for path, forbidden in files.items():
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [
