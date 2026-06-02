@@ -256,8 +256,25 @@
       <p style="color:#991B1B"><i class="fa-solid fa-circle-exclamation"></i>
         آخر خطأ: {{ ov.snapshot_last_error }}</p>
       {% endif %}
-      {% if ov.counters %}
-      <pre class="mt-logs-output" data-mt-overview-counters>{{ ov.counters | tojson(indent=2) }}</pre>
+      {% if ov.counter_rows %}
+      <div class="hub-table-wrap" style="border:none;border-radius:0" data-mt-overview-counters>
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>المؤشر</th>
+              <th class="num" style="width:180px">القيمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in ov.counter_rows %}
+            <tr data-mt-overview-counter-row="{{ row.key }}">
+              <td>{{ row.label_ar }}</td>
+              <td class="num"><strong>{{ row.value_ar }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% endif %}
     </div>
   </section>

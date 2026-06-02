@@ -139,6 +139,10 @@ def test_overview_with_fresh_snapshot(app):
     assert ov.snapshot_status == "fresh"
     assert ov.has_snapshot is True
     assert ov.counters.get("hotspot_active") == 5
+    assert any(
+        row.key == "hotspot_active" and row.value_ar == "5"
+        for row in ov.counter_rows
+    )
     assert ov.resource.get("cpu-load") == "12"
 
 
@@ -352,6 +356,31 @@ def test_route_renders_safety_banner_state(app, client):
         "/admin/radius/mt/12/overview").get_data(as_text=True)
     assert 'data-mt-overview-safe-banner="unsafe"' in html
     assert 'data-mt-overview-safe="false"' in html
+
+
+def test_route_renders_snapshot_counters_as_readable_rows(app, client):
+    _seed_nas(app, nas_id=14, name="counter-rtr")
+    with app.app_context():
+        from app.radius.db.repos import router_snapshots_repo as snapshots
+
+        snapshots.save_success(
+            tenant_id=1,
+            router_id=14,
+            counters={
+                "hotspot_active": 5,
+                "ppp_active": 2,
+                "rx_bytes_total": 2048,
+                "tx_bytes_total": 4096,
+            },
+        )
+
+    _login(client)
+    html = client.get("/admin/radius/mt/14/overview").get_data(as_text=True)
+
+    assert 'data-mt-overview-counter-row="hotspot_active"' in html
+    assert 'data-mt-overview-counter-row="rx_bytes_total"' in html
+    assert "{{ ov.counters | tojson" not in html
+    assert "{&#34;hotspot_active&#34;" not in html
 
 
 def test_route_blocked_for_non_admin_without_perm(app, client):

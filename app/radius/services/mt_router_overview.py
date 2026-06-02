@@ -52,6 +52,13 @@ class SuggestedAction:
 
 
 @dataclass
+class OverviewMetric:
+    key: str
+    label_ar: str
+    value_ar: str
+
+
+@dataclass
 class RouterOverview:
     # Identity
     nas_id: int
@@ -70,6 +77,7 @@ class RouterOverview:
 
     # Counters from snapshot (best-effort; can be None)
     counters: dict[str, Any]
+    counter_rows: list[OverviewMetric]
     resource: dict[str, Any]
 
     # Alerts
@@ -209,6 +217,68 @@ def _first(rows: list[dict], **filters) -> dict | None:
     return None
 
 
+_COUNTER_LABELS = {
+    "hotspot_active": "جلسات Hotspot النشطة",
+    "ppp_active": "جلسات PPP النشطة",
+    "rx_bytes_total": "إجمالي التحميل المستلم",
+    "tx_bytes_total": "إجمالي الرفع المرسل",
+    "last_seen_age_sec": "عمر آخر قراءة",
+    "fetched_at": "وقت القراءة",
+}
+
+
+def _format_bytes(value: Any) -> str:
+    try:
+        size = float(value)
+    except (TypeError, ValueError):
+        return "0 بايت"
+    units = ["بايت", "KB", "MB", "GB", "TB"]
+    idx = 0
+    while size >= 1024 and idx < len(units) - 1:
+        size /= 1024
+        idx += 1
+    if idx == 0:
+        return f"{int(size)} {units[idx]}"
+    return f"{size:.1f} {units[idx]}"
+
+
+def _format_counter_value(key: str, value: Any) -> str:
+    if value is None or value == "":
+        return "لا توجد قراءة"
+    if key.endswith("_bytes_total"):
+        return _format_bytes(value)
+    if key == "last_seen_age_sec":
+        try:
+            return f"{int(value)} ثانية"
+        except (TypeError, ValueError):
+            return str(value)
+    if key == "fetched_at":
+        try:
+            when = datetime.fromtimestamp(float(value), tz=timezone.utc)
+            return when.isoformat(timespec="seconds").replace("+00:00", "Z")
+        except (TypeError, ValueError, OSError):
+            return str(value)
+    if isinstance(value, bool):
+        return "نعم" if value else "لا"
+    if isinstance(value, (dict, list, tuple)):
+        return "مجموعة بيانات"
+    return str(value)
+
+
+def _counter_rows(counters: dict[str, Any]) -> list[OverviewMetric]:
+    rows: list[OverviewMetric] = []
+    for key, value in (counters or {}).items():
+        label = _COUNTER_LABELS.get(str(key), str(key).replace("_", " "))
+        rows.append(
+            OverviewMetric(
+                key=str(key),
+                label_ar=label,
+                value_ar=_format_counter_value(str(key), value),
+            )
+        )
+    return rows
+
+
 # ─── Public API ───────────────────────────────────────────────
 
 
@@ -328,6 +398,7 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
         snapshot_last_error=(snap or {}).get("last_error") or "",
         snapshot_status=snap_status,
         counters=dict(counters),
+        counter_rows=_counter_rows(dict(counters)),
         resource=dict(resource),
         active_alerts_critical=counts["critical"],
         active_alerts_warning=counts["warning"],

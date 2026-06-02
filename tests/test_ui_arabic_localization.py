@@ -189,6 +189,7 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         Path("app/templates/radius/invoices_form.html"),
         Path("app/templates/radius/mt_dashboard.html"),
         Path("app/templates/radius/mt_diagnostics.html"),
+        Path("app/templates/radius/mt_router_overview.html"),
         Path("app/templates/radius/setup_wizard.html"),
         Path("app/templates/radius/_status.html"),
         Path("app/templates/radius/users_form.html"),
@@ -228,6 +229,7 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         "{{ r.payload_json }}",
         'title="{{ r.payload_json }}"',
         "{{ w.info|tojson }}",
+        "{{ ov.counters | tojson(indent=2) }}",
     ]
 
     for path in paths:
