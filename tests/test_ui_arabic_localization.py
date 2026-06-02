@@ -556,6 +556,57 @@ def test_card_and_session_pages_hide_raw_network_labels():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_policy_and_communications_pages_use_arabic_operator_copy():
+    files = {
+        Path("app/templates/radius/tool_set_speeds.html"): [
+            "MikroTik routers",
+            "sync_queue",
+        ],
+        Path("app/templates/radius/_network_policy_shell.html"): [
+            "MikroTik من هذه الصفحات",
+        ],
+        Path("app/templates/radius/network_policy_form.html"): [
+            "SSH (TCP 22)",
+            "API (TCP 8728)",
+            "API SSL (TCP 8729)",
+            "اسم MikroTik hotspot profile",
+            "بصيغة MikroTik",
+            "لا تتّصل بالـ MikroTik",
+        ],
+        Path("app/templates/radius/login.html"): [
+            "تحكّم MikroTik والشبكة",
+        ],
+        Path("app/templates/radius/site_exit.html"): [
+            "قائمة عناوين MikroTik",
+            "API الراوتر",
+            "لا تحتاج SSH",
+        ],
+        Path("app/templates/radius/network_policy_preview.html"): [
+            "سكربت MikroTik",
+            "لا تتّصل بالـ MikroTik",
+        ],
+        Path("app/templates/radius/communications_channels.html"): [
+            "رابط الإرسال (API)",
+        ],
+        Path("app/templates/radius/communications_guide.html"): [
+            "مزوّد واتساب API",
+            "رابط إرسال (API)",
+            "API URL",
+            "رابط الـ API",
+            "Send Message API",
+            "UltraMsg / AdvWhats / غيره",
+        ],
+        Path("app/templates/admin/_sidebar.html"): [
+            "قيد التطوير",
+        ],
+    }
+
+    for path, forbidden in files.items():
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

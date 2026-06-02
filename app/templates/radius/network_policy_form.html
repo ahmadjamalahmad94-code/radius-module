@@ -105,9 +105,9 @@
           </h4>
           {% set toggles = [
               ('allow_winbox',       'Winbox (TCP 8291)', 'مرتفع'),
-              ('allow_ssh',          'SSH (TCP 22)',      'متوسط'),
-              ('allow_api',          'API (TCP 8728) — غير مشفّر', 'مرتفع'),
-              ('allow_api_ssl',      'API SSL (TCP 8729)', 'متوسط'),
+              ('allow_ssh',          'الوصول الآمن (TCP 22)',      'متوسط'),
+              ('allow_api',          'واجهة الربط غير المشفّرة (TCP 8728)', 'مرتفع'),
+              ('allow_api_ssl',      'واجهة الربط المشفّرة (TCP 8729)', 'متوسط'),
               ('allow_webfig_http',  'WebFig HTTP (80) — غير مشفّر', 'مرتفع'),
               ('allow_webfig_https', 'WebFig HTTPS (443)', 'منخفض'),
           ] %}
@@ -196,7 +196,7 @@
                    placeholder="مثلاً: hsprof1"
                    value="{{ policy.hotspot_profile if policy else '' }}">
             <span class="npc-field-hint">
-              اسم MikroTik hotspot profile لتقييد التطبيق؛
+              اسم ملف بوابة الدخول في الراوتر لتقييد التطبيق؛
               تركها فارغة = كل الـ profiles.
             </span>
           </div>
@@ -237,14 +237,14 @@
         <ul style="font-size:13px; color:#4b5563; line-height:1.8;
                    padding-inline-start:18px;">
           <li>ما الذي سيُنفَّذ على الراوتر بالضبط (بلغة عربية).</li>
-          <li>السكربت الكامل بصيغة MikroTik (.rsc).</li>
+          <li>السكربت الكامل بصيغة الراوتر (.rsc).</li>
           <li>سكربت التراجع (rollback) المُولَّد تلقائياً.</li>
           <li>تقييم الخطر (منخفض / متوسط / مرتفع).</li>
           <li>التحذيرات والقواعد التي ستظل سليمة بلا تعديل.</li>
         </ul>
         <p style="font-size:12.5px; color:#6b7280;">
           <i class="fa-solid fa-shield-halved"></i>
-          هذه الصفحة لا تتّصل بالـ MikroTik — لا تُنشأ
+          هذه الصفحة لا تتّصل بالراوتر — لا تُنشأ
           قواعد حقيقية، لا تُعدَّل خدمات، لا يُرسل CoA.
         </p>
       </div>
