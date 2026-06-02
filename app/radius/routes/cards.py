@@ -309,20 +309,6 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
     if not alerts:
         alerts.append({"level": "green", "text": "وضع الكروت مستقر ولا توجد ملاحظات عاجلة."})
 
-    time_minutes = _form_int("time_limit_minutes")
-    time_value = _form_int("time_value")
-    time_unit = _form_str("time_unit") or "days"
-    if time_minutes > 0:
-        if time_minutes % 1440 == 0:
-            time_value = time_minutes // 1440
-            time_unit = "days"
-        elif time_minutes % 60 == 0:
-            time_value = time_minutes // 60
-            time_unit = "hours"
-        else:
-            time_value = time_minutes
-            time_unit = "minutes"
-
     return {
         "cards": {
             "total": total,
@@ -767,6 +753,21 @@ def _collect_batch_options() -> dict:
         "quota": {"value": quota_value, "unit": quota_unit} if quota_value > 0 else None,
         "seconds_validity": {"value": validity_value, "unit": validity_unit} if validity_value > 0 else None,
     }
+    # مدة البطاقة: نقبل إمّا time_limit_minutes (من شاشة التوليد) أو time_value/time_unit
+    # (من تعديل الحزمة). نطبّع القيمة إلى value+unit قبل التمرير لـ generate_batch.
+    time_minutes = _form_int("time_limit_minutes")
+    time_value = _form_int("time_value")
+    time_unit = _form_str("time_unit") or "days"
+    if time_minutes > 0:
+        if time_minutes % 1440 == 0:
+            time_value = time_minutes // 1440
+            time_unit = "days"
+        elif time_minutes % 60 == 0:
+            time_value = time_minutes // 60
+            time_unit = "hours"
+        else:
+            time_value = time_minutes
+            time_unit = "minutes"
     return {
         # توليد
         "username_prefix":           _form_str("username_prefix"),
