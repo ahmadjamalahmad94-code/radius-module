@@ -513,7 +513,7 @@
             <span class="cc-info-value" data-cc-field="ip_address">{{ card.ip_address or '—' }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">NAS</span>
+            <span class="cc-info-label">جهاز الشبكة</span>
             <span class="cc-info-value" data-cc-field="nas_address">{{ card.nas_address or '—' }}</span>
           </div>
           <div class="cc-info-row">
@@ -648,7 +648,7 @@
                   <dt><i class="fa-solid fa-globe"></i> IP</dt>
                   <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
                   {% if card.nas_address %}
-                  <dt><i class="fa-solid fa-server"></i> NAS</dt>
+                  <dt><i class="fa-solid fa-server"></i> جهاز الشبكة</dt>
                   <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
                   {% endif %}
                 </dl>
@@ -1775,7 +1775,7 @@
     </div>
     <div class="cc-modal-sub">
       التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة).
-      إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الـ MikroTik فوراً عبر CoA.
+      إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.
     </div>
 
     <div class="cc-modal-section-label">العملية</div>

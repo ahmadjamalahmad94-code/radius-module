@@ -197,7 +197,7 @@
         <div class="ops-card-body">
           <h3 class="ops-card-title">
             <span><i class="fa-solid fa-chart-line"></i> ملخص التشغيل</span>
-            <span class="ops-muted">من سجلات RADIUS المحفوظة</span>
+            <span class="ops-muted">من سجلات المصادقة المحفوظة</span>
           </h3>
           <div class="ops-stat-grid">
             <div class="ops-stat"><div class="label">عدد الجلسات</div><div class="value">{{ summary.sessions_count or 0 }}</div><div class="subvalue">كل محاولات الاتصال المسجلة</div></div>
@@ -207,7 +207,7 @@
             <div class="ops-stat"><div class="label">إجمالي مدة الاتصال</div><div class="value">{{ duration(summary.total_session_seconds) }}</div><div class="subvalue">مجموع الجلسات</div></div>
             <div class="ops-stat"><div class="label">الرفع</div><div class="value">{{ bytes_size(summary.total_upload_bytes) }}</div><div class="subvalue">من radacct</div></div>
             <div class="ops-stat"><div class="label">التنزيل</div><div class="value">{{ bytes_size(summary.total_download_bytes) }}</div><div class="subvalue">من radacct</div></div>
-            <div class="ops-stat"><div class="label">عدد NAS</div><div class="value">{{ summary.unique_nas or 0 }}</div><div class="subvalue">خوادم/أجهزة مختلفة</div></div>
+            <div class="ops-stat"><div class="label">عدد أجهزة الشبكة</div><div class="value">{{ summary.unique_nas or 0 }}</div><div class="subvalue">أجهزة مختلفة</div></div>
           </div>
         </div>
       </section>
@@ -235,7 +235,7 @@
 
             <div class="ops-action">
               <h4>طرد الجلسة المتصلة</h4>
-              <p>يرسل أمر فصل إلى RADIUS. إذا لم تكن الجلسة متصلة، لن يظهر زر مفيد هنا.</p>
+              <p>يرسل أمر فصل إلى خدمة المصادقة. إذا لم تكن الجلسة متصلة، لن يظهر زر مفيد هنا.</p>
               {% set has_online = false %}
               {% for session in sessions if session.online %}
                 {% set has_online = true %}
@@ -284,7 +284,7 @@
 
             <div class="ops-action">
               <h4>حذف نهائي</h4>
-              <p>خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات RADIUS السابقة المرتبطة باسم الدخول.</p>
+              <p>خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات المصادقة السابقة المرتبطة باسم الدخول.</p>
               <form method="post" class="ops-inline">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="delete_permanent">
@@ -312,7 +312,7 @@
           <div class="ops-field"><div class="k">تاريخ الانتهاء</div><div class="v mono">{{ dt(card.expires_at) }}</div></div>
           <div class="ops-field"><div class="k">آخر ظهور</div><div class="v mono">{{ dt(card.last_seen_at) }}</div></div>
           <div class="ops-field"><div class="k">آخر MAC</div><div class="v mono">{{ card.mac_address or '—' }}</div></div>
-          <div class="ops-field"><div class="k">آخر IP / NAS</div><div class="v mono">{{ card.ip_address or '—' }} · {{ card.nas_address or '—' }}</div></div>
+          <div class="ops-field"><div class="k">آخر عنوان / جهاز</div><div class="v mono">{{ card.ip_address or '—' }} · {{ card.nas_address or '—' }}</div></div>
         </div>
       </div>
     </section>
@@ -353,7 +353,7 @@
                   <th>Session ID</th>
                   <th>MAC</th>
                   <th>IP</th>
-                  <th>NAS</th>
+                  <th>جهاز الشبكة</th>
                   <th>المنفذ</th>
                   <th>بدأت</th>
                   <th>آخر تحديث</th>
@@ -400,7 +400,7 @@
         <h3 class="ops-card-title"><span><i class="fa-solid fa-eye-slash"></i> بيانات غير متاحة حاليًا</span></h3>
         <div class="ops-alert info">
           <i class="fa-solid fa-lightbulb"></i>
-          <div>النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة المصنعة لا يتوفر عادة من RADIUS إلا إذا أرسله NAS داخل حقول الاتصال.</div>
+          <div>النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة المصنعة لا يتوفر عادة من خدمة المصادقة إلا إذا أرسله جهاز الشبكة داخل حقول الاتصال.</div>
         </div>
         <div class="ops-badges" style="margin-top:10px">
           {% set labels = {

@@ -514,6 +514,48 @@ def test_core_operations_do_not_show_old_service_english_labels():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_card_and_session_pages_hide_raw_network_labels():
+    files = {
+        Path("app/templates/radius/cards_checker.html"): [
+            "من سجلات RADIUS المحفوظة",
+            "عدد NAS",
+            "آخر IP / NAS",
+            "<th>NAS</th>",
+            "يرسل أمر فصل إلى RADIUS",
+            "سجلات RADIUS السابقة",
+            "أرسله NAS داخل حقول الاتصال",
+        ],
+        Path("app/templates/radius/cards_checker_v2.html"): [
+            'class="cc-info-label">NAS',
+            "<dt><i class=\"fa-solid fa-server\"></i> NAS</dt>",
+            "تحديث الـ MikroTik فوراً عبر CoA",
+        ],
+        Path("app/templates/radius/cards_of_batch.html"): [
+            'data-label="IP / NAS"',
+            ">IP / NAS</th>",
+        ],
+        Path("app/templates/radius/users_list.html"): [
+            "بحث (اسم/يوزر/جوال)",
+            ">IP / NAS</th>",
+            'mac:"MAC", ip:"IP / NAS"',
+        ],
+        Path("app/templates/radius/sessions_list.html"): [
+            "RADIUS_MODE=mikrotik",
+            '("nas", "NAS")',
+            'data-col="nas">NAS',
+            "مزوّد RADIUS يعمل بوضع mikrotik",
+        ],
+        Path("app/templates/radius/users_profile.html"): [
+            "<th>NAS</th>",
+        ],
+    }
+
+    for path, forbidden in files.items():
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

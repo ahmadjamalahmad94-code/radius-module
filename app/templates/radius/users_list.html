@@ -358,7 +358,7 @@
 
 {# ───── Filter Bar (under the mega-hero) ──────────────────── #}
 <form method="get" class="hub-filterbar hr-toolbar">
-  <input class="hub-input grow" type="text" name="q" placeholder="بحث (اسم/يوزر/جوال)..." value="{{ q or '' }}">
+  <input class="hub-input grow" type="text" name="q" placeholder="بحث بالاسم أو اسم الدخول أو الجوال..." value="{{ q or '' }}">
   <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in statuses %}
@@ -522,7 +522,7 @@
           <th data-col="upload"     data-sortable="number" class="num">رفع</th>
           <th data-col="sessions"   data-sortable="number" class="num">الجلسات</th>
           <th data-col="mac"        data-sortable="text">MAC</th>
-          <th data-col="ip"         data-sortable="text">IP / NAS</th>
+          <th data-col="ip"         data-sortable="text">العنوان / الجهاز</th>
           <th data-col="speed"      data-sortable="number" class="num">السرعة</th>
           <th data-col="first_login" data-sortable="number">أول استخدام</th>
           <th data-col="expire"      data-sortable="number">ينتهي</th>
@@ -1917,7 +1917,7 @@
     device:"الجهاز / النظام", status:"الحالة", remaining:"المتبقي",
     last_login:"آخر اتصال", last_seen:"آخر فصل",
     download:"تحميل", upload:"رفع", sessions:"الجلسات",
-    mac:"MAC", ip:"IP / NAS", speed:"السرعة",
+    mac:"عنوان الجهاز", ip:"العنوان / الجهاز", speed:"السرعة",
     first_login:"أول استخدام", expire:"ينتهي", created:"الإنشاء",
     actions:"إجراءات",
   };

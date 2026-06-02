@@ -331,7 +331,7 @@
 <div class="hub-section" style="margin-bottom:14px;border-color:var(--hub-amber-soft)">
   <div class="hub-section-body" style="display:flex;gap:10px;align-items:center;background:var(--hub-amber-soft);color:var(--hub-amber-ink)">
     <i class="fa-solid fa-circle-info"></i>
-    <div>الوضع اليدوي — لا توجد جلسات حية. شغّل <code style="background:#fff;padding:1px 6px;border-radius:4px">RADIUS_MODE=mikrotik</code> للرؤية الفعلية.</div>
+    <div>الوضع اليدوي — لا توجد جلسات حية. فعّل وضع الربط الفعلي من إعدادات التشغيل لعرض الجلسات المباشرة.</div>
   </div>
 </div>
 {% endif %}
@@ -395,7 +395,7 @@
         ("name", "الإسم"),
         ("plan", "العرض"),
         ("ip", "IP"),
-        ("nas", "NAS"),
+        ("nas", "جهاز الشبكة"),
         ("device", "نوع الجهاز"),
         ("down_speed", "سرعة التحميل"),
         ("up_speed", "سرعة الرفع"),
@@ -429,7 +429,7 @@
           <th data-col="name">المستخدم</th>
           <th data-col="plan">العرض</th>
           <th data-col="ip">IP</th>
-          <th data-col="nas">NAS</th>
+          <th data-col="nas">جهاز الشبكة</th>
           <th data-col="device">نوع الجهاز</th>
           <th data-col="down_speed" class="num">سرعة التحميل</th>
           <th data-col="up_speed" class="num">سرعة الرفع</th>
@@ -553,7 +553,7 @@
 {{ hub.empty(
   "لا جلسات مباشرة",
   sub="لا أحد متصل حاليًا" + (" بنوع «كروت»." if filter_type == "card" else ".") +
-       (" تأكّد أن مزوّد RADIUS يعمل بوضع mikrotik." if settings.mode == "manual" else ""),
+       (" تأكّد أن مزوّد المصادقة يعمل بوضع الربط الفعلي." if settings.mode == "manual" else ""),
   icon="wifi"
 ) }}
 {% endif %}
