@@ -552,13 +552,13 @@
             lines.push(`${u.service_ar || u.service}: ${u.clipboard || u.url}`);
           });
         } else if (conn.public_host) {
-          lines.push(`VPS Host: ${conn.public_host}`);
+          lines.push(`عنوان الخادم: ${conn.public_host}`);
         }
         if (creds && creds.username) {
-          lines.push(`User: ${creds.username}`);
-          if (creds.password) lines.push(`Password: ${creds.password}`);
+          lines.push(`اسم المستخدم: ${creds.username}`);
+          if (creds.password) lines.push(`كلمة المرور: ${creds.password}`);
         }
-        if (conn.vpn_address) lines.push(`VPN IP: ${conn.vpn_address}`);
+        if (conn.vpn_address) lines.push(`عنوان VPN: ${conn.vpn_address}`);
         if (conn.ttl_hours) lines.push(`ينتهي بعد: ${conn.ttl_hours} ساعة`);
         else lines.push(`المدة: دائمة`);
         lines.push(`معرّف الإذن: ${grantToken}`);
