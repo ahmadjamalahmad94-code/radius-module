@@ -90,7 +90,9 @@ def test_audit_index_lists_rows(app, client):
                 result_status="success")
     _login(client)
     html = client.get("/admin/radius/audit").get_data(as_text=True)
-    assert "mt.programming.hotspot.apply" in html
+    # The row now shows the Arabic action label (the raw English code was
+    # removed from the list for clarity; it remains on the detail page).
+    assert "تطبيق إعدادات Hotspot" in html
     assert "data-audit-log-rows" in html
 
 
@@ -121,8 +123,10 @@ def test_filter_by_severity(app, client):
     _login(client)
     html = client.get(
         "/admin/radius/audit?severity=critical").get_data(as_text=True)
-    assert "boom" in html
-    assert "benign" not in html
+    # Raw action codes are no longer printed in the list, so assert the filter
+    # by row count + the critical badge: only the critical row survives.
+    assert html.count('data-audit-row="') == 1
+    assert "حرجة" in html
 
 
 def test_filter_by_action_and_search(app, client):

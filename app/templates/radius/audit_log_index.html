@@ -71,8 +71,8 @@
       </div>
       <h3>كيف تقرأ السجل؟</h3>
       <p>
-        ابدأ بالشدة والنتيجة. العملية الحرجة أو الفاشلة تستحق المراجعة أولا،
-        ثم افتح التفاصيل لمشاهدة payload وبيانات قبل/بعد التغيير.
+        كل سطر = إجراء واحد: مَن نفّذه، على مَن، ونتيجته. ابدأ بالأحمر
+        (فشل / حرج)، واضغط «التفاصيل» لترى ما الذي تغيّر بالضبط.
       </p>
       <div class="audit-guide__chips">
         <span><i class="fa-solid fa-circle"></i> حرجة</span>
@@ -104,10 +104,10 @@
                  data-audit-filter-router>
         </label>
         <label class="audit-field audit-field--wide">
-          <span>الإجراء</span>
+          <span>نوع الإجراء (اختياري)</span>
           <input type="text" name="action"
                  value="{{ filters.action or '' }}"
-                 placeholder="مثال: mt.programming.hotspot.apply"
+                 placeholder="اتركه فارغًا لعرض الكل"
                  data-audit-filter-action>
         </label>
         <label class="audit-field">
@@ -192,7 +192,6 @@
               </span>
               <div>
                 <h4>{{ r.action_label }}</h4>
-                <code dir="ltr">{{ r.action }}</code>
               </div>
             </div>
             <div class="audit-event__badges">
@@ -224,13 +223,6 @@
             </div>
           </dl>
 
-          {% if r.preview_keys %}
-          <div class="audit-payload-preview" aria-label="مفاتيح موجودة في payload">
-            {% for key in r.preview_keys %}
-            <span>{{ key }}</span>
-            {% endfor %}
-          </div>
-          {% endif %}
         </div>
         <a class="audit-detail-link"
            href="{{ url_for('radius.audit_log_detail', audit_id=r.id) }}"

@@ -34,14 +34,56 @@ _RESULT_LABELS = {
     "cancelled": "ملغاة",
 }
 
+# High-value exact labels — read better than the auto-composer below.
 _ACTION_LABELS = {
     "mt.programming.hotspot.apply": "تطبيق إعدادات Hotspot",
     "mt.programming.ppp.apply": "تطبيق إعدادات PPPoE",
-    "mt.programming.interface.apply": "تعديل واجهة",
+    "mt.programming.interface.apply": "تعديل واجهة الراوتر",
     "mt.backup.create": "إنشاء نسخة احتياطية",
-    "mt.deploy": "نشر إعدادات",
-    "mt.apply": "تطبيق إعداد",
-    "mt.toggle": "تبديل حالة",
+    "mt.deploy": "نشر إعدادات على الراوتر",
+    "mt.apply": "تطبيق إعداد على الراوتر",
+    "mt.toggle": "تبديل حالة الراوتر",
+    "change_plan": "تغيير عرض المشترك",
+    "subscriber.cash_balance_add": "إضافة رصيد نقدي",
+    "subscriber.debt_settled_from_payment": "تسوية دين من دفعة",
+    "subscriber.payment": "تسجيل دفعة نقدية",
+    "subscriber.loan": "منح سلفة",
+    "subscriber.quota_reset": "استعادة الكوتة اليومية",
+    "subscriber.extend_time": "إضافة وقت للمشترك",
+}
+
+# Auto-composer vocabulary — turns an unmapped action code like
+# "subscriber.cash_balance_add" into Arabic ("إضافة رصيد") instead of
+# leaking the raw English tail. Verb comes from the last segment's tokens,
+# noun from the nearest known token (last segment wins over the prefix).
+_VERB_LABELS = {
+    "create": "إنشاء", "add": "إضافة", "new": "إنشاء", "update": "تعديل",
+    "edit": "تعديل", "set": "ضبط", "delete": "حذف", "remove": "حذف",
+    "disable": "تعطيل", "enable": "تفعيل", "apply": "تطبيق", "deploy": "نشر",
+    "toggle": "تبديل", "settle": "تسوية", "settled": "تسوية", "void": "إلغاء",
+    "reset": "تصفير", "extend": "تمديد", "renew": "تجديد", "change": "تغيير",
+    "login": "تسجيل دخول", "logout": "تسجيل خروج", "send": "إرسال",
+    "import": "استيراد", "export": "تصدير", "freeze": "تجميد", "unfreeze": "فكّ التجميد",
+    "writeoff": "مسامحة", "refund": "استرجاع", "archive": "أرشفة",
+    "restore": "استعادة", "assign": "إسناد", "grant": "منح", "revoke": "سحب",
+    "rename": "إعادة تسمية", "move": "نقل", "sync": "مزامنة", "run": "تشغيل",
+}
+_NOUN_LABELS = {
+    "balance": "رصيد", "debt": "دين", "loan": "سلفة", "payment": "دفعة",
+    "subscriber": "مشترك", "user": "مشترك", "card": "بطاقة", "cards": "بطاقات",
+    "plan": "عرض", "quota": "كوتة", "time": "وقت", "speed": "سرعة",
+    "mt": "راوتر", "router": "راوتر", "nas": "راوتر", "device": "جهاز",
+    "backup": "نسخة احتياطية", "ticket": "تذكرة", "admin": "مدير",
+    "distributor": "موزّع", "role": "دور", "session": "جلسة", "password": "كلمة المرور",
+    "ledger": "قيد مالي", "interface": "واجهة", "hotspot": "Hotspot", "ppp": "PPPoE",
+}
+
+# Target type → Arabic, so the row reads «مشترك (user1034)» not «user#5».
+_TARGET_TYPE_LABELS = {
+    "user": "مشترك", "subscriber": "مشترك", "card": "بطاقة", "plan": "عرض",
+    "loan": "سلفة", "payment": "دفعة", "router": "راوتر", "nas": "راوتر",
+    "device": "جهاز", "admin": "مدير", "distributor": "موزّع", "role": "دور",
+    "ticket": "تذكرة", "backup": "نسخة احتياطية", "ledger": "قيد مالي",
 }
 
 
@@ -96,11 +138,35 @@ def _tone_for_result(value: str | None) -> str:
 
 
 def _action_label(action: str | None) -> str:
-    raw = action or ""
+    raw = (action or "").strip()
+    if not raw:
+        return "عملية"
     if raw in _ACTION_LABELS:
         return _ACTION_LABELS[raw]
-    tail = raw.split(".")[-1].replace("_", " ").replace("-", " ").strip()
-    return tail or "عملية"
+    parts = raw.replace("-", "_").split(".")
+    last_tokens = parts[-1].split("_") if parts else []
+    verb = next((_VERB_LABELS[t] for t in last_tokens if t in _VERB_LABELS), None)
+    # noun: prefer a token from the last segment, then fall back to the prefix
+    noun = next((_NOUN_LABELS[t] for t in last_tokens if t in _NOUN_LABELS), None)
+    if not noun:
+        noun = next((_NOUN_LABELS[p] for p in parts if p in _NOUN_LABELS), None)
+    if verb and noun:
+        return f"{verb} {noun}"
+    if verb:
+        return verb
+    if noun:
+        return f"عملية على {noun}"
+    return "عملية على النظام"
+
+
+def _target_label(target_type: str | None, target_id) -> str:
+    """Human Arabic target, e.g. «مشترك (user1034)» / «راوتر #42»."""
+    t = (target_type or "").strip().lower()
+    name = _TARGET_TYPE_LABELS.get(t, "هدف")
+    tid = str(target_id).strip() if target_id not in (None, "") else ""
+    if not tid:
+        return name
+    return f"{name} ({tid})"
 
 
 def _decorate_row(row: dict) -> dict:
@@ -121,10 +187,8 @@ def _decorate_row(row: dict) -> dict:
         "result_label": _RESULT_LABELS.get(
             result_status, result_status or "غير محددة"),
         "result_tone": _tone_for_result(result_status),
-        "target_label": (
-            f"{row.get('target_type') or 'target'}"
-            f"#{row.get('target_id') or '—'}"
-        ),
+        "target_label": _target_label(
+            row.get("target_type"), row.get("target_id")),
     }
 
 

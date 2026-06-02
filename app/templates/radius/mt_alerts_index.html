@@ -86,7 +86,19 @@
         </header>
         <div class="opsx-panel-body">
           {% if not rows %}
-          <p class="opsx-empty" data-mt-alerts-empty>لا توجد تنبيهات تطابق هذه الفلاتر.</p>
+          <div class="opsx-empty" data-mt-alerts-empty style="line-height:1.9">
+            <p style="font-weight:800;margin:0 0 6px;font-size:14px">لا توجد تنبيهات حالياً.</p>
+            <p style="margin:0">
+              هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات (نسخة احتياطية
+              فاشلة، لقطة قديمة، خطأ في تطبيق إعداد…). أمّا <strong>المراقبة
+              اللحظية لانقطاع الراوتر</strong> (فحص الاتصال الدوري / netwatch) فهي
+              <strong>قيد التطوير</strong> ولم تُفعَّل بعد على هذا الخادم — لذلك
+              الراوتر المفصول لا يظهر هنا تلقائيًا حتى الآن.
+            </p>
+            <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
+              لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.
+            </p>
+          </div>
           {% else %}
           <ul class="opsx-list" data-mt-alerts-rows>
             {% for a in rows %}

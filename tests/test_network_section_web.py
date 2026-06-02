@@ -84,14 +84,17 @@ def test_router_management_landing_has_shared_nav(app):
         assert label in html, label
 
 
-def test_sidebar_cluster_keeps_operations_and_topology_entries(app):
+def test_sidebar_keeps_router_management_topology_moved_into_it(app):
+    """The sidebar keeps «إدارة الراوترات» as the operational entry. «خريطة
+    الشبكة» (plus problems/diagnostics) now live inside that page's in-section
+    nav, NOT as separate sidebar links."""
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
     assert "إدارة الراوترات" in html
-    assert "خريطة الشبكة" in html
-    assert 'href="/admin/radius/topology"' in html
-    # problems and diagnostics stay in the in-section nav, not the sidebar
+    # topology / problems / diagnostics are NOT standalone sidebar links
+    assert 'href="/admin/radius/topology"' not in html
+    assert "خريطة الشبكة" not in html
     assert "مركز المشاكل" not in html
     assert "تشخيص الراوترات" not in html
 
