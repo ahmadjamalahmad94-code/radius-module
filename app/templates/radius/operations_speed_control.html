@@ -112,11 +112,11 @@
           <div class="spdx-slider__bubble" data-bubble>100%</div>
           <div class="spdx-slider__rail">
             <span class="spdx-slider__fill" data-fill></span>
-            <input type="range" min="0" max="100" step="1" value="100"
+            <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input" data-global-uni
                    aria-label="النسبة الموحّدة لجميع الباقات">
           </div>
-          <div class="spdx-slider__ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
         <label class="spdx-switchrow">
           <span class="spdx-switch">
@@ -159,11 +159,11 @@
           <div class="spdx-slider__bubble" data-bubble>100%</div>
           <div class="spdx-slider__rail">
             <span class="spdx-slider__fill" data-fill></span>
-            <input type="range" min="0" max="100" step="1" value="100"
+            <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input spdx-slider__input--purple" data-global-down
                    aria-label="حدّ التحميل لجميع الباقات">
           </div>
-          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span></div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
         <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد التحميل إلى <b data-global-down-echo>100%</b> من السرعة الأصلية.</p>
       </div>
@@ -178,11 +178,11 @@
           <div class="spdx-slider__bubble" data-bubble>100%</div>
           <div class="spdx-slider__rail">
             <span class="spdx-slider__fill" data-fill></span>
-            <input type="range" min="0" max="100" step="1" value="100"
+            <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input spdx-slider__input--teal" data-global-up
                    aria-label="حدّ الرفع لجميع الباقات">
           </div>
-          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span></div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
         <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد الرفع إلى <b data-global-up-echo>100%</b> من السرعة الأصلية.</p>
       </div>
@@ -221,11 +221,11 @@
               <div class="spdx-slider__bubble" data-bubble>100%</div>
               <div class="spdx-slider__rail">
                 <span class="spdx-slider__fill" data-fill></span>
-                <input type="range" min="0" max="100" step="1" value="100"
+                <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input" data-row-uni
                        aria-label="النسبة الحالية لباقة {{ p.name }}">
               </div>
-              <div class="spdx-slider__ticks"><span>0%</span><span>50%</span><span>100%</span></div>
+              <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
             </div>
           </div>
 
@@ -236,7 +236,7 @@
               <div class="spdx-slider__bubble" data-bubble>100%</div>
               <div class="spdx-slider__rail">
                 <span class="spdx-slider__fill" data-fill></span>
-                <input type="range" min="0" max="100" step="1" value="100"
+                <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input spdx-slider__input--purple" data-row-down
                        aria-label="نسبة التحميل لباقة {{ p.name }}">
               </div>
@@ -246,7 +246,7 @@
               <div class="spdx-slider__bubble" data-bubble>100%</div>
               <div class="spdx-slider__rail">
                 <span class="spdx-slider__fill" data-fill></span>
-                <input type="range" min="0" max="100" step="1" value="100"
+                <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input spdx-slider__input--teal" data-row-up
                        aria-label="نسبة الرفع لباقة {{ p.name }}">
               </div>
@@ -256,15 +256,13 @@
           <div class="spdx-profile__speeds">
             <div class="spdx-speedcol">
               <span class="spdx-speedcol__label"><i class="fa-solid fa-gauge"></i> السرعة الأصلية</span>
-              <span class="spdx-speedcol__val" data-ctl="unified">{{ mb(p.down_kbps) }} <i>Mb</i></span>
-              <span class="spdx-speedcol__val spdx-speedcol__val--dual" data-ctl="separate" hidden>
+              <span class="spdx-speedcol__val spdx-speedcol__val--dual">
                 <b>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b>{{ mb(p.up_kbps) }}</b><small>↑</small>
               </span>
             </div>
             <div class="spdx-speedcol spdx-speedcol--eff">
               <span class="spdx-speedcol__label"><i class="fa-solid fa-bolt"></i> السرعة الفعلية</span>
-              <span class="spdx-speedcol__val" data-ctl="unified" data-eff-uni>{{ mb(p.down_kbps) }} <i>Mb</i></span>
-              <span class="spdx-speedcol__val spdx-speedcol__val--dual" data-ctl="separate" data-eff-dual hidden>
+              <span class="spdx-speedcol__val spdx-speedcol__val--dual">
                 <b data-eff-down>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b data-eff-up>{{ mb(p.up_kbps) }}</b><small>↑</small>
               </span>
             </div>

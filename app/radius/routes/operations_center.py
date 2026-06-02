@@ -100,8 +100,9 @@ def _parse_control_payload(form, preset: str):
 
 
 def _pct(value, default: float) -> float:
+    # 0–300%: profiles may be throttled (<100%) or boosted up to 3x the base speed.
     try:
-        return max(0.0, min(100.0, float(value)))
+        return max(0.0, min(300.0, float(value)))
     except (TypeError, ValueError):
         return float(default)
 

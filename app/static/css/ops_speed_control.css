@@ -231,6 +231,25 @@
 .opsx-redesign .spdx-slider--teal .spdx-slider__bubble { background: var(--spdx-teal); box-shadow: 0 3px 8px rgba(13, 148, 136, .25); }
 .opsx-redesign .spdx-slider--teal .spdx-slider__bubble::after { border-top-color: var(--spdx-teal); }
 
+/* boost zones — override the base colour above 100% (amber) and 200% (red) */
+.opsx-redesign .spdx-slider.is-warn .spdx-slider__fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.opsx-redesign .spdx-slider.is-warn .spdx-slider__bubble { background: #f59e0b; box-shadow: 0 3px 8px rgba(245, 158, 11, .3); }
+.opsx-redesign .spdx-slider.is-warn .spdx-slider__bubble::after { border-top-color: #f59e0b; }
+.opsx-redesign .spdx-slider.is-warn .spdx-slider__input::-webkit-slider-thumb { border-color: #f59e0b; }
+.opsx-redesign .spdx-slider.is-warn .spdx-slider__input::-moz-range-thumb { border-color: #f59e0b; }
+.opsx-redesign .spdx-slider.is-danger .spdx-slider__fill { background: linear-gradient(90deg, #f87171, #dc2626); }
+.opsx-redesign .spdx-slider.is-danger .spdx-slider__bubble { background: #dc2626; box-shadow: 0 3px 8px rgba(220, 38, 38, .3); }
+.opsx-redesign .spdx-slider.is-danger .spdx-slider__bubble::after { border-top-color: #dc2626; }
+.opsx-redesign .spdx-slider.is-danger .spdx-slider__input::-webkit-slider-thumb { border-color: #dc2626; }
+.opsx-redesign .spdx-slider.is-danger .spdx-slider__input::-moz-range-thumb { border-color: #dc2626; }
+
+.opsx-redesign .spdx-ring.is-warn .spdx-ring__bar { stroke: #f59e0b; }
+.opsx-redesign .spdx-ring.is-warn .spdx-ring__label strong,
+.opsx-redesign .spdx-ring.is-warn .spdx-ring__label span { color: #b45309; }
+.opsx-redesign .spdx-ring.is-danger .spdx-ring__bar { stroke: #dc2626; }
+.opsx-redesign .spdx-ring.is-danger .spdx-ring__label strong,
+.opsx-redesign .spdx-ring.is-danger .spdx-ring__label span { color: #b91c1c; }
+
 .opsx-redesign .spdx-slider__ticks {
   direction: ltr; display: flex; justify-content: space-between;
   margin-block-start: 7px; color: var(--spdx-muted); font-size: .72rem; font-weight: 600;
