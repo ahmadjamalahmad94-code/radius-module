@@ -359,7 +359,7 @@ li[data-status="pending"] .swsvf-verify-icon{
           لا يوجد نموذج تهيئة متاح لهذه الخدمة على هذا الراوتر.
         </span>
         <a class="swsvf-btn swsvf-btn-primary"
-           href="{{ url_for('radius.mt_dashboard', router_id=router.id) }}">
+           href="{{ url_for('radius.mt_dashboard', nas_id=router.id) }}">
           العودة إلى الخدمات
           <i class="fa-solid fa-arrow-left"></i>
         </a>
