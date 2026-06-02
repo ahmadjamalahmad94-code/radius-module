@@ -886,8 +886,7 @@
         {% endif %}
       </form>
     {% else %}
-      {# No apply perm — show disabled placeholder so the UX
-         stays consistent. #}
+      {# No apply permission — show the locked execution state. #}
       <div style="margin-top:14px;
                   padding:12px 14px;
                   background:#f3f4f6;
@@ -895,7 +894,7 @@
                   border-radius:10px;
                   color:#6b7280; font-size:12.5px;
                   text-align:center;"
-           data-test="npc-future-apply-placeholder">
+           data-test="npc-apply-locked">
         <i class="fa-solid fa-lock"></i>
         لا تملك صلاحية {{ rdy.apply_perm_label_ar }} —
         التنفيذ غير متاح.
