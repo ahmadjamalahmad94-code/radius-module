@@ -34,6 +34,83 @@
     }
   }
 
+  function formValue(form, name, fallback) {
+    const input = form ? form.querySelector(`[name="${name}"]`) : null;
+    const value = input ? String(input.value || "").trim() : "";
+    return value || fallback || "";
+  }
+
+  function formChecked(form, name) {
+    const input = form ? form.querySelector(`[name="${name}"]`) : null;
+    return !!(input && input.checked);
+  }
+
+  function splitList(value) {
+    return String(value || "")
+      .split(/[\n,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function writeJsonField(form, name, payload) {
+    const input = form ? form.querySelector(`[name="${name}"]`) : null;
+    if (input) input.value = JSON.stringify(payload || {});
+  }
+
+  function syncConfigPayload(form) {
+    if (!form) return;
+    const kind = form.getAttribute("data-sw-form") || "";
+    if (kind === "internet-source") {
+      writeJsonField(form, "payload_json", {
+        interface: formValue(form, "selected_wan_interface", "ether1"),
+        add_default_route: formChecked(form, "add_default_route"),
+        use_peer_dns: formChecked(form, "use_peer_dns"),
+        nat_enabled: formChecked(form, "nat_enabled"),
+      });
+      return;
+    }
+    if (kind === "vpn-radius") {
+      writeJsonField(form, "payload_json", {
+        wg_interface_name: formValue(form, "wg_interface_name", "hr-wg"),
+        peer_name: formValue(form, "peer_name", "vps-peer"),
+        router_vpn_ip: formValue(form, "router_vpn_ip", "10.10.0.3"),
+        vps_vpn_ip: formValue(form, "vps_vpn_ip", "10.10.0.1"),
+        allowed_address: formValue(form, "allowed_address", "10.10.0.1/32"),
+        vps_public_endpoint: formValue(form, "vps_public_endpoint", "187.77.70.18"),
+        endpoint_port: Number(formValue(form, "endpoint_port", "51820")) || 51820,
+        radius_server_ip: formValue(form, "radius_server_ip", "10.10.0.1"),
+        radius_secret: formValue(form, "radius_secret", "CHANGE_ME"),
+        api_username: formValue(form, "api_username", "hr_api_setup"),
+      });
+      return;
+    }
+    if (kind === "hotspot") {
+      writeJsonField(form, "payload_json", {
+        selected_interfaces: splitList(formValue(form, "hotspot_interfaces", "ether3")),
+      });
+      writeJsonField(form, "blocked_json", splitList(formValue(form, "blocked_networks_text", "")));
+      return;
+    }
+    if (kind === "broadband") {
+      writeJsonField(form, "payload_json", {
+        selected_interfaces: splitList(formValue(form, "broadband_interfaces", "ether4")),
+        local_address: formValue(form, "local_address", "10.88.44.1"),
+        remote_pool_cidr: formValue(form, "remote_pool_cidr", "10.88.44.0/24"),
+      });
+      writeJsonField(form, "blocked_json", splitList(formValue(form, "blocked_networks_text", "")));
+    }
+  }
+
+  function payloadFromForm(form) {
+    syncConfigPayload(form);
+    return parseJson(form.querySelector('[name="payload_json"]')?.value || "", {});
+  }
+
+  function blockedListFromForm(form) {
+    syncConfigPayload(form);
+    return parseJson(form.querySelector('[name="blocked_json"]')?.value || "", []);
+  }
+
   async function postJson(url, body) {
     const res = await fetch(url, {
       method: "POST",
@@ -118,7 +195,7 @@
   async function actionSetInternet() {
     requireRun();
     const form = root.querySelector('[data-sw-form="internet-source"]');
-    const payload = parseJson(form.querySelector('[name="payload_json"]').value, {});
+    const payload = payloadFromForm(form);
     const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/internet-source`, {
       source_type: form.querySelector('[name="source_type"]').value,
       selected_wan_interface: form.querySelector('[name="selected_wan_interface"]').value,
@@ -130,7 +207,7 @@
   async function actionGenerateInternet() {
     requireRun();
     const form = root.querySelector('[data-sw-form="internet-source"]');
-    const payload = parseJson(form.querySelector('[name="payload_json"]').value, {});
+    const payload = payloadFromForm(form);
     const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/generate-internet-script`, {
       source_type: form.querySelector('[name="source_type"]').value,
       selected_wan_interface: form.querySelector('[name="selected_wan_interface"]').value,
@@ -153,7 +230,7 @@
   async function actionGenerateVpn() {
     requireRun();
     const form = root.querySelector('[data-sw-form="vpn-radius"]');
-    const payload = parseJson(form.querySelector('[name="payload_json"]').value, {});
+    const payload = payloadFromForm(form);
     const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/generate-vpn-radius-script`, {
       payload,
     });
@@ -187,8 +264,8 @@
   async function actionGenerateHotspot() {
     requireRun();
     const form = root.querySelector('[data-sw-form="hotspot"]');
-    const payload = parseJson(form.querySelector('[name="payload_json"]').value, {});
-    const blocked = parseJson(form.querySelector('[name="blocked_json"]').value, []);
+    const payload = payloadFromForm(form);
+    const blocked = blockedListFromForm(form);
     const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/generate-hotspot-script`, {
       mode: form.querySelector('[name="mode"]').value,
       payload,
@@ -211,8 +288,8 @@
   async function actionGenerateBroadband() {
     requireRun();
     const form = root.querySelector('[data-sw-form="broadband"]');
-    const payload = parseJson(form.querySelector('[name="payload_json"]').value, {});
-    const blocked = parseJson(form.querySelector('[name="blocked_json"]').value, []);
+    const payload = payloadFromForm(form);
+    const blocked = blockedListFromForm(form);
     const data = await postJson(`/admin/radius/setup-wizard/runs/${currentRunId}/generate-broadband-script`, {
       mode: form.querySelector('[name="mode"]').value,
       payload,

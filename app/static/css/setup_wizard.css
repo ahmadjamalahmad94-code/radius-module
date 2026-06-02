@@ -84,6 +84,13 @@
 
 .sw-field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
 .sw-field label{font-size:12px;font-weight:900;color:#334155}
+.sw-field-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
+  margin-bottom:10px;
+}
+.sw-field-grid .sw-field{margin-bottom:0}
 .sw-field input,
 .sw-field textarea,
 .sw-field select{
@@ -155,6 +162,8 @@
   color:#334155;
 }
 .sw-check input{width:auto}
+.sw-checkline{align-items:flex-start}
+.sw-checkline span{line-height:1.55}
 .sw-pilot-output{min-height:110px}
 .sw-lab-timeline{
   margin:0;
