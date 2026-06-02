@@ -533,7 +533,10 @@ def test_print_sheet_geometry_respects_visible_margins_and_gaps():
 def test_backup_status_and_local_run_are_non_destructive(client):
     status = client.get("/api/v1/backups/status", headers=_auth(client))
     assert status.status_code == 200, status.get_json()
-    assert status.get_json()["data"]["job"]["target"] == "local"
+    data = status.get_json()["data"]
+    assert data["job"]["target"] == "local"
+    assert data["google_drive"]["status"] == "not_configured"
+    assert "غير مفعل حاليًا" in data["google_drive"]["message_ar"]
 
     run = client.post("/api/v1/backups/run", json={}, headers=_auth(client))
     assert run.status_code == 201, run.get_json()

@@ -1676,7 +1676,52 @@ class OperationsService:
         return file_path.read_bytes(), str(job.get("file_name") or file_path.name)
 
     def backup_status(self, *, tenant_id: int) -> dict:
-        return operations_repo.backup_status(tenant_id)
+        payload = operations_repo.backup_status(tenant_id)
+        payload["google_drive"] = self._google_drive_backup_status(tenant_id)
+        return payload
+
+    def _google_drive_backup_status(self, tenant_id: int) -> dict:
+        try:
+            from . import google_drive as gd
+            raw = gd.status(tenant_id)
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "configured": False,
+                "connected": False,
+                "pending": False,
+                "status": "unavailable",
+                "email": "",
+                "folder_name": "HobeRadius Backups",
+                "last_upload_at": "",
+                "last_error": str(exc)[:200],
+                "message_ar": "تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.",
+            }
+        configured = bool(raw.get("configured"))
+        connected = bool(raw.get("connected"))
+        pending = bool(raw.get("pending"))
+        if connected:
+            status = "connected"
+            message = "جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة."
+        elif pending:
+            status = "pending"
+            message = "طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم."
+        elif configured:
+            status = "configured_not_connected"
+            message = "إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد."
+        else:
+            status = "not_configured"
+            message = "جوجل درايف غير مفعل حاليًا من إعدادات الخادم."
+        return {
+            "configured": configured,
+            "connected": connected,
+            "pending": pending,
+            "status": status,
+            "email": str(raw.get("email") or ""),
+            "folder_name": str(raw.get("folder_name") or "HobeRadius Backups"),
+            "last_upload_at": str(raw.get("last_upload_at") or ""),
+            "last_error": str(raw.get("last_error") or ""),
+            "message_ar": message,
+        }
 
     def run_local_backup(self, *, tenant_id: int, actor: str) -> dict:
         source = Path(db_path())
