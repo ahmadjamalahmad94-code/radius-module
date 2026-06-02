@@ -140,6 +140,42 @@ def test_primary_ui_does_not_expose_raw_json_blocks(app):
         assert f"<pre {marker}" not in html
 
 
+def test_v2_visible_general_copy_is_arabic():
+    source = _template_source()
+    forbidden = [
+        ">Hotspot<",
+        ">Broadband<",
+        ">DHCP Client<",
+        ">PPPoE<",
+        ">VLAN<",
+        ">ISP Basic<",
+        ">Hotel / Cafe<",
+        ">School<",
+        ">Gaming Center<",
+        ">Partial<",
+        "Preset فقط",
+        "اختر خدمة أو preset",
+        "WireGuard interface",
+        "Web Block عبر",
+        "Walled Garden عبر",
+        "Site Exit / VX2",
+        "تم اختيار Hotspot",
+        "تم اختيار Broadband",
+        "Hotspot ثم Broadband",
+    ]
+
+    for token in forbidden:
+        assert token not in source, f"{token!r} remained visible in v2 copy"
+
+    script = open(
+        os.path.join(ROOT, "app", "static", "js", "setup_wizard_v2.js"),
+        "r",
+        encoding="utf-8",
+    ).read()
+    for token in ("Apply مختبري", "تم اختيار Hotspot", "تم اختيار Broadband"):
+        assert token not in script, f"{token!r} remained in dynamic v2 copy"
+
+
 def test_unsupported_service_copy_is_honest():
     source = _template_source()
 

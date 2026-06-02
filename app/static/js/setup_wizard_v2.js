@@ -662,7 +662,7 @@
     if (applyButton) {
       const enabled = readiness?.status === "ready" && readiness?.flags?.all_required_for_apply === true;
       applyButton.disabled = !enabled;
-      applyButton.textContent = enabled ? "Apply مختبري" : "Apply مختبري مغلق";
+      applyButton.textContent = enabled ? "تطبيق مختبري" : "تطبيق مختبري مغلق";
     }
   }
 
@@ -859,9 +859,9 @@
     const label = page.querySelector("[data-swv2-selected-service]");
     if (label) {
       const names = {
-        hotspot: "تم اختيار Hotspot.",
-        broadband: "تم اختيار Broadband / PPPoE.",
-        both: "تم اختيار Hotspot ثم Broadband بالتتابع.",
+        hotspot: "تم اختيار الهوتسبوت.",
+        broadband: "تم اختيار البرودباند.",
+        both: "تم اختيار الهوتسبوت ثم البرودباند بالتتابع.",
         skip: "تم تخطي الخدمات الآن.",
       };
       label.textContent = names[selectedServicePath] || "لم يتم اختيار مسار بعد.";
@@ -1127,7 +1127,7 @@
       Object.values(data.services || {}).forEach(() => {});
       (data.services || []).forEach((service) => {
         const badge = page.querySelector(`[data-added-status="${service.key}"]`);
-        if (badge) badge.textContent = service.status || (service.supported ? "supported" : "not supported");
+        if (badge) badge.textContent = service.status ? statusText(service.status) : (service.supported ? "مدعومة" : "غير مدعومة");
       });
     } catch (error) {
       renderAddedDiagnostics(null, `تعذر تحميل الكتالوج: ${error.message}`);

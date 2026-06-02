@@ -56,10 +56,10 @@ def test_setup_wizard_v2_source_cards_render(app):
         _auth_session(client)
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
 
-    assert "DHCP Client" in html
-    assert "PPPoE" in html
+    assert "أخذ عنوان تلقائي" in html
+    assert "اتصال مزود الإنترنت" in html
     assert "عنوان ثابت" in html
-    assert "VLAN" in html
+    assert "شبكة افتراضية" in html
     assert 'data-source-type="dhcp"' in html
     assert 'data-source-type="pppoe"' in html
 

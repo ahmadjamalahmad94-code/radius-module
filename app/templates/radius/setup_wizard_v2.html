@@ -47,7 +47,7 @@
     </div>
     <div data-confidence-state="network_ready">
       <strong>الشبكة جاهزة</strong>
-      <span>Hotspot أو PPPoE يجهزان بمعاينة آمنة.</span>
+      <span>الهوتسبوت أو البرودباند يجهزان بمعاينة آمنة.</span>
     </div>
     <div data-confidence-state="added_services">
       <strong>الخدمات الإضافية</strong>
@@ -125,11 +125,11 @@
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="hotspot-flow">
       <span class="swv2-step-index">10</span>
-      <span>Hotspot</span>
+      <span>هوتسبوت</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="broadband-flow">
       <span class="swv2-step-index">11</span>
-      <span>Broadband</span>
+      <span>برودباند</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="added-services">
       <span class="swv2-step-index">12</span>
@@ -168,13 +168,13 @@
         <div class="swv2-source-grid" data-swv2-source-grid>
           <button type="button" class="swv2-source-card is-selected" data-source-type="dhcp">
             <i class="fa-solid fa-network-wired"></i>
-            <strong>DHCP Client</strong>
+            <strong>أخذ عنوان تلقائي</strong>
             <span>الراوتر يأخذ IP تلقائيًا من المودم أو مزود الخدمة.</span>
             <small>مثال: ether1 يحصل على الإنترنت مباشرة</small>
           </button>
           <button type="button" class="swv2-source-card" data-source-type="pppoe">
             <i class="fa-solid fa-key"></i>
-            <strong>PPPoE</strong>
+            <strong>اتصال مزود الإنترنت</strong>
             <span>اسم مستخدم وكلمة مرور من مزود الإنترنت.</span>
             <small>مثال: اشتراك DSL أو Fiber PPPoE</small>
           </button>
@@ -186,9 +186,9 @@
           </button>
           <button type="button" class="swv2-source-card" data-source-type="vlan">
             <i class="fa-solid fa-layer-group"></i>
-            <strong>VLAN</strong>
-            <span>الإنترنت يأتي عبر VLAN فوق منفذ محدد.</span>
-            <small>مثال: VLAN 35 على ether1</small>
+            <strong>شبكة افتراضية</strong>
+            <span>الإنترنت يأتي عبر شبكة افتراضية فوق منفذ محدد.</span>
+            <small>مثال: رقم الشبكة 35 على ether1</small>
           </button>
         </div>
       </div>
@@ -643,7 +643,7 @@
         <div class="swv2-success-state" hidden data-swv2-success="vpn">
           <i class="fa-solid fa-party-horn"></i>
           <strong>تم ربط الراوتر بنجاح</strong>
-          <span>يمكنك متابعة إعداد Hotspot أو Broadband في الموجة التالية.</span>
+          <span>يمكنك متابعة إعداد الهوتسبوت أو البرودباند في الخطوة التالية.</span>
           <div class="swv2-success-card" data-swv2-success-card="vpn">
             <b>الشبكة جاهزة للتوسع</b>
             <span>تم اجتياز فحص الربط الأساسي. اختر الآن خدمة الشبكة المناسبة أو انتقل إلى ملخص الإعداد.</span>
@@ -661,20 +661,20 @@
         <div class="swv2-service-grid" data-swv2-service-path>
           <button type="button" class="swv2-service-card is-locked" data-service-path="hotspot" data-locked-until="vpn-radius">
             <i class="fa-solid fa-wifi"></i>
-            <strong>Hotspot</strong>
+            <strong>هوتسبوت</strong>
             <span>بوابة تسجيل دخول لكروت الإنترنت المؤقتة.</span>
             <small>موصى به للكافيهات والفنادق ومناطق الواي فاي.</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="broadband" data-locked-until="vpn-radius">
             <i class="fa-solid fa-ethernet"></i>
-            <strong>Broadband / PPPoE</strong>
-            <span>خدمة مستخدمين عبر PPPoE مع RADIUS.</span>
+            <strong>برودباند عبر مزود الإنترنت</strong>
+            <span>خدمة مستخدمين عبر اتصال المزود مع المصادقة المركزية.</span>
             <small>موصى به لشبكات ISP والسلكية.</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="both" data-locked-until="vpn-radius">
             <i class="fa-solid fa-layer-group"></i>
-            <strong>Hotspot + Broadband</strong>
-            <span>تجهيز Hotspot ثم Broadband خطوة بخطوة.</span>
+            <strong>هوتسبوت + برودباند</strong>
+            <span>تجهيز الهوتسبوت ثم البرودباند خطوة بخطوة.</span>
             <small>كل خدمة تبقى منفصلة ولها معاينة تنفيذ خاصة.</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="skip" data-locked-until="vpn-radius">
@@ -754,8 +754,8 @@
 
     <article class="swv2-step" data-swv2-step="hotspot-flow">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">Hotspot</span>
-        <h2>تجهيز Hotspot بمعاينة آمنة</h2>
+        <span class="swv2-eyebrow">هوتسبوت</span>
+        <h2>تجهيز الهوتسبوت بمعاينة آمنة</h2>
         <p>اختر الوضع الذكي أو اليدوي، ثم ولّد السكربت من المحرك الحقيقي. التفاصيل الهندسية مخفية حتى تحتاجها.</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="hotspot">
           <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">الوضع الذكي</button>
@@ -763,7 +763,7 @@
         </div>
         <div class="swv2-safe-proposal" data-swv2-hotspot-proposal>
           <strong>مقترح آمن</strong>
-          <span>سيتم تجهيز كل منفذ مختار كشبكة Hotspot مستقلة بعناوين تلقائية، بدون bridge.</span>
+          <span>سيتم تجهيز كل منفذ مختار كشبكة هوتسبوت مستقلة بعناوين تلقائية، بدون bridge.</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="hotspot">
           <label>واجهات الخدمة
@@ -777,26 +777,26 @@
           </label>
         </form>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت Hotspot</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت الهوتسبوت</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="hotspot">تحقق</button>
         </div>
-        <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات Hotspot print أو تحقق RADIUS هنا"></textarea>
+        <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات فحص الهوتسبوت أو تحقق المصادقة هنا"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت Hotspot</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="hotspot-script-code">نسخ</button></div>
-          <pre id="hotspot-script-code">-- لم يتم توليد سكربت Hotspot بعد --</pre>
+          <div><strong>معاينة سكربت الهوتسبوت</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="hotspot-script-code">نسخ</button></div>
+          <pre id="hotspot-script-code">-- لم يتم توليد سكربت الهوتسبوت بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
         <details class="swv2-advanced">
-          <summary>تفاصيل Hotspot الهندسية</summary>
-          <div class="swv2-summary-box" data-swv2-service-json="hotspot">لم يتم توليد ملخص Hotspot بعد.</div>
+          <summary>تفاصيل الهوتسبوت الهندسية</summary>
+          <div class="swv2-summary-box" data-swv2-service-json="hotspot">لم يتم توليد ملخص الهوتسبوت بعد.</div>
         </details>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="broadband-flow">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">Broadband / PPPoE</span>
+        <span class="swv2-eyebrow">برودباند</span>
         <h2>تجهيز PPPoE بمعاينة آمنة</h2>
         <p>سيتم توليد profile و pool و PPPoE server مع NAT scoped على pool فقط. لا يوجد تطبيق مباشر.</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="broadband">
@@ -826,21 +826,21 @@
           <label>DNS
             <input type="text" name="broadband_dns" value="1.1.1.1,8.8.8.8">
           </label>
-          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT محدود على عناوين Broadband فقط</label>
+          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT محدود على عناوين البرودباند فقط</label>
         </form>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">توليد سكربت Broadband</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">توليد سكربت البرودباند</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">تحقق</button>
         </div>
         <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات PPPoE أو تحقق RADIUS هنا"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت Broadband</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">نسخ</button></div>
-          <pre id="broadband-script-code">-- لم يتم توليد سكربت Broadband بعد --</pre>
+          <div><strong>معاينة سكربت البرودباند</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">نسخ</button></div>
+          <pre id="broadband-script-code">-- لم يتم توليد سكربت البرودباند بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
         <details class="swv2-advanced">
-          <summary>تفاصيل Broadband الهندسية</summary>
+          <summary>تفاصيل البرودباند الهندسية</summary>
           <div class="swv2-summary-box" data-swv2-service-json="broadband">لم يتم توليد ملخص البرودباند بعد.</div>
         </details>
       </div>
@@ -850,33 +850,33 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">خدمات إضافية</span>
         <h2>اختر خدمات الشبكة الإضافية</h2>
-        <p>هذه المرحلة تعرض خططًا آمنة فقط وتعيد استخدام Network Policy وSite Exit الموجودين. لا يوجد تطبيق مباشر من هنا.</p>
+        <p>هذه المرحلة تعرض خططًا آمنة فقط وتعيد استخدام مركز سياسات الشبكة ومسار تغيير عنوان الخروج الموجودين. لا يوجد تطبيق مباشر من هنا.</p>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-added-services>تحميل كتالوج الخدمات</button>
         </div>
         <div class="swv2-service-grid" data-swv2-added-presets>
           <button type="button" class="swv2-service-card" data-added-preset="isp_basic">
             <i class="fa-solid fa-network-wired"></i>
-            <strong>ISP Basic</strong>
+            <strong>مزود إنترنت أساسي</strong>
             <span>حجب بسيط + مواقع مفتوحة قليلة.</span>
-            <small>Preset فقط ولا يطبق شيئًا.</small>
+            <small>قالب جاهز فقط ولا يطبق شيئًا.</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="hotel_cafe">
             <i class="fa-solid fa-mug-hot"></i>
-            <strong>Hotel / Cafe</strong>
-            <span>Walled garden للدفع والدعم + حجب محدود.</span>
-            <small>مناسب للـ Hotspot.</small>
+            <strong>فندق أو مقهى</strong>
+            <span>مواقع مفتوحة للدفع والدعم + حجب محدود.</span>
+            <small>مناسب لخدمة الهوتسبوت.</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="school">
             <i class="fa-solid fa-school"></i>
-            <strong>School</strong>
+            <strong>مدرسة</strong>
             <span>حجب أقوى مع مواقع تعليمية مفتوحة.</span>
             <small>راجع القوائم قبل التنفيذ.</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="gaming_center">
             <i class="fa-solid fa-gamepad"></i>
-            <strong>Gaming Center</strong>
-            <span>Site Exit عند توفر VX2 + حجب محدود.</span>
+            <strong>مركز ألعاب</strong>
+            <span>تغيير عنوان الخروج عند توفر المسار المخصص + حجب محدود.</span>
             <small>يحتاج إعداد VPS مسبقًا.</small>
           </button>
         </div>
@@ -884,20 +884,20 @@
           <button type="button" class="swv2-service-card" data-added-service="walled_garden">
             <i class="fa-solid fa-door-open"></i>
             <strong>مواقع مفتوحة بدون تسجيل</strong>
-            <span>Walled Garden عبر NPC.</span>
-            <small data-added-status="walled_garden">Partial</small>
+            <span>سماح محدود قبل تسجيل الدخول عبر مركز السياسات.</span>
+            <small data-added-status="walled_garden">جزئية</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-service="block_sites">
             <i class="fa-solid fa-ban"></i>
             <strong>حجب مواقع</strong>
-            <span>Web Block عبر NPC.</span>
-            <small data-added-status="block_sites">Partial</small>
+            <span>حجب الويب عبر مركز السياسات.</span>
+            <small data-added-status="block_sites">جزئية</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-service="site_exit_public_ip">
             <i class="fa-solid fa-route"></i>
-            <strong>تغيير Public IP</strong>
-            <span>Site Exit / VX2.</span>
-            <small data-added-status="site_exit_public_ip">Partial</small>
+            <strong>تغيير عنوان الخروج العام</strong>
+            <span>مسار خروج مخصص.</span>
+            <small data-added-status="site_exit_public_ip">جزئية</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-added-service="anti_sharing">
             <i class="fa-solid fa-user-shield"></i>
@@ -910,7 +910,7 @@
           <label>النطاقات أو الوجهات
             <textarea name="added_domains" placeholder="example.com&#10;payment.local"></textarea>
           </label>
-          <label>WireGuard interface لميزة Site Exit
+          <label>واجهة الربط لميزة تغيير عنوان الخروج
             <input type="text" name="added_wg_interface" value="hr-wg">
           </label>
         </form>
@@ -920,7 +920,7 @@
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>إرشادات التحقق</button>
         </div>
         <div class="swv2-script-card">
-          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو preset.</span><button type="button" class="swv2-copy-chip" data-copy-target="added-service-plan-code">نسخ</button></div>
+          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو قالبًا جاهزًا.</span><button type="button" class="swv2-copy-chip" data-copy-target="added-service-plan-code">نسخ</button></div>
           <pre id="added-service-plan-code" data-swv2-added-preview>-- لم يتم توليد خطة خدمة إضافية بعد --</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>

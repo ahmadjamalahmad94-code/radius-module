@@ -160,6 +160,12 @@ def test_license_file_translates_service_contract_keys(app):
         assert raw_key not in html
 
 
+def test_unknown_bridge_status_does_not_leak_raw_code():
+    from app.radius.routes.admin_bridge import _sync_status_label
+
+    assert _sync_status_label("future_status_code") == "حالة غير معروفة من لوحة التراخيص"
+
+
 def test_license_file_can_save_customer_portal_bridge_values(app, monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ADMIN_BRIDGE_ENABLED", raising=False)
     monkeypatch.delenv("HOBERADIUS_ADMIN_BASE_URL", raising=False)

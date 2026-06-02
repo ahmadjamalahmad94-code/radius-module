@@ -369,5 +369,4 @@ def _sync_status_label(status: Any) -> str:
     raw = str(status or "unknown").strip().lower()
     if raw in labels:
         return labels[raw]
-    # Fallback: show the raw status so the operator can diagnose it
-    return f"حالة: {raw}"
+    return "حالة غير معروفة من لوحة التراخيص"
