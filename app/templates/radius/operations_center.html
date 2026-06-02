@@ -1,10 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز العمليات — Hobe Hub{% endblock %}
+{% block title %}مركز العمليات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}مركز العمليات{% endblock %}
-{% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة NAS/RADIUS، إشارات المحاسبة، وإجراءات طوارئ آمنة كمؤشرات فقط.</span>{% endblock %}
+{% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة أجهزة الشبكة وخدمة المصادقة، إشارات المحاسبة، وإجراءات طوارئ آمنة.</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
@@ -29,9 +29,9 @@
 
 <div class="hub-kpi-grid" data-testid="operations-summary">
   {{ hub.kpi("المستخدمون المتصلون", snapshot.online_users, icon="wifi", variant="green") }}
-  {{ hub.kpi("أجهزة NAS", snapshot.nas_health.total, icon="server", variant="blue") }}
-  {{ hub.kpi("NAS المفعلة", snapshot.nas_health.enabled, icon="circle-check") }}
-  {{ hub.kpi("فشل RADIUS", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
+  {{ hub.kpi("أجهزة الشبكة", snapshot.nas_health.total, icon="server", variant="blue") }}
+  {{ hub.kpi("الأجهزة المفعلة", snapshot.nas_health.enabled, icon="circle-check") }}
+  {{ hub.kpi("فشل المصادقة", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
 </div>
 
 <div class="hub-grid hub-grid--2">
@@ -43,7 +43,7 @@
           {% for session in snapshot.active_sessions %}
             <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>
           {% else %}
-            <tr><td colspan="4">لا توجد جلسات نشطة في radacct.</td></tr>
+            <tr><td colspan="4">لا توجد جلسات نشطة حالياً.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -52,7 +52,7 @@
 
   {% call hub.section("إشارات الصحة", icon="heart-pulse") %}
     <ul class="hub-list" data-testid="operations-health">
-      <li>مسار قاعدة RADIUS: {{ _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة') }}</li>
+      <li>مسار قاعدة المصادقة: {{ _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة') }}</li>
       <li>أجهزة مضبوطة عبر واجهة الربط: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
       <li>فحص مباشر: {{ "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل" }}</li>
     </ul>
@@ -61,7 +61,7 @@
 
 {% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
   <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="emergency-placeholders">
+    <table class="hub-table" data-testid="emergency-indicators">
       <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
       <tbody>
         {% for action in snapshot.emergency_actions %}

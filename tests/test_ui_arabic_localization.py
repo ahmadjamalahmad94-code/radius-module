@@ -133,8 +133,10 @@ def test_operational_pages_do_not_show_future_placeholder_copy(client):
     _web_login(client)
     routes = [
         "/admin/radius/network/devices/new",
+        "/admin/radius/operations",
         "/admin/radius/operations/speed-control",
         "/admin/radius/communications/channels",
+        "/admin/radius/alerts",
     ]
     forbidden = [
         "لم يُربط بعد",
@@ -144,6 +146,14 @@ def test_operational_pages_do_not_show_future_placeholder_copy(client):
         "المراحل القادمة",
         "مرحلة قادمة",
         "UI-only stub",
+        "قيد التطوير",
+        "صحة NAS/RADIUS",
+        "أجهزة NAS",
+        "NAS المفعلة",
+        "لا توجد جلسات نشطة في radacct",
+        "مسار قاعدة RADIUS",
+        "ترافيك عالٍ",
+        "emergency-placeholders",
     ]
 
     for route in routes:
@@ -158,7 +168,9 @@ def test_source_templates_do_not_keep_future_placeholder_copy():
     paths = [
         Path("app/templates/radius/setup_wizard_v3_router_service_flow.html"),
         Path("app/templates/radius/network_devices_form.html"),
+        Path("app/templates/radius/operations_center.html"),
         Path("app/templates/radius/operations_speed_control.html"),
+        Path("app/templates/radius/mt_alerts_index.html"),
         Path("app/templates/radius/communications_channels.html"),
         Path("app/radius/routes/network_policy.py"),
     ]
@@ -170,6 +182,14 @@ def test_source_templates_do_not_keep_future_placeholder_copy():
         "المراحل القادمة",
         "مرحلة قادمة",
         "UI-only stub",
+        "قيد التطوير",
+        "صحة NAS/RADIUS",
+        "أجهزة NAS",
+        "NAS المفعلة",
+        "لا توجد جلسات نشطة في radacct",
+        "مسار قاعدة RADIUS",
+        "ترافيك عالٍ",
+        "emergency-placeholders",
     ]
 
     for path in paths:

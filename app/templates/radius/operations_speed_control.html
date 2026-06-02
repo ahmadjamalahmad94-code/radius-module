@@ -1,10 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مراقبة الباندويث — Hobe Hub{% endblock %}
+{% block title %}مراقبة عرض الحزمة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
-{% block page_title %}مراقبة الباندويث{% endblock %}
-{% block page_sub %}<span class="sub">تحكّم بنِسب الباندويث لباقات MikroTik كمعاينة آمنة — لا يُطبَّق أي تغيير على الراوترات إلا بعد اعتماد صريح.</span>{% endblock %}
+{% block page_title %}مراقبة عرض الحزمة{% endblock %}
+{% block page_sub %}<span class="sub">تحكّم بنسب عرض الحزمة للباقات كمعاينة آمنة. لا يُطبَّق أي تغيير على الراوترات إلا بعد اعتماد صريح.</span>{% endblock %}
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ops_speed_control.css') }}">
@@ -30,10 +30,10 @@
   <header class="spdx-topbar">
     <div class="spdx-topbar__title">
       <span class="spdx-topbar__icon"><i class="fa-solid fa-gauge-high"></i></span>
-      <span>مراقبة الباندويث</span>
+      <span>مراقبة عرض الحزمة</span>
     </div>
     <div class="spdx-topbar__tools">
-      <div class="spdx-modeswitch" role="group" aria-label="طريقة التحكم بالباندويث">
+      <div class="spdx-modeswitch" role="group" aria-label="طريقة التحكم بعرض الحزمة">
         <button type="button" class="spdx-modeswitch__btn is-active" aria-pressed="true"
                 data-mode-btn="unified"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> التحكم الموحّد</button>
         <button type="button" class="spdx-modeswitch__btn" aria-pressed="false"
@@ -47,7 +47,7 @@
   </header>
 
   <p class="spdx-lede" data-mode-lede>
-    <span data-lede="unified">تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة على MikroTik.</span>
+    <span data-lede="unified">تحكّم موحّد في نسبة عرض الحزمة لجميع الباقات المدارة على الراوترات.</span>
     <span data-lede="separate" hidden>تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.</span>
   </p>
 
@@ -360,7 +360,7 @@
     <div class="hub-section-body">
       <div class="hub-table-wrap">
         <table class="hub-table" data-testid="speed-policies-table">
-          <thead><tr><th>الرقم</th><th>الاسم المختصر</th><th>النمط</th><th>الحالة</th><th>مطبّقة على RADIUS</th></tr></thead>
+          <thead><tr><th>الرقم</th><th>الاسم المختصر</th><th>النمط</th><th>الحالة</th><th>مطبّقة على خدمة المصادقة</th></tr></thead>
           <tbody>
             {% for policy in policies %}
               <tr>

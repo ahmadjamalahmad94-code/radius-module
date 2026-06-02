@@ -87,18 +87,18 @@
       <section class="opsx-panel">
         <header class="opsx-panel-head">
           <div class="opsx-panel-title"><i class="fa-solid fa-list-check"></i> النتائج</div>
-          <span class="opsx-chip opsx-chip--blue">{{ filters.status }}</span>
+          <span class="opsx-chip opsx-chip--blue">{{ "المفتوحة" if filters.status == "open" else "المغلقة" }}</span>
         </header>
         <div class="opsx-panel-body">
           {% if not rows %}
           <div class="opsx-empty" data-mt-alerts-empty style="line-height:1.9">
             <p style="font-weight:800;margin:0 0 6px;font-size:14px">لا توجد تنبيهات حالياً.</p>
             <p style="margin:0">
-              هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات (نسخة احتياطية
-              فاشلة، لقطة قديمة، خطأ في تطبيق إعداد…). أمّا <strong>المراقبة
-              اللحظية لانقطاع الراوتر</strong> (فحص الاتصال الدوري / netwatch) فهي
-              <strong>قيد التطوير</strong> ولم تُفعَّل بعد على هذا الخادم — لذلك
-              الراوتر المفصول لا يظهر هنا تلقائيًا حتى الآن.
+              هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي،
+              حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا <strong>المراقبة
+              اللحظية لانقطاع الراوتر</strong> فتعتمد على وصول مقاييس الراوتر بشكل دوري؛
+              إذا لم يظهر الراوتر هنا، افتح إدارة الراوترات أو إعداد عميل المقاييس
+              للتحقق من حالة الإرسال.
             </p>
             <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
               لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.
@@ -163,7 +163,7 @@
       <div class="sa-card">
         <div class="sa-card-title">أنواع الكشف</div>
         <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>راوتر مفصول (توقّف عن الإرسال)</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>ترافيك عالٍ فوق حدّ السرعة</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>حركة عالية فوق حدّ السرعة</span></label>
         <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق حدّ الجيجابايت</span></label>
         <label class="sa-toggle"><input type="checkbox" name="loop" value="1" {% if settings.loop %}checked{% endif %}><span>حلقة (لوب) على منفذ — عبر مجسّ DHCP</span></label>
         <div class="sa-grid">
