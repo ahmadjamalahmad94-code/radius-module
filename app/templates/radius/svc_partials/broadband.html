@@ -149,15 +149,6 @@
 
 <div class="swbb-error" data-swbb-form-error hidden></div>
 
-{# Live JSON debug — open to confirm exactly what gets POSTed. #}
-<details style="margin-top:14px;background:#F8FAFC;border:1px solid var(--swsvf-line);border-radius:8px;padding:8px 12px;font-size:12px">
-  <summary style="cursor:pointer;color:var(--swsvf-mute);font-weight:600">
-    👁️ معاينة البيانات التي ستُرسل (للتشخيص)
-  </summary>
-  <pre style="margin:8px 0 0;padding:8px;background:#0F172A;color:#A5F3FC;border-radius:6px;font-family:monospace;font-size:11px;overflow:auto;direction:ltr;text-align:left"
-       data-swbb-debug-payload>{}</pre>
-</details>
-
 <script>
 (function () {
   "use strict";
@@ -170,7 +161,6 @@
   const poolInput = page.querySelector("[data-swbb-pool]");
   const formError = page.querySelector("[data-swbb-form-error]");
   const counter = page.querySelector("[data-swbb-counter]");
-  const debugEl = page.querySelector("[data-swbb-debug-payload]");
 
   function token() {
     const el = document.querySelector('input[name="_csrf_token"]');
@@ -208,7 +198,6 @@
     const payload = getPayload();
     page.dataset.swsvfConfigurePayload = JSON.stringify(payload);
     updateCounter();
-    if (debugEl) debugEl.textContent = JSON.stringify(payload, null, 2);
     if (window.console) console.debug("[Broadband] payload:", payload);
   }
 
@@ -376,19 +365,13 @@
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        // If the backend included the debug_script (set on failure),
-        // log it to the JS console + write it to the page so the
-        // operator can copy-paste into MikroTik Terminal and find
-        // the offending line.
+        // Keep generated scripts out of the UI; support can inspect
+        // the browser console when deep diagnostics are needed.
         if (data.debug_script && window.console) {
           console.warn("[Broadband] FAILED — script that was sent to the router:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
                       `تعذّر الإرسال (رمز ${res.status})`);
-        if (data.debug_script) {
-          banner += "\n\nالسكربت المُرسل (للنسخ ولصقه في MikroTik Terminal للتشخيص):\n"
-                  + data.debug_script;
-        }
         window.SWSVF.showApplyError(banner);
         return;
       }
