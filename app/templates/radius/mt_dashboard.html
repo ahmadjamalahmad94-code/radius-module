@@ -6,7 +6,7 @@
 {% block title %}لوحة الراوتر — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
 {% block page_title %}لوحة الراوتر {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">NAS #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -1185,7 +1185,7 @@
         <span class="hub-kpi-icon"><i class="fa-solid fa-award"></i></span>
         <div class="hub-kpi-titles">
           <span class="hub-kpi-label">إصدار النظام</span>
-          <span class="hub-kpi-status">RouterOS</span>
+          <span class="hub-kpi-status">نظام الراوتر</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>

@@ -3,7 +3,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% set ttl = "إضافة اتصال MikroTik" if is_new else "تعديل: " + (item.name or 'اتصال MikroTik') %}
+{% set ttl = "إضافة اتصال راوتر" if is_new else "تعديل: " + (item.name or 'اتصال راوتر') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -61,7 +61,7 @@
       <div class="mt-field">
         <label>المنفذ</label>
         <input class="hub-input" type="number" name="port" value="{{ item.port or 8728 }}">
-        <div class="help">الافتراضي 8728 (بدون TLS) أو 8729 (TLS).</div>
+        <div class="help">الافتراضي 8728 (بدون تشفير) أو 8729 (مشفر).</div>
       </div>
       <div class="mt-field">
         <label>المهلة (ثانية)</label>
@@ -86,12 +86,12 @@
     </div>
   {% endcall %}
 
-  {% call hub.section("التشغيل و TLS", icon="shield-halved") %}
+  {% call hub.section("التشغيل والتشفير", icon="shield-halved") %}
     <div class="mt-grid">
       <div class="mt-field">
-        <label>تفعيل TLS</label>
+        <label>تفعيل التشفير</label>
         <div class="mt-chk">
-          {{ toggle_switch(name="use_tls", checked=item.use_tls, value="1", id="mt-tls", on_label="تشفير الاتصال (TLS)", off_label="بدون TLS") }}
+          {{ toggle_switch(name="use_tls", checked=item.use_tls, value="1", id="mt-tls", on_label="تشفير الاتصال", off_label="بدون تشفير") }}
         </div>
       </div>
       <div class="mt-field">

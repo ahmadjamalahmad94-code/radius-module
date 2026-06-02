@@ -2,15 +2,15 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}اتصالات MikroTik{% endblock %}
+{% block title %}اتصالات الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
-{% block page_title %}اتصالات MikroTik{% endblock %}
+{% block page_title %}اتصالات الراوترات{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} اتصال</span>{% endblock %}
 
 {% block content %}
 
 {{ hub.hero(
-  "اتصالات MikroTik",
+  "اتصالات الراوترات",
   subtitle="إدارة اتصالات الراوتر — العنوان، المنفذ، الاتصال المشفّر، وحالة آخر فحص",
   icon="router",
   actions_html='
@@ -27,7 +27,7 @@
   {{ hub.kpi("الإجمالي",   items|length, icon="router",      variant="brand") }}
   {{ hub.kpi("مفعَّل",      _enabled,     icon="toggle-on",   variant="green") }}
   {{ hub.kpi("معطَّل",      items|length - _enabled, icon="toggle-off", variant="amber") }}
-  {{ hub.kpi("يستخدم TLS", _tls,         icon="lock",        variant="blue") }}
+  {{ hub.kpi("اتصال مشفّر", _tls,         icon="lock",        variant="blue") }}
 </div>
 
 {% call hub.section("الاتصالات", icon="table-list", meta=items|length|string + " اتصال", flush=True) %}
@@ -56,7 +56,7 @@
           <td class="num mono">{{ it.port }}</td>
           <td class="mono small">{{ it.username }}</td>
           <td>
-            {% if it.use_tls %}{{ hub.pill("TLS", variant="green") }}
+            {% if it.use_tls %}{{ hub.pill("مشفّر", variant="green") }}
             {% else %}{{ hub.pill("عادي", variant="grey") }}{% endif %}
           </td>
           <td>
@@ -95,7 +95,7 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا اتصالات MikroTik بعد",
+  "لا اتصالات راوترات بعد",
   sub="أضف أوّل اتصال من زرّ «إضافة اتصال» لإدارة الراوترات مباشرة.",
   icon="router"
 ) }}

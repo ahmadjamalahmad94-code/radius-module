@@ -3,7 +3,7 @@
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
-{% block page_sub %}<span class="sub">فحص TCP، دخول API، هوية الراوتر، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
+{% block page_sub %}<span class="sub">فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -16,7 +16,7 @@
   <header class="opsx-hero">
     <div>
       <h2>تشخيص اتصال الراوترات</h2>
-      <p>فحص حي لكل MikroTik معرف: هل المنفذ مفتوح؟ هل تسجيل API ينجح؟ وما الإصلاح المقترح عند الفشل.</p>
+      <p>فحص حي لكل راوتر معرف: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل.</p>
     </div>
     <span class="opsx-hero-icon"><i class="fa-solid fa-wave-square"></i></span>
   </header>
@@ -24,10 +24,10 @@
   <div class="opsx-layout">
     <aside class="opsx-guide" aria-label="شرح التشخيص">
       <div class="opsx-guide-title"><i class="fa-solid fa-clipboard-check"></i> دليل القراءة</div>
-      <p>هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير Firewall أو WireGuard أو API user.</p>
+      <p>هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط.</p>
       <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-plug"></i><span>TCP فاشل يعني أن الطريق للمنفذ غير مفتوح.</span></li>
-        <li><i class="fa-solid fa-key"></i><span>API فاشل يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.</span></li>
+        <li><i class="fa-solid fa-plug"></i><span>فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.</span></li>
+        <li><i class="fa-solid fa-key"></i><span>فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.</span></li>
         <li><i class="fa-solid fa-copy"></i><span>أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.</span></li>
       </ul>
     </aside>
@@ -35,8 +35,8 @@
     <main class="opsx-main">
       <section class="opsx-stats">
         <div class="opsx-stat opsx-stat--ok"><span>يعمل</span><strong>{{ report.summary.ok }}</strong></div>
-        <div class="opsx-stat opsx-stat--bad"><span>TCP فاشل</span><strong>{{ report.summary.tcp_failed }}</strong></div>
-        <div class="opsx-stat opsx-stat--warn"><span>API فاشل</span><strong>{{ report.summary.api_failed }}</strong></div>
+        <div class="opsx-stat opsx-stat--bad"><span>المنفذ مغلق</span><strong>{{ report.summary.tcp_failed }}</strong></div>
+        <div class="opsx-stat opsx-stat--warn"><span>فشل واجهة الربط</span><strong>{{ report.summary.api_failed }}</strong></div>
         <div class="opsx-stat"><span>معطل</span><strong>{{ report.summary.disabled }}</strong></div>
         <div class="opsx-stat"><span>المجموع</span><strong>{{ report.summary.total }}</strong></div>
       </section>
@@ -62,8 +62,8 @@
         <div class="opsx-panel-body">
           <p class="opsx-empty">
             لا يوجد أي راوتر معرف على هذا الـ tenant.
-            أضف راوتر من <a href="{{ url_for('radius.mt_list') }}">إعدادات MikroTik</a>
-            أو من <a href="{{ url_for('radius.devices_list') }}">أجهزة NAS</a>.
+            أضف راوتر من <a href="{{ url_for('radius.mt_list') }}">إعدادات الراوترات</a>
+            أو من <a href="{{ url_for('radius.devices_list') }}">أجهزة الشبكة</a>.
           </p>
         </div>
       </section>
@@ -79,9 +79,9 @@
           {% if r.status == 'ok' %}
           <span class="opsx-chip opsx-chip--ok">يعمل</span>
           {% elif r.status == 'tcp_failed' %}
-          <span class="opsx-chip opsx-chip--bad">TCP فاشل</span>
+          <span class="opsx-chip opsx-chip--bad">المنفذ مغلق</span>
           {% elif r.status == 'api_failed' %}
-          <span class="opsx-chip opsx-chip--warn">API فاشل</span>
+          <span class="opsx-chip opsx-chip--warn">فشل واجهة الربط</span>
           {% elif r.status == 'disabled' %}
           <span class="opsx-chip">معطل</span>
           {% else %}
@@ -104,14 +104,14 @@
           <div class="opsx-stats" style="margin-bottom:14px">
             {% if r.tcp %}
             <div class="opsx-stat {% if r.tcp.ok %}opsx-stat--ok{% else %}opsx-stat--bad{% endif %}">
-              <span>فحص TCP</span>
+              <span>فحص المنفذ</span>
               <strong style="font-size:18px">{% if r.tcp.ok %}متاح{% else %}فشل{% endif %}</strong>
               {% if r.tcp.latency_ms is not none %}<span>{{ r.tcp.latency_ms }} ms</span>{% endif %}
             </div>
             {% endif %}
             {% if r.api %}
             <div class="opsx-stat {% if r.api.ok %}opsx-stat--ok{% else %}opsx-stat--warn{% endif %}">
-              <span>دخول API</span>
+              <span>دخول واجهة الربط</span>
               <strong style="font-size:18px">{% if r.api.ok %}ناجح{% else %}فشل{% endif %}</strong>
               {% if r.api.latency_ms is not none %}<span>{{ r.api.latency_ms }} ms</span>{% endif %}
             </div>
@@ -138,11 +138,11 @@
             {% if r.connection_mode == 'vpn' %}
               {% set repair_address = wg_subnet %}
               {% set repair_src = wg_subnet %}
-              {% set repair_label = "على MikroTik عبر WireGuard VPN" %}
+              {% set repair_label = "على الراوتر عبر الاتصال المشفّر" %}
             {% else %}
               {% set repair_address = vps_ip ~ '/32' %}
               {% set repair_src = vps_ip %}
-              {% set repair_label = "على MikroTik عبر public IP" %}
+              {% set repair_label = "على الراوتر عبر العنوان العام" %}
             {% endif %}
           <div class="opsx-fix" data-mt-repair-mode="{{ r.connection_mode }}">
             <button class="opsx-btn" type="button"
@@ -164,7 +164,7 @@
                     onclick="navigator.clipboard.writeText(this.parentElement.querySelector('pre').textContent); this.textContent='منسوخ ✓'">
               <i class="fa-solid fa-copy"></i> نسخ
             </button>
-            <strong>تحقق من حساب API على MikroTik</strong>
+            <strong>تحقق من حساب الربط على الراوتر</strong>
 <pre>/user print where name=USERNAME_HERE
 /user group add name=api-only policy=api,read,write,test
 /user set USERNAME_HERE group=full

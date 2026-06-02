@@ -1,11 +1,11 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% block title %}إعداد دفع DHCP من المايكروتيك{% endblock %}
+{% block title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrow-up-from-bracket"></i>{% endblock %}
-{% block page_title %}إعداد دفع DHCP من المايكروتيك{% endblock %}
+{% block page_title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    حلّ شامل لمشكلة "الجهاز / النظام" لمّا يكون الراوتر خلف NAT أو الـ API مسكر.
+    حلّ شامل لمشكلة "الجهاز / النظام" عندما يكون الراوتر خلف ترجمة عناوين أو واجهة الربط مغلقة.
   </span>
 {% endblock %}
 
@@ -103,8 +103,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "إعداد دفع DHCP من المايكروتيك",
-  subtitle="تجهيز السكربت الذي يدفع DHCP من MikroTik",
+  "إعداد دفع بيانات الأجهزة من الراوتر",
+  subtitle="تجهيز السكربت الذي يدفع بيانات الأجهزة من الراوتر",
   icon="arrow-up-from-bracket"
 ) }}
 
@@ -112,15 +112,15 @@
   <h3><i class="fa-solid fa-circle-info"></i> لماذا هذا الحلّ؟</h3>
   <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
     عمود <strong>«الجهاز / النظام»</strong> في فحص البطاقة يحتاج معرفة اسم الجهاز
-    (host-name) ونوع نظام التشغيل (DHCP option 60) لكل MAC. الحلّ الأصلي كان
-    أن يسحب الخادم هذه البيانات من MT API على البورت <code>8728</code>،
-    لكن لمّا الراوتر خلف NAT أو الفايروول مسكّر، الـ API لا يصل من الخادم.
+    اسم الجهاز ونوع نظام التشغيل لكل عنوان جهاز. الحلّ الأصلي كان
+    أن يسحب الخادم هذه البيانات من واجهة ربط الراوتر على المنفذ <code>8728</code>،
+    لكن عندما يكون الراوتر خلف ترجمة عناوين أو جدار ناري مغلق، لا تصل واجهة الربط من الخادم.
   </p>
   <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:8px 0 0">
     هذا الحلّ يعكس الاتجاه: نخلّي <strong>الراوتر يدفع</strong> البيانات إلى
-    الخادم عبر HTTPS كل دقيقتين. الـ outbound HTTPS مفتوح في كل الراوترات
-    تقريبًا (لأنه نفس المنفذ المستخدم للوصول للإنترنت)، فلا يحتاج فتح
-    منافذ خارجية ولا VPN ولا port forwarding.
+    الخادم عبر اتصال خارجي مشفّر كل دقيقتين. الاتصال الخارجي المشفّر مفتوح في أغلب الراوترات
+    لأنه نفس المسار المستخدم للوصول للإنترنت، فلا يحتاج فتح
+    منافذ خارجية ولا اتصالاً خاصاً ولا تحويل منافذ.
   </p>
 </div>
 
@@ -142,9 +142,9 @@
       </a>
       (تفتح في تبويب جديد)
     </li>
-    <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّيه <code>mikrotik-push</code> (أو أي اسم).</li>
+    <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.</li>
     <li>
-      بعد الإنشاء بيظهر الـ token كامل <strong>مرة واحدة فقط</strong>
+      بعد الإنشاء يظهر رمز الربط كاملاً <strong>مرة واحدة فقط</strong>
       في بنر أصفر — انسخه فوراً.
     </li>
     <li>ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.</li>
@@ -153,7 +153,7 @@
             border-radius:6px;font-size:12.5px;color:#92400e">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <strong>تنبيه:</strong> لأمان النظام نحفظ في قاعدة البيانات
-    <em>hash</em> من الـ token فقط، فالقيمة الأصلية لا تظهر مرة ثانية.
+    بصمة من رمز الربط فقط، فالقيمة الأصلية لا تظهر مرة ثانية.
     لو ضاع منك أنشئ رمزًا جديدًا واستبدله في السكربت.
   </p>
 </div>
@@ -189,16 +189,16 @@
   <h3><i class="fa-solid fa-list-ol"></i> الخطوات (3 دقائق)</h3>
   <div class="pushp-steps">
     <div class="pushp-step">
-      افتح Winbox أو WebFig على الراوتر، ادخل على <strong>Terminal</strong> (الزرّ الأسود يمين أعلى Winbox).
+      افتح برنامج إدارة الراوتر أو واجهة الويب، ثم افتح نافذة الأوامر.
     </div>
     <div class="pushp-step">
-      عبّئ الـ URL والـ token بالأعلى. الـ script رح يتولّد تلقائيًا بالأسفل.
+      عبّئ عنوان الخادم ورمز الربط بالأعلى. السكربت سيتولّد تلقائيًا بالأسفل.
     </div>
     <div class="pushp-step">
-      اضغط زر <strong>نسخ</strong> بجوار الـ script.
+      اضغط زر <strong>نسخ</strong> بجوار السكربت.
     </div>
     <div class="pushp-step">
-      الصقه في Terminal الراوتر واضغط Enter. رح ترى مهمّة جديدة في <code>/system/scheduler</code>.
+      الصقه في نافذة أوامر الراوتر واضغط Enter. ستظهر مهمة مجدولة جديدة في الراوتر.
     </div>
     <div class="pushp-step">
       انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.
@@ -207,7 +207,7 @@
 </div>
 
 <div class="pushp-card">
-  <h3><i class="fa-solid fa-code"></i> سكربت MikroTik</h3>
+  <h3><i class="fa-solid fa-code"></i> سكربت الراوتر</h3>
   <div class="pushp-script">
     <button class="copy-btn" type="button" data-copy-script>
       <i class="fa-solid fa-copy"></i> نسخ
@@ -219,8 +219,8 @@
 <div class="pushp-card">
   <h3><i class="fa-solid fa-vial"></i> اختبار سريع</h3>
   <p style="font-size:13px;color:#475569;margin:0 0 10px">
-    تأكّد من وصول الراوتر قبل ما تركّب الـ scheduler: انسخ الأمر التالي وألصقه في الراوتر.
-    لازم يرجع <code>{"ok":true,"data":{"ingested":1,...}}</code>.
+    تأكّد من وصول الراوتر قبل تركيب المهمة المجدولة: انسخ الأمر التالي وألصقه في الراوتر.
+    يجب أن يرجع رد نجاح من الخادم.
   </p>
   <div class="pushp-script">
     <button class="copy-btn" type="button" data-copy-test>
@@ -233,10 +233,10 @@
 <div class="pushp-card">
   <h3><i class="fa-solid fa-magnifying-glass-chart"></i> التحقّق + استكشاف الأخطاء</h3>
   <p style="font-size:13px;color:#475569;margin:0 0 8px">
-    لو ركّبت الـ scheduler بس البيانات ما ظهرت، نفّذ الأوامر التالية على الراوتر للتحقّق:
+    لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:
   </p>
   <div class="pushp-script">
-<pre dir="ltr"># 1) تحقق أن الـ scheduler موجود وفعّال
+<pre dir="ltr"># 1) تحقق أن المهمة المجدولة موجودة وفعّالة
 /system scheduler print where name=hoberadius-push-dhcp
 
 # 2) شغّل المهمة فورًا بدون انتظار 2 دقيقة (للاختبار)
@@ -257,16 +257,16 @@
   <p style="font-size:12.5px;color:#92400e;background:#fffbeb;
             border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;margin-top:10px">
     <i class="fa-solid fa-triangle-exclamation"></i>
-    <strong>تنبيه شائع:</strong> لو الـ URL يبدأ بـ <code>http://</code> (مش https)
+    <strong>تنبيه شائع:</strong> لو عنوان الخادم يبدأ بـ <code>http://</code> (وليس https)
     فلازم يكون <code>mode=http</code> في الـ fetch — وليس <code>mode=https</code>.
     السكربت أعلاه يضبط هذا تلقائيًا بناءً على عنوان الخادم.
   </p>
 </div>
 
 <div class="pushp-card">
-  <h3><i class="fa-solid fa-broom"></i> إزالة الـ scheduler</h3>
+  <h3><i class="fa-solid fa-broom"></i> إزالة المهمة المجدولة</h3>
   <p style="font-size:13px;color:#475569;margin:0 0 10px">
-    إذا تريد تعطيل الدفع (مثلاً بعد إصلاح API على الراوتر) نفّذ:
+    إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:
   </p>
   <div class="pushp-script">
 <pre dir="ltr">/system scheduler remove [find name=hoberadius-push-dhcp]</pre>

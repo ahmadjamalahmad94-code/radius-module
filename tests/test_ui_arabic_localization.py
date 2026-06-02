@@ -607,6 +607,74 @@ def test_policy_and_communications_pages_use_arabic_operator_copy():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_router_operator_pages_hide_raw_vendor_copy():
+    files = {
+        Path("app/templates/radius/mt_diagnostics.html"): [
+            "فحص TCP",
+            "دخول API",
+            "لكل MikroTik",
+            "Firewall",
+            "API user",
+            "TCP فاشل",
+            "API فاشل",
+            "إعدادات MikroTik",
+            "أجهزة NAS",
+            "على MikroTik عبر",
+            "حساب API على MikroTik",
+        ],
+        Path("app/templates/radius/mt_list.html"): [
+            "اتصالات MikroTik",
+            "لا اتصالات MikroTik",
+            "يستخدم TLS",
+            'hub.pill("TLS"',
+        ],
+        Path("app/templates/radius/mt_form.html"): [
+            "إضافة اتصال MikroTik",
+            "اتصال MikroTik",
+            "التشغيل و TLS",
+            "تفعيل TLS",
+            "بدون TLS",
+        ],
+        Path("app/templates/radius/mt_legacy_gone.html"): [
+            "غرفة عمليات MikroTik",
+            "K9 dashboard",
+            "host / port / user / password / secret / vendor",
+            "WireGuard tunnel + API user + RADIUS secret + سكربت RouterOS",
+        ],
+        Path("app/templates/radius/mt_loop_setup.html"): [
+            "سكربت MikroTik",
+        ],
+        Path("app/templates/radius/mt_push_setup.html"): [
+            "إعداد دفع DHCP من المايكروتيك",
+            "من MikroTik",
+            "الـ API",
+            "MT API",
+            "port forwarding",
+            "mikrotik-push",
+            "hash",
+            "Winbox أو WebFig",
+            "Terminal",
+            "سكربت MikroTik",
+            "إصلاح API",
+        ],
+        Path("app/templates/radius/mt_dashboard.html"): [
+            "NAS #{{ nas.id }}",
+            ">RouterOS<",
+        ],
+        Path("app/templates/radius/mt_backups.html"): [
+            "NAS #{{ nas.id }}",
+        ],
+        Path("app/templates/radius/mt_audit_timeline.html"): [
+            "NAS #{{ nas.id }}",
+        ],
+    }
+
+    for path, forbidden in files.items():
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [
