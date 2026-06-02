@@ -19,7 +19,7 @@ def _ov(**overrides):
         snapshot_last_success_at="2026-05-22T18:00:00Z",
         snapshot_last_error="",
         snapshot_status="fresh",
-        counters={}, resource={},
+        counters={}, counter_rows=[], resource={},
         active_alerts_critical=0,
         active_alerts_warning=0,
         active_alerts_info=0,
