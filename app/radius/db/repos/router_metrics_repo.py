@@ -72,6 +72,21 @@ def latest_two(tenant_id: int, router_id: int) -> list[dict]:
     return [_row(r) for r in cur.fetchall()]
 
 
+def samples_since(tenant_id: int, router_id: int, since_iso: str,
+                  limit: int = 2000) -> list[dict]:
+    """Samples recorded at/after `since_iso` (oldest first) — for windowed
+    usage accumulation (sum of positive per-interface byte deltas)."""
+    cur = db().execute(
+        """
+        SELECT * FROM router_metric_samples
+        WHERE tenant_id=? AND router_id=? AND recorded_at >= ?
+        ORDER BY id ASC LIMIT ?
+        """,
+        (int(tenant_id), int(router_id), str(since_iso), limit),
+    )
+    return [_row(r) for r in cur.fetchall()]
+
+
 def last_push_map(tenant_id: int) -> dict[int, str]:
     """{router_id: last_push_at_iso} for every router that ever pushed."""
     cur = db().execute(

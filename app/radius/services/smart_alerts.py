@@ -15,7 +15,7 @@ Design notes:
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from ..db.repos import (
@@ -203,8 +203,169 @@ def sweep_offline(tenant_id: int) -> dict[str, int]:
 
 def on_push(tenant_id: int, router_id: int) -> None:
     """A fresh metric push means the router is alive — clear its offline alert
-    immediately (sweep_offline also handles this on page open)."""
+    immediately, then re-evaluate traffic/usage for this router."""
     try:
         alerts_repo.resolve(tenant_id, f"{_OFFLINE_RULE}:{int(router_id)}")
     except Exception:  # noqa: BLE001
         pass
+    try:
+        evaluate_push(tenant_id, int(router_id))
+    except Exception:  # noqa: BLE001 — evaluation must never break ingest
+        pass
+
+
+# ── Phase 2: high-traffic + high-usage detectors ───────────────────
+_TRAFFIC_RULE = "auto.router.high_traffic"
+_USAGE_RULE = "auto.router.high_usage"
+_WINDOW_LABEL = {"day": "آخر ٢٤ ساعة", "month": "آخر ٣٠ يومًا"}
+_WINDOW_MINUTES = {"day": 24 * 60, "month": 30 * 24 * 60}
+
+
+def _iface_bytes(sample: dict) -> dict[str, int]:
+    """{interface_name: rx+tx bytes} for one sample (missing → skipped)."""
+    out: dict[str, int] = {}
+    for i in (sample.get("interfaces") or []):
+        name = str(i.get("name") or "").strip()
+        if not name:
+            continue
+        rx = i.get("rx_bytes")
+        tx = i.get("tx_bytes")
+        total = (rx if isinstance(rx, (int, float)) else 0) + \
+                (tx if isinstance(tx, (int, float)) else 0)
+        out[name] = int(total)
+    return out
+
+
+def _peak_mbps(tenant_id: int, router_id: int) -> tuple[Optional[float], str]:
+    """Peak per-interface throughput (Mbps) between the last two samples.
+
+    Counter resets (Δ<0, e.g. a reboot) are ignored. Returns (None, "") when
+    there isn't a usable pair yet.
+    """
+    samples = router_metrics_repo.latest_two(tenant_id, router_id)
+    if len(samples) < 2:
+        return None, ""
+    newest, prev = samples[0], samples[1]
+    dt = _age_minutes(prev.get("recorded_at", ""), datetime.utcnow())
+    dt_new = _age_minutes(newest.get("recorded_at", ""), datetime.utcnow())
+    if dt is None or dt_new is None:
+        return None, ""
+    secs = (dt - dt_new) * 60.0  # prev is older → larger age
+    if secs < 10:                # too close together → unreliable
+        return None, ""
+    now_b, prev_b = _iface_bytes(newest), _iface_bytes(prev)
+    peak_mbps, peak_if = 0.0, ""
+    for name, nb in now_b.items():
+        pb = prev_b.get(name)
+        if pb is None or nb < pb:   # new interface or counter reset
+            continue
+        mbps = ((nb - pb) * 8.0) / secs / 1_000_000.0
+        if mbps > peak_mbps:
+            peak_mbps, peak_if = mbps, name
+    return peak_mbps, peak_if
+
+
+def _window_usage_gb(tenant_id: int, router_id: int, window: str) -> Optional[float]:
+    """Total GB consumed over a rolling window = Σ positive per-interface byte
+    deltas across consecutive samples (reset-safe)."""
+    minutes = _WINDOW_MINUTES.get(window, _WINDOW_MINUTES["day"])
+    since = (datetime.utcnow() - timedelta(minutes=minutes)).isoformat() + "Z"
+    samples = router_metrics_repo.samples_since(tenant_id, router_id, since)
+    if len(samples) < 2:
+        return None
+    total = 0
+    prev_b = _iface_bytes(samples[0])
+    for s in samples[1:]:
+        cur_b = _iface_bytes(s)
+        for name, cb in cur_b.items():
+            pb = prev_b.get(name)
+            if pb is not None and cb >= pb:
+                total += (cb - pb)
+        prev_b = cur_b
+    return total / (1024.0 ** 3)
+
+
+def evaluate_push(tenant_id: int, router_id: int,
+                  glob: Optional[dict] = None) -> dict[str, str]:
+    """Evaluate high-traffic + high-usage for one router; open/resolve alerts."""
+    glob = glob or global_settings(tenant_id)
+    if not glob["enabled"]:
+        return {}
+    per_router = router_alert_settings_repo.list_for_tenant(tenant_id)
+    eff = effective_for_router(router_id, glob, per_router)
+    if not eff["enabled"]:
+        return {}
+    name = _router_names(tenant_id).get(router_id, f"#{router_id}")
+    result: dict[str, str] = {}
+
+    # ── high traffic ──
+    if glob["high_traffic"]:
+        dedup = f"{_TRAFFIC_RULE}:{router_id}"
+        limit = float(eff["normal_speed_mbps"] or 0)
+        mbps, iface = _peak_mbps(tenant_id, router_id)
+        if mbps is not None and limit > 0 and mbps > limit:
+            alerts_repo.open(
+                tenant_id=tenant_id, rule=_TRAFFIC_RULE, dedup_key=dedup,
+                router_id=router_id, severity="warning",
+                title_ar=f"ترافيك عالٍ على «{name}»",
+                explanation_ar=(f"بلغ المعدّل {mbps:.1f} ميجابت/ث على الواجهة "
+                                f"{iface} (الحدّ {limit:.0f} ميجابت/ث)."),
+                recommended_action_ar="راجع استهلاك المشتركين/الخدمات على هذا الراوتر.",
+                evidence={"peak_mbps": round(mbps, 2), "interface": iface,
+                          "threshold_mbps": limit},
+            )
+            result["high_traffic"] = "opened"
+            if glob["telegram"]:
+                _notify(tenant_id, f"تنبيه: ترافيك عالٍ على «{name}» "
+                                   f"({mbps:.0f} ميجابت/ث).")
+        elif mbps is not None and limit > 0:
+            if alerts_repo.resolve(tenant_id, dedup):
+                result["high_traffic"] = "resolved"
+
+    # ── high usage ──
+    if glob["high_usage"]:
+        dedup = f"{_USAGE_RULE}:{router_id}"
+        limit = float(eff["normal_usage_gb"] or 0)
+        window = eff["usage_window"] or "day"
+        gb = _window_usage_gb(tenant_id, router_id, window)
+        label = _WINDOW_LABEL.get(window, window)
+        if gb is not None and limit > 0 and gb > limit:
+            alerts_repo.open(
+                tenant_id=tenant_id, rule=_USAGE_RULE, dedup_key=dedup,
+                router_id=router_id, severity="warning",
+                title_ar=f"استهلاك عالٍ على «{name}»",
+                explanation_ar=(f"بلغ الاستهلاك {gb:.1f} جيجابايت خلال {label} "
+                                f"(الحدّ {limit:.0f} جيجابايت)."),
+                recommended_action_ar="راجع حصص المشتركين أو احتمال تسريب/استخدام غير طبيعي.",
+                evidence={"usage_gb": round(gb, 2), "window": window,
+                          "threshold_gb": limit},
+            )
+            result["high_usage"] = "opened"
+            if glob["telegram"]:
+                _notify(tenant_id, f"تنبيه: استهلاك عالٍ على «{name}» "
+                                   f"({gb:.0f} جيجابايت / {label}).")
+        elif gb is not None and limit > 0:
+            if alerts_repo.resolve(tenant_id, dedup):
+                result["high_usage"] = "resolved"
+
+    return result
+
+
+def evaluate_all(tenant_id: int) -> dict[str, int]:
+    """Re-evaluate traffic/usage for every router that has pushed — used on
+    the alerts-page open so it reflects current breaches without a new push."""
+    glob = global_settings(tenant_id)
+    if not glob["enabled"] or not (glob["high_traffic"] or glob["high_usage"]):
+        return {"opened": 0, "resolved": 0}
+    opened = resolved = 0
+    for rid in router_metrics_repo.last_push_map(tenant_id):
+        try:
+            out = evaluate_push(tenant_id, rid, glob)
+        except Exception:  # noqa: BLE001
+            continue
+        for v in out.values():
+            if v == "opened":
+                opened += 1
+            elif v == "resolved":
+                resolved += 1
+    return {"opened": opened, "resolved": resolved}

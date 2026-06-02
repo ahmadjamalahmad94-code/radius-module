@@ -89,6 +89,10 @@ def mt_alerts_index():
     except Exception:  # noqa: BLE001
         pass
     try:
+        smart_alerts.evaluate_all(tid)   # high-traffic / high-usage breaches
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         mt_alerts_generator.refresh_alerts_from_problems(tid)
     except Exception:  # noqa: BLE001
         pass

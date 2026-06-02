@@ -233,3 +233,60 @@ def test_metrics_agent_setup_page_renders(app, client):
     assert "إعداد دفع مقاييس الراوتر" in html
     assert "/metrics/ingest" in html
     assert "راوتر الفرع" in html
+
+
+# ── Phase 2: high traffic + high usage ──────────────────────────────
+
+def _insert_sample(router_id: int, secs_ago: float, ifaces: list) -> None:
+    import json
+
+    from app.radius.db.connection import transaction
+    ts = (datetime.utcnow() - timedelta(seconds=secs_ago)).isoformat() + "Z"
+    with transaction() as conn:
+        conn.execute(
+            """
+            INSERT INTO router_metric_samples(tenant_id, router_id, reported_at,
+                uptime_seconds, interfaces_json, recorded_at)
+            VALUES(1,?,?,?,?,?)
+            """,
+            (router_id, "", None, json.dumps(ifaces), ts),
+        )
+
+
+def test_high_traffic_opens_then_resolves(app, client):
+    with app.app_context():
+        from app.radius.db.repos import alerts_repo, router_alert_settings_repo
+        from app.radius.services import smart_alerts
+
+        _seed_router(77)
+        router_alert_settings_repo.upsert(tenant_id=1, router_id=77,
+                                          enabled=True, normal_speed_mbps=1)
+        # 60 MB over 120 s on ether1 ≈ 4 Mbps > 1 Mbps threshold → open
+        _insert_sample(77, 120, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 0}])
+        _insert_sample(77, 0, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 60_000_000}])
+        out = smart_alerts.evaluate_push(1, 77)
+        assert out.get("high_traffic") == "opened"
+        assert "auto.router.high_traffic:77" in {a["dedup_key"] for a in alerts_repo.list_open(1)}
+
+        # a fresh 120s pair with no Δ (idle) → 0 Mbps < threshold → resolves
+        _insert_sample(77, 120, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 60_000_000}])
+        _insert_sample(77, 0, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 60_000_000}])
+        smart_alerts.evaluate_push(1, 77)
+        assert "auto.router.high_traffic:77" not in {a["dedup_key"] for a in alerts_repo.list_open(1)}
+
+
+def test_high_usage_opens_when_window_usage_exceeds_threshold(app, client):
+    with app.app_context():
+        from app.radius.db.repos import alerts_repo, router_alert_settings_repo
+        from app.radius.services import smart_alerts
+
+        _seed_router(77)
+        router_alert_settings_repo.upsert(tenant_id=1, router_id=77,
+                                          enabled=True, normal_usage_gb=1,
+                                          usage_window="day")
+        # 2.5 GB consumed within the last 24h → over the 1 GB threshold
+        _insert_sample(77, 6000, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 0}])
+        _insert_sample(77, 60, [{"name": "ether1", "rx_bytes": 0, "tx_bytes": 2_500_000_000}])
+        out = smart_alerts.evaluate_push(1, 77)
+        assert out.get("high_usage") == "opened"
+        assert "auto.router.high_usage:77" in {a["dedup_key"] for a in alerts_repo.list_open(1)}

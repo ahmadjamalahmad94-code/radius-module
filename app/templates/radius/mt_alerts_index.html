@@ -161,8 +161,8 @@
       <div class="sa-card">
         <div class="sa-card-title">أنواع الكشف</div>
         <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>راوتر مفصول (توقّف عن الإرسال)</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>ترافيك عالٍ فوق الحد <small>(قيد التفعيل)</small></span></label>
-        <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق الحد <small>(قيد التفعيل)</small></span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>ترافيك عالٍ فوق حدّ السرعة</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق حدّ الجيجابايت</span></label>
         <div class="sa-grid">
           <label class="sa-field">يُعدّ مفصولًا بعد (دقيقة)
             <input type="number" min="2" name="offline_after_min" value="{{ settings.offline_after_min }}">
