@@ -7,6 +7,7 @@ routes للحالة التشغيلية: /admin/radius/_status + sync queue inspe
 """
 from __future__ import annotations
 
+import json
 import time
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
@@ -33,6 +34,49 @@ def register_status_routes(bp: Blueprint) -> None:
                     diagnostics, methods=["GET"])
     bp.add_url_rule("/mt-push-setup", "mt_push_setup",
                     mt_push_setup, methods=["GET"])
+
+
+_PAYLOAD_KEY_LABELS = {
+    "router_id": "الراوتر",
+    "job_id": "المهمة",
+    "status": "الحالة",
+    "result": "النتيجة",
+    "error": "الخطأ",
+    "message": "الرسالة",
+    "count": "العدد",
+    "changed": "العناصر المتغيرة",
+    "username": "اسم الدخول",
+    "plan_id": "الباقة",
+    "amount": "المبلغ",
+    "currency": "العملة",
+    "reference": "المرجع",
+    "reference_code": "رمز المرجع",
+}
+
+
+def _payload_summary(raw: object) -> str:
+    try:
+        payload = json.loads(raw or "{}") if isinstance(raw, str) else raw
+    except (TypeError, ValueError):
+        payload = {}
+    if not isinstance(payload, dict) or not payload:
+        return "لا توجد تفاصيل إضافية."
+
+    parts: list[str] = []
+    for key, value in list(payload.items())[:4]:
+        label = _PAYLOAD_KEY_LABELS.get(str(key), str(key).replace("_", " "))
+        if isinstance(value, bool):
+            rendered = "نعم" if value else "لا"
+        elif value is None or value == "":
+            rendered = "—"
+        elif isinstance(value, (dict, list, tuple)):
+            rendered = "مجموعة بيانات"
+        else:
+            rendered = str(value)
+        parts.append(f"{label}: {rendered}")
+    if len(payload) > 4:
+        parts.append(f"{len(payload) - 4} حقل إضافي")
+    return "، ".join(parts)
 
 
 def mt_push_setup():
@@ -223,10 +267,20 @@ def sync_cancel(job_id: int):
 # ─────────────── audit ───────────────
 
 def audit_list():
+    from .audit_log import _action_label, _target_label
+
     cur = db().execute("""
         SELECT * FROM audit_log
         WHERE tenant_id = ?
         ORDER BY id DESC LIMIT 300
     """, (_tid(),))
-    items = [dict(r) for r in cur.fetchall()]
+    items = []
+    for row in cur.fetchall():
+        item = dict(row)
+        item["action_label"] = _action_label(item.get("action"))
+        item["target_label"] = _target_label(
+            item.get("target_type"), item.get("target_id")
+        )
+        item["payload_summary"] = _payload_summary(item.get("payload_json"))
+        items.append(item)
     return render_template("radius/audit_list.html", items=items)

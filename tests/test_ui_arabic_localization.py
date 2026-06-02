@@ -180,6 +180,7 @@ def test_source_templates_do_not_keep_future_placeholder_copy():
 
 def test_source_templates_do_not_keep_old_english_operator_labels():
     paths = [
+        Path("app/templates/radius/audit_list.html"),
         Path("app/templates/radius/audit_log_detail.html"),
         Path("app/templates/radius/backups.html"),
         Path("app/templates/radius/cards_print_batch.html"),
@@ -223,6 +224,8 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         ">Balance<",
         "Primary DNS (PPP)",
         "Secondary DNS (PPP)",
+        "{{ r.payload_json }}",
+        'title="{{ r.payload_json }}"',
     ]
 
     for path in paths:

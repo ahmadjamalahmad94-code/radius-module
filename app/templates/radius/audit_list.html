@@ -33,15 +33,15 @@
           <tr>
             <td class="num mono">{{ r.id }}</td>
             <td><strong>{{ r.actor }}</strong></td>
-            <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action }}</span></td>
-            <td class="mono">{{ r.target_type }}</td>
-            <td class="mono">{{ r.target_id }}</td>
+            <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action_label or 'عملية' }}</span></td>
+            <td>{{ r.target_label or 'هدف' }}</td>
+            <td class="mono">{{ r.target_id or '—' }}</td>
             <td class="mono">{{ r.ip_address or '—' }}</td>
             <td class="mono">{{ r.created_at|dt_local if r.created_at else '—' }}</td>
-            <td class="mono"
+            <td
                 style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                title="{{ r.payload_json }}">
-              {{ r.payload_json }}
+                title="{{ r.payload_summary }}">
+              {{ r.payload_summary }}
             </td>
           </tr>
         {% endfor %}
