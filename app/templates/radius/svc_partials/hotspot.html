@@ -1,5 +1,4 @@
-{# Hotspot service — configure form (Phase 1) + JS wiring for the
-   shell (Phases 2/3/4).
+{# خدمة بوابة الدخول — نموذج التهيئة وربط مراحل التنفيذ.
 
    The shell (setup_wizard_v3_router_service_flow.html) gives us:
      - window.SWSVF.setPreview(bullets)
@@ -10,16 +9,15 @@
      - event 'swsvf:phase-change' fired on the page element
 
    What this partial does:
-     Phase 1: render the configure form (interfaces + subnet). Listen
-              for the «التالي» button — when clicked, validate + write
-              the input JSON to page.dataset.swsvfConfigurePayload.
+     Phase 1: عرض نموذج التهيئة ثم كتابة بيانات الإدخال في
+              page.dataset.swsvfConfigurePayload عند الضغط على «التالي».
      Phase 2: on entry, POST /preview. Render the returned bullets.
      Phase 3: on entry, POST /apply. Animate substep ticks.
      Phase 4: on entry, GET /verify. Render the checks list.
 #}
-<h2>تهيئة Hotspot</h2>
+<h2>تهيئة بوابة الدخول</h2>
 <p class="swsvf-pane-sub">
-  اختر واجهات الشبكة التي ستعمل عليها بوابة Hotspot، ثم اضغط «التالي».
+  اختر واجهات الشبكة التي ستعمل عليها بوابة الدخول، ثم اضغط «التالي».
   سنحضّر المعاينة قبل تطبيق أي شيء على الراوتر.
 </p>
 
@@ -123,10 +121,9 @@
 </style>
 
 {# ───── Section 1: pick interfaces ─────
-   For deleting an already-active Hotspot on a specific port, use
-   the «خدماتي» tab on the router page — it lists every active
-   service with per-item delete + confirmation modal. This form
-   stays focused on creating / editing the active set. #}
+   لحذف بوابة دخول مفعّلة على منفذ محدد، استخدم تبويب «خدماتي»
+   في صفحة الراوتر. هذا النموذج مخصص للإنشاء أو تعديل المجموعة
+   الفعالة فقط. #}
 <div class="swhs-section">
   <div class="swhs-section-title">
     واجهات الشبكة
@@ -193,19 +190,12 @@
   }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function getSelectedInterfaces() {
-    // Defensive: trim + filter empties. We've seen cases where the
-    // checkbox value resolves to "" for unclear reasons (corrupted
-    // discovery payload, encoding glitch, etc). Sending [""] to the
-    // planner trips the same hotspot_no_interface_selected check as
-    // sending [] would — better to surface the issue here.
+    // تنظيف احترازي للقيم الفارغة حتى لا تصل كواجهة مختارة.
     return Array.from(page.querySelectorAll("[data-swhs-iface]:checked"))
                 .map((el) => (el.value || "").trim())
                 .filter(Boolean);
   }
-  // WAN interface names captured from /discover-interfaces. Sent back
-  // as blocked_interfaces so the planner refuses them even if the
-  // operator manages to tick one (shouldn't happen — they're disabled
-  // in the UI — but defense in depth).
+  // أسماء واجهات الإنترنت المكتشفة تُرسل كواجهات محمية حتى يرفضها المخطط.
   let wanInterfaces = [];
 
   function getPayload() {
@@ -241,7 +231,7 @@
       void genBtn.offsetWidth;  // force reflow so the class reapplies
       genBtn.classList.add("is-rolling");
       setTimeout(() => genBtn.classList.remove("is-rolling"), 600);
-      // Keep the form payload in sync.
+      // إبقاء بيانات النموذج متزامنة.
       refreshPayload();
     });
   }
@@ -266,10 +256,7 @@
         throw new Error(data.error || `رمز ${res.status}`);
       }
       wanInterfaces = data.wan_interfaces || [];
-      // Pre-tick: look up running Hotspot interfaces so they keep
-      // their ticks across a re-apply (otherwise the planner's
-      // clean-replace would silently wipe peers). Per-item delete
-      // moved to the dedicated «خدماتي» tab.
+      // تحديد واجهات بوابة الدخول الحالية مسبقًا عند تعديل الإعداد.
       let activeInterfaces = [];
       try {
         const cur = await fetch(
@@ -301,9 +288,7 @@
     ifaceList.innerHTML = items.map((it) => {
       const isWan = !!it.is_wan;
       const isActive = activeSet.has(it.name);
-      // Auto-tick: already-running interfaces ALWAYS pre-tick (so
-      // re-apply preserves them). Otherwise fall back to the
-      // planner's `recommended` hint. WAN never pre-ticks.
+      // الواجهات العاملة مسبقًا تُحدد تلقائيًا حتى يحافظ التطبيق عليها.
       const checked = (!isWan && (isActive || it.recommended)) ? "checked" : "";
       const disabled = isWan ? "disabled" : "";
       const meta = [
@@ -325,11 +310,7 @@
           <span class="swhs-iface-meta">${meta}</span>
         </label>`;
     }).join("");
-    // Initial `checked` attributes from `recommended:true` do NOT
-    // fire a change event — they're just initial DOM state. So we
-    // force a refresh here AND also paint the is-checked fallback
-    // class onto any pre-checked cards in case the browser doesn't
-    // support :has() yet.
+    // القيم المحددة مبدئيًا لا تطلق حدث تغيير، لذلك نحدث الحالة هنا.
     ifaceList.querySelectorAll("[data-swhs-iface]:checked").forEach((cb) => {
       const card = cb.closest(".swhs-iface-card");
       if (card) card.classList.add("is-checked");
@@ -339,14 +320,8 @@
 
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
 
-  /* ─── Configure phase → write payload before advancing ─── */
-  // The shell's «التالي» button fires data-swsvf-next="preview".
-  // We intercept that BEFORE the shell handler runs by listening
-  // on the same button click and validating. If invalid, we keep
-  // the shell button's default behaviour (it still navigates),
-  // but the preview pane will get our error from the API.
-  // Cleaner: write the payload to the dataset whenever the form
-  // changes. The shell reads it on navigation.
+  /* ─── مرحلة التهيئة: كتابة البيانات قبل الانتقال ─── */
+  // نكتب أحدث بيانات النموذج عند أي تغيير حتى تقرأها الواجهة المشتركة.
   function updateCounter() {
     if (!counter) return;
     const n = getSelectedInterfaces().length;
@@ -360,18 +335,12 @@
     const json = JSON.stringify(payload);
     page.dataset.swsvfConfigurePayload = json;
     updateCounter();
-    if (window.console) console.debug("[Hotspot] payload:", payload);
+    if (window.console) console.debug("[بوابة الدخول] بيانات الإعداد:", payload);
   }
-  // Event delegation — one listener on the parent catches every
-  // checkbox toggle, including those from labels-without-for,
-  // keyboard tabs, autofill, and screen readers. Also covers
-  // checkboxes added by future renderInterfaces() calls without
-  // re-attaching listeners.
+  // مستمع واحد يلتقط تغييرات كل الواجهات حتى بعد إعادة الرسم.
   ifaceList.addEventListener("change", (e) => {
     if (e.target && e.target.matches && e.target.matches("[data-swhs-iface]")) {
-      // The :has(input:checked) CSS rule handles the visual state
-      // automatically on modern browsers; the legacy is-checked
-      // class is a fallback for older engines.
+      // الصنف الاحتياطي يحافظ على الحالة المرئية في المتصفحات الأقدم.
       const card = e.target.closest(".swhs-iface-card");
       if (card) card.classList.toggle("is-checked", e.target.checked);
     }
@@ -379,10 +348,7 @@
   });
   subnetInput.addEventListener("input", refreshPayload);
   refreshPayload();
-  // Last-chance refresh: the shell fires this event right before
-  // reading the payload on «التالي», so even if change/input never
-  // fired for some interaction (autofill, fast clicks, programmatic
-  // checks), we re-serialize the current DOM state.
+  // تحديث أخير قبل قراءة البيانات عند الضغط على «التالي».
   page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   /* ─── Phase-change handler: drive preview/apply/verify ─── */
@@ -401,17 +367,14 @@
   });
 
   async function runPreview(payload) {
-    if (window.console) console.debug("[Hotspot] runPreview called with:", payload);
-    // Belt + suspenders: re-collect from DOM in case the payload
-    // coming through the shell event got corrupted in transit.
-    // The first source of truth is the live DOM, not whatever was
-    // serialized minutes ago.
+    if (window.console) console.debug("[بوابة الدخول] تشغيل المعاينة:", payload);
+    // قراءة احتياطية من الصفحة إذا وصلت بيانات ناقصة.
     if (!payload || !payload.selected_interfaces ||
         !payload.selected_interfaces.length) {
       const fresh = getPayload();
       if (fresh.selected_interfaces && fresh.selected_interfaces.length) {
         payload = fresh;
-        if (window.console) console.debug("[Hotspot] fell back to fresh DOM read:", payload);
+        if (window.console) console.debug("[بوابة الدخول] قراءة أحدث القيم من الصفحة:", payload);
       }
     }
     if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
@@ -430,7 +393,7 @@
         }
       );
       const data = await res.json().catch(() => ({ ok: false }));
-      if (window.console) console.debug("[Hotspot] preview response:", data);
+      if (window.console) console.debug("[بوابة الدخول] نتيجة المعاينة:", data);
       if (!res.ok || data.ok === false) {
         const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
@@ -456,28 +419,21 @@
       );
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        // Stage-aware substep update: if the backend told us exactly
-        // which stage failed (connect/send/commit), mark earlier
-        // stages as done, the failing one as failed, and later ones
-        // as pending. Falls back to the old behaviour (mark all 3
-        // failed) for older backend responses missing substeps.
+        // تحديث مراحل الفشل بدقة إذا أعاد الخادم مراحل فرعية.
         const subs = Array.isArray(data.substeps) && data.substeps.length
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        // Keep generated scripts out of the UI; support can inspect
-        // the browser console when deep diagnostics are needed.
+        // إبقاء السكربت المولّد خارج الواجهة، ويظهر في الكونسول للدعم.
         if (data.debug_script && window.console) {
-          console.warn("[Hotspot] FAILED — script that was sent to the router:\n" + data.debug_script);
+          console.warn("[بوابة الدخول] فشل الإرسال. السكربت المرسل للراوتر:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
                       `تعذّر الإرسال (رمز ${res.status})`);
         window.SWSVF.showApplyError(banner);
         return;
       }
-      // Animate substeps from connect → send → commit briefly even
-      // though the backend returns all at once — gives the operator
-      // visual progress instead of an instant jump.
+      // تحريك المراحل بصريًا حتى يرى المشغل تقدم التنفيذ.
       window.SWSVF.setApplySubstep("connect", "done");
       window.SWSVF.setApplyLabel("إرسال الإعدادات…", "");
       await sleep(400);

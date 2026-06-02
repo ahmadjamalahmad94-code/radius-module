@@ -1,18 +1,18 @@
-{# Broadband service — configure form (Phase 1) + JS wiring.
+{# خدمة البرودباند — نموذج التهيئة وربط مراحل التنفيذ.
 
-   Mirrors the Hotspot partial structure:
+   تتبع نفس بنية خدمة بوابة الدخول:
      Phase 1: pick interfaces (multi) + advanced pool overrides
      Phase 2: POST /preview → bullets in Arabic
      Phase 3: POST /apply  → animate substeps
-     Phase 4: GET  /verify → real probe (PPPoE server + RADIUS link)
+     Phase 4: GET  /verify → فحص فعلي لخدمة البرودباند وربط المصادقة
 
    Shell APIs used:
      window.SWSVF.setPreview, setApplySubstep, setApplyLabel,
                   showApplyError, setVerifyChecks, setPhase #}
-<h2>برمجة Broadband</h2>
+<h2>برمجة البرودباند</h2>
 <p class="swsvf-pane-sub">
-  PPPoE — يفتح للمشتركين اشتراكاً ثابتاً (مستخدم + كلمة مرور). اختر الواجهات
-  التي سيُسمح عليها بالـ PPPoE، ثم اضغط «التالي».
+  يفتح للمشتركين اشتراكاً ثابتاً باسم مستخدم وكلمة مرور. اختر الواجهات
+  التي سيُسمح عليها باشتراكات البرودباند، ثم اضغط «التالي».
 </p>
 
 <style>
@@ -63,7 +63,7 @@
 .swbb-iface-counter.is-ready{
   background:var(--swsvf-green-soft);color:#065F46;
 }
-/* WAN-locked interface — same treatment as Hotspot. */
+/* واجهة الإنترنت محمية من الاختيار مثل بوابة الدخول. */
 .swbb-iface-card.is-wan{
   background:#FEF2F2;border-color:#FCA5A5;
   cursor:not-allowed;opacity:.85;
@@ -103,11 +103,11 @@
    This form stays focused on creating / editing the active set. #}
 <div class="swbb-section">
   <div class="swbb-section-title">
-    واجهات الـ PPPoE
+    واجهات البرودباند
     <span class="swbb-iface-counter" data-swbb-counter>0 واجهة مختارة</span>
   </div>
   <p class="swbb-help">
-    اختر الواجهة (أو الواجهات) التي ستُشغّل عليها خدمة PPPoE — عادةً منفذ LAN
+    اختر الواجهة (أو الواجهات) التي ستُشغّل عليها خدمة البرودباند — عادةً منفذ LAN
     موصّل بسويتش يوزّع على المشتركين.
   </p>
   <button type="button" class="swsvf-btn swbb-discover-btn"
@@ -169,13 +169,12 @@
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
   function getSelectedInterfaces() {
-    // Defensive: trim + filter empties — matches the Hotspot partial.
+    // تنظيف احترازي للقيم الفارغة.
     return Array.from(page.querySelectorAll("[data-swbb-iface]:checked"))
                 .map((el) => (el.value || "").trim())
                 .filter(Boolean);
   }
-  // WAN interfaces from /discover-interfaces — also passed back to
-  // the planner as blocked_interfaces so a misclick can't slip past.
+  // واجهات الإنترنت المكتشفة تُرسل كواجهات محمية حتى لا تُختار بالخطأ.
   let wanInterfaces = [];
 
   function getPayload() {
@@ -198,7 +197,7 @@
     const payload = getPayload();
     page.dataset.swsvfConfigurePayload = JSON.stringify(payload);
     updateCounter();
-    if (window.console) console.debug("[Broadband] payload:", payload);
+    if (window.console) console.debug("[البرودباند] بيانات الإعداد:", payload);
   }
 
   /* ── Interface discovery ── */
@@ -216,8 +215,7 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
       wanInterfaces = data.wan_interfaces || [];
-      // Pre-tick active PPPoE interfaces so re-apply preserves them.
-      // Per-item delete lives in the «خدماتي» tab instead.
+      // تحديد واجهات البرودباند الحالية مسبقًا حتى يحافظ التطبيق عليها.
       let activeInterfaces = [];
       try {
         const cur = await fetch(
@@ -247,7 +245,7 @@
     ifaceList.innerHTML = items.map((it) => {
       const isWan = !!it.is_wan;
       const isActive = activeSet.has(it.name);
-      // Already-serving interfaces auto-tick so re-apply keeps them.
+      // الواجهات العاملة مسبقًا تُحدد تلقائيًا حتى تبقى محفوظة.
       const checked = (!isWan && (isActive || it.recommended)) ? "checked" : "";
       const disabled = isWan ? "disabled" : "";
       const meta = [
@@ -269,8 +267,7 @@
           <span class="swbb-iface-meta">${meta}</span>
         </label>`;
     }).join("");
-    // Paint is-checked fallback class on any pre-checked cards
-    // for browsers without :has() support.
+    // تحديث الصنف الاحتياطي للبطاقات المحددة مسبقًا.
     ifaceList.querySelectorAll("[data-swbb-iface]:checked").forEach((cb) => {
       const card = cb.closest(".swbb-iface-card");
       if (card) card.classList.add("is-checked");
@@ -280,9 +277,7 @@
 
   if (discoverBtn) discoverBtn.addEventListener("click", discoverInterfaces);
   [localInput, poolInput].forEach((el) => el && el.addEventListener("input", refreshPayload));
-  // Single delegated listener — catches every change event from
-  // any [data-swbb-iface], including newly rendered ones, and
-  // keeps both the visual fallback class and the payload in sync.
+  // مستمع واحد يلتقط تغييرات الواجهات حتى بعد إعادة الرسم.
   ifaceList.addEventListener("change", (e) => {
     if (e.target && e.target.matches && e.target.matches("[data-swbb-iface]")) {
       const card = e.target.closest(".swbb-iface-card");
@@ -291,7 +286,7 @@
     refreshPayload();
   });
   refreshPayload();
-  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  // تحديث أخير عند الضغط على «التالي».
   page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   /* ── Phase-change handler ── */
@@ -310,15 +305,14 @@
   });
 
   async function runPreview(payload) {
-    if (window.console) console.debug("[Broadband] runPreview called with:", payload);
-    // Fresh DOM re-read fallback in case the shell event passed
-    // a stale/empty payload for any reason.
+    if (window.console) console.debug("[البرودباند] تشغيل المعاينة:", payload);
+    // قراءة احتياطية من الصفحة إذا وصلت بيانات ناقصة.
     if (!payload || !payload.selected_interfaces ||
         !payload.selected_interfaces.length) {
       const fresh = getPayload();
       if (fresh.selected_interfaces && fresh.selected_interfaces.length) {
         payload = fresh;
-        if (window.console) console.debug("[Broadband] fell back to fresh DOM read:", payload);
+        if (window.console) console.debug("[البرودباند] قراءة أحدث القيم من الصفحة:", payload);
       }
     }
     if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
@@ -334,7 +328,7 @@
           headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
-      if (window.console) console.debug("[Broadband] preview response:", data);
+      if (window.console) console.debug("[البرودباند] نتيجة المعاينة:", data);
       if (!res.ok || data.ok === false) {
         const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
@@ -357,18 +351,14 @@
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        // Stage-aware substep update: use data.substeps when the
-        // backend provides it so the operator sees exactly which
-        // stage tripped (connect / send / commit). Fallback marks
-        // all three failed for older responses without substeps.
+        // تحديث مراحل الفشل بدقة إذا أعاد الخادم مراحل فرعية.
         const subs = Array.isArray(data.substeps) && data.substeps.length
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        // Keep generated scripts out of the UI; support can inspect
-        // the browser console when deep diagnostics are needed.
+        // إبقاء السكربت المولّد خارج الواجهة، ويظهر في الكونسول للدعم.
         if (data.debug_script && window.console) {
-          console.warn("[Broadband] FAILED — script that was sent to the router:\n" + data.debug_script);
+          console.warn("[البرودباند] فشل الإرسال. السكربت المرسل للراوتر:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
                       `تعذّر الإرسال (رمز ${res.status})`);

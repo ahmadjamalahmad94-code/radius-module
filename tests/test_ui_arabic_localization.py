@@ -406,6 +406,24 @@ def test_core_operations_do_not_show_old_service_english_labels():
             "عنوان شبكة VPN الداخلي",
             "عنوان VPN:",
         ],
+        Path("app/templates/radius/svc_partials/hotspot.html"): [
+            "{# Hotspot service",
+            "<h2>تهيئة Hotspot</h2>",
+            "بوابة Hotspot",
+            "already-active Hotspot",
+            "[Hotspot]",
+            "script that was sent",
+        ],
+        Path("app/templates/radius/svc_partials/broadband.html"): [
+            "{# Broadband service",
+            "Mirrors the Hotspot",
+            "<h2>برمجة Broadband</h2>",
+            "PPPoE —",
+            "واجهات الـ PPPoE",
+            "خدمة PPPoE",
+            "[Broadband]",
+            "script that was sent",
+        ],
     }
 
     for path, forbidden in files.items():
