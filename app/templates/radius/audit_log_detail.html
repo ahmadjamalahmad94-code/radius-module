@@ -6,6 +6,44 @@
 {% block page_title %}عملية #{{ entry.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ entry.action_label }}</span>{% endblock %}
 
+{% macro readable_value(value) -%}
+  {%- if value is mapping -%}
+    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+  {%- elif value is sequence and value is not string -%}
+    <span class="sub">قائمة — {{ value|length }} بند</span>
+  {%- elif value is boolean -%}
+    {{ 'نعم' if value else 'لا' }}
+  {%- elif value is none -%}
+    —
+  {%- else -%}
+    {{ value }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro readable_audit_data(data) -%}
+  {% if data is mapping %}
+    <dl class="audit-facts">
+      {% for key, value in data.items() %}
+      <div>
+        <dt>{{ key|string|replace('_', ' ') }}</dt>
+        <dd>{{ readable_value(value) }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  {% elif data is sequence and data is not string %}
+    <dl class="audit-facts">
+      {% for value in data %}
+      <div>
+        <dt>بند {{ loop.index }}</dt>
+        <dd>{{ readable_value(value) }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  {% else %}
+    <p>{{ readable_value(data) }}</p>
+  {% endif %}
+{%- endmacro %}
+
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/audit_log_redesign.css') }}">
@@ -114,7 +152,7 @@
       </div>
       <i class="fa-solid fa-database"></i>
     </header>
-    <pre class="audit-json-output">{{ entry.payload | tojson(indent=2) }}</pre>
+    {{ readable_audit_data(entry.payload) }}
   </section>
   {% endif %}
 
@@ -128,7 +166,7 @@
         </div>
         <i class="fa-solid fa-clock-rotate-left"></i>
       </header>
-      <pre class="audit-json-output">{{ entry.before | tojson(indent=2) }}</pre>
+      {{ readable_audit_data(entry.before) }}
     </article>
     {% endif %}
 
@@ -141,7 +179,7 @@
         </div>
         <i class="fa-solid fa-arrow-right-long"></i>
       </header>
-      <pre class="audit-json-output">{{ entry.after | tojson(indent=2) }}</pre>
+      {{ readable_audit_data(entry.after) }}
     </article>
     {% endif %}
   </section>

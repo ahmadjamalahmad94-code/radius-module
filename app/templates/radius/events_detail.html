@@ -7,6 +7,20 @@
 {% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
+{% macro readable_value(value) -%}
+  {%- if value is mapping -%}
+    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+  {%- elif value is sequence and value is not string -%}
+    <span class="sub">قائمة — {{ value|length }} بند</span>
+  {%- elif value is boolean -%}
+    {{ 'نعم' if value else 'لا' }}
+  {%- elif value is none -%}
+    —
+  {%- else -%}
+    {{ value }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 <div class="opsx-redesign">
 {{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info") }}
@@ -20,7 +34,22 @@
 </div>
 
 {% call hub.section("البيانات الوصفية", icon="brackets-curly") %}
-  <pre class="hub-code" data-testid="event-metadata">{{ event.metadata }}</pre>
+  <div class="hub-table-wrap" data-testid="event-metadata">
+    <table class="hub-table">
+      <thead><tr><th>البند</th><th>القيمة</th></tr></thead>
+      <tbody>
+      {% if event.metadata is mapping %}
+      {% for key, value in event.metadata.items() %}
+      <tr><td>{{ key|string|replace('_', ' ') }}</td><td>{{ readable_value(value) }}</td></tr>
+      {% else %}
+      <tr><td>الحالة</td><td>لا توجد بيانات وصفية لهذا الحدث.</td></tr>
+      {% endfor %}
+      {% else %}
+      <tr><td>التفاصيل</td><td>{{ readable_value(event.metadata) }}</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 
 {% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
