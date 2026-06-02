@@ -1,12 +1,11 @@
-{# Remote-access — temporary firewall opening for a technician.
-   Adds /ip firewall filter rules that allow Winbox/SSH/WebFig from
-   a specific source IP for a limited time, then auto-removes them
-   via /system scheduler. No DB policy row created — the rules
-   carry a HOBERADIUS_TECH:<token> comment for verify + revoke. #}
+{# اتصال عن بعد — فتح مؤقت للفنّي عبر قواعد الجدار الناري.
+   يضيف قواعد تسمح بالخدمات المختارة من عنوان مصدر محدد لمدة محدودة،
+   ثم يحذفها تلقائيًا عبر المجدول. لا ينشئ صف سياسة في قاعدة البيانات؛
+   تحمل القواعد تعليق HOBERADIUS_TECH:<token> للتحقق والإلغاء. #}
 <h2>اتصال عن بُعد للفنّي</h2>
 <p class="swsvf-pane-sub">
-  افتح للفنّي صلاحيّة الدخول للراوتر مؤقّتاً عبر <strong>Winbox</strong> أو
-  <strong>SSH</strong> أو <strong>WebFig</strong> من IP محدّد. القواعد تُحذف
+  افتح للفنّي صلاحيّة الدخول للراوتر مؤقّتاً عبر إدارة وينبوكس أو
+  الدخول النصي أو واجهة الويب من عنوان مصدر محدّد. القواعد تُحذف
   تلقائيّاً عند انتهاء المدّة.
 </p>
 
@@ -76,8 +75,7 @@
 .swra-perm-body strong{font-size:13.5px;color:#1F2937;font-weight:800}
 .swra-perm-chip.is-checked .swra-perm-body strong{color:#5B21B6}
 .swra-perm-body span{font-size:11.5px;color:var(--swsvf-mute)}
-/* Tech-credentials card — extra-prominent because the password is
-   the operator's ONLY chance to copy it (we don't store it). */
+/* بطاقة بيانات الدخول المؤقتة بارزة لأن كلمة المرور تظهر مرة واحدة فقط. */
 .swra-creds{
   background:#FEFCE8;border:2px solid #FACC15;border-radius:10px;
   padding:12px 16px;margin-top:12px;
@@ -117,22 +115,22 @@
     <label class="swra-svc-chip is-checked">
       <input type="checkbox" data-swra-svc value="winbox" data-port="8291" checked>
       <i class="fa-solid fa-window-restore"></i>
-      <span>Winbox (port 8291)</span>
+      <span>إدارة وينبوكس — منفذ 8291</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="ssh" data-port="22">
       <i class="fa-solid fa-terminal"></i>
-      <span>SSH (port 22)</span>
+      <span>الدخول النصي — منفذ 22</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="webfig" data-port="80">
       <i class="fa-solid fa-globe"></i>
-      <span>WebFig (port 80)</span>
+      <span>واجهة الويب — منفذ 80</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="api" data-port="8728">
       <i class="fa-solid fa-plug"></i>
-      <span>API (port 8728)</span>
+      <span>واجهة الربط البرمجية — منفذ 8728</span>
     </label>
   </div>
 </div>
@@ -162,12 +160,12 @@
       </div>
     </label>
     <label>
-      <div class="swra-section-title">IP المصدر (اختياري)</div>
+      <div class="swra-section-title">عنوان المصدر (اختياري)</div>
       <input type="text" class="swra-input" data-swra-source
              placeholder="مثال: 1.2.3.4">
       <div class="swra-hint">
         <i class="fa-solid fa-circle-info"></i>
-        اتركه فاضي للسماح من أي IP. الأفضل أمنيّاً تحديد IP الفنّي العام.
+        اتركه فارغًا للسماح من أي عنوان. الأفضل أمنيّاً تحديد عنوان الفنّي العام.
       </div>
     </label>
   </div>
@@ -176,8 +174,8 @@
 <div class="swra-section">
   <div class="swra-section-title">صلاحيّات الفنّي على الراوتر</div>
   <div class="swra-help">
-    سنُنشئ مستخدم RouterOS مؤقّت خاص بهذا الوصول. لن يستعمل الفنّي
-    كلمة مرور الـ admin تبعك. عند انتهاء المدّة، يُحذف المستخدم
+    سنُنشئ مستخدمًا مؤقّتًا على الراوتر خاصًا بهذا الوصول. لن يستعمل الفنّي
+    كلمة مرور مديرك الأساسي. عند انتهاء المدّة، يُحذف المستخدم
     تلقائياً مع القاعدة.
   </div>
   <div class="swra-perms" data-swra-perms>
@@ -192,14 +190,14 @@
       <input type="radio" name="swra-perm" value="write" checked>
       <div class="swra-perm-body">
         <strong>تعديل محدود</strong>
-        <span>قراءة + كتابة على الشبكة، بدون system/users/ملفّات.</span>
+        <span>قراءة + كتابة على الشبكة، بدون إعدادات النظام أو المستخدمين أو الملفات.</span>
       </div>
     </label>
     <label class="swra-perm-chip">
       <input type="radio" name="swra-perm" value="full">
       <div class="swra-perm-body">
         <strong>تعديل كامل</strong>
-        <span>صلاحيّات admin كاملة — استعمله بحذر للفنّيين الموثوقين.</span>
+        <span>صلاحيات مدير كاملة — استعمله بحذر للفنّيين الموثوقين.</span>
       </div>
     </label>
   </div>
@@ -217,12 +215,11 @@
     معلومات الاتصال للفنّي
   </h3>
   <p class="swra-help" style="margin-bottom:10px">
-    أعطِ الفنّي القيم التالية ليفتح Winbox/SSH/WebFig على الراوتر:
+    أعطِ الفنّي القيم التالية ليفتح الخدمة المطلوبة على الراوتر:
   </p>
 
-  {# Temporary credentials — shown ONCE here at apply time. The
-     password is not stored anywhere in HobeRadius after this point,
-     so the operator must copy it from this card. #}
+  {# بيانات مؤقتة تظهر مرة واحدة عند التطبيق. كلمة المرور لا تُحفظ
+     بعد هذه اللحظة، لذلك يجب نسخها من هذه البطاقة. #}
   <div class="swra-creds" data-swra-creds hidden>
     <h4>
       <i class="fa-solid fa-shield-halved"></i>
@@ -311,8 +308,8 @@
   function showError(msg) { formError.textContent = String(msg); formError.hidden = false; }
   function clearError() { formError.hidden = true; formError.textContent = ""; }
 
-  // Generate a short random token for this access grant (used in
-  // RouterOS comments so verify/revoke can target this run only).
+  // توليد معرّف قصير لهذا الإذن؛ يوضع في تعليقات الراوتر
+  // حتى يستهدف التحقق والإلغاء هذه العملية فقط.
   function makeToken() {
     const arr = new Uint8Array(6);
     (window.crypto || window.msCrypto).getRandomValues(arr);
@@ -349,9 +346,7 @@
     cb.closest(".swra-svc-chip").classList.toggle("is-checked", cb.checked);
     refreshPayload();
   }));
-  // Permission radio — also toggle the .is-checked class on the chip
-  // so the visual state matches the underlying input. We don't rely
-  // on :has() because some embedded webviews don't support it.
+  // أزرار الصلاحية: نطابق الحالة المرئية مع قيمة الإدخال.
   page.querySelectorAll('input[name="swra-perm"]').forEach((rb) => {
     rb.addEventListener("change", () => {
       page.querySelectorAll(".swra-perm-chip").forEach((chip) => {
@@ -364,7 +359,7 @@
   ttlSel.addEventListener("change", refreshPayload);
   sourceInput.addEventListener("input", refreshPayload);
   refreshPayload();
-  // Last-chance refresh on «التالي» click — see hotspot.html for rationale.
+  // تحديث أخير عند الضغط على «التالي» لضمان جمع أحدث قيمة.
   page.addEventListener("swsvf:configure-collect", refreshPayload);
 
   let lastPayload = null;
@@ -417,8 +412,7 @@
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        // Stage-aware: backend may include data.substeps with the
-        // precise failing stage. Fallback marks all three failed.
+        // قد يعيد الخادم مراحل فرعية تحدد موضع الفشل بدقة.
         const subs = Array.isArray(data.substeps) && data.substeps.length
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
@@ -443,17 +437,15 @@
     }
   }
 
-  // Render the connection-info card with what the tech needs to
-  // know to reach the router (IP + open ports). Called once apply
-  // succeeds; the same data is used by the copy-to-clipboard button.
+  // عرض بطاقة معلومات الاتصال التي يحتاجها الفنّي للوصول إلى الراوتر.
+  // تُستدعى بعد نجاح التطبيق وتستخدم البيانات نفسها لزر النسخ.
   function renderConnectionCard(conn) {
     const card = page.querySelector("[data-swra-conn-card]");
     const tbody = page.querySelector("[data-swra-conn-rows]");
     if (!card || !tbody) return;
 
-    // ── Temporary user credentials — shown only on apply success.
-    // The password lives only in this DOM, never in DB. Each copy
-    // button wires through HobeCopy so it works on HTTP.
+    // بيانات المستخدم المؤقت تظهر مرة واحدة بعد نجاح التطبيق.
+    // كلمة المرور لا تُحفظ في قاعدة البيانات.
     const creds = conn.tech_user || null;
     const credsBox = page.querySelector("[data-swra-creds]");
     if (credsBox && creds && creds.username) {
@@ -465,12 +457,12 @@
       if (permEl) {
         const permMap = {
           read:  "قراءة فقط",
-          write: "تعديل محدود (بدون system/users)",
-          full:  "تعديل كامل (admin)",
+          write: "تعديل محدود (بدون إعدادات النظام أو المستخدمين)",
+          full:  "تعديل كامل",
         };
         permEl.textContent = permMap[creds.permission] || creds.permission || "—";
       }
-      // Wire copy buttons for user + pass via the HTTP-safe helper.
+      // ربط أزرار النسخ بمساعد النسخ.
       page.querySelectorAll(".swra-creds-copy").forEach((btn) => {
         const which = btn.dataset.which;
         const val = which === "pass" ? (creds.password || "")
@@ -486,17 +478,16 @@
     }
     const services = (conn.services || []).map((s) => {
       const map = {
-        winbox: "Winbox",
-        ssh: "SSH",
-        webfig: "WebFig (HTTP)",
-        api: "API",
+        winbox: "إدارة وينبوكس",
+        ssh: "الدخول النصي",
+        webfig: "واجهة الويب",
+        api: "واجهة الربط البرمجية",
       };
       return `${map[s.name] || s.name} · المنفذ ${s.port}`;
     }).join("<br>");
     const rows = [];
-    // Per-service VPS URLs (preferred — stable, work from anywhere on
-    // the internet). Each row shows the full <host>:<port> the tech
-    // pastes into Winbox / browser / SSH client.
+    // روابط كل خدمة على الخادم العام؛ هذه القيم ينسخها الفنّي
+    // في أداة الإدارة أو المتصفح أو عميل الدخول النصي.
     const urls = Array.isArray(conn.urls) ? conn.urls : [];
     urls.forEach((u) => {
       const label = u.service_ar || u.service || "—";
@@ -509,18 +500,17 @@
         `</td></tr>`
       );
     });
-    // If no per-service URLs were allocated, fall back to showing
-    // just the VPS host so the operator knows where to point.
+    // إذا لم توجد روابط مفصلة للخدمات، نعرض عنوان الخادم العام.
     if (!urls.length && conn.public_host) {
-      rows.push(`<tr><td>عنوان VPS</td><td><code>${conn.public_host}</code>
+      rows.push(`<tr><td>عنوان الخادم العام</td><td><code>${conn.public_host}</code>
         <small style="color:#475569;display:block;margin-top:2px;font-family:Cairo">
           (المنفذ سيُمنح تلقائياً عند تفعيل الخدمة)
         </small></td></tr>`);
     }
     if (conn.vpn_address) {
-      rows.push(`<tr><td>عنوان شبكة VPN الداخلي</td><td><code>${conn.vpn_address}</code>
+      rows.push(`<tr><td>عنوان النفق الداخلي</td><td><code>${conn.vpn_address}</code>
         <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
-          (يصلح فقط لو الفنّي متصل على نفس الـ VPN)
+          (يصلح فقط لو الفنّي متصل على نفس النفق)
         </small></td></tr>`);
     }
     rows.push(`<tr><td>الخدمات والمنافذ</td><td>${services || "—"}</td></tr>`);
@@ -528,9 +518,9 @@
       rows.push(`<tr><td>المدّة</td><td>${conn.ttl_hours} ساعة (إلغاء تلقائي بعدها)</td></tr>`);
     }
     if (conn.source_ip) {
-      rows.push(`<tr><td>IP المصدر المسموح</td><td><code>${conn.source_ip}</code></td></tr>`);
+      rows.push(`<tr><td>عنوان المصدر المسموح</td><td><code>${conn.source_ip}</code></td></tr>`);
     } else {
-      rows.push(`<tr><td>IP المصدر</td><td>أي IP (مسموح من أيّ مصدر)</td></tr>`);
+      rows.push(`<tr><td>عنوان المصدر</td><td>أي عنوان (مسموح من أيّ مصدر)</td></tr>`);
     }
     rows.push(`<tr><td>معرّف الإذن</td><td><code>${grantToken}</code>
       <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
@@ -539,9 +529,7 @@
     tbody.innerHTML = rows.join("");
     card.hidden = false;
 
-    // Wire the «copy everything» button via the HTTP-safe helper.
-    // Builds a multi-line plaintext bundle the operator can paste
-    // into WhatsApp / Telegram for the tech.
+    // ربط زر «نسخ كل المعلومات» بمساعد النسخ.
     const copyBtn = page.querySelector("[data-swra-copy]");
     if (copyBtn && window.HobeCopy) {
       window.HobeCopy.wireButton(copyBtn, () => {
@@ -558,7 +546,7 @@
           lines.push(`اسم المستخدم: ${creds.username}`);
           if (creds.password) lines.push(`كلمة المرور: ${creds.password}`);
         }
-        if (conn.vpn_address) lines.push(`عنوان VPN: ${conn.vpn_address}`);
+        if (conn.vpn_address) lines.push(`عنوان النفق الداخلي: ${conn.vpn_address}`);
         if (conn.ttl_hours) lines.push(`ينتهي بعد: ${conn.ttl_hours} ساعة`);
         else lines.push(`المدة: دائمة`);
         lines.push(`معرّف الإذن: ${grantToken}`);

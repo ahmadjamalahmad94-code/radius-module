@@ -388,6 +388,24 @@ def test_core_operations_do_not_show_old_service_english_labels():
             "Walled Garden",
             "اكتب domain",
         ],
+        Path("app/templates/radius/svc_partials/remote-access.html"): [
+            "<strong>SSH</strong>",
+            "<strong>WebFig</strong>",
+            "من IP محدّد",
+            "Winbox (port",
+            "SSH (port",
+            "WebFig (port",
+            "API (port",
+            "IP المصدر",
+            "أي IP",
+            "RouterOS مؤقّت",
+            "بدون system/users",
+            "Winbox/SSH/WebFig",
+            "صلاحيّات admin",
+            "عنوان VPS",
+            "عنوان شبكة VPN الداخلي",
+            "عنوان VPN:",
+        ],
     }
 
     for path, forbidden in files.items():
