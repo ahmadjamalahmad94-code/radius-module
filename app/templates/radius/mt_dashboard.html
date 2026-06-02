@@ -2076,7 +2076,7 @@
         <div class="mt-page-hero-chips rh-inv-hero-chips">
           <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
           <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
-          <span><i class="fa-solid fa-route"></i> عبر VPN</span>
+          <span><i class="fa-solid fa-route"></i> عبر نفق الإدارة</span>
         
       </div>
       <div class="rh-inv-hero-stats" data-rh-inv-stats hidden>
@@ -3111,13 +3111,13 @@
     if (vpn) {
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان شبكة VPN الداخلي</span>
+          <span class="rh-inv-conn-label">عنوان شبكة نفق الإدارة الداخلي</span>
           <code class="rh-inv-conn-value">${safe(vpn)}</code>
           <button type="button" class="rh-inv-copy-btn"
                   data-rh-inv-copy="${safe(vpn)}" title="نسخ">
             <i class="fa-solid fa-copy"></i>
           </button>
-          <small class="rh-inv-conn-hint">للفنّي على نفس الـ VPN</small>
+          <small class="rh-inv-conn-hint">للفنّي على نفس نفق الإدارة</small>
         </div>`);
     }
 
