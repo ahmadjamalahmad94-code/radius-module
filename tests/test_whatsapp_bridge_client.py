@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from app.radius.services.admin_panel_client import (
+    WHATSAPP_CLOUD_TEST_PATH,
     WHATSAPP_ENQUEUE_PATH,
     WHATSAPP_MESSAGE_STATUS_PATH,
     WHATSAPP_PREFERENCES_SYNC_PATH,
@@ -147,6 +148,23 @@ def test_send_whatsapp_test_posts_signed_to_test_path(app_db):
     body = transport.calls[0]["json_body"]
     assert body["recipient_phone"] == "962790000000"
     assert body["idempotency_key"] == "wa-test-key"
+    _assert_signed_envelope(body)
+
+
+def test_send_whatsapp_cloud_test_posts_signed_to_cloud_path(app_db):
+    transport = MockTransport({"ok": True, "provider_message_id": "wamid.X"})
+    result = _client(transport).send_whatsapp_cloud_test(
+        recipient_phone="962790000000", template_name="hello_world", language="en_US"
+    )
+
+    assert result["ok"] is True                          # bridge transport ok
+    assert result["response"]["ok"] is True              # panel reported ok
+    assert result["response"]["provider_message_id"] == "wamid.X"
+    assert transport.calls[0]["url"] == f"{BASE}{WHATSAPP_CLOUD_TEST_PATH}"
+    body = transport.calls[0]["json_body"]
+    assert body["recipient_phone"] == "962790000000"
+    assert body["template_name"] == "hello_world"
+    assert body["language"] == "en_US"
     _assert_signed_envelope(body)
 
 
