@@ -56,17 +56,17 @@ def router_loop_ingest(router_id: int):
     for row in probes:
         if not isinstance(row, dict):
             continue
-        iface = (row.get("interface") or row.get("name") or "").strip()
+        iface = str(row.get("interface") or row.get("name") or "").strip()
         if not iface:
             continue
         router_loop_probes_repo.upsert_reading(
             tenant_id=tenant_id,
             router_id=int(router_id),
             interface=iface,
-            status=(row.get("status") or "").strip(),
-            lease_ip=(row.get("address") or row.get("lease_ip") or "").strip(),
-            server_ip=(row.get("server") or row.get("gateway")
-                       or row.get("server_ip") or "").strip(),
+            status=str(row.get("status") or "").strip(),
+            lease_ip=str(row.get("address") or row.get("lease_ip") or "").strip(),
+            server_ip=str(row.get("server") or row.get("gateway")
+                          or row.get("server_ip") or "").strip(),
         )
         recorded += 1
 

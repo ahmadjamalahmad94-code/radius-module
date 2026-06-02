@@ -129,10 +129,34 @@ def test_dashboard_renders_shell_and_markers(app, client):
     assert "data-mt-action-identity" in html
     assert "data-mt-action-output" in html
     assert "data-mt-action-form" in html
+    assert "data-rh-loop-tile" in html
+    assert "تتبّع اللوب" in html
+    assert "كشف اللوب عبر مجس DHCP على منافذ الزبائن" in html
 
     # The router name lands in the title + meta strip.
     assert "main-gw" in html
     assert "203.0.113.10" in html
+
+
+def test_dashboard_loop_tile_stays_renderable_with_probe(app, client):
+    _seed_router(app, nas_id=3, name="loop-rtr", address="203.0.113.30")
+    with app.app_context():
+        from app.radius.db.repos import router_loop_probes_repo
+        router_loop_probes_repo.upsert_reading(
+            tenant_id=1,
+            router_id=3,
+            interface="ether2",
+            status="bound",
+            lease_ip="10.0.0.8/24",
+            server_ip="10.0.0.1",
+        )
+    _login(client)
+
+    res = client.get("/admin/radius/mt/3/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "data-rh-loop-tile" in html
+    assert "مفعّل" in html
 
 
 def test_dashboard_returns_404_for_unknown_router(app, client):
