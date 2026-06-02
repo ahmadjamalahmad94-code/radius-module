@@ -1,10 +1,10 @@
-{# NAS devices list — REBUILT N8 (hub-v2). Backend data: items (NasDevice list). #}
+{# قائمة أجهزة الشبكة — تعتمد نفس بيانات الخلفية الحالية. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}NAS{% endblock %}
+{% block title %}أجهزة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
-{% block page_title %}NAS{% endblock %}
+{% block page_title %}أجهزة الشبكة{% endblock %}
 {% block page_sub %}
   <span class="sub">
     {{ items|length }}
@@ -16,7 +16,7 @@
 <div class="hr-page-shell" data-admin-rhythm data-devices-page>
 
 {{ hub.hero(
-  "NAS — أجهزة شبكة RADIUS",
+  "أجهزة الشبكة",
   subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات.",
   icon="server",
   actions_html='
@@ -76,7 +76,7 @@
           <td class="mono small">
             {{ d.auth_port }}/{{ d.acct_port }}
             <div class="hub-text-mute" style="font-size:11px">
-              قطع الجلسة: {{ d.coa_port }} · API: {{ d.api_port }}
+              قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}
             </div>
           </td>
           <td>

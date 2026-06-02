@@ -38,7 +38,7 @@
   {% call hub.section("الجلسات النشطة", icon="wifi", flush=True) %}
     <div class="hub-table-wrap">
       <table class="hub-table" data-testid="active-sessions-table">
-        <thead><tr><th>المستخدم</th><th>جهاز NAS</th><th>عنوان IP</th><th>عنوان MAC</th></tr></thead>
+        <thead><tr><th>المستخدم</th><th>جهاز الشبكة</th><th>العنوان الشبكي</th><th>العنوان الفيزيائي</th></tr></thead>
         <tbody>
           {% for session in snapshot.active_sessions %}
             <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>

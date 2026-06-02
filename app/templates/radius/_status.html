@@ -50,7 +50,7 @@
 
 {{ hub.hero(
   "حالة النظام",
-  subtitle="تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة MikroTik، وعدّادات الكيانات",
+  subtitle="تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة الشبكة، وعدّادات الكيانات",
   icon="heart-pulse"
 ) }}
 
@@ -93,7 +93,7 @@
       sub=("تم الإرسال " ~ s.webhook_deliveries.delivered ~ " · يعاد المحاولة " ~ s.webhook_deliveries.retrying ~ " · فشل " ~ s.webhook_deliveries.failed)
   ) }}
   {{ hub.kpi(
-      "أجهزة MikroTik",
+      "أجهزة الشبكة",
       s.mt_routers.enabled|string ~ " / " ~ s.mt_routers.total|string,
       icon="router",
       variant="green",
@@ -109,7 +109,7 @@
     <i class="fa-solid fa-bolt"></i> فتح سجل الإشعارات
   </a>
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
-    <i class="fa-solid fa-router"></i> إدارة MikroTik
+    <i class="fa-solid fa-router"></i> إدارة الراوترات
   </a>
 </div>
 
@@ -135,9 +135,9 @@
   </div>
 {% endcall %}
 
-{# MikroTik routers detail #}
+{# تفاصيل اتصالات الراوتر #}
 {% if s.mt_routers['items'] %}
-  {% call hub.section("أجهزة MikroTik", icon="router",
+  {% call hub.section("أجهزة الشبكة", icon="router",
                       meta=s.mt_routers['items']|length|string + " اتصال", flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -172,13 +172,13 @@
     </div>
   {% endcall %}
 {% else %}
-  {% call hub.section("أجهزة MikroTik", icon="router") %}
-    {{ hub.empty("لا توجد اتصالات MikroTik", icon="router") }}
+  {% call hub.section("أجهزة الشبكة", icon="router") %}
+    {{ hub.empty("لا توجد اتصالات راوتر", icon="router") }}
   {% endcall %}
 {% endif %}
 
 <div class="hub-text-mute" style="margin-top:10px;font-size:12px;line-height:1.7">
-  للحصول على JSON: <code>?format=json</code> أو <code>Accept: application/json</code>.
+  للاستجابة الفنية استخدم <code>?format=json</code> أو <code>Accept: application/json</code>.
   آخر تحديث: <span class="mono">{{ s.now }}</span>
 </div>
 
