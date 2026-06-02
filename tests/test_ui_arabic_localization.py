@@ -313,6 +313,47 @@ def test_mikrotik_dashboard_does_not_render_raw_operator_json():
         assert token not in combined, f"{token!r} remained in MT dashboard UI"
 
 
+def test_setup_wizard_v3_operator_copy_is_arabic():
+    template = Path("app/templates/radius/setup_wizard_v3.html").read_text(
+        encoding="utf-8"
+    )
+    script = Path("app/static/js/setup_wizard_v3.js").read_text(
+        encoding="utf-8"
+    )
+    forbidden_template = [
+        "<strong>Hotspot",
+        "<strong>PPPoE",
+        "<strong>Mixed",
+        "<strong>VLAN",
+        "<strong>Broadband",
+        "<strong>Walled Garden",
+        "<label>VLAN ID</label>",
+        "توليد سكربت Hotspot",
+        "توليد سكربت Broadband",
+        "منافذ Hotspot",
+        "منافذ PPPoE",
+        "IPs التي",
+    ]
+    forbidden_script = [
+        "اختر على الأقل منفذاً واحداً للـ Hotspot.",
+        "تعذّر توليد سكربت Hotspot.",
+        "سكربت Hotspot جاهز",
+        "إعدادات Hotspot",
+        "اختر على الأقل منفذاً واحداً لـ PPPoE.",
+        "تعذّر توليد سكربت Broadband.",
+        "سكربت Broadband جاهز",
+        "إعدادات PPPoE",
+        "state=BLOCKED",
+        "state=${run.v3_state}",
+        "ابدأ run",
+    ]
+
+    for token in forbidden_template:
+        assert token not in template, f"{token!r} remained in v3 template"
+    for token in forbidden_script:
+        assert token not in script, f"{token!r} remained in v3 script"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

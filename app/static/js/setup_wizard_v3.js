@@ -757,7 +757,7 @@
       const interfaces = collectHotspotInterfaces();
       if (!interfaces.length) {
         toast(
-          "اختر على الأقل منفذاً واحداً للـ Hotspot.",
+          "اختر على الأقل منفذاً واحداً لبوابة دخول المشتركين.",
           "error",
         );
         return;
@@ -789,14 +789,14 @@
       );
       const plan = data.plan || {};
       if (!plan.can_apply) {
-        toast("تعذّر توليد سكربت Hotspot. راجع المدخلات.", "error");
+        toast("تعذّر توليد سكربت بوابة الدخول. راجع المدخلات.", "error");
         return;
       }
       showScript("hotspot", plan.script);
       const ifaceList = interfaces.join(", ");
       toast(
-        `✅ سكربت Hotspot جاهز لـ ${interfaces.length} منفذ `
-        + `(${ifaceList}). ⚠️ السكربت سيحذف أي إعدادات Hotspot `
+        `✅ سكربت بوابة الدخول جاهز لـ ${interfaces.length} منفذ `
+        + `(${ifaceList}). ⚠️ السكربت سيحذف أي إعدادات بوابة دخول `
         + `سابقة لـ HobeRadius على نفس المنافذ.`,
         "ok",
       );
@@ -828,7 +828,7 @@
       const interfaces = collectBroadbandInterfaces();
       if (!interfaces.length) {
         toast(
-          "اختر على الأقل منفذاً واحداً لـ PPPoE.",
+          "اختر على الأقل منفذاً واحداً لاشتراكات البرودباند.",
           "error",
         );
         return;
@@ -849,13 +849,13 @@
       );
       const plan = data.plan || {};
       if (!plan.can_apply) {
-        toast("تعذّر توليد سكربت Broadband. راجع المدخلات.", "error");
+        toast("تعذّر توليد سكربت البرودباند. راجع المدخلات.", "error");
         return;
       }
       showScript("broadband", plan.script);
       toast(
-        `✅ سكربت Broadband جاهز لـ ${interfaces.length} منفذ. `
-        + `⚠️ السكربت سيحذف أي إعدادات PPPoE سابقة لـ HobeRadius.`,
+        `✅ سكربت البرودباند جاهز لـ ${interfaces.length} منفذ. `
+        + `⚠️ السكربت سيحذف أي إعدادات برودباند سابقة لـ HobeRadius.`,
         "ok",
       );
     } catch (err) {
@@ -913,10 +913,8 @@
           api_password: state.apiPassword || getValue("[data-swz-api-pass]"),
         },
       );
-      // Backend may return HTTP 200 with run.v3_state=BLOCKED
-      // when state_json is missing required inputs (router_name
-      // or router_vpn_ip). Don't celebrate prematurely — check
-      // the actual run state.
+      // قد يرجع الخادم نجاح HTTP رغم أن حالة العملية محجوبة
+      // عند نقص بيانات تشغيل أساسية. لذلك نفحص حالة العملية نفسها.
       const run = (data && data.run) || {};
       if (run.v3_state === "BLOCKED") {
         const diags = run.diagnostics || [];
@@ -924,14 +922,14 @@
           ? diags[diags.length - 1].ar
             || diags[diags.length - 1].code
             || "تعذّر التسجيل"
-          : "تعذّر التسجيل (state=BLOCKED)";
+          : "تعذّر التسجيل: بيانات التشغيل غير مكتملة";
         toast("⛔ التسجيل فشل: " + reason, "error");
         return;
       }
       if (run.v3_state && run.v3_state !== "COMPLETE") {
         toast(
-          `⚠️ التسجيل لم يكتمل (state=${run.v3_state}).`
-          + ` راجع لوحة التشخيص أو ابدأ run جديداً.`,
+          "⚠️ التسجيل لم يكتمل."
+          + " راجع لوحة التشخيص أو ابدأ عملية جديدة.",
           "error",
         );
         return;

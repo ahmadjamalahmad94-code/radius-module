@@ -11,7 +11,7 @@ Steps:
   2. مصدر الإنترنت — WAN type + dynamic fields per source
   3. الربط بالخادم — generate unified script + paste-back key
   4. التحقّق من الاتصال — wait for handshake / confirm
-  5. خدمات إضافية — optional cards (Hotspot / Broadband / etc.)
+  5. خدمات إضافية — بطاقات اختيارية للخدمات التشغيلية
   6. تسجيل وإنهاء — API user + final commit
 #}
 
@@ -103,22 +103,22 @@ Steps:
         <label class="swz-radio">
           <input type="radio" name="router_type" value="hotspot" checked>
           <span class="swz-radio-card">
-            <strong>Hotspot (وصول عام)</strong>
+            <strong>بوابة دخول المشتركين</strong>
             <small>صفحة دخول للمستخدمين عبر WiFi/كابل</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="router_type" value="pppoe">
           <span class="swz-radio-card">
-            <strong>PPPoE (اشتراكات منزليّة)</strong>
+            <strong>اشتراكات برودباند منزليّة</strong>
             <small>عملاء يستخدمون اسم مستخدم وكلمة سرّ</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="router_type" value="mixed">
           <span class="swz-radio-card">
-            <strong>Mixed (الاثنين معاً)</strong>
-            <small>Hotspot + PPPoE على نفس الراوتر</small>
+            <strong>الخدمتان معاً</strong>
+            <small>بوابة دخول المشتركين واشتراكات البرودباند على نفس الراوتر</small>
           </span>
         </label>
       </div>
@@ -146,23 +146,23 @@ Steps:
           <input type="radio" name="net_source" value="dhcp" checked
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>تلقائي (DHCP)</strong>
-            <small>المزوّد يعطي IP تلقائياً</small>
+            <strong>عنوان تلقائي</strong>
+            <small>المزوّد يعطي عنوان الإنترنت تلقائياً</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="net_source" value="static"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>IP ثابت</strong>
-            <small>المزوّد أعطاك IP وبوّابة محدّدة</small>
+            <strong>عنوان ثابت</strong>
+            <small>المزوّد أعطاك عنواناً وبوّابة محدّدة</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="net_source" value="pppoe"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>PPPoE</strong>
+            <strong>اتصال بحساب من المزوّد</strong>
             <small>اسم مستخدم + كلمة مرور من المزوّد</small>
           </span>
         </label>
@@ -170,8 +170,8 @@ Steps:
           <input type="radio" name="net_source" value="vlan"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>VLAN</strong>
-            <small>وصلة موسومة بـ VLAN ID</small>
+            <strong>شبكة افتراضية موسومة</strong>
+            <small>وصلة مخصصة برقم شبكة افتراضية</small>
           </span>
         </label>
       </div>
@@ -246,20 +246,20 @@ Steps:
 
     <div class="swz-source-fields" data-swz-source-fields="vlan" hidden>
       <div class="swz-field">
-        <label>المنفذ الأب (Parent interface)</label>
+        <label>المنفذ الأساسي</label>
         <input type="text" data-swz-vlan-parent placeholder="ether1"
                value="ether1" autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>VLAN ID</label>
+        <label>رقم الشبكة الافتراضية</label>
         <input type="number" data-swz-vlan-id min="1" max="4094"
                placeholder="35" dir="ltr" autocomplete="off">
       </div>
       <div class="swz-field">
         <label>وضع العنوان</label>
         <select data-swz-vlan-mode>
-          <option value="dhcp">DHCP (تلقائي)</option>
-          <option value="static">IP ثابت</option>
+          <option value="dhcp">عنوان تلقائي</option>
+          <option value="static">عنوان ثابت</option>
         </select>
       </div>
       <div class="swz-vlan-static" hidden>
@@ -318,23 +318,23 @@ Steps:
   {# ─── Step 3: VPN / RADIUS bootstrap ───────────── #}
   <section class="swz-step" data-swz-step="3">
     <header>
-      <h2>الربط بالخادم (WireGuard + RADIUS)</h2>
-      <p>سيُولّد سكربت موحَّد يربط الراوتر بالخادم عبر VPN
-         آمن ويُهيّء RADIUS. لا تحتاج لكتابة أي شيء.</p>
+      <h2>الربط بالخادم الآمن</h2>
+      <p>سيُولّد سكربت موحَّد يربط الراوتر بالخادم عبر نفق
+         آمن ويُهيّئ المصادقة. لا تحتاج لكتابة أي شيء.</p>
     </header>
 
     <div class="swz-script-card" data-swz-step3-script hidden>
       <header>
         <strong>✅ سكربت الربط جاهز</strong>
-        <p>يحتوي السكربت على WireGuard + مستخدم API + RADIUS
-           بالكامل. <strong>تنبيه:</strong> الـ MikroTik Terminal
+        <p>يحتوي السكربت على النفق الآمن ومستخدم الربط والمصادقة
+           بالكامل. <strong>تنبيه:</strong> شاشة أوامر الراوتر
            يفقد السطور الطويلة عند اللصق المباشر — استخدم
-           طريقة <code dir="ltr">/import</code> أدناه (موصى بها).</p>
+           طريقة الاستيراد أدناه (موصى بها).</p>
       </header>
 
       <div class="swz-fetch-import-card">
-        <strong>🚀 الطريقة الموصى بها — fetch &amp; import</strong>
-        <p>انسخ السطر التالي والصقه في MikroTik Terminal:</p>
+        <strong>🚀 الطريقة الموصى بها — تحميل ثم استيراد</strong>
+        <p>انسخ السطر التالي والصقه في شاشة أوامر الراوتر:</p>
         <pre data-swz-fetch-import dir="ltr"></pre>
         <button type="button" class="swz-btn swz-btn-success"
                 data-swz-copy-script="fetch_import">
@@ -342,7 +342,7 @@ Steps:
         </button>
         <small>أمران مفصولان بفاصلة منقوطة <code dir="ltr">;</code>
           — الراوتر يحمّل الملفّ ثم ينفّذه تتابعياً. سطر واحد
-          يضمن عدم فقد <code dir="ltr">/import</code> أثناء
+          يضمن عدم فقد أمر الاستيراد أثناء
           عرض شريط تقدّم التنزيل.</small>
       </div>
 
@@ -356,7 +356,7 @@ Steps:
           اللصق. لو لاحظت أن
           <code dir="ltr">/user add</code> أو
           <code dir="ltr">/radius add</code> لم يتنفّذا، عُد
-          إلى طريقة الـ <code dir="ltr">fetch + import</code>
+          إلى طريقة التحميل ثم الاستيراد
           أعلاه.
         </p>
         <button type="button" class="swz-btn swz-btn-ghost"
@@ -371,10 +371,10 @@ Steps:
        operator sees them only if they explicitly look. #}
     <div class="swz-radius-secret-card" data-swz-radius-secret hidden>
       <header>
-        <strong>🔐 ربط RADIUS بالخادم</strong>
+        <strong>🔐 ربط المصادقة بالخادم</strong>
         <p>اضغط الزر لإكمال ربط الراوتر بـ FreeRADIUS — سيتم
-           إعداد كل شيء تلقائياً على الـ VPS بدون الحاجة لـ
-           SSH أو نسخ يدوي.</p>
+           إعداد كل شيء تلقائياً على الخادم بدون الحاجة للدخول
+           اليدوي أو النسخ اليدوي.</p>
       </header>
       <div class="swz-radius-actions">
         <button type="button" class="swz-btn swz-btn-success"
@@ -390,10 +390,8 @@ Steps:
       <details class="swz-radius-advanced">
         <summary>⚙️ تفاصيل تقنيّة (لا حاجة لها عادةً)</summary>
         <p>إذا فشل الزر التلقائي أو احتجت لتطبيق يدوي:
-          انسخ السطر التالي وأضفه إلى
-          <code dir="ltr">/etc/freeradius/clients.conf</code>
-          على الـ VPS، ثم
-          <code dir="ltr">docker compose ... restart freeradius</code>.
+          انسخ السطر التالي وأضفه إلى ملف عملاء خدمة المصادقة
+          على الخادم، ثم أعد تشغيل الخدمة.
         </p>
         <pre data-swz-clients-conf dir="ltr"></pre>
         <button type="button" class="swz-btn swz-btn-ghost"
@@ -427,15 +425,15 @@ Steps:
   {# ─── Step 4: Verify handshake ─────────────────── #}
   <section class="swz-step" data-swz-step="4">
     <header>
-      <h2>التحقّق من اتصال VPN</h2>
-      <p>سنتأكّد أن الراوتر يتبادل WireGuard handshake
-         مع الخادم. هذا قد يستغرق 10–30 ثانية.</p>
+      <h2>التحقّق من اتصال النفق الآمن</h2>
+      <p>سنتأكّد أن الراوتر بدأ الاتصال الآمن مع الخادم.
+         هذا قد يستغرق 10–30 ثانية.</p>
     </header>
 
     <div class="swz-verify-status" data-swz-verify-status>
       <div class="swz-verify-spinner">⏳</div>
-      <strong>بانتظار handshake من الراوتر...</strong>
-      <p>تأكّد أن السكربت قد لُصق على الراوتر وأن منفذ UDP
+      <strong>بانتظار إشارة الاتصال من الراوتر...</strong>
+      <p>تأكّد أن السكربت قد لُصق على الراوتر وأن منفذ الاتصال
          51820 مفتوح من جهة المزوّد.</p>
     </div>
 
@@ -460,12 +458,12 @@ Steps:
 
     <div class="swz-services-grid">
 
-      {# Hotspot #}
+      {# خدمة بوابة الدخول #}
       <article class="swz-service-card" data-swz-service="hotspot">
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="hotspot">
-            <span><strong>Hotspot</strong> — صفحة دخول للمستخدمين</span>
+            <span><strong>بوابة دخول المشتركين</strong> — صفحة دخول للمستخدمين</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
@@ -476,10 +474,10 @@ Steps:
                    autocomplete="off">
             <small>المنفذ الذي يخرج منه الراوتر للإنترنت
               (نفس المنفذ من الخطوة 2). نحتاجه لإضافة قاعدة
-              NAT تربط Hotspot بالإنترنت.</small>
+              قاعدة خروج تربط بوابة الدخول بالإنترنت.</small>
           </div>
           <div class="swz-field">
-            <label>منافذ Hotspot (اختر واحداً أو أكثر)</label>
+            <label>منافذ بوابة الدخول (اختر واحداً أو أكثر)</label>
 
             {# Auto-discovery panel — shown before user picks #}
             <div class="swz-discover-panel" data-swz-discover-panel>
@@ -589,7 +587,7 @@ Steps:
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-hotspot">
-            توليد سكربت Hotspot
+            توليد سكربت بوابة الدخول
           </button>
           <div class="swz-script-card" data-swz-hotspot-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
@@ -605,21 +603,21 @@ Steps:
         </div>
       </article>
 
-      {# Broadband / PPPoE server #}
+      {# خدمة اشتراكات البرودباند #}
       <article class="swz-service-card" data-swz-service="broadband">
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="broadband">
-            <span><strong>Broadband (PPPoE server)</strong> — اشتراكات بعيدة</span>
+            <span><strong>اشتراكات برودباند</strong> — اشتراكات بعيدة</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>منافذ PPPoE (اختر واحداً أو أكثر)</label>
+            <label>منافذ اشتراكات البرودباند (اختر واحداً أو أكثر)</label>
 
             <div class="swz-discover-mini" data-swz-bb-discover-mini>
               <p>
-                💡 إذا لم تقم بالاكتشاف في بطاقة Hotspot،
+                💡 إذا لم تقم بالاكتشاف في بطاقة بوابة الدخول،
                 اضغط هنا لجلب منافذ الراوتر الحقيقيّة:
               </p>
               <button type="button" class="swz-btn swz-btn-ghost"
@@ -651,9 +649,9 @@ Steps:
               </label>
             </div>
             <small>
-              المنفذ/المنافذ التي يتّصل بها مستخدمو PPPoE.
+              المنفذ/المنافذ التي يتّصل بها مستخدمو اشتراكات البرودباند.
               تُستثنى منفذ الإنترنت (WAN) و hr-wg تلقائياً.
-              يمكن إعادة استخدام منفذ اكتُشف في الـ Hotspot.
+              يمكن إعادة استخدام منفذ اكتُشف في بوابة الدخول.
             </small>
             <input type="text" data-swz-bb-iface-custom dir="ltr"
                    placeholder="منافذ إضافيّة مفصولة بفاصلة"
@@ -663,7 +661,7 @@ Steps:
             <label>عنوان البوّابة المحليّة</label>
             <input type="text" data-swz-bb-local dir="ltr"
                    placeholder="192.168.50.1" value="192.168.50.1">
-            <small>عنوان الراوتر الخاص الذي يظهر لعملاء PPPoE
+            <small>عنوان الراوتر الخاص الذي يظهر لعملاء البرودباند
               كبوّابة افتراضيّة.</small>
           </div>
           <div class="swz-field">
@@ -671,11 +669,11 @@ Steps:
             <input type="text" data-swz-bb-pool dir="ltr"
                    placeholder="192.168.50.0/24"
                    value="192.168.50.0/24">
-            <small>الـ IPs التي توزَّع تلقائياً للعملاء.</small>
+            <small>العناوين التي توزَّع تلقائياً للعملاء.</small>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-broadband">
-            توليد سكربت Broadband
+            توليد سكربت البرودباند
           </button>
           <div class="swz-script-card" data-swz-broadband-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
@@ -691,12 +689,12 @@ Steps:
         </div>
       </article>
 
-      {# Walled garden #}
+      {# المواقع المسموحة قبل الدخول #}
       <article class="swz-service-card" data-swz-service="walled_garden">
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="walled_garden">
-            <span><strong>Walled Garden</strong> — مواقع مسموحة قبل الدخول</span>
+            <span><strong>مواقع مسموحة قبل الدخول</strong> — فتح وجهات محددة بدون تسجيل دخول</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
