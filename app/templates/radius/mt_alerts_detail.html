@@ -6,6 +6,20 @@
 {% block page_title %}تنبيه #{{ alert.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ alert.rule }} · {{ alert.status }}</span>{% endblock %}
 
+{% macro readable_value(value) -%}
+  {%- if value is mapping -%}
+    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+  {%- elif value is sequence and value is not string -%}
+    <span class="sub">قائمة — {{ value|length }} بند</span>
+  {%- elif value is boolean -%}
+    {{ 'نعم' if value else 'لا' }}
+  {%- elif value is none -%}
+    —
+  {%- else -%}
+    {{ value }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 {% endblock %}
@@ -77,7 +91,21 @@
       <h3><i class="fa-solid fa-microscope"></i> الدليل</h3>
     </header>
     <div class="mt-card-body">
-      <pre class="mt-logs-output">{{ alert.evidence | tojson(indent=2) }}</pre>
+      {% if alert.evidence is mapping %}
+      <ul class="mt-program-summary">
+        {% for key, value in alert.evidence.items() %}
+        <li><strong>{{ key|string|replace('_', ' ') }}</strong>: {{ readable_value(value) }}</li>
+        {% endfor %}
+      </ul>
+      {% elif alert.evidence is sequence and alert.evidence is not string %}
+      <ul class="mt-program-summary">
+        {% for value in alert.evidence %}
+        <li>بند {{ loop.index }}: {{ readable_value(value) }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>{{ readable_value(alert.evidence) }}</p>
+      {% endif %}
     </div>
   </section>
   {% endif %}

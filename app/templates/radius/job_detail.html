@@ -12,6 +12,41 @@
 {% block page_title %}مهمة #{{ job.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ job.type }} · {{ job.status }}</span>{% endblock %}
 
+{% macro readable_value(value) -%}
+  {%- if value is mapping -%}
+    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+  {%- elif value is sequence and value is not string -%}
+    <span class="sub">قائمة — {{ value|length }} بند</span>
+  {%- elif value is boolean -%}
+    {{ 'نعم' if value else 'لا' }}
+  {%- elif value is none -%}
+    —
+  {%- else -%}
+    {{ value }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro readable_panel(title, data, testid) -%}
+  <details class="mt-health-evidence" {{ 'open' if testid == 'data-mt-job-result' else '' }} {{ testid }}>
+    <summary>{{ title }}</summary>
+    {% if data is mapping %}
+      <ul class="mt-program-summary">
+        {% for key, value in data.items() %}
+        <li><strong>{{ key|string|replace('_', ' ') }}</strong>: {{ readable_value(value) }}</li>
+        {% endfor %}
+      </ul>
+    {% elif data is sequence and data is not string %}
+      <ul class="mt-program-summary">
+        {% for value in data %}
+        <li>بند {{ loop.index }}: {{ readable_value(value) }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>{{ readable_value(data) }}</p>
+    {% endif %}
+  </details>
+{%- endmacro %}
+
 {% block content %}
 
 <section class="mt-dashboard" data-mt-job-detail data-mt-job-id="{{ job.id }}">
@@ -59,17 +94,11 @@
       {% endif %}
 
       {% if job.result %}
-      <details class="mt-health-evidence" data-mt-job-result open>
-        <summary>تفاصيل النتيجة</summary>
-        <pre>{{ job.result | tojson(indent=2) }}</pre>
-      </details>
+      {{ readable_panel('تفاصيل النتيجة', job.result, 'data-mt-job-result') }}
       {% endif %}
 
       {% if job.payload %}
-      <details class="mt-health-evidence" data-mt-job-payload>
-        <summary>محتوى المهمة</summary>
-        <pre>{{ job.payload | tojson(indent=2) }}</pre>
-      </details>
+      {{ readable_panel('محتوى المهمة', job.payload, 'data-mt-job-payload') }}
       {% endif %}
     </div>
   </section>
