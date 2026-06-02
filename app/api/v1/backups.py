@@ -42,7 +42,7 @@ def backups_run():
 def backups_google_drive_connect():
     return fail(
         "not_implemented",
-        "ربط Google Drive عبر OAuth غير مفعل حاليًا من هذا المسار.",
+        "ربط جوجل درايف عبر بروتوكول التفويض غير مفعل حاليًا من هذا المسار.",
         status=501,
         details={
             "domain": "backups",

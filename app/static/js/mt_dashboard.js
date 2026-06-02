@@ -1053,8 +1053,8 @@
   if (actionButtons.backup) {
     actionButtons.backup.addEventListener("click", () => {
       openForm("backup", `
-        <label>اسم النسخة (اختياري — افتراضي backup-YYYYMMDD-HHMMSS)
-          <input type="text" name="name" placeholder="weekly-1"
+        <label>اسم النسخة (اختياري — الافتراضي اسم تلقائي بتاريخ اليوم)
+          <input type="text" name="name" placeholder="20260602-01"
                  maxlength="64" data-mt-backup-name>
         </label>
         <div class="mt-action-row">
@@ -1089,7 +1089,7 @@
                  data-mt-ping-count>
         </label>
         <div class="mt-action-row">
-          <button type="submit">شغّل ping</button>
+          <button type="submit">شغّل فحص الاتصال</button>
           <button type="button" class="mt-cancel">إلغاء</button>
         </div>
       `);
@@ -1114,8 +1114,8 @@
   if (actionButtons.reboot) {
     actionButtons.reboot.addEventListener("click", () => {
       openForm("reboot", `
-        <label>سبب (اختياري — يُسجَّل في audit)
-          <input type="text" name="reason" placeholder="kernel panic" data-mt-reboot-reason>
+        <label>سبب (اختياري — يُسجَّل في سجل التدقيق)
+          <input type="text" name="reason" placeholder="تعليق النظام" data-mt-reboot-reason>
         </label>
         <label class="mt-action-confirm">
           <input type="checkbox" data-mt-reboot-confirm>
@@ -1146,13 +1146,13 @@
   if (actionButtons.identity) {
     actionButtons.identity.addEventListener("click", () => {
       openForm("identity", `
-        <label>الاسم الجديد ([A-Za-z0-9._-] حتى 32 حرفًا)
+        <label>الاسم الجديد (حروف لاتينية وأرقام ورموز النقطة والشرطة فقط، حتى 32 حرفًا)
           <input type="text" name="name" maxlength="32"
                  pattern="[A-Za-z0-9._\\-]{1,32}"
-                 placeholder="main-gw" data-mt-identity-name required>
+                 placeholder="r-01" data-mt-identity-name required>
         </label>
         <label>سبب (اختياري)
-          <input type="text" name="reason" placeholder="rename for clarity" data-mt-identity-reason>
+          <input type="text" name="reason" placeholder="توضيح اسم الجهاز" data-mt-identity-reason>
         </label>
         <label class="mt-action-confirm">
           <input type="checkbox" data-mt-identity-confirm>
@@ -1195,7 +1195,7 @@
                  data-mt-trace-hops>
         </label>
         <div class="mt-action-row">
-          <button type="submit">شغّل Traceroute</button>
+          <button type="submit">شغّل تتبّع المسار</button>
           <button type="button" class="mt-cancel">إلغاء</button>
         </div>
       `);

@@ -1735,7 +1735,7 @@ class OperationsService:
                 db().backup(dest)
             verified = target.exists() and target.stat().st_size > 0
             status = "success" if verified else "failed"
-            message = "Local SQLite backup verified." if verified else "Backup file was not created."
+            message = "تم إنشاء نسخة SQLite محلية والتحقق منها." if verified else "لم يتم إنشاء ملف النسخة الاحتياطية."
         except sqlite3.Error as exc:
             verified = False
             status = "failed"
@@ -1759,7 +1759,7 @@ class OperationsService:
             self.prune_local_backups_by_count(tenant_id=tenant_id)
         except Exception:  # noqa: BLE001 — retention must never break a backup run
             pass
-        # Best-effort: push to the operator's Google Drive if connected.
+        # محاولة غير إلزامية: ارفع النسخة إلى جوجل درايف إذا كان مربوطًا.
         if verified:
             try:
                 from . import google_drive as gd
@@ -1904,7 +1904,7 @@ class OperationsService:
 
     def run_full_backup(self, *, tenant_id: int, actor: str) -> dict:
         """Run local backup, then upload to the panel (if paid), and report
-        Google Drive. Returns {"ok": bool, "steps": [{key,label,status,message}]}."""
+        جوجل درايف. يرجع خطوات الفحص بدون تنفيذ عمليات كتابة."""
         steps: list[dict] = []
         local = self.run_local_backup(tenant_id=tenant_id, actor=actor)
         local_ok = bool(local.get("verified"))
@@ -1939,7 +1939,7 @@ class OperationsService:
             except Exception as exc:  # noqa: BLE001
                 steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(exc)})
 
-        # Drive: the customer connects it on the panel (portal OAuth), and the
+        # درايف: العميل يربطه من لوحة التراخيص، والريدياس يقرأ الحالة فقط.
         # panel forwards uploaded backups to that Drive in the background — so
         # read the PANEL's Drive status, not the radius's dormant device flow.
         connected = False
@@ -1957,12 +1957,12 @@ class OperationsService:
             except Exception:  # noqa: BLE001
                 connected = False
         if not connected:
-            steps.append({"key": "drive", "label": "Google Drive", "status": "skipped", "message": "غير مربوط."})
+            steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped", "message": "غير مربوط."})
         elif panel_ok:
-            steps.append({"key": "drive", "label": "Google Drive", "status": "success",
+            steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
                           "message": "سيُرفع تلقائيًا إلى درايفك في الخلفية."})
         else:
-            steps.append({"key": "drive", "label": "Google Drive", "status": "skipped",
+            steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
                           "message": "يتطلّب نجاح الرفع إلى اللوحة."})
         return {"ok": local_ok, "steps": steps}
 

@@ -57,7 +57,7 @@ def test_backups_web_status_and_manual_local_run(client):
     page = client.get("/admin/radius/backups")
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert "Google Drive" in html
+    assert "جوجل درايف" in html
     assert "غير مفعل" in html
 
     token = _csrf(client, "/admin/radius/backups")
@@ -68,4 +68,4 @@ def test_backups_web_status_and_manual_local_run(client):
     )
     assert run.status_code == 200
     run_html = run.get_data(as_text=True)
-    assert "Local SQLite backup verified." in run_html or "تم إنشاء نسخة" in run_html
+    assert "تم إنشاء نسخة" in run_html

@@ -222,6 +222,25 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_mikrotik_operation_forms_do_not_keep_old_english_placeholders():
+    content = Path("app/static/js/mt_dashboard.js").read_text(encoding="utf-8")
+    forbidden = [
+        'placeholder="weekly-1"',
+        'placeholder="backup-01"',
+        'placeholder="kernel panic"',
+        'placeholder="main-gw"',
+        'placeholder="rename for clarity"',
+        ">شغّل ping<",
+        ">شغّل Traceroute<",
+        "يُسجَّل في audit",
+        "[A-Za-z0-9._-] حتى 32 حرفًا",
+        "افتراضي backup-YYYYMMDD-HHMMSS",
+    ]
+
+    for token in forbidden:
+        assert token not in content, f"{token!r} remained in mt_dashboard.js"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

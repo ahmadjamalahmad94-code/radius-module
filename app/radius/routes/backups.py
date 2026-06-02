@@ -126,8 +126,8 @@ def backups_schedule():
 
 
 def _gdrive_status(tid: int) -> dict:
-    """Google Drive connection lives on the panel (per-customer). Fetch it via
-    the bridge so the radius page can reflect whether it's connected."""
+    """اتصال جوجل درايف يعيش في لوحة التراخيص لكل عميل.
+    نقرأه عبر جسر الربط حتى تعرض صفحة الريدياس حالته الفعلية."""
     try:
         from ..services.admin_panel_client import AdminPanelClient
         r = AdminPanelClient().fetch_google_drive_status()
@@ -190,10 +190,10 @@ def backups_upload_panel():
 
 
 def backups_gdrive_save():
-    """Save the Google OAuth client (device-type) id/secret for Drive."""
+    """احفظ بيانات عميل جوجل اللازمة لربط درايف."""
     from ..services import google_drive as gd
     gd.save_client(_tid(), request.form.get("client_id") or "", request.form.get("client_secret") or "")
-    flash("تم حفظ بيانات Google. اضغط «ربط Google Drive» للبدء.", "success")
+    flash("تم حفظ بيانات جوجل. اضغط «ربط جوجل درايف» للبدء.", "success")
     return redirect(url_for("radius.backups"))
 
 
@@ -203,9 +203,9 @@ def backups_gdrive_start():
     result = gd.start_device_flow(_tid())
     if not result.get("ok"):
         if result.get("error") == "not_configured":
-            flash("أدخل Client ID و Client Secret من Google أولاً.", "error")
+            flash("أدخل معرّف العميل وسر العميل من جوجل أولاً.", "error")
         else:
-            flash(f"تعذّر بدء الربط مع Google: {result.get('error')} {result.get('detail','')}", "error")
+            flash(f"تعذّر بدء الربط مع جوجل: {result.get('error')} {result.get('detail','')}", "error")
         return redirect(url_for("radius.backups"))
     # show the pairing instructions on the backups page
     flash(
@@ -224,7 +224,7 @@ def backups_gdrive_poll():
         return jsonify(result)
     if result.get("ok"):
         session.pop("gdrive_pairing", None)
-        flash(f"تم ربط Google Drive بنجاح ({result.get('email') or ''}). ستُرفع نسخك إلى درايفك تلقائيًا.", "success")
+        flash(f"تم ربط جوجل درايف بنجاح ({result.get('email') or ''}). ستُرفع نسخك إلى درايفك تلقائيًا.", "success")
     elif result.get("pending"):
         flash("لم يكتمل التفويض بعد. أكمل الموافقة على google.com/device ثم أعد المحاولة.", "warning")
     else:
@@ -236,7 +236,7 @@ def backups_gdrive_disconnect():
     from ..services import google_drive as gd
     gd.disconnect(_tid())
     session.pop("gdrive_pairing", None)
-    flash("تم فصل Google Drive.", "info")
+    flash("تم فصل جوجل درايف.", "info")
     return redirect(url_for("radius.backups"))
 
 
