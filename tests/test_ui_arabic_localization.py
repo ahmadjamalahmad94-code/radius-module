@@ -235,6 +235,9 @@ def test_mikrotik_operation_forms_do_not_keep_old_english_placeholders():
         "يُسجَّل في audit",
         "[A-Za-z0-9._-] حتى 32 حرفًا",
         "افتراضي backup-YYYYMMDD-HHMMSS",
+        "API token",
+        "تعذّر الاتصال بالـ API",
+        "قناة API آمنة",
     ]
 
     for token in forbidden:

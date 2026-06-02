@@ -93,8 +93,8 @@
   if (!CFG.apiToken) {
     setStatus(
       "error",
-      "لا يوجد API token مُهيَّأ",
-      "اضبط HOBERADIUS_API_TOKENS في البيئة ثم أعد تحميل الصفحة.",
+      "لا يوجد رمز واجهة الربط مُهيَّأ",
+      "اضبط رمز واجهة الربط في إعدادات البيئة ثم أعد تحميل الصفحة.",
     );
     return; // Without a token every fetch will 401 — bail loudly.
   }
@@ -250,7 +250,7 @@
         const msg = body && body.error && body.error.message
           ? body.error.message
           : ("HTTP " + res.status);
-        setStatus("error", "تعذّر الاتصال بالـ API", msg);
+        setStatus("error", "تعذّر الاتصال بواجهة الربط", msg);
         return;
       }
       const data = body.data || {};
@@ -866,37 +866,37 @@
       { label: "إرسال النتيجة",                 hint: "جلب الجدول النهائي", t: 400 },
     ],
     "dns-resolve": [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "استعلام DNS",                    hint: "سؤال خادم DNS عن الاسم", t: 800 },
       { label: "جلب النتيجة",                    hint: "العناوين IP المُحلَّلة", t: 200 },
     ],
     "dns-flush": [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "تنفيذ /ip/dns/cache/flush",      hint: "إفراغ كاش الـ DNS", t: 500 },
       { label: "تأكيد العملية",                  hint: "الكاش فارغ الآن", t: 200 },
     ],
     "clock-sync": [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "إيقاف عميل NTP مؤقّتاً",         hint: "خطوة تحضيرية", t: 400 },
       { label: "إعادة تفعيله للمزامنة",          hint: "العميل يربط مع pool خوادم NTP", t: 1000 },
       { label: "قراءة الساعة الجديدة",           hint: "للتحقّق", t: 300 },
     ],
     backup: [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 400 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 400 },
       { label: "تنفيذ /system/backup/save",       hint: "الراوتر يكتب الملف على الذاكرة الداخلية", t: 1500 },
       { label: "التحقق من إنشاء الملف",          hint: "قائمة /file بعد الحفظ", t: 600 },
     ],
     reboot: [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "إرسال أمر /system/reboot",        hint: "الراوتر يبدأ الإقلاع", t: 500 },
     ],
     identity: [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "تعديل /system/identity",          hint: "تطبيق الاسم الجديد", t: 400 },
       { label: "تأكيد التغيير",                   hint: "قراءة الاسم بعد التعديل", t: 300 },
     ],
     disconnect: [
-      { label: "الاتصال بالراوتر",              hint: "قناة API آمنة", t: 300 },
+      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
       { label: "إزالة الجلسة من /active",        hint: "كَيك الجلسة", t: 400 },
     ],
   };
@@ -911,7 +911,7 @@
   function showProgress(kind) {
     if (!actionResEl) return () => {};
     const stages = PROGRESS_STAGES[kind] || [
-      { label: "الاتصال بالراوتر",        hint: "قناة API آمنة", t: 400 },
+      { label: "الاتصال بالراوتر",        hint: "قناة ربط آمنة", t: 400 },
       { label: "تنفيذ الأمر",              hint: "يعمل…", t: 1500 },
       { label: "جلب النتيجة",              hint: "نهائي", t: 400 },
     ];
@@ -1537,7 +1537,7 @@
         // Better to fail loudly upfront than to ping-pong reconnect.
         liveSetState("error");
         if (window.console) {
-          console.warn("[live-bridge] no API token — stream disabled");
+          console.warn("[live-bridge] رمز واجهة الربط غير مهيأ — تم إيقاف البث الحي");
         }
         return;
       }

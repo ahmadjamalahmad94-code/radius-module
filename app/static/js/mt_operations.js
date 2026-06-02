@@ -29,8 +29,8 @@
     note.className = "hub-pill hub-pill--amber";
     note.style.margin = "10px 0";
     note.textContent =
-      "API token غير مهيّأ — لن تتحدّث الأعمدة الحيّة. " +
-      "اضبط HOBERADIUS_API_TOKENS في البيئة.";
+      "رمز واجهة الربط غير مهيّأ — لن تتحدّث الأعمدة الحيّة. " +
+      "اضبط رمز واجهة الربط في إعدادات البيئة.";
     table.parentNode.insertBefore(note, table);
     return;
   }
