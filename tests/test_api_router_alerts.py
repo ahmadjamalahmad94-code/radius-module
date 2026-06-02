@@ -65,12 +65,20 @@ def test_router_alerts_settings_route_is_registered(client):
 def test_router_alerts_settings_get_returns_settings_and_routers(app, client):
     _seed_router(app)
     with app.app_context():
-        from app.radius.db.repos import router_metrics_repo
+        from app.radius.db.repos import router_loop_probes_repo, router_metrics_repo
 
         router_metrics_repo.record_sample(
             tenant_id=1,
             router_id=17,
             interfaces=[{"name": "ether1", "rx_bytes": 10, "tx_bytes": 20}],
+        )
+        router_loop_probes_repo.upsert_reading(
+            tenant_id=1,
+            router_id=17,
+            interface="ether2",
+            status="bound",
+            lease_ip="10.0.0.7/24",
+            server_ip="10.0.0.1",
         )
 
     res = client.get("/api/v1/router-alerts/settings", headers=AUTH)
@@ -79,8 +87,13 @@ def test_router_alerts_settings_get_returns_settings_and_routers(app, client):
     assert data["settings"]["enabled"] is True
     assert data["counts"]["routers"] == 1
     assert data["counts"]["pushing"] == 1
+    assert data["counts"]["loop_probes"] == 1
+    assert data["counts"]["loop_detected"] == 1
     assert data["routers"][0]["name"] == "راوتر الفرع"
     assert data["routers"][0]["last_push_at"]
+    assert data["loop_probes"][0]["router_name"] == "راوتر الفرع"
+    assert data["loop_probes"][0]["interface"] == "ether2"
+    assert data["loop_probes"][0]["loop_detected"] is True
 
 
 def test_router_alerts_settings_patch_persists_global_and_router(app, client):
@@ -95,6 +108,7 @@ def test_router_alerts_settings_patch_persists_global_and_router(app, client):
                 "offline": True,
                 "high_traffic": True,
                 "high_usage": True,
+                "loop": False,
                 "offline_after_min": 11,
                 "default_speed_mbps": 120,
                 "default_usage_gb": 400,
@@ -115,6 +129,7 @@ def test_router_alerts_settings_patch_persists_global_and_router(app, client):
     assert res.status_code == 200, res.get_json()
     data = res.get_json()["data"]
     assert data["settings"]["offline_after_min"] == 11
+    assert data["settings"]["loop"] is False
     assert data["routers"][0]["normal_speed_mbps"] == 80
     assert data["counts"]["overrides"] == 1
 

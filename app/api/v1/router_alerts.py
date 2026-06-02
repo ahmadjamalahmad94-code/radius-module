@@ -71,21 +71,28 @@ def _usage_window(value: Any, default: str = "day") -> str:
 
 
 def _settings_payload(tenant_id: int) -> dict:
-    from ...radius.db.repos import nas_repo, router_alert_settings_repo, router_metrics_repo
+    from ...radius.db.repos import (
+        nas_repo,
+        router_alert_settings_repo,
+        router_loop_probes_repo,
+        router_metrics_repo,
+    )
     from ...radius.services import smart_alerts
 
     glob = smart_alerts.global_settings(tenant_id)
     overrides = router_alert_settings_repo.list_for_tenant(tenant_id)
     last_push = router_metrics_repo.last_push_map(tenant_id)
+    router_names: dict[int, str] = {}
     routers = []
     for router in nas_repo.list_nas(tenant_id, limit=1000):
         router_id = int(router.id or 0)
+        router_names[router_id] = router.name or f"#{router_id}"
         effective = smart_alerts.effective_for_router(router_id, glob, overrides)
         override = overrides.get(router_id) or {}
         routers.append(
             {
                 "id": router_id,
-                "name": router.name or f"#{router_id}",
+                "name": router_names[router_id],
                 "address": router.address or "",
                 "enabled": bool(effective["enabled"]),
                 "offline_after_min": int(effective["offline_after_min"] or 0),
@@ -96,13 +103,36 @@ def _settings_payload(tenant_id: int) -> dict:
                 "has_override": bool(override),
             }
         )
+    loop_probes = []
+    for probe in router_loop_probes_repo.list_for_tenant(tenant_id):
+        status = str(probe.get("last_status") or "").strip().lower()
+        lease_ip = str(probe.get("last_lease_ip") or "").strip()
+        loop_detected = status == "bound" or bool(lease_ip)
+        router_id = int(probe.get("router_id") or 0)
+        loop_probes.append(
+            {
+                "router_id": router_id,
+                "router_name": router_names.get(router_id, f"#{router_id}"),
+                "interface": str(probe.get("interface") or ""),
+                "enabled": bool(int(probe.get("enabled") or 0)),
+                "status": status,
+                "lease_ip": lease_ip,
+                "server_ip": str(probe.get("last_server_ip") or ""),
+                "last_reading_at": str(probe.get("last_reading_at") or ""),
+                "loop_detected": loop_detected,
+            }
+        )
     return {
         "settings": glob,
         "routers": routers,
+        "loop_probes": loop_probes,
         "counts": {
             "routers": len(routers),
             "pushing": sum(1 for item in routers if item.get("last_push_at")),
             "overrides": sum(1 for item in routers if item.get("has_override")),
+            "loop_probes": len(loop_probes),
+            "loop_detected": sum(1 for item in loop_probes if item["loop_detected"]),
+            "loop_routers": len({int(item["router_id"]) for item in loop_probes}),
         },
         "usage_windows": [
             {"key": "day", "label": "يومي"},
@@ -146,6 +176,7 @@ def router_alerts_settings_patch():
                 "offline": _bool(global_in.get("offline"), True),
                 "high_traffic": _bool(global_in.get("high_traffic"), True),
                 "high_usage": _bool(global_in.get("high_usage"), True),
+                "loop": _bool(global_in.get("loop"), True),
                 "offline_after_min": _positive_int(
                     global_in.get("offline_after_min", 6),
                     field="offline_after_min",
