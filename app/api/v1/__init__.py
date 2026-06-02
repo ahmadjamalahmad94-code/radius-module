@@ -18,6 +18,7 @@ def register_v1(parent: Blueprint) -> None:
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, service_requests, services, sessions,
         settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
+        setup_wizard,
     )
     health.register(v1)
     accounts.register(v1)
@@ -45,6 +46,7 @@ def register_v1(parent: Blueprint) -> None:
     sessions.register(v1)
     accounting.register(v1)
     webhooks.register(v1)
+    setup_wizard.register(v1)
     mikrotik.register(v1)
     mikrotik_control.register(v1)  # K3: system/*  · K4: interfaces + network
     internal_auth.register(v1)
