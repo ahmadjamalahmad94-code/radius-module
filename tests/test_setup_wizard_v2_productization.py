@@ -137,6 +137,7 @@ def test_primary_ui_does_not_expose_raw_json_blocks(app):
         "data-swv2-recovery-json",
     ):
         _assert_inside_collapsed_advanced(html, marker)
+        assert f"<pre {marker}" not in html
 
 
 def test_unsupported_service_copy_is_honest():

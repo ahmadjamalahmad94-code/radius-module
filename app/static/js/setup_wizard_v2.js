@@ -102,6 +102,118 @@
     return raw;
   }
 
+  const summaryLabels = {
+    add_default_route: "إضافة المسار الافتراضي",
+    address_cidr: "العنوان",
+    address_mode: "طريقة العنوان",
+    all_required_for_apply: "جاهز للتطبيق المختبري",
+    checks: "الفحوص",
+    computed: "القيم المحسوبة",
+    current_state: "مرحلة الراوتر",
+    destinations: "الوجهات",
+    dns_servers: "خوادم DNS",
+    domains: "النطاقات",
+    flags: "الأعلام",
+    generated_objects: "العناصر التي سيجهزها السكربت",
+    gateway: "البوابة",
+    health_score: "درجة الصحة",
+    interface: "الواجهة",
+    masked_sensitive_values: "القيم الحساسة المخفية",
+    mode: "الوضع",
+    nat_enabled: "تفعيل NAT",
+    peer: "بيانات الربط",
+    plan_status: "حالة الخطة",
+    prepared_wireguard_peer: "ربط WireGuard",
+    recommendation_ar: "التوصية",
+    rollback_notes: "ملاحظات الرجوع",
+    router_provisioning: "بيانات الراوتر المحجوزة",
+    selected_interfaces: "المنافذ المختارة",
+    selected_wan_interface: "منفذ الإنترنت",
+    service_key: "الخدمة",
+    source_type: "مصدر الإنترنت",
+    status: "الحالة",
+    use_peer_dns: "استخدام DNS من المزود",
+    warnings: "التحذيرات",
+    wireguard_peer_name: "اسم ربط WireGuard",
+  };
+
+  function escapeHtml(text) {
+    return String(text == null ? "" : text).replace(/[<>&"]/g, (ch) => ({
+      "<": "&lt;",
+      ">": "&gt;",
+      "&": "&amp;",
+      '"': "&quot;",
+    }[ch]));
+  }
+
+  function summaryLabel(key) {
+    return summaryLabels[key] || "تفصيل";
+  }
+
+  function statusText(value) {
+    const key = String(value == null ? "" : value).toLowerCase();
+    const map = {
+      applied: "مطبقة",
+      block_sites: "حجب مواقع",
+      broadband: "برودباند",
+      clean_resume: "جاهز للاستكمال",
+      disabled: "معطل",
+      dhcp: "أخذ عنوان تلقائي",
+      dry_run_ready: "جاهزة للمراجعة الجافة",
+      failed: "فشل",
+      false: "لا",
+      hotspot: "هوتسبوت",
+      not_supported: "غير مدعومة",
+      partial: "جزئية",
+      pppoe: "اتصال PPPoE",
+      preview: "معاينة",
+      ready: "جاهزة",
+      reserved: "محجوزة",
+      script_generated: "تم توليد السكربت",
+      site_exit_public_ip: "تغيير عنوان الخروج",
+      static: "عنوان ثابت",
+      success: "ناجحة",
+      supported: "مدعومة",
+      true: "نعم",
+      vlan: "شبكة VLAN",
+      warning: "تحذير",
+      walled_garden: "مواقع مفتوحة قبل تسجيل الدخول",
+    };
+    return map[key] || String(value == null || value === "" ? "—" : value);
+  }
+
+  function summaryValue(value, depth) {
+    if (typeof value === "boolean") return value ? "نعم" : "لا";
+    if (typeof value === "number") return String(value);
+    if (typeof value === "string") return statusText(value);
+    if (Array.isArray(value)) {
+      if (!value.length) return "لا يوجد";
+      const primitive = value.every((item) => item == null || ["string", "number", "boolean"].includes(typeof item));
+      if (primitive) return value.map((item) => statusText(item)).join("، ");
+      return `${value.length} عنصر`;
+    }
+    if (value && typeof value === "object") {
+      const entries = Object.entries(value)
+        .filter(([key, inner]) => !/script|command|password|secret|private/i.test(key) && inner != null && inner !== "")
+        .slice(0, depth > 0 ? 4 : 6);
+      if (!entries.length) return "متوفر";
+      return entries.map(([key, inner]) => `${summaryLabel(key)}: ${summaryValue(inner, depth + 1)}`).join("، ");
+    }
+    return "—";
+  }
+
+  function writeSummaryBox(target, data, title) {
+    if (!target) return;
+    const source = data && typeof data === "object" ? data : { value: data };
+    const rows = Object.entries(source)
+      .filter(([key, value]) => !/script|command|password|secret|private/i.test(key) && value != null && value !== "")
+      .slice(0, 10);
+    const items = rows.length ? rows.map(([key, value]) => {
+      return `<li><b>${escapeHtml(summaryLabel(key))}</b><span>${escapeHtml(summaryValue(value, 0))}</span></li>`;
+    }).join("") : '<li><b>الحالة</b><span>لا توجد تفاصيل إضافية.</span></li>';
+    target.innerHTML = `<strong>${escapeHtml(title || "ملخص")}</strong><ul>${items}</ul>`;
+  }
+
   async function getJson(url) {
     const res = await fetch(url, {
       method: "GET",
@@ -134,7 +246,7 @@
         recoveryProblems.appendChild(card);
       });
     }
-    if (recoveryJson) recoveryJson.textContent = JSON.stringify(recovery || {}, null, 2);
+    writeSummaryBox(recoveryJson, recovery || {}, "ملخص التعافي");
   }
 
   async function checkRecovery() {
@@ -159,7 +271,7 @@
       mode: "manual_contract",
       checks: {},
     });
-    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    writeSummaryBox(recoveryJson, data || {}, "نتيجة إعادة التحقق");
     await checkRecovery();
   }
 
@@ -168,7 +280,7 @@
     const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/regenerate-script`, {
       step_key: "vpn_radius",
     });
-    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    writeSummaryBox(recoveryJson, data || {}, "نتيجة إعادة توليد السكربت");
     await checkRecovery();
   }
 
@@ -179,7 +291,7 @@
       step_key: stepNames[current] || "current_step",
       reason,
     });
-    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    writeSummaryBox(recoveryJson, data || {}, "تسجيل التخلي عن الخطوة");
   }
 
   async function retireRecoveryRouter() {
@@ -188,7 +300,7 @@
     const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/retire-router`, {
       reason,
     });
-    if (recoveryJson) recoveryJson.textContent = JSON.stringify(data || {}, null, 2);
+    writeSummaryBox(recoveryJson, data || {}, "إيقاف الراوتر من مسار الإعداد");
     await checkRecovery();
   }
 
@@ -305,17 +417,13 @@
       internetScript.textContent = plan.script_text || "-- لم يرجع الخادم سكربت --";
     }
     if (internetPlanJson) {
-      internetPlanJson.textContent = JSON.stringify(
-        {
-          source_type: request.source_type,
-          selected_wan_interface: request.selected_wan_interface,
-          warnings: plan.warnings || [],
-          generated_objects: plan.generated_objects || [],
-          masked_sensitive_values: plan.masked_sensitive_values || {},
-        },
-        null,
-        2
-      );
+      writeSummaryBox(internetPlanJson, {
+        source_type: request.source_type,
+        selected_wan_interface: request.selected_wan_interface,
+        warnings: plan.warnings || [],
+        generated_objects: plan.generated_objects || [],
+        masked_sensitive_values: plan.masked_sensitive_values || {},
+      }, "ملخص سكربت الإنترنت");
     }
     setScriptLoading(`تم توليد سكربت ${request.source_type} من المحرك الحقيقي.`);
   }
@@ -360,16 +468,12 @@
       vpnScript.textContent = plan.script_text || "-- لم يرجع سكربت الربط والمصادقة --";
     }
     if (vpnPlanJson) {
-      vpnPlanJson.textContent = JSON.stringify(
-        {
-          router_provisioning: provisioning,
-          warnings: plan.warnings || [],
-          generated_objects: plan.generated_objects || [],
-          masked_sensitive_values: plan.masked_sensitive_values || {},
-        },
-        null,
-        2
-      );
+      writeSummaryBox(vpnPlanJson, {
+        router_provisioning: provisioning,
+        warnings: plan.warnings || [],
+        generated_objects: plan.generated_objects || [],
+        masked_sensitive_values: plan.masked_sensitive_values || {},
+      }, "ملخص الربط والمصادقة");
     }
     writeProvisioningValue("router_vpn_ip", provisioning.router_vpn_ip);
     writeProvisioningValue("server_vpn_ip", provisioning.server_vpn_ip);
@@ -572,7 +676,7 @@
       if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
       updateReadinessCards(data.readiness || {});
       if (serverWgReadinessResult) {
-        serverWgReadinessResult.textContent = JSON.stringify(data.readiness || {}, null, 2);
+        writeSummaryBox(serverWgReadinessResult, data.readiness || {}, "ملخص جاهزية الخادم");
       }
     } catch (error) {
       if (serverWgReadinessResult) serverWgReadinessResult.textContent = `تعذر فحص الجاهزية: ${error.message}`;
@@ -644,7 +748,7 @@
     writePeerHealthValue("tx", formatBytes(peer.tx_bytes), status);
     writePeerHealthValue("recommendation", health?.recommendation_ar || "--", status);
     if (serverPeerHealthResult) {
-      serverPeerHealthResult.textContent = JSON.stringify(health || {}, null, 2);
+      writeSummaryBox(serverPeerHealthResult, health || {}, "ملخص صحة الربط");
     }
   }
 
@@ -886,11 +990,11 @@
     if (script) script.textContent = plan.script_text || "-- no script returned --";
     if (status) status.textContent = `تم توليد سكربت ${service} من المحرك الحقيقي.`;
     if (details) {
-      details.textContent = JSON.stringify({
+      writeSummaryBox(details, {
         computed: plan.computed || {},
         warnings: plan.warnings || [],
         generated_objects: plan.generated_objects || [],
-      }, null, 2);
+      }, `ملخص ${service}`);
     }
   }
 
@@ -938,7 +1042,7 @@
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/dry-run/${service}`, {});
       renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء التجربة الجافة");
       const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
-      if (details) details.textContent = JSON.stringify(data, null, 2);
+      writeSummaryBox(details, data, `نتيجة المراجعة الجافة ${service}`);
     } catch (error) {
       renderServiceDiagnostics(service, null, "المراجعة الجافة غير جاهزة", friendlyWizardError(error.message));
     }
@@ -1010,7 +1114,7 @@
     if (status) {
       status.textContent = `${plan.service_key || selectedAddedService} · ${plan.plan_status || plan.status || "preview"}`;
     }
-    if (details) details.textContent = JSON.stringify(data, null, 2);
+    writeSummaryBox(details, data, "ملخص الخدمة الإضافية");
     renderAddedDiagnostics(plan, "لم تكتمل خطة الخدمة");
   }
 
@@ -1019,7 +1123,7 @@
       const data = await getJson("/admin/radius/setup-wizard/added-services/catalog");
       addedServicesCatalog = data;
       const details = page.querySelector("[data-swv2-added-json]");
-      if (details) details.textContent = JSON.stringify(data, null, 2);
+      writeSummaryBox(details, data, "كتالوج الخدمات الإضافية");
       Object.values(data.services || {}).forEach(() => {});
       (data.services || []).forEach((service) => {
         const badge = page.querySelector(`[data-added-status="${service.key}"]`);

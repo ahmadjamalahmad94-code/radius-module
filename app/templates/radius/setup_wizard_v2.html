@@ -81,7 +81,7 @@
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-abandon>تسجيل التخلي عن الخطوة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>إيقاف الراوتر من مسار الإعداد</button>
         </div>
-        <pre data-swv2-recovery-json>{}</pre>
+        <div class="swv2-summary-box" data-swv2-recovery-json>لم يتم تشغيل فحص الاستكمال بعد.</div>
       </details>
     </div>
   </section>
@@ -319,7 +319,7 @@
           <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="internet-script-code">نسخ السكربت</button>
           <details class="swv2-advanced">
             <summary>عرض التفاصيل المتقدمة</summary>
-            <pre data-swv2-plan-json="internet">لم يتم توليد مخطط بعد.</pre>
+            <div class="swv2-summary-box" data-swv2-plan-json="internet">لم يتم توليد ملخص الإعداد بعد.</div>
           </details>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="internet">
@@ -438,7 +438,7 @@
             </div>
             <details class="swv2-advanced">
               <summary>تفاصيل الجاهزية</summary>
-              <pre data-swv2-server-wg-readiness-result>لم يتم فحص الجاهزية بعد.</pre>
+              <div class="swv2-summary-box" data-swv2-server-wg-readiness-result>لم يتم فحص الجاهزية بعد.</div>
             </details>
           </div>
           <div class="swv2-peer-health-panel" data-swv2-peer-health-panel>
@@ -459,7 +459,7 @@
             </div>
             <details class="swv2-advanced">
               <summary>تفاصيل صحة peer</summary>
-              <pre data-swv2-peer-health-result>لم يتم فحص صحة peer بعد.</pre>
+              <div class="swv2-summary-box" data-swv2-peer-health-result>لم يتم فحص صحة الربط بعد.</div>
             </details>
           </div>
           <div class="swv2-action-row">
@@ -473,7 +473,7 @@
             <span>مختبر داخلي فقط. لا تستخدمه على VPS إنتاجي أو راوتر عميل.</span>
           </label>
           <textarea data-swv2-server-peer-output placeholder="اختياري: الصق wg show للتحقق من وجود peer و handshake"></textarea>
-          <pre data-swv2-server-peer-result>لم يتم تشغيل معاينة التنفيذ بعد.</pre>
+          <div class="swv2-summary-box" data-swv2-server-peer-result>لم يتم تشغيل معاينة التنفيذ بعد.</div>
         </div>
         </details>
         <h2>جهز سكربت ربط الراوتر</h2>
@@ -482,11 +482,7 @@
           <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">نسخ سكربت الربط</button>
           <details class="swv2-advanced">
             <summary>تفاصيل هندسية</summary>
-            <pre data-swv2-plan-json="vpn">{
-  "mode": "preview_only",
-  "step": "vpn_radius",
-  "requires": "internet_verified"
-}</pre>
+            <div class="swv2-summary-box" data-swv2-plan-json="vpn">لم يتم توليد ملخص الربط بعد.</div>
           </details>
         </div>
         <div class="swv2-action-row">
@@ -793,7 +789,7 @@
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
         <details class="swv2-advanced">
           <summary>تفاصيل Hotspot الهندسية</summary>
-          <pre data-swv2-service-json="hotspot">{}</pre>
+          <div class="swv2-summary-box" data-swv2-service-json="hotspot">لم يتم توليد ملخص Hotspot بعد.</div>
         </details>
       </div>
     </article>
@@ -845,7 +841,7 @@
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
         <details class="swv2-advanced">
           <summary>تفاصيل Broadband الهندسية</summary>
-          <pre data-swv2-service-json="broadband">{}</pre>
+          <div class="swv2-summary-box" data-swv2-service-json="broadband">لم يتم توليد ملخص البرودباند بعد.</div>
         </details>
       </div>
     </article>
@@ -930,7 +926,7 @@
         <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>
         <details class="swv2-advanced">
           <summary>تفاصيل الخدمات الإضافية الهندسية</summary>
-          <pre data-swv2-added-json>{}</pre>
+          <div class="swv2-summary-box" data-swv2-added-json>لم يتم توليد ملخص الخدمة الإضافية بعد.</div>
         </details>
       </div>
     </article>
