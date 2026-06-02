@@ -948,14 +948,15 @@
   user-select: none;
   color: #2563EB;
 }
-.mt-health-evidence pre {
-  margin-top: 8px;
-  background: #F8FAFC;
-  padding: 8px 10px;
-  border-radius: 6px;
+.mt-health-evidence-list {
+  margin: 8px 0 0;
+  padding: 8px 18px;
+  border-radius: 8px;
   border: 1px solid #E2E8F0;
-  overflow-x: auto;
-  direction: ltr;
-  text-align: start;
-  font-family: ui-monospace, "Cairo", monospace;
+  background: #F8FAFC;
+  display: grid;
+  gap: 6px;
+}
+.mt-health-evidence-list li {
+  line-height: 1.7;
 }

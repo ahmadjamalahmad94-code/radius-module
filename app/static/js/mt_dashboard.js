@@ -487,16 +487,11 @@
   // ── K9.3 — quick actions ───────────────────────────────────────
   //
   // Each action opens a small inline form. The Submit button posts
-  // the JSON body the K8 endpoints expect (confirm: true for
-  // destructive ones). The output area prints the actual response
-  // verbatim — no fake "success" toast. Destructive actions
-  // additionally require the operator to tick a checkbox before
-  // the Submit button enables.
+  // the structured body the K8 endpoints expect. The operator sees
+  // an Arabic result card; endpoint payloads stay internal.
 
   const actionFormEl  = root.querySelector("[data-mt-action-form]");
-  const actionOutEl   = root.querySelector("[data-mt-action-output]");
   const actionResEl   = root.querySelector("[data-mt-action-result]");
-  const actionRawWrap = root.querySelector("[data-mt-action-raw-wrap]");
   const actionButtons = {
     backup:      root.querySelector("[data-mt-action-backup]"),
     reboot:      root.querySelector("[data-mt-action-reboot]"),
@@ -526,15 +521,6 @@
   }
 
   function writeOutput(payload, ok) {
-    // Raw JSON dump — always populated for the «عرض الاستجابة
-    // الخام» disclosure. Stays hidden until the operator expands.
-    if (actionOutEl) {
-      actionOutEl.textContent = JSON.stringify(payload, null, 2);
-      actionOutEl.classList.toggle("is-ok", !!ok);
-      actionOutEl.classList.toggle("is-fail", !ok);
-    }
-    if (actionRawWrap) actionRawWrap.hidden = false;
-    // Friendly card — built per action kind.
     if (actionResEl) {
       actionResEl.innerHTML = renderResultCard(currentActionKind, payload, ok);
       actionResEl.classList.toggle("is-ok", !!ok);
@@ -816,7 +802,7 @@
       ok ? "تمّ تنفيذ العملية" : "فشلت العملية",
       ""
     ) + (ok
-      ? body('<div class="mt-action-result-summary">✓ راجع «عرض الاستجابة الخام» للتفاصيل.</div>')
+      ? body('<div class="mt-action-result-summary">✓ تمت العملية. تظهر التفاصيل المهمة هنا حسب نوع الأمر.</div>')
       : failBody());
   }
 
@@ -825,7 +811,6 @@
     actionFormEl.hidden = true;
     actionFormEl.textContent = "";
     if (actionResEl)   { actionResEl.hidden = true; actionResEl.innerHTML = ""; }
-    if (actionRawWrap) { actionRawWrap.hidden = true; actionRawWrap.open = false; }
     currentActionKind = "";
     clearActiveButtons();
   }
@@ -835,7 +820,6 @@
     actionFormEl.hidden = false;
     actionFormEl.innerHTML = html;
     if (actionResEl)   { actionResEl.hidden = true; actionResEl.innerHTML = ""; }
-    if (actionRawWrap) { actionRawWrap.hidden = true; actionRawWrap.open = false; }
     currentActionKind = key;
     clearActiveButtons();
     if (actionButtons[key]) actionButtons[key].classList.add("is-active");
@@ -965,7 +949,6 @@
       </div>
     `;
     actionResEl.hidden = false;
-    if (actionRawWrap) actionRawWrap.hidden = true;
 
     // Live elapsed counter.
     const tickEl = actionResEl.querySelector("[data-mt-progress-tick]");
@@ -1765,12 +1748,62 @@
       }[ch]));
     }
 
+    const evidenceLabels = {
+      address: "العنوان",
+      avg: "المتوسط",
+      best: "الأفضل",
+      count: "العدد",
+      host: "الوجهة",
+      interface: "الواجهة",
+      interfaces: "الواجهات",
+      last: "آخر قيمة",
+      loss: "الفقد",
+      mac: "عنوان MAC",
+      name: "الاسم",
+      port: "المنفذ",
+      reason: "السبب",
+      status: "الحالة",
+      total: "الإجمالي",
+      type: "النوع",
+      value: "القيمة",
+      worst: "الأسوأ",
+    };
+
+    function evidenceKeyLabel(key) {
+      return evidenceLabels[key] || "تفصيل";
+    }
+
+    function evidenceValueText(value) {
+      if (Array.isArray(value)) return value.map(evidenceValueText).join("، ");
+      if (value && typeof value === "object") {
+        return Object.entries(value).map(([key, inner]) => {
+          return evidenceKeyLabel(key) + ": " + evidenceValueText(inner);
+        }).join("، ");
+      }
+      return String(value == null || value === "" ? "—" : value);
+    }
+
+    function evidenceRowText(item, index) {
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const parts = Object.entries(item)
+          .filter(([, value]) => value != null && value !== "")
+          .map(([key, value]) => {
+            return "<strong>" + escapeText(evidenceKeyLabel(key)) + ":</strong> "
+                 + escapeText(evidenceValueText(value));
+          });
+        if (parts.length) return parts.join(" · ");
+      }
+      return "<strong>معلومة " + String(index + 1) + ":</strong> "
+           + escapeText(evidenceValueText(item));
+    }
+
     function evidenceHtml(ev) {
       if (!Array.isArray(ev) || !ev.length) return "";
-      const pretty = JSON.stringify(ev, null, 2);
       return ['<details class="mt-health-evidence">',
-              '<summary>عرض الدليل (', String(ev.length), ')</summary>',
-              '<pre>', escapeText(pretty), '</pre>',
+              '<summary>تفاصيل الفحص (', String(ev.length), ')</summary>',
+              '<ul class="mt-health-evidence-list">',
+              ev.map((item, idx) => '<li>' + evidenceRowText(item, idx) + '</li>').join(""),
+              '</ul>',
               '</details>'].join("");
     }
 

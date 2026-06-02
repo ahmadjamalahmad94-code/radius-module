@@ -293,6 +293,26 @@ def test_print_template_preview_does_not_render_raw_json():
         assert token not in content, f"{token!r} remained in print_templates.html"
 
 
+def test_mikrotik_dashboard_does_not_render_raw_operator_json():
+    template = Path("app/templates/radius/mt_dashboard.html").read_text(
+        encoding="utf-8"
+    )
+    script = Path("app/static/js/mt_dashboard.js").read_text(encoding="utf-8")
+    css = Path("app/static/css/mt_dashboard.css").read_text(encoding="utf-8")
+    forbidden = [
+        "data-mt-action-output",
+        "data-mt-action-raw-wrap",
+        "JSON.stringify(payload",
+        "JSON.stringify(ev",
+        "mt-health-evidence pre",
+        "عرض الاستجابة الخام",
+    ]
+
+    combined = "\n".join([template, script, css])
+    for token in forbidden:
+        assert token not in combined, f"{token!r} remained in MT dashboard UI"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

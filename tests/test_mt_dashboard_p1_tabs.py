@@ -149,7 +149,7 @@ def test_overview_still_carries_k9_markers(app, client):
         "data-mt-live-traffic",
         "data-mt-active-users",
         "data-mt-quick-actions",
-        "data-mt-action-output",
+        "data-mt-action-result",
     ):
         assert marker in html, f"K9 marker lost in P1 wrap: {marker}"
 

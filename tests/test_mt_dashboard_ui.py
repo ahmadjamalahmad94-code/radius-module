@@ -127,7 +127,7 @@ def test_dashboard_renders_shell_and_markers(app, client):
     assert "data-mt-action-reboot" in html
     assert "data-mt-action-ping" in html
     assert "data-mt-action-identity" in html
-    assert "data-mt-action-output" in html
+    assert "data-mt-action-result" in html
     assert "data-mt-action-form" in html
     assert "data-rh-loop-tile" in html
     assert "تتبّع اللوب" in html

@@ -891,24 +891,6 @@
 .rh-overview .mt-action-result.is-ok .mt-action-result-summary{
   background:#ECFDF5;border-color:#BBF7D0;color:#065F46;
 }
-.rh-overview .mt-action-raw{
-  margin-top:10px;
-}
-.rh-overview .mt-action-raw[hidden]{display:none}
-.rh-overview .mt-action-raw > summary{
-  cursor:pointer;color:#94A3B8;font-size:11.5px;font-weight:700;
-  padding:6px 10px;list-style:none;user-select:none;
-}
-.rh-overview .mt-action-raw > summary::-webkit-details-marker{display:none}
-.rh-overview .mt-action-raw > summary::before{
-  content:"▸ ";color:#CBD5E1;transition:transform .15s;
-}
-.rh-overview .mt-action-raw[open] > summary::before{content:"▾ "}
-.rh-overview .mt-action-raw .mt-action-output{
-  margin:0;padding:12px 14px;background:#0F172A;color:#E2E8F0;
-  border-radius:10px;font-size:11.5px;line-height:1.5;
-  max-height:280px;overflow:auto;direction:ltr;text-align:start;
-}
 @keyframes mt-action-pop{
   from{opacity:0;transform:translateY(8px);}
   to  {opacity:1;transform:translateY(0);}
@@ -1425,16 +1407,8 @@
          until an action is picked, so the page starts compact. #}
       <div class="mt-action-form" data-mt-action-form hidden></div>
 
-      {# Pretty output panel — JS renders a friendly card here for
-         known actions (ping summary, traceroute hops, DNS resolve,
-         backup confirmation …). Falls back to raw JSON via the
-         hidden <pre> below for unknown shapes / debugging. #}
+      {# Pretty output panel: JS renders operator-friendly summaries. #}
       <div class="mt-action-result" data-mt-action-result hidden></div>
-      <details class="mt-action-raw" data-mt-action-raw-wrap hidden>
-        <summary>عرض الاستجابة الخام (JSON)</summary>
-        <pre class="mt-action-output" data-mt-action-output
-             aria-live="polite"></pre>
-      </details>
     </div>
   </section>
 
