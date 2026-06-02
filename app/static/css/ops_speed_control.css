@@ -164,7 +164,8 @@
 .opsx-redesign .spdx-ring__lap {
   fill: none; stroke-width: 12; stroke-linecap: round;
   stroke-dasharray: 326.7; stroke-dashoffset: 326.7;
-  transition: stroke-dashoffset var(--spdx-med) var(--spdx-ease);
+  /* offset is driven once per frame from the drag (rAF) — no CSS transition,
+     so it follows the slider 1:1 with no lag. */
 }
 .opsx-redesign .spdx-ring__lap--1 { stroke: var(--spdx-purple); }
 .opsx-redesign .spdx-ring__lap--2 { stroke: #f59e0b; }
@@ -199,8 +200,8 @@
 .opsx-redesign .spdx-slider__fill {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   height: 8px; width: 0; border-radius: var(--spdx-pill);
-  background: var(--fill-grad, linear-gradient(90deg, var(--spdx-purple), var(--spdx-purple-deep)));
-  transition: width var(--spdx-fast) linear, background var(--spdx-fast) linear;
+  background: var(--spdx-purple); /* JS sets a solid interpolated colour live */
+  transition: width var(--spdx-fast) linear;
 }
 .opsx-redesign .spdx-slider.is-dragging .spdx-slider__fill { transition: none; }
 .opsx-redesign .spdx-slider.is-dragging .spdx-slider__bubble { transition: none; }
@@ -216,24 +217,23 @@
   width: 20px; height: 20px; border-radius: 50%; cursor: grab;
   background: #fff; border: 3px solid var(--thumb-c, var(--spdx-purple));
   box-shadow: 0 2px 6px rgba(20, 28, 46, .25);
-  transition: transform var(--spdx-fast) var(--spdx-ease), box-shadow var(--spdx-fast) var(--spdx-ease), border-color var(--spdx-fast) linear;
+  transition: transform var(--spdx-fast) var(--spdx-ease), box-shadow var(--spdx-fast) var(--spdx-ease);
   margin-top: 0;
 }
 .opsx-redesign .spdx-slider__input::-moz-range-thumb {
   width: 20px; height: 20px; border-radius: 50%; cursor: grab;
   background: #fff; border: 3px solid var(--thumb-c, var(--spdx-purple));
   box-shadow: 0 2px 6px rgba(20, 28, 46, .25);
-  transition: border-color var(--spdx-fast) linear;
 }
 .opsx-redesign .spdx-slider__input:hover::-webkit-slider-thumb { transform: scale(1.12); }
 .opsx-redesign .spdx-slider__input:active::-webkit-slider-thumb { cursor: grabbing; box-shadow: 0 0 0 6px rgba(107, 90, 237, .15); }
 .opsx-redesign .spdx-slider__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px rgba(107, 90, 237, .28); }
 .opsx-redesign .spdx-slider__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px rgba(107, 90, 237, .28); }
 
-/* Slider fill / bubble / thumb colour is interpolated live in JS via the
-   --fill-grad, --bubble-c and --thumb-c custom properties (base → amber → red
-   as the value climbs 0 → 300%), so the colour builds up gradually while
-   dragging. The ring-label colour still escalates by zone: */
+/* Slider fill colour is set directly (solid) by JS and the bubble/thumb via the
+   --bubble-c / --thumb-c custom properties (base → amber → red as the value
+   climbs 0 → 300%) — refreshed only when the rounded value changes, so the
+   colour builds up gradually while dragging stays light. Ring label by zone: */
 .opsx-redesign .spdx-ring.is-warn .spdx-ring__label strong,
 .opsx-redesign .spdx-ring.is-warn .spdx-ring__label span { color: #b45309; }
 .opsx-redesign .spdx-ring.is-danger .spdx-ring__label strong,
