@@ -22,8 +22,61 @@
     scriptPreview.textContent = lastScript || "-- لا يوجد سكربت بعد --";
   }
 
+  const RESULT_LABELS = {
+    ok: "النتيجة",
+    error: "الخطأ",
+    message: "الرسالة",
+    code: "رمز الحالة",
+    status: "الحالة",
+    run_id: "رقم التشغيل",
+    step: "الخطوة",
+    timeline: "الخط الزمني",
+    operations: "العمليات",
+    health: "فحص الصحة",
+    summary: "الملخص",
+    verification: "التحقق",
+    support_bundle: "حزمة الدعم",
+    pilot_drill: "قائمة فحص التجربة",
+  };
+
+  function resultLabel(key) {
+    return RESULT_LABELS[key] || String(key || "").replaceAll("_", " ");
+  }
+
+  function resultValue(value) {
+    if (value === true) return "نجح";
+    if (value === false) return "لم ينجح";
+    if (value == null || value === "") return "لا توجد قيمة";
+    if (Array.isArray(value)) {
+      if (!value.length) return "لا توجد عناصر";
+      if (value.every((item) => typeof item === "string")) return value.join("\n");
+      return `${value.length} عنصر`;
+    }
+    if (typeof value === "object") {
+      if (value.message || value.error || value.status || value.overall) {
+        return String(value.message || value.error || value.status || value.overall);
+      }
+      return "تفاصيل متاحة في البطاقات المرتبطة";
+    }
+    return String(value);
+  }
+
+  function formatResult(payload) {
+    if (!payload || typeof payload !== "object") return String(payload || "لا توجد نتائج بعد");
+    const preferred = [
+      "ok", "message", "error", "code", "status", "run_id", "step",
+      "timeline", "verification", "health", "operations", "support_bundle",
+    ];
+    const keys = [
+      ...preferred.filter((key) => Object.prototype.hasOwnProperty.call(payload, key)),
+      ...Object.keys(payload).filter((key) => !preferred.includes(key)).slice(0, 6),
+    ];
+    if (!keys.length) return "لا توجد تفاصيل إضافية.";
+    return keys.map((key) => `${resultLabel(key)}: ${resultValue(payload[key])}`).join("\n");
+  }
+
   function setOutput(payload) {
-    outputPreview.textContent = JSON.stringify(payload, null, 2);
+    outputPreview.textContent = formatResult(payload);
   }
 
   function parseJson(text, fallback) {
@@ -379,7 +432,7 @@
     requireRun();
     const data = await getJson(`/admin/radius/setup-wizard/runs/${currentRunId}/pilot-drill?step=${encodeURIComponent(pilotStep())}`);
     if (pilotOutput) {
-      pilotOutput.textContent = JSON.stringify(data.pilot_drill || data, null, 2);
+      pilotOutput.textContent = formatResult(data.pilot_drill || data);
     }
     setOutput(data);
   }

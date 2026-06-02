@@ -268,6 +268,17 @@ def test_mikrotik_operation_forms_do_not_keep_old_english_placeholders():
         assert token not in content, f"{token!r} remained in mt_dashboard.js"
 
 
+def test_setup_wizard_outputs_do_not_render_raw_json():
+    content = Path("app/static/js/setup_wizard.js").read_text(encoding="utf-8")
+    forbidden = [
+        "outputPreview.textContent = JSON.stringify",
+        "pilotOutput.textContent = JSON.stringify",
+    ]
+
+    for token in forbidden:
+        assert token not in content, f"{token!r} remained in setup_wizard.js"
+
+
 def test_print_template_preview_does_not_render_raw_json():
     content = Path("app/templates/radius/print_templates.html").read_text(
         encoding="utf-8"
