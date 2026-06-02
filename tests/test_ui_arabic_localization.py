@@ -675,6 +675,75 @@ def test_router_operator_pages_hide_raw_vendor_copy():
             assert token not in content, f"{token!r} remained in {path}"
 
 
+def test_setup_plan_and_public_pages_hide_raw_vendor_copy():
+    files = {
+        Path("app/templates/radius/plans_form.html"): [
+            "الشبكة + MikroTik",
+            "MikroTik / PPP / Hotspot",
+            "قائمة عناوين MikroTik",
+            "سلسلة فلترة MikroTik",
+            "مجموعة مستخدم MikroTik",
+        ],
+        Path("app/templates/radius/setup_wizard.html"): [
+            "Hotspot/Broadband",
+            "مستخدم API للراوتر",
+            "Hotspot —",
+            "واجهات Hotspot",
+            "سكربت Hotspot",
+            "تحقّق Hotspot",
+            "PPPoE —",
+            "بيانات PPPoE",
+            "واجهات PPPoE",
+            "سكربت PPPoE",
+            "تحقق Broadband",
+            "أوامر RouterOS",
+            "على MikroTik",
+            "تجربة CHR",
+        ],
+        Path("app/templates/radius/setup_wizard_v2.html"): [
+            "إلى MikroTik",
+            "على MikroTik",
+        ],
+        Path("app/templates/radius/setup_wizard_v3.html"): [
+            "مخرجات MikroTik",
+            "بيانات API",
+            "اسم مستخدم API",
+            "كلمة مرور API",
+            "مستخدم API مخصّص",
+        ],
+        Path("app/templates/radius/tool_general_adj.html"): [
+            "تُدفع لـ MikroTik",
+        ],
+        Path("app/templates/radius/payment_collection_request_detail.html"): [
+            "RADIUS أو CoA أو MikroTik",
+        ],
+        Path("app/templates/radius/cards_import.html"): [
+            "مع RADIUS",
+            "داخل RADIUS",
+            "حسابات RADIUS",
+            "مزامنة RADIUS",
+            "إجراء على NAS",
+        ],
+        Path("app/templates/radius/dashboard.html"): [
+            "أجهزة NAS والراوترات",
+        ],
+        Path("app/templates/radius/services_form.html"): [
+            "MikroTik hAP",
+        ],
+        Path("app/templates/radius/network_policy_list.html"): [
+            "NAS #{{ scoped_to_nas.id }}",
+        ],
+        Path("app/templates/radius/whatsapp.html"): [
+            "Cloud API",
+        ],
+    }
+
+    for path, forbidden in files.items():
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden:
+            assert token not in content, f"{token!r} remained in {path}"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

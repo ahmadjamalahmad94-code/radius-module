@@ -197,7 +197,7 @@
 {% block content %}
 {{ hub.hero(
   "استيراد ملف كروت",
-  subtitle="ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع RADIUS عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.",
+  subtitle="ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع خدمة المصادقة عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.",
   icon="file-import",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
@@ -233,10 +233,10 @@
               ملف خارجي للحساب فقط
             </option>
             <option value="imported" {% if form.get('source_type') == 'imported' %}selected{% endif %}>
-              ملف مستورد داخل RADIUS
+              ملف مستورد داخل خدمة المصادقة
             </option>
           </select>
-          <div class="ci-help">الخارجي لا ينشئ حسابات RADIUS ولا ينفذ أي إجراء على NAS.</div>
+          <div class="ci-help">الخارجي لا ينشئ حسابات في خدمة المصادقة ولا ينفذ أي إجراء على أجهزة الشبكة.</div>
         </div>
 
         <div class="ci-field">
@@ -260,9 +260,9 @@
         </div>
 
         <div class="ci-field full">
-          {{ toggle_switch(name="sync_to_radius", checked=form.get('sync_to_radius'), value="1", on_label="مزامنة حسابات RADIUS للملف المستورد", off_label="بدون مزامنة RADIUS") }}
+          {{ toggle_switch(name="sync_to_radius", checked=form.get('sync_to_radius'), value="1", on_label="مزامنة حسابات خدمة المصادقة للملف المستورد", off_label="بدون مزامنة خدمة المصادقة") }}
           <div class="ci-note">
-            يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات RADIUS فعلية.
+            يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة.
           </div>
         </div>
       </div>

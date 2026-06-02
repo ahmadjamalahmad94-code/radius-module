@@ -400,7 +400,7 @@ Steps:
     </div>
 
     <div class="swz-field" data-swz-step3-paste hidden>
-      <label>الصق مخرجات MikroTik هنا</label>
+      <label>الصق مخرجات الراوتر هنا</label>
       <textarea data-swz-step3-output rows="8" dir="ltr"
                 placeholder='Flags: X - disabled; R - running...
 0   name="hr-wg" listen-port=13231 ...
@@ -488,7 +488,7 @@ Steps:
               <div class="swz-discover-actions">
                 <button type="button" class="swz-btn swz-btn-ghost"
                         data-swz-action="discover-via-api">
-                  🔍 اكتشاف تلقائي (يحتاج بيانات API)
+                  🔍 اكتشاف تلقائي (يحتاج بيانات الربط)
                 </button>
                 <button type="button" class="swz-btn swz-btn-ghost"
                         data-swz-toggle-paste-discover>
@@ -503,13 +503,13 @@ Steps:
                  here, the `!field.value` pre-fill check fails. #}
               <div class="swz-discover-api-form" data-swz-discover-api-form hidden>
                 <div class="swz-field">
-                  <label>اسم مستخدم API</label>
+                  <label>اسم مستخدم الربط</label>
                   <input type="text" data-swz-discover-api-user
                          dir="ltr" autocomplete="off"
                          placeholder="سيُملأ تلقائياً من سكربت الخطوة 3">
                 </div>
                 <div class="swz-field">
-                  <label>كلمة مرور API</label>
+                  <label>كلمة مرور الربط</label>
                   <input type="password" data-swz-discover-api-pass
                          dir="ltr" autocomplete="new-password"
                          placeholder="سيُملأ تلقائياً">
@@ -771,19 +771,19 @@ ads.example"></textarea>
   <section class="swz-step" data-swz-step="98" hidden>
     <header>
       <h2>تسجيل الراوتر في القائمة</h2>
-      <p>تم توليد مستخدم API مخصّص للراوتر في سكربت الخطوة 3.
+      <p>تم توليد مستخدم ربط مخصّص للراوتر في سكربت الخطوة 3.
          فقط اضغط (تسجيل وإنهاء) — لا حاجة لإدخال أي شيء.</p>
     </header>
 
     <div class="swz-field">
-      <label>اسم مستخدم API</label>
+      <label>اسم مستخدم الربط</label>
       <input type="text" data-swz-api-user dir="ltr" readonly
              value="" autocomplete="off">
       <small>مُولَّد تلقائياً (يبدأ بـ <code>hr-api-</code>).</small>
     </div>
 
     <div class="swz-field">
-      <label>كلمة مرور API</label>
+      <label>كلمة مرور الربط</label>
       <input type="text" data-swz-api-pass dir="ltr" readonly
              value="" autocomplete="off">
       <small>مُولَّدة تلقائياً، آمنة، وموجودة على الراوتر

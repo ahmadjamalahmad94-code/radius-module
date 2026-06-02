@@ -183,7 +183,7 @@
       <a href="#pl-subs"><i class="fa-solid fa-handshake"></i> الاشتراك والسلوك</a>
       <a href="#pl-notif"><i class="fa-solid fa-bell"></i> التنبيهات</a>
       <a href="#pl-adv"><i class="fa-solid fa-sliders"></i> سياسات التجديد</a>
-      <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> الشبكة + MikroTik</a>
+      <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> الشبكة والراوترات</a>
       <a href="#pl-days"><i class="fa-solid fa-calendar-days"></i> أيام وساعات السماح</a>
       <a href="#pl-biz"><i class="fa-solid fa-coins"></i> تجاري</a>
     </nav>
@@ -456,11 +456,11 @@
       </div>
     </section>
 
-    {# 7. Network + MikroTik #}
+    {# 7. Network and routers #}
     <section class="pl-section pl-section--mt is-collapsible is-collapsed" data-sec="mt" id="pl-mt">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <span class="pl-section-title">الشبكة + MikroTik / PPP / Hotspot</span>
+        <span class="pl-section-title">الشبكة والراوترات / خدمات الاتصال</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
@@ -499,11 +499,11 @@
             <div class="pl-chk">{{ toggle_switch(name="expiry_day_limit_toggle", checked=(plan.expiry_day_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div></div>
           <div class="pl-field"><label>حد بساعات الانتهاء</label>
             <div class="pl-chk">{{ toggle_switch(name="expiry_hour_limit_toggle", checked=(plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div></div>
-          <div class="pl-field"><label>قائمة عناوين MikroTik</label>
+          <div class="pl-field"><label>قائمة عناوين الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}"></div>
-          <div class="pl-field"><label>سلسلة فلترة MikroTik</label>
+          <div class="pl-field"><label>سلسلة فلترة الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_filter_chain_name" value="{{ plan.mikrotik_filter_chain_name or '' }}"></div>
-          <div class="pl-field"><label>مجموعة مستخدم MikroTik</label>
+          <div class="pl-field"><label>مجموعة مستخدم الراوتر</label>
             <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ plan.mikrotik_user_group or '' }}"></div>
           <div class="pl-field"><label>أولوية طابور السرعة</label>
             <input class="hub-input" type="text" name="mikrotik_queue_priority_simple_queue" value="{{ plan.mikrotik_queue_priority_simple_queue or '' }}" placeholder="1..8"></div>

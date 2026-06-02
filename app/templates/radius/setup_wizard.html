@@ -27,7 +27,7 @@
     <div class="sw-step">3. تحقق الإنترنت</div>
     <div class="sw-step">4. معاينة الربط والمصادقة</div>
     <div class="sw-step">5. تحقق الربط والمصادقة</div>
-    <div class="sw-step">6. Hotspot/Broadband</div>
+    <div class="sw-step">6. بوابة الدخول / البرودباند</div>
     <div class="sw-step">7. الملخص النهائي</div>
   </section>
 
@@ -106,7 +106,7 @@
           <label class="sw-field"><span>منفذ WireGuard</span><input name="endpoint_port" type="number" min="1" max="65535" value="51820"></label>
           <label class="sw-field"><span>عنوان خادم RADIUS</span><input name="radius_server_ip" value="10.10.0.1"></label>
           <label class="sw-field"><span>سر RADIUS</span><input name="radius_secret" value="CHANGE_ME"></label>
-          <label class="sw-field"><span>مستخدم API للراوتر</span><input name="api_username" value="hr_api_setup"></label>
+          <label class="sw-field"><span>مستخدم الربط للراوتر</span><input name="api_username" value="hr_api_setup"></label>
         </div>
         <div class="sw-inline-actions">
           <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">توليد سكربت الربط والمصادقة</button>
@@ -122,7 +122,7 @@
 
   <div class="sw-grid">
     <section class="sw-panel">
-      <h2>3) Hotspot — الوصول العامّ</h2>
+      <h2>3) بوابة الدخول — الوصول العامّ</h2>
       <form data-sw-form="hotspot">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
@@ -134,7 +134,7 @@
         </div>
         <input type="hidden" name="payload_json" value="">
         <div class="sw-field">
-          <label>واجهات Hotspot المختارة</label>
+          <label>واجهات بوابة الدخول المختارة</label>
           <input name="hotspot_interfaces" value="ether3" placeholder="مثال: ether3 أو ether3, ether5">
         </div>
         <div class="sw-field">
@@ -145,18 +145,18 @@
         </div>
         <div class="sw-inline-actions">
           <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">جلب الواجهات المرشّحة</button>
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">توليد سكربت Hotspot</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">توليد سكربت بوابة الدخول</button>
           <button class="hub-btn" type="button" data-sw-action="verify-hotspot">تحليل التحقّق</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقّق Hotspot</label>
+          <label>مخرجات تحقق بوابة الدخول</label>
           <textarea name="verify_output" rows="4" spellcheck="false" placeholder="/ip hotspot print detail&#10;/ip hotspot profile print detail"></textarea>
         </div>
       </form>
     </section>
 
     <section class="sw-panel">
-      <h2>4) PPPoE — اتّصال المشتركين</h2>
+      <h2>4) البرودباند — اتصال المشتركين</h2>
       <form data-sw-form="broadband">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
@@ -167,8 +167,8 @@
           </select>
         </div>
         <input type="hidden" name="payload_json" value="">
-        <div class="sw-field-grid" aria-label="بيانات PPPoE">
-          <label class="sw-field"><span>واجهات PPPoE المختارة</span><input name="broadband_interfaces" value="ether4" placeholder="مثال: ether4 أو ether4, ether5"></label>
+        <div class="sw-field-grid" aria-label="بيانات البرودباند">
+          <label class="sw-field"><span>واجهات البرودباند المختارة</span><input name="broadband_interfaces" value="ether4" placeholder="مثال: ether4 أو ether4, ether5"></label>
           <label class="sw-field"><span>عنوان الخادم المحلي</span><input name="local_address" value="10.88.44.1"></label>
           <label class="sw-field"><span>نطاق عناوين المشتركين</span><input name="remote_pool_cidr" value="10.88.44.0/24"></label>
         </div>
@@ -180,11 +180,11 @@
           <input type="hidden" name="blocked_json" value="">
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت PPPoE</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت البرودباند</button>
           <button class="hub-btn" type="button" data-sw-action="verify-broadband">تحليل التحقّق</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق Broadband</label>
+          <label>مخرجات تحقق البرودباند</label>
           <textarea name="verify_output" rows="4" spellcheck="false" placeholder="/interface pppoe-server server print detail&#10;/ppp profile print detail"></textarea>
         </div>
       </form>
@@ -241,7 +241,7 @@
   <section class="sw-panel">
     <h2>جرد الراوتر</h2>
     <div class="sw-field">
-      <label>ألصق مخرجات أوامر RouterOS</label>
+      <label>ألصق مخرجات أوامر الراوتر</label>
       <textarea data-sw-inventory-output rows="6" spellcheck="false" placeholder="/interface print detail&#10;/ip address print detail&#10;/ip route print detail"></textarea>
     </div>
     <div class="sw-inline-actions">
@@ -256,7 +256,7 @@
     <div class="sw-panel-head">
       <div>
         <h2>لوحة تدريب التشغيل الداخلي</h2>
-        <p class="sw-muted">هذه اللوحة لا تنفذ أي أمر على MikroTik. هدفها تجهيز قائمة فحص قبل تجربة CHR مضبوطة.</p>
+        <p class="sw-muted">هذه اللوحة لا تنفذ أي أمر على الراوتر. هدفها تجهيز قائمة فحص قبل تجربة تشغيل مضبوطة.</p>
       </div>
       <span class="status-pill status-blocked">تجربة فقط</span>
     </div>

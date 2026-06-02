@@ -104,7 +104,7 @@
 {% call hub.section("تطبيق الخدمة", icon="bolt", meta=(apply_attempts|length|string + " محاولة") if apply_attempts else "", flush=apply_attempts|length > 0) %}
   <div style="{% if apply_attempts %}padding:14px 16px{% endif %}">
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
-      هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي RADIUS أو CoA أو MikroTik.
+      هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي خدمة المصادقة أو فصل الجلسات أو الراوتر.
     </p>
     <form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="margin:0">
       {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
